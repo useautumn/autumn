@@ -371,7 +371,7 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 					"x-client-type": "dashboard",
 				},
 				body: JSON.stringify({
-					name: `MCP OAuth E2E ${randomBytes(4).toString("hex")}`,
+					name: `MCP-OAuth-E2E-${randomBytes(4).toString("hex")}`,
 				}),
 			},
 		);

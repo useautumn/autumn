@@ -1,22 +1,6 @@
 import type { DeductionPeriod } from "@autumn/shared";
 import type { EventRow, EventsData } from "../components/analytics-types";
-
-const pad = (value: number): string => String(value).padStart(2, "0");
-
-/**
- * The server converts the pipe's "%F %T" period strings to epoch ms; the chart
- * parses period strings (parseLocalTimestamp for day bins, parseUTCTimestamp
- * for hour bins). Formatting the epoch back as a UTC wall-clock string
- * round-trips to exactly what the pipe emitted, so both parse paths behave the
- * same as they do for the normal events pipeline.
- */
-const toPeriodString = (epochMs: number): string => {
-	const date = new Date(epochMs);
-	return (
-		`${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ` +
-		`${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
-	);
-};
+import { epochToPeriodString } from "./epochToPeriodString";
 
 /** Suffix appended to a group's series when it spent from a balance it doesn't own. */
 export const CUSTOMER_BALANCE_SUFFIX = " · customer";
@@ -41,9 +25,12 @@ export const CUSTOMER_BALANCE_SUFFIX = " · customer";
  */
 export function deductionsToEventsData({
 	deductions,
+	utc,
 	splitSpillover = false,
 }: {
 	deductions: DeductionPeriod[];
+	/** Hour bins and UTC-requested bins format in UTC; others in the viewer's zone. */
+	utc: boolean;
 	/** Split each entity's series into own-balance vs customer-level spillover. */
 	splitSpillover?: boolean;
 }): EventsData {
@@ -54,7 +41,9 @@ export function deductionsToEventsData({
 	const sortable: Array<{ epoch: number; row: EventRow }> = [];
 
 	for (const period of deductions) {
-		const row: EventRow = { period: toPeriodString(period.period) };
+		const row: EventRow = {
+			period: epochToPeriodString({ epochMs: period.period, utc }),
+		};
 
 		if (grouped) {
 			// grouped_values is keyed by balance_id; resolve each balance back to

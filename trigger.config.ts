@@ -84,6 +84,8 @@ export default defineConfig({
 		"server/src/internal/billing/v2/actions/batchTransition/tasks",
 	],
 	build: {
+		// @useautumn/sdk ships from gitignored dist/; resolve the workspace copy from source.
+		conditions: ["@useautumn/sdk/source"],
 		// Native / heavy deps stay external — bundling them inflates the deploy
 		// and breaks platform-specific binaries (pg, ioredis, etc.).
 		external: [

@@ -8,6 +8,7 @@ import {
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getMonthStartAnchorMs } from "@/internal/billing/v2/utils/cycleAnchor/getMonthStartAnchorMs";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 const hasOtherEffectivePaidMainProduct = ({
@@ -23,7 +24,9 @@ const hasOtherEffectivePaidMainProduct = ({
 }) => {
 	const internalEntityId = customerProduct.internal_entity_id ?? undefined;
 	const deletedCustomerProductIds = new Set(
-		deletedCustomerProducts.map((deletedCustomerProduct) => deletedCustomerProduct.id),
+		deletedCustomerProducts.map(
+			(deletedCustomerProduct) => deletedCustomerProduct.id,
+		),
 	);
 
 	return customerProducts.some((candidate) => {
@@ -108,7 +111,11 @@ export const computeDefaultCustomerProduct = ({
 			}),
 			fullProduct: defaultProduct,
 			featureQuantities: [],
-			resetCycleAnchor: startsAt,
+			resetCycleAnchor:
+				getMonthStartAnchorMs({
+					fullProducts: [defaultProduct],
+					startsAt,
+				}) ?? startsAt,
 			now: currentEpochMs,
 			freeTrial: null,
 		},

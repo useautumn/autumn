@@ -2164,6 +2164,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
             </DynamicResponseField>
 
+            <DynamicResponseField name="anchor_to_month_start" type="boolean">
+              Anchor billing and reset cycles to the 1st of the month (UTC).
+            </DynamicResponseField>
+
           </Expandable>
         </DynamicResponseField>
 
@@ -3839,6 +3843,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           <Expandable title="properties">
             <DynamicResponseField name="ignore_past_due" type="boolean">
               If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="anchor_to_month_start" type="boolean">
+              Anchor billing and reset cycles to the 1st of the month (UTC).
             </DynamicResponseField>
 
           </Expandable>

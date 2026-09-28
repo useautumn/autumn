@@ -235,7 +235,7 @@ describe("provisionSubOrg rollback", () => {
 			masterOrg: { id: "org_master" } as never,
 			actorUser: user,
 			slug: "my-sandbox|org_master",
-			name: "My Sandbox",
+			name: "My-Sandbox",
 			isSandbox,
 			createMembership,
 		});
@@ -275,7 +275,7 @@ describe("createSandboxForOrg teardown (key-failure)", () => {
 			db: fakeDb,
 			masterOrg: { id: "org_master" } as never,
 			actorUser: user,
-			name: "My Sandbox",
+			name: "My-Sandbox",
 		});
 
 	test("createKey failure tears down the fully-provisioned org and rethrows", async () => {

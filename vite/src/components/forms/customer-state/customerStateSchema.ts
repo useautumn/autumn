@@ -2,13 +2,14 @@ import {
 	BillingBehaviorSchema,
 	type CustomizePlanLicense,
 	type ProductItem,
-	type SyncPlanInstance,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const CustomerStatePlanSchema = z.object({
 	productId: z.string().min(1),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
+	/** Total seats per license plan, included seats counted. */
+	licenseQuantities: z.record(z.string(), z.number().int().nonnegative()),
 	items: z.custom<ProductItem[]>().nullable(),
 	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),
@@ -19,9 +20,6 @@ export const CustomerStatePlanSchema = z.object({
 	// Sync only — carried over from what Stripe bills.
 	/** Add-on instances to create from this row. */
 	quantity: z.number().int().min(1).optional(),
-	licenseQuantities: z
-		.custom<NonNullable<SyncPlanInstance["license_quantities"]>>()
-		.optional(),
 });
 
 export type CustomerStatePlan = z.infer<typeof CustomerStatePlanSchema>;
@@ -29,6 +27,7 @@ export type CustomerStatePlan = z.infer<typeof CustomerStatePlanSchema>;
 export const EMPTY_CUSTOMER_STATE_PLAN: CustomerStatePlan = {
 	productId: "",
 	prepaidOptions: {},
+	licenseQuantities: {},
 	items: null,
 	addLicenses: null,
 	isCustom: false,
@@ -41,6 +40,11 @@ export const EMPTY_CUSTOMER_STATE_PLAN: CustomerStatePlan = {
 export type PlanLocation =
 	| { location: "phase"; phaseIndex: number; planIndex: number }
 	| { location: "unscheduled"; planIndex: number };
+
+export const planLocationToFieldPath = (location: PlanLocation) =>
+	location.location === "unscheduled"
+		? (`unscheduledPlans[${location.planIndex}]` as const)
+		: (`phases[${location.phaseIndex}].plans[${location.planIndex}]` as const);
 
 export const CustomerStatePhaseSchema = z.object({
 	startsAt: z.number().nullable(),

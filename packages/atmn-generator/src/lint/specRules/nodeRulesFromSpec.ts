@@ -22,7 +22,7 @@ import type {
 
 export type SpecNodeRules = Pick<
 	NodeRules,
-	"required" | "fields" | "keys" | "variants" | "hidden"
+	"required" | "fields" | "keys" | "values" | "variants" | "hidden"
 >;
 
 const CONSTRAINT_KEYS = [
@@ -43,6 +43,7 @@ type Shape = {
 	hidden: Set<string>;
 	fields: Record<string, FieldConstraints>;
 	keys?: FieldConstraints;
+	values?: FieldConstraints;
 	variants?: NodeRules["variants"];
 	/** Segments to descend into: a property name, or `*` for a record's values. */
 	children: [string, JsonSchema][];
@@ -143,6 +144,7 @@ const mergeInto = ({ target, source }: { target: Shape; source: Shape }) => {
 		if (target.fields[field] === undefined) target.fields[field] = constraints;
 	}
 	target.keys ??= source.keys;
+	target.values ??= source.values;
 	target.variants ??= source.variants;
 	target.children.push(...source.children);
 };
@@ -162,6 +164,7 @@ const hasContent = (shape: Shape): boolean =>
 	shape.hidden.size > 0 ||
 	Object.keys(shape.fields).length > 0 ||
 	shape.keys !== undefined ||
+	shape.values !== undefined ||
 	shape.variants !== undefined;
 
 /** Fields present in every branch, with the constraints they all agree on. */
@@ -267,6 +270,8 @@ const shapeOf = ({
 			root,
 		});
 		if (keys) shape.keys = keys;
+		const values = constraintsOf({ schema: valueSchema, root });
+		if (values) shape.values = values;
 		if (!isFreeFormSchema(valueSchema)) shape.children.push(["*", valueSchema]);
 		return shape;
 	}
@@ -327,6 +332,7 @@ const specRulesOf = (shape: Shape): SpecNodeRules | undefined => {
 	const out: Record<string, unknown> = { ...shapeRulesOf(shape) };
 	if (shape.hidden.size > 0) out.hidden = [...shape.hidden].sort();
 	if (shape.keys) out.keys = shape.keys;
+	if (shape.values) out.values = shape.values;
 	if (shape.variants) out.variants = shape.variants;
 	return nonEmpty(out) as SpecNodeRules | undefined;
 };
@@ -353,6 +359,7 @@ const intersectSpecRules = (
 	);
 	if (Object.keys(fields).length > 0) out.fields = fields;
 	if (sameValue(a.keys, b.keys) && a.keys) out.keys = a.keys;
+	if (sameValue(a.values, b.values) && a.values) out.values = a.values;
 	if (sameValue(a.variants, b.variants) && a.variants)
 		out.variants = a.variants;
 	return out as SpecNodeRules;

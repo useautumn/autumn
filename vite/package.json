@@ -22,6 +22,7 @@
 	"license": "Apache-2.0",
 	"dependencies": {
 		"@ai-sdk/react": "^3.0.25",
+		"@autumn/atmn-old": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/render": "workspace:*",
 		"@autumn/shared": "workspace:*",
@@ -46,7 +47,6 @@
 		"@tanstack/react-virtual": "^3.13.18",
 		"@trigger.dev/react-hooks": "4.4.5",
 		"ai": "^6.0.5",
-		"@autumn/atmn-old": "workspace:*",
 		"autumn-js": "workspace:*",
 		"axios": "^1.8.3",
 		"better-auth": "catalog:",
@@ -67,7 +67,6 @@
 		"react": "catalog:",
 		"react-day-picker": "^8.10.1",
 		"react-dom": "catalog:",
-		"react-grab": "^0.1.29",
 		"react-hotkeys-hook": "^4.6.1",
 		"react-resizable-panels": "^4.11.0",
 		"react-router": "^7.3.0",

@@ -3,6 +3,7 @@ import type { Stripe } from "stripe";
 import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "../InvoiceService";
+import { stripeInvoiceToPaidAt } from "../utils/stripeInvoiceToPaidAt";
 import { upsertInvoiceInCache } from "./cache/upsertInvoiceInCache";
 
 export const updateInvoiceFromStripe = async ({
@@ -33,6 +34,7 @@ export const updateInvoiceFromStripe = async ({
 				amount: stripeInvoice.amount_paid,
 				currency: stripeInvoice.currency,
 			}),
+			paid_at: stripeInvoiceToPaidAt({ stripeInvoice }) ?? undefined,
 		},
 	});
 

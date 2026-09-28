@@ -2,12 +2,14 @@
 // Do not edit — run `bun generate` in packages/atmn-generator instead.
 
 import type { Feature } from "./features.js";
+import { isLocalWebhookUrl } from "./isLocalWebhookUrl.js";
 import { LINT_RULES } from "./lintRules.js";
-import { ConfigError, lintDocument } from "./lintRuntime.js";
+import { ConfigError, type LintIssue, lintDocument } from "./lintRuntime.js";
 import type { Plan } from "./plans.js";
 import type { ReferralProgram } from "./referralPrograms.js";
 import type { Reward } from "./rewards.js";
 import type { Settings } from "./settings.js";
+import type { Webhook } from "./webhooks.js";
 
 /** Operators like `$startsWith` are literal API keys, not snake_case fields. */
 const isOperatorKey = (key: string): boolean => key.startsWith("$");
@@ -214,6 +216,7 @@ const CATALOG_HINTS = hintsOf({
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups",
+		"webhooks.url",
 	],
 	frozenPaths: [
 		"plans.licenses.metadata",
@@ -239,6 +242,9 @@ export type AtmnConfig = {
 	/** The settings this config manages. Only the fields stated are written;
 	 * an omitted field keeps its value, and an omitted block manages nothing. */
 	settings?: Settings;
+	/** The webhooks this config manages, by id. Push creates or updates them in
+	 * the target environment and never deletes one; unlisted webhooks are left alone. */
+	webhooks?: Webhook[];
 };
 
 const stated = (config: AtmnConfig): Record<string, unknown> => ({
@@ -255,15 +261,20 @@ const stated = (config: AtmnConfig): Record<string, unknown> => ({
 		? { referralPrograms: config.referralPrograms }
 		: {}),
 	...(config.settings !== undefined ? { settings: config.settings } : {}),
+	...(config.webhooks !== undefined ? { webhooks: config.webhooks } : {}),
 });
 
 const SINGLETON_KEYS: readonly string[] = ["settings"];
+const LIST_KEYS: readonly string[] = ["webhooks"];
+/** Where `atmn()` carries lint warnings: they never refuse the config. */
+const WARNINGS_KEY = "lint_warnings";
 const CONFIG_KEYS: readonly string[] = [
 	"features",
 	"plans",
 	"rewards",
 	"referralPrograms",
 	"settings",
+	"webhooks",
 ];
 
 /**
@@ -283,17 +294,25 @@ const unknownKeyIssue = (key: string): { path: string; message: string } =>
 			};
 
 /**
- * The catalog document and each singleton's own request body, split from the
- * one document `atmn()` returns: they go to different operations.
+ * The catalog document, each singleton's own request body and each synced
+ * list's entries, split from the one document `atmn()` returns: they go to
+ * different operations. Synced lists still hold every environment's values.
  */
 export const splitWire = (
 	document: WireDocument,
 ): {
 	catalog: WireDocument;
 	singletons: Record<string, WireDocument | undefined>;
+	lists: Record<string, WireDocument[] | undefined>;
+	warnings: LintIssue[];
 } => ({
 	catalog: Object.fromEntries(
-		Object.entries(document).filter(([key]) => !SINGLETON_KEYS.includes(key)),
+		Object.entries(document).filter(
+			([key]) =>
+				!SINGLETON_KEYS.includes(key) &&
+				!LIST_KEYS.includes(key) &&
+				key !== WARNINGS_KEY,
+		),
 	),
 	singletons: {
 		settings:
@@ -301,6 +320,10 @@ export const splitWire = (
 				? undefined
 				: { config: document.settings },
 	},
+	lists: {
+		webhooks: document.webhooks as WireDocument[] | undefined,
+	},
+	warnings: (document[WARNINGS_KEY] as LintIssue[] | undefined) ?? [],
 });
 
 export const atmn = (config: AtmnConfig): WireDocument => {
@@ -316,8 +339,11 @@ export const atmn = (config: AtmnConfig): WireDocument => {
 		document,
 		rules: LINT_RULES,
 		hints: CATALOG_HINTS,
+		checks: { isLocalWebhookUrl },
 	});
-	if (issues.length > 0) throw new ConfigError(issues);
+	const errors = issues.filter((issue) => issue.warning !== true);
+	if (errors.length > 0) throw new ConfigError(errors);
+	const warnings = issues.filter((issue) => issue.warning === true);
 
 	return {
 		...(toWire({
@@ -325,6 +351,7 @@ export const atmn = (config: AtmnConfig): WireDocument => {
 			path: "",
 			hints: CATALOG_HINTS,
 		}) as WireDocument),
+		...(warnings.length > 0 ? { [WARNINGS_KEY]: warnings } : {}),
 		// The payload is the complete desired catalog, so omission is a removal.
 		skip_deletions: false,
 		// A constant, not a decision: "draft wherever one is warranted". The server

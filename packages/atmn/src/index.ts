@@ -17,4 +17,5 @@ export {
 	type Reward,
 } from "./generated/rewards.js";
 export { type Variant, variant } from "./generated/variants.js";
+export { type Webhook, webhook } from "./generated/webhooks.js";
 export { type AtmnConfig, atmn } from "./generated/wire.js";

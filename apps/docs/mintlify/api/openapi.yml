@@ -2815,6 +2815,10 @@ components:
               description: If true, entitlements attached to this plan will still reset on
                 schedule even when the customer's product is in a past_due
                 state.
+            anchor_to_month_start:
+              type: boolean
+              description: Anchor billing and reset cycles to the 1st of the month (UTC).
+              default: false
           description: Miscellaneous plan-level configuration flags.
         billing_controls:
           type: object
@@ -12499,6 +12503,10 @@ paths:
                         schedule even when the customer's product is in a
                         past_due state.
                       default: false
+                    anchor_to_month_start:
+                      type: boolean
+                      description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                      default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -13690,6 +13698,10 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -16721,6 +16733,10 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -19736,6 +19752,10 @@ paths:
                               description: If true, entitlements attached to this plan will still reset on
                                 schedule even when the customer's product is in
                                 a past_due state.
+                            anchor_to_month_start:
+                              type: boolean
+                              description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -25120,6 +25140,10 @@ paths:
                                         description: If true, entitlements attached to this plan will still reset on
                                           schedule even when the customer's
                                           product is in a past_due state.
+                                      anchor_to_month_start:
+                                        type: boolean
+                                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -26976,6 +27000,10 @@ paths:
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
+                      default: false
+                    anchor_to_month_start:
+                      type: boolean
+                      description: Anchor billing and reset cycles to the 1st of the month (UTC).
                       default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
@@ -30009,6 +30037,10 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -66169,13 +66201,14 @@ paths:
       operationId: batchTrack
       description: Enqueue up to 1000 usage events for asynchronous processing. Items
         are validated synchronously up front; validated items are then enqueued
-        via SQS for background deduction by workers. The response returns 202
-        immediately and does not include balance information. On partial enqueue
-        failure (some items fail to enqueue, others succeed), the endpoint still
-        returns 202 and logs the failures server-side; clients should NOT retry,
-        because retrying re-enqueues the already-succeeded items. A 503 is
-        returned only when zero items were successfully enqueued (queue entirely
-        unavailable) — that case is safe to retry.
+        via SQS for background deduction by workers. The response returns 200
+        (or 202) immediately and does not include balance information. On
+        partial enqueue failure (some items fail to enqueue, others succeed),
+        the endpoint still returns 200 (or 202) and logs the failures
+        server-side; clients should NOT retry, because retrying re-enqueues the
+        already-succeeded items. A 503 is returned only when zero items were
+        successfully enqueued (queue entirely unavailable) — that case is safe
+        to retry.
       requestBody:
         required: true
         content:
@@ -66213,6 +66246,10 @@ paths:
                       type: string
                     additionalProperties: {}
                     description: Additional properties to attach to this usage event.
+                  idempotency_key:
+                    type: string
+                    description: "Deduplicates this item: a second track with the same key within 24
+                      hours is ignored."
                   timestamp:
                     type: integer
                     minimum: 0
@@ -66266,12 +66303,8 @@ paths:
                     value: 1
             example: *a68
       responses:
-        "202":
-          description: "Batch accepted. All items passed synchronous validation. Enqueue
-            is best-effort: partial failures (some items enqueued, some not) are
-            logged server-side and are NOT surfaced in the response body;
-            clients must not retry on 202. See the endpoint description for full
-            partial-failure semantics."
+        "200":
+          description: OK
           content:
             application/json:
               schema:
@@ -66285,6 +66318,25 @@ paths:
                   - &a69
                     success: true
               example: *a69
+        "202":
+          description: "Batch accepted. All items passed synchronous validation. Enqueue
+            is best-effort: partial failures (some items enqueued, some not) are
+            logged server-side and are NOT surfaced in the response body;
+            clients must not retry on success. See the endpoint description for
+            full partial-failure semantics."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                required:
+                  - success
+                examples:
+                  - &a70
+                    success: true
+              example: *a70
       x-speakeasy-name-override: batchTrack
       parameters:
         - *a5
@@ -66381,9 +66433,21 @@ paths:
                       type: number
                       description: Filter events before this timestamp (epoch milliseconds)
                   description: Filter events by time range
+                range:
+                  enum:
+                    - 24h
+                    - 7d
+                    - 30d
+                    - 90d
+                    - last_cycle
+                    - 1bc
+                    - 3bc
+                  type: string
+                  description: Preset time range to filter events by, resolved the same way as in
+                    events.aggregate. Cannot be combined with custom_range
               title: EventsListParams
               examples:
-                - &a70
+                - &a71
                   start_cursor: ""
                   customer_id: cus_123
                   limit: 50
@@ -66392,7 +66456,7 @@ paths:
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a70
+            example: *a71
       responses:
         "200":
           description: OK
@@ -66517,7 +66581,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a71
+                  - &a72
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -66541,7 +66605,7 @@ paths:
                         properties: {}
                         deductions: null
                     next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
-              example: *a71
+              example: *a72
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -66641,6 +66705,11 @@ paths:
                     - end
                   description: Custom time range to aggregate events for. If provided, range must
                     not be provided
+                timezone:
+                  type: string
+                  description: IANA timezone (e.g. "America/New_York") that day, week and month
+                    bins are aligned to. Hour bins are always UTC. Defaults to
+                    UTC
                 filter_by:
                   type: object
                   propertyNames:
@@ -66668,7 +66737,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a72
+                - &a73
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -66679,7 +66748,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a72
+            example: *a73
       responses:
         "200":
           description: OK
@@ -66857,7 +66926,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a73
+                  - &a74
                     list:
                       - period: 1762905600000
                         values:
@@ -66904,7 +66973,7 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a73
+              example: *a74
       x-speakeasy-name-override: aggregate
       parameters:
         - *a5
@@ -66975,10 +67044,10 @@ paths:
               additionalProperties: false
               title: SearchRequestLogsParams
               examples:
-                - &a74
+                - &a75
                   query: where status_code >= 400 | order by timestamp desc
                   limit: 50
-            example: *a74
+            example: *a75
       responses:
         "200":
           description: OK
@@ -67112,7 +67181,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a75
+                  - &a76
                     list:
                       - timestamp: 2026-09-21T12:00:00.000Z
                         source: api_request
@@ -67136,7 +67205,7 @@ paths:
                           customer_id: cus_123
                         response_body:
                           allowed: true
-              example: *a75
+              example: *a76
       x-speakeasy-name-override: search
       parameters:
         - *a5
@@ -67961,7 +68030,7 @@ paths:
               additionalProperties: false
               title: CreateInvoiceParams
               examples:
-                - &a76
+                - &a77
                   customer_id: cus_123
                   net_terms_days: 30
                   plans:
@@ -67976,7 +68045,7 @@ paths:
                   custom_line_items:
                     - description: Implementation services
                       amount: 500
-            example: *a76
+            example: *a77
       responses:
         "200":
           description: OK
@@ -68259,7 +68328,7 @@ paths:
                   - invoice
                   - preview
                 examples:
-                  - &a77
+                  - &a78
                     invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
@@ -68312,7 +68381,7 @@ paths:
                         currency: usd
                       amount_due: 19.99
                       due_date: 1761839877000
-              example: *a77
+              example: *a78
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -68469,7 +68538,7 @@ paths:
                 - invoices
               title: InsertInvoicesParams
               examples:
-                - &a78
+                - &a79
                   invoices:
                     - customer_id: cus_123
                       plan_ids:
@@ -68483,7 +68552,7 @@ paths:
                       currency: usd
                       created_at: 1451606400000
                       hosted_invoice_url: https://billing.example.com/invoices/legacy-123
-            example: *a78
+            example: *a79
       responses:
         "200":
           description: OK
@@ -68558,7 +68627,7 @@ paths:
                 required:
                   - invoices
                 examples:
-                  - &a79
+                  - &a80
                     invoices:
                       - id: inv_2b3c4d5e6f7g8h
                         customer_id: cus_123
@@ -68573,7 +68642,7 @@ paths:
                         currency: usd
                         created_at: 1451606400000
                         hosted_invoice_url: https://billing.example.com/invoices/legacy-123
-              example: *a79
+              example: *a80
       x-speakeasy-name-override: insert
       parameters:
         - *a5
@@ -68688,14 +68757,14 @@ paths:
                     before processor tracking count as stripe.
               title: ListInvoicesParams
               examples:
-                - &a80
+                - &a81
                   start_cursor: ""
                   limit: 10
                   customer_id: cus_123
                   status:
                     - open
                     - paid
-            example: *a80
+            example: *a81
       responses:
         "200":
           description: OK
@@ -68871,7 +68940,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a81
+                  - &a82
                     list:
                       - id: inv_2b3c4d5e6f7g8h
                         customer_id: cus_123
@@ -68912,7 +68981,7 @@ paths:
                                 quantity: 4995
                                 amount: 9.99
                     next_cursor: null
-              example: *a81
+              example: *a82
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -68979,10 +69048,10 @@ paths:
               title: ListInvoiceTemplatesParams
               description: Parameters for listing an organization's invoice templates.
               examples:
-                - &a82
+                - &a83
                   limit: 10
                   offset: 0
-            example: *a82
+            example: *a83
       responses:
         "200":
           description: OK
@@ -69043,7 +69112,7 @@ paths:
                   - offset
                   - has_more
                 examples:
-                  - &a83
+                  - &a84
                     list:
                       - id: inv_tmpl_2b3c4d5e6f7g8h
                         name: Bank transfer
@@ -69055,7 +69124,7 @@ paths:
                     limit: 10
                     offset: 0
                     has_more: false
-              example: *a83
+              example: *a84
       x-speakeasy-name-override: listTemplates
       parameters:
         - *a5
@@ -69098,9 +69167,9 @@ paths:
                 - invoice_id
               title: PayInvoiceParams
               examples:
-                - &a84
+                - &a85
                   invoice_id: inv_2b3c4d5e6f7g8h
-            example: *a84
+            example: *a85
       responses:
         "200":
           description: OK
@@ -69266,7 +69335,7 @@ paths:
                 required:
                   - invoice
                 examples:
-                  - &a85
+                  - &a86
                     invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
@@ -69306,7 +69375,7 @@ paths:
                             - entity_id: acme-docs-prod
                               quantity: 4995
                               amount: 9.99
-              example: *a85
+              example: *a86
       x-speakeasy-name-override: pay
       parameters:
         - *a5
@@ -70262,10 +70331,10 @@ paths:
                 - invoice_id
               title: ReissueInvoiceParams
               examples:
-                - &a86
+                - &a87
                   invoice_id: inv_2b3c4d5e6f7g8h
                   invoice_template_id: inv_tmpl_bank_transfer
-            example: *a86
+            example: *a87
       responses:
         "200":
           description: OK
@@ -70566,7 +70635,7 @@ paths:
                   - credit_note_id
                   - preview
                 examples:
-                  - &a87
+                  - &a88
                     invoice:
                       id: inv_3c4d5e6f7g8h9i
                       customer_id: cus_123
@@ -70616,7 +70685,7 @@ paths:
                       total: 29.99
                       amount_due: 29.99
                       due_date: 1761839877000
-              example: *a87
+              example: *a88
       x-speakeasy-name-override: reissue
       parameters:
         - *a5
@@ -70667,9 +70736,9 @@ paths:
                 - invoice_id
               title: VoidInvoiceParams
               examples:
-                - &a88
+                - &a89
                   invoice_id: inv_2b3c4d5e6f7g8h
-            example: *a88
+            example: *a89
       responses:
         "200":
           description: OK
@@ -70835,7 +70904,7 @@ paths:
                 required:
                   - invoice
                 examples:
-                  - &a89
+                  - &a90
                     invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
@@ -70875,7 +70944,7 @@ paths:
                             - entity_id: acme-docs-prod
                               quantity: 4995
                               amount: 9.99
-              example: *a89
+              example: *a90
       x-speakeasy-name-override: void
       parameters:
         - *a5
@@ -70941,13 +71010,13 @@ paths:
                 - entities
               title: AttachLicenseParams
               examples:
-                - &a90
+                - &a91
                   customer_id: cus_123
                   plan_id: seat_plan
                   entities:
                     - entity_id: user_123
                       name: Ada Lovelace
-            example: *a90
+            example: *a91
       responses:
         "200":
           description: OK
@@ -71026,12 +71095,12 @@ paths:
                 - entity_ids
               title: ReleaseLicenseParams
               examples:
-                - &a91
+                - &a92
                   customer_id: cus_123
                   license_plan_id: seat_plan
                   entity_ids:
                     - user_123
-            example: *a91
+            example: *a92
       responses:
         "200":
           description: OK
@@ -71102,10 +71171,10 @@ paths:
                 - customer_id
               title: ListLicenseAssignmentsParams
               examples:
-                - &a92
+                - &a93
                   customer_id: cus_123
                   active: true
-            example: *a92
+            example: *a93
       responses:
         "200":
           description: OK
@@ -71140,14 +71209,14 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a93
+                  - &a94
                     list:
                       - id: lic_asn_123
                         entity_id: user_123
                         license_plan_id: seat_plan
                         started_at: 1759247877000
                         ended_at: null
-              example: *a93
+              example: *a94
       x-speakeasy-name-override: listAssignments
       x-speakeasy-ignore: true
       parameters:
@@ -71173,9 +71242,9 @@ paths:
                 - customer_id
               title: ListLicensesParams
               examples:
-                - &a94
+                - &a95
                   customer_id: cus_123
-            example: *a94
+            example: *a95
       responses:
         "200":
           description: OK
@@ -71221,7 +71290,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a95
+                  - &a96
                     list:
                       - license_plan_id: seat_plan
                         parent_plan_id: pro_plan
@@ -71230,7 +71299,7 @@ paths:
                         usage: 3
                         remaining: 7
                         paid_quantity: 5
-              example: *a95
+              example: *a96
       x-speakeasy-name-override: list
       x-speakeasy-ignore: true
       parameters:
@@ -71456,12 +71525,12 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a96
+                - &a97
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a96
+            example: *a97
       responses:
         "200":
           description: OK
@@ -72455,7 +72524,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a97
+                  - &a98
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -72500,7 +72569,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a97
+              example: *a98
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -72559,11 +72628,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a98
+                - &a99
                   entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a98
+            example: *a99
       responses:
         "200":
           description: OK
@@ -73557,7 +73626,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a99
+                  - &a100
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -73602,7 +73671,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a99
+              example: *a100
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -73700,12 +73769,12 @@ paths:
                     paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
-                - &a100
+                - &a101
                   start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
-            example: *a100
+            example: *a101
       responses:
         "200":
           description: OK
@@ -74720,7 +74789,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a101
+                  - &a102
                     list:
                       - id: seat_42
                         name: Seat 42
@@ -74767,7 +74836,7 @@ paths:
                                 expires_at: null
                         invoices: []
                     next_cursor: null
-              example: *a101
+              example: *a102
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -75052,7 +75121,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a102
+                - &a103
                   customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
@@ -75061,7 +75130,7 @@ paths:
                         enabled: true
                         limit_type: usage_percentage
                         overage_limit: 120
-            example: *a102
+            example: *a103
       responses:
         "200":
           description: OK
@@ -76055,7 +76124,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a103
+                  - &a104
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -76100,7 +76169,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a103
+              example: *a104
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -76175,10 +76244,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a104
+                - &a105
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a104
+            example: *a105
       responses:
         "200":
           description: OK
@@ -76192,9 +76261,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a105
+                  - &a106
                     success: true
-              example: *a105
+              example: *a106
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -76245,10 +76314,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a106
+                - &a107
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a106
+            example: *a107
       responses:
         "200":
           description: OK
@@ -76271,11 +76340,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a107
+                  - &a108
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a107
+              example: *a108
       x-speakeasy-name-override: createCode
       parameters:
         - *a5
@@ -76326,10 +76395,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a108
+                - &a109
                   code: REF123
                   customer_id: cus_456
-            example: *a108
+            example: *a109
       responses:
         "200":
           description: OK
@@ -76352,11 +76421,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a109
+                  - &a110
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a109
+              example: *a110
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -76450,7 +76519,7 @@ paths:
               additionalProperties: false
               title: CreateReferralProgramParams
               examples:
-                - &a110
+                - &a111
                   id: refer_a_friend
                   reward_id: beta_credits_grant
                   redeem_on: customer_creation
@@ -76459,7 +76528,7 @@ paths:
                   plan_ids: null
                   exclude_trial: false
                   created_at: 1718000000000
-            example: *a110
+            example: *a111
       responses:
         "200":
           description: OK
@@ -76518,7 +76587,7 @@ paths:
                   - created_at
                 title: CreateReferralProgramResponse
                 examples:
-                  - &a111
+                  - &a112
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -76527,7 +76596,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a111
+              example: *a112
       x-speakeasy-name-override: createProgram
       parameters:
         - *a5
@@ -76578,8 +76647,8 @@ paths:
               type: object
               title: ListReferralProgramsParams
               examples:
-                - &a112 {}
-            example: *a112
+                - &a113 {}
+            example: *a113
       responses:
         "200":
           description: OK
@@ -76654,7 +76723,7 @@ paths:
                   - list
                 title: ListReferralProgramsResponse
                 examples:
-                  - &a113
+                  - &a114
                     list:
                       - id: refer_a_friend
                         reward_id: beta_credits_grant
@@ -76664,7 +76733,7 @@ paths:
                         plan_ids: null
                         exclude_trial: false
                         created_at: 1718000000000
-              example: *a113
+              example: *a114
       x-speakeasy-name-override: listPrograms
       parameters:
         - *a5
@@ -76766,7 +76835,7 @@ paths:
                   - created_at
                 title: GetReferralProgramResponse
                 examples:
-                  - &a114
+                  - &a115
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -76775,7 +76844,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a114
+              example: *a115
       x-speakeasy-name-override: getProgram
       parameters:
         - *a5
@@ -76919,7 +76988,7 @@ paths:
                   - created_at
                 title: UpdateReferralProgramResponse
                 examples:
-                  - &a115
+                  - &a116
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -76928,7 +76997,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a115
+              example: *a116
       x-speakeasy-name-override: updateProgram
       parameters:
         - *a5
@@ -76988,9 +77057,9 @@ paths:
                   - success
                 title: DeleteReferralProgramResponse
                 examples:
-                  - &a116
+                  - &a117
                     success: true
-              example: *a116
+              example: *a117
       x-speakeasy-name-override: deleteProgram
       parameters:
         - *a5
@@ -77208,7 +77277,7 @@ paths:
               additionalProperties: false
               title: CreateRewardParams
               examples:
-                - &a117
+                - &a118
                   coupon:
                     id: summer_sale
                     name: Summer Sale
@@ -77220,7 +77289,7 @@ paths:
                     plan_ids: null
                     promo_codes:
                       - code: SUMMER20
-            example: *a117
+            example: *a118
       responses:
         "200":
           description: OK
@@ -77496,8 +77565,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a118 {}
-            example: *a118
+                - &a119 {}
+            example: *a119
       responses:
         "200":
           description: OK
@@ -77710,10 +77779,10 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a119
+                  - &a120
                     coupons: []
                     feature_grants: []
-              example: *a119
+              example: *a120
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -77962,7 +78031,7 @@ paths:
                 additionalProperties: false
                 title: GetRewardResponse
                 examples:
-                  - &a120
+                  - &a121
                     coupon:
                       id: summer_sale
                       name: Summer Sale
@@ -77979,7 +78048,7 @@ paths:
                           global_max_redemption: 100
                           first_time_transaction: false
                       created_at: 1718000000000
-              example: *a120
+              example: *a121
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -78310,7 +78379,7 @@ paths:
                 additionalProperties: false
                 title: UpdateRewardResponse
                 examples:
-                  - &a121
+                  - &a122
                     feature_grant:
                       id: beta_credits_grant
                       name: Beta Tester Credits
@@ -78324,7 +78393,7 @@ paths:
                             type: month
                             length: 1
                       created_at: 1718000000000
-              example: *a121
+              example: *a122
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -78382,9 +78451,9 @@ paths:
                   - success
                 title: DeleteRewardResponse
                 examples:
-                  - &a122
+                  - &a123
                     success: true
-              example: *a122
+              example: *a123
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -78431,10 +78500,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a123
+                - &a124
                   code: REWARD10
                   customer_id: cus_456
-            example: *a123
+            example: *a124
       responses:
         "200":
           description: OK
@@ -78465,12 +78534,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a124
+                  - &a125
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a124
+              example: *a125
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -78527,10 +78596,10 @@ paths:
                 - env
               title: GetStripeConnectionParams
               examples:
-                - &a125
+                - &a126
                   organization_slug: my-app
                   env: test
-            example: *a125
+            example: *a126
       responses:
         "200":
           description: OK
@@ -78561,14 +78630,14 @@ paths:
                   - connected_at
                 title: GetStripeConnectionResponse
                 examples:
-                  - &a126
+                  - &a127
                     connected: true
                     account_id: acct_example
                     connected_at: 1781113864000
                   - connected: false
                     account_id: null
                     connected_at: null
-              example: *a126
+              example: *a127
       x-speakeasy-name-override: getStripeConnection
       parameters:
         - *a5
@@ -78626,10 +78695,10 @@ paths:
                 - env
               title: DisconnectStripeParams
               examples:
-                - &a127
+                - &a128
                   organization_slug: my-app
                   env: test
-            example: *a127
+            example: *a128
       responses:
         "200":
           description: OK
@@ -78644,9 +78713,9 @@ paths:
                   - success
                 title: DisconnectStripeResponse
                 examples:
-                  - &a128
+                  - &a129
                     success: true
-              example: *a128
+              example: *a129
       x-speakeasy-name-override: disconnectStripe
       parameters:
         - *a5
@@ -78708,12 +78777,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a129
+                - &a130
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a129
+            example: *a130
       responses:
         "200":
           description: OK
@@ -78728,9 +78797,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a130
+                  - &a131
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a130
+              example: *a131
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -78799,13 +78868,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a131
+                - &a132
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a131
+            example: *a132
       responses:
         "200":
           description: OK
@@ -78871,7 +78940,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a132
+                  - &a133
                     results:
                       - plan_id: pro
                         status: synced
@@ -78882,7 +78951,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a132
+              example: *a133
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -78947,10 +79016,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a133
+                - &a134
                   organization_slug: acme
                   env: test
-            example: *a133
+            example: *a134
       responses:
         "200":
           description: OK
@@ -79013,7 +79082,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a134
+                  - &a135
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -79024,7 +79093,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a134
+              example: *a135
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -79079,9 +79148,9 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a135
+                - &a136
                   customer_id: cus_123
-            example: *a135
+            example: *a136
       responses:
         "200":
           description: OK
@@ -79110,12 +79179,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a136
+                  - &a137
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a136
+              example: *a137
       x-speakeasy-name-override: mint
       parameters:
         - *a5
@@ -79158,8 +79227,8 @@ paths:
               description: No body. The refresh token is supplied as the Bearer credential;
                 the response is a freshly rotated access + refresh pair.
               examples:
-                - &a137 {}
-            example: *a137
+                - &a138 {}
+            example: *a138
       responses:
         "200":
           description: OK
@@ -79188,12 +79257,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a138
+                  - &a139
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a138
+              example: *a139
       x-speakeasy-name-override: refresh
       parameters:
         - *a5
@@ -79239,9 +79308,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a139
+                - &a140
                   customer_id: cus_123
-            example: *a139
+            example: *a140
       responses:
         "200":
           description: OK
@@ -79255,9 +79324,9 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a140
+                  - &a141
                     revoked: true
-              example: *a140
+              example: *a141
       x-speakeasy-name-override: revoke
       parameters:
         - *a5
@@ -79301,8 +79370,9 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 100
-                  pattern: \S
-                  description: A name for the sandbox, unique within your organization.
+                  pattern: ^\S+$
+                  description: A name for the sandbox, unique within your organization. No spaces,
+                    and it can't be `live` or `sandbox`.
                 color:
                   enum:
                     - gray
@@ -79322,11 +79392,11 @@ paths:
                 - name
               title: CreateSandboxParams
               examples:
-                - &a141
+                - &a142
                   name: staging
                   color: blue
                   icon: Flask
-            example: *a141
+            example: *a142
       responses:
         "200":
           description: OK
@@ -79377,7 +79447,7 @@ paths:
                   - secret_key
                 title: CreateSandboxResponse
                 examples:
-                  - &a142
+                  - &a143
                     id: org_123
                     name: staging
                     slug: staging-abc123|org_456
@@ -79385,7 +79455,7 @@ paths:
                     color: blue
                     icon: Flask
                     secret_key: am_sk_test_abc123
-              example: *a142
+              example: *a143
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -79430,8 +79500,8 @@ paths:
               title: ListSandboxesParams
               description: No body. Lists every sandbox belonging to your organization.
               examples:
-                - &a143 {}
-            example: *a143
+                - &a144 {}
+            example: *a144
       responses:
         "200":
           description: OK
@@ -79484,7 +79554,7 @@ paths:
                   - list
                 title: ListSandboxesResponse
                 examples:
-                  - &a144
+                  - &a145
                     list:
                       - id: org_123
                         name: staging
@@ -79492,7 +79562,7 @@ paths:
                         created_at: 1781113864000
                         color: blue
                         icon: Flask
-              example: *a144
+              example: *a145
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -79537,9 +79607,9 @@ paths:
                 - id
               title: DeleteSandboxParams
               examples:
-                - &a145
+                - &a146
                   id: org_123
-            example: *a145
+            example: *a146
       responses:
         "200":
           description: OK
@@ -79555,9 +79625,9 @@ paths:
                   - success
                 title: DeleteSandboxResponse
                 examples:
-                  - &a146
+                  - &a147
                     success: true
-              example: *a146
+              example: *a147
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -79601,8 +79671,8 @@ paths:
               description: No body. Resets the sandbox the calling key belongs to — there is
                 no id to pass.
               examples:
-                - &a147 {}
-            example: *a147
+                - &a148 {}
+            example: *a148
       responses:
         "200":
           description: OK
@@ -79618,9 +79688,9 @@ paths:
                   - success
                 title: ResetSandboxResponse
                 examples:
-                  - &a148
+                  - &a149
                     success: true
-              example: *a148
+              example: *a149
       x-speakeasy-name-override: reset
       parameters:
         - *a5
@@ -79642,6 +79712,1288 @@ paths:
 
             res = autumn.sandboxes.reset(
                 request={},
+            )
+  /v1/webhooks.create:
+    post:
+      operationId: createWebhook
+      description: "Creates a webhook: a URL Autumn sends the listed events to, in the
+        environment of the calling key. You choose the `id`, and it can't be
+        changed later. Returns the signing secret once, in this response — store
+        it, it cannot be read back."
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: "Your ID for the webhook: letters, digits, `-` and `_`. It can't be
+                    changed after creation."
+                url:
+                  type: string
+                  pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                  description: The https URL Autumn sends events to. Localhost and private-network
+                    addresses are rejected; tunnels such as ngrok work.
+                events:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - customer.products.updated
+                      - customer.threshold_reached
+                      - balances.usage_alert_triggered
+                      - balances.limit_reached
+                      - billing.auto_topup_failed
+                      - billing.auto_topup_succeeded
+                      - billing.updated
+                      - invoice.finalized
+                      - vercel.resources.deleted
+                      - vercel.resources.provisioned
+                      - vercel.resources.rotate_secrets
+                      - vercel.webhooks.event
+                    type: string
+                    description: An event type the webhook receives.
+                  description: The events sent to this webhook. At least one. `vercel.*` events
+                    can't be mixed with other events.
+                description:
+                  type: string
+                  description: A note for your own reference.
+                disabled:
+                  type: boolean
+                  description: When true, no events are sent to the webhook.
+              required:
+                - id
+                - url
+                - events
+              title: CreateWebhookParams
+              examples:
+                - &a150
+                  id: billing
+                  url: https://example.com/webhooks/autumn
+                  events:
+                    - billing.updated
+                    - invoice.finalized
+                  description: Plan changes and invoices
+            example: *a150
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                      ID.
+                  url:
+                    type: string
+                    description: The URL Autumn sends events to.
+                  description:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: A note for your own reference.
+                  events:
+                    type: array
+                    items:
+                      type: string
+                    description: The events sent to this webhook, as `WebhookEventType` names; a
+                      type newer than your client is returned as-is. Empty only
+                      for a webhook made in the dashboard that receives every
+                      event.
+                  disabled:
+                    type: boolean
+                    description: When true, no events are sent to the webhook.
+                  created_at:
+                    type: number
+                    description: When the webhook was created, ms since epoch.
+                  updated_at:
+                    type: number
+                    description: When the webhook was last changed, ms since epoch.
+                  secret:
+                    type: string
+                    description: "The webhook's signing secret. Shown once, here: store it before
+                      you discard the response."
+                    readOnly: true
+                required:
+                  - id
+                  - url
+                  - description
+                  - events
+                  - disabled
+                  - created_at
+                  - updated_at
+                  - secret
+                title: CreateWebhookResponse
+                examples:
+                  - &a151
+                    id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: false
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
+                    secret: whsec_abc123
+              example: *a151
+      x-speakeasy-name-override: create
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.webhooks.create({
+              id: "billing",
+              url: "https://example.com/webhooks/autumn",
+              events: [
+                "billing.updated",
+                "invoice.finalized",
+              ],
+              description: "Plan changes and invoices",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.webhooks.create(
+                id="billing",
+                url="https://example.com/webhooks/autumn",
+                events=[
+                    "billing.updated",
+                    "invoice.finalized",
+                ],
+                description="Plan changes and invoices",
+            )
+  /v1/webhooks.get:
+    post:
+      operationId: getWebhook
+      description: Gets one webhook by ID. The signing secret is never returned here —
+        only `webhooks.create` and `webhooks.sync` show one, when they create
+        the webhook.
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID
+                    shown by `webhooks.list`.
+              required:
+                - id
+              title: GetWebhookParams
+              examples:
+                - &a152
+                  id: billing
+            example: *a152
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                      ID.
+                  url:
+                    type: string
+                    description: The URL Autumn sends events to.
+                  description:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: A note for your own reference.
+                  events:
+                    type: array
+                    items:
+                      type: string
+                    description: The events sent to this webhook, as `WebhookEventType` names; a
+                      type newer than your client is returned as-is. Empty only
+                      for a webhook made in the dashboard that receives every
+                      event.
+                  disabled:
+                    type: boolean
+                    description: When true, no events are sent to the webhook.
+                  created_at:
+                    type: number
+                    description: When the webhook was created, ms since epoch.
+                  updated_at:
+                    type: number
+                    description: When the webhook was last changed, ms since epoch.
+                required:
+                  - id
+                  - url
+                  - description
+                  - events
+                  - disabled
+                  - created_at
+                  - updated_at
+                title: Webhook
+                examples:
+                  - &a153
+                    id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: false
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
+              example: *a153
+      x-speakeasy-name-override: get
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.webhooks.get({
+              id: "billing",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.webhooks.get(id="billing")
+  /v1/webhooks.list:
+    post:
+      operationId: listWebhooks
+      description: Lists every webhook in the environment of the calling key,
+        including ones made in the dashboard (these show their `ep_…` ID).
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ListWebhooksParams
+              description: No body. Lists every webhook in the environment of the calling key.
+              examples:
+                - &a154 {}
+            example: *a154
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                            ID.
+                        url:
+                          type: string
+                          description: The URL Autumn sends events to.
+                        description:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: A note for your own reference.
+                        events:
+                          type: array
+                          items:
+                            type: string
+                          description: The events sent to this webhook, as `WebhookEventType` names; a
+                            type newer than your client is returned as-is. Empty
+                            only for a webhook made in the dashboard that
+                            receives every event.
+                        disabled:
+                          type: boolean
+                          description: When true, no events are sent to the webhook.
+                        created_at:
+                          type: number
+                          description: When the webhook was created, ms since epoch.
+                        updated_at:
+                          type: number
+                          description: When the webhook was last changed, ms since epoch.
+                      required:
+                        - id
+                        - url
+                        - description
+                        - events
+                        - disabled
+                        - created_at
+                        - updated_at
+                    description: The environment's webhooks.
+                required:
+                  - list
+                title: ListWebhooksResponse
+                examples:
+                  - &a155
+                    list:
+                      - id: billing
+                        url: https://example.com/webhooks/autumn
+                        events:
+                          - billing.updated
+                          - invoice.finalized
+                        description: Plan changes and invoices
+                        disabled: false
+                        created_at: 1781113864000
+                        updated_at: 1781113864000
+              example: *a155
+      x-speakeasy-name-override: list
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.webhooks.list({});
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.webhooks.list(
+                request={},
+            )
+  /v1/webhooks.update:
+    post:
+      operationId: updateWebhook
+      description: Updates a webhook's URL, events, description or disabled state.
+        Only the fields you pass change. The ID can't be changed — to rename,
+        create a new webhook.
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID
+                    shown by `webhooks.list`.
+                url:
+                  type: string
+                  pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                  description: The https URL Autumn sends events to. Localhost and private-network
+                    addresses are rejected; tunnels such as ngrok work.
+                events:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - customer.products.updated
+                      - customer.threshold_reached
+                      - balances.usage_alert_triggered
+                      - balances.limit_reached
+                      - billing.auto_topup_failed
+                      - billing.auto_topup_succeeded
+                      - billing.updated
+                      - invoice.finalized
+                      - vercel.resources.deleted
+                      - vercel.resources.provisioned
+                      - vercel.resources.rotate_secrets
+                      - vercel.webhooks.event
+                    type: string
+                    description: An event type the webhook receives.
+                  description: The events sent to this webhook. At least one. `vercel.*` events
+                    can't be mixed with other events.
+                description:
+                  type: string
+                  description: A note for your own reference.
+                disabled:
+                  type: boolean
+                  description: When true, no events are sent to the webhook.
+              required:
+                - id
+              title: UpdateWebhookParams
+              examples:
+                - &a156
+                  id: billing
+                  disabled: true
+            example: *a156
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                      ID.
+                  url:
+                    type: string
+                    description: The URL Autumn sends events to.
+                  description:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: A note for your own reference.
+                  events:
+                    type: array
+                    items:
+                      type: string
+                    description: The events sent to this webhook, as `WebhookEventType` names; a
+                      type newer than your client is returned as-is. Empty only
+                      for a webhook made in the dashboard that receives every
+                      event.
+                  disabled:
+                    type: boolean
+                    description: When true, no events are sent to the webhook.
+                  created_at:
+                    type: number
+                    description: When the webhook was created, ms since epoch.
+                  updated_at:
+                    type: number
+                    description: When the webhook was last changed, ms since epoch.
+                required:
+                  - id
+                  - url
+                  - description
+                  - events
+                  - disabled
+                  - created_at
+                  - updated_at
+                title: Webhook
+                examples:
+                  - &a157
+                    id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: true
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
+              example: *a157
+      x-speakeasy-name-override: update
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.webhooks.update({
+              id: "billing",
+              disabled: true,
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.webhooks.update(id="billing", disabled=True)
+  /v1/webhooks.delete:
+    post:
+      operationId: deleteWebhook
+      description: Permanently deletes a webhook. Autumn stops sending it events
+        immediately. Cannot be undone.
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID
+                    shown by `webhooks.list`.
+              required:
+                - id
+              title: DeleteWebhookParams
+              examples:
+                - &a158
+                  id: billing
+            example: *a158
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                    description: Always true when the webhook was deleted.
+                required:
+                  - success
+                title: DeleteWebhookResponse
+                examples:
+                  - &a159
+                    success: true
+              example: *a159
+      x-speakeasy-name-override: delete
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.webhooks.delete({
+              id: "billing",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.webhooks.delete(id="billing")
+  /v1/webhooks.preview_sync:
+    post:
+      operationId: previewSyncWebhooks
+      description: "Shows what `webhooks.sync` would do with the same body, without
+        changing anything: which webhooks it would create or update, and which
+        existing ones it would leave alone because the body doesn't list them."
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                webhooks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        minLength: 1
+                        maxLength: 256
+                        pattern: ^[a-zA-Z0-9_-]+$
+                        description: "Your ID for the webhook: letters, digits, `-` and `_`. It can't be
+                          changed after creation."
+                      url:
+                        type: string
+                        pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                        description: The https URL Autumn sends events to. Localhost and private-network
+                          addresses are rejected; tunnels such as ngrok work.
+                      events:
+                        type: array
+                        minItems: 1
+                        items:
+                          enum:
+                            - customer.products.updated
+                            - customer.threshold_reached
+                            - balances.usage_alert_triggered
+                            - balances.limit_reached
+                            - billing.auto_topup_failed
+                            - billing.auto_topup_succeeded
+                            - billing.updated
+                            - invoice.finalized
+                            - vercel.resources.deleted
+                            - vercel.resources.provisioned
+                            - vercel.resources.rotate_secrets
+                            - vercel.webhooks.event
+                          type: string
+                          description: An event type the webhook receives.
+                        description: The events sent to this webhook. At least one. `vercel.*` events
+                          can't be mixed with other events.
+                      description:
+                        type: string
+                        description: A note for your own reference.
+                      disabled:
+                        type: boolean
+                        description: When true, no events are sent to the webhook.
+                    required:
+                      - id
+                      - url
+                      - events
+                  description: The webhooks to create or update. Webhooks not listed are left
+                    alone; nothing is deleted.
+              required:
+                - webhooks
+              title: SyncWebhooksParams
+              examples:
+                - &a160
+                  webhooks:
+                    - id: billing
+                      url: https://example.com/webhooks/autumn
+                      events:
+                        - billing.updated
+                        - invoice.finalized
+                      description: Plan changes and invoices
+            example: *a160
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  changes:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            action:
+                              const: create
+                            id:
+                              type: string
+                            webhook:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - webhook
+                        - type: object
+                          properties:
+                            action:
+                              const: update
+                            id:
+                              type: string
+                            before:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                            after:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - before
+                            - after
+                        - type: object
+                          properties:
+                            action:
+                              const: adopt
+                            id:
+                              type: string
+                            before:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                            after:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - before
+                            - after
+                        - type: object
+                          properties:
+                            action:
+                              const: unmanaged
+                            id:
+                              type: string
+                            webhook:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - webhook
+                    description: What `webhooks.sync` would do. `adopt` takes over a webhook made in
+                      the dashboard with the same URL, keeping its signing
+                      secret. `unmanaged` webhooks exist but aren't listed, so
+                      sync leaves them alone.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        message:
+                          type: string
+                      required:
+                        - id
+                        - message
+                    description: Listed webhooks `webhooks.sync` would refuse, e.g. when several
+                      dashboard webhooks share the URL.
+                required:
+                  - changes
+                  - errors
+                title: PreviewSyncWebhooksResponse
+                examples:
+                  - &a161
+                    changes:
+                      - action: create
+                        id: billing
+                        webhook:
+                          id: billing
+                          url: https://example.com/webhooks/autumn
+                          events:
+                            - billing.updated
+                            - invoice.finalized
+                          description: Plan changes and invoices
+                          disabled: false
+                          created_at: 1781113864000
+                          updated_at: 1781113864000
+                    errors: []
+              example: *a161
+      x-speakeasy-name-override: previewSync
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.webhooks.previewSync({
+              webhooks: [
+                {
+                  id: "billing",
+                  url: "https://example.com/webhooks/autumn",
+                  events: [
+                    "billing.updated",
+                    "invoice.finalized",
+                  ],
+                  description: "Plan changes and invoices",
+                },
+              ],
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.webhooks.preview_sync(
+                webhooks=[
+                    {
+                        "id": "billing",
+                        "url": "https://example.com/webhooks/autumn",
+                        "events": [
+                            "billing.updated",
+                            "invoice.finalized",
+                        ],
+                        "description": "Plan changes and invoices",
+                    },
+                ],
+            )
+  /v1/webhooks.sync:
+    post:
+      operationId: syncWebhooks
+      description: "Makes the listed webhooks exist as described: creates missing ones
+        and updates ones that differ. Webhooks not listed are left alone — sync
+        never deletes. Returns the signing secret of each webhook it created,
+        once. Each webhook is applied on its own: failures are listed in
+        `errors` while the rest still apply, and the request fails only when
+        none could be applied."
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                webhooks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        minLength: 1
+                        maxLength: 256
+                        pattern: ^[a-zA-Z0-9_-]+$
+                        description: "Your ID for the webhook: letters, digits, `-` and `_`. It can't be
+                          changed after creation."
+                      url:
+                        type: string
+                        pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                        description: The https URL Autumn sends events to. Localhost and private-network
+                          addresses are rejected; tunnels such as ngrok work.
+                      events:
+                        type: array
+                        minItems: 1
+                        items:
+                          enum:
+                            - customer.products.updated
+                            - customer.threshold_reached
+                            - balances.usage_alert_triggered
+                            - balances.limit_reached
+                            - billing.auto_topup_failed
+                            - billing.auto_topup_succeeded
+                            - billing.updated
+                            - invoice.finalized
+                            - vercel.resources.deleted
+                            - vercel.resources.provisioned
+                            - vercel.resources.rotate_secrets
+                            - vercel.webhooks.event
+                          type: string
+                          description: An event type the webhook receives.
+                        description: The events sent to this webhook. At least one. `vercel.*` events
+                          can't be mixed with other events.
+                      description:
+                        type: string
+                        description: A note for your own reference.
+                      disabled:
+                        type: boolean
+                        description: When true, no events are sent to the webhook.
+                    required:
+                      - id
+                      - url
+                      - events
+                  description: The webhooks to create or update. Webhooks not listed are left
+                    alone; nothing is deleted.
+              required:
+                - webhooks
+              title: SyncWebhooksParams
+              examples:
+                - &a162
+                  webhooks:
+                    - id: billing
+                      url: https://example.com/webhooks/autumn
+                      events:
+                        - billing.updated
+                        - invoice.finalized
+                      description: Plan changes and invoices
+            example: *a162
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                            ID.
+                        url:
+                          type: string
+                          description: The URL Autumn sends events to.
+                        description:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: A note for your own reference.
+                        events:
+                          type: array
+                          items:
+                            type: string
+                          description: The events sent to this webhook, as `WebhookEventType` names; a
+                            type newer than your client is returned as-is. Empty
+                            only for a webhook made in the dashboard that
+                            receives every event.
+                        disabled:
+                          type: boolean
+                          description: When true, no events are sent to the webhook.
+                        created_at:
+                          type: number
+                          description: When the webhook was created, ms since epoch.
+                        updated_at:
+                          type: number
+                          description: When the webhook was last changed, ms since epoch.
+                      required:
+                        - id
+                        - url
+                        - description
+                        - events
+                        - disabled
+                        - created_at
+                        - updated_at
+                    description: The listed webhooks as they stand after the sync, except those in
+                      `errors`.
+                  secrets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        secret:
+                          type: string
+                          description: "The webhook's signing secret. Shown once, here: store it before
+                            you discard the response."
+                          readOnly: true
+                      required:
+                        - id
+                        - secret
+                    description: Signing secrets for the webhooks this sync created, shown once.
+                      Existing webhooks keep theirs.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        message:
+                          type: string
+                      required:
+                        - id
+                        - message
+                    description: Webhooks that couldn't be created or updated. The others were still
+                      applied; the request fails only when none could be.
+                required:
+                  - webhooks
+                  - secrets
+                  - errors
+                title: SyncWebhooksResponse
+                examples:
+                  - &a163
+                    webhooks:
+                      - id: billing
+                        url: https://example.com/webhooks/autumn
+                        events:
+                          - billing.updated
+                          - invoice.finalized
+                        description: Plan changes and invoices
+                        disabled: false
+                        created_at: 1781113864000
+                        updated_at: 1781113864000
+                    secrets:
+                      - id: billing
+                        secret: whsec_abc123
+                    errors: []
+              example: *a163
+      x-speakeasy-name-override: sync
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.webhooks.sync({
+              webhooks: [
+                {
+                  id: "billing",
+                  url: "https://example.com/webhooks/autumn",
+                  events: [
+                    "billing.updated",
+                    "invoice.finalized",
+                  ],
+                  description: "Plan changes and invoices",
+                },
+              ],
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.webhooks.sync(
+                webhooks=[
+                    {
+                        "id": "billing",
+                        "url": "https://example.com/webhooks/autumn",
+                        "events": [
+                            "billing.updated",
+                            "invoice.finalized",
+                        ],
+                        "description": "Plan changes and invoices",
+                    },
+                ],
             )
 security:
   - secretKey: []
@@ -81449,6 +82801,8 @@ webhooks:
                                           schedule even when the customer's
                                           product is in a past_due state.
                                         default: false
+                                        type: boolean
+                                      anchor_to_month_start:
                                         type: boolean
                                     required:
                                       - ignore_past_due
@@ -83623,6 +84977,8 @@ webhooks:
                                                   customer's product is in a
                                                   past_due state.
                                                 default: false
+                                                type: boolean
+                                              anchor_to_month_start:
                                                 type: boolean
                                             required:
                                               - ignore_past_due
@@ -87776,6 +89132,8 @@ webhooks:
                                                 past_due state.
                                               default: false
                                               type: boolean
+                                            anchor_to_month_start:
+                                              type: boolean
                                           required:
                                             - ignore_past_due
                                           additionalProperties: false
@@ -90930,6 +92288,8 @@ webhooks:
                                                         a past_due state.
                                                       default: false
                                                       type: boolean
+                                                    anchor_to_month_start:
+                                                      type: boolean
                                                   required:
                                                     - ignore_past_due
                                                   additionalProperties: false
@@ -93148,6 +94508,8 @@ webhooks:
                                                                 product is in a
                                                                 past_due state.
                                                               default: false
+                                                              type: boolean
+                                                            anchor_to_month_start:
                                                               type: boolean
                                                           required:
                                                             - ignore_past_due

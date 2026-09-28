@@ -143,6 +143,10 @@ export const customerEntitlements = pgTable(
 				sql`${table.expired} IS NOT TRUE AND ${table.next_reset_at} IS NOT NULL`,
 			)
 			.concurrently(),
+		index("idx_customer_entitlements_pooled_balance_id")
+			.on(table.pooled_balance_id)
+			.where(sql`${table.pooled_balance_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_customer_entitlements_pooled_contribution")
 			.on(table.pooled_contribution_id)
 			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)

@@ -1,0 +1,124 @@
+---
+title: "Sync Webhooks"
+openapi: "openapi POST /v1/webhooks.sync"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="webhooks" type="object[]" required>
+  The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+  <Expandable title="properties">
+    <DynamicParamField body="id" type="string" required>
+      Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation.
+    </DynamicParamField>
+
+    <DynamicParamField body="url" type="string" required>
+      The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
+    </DynamicParamField>
+
+    <DynamicParamField body="events" type="('customer.products.updated' | 'customer.threshold_reached' | 'balances.usage_alert_triggered' | 'balances.limit_reached' | 'billing.auto_topup_failed' | 'billing.auto_topup_succeeded' | 'billing.updated' | 'invoice.finalized' | 'vercel.resources.deleted' | 'vercel.resources.provisioned' | 'vercel.resources.rotate_secrets' | 'vercel.webhooks.event')[]" required>
+      The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+    </DynamicParamField>
+
+    <DynamicParamField body="description" type="string">
+      A note for your own reference.
+    </DynamicParamField>
+
+    <DynamicParamField body="disabled" type="boolean">
+      When true, no events are sent to the webhook.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="webhooks" type="object[]">
+  The listed webhooks as they stand after the sync, except those in `errors`.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="url" type="string">
+      The URL Autumn sends events to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="description" type="string | null">
+      A note for your own reference.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="events" type="string[]">
+      The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="disabled" type="boolean">
+      When true, no events are sent to the webhook.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      When the webhook was created, ms since epoch.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="updated_at" type="number">
+      When the webhook was last changed, ms since epoch.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="secrets" type="object[]">
+  Signing secrets for the webhooks this sync created, shown once. Existing webhooks keep theirs.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string" />
+
+    <DynamicResponseField name="secret" type="string">
+      The webhook's signing secret. Shown once, here: store it before you discard the response.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="errors" type="object[]">
+  Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string" />
+
+    <DynamicResponseField name="message" type="string" />
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "webhooks": [
+    {
+      "id": "billing",
+      "url": "https://example.com/webhooks/autumn",
+      "events": [
+        "billing.updated",
+        "invoice.finalized"
+      ],
+      "description": "Plan changes and invoices",
+      "disabled": false,
+      "created_at": 1781113864000,
+      "updated_at": 1781113864000
+    }
+  ],
+  "secrets": [
+    {
+      "id": "billing",
+      "secret": "whsec_abc123"
+    }
+  ],
+  "errors": []
+}
+```
+</ResponseExample>

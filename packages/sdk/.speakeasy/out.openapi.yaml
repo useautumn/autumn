@@ -2612,6 +2612,10 @@ components:
               type: boolean
               default: false
               description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            anchor_to_month_start:
+              type: boolean
+              description: Anchor billing and reset cycles to the 1st of the month (UTC).
+              default: false
           description: Miscellaneous plan-level configuration flags.
         billing_controls:
           type: object
@@ -11436,6 +11440,10 @@ paths:
                       type: boolean
                       description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
                       default: false
+                    anchor_to_month_start:
+                      type: boolean
+                      description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                      default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -12509,6 +12517,10 @@ paths:
                         type: boolean
                         default: false
                         description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -15201,6 +15213,10 @@ paths:
                         type: boolean
                         default: false
                         description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -17874,6 +17890,10 @@ paths:
                               type: boolean
                               default: false
                               description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                            anchor_to_month_start:
+                              type: boolean
+                              description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -22588,6 +22608,10 @@ paths:
                                         type: boolean
                                         default: false
                                         description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                                      anchor_to_month_start:
+                                        type: boolean
+                                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -24291,6 +24315,10 @@ paths:
                     ignore_past_due:
                       type: boolean
                       description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                      default: false
+                    anchor_to_month_start:
+                      type: boolean
+                      description: Anchor billing and reset cycles to the 1st of the month (UTC).
                       default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
@@ -26983,6 +27011,10 @@ paths:
                         type: boolean
                         default: false
                         description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -59276,7 +59308,7 @@ paths:
   /v1/balances.batch_track:
     post:
       operationId: batchTrack
-      description: Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+      description: Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
       requestBody:
         required: true
         content:
@@ -59310,6 +59342,9 @@ paths:
                       type: string
                     additionalProperties: {}
                     description: Additional properties to attach to this usage event.
+                  idempotency_key:
+                    type: string
+                    description: "Deduplicates this item: a second track with the same key within 24 hours is ignored."
                   timestamp:
                     type: integer
                     minimum: 0
@@ -59352,8 +59387,21 @@ paths:
                     event_name: message.sent
                     value: 1
       responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                required:
+                  - success
+                examples:
+                  - success: true
         "202":
-          description: "Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics."
+          description: "Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on success. See the endpoint description for full partial-failure semantics."
           content:
             application/json:
               schema:
@@ -59417,6 +59465,17 @@ paths:
                       type: number
                       description: Filter events before this timestamp (epoch milliseconds)
                   description: Filter events by time range
+                range:
+                  enum:
+                    - 24h
+                    - 7d
+                    - 30d
+                    - 90d
+                    - last_cycle
+                    - 1bc
+                    - 3bc
+                  type: string
+                  description: Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range
               title: EventsListParams
               examples:
                 - start_cursor: ""
@@ -59629,6 +59688,9 @@ paths:
                     - start
                     - end
                   description: Custom time range to aggregate events for. If provided, range must not be provided
+                timezone:
+                  type: string
+                  description: IANA timezone (e.g. "America/New_York") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC
                 filter_by:
                   type: object
                   propertyNames:
@@ -70468,8 +70530,8 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 100
-                  pattern: \S
-                  description: A name for the sandbox, unique within your organization.
+                  pattern: ^\S+$
+                  description: A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`.
                 color:
                   enum:
                     - gray
@@ -70703,6 +70765,984 @@ paths:
                 examples:
                   - success: true
       x-speakeasy-name-override: reset
+      parameters:
+        - *a1
+  /v1/webhooks.create:
+    post:
+      operationId: createWebhook
+      description: "Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back."
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: "Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation."
+                url:
+                  type: string
+                  pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                  description: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
+                events:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - customer.products.updated
+                      - customer.threshold_reached
+                      - balances.usage_alert_triggered
+                      - balances.limit_reached
+                      - billing.auto_topup_failed
+                      - billing.auto_topup_succeeded
+                      - billing.updated
+                      - invoice.finalized
+                      - vercel.resources.deleted
+                      - vercel.resources.provisioned
+                      - vercel.resources.rotate_secrets
+                      - vercel.webhooks.event
+                    type: string
+                    description: An event type the webhook receives.
+                  description: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+                description:
+                  type: string
+                  description: A note for your own reference.
+                disabled:
+                  type: boolean
+                  description: When true, no events are sent to the webhook.
+              required:
+                - id
+                - url
+                - events
+              title: CreateWebhookParams
+              examples:
+                - id: billing
+                  url: https://example.com/webhooks/autumn
+                  events:
+                    - billing.updated
+                    - invoice.finalized
+                  description: Plan changes and invoices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                  url:
+                    type: string
+                    description: The URL Autumn sends events to.
+                  description:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: A note for your own reference.
+                  events:
+                    type: array
+                    items:
+                      type: string
+                    description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                  disabled:
+                    type: boolean
+                    description: When true, no events are sent to the webhook.
+                  created_at:
+                    type: number
+                    description: When the webhook was created, ms since epoch.
+                  updated_at:
+                    type: number
+                    description: When the webhook was last changed, ms since epoch.
+                  secret:
+                    type: string
+                    description: "The webhook's signing secret. Shown once, here: store it before you discard the response."
+                    readOnly: true
+                required:
+                  - id
+                  - url
+                  - description
+                  - events
+                  - disabled
+                  - created_at
+                  - updated_at
+                  - secret
+                title: CreateWebhookResponse
+                examples:
+                  - id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: false
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
+                    secret: whsec_abc123
+      x-speakeasy-name-override: create
+      parameters:
+        - *a1
+  /v1/webhooks.get:
+    post:
+      operationId: getWebhook
+      description: Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.
+              required:
+                - id
+              title: GetWebhookParams
+              examples:
+                - id: billing
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                  url:
+                    type: string
+                    description: The URL Autumn sends events to.
+                  description:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: A note for your own reference.
+                  events:
+                    type: array
+                    items:
+                      type: string
+                    description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                  disabled:
+                    type: boolean
+                    description: When true, no events are sent to the webhook.
+                  created_at:
+                    type: number
+                    description: When the webhook was created, ms since epoch.
+                  updated_at:
+                    type: number
+                    description: When the webhook was last changed, ms since epoch.
+                required:
+                  - id
+                  - url
+                  - description
+                  - events
+                  - disabled
+                  - created_at
+                  - updated_at
+                title: Webhook
+                examples:
+                  - id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: false
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
+      x-speakeasy-name-override: get
+      parameters:
+        - *a1
+  /v1/webhooks.list:
+    post:
+      operationId: listWebhooks
+      description: Lists every webhook in the environment of the calling key, including ones made in the dashboard (these show their `ep_…` ID).
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ListWebhooksParams
+              description: No body. Lists every webhook in the environment of the calling key.
+              examples:
+                - {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                        url:
+                          type: string
+                          description: The URL Autumn sends events to.
+                        description:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: A note for your own reference.
+                        events:
+                          type: array
+                          items:
+                            type: string
+                          description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                        disabled:
+                          type: boolean
+                          description: When true, no events are sent to the webhook.
+                        created_at:
+                          type: number
+                          description: When the webhook was created, ms since epoch.
+                        updated_at:
+                          type: number
+                          description: When the webhook was last changed, ms since epoch.
+                      required:
+                        - id
+                        - url
+                        - description
+                        - events
+                        - disabled
+                        - created_at
+                        - updated_at
+                    description: The environment's webhooks.
+                required:
+                  - list
+                title: ListWebhooksResponse
+                examples:
+                  - list:
+                      - id: billing
+                        url: https://example.com/webhooks/autumn
+                        events:
+                          - billing.updated
+                          - invoice.finalized
+                        description: Plan changes and invoices
+                        disabled: false
+                        created_at: 1781113864000
+                        updated_at: 1781113864000
+      x-speakeasy-name-override: list
+      parameters:
+        - *a1
+  /v1/webhooks.update:
+    post:
+      operationId: updateWebhook
+      description: Updates a webhook's URL, events, description or disabled state. Only the fields you pass change. The ID can't be changed — to rename, create a new webhook.
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.
+                url:
+                  type: string
+                  pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                  description: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
+                events:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - customer.products.updated
+                      - customer.threshold_reached
+                      - balances.usage_alert_triggered
+                      - balances.limit_reached
+                      - billing.auto_topup_failed
+                      - billing.auto_topup_succeeded
+                      - billing.updated
+                      - invoice.finalized
+                      - vercel.resources.deleted
+                      - vercel.resources.provisioned
+                      - vercel.resources.rotate_secrets
+                      - vercel.webhooks.event
+                    type: string
+                    description: An event type the webhook receives.
+                  description: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+                description:
+                  type: string
+                  description: A note for your own reference.
+                disabled:
+                  type: boolean
+                  description: When true, no events are sent to the webhook.
+              required:
+                - id
+              title: UpdateWebhookParams
+              examples:
+                - id: billing
+                  disabled: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                  url:
+                    type: string
+                    description: The URL Autumn sends events to.
+                  description:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: A note for your own reference.
+                  events:
+                    type: array
+                    items:
+                      type: string
+                    description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                  disabled:
+                    type: boolean
+                    description: When true, no events are sent to the webhook.
+                  created_at:
+                    type: number
+                    description: When the webhook was created, ms since epoch.
+                  updated_at:
+                    type: number
+                    description: When the webhook was last changed, ms since epoch.
+                required:
+                  - id
+                  - url
+                  - description
+                  - events
+                  - disabled
+                  - created_at
+                  - updated_at
+                title: Webhook
+                examples:
+                  - id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: true
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
+      x-speakeasy-name-override: update
+      parameters:
+        - *a1
+  /v1/webhooks.delete:
+    post:
+      operationId: deleteWebhook
+      description: Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  description: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.
+              required:
+                - id
+              title: DeleteWebhookParams
+              examples:
+                - id: billing
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                    description: Always true when the webhook was deleted.
+                required:
+                  - success
+                title: DeleteWebhookResponse
+                examples:
+                  - success: true
+      x-speakeasy-name-override: delete
+      parameters:
+        - *a1
+  /v1/webhooks.preview_sync:
+    post:
+      operationId: previewSyncWebhooks
+      description: "Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them."
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                webhooks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        minLength: 1
+                        maxLength: 256
+                        pattern: ^[a-zA-Z0-9_-]+$
+                        description: "Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation."
+                      url:
+                        type: string
+                        pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                        description: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
+                      events:
+                        type: array
+                        minItems: 1
+                        items:
+                          enum:
+                            - customer.products.updated
+                            - customer.threshold_reached
+                            - balances.usage_alert_triggered
+                            - balances.limit_reached
+                            - billing.auto_topup_failed
+                            - billing.auto_topup_succeeded
+                            - billing.updated
+                            - invoice.finalized
+                            - vercel.resources.deleted
+                            - vercel.resources.provisioned
+                            - vercel.resources.rotate_secrets
+                            - vercel.webhooks.event
+                          type: string
+                          description: An event type the webhook receives.
+                        description: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+                      description:
+                        type: string
+                        description: A note for your own reference.
+                      disabled:
+                        type: boolean
+                        description: When true, no events are sent to the webhook.
+                    required:
+                      - id
+                      - url
+                      - events
+                  description: The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+              required:
+                - webhooks
+              title: SyncWebhooksParams
+              examples:
+                - webhooks:
+                    - id: billing
+                      url: https://example.com/webhooks/autumn
+                      events:
+                        - billing.updated
+                        - invoice.finalized
+                      description: Plan changes and invoices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  changes:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            action:
+                              const: create
+                            id:
+                              type: string
+                            webhook:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - webhook
+                        - type: object
+                          properties:
+                            action:
+                              const: update
+                            id:
+                              type: string
+                            before:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                            after:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - before
+                            - after
+                        - type: object
+                          properties:
+                            action:
+                              const: adopt
+                            id:
+                              type: string
+                            before:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                            after:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - before
+                            - after
+                        - type: object
+                          properties:
+                            action:
+                              const: unmanaged
+                            id:
+                              type: string
+                            webhook:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - webhook
+                    description: What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        message:
+                          type: string
+                      required:
+                        - id
+                        - message
+                    description: Listed webhooks `webhooks.sync` would refuse, e.g. when several dashboard webhooks share the URL.
+                required:
+                  - changes
+                  - errors
+                title: PreviewSyncWebhooksResponse
+                examples:
+                  - changes:
+                      - action: create
+                        id: billing
+                        webhook:
+                          id: billing
+                          url: https://example.com/webhooks/autumn
+                          events:
+                            - billing.updated
+                            - invoice.finalized
+                          description: Plan changes and invoices
+                          disabled: false
+                          created_at: 1781113864000
+                          updated_at: 1781113864000
+                    errors: []
+      x-speakeasy-name-override: previewSync
+      parameters:
+        - *a1
+  /v1/webhooks.sync:
+    post:
+      operationId: syncWebhooks
+      description: "Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied."
+      tags:
+        - webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                webhooks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        minLength: 1
+                        maxLength: 256
+                        pattern: ^[a-zA-Z0-9_-]+$
+                        description: "Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation."
+                      url:
+                        type: string
+                        pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
+                        description: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
+                      events:
+                        type: array
+                        minItems: 1
+                        items:
+                          enum:
+                            - customer.products.updated
+                            - customer.threshold_reached
+                            - balances.usage_alert_triggered
+                            - balances.limit_reached
+                            - billing.auto_topup_failed
+                            - billing.auto_topup_succeeded
+                            - billing.updated
+                            - invoice.finalized
+                            - vercel.resources.deleted
+                            - vercel.resources.provisioned
+                            - vercel.resources.rotate_secrets
+                            - vercel.webhooks.event
+                          type: string
+                          description: An event type the webhook receives.
+                        description: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+                      description:
+                        type: string
+                        description: A note for your own reference.
+                      disabled:
+                        type: boolean
+                        description: When true, no events are sent to the webhook.
+                    required:
+                      - id
+                      - url
+                      - events
+                  description: The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+              required:
+                - webhooks
+              title: SyncWebhooksParams
+              examples:
+                - webhooks:
+                    - id: billing
+                      url: https://example.com/webhooks/autumn
+                      events:
+                        - billing.updated
+                        - invoice.finalized
+                      description: Plan changes and invoices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+                        url:
+                          type: string
+                          description: The URL Autumn sends events to.
+                        description:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: A note for your own reference.
+                        events:
+                          type: array
+                          items:
+                            type: string
+                          description: The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+                        disabled:
+                          type: boolean
+                          description: When true, no events are sent to the webhook.
+                        created_at:
+                          type: number
+                          description: When the webhook was created, ms since epoch.
+                        updated_at:
+                          type: number
+                          description: When the webhook was last changed, ms since epoch.
+                      required:
+                        - id
+                        - url
+                        - description
+                        - events
+                        - disabled
+                        - created_at
+                        - updated_at
+                    description: The listed webhooks as they stand after the sync, except those in `errors`.
+                  secrets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        secret:
+                          type: string
+                          description: "The webhook's signing secret. Shown once, here: store it before you discard the response."
+                          readOnly: true
+                      required:
+                        - id
+                        - secret
+                    description: Signing secrets for the webhooks this sync created, shown once. Existing webhooks keep theirs.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        message:
+                          type: string
+                      required:
+                        - id
+                        - message
+                    description: Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be.
+                required:
+                  - webhooks
+                  - secrets
+                  - errors
+                title: SyncWebhooksResponse
+                examples:
+                  - webhooks:
+                      - id: billing
+                        url: https://example.com/webhooks/autumn
+                        events:
+                          - billing.updated
+                          - invoice.finalized
+                        description: Plan changes and invoices
+                        disabled: false
+                        created_at: 1781113864000
+                        updated_at: 1781113864000
+                    secrets:
+                      - id: billing
+                        secret: whsec_abc123
+                    errors: []
+      x-speakeasy-name-override: sync
       parameters:
         - *a1
 security:
@@ -72356,6 +73396,8 @@ webhooks:
                                       ignore_past_due:
                                         description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
                                         default: false
+                                        type: boolean
+                                      anchor_to_month_start:
                                         type: boolean
                                     required:
                                       - ignore_past_due
@@ -74243,6 +75285,8 @@ webhooks:
                                               ignore_past_due:
                                                 description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
                                                 default: false
+                                                type: boolean
+                                              anchor_to_month_start:
                                                 type: boolean
                                             required:
                                               - ignore_past_due
@@ -77885,6 +78929,8 @@ webhooks:
                                               description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
                                               default: false
                                               type: boolean
+                                            anchor_to_month_start:
+                                              type: boolean
                                           required:
                                             - ignore_past_due
                                           additionalProperties: false
@@ -80590,6 +81636,8 @@ webhooks:
                                                       description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
                                                       default: false
                                                       type: boolean
+                                                    anchor_to_month_start:
+                                                      type: boolean
                                                   required:
                                                     - ignore_past_due
                                                   additionalProperties: false
@@ -82476,6 +83524,8 @@ webhooks:
                                                             ignore_past_due:
                                                               description: If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
                                                               default: false
+                                                              type: boolean
+                                                            anchor_to_month_start:
                                                               type: boolean
                                                           required:
                                                             - ignore_past_due

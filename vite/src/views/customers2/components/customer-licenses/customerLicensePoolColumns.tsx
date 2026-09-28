@@ -23,13 +23,8 @@ export interface CustomerLicensePoolRow {
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 
-/** Mirrors the plans table's Scope column so both tables' flexible columns
- * resolve to identical widths. License pools are always customer-scoped. */
-const scopeColumn = {
-	header: "Scope",
-	accessorKey: "scope",
-	cell: () => <span className="text-muted-foreground">Customer</span>,
-};
+// Widths mirror the plans table (Price 180, Scope 200, Status 220) so columns line up.
+const PLANS_SCOPE_COLUMN_WIDTH = 200;
 
 export const createCustomerLicensePoolColumns = ({
 	hasEntities,
@@ -40,7 +35,7 @@ export const createCustomerLicensePoolColumns = ({
 		header: "Name",
 		accessorKey: "name",
 		size: 150,
-		meta: { skeleton: nameWithIconSkeleton },
+		meta: { skeleton: nameWithIconSkeleton, grow: true },
 		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => (
 			<div className="font-medium text-foreground flex items-center gap-2">
 				<LicenseIcon size={14} className="shrink-0" />
@@ -59,11 +54,10 @@ export const createCustomerLicensePoolColumns = ({
 			</div>
 		),
 	},
-	...(hasEntities ? [scopeColumn] : []),
 	{
 		header: "Price",
 		accessorKey: "price",
-		size: 120,
+		size: 180,
 		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => {
 			const { product, granted, paidQuantity } = row.original;
 			return (
@@ -78,7 +72,8 @@ export const createCustomerLicensePoolColumns = ({
 	{
 		header: "Status",
 		accessorKey: "status",
-		size: 110,
+		// Starts under the plans table's Scope column and spans Scope + Status.
+		size: hasEntities ? PLANS_SCOPE_COLUMN_WIDTH + 220 : 220,
 		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => (
 			<div className="flex items-baseline gap-1 truncate">
 				<span className="text-muted-foreground">
@@ -94,15 +89,14 @@ export const createCustomerLicensePoolColumns = ({
 			accessorKey: "createdAt",
 			withYear: true,
 		}),
-		size: 150,
+		size: 130,
 	},
 	{
 		id: "actions",
 		header: "",
 		size: 40,
 		meta: { skeleton: hiddenSkeleton },
-		// Spacer matching the plans table's actions column so both tables'
-		// flexible columns resolve to identical widths.
+		// Spacer matching the plans table's actions column.
 		cell: () => null,
 	},
 ];
