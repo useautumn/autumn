@@ -923,7 +923,7 @@ test("a failed live check never reads as No changes, and survives a failing sand
 
 test("a create in one sandbox refuses when another sandbox already states that id under the same secret name", async () => {
 	const dir = projectWith({
-		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", url: { "qa-team": "https://qa.example.com/a", qa_team: "https://qa2.example.com/a" } }),\n\t],`,
+		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", env: "qa-team", url: "https://qa.example.com/a" }),\n\t\twebhook({ id: "billing", env: "qa_team", url: "https://qa2.example.com/a" }),\n\t],`,
 	});
 	const calls: string[] = [];
 	const push = runPush({
