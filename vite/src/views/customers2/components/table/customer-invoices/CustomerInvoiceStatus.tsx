@@ -1,5 +1,5 @@
 import { InvoiceStatus } from "@autumn/shared";
-import { StatusChip, StatusChipIcon } from "@autumn/ui";
+import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
 	CalendarBlankIcon,
@@ -35,7 +35,7 @@ const statusConfig: Record<InvoiceStatus, InvoiceStatusDisplay> = {
 		icon: CheckIcon,
 	},
 	[InvoiceStatus.Uncollectible]: {
-		color: "bg-zinc-400 dark:bg-zinc-500",
+		color: NEUTRAL_STATUS_ICON_CLASS,
 		label: "Uncollectible",
 		icon: MinusIcon,
 	},
@@ -104,12 +104,8 @@ export function CustomerInvoiceStatus({
 
 	return (
 		<StatusChip
-			indicator={
-				<StatusChipIcon
-					icon={<StatusIcon weight="bold" />}
-					className={config.color}
-				/>
-			}
+			icon={<StatusIcon weight="bold" />}
+			iconClassName={config.color}
 		>
 			{config.label}
 		</StatusChip>

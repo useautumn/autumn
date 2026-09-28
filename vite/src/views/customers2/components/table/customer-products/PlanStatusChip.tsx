@@ -8,7 +8,6 @@ import {
 } from "@autumn/ui";
 import { differenceInCalendarDays, format, formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
-import { PlanStatusIcon } from "./PlanStatusIcon";
 import { PLAN_STATUS_CONFIG } from "./planStatusConfig";
 import { type PlanStatus, resolvePlanStatus } from "./resolvePlanStatus";
 
@@ -102,7 +101,11 @@ export function PlanStatusChip({
 		canceled: customerProduct.canceled,
 		trialing: Boolean(isCustomerProductTrialing(customerProduct, { nowMs })),
 	});
-	const { label } = PLAN_STATUS_CONFIG[planStatus];
+	const {
+		icon: StatusIcon,
+		iconClassName,
+		label,
+	} = PLAN_STATUS_CONFIG[planStatus];
 	const { shortText, tooltipText, tooltipSubtext } = getStatusDetail({
 		planStatus,
 		customerProduct,
@@ -122,7 +125,8 @@ export function PlanStatusChip({
 			<Tooltip delayDuration={150}>
 				<TooltipTrigger asChild>
 					<StatusChip
-						indicator={<PlanStatusIcon planStatus={planStatus} />}
+						icon={<StatusIcon strokeWidth={3} />}
+						iconClassName={iconClassName}
 						dashed={isPending}
 						className={cn(isExpired && "bg-transparent", className)}
 					>

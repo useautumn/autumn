@@ -1,5 +1,6 @@
 import { type CusProductStatus, formatMsToDate } from "@autumn/shared";
 import {
+	StatusChipIcon,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
@@ -7,7 +8,6 @@ import {
 } from "@autumn/ui";
 import { DotIcon } from "@phosphor-icons/react";
 import { formatDistance } from "date-fns";
-import { PlanStatusIcon } from "./PlanStatusIcon";
 import { PLAN_STATUS_CONFIG } from "./planStatusConfig";
 import { resolvePlanStatus } from "./resolvePlanStatus";
 
@@ -67,7 +67,13 @@ export function CustomerProductsStatus({
 		nowMs: effectiveNowMs,
 	});
 
-	const iconElement = <PlanStatusIcon planStatus={resolvedStatus} />;
+	const StatusIcon = config.icon;
+	const iconElement = (
+		<StatusChipIcon
+			icon={<StatusIcon strokeWidth={3} />}
+			className={config.iconClassName}
+		/>
+	);
 
 	if (tooltip) {
 		return (

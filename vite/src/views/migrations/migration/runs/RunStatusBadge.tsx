@@ -1,5 +1,5 @@
 import type { MigrationItemRunSkipReason } from "@autumn/shared";
-import { StatusChip, StatusChipIcon } from "@autumn/ui";
+import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
 import { CheckIcon, type Icon, MinusIcon, XIcon } from "@phosphor-icons/react";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -14,17 +14,15 @@ export function ActiveRunDot({ className }: { className?: string }) {
 	);
 }
 
-const NEUTRAL_ICON_CLASS = "bg-zinc-400 dark:bg-zinc-500";
-
 const LIVE_ICON_CLASSES: Record<MigrationItemEventStatus, string> = {
 	succeeded: "bg-green-500",
-	skipped: NEUTRAL_ICON_CLASS,
+	skipped: NEUTRAL_STATUS_ICON_CLASS,
 	failed: "bg-red-500",
 };
 
 const DRY_ICON_CLASSES: Record<MigrationItemEventStatus, string> = {
 	succeeded: "bg-blue-500",
-	skipped: NEUTRAL_ICON_CLASS,
+	skipped: NEUTRAL_STATUS_ICON_CLASS,
 	failed: "bg-orange-500",
 };
 
@@ -64,12 +62,8 @@ export function ItemEventStatusBadge({
 	return (
 		<StatusChip
 			dashed={dryRun}
-			indicator={
-				<StatusChipIcon
-					icon={<StatusIcon weight="bold" />}
-					className={iconClassName}
-				/>
-			}
+			icon={<StatusIcon weight="bold" />}
+			iconClassName={iconClassName}
 		>
 			{label}
 		</StatusChip>

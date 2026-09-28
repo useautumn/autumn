@@ -1,5 +1,5 @@
 import type { SubscriptionVerifyResult } from "@autumn/shared";
-import { StatusChip, StatusChipIcon } from "@autumn/ui";
+import { StatusChip } from "@autumn/ui";
 import {
 	CheckIcon,
 	ExclamationMarkIcon,
@@ -50,12 +50,8 @@ export function VerifyStripeStatusBadge({
 
 	return (
 		<StatusChip
-			indicator={
-				<StatusChipIcon
-					icon={<StatusIcon weight="bold" />}
-					className={config.className}
-				/>
-			}
+			icon={<StatusIcon weight="bold" />}
+			iconClassName={config.className}
 		>
 			{config.label}
 		</StatusChip>

@@ -36,7 +36,7 @@ export const formatLogTime = ({ timestamp }: { timestamp: number }) =>
 const ColumnHeaders = () => (
 	<div
 		style={ROW_GRID}
-		className="h-8 px-4 shrink-0 text-xs font-normal text-tertiary-foreground"
+		className="h-8 px-4 shrink-0 text-xs text-tertiary-foreground"
 	>
 		<span className={CELL}>Time</span>
 		<span className={CELL}>Event</span>
@@ -154,71 +154,73 @@ export const LogsList = ({
 			)}
 		>
 			<ColumnHeaders />
-			<div
-				className={cn(TABLE_TRAY_SURFACE_CLASS, "flex flex-col flex-1 min-h-0")}
-			>
-				{isEmpty ? (
-					<div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
-						<LogsIcon size={28} strokeWidth={1.5} className="opacity-50" />
-						<p className="text-sm">No events match these filters.</p>
-					</div>
-				) : (
-					<div
-						ref={scrollRef}
-						className={cn(
-							"flex-1 min-h-0",
-							isLoading ? "overflow-hidden" : "overflow-y-auto",
-						)}
-					>
-						{isLoading ? (
-							Array.from({ length: LOADING_ROWS }, (_, i) => (
-								<div
-									key={i}
-									className="flex items-center gap-6 px-4 border-b border-table-row-divider last:border-b-0"
-									style={{ height: ROW_HEIGHT }}
-								>
-									<Skeleton className="h-2.5 w-28" />
-									<Skeleton className="h-2.5 w-24" />
-									<Skeleton className="h-2.5 w-20" />
-									<Skeleton className="h-2.5 w-1/3" />
-								</div>
-							))
-						) : (
+			{isEmpty ? (
+				<div
+					className={cn(
+						TABLE_TRAY_SURFACE_CLASS,
+						"flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground",
+					)}
+				>
+					<LogsIcon size={28} strokeWidth={1.5} className="opacity-50" />
+					<p className="text-sm">No events match these filters.</p>
+				</div>
+			) : (
+				<div
+					ref={scrollRef}
+					className={cn(
+						TABLE_TRAY_SURFACE_CLASS,
+						"flex-1 min-h-0",
+						isLoading ? "overflow-hidden" : "overflow-y-auto",
+					)}
+				>
+					{isLoading ? (
+						Array.from({ length: LOADING_ROWS }, (_, i) => (
 							<div
-								className="relative w-full"
-								style={{ height: virtualizer.getTotalSize() + ROW_HEIGHT }}
+								key={i}
+								className={cn(
+									"flex items-center gap-6 px-4",
+									TABLE_TRAY_SURFACE_ROW_CLASS,
+								)}
+								style={{ height: ROW_HEIGHT }}
 							>
-								{virtualItems.map((item) => {
-									const event = events[item.index];
-									return (
-										<LogRow
-											key={event.id}
-											event={event}
-											color={colorFor(event.feature_id)}
-											isSelected={event.id === selectedId}
-											top={item.start}
-											onSelect={() => onSelect(event)}
-										/>
-									);
-								})}
-								<div
-									className="absolute inset-x-0 flex items-center justify-center text-xs text-subtle"
-									style={{
-										top: virtualizer.getTotalSize(),
-										height: ROW_HEIGHT,
-									}}
-								>
-									{isFetchingNextPage
-										? "Loading more…"
-										: hasNextPage
-											? ""
-											: `${events.length.toLocaleString()} events`}
-								</div>
+								<Skeleton className="h-2.5 w-28" />
+								<Skeleton className="h-2.5 w-24" />
+								<Skeleton className="h-2.5 w-20" />
+								<Skeleton className="h-2.5 w-1/3" />
 							</div>
-						)}
-					</div>
-				)}
-			</div>
+						))
+					) : (
+						<div
+							className="relative w-full"
+							style={{ height: virtualizer.getTotalSize() + ROW_HEIGHT }}
+						>
+							{virtualItems.map((item) => {
+								const event = events[item.index];
+								return (
+									<LogRow
+										key={event.id}
+										event={event}
+										color={colorFor(event.feature_id)}
+										isSelected={event.id === selectedId}
+										top={item.start}
+										onSelect={() => onSelect(event)}
+									/>
+								);
+							})}
+							<div
+								className="absolute inset-x-0 flex items-center justify-center text-xs text-subtle"
+								style={{ top: virtualizer.getTotalSize(), height: ROW_HEIGHT }}
+							>
+								{isFetchingNextPage
+									? "Loading more…"
+									: hasNextPage
+										? ""
+										: `${events.length.toLocaleString()} events`}
+							</div>
+						</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 };

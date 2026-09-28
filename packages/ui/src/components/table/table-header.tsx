@@ -1,9 +1,5 @@
 import { useTableContext } from "@autumn/ui/components/table/table-context";
 import { getColumnWidthStyle } from "@autumn/ui/components/table/table-row-cells";
-import {
-	TABLE_TRAY_HEAD_CLASS,
-	TABLE_TRAY_HEADER_ROW_CLASS,
-} from "@autumn/ui/components/table/table-tray-classes";
 import { Checkbox } from "@autumn/ui/components/ui/checkbox";
 import {
 	TableHeader as ShadcnTableHeader,
@@ -84,15 +80,20 @@ export function TableHeader({ className }: { className?: string }) {
 		flexibleTableColumns,
 	} = useTableContext();
 	const headerGroups = table.getHeaderGroups();
+	const rows = table.getRowModel().rows;
 
 	return (
-		<ShadcnTableHeader
-			className={cn("sticky top-0 z-20 bg-table-tray", className)}
-		>
+		<ShadcnTableHeader className={cn("sticky top-0 z-20 bg-card", className)}>
 			{headerGroups.map((headerGroup) => (
-				<TableRow className={TABLE_TRAY_HEADER_ROW_CLASS} key={headerGroup.id}>
+				<TableRow
+					className={cn(
+						"bg-card text-subtle border-b",
+						!rows.length && "border-dashed",
+					)}
+					key={headerGroup.id}
+				>
 					{enableSelection && table && (
-						<TableHead className={cn(TABLE_TRAY_HEAD_CLASS, "w-[50px]")}>
+						<TableHead className="w-[50px]">
 							<Checkbox
 								aria-label="Select all rows"
 								checked={table.getIsAllPageRowsSelected()}
@@ -112,7 +113,7 @@ export function TableHeader({ className }: { className?: string }) {
 						return (
 							<TableHead
 								className={cn(
-									TABLE_TRAY_HEAD_CLASS,
+									"px-2",
 									index === 0 && "pl-4",
 									isLast && enableColumnVisibility && "pr-8",
 								)}

@@ -4,10 +4,7 @@ import {
 	useTableContext,
 } from "@autumn/ui/components/table/table-context";
 import { TableMobileCards } from "@autumn/ui/components/table/table-mobile-cards";
-import {
-	TABLE_TRAY_CLASS,
-	TABLE_TRAY_TABLE_CLASS,
-} from "@autumn/ui/components/table/table-tray-classes";
+import { TABLE_TRAY_CLASS } from "@autumn/ui/components/table/table-tray-classes";
 import { Table } from "@autumn/ui/components/ui/table";
 import { cn } from "@autumn/ui/lib/utils";
 
@@ -46,7 +43,6 @@ export function TableContent({
 			className={cn(
 				"relative z-50 min-w-0",
 				TABLE_TRAY_CLASS,
-				TABLE_TRAY_TABLE_CLASS,
 				className,
 				showsSkeleton && "overflow-hidden",
 			)}

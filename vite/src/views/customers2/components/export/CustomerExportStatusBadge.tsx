@@ -1,5 +1,5 @@
 import type { CustomerExportResponse } from "@autumn/shared";
-import { StatusChip, StatusChipIcon } from "@autumn/ui";
+import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
 import {
 	CheckIcon,
 	ClockClockwiseIcon,
@@ -12,7 +12,7 @@ const STATUS_CONFIG = {
 	queued: {
 		label: "Queued",
 		icon: ClockClockwiseIcon,
-		className: "bg-zinc-400 dark:bg-zinc-500",
+		className: NEUTRAL_STATUS_ICON_CLASS,
 		iconClassName: "",
 	},
 	running: {
@@ -48,12 +48,8 @@ export function CustomerExportStatusBadge({
 
 	return (
 		<StatusChip
-			indicator={
-				<StatusChipIcon
-					icon={<StatusIcon weight="bold" className={config.iconClassName} />}
-					className={config.className}
-				/>
-			}
+			icon={<StatusIcon weight="bold" className={config.iconClassName} />}
+			iconClassName={config.className}
 		>
 			{config.label}
 		</StatusChip>

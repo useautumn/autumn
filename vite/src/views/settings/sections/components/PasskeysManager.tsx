@@ -9,6 +9,8 @@ import {
 	DialogTitle,
 	FormLabel,
 	Input,
+	TableCell,
+	TableRow,
 } from "@autumn/ui";
 import { KeyRound, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -18,8 +20,6 @@ import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
 	SETTINGS_ROW_CLASS,
 	SettingsTable,
-	TableCell,
-	TableRow,
 } from "@/views/settings/SettingsTable";
 
 const COLUMNS = [

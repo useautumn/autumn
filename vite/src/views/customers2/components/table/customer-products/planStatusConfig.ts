@@ -1,3 +1,4 @@
+import { NEUTRAL_STATUS_ICON_CLASS } from "@autumn/ui";
 import {
 	AlertTriangleIcon,
 	BanIcon,
@@ -55,6 +56,6 @@ export const PLAN_STATUS_CONFIG: Record<PlanStatus, PlanStatusConfig> = {
 	pending: {
 		icon: HourglassIcon,
 		label: "Pending",
-		iconClassName: "bg-zinc-400 dark:bg-zinc-500",
+		iconClassName: NEUTRAL_STATUS_ICON_CLASS,
 	},
 };

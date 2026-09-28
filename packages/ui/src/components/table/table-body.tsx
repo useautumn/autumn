@@ -8,10 +8,6 @@ import {
 	TableRowCells,
 	TableSkeletonRows,
 } from "@autumn/ui/components/table/table-row-cells";
-import {
-	TABLE_TRAY_CELL_CLASS,
-	TABLE_TRAY_ROW_CLASS,
-} from "@autumn/ui/components/table/table-tray-classes";
 import { TableCell, TableRow } from "@autumn/ui/components/ui/table";
 import { cn } from "@autumn/ui/lib/utils";
 import { useRef } from "react";
@@ -60,6 +56,7 @@ export function TableBody() {
 				key="skeleton"
 				{...TABLE_FADE_IN}
 				transition={TABLE_TRANSITION}
+				className="divide-y bg-interactive-secondary"
 			>
 				<TableSkeletonRows
 					columns={columns}
@@ -75,9 +72,9 @@ export function TableBody() {
 	if (!hasRows) {
 		return (
 			<MotionTbody key="empty" {...TABLE_FADE_IN} transition={TABLE_TRANSITION}>
-				<TableRow className={TABLE_TRAY_ROW_CLASS}>
+				<TableRow className="hover:bg-transparent dark:hover:bg-transparent">
 					<TableCell
-						className={cn(TABLE_TRAY_CELL_CLASS, "h-10 text-center py-0")}
+						className="h-10 text-center py-0"
 						colSpan={numberOfColumns}
 					>
 						<div className="text-subtle text-xs text-center w-full h-full items-center justify-center flex">
@@ -95,7 +92,12 @@ export function TableBody() {
 		.join(",");
 
 	return (
-		<MotionTbody key="content" {...TABLE_FADE_IN} transition={TABLE_TRANSITION}>
+		<MotionTbody
+			key="content"
+			{...TABLE_FADE_IN}
+			transition={TABLE_TRANSITION}
+			className="divide-y bg-interactive-secondary"
+		>
 			{rows.map((row) => {
 				const isSelected = selectedItemId === (row.original as any).id;
 				const rowHref = getRowHref?.(row.original);
@@ -103,11 +105,10 @@ export function TableBody() {
 				return (
 					<TableRow
 						className={cn(
-							TABLE_TRAY_ROW_CLASS,
 							"text-tertiary-foreground transition-none h-12 py-4 relative",
 							rowClassName,
 							getRowClassName?.(row.original),
-							isSelected && "z-100",
+							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 							(onRowClick || rowHref) && "cursor-pointer",
 						)}
 						data-state={row.getIsSelected() && "selected"}

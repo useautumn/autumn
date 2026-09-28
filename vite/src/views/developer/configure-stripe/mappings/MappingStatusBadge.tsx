@@ -1,5 +1,5 @@
 import type { CatalogStripeMapping } from "@autumn/shared";
-import { StatusChip, StatusChipIcon } from "@autumn/ui";
+import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
 import {
 	CheckIcon,
 	CircleDashedIcon,
@@ -7,8 +7,6 @@ import {
 	ExclamationMarkIcon,
 	type Icon,
 } from "@phosphor-icons/react";
-
-const NEUTRAL_ICON_CLASS = "bg-zinc-400 dark:bg-zinc-500";
 
 const statusConfig = {
 	ok: {
@@ -19,12 +17,12 @@ const statusConfig = {
 	unmapped: {
 		label: "Unmapped",
 		icon: CircleDashedIcon,
-		className: NEUTRAL_ICON_CLASS,
+		className: NEUTRAL_STATUS_ICON_CLASS,
 	},
 	unchecked: {
 		label: "Unchecked",
 		icon: ClockClockwiseIcon,
-		className: NEUTRAL_ICON_CLASS,
+		className: NEUTRAL_STATUS_ICON_CLASS,
 	},
 	missing: {
 		label: "Missing",
@@ -63,12 +61,8 @@ export const MappingStatusBadge = ({
 	return (
 		<StatusChip
 			className={className}
-			indicator={
-				<StatusChipIcon
-					icon={<StatusIcon weight="bold" />}
-					className={config.className}
-				/>
-			}
+			icon={<StatusIcon weight="bold" />}
+			iconClassName={config.className}
 		>
 			{config.label}
 		</StatusChip>

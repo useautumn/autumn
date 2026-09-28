@@ -2,10 +2,6 @@ import {
 	type TableLinkComponent,
 	useTableContext,
 } from "@autumn/ui/components/table/table-context";
-import {
-	TABLE_TRAY_CELL_CLASS,
-	TABLE_TRAY_ROW_CLASS,
-} from "@autumn/ui/components/table/table-tray-classes";
 import { Checkbox } from "@autumn/ui/components/ui/checkbox";
 import { Skeleton } from "@autumn/ui/components/ui/skeleton";
 import {
@@ -64,7 +60,7 @@ function TableRowCellsInner<T>({
 	return (
 		<>
 			{enableSelection && (
-				<TableCell className={cn(TABLE_TRAY_CELL_CLASS, "w-[50px]")}>
+				<TableCell className="w-[50px]">
 					<Checkbox
 						aria-label="Select row"
 						checked={row.getIsSelected()}
@@ -86,7 +82,6 @@ function TableRowCellsInner<T>({
 				return (
 					<TableCell
 						className={cn(
-							TABLE_TRAY_CELL_CLASS,
 							"px-2 h-4 text-tertiary-foreground",
 							cellIndex === 0 && "pl-4 text-muted-foreground font-medium",
 							rowHref && "p-0",
@@ -173,7 +168,10 @@ export function TableSkeletonRows({
 	const skeletonRows = Array.from({ length: rowCount }).map((_, rowIndex) => (
 		<TableRow
 			key={`skeleton-${rowIndex}`}
-			className={cn(TABLE_TRAY_ROW_CLASS, "h-10", rowClassName)}
+			className={cn(
+				"h-10 hover:bg-transparent dark:hover:bg-transparent",
+				rowClassName,
+			)}
 		>
 			{columns.map((col, colIndex) => {
 				const meta = col.skeleton;
@@ -187,7 +185,6 @@ export function TableSkeletonRows({
 					return (
 						<TableCell
 							key={`skeleton-${col.id}-${rowIndex}`}
-							className={TABLE_TRAY_CELL_CLASS}
 							style={cellStyle}
 						/>
 					);
@@ -204,11 +201,7 @@ export function TableSkeletonRows({
 				return (
 					<TableCell
 						key={`skeleton-${col.id}-${rowIndex}`}
-						className={cn(
-							TABLE_TRAY_CELL_CLASS,
-							"px-2",
-							colIndex === 0 && "pl-4",
-						)}
+						className={cn("px-2", colIndex === 0 && "pl-4")}
 						style={cellStyle}
 					>
 						{skeletonContent ?? (
@@ -222,5 +215,9 @@ export function TableSkeletonRows({
 
 	if (asFragment) return <>{skeletonRows}</>;
 
-	return <ShadcnTableBody>{skeletonRows}</ShadcnTableBody>;
+	return (
+		<ShadcnTableBody className="divide-y bg-interactive-secondary">
+			{skeletonRows}
+		</ShadcnTableBody>
+	);
 }

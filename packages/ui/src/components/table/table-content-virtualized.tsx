@@ -6,10 +6,7 @@ import {
 } from "@autumn/ui/components/table/table-context";
 import { TableHeader } from "@autumn/ui/components/table/table-header";
 import { TableMobileCards } from "@autumn/ui/components/table/table-mobile-cards";
-import {
-	TABLE_TRAY_CLASS,
-	TABLE_TRAY_TABLE_CLASS,
-} from "@autumn/ui/components/table/table-tray-classes";
+import { TABLE_TRAY_CLASS } from "@autumn/ui/components/table/table-tray-classes";
 import { Table } from "@autumn/ui/components/ui/table";
 import { cn } from "@autumn/ui/lib/utils";
 import React, { useMemo, useState } from "react";
@@ -91,7 +88,6 @@ export function TableContentVirtualized({
 				className={cn(
 					"relative z-50 min-w-0 overflow-hidden",
 					TABLE_TRAY_CLASS,
-					TABLE_TRAY_TABLE_CLASS,
 					isFlexFill && "h-full flex flex-col",
 					className,
 				)}

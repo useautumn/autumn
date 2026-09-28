@@ -1,7 +1,7 @@
 import type { MigrationStatus } from "@autumn/shared";
 import {
+	NEUTRAL_STATUS_ICON_CLASS,
 	StatusChip,
-	StatusChipIcon,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -19,16 +19,14 @@ import {
 import { cn } from "@/lib/utils";
 import { statusLabel, waitingExplanation } from "./migrationStatus";
 
-const NEUTRAL_ICON_CLASS = "bg-zinc-400 dark:bg-zinc-500";
-
 const STATUS_ICON_CLASSES: Record<MigrationStatus, string> = {
-	draft: NEUTRAL_ICON_CLASS,
+	draft: NEUTRAL_STATUS_ICON_CLASS,
 	waiting: "bg-yellow-500",
 	running: "bg-green-500",
 	run: "bg-blue-500",
-	no_changes: NEUTRAL_ICON_CLASS,
+	no_changes: NEUTRAL_STATUS_ICON_CLASS,
 	failed: "bg-red-500",
-	canceled: NEUTRAL_ICON_CLASS,
+	canceled: NEUTRAL_STATUS_ICON_CLASS,
 };
 
 const STATUS_ICONS: Record<MigrationStatus, Icon> = {
@@ -57,12 +55,8 @@ export function MigrationStatusBadge({
 		<StatusChip
 			tabIndex={status === "waiting" ? 0 : undefined}
 			className={cn("max-w-56", className)}
-			indicator={
-				<StatusChipIcon
-					icon={<StatusIcon weight="bold" />}
-					className={STATUS_ICON_CLASSES[status]}
-				/>
-			}
+			icon={<StatusIcon weight="bold" />}
+			iconClassName={STATUS_ICON_CLASSES[status]}
 		>
 			<span className="truncate">
 				{statusLabel({ status, blockedBy: labelBlocker ? blockedBy : null })}

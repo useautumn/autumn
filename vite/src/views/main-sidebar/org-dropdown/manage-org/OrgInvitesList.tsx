@@ -1,5 +1,5 @@
 import type { Invite, Role } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { Badge, TableCell, TableRow } from "@autumn/ui";
 import { isFuture } from "date-fns";
 import { ROLE_META } from "@/components/v2/selects/RoleSelect";
 import { useInNamedSandbox } from "@/hooks/sandbox/useInNamedSandbox";
@@ -7,8 +7,6 @@ import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
 	SETTINGS_ROW_CLASS,
 	SettingsTable,
-	TableCell,
-	TableRow,
 } from "@/views/settings/SettingsTable";
 import { useCurrentMembership } from "../hooks/useCurrentMembership";
 import { useMemberships } from "../hooks/useMemberships";

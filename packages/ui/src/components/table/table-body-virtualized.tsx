@@ -8,10 +8,6 @@ import {
 	TableRowCells,
 	TableSkeletonRows,
 } from "@autumn/ui/components/table/table-row-cells";
-import {
-	TABLE_TRAY_CELL_CLASS,
-	TABLE_TRAY_ROW_CLASS,
-} from "@autumn/ui/components/table/table-tray-classes";
 import { TableCell, TableRow } from "@autumn/ui/components/ui/table";
 import { cn } from "@autumn/ui/lib/utils";
 import type { Row } from "@tanstack/react-table";
@@ -63,10 +59,9 @@ const VirtualRowInner = <T,>({
 			data-state={row.getIsSelected() && "selected"}
 			data-index={virtualRow.index}
 			className={cn(
-				TABLE_TRAY_ROW_CLASS,
-				"text-tertiary-foreground transition-none h-10 relative",
+				"text-tertiary-foreground transition-none h-10 relative border-b last:border-b-0",
 				rowClassName,
-				isSelected && "z-100",
+				isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 				(onRowClick || rowHref) && "cursor-pointer",
 			)}
 			onClick={handleClick}
@@ -216,6 +211,7 @@ export function TableBodyVirtualized() {
 				key="skeleton"
 				{...TABLE_FADE_IN}
 				transition={TABLE_TRANSITION}
+				className="divide-y bg-interactive-secondary"
 			>
 				<TableSkeletonRows
 					columns={columns}
@@ -231,9 +227,9 @@ export function TableBodyVirtualized() {
 	if (!hasRows) {
 		return (
 			<MotionTbody key="empty" {...TABLE_FADE_IN} transition={TABLE_TRANSITION}>
-				<TableRow className={TABLE_TRAY_ROW_CLASS}>
+				<TableRow className="hover:bg-transparent dark:hover:bg-transparent">
 					<TableCell
-						className={cn(TABLE_TRAY_CELL_CLASS, "h-10 text-center py-0")}
+						className="h-10 text-center py-0"
 						colSpan={spannedColumnCount}
 					>
 						<div className="text-subtle text-xs text-center w-full h-full items-center justify-center flex">
@@ -251,6 +247,7 @@ export function TableBodyVirtualized() {
 				key="content"
 				{...TABLE_FADE_IN}
 				transition={TABLE_TRANSITION}
+				className="bg-interactive-secondary"
 			>
 				{rows.map((row, index) => {
 					const isSelected =
@@ -278,7 +275,12 @@ export function TableBodyVirtualized() {
 	}
 
 	return (
-		<MotionTbody key="content" {...TABLE_FADE_IN} transition={TABLE_TRANSITION}>
+		<MotionTbody
+			key="content"
+			{...TABLE_FADE_IN}
+			transition={TABLE_TRANSITION}
+			className="bg-interactive-secondary"
+		>
 			{paddingTop > 0 && (
 				<tr style={{ height: paddingTop }}>
 					<td
