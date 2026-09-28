@@ -1,4 +1,5 @@
 import type {
+	CustomerLicenseTransition,
 	FullCusProduct,
 	FullCustomer,
 	PooledBalancePlan,
@@ -14,11 +15,13 @@ export const computeLicensePooledBalancePlan = ({
 	ctx,
 	fullCustomer,
 	parentCustomerProduct,
+	customerLicenseTransitions,
 	now,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	parentCustomerProduct: FullCusProduct;
+	customerLicenseTransitions?: CustomerLicenseTransition[];
 	now: number;
 }): PooledBalancePlan | undefined => {
 	const computeContext = setupPooledBalanceComputeContext({
@@ -30,6 +33,7 @@ export const computeLicensePooledBalancePlan = ({
 		computeContext,
 		customerLicenses: parentCustomerProduct.customer_licenses ?? [],
 		parentCustomerProducts: [parentCustomerProduct],
+		customerLicenseTransitions,
 		customerCreatedAt: fullCustomer.created_at,
 		now,
 	});
