@@ -1,7 +1,16 @@
 import type { BillingContext, BillingPeriod } from "@autumn/shared";
 
-/** The instant proration is measured from. `bill_difference` measures from the period
- * start on an existing subscription; a new subscription's stub still prorates. */
+/** `bill_difference` applies only to an existing subscription; a new subscription's
+ * stub still prorates. */
+export const billingContextBillsDifference = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}): boolean =>
+	billingContext.requestedProrationBehavior === "bill_difference" &&
+	billingContext.stripeSubscription !== undefined;
+
+/** The instant proration is measured from: the period start when billing the full difference. */
 export const billingContextToProrationNow = ({
 	billingContext,
 	billingPeriod,
@@ -11,8 +20,6 @@ export const billingContextToProrationNow = ({
 	billingPeriod?: BillingPeriod;
 	now: number;
 }): number => {
-	if (billingContext.requestedProrationBehavior !== "bill_difference")
-		return now;
-	if (!billingContext.stripeSubscription) return now;
+	if (!billingContextBillsDifference({ billingContext })) return now;
 	return billingPeriod?.start ?? now;
 };

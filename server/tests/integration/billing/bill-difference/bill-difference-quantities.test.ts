@@ -4,12 +4,15 @@
  * Contract (each on day 14 of a monthly cycle):
  *   credit packs 300 -> 500 ($10 / 100) charges $20, seats 5 -> 8 ($10 each) charges $30,
  *   licenses 3 -> 5 ($20 each) charges $40. Balances are granted as today; renewal date unchanged.
+ *   A decrease credits only the unused time of the removed packs and lowers the quantity now,
+ *   even when the price's on_decrease would defer it (packs 500 -> 300, balance 300).
  */
 
-import { expect, test } from "bun:test";
-import type {
-	BillingPreviewResponse,
-	UpdateSubscriptionV1ParamsInput,
+import { test } from "bun:test";
+import {
+	type BillingPreviewResponse,
+	OnDecrease,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import {
 	expectAnchorQuantityIdentity,
@@ -17,11 +20,13 @@ import {
 } from "@tests/integration/billing/update-subscription/params/billing-cycle-anchor/setupAnchorQuantityScenario";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
+import { calculateProration } from "@tests/integration/billing/utils/proration";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import chalk from "chalk";
+import { expectPreviewTotalCorrect } from "./utils/expectPreviewTotalCorrect";
 
 type Scenario = Awaited<ReturnType<typeof setupAnchorQuantityScenario>>;
 
@@ -45,7 +50,7 @@ const billDifference = async ({
 		await autumnV2_4.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 			body,
 		);
-	expect(preview.total).toEqual(expectedTotal);
+	expectPreviewTotalCorrect({ preview, total: expectedTotal });
 
 	await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>(body);
 
@@ -142,6 +147,42 @@ test.concurrent(
 					paid_quantity: 5,
 				},
 			],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("bill_difference: credit pack decrease credits unused time and applies now")}`,
+	async () => {
+		const scenario = await setupAnchorQuantityScenario({
+			customerId: "bill-diff-pack-decrease",
+			quantity: 500,
+			prepaidItem: items.prepaidMessages({
+				prorationConfig: { onDecrease: OnDecrease.None },
+			}),
+		});
+
+		const unusedCredit = await calculateProration({
+			customerId: scenario.customerId,
+			advancedTo: scenario.advancedTo,
+			amount: 20,
+		});
+
+		await billDifference({
+			scenario,
+			params: {
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: 300 },
+				],
+			},
+			expectedTotal: -unusedCredit,
+		});
+
+		await expectBalanceCorrect({
+			customerId: scenario.customerId,
+			autumn: scenario.autumnV2_4,
+			featureId: TestFeature.Messages,
+			remaining: 300,
 		});
 	},
 );

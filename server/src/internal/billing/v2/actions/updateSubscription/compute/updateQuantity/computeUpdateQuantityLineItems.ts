@@ -11,13 +11,13 @@ import {
 	InternalError,
 	type LineItem,
 	type LineItemContext,
-	priceToProrationConfig,
 	sumValues,
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 import { getRefundLineItemsForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemsForPrice";
+import { billingContextToQuantityProrationConfig } from "./billingContextToQuantityProrationConfig";
 
 export const computeUpdateQuantityLineItems = ({
 	ctx,
@@ -51,19 +51,13 @@ export const computeUpdateQuantityLineItems = ({
 	}
 
 	// Get proration config based on price and direction (upgrade/downgrade)
-	// bill_difference overrides the price's own on_increase / on_decrease config.
 	const isUpgrade = quantityDifferenceForEntitlements > 0;
 	const { shouldApplyProration, chargeImmediately, skipLineItems } =
-		billingContext.requestedProrationBehavior === "bill_difference"
-			? {
-					shouldApplyProration: true,
-					chargeImmediately: true,
-					skipLineItems: false,
-				}
-			: priceToProrationConfig({
-					price: customerPrice.price,
-					isUpgrade,
-				});
+		billingContextToQuantityProrationConfig({
+			billingContext,
+			price: customerPrice.price,
+			isUpgrade,
+		});
 
 	if (skipLineItems) {
 		return [];
