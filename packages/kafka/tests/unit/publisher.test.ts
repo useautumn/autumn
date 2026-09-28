@@ -258,6 +258,131 @@ function transactionalBatchTests(): void {
 		"rejects an empty batch before opening a transaction",
 		rejectsEmptyBatchBeforeTransaction,
 	);
+
+	function concurrentTransactions(): KafkaJSProtocolError {
+		return new KafkaJSProtocolError(
+			Object.assign(
+				new Error(
+					"The producer attempted to update a transaction while another concurrent operation on the same transaction was ongoing",
+				),
+				{ type: "CONCURRENT_TRANSACTIONS", code: 51, retriable: true },
+			),
+		);
+	}
+
+	/** Refuses the first `refusals` sends the way the coordinator does while it finishes the previous transaction. */
+	function createRefusingProducer({ refusals }: { refusals: number }) {
+		const lifecycle: string[] = [];
+		let remaining = refusals;
+		function refuseOrPass(step: string): void {
+			lifecycle.push(step);
+			if (remaining > 0) {
+				remaining -= 1;
+				throw concurrentTransactions();
+			}
+		}
+		async function transaction(): Promise<KafkaTransaction> {
+			lifecycle.push("transaction");
+			return {
+				send: async () => {
+					refuseOrPass("send");
+					return [
+						{ topicName: topic, partition, errorCode: 0, baseOffset: "41" },
+					];
+				},
+				sendOffsets: async () => {
+					refuseOrPass("sendOffsets");
+				},
+				commit: async () => {
+					lifecycle.push("commit");
+				},
+				abort: async () => {
+					lifecycle.push("abort");
+				},
+			};
+		}
+		return { lifecycle, producer: { transaction } as KafkaProducer };
+	}
+	const fastRetry = { attempts: 3, initialBackoffMs: 1, sleep: async () => {} };
+
+	test("a coordinator still finishing the last transaction is retried: abort, wait, begin again", async () => {
+		const fake = createRefusingProducer({ refusals: 2 });
+		const appended = await sendTransactionalBatch({
+			producer: fake.producer,
+			topic,
+			partition,
+			messages: [message],
+			retry: fastRetry,
+		});
+		expect(appended.baseOffset).toBe(41n);
+		expect(fake.lifecycle).toEqual([
+			"transaction",
+			"send",
+			"abort",
+			"transaction",
+			"send",
+			"abort",
+			"transaction",
+			"send",
+			"commit",
+		]);
+	});
+
+	test("an offset-only transaction is retried the same way", async () => {
+		const fake = createRefusingProducer({ refusals: 1 });
+		await sendTransactionalOffsets({
+			producer: fake.producer,
+			offsets: { consumerGroupId: "g", topics: [] },
+			retry: fastRetry,
+		});
+		expect(fake.lifecycle).toEqual([
+			"transaction",
+			"sendOffsets",
+			"abort",
+			"transaction",
+			"sendOffsets",
+			"commit",
+		]);
+	});
+
+	test("past the retry budget the batch is reported not committed, never unknown", async () => {
+		const fake = createRefusingProducer({ refusals: 10 });
+		await expect(
+			sendTransactionalBatch({
+				producer: fake.producer,
+				topic,
+				partition,
+				messages: [message],
+				retry: fastRetry,
+			}),
+		).rejects.toBeInstanceOf(KafkaBatchNotCommittedError);
+		expect(
+			fake.lifecycle.filter((step) => step === "transaction"),
+		).toHaveLength(3);
+		expect(fake.lifecycle.at(-1)).toBe("abort");
+	});
+
+	test("any other send refusal is not retried", async () => {
+		const fake = createFakeProducer({
+			sendError: new KafkaJSProtocolError(
+				Object.assign(new Error("too large"), {
+					type: "MESSAGE_TOO_LARGE",
+					code: 10,
+					retriable: false,
+				}),
+			),
+		});
+		await expect(
+			sendTransactionalBatch({
+				producer: fake.producer,
+				topic,
+				partition,
+				messages: [message],
+				retry: fastRetry,
+			}),
+		).rejects.toBeInstanceOf(KafkaBatchNotCommittedError);
+		expect(fake.lifecycle).toEqual(["transaction", "send", "abort"]);
+	});
 }
 
 function meteringPublisherTests(): void {
