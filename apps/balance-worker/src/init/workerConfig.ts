@@ -40,6 +40,22 @@ export function assertKafkaBalanceWorkerTimings({
 	}
 }
 
+/**
+ * Each ECS fleet consumes in its own group, so a green boot never rebalances blue's
+ * partitions away; off ECS (local, tests, a fail-open boot) the base group is the whole fleet.
+ */
+export function workerConsumerGroupIdOf({
+	env,
+	fleetId,
+}: {
+	env: Pick<BalanceWorkerEnv, "BALANCE_WORKER_GROUP_ID">;
+	fleetId: string | null;
+}): string {
+	return fleetId
+		? `${env.BALANCE_WORKER_GROUP_ID}-${fleetId}`
+		: env.BALANCE_WORKER_GROUP_ID;
+}
+
 export function createWorkerConsumerConfig({
 	groupId,
 	timings,
@@ -94,16 +110,19 @@ export function createWorkerProducerConfig({
 export function balanceWorkerEnvToRuntimeConfig({
 	env,
 	endpoint,
+	groupId,
 }: {
 	env: BalanceWorkerEnv;
 	endpoint: string;
+	/** The group the worker consumes in; command offsets are committed under it. */
+	groupId: string;
 }): PartitionRuntimeFactoryConfig {
 	return {
 		deploymentEnvironment: env.BALANCE_WORKER_DEPLOYMENT,
 		commit: { mode: env.BALANCE_WORKER_COMMIT_MODE },
 		commands: {
 			commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
-			groupId: env.BALANCE_WORKER_GROUP_ID,
+			groupId,
 		},
 		ownership: {
 			topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,

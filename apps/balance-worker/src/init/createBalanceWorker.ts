@@ -1,6 +1,7 @@
 import type { KafkaOffsetCommit } from "@autumn/kafka";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
+import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
@@ -33,6 +34,7 @@ import { createWorkerCheckpointConfig } from "./workerCheckpointConfig.js";
 import {
 	balanceWorkerEnvToRuntimeConfig,
 	createWorkerConsumerConfig,
+	workerConsumerGroupIdOf,
 } from "./workerConfig.js";
 import { openWorkerResources } from "./workerResources.js";
 
@@ -50,9 +52,15 @@ export async function createBalanceWorker({
 		ctx: { logger: dependencies.logger },
 		env,
 	});
+	// Both Flightcontrol fleets boot with the same env; the service ARN is what tells their groups apart.
+	const fleetId = identity.serviceArn
+		? fleetIdOf({ serviceArn: identity.serviceArn })
+		: null;
+	const groupId = workerConsumerGroupIdOf({ env, fleetId });
 	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: address.endpoint,
+		groupId,
 	});
 	const resources = await openWorkerResources({
 		ctx: { logger: dependencies.logger },
@@ -75,15 +83,15 @@ export async function createBalanceWorker({
 					},
 				})
 			: undefined;
-		if (identity.serviceArn)
+		if (fleetId)
 			dependencies.logger.info(
-				`Blue-green slot ${env.BALANCE_WORKER_SLOT}: service ${identity.serviceArn}, build ${identity.imageSha ?? "unknown"}`,
+				`Blue-green fleet ${fleetId}: service ${identity.serviceArn}, group ${groupId}, build ${identity.imageSha ?? "unknown"}`,
 			);
 		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
 		const consumer = resources.kafka.consumer(
 			createWorkerConsumerConfig({
-				groupId: env.BALANCE_WORKER_GROUP_ID,
+				groupId,
 				timings: runtimeConfig.timings,
 				partitionLoad,
 			}),
@@ -205,7 +213,7 @@ export async function createBalanceWorker({
 		const reportsHealth = process.env.NODE_ENV === "production";
 		// Only a task with an ECS identity is part of a fleet the dashboard can swap.
 		const slotHeartbeat =
-			slotGate && resources.edgeConfigs && identity.serviceArn
+			slotGate && resources.edgeConfigs && fleetId
 				? createSlotHeartbeat({
 						ctx: {
 							...resources.edgeConfigs.adminBucket,
@@ -219,7 +227,7 @@ export async function createBalanceWorker({
 						},
 						config: {
 							deployment: env.BALANCE_WORKER_DEPLOYMENT,
-							slot: env.BALANCE_WORKER_SLOT,
+							fleetId,
 							endpoint: address.endpoint,
 							identity,
 						},

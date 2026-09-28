@@ -56,8 +56,11 @@ async function ecsAddresses(): Promise<void> {
 				endpoint: `http://${address}:12982`,
 			});
 			expect(
-				balanceWorkerEnvToRuntimeConfig({ env, endpoint: resolved.endpoint })
-					.ownership.endpoint,
+				balanceWorkerEnvToRuntimeConfig({
+					env,
+					endpoint: resolved.endpoint,
+					groupId: env.BALANCE_WORKER_GROUP_ID,
+				}).ownership.endpoint,
 			).toBe(`http://${address}:12982`);
 		}
 	} finally {

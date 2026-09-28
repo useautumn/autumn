@@ -12,6 +12,7 @@ test("partition producers retry concurrent transactions within milliseconds", ()
 	const { producerLimits } = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: "http://127.0.0.1:12982",
+		groupId: env.BALANCE_WORKER_GROUP_ID,
 	});
 
 	// CONCURRENT_TRANSACTIONS clears in a few ms; a 100ms first backoff was the tail.

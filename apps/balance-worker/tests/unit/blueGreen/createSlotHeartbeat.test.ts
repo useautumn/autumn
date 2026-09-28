@@ -73,7 +73,7 @@ const createHarness = ({
 		},
 		config: {
 			deployment: "tf-balance-staging",
-			slot: "green",
+			fleetId: "1a2b3c4d",
 			endpoint: "http://10.0.0.7:8082",
 			identity: { serviceArn: ours, imageSha: "abc123" },
 		},
@@ -101,14 +101,17 @@ describe("blue-green slot heartbeat", () => {
 		const [{ key, body }] = written;
 		const parsed = SlotHeartbeatSchema.parse(body);
 		expect(key).toBe(
-			slotHeartbeatKeyOf({ slot: "green", instanceId: parsed.instanceId }),
+			slotHeartbeatKeyOf({
+				fleetId: "1a2b3c4d",
+				instanceId: parsed.instanceId,
+			}),
 		);
 		expect(key).toMatch(
-			/^admin\/blue-green-heartbeats\/balance-workers\/green\/.+\.json$/,
+			/^admin\/blue-green-heartbeats\/balance-workers\/1a2b3c4d\/.+\.json$/,
 		);
 		expect(parsed).toMatchObject({
 			serviceName: "balance-workers",
-			slot: "green",
+			fleetId: "1a2b3c4d",
 			deployment: "tf-balance-staging",
 			endpoint: "http://10.0.0.7:8082",
 			pid: process.pid,
@@ -130,6 +133,7 @@ describe("blue-green slot heartbeat", () => {
 				],
 			},
 		});
+		expect(parsed).not.toHaveProperty("slot");
 		expect(Date.parse(parsed.writtenAt)).toBeGreaterThan(0);
 		expect(Date.parse(parsed.startedAt)).toBeLessThanOrEqual(
 			Date.parse(parsed.writtenAt),

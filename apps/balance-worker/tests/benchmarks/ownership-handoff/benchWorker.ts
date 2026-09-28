@@ -10,6 +10,7 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
+import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
@@ -19,6 +20,7 @@ import { createWorkerCheckpointConfig } from "../../../src/init/workerCheckpoint
 import {
 	balanceWorkerEnvToRuntimeConfig,
 	createWorkerConsumerConfig,
+	workerConsumerGroupIdOf,
 } from "../../../src/init/workerConfig.js";
 import { openWorkerResources } from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
@@ -60,9 +62,15 @@ function describe(value: unknown): unknown {
 
 const checkpointConfig = createWorkerCheckpointConfig({ env });
 const address = await resolveWorkerAddress({ env });
+/** The fleet's identity handed in instead of read from ECS; the group derives from it exactly as in createBalanceWorker. */
+const fleetId = env.BENCH_SERVICE_ARN
+	? fleetIdOf({ serviceArn: env.BENCH_SERVICE_ARN })
+	: null;
+const groupId = workerConsumerGroupIdOf({ env, fleetId });
 const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 	env,
 	endpoint: address.endpoint,
+	groupId,
 });
 const resources = await openWorkerResources({
 	ctx: {
@@ -181,7 +189,7 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 
 const consumer = resources.kafka.consumer(
 	createWorkerConsumerConfig({
-		groupId: env.BALANCE_WORKER_GROUP_ID,
+		groupId,
 		timings: runtimeConfig.timings,
 	}),
 );
@@ -197,7 +205,6 @@ consumer.on(consumer.events.CRASH, (event) =>
 	emit("consumer.crash", { error: describe(event.payload.error) }),
 );
 
-/** Same gate createBalanceWorker builds, with the fleet's identity handed in instead of read from ECS. */
 const slotGate =
 	env.BENCH_SERVICE_ARN && resources.edgeConfigs
 		? createSlotGate({
@@ -252,7 +259,7 @@ const app = createBalanceWorkerApp({
 
 /** The production heartbeat every 2s instead of 20s, so the orchestrator can assert on it between steps. */
 const slotHeartbeat =
-	slotGate && resources.edgeConfigs && env.BENCH_SERVICE_ARN
+	slotGate && resources.edgeConfigs && env.BENCH_SERVICE_ARN && fleetId
 		? createSlotHeartbeat({
 				ctx: {
 					...resources.edgeConfigs.adminBucket,
@@ -282,14 +289,14 @@ const slotHeartbeat =
 				},
 				config: {
 					deployment: env.BALANCE_WORKER_DEPLOYMENT,
-					slot: env.BALANCE_WORKER_SLOT,
+					fleetId,
 					endpoint: address.endpoint,
 					identity: { serviceArn: env.BENCH_SERVICE_ARN, imageSha: null },
 				},
 			})
 		: undefined;
 
-emit("worker.starting");
+emit("worker.starting", { groupId, fleetId });
 await resources.edgeConfigs?.start();
 await resources.catalogInvalidations?.start();
 const listener = Bun.serve({
