@@ -6,10 +6,10 @@
  * Cached id — Red (before): the async processor id merge updated Postgres but not a cache built before it landed.
  *             Green (after): the id merge invalidates the cache, so the next read carries the id.
  * Cache race — Red (before): the id store's whole-processor cache patch landed after a renewal's, regressing the cached period.
- *              Green (after): processor writers invalidate instead of patching, so reads rebuild from Postgres.
+ *              Green (after): processor writers invalidate instead of patching; the hold sits on that invalidation.
  */
 
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, spyOn, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { waitForBillingUpdatedWebhook } from "@tests/integration/billing/autumn-webhooks/utils/expectBillingUpdatedWebhook";
 import {
@@ -22,6 +22,7 @@ import chalk from "chalk";
 import { storeRevenueCatProcessorId } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { storeRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject";
+import * as invalidateFullSubjectModule from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject";
 import { ProductService } from "@/internal/products/ProductService";
 import {
 	expectWebhookSuccess,
@@ -212,8 +213,8 @@ test.concurrent(
 	},
 );
 
-/** A ctx whose cusProduct cache patch parks until released, to force a late cache write. */
-const withParkedCachePatch = () => {
+/** Parks the id store's cache invalidation for one customer until released, to force a late cache write. */
+const parkIdStoreInvalidation = ({ customerId }: { customerId: string }) => {
 	let markReached: () => void = () => {};
 	let release: () => void = () => {};
 	const reached = new Promise<void>((resolve) => {
@@ -222,22 +223,21 @@ const withParkedCachePatch = () => {
 	const released = new Promise<void>((resolve) => {
 		release = resolve;
 	});
-	const redisV2 = new Proxy(ctx.redisV2, {
-		get: (target, prop) => {
-			if (prop === "updateFullSubjectCustomerProductV2") {
-				return async (...args: string[]) => {
-					markReached();
-					await released;
-					return target.updateFullSubjectCustomerProductV2(
-						...(args as [string, string, string, string]),
-					);
-				};
-			}
-			const value = Reflect.get(target, prop, target);
-			return typeof value === "function" ? value.bind(target) : value;
-		},
+	const invalidate = invalidateFullSubjectModule.invalidateCachedFullSubject;
+	const spy = spyOn(
+		invalidateFullSubjectModule,
+		"invalidateCachedFullSubject",
+	).mockImplementation(async (args) => {
+		if (
+			args.source === "storeRevenueCatProcessorId" &&
+			args.customerId === customerId
+		) {
+			markReached();
+			await released;
+		}
+		return invalidate(args);
 	});
-	return { redisV2, reached, release };
+	return { reached, release, restore: () => spy.mockRestore() };
 };
 
 test.concurrent(
@@ -278,38 +278,47 @@ test.concurrent(
 			orgId: ctx.org.id,
 			env: ctx.env,
 		});
-		const parked = withParkedCachePatch();
+		const parked = parkIdStoreInvalidation({ customerId });
 
-		// Id store merges {id, Jan} in Postgres, then parks before its cache write.
-		const idStore = storeRevenueCatProcessorId({
-			ctx: {
-				...ctx,
-				redisV2: parked.redisV2,
-				testOptions: {
-					mockRevenueCat: true,
-					revenueCat: mockRcCatalog({
-						internalId: RC_INTERNAL_ID,
-						storeId: RC_STORE_ID,
-						subId: SUB_ID,
-						startMs: janStartMs,
-					}),
+		try {
+			// Id store merges {id, Jan} in Postgres, then parks before its cache invalidation.
+			const idStore = storeRevenueCatProcessorId({
+				ctx: {
+					...ctx,
+					testOptions: {
+						mockRevenueCat: true,
+						revenueCat: mockRcCatalog({
+							internalId: RC_INTERNAL_ID,
+							storeId: RC_STORE_ID,
+							subId: SUB_ID,
+							startMs: janStartMs,
+						}),
+					},
 				},
-			},
-			cusProduct: cusProduct!,
-			product,
-			appUserId: customerId,
-		});
-		await Promise.race([parked.reached, idStore]);
+				cusProduct: cusProduct!,
+				product,
+				appUserId: customerId,
+			});
+			const reached = await Promise.race([
+				parked.reached.then(() => true),
+				idStore.then(() => false),
+			]);
+			expect(reached).toBe(true);
 
-		// The renewal lands in between and moves the period to Feb.
-		await storeRevenueCatPeriod({
-			ctx,
-			customerProduct: cusProduct!,
-			event: { purchased_at_ms: febStartMs, expiration_at_ms: febEndMs },
-		});
+			// The renewal lands in between, moves the period to Feb, and a read rebuilds the cache.
+			await storeRevenueCatPeriod({
+				ctx,
+				customerProduct: cusProduct!,
+				event: { purchased_at_ms: febStartMs, expiration_at_ms: febEndMs },
+			});
+			await autumnV2_2.customers.get(customerId);
 
-		parked.release();
-		await idStore;
+			parked.release();
+			await idStore;
+		} finally {
+			parked.release();
+			parked.restore();
+		}
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		const subscription = customer.subscriptions.find(

@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { AppEnv, type Organization } from "@autumn/shared";
+import {
+	AppEnv,
+	type Organization,
+	type RevenueCatOAuthConfig,
+} from "@autumn/shared";
 import { OAuth2Tokens } from "arctic";
-import { encryptData } from "@/utils/encryptUtils.js";
+import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
@@ -16,8 +20,14 @@ const mockRefreshRcTokens = mock(() =>
 	),
 );
 
-const mockOrgUpdate = mock(
-	(_args: { updates: Organization }): Promise<null> => Promise.resolve(null),
+let storedOrg: Organization | null = null;
+const mockOrgGet = mock(() => Promise.resolve(storedOrg as Organization));
+const mockSwapRevenueCatOAuth = mock(
+	(_args: {
+		env: AppEnv;
+		oauthConfig: RevenueCatOAuthConfig;
+		expectedRefreshToken: string;
+	}): Promise<boolean> => Promise.resolve(true),
 );
 
 await mockModuleWithRestore(
@@ -28,10 +38,29 @@ await mockModuleWithRestore(
 );
 
 await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
-	OrgService: {
-		update: mockOrgUpdate,
-	},
+	OrgService: { get: mockOrgGet },
 }));
+
+await mockModuleWithRestore("@/internal/orgs/repos/index.js", () => ({
+	orgRepo: { swapRevenueCatOAuth: mockSwapRevenueCatOAuth },
+}));
+
+await mockModuleWithRestore(
+	"@/internal/orgs/orgUtils/clearOrgCache.js",
+	() => ({
+		clearOrgCache: () => Promise.resolve(),
+	}),
+);
+
+await mockModuleWithRestore(
+	"@/external/redis/utils/lockUtils/acquireLockWithWait.js",
+	() => ({ acquireLockWithWait: () => Promise.resolve() }),
+);
+
+await mockModuleWithRestore(
+	"@/external/redis/utils/lockUtils/clearLock.js",
+	() => ({ clearLock: () => Promise.resolve() }),
+);
 
 const { getRevenuecatAccessToken } = await import(
 	"@/external/revenueCat/misc/getRevenuecatAccessToken.js"
@@ -66,7 +95,8 @@ describe("getRevenuecatAccessToken", () => {
 	beforeEach(() => {
 		process.env.ENCRYPTION_PASSWORD = "test-encryption-password";
 		mockRefreshRcTokens.mockClear();
-		mockOrgUpdate.mockClear();
+		mockOrgGet.mockClear();
+		mockSwapRevenueCatOAuth.mockClear();
 	});
 
 	afterEach(() => {
@@ -84,11 +114,12 @@ describe("getRevenuecatAccessToken", () => {
 
 		expect(token).toBe("cached_access_token");
 		expect(mockRefreshRcTokens).not.toHaveBeenCalled();
-		expect(mockOrgUpdate).not.toHaveBeenCalled();
+		expect(mockSwapRevenueCatOAuth).not.toHaveBeenCalled();
 	});
 
 	test("refreshes and persists rotated tokens when expired", async () => {
 		const org = buildOrg({ expiresAt: Date.now() - 1000 });
+		storedOrg = org;
 
 		const token = await getRevenuecatAccessToken({
 			db: {} as never,
@@ -98,15 +129,17 @@ describe("getRevenuecatAccessToken", () => {
 
 		expect(token).toBe("atk_refreshed");
 		expect(mockRefreshRcTokens).toHaveBeenCalledTimes(1);
-		expect(mockOrgUpdate).toHaveBeenCalledTimes(1);
+		expect(mockSwapRevenueCatOAuth).toHaveBeenCalledTimes(1);
 
-		const updateCall = mockOrgUpdate.mock.calls[0]?.[0];
-		const sandboxOauth =
-			updateCall?.updates.processor_configs?.revenuecat?.sandbox_oauth;
-
-		expect(sandboxOauth?.access_token).toBeDefined();
-		expect(sandboxOauth?.refresh_token).toBeDefined();
-		expect(sandboxOauth?.expires_at).toBeGreaterThan(Date.now());
+		const swapCall = mockSwapRevenueCatOAuth.mock.calls[0]?.[0];
+		expect(swapCall?.env).toBe(AppEnv.Sandbox);
+		expect(swapCall?.expectedRefreshToken).toBe(
+			org.processor_configs?.revenuecat?.sandbox_oauth?.refresh_token ?? "",
+		);
+		expect(decryptData(swapCall?.oauthConfig.refresh_token ?? "")).toBe(
+			"rtk_rotated",
+		);
+		expect(swapCall?.oauthConfig.expires_at).toBeGreaterThan(Date.now());
 	});
 
 	test("falls back to legacy api_key when oauth is absent", async () => {
