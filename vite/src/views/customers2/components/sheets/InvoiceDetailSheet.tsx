@@ -5,23 +5,17 @@ import {
 	InvoiceStatus,
 	ProcessorType,
 } from "@autumn/shared";
-import {
-	Badge,
-	Button,
-	InfoRow,
-	MiniCopyButton,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
+import { Badge, InfoRow, MiniCopyButton } from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
 	CalendarBlankIcon,
+	CheckCircleIcon,
 	CreditCardIcon,
 	HashIcon,
 	PaperPlaneTiltIcon,
 	ProhibitIcon,
+	ReceiptIcon,
 } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -29,7 +23,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
-import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -51,6 +45,10 @@ import {
 	useInvoiceMetadataQuery,
 } from "@/views/customers2/hooks/useInvoiceMetadataQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
+import {
+	type InvoiceSheetAction,
+	InvoiceSheetFooter,
+} from "./InvoiceSheetFooter";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
 type LineItemGroup = {
@@ -117,23 +115,38 @@ export function InvoiceDetailSheet({
 	const buildQueryKey = useQueryKeyFactory();
 	const { refetch } = useCusQuery();
 
+	const refreshCustomer = () =>
+		Promise.all([
+			refetch(),
+			queryClient.invalidateQueries({
+				queryKey: buildQueryKey([
+					"customer",
+					customer?.id || customer?.internal_id,
+				]),
+			}),
+		]);
+
 	const voidInvoice = useMutation({
 		mutationFn: () =>
 			axiosInstance.post("/v1/invoices.void", { invoice_id: invoice?.id }),
 		onSuccess: async () => {
 			toast.success("Invoice voided");
-			await Promise.all([
-				refetch(),
-				queryClient.invalidateQueries({
-					queryKey: buildQueryKey([
-						"customer",
-						customer?.id || customer?.internal_id,
-					]),
-				}),
-			]);
+			await refreshCustomer();
 		},
 		onError: (error) => {
 			toast.error(getBackendErr(error, "Failed to void invoice"));
+		},
+	});
+
+	const markInvoicePaid = useMutation({
+		mutationFn: () =>
+			axiosInstance.post("/v1/invoices.pay", { invoice_id: invoice?.id }),
+		onSuccess: async () => {
+			toast.success("Invoice marked as paid");
+			await refreshCustomer();
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to mark invoice as paid"));
 		},
 	});
 
@@ -225,6 +238,11 @@ export function InvoiceDetailSheet({
 
 	if (!invoice) return null;
 
+	const itemCount = productGroups.reduce(
+		(count, productGroup) => count + productGroup.lineItemGroups.length,
+		0,
+	);
+
 	const invoiceProcessor = resolveInvoiceProcessor({
 		processorType: invoice.processor_type,
 		metadata: invoiceMetadata,
@@ -270,11 +288,15 @@ export function InvoiceDetailSheet({
 					path: `invoices/${invoice.stripe_id}`,
 				})
 			: null;
-	const canOpenInvoice = Boolean(
-		invoice.hosted_invoice_url ||
-			stripeConnectViewAsInvoiceLink ||
-			invoiceIsStripe,
-	);
+	const stripeInvoiceUrl =
+		stripeConnectViewAsInvoiceLink ??
+		(invoiceIsStripe
+			? getStripeInvoiceLink({
+					stripeInvoice: invoice.stripe_id,
+					env,
+					accountId: stripeAccount?.id,
+				})
+			: null);
 
 	const formatAmount = (amount: number, currency: string) => {
 		const absAmount = Math.abs(amount);
@@ -303,74 +325,116 @@ export function InvoiceDetailSheet({
 		return format(new Date(timestamp), "MMM d, yyyy");
 	};
 
-	const handleViewInvoice = () => {
-		if (stripeConnectViewAsInvoiceLink) {
-			window.open(stripeConnectViewAsInvoiceLink, "_blank");
-			return;
-		}
+	const openUrl = (url: string) => window.open(url, "_blank", "noopener");
 
-		if (invoice.hosted_invoice_url) {
-			window.open(invoice.hosted_invoice_url, "_blank");
-			return;
-		}
+	const canMarkPaid = canVoid;
+	const markPaidAction: InvoiceSheetAction | undefined = canMarkPaid
+		? {
+				label: "Mark as paid",
+				icon: <CheckCircleIcon size={16} />,
+				onSelect: () => markInvoicePaid.mutate(),
+				isLoading: markInvoicePaid.isPending,
+			}
+		: undefined;
+	const reissueAction: InvoiceSheetAction | undefined = canReissue
+		? {
+				label: "Reissue",
+				icon: <PaperPlaneTiltIcon size={16} />,
+				onSelect: () =>
+					setSheet({
+						type: "invoice-reissue",
+						data: { invoice, lineItems, taxedAmount },
+					}),
+			}
+		: undefined;
+	const primaryAction = markPaidAction ?? reissueAction;
 
-		if (invoiceIsStripe) {
-			window.open(
-				getStripeInvoiceLink({
-					stripeInvoice: invoice.stripe_id,
-					env,
-					accountId: stripeAccount?.id,
-				}),
-				"_blank",
-			);
-		}
-	};
+	const menuActions: InvoiceSheetAction[] = [];
+	if (reissueAction && reissueAction !== primaryAction) {
+		menuActions.push({ ...reissueAction, label: "Reissue invoice" });
+	}
+	if (stripeInvoiceUrl) {
+		menuActions.push({
+			label: "Open in Stripe",
+			icon: <ArrowSquareOutIcon size={16} />,
+			onSelect: () => openUrl(stripeInvoiceUrl),
+		});
+	}
+	if (invoice.hosted_invoice_url) {
+		const hostedInvoiceUrl = invoice.hosted_invoice_url;
+		menuActions.push({
+			label: "View hosted invoice",
+			icon: <ReceiptIcon size={16} />,
+			onSelect: () => openUrl(hostedInvoiceUrl),
+		});
+	}
+	if (canRefund || (vercelRefundBlocked && !isFullyRefunded)) {
+		menuActions.push({
+			label: canRefund ? "Refund invoice" : "Refund via Vercel support",
+			icon: <ArrowCounterClockwiseIcon size={16} />,
+			onSelect: () => setRefundDialogOpen(true),
+			destructive: true,
+			disabled: !canRefund,
+		});
+	}
+	if (canVoid) {
+		menuActions.push({
+			label: "Void invoice",
+			icon: <ProhibitIcon size={16} />,
+			onSelect: () => voidInvoice.mutate(),
+			destructive: true,
+			disabled: voidInvoice.isPending,
+		});
+	}
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
-			<SheetHeader
-				title={
-					<div className="flex items-center gap-2">
-						<span>Invoice</span>
-						<CustomerInvoiceStatus
-							status={invoice.status ?? InvoiceStatus.Paid}
-							amountPaid={invoice.amount_paid}
-							total={invoice.total}
-							refundedAmount={invoice.refunded_amount}
-						/>
-					</div>
-				}
-				description={`${formatDate(invoice.created_at)} • ${formatSignedAmount(invoice.total, invoice.currency)}`}
-			/>
+			<div className="p-4">
+				<div className="flex items-center gap-2 text-sm font-medium text-tertiary-foreground">
+					<span>Invoice</span>
+					<CustomerInvoiceStatus
+						status={invoice.status ?? InvoiceStatus.Paid}
+						amountPaid={invoice.amount_paid}
+						total={invoice.total}
+						refundedAmount={invoice.refunded_amount}
+					/>
+				</div>
+				<p className="mt-1.5 text-[30px] font-semibold leading-9 tracking-[-0.02em] text-foreground tabular-nums">
+					{formatSignedAmount(invoice.total, invoice.currency)}
+				</p>
+				<p className="mt-0.5 text-sm text-tertiary-foreground">
+					{formatDate(invoice.created_at)} · {processorLabel} · {itemCount}{" "}
+					{itemCount === 1 ? "item" : "items"}
+				</p>
+			</div>
 
-			{productGroups.map((productGroup) => (
-				<SheetSection
-					key={productGroup.productId ?? "unknown"}
-					withSeparator={true}
-				>
-					<div className="mb-2">
-						<span className="text-xs font-medium text-tertiary-foreground truncate">
-							{productGroup.productName}
-						</span>
-					</div>
+			<div className="mx-4 overflow-hidden rounded-lg border bg-background dark:border-[#262626] dark:bg-[#191919]">
+				{productGroups.map((productGroup) => (
+					<div
+						key={productGroup.productId ?? "unknown"}
+						className="border-b px-3 pt-3 pb-2 dark:border-[#232323]"
+					>
+						<div className="mb-1">
+							<span className="text-xs font-medium text-tertiary-foreground truncate">
+								{productGroup.productName}
+							</span>
+						</div>
 
-					<div className="flex flex-col gap-2">
-						{productGroup.lineItemGroups.map((group) => (
-							<LineItemGroupRow
-								key={group.groupKey}
-								group={group}
-								formatAmount={formatAmount}
-								formatPeriod={formatPeriod}
-								currency={invoice.currency}
-							/>
-						))}
+						<div className="flex flex-col gap-2">
+							{productGroup.lineItemGroups.map((group) => (
+								<LineItemGroupRow
+									key={group.groupKey}
+									group={group}
+									formatAmount={formatAmount}
+									formatPeriod={formatPeriod}
+									currency={invoice.currency}
+								/>
+							))}
+						</div>
 					</div>
-				</SheetSection>
-			))}
+				))}
 
-			{/* Invoice Total */}
-			<SheetSection withSeparator={true}>
-				<div className="space-y-2">
+				<div className="space-y-2 bg-muted/50 px-3 py-2.5 dark:bg-[#1C1C1C]">
 					{taxedAmount != null && taxedAmount > 0 && (
 						<div className="flex items-center justify-between">
 							<span className="text-sm text-muted-foreground">Tax</span>
@@ -418,10 +482,10 @@ export function InvoiceDetailSheet({
 						</>
 					)}
 				</div>
-			</SheetSection>
+			</div>
 
 			<SheetSection withSeparator={false}>
-				<div className="space-y-3">
+				<div className="space-y-2.5">
 					<InfoRow
 						icon={<HashIcon size={16} weight="duotone" />}
 						label="Invoice ID"
@@ -462,70 +526,10 @@ export function InvoiceDetailSheet({
 				</div>
 			</SheetSection>
 
-			<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
-				{canOpenInvoice && (
-					<Button
-						variant="secondary"
-						className="flex-1"
-						onClick={handleViewInvoice}
-					>
-						<ArrowSquareOutIcon size={16} className="mr-1.5" />
-						Open
-					</Button>
-				)}
-				{canRefund && (
-					<Button
-						variant="primary"
-						className="flex-1"
-						onClick={() => setRefundDialogOpen(true)}
-					>
-						<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
-						Refund Invoice
-					</Button>
-				)}
-				{vercelRefundBlocked && !isFullyRefunded && (
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<span className="flex-1">
-								<Button variant="primary" className="w-full" disabled>
-									<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
-									Refund Invoice
-								</Button>
-							</span>
-						</TooltipTrigger>
-						<TooltipContent className="max-w-64">
-							This Vercel invoice predates refund support in Autumn. Refund it
-							via Vercel support.
-						</TooltipContent>
-					</Tooltip>
-				)}
-				{canReissue && (
-					<Button
-						variant="primary"
-						className="flex-1"
-						onClick={() =>
-							setSheet({
-								type: "invoice-reissue",
-								data: { invoice, lineItems, taxedAmount },
-							})
-						}
-					>
-						<PaperPlaneTiltIcon size={16} className="mr-1.5" />
-						Reissue
-					</Button>
-				)}
-				{canVoid && (
-					<Button
-						variant="destructive"
-						className="flex-1"
-						onClick={() => voidInvoice.mutate()}
-						isLoading={voidInvoice.isPending}
-					>
-						<ProhibitIcon size={16} className="mr-1.5" />
-						Void
-					</Button>
-				)}
-			</div>
+			<InvoiceSheetFooter
+				primaryAction={primaryAction}
+				menuActions={menuActions}
+			/>
 			{canRefund && (
 				<RefundInvoiceDialog
 					open={refundDialogOpen}
