@@ -243,3 +243,7 @@ Recorded while implementing items 1–3 (2026-09-28, PR "feat(balance-worker): b
 - **The dead-owner fixture is deaf.** `partitionHandoff.test.ts`'s "late draining record" case stood
   a live, unrevoked worker in for a dead owner; a live owner now answers a `ready`, so the fixture
   says explicitly that it never hears one.
+
+## Production rollout log
+
+- 2026-09-28: balance-workers and herald converted to blue/green in Flightcontrol; FC created the `-2` green services. The first S3 record must name the original (live) service as blue: Initialize ran before FC tagged `-2` and picked it, so balance-workers was re-marked by hand.
