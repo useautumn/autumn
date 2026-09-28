@@ -2,7 +2,17 @@ import { AppEnv, type Feature, type SharedContext } from "../../index.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { Organization } from "../../models/orgModels/orgTable.js";
 
-export const orgToInStatuses = ({ org }: { org: Organization }) => {
+/** Generic over the org shape so the balance engine's org pick qualifies. */
+export const orgToInStatuses = ({
+	org,
+}: {
+	org: {
+		config: Pick<
+			Organization["config"],
+			"include_past_due" | "block_overdue_entitlements"
+		>;
+	};
+}) => {
 	if (org.config.include_past_due || org.config.block_overdue_entitlements) {
 		return [CusProductStatus.Active, CusProductStatus.PastDue];
 	}

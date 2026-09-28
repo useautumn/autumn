@@ -225,6 +225,6 @@ export const runOAuthFlow = async ({
 	}
 
 	throw new Error(
-		`All OAuth callback ports (${OAUTH_PORTS.at(0)}-${OAUTH_PORTS.at(-1)}) are in use.`,
+		`All OAuth callback ports (${OAUTH_PORTS[0]}-${OAUTH_PORTS[OAUTH_PORTS.length - 1]}) are in use.`,
 	);
 };

@@ -1,5 +1,8 @@
 import pino from "pino";
-import { createConsoleJsonStream } from "../streams/consoleJsonStream.js";
+import {
+	type ConsoleJsonStream,
+	createConsoleJsonStream,
+} from "../streams/consoleJsonStream.js";
 import { createPrettyLogStream } from "../streams/prettyLogStream.js";
 import type { CreateLoggerParams } from "../types.js";
 import {
@@ -30,6 +33,7 @@ export const createLogger = (
 	const axiomOrgId = params.axiomOrgId ?? process.env.AXIOM_ORG_ID;
 	const streams: pino.StreamEntry[] = [];
 	const transportStreams: TransportStream[] = [];
+	const consoleJsonStreams: ConsoleJsonStream[] = [];
 
 	for (const output of resolved.outputs) {
 		if (output === "console-pretty") {
@@ -43,10 +47,9 @@ export const createLogger = (
 		}
 
 		if (output === "console-json") {
-			streams.push({
-				level: resolved.level,
-				stream: createConsoleJsonStream(),
-			});
+			const consoleJson = createConsoleJsonStream();
+			consoleJsonStreams.push(consoleJson);
+			streams.push({ level: resolved.level, stream: consoleJson });
 		}
 
 		if (output === "axiom" && axiomToken) {
@@ -86,9 +89,10 @@ export const createLogger = (
 	// drains its buffer in its close hook, not on pino's in-process flush.
 	let flushed: Promise<void> | undefined;
 	const flushTransports = () => {
-		flushed ??= Promise.all(transportStreams.map(closeTransportStream)).then(
-			() => undefined,
-		);
+		flushed ??= Promise.all([
+			...transportStreams.map(closeTransportStream),
+			...consoleJsonStreams.map((stream) => stream.flush()),
+		]).then(() => undefined);
 		return flushed;
 	};
 

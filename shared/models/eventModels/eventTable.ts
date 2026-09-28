@@ -37,6 +37,11 @@ export const eventColumns = () => ({
 	customer_id: text("customer_id").notNull(),
 	properties: jsonb().$type<Record<string, any>>(),
 	deductions: jsonb().$type<TrackDeduction[]>(),
+	/** When Tinybird confirmed this row; null until then, so a retry sends only what Tinybird has not got. */
+	sent_to_tinybird_at: timestamp("sent_to_tinybird_at", {
+		mode: "date",
+		withTimezone: true,
+	}),
 });
 
 export const eventUnique = (

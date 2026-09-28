@@ -30,8 +30,10 @@ describe("viteHmrClient", () => {
 		expect(viteHmrClient({ frontendUrl: "", vitePort: 7400 })).toEqual({
 			port: 7400,
 		});
-		expect(viteHmrClient({ frontendUrl: "not-a-url", vitePort: 3000 })).toEqual({
-			port: 3000,
-		});
+		expect(viteHmrClient({ frontendUrl: "not-a-url", vitePort: 3000 })).toEqual(
+			{
+				port: 3000,
+			},
+		);
 	});
 });

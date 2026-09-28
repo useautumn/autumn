@@ -25,3 +25,15 @@ export const createLoopsContact = async (user: User) => {
 		logger.error("Error creating loops contact", { error });
 	}
 };
+
+export const deleteLoopsContact = async ({ email }: { email: string }) => {
+	if (!process.env.LOOPS_API_KEY) return;
+
+	try {
+		const loops = createLoopsCli();
+		await loops.deleteContact({ email });
+	} catch (error) {
+		// Loops returns 404 when no contact exists for the email, which is fine.
+		logger.warn("Failed to delete loops contact", { error, email });
+	}
+};

@@ -1,5 +1,6 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { InvoiceModeParamsSchema } from "@api/billing/common/invoiceModeParams";
+import { LicenseQuantityParamsSchema } from "@api/billing/common/licenseQuantityParams";
 import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
 import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
@@ -42,6 +43,10 @@ export const CreateSchedulePlanSchema = z.object({
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description: "Optional prepaid feature quantities for this phase's plan.",
+	}),
+	license_quantities: z.array(LicenseQuantityParamsSchema).optional().meta({
+		description:
+			"Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.",
 	}),
 	version: z.number().optional().meta({
 		description: "Optional explicit plan version to schedule.",
@@ -198,7 +203,7 @@ export const CreateScheduleParamsV0Schema = z
 		}),
 		billing_behavior: BillingBehaviorSchema.optional().meta({
 			description:
-				"Whether to prorate the immediate phase. 'none' skips proration charges and credits.",
+				"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.",
 		}),
 		no_billing_changes: z.boolean().optional().meta({
 			description: "If true, skips any billing changes for the schedule.",

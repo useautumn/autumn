@@ -37,6 +37,11 @@ export interface AttachBillingContext extends BillingContext {
 	// in-group transitions; falls back to a removed cross-group plan otherwise.
 	carryOverSourceCustomerProduct?: FullCusProduct;
 
+	// Source for license pools and seat assignments. Same as
+	// currentCustomerProduct for in-group transitions; falls back to the one
+	// removed cross-group plan that carries license pools.
+	licenseTransitionSourceCustomerProduct?: FullCusProduct;
+
 	// Timing
 	planTiming: PlanTiming;
 	endOfCycleMs?: number; // Only needed if planTiming === "end_of_cycle"

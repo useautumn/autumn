@@ -1,0 +1,136 @@
+import {
+	readEdgeConfigTimestamp,
+	writeEdgeConfigTimestamp,
+} from "../s3/edgeConfigTimestamp.js";
+import type {
+	EdgeConfigContext,
+	EdgeConfigLogger,
+} from "../types/edgeConfig.js";
+
+const ONE_SECOND_MS = 1_000;
+const TEN_SECONDS_MS = 10_000;
+const TEN_MINUTES_MS = 600_000;
+
+type EdgeConfigLifecycle = {
+	refresh: (options?: { logger?: EdgeConfigLogger }) => Promise<void>;
+};
+
+/** One per process: every store joins it, one timestamp poll drives them all, a backstop refresh self-heals. */
+export const createEdgeConfigRegistry = ({
+	ctx,
+	readTimestamp = () => readEdgeConfigTimestamp({ ctx }),
+	writeTimestamp = () => writeEdgeConfigTimestamp({ ctx }),
+	pollIntervalMs = process.env.NODE_ENV === "development"
+		? ONE_SECOND_MS
+		: TEN_SECONDS_MS,
+	backstopIntervalMs = TEN_MINUTES_MS,
+}: {
+	ctx: EdgeConfigContext;
+	readTimestamp?: () => Promise<string | null>;
+	writeTimestamp?: () => Promise<string>;
+	pollIntervalMs?: number;
+	backstopIntervalMs?: number;
+}) => {
+	const stores: EdgeConfigLifecycle[] = [];
+	let lastTimestamp: string | null | undefined;
+	let lastTimestampError: string | undefined;
+	let timestampWriteAttempted = false;
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let pollPromise: Promise<void> | null = null;
+	let backstopTimer: ReturnType<typeof setInterval> | null = null;
+	let backstopPromise: Promise<void> | null = null;
+	let pollLogger: EdgeConfigLogger | undefined;
+
+	// A store registered after polling began missed the startup load and would
+	// serve its default until the next timestamp change or backstop.
+	const register = ({ store }: { store: EdgeConfigLifecycle }) => {
+		stores.push(store);
+		if (pollTimer) void store.refresh({ logger: pollLogger });
+	};
+
+	const refreshAll = async ({ logger }: { logger?: EdgeConfigLogger } = {}) => {
+		await Promise.all(stores.map((store) => store.refresh({ logger })));
+	};
+
+	const warnTimestampError = ({
+		error,
+		logger,
+	}: {
+		error: unknown;
+		logger?: EdgeConfigLogger;
+	}) => {
+		const message = error instanceof Error ? error.message : String(error);
+		if (message !== lastTimestampError) {
+			logger?.warn(`Failed to read edge config timestamp: ${message}`);
+		}
+		lastTimestampError = message;
+	};
+
+	/** One create attempt per missing-key stretch: every process polls, so
+	 *  retrying each tick would hammer S3 fleet-wide while the key stays absent. */
+	const ensureTimestamp = async (): Promise<string | null> => {
+		if (timestampWriteAttempted) return null;
+		timestampWriteAttempted = true;
+		return await writeTimestamp();
+	};
+
+	const checkForChanges = async ({
+		logger,
+	}: {
+		logger?: EdgeConfigLogger;
+	} = {}) => {
+		try {
+			const timestamp = await readTimestamp();
+			lastTimestampError = undefined;
+			if (timestamp !== null) timestampWriteAttempted = false;
+			if (timestamp === lastTimestamp && timestamp !== null) return;
+			await refreshAll({ logger });
+			lastTimestamp = timestamp ?? (await ensureTimestamp());
+		} catch (error) {
+			warnTimestampError({ error, logger });
+			await refreshAll({ logger });
+		}
+	};
+
+	const start = async ({ logger }: { logger?: EdgeConfigLogger } = {}) => {
+		if (pollTimer || process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64) {
+			await refreshAll({ logger });
+			return;
+		}
+		try {
+			const timestamp = await readTimestamp();
+			if (timestamp !== null) timestampWriteAttempted = false;
+			lastTimestamp = timestamp ?? (await ensureTimestamp());
+			lastTimestampError = undefined;
+		} catch (error) {
+			warnTimestampError({ error, logger });
+		}
+		await refreshAll({ logger });
+		pollLogger = logger;
+		pollTimer = setInterval(() => {
+			if (pollPromise) return;
+			pollPromise = checkForChanges({ logger }).finally(() => {
+				pollPromise = null;
+			});
+		}, pollIntervalMs);
+		// Self-heals a config whose timestamp never advanced (write lost after the
+		// config landed), which the timestamp poll alone cannot detect.
+		backstopTimer = setInterval(() => {
+			if (backstopPromise) return;
+			backstopPromise = refreshAll({ logger }).finally(() => {
+				backstopPromise = null;
+			});
+		}, backstopIntervalMs);
+	};
+
+	const stop = () => {
+		if (pollTimer) clearInterval(pollTimer);
+		if (backstopTimer) clearInterval(backstopTimer);
+		pollTimer = null;
+		backstopTimer = null;
+	};
+
+	return { register, start, stop, checkForChanges, refreshAll };
+};
+
+export type EdgeConfigRegistry = ReturnType<typeof createEdgeConfigRegistry>;

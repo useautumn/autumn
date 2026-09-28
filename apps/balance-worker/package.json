@@ -1,0 +1,47 @@
+{
+	"name": "@autumn/balance-worker",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "bun --config=./bunfig.toml src/main.ts",
+		"setup:local": "bun --config=./bunfig.toml scripts/setupLocalTopics.ts",
+		"dev": "NODE_ENV=development bun run setup:local && NODE_ENV=development KAFKA_AUTH_MODE=${KAFKA_AUTH_MODE:-none} bun --watch --no-clear-screen --config=./bunfig.toml src/main.ts",
+		"dev:restart": "bun scripts/devWithRestart.ts",
+		"test": "bun test --config ./bunfig.toml tests/unit",
+		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/kafka",
+		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"benchmark:checkpoint": "bun --config=./bunfig.toml tests/benchmarks/checkpoint-capture.ts",
+		"benchmark:handoff": "bun --config=./bunfig.toml tests/benchmarks/ownership-handoff/run.ts",
+		"benchmark:handoff:summarize": "bun tests/benchmarks/ownership-handoff/summarize.ts",
+		"benchmark:handoff:worker": "bun --config=./bunfig.toml tests/benchmarks/ownership-handoff/benchWorker.ts",
+		"benchmark:effects": "bun --config=./bunfig.toml tests/benchmarks/track-effects/run.ts",
+		"benchmark:track": "bun --config=./bunfig.toml tests/benchmarks/track-throughput/run.ts",
+		"ts": "tsc --noEmit",
+		"test:postgres": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/postgres"
+	},
+	"dependencies": {
+		"@autumn/auto-topup": "workspace:*",
+		"@autumn/balance-engine": "workspace:*",
+		"@autumn/balance-webhooks": "workspace:*",
+		"@autumn/balance-worker-client": "workspace:*",
+		"@autumn/catalog-lru": "workspace:*",
+		"@autumn/dynamodb": "workspace:*",
+		"@autumn/edge-config": "workspace:*",
+		"@autumn/env": "workspace:*",
+		"@autumn/kafka": "workspace:*",
+		"@autumn/logging": "workspace:*",
+		"@autumn/postgres": "workspace:*",
+		"@aws-sdk/client-s3": "^3.1017.0",
+		"hono": "^4.13.5",
+		"kafkajs": "^2.2.4",
+		"lru-cache": "^11.2.7",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@autumn/shared": "workspace:*",
+		"@types/bun": "1.4.2",
+		"@types/node": "^24.9.1",
+		"typescript": "~5.8.3"
+	}
+}

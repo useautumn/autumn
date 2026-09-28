@@ -7,6 +7,7 @@ import {
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
@@ -25,17 +26,14 @@ export function CreateScheduleAdvancedSection() {
 	return (
 		<AdvancedSection>
 			{rules.proration.visible && (
-				<ConfigRow
-					title="Prorate Changes"
-					description="Prorate price differences when changing plans mid-cycle"
-					action={
-						<BillingOptionToggle
-							rule={rules.proration}
-							checked={billingBehavior !== "none"}
-							onCheckedChange={(checked) =>
-								form.setFieldValue("billingBehavior", checked ? null : "none")
-							}
-						/>
+				<ProrationBehaviorConfigRow
+					rule={rules.proration}
+					value={billingBehavior ?? "prorate_immediately"}
+					onChange={(value) =>
+						form.setFieldValue(
+							"billingBehavior",
+							value === "prorate_immediately" ? null : value,
+						)
 					}
 				/>
 			)}

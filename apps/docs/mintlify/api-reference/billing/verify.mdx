@@ -1,0 +1,280 @@
+---
+title: "Verify"
+openapi: "openapi POST /v1/billing.verify"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+    Verify checks a customer's Stripe subscriptions against the plans Autumn
+    has on record and reports any drift, such as missing or unexpected items,
+    quantity or price differences, schedule mismatches and cancellation state.
+    It is read-only and never changes Autumn or Stripe.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Verify all subscriptions
+const response = await autumn.billing.verify({
+    customerId: "cus_123",
+});
+
+const drifted = response.subscriptions.filter(
+    (subscription) => subscription.status === "mismatched",
+);
+```
+
+```typescript Verify specific subscriptions in strict mode
+const response = await autumn.billing.verify({
+    customerId: "cus_123",
+    subscriptionIds: ["sub_1234"],
+    strict: true,
+});
+```
+
+</CodeGroup>
+
+Each mismatch carries a `message` you can show as-is and a `severity`. Warnings,
+like a Stripe subscription with no Autumn plan linked to it, can be deliberate;
+errors mean Stripe will bill differently from what Autumn expects.
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
+</DynamicParamField>
+
+<DynamicParamField body="subscription_ids" type="string[]">
+  Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.
+</DynamicParamField>
+
+<DynamicParamField body="strict" type="boolean">
+  When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string" />
+
+<DynamicResponseField name="customer_mismatches" type="object | object | object | object | object | object | object | object | object | object | object | object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="type" type="any" />
+
+    <DynamicResponseField name="message" type="string">
+      Human-readable one-line description of the mismatch.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="severity" type="'error' | 'warning'">
+      How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="reason" type="'missing' | 'unexpected' | 'amount_mismatch'" />
+
+    <DynamicResponseField name="expected_price_id" type="string" />
+
+    <DynamicResponseField name="actual_price_id" type="string">
+      The Stripe price of the item this mismatch is about.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expected_amount" type="string" />
+
+    <DynamicResponseField name="actual_amount" type="string" />
+
+    <DynamicResponseField name="plan_name" type="string" />
+
+    <DynamicResponseField name="plan_id" type="string">
+      The Autumn plan this mismatch belongs to, when resolvable.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="price_amount" type="number" />
+
+    <DynamicResponseField name="price_interval" type="string" />
+
+    <DynamicResponseField name="price_interval_count" type="number" />
+
+    <DynamicResponseField name="expected_quantity" type="number" />
+
+    <DynamicResponseField name="phase_starts_at" type="number">
+      Present when the mismatch is inside a future scheduled phase rather than the current subscription.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="price_type" type="'usage' | 'prepaid' | 'allocated' | 'fixed'" />
+
+    <DynamicResponseField name="feature_id" type="string" />
+
+    <DynamicResponseField name="actual_quantity" type="number" />
+
+    <DynamicResponseField name="expected_unit_amount" type="string" />
+
+    <DynamicResponseField name="actual_unit_amount" type="string" />
+
+    <DynamicResponseField name="expected_phase_count" type="number" />
+
+    <DynamicResponseField name="actual_phase_count" type="number" />
+
+    <DynamicResponseField name="actual_phase_starts_at" type="number[]" />
+
+    <DynamicResponseField name="expected_canceling" type="boolean" />
+
+    <DynamicResponseField name="actual_canceling" type="boolean" />
+
+    <DynamicResponseField name="missing_reward_ids" type="string[]" />
+
+    <DynamicResponseField name="unexpected_reward_ids" type="string[]" />
+
+    <DynamicResponseField name="ending_subscription_id" type="string" />
+
+    <DynamicResponseField name="error" type="string" />
+
+    <DynamicResponseField name="stripe_customer_id" type="string" />
+
+    <DynamicResponseField name="other_customer_ids" type="string[]" />
+
+    <DynamicResponseField name="other_customers" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string" />
+
+        <DynamicResponseField name="name" type="string | null" />
+
+        <DynamicResponseField name="email" type="string | null" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="subscriptions" type="object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="stripe_subscription_id" type="string" />
+
+    <DynamicResponseField name="status" type="'correct' | 'mismatched'" />
+
+    <DynamicResponseField name="mismatches" type="object | object | object | object | object | object | object | object | object | object | object | object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="type" type="any" />
+
+        <DynamicResponseField name="message" type="string">
+          Human-readable one-line description of the mismatch.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="severity" type="'error' | 'warning'">
+          How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="reason" type="'missing' | 'unexpected' | 'amount_mismatch'" />
+
+        <DynamicResponseField name="expected_price_id" type="string" />
+
+        <DynamicResponseField name="actual_price_id" type="string">
+          The Stripe price of the item this mismatch is about.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expected_amount" type="string" />
+
+        <DynamicResponseField name="actual_amount" type="string" />
+
+        <DynamicResponseField name="plan_name" type="string" />
+
+        <DynamicResponseField name="plan_id" type="string">
+          The Autumn plan this mismatch belongs to, when resolvable.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="price_amount" type="number" />
+
+        <DynamicResponseField name="price_interval" type="string" />
+
+        <DynamicResponseField name="price_interval_count" type="number" />
+
+        <DynamicResponseField name="expected_quantity" type="number" />
+
+        <DynamicResponseField name="phase_starts_at" type="number">
+          Present when the mismatch is inside a future scheduled phase rather than the current subscription.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="price_type" type="'usage' | 'prepaid' | 'allocated' | 'fixed'" />
+
+        <DynamicResponseField name="feature_id" type="string" />
+
+        <DynamicResponseField name="actual_quantity" type="number" />
+
+        <DynamicResponseField name="expected_unit_amount" type="string" />
+
+        <DynamicResponseField name="actual_unit_amount" type="string" />
+
+        <DynamicResponseField name="expected_phase_count" type="number" />
+
+        <DynamicResponseField name="actual_phase_count" type="number" />
+
+        <DynamicResponseField name="actual_phase_starts_at" type="number[]" />
+
+        <DynamicResponseField name="expected_canceling" type="boolean" />
+
+        <DynamicResponseField name="actual_canceling" type="boolean" />
+
+        <DynamicResponseField name="missing_reward_ids" type="string[]" />
+
+        <DynamicResponseField name="unexpected_reward_ids" type="string[]" />
+
+        <DynamicResponseField name="ending_subscription_id" type="string" />
+
+        <DynamicResponseField name="error" type="string" />
+
+        <DynamicResponseField name="stripe_customer_id" type="string" />
+
+        <DynamicResponseField name="other_customer_ids" type="string[]" />
+
+        <DynamicResponseField name="other_customers" type="object[]">
+          <Expandable title="properties">
+            <DynamicResponseField name="id" type="string" />
+
+            <DynamicResponseField name="name" type="string | null" />
+
+            <DynamicResponseField name="email" type="string | null" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "customer_mismatches": [],
+  "subscriptions": [
+    {
+      "stripe_subscription_id": "sub_1234",
+      "status": "mismatched",
+      "mismatches": [
+        {
+          "type": "prepaid_quantity_mismatch",
+          "message": "Prepaid seats quantity differs — expected 10, Stripe has 5",
+          "severity": "error",
+          "actual_price_id": "price_1234",
+          "feature_id": "seats",
+          "plan_id": "pro_plan",
+          "expected_quantity": 10,
+          "actual_quantity": 5
+        }
+      ]
+    },
+    {
+      "stripe_subscription_id": "sub_5678",
+      "status": "correct",
+      "mismatches": []
+    }
+  ]
+}
+```
+</ResponseExample>

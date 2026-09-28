@@ -15,6 +15,7 @@ import {
 	type Subscription,
 	scopeExpandForCtx,
 } from "@autumn/shared";
+import { customerProductToRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -97,6 +98,11 @@ export const getApiSubscriptionV2 = async ({
 			current_period_end: customerProduct.trial_ends_at ?? null,
 		};
 	}
+
+	const revenueCatPeriod = customerProductToRevenueCatPeriod({
+		customerProduct,
+	});
+	if (revenueCatPeriod) subscriptionPeriod = revenueCatPeriod;
 
 	const { planCtx, shouldExpandPlan } = handlePlanExpand({
 		ctx,

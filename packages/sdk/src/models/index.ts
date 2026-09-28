@@ -114,4 +114,5 @@ export * from "./update-referral-program-op.js";
 export * from "./update-reward-op.js";
 export * from "./update-webhook-op.js";
 export * from "./variant-plan-usage-limit-interval.js";
+export * from "./verify-op.js";
 export * from "./void-invoice-op.js";

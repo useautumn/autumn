@@ -26,8 +26,8 @@ export function isOtherSeries({ key }: { key: string }): boolean {
 }
 
 /**
- * Colors series by volume rank, largest first. Past the eighth slot a series
- * reads as "Other" rather than cycling hues neighbours could be confused with.
+ * Colors series by volume rank, largest first. Slots cycle past the eighth so a
+ * named series is never painted the gray reserved for "Other".
  */
 export function assignSeriesColors({
 	events,
@@ -51,7 +51,7 @@ export function assignSeriesColors({
 
 	const colors: Record<string, string> = {};
 	for (const [index, key] of rankedKeys.entries()) {
-		colors[key] = SERIES_SLOT_COLORS[index] ?? OTHER_SERIES_COLOR;
+		colors[key] = SERIES_SLOT_COLORS[index % SERIES_SLOT_COLORS.length];
 	}
 	return colors;
 }

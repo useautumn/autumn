@@ -97,8 +97,8 @@ webhooks: Array<{
 id: string;
 /** The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work. */
 url: string;
-/** The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events. Defaults to []. */
+events?: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
 /** A note for your own reference. */
 description?: string;
 /** When true, no events are sent to the webhook. */
@@ -191,6 +191,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -1409,6 +1411,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -2457,6 +2461,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -3671,6 +3677,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -4685,6 +4693,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -5873,6 +5883,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -6842,6 +6854,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -7934,6 +7948,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -8781,6 +8797,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -9969,6 +9987,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -10936,6 +10956,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -12028,6 +12050,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -12883,6 +12907,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -14097,6 +14123,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -15125,6 +15153,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -16313,6 +16343,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -17272,6 +17304,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -18486,6 +18520,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -19512,6 +19548,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -20700,6 +20738,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -24014,6 +24054,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -25232,6 +25274,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -26280,6 +26324,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -27494,6 +27540,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -28508,6 +28556,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -29696,6 +29746,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -30665,6 +30717,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -31757,6 +31811,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -32604,6 +32660,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -33792,6 +33850,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -34759,6 +34819,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -35851,6 +35913,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -36706,6 +36770,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -37920,6 +37986,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -38948,6 +39016,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -40136,6 +40206,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -41095,6 +41167,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -42309,6 +42383,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -43335,6 +43411,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -44523,6 +44601,8 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -50440,6 +50520,8 @@ archived: boolean;
 config: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 };
 /** Plan-level billing controls used as customer defaults. */
 billingControls?: {
@@ -52150,6 +52232,8 @@ archived: boolean;
 config: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
+/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+anchorToMonthStart?: boolean;
 };
 /** Plan-level billing controls used as customer defaults. */
 billingControls?: {
@@ -52431,7 +52515,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
@@ -52453,7 +52537,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
@@ -52472,7 +52556,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
@@ -52488,7 +52572,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
@@ -52507,7 +52591,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
@@ -52523,7 +52607,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
@@ -52542,7 +52626,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
@@ -52567,7 +52651,7 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
 events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;

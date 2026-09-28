@@ -38,7 +38,7 @@ function CustomersPageContent() {
 
 	return (
 		<CustomersContext.Provider value={{ customers: customers ?? [] }}>
-			<PageContainer>
+			<PageContainer className="h-full">
 				<CustomerListTable
 					key={org?.id}
 					customers={customers ?? []}

@@ -7,6 +7,7 @@ import {
 	type PurchaseStatus,
 	type SubscriptionSnapshot,
 } from "@autumn/shared";
+import { customerProductToRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
 
 const cusProductStatusToPurchaseStatus = (
 	status: CusProductStatus,
@@ -33,6 +34,8 @@ export type CustomerPlanSnapshotFields = {
 	canceledAt: number | null;
 	endedAt: number | null;
 	trialEndsAt: number | null;
+	currentPeriodStart?: number | null;
+	currentPeriodEnd?: number | null;
 	nowMs?: number;
 };
 
@@ -46,6 +49,8 @@ export const toCustomerPlanSnapshotFromFields = ({
 	canceledAt,
 	endedAt,
 	trialEndsAt,
+	currentPeriodStart = null,
+	currentPeriodEnd = null,
 	nowMs,
 }: CustomerPlanSnapshotFields): CustomerPlanSnapshotForChange => {
 	if (isOneOff) {
@@ -70,8 +75,8 @@ export const toCustomerPlanSnapshotFromFields = ({
 			canceled_at: canceledAt,
 			expires_at: endedAt,
 			trial_ends_at: trialing ? trialEndsAt : null,
-			current_period_start: null,
-			current_period_end: null,
+			current_period_start: currentPeriodStart,
+			current_period_end: currentPeriodEnd,
 		},
 	};
 };
@@ -80,8 +85,13 @@ export const toCustomerPlanSnapshot = ({
 	cusProduct,
 }: {
 	cusProduct: FullCusProduct;
-}): CustomerPlanSnapshotForChange =>
-	toCustomerPlanSnapshotFromFields({
+}): CustomerPlanSnapshotForChange => {
+	// Stripe periods aren't on the customer product, so only store-owned periods are surfaced here.
+	const revenueCatPeriod = customerProductToRevenueCatPeriod({
+		customerProduct: cusProduct,
+	});
+
+	return toCustomerPlanSnapshotFromFields({
 		planId: cusProduct.product_id,
 		status: cusProduct.status,
 		isOneOff: isCustomerProductOneOff(cusProduct),
@@ -89,4 +99,7 @@ export const toCustomerPlanSnapshot = ({
 		canceledAt: cusProduct.canceled_at ?? null,
 		endedAt: cusProduct.ended_at ?? null,
 		trialEndsAt: cusProduct.trial_ends_at ?? null,
+		currentPeriodStart: revenueCatPeriod?.current_period_start,
+		currentPeriodEnd: revenueCatPeriod?.current_period_end,
 	});
+};

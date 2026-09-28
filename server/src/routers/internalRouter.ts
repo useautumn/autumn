@@ -10,6 +10,7 @@ import { queryMiddleware } from "../honoMiddlewares/queryMiddleware";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware";
 import { traceEnrichMiddleware } from "../honoMiddlewares/traceMiddleware";
 import type { HonoEnv } from "../honoUtils/HonoEnv";
+import { accountRouter } from "../internal/account/accountRouter";
 import { honoAdminRouter } from "../internal/admin/adminRouter";
 import { internalAnalyticsRouter } from "../internal/analytics/internalAnalyticsRouter";
 import { chatRouter } from "../internal/chat/chatRouter";
@@ -40,6 +41,7 @@ internalRouter.use("*", queryMiddleware());
 internalRouter.use("/admin/*", adminAuthMiddleware);
 internalRouter.route("admin", honoAdminRouter);
 
+internalRouter.route("/account", accountRouter);
 internalRouter.route("organization", internalOrgRouter);
 internalRouter.route("organization/chat", chatRouter);
 internalRouter.route("/invoice_templates", invoiceTemplateRouter);
