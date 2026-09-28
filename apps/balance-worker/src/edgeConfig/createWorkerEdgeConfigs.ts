@@ -1,4 +1,5 @@
 import {
+	createBunS3EdgeConfigClient,
 	createEdgeConfigRegistry,
 	createEdgeConfigStore,
 	type DbControlEdgeConfig,
@@ -20,6 +21,8 @@ export type WorkerEdgeConfigs = {
 	dbControl: EdgeConfigStore<DbControlEdgeConfig>;
 	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
+	/** The same bucket and client the stores read, for objects the worker writes itself. */
+	adminBucket: { s3Client: EdgeConfigS3Client; location: EdgeConfigLocation };
 	start(): Promise<void>;
 	stop(): void;
 };
@@ -31,10 +34,13 @@ export const createWorkerEdgeConfigs = ({
 	ctx: { logger?: EdgeConfigLogger; s3Client?: EdgeConfigS3Client };
 	config: { location: EdgeConfigLocation };
 }): WorkerEdgeConfigs => {
+	const s3Client =
+		ctx.s3Client ??
+		createBunS3EdgeConfigClient({ region: config.location.region });
 	const edgeConfigContext = {
 		location: () => config.location,
 		logger: ctx.logger,
-		s3Client: ctx.s3Client,
+		s3Client,
 	};
 	const registry = createEdgeConfigRegistry({ ctx: edgeConfigContext });
 	const dbControl = createEdgeConfigStore({
@@ -62,5 +68,11 @@ export const createWorkerEdgeConfigs = ({
 		registry.stop();
 	}
 
-	return { dbControl, activeSlot, start, stop };
+	return {
+		dbControl,
+		activeSlot,
+		adminBucket: { s3Client, location: config.location },
+		start,
+		stop,
+	};
 };

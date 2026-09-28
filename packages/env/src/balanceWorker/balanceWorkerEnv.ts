@@ -13,6 +13,7 @@ import {
 	BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
 } from "./balanceWorkerConstants.js";
 import {
+	type BalanceWorkerSlot,
 	balanceWorkerDeploymentToKafkaNames,
 	getBalanceWorkerDeployment,
 	getBalanceWorkerSlot,
@@ -134,6 +135,7 @@ export function createBalanceWorkerEnv(
 }
 
 export type BalanceWorkerEnv = ReturnType<typeof createBalanceWorkerEnv>;
+export type { BalanceWorkerSlot };
 
 let balanceWorkerEnv: BalanceWorkerEnv | undefined;
 

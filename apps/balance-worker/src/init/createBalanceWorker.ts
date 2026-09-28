@@ -1,5 +1,6 @@
 import type { KafkaOffsetCommit } from "@autumn/kafka";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
+import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
@@ -199,6 +200,38 @@ export async function createBalanceWorker({
 			},
 		});
 		const reportsHealth = process.env.NODE_ENV === "production";
+		// Only a task with an ECS identity is part of a fleet the dashboard can swap.
+		const slotHeartbeat =
+			slotGate && resources.edgeConfigs && identity.serviceArn
+				? createSlotHeartbeat({
+						ctx: {
+							...resources.edgeConfigs.adminBucket,
+							gate: slotGate,
+							readPartitions: partitions.partitions,
+							readStoreHealthy: readSlotStoreHealthy,
+							probes: { kafka: probeKafka, postgres: probePostgres },
+							logger: dependencies.logger,
+						},
+						config: {
+							deployment: env.BALANCE_WORKER_DEPLOYMENT,
+							slot: env.BALANCE_WORKER_SLOT,
+							endpoint: address.endpoint,
+							identity,
+						},
+					})
+				: undefined;
+		function readSlotStoreHealthy(): boolean {
+			return resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false;
+		}
+		async function probeKafka(): Promise<void> {
+			await resources.admin.fetchTopicOffsets(
+				env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+			);
+		}
+		async function probePostgres(): Promise<void> {
+			if (!resources.postgres.client) throw new Error("No Postgres pool");
+			await resources.postgres.client`select 1`;
+		}
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: { logger: dependencies.logger, recorder: syncSections },
 			config: {
@@ -219,6 +252,7 @@ export async function createBalanceWorker({
 		});
 		function startTelemetry(): void {
 			healthReporter.start();
+			void slotHeartbeat?.start();
 			if (!reportsHealth) return;
 			stallMonitor.start();
 			kafkaRequestReporter.start();
@@ -226,6 +260,7 @@ export async function createBalanceWorker({
 		function stopTelemetry(): void {
 			kafkaRequestReporter.stop();
 			stallMonitor.stop();
+			slotHeartbeat?.stop();
 			healthReporter.stop();
 		}
 		const ctx: WorkerLifecycleContext = {
