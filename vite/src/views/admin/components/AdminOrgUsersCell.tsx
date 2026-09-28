@@ -1,4 +1,9 @@
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
+import {
+	StatusChip,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import type { User } from "better-auth";
 import { AdminEmailWithDomainLink } from "./AdminEmailWithDomainLink";
 
@@ -18,9 +23,7 @@ export const AdminOrgUsersCell = ({ users }: { users: User[] }) => {
 			{otherUsers.length > 0 && (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Badge size="sm" variant="muted" className="shrink-0">
-							{`+${otherUsers.length}`}
-						</Badge>
+						<StatusChip>{`+${otherUsers.length}`}</StatusChip>
 					</TooltipTrigger>
 					<TooltipContent className="flex flex-col gap-0.5">
 						{otherUsers.map((user) => (

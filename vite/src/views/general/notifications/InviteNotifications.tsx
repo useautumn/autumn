@@ -1,11 +1,10 @@
 import type { FullInvite } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import { Button, StatusChip } from "@autumn/ui";
 import { format, isSameYear } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Badge } from "@autumn/ui";
 import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import { useInvitesQuery } from "@/hooks/queries/useInvitesQuery";
 import { authClient } from "@/lib/auth-client";
@@ -136,7 +135,7 @@ export const InviteNotifications = () => {
 											<span className="font-medium text-foreground">
 												{invite.organization.name}
 											</span>{" "}
-											as <Badge variant="outline">{invite.role}</Badge>
+											as <StatusChip>{invite.role}</StatusChip>
 										</p>
 
 										<div className="flex gap-2">

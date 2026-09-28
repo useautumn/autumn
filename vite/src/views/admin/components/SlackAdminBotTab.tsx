@@ -1,5 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
-import { Badge, Button } from "@autumn/ui";
+import { Button, StatusChip } from "@autumn/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -114,9 +114,13 @@ export const SlackAdminBotTab = () => {
 							<p className="text-sm font-medium">
 								{installation?.workspace_name ?? "No workspace installed"}
 							</p>
-							<Badge variant={installation ? "muted" : "muted"}>
-								{installation ? "Installed" : "Not installed"}
-							</Badge>
+							{installation ? (
+								<StatusChip tone="green" glyph="check">
+									Installed
+								</StatusChip>
+							) : (
+								<StatusChip glyph="dashed">Not installed</StatusChip>
+							)}
 						</div>
 						{installation ? (
 							<p className="text-xs text-muted-foreground mt-1 truncate">

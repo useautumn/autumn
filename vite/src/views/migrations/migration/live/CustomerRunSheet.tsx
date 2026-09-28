@@ -1,6 +1,5 @@
 import type { Operations } from "@autumn/shared";
 import {
-	Badge,
 	Button,
 	Dialog,
 	DialogContent,
@@ -10,6 +9,7 @@ import {
 	DialogTitle,
 	InfoRow,
 	ShortcutButton,
+	StatusChip,
 } from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
@@ -55,18 +55,22 @@ function StatusValue({
 		activeStatus: isActive ? "running" : null,
 	});
 
-	if (status.kind === "running" || status.kind === "queued")
+	if (status.kind === "queued")
 		return (
-			<div className="flex items-center gap-2">
-				<ActiveRunDot />
-				<span className="text-xs text-muted-foreground">
-					{status.kind === "running" && activeRunDryRun
-						? "Dry run in progress"
-						: status.kind === "queued"
-							? "Queued"
-							: "Running"}
-				</span>
-			</div>
+			<StatusChip tone="orange" glyph="clock">
+				Queued
+			</StatusChip>
+		);
+
+	if (status.kind === "running")
+		return (
+			<StatusChip
+				tone="green"
+				glyph="spinner"
+				dashed={Boolean(activeRunDryRun)}
+			>
+				{activeRunDryRun ? "Dry run in progress" : "Running"}
+			</StatusChip>
 		);
 
 	if (status.kind === "result")
@@ -86,7 +90,7 @@ function StatusValue({
 			</div>
 		);
 
-	return <Badge variant="muted">Not Run</Badge>;
+	return <StatusChip glyph="dashed">Not Run</StatusChip>;
 }
 
 export function CustomerRunSheet({

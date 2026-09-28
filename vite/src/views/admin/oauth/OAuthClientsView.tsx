@@ -1,4 +1,4 @@
-import { Badge, CopyButton, IconButton } from "@autumn/ui";
+import { CopyButton, IconButton, StatusChip } from "@autumn/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft,
@@ -14,7 +14,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
@@ -242,39 +241,32 @@ export const OAuthClientsView = () => {
 
 								{/* Type */}
 								<div>
-									<Badge
-										variant="muted"
-										className={cn(
-											"text-xs",
-											client.public
-												? "bg-blue-500/10 text-blue-600 border-blue-200"
-												: "bg-purple-500/10 text-purple-600 border-purple-200",
-										)}
-									>
-										{client.public ? "Public" : "Confidential"}
-									</Badge>
+									{client.public ? (
+										<StatusChip tone="blue" glyph="user">
+											Public
+										</StatusChip>
+									) : (
+										<StatusChip tone="purple" glyph="shield">
+											Confidential
+										</StatusChip>
+									)}
 								</div>
 
 								{/* Status */}
 								<div className="flex flex-col gap-1">
-									<Badge
-										variant="muted"
-										className={cn(
-											"text-xs w-fit",
-											client.disabled
-												? "bg-red-500/10 text-red-600 border-red-200"
-												: "bg-green-500/10 text-green-600 border-green-200",
-										)}
-									>
-										{client.disabled ? "Disabled" : "Active"}
-									</Badge>
+									{client.disabled ? (
+										<StatusChip tone="red" glyph="ban" className="w-fit">
+											Disabled
+										</StatusChip>
+									) : (
+										<StatusChip tone="green" glyph="check" className="w-fit">
+											Active
+										</StatusChip>
+									)}
 									{client.skip_consent && (
-										<Badge
-											variant="muted"
-											className="text-xs w-fit bg-yellow-500/10 text-yellow-600 border-yellow-200"
-										>
+										<StatusChip tone="yellow" glyph="alert" className="w-fit">
 											Skip Consent
-										</Badge>
+										</StatusChip>
 									)}
 								</div>
 

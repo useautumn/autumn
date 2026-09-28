@@ -1,4 +1,4 @@
-import { Badge, Button, FormLabel, Input } from "@autumn/ui";
+import { Button, FormLabel, Input, StatusChip } from "@autumn/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -73,11 +73,11 @@ export const MiscRedisBackupForm = ({
 						readOnly
 						className="font-mono text-xs"
 					/>
-					<Badge variant="muted">
+					<StatusChip>
 						{config.backup.hasPrivateConnectionString
 							? "private endpoint set"
 							: "public only"}
-					</Badge>
+					</StatusChip>
 				</div>
 			)}
 
