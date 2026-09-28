@@ -11,6 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "@/internal/customers/actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
+import { resolveRolloutOrgId } from "@/internal/misc/rollouts/resolveRolloutOrgId.js";
 import {
 	ACTIVE_ROLLOUT_ID,
 	isRolloutCacheStale,
@@ -166,7 +167,7 @@ export const getCachedFullSubject = async ({
 	if (
 		isRolloutCacheStale({
 			rolloutId: ACTIVE_ROLLOUT_ID,
-			orgId: ctx.org.id,
+			orgId: resolveRolloutOrgId({ org: ctx.org }),
 			customerId,
 			cachedAt: cached._cachedAt,
 		})
