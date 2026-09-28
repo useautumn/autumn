@@ -9,7 +9,7 @@ import {
 	throwWebhookEnvFailures,
 	type WebhookEnvFailure,
 } from "./webhookEnvFailures";
-import { webhookSecretName } from "./webhookSecretName";
+import { envWebhookSecretName } from "./webhookSecretName";
 
 export type WebhookClient = Pick<
 	AutumnClient,
@@ -57,10 +57,7 @@ const assertDistinctSecretNames = ({
 	savedEnv: Record<string, string | undefined>;
 }): void => {
 	const secretName = ({ lane, id }: { lane: WebhooksLane; id: string }) =>
-		webhookSecretName({
-			id,
-			...(lane.env.live ? {} : { envKey: lane.env.key }),
-		});
+		envWebhookSecretName({ env: lane.env, id });
 	const creates = (lane: WebhooksLane) =>
 		lane.preview.changes.filter((change) => change.action === "create");
 	const clashes = new Map<string, string>();
