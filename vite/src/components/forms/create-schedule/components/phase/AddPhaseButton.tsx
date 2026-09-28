@@ -12,7 +12,7 @@ export function AddPhaseButton({
 		<button
 			type="button"
 			onClick={onClick}
-			className="group/add-phase flex h-8 w-fit items-center gap-3 text-sm text-tertiary-foreground transition-colors hover:text-foreground"
+			className="group/add-phase flex h-8 w-fit cursor-pointer items-center gap-3 text-sm text-tertiary-foreground transition-colors hover:text-foreground"
 		>
 			<span
 				className={cn("flex shrink-0 justify-center", alignsWithRail && "w-2")}
