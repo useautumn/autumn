@@ -25,6 +25,7 @@ import {
 } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
+import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { activeSlotEdgeConfig } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
@@ -712,10 +713,11 @@ describe("Partition handoff under load", () => {
 		let hammering = false;
 		const hammers: Promise<void>[] = [];
 		const workerContext = { kafka, admin, id, topic, owners, events, errors };
+		// The groups createBalanceWorker would derive: one per fleet, from the service ARN alone.
 		const blue = await startWorker({
 			name: "A",
 			...workerContext,
-			groupId: `${id}-workers`,
+			groupId: `${id}-workers-${fleetIdOf({ serviceArn: arns.blue })}`,
 		});
 		let green: LiveWorker | undefined;
 		try {
@@ -744,7 +746,7 @@ describe("Partition handoff under load", () => {
 			green = await startWorker({
 				name: "B",
 				...workerContext,
-				groupId: `${id}-green-workers`,
+				groupId: `${id}-workers-${fleetIdOf({ serviceArn: arns.green })}`,
 				awaitReadyAnnouncement: ({ signal }) =>
 					greenGate.awaitActive({ signal }),
 			});

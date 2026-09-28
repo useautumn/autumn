@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { coPartitionedAssigner, createKafkaClient } from "@autumn/kafka";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
-import { createWorkerConsumerConfig } from "../../../src/init/workerConfig.js";
+import {
+	createWorkerConsumerConfig,
+	workerConsumerGroupIdOf,
+} from "../../../src/init/workerConfig.js";
 
 const timings = {
 	fetchMaxWaitTimeMs: 250,
@@ -141,4 +144,18 @@ test("a worker that reports partition load gets the load-aware assigner", () => 
 			logger: {} as never,
 		}).name,
 	).toBe("LoadAwareCoPartitionedAssigner");
+});
+
+describe("the worker's consumer group", () => {
+	const base = { BALANCE_WORKER_GROUP_ID: "tf-balance-staging-workers" };
+	test("off ECS it is the deployment's base group: local, tests and a fail-open boot are unchanged", () => {
+		expect(workerConsumerGroupIdOf({ env: base, fleetId: null })).toBe(
+			"tf-balance-staging-workers",
+		);
+	});
+	test("on ECS it carries the fleet id, so the two Flightcontrol fleets never share a group", () => {
+		expect(workerConsumerGroupIdOf({ env: base, fleetId: "1a2b3c4d" })).toBe(
+			"tf-balance-staging-workers-1a2b3c4d",
+		);
+	});
 });

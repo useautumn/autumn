@@ -9,9 +9,10 @@
  *   cd apps/balance-worker
  *   KAFKA_BROKERS=127.0.0.1:19092 NODE_ENV=test bun tests/benchmarks/ownership-handoff/run.ts [--runs 3] [--backend sqlite]
  *
- * --slots runs the blue-green scenario instead: two fleets in their own consumer
- * groups, a slot record in a temp directory the workers poll like S3, and the six
- * steps of plans/balance-worker-blue-green/overview.md. One pass per invocation.
+ * --slots runs the blue-green scenario instead: two fleets told apart only by a fake
+ * ECS service ARN (BENCH_SERVICE_ARN, which names their consumer groups), a slot
+ * record in a temp directory the workers poll like S3, and the six steps of
+ * plans/balance-worker-blue-green/overview.md. One pass per invocation.
  */
 import {
 	mkdirSync,
@@ -39,6 +40,7 @@ import {
 	ownershipTopic,
 } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";
+import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import {
 	SLOT_HEARTBEAT_KEY_PREFIX,
 	type SlotHeartbeat,
@@ -349,17 +351,15 @@ const workersByEndpoint = new Map<string, string>();
 const nameOf = (endpoint: string | undefined) =>
 	(endpoint && workersByEndpoint.get(endpoint)) ?? "?";
 
-// Two fleets with synthetic ECS service ARNs; the slot record names one of them.
-type Fleet = { slot: "blue" | "green"; serviceArn: string };
-const fleets: Record<Fleet["slot"], Fleet> = {
-	blue: {
-		slot: "blue",
-		serviceArn: `arn:aws:ecs:local:0:service/${deployment}/balance-workers-blue`,
-	},
-	green: {
-		slot: "green",
-		serviceArn: `arn:aws:ecs:local:0:service/${deployment}/balance-workers-green`,
-	},
+// Two fleets told apart by synthetic ECS service ARNs alone, as on Flightcontrol; the slot record names one of them.
+type Fleet = { name: "blue" | "green"; serviceArn: string; fleetId: string };
+function fleetOfArn(name: Fleet["name"]): Fleet {
+	const serviceArn = `arn:aws:ecs:local:0:service/${deployment}/balance-workers-${name}`;
+	return { name, serviceArn, fleetId: fleetIdOf({ serviceArn }) };
+}
+const fleets: Record<Fleet["name"], Fleet> = {
+	blue: fleetOfArn("blue"),
+	green: fleetOfArn("green"),
 };
 const edgeConfigDir = SLOTS
 	? mkdtempSync(join(tmpdir(), `bench-edge-${deployment}-`))
@@ -406,7 +406,7 @@ async function reservePort(): Promise<number> {
 /** What the dashboard would read: every heartbeat object a fleet's tasks have written. */
 function readHeartbeats({ fleet }: { fleet: Fleet }): SlotHeartbeat[] {
 	if (!edgeConfigDir) return [];
-	const dir = join(edgeConfigDir, SLOT_HEARTBEAT_KEY_PREFIX, fleet.slot);
+	const dir = join(edgeConfigDir, SLOT_HEARTBEAT_KEY_PREFIX, fleet.fleetId);
 	const heartbeats: SlotHeartbeat[] = [];
 	for (const file of readdirSync(dir, { recursive: false })) {
 		heartbeats.push(
@@ -453,7 +453,6 @@ async function spawnWorker(name: string, fleet?: Fleet): Promise<Worker> {
 			BALANCE_WORKER_PORT: String(port),
 			BALANCE_WORKER_SQLITE_PATH: join(dir, "state.sqlite"),
 			BALANCE_WORKER_DEPLOYMENT: deployment,
-			...(fleet && { BALANCE_WORKER_SLOT: fleet.slot }),
 		}),
 		BENCH_NAME: name,
 		BENCH_BACKEND: BACKEND,

@@ -38,7 +38,8 @@ dashboard    preflight: target has running tasks · no ECS rollout in flight ·
 ## The design
 
 ```
-green boots     group = <deployment>-green-workers    topics, transactional ids: <deployment> only
+green boots     group = <deployment>-workers-<fleetId>    topics, transactional ids: <deployment> only
+                fleetId = sha256(its ECS service ARN)[0:8]; blue's differs, so no rebalance
                 its roster deals it ~11 partitions; it prepares each (read-only) and tails the log
                 heartbeat: prepared N/M, lag per partition, probes, identity
 record flips    dashboard writes admin/blue-green-balance-workers-active-slot.json → green's ARN
@@ -68,13 +69,16 @@ ARN that is not ours → hold. A record naming ours → go.
 
 ## Work
 
-### 1. `packages/env`: the slot
+### 1. The consumer group: one per fleet, from the ECS service ARN
 
-- `BALANCE_WORKER_SLOT` = `blue` | `green`, required in production, defaults to `blue` elsewhere.
-- `balanceWorkerDeploymentToKafkaNames` gains `slot`; only `consumerGroup` changes:
-  `${deployment}-${slot}-workers`. Topics, transactional-id prefix (`createWorkerProducerConfig`),
-  checkpoint prefix, catalog invalidation group prefix: deployment only.
-- Tests: names for both slots; production refuses an unset slot.
+- `packages/env` keeps every Kafka name deployment-only; `BALANCE_WORKER_GROUP_ID` is the base
+  `${deployment}-workers`. No fleet env var: Flightcontrol has one env block per service and both
+  of its ECS fleets receive it verbatim, so anything set there is the same on blue and green.
+- The worker derives its group at boot, after `resolveTaskIdentity`: `${base}-${fleetId}` with
+  `fleetId = sha256(identity.serviceArn)[0:8]` (`blueGreen/fleetIdOf.ts`); no ECS identity (local,
+  tests, fail-open) → the base group, unchanged. Topics, transactional-id prefix
+  (`createWorkerProducerConfig`), checkpoint prefix, catalog invalidation group prefix: deployment only.
+- Tests: the base group off ECS, the suffixed group on it, the two fleets' ids differ.
 
 ### 2. `apps/balance-worker`: slot store, gate, hook, heartbeat
 
@@ -86,7 +90,7 @@ ARN that is not ours → hold. A record naming ours → go.
   `server/src/queue/blueGreen/blueGreenGate.ts`), re-checking on every store change, aborting on
   the partition's signal.
 - Heartbeat writer, 20s, key `admin/blue-green-heartbeats/balance-workers.json` (one object per
-  fleet, last writer wins, like workers/cron): identity, slot, `partitions: { prepared, ready,
+  fleet, last writer wins, like workers/cron): identity, fleet id, `partitions: { prepared, ready,
   admitted, total }`, per-partition `{ status, lagRecords }`, probes `{ kafka, postgres }`, `ok`.
 - A worker that is the active slot (or fail-open) must behave byte-for-byte as today: the tests in
   `tests/unit/partitions/partitionHandoff.test.ts` keep passing with no hook set.
@@ -96,8 +100,9 @@ ARN that is not ours → hold. A record naming ours → go.
 ### 3. Local proof: two-slot benchmark
 
 Extend `apps/balance-worker/tests/benchmarks/ownership-handoff/` (do not fork it): a `--slots`
-mode spawns two fleets with `BALANCE_WORKER_SLOT` and a file-backed slot store (an injected
-`EdgeConfigS3Client` whose `send` reads a JSON file; the worker polls it like S3). Scenario:
+mode spawns two fleets told apart only by a fake service ARN (`BENCH_SERVICE_ARN`, which names
+their groups) and a file-backed slot store (an injected `EdgeConfigS3Client` whose `send` reads a
+JSON file; the worker polls it like S3). The record flips between the two ARNs. Scenario:
 
 | step | action | assert |
 |---|---|---|
@@ -125,6 +130,8 @@ Report the same median/max tables as the join/leave benchmark. Also add the step
 
 Create the green FC service (blue-green strategy, auto-shutdown 1h to start), deploy, run the
 hammer against staging, flip from the dashboard, count C2S 503s in Axiom. Expect zero.
+Runbook: no env var to set in Flightcontrol on either fleet; the worker derives its fleet id from
+its ECS service ARN.
 
 ## Decided
 
@@ -169,22 +176,36 @@ Recorded while implementing items 1–3 (2026-09-28, PR "feat(balance-worker): b
   held at the gate), the state a green task is in before a swap, so flipping the record back runs
   the same handoff in reverse (benchmark steps 3b/3c). Only with a gate: without one it would
   announce at once and take the partition straight back, so a gate-less worker stays stopped.
-- **`BALANCE_WORKER_SLOT` is required in production on purpose.** It must be set (`blue`) on the
-  existing Flightcontrol service before this code is deployed there; a worker that boots without
-  it refuses to start rather than guess which fleet it is.
+- **No fleet env var; the group comes from the ECS service ARN.** The first cut introduced
+  `BALANCE_WORKER_SLOT` (blue | green), required in production. That cannot work on Flightcontrol:
+  a service has one env block and both of its ECS fleets receive it verbatim, so blue and green
+  would boot with the same slot, share a group, and green would rebalance-steal partitions on boot.
+  The workers/cron gate never had this problem because it keys on the ECS *service ARN*, the one
+  thing that differs between the fleets. The worker now does the same: after `resolveTaskIdentity`
+  it consumes in `${deployment}-workers-${fleetId}`, `fleetId = sha256(serviceArn)[0:8]`
+  (`blueGreen/fleetIdOf.ts`, group in `init/workerConfig.ts`). Off ECS it is the plain
+  `${deployment}-workers`, so local runs and tests are unchanged. Runbook: nothing to set in
+  Flightcontrol; the fleet id is in the boot log and the heartbeat.
 - **The slot store retains its last record through a read error** (`retainOnError`), the task
   identity retries the ECS metadata endpoint (~10s) before failing open and logs at error level
   when it does, and the heartbeat's `ok` includes the store's health: each of those defaults would
   otherwise have opened green's gate without a flip.
-- **Blue keeps the legacy group name.** `blue → ${deployment}-workers`, `green → ${deployment}-green-workers`.
-  Renaming blue would have made the first deploy of this code a second, unrevoked group beside the
-  running fleet: prepare, silence, self-claim, fence. Keeping the name makes it a rolling deploy of
-  the existing group, which the handoff already covers.
-- **Heartbeat per task, every task writes.** `admin/blue-green-heartbeats/balance-workers/<slot>/<instanceId>.json`
+- **The first rollout renames the existing fleet's group, once.** The running fleet is in
+  `${deployment}-workers`; the first task with this code joins `${deployment}-workers-<fleetId>`, a
+  second, unrevoked group beside it, and the partitions move by release-then-claim with the fence:
+  the new task prepares and announces `ready`; an owner that watches for a successor hands off
+  (withdraw → drain → `claimed{new}`), an older one stays silent and the new task self-claims after
+  the silence window and fences it. One bounded detour per partition, one time. Every later deploy
+  of either fleet is a rolling deploy inside its own group, and a slot flip is the handoff. The
+  earlier "blue keeps the legacy name" decision avoided this rename at the price of the env var
+  above, which Flightcontrol cannot set per fleet; the one-time rename is the smaller price.
+- **Heartbeat per task, every task writes.** `admin/blue-green-heartbeats/balance-workers/<fleetId>/<instanceId>.json`
   rather than one object per fleet: with two tasks per fleet a last-writer-wins key shows one task's
   `prepared/total`, so `prepared == total` cannot be read and the post-flip "admitted by green" count
-  cannot either. `declaredActive` carries the gate's answer; the dashboard lists the prefix, keeps
-  objects with `writtenAt` under 90s (a killed task's last object stays behind) and sums per slot.
+  cannot either. The body carries `fleetId` and `identity.serviceArn`; the dashboard groups by the
+  ARN (the record names an ARN, not a colour). `declaredActive` carries the gate's answer; the
+  dashboard lists the prefix, keeps objects with `writtenAt` under 90s (a killed task's last object
+  stays behind) and sums per fleet.
 - **Steps 5 → 6.** Step 5 (record → blue with blue gone) is asserted a no-op for 5s and the record is
   then restored to green before the SIGKILL. A survivor whose record names the gone fleet prepares
   the dead task's partitions and holds at the gate for good, the same hazard the dashboard's

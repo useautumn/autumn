@@ -2,7 +2,6 @@ import type {
 	EdgeConfigLocation,
 	EdgeConfigS3Client,
 } from "@autumn/edge-config";
-import type { BalanceWorkerSlot } from "@autumn/env/balanceWorker";
 import type { AutumnLogger } from "@autumn/logging";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
@@ -33,7 +32,7 @@ type SlotHeartbeatContext = {
 
 type SlotHeartbeatConfig = {
 	deployment: string;
-	slot: BalanceWorkerSlot;
+	fleetId: string;
 	endpoint: string;
 	identity: TaskIdentity;
 };
@@ -46,7 +45,7 @@ export function createSlotHeartbeat({
 	config: SlotHeartbeatConfig;
 }): { start(): Promise<void>; stop(): void } {
 	const instanceId = `${process.pid}-${crypto.randomUUID().split("-")[0]}`;
-	const key = slotHeartbeatKeyOf({ slot: config.slot, instanceId });
+	const key = slotHeartbeatKeyOf({ fleetId: config.fleetId, instanceId });
 	const startedAt = new Date().toISOString();
 	let cancel: (() => void) | undefined;
 	let writing: Promise<void> | null = null;
@@ -77,7 +76,7 @@ export function createSlotHeartbeat({
 		const assigned = ctx.readAssignmentSettled() && health.length > 0;
 		return {
 			serviceName: "balance-workers",
-			slot: config.slot,
+			fleetId: config.fleetId,
 			deployment: config.deployment,
 			endpoint: config.endpoint,
 			instanceId,

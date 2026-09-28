@@ -1,4 +1,3 @@
-import type { BalanceWorkerSlot } from "@autumn/env/balanceWorker";
 import { z } from "zod/v4";
 
 /** One object per task; the dashboard lists the fleet's prefix and sums the fresh ones. */
@@ -6,13 +5,13 @@ export const SLOT_HEARTBEAT_KEY_PREFIX =
 	"admin/blue-green-heartbeats/balance-workers";
 
 export function slotHeartbeatKeyOf({
-	slot,
+	fleetId,
 	instanceId,
 }: {
-	slot: BalanceWorkerSlot;
+	fleetId: string;
 	instanceId: string;
 }): string {
-	return `${SLOT_HEARTBEAT_KEY_PREFIX}/${slot}/${instanceId}.json`;
+	return `${SLOT_HEARTBEAT_KEY_PREFIX}/${fleetId}/${instanceId}.json`;
 }
 
 export const SlotProbeResultSchema = z.object({
@@ -25,7 +24,8 @@ export type SlotProbeResult = z.infer<typeof SlotProbeResultSchema>;
 /** The server's readiness heartbeat plus what a swap needs to know about partitions. */
 export const SlotHeartbeatSchema = z.object({
 	serviceName: z.literal("balance-workers"),
-	slot: z.enum(["blue", "green"]),
+	/** sha256(identity.serviceArn) first 8 hex; the dashboard groups by the ARN itself. */
+	fleetId: z.string(),
 	deployment: z.string(),
 	endpoint: z.string(),
 	instanceId: z.string(),
