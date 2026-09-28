@@ -265,51 +265,73 @@ export default atmn({
 });
 
 const DASHBOARD_ID = "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5";
-const WH_ID = /^wh_[0-9A-Za-z]{27}$/;
+const OTHER_DASHBOARD_ID = "ep_3Jxk7Yl0Zq8btswXe5LI7SSRZ9Z";
 
-test("rule 5: a dashboard webhook is appended under a fresh wh_ id, and a second pull adds nothing", () => {
+test("rule 5: a dashboard webhook is appended under its own ep_ id, and a second pull adds nothing", () => {
 	const before = `export default atmn({
 	webhooks: [
 		webhook({ id: "billing", events: ["billing.updated"], url: { live: "https://example.com/a" } }),
 	],
 });
 `;
+	const billing: StatedWebhook = {
+		id: "billing",
+		events: ["billing.updated"],
+		url: { live: "https://example.com/a" },
+	};
 	const dashboard = remote(DASHBOARD_ID, "https://x.dev/h");
 	const first = pullInto({
 		source: before,
 		remoteList: [dashboard],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { live: "https://example.com/a" },
-			},
-		],
+		stated: [billing],
 	});
-	const id = /webhook (wh_\S+)/.exec(first.lines[0] ?? "")?.[1] ?? "";
-	expect(id).toMatch(WH_ID);
 	expect(first.lines).toEqual([
-		`+ webhook ${id} (made in the dashboard; push adopts it by URL)`,
+		`+ webhook ${DASHBOARD_ID} (made in the dashboard; push manages it by this id)`,
 	]);
-	expect(first.source).toContain(`id: "${id}",`);
+	expect(first.source).toContain(`id: "${DASHBOARD_ID}",`);
 	expect(first.source).toContain('sandbox: "https://x.dev/h",');
-	expect(first.source).not.toContain(DASHBOARD_ID);
 
 	// Nothing was pushed: the server still holds the uid-less endpoint.
 	const second = pullInto({
 		source: first.source ?? "",
 		remoteList: [dashboard],
 		stated: [
+			billing,
 			{
-				id: "billing",
+				id: DASHBOARD_ID,
 				events: ["billing.updated"],
-				url: { live: "https://example.com/a" },
+				url: { sandbox: "https://x.dev/h" },
 			},
-			{ id, events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } },
 		],
 	});
 	expect(second.source).toBe(first.source);
 	expect(second.lines).toEqual([]);
+});
+
+test("two dashboard webhooks on one URL in one env are both kept, each under its own id", () => {
+	const { stated } = pullInto({
+		source: `export default atmn({
+	webhooks: [
+		webhook({ id: "${DASHBOARD_ID}", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),
+	],
+});
+`,
+		remoteList: [
+			remote(DASHBOARD_ID, "https://x.dev/h"),
+			remote(OTHER_DASHBOARD_ID, "https://x.dev/h"),
+		],
+		stated: [
+			{
+				id: DASHBOARD_ID,
+				events: ["billing.updated"],
+				url: { sandbox: "https://x.dev/h" },
+			},
+		],
+	});
+	expect(stated.map(({ id }) => id)).toEqual([
+		DASHBOARD_ID,
+		OTHER_DASHBOARD_ID,
+	]);
 });
 
 test("rule 5: a dashboard webhook whose URL the config already states updates that webhook, and keeps its url", () => {
@@ -538,7 +560,9 @@ test("a dashboard webhook receiving every event is appended with no events key",
 	});
 	expect(source).not.toContain("events");
 	expect(lines).toEqual([
-		expect.stringContaining("(made in the dashboard; push adopts it by URL)"),
+		expect.stringContaining(
+			"(made in the dashboard; push manages it by this id)",
+		),
 	]);
 });
 
@@ -582,5 +606,7 @@ test("a dashboard webhook only matches a config webhook of the same kind (vercel
 		],
 	});
 	expect(source).toContain('events: ["billing.updated"]');
-	expect(lines[0]).toMatch(/^\+ webhook wh_\S+ \(made in the dashboard/);
+	expect(lines[0]).toBe(
+		`+ webhook ${DASHBOARD_ID} (made in the dashboard; push manages it by this id)`,
+	);
 });

@@ -1,5 +1,4 @@
 import { isDashboardWebhook } from "../../webhooks/isDashboardWebhook";
-import { newWebhookId } from "../../webhooks/newWebhookId";
 import { appendWebhook } from "./appendWebhook";
 import { removeWebhookEnv } from "./removeWebhookEnv";
 import type {
@@ -49,8 +48,8 @@ const merge = (target: WebhookEditResult, source: WebhookEditResult): void => {
 /**
  * One env's webhooks written back into the config. Only `url[envKey]` is
  * touched on the url map; every other env's key, comment and ordering stays.
- * A dashboard webhook is matched to the config by URL, never duplicated: the
- * next push adopts it by that URL, keeping its signing secret.
+ * A dashboard webhook is written under its own `ep_…` id, which push addresses
+ * directly, so a URL edited before the first push never makes a duplicate.
  */
 export const applyWebhooksPull = ({
 	pull,
@@ -58,7 +57,6 @@ export const applyWebhooksPull = ({
 	stated,
 	envKey,
 	readEnvKeys,
-	newId = newWebhookId,
 }: {
 	pull: PullFiles;
 	remote: RemoteWebhook[];
@@ -67,8 +65,6 @@ export const applyWebhooksPull = ({
 	envKey: string;
 	/** Every env this pull read; absent counts every url-map env as read. */
 	readEnvKeys?: ReadonlySet<string>;
-	/** Mints the id a dashboard webhook is written under. */
-	newId?: () => string;
 }): WebhookEditResult & { stated: StatedWebhook[] } => {
 	const result: WebhookEditResult = {
 		lines: [],
@@ -95,11 +91,15 @@ export const applyWebhooksPull = ({
 			// matches within one.
 			const sameApp = (row: StatedWebhook) =>
 				isVercelWebhook(row.events) === isVercelWebhook(webhook.events);
+			// An `ep_…` row is its own endpoint in this env, never another's.
 			// Another env's copy of this URL fills in this env's key rather than
 			// becoming a second webhook.
 			const represented =
 				(stated ?? []).find(
-					(row) => row.url?.[envKey] === webhook.url && sameApp(row),
+					(row) =>
+						row.url?.[envKey] === webhook.url &&
+						!isDashboardWebhook(row) &&
+						sameApp(row),
 				) ??
 				(stated ?? []).find(
 					(row) =>
@@ -131,26 +131,16 @@ export const applyWebhooksPull = ({
 				);
 				continue;
 			}
-			const id = newId();
-			const failure = appendWebhook({
-				pull,
-				webhook: { ...webhook, id },
-				envKey,
-			});
+			const failure = appendWebhook({ pull, webhook, envKey });
 			if (failure === null) {
 				next.set(
-					id,
-					statedFrom({
-						row: undefined,
-						webhook: { ...webhook, id },
-						envKey,
-						keepShared: false,
-					}),
+					webhook.id,
+					statedFrom({ row: undefined, webhook, envKey, keepShared: false }),
 				);
 				result.lines.push(
-					`+ webhook ${id} (made in the dashboard; push adopts it by URL)`,
+					`+ webhook ${webhook.id} (made in the dashboard; push manages it by this id)`,
 				);
-			} else result.unlocated.push({ id, action: failure });
+			} else result.unlocated.push({ id: webhook.id, action: failure });
 			continue;
 		}
 		present.add(webhook.id);
