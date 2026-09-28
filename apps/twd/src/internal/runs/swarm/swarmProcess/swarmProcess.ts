@@ -16,7 +16,11 @@ import { stripeBudgetForRun } from "@tw/helpers/stripeBudget.ts";
 import { runSwarmTests } from "@tw/tui/runnerCore.ts";
 import { getTuiState, type TuiTestFile } from "@tw/tui/store.ts";
 import pLimit from "p-limit";
-import type { RunFile } from "../../../../api/contract.ts";
+import type {
+	RunFile,
+	WorkerBoot,
+	WorkerState,
+} from "../../../../api/contract.ts";
 import { ACCOUNTS_PER_KEY_CAP } from "../../../accounts/allocator/poolLimits.ts";
 import { TESTS_DIR, toTestId } from "../../../catalog/repoPaths.ts";
 import type {
@@ -25,6 +29,7 @@ import type {
 	SwarmInit,
 	SwarmParentMessage,
 } from "../../types/swarmMessages.ts";
+import { createBootTimeline } from "./bootTimeline.ts";
 import {
 	loadTwModules,
 	type ProviderSandbox,
@@ -35,6 +40,7 @@ import {
 } from "./twModules.ts";
 
 const FILE_POLL_MS = 500;
+const OUTPUT_FLUSH_MS = 1_000;
 const TEARDOWN_TIMEOUT_MS = 20_000;
 /** After this many failed forks/boots the run stops asking for accounts. */
 const MAX_PROVISION_FAILURES = 5;
@@ -140,6 +146,21 @@ const main = async (init: SwarmInit) => {
 			send({ type: "log", file: null, worker: null, text: line });
 	});
 	enableHub();
+	const boot = createBootTimeline();
+	const bootOf = new Map<string, WorkerBoot>();
+	const workerState = (
+		name: string,
+		status: WorkerState["status"],
+		file: string | null,
+	): WorkerState => ({ name, status, file, boot: bootOf.get(name) ?? null });
+	// Worker server output is chatty: coalesce per worker instead of one IPC message per chunk.
+	const outputBuffer = new Map<string, string>();
+	const flushOutput = () => {
+		for (const [worker, text] of outputBuffer)
+			send({ type: "log", file: null, worker, text });
+		outputBuffer.clear();
+	};
+	const outputTimer = setInterval(flushOutput, OUTPUT_FLUSH_MS);
 	const workerFile = new Map<string, string>();
 	const startedFiles = new Set<string>();
 	const shardOf = new Map<string, Shard>();
@@ -152,17 +173,17 @@ const main = async (init: SwarmInit) => {
 				text: event.chunk,
 			});
 		} else if (event.type === "workerOutput") {
-			send({
-				type: "log",
-				file: null,
-				worker: event.worker,
-				text: event.chunk,
-			});
+			boot.recordOutput(event.worker, event.chunk);
+			outputBuffer.set(
+				event.worker,
+				(outputBuffer.get(event.worker) ?? "") + event.chunk,
+			);
 		} else if (event.type === "workerStatus") {
 			workerFile.delete(event.worker);
+			if (event.status === "ready") boot.mark(event.worker, "ready");
 			send({
 				type: "worker",
-				worker: { name: event.worker, status: event.status, file: null },
+				worker: workerState(event.worker, event.status, null),
 			});
 		} else if (event.type === "fileWorker") {
 			const file = toTestId({ absolutePath: event.file });
@@ -174,7 +195,7 @@ const main = async (init: SwarmInit) => {
 			}
 			send({
 				type: "worker",
-				worker: { name: event.worker, status: "busy", file },
+				worker: workerState(event.worker, "busy", file),
 			});
 		}
 	});
@@ -359,6 +380,7 @@ const main = async (init: SwarmInit) => {
 	}) => {
 		const name = `tw-twd-${init.runId}-${nextWorkerIdx++}`;
 		shard.provisioning++;
+		boot.mark(name, "account");
 		setWorkerStatus(name, "provisioning");
 		let sandbox: ProviderSandbox | undefined;
 		try {
@@ -367,6 +389,7 @@ const main = async (init: SwarmInit) => {
 				svixAppId = await tw.svix.createSvixApp(tw.testOrg.TEST_ORG_CONFIG.id);
 				svixAppIds.push(svixAppId);
 			}
+			boot.mark(name, "forkStart");
 			sandbox = await tw.provider.forkWorker({
 				sourceSandbox: warmName,
 				name,
@@ -386,8 +409,10 @@ const main = async (init: SwarmInit) => {
 				tags: { owner: "twd", run: init.runId, kind: "bun-tw" },
 				signal,
 			});
+			boot.mark(name, "forkDone");
 			track({ name, sandbox, accountId: account.accountId });
 			const publicUrl = await tw.provider.getPublicUrl(sandbox, SERVER_PORT);
+			boot.mark(name, "execStart");
 			await tw.run.waitForReady({ sandbox, name, signal });
 			await tw.ingress.pushWorkerMapping({
 				ingressUrl: init.ingressUrl,
@@ -395,6 +420,10 @@ const main = async (init: SwarmInit) => {
 				accountId: account.accountId,
 				workerUrl: publicUrl,
 			});
+			boot.mark(name, "mapped");
+			const timeline = boot.finish(name);
+			if (timeline) bootOf.set(name, timeline);
+			send({ type: "worker", worker: workerState(name, "ready", null) });
 			sandboxByName.set(name, sandbox);
 			shard.provisioning--;
 			shard.pool.add({
@@ -473,7 +502,7 @@ const main = async (init: SwarmInit) => {
 					workerFile.delete(worker);
 					send({
 						type: "worker",
-						worker: { name: worker, status: "ready", file: null },
+						worker: workerState(worker, "ready", null),
 					});
 				}
 			}
@@ -511,6 +540,8 @@ const main = async (init: SwarmInit) => {
 				accountIds: accounts.map(({ accountId }) => accountId),
 			});
 		clearInterval(poll);
+		clearInterval(outputTimer);
+		flushOutput();
 		flushFiles();
 		stopCulling?.();
 		for (const shard of shards) shard.pool.close();

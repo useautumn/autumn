@@ -1,17 +1,10 @@
-import {
-	STRIPE_REQUEST_OPTIONS,
-	withStripeRequestSlot,
-} from "@tw/helpers/stripeRequestBudget.ts";
 import { and, eq, inArray } from "drizzle-orm";
-import pLimit from "p-limit";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { clearIngressRoutesForAccounts } from "../../ingress/actions/clearIngressRoutesForAccounts.ts";
 import { resolveKeySecret } from "../../keys/actions/resolveKeySecret.ts";
 import { getKeyGate } from "../../keys/repos/keyGateRepo.ts";
-import { describeStripeError, isAccountGone } from "../../keys/stripeErrors.ts";
-import { stripeForKey } from "../../keys/stripeForKey.ts";
 import { lockCleanAccounts } from "../repos/cleanAccountsRepo.ts";
 import { enqueueNukeJobs } from "./enqueueNukeJobs.ts";
 
@@ -25,9 +18,6 @@ export type ClaimedAccount = {
 	/** Secret for this account's platform key, stored in twd. */
 	secretKey: string;
 };
-
-/** Per-claim retrieve fan-out; each request also takes a shared Stripe budget slot. */
-const VERIFY_CONCURRENCY = 16;
 
 type ClaimedRow = { accountId: string; platformAccountId: string };
 
@@ -56,37 +46,7 @@ const claimRound = async ({
 			});
 	});
 
-/** false only when Stripe says the account is gone; other errors keep it (the run surfaces them). */
-const accountExists = async ({
-	ctx,
-	account,
-}: {
-	ctx: TwdContext;
-	account: ClaimedAccount;
-}): Promise<boolean> => {
-	try {
-		const retrieved = await withStripeRequestSlot(() =>
-			stripeForKey({ secret: account.secretKey }).accounts.retrieve(
-				account.accountId,
-				undefined,
-				STRIPE_REQUEST_OPTIONS,
-			),
-		);
-		return !(retrieved as { deleted?: unknown }).deleted;
-	} catch (error) {
-		if (isAccountGone(error)) return false;
-		ctx.logger.warn("twd claim verify failed; keeping account", {
-			accountId: account.accountId,
-			error: describeStripeError(error),
-		});
-		return true;
-	}
-};
-
-/**
- * clean → in_use, up to `count` (fewer, even 0, when the pool is short). Every claimed account is
- * retrieved from Stripe; vanished ones leave the ledger and are replaced from the clean pool.
- */
+/** clean → in_use, up to `count` (fewer, even 0, when the pool is short). The ledger is trusted: reinit and nukes keep it true. */
 export const claimAccountsForRun = async ({
 	ctx,
 	runId,
@@ -112,67 +72,31 @@ export const claimAccountsForRun = async ({
 		});
 	}
 
-	const secrets = new Map<string, Promise<string>>();
-	const secretFor = (platformAccountId: string) => {
-		let secret = secrets.get(platformAccountId);
-		if (!secret) {
-			secret = resolveKeySecret({ ctx, platformAccountId });
-			secrets.set(platformAccountId, secret);
-		}
-		return secret;
-	};
-	const verifyLimit = pLimit(VERIFY_CONCURRENCY);
-	const verified: ClaimedAccount[] = [];
-	const claimedIds: string[] = [];
+	const rows = await claimRound({ ctx, runId, heldBy, need });
 	try {
-		while (verified.length < need) {
-			const rows = await claimRound({
-				ctx,
-				runId,
-				heldBy,
-				need: need - verified.length,
-			});
-			if (rows.length === 0) break;
-			claimedIds.push(...rows.map((row) => row.accountId));
-			const checked = await Promise.all(
-				rows.map((row) =>
-					verifyLimit(async () => {
-						const account = {
-							...row,
-							secretKey: await secretFor(row.platformAccountId),
-						};
-						return { account, exists: await accountExists({ ctx, account }) };
-					}),
-				),
-			);
-			const gone = checked.filter(({ exists }) => !exists);
-			if (gone.length > 0) {
-				await ctx.db.delete(stripeAccounts).where(
-					inArray(
-						stripeAccounts.id,
-						gone.map(({ account }) => account.accountId),
-					),
-				);
-				for (const { account } of gone) {
-					ctx.logger.warn(
-						"twd claim: account gone from Stripe, removed from ledger",
-						{
-							runId,
-							accountId: account.accountId,
-							platformAccountId: account.platformAccountId,
-						},
-					);
-				}
+		const secrets = new Map<string, Promise<string>>();
+		const secretFor = (platformAccountId: string) => {
+			let secret = secrets.get(platformAccountId);
+			if (!secret) {
+				secret = resolveKeySecret({ ctx, platformAccountId });
+				secrets.set(platformAccountId, secret);
 			}
-			verified.push(
-				...checked.filter(({ exists }) => exists).map(({ account }) => account),
-			);
-		}
+			return secret;
+		};
+		return await Promise.all(
+			rows.map(async (row) => ({
+				...row,
+				secretKey: await secretFor(row.platformAccountId),
+			})),
+		);
 	} catch (error) {
-		await returnUnusedAccounts({ ctx, runId, accountIds: claimedIds });
+		await returnUnusedAccounts({
+			ctx,
+			runId,
+			accountIds: rows.map((row) => row.accountId),
+		});
 		throw error;
 	}
-	return verified;
 };
 
 /** in_use → clean for accounts no sandbox ever touched (failed claim, run already gone, surplus). */

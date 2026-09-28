@@ -7,6 +7,7 @@ import { warmBranch } from "../../catalog/actions/warmBranch.ts";
 import { cancelRun } from "../../runs/actions/cancelRun.ts";
 import { createRun } from "../../runs/actions/createRun.ts";
 import { getRun } from "../../runs/actions/getRun.ts";
+import { summariseBoot } from "../../runs/boot/summariseBoot.ts";
 import { getFailedLogs, getRunLogs } from "../../runs/logs/getRunLogs.ts";
 import { toolOk } from "./toolResult.ts";
 import { defineTool, serveTools } from "./toolServer.ts";
@@ -43,6 +44,7 @@ const summariseRun = (run: RunDetail) => {
 		terminal: TERMINAL.has(run.status),
 		workers: { current: run.workerCount, wanted: run.workersWanted },
 		queuePosition: run.queuePosition,
+		boot: summariseBoot(run.workers),
 		cost: run.cost,
 		files: {
 			total: run.fileCount,
@@ -169,7 +171,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run",
 			description:
-				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted, queue position while waiting for its first account, cost, pass/fail counts, failing files with failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). Use wait_for_run to block until it finishes.",
+				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted, boot (per-step p50/p90/max ms from account to serving, and the slowest workers), queue position while waiting for its first account, cost, pass/fail counts, failing files with failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). Use wait_for_run to block until it finishes.",
 			input: z.object({ run_id: z.string().min(1) }),
 			run: async ({ run_id }) =>
 				toolOk(summariseRun(await getRun({ ctx, runId: run_id }))),

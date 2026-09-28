@@ -111,6 +111,11 @@ export const CreateRunBody = z.object({
 	purpose: z.enum(["adhoc", "baseline"]).default("adhoc"),
 });
 
+export const WorkerBoot = z.object({
+	/** Ordered boot phases: orchestrator-side (modal create, tunnel, exec, ready seen, ingress) and in-sandbox. */
+	steps: z.array(z.object({ step: z.string(), ms: z.number() })),
+	totalMs: z.number().nullable(),
+});
 export const WorkerState = z.object({
 	name: z.string(),
 	status: z.enum([
@@ -122,6 +127,7 @@ export const WorkerState = z.object({
 		"failed",
 	]),
 	file: z.string().nullable(),
+	boot: WorkerBoot.nullable().optional(),
 });
 
 export const RunFile = z.object({
@@ -527,6 +533,7 @@ export type RunDetail = z.infer<typeof RunDetail>;
 export type RunFile = z.infer<typeof RunFile>;
 export type RunEvent = z.infer<typeof RunEvent>;
 export type WorkerState = z.infer<typeof WorkerState>;
+export type WorkerBoot = z.infer<typeof WorkerBoot>;
 export type Drift = z.infer<typeof Drift>;
 export type StripeKey = z.infer<typeof StripeKey>;
 export type ReinitScope = z.infer<typeof ReinitScope>;

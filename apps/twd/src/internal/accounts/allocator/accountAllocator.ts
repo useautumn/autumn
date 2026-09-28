@@ -12,7 +12,6 @@ import { countHeldAccountsByRun } from "../repos/accountCountsRepo.ts";
 import { topUpPool } from "./topUpPool.ts";
 
 const TICK_MS = 2_000;
-const CLAIM_CHUNK = 32;
 
 /** A swarm job ready to take accounts. The allocator lowers `wants` by what it delivers. */
 export type RunDemand = {
@@ -49,25 +48,17 @@ const allocate = async ({ ctx }: { ctx: TwdContext }) => {
 			(run.workersWanted ?? 0) - (held.get(run.id) ?? 0),
 		);
 		if (need <= 0) continue;
-		let claimed = 0;
-		let short = false;
-		// Each claim verifies every account on Stripe, so deliver per chunk and workers start immediately.
-		while (claimed < need && !short && demand.wants > 0) {
-			const chunk = Math.min(CLAIM_CHUNK, need - claimed, demand.wants);
-			const accounts = await claimAccountsForRun({
-				ctx,
-				runId: run.id,
-				heldBy: run.createdBy,
-				count: chunk,
-			});
-			if (accounts.length > 0) {
-				claimed += accounts.length;
-				demand.wants -= accounts.length;
-				demand.deliver(accounts);
-			}
-			short = accounts.length < chunk;
+		const accounts = await claimAccountsForRun({
+			ctx,
+			runId: run.id,
+			heldBy: run.createdBy,
+			count: need,
+		});
+		if (accounts.length > 0) {
+			demand.wants -= accounts.length;
+			demand.deliver(accounts);
 		}
-		if (short) {
+		if (accounts.length < need) {
 			topUpPool({ ctx })
 				?.then((created) => {
 					if (created > 0) kickAllocator();

@@ -593,6 +593,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 			name: workerName(w),
 			status: "dead" as const,
 			file: null,
+			boot: mockBoot(),
 		})),
 		files: kept,
 		drift: [],
@@ -840,9 +841,29 @@ const growWorkers = (run: RunDetail, sim: Sim) => {
 		});
 };
 
+function mockBoot() {
+	const j = (base: number, spread: number) =>
+		Math.round(base + Math.random() * spread);
+	const steps = [
+		{ step: "modal create", ms: j(900, 4_000) },
+		{ step: "tunnel url", ms: j(150, 600) },
+		{ step: "exec → boot.ts", ms: j(3_000, 3_000) },
+		{ step: "services up", ms: j(1_000, 2_500) },
+		{ step: "balance queue prep", ms: j(100, 300) },
+		{ step: "bun install", ms: j(900, 1_500) },
+		{ step: "db migrate", ms: j(700, 800) },
+		{ step: "stripe bind", ms: j(100, 300) },
+		{ step: "server load → health", ms: j(6_000, 6_000) },
+		{ step: "ready seen by twd", ms: j(50, 900) },
+		{ step: "ingress mapping", ms: j(80, 400) },
+	];
+	return { steps, totalMs: steps.reduce((sum, s) => sum + s.ms, 0) };
+}
+
 const bootWorkers = (run: RunDetail) => {
 	const ready = run.workers.filter((w) => w.status === "booting").slice(0, 4);
-	for (const w of ready) setWorker(run, { ...w, status: "ready" });
+	for (const w of ready)
+		setWorker(run, { ...w, status: "ready", boot: mockBoot() });
 	const waiting = run.workers.filter((w) => w.status === "provisioning");
 	for (const w of waiting.slice(0, 6))
 		setWorker(run, { ...w, status: "booting" });
@@ -931,7 +952,7 @@ const tickRun = (run: RunDetail) => {
 				worker: w.name,
 				failureSummary: null,
 			});
-			setWorker(run, { name: w.name, status: "busy", file: next });
+			setWorker(run, { ...w, status: "busy", file: next });
 		}
 	}
 	summarize(run);

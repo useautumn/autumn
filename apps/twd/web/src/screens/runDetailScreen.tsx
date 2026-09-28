@@ -57,6 +57,7 @@ import {
 } from "../components/ui.tsx";
 import { cn, elapsed, formatDate, formatMs, num, sha7 } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
+import { BootBreakdown } from "./runDetail/bootBreakdown.tsx";
 
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
 const FILTERS = ["all", "failed", "drift", "running", "passed"] as const;
@@ -704,6 +705,7 @@ export const RunDetailScreen = () => {
 							)}
 						</Panel>
 					</section>
+					<BootBreakdown workers={r.workers} onOpenWorker={setOpenWorker} />
 					{live && (
 						<section>
 							<SectionTag>Live output</SectionTag>
