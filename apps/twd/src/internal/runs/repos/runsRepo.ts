@@ -7,7 +7,6 @@ import {
 	notInArray,
 	sql,
 } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
 import type { RunSummary } from "../../../api/contract.ts";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { users } from "../../../db/schema/auth.ts";
@@ -31,12 +30,10 @@ export const isTerminalRunStatus = ({ status }: { status: RunStatus }) =>
 const holdsNoAccounts = (runId: AnyColumn) =>
 	sql`not exists (select 1 from ${stripeAccounts} where ${stripeAccounts.runId} = ${runId} and ${stripeAccounts.state} = 'in_use')`;
 
-const earlierRuns = alias(runs, "earlier_runs");
-
 /** 1-based FIFO place among queued runs holding no account; null otherwise. */
 export const queuePositionSql = sql<
 	number | null
->`case when ${runs.status} = 'queued' and ${holdsNoAccounts(runs.id)} then (select count(*) from ${earlierRuns} where ${earlierRuns.status} = 'queued' and ${earlierRuns.createdAt} <= ${runs.createdAt} and ${holdsNoAccounts(earlierRuns.id)}) end`.mapWith(
+>`case when ${runs.status} = 'queued' and ${holdsNoAccounts(runs.id)} then (select count(*) from runs earlier where earlier.status = 'queued' and earlier.created_at <= ${runs.createdAt} and not exists (select 1 from stripe_accounts held where held.run_id = earlier.id and held.state = 'in_use')) end`.mapWith(
 	Number,
 );
 
