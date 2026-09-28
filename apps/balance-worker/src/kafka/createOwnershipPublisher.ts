@@ -17,7 +17,7 @@ export function createOwnershipPublisher({
 		partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
 		/** Without these nothing is announced and no wait settles: handoffs time out into release-then-claim. */
 		handoff?: {
-			tail: Pick<OwnershipTail, "tailPartition">;
+			tail: Pick<OwnershipTail, "tailPartition" | "readView">;
 			sender: KafkaSender;
 		};
 	};
@@ -76,6 +76,20 @@ export function createOwnershipPublisher({
 		});
 	}
 
+	async function announceDraining({
+		successor,
+	}: {
+		successor: string;
+	}): Promise<void> {
+		if (!ctx.handoff) return;
+		await publisher.announceDraining({
+			partition: config.partition,
+			endpoint: config.endpoint,
+			successor,
+			drainingAt: Date.now(),
+		});
+	}
+
 	/** Resolves on the first tail record `match` accepts; rejects with the signal's reason. */
 	function awaitRecord<Result>({
 		signal,
@@ -121,6 +135,50 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchReady });
 	}
 
+	/** A drain the current owner started and has not yet concluded: whoever it names, fencing it now would cut it short. */
+	function readActiveDrain(): { endpoint: string } | null {
+		const view = ctx.handoff?.tail.readView({ partition: config.partition });
+		const drain = view?.activeDrain;
+		if (!drain || drain.endpoint === config.endpoint) return null;
+		return { endpoint: drain.endpoint };
+	}
+
+	function awaitDraining({
+		signal,
+	}: {
+		signal: AbortSignal;
+	}): Promise<{ endpoint: string }> {
+		// A drain handing to this worker is always ours to wait on. One naming another
+		// successor still means the owner is alive mid-drain, unless its author no longer
+		// owns the partition, in which case it is a late record and nothing to hold for.
+		function matchDraining({ record }: OwnershipTailRecord) {
+			if (record.type !== "draining" || record.endpoint === config.endpoint)
+				return undefined;
+			if (record.successor === config.endpoint)
+				return { endpoint: record.endpoint };
+			const owner = ctx.handoff?.tail.readView({
+				partition: config.partition,
+			})?.owner;
+			if (owner !== undefined && owner !== record.endpoint) return undefined;
+			return { endpoint: record.endpoint };
+		}
+		return awaitRecord({ signal, match: matchDraining });
+	}
+
+	/** A `claimed` naming some other worker: the owner concluded a handoff that was not to this worker. */
+	function awaitForeignClaim({
+		signal,
+	}: {
+		signal: AbortSignal;
+	}): Promise<{ endpoint: string }> {
+		function matchForeignClaim({ record }: OwnershipTailRecord) {
+			if (record.type !== "claimed" || record.endpoint === config.endpoint)
+				return undefined;
+			return { endpoint: record.endpoint };
+		}
+		return awaitRecord({ signal, match: matchForeignClaim });
+	}
+
 	function awaitClaim({
 		signal,
 	}: {
@@ -134,5 +192,15 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchClaim });
 	}
 
-	return { claim, release, announceReady, awaitReady, awaitClaim };
+	return {
+		claim,
+		release,
+		announceReady,
+		announceDraining,
+		awaitReady,
+		readActiveDrain,
+		awaitDraining,
+		awaitForeignClaim,
+		awaitClaim,
+	};
 }
