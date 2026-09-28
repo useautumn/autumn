@@ -1007,6 +1007,52 @@ test("two sandboxes whose slugs name the same secret variable refuse the push be
 	expect(calls.filter((call) => call.endsWith(":sync"))).toEqual([]);
 });
 
+test("a deleted sandbox (404) is skipped with a warning, the way pull skips it", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${SHARED_URL}` });
+	const calls: string[] = [];
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_SANDBOX_STG_SECRET_KEY: "sk_stg",
+			},
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: envClient({
+					name: "sandbox",
+					calls,
+					changes: [
+						urlUpdate(
+							"https://old.example.com/autumn",
+							"https://sbx.example.com/autumn",
+						),
+					],
+				}),
+				sk_stg: {
+					previewSyncWebhooks: async () => {
+						throw new AutumnApiError({
+							status: 404,
+							body: { message: "Sandbox not found" },
+							path: "/v1/webhooks.preview_sync",
+						});
+					},
+				},
+			},
+		}),
+	});
+	expect(output).toContain(
+		"⚠ webhooks: skipped sandbox stg (AUTUMN_SANDBOX_STG_SECRET_KEY failed: Sandbox not found)",
+	);
+	expect(calls).toContain("sandbox:sync");
+});
+
 test("pull then push of a webhook receiving every event sends no events, so the server keeps it receiving every event", async () => {
 	const dir = projectWith({
 		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),\n\t],`,

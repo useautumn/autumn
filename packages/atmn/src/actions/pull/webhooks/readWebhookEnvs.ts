@@ -3,8 +3,8 @@ import { webhookEnvSkipWarning } from "./webhookEnvSkipWarning";
 import type { WebhookPullEnv } from "./webhookPullEnvs";
 
 /**
- * Lists every env in parallel. A rejected key, or one for another org, skips
- * its env with one warning; any other failure fails the pull.
+ * Lists every env in parallel. A rejected key, one for another org, or a 404
+ * (a deleted sandbox) skips its env with one warning; anything else fails the pull.
  */
 export const readWebhookEnvs = async ({
 	envs,
