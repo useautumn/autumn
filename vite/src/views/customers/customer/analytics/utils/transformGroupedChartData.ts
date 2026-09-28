@@ -91,31 +91,13 @@ const otherColumnFor = ({ column }: { column: string }): string | null => {
 	return parsed ? `${parsed.featureKey}__${RESERVED_GROUP}` : null;
 };
 
-/** Group series ascending by volume, so the largest is last → top of stack. */
-const rankSeriesAscending = ({ events }: { events: EventsData }): string[] =>
-	events.meta
-		.filter((m) => m.name !== "period" && !isOtherSeries({ key: m.name }))
-		.map(({ name: column }) => ({
-			column,
-			total: sumSeriesColumn({ events, column }),
-		}))
-		.sort((a, b) => a.total - b.total)
-		.map(({ column }) => column);
-
-/** Stacks series by volume with "Other" on top, without dropping or folding any. */
-export function orderSeriesByVolume({
-	events,
-}: {
-	events: EventsData;
-}): EventsData {
-	const otherCols = events.meta
-		.filter((m) => isOtherSeries({ key: m.name }))
-		.map((m) => m.name);
-	const orderedCols = [...rankSeriesAscending({ events }), ...otherCols];
-	return {
-		...events,
-		meta: [{ name: "period" }, ...orderedCols.map((name) => ({ name }))],
-	};
+/** Drops series that are zero in every period, e.g. a group paired with an event it never sent. */
+export function dropZeroSeries({ events }: { events: EventsData }): EventsData {
+	const meta = events.meta.filter(
+		(m) =>
+			m.name === "period" || sumSeriesColumn({ events, column: m.name }) !== 0,
+	);
+	return { ...events, meta };
 }
 
 /**
@@ -133,7 +115,15 @@ export function trimToTopSeries({
 		.filter((m) => m.name !== "period")
 		.map((m) => m.name);
 
-	const rankedGroups = rankSeriesAscending({ events });
+	// Sorted ascending so the largest series is last → top of stack
+	const rankedGroups = seriesCols
+		.filter((key) => !isOtherSeries({ key }))
+		.map((column) => ({
+			column,
+			total: sumSeriesColumn({ events, column }),
+		}))
+		.sort((a, b) => a.total - b.total)
+		.map(({ column }) => column);
 	const keptGroups = rankedGroups.slice(-maxSeries);
 	const droppedGroups = rankedGroups.slice(0, -maxSeries);
 

@@ -48,8 +48,8 @@ import {
 import { formatBinStartLabel } from "./utils/parseTimestamp";
 import { assignSeriesColors } from "./utils/seriesColors";
 import {
+	dropZeroSeries,
 	generateChartConfig,
-	orderSeriesByVolume,
 	parseSeriesKey,
 	transformGroupedData,
 	trimToTopSeries,
@@ -83,9 +83,9 @@ const toChartSeries = ({
 		events: nonZeroEvents,
 		groupBy: chartGroupBy,
 	});
-	// The events pipe already caps groups and folds the rest into "Other".
-	if (!isDeducted) return orderSeriesByVolume({ events: pivoted });
-	return trimToTopSeries({ events: pivoted, maxSeries: MAX_CHART_SERIES });
+	// The pipe caps groups per event, so multi-event charts still need a chart-wide cap.
+	const series = isDeducted ? pivoted : dropZeroSeries({ events: pivoted });
+	return trimToTopSeries({ events: series, maxSeries: MAX_CHART_SERIES });
 };
 
 export const AnalyticsView = () => {
