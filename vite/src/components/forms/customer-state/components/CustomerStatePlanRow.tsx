@@ -13,7 +13,6 @@ import {
 } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanPickerTrayRow } from "./tray/PlanPickerTrayRow";
-import { ScopeMenuAnchor } from "./tray/ScopeMenuAnchor";
 import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function CustomerStatePlanRow({
@@ -40,11 +39,10 @@ export function CustomerStatePlanRow({
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	const isOpeningPhase = phaseIndex === 0;
 	const isLocked = isPhaseLocked({ phaseIndex });
-	const { scope, hasEntities, selectedLabel, openScope } = usePlanScopeField({
+	const { hasEntities, selectedLabel, scopeMenu } = usePlanScopeField({
 		planEntityId: plan?.entityId,
 		disabled: isLocked,
 		disabledReason: "this phase has started",
-		trigger: <ScopeMenuAnchor />,
 		onChange: (nextEntityId) =>
 			form.setFieldValue(
 				`phases[${phaseIndex}].plans[${planIndex}].entityId`,
@@ -110,9 +108,9 @@ export function CustomerStatePlanRow({
 		...(!isLocked && hasEntities
 			? [
 					{
-						label: "Move to…",
+						label: "Move to",
 						icon: <ArrowsLeftRightIcon size={ROW_ACTION_ICON_SIZE} />,
-						onSelect: openScope,
+						submenu: scopeMenu,
 					},
 				]
 			: []),
@@ -131,7 +129,6 @@ export function CustomerStatePlanRow({
 		<SelectedPlanTrayRow
 			location={location}
 			plan={plan}
-			scope={scope}
 			readOnly={isLocked}
 			actions={rowActions}
 			onCustomize={isLocked ? undefined : () => setEditingPlan(location)}

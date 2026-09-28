@@ -4,7 +4,6 @@ import { usePlanScopeField } from "@/components/forms/shared";
 import { ROW_ACTION_ICON_SIZE } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanPickerTrayRow } from "./tray/PlanPickerTrayRow";
-import { ScopeMenuAnchor } from "./tray/ScopeMenuAnchor";
 import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
@@ -19,9 +18,8 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	const location = { location: "unscheduled", planIndex } as const;
 
 	const plan = formValues.unscheduledPlans[planIndex];
-	const { scope, hasEntities, openScope } = usePlanScopeField({
+	const { hasEntities, scopeMenu } = usePlanScopeField({
 		planEntityId: plan?.entityId,
-		trigger: <ScopeMenuAnchor />,
 		onChange: (nextEntityId) =>
 			form.setFieldValue(
 				`unscheduledPlans[${planIndex}].entityId`,
@@ -62,14 +60,13 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		<SelectedPlanTrayRow
 			location={location}
 			plan={plan}
-			scope={scope}
 			actions={
 				hasEntities
 					? [
 							{
-								label: "Move to…",
+								label: "Move to",
 								icon: <ArrowsLeftRightIcon size={ROW_ACTION_ICON_SIZE} />,
-								onSelect: openScope,
+								submenu: scopeMenu,
 							},
 						]
 					: []

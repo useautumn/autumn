@@ -1,7 +1,8 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { PlanEntityScopeSelector } from "./PlanEntityScopeSelector";
 import { PlanScopeChip } from "./PlanScopeChip";
+import { PlanScopeMenuItems } from "./PlanScopeMenuItems";
 import type { PlanRowScope } from "./ScopedPlanRow";
 import { resolvePlanEntityId } from "./utils/resolvePlanEntityId";
 
@@ -15,7 +16,6 @@ export function usePlanScopeField({
 	onChange,
 	disabled,
 	disabledReason,
-	trigger,
 }: {
 	/** Undefined follows `defaultEntityId`; null is an explicit customer level. */
 	planEntityId?: string | null;
@@ -23,8 +23,6 @@ export function usePlanScopeField({
 	onChange: (entityId: string | null | undefined) => void;
 	disabled?: boolean;
 	disabledReason?: string;
-	/** Replaces the scope chip, e.g. with an anchor opened from a menu. */
-	trigger?: ReactNode;
 }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const effectiveEntityId = resolvePlanEntityId({
@@ -61,14 +59,12 @@ export function usePlanScopeField({
 						onSearchChange={setSearch}
 						open={isOpen}
 						trigger={
-							trigger ?? (
-								<PlanScopeChip
-									disabled={disabled}
-									disabledReason={disabledReason}
-									isEntityScoped={!!effectiveEntityId}
-									label={chipLabel}
-								/>
-							)
+							<PlanScopeChip
+								disabled={disabled}
+								disabledReason={disabledReason}
+								isEntityScoped={!!effectiveEntityId}
+								label={chipLabel}
+							/>
 						}
 						value={pickerValue}
 					/>
@@ -76,11 +72,22 @@ export function usePlanScopeField({
 			}
 		: undefined;
 
+	const scopeMenu = hasEntities ? (
+		<PlanScopeMenuItems
+			entities={entities}
+			isLoading={isLoading}
+			onChange={onChange}
+			onSearchChange={setSearch}
+			value={effectiveEntityId ?? null}
+		/>
+	) : undefined;
+
 	return {
 		effectiveEntityId,
 		hasEntities,
 		selectedLabel,
 		scope,
+		scopeMenu,
 		openScope: () => setIsOpen(true),
 	};
 }

@@ -7,7 +7,6 @@ import {
 	type PlanRowAction,
 	ROW_ACTION_ICON_SIZE,
 } from "@/components/forms/shared/PlanRowActionsMenu";
-import type { PlanRowScope } from "@/components/forms/shared/ScopedPlanRow";
 import { useCustomerStateContext } from "../../CustomerStateProvider";
 import { CustomerStatePlanQuantities } from "../CustomerStatePlanQuantities";
 import { NotFoundBadge } from "../NotFoundBadge";
@@ -38,7 +37,6 @@ const buildRowActions = ({
 export function SelectedPlanTrayRow({
 	location,
 	plan,
-	scope,
 	readOnly = false,
 	onCustomize,
 	onRemove,
@@ -46,7 +44,6 @@ export function SelectedPlanTrayRow({
 }: {
 	location: PlanLocation;
 	plan: CustomerStatePlan;
-	scope?: PlanRowScope;
 	readOnly?: boolean;
 	onCustomize?: () => void;
 	onRemove?: () => void;
@@ -61,7 +58,6 @@ export function SelectedPlanTrayRow({
 				productId={plan.productId}
 				product={product}
 				items={plan.items}
-				anchor={scope?.picker}
 				badge={<NotFoundBadge reasons={planNotFoundReasons(location)} />}
 				controls={
 					<PlanRowControls

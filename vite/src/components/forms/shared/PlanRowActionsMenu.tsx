@@ -2,6 +2,9 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	IconButton,
 } from "@autumn/ui";
@@ -13,8 +16,7 @@ export const ROW_ACTION_ICON_SIZE = 14;
 export type PlanRowAction = {
 	label: string;
 	icon: ReactNode;
-	onSelect: () => void;
-};
+} & ({ onSelect: () => void } | { submenu: ReactNode });
 
 /** Row-level actions behind a "…" button, sitting next to the scope picker. */
 export function PlanRowActionsMenu({
@@ -42,12 +44,28 @@ export function PlanRowActionsMenu({
 				/>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="max-w-64">
-				{actions.map(({ label, icon, onSelect }) => (
-					<DropdownMenuItem key={label} onClick={onSelect}>
-						<span className="shrink-0 text-tertiary-foreground">{icon}</span>
-						<span className="truncate">{label}</span>
-					</DropdownMenuItem>
-				))}
+				{actions.map((action) =>
+					"submenu" in action ? (
+						<DropdownMenuSub key={action.label}>
+							<DropdownMenuSubTrigger>
+								<span className="shrink-0 text-tertiary-foreground">
+									{action.icon}
+								</span>
+								<span className="truncate">{action.label}</span>
+							</DropdownMenuSubTrigger>
+							<DropdownMenuSubContent className="w-64">
+								{action.submenu}
+							</DropdownMenuSubContent>
+						</DropdownMenuSub>
+					) : (
+						<DropdownMenuItem key={action.label} onClick={action.onSelect}>
+							<span className="shrink-0 text-tertiary-foreground">
+								{action.icon}
+							</span>
+							<span className="truncate">{action.label}</span>
+						</DropdownMenuItem>
+					),
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
