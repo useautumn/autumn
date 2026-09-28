@@ -47,12 +47,20 @@ const saveLane = async ({
 		);
 		return false;
 	});
-	const saved = await writeWebhookSecrets({
-		secrets,
-		env: lane.env,
-		envDirs,
-		cwd,
-	});
+	let saved: string[];
+	try {
+		saved = await writeWebhookSecrets({
+			secrets,
+			env: lane.env,
+			envDirs,
+			cwd,
+		});
+	} catch (error) {
+		// Nothing was saved, so another env may still save under these names.
+		for (const [name, owner] of claimed)
+			if (owner === lane.env.key) claimed.delete(name);
+		throw error;
+	}
 	// A secret means the server created the webhook after all (its dashboard
 	// twin moved since the preview): only the rest were adopted.
 	const failed = new Set([
@@ -88,31 +96,32 @@ export const applyWebhooks = async ({
 	cwd: string;
 	write: (text: string) => void;
 }): Promise<void> => {
-	// Saved in env order, one env at a time, so a shared secret name has one owner.
-	const withWork = lanes
-		.filter((lane) => webhooksHaveWork({ webhooks: lane.preview }))
-		.sort((a, b) => (a.env.key < b.env.key ? -1 : 1));
-	const synced = await Promise.allSettled(
-		withWork.map((lane) => lane.client.syncWebhooks(lane.body)),
+	const withWork = lanes.filter((lane) =>
+		webhooksHaveWork({ webhooks: lane.preview }),
 	);
+	// Shared across lanes: each saves as soon as its own sync answers.
 	const claimed = new Map<string, string>();
-	const failures: WebhookEnvFailure[] = [];
-	for (const [index, lane] of withWork.entries()) {
-		const sync = synced[index];
-		try {
-			if (sync === undefined) continue;
-			if (sync.status === "rejected") throw sync.reason;
-			await saveLane({
+	const results = await Promise.allSettled(
+		withWork.map(async (lane) =>
+			saveLane({
 				lane,
-				result: sync.value,
+				result: await lane.client.syncWebhooks(lane.body),
 				claimed,
 				envDirs,
 				cwd,
 				write,
-			});
-		} catch (error) {
-			failures.push({ env: lane.env.key, message: messageOf(error) });
-		}
-	}
+			}),
+		),
+	);
+	const failures: WebhookEnvFailure[] = results.flatMap((result, index) =>
+		result.status === "rejected"
+			? [
+					{
+						env: withWork[index]?.env.key ?? "",
+						message: messageOf(result.reason),
+					},
+				]
+			: [],
+	);
 	throwWebhookEnvFailures({ failures, envCount: withWork.length });
 };
