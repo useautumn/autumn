@@ -1,5 +1,10 @@
 import { LockAlreadyExistsError } from "@autumn/balance-engine";
-import { FlushBookmarkConflictError } from "@autumn/postgres";
+import {
+	FlushBookmarkConflictError,
+	isTransientPostgresError,
+	PostgresSqlState,
+	postgresSqlStateOf,
+} from "@autumn/postgres";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,
@@ -21,28 +26,9 @@ import type {
 } from "../types/committer.js";
 import { runFlush } from "./runFlush.js";
 
-/** SQLSTATE classes worth a retry: the connection, a concurrency abort, a cancelled statement, a full pool. */
-const TRANSIENT_SQLSTATE = /^(08|40001|40P01|57014|53300|57P0[123])/;
-const TRANSIENT_SOCKET_CODES = new Set([
-	"ECONNRESET",
-	"ECONNREFUSED",
-	"EPIPE",
-	"ETIMEDOUT",
-]);
-
-const isTransientFailure = (cause: unknown): boolean => {
-	if (!(cause instanceof Error)) return false;
-	const { errno, code } = cause as Error & { errno?: unknown; code?: unknown };
-	if (typeof errno === "string" && TRANSIENT_SQLSTATE.test(errno)) return true;
-	return typeof code === "string" && TRANSIENT_SOCKET_CODES.has(code);
-};
-
 /** Another writer moved this partition's bookmark: the record is fine, this worker no longer owns it. */
 const isOwnershipLost = (cause: unknown): boolean =>
 	cause instanceof FlushBookmarkConflictError;
-
-const UNIQUE_VIOLATION = "23505";
-const FOREIGN_KEY_VIOLATION = "23503";
 
 /**
  * Why this record is skipped, or null when the failure is the store's or the partition's, not the record's own.
@@ -55,22 +41,26 @@ const refusalOf = ({
 	record: DurableMutationRecord;
 	cause: unknown;
 }): Error | null => {
-	if (isTransientFailure(cause) || isOwnershipLost(cause)) return null;
+	if (isTransientPostgresError({ error: cause }) || isOwnershipLost(cause))
+		return null;
 	const { command, identity } = record.mutation;
 	if (cause instanceof StaleSubjectRowsError)
 		return new SubjectStaleError({ identity, cause });
 
 	// A lock id is unique across the org but a writer knows only its own customers' locks, and a customer can be
 	// deleted between the decision and the write: both are the request's problem, with an answer of their own.
-	const { errno } = cause as Error & { errno?: unknown };
-	if (command.type === "applyBillingPlan" && errno === UNIQUE_VIOLATION)
+	const sqlState = postgresSqlStateOf({ error: cause });
+	if (
+		command.type === "applyBillingPlan" &&
+		sqlState === PostgresSqlState.UniqueViolation
+	)
 		return new BillingPlanRowCollisionError({ identity, cause });
 	const lockId = command.type === "track" ? command.lock?.lockId : undefined;
 	const isLockRow =
 		lockId && cause instanceof Error && cause.message.includes("balance_locks");
-	if (isLockRow && errno === UNIQUE_VIOLATION)
+	if (isLockRow && sqlState === PostgresSqlState.UniqueViolation)
 		return new LockAlreadyExistsError({ lockId });
-	if (isLockRow && errno === FOREIGN_KEY_VIOLATION)
+	if (isLockRow && sqlState === PostgresSqlState.ForeignKeyViolation)
 		return new SubjectNotFoundError({ identity });
 	return new FlushRecordRefusedError({ mutationId: record.mutation.id, cause });
 };
@@ -169,7 +159,7 @@ const runWithRetries = async ({
 			reportStoreRecovered({ scope, attempt });
 			return outcomes;
 		} catch (cause) {
-			if (!isTransientFailure(cause)) throw cause;
+			if (!isTransientPostgresError({ error: cause })) throw cause;
 			reportStoreWaiting({ scope, attempt, cause });
 			await sleep({ delayMs, signal });
 			if (signal.aborted) throw new CommitterStoppedError({ cause });

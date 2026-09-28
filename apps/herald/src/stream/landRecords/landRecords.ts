@@ -11,6 +11,8 @@ export type LandRecordsContext = {
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	/** Ends a wait on the store when herald stops. */
 	signal: AbortSignal;
+	/** Keeps the partition while the store is down; throws once Kafka has moved it. */
+	heartbeat: () => Promise<void>;
 	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 };
 
@@ -65,6 +67,7 @@ const handleWhileStoreAnswers = async ({
 				);
 			await sleep({ delayMs, signal: ctx.signal });
 			if (ctx.signal.aborted) return { landed: false };
+			await ctx.heartbeat();
 			delayMs = Math.min(delayMs * 4, MAX_BACKOFF_MS);
 		}
 	}
@@ -73,6 +76,7 @@ const handleWhileStoreAnswers = async ({
 /**
  * Lands a batch so that no single record can hold its partition: a store failure waits in place with capped backoff
  * (never thrown to Kafka), and a failure in the job's own code is narrowed to the one record, which is skipped loudly.
+ * Returns false when herald stopped before every record landed or was skipped.
  */
 export const landRecords = async ({
 	ctx,
@@ -82,15 +86,18 @@ export const landRecords = async ({
 	ctx: LandRecordsContext;
 	job: StreamConsumer;
 	records: StreamRecord[];
-}): Promise<void> => {
-	if (records.length === 0 || ctx.signal.aborted) return;
+}): Promise<boolean> => {
+	if (records.length === 0) return true;
+	if (ctx.signal.aborted) return false;
 	const outcome = await handleWhileStoreAnswers({ ctx, job, records });
-	if (outcome.landed || ctx.signal.aborted) return;
+	if (outcome.landed) return true;
+	if (ctx.signal.aborted) return false;
 	if (records.length > 1) {
 		const middle = Math.ceil(records.length / 2);
-		await landRecords({ ctx, job, records: records.slice(0, middle) });
-		await landRecords({ ctx, job, records: records.slice(middle) });
-		return;
+		return (
+			(await landRecords({ ctx, job, records: records.slice(0, middle) })) &&
+			(await landRecords({ ctx, job, records: records.slice(middle) }))
+		);
 	}
 	const [record] = records;
 	ctx.logger.error(
@@ -106,4 +113,5 @@ export const landRecords = async ({
 		},
 		"Herald skipped a record its job could not handle",
 	);
+	return true;
 };

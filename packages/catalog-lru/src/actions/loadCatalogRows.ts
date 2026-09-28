@@ -2,10 +2,12 @@ import {
 	type CatalogKey,
 	type CatalogRow,
 	catalogKeyToString,
+	catalogRowToCatalogKey,
 	type MeteringIdentity,
 } from "@autumn/balance-engine";
 import type { CatalogRowsEnvelope } from "@autumn/postgres";
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
+import { snapshotCatalogVersions } from "./catalogVersions.js";
 import { putCatalogRows } from "./putCatalogRows.js";
 
 const idsOf = ({
@@ -43,7 +45,13 @@ const fetchAndPut = async ({
 	scope: CatalogCacheScope;
 	identity: MeteringIdentity;
 	keys: CatalogKey[];
-}): Promise<void> => {
+}): Promise<CatalogRow[]> => {
+	// Stamped with the versions from before the read: an invalidation during it leaves these rows stale.
+	const versionOf = snapshotCatalogVersions({
+		scope,
+		orgId: identity.orgId,
+		env: identity.env,
+	});
 	const envelope = await scope.ctx.db.getCatalogRows({
 		identity,
 		ids: {
@@ -55,10 +63,13 @@ const fetchAndPut = async ({
 			freeTrialIds: idsOf({ keys, table: "freeTrials" }),
 		},
 	});
-	putCatalogRows({ scope, rows: envelopeToCatalogRows({ envelope }) });
+	const rows = envelopeToCatalogRows({ envelope });
+	putCatalogRows({ scope, rows, versionOf });
+	return rows;
 };
 
-/** Keys with a fetch already in flight join it, so a burst of misses on one customer costs one round trip. */
+/** Keys with a fetch already in flight join it, so a burst of misses on one customer costs one round trip.
+ *  Returns the rows read for `keys`, which answer this call even if an invalidation has since made them stale. */
 export const loadCatalogRows = async ({
 	scope,
 	identity,
@@ -67,9 +78,9 @@ export const loadCatalogRows = async ({
 	scope: CatalogCacheScope;
 	identity: MeteringIdentity;
 	keys: CatalogKey[];
-}): Promise<void> => {
+}): Promise<CatalogRow[]> => {
 	const { inFlight } = scope.state;
-	const joined: Promise<void>[] = [];
+	const joined: Promise<CatalogRow[]>[] = [];
 	const toFetch: CatalogKey[] = [];
 	for (const key of keys) {
 		const pending = inFlight.get(catalogKeyToString({ key }));
@@ -87,5 +98,12 @@ export const loadCatalogRows = async ({
 		joined.push(fetch);
 	}
 
-	await Promise.all(joined);
+	const requested = new Set(keys.map((key) => catalogKeyToString({ key })));
+	return (await Promise.all(joined))
+		.flat()
+		.filter((row) =>
+			requested.has(
+				catalogKeyToString({ key: catalogRowToCatalogKey({ row }) }),
+			),
+		);
 };

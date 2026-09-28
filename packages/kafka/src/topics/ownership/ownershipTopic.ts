@@ -45,8 +45,11 @@ function parseReady({
 	return parsed.data;
 }
 
+/** The topic compacts by key, so `ready` needs its own: sharing the claim's key would let a later
+ *  readiness announcement compact the claim away, and a replay would find the partition unowned. */
 function ownershipRecordToKey({ record }: { record: OwnershipRecord }): string {
-	return record.partition.toString();
+	const partition = record.partition.toString();
+	return record.type === "ready" ? `${partition}:ready` : partition;
 }
 
 function parseOwnershipPayload({

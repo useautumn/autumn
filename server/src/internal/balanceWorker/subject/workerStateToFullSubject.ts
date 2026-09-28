@@ -183,8 +183,9 @@ const subjectEntityOf = ({
 	"subjectType" | "entityId" | "internalEntityId" | "entity"
 > => {
 	const { entityId } = state.identity;
-	if (!entityId || state.entity?.id !== entityId)
-		return { subjectType: "customer" };
+	// A pending entity has no id, so it is named by its internal id, as legacy names it.
+	const entityKey = state.entity?.id ?? state.entity?.internal_id;
+	if (!entityId || entityKey !== entityId) return { subjectType: "customer" };
 	const entity = EntitySchema.parse(state.entity);
 	return {
 		subjectType: "entity",

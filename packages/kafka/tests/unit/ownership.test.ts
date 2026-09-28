@@ -56,7 +56,7 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
 		});
 
-		test("round-trips a ready record", () => {
+		test("round-trips a ready record under its own key, apart from the claim", () => {
 			const record = {
 				schemaVersion: 1 as const,
 				type: "ready" as const,
@@ -66,7 +66,7 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			};
 			const serialized = ownershipTopic.serialize({ record });
 
-			expect(serialized.key.toString("utf8")).toBe("7");
+			expect(serialized.key.toString("utf8")).toBe("7:ready");
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
 		});
 

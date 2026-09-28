@@ -21,7 +21,10 @@ import {
 	type CheckFailOpenReason,
 	getCheckFailOpenFallback,
 } from "./checkUtils/getCheckFailOpenFallback.js";
-import { getCheckPreview } from "./getCheckPreview.js";
+import {
+	type CheckResponseWithPreview,
+	getCheckPreview,
+} from "./getCheckPreview.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
@@ -92,24 +95,46 @@ export const handleCheck = createRoute({
 		const rawBody = c.req.valid("json");
 		const ctx = c.get("ctx");
 
+		// Plans, not balances, answer a product check, so it runs the same on both routes.
+		if (rawBody.product_id) {
+			const body = parseCheckParamsForLock({ params: rawBody });
+			return c.json(
+				await handleProductCheck({
+					ctx,
+					body: { ...body, product_id: rawBody.product_id },
+				}),
+			);
+		}
+
 		if (
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: rawBody.customer_id })
 		) {
 			const runOnWorker = () => runBalanceWorkerCheck({ ctx, body: rawBody });
 			// A lock must settle its reservation, so a lock check never answers without the worker.
 			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
-			const { result, failedOpen } = await withBalanceWorkerFailOpen({
-				ctx,
-				source: "check",
-				run: runOnWorker,
-				fallback: async ({ error }) =>
+			if (ctx.orgRateLimitDegraded)
+				return c.json(
 					checkFailOpenResponse({
 						ctx,
 						params: rawBody,
-						error,
-						reason: "balance_worker_unavailable",
+						error: new Error("org aggregate rate cap exceeded"),
+						reason: "org_rate_limit",
 					}),
-			});
+					202,
+				);
+			const { result, failedOpen } =
+				await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
+					ctx,
+					source: "check",
+					run: runOnWorker,
+					fallback: async ({ error }) =>
+						checkFailOpenResponse({
+							ctx,
+							params: rawBody,
+							error,
+							reason: "balance_worker_unavailable",
+						}),
+				});
 			return c.json(result, failedOpen ? 202 : 200);
 		}
 
@@ -119,21 +144,11 @@ export const handleCheck = createRoute({
 
 		const {
 			customer_id,
-			product_id,
 			entity_id,
 			required_quantity,
 			required_balance,
 			with_preview,
 		} = body;
-
-		// Legacy path - product check
-		if (product_id) {
-			const checkProductResult = await handleProductCheck({
-				ctx: c.get("ctx"),
-				body: { ...body, product_id }, // Ensure product_id is passed as string
-			});
-			return c.json(checkProductResult);
-		}
 
 		const requiredBalance =
 			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
@@ -152,8 +167,9 @@ export const handleCheck = createRoute({
 		const preview = with_preview
 			? await getCheckPreview({
 					ctx,
-					checkResponse: response,
-					checkData,
+					allowed: response.allowed,
+					apiBalance: checkData.apiBalance,
+					feature: checkData.featureToUse,
 					customerId: customer_id,
 					entityId: entity_id,
 				})

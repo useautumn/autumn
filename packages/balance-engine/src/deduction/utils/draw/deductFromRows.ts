@@ -197,6 +197,7 @@ export const deductFromRows = ({
 			deductionState,
 			row: windowRow,
 			units: unitsGiven,
+			credits: change,
 		});
 	}
 };

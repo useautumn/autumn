@@ -29,6 +29,7 @@ const mockState = {
 	queueCommands: [] as Record<string, unknown>[],
 	originalSend: null as null | SQSClient["send"],
 	queuedForReplay: false,
+	workerUnreachable: false,
 };
 
 const trackAsyncQueueUrl =
@@ -138,13 +139,26 @@ await mockModuleWithRestore(
 await mockModuleWithRestore(
 	"@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js",
 	() => ({
-		runBalanceWorkerTrack: async (args: { body: typeof trackBody }) => {
+		runBalanceWorkerTrack: async (args: {
+			body: typeof trackBody;
+			isAsync?: boolean;
+		}) => {
 			mockState.runBalanceWorkerTrackCalls.push(args);
+			if (mockState.workerUnreachable && !args.isAsync)
+				rethrowBalanceWorkerError({
+					cause: new BalanceWorkerClientError({
+						code: "NO_OWNER",
+						outcome: "not_submitted",
+						message: "no owner for the partition",
+					}),
+				});
 			return { customer_id: args.body.customer_id, value: args.body.value };
 		},
 	}),
 );
 
+import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
+import { rethrowBalanceWorkerError } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { handleTrackTokens } from "@/internal/balances/handlers/handleTrackTokens.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
@@ -212,6 +226,7 @@ describe("handleTrackTokens", () => {
 		mockState.runTrackWithRolloutCalls = [];
 		mockState.queueCommands = [];
 		mockState.queuedForReplay = false;
+		mockState.workerUnreachable = false;
 	});
 
 	test("with the balance worker on, tracks the converted body on the worker", async () => {
@@ -230,9 +245,51 @@ describe("handleTrackTokens", () => {
 			expect(mockState.runBalanceWorkerTrackCalls).toHaveLength(1);
 			expect(mockState.runBalanceWorkerTrackCalls[0]).toMatchObject({
 				body: trackBody,
-				isAsync: false,
 			});
+			expect(mockState.runBalanceWorkerTrackCalls[0]?.isAsync).toBeFalsy();
 			expect(mockState.runTrackWithRolloutCalls).toHaveLength(0);
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
+	});
+
+	test("with the worker unreachable, queues the track for it and answers 202, as /track does", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		mockState.workerUnreachable = true;
+		try {
+			const response = await createApp({ ctx: createCtx() }).request(
+				"/track_tokens",
+				{
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify(requestBody),
+				},
+			);
+
+			expect(response.status).toBe(202);
+			expect(
+				mockState.runBalanceWorkerTrackCalls.map((call) => call.isAsync),
+			).toEqual([undefined, true]);
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
+	});
+
+	test("with the org over its rate cap, queues the track on the worker and answers 202, as legacy does", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		try {
+			const ctx = createCtx();
+			ctx.orgRateLimitDegraded = true;
+			const response = await createApp({ ctx }).request("/track_tokens", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(requestBody),
+			});
+
+			expect(response.status).toBe(202);
+			expect(
+				mockState.runBalanceWorkerTrackCalls.map((call) => call.isAsync),
+			).toEqual([true]);
 		} finally {
 			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 		}
