@@ -2,14 +2,17 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Children, isValidElement, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+const EASE_DRAWER = [0.32, 0.72, 0, 1] as const;
+const HEIGHT_TRANSITION = { duration: 0.22, ease: EASE_DRAWER };
 
 const ENTER_TRANSITION = {
-	duration: 0.18,
-	ease: EASE_OUT,
-	opacity: { duration: 0.12, ease: EASE_OUT },
+	height: HEIGHT_TRANSITION,
+	opacity: { duration: 0.18, delay: 0.04, ease: "easeOut" },
 };
-const EXIT_TRANSITION = { duration: 0.14, ease: EASE_OUT };
+const EXIT_TRANSITION = {
+	height: HEIGHT_TRANSITION,
+	opacity: { duration: 0.12, ease: "easeOut" },
+};
 
 const COLLAPSED = { height: 0, opacity: 0, transition: EXIT_TRANSITION };
 const EXPANDED = { height: "auto", opacity: 1, transition: ENTER_TRANSITION };
