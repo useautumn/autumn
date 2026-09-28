@@ -1,5 +1,15 @@
-import { and, desc, eq, inArray, notInArray } from "drizzle-orm";
+import {
+	type AnyColumn,
+	and,
+	desc,
+	eq,
+	inArray,
+	notInArray,
+	sql,
+} from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { RunSummary } from "../../../api/contract.ts";
+import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { users } from "../../../db/schema/auth.ts";
 import { type RunStatus, runs } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
@@ -18,18 +28,32 @@ export const LIVE_RUN_STATUSES: RunStatus[] = [
 export const isTerminalRunStatus = ({ status }: { status: RunStatus }) =>
 	!LIVE_RUN_STATUSES.includes(status);
 
+const holdsNoAccounts = (runId: AnyColumn) =>
+	sql`not exists (select 1 from ${stripeAccounts} where ${stripeAccounts.runId} = ${runId} and ${stripeAccounts.state} = 'in_use')`;
+
+const earlierRuns = alias(runs, "earlier_runs");
+
+/** 1-based FIFO place among queued runs holding no account; null otherwise. */
+export const queuePositionSql = sql<
+	number | null
+>`case when ${runs.status} = 'queued' and ${holdsNoAccounts(runs.id)} then (select count(*) from ${earlierRuns} where ${earlierRuns.status} = 'queued' and ${earlierRuns.createdAt} <= ${runs.createdAt} and ${holdsNoAccounts(earlierRuns.id)}) end`.mapWith(
+	Number,
+);
+
 const selectRuns = ({ ctx }: { ctx: TwdContext }) =>
 	ctx.db
-		.select({ run: runs, email: users.email })
+		.select({ run: runs, email: users.email, queuePosition: queuePositionSql })
 		.from(runs)
 		.leftJoin(users, eq(users.id, runs.createdBy));
 
 export const toRunSummary = ({
 	run,
 	email,
+	queuePosition = null,
 }: {
 	run: RunRow;
 	email: string | null;
+	queuePosition?: number | null;
 }): RunSummary => ({
 	id: run.id,
 	branch: run.branch,
@@ -39,6 +63,13 @@ export const toRunSummary = ({
 	selection: run.selection,
 	fileCount: run.fileCount,
 	workerCount: run.workerCount,
+	workersWanted: run.workersWanted,
+	queuePosition,
+	cost: {
+		usd: run.costUsd,
+		workerSeconds: run.workerSeconds,
+		final: isTerminalRunStatus({ status: run.status }),
+	},
 	passed: run.passed,
 	failed: run.failed,
 	createdBy: {

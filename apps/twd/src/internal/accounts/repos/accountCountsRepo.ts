@@ -5,7 +5,6 @@ import type { TwdDb } from "../../../lib/getDb.ts";
 
 export type AccountCounts = {
 	clean: number;
-	reserved: number;
 	inUse: number;
 	nuking: number;
 	broken: number;
@@ -13,7 +12,6 @@ export type AccountCounts = {
 
 export const emptyAccountCounts = (): AccountCounts => ({
 	clean: 0,
-	reserved: 0,
 	inUse: 0,
 	nuking: 0,
 	broken: 0,
@@ -21,7 +19,6 @@ export const emptyAccountCounts = (): AccountCounts => ({
 
 const COUNT_FIELD: Record<AccountState, keyof AccountCounts> = {
 	clean: "clean",
-	reserved: "reserved",
 	in_use: "inUse",
 	nuking: "nuking",
 	broken: "broken",
@@ -50,9 +47,25 @@ export const countAccountsByKey = async ({
 	return byKey;
 };
 
-export const HELD_ACCOUNT_STATES = ["in_use", "reserved"] as const;
+/** in_use accounts per run. */
+export const countHeldAccountsByRun = async ({
+	db,
+}: {
+	db: TwdDb;
+}): Promise<Map<string, number>> => {
+	const rows = await db
+		.select({ runId: stripeAccounts.runId, n: count() })
+		.from(stripeAccounts)
+		.where(eq(stripeAccounts.state, "in_use"))
+		.groupBy(stripeAccounts.runId);
+	return new Map(
+		rows.flatMap((row) => (row.runId ? [[row.runId, row.n] as const] : [])),
+	);
+};
 
-/** Accounts on one key held by a run or reservation. */
+export const HELD_ACCOUNT_STATES = ["in_use"] as const;
+
+/** Accounts on one key held by a run. */
 export const countHeldAccountsOnKey = async ({
 	db,
 	platformAccountId,

@@ -7,6 +7,7 @@ import { and, count, eq, ne } from "drizzle-orm";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { ACCOUNTS_PER_KEY_CAP } from "../../accounts/allocator/poolLimits.ts";
 import { stripeForKey } from "../stripeForKey.ts";
 import { resolveKeySecret } from "./resolveKeySecret.ts";
 import { twdPoolMetadata } from "./setTwdPoolState.ts";
@@ -15,7 +16,8 @@ const POOL_ORG_NAME = "Unit Test Org (twd pool)";
 const POOL_ORG_ID = "twd_pool";
 
 /** Same v2 create body as scripts/tw createSandboxSubAccount (that one pulls the server graph).
- * Tops every usable key (or just `platformAccountId`, locked or not) up to `targetPerKey` non-broken accounts. */
+ * Tops every usable key (or just `platformAccountId`, locked or not) up to `targetPerKey` non-broken
+ * accounts, never past ACCOUNTS_PER_KEY_CAP. */
 export const topUpAccounts = async ({
 	ctx,
 	targetPerKey,
@@ -37,6 +39,7 @@ export const topUpAccounts = async ({
 				: and(eq(stripeKeys.usable, true), eq(stripeKeys.present, true)),
 		);
 
+	const target = Math.min(targetPerKey, ACCOUNTS_PER_KEY_CAP);
 	let created = 0;
 	await Promise.all(
 		keys.map(async ({ platformAccountId }) => {
@@ -51,7 +54,7 @@ export const topUpAccounts = async ({
 				);
 			const secretKey = await resolveKeySecret({ ctx, platformAccountId });
 			await Promise.all(
-				Array.from({ length: Math.max(0, targetPerKey - n) }, async () => {
+				Array.from({ length: Math.max(0, target - n) }, async () => {
 					const { id: accountId } = await withStripeRequestSlot(() =>
 						stripeForKey({ secret: secretKey }).v2.core.accounts.create(
 							{
@@ -83,6 +86,6 @@ export const topUpAccounts = async ({
 			);
 		}),
 	);
-	ctx.logger.info("twd pool top-up", { targetPerKey, created });
+	ctx.logger.info("twd pool top-up", { targetPerKey: target, created });
 	return { created };
 };

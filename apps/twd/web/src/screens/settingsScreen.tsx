@@ -81,7 +81,7 @@ const CreateKeyDialog = ({
 			open={open}
 			onOpenChange={close}
 			title="Create API key"
-			description="Keys act as you: every run or reservation made with it is recorded as yours, via this key."
+			description="Keys act as you: every run started with it is recorded as yours, via this key."
 			footer={
 				<>
 					<Button variant="secondary" onClick={() => close(false)}>
@@ -255,8 +255,7 @@ export const SettingsScreen = () => {
 						<p className="text-xs text-subtle">
 							Tools:{" "}
 							<span className="text-tiny-id">
-								get_capacity · start_run · wait_for_run · get_run ·
-								reserve_accounts · list_catalog
+								get_capacity · start_run · wait_for_run · get_run · list_catalog
 							</span>
 						</p>
 					</Panel>

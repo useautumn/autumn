@@ -13,7 +13,8 @@ export const getRun = async ({
 	ctx: TwdContext;
 	runId: string;
 }): Promise<RunDetail> => {
-	const { run, email } = await getRunWithEmail({ ctx, runId });
+	const found = await getRunWithEmail({ ctx, runId });
+	const { run } = found;
 	const progress = readRunProgress({ progress: run.progress });
 	const live = getLiveRun({ runId });
 	const known = new Map<string, RunFile>(
@@ -36,7 +37,7 @@ export const getRun = async ({
 			},
 	);
 	return {
-		...toRunSummary({ run, email }),
+		...toRunSummary(found),
 		phase: live?.phase ?? progress.phase ?? null,
 		workers: live ? [...live.workers.values()] : (progress.workers ?? []),
 		files,

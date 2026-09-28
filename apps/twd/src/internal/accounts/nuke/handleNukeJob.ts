@@ -9,6 +9,7 @@ import {
 	describeStripeError,
 	isAccountGone,
 } from "../../keys/stripeErrors.ts";
+import { kickAllocator } from "../allocator/accountAllocator.ts";
 
 const NUKE_TRIES = 3;
 const RETRY_DELAY_MS = 5_000;
@@ -26,7 +27,7 @@ export const handleNukeJob: JobHandler = async ({ ctx, job, signal }) => {
 		});
 		return;
 	}
-	if (account.state === "in_use" || account.state === "reserved") {
+	if (account.state === "in_use") {
 		ctx.logger.warn("twd nuke skipped: account is held", {
 			accountId,
 			state: account.state,
@@ -66,13 +67,12 @@ export const handleNukeJob: JobHandler = async ({ ctx, job, signal }) => {
 					brokenReason: null,
 					heldBy: null,
 					runId: null,
-					reservationId: null,
-					reservedUntil: null,
 					lastNukedAt: now,
 					stateChangedAt: now,
 				})
 				.where(eq(stripeAccounts.id, accountId));
 			ctx.logger.info("twd nuke clean", { accountId, ms, counts });
+			kickAllocator();
 			return;
 		} catch (error) {
 			if (isAccountGone(error)) {

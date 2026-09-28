@@ -8,7 +8,7 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { resolveBranchSha } from "../../catalog/actions/gitRemote.ts";
 import { resolveTestSelection } from "../../catalog/actions/resolveTestSelection.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
-import { toRunSummary, updateRun } from "../repos/runsRepo.ts";
+import { getRunWithEmail, toRunSummary, updateRun } from "../repos/runsRepo.ts";
 import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
 import type { RunProgress } from "../types/runProgress.ts";
 
@@ -69,7 +69,6 @@ export const createRun = async ({
 			pinnedSha: body.sha !== undefined,
 			selection: body.selection,
 			purpose: body.purpose,
-			reservationId: body.reservationId ?? null,
 			fileCount: files.length,
 			progress,
 			createdBy: actor.userId,
@@ -93,7 +92,7 @@ export const createRun = async ({
 			payload: { runId: run.id },
 		});
 		await updateRun({ ctx, runId: run.id, set: { jobId: job.id } });
-		return toRunSummary({ run: { ...run, jobId: job.id }, email: actor.email });
+		return toRunSummary(await getRunWithEmail({ ctx, runId: run.id }));
 	} catch (error) {
 		await updateRun({
 			ctx,

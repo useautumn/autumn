@@ -58,3 +58,13 @@ export const handle = (email: string) => email.split("@")[0];
 
 /** `api_key:<id>` → API key actor (agent/CI); `session` → human. */
 export const isAgentVia = (via: string) => via.startsWith("api_key");
+
+export const usd = (n: number) => {
+	if (n > 0 && n < 0.01) return "<$0.01";
+	return new Intl.NumberFormat("en", {
+		style: "currency",
+		currency: "USD",
+		maximumFractionDigits: n >= 1000 ? 0 : 2,
+		minimumFractionDigits: n >= 1000 ? 0 : 2,
+	}).format(n);
+};

@@ -17,7 +17,8 @@
 			"@autumn/ui/*": ["../../../packages/ui/src/*"],
 			"react": ["../node_modules/@types/react"],
 			"react/*": ["../node_modules/@types/react/*"],
-			"@tanstack/react-table": ["../node_modules/@tanstack/react-table"]
+			"@tanstack/react-table": ["../node_modules/@tanstack/react-table"],
+			"recharts": ["../../../packages/ui/node_modules/recharts"]
 		}
 	},
 	"include": ["src", "vite.config.ts"]

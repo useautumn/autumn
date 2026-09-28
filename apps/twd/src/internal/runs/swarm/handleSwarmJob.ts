@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { and, count, eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import type { RunEvent } from "../../../api/contract.ts";
 import { jobs } from "../../../db/schema/jobs.ts";
 import { stripeKeys } from "../../../db/schema/keys.ts";
@@ -8,12 +8,22 @@ import { SYSTEM_ACTOR } from "../../../lib/createContext.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import {
 	type ClaimedAccount,
-	claimAccountsForRun,
 	releaseRunAccounts,
+	returnUnusedAccounts,
 } from "../../accounts/actions/accountLedger.ts";
+import {
+	kickAllocator,
+	type RunDemand,
+	registerRunDemand,
+} from "../../accounts/allocator/accountAllocator.ts";
+import {
+	ACCOUNTS_PER_KEY_CAP,
+	MAX_RUN_WORKERS,
+} from "../../accounts/allocator/poolLimits.ts";
+import { usableKey } from "../../accounts/repos/cleanAccountsRepo.ts";
 import { getTestTreeAtSha } from "../../catalog/actions/getTestTreeAtSha.ts";
 import { toAbsoluteTestPath } from "../../catalog/repoPaths.ts";
-import { deleteIngressRoute } from "../../ingress/actions/ingressRoutes.ts";
+import { accrueRunCost } from "../../costs/actions/accrueRunCost.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
 import { onRunFinished } from "../../results/actions/refreshBaselines.ts";
@@ -33,17 +43,20 @@ import {
 	type RunRow,
 	updateRun,
 } from "../repos/runsRepo.ts";
+import { endRunWorkers, insertRunWorker } from "../repos/runWorkersRepo.ts";
 import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
 import { spawnTwChild } from "../spawnTwChild.ts";
 import { type RunProgress, readRunProgress } from "../types/runProgress.ts";
-import type { SwarmChildMessage, SwarmInit } from "../types/swarmMessages.ts";
+import type {
+	SwarmChildMessage,
+	SwarmInit,
+	SwarmParentMessage,
+} from "../types/swarmMessages.ts";
 
 const SWARM_ENTRY = resolve(import.meta.dir, "swarmProcess/swarmProcess.ts");
-const MAX_WORKERS = 400;
-/** scripts/tw/helpers/stripeBudget.ts rejects more than 4 workers per platform key. */
-const MAX_WORKERS_PER_KEY = 4;
 const WARM_POLL_MS = 5_000;
 const FLUSH_MS = 2_000;
+const ACCRUE_MS = 10_000;
 const LOG_TAIL_CHARS = 8_000;
 
 /** `committed`: accounts may be claimed / sandboxes may exist for this run. */
@@ -100,6 +113,11 @@ const waitForWarm = async ({
 	}
 };
 
+const toSwarmAccount = ({ accountId, secretKey }: ClaimedAccount) => ({
+	accountId,
+	secretKey,
+});
+
 /** A resumed job whose child already ran: the daemon died mid-run. Clean up, never re-run. */
 const recoverCrashedSwarm = async ({
 	ctx,
@@ -112,6 +130,8 @@ const recoverCrashedSwarm = async ({
 }) => {
 	await terminateSandboxes({ sandboxIds: state.sandboxIds ?? [] });
 	await releaseRunAccounts({ ctx, runId: run.id });
+	await endRunWorkers({ ctx, runId: run.id });
+	await accrueRunCost({ ctx, runId: run.id });
 	await updateRun({
 		ctx,
 		runId: run.id,
@@ -128,7 +148,10 @@ const recoverCrashedSwarm = async ({
 	});
 };
 
-/** payload: { runId }. Warm → claim accounts → swarm child → persist + fan out events. */
+/**
+ * payload: { runId }. Warm → wait in the FIFO account queue → start the child on the first
+ * account(s) → feed it more as the allocator frees them → persist + fan out events.
+ */
 export const handleSwarmJob: JobHandler = async ({
 	ctx: jobCtx,
 	job,
@@ -195,10 +218,15 @@ export const handleSwarmJob: JobHandler = async ({
 	};
 
 	const sandboxIds: string[] = [];
+	const workers = new Set<string>();
 	let checkpointedSandboxes = 0;
 	const flush = () => {
 		enqueueWrite(() =>
-			updateRun({ ctx, runId, set: { progress: snapshot(), ...counts() } }),
+			updateRun({
+				ctx,
+				runId,
+				set: { progress: snapshot(), workerCount: workers.size, ...counts() },
+			}),
 		);
 		if (sandboxIds.length === checkpointedSandboxes) return;
 		checkpointedSandboxes = sandboxIds.length;
@@ -211,21 +239,64 @@ export const handleSwarmJob: JobHandler = async ({
 			),
 		);
 	};
+	const accrue = () =>
+		accrueRunCost({ ctx, runId }).catch((error: unknown) =>
+			ctx.logger.warn("accrueRunCost failed", { runId, error: String(error) }),
+		);
 
-	let accounts: ClaimedAccount[] = [];
+	// Accounts from the FIFO allocator: parked until the child exists, then sent over IPC.
+	let closed = false;
+	let delivered = 0;
+	let sendToChild: ((message: SwarmParentMessage) => void) | undefined;
+	const parked: ClaimedAccount[] = [];
+	let onFirstAccounts = () => {};
+	const firstAccounts = new Promise<void>((resolveFirst) => {
+		onFirstAccounts = resolveFirst;
+	});
+	const demand: RunDemand = {
+		wants: 0,
+		deliver: (accounts) => {
+			if (closed || abort.signal.aborted) {
+				void returnUnusedAccounts({
+					ctx,
+					runId,
+					accountIds: accounts.map(({ accountId }) => accountId),
+				}).catch((error: unknown) =>
+					ctx.logger.error("returning accounts failed", {
+						runId,
+						error: String(error),
+					}),
+				);
+				return;
+			}
+			delivered += accounts.length;
+			if (sendToChild) {
+				sendToChild({
+					type: "add_accounts",
+					accounts: accounts.map(toSwarmAccount),
+				});
+				return;
+			}
+			parked.push(...accounts);
+			onFirstAccounts();
+		},
+	};
+	let unregister = () => {};
+	abort.signal.addEventListener(
+		"abort",
+		() => {
+			demand.wants = 0;
+			onFirstAccounts();
+		},
+		{ once: true },
+	);
+
 	let childDone: Extract<SwarmChildMessage, { type: "done" }> | undefined;
 	let exitCode: number | null = 0;
 	let failure: string | undefined;
 	const flushTimer = setInterval(flush, FLUSH_MS);
+	const accrueTimer = setInterval(() => void accrue(), ACCRUE_MS);
 	try {
-		setStatus({
-			status: "warming",
-			phase: "waiting for warm image",
-			set: { startedAt: new Date() },
-		});
-		await waitForWarm({ ctx, run, signal: abort.signal });
-		if (abort.signal.aborted) return;
-
 		const files = await orderFilesLongestFirst({
 			ctx,
 			files: progress.plannedFiles ?? [],
@@ -233,38 +304,36 @@ export const handleSwarmJob: JobHandler = async ({
 		const [{ usableKeys }] = await ctx.db
 			.select({ usableKeys: count() })
 			.from(stripeKeys)
-			.where(and(eq(stripeKeys.usable, true), eq(stripeKeys.present, true)));
-		const wanted = Math.min(
+			.where(usableKey);
+		const workersWanted = Math.min(
 			files.length,
-			MAX_WORKERS,
-			usableKeys * MAX_WORKERS_PER_KEY,
+			usableKeys * ACCOUNTS_PER_KEY_CAP,
+			MAX_RUN_WORKERS,
 		);
-		if (wanted === 0) {
+		setStatus({
+			status: "warming",
+			phase: "waiting for warm image",
+			set: { startedAt: new Date(), workersWanted },
+		});
+		if (workersWanted === 0) {
 			throw new Error(
 				files.length === 0
 					? "run has no planned files"
 					: "no usable Stripe keys — ask a twd admin to fix TW_V3_KEYS / run POST /keys/reinit",
 			);
 		}
+		await waitForWarm({ ctx, run, signal: abort.signal });
+		if (abort.signal.aborted) return;
+
 		// From here a crash-resume must clean up (accounts, sandboxes), never re-run.
 		await checkpoint({ committed: true, sandboxIds: [] });
-		accounts = await claimAccountsForRun({
-			ctx,
-			runId,
-			count: wanted,
-			reservationId: run.reservationId ?? undefined,
-		});
-		if (accounts.length === 0) {
-			throw new Error(
-				"no clean Stripe accounts available — wait for nukes or free a reservation",
-			);
-		}
+		setStatus({ status: "queued", phase: "waiting for a free account" });
+		demand.wants = workersWanted;
+		unregister = registerRunDemand({ runId, demand });
+		await firstAccounts;
+		if (abort.signal.aborted) return;
 
-		setStatus({
-			status: "provisioning",
-			phase: "provisioning workers",
-			set: { workerCount: accounts.length },
-		});
+		setStatus({ status: "provisioning", phase: "provisioning workers" });
 		const init: SwarmInit = {
 			type: "init",
 			runId,
@@ -272,19 +341,27 @@ export const handleSwarmJob: JobHandler = async ({
 			files: files.map((testId) => toAbsoluteTestPath({ testId })),
 			testsDirAtSha: (await getTestTreeAtSha({ ctx, sha: run.sha })).testsDir,
 			grep: run.selection.grep,
-			accounts: accounts.map(({ accountId, secretKey }) => ({
-				accountId,
-				secretKey,
-			})),
+			accounts: parked.splice(0).map(toSwarmAccount),
+			workersWanted,
+			usableKeys,
 			ingressUrl: ctx.env.TWD_PUBLIC_URL,
 			ingressToken: ctx.env.TWD_INGRESS_TOKEN,
 		};
-		({ exitCode } = await spawnTwChild<SwarmChildMessage>({
+		({ exitCode } = await spawnTwChild<SwarmChildMessage, SwarmParentMessage>({
 			entry: SWARM_ENTRY,
 			init,
 			env: { TW_MODAL_NO_STALE: "1" },
 			signal: abort.signal,
 			logger: ctx.logger,
+			onInitSent: (send) => {
+				sendToChild = send;
+				if (parked.length > 0) {
+					send({
+						type: "add_accounts",
+						accounts: parked.splice(0).map(toSwarmAccount),
+					});
+				}
+			},
 			onMessage: (message) => {
 				if (message.type === "done") {
 					childDone = message;
@@ -292,12 +369,42 @@ export const handleSwarmJob: JobHandler = async ({
 					setStatus({
 						status: message.phase,
 						phase: message.phase.replace("_", " "),
-						set: message.workerCount
-							? { workerCount: message.workerCount }
-							: {},
 					});
-				} else if (message.type === "sandbox") {
-					sandboxIds.push(message.sandboxId);
+				} else if (message.type === "worker_started") {
+					if (message.sandboxId) sandboxIds.push(message.sandboxId);
+					workers.add(message.name);
+					enqueueWrite(() =>
+						insertRunWorker({
+							ctx,
+							runId,
+							name: message.name,
+							sandboxId: message.sandboxId,
+							accountId: message.accountId,
+						}),
+					);
+				} else if (message.type === "worker_ended") {
+					workers.delete(message.name);
+					enqueueWrite(async () => {
+						await endRunWorkers({ ctx, runId, name: message.name });
+						await releaseRunAccounts({
+							ctx,
+							runId,
+							accountIds: [message.accountId],
+						});
+					});
+				} else if (message.type === "release_accounts") {
+					enqueueWrite(async () => {
+						await returnUnusedAccounts({
+							ctx,
+							runId,
+							accountIds: message.accountIds,
+						});
+						kickAllocator();
+					});
+				} else if (message.type === "demand") {
+					const grew = message.workers > demand.wants;
+					demand.wants = abort.signal.aborted ? 0 : message.workers;
+					if (grew) kickAllocator();
 				} else if (message.type === "file") {
 					publishRunEvent({
 						runId,
@@ -329,10 +436,19 @@ export const handleSwarmJob: JobHandler = async ({
 	} catch (error) {
 		failure = error instanceof Error ? error.message : String(error);
 	} finally {
+		closed = true;
+		sendToChild = undefined;
+		unregister();
 		clearInterval(flushTimer);
+		clearInterval(accrueTimer);
 		if (exitCode !== 0) await terminateSandboxes({ sandboxIds });
-		for (const { accountId } of accounts) deleteIngressRoute({ accountId });
-		if (accounts.length > 0) {
+		await writes;
+		await returnUnusedAccounts({
+			ctx,
+			runId,
+			accountIds: parked.splice(0).map(({ accountId }) => accountId),
+		}).catch(() => undefined);
+		if (delivered > 0) {
 			await releaseRunAccounts({ ctx, runId }).catch((error: unknown) =>
 				ctx.logger.error("releaseRunAccounts failed", {
 					runId,
@@ -340,6 +456,7 @@ export const handleSwarmJob: JobHandler = async ({
 				}),
 			);
 		}
+		workers.clear();
 		const { passed, failed } = counts();
 		const status: RunStatus = abort.signal.aborted
 			? "cancelled"
@@ -357,10 +474,12 @@ export const handleSwarmJob: JobHandler = async ({
 				]),
 		);
 		if (failure) progress.error = failure;
+		enqueueWrite(() => endRunWorkers({ ctx, runId }));
+		enqueueWrite(accrue);
 		setStatus({
 			status,
 			phase: failure ?? status,
-			set: { passed, failed, finishedAt: new Date() },
+			set: { passed, failed, workerCount: 0, finishedAt: new Date() },
 		});
 		await writes;
 		retireLiveRun({ runId });

@@ -3,8 +3,8 @@ import {
 	index,
 	integer,
 	jsonb,
-	real,
 	pgTable,
+	real,
 	text,
 	timestamp,
 } from "drizzle-orm/pg-core";
@@ -96,8 +96,13 @@ export const runWorkers = pgTable(
 		accountId: text("account_id"),
 		cores: real("cores").notNull(),
 		memoryGib: real("memory_gib").notNull(),
-		startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+		startedAt: timestamp("started_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		endedAt: timestamp("ended_at", { withTimezone: true }),
 	},
-	(t) => [index("run_workers_run_idx").on(t.runId), index("run_workers_started_idx").on(t.startedAt)],
+	(t) => [
+		index("run_workers_run_idx").on(t.runId),
+		index("run_workers_started_idx").on(t.startedAt),
+	],
 );

@@ -55,15 +55,17 @@ const applyRunEvent = (run: RunDetail, event: RunEvent): RunDetail => {
 						? new Date().toISOString()
 						: run.finishedAt,
 			};
-		case "worker":
+		case "worker": {
+			const known = run.workers.some((w) => w.name === event.worker.name);
 			return {
 				...run,
-				workers: upsert(
-					run.workers,
-					event.worker,
-					(w) => w.name === event.worker.name,
-				),
+				workers: known
+					? run.workers.map((w) =>
+							w.name === event.worker.name ? event.worker : w,
+						)
+					: [...run.workers, event.worker],
 			};
+		}
 		case "file": {
 			const files = upsert(
 				run.files,
@@ -113,10 +115,8 @@ const applySnapshot = (
 	if (topic === "capacity" && data)
 		return qc.setQueryData(qk.capacity, data as Capacity);
 	if (topic === "keys") return qc.invalidateQueries({ queryKey: qk.keys });
-	if (topic === "accounts") {
-		qc.invalidateQueries({ queryKey: qk.accounts });
-		return qc.invalidateQueries({ queryKey: qk.reservations });
-	}
+	if (topic === "accounts")
+		return qc.invalidateQueries({ queryKey: qk.accounts });
 	if (topic === "warm") return qc.invalidateQueries({ queryKey: qk.branches });
 };
 
@@ -176,7 +176,6 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 			return;
 		case "accounts.changed":
 			qc.invalidateQueries({ queryKey: qk.accounts });
-			qc.invalidateQueries({ queryKey: qk.reservations });
 			return;
 		case "warm.updated":
 			qc.setQueryData<Branch[]>(qk.branches, (branches) =>

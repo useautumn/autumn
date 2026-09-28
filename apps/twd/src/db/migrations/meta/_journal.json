@@ -1,41 +1,41 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1790604672529,
-      "tag": "0000_init",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1790605864762,
-      "tag": "0001_live_notify_triggers",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1790607576143,
-      "tag": "0002_account_broken_reason",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1790607864599,
-      "tag": "0003_run_pinned_sha",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1790609941968,
-      "tag": "0004_elastic_pool_and_costs",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1790604672529,
+			"tag": "0000_init",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1790605864762,
+			"tag": "0001_live_notify_triggers",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1790607576143,
+			"tag": "0002_account_broken_reason",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1790607864599,
+			"tag": "0003_run_pinned_sha",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1790609941968,
+			"tag": "0004_elastic_pool_and_costs",
+			"breakpoints": true
+		}
+	]
 }

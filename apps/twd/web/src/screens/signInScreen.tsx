@@ -43,7 +43,7 @@ export const SignInScreen = () => {
 				</h1>
 				<p className="mt-1 text-sm text-pretty text-tertiary-foreground">
 					Start and watch <span className="font-mono">bun tw</span> runs, manage
-					Stripe keys and account reservations.
+					Stripe keys and the account pool.
 				</p>
 				<Button variant="secondary" onClick={signIn} className="mt-6 w-full">
 					<GoogleMark />

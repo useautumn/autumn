@@ -8,6 +8,7 @@ import { AppShell } from "./components/appShell.tsx";
 import { RouteError } from "./components/routeError.tsx";
 import { TooltipProvider } from "./components/ui.tsx";
 import { AccountsScreen } from "./screens/accountsScreen.tsx";
+import { CostsScreen } from "./screens/costsScreen.tsx";
 import { KeysScreen } from "./screens/keysScreen.tsx";
 import { NewRunScreen } from "./screens/newRunScreen.tsx";
 import { RunDetailScreen } from "./screens/runDetailScreen.tsx";
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
 					{ path: "/", element: <RunsScreen /> },
 					{ path: "/runs/new", element: <NewRunScreen /> },
 					{ path: "/runs/:id", element: <RunDetailScreen /> },
+					{ path: "/costs", element: <CostsScreen /> },
 					{ path: "/keys", element: <KeysScreen /> },
 					{ path: "/accounts", element: <AccountsScreen /> },
 					{ path: "/settings", element: <SettingsScreen /> },

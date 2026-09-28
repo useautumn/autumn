@@ -7,10 +7,12 @@ import {
 	useBranches,
 	useCapacity,
 	useCatalog,
+	useCostRates,
 	useCreateRun,
 	useWarmBranch,
 } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
+import { workerUsdPerSecond } from "../components/cost.tsx";
 import { ErrorCallout, StatusDot } from "../components/status.tsx";
 import {
 	Button,
@@ -20,9 +22,9 @@ import {
 	SectionTag,
 	Skeleton,
 } from "../components/ui.tsx";
-import { cn, formatMs, num } from "../lib/format.ts";
+import { cn, formatMs, num, usd } from "../lib/format.ts";
 import { BranchPicker, WarmBadge } from "./newRun/branchPicker.tsx";
-import { estimateWallMs } from "./newRun/estimate.ts";
+import { estimateWallMs, estimateWorkerSeconds } from "./newRun/estimate.ts";
 import { TestSelector } from "./newRun/testSelector.tsx";
 import { useRunSelection } from "./newRun/useRunSelection.ts";
 
@@ -40,13 +42,13 @@ const capacityCheck = ({
 		};
 	if (capacity.maxFilesNow === 0)
 		return {
-			tone: "bad" as const,
-			text: "No clean Stripe accounts free right now. Wait for nukes or release a reservation.",
+			tone: "warn" as const,
+			text: `No accounts free right now. The run joins the queue${capacity.queuedRuns ? ` behind ${num(capacity.queuedRuns)}` : ""} and starts as accounts free up.`,
 		};
 	if (files > capacity.maxFilesNow)
 		return {
 			tone: "warn" as const,
-			text: `${num(capacity.maxFilesNow)} accounts free — the run fans out to ${num(capacity.maxFilesNow)} workers and queues the rest.`,
+			text: `${num(capacity.maxFilesNow)} accounts free. The run starts with ${num(capacity.maxFilesNow)} workers and grows as accounts free up.`,
 		};
 	return {
 		tone: "ok" as const,
@@ -79,12 +81,15 @@ export const NewRunScreen = () => {
 		catalog.data?.files.map((f) => [f.path, f.baselineP90Ms]),
 	);
 	const workers = capacity.data
-		? Math.min(fileCount, capacity.data.maxFilesNow)
+		? Math.min(fileCount, capacity.data.poolCap)
 		: fileCount;
-	const estimate = estimateWallMs({
-		p90s: sel.effective.map((f) => p90ByPath.get(f) ?? null),
-		workers,
-	});
+	const p90s = sel.effective.map((f) => p90ByPath.get(f) ?? null);
+	const estimate = estimateWallMs({ p90s, workers });
+	const rates = useCostRates();
+	const costEstimate =
+		rates && fileCount
+			? estimateWorkerSeconds({ p90s, workers }) * workerUsdPerSecond(rates)
+			: null;
 	const unseen = sel.effective.filter((f) => p90ByPath.get(f) === null).length;
 	const check =
 		capacity.data && fileCount > 0
@@ -196,9 +201,16 @@ export const NewRunScreen = () => {
 								label="Estimate"
 								value={estimate ? `~${formatMs(estimate)}` : "—"}
 							/>
+							<SummaryRow
+								label="Cost"
+								value={
+									costEstimate === null ? "—" : `${usd(costEstimate)} est.`
+								}
+							/>
 						</div>
 						<p className="text-xs text-pretty text-subtle">
-							From dev baseline p90, longest-first, plus ~2 min fan-out.
+							From dev baseline p90, longest-first, plus ~2 min fan-out. Cost
+							adds ~90s boot per worker at Modal rates.
 							{unseen > 0 &&
 								` ${unseen} file${unseen === 1 ? " has" : "s have"} no baseline yet (counted as 1 min).`}
 						</p>

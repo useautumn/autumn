@@ -1,10 +1,6 @@
 import { z } from "zod/v4";
 import type { RunDetail } from "../../../api/contract.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import {
-	createReservation,
-	releaseReservation,
-} from "../../accounts/actions/reservations.ts";
 import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { listCatalog } from "../../catalog/actions/listCatalog.ts";
 import { warmBranch } from "../../catalog/actions/warmBranch.ts";
@@ -32,6 +28,11 @@ const summariseRun = (run: RunDetail) => {
 	const done = run.files.filter(
 		(f) => f.status !== "queued" && f.status !== "running",
 	).length;
+	const workers = `workers ${run.workerCount ?? 0}/${run.workersWanted ?? "?"}`;
+	const queue =
+		run.queuePosition === null
+			? ""
+			: `, #${run.queuePosition} in the account queue (starts as soon as one account is free)`;
 	const data = {
 		id: run.id,
 		branch: run.branch,
@@ -39,6 +40,9 @@ const summariseRun = (run: RunDetail) => {
 		status: run.status,
 		phase: run.phase,
 		terminal: TERMINAL.has(run.status),
+		workers: { current: run.workerCount, wanted: run.workersWanted },
+		queuePosition: run.queuePosition,
+		cost: run.cost,
 		files: {
 			total: run.fileCount,
 			done,
@@ -50,7 +54,7 @@ const summariseRun = (run: RunDetail) => {
 		startedAt: run.startedAt,
 		finishedAt: run.finishedAt,
 	};
-	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}: ${run.passed} passed, ${run.failed} failed, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).`;
+	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).`;
 	return { summary, data };
 };
 
@@ -60,12 +64,12 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_capacity",
 			description:
-				"Check whether a test run can start now. Returns the key gate (open|draining), usable Stripe keys, account counts by state, live runs, and maxFilesNow (largest run that starts without waiting). Call before start_run for big selections; if gate is draining or maxFilesNow is 0, wait or narrow the selection.",
+				"See how busy the test pool is. Returns the key gate (open|draining), usable Stripe keys, account counts by state, live and queued runs, accountsWanted (accounts live runs still want), poolCap, and maxFilesNow (workers a new run would get immediately). You never need to wait before start_run: runs queue FIFO, start as soon as one account is free, and grow as more free up. Only a draining gate blocks new runs.",
 			input: z.object({}),
 			run: async () => {
 				const capacity = await getCapacity({ ctx });
 				return toolOk({
-					summary: `Gate ${capacity.gate}; ${capacity.accounts.clean} clean accounts; ${capacity.liveRuns} live run(s); up to ${capacity.maxFilesNow} files can start now.`,
+					summary: `Gate ${capacity.gate}; ${capacity.accounts.clean} clean accounts (pool cap ${capacity.poolCap}); ${capacity.liveRuns} live run(s), ${capacity.queuedRuns} queued, ${capacity.accountsWanted} account(s) still wanted; a new run would start with ${capacity.maxFilesNow} worker(s) now${capacity.maxFilesNow === 0 ? " and wait its turn in the FIFO queue" : ""}.`,
 					data: capacity,
 				});
 			},
@@ -115,7 +119,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "start_run",
 			description:
-				"Step 2 of 'test my branch'. Starts a test run on Modal for a pushed branch and returns its run id immediately. Select tests with groups (names from list_catalog), files (exact paths), and/or grep (test-name pattern); at least one is required. Next: wait_for_run with the returned id.",
+				"Step 2 of 'test my branch'. Starts a test run on Modal for a pushed branch and returns its run id immediately. Select tests with groups (names from list_catalog), files (exact paths), and/or grep (test-name pattern); at least one is required. Accounts are allocated automatically, FIFO: the run starts as soon as one account is free and grows as more free up, so never pre-check capacity. Next: wait_for_run with the returned id.",
 			input: z
 				.object({
 					branch: z.string().min(1).describe("Pushed git branch."),
@@ -135,23 +139,18 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 						.string()
 						.optional()
 						.describe("Only run tests whose name matches this pattern."),
-					reservation_id: z
-						.string()
-						.optional()
-						.describe("Run on accounts pinned by reserve_accounts."),
 				})
 				.strict(),
-			run: async ({ branch, sha, groups, files, grep, reservation_id }) => {
+			run: async ({ branch, sha, groups, files, grep }) => {
 				const run = await createRun({
 					ctx,
 					branch,
 					sha,
 					selection: { groups, files, grep },
-					reservationId: reservation_id,
 					purpose: "adhoc",
 				});
 				return toolOk({
-					summary: `Started run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} (${run.status}). Next: wait_for_run with run_id=${run.id}.`,
+					summary: `Started run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} (${run.status}${run.queuePosition === null ? "" : `, #${run.queuePosition} in the account queue`}). It starts as soon as one account is free and grows from there. Next: wait_for_run with run_id=${run.id}.`,
 					data: run,
 				});
 			},
@@ -159,7 +158,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run",
 			description:
-				"Non-blocking snapshot of a run: status, phase, pass/fail counts, failing files with failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). Use wait_for_run to block until it finishes.",
+				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted, queue position while waiting for its first account, cost, pass/fail counts, failing files with failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). Use wait_for_run to block until it finishes.",
 			input: z.object({ run_id: z.string().min(1) }),
 			run: async ({ run_id }) =>
 				toolOk(summariseRun(await getRun({ ctx, runId: run_id }))),
@@ -167,7 +166,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "wait_for_run",
 			description:
-				"Step 3 of 'test my branch'. Blocks until the run finishes (passed|failed|cancelled|errored) or timeout_s elapses (default and max 600), then returns the same shape as get_run. If terminal is false, call it again. On finish, read failures and drift: a new_failure is most likely caused by your branch; files failing without drift may be flaky on dev too.",
+				"Step 3 of 'test my branch'. Blocks until the run finishes (passed|failed|cancelled|errored) or timeout_s elapses (default and max 600), then returns the same shape as get_run (including workers X/Y and queue position). If terminal is false, call it again; a queued run is waiting for its first free account and starts on its own. On finish, read failures and drift: a new_failure is most likely caused by your branch; files failing without drift may be flaky on dev too.",
 			input: z.object({
 				run_id: z.string().min(1),
 				timeout_s: z
@@ -194,7 +193,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 								progressToken,
 								progress: run.passed + run.failed,
 								total: run.fileCount ?? undefined,
-								message: `${run.status}${run.phase ? ` (${run.phase})` : ""}`,
+								message: `${run.status}${run.phase ? ` (${run.phase})` : ""}; workers ${run.workerCount ?? 0}/${run.workersWanted ?? "?"}${run.queuePosition === null ? "" : `; #${run.queuePosition} in queue`}`,
 							},
 						});
 					}
@@ -220,47 +219,6 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 				return toolOk({
 					summary: `Run ${run.id} is ${run.status}.`,
 					data: run,
-				});
-			},
-		}),
-		defineTool({
-			name: "reserve_accounts",
-			description:
-				"Pin clean Stripe test accounts for your exclusive use (e.g. several runs in a row). Pass the returned reservation id as reservation_id to start_run. Always call release_reservation when finished; reservations also expire after ttl.",
-			input: z.object({
-				count: z.number().int().min(1).max(2000),
-				ttl: z
-					.string()
-					.optional()
-					.describe("Duration like '30m' or '2h' (default 2h, max 24h)."),
-				note: z.string().optional().describe("Why you are reserving."),
-			}),
-			run: async ({ count, ttl, note }) => {
-				const reservation = await createReservation({
-					ctx,
-					count,
-					ttl: ttl ?? "2h",
-					note,
-				});
-				return toolOk({
-					summary: `Reserved ${reservation.accountIds.length} account(s) as ${reservation.id} until ${reservation.expiresAt}. Pass reservation_id=${reservation.id} to start_run.`,
-					data: reservation,
-				});
-			},
-		}),
-		defineTool({
-			name: "release_reservation",
-			description:
-				"Release accounts pinned by reserve_accounts so others can use them. Safe to call more than once.",
-			input: z.object({ reservation_id: z.string().min(1) }),
-			run: async ({ reservation_id }) => {
-				const reservation = await releaseReservation({
-					ctx,
-					reservationId: reservation_id,
-				});
-				return toolOk({
-					summary: `Released reservation ${reservation.id}.`,
-					data: reservation,
 				});
 			},
 		}),

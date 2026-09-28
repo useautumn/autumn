@@ -1,7 +1,8 @@
-import { and, count, eq, notInArray } from "drizzle-orm";
+import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { TwdDb } from "../../../lib/getDb.ts";
+import { ACCOUNTS_PER_KEY_CAP } from "../allocator/poolLimits.ts";
 
 export type TwdTx = Parameters<Parameters<TwdDb["transaction"]>[0]>[0];
 
@@ -34,7 +35,7 @@ const spreadAcrossKeys = ({
 	return quota;
 };
 
-/** Row-lock up to `need` clean accounts on usable keys, spread evenly across keys (SKIP LOCKED). */
+/** Row-lock up to `need` clean accounts on usable keys, spread across keys, never past the per-key in_use cap. */
 export const lockCleanAccounts = async ({
 	tx,
 	need,
@@ -43,16 +44,25 @@ export const lockCleanAccounts = async ({
 	need: number;
 }): Promise<string[]> => {
 	const perKey = await tx
-		.select({ platformAccountId: stripeAccounts.platformAccountId, n: count() })
+		.select({
+			platformAccountId: stripeAccounts.platformAccountId,
+			clean: count(sql`case when ${stripeAccounts.state} = 'clean' then 1 end`),
+			inUse: count(
+				sql`case when ${stripeAccounts.state} = 'in_use' then 1 end`,
+			),
+		})
 		.from(stripeAccounts)
 		.innerJoin(
 			stripeKeys,
 			eq(stripeKeys.platformAccountId, stripeAccounts.platformAccountId),
 		)
-		.where(and(eq(stripeAccounts.state, "clean"), usableKey))
+		.where(and(inArray(stripeAccounts.state, ["clean", "in_use"]), usableKey))
 		.groupBy(stripeAccounts.platformAccountId);
 	const available = new Map(
-		perKey.map((row) => [row.platformAccountId, row.n]),
+		perKey.map((row) => [
+			row.platformAccountId,
+			Math.max(0, Math.min(row.clean, ACCOUNTS_PER_KEY_CAP - row.inUse)),
+		]),
 	);
 
 	const ids: string[] = [];

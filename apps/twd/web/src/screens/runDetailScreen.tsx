@@ -7,13 +7,19 @@ import {
 	BreadcrumbSeparator,
 } from "@autumn/ui/components/ui/breadcrumb";
 import type { ColumnDef } from "@tanstack/react-table";
-import { GitCommitHorizontal, RotateCcw, Square } from "lucide-react";
+import {
+	GitCommitHorizontal,
+	Hourglass,
+	RotateCcw,
+	Square,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Drift, RunDetail, RunFile } from "../../../src/api/contract.ts";
 import {
 	useCancelRun,
 	useCatalog,
+	useCostRates,
 	useFileLog,
 	useLiveLog,
 	useRerunFailed,
@@ -22,6 +28,7 @@ import {
 import { useLiveTopics } from "../api/live.ts";
 import type { LogLine } from "../api/liveCache.ts";
 import { AnsiLog, AnsiText } from "../components/ansi.tsx";
+import { CostValue } from "../components/cost.tsx";
 import { RunLabel } from "../components/runLabel.tsx";
 import {
 	Actor,
@@ -124,7 +131,13 @@ const DurationCell = ({
 	);
 };
 
-const WorkerGrid = ({ workers }: { workers: RunDetail["workers"] }) => {
+const WorkerGrid = ({
+	workers,
+	wanted,
+}: {
+	workers: RunDetail["workers"];
+	wanted: number;
+}) => {
 	const counts = workers.reduce<Record<string, number>>((acc, w) => {
 		acc[w.status] = (acc[w.status] ?? 0) + 1;
 		return acc;
@@ -148,7 +161,7 @@ const WorkerGrid = ({ workers }: { workers: RunDetail["workers"] }) => {
 					>
 						<span
 							className={cn(
-								"size-2.5 rounded-[2px]",
+								"twd-pop size-2.5 rounded-[2px]",
 								WORKER_COLOR[w.status],
 								w.status === "busy" && "twd-pulse",
 							)}
@@ -157,6 +170,17 @@ const WorkerGrid = ({ workers }: { workers: RunDetail["workers"] }) => {
 						/>
 					</Tooltip>
 				))}
+				{Array.from(
+					{ length: Math.max(0, wanted - workers.length) },
+					(_, i) => (
+						<span
+							// biome-ignore lint/suspicious/noArrayIndexKey: interchangeable empty slots
+							key={i}
+							className="size-2.5 rounded-[2px] border border-dashed border-subtle/50"
+							aria-hidden
+						/>
+					),
+				)}
 			</div>
 			<div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-tertiary-foreground tabular-nums">
 				{Object.entries(counts).map(([status, n]) => (
@@ -170,6 +194,12 @@ const WorkerGrid = ({ workers }: { workers: RunDetail["workers"] }) => {
 						{n} {status}
 					</span>
 				))}
+				{wanted > workers.length && (
+					<span className="flex items-center gap-1.5">
+						<span className="size-2 rounded-[2px] border border-dashed border-subtle/60" />
+						{wanted - workers.length} waiting for accounts
+					</span>
+				)}
 			</div>
 		</div>
 	);
@@ -210,6 +240,7 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	const cancel = useCancelRun(run.id);
 	const rerun = useRerunFailed(run.id);
 	const [confirmCancel, setConfirmCancel] = useState(false);
+	const rates = useCostRates();
 	const live = !TERMINAL.has(run.status);
 	return (
 		<div className="flex flex-col gap-2 pb-4">
@@ -265,7 +296,7 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 					Created {formatDate(run.createdAt)}
 				</span>
 				<span className="tabular-nums">
-					{live ? "Running for " : "Took "}
+					{!live ? "Took " : run.startedAt ? "Running for " : "Waiting for "}
 					<span className="text-foreground">
 						{elapsed({
 							from: run.startedAt ?? run.createdAt,
@@ -273,6 +304,9 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 							now,
 						})}
 					</span>
+				</span>
+				<span className="flex items-center gap-1">
+					Cost <CostValue cost={run.cost} rates={rates} />
 				</span>
 				<MiniCopyButton text={run.id} />
 			</div>
@@ -302,7 +336,7 @@ export const RunDetailScreen = () => {
 	const run = useRun(id);
 	const catalog = useCatalog();
 	const live = !!run.data && !TERMINAL.has(run.data.status);
-	useLiveTopics(id && `run:${id}`);
+	useLiveTopics(id && `run:${id}`, live && "runs");
 	const log = useLiveLog(id);
 	const now = useNow({ active: live });
 	const [filter, setFilter] = useState<Filter>("all");
@@ -602,11 +636,25 @@ export const RunDetailScreen = () => {
 							Workers{" "}
 							<span className="text-subtle tabular-nums">
 								{r.workers.length}
+								{r.workersWanted !== null && `/${num(r.workersWanted)}`}
 							</span>
 						</SectionTag>
-						<Panel className="p-3">
-							{r.workers.length ? (
-								<WorkerGrid workers={r.workers} />
+						<Panel className="flex flex-col gap-3 p-3">
+							{r.queuePosition !== null && (
+								<p className="flex items-center gap-2 text-xs text-tertiary-foreground">
+									<Hourglass className="size-3.5 text-subtle" />
+									Waiting for accounts ·{" "}
+									<span className="text-foreground tabular-nums">
+										#{r.queuePosition}
+									</span>{" "}
+									in queue
+								</p>
+							)}
+							{r.workers.length || r.workersWanted ? (
+								<WorkerGrid
+									workers={r.workers}
+									wanted={live ? (r.workersWanted ?? 0) : 0}
+								/>
 							) : (
 								<p className="text-xs text-subtle">No workers yet.</p>
 							)}

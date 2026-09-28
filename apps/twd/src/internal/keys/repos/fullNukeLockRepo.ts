@@ -32,7 +32,7 @@ export const unusableReasonFromProbe = ({
 	return null;
 };
 
-/** usable=false makes claims, reservations, and top-ups skip the key. */
+/** usable=false makes claims and top-ups skip the key. */
 export const lockKeyForFullNuke = async ({
 	db,
 	platformAccountId,

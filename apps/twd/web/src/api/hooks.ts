@@ -10,13 +10,13 @@ import {
 	Branch,
 	Capacity,
 	Catalog,
+	Costs,
 	CreateApiKeyResponse,
 	type CreateRunBody,
 	EnqueueResponse,
 	Job,
 	KeysOverview,
 	Me,
-	Reservation,
 	RunDetail,
 	RunSummary,
 	StripeAccount,
@@ -37,9 +37,11 @@ export const qk = {
 	capacity: ["capacity"] as const,
 	keys: ["keys"] as const,
 	accounts: ["accounts"] as const,
-	reservations: ["reservations"] as const,
+	costs: (q: CostsFilter) => ["costs", q] as const,
 	apiKeys: ["api-keys"] as const,
 };
+
+export type CostsFilter = { from: string; bucket: "day" | "week" };
 
 export type RunsFilter = {
 	status: "live" | "finished" | "all";
@@ -160,12 +162,22 @@ export const useJobs = () =>
 		refetchInterval: whileDisconnected,
 	});
 
-export const useReservations = () =>
+export const useCosts = (filter: CostsFilter) =>
 	useQuery({
-		queryKey: qk.reservations,
-		queryFn: () => api({ path: "/reservations", schema: z.array(Reservation) }),
-		refetchInterval: whileDisconnected,
+		queryKey: qk.costs(filter),
+		queryFn: () => api({ path: `/costs${qs(filter)}`, schema: Costs }),
+		placeholderData: keepPreviousData,
+		staleTime: 60_000,
 	});
+
+/** Worker pricing only; rates change per deploy, not per window. */
+export const useCostRates = () =>
+	useQuery({
+		queryKey: ["costs", "rates"],
+		queryFn: () => api({ path: "/costs?bucket=week", schema: Costs }),
+		select: (costs) => costs.rates,
+		staleTime: Number.POSITIVE_INFINITY,
+	}).data;
 
 export const useApiKeys = () =>
 	useQuery({
@@ -297,34 +309,6 @@ export const useForgetAccount = () => {
 			qc.invalidateQueries({ queryKey: qk.accounts });
 			qc.invalidateQueries({ queryKey: qk.capacity });
 			qc.invalidateQueries({ queryKey: qk.keys });
-		},
-	});
-};
-
-export const useCreateReservation = () => {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: (body: { count: number; ttl: string; note?: string }) =>
-			api({ method: "POST", path: "/reservations", body, schema: Reservation }),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: qk.reservations });
-			qc.invalidateQueries({ queryKey: qk.capacity });
-		},
-	});
-};
-
-export const useReleaseReservation = () => {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: (id: string) =>
-			api({
-				method: "DELETE",
-				path: `/reservations/${id}`,
-				schema: z.unknown(),
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: qk.reservations });
-			qc.invalidateQueries({ queryKey: qk.capacity });
 		},
 	});
 };

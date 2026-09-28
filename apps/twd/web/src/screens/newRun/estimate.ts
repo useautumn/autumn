@@ -34,6 +34,19 @@ export const estimateWallMs = ({
 	return FANOUT_MS + Math.max(...heap);
 };
 
+const BOOT_S = 90;
+
+/** Worker-seconds a run bills: every file's p90 plus one boot per worker. */
+export const estimateWorkerSeconds = ({
+	p90s,
+	workers,
+}: {
+	p90s: (number | null)[];
+	workers: number;
+}) =>
+	p90s.reduce<number>((sum, d) => sum + (d ?? UNSEEN_MS) / 1000, 0) +
+	BOOT_S * workers;
+
 /** Subsequence fuzzy match; returns matched indexes or null. Word-boundary hits score higher. */
 export const fuzzyMatch = (query: string, target: string) => {
 	const q = query.toLowerCase().replace(/\s+/g, "");

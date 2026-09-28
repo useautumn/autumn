@@ -35,7 +35,8 @@ dashboard, the `bun tw` thin client, and agents.
   `scripts/tw` keeps module-level state (hub, TUI store, registry).
 - **Keys come only from `TW_V3_KEYS`.** A key is identified by its platform
   account id (`keys.platform_account_id`), never by list position.
-- **Account ledger:** `clean → reserved → in_use → nuking → clean`.
+- **Account ledger:** `clean → in_use → nuking → clean`. No reservations: runs
+  get accounts implicitly (see Allocation).
 - **Auth:** Google OAuth restricted to verified `@useautumn.com`, or an API key
   (hashed, revocable, owned by the user who minted it). Every mutation records
   `created_by` (user id) and `via` (`session` | `api_key:<id>`).
@@ -45,9 +46,25 @@ dashboard, the `bun tw` thin client, and agents.
 **Auto-warm** — GitHub `push` / `pull_request` on open PRs, `dev`, `main` →
 `warm:<sha>` job → publishes `tw-warm:<sha12>` on Modal.
 
-**Swarm** — `POST /runs` → gate check (keys not draining) → claim accounts
-(`in_use`) → `swarm:<runId>` job → child process fans out on Modal, streams
-events → per-file `test_results` rows → teardown enqueues `nuke:<acct>` jobs.
+**Swarm** — `POST /runs` → gate check (keys not draining) → `swarm:<runId>` job
+→ warm → FIFO queue (`queued`) → child starts on the first account and grows
+over IPC (`add_accounts`) → per-file `test_results` rows → culled/finished
+workers release their account early; teardown enqueues `nuke:<acct>` jobs.
+
+## Allocation
+
+- **FIFO.** `internal/accounts/allocator/` ticks every 2 s (and on any release,
+  clean nuke, or new demand). It walks live runs by `created_at`; a later run
+  gets an account only when every earlier ready run is satisfied. A run holding
+  0 accounts is `queued` with a 1-based `queuePosition`. Runs never fail for
+  lack of accounts.
+- **Elastic.** `workers_wanted = min(files, usableKeys × 4, 400)`. The swarm
+  starts with whatever is free and forks a worker per new account. It stops
+  asking once unstarted files ≤ its workers; idle culling hands accounts back.
+- **Cap.** `ACCOUNTS_PER_KEY_CAP` (4) bounds both `in_use` per key (so the
+  Stripe budget, sized for 4 workers on every key, always holds) and the pool:
+  when runs still want accounts the pool tops up in the background to 4
+  non-broken accounts per usable key, never more.
 
 **Re-initialise keys** — `POST /keys/reinit` → gate `draining` → wait for live
 swarms + nukes → delete every webhook endpoint on each `TW_V3_KEYS` key →
@@ -92,12 +109,11 @@ actions the REST routes call — no MCP-only behaviour.
 
 | tool             | does                                             |
 |------------------|--------------------------------------------------|
-| `get_capacity`   | free accounts, usable keys, gate, live runs      |
+| `get_capacity`   | gate, accounts, live/queued runs, pool cap       |
 | `warm_branch`    | warm any pushed branch (no PR needed)            |
 | `start_run`      | branch + groups/files/grep → runId               |
-| `get_run`        | status, failures, drift                          |
+| `get_run`        | status, workers X/Y, queue position, failures, drift |
 | `wait_for_run`   | blocks up to N s, returns the same shape         |
-| `reserve_accounts` / `release_reservation` | pin accounts           |
 | `list_catalog`   | groups + files for selection                     |
 
 Every error is `{ error: { code, message, next, escalate } }`: `next` tells an

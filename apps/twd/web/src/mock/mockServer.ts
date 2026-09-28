@@ -3,6 +3,7 @@ import type {
 	Branch,
 	Capacity,
 	Catalog,
+	Costs,
 	Drift,
 	EnqueueResponse,
 	Job,
@@ -11,7 +12,6 @@ import type {
 	LiveEvent,
 	LiveServerMessage,
 	Me,
-	Reservation,
 	RunDetail,
 	RunEvent,
 	RunFile,
@@ -62,6 +62,7 @@ const ACTORS = [
 	{ userId: "usr_ayush", email: "ayush@useautumn.com", via: "session" },
 	{ userId: "usr_tanvir", email: ME.email, via: "api_key:ak_capy01" },
 	{ userId: "usr_john", email: "john@useautumn.com", via: "api_key:ak_ci0042" },
+	{ userId: "usr_shreyas", email: "shreyas@useautumn.com", via: "session" },
 ];
 const SYSTEM = {
 	userId: "system",
@@ -225,8 +226,6 @@ const accounts: StripeAccount[] = keys.flatMap((k, ki) =>
 					state: broken ? ("broken" as const) : ("clean" as const),
 					heldBy: null,
 					runId: null,
-					reservationId: null,
-					reservedUntil: null,
 					stateChangedAt: iso(START - rand() * 6 * HOUR),
 					brokenReason: broken
 						? BROKEN_REASONS[Math.floor(ki / 97) % BROKEN_REASONS.length]
@@ -238,18 +237,12 @@ const accounts: StripeAccount[] = keys.flatMap((k, ki) =>
 
 const claim = ({
 	count,
-	state,
 	runId,
-	reservationId,
 	heldBy,
-	until,
 }: {
 	count: number;
-	state: StripeAccount["state"];
-	runId?: string;
-	reservationId?: string;
-	heldBy?: string;
-	until?: string;
+	runId: string;
+	heldBy: string;
 }) => {
 	const slot = (a: StripeAccount) => Number(a.id.slice(4)) % 3;
 	const free = accounts
@@ -257,11 +250,9 @@ const claim = ({
 		.sort((a, b) => slot(a) - slot(b) || a.id.localeCompare(b.id))
 		.slice(0, count);
 	for (const a of free) {
-		a.state = state;
-		a.runId = runId ?? null;
-		a.reservationId = reservationId ?? null;
-		a.heldBy = heldBy ?? null;
-		a.reservedUntil = until ?? null;
+		a.state = "in_use";
+		a.runId = runId;
+		a.heldBy = heldBy;
 		a.stateChangedAt = iso(Date.now());
 	}
 	return free.map((a) => a.id);
@@ -272,9 +263,7 @@ const releaseAccounts = (match: (a: StripeAccount) => boolean) => {
 		a.state = "nuking";
 		a.brokenReason = null;
 		a.runId = null;
-		a.reservationId = null;
 		a.heldBy = null;
-		a.reservedUntil = null;
 		a.stateChangedAt = iso(Date.now());
 		setTimeout(
 			() => {
@@ -288,7 +277,6 @@ const releaseAccounts = (match: (a: StripeAccount) => boolean) => {
 
 const countStates = (list: StripeAccount[]) => ({
 	clean: list.filter((a) => a.state === "clean").length,
-	reserved: list.filter((a) => a.state === "reserved").length,
 	inUse: list.filter((a) => a.state === "in_use").length,
 	nuking: list.filter((a) => a.state === "nuking").length,
 	broken: list.filter((a) => a.state === "broken").length,
@@ -311,70 +299,6 @@ const keysOverview = (): KeysOverview => {
 		),
 	};
 };
-
-// ---- reservations ---------------------------------------------------------
-
-const reservations: Reservation[] = [];
-const createReservation = ({
-	owner,
-	count,
-	ttlMs,
-	note,
-	createdAt = Date.now(),
-}: {
-	owner: Reservation["owner"];
-	count: number;
-	ttlMs: number;
-	note: string | null;
-	createdAt?: number;
-}) => {
-	const rid = id("rsv");
-	const expiresAt = iso(createdAt + ttlMs);
-	const accountIds = claim({
-		count,
-		state: "reserved",
-		reservationId: rid,
-		heldBy: owner.email,
-		until: expiresAt,
-	});
-	const reservation: Reservation = {
-		id: rid,
-		owner,
-		note,
-		accountIds,
-		expiresAt,
-		releasedAt: null,
-		createdAt: iso(createdAt),
-	};
-	reservations.unshift(reservation);
-	return reservation;
-};
-createReservation({
-	owner: ACTORS[3],
-	count: 120,
-	ttlMs: 2 * HOUR,
-	note: "capy: bisecting proration flake",
-	createdAt: START - 25 * MIN,
-});
-createReservation({
-	owner: ACTORS[1],
-	count: 40,
-	ttlMs: 6 * HOUR,
-	note: "local multi-currency e2e",
-	createdAt: START - 3 * HOUR,
-});
-reservations.push({
-	id: id("rsv"),
-	owner: ACTORS[2],
-	note: "load test dry-run",
-	accountIds: Array.from(
-		{ length: 200 },
-		(_, i) => `acc_${String(i + 900).padStart(5, "0")}`,
-	),
-	expiresAt: iso(START - 20 * HOUR),
-	releasedAt: iso(START - 22 * HOUR),
-	createdAt: iso(START - 26 * HOUR),
-});
 
 // ---- jobs -----------------------------------------------------------------
 
@@ -422,9 +346,7 @@ const fullNukeKey = ({
 	key.unusableReason = FULL_NUKE_REASON;
 	const owned = accounts.filter(
 		(a) =>
-			a.platformAccountId === key.platformAccountId &&
-			a.state !== "reserved" &&
-			a.state !== "in_use",
+			a.platformAccountId === key.platformAccountId && a.state !== "in_use",
 	);
 	for (const a of owned) {
 		a.state = "nuking";
@@ -444,8 +366,6 @@ const fullNukeKey = ({
 				state: "clean",
 				heldBy: null,
 				runId: null,
-				reservationId: null,
-				reservedUntil: null,
 				stateChangedAt: iso(Date.now()),
 				brokenReason: null,
 			});
@@ -461,7 +381,14 @@ const fullNukeKey = ({
 
 // ---- runs -----------------------------------------------------------------
 
-type Sim = { queue: string[]; logSeq: number };
+type Sim = {
+	queue: string[];
+	logSeq: number;
+	ticks: number;
+	/** When the run left the account queue; phases time from here. */
+	readyAt: number;
+	workerSeconds: number;
+};
 const runs: RunDetail[] = [];
 const sims = new Map<string, Sim>();
 const emit = (runId: string, event: RunEvent) =>
@@ -550,33 +477,98 @@ const summarize = (run: RunDetail) => {
 	run.drift = computeDrift(run.files);
 };
 
+const summary = (run: RunDetail): RunSummary => {
+	const { phase: _p, workers: _w, files: _f, drift: _d, ...rest } = run;
+	return rest;
+};
+
+// ---- costs ----------------------------------------------------------------
+
+/** Same defaults as internal/costs/actions/getCostRates.ts. */
+const RATES: Costs["rates"] = {
+	usdPerCoreSecond: 0.0000131,
+	usdPerGibSecond: 0.00000222,
+	workerCores: 2,
+	workerMemoryGib: 4,
+};
+const WORKER_USD_S =
+	RATES.workerCores * RATES.usdPerCoreSecond +
+	RATES.workerMemoryGib * RATES.usdPerGibSecond;
+const BOOT_S = 90;
+const costOf = (workerSeconds: number, final: boolean) => ({
+	usd: Math.round(workerSeconds * WORKER_USD_S * 10_000) / 10_000,
+	workerSeconds: Math.round(workerSeconds),
+	final,
+});
+
+// ---- history (60 days of finished runs) -----------------------------------
+
+const HISTORY_DAYS = 60;
+const DAY = 24 * HOUR;
+const RUN_USERS = [ACTORS[0], ACTORS[1], ACTORS[2], ACTORS[5], ACTORS[3]];
+/** Relative run volume per actor above; the api-key actor is Tanvir's agent. */
+const USER_WEIGHT = [0.3, 0.22, 0.14, 0.12, 0.22];
+
+const SELECTIONS = [
+	{ groups: ["core"] },
+	{ groups: ["core-attach", "core-balances"] },
+	{ groups: ["billing"] },
+	{ groups: ["pre-merge"] },
+	{ files: filesForSelection({ groups: ["track"] }).slice(0, 12) },
+	{ groups: ["webhooks"], grep: "webhook" },
+];
+
+/** Busy weekdays, quiet weekends, a slow ramp up towards today. */
+const historyTimes = (() => {
+	const r = rng(99);
+	const times: { at: number; baseline: boolean }[] = [];
+	for (let d = 0; d < HISTORY_DAYS; d++) {
+		const dayStart = Math.floor((START - d * DAY) / DAY) * DAY;
+		const weekend = [0, 6].includes(new Date(dayStart).getUTCDay());
+		const volume = weekend ? 2 + r() * 3 : 7 + (1 - d / HISTORY_DAYS) * 6;
+		const count = Math.round(volume * (0.7 + r() * 0.6));
+		times.push({ at: dayStart + 2 * HOUR, baseline: true });
+		for (let k = 0; k < count; k++)
+			times.push({ at: dayStart + (8 + r() * 14) * HOUR, baseline: false });
+	}
+	return times
+		.filter((t) => t.at < START - 30 * MIN)
+		.sort((a, b) => b.at - a.at);
+})();
+
+const pickUser = (r: () => number) => {
+	let x = r();
+	for (const [i, w] of USER_WEIGHT.entries()) {
+		x -= w;
+		if (x <= 0) return RUN_USERS[i];
+	}
+	return RUN_USERS[0];
+};
+
 const makeFinishedRun = (i: number): RunDetail => {
 	const r = rng(500 + i);
-	const branch = i % 4 === 0 ? branches[0] : pick(branches.slice(2), r);
-	const baseline = branch.name === "dev" && i % 8 === 0;
+	const { at: createdAt, baseline } = historyTimes[i];
+	const branch = baseline
+		? branches[0]
+		: i % 4 === 0
+			? branches[0]
+			: pick(branches.slice(2), r);
 	const selection = baseline
 		? { groups: ["core", ...fixture.suites[1].groups] }
-		: pick(
-				[
-					{ groups: ["core"] },
-					{ groups: ["core-attach", "core-balances"] },
-					{ groups: ["billing"] },
-					{ groups: ["pre-merge"] },
-					{ files: filesForSelection({ groups: ["track"] }).slice(0, 12) },
-					{ groups: ["webhooks"], grep: "webhook" },
-				],
-				r,
-			);
+		: pick(SELECTIONS, r);
 	const list = filesForSelection(selection);
 	const workerCount = Math.min(list.length, 40 + Math.floor(r() * 160));
 	const failRate = r() < 0.45 ? 0 : 0.004 + r() * 0.02;
-	const createdAt = START - (i + 1) * (2.3 * HOUR) - r() * HOUR;
 	const startedAt = createdAt + (40 + r() * 80) * 1000;
 	const files = list.map((f, j) =>
 		finishedFile(f, r, workerName(j % workerCount), failRate),
 	);
 	const wall = Math.max(0, ...files.map((f) => f.durationMs ?? 0)) + 90_000;
 	const cancelled = i === 6;
+	const kept = cancelled ? files.slice(0, Math.floor(files.length / 3)) : files;
+	const workerSeconds =
+		kept.reduce((sum, f) => sum + (f.durationMs ?? 0), 0) / 1000 +
+		BOOT_S * workerCount;
 	const run: RunDetail = {
 		id: `run_${hex(10, r)}`,
 		branch: branch.name,
@@ -587,9 +579,12 @@ const makeFinishedRun = (i: number): RunDetail => {
 		selection,
 		fileCount: list.length,
 		workerCount,
+		workersWanted: workerCount,
+		queuePosition: null,
+		cost: costOf(workerSeconds, true),
 		passed: 0,
 		failed: 0,
-		createdBy: baseline ? SYSTEM : pick(ACTORS, r),
+		createdBy: baseline ? SYSTEM : pickUser(r),
 		createdAt: iso(createdAt),
 		startedAt: iso(startedAt),
 		finishedAt: iso(startedAt + (cancelled ? wall / 3 : wall)),
@@ -599,7 +594,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 			status: "dead" as const,
 			file: null,
 		})),
-		files: cancelled ? files.slice(0, Math.floor(files.length / 3)) : files,
+		files: kept,
 		drift: [],
 	};
 	summarize(run);
@@ -607,7 +602,100 @@ const makeFinishedRun = (i: number): RunDetail => {
 	return run;
 };
 
-for (let i = 0; i < 18; i++) runs.push(makeFinishedRun(i));
+/** Finished runs keep only their summary; details regenerate from the seed. */
+const history = historyTimes.map((_, i) => summary(makeFinishedRun(i)));
+const historyIndex = new Map(history.map((h, i) => [h.id, i]));
+const details = new Map<string, RunDetail>();
+
+const findRun = (runId: string) => {
+	const session = runs.find((r) => r.id === runId);
+	if (session) return session;
+	const i = historyIndex.get(runId);
+	if (i === undefined) return undefined;
+	const cached = details.get(runId) ?? makeFinishedRun(i);
+	details.set(runId, cached);
+	return cached;
+};
+const allSummaries = () => [...runs.map(summary), ...history];
+
+const warmBuilds = (() => {
+	const r = rng(4242);
+	return historyTimes
+		.filter(() => r() < 0.55)
+		.map((t) => ({
+			at: t.at - 20 * MIN,
+			usd: (240 + r() * 360) * WORKER_USD_S * 4,
+		}));
+})();
+
+const bucketStart = (ms: number, bucket: "day" | "week") => {
+	const day = Math.floor(ms / DAY) * DAY;
+	if (bucket === "day") return day;
+	return day - ((new Date(day).getUTCDay() + 6) % 7) * DAY;
+};
+
+const costsReport = ({
+	from,
+	to,
+	bucket,
+}: {
+	from: number;
+	to: number;
+	bucket: "day" | "week";
+}): Costs => {
+	const inRange = allSummaries().filter((r) => {
+		const at = Date.parse(r.createdAt);
+		return at >= from && at <= to && r.cost.usd > 0;
+	});
+	const warm = warmBuilds.filter((w) => w.at >= from && w.at <= to);
+	const buckets = new Map<number, Costs["buckets"][number]>();
+	for (
+		let t = bucketStart(from, bucket);
+		t <= to;
+		t += bucket === "day" ? DAY : 7 * DAY
+	)
+		buckets.set(t, {
+			start: iso(t),
+			usd: 0,
+			warmUsd: 0,
+			runs: 0,
+			byUser: {},
+		});
+	const users = new Map<string, Costs["users"][number]>();
+	for (const run of inRange) {
+		const b = buckets.get(bucketStart(Date.parse(run.createdAt), bucket));
+		const { userId, email } = run.createdBy;
+		const u = users.get(userId) ?? { userId, email, usd: 0, runs: 0 };
+		u.usd += run.cost.usd;
+		u.runs += 1;
+		users.set(userId, u);
+		if (!b) continue;
+		b.usd += run.cost.usd;
+		b.runs += 1;
+		b.byUser[userId] = (b.byUser[userId] ?? 0) + run.cost.usd;
+	}
+	for (const w of warm) {
+		const b = buckets.get(bucketStart(w.at, bucket));
+		if (!b) continue;
+		b.usd += w.usd;
+		b.warmUsd += w.usd;
+	}
+	const warmUsd = warm.reduce((s, w) => s + w.usd, 0);
+	return {
+		rates: RATES,
+		totals: {
+			usd: inRange.reduce((s, r) => s + r.cost.usd, 0) + warmUsd,
+			runs: inRange.length,
+			workerSeconds: inRange.reduce((s, r) => s + r.cost.workerSeconds, 0),
+			warmUsd,
+		},
+		buckets: [...buckets.values()],
+		users: [...users.values()].sort((a, b) => b.usd - a.usd),
+		topRuns: [...inRange].sort((a, b) => b.cost.usd - a.cost.usd).slice(0, 10),
+	};
+};
+
+// ---- live runs ------------------------------------------------------------
 
 const startLiveRun = ({
 	branch,
@@ -616,6 +704,8 @@ const startLiveRun = ({
 	createdBy,
 	progress = 0,
 	workerCap = 40,
+	startWorkers = 12,
+	queuedForMs = 0,
 	purpose = "adhoc",
 	pinnedSha = false,
 }: {
@@ -626,17 +716,25 @@ const startLiveRun = ({
 	createdBy: RunSummary["createdBy"];
 	progress?: number;
 	workerCap?: number;
+	/** Workers attached at start; the rest arrive as accounts free up. */
+	startWorkers?: number;
+	/** Wait in the FIFO account queue before anything starts. */
+	queuedForMs?: number;
 	purpose?: RunSummary["purpose"];
 }) => {
 	const list = filesForSelection(selection);
-	const workerCount = Math.min(list.length, workerCap);
+	const wanted = Math.min(list.length, workerCap);
+	const attached = queuedForMs ? 0 : Math.min(wanted, startWorkers);
 	const runId = `run_${hex(10)}`;
 	const createdAt = Date.now() - progress * 11 * MIN;
 	const done = Math.floor(list.length * progress);
 	const files: RunFile[] = list
 		.slice(0, done)
-		.map((f, j) => finishedFile(f, rand, workerName(j % workerCount), 0.012));
-	const running = progress > 0 ? list.slice(done, done + workerCount) : [];
+		.map((f, j) => finishedFile(f, rand, workerName(j % attached), 0.012));
+	const running = progress > 0 ? list.slice(done, done + attached) : [];
+	const queuePosition = queuedForMs
+		? runs.filter((r) => r.queuePosition !== null).length + 1
+		: null;
 	const run: RunDetail = {
 		id: runId,
 		branch,
@@ -646,7 +744,10 @@ const startLiveRun = ({
 		purpose,
 		selection,
 		fileCount: list.length,
-		workerCount,
+		workerCount: attached,
+		workersWanted: wanted,
+		queuePosition,
+		cost: costOf(progress > 0 ? attached * (progress * 11 * 60) : 0, false),
 		passed: 0,
 		failed: 0,
 		createdBy,
@@ -656,8 +757,10 @@ const startLiveRun = ({
 		phase:
 			progress > 0
 				? `running ${done}/${list.length}`
-				: "waiting for warm image",
-		workers: Array.from({ length: workerCount }, (_, w) => ({
+				: queuePosition
+					? `waiting for accounts · #${queuePosition} in queue`
+					: "waiting for warm image",
+		workers: Array.from({ length: attached }, (_, w) => ({
 			name: workerName(w),
 			status: running[w]
 				? ("busy" as const)
@@ -682,20 +785,22 @@ const startLiveRun = ({
 		drift: [],
 	};
 	summarize(run);
-	claim({
-		count: workerCount,
-		state: "in_use",
-		runId,
-		heldBy: createdBy.email,
-	});
+	claim({ count: attached, runId, heldBy: createdBy.email });
 	runs.unshift(run);
-	sims.set(runId, { queue: list.slice(done + running.length), logSeq: 0 });
+	sims.set(runId, {
+		queue: list.slice(done + running.length),
+		logSeq: 0,
+		ticks: 0,
+		readyAt: createdAt + queuedForMs,
+		workerSeconds: run.cost.workerSeconds,
+	});
 	return run;
 };
 
 const setWorker = (run: RunDetail, worker: WorkerState) => {
 	const i = run.workers.findIndex((w) => w.name === worker.name);
-	run.workers[i] = worker;
+	if (i === -1) run.workers.push(worker);
+	else run.workers[i] = worker;
 	emit(run.id, { type: "worker", worker });
 };
 const setFile = (run: RunDetail, file: RunFile) => {
@@ -711,31 +816,76 @@ const setStatus = (
 ) => {
 	run.status = status;
 	run.phase = phase;
-	if (TERMINAL.has(status)) run.finishedAt = iso(Date.now());
+	if (TERMINAL.has(status)) {
+		run.finishedAt = iso(Date.now());
+		run.cost = { ...run.cost, final: true };
+	}
 	emit(run.id, { type: "status", status, phase });
+};
+
+/** Elastic growth: a few more workers every other tick while accounts are free. */
+const growWorkers = (run: RunDetail, sim: Sim) => {
+	const missing = (run.workersWanted ?? 0) - run.workers.length;
+	if (missing <= 0 || sim.ticks % 2) return;
+	const got = claim({
+		count: Math.min(missing, 3),
+		runId: run.id,
+		heldBy: run.createdBy.email,
+	});
+	for (const _ of got)
+		setWorker(run, {
+			name: workerName(run.workers.length),
+			status: "provisioning",
+			file: null,
+		});
+};
+
+const bootWorkers = (run: RunDetail) => {
+	const ready = run.workers.filter((w) => w.status === "booting").slice(0, 4);
+	for (const w of ready) setWorker(run, { ...w, status: "ready" });
+	const waiting = run.workers.filter((w) => w.status === "provisioning");
+	for (const w of waiting.slice(0, 6))
+		setWorker(run, { ...w, status: "booting" });
 };
 
 const tickRun = (run: RunDetail) => {
 	const sim = sims.get(run.id);
 	if (!sim) return;
-	const ageMs = Date.now() - Date.parse(run.createdAt);
+	sim.ticks++;
+	if (run.queuePosition !== null) {
+		if (Date.now() < sim.readyAt) return;
+		run.queuePosition = null;
+		const got = claim({
+			count: Math.min(run.workersWanted ?? 0, 12),
+			runId: run.id,
+			heldBy: run.createdBy.email,
+		});
+		for (const _ of got)
+			setWorker(run, {
+				name: workerName(run.workers.length),
+				status: "provisioning",
+				file: null,
+			});
+		return setStatus(run, "queued", "waiting for warm image");
+	}
+	const alive = run.workers.filter((w) => w.status !== "dead").length;
+	run.workerCount = alive;
+	sim.workerSeconds += alive;
+	run.cost = costOf(sim.workerSeconds, false);
+	const ageMs = Date.now() - sim.readyAt;
 
 	if (run.status === "queued" && ageMs > 3_000)
 		return setStatus(run, "warming", "building tw-warm image");
 	if (run.status === "warming" && ageMs > 9_000)
-		return setStatus(run, "provisioning", `booting 0/${run.workerCount}`);
+		return setStatus(run, "provisioning", `booting 0/${run.workers.length}`);
 	if (run.status === "provisioning") {
-		const booting = run.workers.filter((w) => w.status === "provisioning");
-		for (const w of booting.slice(0, 6))
-			setWorker(run, { ...w, status: "booting" });
-		const ready = run.workers.filter((w) => w.status === "booting").slice(0, 4);
-		for (const w of ready) setWorker(run, { ...w, status: "ready" });
+		bootWorkers(run);
 		const up = run.workers.filter((w) => w.status === "ready").length;
-		if (up === run.workers.length) {
+		if (up > 0 && up >= run.workers.length / 2) {
 			run.startedAt = iso(Date.now());
 			return setStatus(run, "running", `running 0/${run.fileCount}`);
 		}
-		run.phase = `booting ${up}/${run.workerCount}`;
+		run.phase = `booting ${up}/${run.workers.length}`;
 		return emit(run.id, {
 			type: "status",
 			status: run.status,
@@ -744,6 +894,8 @@ const tickRun = (run: RunDetail) => {
 	}
 	if (run.status !== "running") return;
 
+	growWorkers(run, sim);
+	bootWorkers(run);
 	for (const w of run.workers) {
 		const current = w.file
 			? run.files.find((f) => f.file === w.file)
@@ -792,6 +944,7 @@ const tickRun = (run: RunDetail) => {
 		for (const w of run.workers)
 			setWorker(run, { ...w, status: "dead", file: null });
 		releaseAccounts((a) => a.runId === run.id);
+		run.workerCount = 0;
 		setStatus(run, run.failed ? "failed" : "passed", null);
 		sims.delete(run.id);
 	}
@@ -803,6 +956,8 @@ startLiveRun({
 	selection: { groups: ["core"] },
 	createdBy: ACTORS[0],
 	progress: 0.42,
+	workerCap: 120,
+	startWorkers: 26,
 });
 startLiveRun({
 	branch: "capy/twd",
@@ -811,6 +966,14 @@ startLiveRun({
 	createdBy: ACTORS[3],
 	workerCap: 24,
 	pinnedSha: true,
+});
+startLiveRun({
+	branch: "fix/cross-group-license-carry",
+	sha: branches[3].sha,
+	selection: { groups: ["billing"] },
+	createdBy: ACTORS[5],
+	workerCap: 48,
+	queuedForMs: 90_000,
 });
 
 setInterval(() => {
@@ -922,25 +1085,22 @@ const ok = (data: unknown) => ({
 	contentType: "application/json",
 	data: structuredClone(data),
 });
-const summary = (run: RunDetail): RunSummary => {
-	const { phase: _p, workers: _w, files: _f, drift: _d, ...rest } = run;
-	return rest;
-};
-
-const parseTtl = (ttl: string) => {
-	const m = /^(\d+)(m|h)$/.exec(ttl);
-	if (!m) return null;
-	const ms = Number(m[1]) * (m[2] === "h" ? HOUR : MIN);
-	return ms > 24 * HOUR ? null : ms;
-};
-
 const capacity = (): Capacity => {
 	const counts = countStates(accounts);
+	const live = runs.filter(isLive);
+	const usableKeys = keys.filter((k) => k.usable).length;
 	return {
 		gate: gate.state,
-		usableKeys: keys.filter((k) => k.usable).length,
+		usableKeys,
 		accounts: counts,
-		liveRuns: runs.filter(isLive).length,
+		liveRuns: live.length,
+		queuedRuns: live.filter((r) => r.queuePosition !== null).length,
+		accountsWanted: live.reduce(
+			(sum, r) =>
+				sum + Math.max(0, (r.workersWanted ?? 0) - (r.workerCount ?? 0)),
+			0,
+		),
+		poolCap: usableKeys * 3,
 		maxFilesNow: gate.state === "draining" ? 0 : counts.clean,
 		warmBuilds: branches.filter((b) => b.warm === "building").length,
 	};
@@ -980,7 +1140,6 @@ export const handle = ({
 	if (route === "GET /capacity") return ok(capacity());
 	if (route === "GET /keys") return ok(keysOverview());
 	if (route === "GET /accounts") return ok(accounts);
-	if (route === "GET /reservations") return ok(reservations);
 	if (route === "GET /api-keys") return ok(apiKeys);
 
 	if (method === "POST" && seg[0] === "branches" && seg[2] === "warm") {
@@ -1006,13 +1165,13 @@ export const handle = ({
 	if (route === "GET /runs") {
 		const status = url.searchParams.get("status") ?? "live";
 		const branch = url.searchParams.get("branch");
-		const list = runs
+		const list = allSummaries()
 			.filter((r) =>
 				status === "all" ? true : status === "live" ? isLive(r) : !isLive(r),
 			)
 			.filter((r) => !branch || r.branch.includes(branch))
 			.slice(0, Number(url.searchParams.get("limit") ?? 50));
-		return ok(list.map(summary));
+		return ok(list);
 	}
 
 	if (route === "POST /runs") {
@@ -1047,15 +1206,6 @@ export const handle = ({
 				"The selection matched no test files.",
 				"Pick at least one group or file, or loosen the grep.",
 			);
-		const cap = capacity();
-		if (count > cap.maxFilesNow && cap.maxFilesNow < 40)
-			return err(
-				409,
-				"no_capacity",
-				`Only ${cap.maxFilesNow} clean accounts are free.`,
-				"Wait for nukes to finish or release a reservation.",
-				"If accounts stay broken, ask a twd admin to re-initialise keys.",
-			);
 		const run = startLiveRun({
 			branch: branch.name,
 			sha: b.sha ?? branch.sha,
@@ -1063,12 +1213,15 @@ export const handle = ({
 			selection: b.selection,
 			createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
 			purpose: b.purpose,
+			workerCap: 120,
+			startWorkers: 10,
+			queuedForMs: capacity().accounts.clean === 0 ? 30_000 : 0,
 		});
 		return ok(summary(run));
 	}
 
 	if (seg[0] === "runs" && seg[1]) {
-		const run = runs.find((r) => r.id === seg[1]);
+		const run = findRun(seg[1]);
 		if (!run)
 			return err(
 				404,
@@ -1149,6 +1302,19 @@ export const handle = ({
 
 	if (route === "GET /jobs") return ok({ jobs });
 
+	if (route === "GET /costs") {
+		const from = url.searchParams.get("from");
+		const to = url.searchParams.get("to");
+		const bucket = url.searchParams.get("bucket") === "week" ? "week" : "day";
+		return ok(
+			costsReport({
+				from: from ? Date.parse(from) : Date.now() - 29 * DAY,
+				to: to ? Date.parse(to) + DAY - 1 : Date.now(),
+				bucket,
+			}),
+		);
+	}
+
 	if (method === "POST" && seg[0] === "keys" && seg[2] === "full-nuke") {
 		const pid = decodeURIComponent(seg[1]);
 		const key = keys.find((k) => k.platformAccountId === pid);
@@ -1175,15 +1341,13 @@ export const handle = ({
 	if (route === "POST /accounts/nuke") {
 		const ids = (body as { accountIds?: string[] } | undefined)?.accountIds;
 		const found = accounts.filter((a) => ids?.includes(a.id));
-		const held = found.filter(
-			(a) => a.state === "reserved" || a.state === "in_use",
-		);
+		const held = found.filter((a) => a.state === "in_use");
 		if (held.length)
 			return err(
 				409,
 				"accounts_held",
-				`Accounts are held by a reservation or run: ${held.map((a) => a.id).join(", ")}.`,
-				"Release the reservation or wait for the run to finish; its teardown nukes them.",
+				`Accounts are held by a run: ${held.map((a) => a.id).join(", ")}.`,
+				"Wait for the run to finish; its teardown nukes them.",
 			);
 		const res = found.map((a) => enqueue("nuke", `nuke:${a.id}`));
 		releaseAccounts((a) => found.includes(a));
@@ -1205,56 +1369,15 @@ export const handle = ({
 				"GET /accounts for valid ids.",
 			);
 		const a = accounts[i];
-		if (a.state === "in_use" || a.state === "reserved")
+		if (a.state === "in_use")
 			return err(
 				409,
 				"account_held",
-				`${a.id} is ${a.state.replace("_", " ")}.`,
-				"Release the reservation or wait for the run to finish, then forget it.",
+				`${a.id} is in use by ${a.runId}.`,
+				"Wait for the run to finish, then forget it.",
 			);
 		accounts.splice(i, 1);
 		return ok(a);
-	}
-
-	if (route === "POST /reservations") {
-		const b = body as { count: number; ttl?: string; note?: string };
-		const ttlMs = parseTtl(b.ttl ?? "2h");
-		if (!ttlMs)
-			return err(
-				422,
-				"bad_ttl",
-				`TTL "${b.ttl}" is not valid.`,
-				'Use a duration like "30m" or "2h" (max 24h).',
-			);
-		if (b.count > capacity().accounts.clean)
-			return err(
-				409,
-				"no_capacity",
-				`Only ${capacity().accounts.clean} clean accounts are free.`,
-				"Reserve fewer accounts or wait for nukes to finish.",
-				"If the clean pool stays this small, ask a twd admin to re-initialise keys or add platform keys to TW_V3_KEYS.",
-			);
-		return ok(
-			createReservation({
-				owner: { userId: ME.userId, email: ME.email, via: ME.via },
-				count: b.count,
-				ttlMs,
-				note: b.note ?? null,
-			}),
-		);
-	}
-	if (method === "DELETE" && seg[0] === "reservations") {
-		const r = reservations.find((x) => x.id === seg[1]);
-		if (!r)
-			return err(
-				404,
-				"reservation_not_found",
-				"No such reservation.",
-				"List reservations with GET /reservations.",
-			);
-		r.releasedAt = iso(Date.now());
-		releaseAccounts((a) => a.reservationId === r.id);
-		return ok(r);
 	}
 
 	if (route === "POST /api-keys") {
@@ -1305,11 +1428,10 @@ const publish = (topic: string, event: LiveEvent) => {
 };
 
 const snapshotOf = (topic: string) => {
-	if (topic === "runs") return runs.map(summary);
+	if (topic === "runs") return allSummaries();
 	if (topic === "jobs") return jobs;
 	if (topic === "capacity") return capacity();
-	if (topic.startsWith("run:"))
-		return runs.find((r) => r.id === topic.slice(4)) ?? null;
+	if (topic.startsWith("run:")) return findRun(topic.slice(4)) ?? null;
 	return null;
 };
 
@@ -1334,7 +1456,7 @@ export const flush = () => {
 		publish("capacity", { type: "capacity.updated", capacity: cap });
 	if (changed("keys", keysOverview()))
 		publish("keys", { type: "keys.changed" });
-	if (changed("accounts", [accounts, reservations]))
+	if (changed("accounts", accounts))
 		publish("accounts", { type: "accounts.changed" });
 	for (const b of branches)
 		if (changed(`warm:${b.name}`, b.warm) && b.warm !== "none")

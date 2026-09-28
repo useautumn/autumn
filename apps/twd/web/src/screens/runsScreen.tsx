@@ -6,6 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { RunSummary } from "../../../src/api/contract.ts";
 import { type RunsFilter, useRuns } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
+import { CostValue } from "../components/cost.tsx";
 import { RunLabel } from "../components/runLabel.tsx";
 import {
 	Actor,
@@ -20,6 +21,7 @@ import {
 	SearchInput,
 	SectionTag,
 	Segmented,
+	Tooltip,
 } from "../components/ui.tsx";
 import { cn, elapsed, num, timeAgo } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
@@ -43,7 +45,7 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 	{
 		id: "branch",
 		header: "Branch",
-		size: 260,
+		size: 240,
 		meta: { grow: true },
 		cell: ({ row: { original: run } }) => (
 			<div className="flex min-w-0 items-center gap-2 pr-4">
@@ -59,7 +61,7 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 	{
 		id: "tests",
 		header: "Tests",
-		size: 180,
+		size: 150,
 		cell: ({ row: { original: run } }) => (
 			<span className="block truncate text-tiny-id text-tertiary-foreground">
 				{selectionLabel(run)}
@@ -69,15 +71,22 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 	{
 		id: "status",
 		header: "Status",
-		size: 130,
-		cell: ({ row: { original: run } }) => (
-			<RunStatusBadge status={run.status} />
-		),
+		size: 120,
+		cell: ({ row: { original: run } }) =>
+			run.queuePosition !== null ? (
+				<Tooltip content="Waiting in the FIFO queue for its first Stripe account">
+					<span>
+						<Pill className="tabular-nums">Queued · #{run.queuePosition}</Pill>
+					</span>
+				</Tooltip>
+			) : (
+				<RunStatusBadge status={run.status} />
+			),
 	},
 	{
 		id: "progress",
 		header: "Progress",
-		size: 220,
+		size: 180,
 		cell: ({ row: { original: run } }) => {
 			const total = run.fileCount ?? 0;
 			return (
@@ -109,7 +118,7 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 	{
 		id: "by",
 		header: "Started by",
-		size: 150,
+		size: 120,
 		cell: ({ row: { original: run } }) => (
 			<Actor actor={run.createdBy} compact />
 		),
@@ -117,7 +126,7 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 	{
 		id: "elapsed",
 		header: "Elapsed",
-		size: 90,
+		size: 80,
 		cell: ({ row: { original: run } }) => (
 			<span className="text-xs tabular-nums">
 				{elapsed({
@@ -125,16 +134,35 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 					to: run.finishedAt,
 					now,
 				})}
-				{!run.finishedAt && run.workerCount ? (
-					<span className="text-subtle"> · {run.workerCount}w</span>
-				) : null}
 			</span>
+		),
+	},
+	{
+		id: "workers",
+		header: "Workers",
+		size: 80,
+		cell: ({ row: { original: run } }) =>
+			run.workersWanted === null ? (
+				<span className="text-xs text-subtle">—</span>
+			) : (
+				<span className="text-xs tabular-nums">
+					<span className="text-foreground">{num(run.workerCount ?? 0)}</span>
+					<span className="text-subtle">/{num(run.workersWanted)}</span>
+				</span>
+			),
+	},
+	{
+		id: "cost",
+		header: "Cost",
+		size: 80,
+		cell: ({ row: { original: run } }) => (
+			<CostValue cost={run.cost} className="text-xs" />
 		),
 	},
 	{
 		id: "created",
 		header: "Created",
-		size: 90,
+		size: 80,
 		cell: ({ row: { original: run } }) => (
 			<span className="text-xs text-subtle tabular-nums">
 				{timeAgo(run.createdAt, now)}

@@ -27,6 +27,10 @@ export default defineConfig(({ mode }) => {
 				single("react/jsx-runtime"),
 				single("react/jsx-dev-runtime"),
 				single("@tanstack/react-table"),
+				{
+					find: /^recharts$/,
+					replacement: path.resolve(uiSrc, "../node_modules/recharts"),
+				},
 			],
 		},
 		build: { outDir: path.resolve(__dirname, "dist"), emptyOutDir: true },

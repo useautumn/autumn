@@ -57,8 +57,8 @@ export const enqueueFullNukeKey = async ({
 		throw new TwdError({
 			status: 409,
 			code: "key_busy",
-			message: `${held} accounts on ${platformAccountId} are in_use or reserved.`,
-			next: `Wait for runs to finish and reservations to be released (GET /accounts?key=${platformAccountId}), then retry.`,
+			message: `${held} accounts on ${platformAccountId} are in use by runs.`,
+			next: `Wait for runs using this key to finish (GET /accounts?key=${platformAccountId}), then retry.`,
 			details: { platformAccountId, held },
 		});
 	}

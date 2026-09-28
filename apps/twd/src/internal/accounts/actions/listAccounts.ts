@@ -12,8 +12,6 @@ export const toStripeAccount = (
 	state: row.state,
 	heldBy: row.heldBy,
 	runId: row.runId,
-	reservationId: row.reservationId,
-	reservedUntil: row.reservedUntil?.toISOString() ?? null,
 	stateChangedAt: row.stateChangedAt.toISOString(),
 	brokenReason: row.brokenReason,
 });

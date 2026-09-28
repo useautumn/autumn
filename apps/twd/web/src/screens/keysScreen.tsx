@@ -107,8 +107,7 @@ export const KeysScreen = () => {
 	const totals = all.reduce(
 		(acc, k) => ({
 			clean: acc.clean + k.accounts.clean,
-			busy:
-				acc.busy + k.accounts.reserved + k.accounts.inUse + k.accounts.nuking,
+			busy: acc.busy + k.accounts.inUse + k.accounts.nuking,
 			broken: acc.broken + k.accounts.broken,
 		}),
 		{ clean: 0, busy: 0, broken: 0 },
@@ -217,11 +216,7 @@ export const KeysScreen = () => {
 		...(
 			[
 				["clean", "Clean", (k: StripeKey) => k.accounts.clean],
-				[
-					"held",
-					"Held",
-					(k: StripeKey) => k.accounts.reserved + k.accounts.inUse,
-				],
+				["held", "In use", (k: StripeKey) => k.accounts.inUse],
 				["nuking", "Nuking", (k: StripeKey) => k.accounts.nuking],
 				["broken", "Broken", (k: StripeKey) => k.accounts.broken],
 			] as const

@@ -1,11 +1,7 @@
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { stripeKeys } from "./keys.ts";
 
-export type AccountState =
-	| "clean"
-	| "in_use"
-	| "nuking"
-	| "broken";
+export type AccountState = "clean" | "in_use" | "nuking" | "broken";
 
 export const stripeAccounts = pgTable(
 	"stripe_accounts",

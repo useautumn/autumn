@@ -10,6 +10,7 @@ import {
 } from "@autumn/ui/components/ui/dropdown-menu";
 import {
 	ChevronsUpDown,
+	CircleDollarSign,
 	KeyRound,
 	List,
 	LogOut,
@@ -131,9 +132,10 @@ const CapacityRow = () => {
 					{data && (
 						<>
 							{" "}
-							· {num(data.accounts.clean)} clean · {num(data.accounts.reserved)}{" "}
-							reserved · {num(data.accounts.inUse)} in use ·{" "}
-							{num(data.accounts.nuking)} nuking · {data.usableKeys} usable keys
+							· {num(data.accounts.clean)} clean · {num(data.accounts.inUse)} in
+							use · {num(data.accounts.nuking)} nuking · {data.usableKeys}{" "}
+							usable keys
+							{data.queuedRuns > 0 && ` · ${data.queuedRuns} queued`}
 						</>
 					)}
 				</span>
@@ -151,7 +153,7 @@ const CapacityRow = () => {
 					<span className="ml-auto truncate text-subtle">
 						{data.gate === "draining"
 							? "draining"
-							: `${num(data.maxFilesNow)} free · ${data.liveRuns} live`}
+							: `${num(data.maxFilesNow)} free · ${data.liveRuns} live${data.queuedRuns ? ` · ${data.queuedRuns} queued` : ""}`}
 					</span>
 				) : (
 					<Skeleton className="ml-auto h-3 w-16" />
@@ -251,6 +253,11 @@ const Sidebar = () => (
 						to="/runs/new"
 						title="New run"
 						icon={<Plus strokeWidth={ICON_STROKE} />}
+					/>
+					<NavItem
+						to="/costs"
+						title="Costs"
+						icon={<CircleDollarSign strokeWidth={ICON_STROKE} />}
 					/>
 				</NavSection>
 				<NavSection title="Pool">

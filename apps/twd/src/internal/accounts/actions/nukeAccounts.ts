@@ -6,7 +6,7 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { enqueueNukeJobs } from "./enqueueNukeJobs.ts";
 import { toEnqueueResponses } from "./toEnqueueResponses.ts";
 
-/** Manual nuke of clean/nuking/broken accounts; held (reserved/in_use) accounts are refused. */
+/** Manual nuke of clean/nuking/broken accounts; in_use accounts are refused. */
 export const nukeAccounts = async ({
 	ctx,
 	accountIds,
@@ -34,15 +34,13 @@ export const nukeAccounts = async ({
 			details: { unknown },
 		});
 	}
-	const held = rows.filter(
-		(row) => row.state === "reserved" || row.state === "in_use",
-	);
+	const held = rows.filter((row) => row.state === "in_use");
 	if (held.length) {
 		throw new TwdError({
 			status: 409,
 			code: "accounts_held",
-			message: `Accounts are held by a reservation or run: ${held.map((row) => `${row.id} (${row.state})`).join(", ")}.`,
-			next: "Release the reservation or wait for the run to finish; its teardown nukes them.",
+			message: `Accounts are held by a run: ${held.map((row) => `${row.id} (run ${row.runId})`).join(", ")}.`,
+			next: "Wait for the run to finish (or cancel it); its teardown nukes them.",
 			details: { held },
 		});
 	}

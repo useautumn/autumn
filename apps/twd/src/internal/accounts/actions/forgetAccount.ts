@@ -1,4 +1,4 @@
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { StripeAccount } from "../../../api/contract.ts";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { TwdError } from "../../../http/apiError.ts";
@@ -16,10 +16,7 @@ export const forgetAccount = async ({
 	const [forgotten] = await ctx.db
 		.delete(stripeAccounts)
 		.where(
-			and(
-				eq(stripeAccounts.id, accountId),
-				notInArray(stripeAccounts.state, ["in_use", "reserved"]),
-			),
+			and(eq(stripeAccounts.id, accountId), ne(stripeAccounts.state, "in_use")),
 		)
 		.returning();
 	if (forgotten) {
@@ -46,15 +43,8 @@ export const forgetAccount = async ({
 	throw new TwdError({
 		status: 409,
 		code: "account_held",
-		message: `${accountId} is ${held.state}${held.runId ? ` by run ${held.runId}` : ""}${held.reservationId ? ` in reservation ${held.reservationId}` : ""}.`,
-		next:
-			held.state === "in_use"
-				? "Wait for the run to finish (or cancel it); its teardown releases the account."
-				: "Release the reservation (DELETE /reservations/:id), then retry.",
-		details: {
-			state: held.state,
-			runId: held.runId,
-			reservationId: held.reservationId,
-		},
+		message: `${accountId} is ${held.state}${held.runId ? ` by run ${held.runId}` : ""}.`,
+		next: "Wait for the run to finish (or cancel it); its teardown releases the account.",
+		details: { state: held.state, runId: held.runId },
 	});
 };

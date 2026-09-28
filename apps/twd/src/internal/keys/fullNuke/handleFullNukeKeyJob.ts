@@ -155,7 +155,7 @@ export const handleFullNukeKeyJob: JobHandler = async ({
 			if (held > 0) {
 				await releaseFullNukeLock({ db: ctx.db, platformAccountId });
 				throw new PermanentJobError(
-					`key_busy: ${held} accounts on ${platformAccountId} are in_use or reserved; nothing was deleted. Wait for runs/reservations, then retry.`,
+					`key_busy: ${held} accounts on ${platformAccountId} are in use by runs; nothing was deleted. Wait for those runs to finish, then retry.`,
 				);
 			}
 		}

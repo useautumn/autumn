@@ -376,7 +376,12 @@ export const CostsQuery = z.object({
 });
 export const Costs = z.object({
 	rates: CostRates,
-	totals: z.object({ usd: z.number(), runs: z.number(), workerSeconds: z.number(), warmUsd: z.number() }),
+	totals: z.object({
+		usd: z.number(),
+		runs: z.number(),
+		workerSeconds: z.number(),
+		warmUsd: z.number(),
+	}),
 	/** Time series for the chart; one row per bucket, per-user split in `byUser`. */
 	buckets: z.array(
 		z.object({
@@ -387,7 +392,14 @@ export const Costs = z.object({
 			byUser: z.record(z.number()),
 		}),
 	),
-	users: z.array(z.object({ userId: z.string(), email: z.string(), usd: z.number(), runs: z.number() })),
+	users: z.array(
+		z.object({
+			userId: z.string(),
+			email: z.string(),
+			usd: z.number(),
+			runs: z.number(),
+		}),
+	),
 	/** Most expensive runs in the window. */
 	topRuns: z.array(RunSummary),
 });

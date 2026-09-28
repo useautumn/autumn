@@ -2,10 +2,9 @@ import {
 	STRIPE_REQUEST_OPTIONS,
 	withStripeRequestSlot,
 } from "@tw/helpers/stripeRequestBudget.ts";
-import { and, count, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import pLimit from "p-limit";
-import { reservations, stripeAccounts } from "../../../db/schema/accounts.ts";
-import { stripeKeys } from "../../../db/schema/keys.ts";
+import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { clearIngressRoutesForAccounts } from "../../ingress/actions/clearIngressRoutesForAccounts.ts";
@@ -13,12 +12,12 @@ import { resolveKeySecret } from "../../keys/actions/resolveKeySecret.ts";
 import { getKeyGate } from "../../keys/repos/keyGateRepo.ts";
 import { describeStripeError, isAccountGone } from "../../keys/stripeErrors.ts";
 import { stripeForKey } from "../../keys/stripeForKey.ts";
-import { lockCleanAccounts, usableKey } from "../repos/cleanAccountsRepo.ts";
+import { lockCleanAccounts } from "../repos/cleanAccountsRepo.ts";
 import { enqueueNukeJobs } from "./enqueueNukeJobs.ts";
 
 /**
- * Frozen cross-task API for the account ledger. OWNED BY THE KEYS TASK.
- * Claims are atomic (FOR UPDATE SKIP LOCKED), spread round-robin across usable keys.
+ * Frozen cross-task API for the account ledger.
+ * Claims are atomic (FOR UPDATE SKIP LOCKED), spread across usable keys under the per-key cap.
  */
 export type ClaimedAccount = {
 	accountId: string;
@@ -30,129 +29,31 @@ export type ClaimedAccount = {
 /** Per-claim retrieve fan-out; each request also takes a shared Stripe budget slot. */
 const VERIFY_CONCURRENCY = 16;
 
-const insufficient = ({
-	need,
-	have,
-	pool,
-}: {
-	need: number;
-	have: number;
-	pool: number;
-}) =>
-	new TwdError({
-		status: 409,
-		code: "insufficient_accounts",
-		message: `Need ${need} clean Stripe accounts on usable keys, only ${have} free right now.`,
-		next: "Reduce the selection or wait for nukes to finish; GET /capacity shows maxFilesNow.",
-		escalate:
-			pool < need
-				? `The whole pool is ${pool} accounts — ask a twd admin to add Stripe accounts/keys (POST /keys/reinit with targetPerKey).`
-				: undefined,
-		details: { need, have, pool },
-	});
-
 type ClaimedRow = { accountId: string; platformAccountId: string };
 
-/** One atomic claim of `need` accounts; `have` = already verified this call (for error counts). */
+/** One atomic claim of up to `need` clean accounts. */
 const claimRound = async ({
 	ctx,
 	runId,
+	heldBy,
 	need,
-	have,
-	reservationId,
 }: {
 	ctx: TwdContext;
 	runId: string;
+	heldBy: string;
 	need: number;
-	have: number;
-	reservationId?: string;
 }): Promise<ClaimedRow[]> =>
 	ctx.db.transaction(async (tx) => {
-		const heldBy = ctx.actor?.userId ?? "system";
-		const now = new Date();
-		const take = async (ids: string[]) =>
-			ids.length === 0
-				? []
-				: tx
-						.update(stripeAccounts)
-						.set({ state: "in_use", runId, heldBy, stateChangedAt: now })
-						.where(inArray(stripeAccounts.id, ids))
-						.returning({
-							accountId: stripeAccounts.id,
-							platformAccountId: stripeAccounts.platformAccountId,
-						});
-
-		if (reservationId) {
-			const [reservation] = await tx
-				.select()
-				.from(reservations)
-				.where(eq(reservations.id, reservationId));
-			if (
-				!reservation ||
-				reservation.releasedAt ||
-				reservation.expiresAt < now
-			) {
-				throw new TwdError({
-					status: 404,
-					code: "reservation_not_active",
-					message: `Reservation ${reservationId} does not exist, was released, or expired.`,
-					next: "Drop reservationId, or POST /reservations for a new one.",
-				});
-			}
-			if (ctx.actor && reservation.userId !== ctx.actor.userId) {
-				throw new TwdError({
-					status: 403,
-					code: "forbidden",
-					message: `Reservation ${reservationId} belongs to another user.`,
-					next: "Use your own reservation or drop reservationId.",
-					escalate: `Ask the reservation owner (user ${reservation.userId}) to run it or release it.`,
-				});
-			}
-			const rows = await tx
-				.select({ id: stripeAccounts.id })
-				.from(stripeAccounts)
-				.innerJoin(
-					stripeKeys,
-					eq(stripeKeys.platformAccountId, stripeAccounts.platformAccountId),
-				)
-				.where(
-					and(
-						eq(stripeAccounts.reservationId, reservationId),
-						eq(stripeAccounts.state, "reserved"),
-						usableKey,
-					),
-				)
-				.limit(need)
-				.for("update", { of: stripeAccounts, skipLocked: true });
-			if (rows.length < need) {
-				throw new TwdError({
-					status: 409,
-					code: "insufficient_accounts",
-					message: `Reservation ${reservationId} has ${rows.length} free accounts on usable keys; the run needs ${need}.`,
-					next: "Reduce the selection, wait for the reservation's accounts to finish nuking, or run without reservationId.",
-					details: { need, have: rows.length },
-				});
-			}
-			return take(rows.map((row) => row.id));
-		}
-
 		const ids = await lockCleanAccounts({ tx, need });
-		if (ids.length < need) {
-			const [pool] = await tx
-				.select({ n: count() })
-				.from(stripeAccounts)
-				.innerJoin(
-					stripeKeys,
-					eq(stripeKeys.platformAccountId, stripeAccounts.platformAccountId),
-				)
-				.where(and(ne(stripeAccounts.state, "broken"), usableKey));
-			throw insufficient({
-				need: need + have,
-				have: ids.length + have,
-				pool: pool.n,
+		if (ids.length === 0) return [];
+		return tx
+			.update(stripeAccounts)
+			.set({ state: "in_use", runId, heldBy, stateChangedAt: new Date() })
+			.where(inArray(stripeAccounts.id, ids))
+			.returning({
+				accountId: stripeAccounts.id,
+				platformAccountId: stripeAccounts.platformAccountId,
 			});
-		}
-		return take(ids);
 	});
 
 /** false only when Stripe says the account is gone; other errors keep it (the run surfaces them). */
@@ -183,19 +84,19 @@ const accountExists = async ({
 };
 
 /**
- * clean → in_use (or reserved → in_use when reservationId is given). Every claimed account is
+ * clean → in_use, up to `count` (fewer, even 0, when the pool is short). Every claimed account is
  * retrieved from Stripe; vanished ones leave the ledger and are replaced from the clean pool.
  */
 export const claimAccountsForRun = async ({
 	ctx,
 	runId,
+	heldBy,
 	count: need,
-	reservationId,
 }: {
 	ctx: TwdContext;
 	runId: string;
+	heldBy: string;
 	count: number;
-	reservationId?: string;
 }): Promise<ClaimedAccount[]> => {
 	const gate = await getKeyGate({ db: ctx.db });
 	if (gate.state === "draining") {
@@ -223,21 +124,16 @@ export const claimAccountsForRun = async ({
 	const verifyLimit = pLimit(VERIFY_CONCURRENCY);
 	const verified: ClaimedAccount[] = [];
 	const claimedIds: string[] = [];
-	const reservedIds = new Set<string>();
 	try {
-		for (let round = 0; verified.length < need; round++) {
-			const fromReservation = round === 0 ? reservationId : undefined;
+		while (verified.length < need) {
 			const rows = await claimRound({
 				ctx,
 				runId,
+				heldBy,
 				need: need - verified.length,
-				have: verified.length,
-				reservationId: fromReservation,
 			});
-			for (const row of rows) {
-				claimedIds.push(row.accountId);
-				if (fromReservation) reservedIds.add(row.accountId);
-			}
+			if (rows.length === 0) break;
+			claimedIds.push(...rows.map((row) => row.accountId));
 			const checked = await Promise.all(
 				rows.map((row) =>
 					verifyLimit(async () => {
@@ -273,66 +169,65 @@ export const claimAccountsForRun = async ({
 			);
 		}
 	} catch (error) {
-		await unclaim({ ctx, runId, accountIds: claimedIds, reservedIds });
+		await returnUnusedAccounts({ ctx, runId, accountIds: claimedIds });
 		throw error;
 	}
 	return verified;
 };
 
-/** Puts a failed claim's accounts back where they came from. */
-const unclaim = async ({
+/** in_use → clean for accounts no sandbox ever touched (failed claim, run already gone, surplus). */
+export const returnUnusedAccounts = async ({
 	ctx,
 	runId,
 	accountIds,
-	reservedIds,
 }: {
 	ctx: TwdContext;
 	runId: string;
 	accountIds: string[];
-	reservedIds: Set<string>;
 }): Promise<void> => {
 	if (accountIds.length === 0) return;
-	const now = new Date();
-	const held = and(
-		eq(stripeAccounts.runId, runId),
-		eq(stripeAccounts.state, "in_use"),
-	);
-	const reserved = [...reservedIds];
-	const clean = accountIds.filter((id) => !reservedIds.has(id));
-	if (reserved.length > 0) {
-		await ctx.db
-			.update(stripeAccounts)
-			.set({ state: "reserved", runId: null, stateChangedAt: now })
-			.where(and(held, inArray(stripeAccounts.id, reserved)));
-	}
-	if (clean.length > 0) {
-		await ctx.db
-			.update(stripeAccounts)
-			.set({ state: "clean", runId: null, heldBy: null, stateChangedAt: now })
-			.where(and(held, inArray(stripeAccounts.id, clean)));
-	}
+	await ctx.db
+		.update(stripeAccounts)
+		.set({
+			state: "clean",
+			runId: null,
+			heldBy: null,
+			stateChangedAt: new Date(),
+		})
+		.where(
+			and(
+				eq(stripeAccounts.runId, runId),
+				eq(stripeAccounts.state, "in_use"),
+				inArray(stripeAccounts.id, accountIds),
+			),
+		);
 };
 
-/** in_use → nuking; enqueues one nuke:<acct> job per account. Idempotent. */
+/** in_use → nuking (all of the run's, or just `accountIds`); enqueues one nuke:<acct> job each. Idempotent. */
 export const releaseRunAccounts = async ({
 	ctx,
 	runId,
+	accountIds: only,
 }: {
 	ctx: TwdContext;
 	runId: string;
+	accountIds?: string[];
 }): Promise<void> => {
+	if (only?.length === 0) return;
+	const ofRun = (state: "in_use" | "nuking") =>
+		and(
+			eq(stripeAccounts.runId, runId),
+			eq(stripeAccounts.state, state),
+			only ? inArray(stripeAccounts.id, only) : undefined,
+		);
 	await ctx.db
 		.update(stripeAccounts)
 		.set({ state: "nuking", stateChangedAt: new Date() })
-		.where(
-			and(eq(stripeAccounts.runId, runId), eq(stripeAccounts.state, "in_use")),
-		);
+		.where(ofRun("in_use"));
 	const nuking = await ctx.db
 		.select({ id: stripeAccounts.id })
 		.from(stripeAccounts)
-		.where(
-			and(eq(stripeAccounts.runId, runId), eq(stripeAccounts.state, "nuking")),
-		);
+		.where(ofRun("nuking"));
 	const accountIds = nuking.map((row) => row.id);
 	clearIngressRoutesForAccounts({ accountIds });
 	await enqueueNukeJobs({ ctx, accountIds });

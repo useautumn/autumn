@@ -12,7 +12,6 @@ import {
 	CreateApiKeyResponse,
 	EnqueueResponse,
 	Me,
-	Reservation,
 	RunEvent,
 	RunSummary,
 } from "../api/contract.ts";
@@ -28,13 +27,13 @@ const USAGE = `twd — test worker daemon client (TWD_URL=${BASE_URL})
 
   twd login [key]                         store an API key (mint one in the dashboard)
   twd run <groups|files…> [--branch=] [--grep=] [--wait]
+                                          starts as soon as one account is free, grows from there
   twd runs [--all] [--branch=]
   twd run-status <id>                     follow a run's events until it finishes
   twd cancel <id>
   twd capacity
   twd warm <branch>
-  twd keys [create <name> | revoke <id>]
-  twd reserve <n> [--ttl=2h] [--note=]`;
+  twd keys [create <name> | revoke <id>]`;
 
 class CliError extends Error {}
 
@@ -104,7 +103,7 @@ const gitBranch = () => {
 
 const printRun = (run: z.infer<typeof RunSummary>) =>
 	console.log(
-		`${run.id}  ${run.status.padEnd(12)} ${run.branch}@${run.sha.slice(0, 8)}  ${run.passed}✓ ${run.failed}✗  files=${run.fileCount ?? "?"}  by ${run.createdBy.email}`,
+		`${run.id}  ${run.status.padEnd(12)} ${run.branch}@${run.sha.slice(0, 8)}  ${run.passed}✓ ${run.failed}✗  files=${run.fileCount ?? "?"}  workers=${run.workerCount ?? 0}/${run.workersWanted ?? "?"}${run.queuePosition === null ? "" : `  queue=#${run.queuePosition}`}  $${run.cost.usd.toFixed(2)}  by ${run.createdBy.email}`,
 	);
 
 const printEvent = (event: z.infer<typeof RunEvent>) => {
@@ -261,9 +260,9 @@ const commands: Record<
 			[
 				`gate        ${cap.gate}`,
 				`usable keys ${cap.usableKeys}`,
-				`accounts    clean=${a.clean} reserved=${a.reserved} in_use=${a.inUse} nuking=${a.nuking} broken=${a.broken}`,
-				`live runs   ${cap.liveRuns}`,
-				`max files   ${cap.maxFilesNow} (startable now)`,
+				`accounts    clean=${a.clean} in_use=${a.inUse} nuking=${a.nuking} broken=${a.broken} (cap ${cap.poolCap})`,
+				`live runs   ${cap.liveRuns} (${cap.queuedRuns} queued, ${cap.accountsWanted} accounts wanted)`,
+				`new run     ${cap.maxFilesNow} worker(s) now; runs queue FIFO and grow as accounts free up`,
 				`warm builds ${cap.warmBuilds}`,
 			].join("\n"),
 		);
@@ -312,27 +311,6 @@ const commands: Record<
 			console.log(
 				`${key.id}  ${key.prefix}…  ${key.name.padEnd(20)} ${key.ownerEmail}  ${key.revokedAt ? "revoked" : `last used ${key.lastUsedAt ?? "never"}`}`,
 			);
-		return 0;
-	},
-
-	reserve: async (args) => {
-		const { values, positionals } = parseArgs({
-			args,
-			allowPositionals: true,
-			options: { ttl: { type: "string" }, note: { type: "string" } },
-		});
-		const count = Number(positionals[0]);
-		if (!Number.isInteger(count) || count < 1)
-			throw new CliError("usage: twd reserve <n> [--ttl=2h] [--note=]");
-		const reservation = await api({
-			method: "POST",
-			path: "/reservations",
-			body: { count, ttl: values.ttl, note: values.note },
-			schema: Reservation,
-		});
-		console.log(
-			`reservation ${reservation.id}: ${reservation.accountIds.length} accounts until ${reservation.expiresAt}`,
-		);
 		return 0;
 	},
 };

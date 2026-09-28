@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { LiveEvent } from "../../../api/contract.ts";
 import { jobs } from "../../../db/schema/jobs.ts";
-import { warmImages } from "../../../db/schema/runs.ts";
+import { runs, warmImages } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { selectApiJobs } from "../../jobs/repos/selectApiJobs.ts";
@@ -68,6 +68,22 @@ const publishRun = async ({
 	publishLiveIfChanged({ key: runTopic, topic: runTopic, event });
 };
 
+/** A run leaving the queue shifts everyone behind it; unchanged positions are deduped. */
+const publishQueuedRuns = async ({
+	ctx,
+	exceptRunId,
+}: {
+	ctx: TwdContext;
+	exceptRunId: string;
+}) => {
+	if (!hasLiveSubscribers({ topic: "runs" })) return;
+	const queued = await ctx.db
+		.select({ id: runs.id })
+		.from(runs)
+		.where(and(eq(runs.status, "queued"), ne(runs.id, exceptRunId)));
+	for (const run of queued) await publishRun({ ctx, runId: run.id });
+};
+
 const publishJob = async ({
 	ctx,
 	jobId,
@@ -113,10 +129,13 @@ export const publishTableChange = async ({
 	id: string;
 }) => {
 	scheduleCapacity({ ctx });
-	if (table === "runs") return publishRun({ ctx, runId: id });
+	if (table === "runs") {
+		await publishRun({ ctx, runId: id });
+		return publishQueuedRuns({ ctx, exceptRunId: id });
+	}
 	if (table === "jobs") return publishJob({ ctx, jobId: id });
 	if (table === "warm_images") return publishWarm({ ctx, sha: id });
-	if (table === "stripe_accounts" || table === "reservations")
+	if (table === "stripe_accounts")
 		return publishLive({
 			topic: "accounts",
 			event: { type: "accounts.changed" },

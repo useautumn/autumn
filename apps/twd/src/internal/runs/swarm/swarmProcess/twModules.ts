@@ -26,7 +26,13 @@ export type TestExecutor = {
 	}): Promise<{ exitCode: number; stderr: string }>;
 };
 
-export type WorkerPool = { readonly size: number; close(): void };
+export type WorkerPool = {
+	readonly size: number;
+	close(): void;
+	add(worker: WorkerHandle): void;
+	cullIdle(count: number, keepMin: number): WorkerHandle[];
+	markDead(worker: WorkerHandle): void;
+};
 
 export type TwModules = {
 	provider: {
