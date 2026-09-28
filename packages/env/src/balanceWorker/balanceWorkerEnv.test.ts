@@ -20,6 +20,23 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
 		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(4);
 	});
+	test("samples successful request logs at one in twenty unless a deployment says otherwise", () => {
+		expect(
+			createBalanceWorkerEnv(valid).BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
+		).toBe(0.05);
+		expect(
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE: "1",
+			}).BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
+		).toBe(1);
+		expect(() =>
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE: "1.5",
+			}),
+		).toThrow();
+	});
 	test("commits transactionally unless a deployment opts into the one-trip commit", () => {
 		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_COMMIT_MODE).toBe(
 			"transactional",

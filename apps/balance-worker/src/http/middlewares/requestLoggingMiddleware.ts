@@ -46,10 +46,13 @@ function logRequestResult({
 	const requestLog = context.get("requestLog");
 	const { command, response, error, errorCode, batch } = requestLog;
 	const statusCode = context.res.status;
-	const identity = command?.identity ?? batch?.identity;
-	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
 	// A batch answers 200 around its commands' failures; the worst of them sets the level.
 	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
+	// Decided before the line is built: what is skipped costs nothing but this comparison.
+	if (severity < 400 && !(batch && batch.failed > 0) && !sampleSuccess({ ctx }))
+		return;
+	const identity = command?.identity ?? batch?.identity;
+	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
 	const event = {
 		event: "balance_worker.request",
 		statusCode,
@@ -109,6 +112,13 @@ function loggedErrorOf({
 	return { name: error.name, message: error.message };
 }
 
+/** Every failure is logged; a success is logged at the configured rate, or always when none is set. */
+function sampleSuccess({ ctx }: { ctx: BalanceWorkerHttpContext }): boolean {
+	const rate = ctx.requestLog?.successSampleRate;
+	if (rate === undefined || rate >= 1) return true;
+	if (rate <= 0) return false;
+	return Math.random() < rate;
+}
 function shouldLogResponse(): boolean {
 	if (process.env.NODE_ENV !== "production") return true;
 	return Math.random() < PRODUCTION_RESPONSE_SAMPLE_RATE;

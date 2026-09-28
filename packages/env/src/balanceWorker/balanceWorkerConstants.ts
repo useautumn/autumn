@@ -96,6 +96,12 @@ export const BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES = 33_554_432;
  *  BALANCE_WORKER_COMMIT_MODE=idempotent once its fence has been exercised. */
 export const BALANCE_WORKER_COMMIT_MODE = "transactional" as const;
 
+/** Share of successful requests the worker logs a line for. Every failure is
+ *  logged whatever this says; the API keeps a line per request either way.
+ *  Building and serialising a line costs the event loop about as much as a
+ *  small decision, and a worker does thousands a second. */
+export const BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE = 0.05;
+
 /** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
  *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;

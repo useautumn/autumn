@@ -82,4 +82,6 @@ export type BalanceWorkerHttpContext = {
 	};
 	partitionResolver: MeteringPartitionResolver;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
+	/** Absent, every request is logged; failures always are. */
+	requestLog?: { successSampleRate: number };
 };
