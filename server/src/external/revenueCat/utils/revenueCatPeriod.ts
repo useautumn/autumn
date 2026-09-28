@@ -4,34 +4,18 @@ import {
 	ProcessorType,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
 export type RevenueCatPeriodEvent = {
 	purchased_at_ms?: number | null;
 	expiration_at_ms?: number | null;
 };
 
-/** Builds a `processor` update that stamps the event's store period, keeping existing processor keys. */
-export const revenueCatEventToPeriodUpdates = ({
-	customerProduct,
-	event,
-}: {
-	customerProduct: FullCusProduct;
-	event: RevenueCatPeriodEvent;
-}): Partial<InsertCustomerProduct> => {
-	if (!event.purchased_at_ms || !event.expiration_at_ms) return {};
-
-	return {
-		processor: {
-			...customerProduct.processor,
-			type: ProcessorType.RevenueCat,
-			current_period_start: event.purchased_at_ms,
-			current_period_end: event.expiration_at_ms,
-		},
-	};
-};
-
-/** Persists the event's store period on the RevenueCat customer product (DB + cache). */
+/**
+ * Merges the event's store period into the RevenueCat customer product's `processor` (DB, then cache from the DB result).
+ * Only moves the period forward, so redelivered older events are ignored. Returns the applied updates, or {} if skipped.
+ */
 export const storeRevenueCatPeriod = async ({
 	ctx,
 	customerProduct,
@@ -42,16 +26,30 @@ export const storeRevenueCatPeriod = async ({
 	customerProduct: FullCusProduct;
 	customerId: string;
 	event: RevenueCatPeriodEvent;
-}): Promise<void> => {
-	const updates = revenueCatEventToPeriodUpdates({ customerProduct, event });
-	if (Object.keys(updates).length === 0) return;
+}): Promise<Partial<InsertCustomerProduct>> => {
+	if (!event.purchased_at_ms || !event.expiration_at_ms) return {};
 
-	await customerProductActions.updateDbAndCache({
+	const processor = await customerProductRepo.mergeProcessor({
+		db: ctx.db,
+		cusProductId: customerProduct.id,
+		processor: {
+			type: ProcessorType.RevenueCat,
+			current_period_start: event.purchased_at_ms,
+			current_period_end: event.expiration_at_ms,
+		},
+		periodEndAtLeast: event.expiration_at_ms,
+	});
+	if (!processor) return {};
+
+	const updates = { processor };
+	await updateCachedCustomerProductV2({
 		ctx,
 		customerId,
-		cusProductId: customerProduct.id,
+		customerProductId: customerProduct.id,
 		updates,
 	});
+
+	return updates;
 };
 
 /** The store period stored on a RevenueCat customer product, in ms; null when it's not a RevenueCat plan or has none yet. */

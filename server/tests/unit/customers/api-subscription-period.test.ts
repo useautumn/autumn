@@ -10,7 +10,6 @@ import {
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { customers } from "@tests/utils/fixtures/db/customers";
-import { revenueCatEventToPeriodUpdates } from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { RequestContext } from "@/honoUtils/HonoEnv";
 import { getApiSubscription } from "@/internal/customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscription";
 import { getApiSubscriptionV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubscription/getApiSubscriptionV2";
@@ -116,30 +115,5 @@ describe("API subscription current period", () => {
 				end: STRIPE_END_S * 1000,
 			});
 		}
-	});
-});
-
-describe("revenueCatEventToPeriodUpdates", () => {
-	test("keeps the existing processor id", () => {
-		const updates = revenueCatEventToPeriodUpdates({
-			customerProduct: revenueCatPlan({ withPeriod: false }),
-			event: { purchased_at_ms: RC_START_MS, expiration_at_ms: RC_END_MS },
-		});
-
-		expect(updates.processor).toEqual({
-			type: ProcessorType.RevenueCat,
-			id: "rc_sub_test",
-			current_period_start: RC_START_MS,
-			current_period_end: RC_END_MS,
-		});
-	});
-
-	test("skips events without an expiration", () => {
-		const updates = revenueCatEventToPeriodUpdates({
-			customerProduct: revenueCatPlan({ withPeriod: false }),
-			event: { purchased_at_ms: RC_START_MS, expiration_at_ms: null },
-		});
-
-		expect(updates).toEqual({});
 	});
 });

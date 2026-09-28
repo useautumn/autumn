@@ -5,6 +5,11 @@
  *
  * The RC read client is served from mock fixtures, so these tests never touch
  * api.revenuecat.com.
+ *
+ * Stale renewal — Red (before): a redelivered older RENEWAL moved the period backward.
+ *                 Green (after): the period only moves forward.
+ * Stale snapshot — Red (before): a period write rebuilt `processor` from an old copy and wiped `processor.id`.
+ *                  Green (after): the period merges into `processor`, keeping the id.
  */
 
 import { expect, test } from "bun:test";
@@ -21,7 +26,9 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
+import { storeRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { encryptData } from "@/utils/encryptUtils";
 import {
@@ -263,5 +270,118 @@ test.concurrent(
 		);
 		expect(subscription?.current_period_start).toBe(renewedStartMs);
 		expect(subscription?.current_period_end).toBe(renewedEndMs);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("rc period: a stale RENEWAL redelivered after a newer one does not move the period backward")}`,
+	async () => {
+		const customerId = "rc-period-stale-cus";
+		const RC_STORE_ID = "com.app.rc_period_stale_pro";
+		const periodOneStartMs = Date.now() - 61 * DAY_MS;
+		const periodTwoStartMs = periodOneStartMs + 30 * DAY_MS;
+		const periodThreeStartMs = periodTwoStartMs + 30 * DAY_MS;
+		const periodThreeEndMs = periodThreeStartMs + 30 * DAY_MS;
+
+		const { autumnV2_2, proMonthly } = await setupRcProduct({
+			customerId,
+			productId: "rc-period-stale-pro",
+			storeId: RC_STORE_ID,
+		});
+
+		const client = newRcClient();
+		const renewal = ({ startMs, txId }: { startMs: number; txId: string }) =>
+			client.renewal({
+				productId: RC_STORE_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc_period_stale_tx_001",
+				transactionId: txId,
+				purchasedAtMs: startMs,
+				expirationAtMs: startMs + 30 * DAY_MS,
+			});
+
+		expectWebhookSuccess(
+			await client.initialPurchase({
+				productId: RC_STORE_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc_period_stale_tx_001",
+				purchasedAtMs: periodOneStartMs,
+				expirationAtMs: periodTwoStartMs,
+			}),
+		);
+		expectWebhookSuccess(
+			await renewal({
+				startMs: periodThreeStartMs,
+				txId: "rc_period_stale_tx_003",
+			}),
+		);
+		expectWebhookSuccess(
+			await renewal({
+				startMs: periodTwoStartMs,
+				txId: "rc_period_stale_tx_002",
+			}),
+		);
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		const subscription = customer.subscriptions.find(
+			(sub) => sub.plan_id === proMonthly.id,
+		);
+		expect(subscription?.current_period_start).toBe(periodThreeStartMs);
+		expect(subscription?.current_period_end).toBe(periodThreeEndMs);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("rc period: a period write from a stale snapshot keeps a processor id merged after the snapshot")}`,
+	async () => {
+		const customerId = "rc-period-snapshot-cus";
+		const RC_STORE_ID = "com.app.rc_period_snapshot_pro";
+		const SUB_ID = "sub_rc_period_snapshot_001";
+		const purchasedAtMs = Date.now() - DAY_MS;
+		const expirationAtMs = purchasedAtMs + 30 * DAY_MS;
+
+		const { proMonthly } = await setupRcProduct({
+			customerId,
+			productId: "rc-period-snapshot-pro",
+			storeId: RC_STORE_ID,
+		});
+
+		expectWebhookSuccess(
+			await newRcClient().initialPurchase({
+				productId: RC_STORE_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc_period_snapshot_tx_001",
+			}),
+		);
+
+		const snapshot = await pollUntil(
+			() => getRcCusProduct({ customerId, autumnProductId: proMonthly.id }),
+			(cp) => Boolean(cp),
+		);
+		expect(snapshot?.processor?.id).toBeFalsy();
+
+		// The background id lookup lands after the snapshot was read.
+		await customerProductRepo.mergeProcessor({
+			db: ctx.db,
+			cusProductId: snapshot!.id,
+			processor: { id: SUB_ID },
+		});
+
+		await storeRevenueCatPeriod({
+			ctx,
+			customerProduct: snapshot!,
+			customerId,
+			event: {
+				purchased_at_ms: purchasedAtMs,
+				expiration_at_ms: expirationAtMs,
+			},
+		});
+
+		const after = await getRcCusProduct({
+			customerId,
+			autumnProductId: proMonthly.id,
+		});
+		expect(after?.processor?.id).toBe(SUB_ID);
+		expect(after?.processor?.current_period_end).toBe(expirationAtMs);
 	},
 );

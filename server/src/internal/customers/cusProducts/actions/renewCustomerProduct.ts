@@ -6,11 +6,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { dispatchCustomerProductUpdatedWebhooks } from "@/internal/customers/cusProducts/actions/dispatchCustomerProductUpdatedWebhooks";
-import { updateCustomerProductDbAndCache } from "@/internal/customers/cusProducts/actions/updateDbAndCache";
 
 /**
  * Sends products_updated + billing.updated for a renewal of an already-active
- * customer product, persisting any store-owned `updates` (e.g. the new period).
+ * customer product. `updates` describes changes the caller already persisted (e.g. the new store period).
  */
 export const renewCustomerProduct = async ({
 	ctx,
@@ -24,15 +23,6 @@ export const renewCustomerProduct = async ({
 	updates?: Partial<InsertCustomerProduct>;
 }): Promise<void> => {
 	const originalFullCustomer = structuredClone(fullCustomer);
-
-	if (Object.keys(updates).length > 0) {
-		await updateCustomerProductDbAndCache({
-			ctx,
-			customerId: fullCustomer.id ?? "",
-			cusProductId: customerProduct.id,
-			updates,
-		});
-	}
 
 	// Empty updates still surface an "updated" plan change so billing.updated mirrors the legacy webhook.
 	await dispatchCustomerProductUpdatedWebhooks({

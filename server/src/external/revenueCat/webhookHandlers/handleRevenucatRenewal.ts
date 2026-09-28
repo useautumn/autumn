@@ -8,10 +8,7 @@ import {
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
-import {
-	revenueCatEventToPeriodUpdates,
-	storeRevenueCatPeriod,
-} from "@/external/revenueCat/utils/revenueCatPeriod";
+import { storeRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
@@ -56,14 +53,18 @@ export const handleRenewal = async ({
 			`Renewal for existing active product ${product.id}, sending webhook`,
 		);
 
+		const updates = await storeRevenueCatPeriod({
+			ctx: customerCtx,
+			customerProduct: curSameProduct,
+			customerId: customer.id ?? "",
+			event,
+		});
+
 		await customerProductActions.renew({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
-			updates: revenueCatEventToPeriodUpdates({
-				customerProduct: curSameProduct,
-				event,
-			}),
+			updates,
 		});
 
 		await recordRevenueCatInvoice({
