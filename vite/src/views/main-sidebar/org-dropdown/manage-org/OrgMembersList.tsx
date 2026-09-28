@@ -1,5 +1,4 @@
 import type { Membership, Role } from "@autumn/shared";
-import { TableCell, TableRow } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { RoleSelect } from "@/components/v2/selects/RoleSelect";
@@ -9,6 +8,8 @@ import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
 	SETTINGS_ROW_CLASS,
 	SettingsTable,
+	TableCell,
+	TableRow,
 } from "@/views/settings/SettingsTable";
 import { useCurrentMembership } from "../hooks/useCurrentMembership";
 import { useMemberships } from "../hooks/useMemberships";

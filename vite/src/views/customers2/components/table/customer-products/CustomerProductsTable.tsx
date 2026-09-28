@@ -102,7 +102,10 @@ export function CustomerProductsTable() {
 	const hasEntities = customer.entities.length > 0;
 
 	const columns = useMemo(() => {
-		const baseColumns = [CustomerProductsColumns[0], CustomerProductsColumns[1]];
+		const baseColumns = [
+			CustomerProductsColumns[0],
+			CustomerProductsColumns[1],
+		];
 
 		if (hasEntities) {
 			baseColumns.push(createScopeColumn(customer.entities, setEntityId));
@@ -229,28 +232,31 @@ export function CustomerProductsTable() {
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
-					<Table.VirtualizedContent>
+					<Table.VirtualizedContent
+						footer={
+							showFooter && (
+								<Table.PaginationFooter
+									currentPage={page}
+									totalPages={totalPages}
+									totalCount={totalCount}
+									canGoPrev={canGoBack}
+									canGoNext={!!nextCursor}
+									onPrev={popCursor}
+									onNext={() => nextCursor && pushCursor(nextCursor)}
+									pageSize={pageSize}
+									pageSizeOptions={CUSTOMER_PRODUCTS_PAGE_SIZES}
+									onPageSizeChange={(size) =>
+										changePageSize(
+											size as (typeof CUSTOMER_PRODUCTS_PAGE_SIZES)[number],
+										)
+									}
+									disabled={isTransitioning}
+								/>
+							)
+						}
+					>
 						<Table.VirtualizedBody />
 					</Table.VirtualizedContent>
-					{showFooter && (
-						<Table.PaginationFooter
-							currentPage={page}
-							totalPages={totalPages}
-							totalCount={totalCount}
-							canGoPrev={canGoBack}
-							canGoNext={!!nextCursor}
-							onPrev={popCursor}
-							onNext={() => nextCursor && pushCursor(nextCursor)}
-							pageSize={pageSize}
-							pageSizeOptions={CUSTOMER_PRODUCTS_PAGE_SIZES}
-							onPageSizeChange={(size) =>
-								changePageSize(
-									size as (typeof CUSTOMER_PRODUCTS_PAGE_SIZES)[number],
-								)
-							}
-							disabled={isTransitioning}
-						/>
-					)}
 				</Table.Container>
 			</Table.Provider>
 		</div>

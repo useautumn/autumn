@@ -3,6 +3,11 @@ import { Skeleton } from "@autumn/ui";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { format } from "date-fns";
 import { type CSSProperties, useEffect, useRef } from "react";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+	TABLE_TRAY_SURFACE_ROW_CLASS,
+} from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import { useLogFeatures } from "../hooks/useLogFeatures";
 import { LogsIcon } from "../LogsIcon";
@@ -31,7 +36,7 @@ export const formatLogTime = ({ timestamp }: { timestamp: number }) =>
 const ColumnHeaders = () => (
 	<div
 		style={ROW_GRID}
-		className="h-8 px-4 shrink-0 border-b bg-interactive-secondary text-xs font-medium text-subtle"
+		className="h-8 px-4 shrink-0 text-xs font-normal text-tertiary-foreground"
 	>
 		<span className={CELL}>Time</span>
 		<span className={CELL}>Event</span>
@@ -60,7 +65,8 @@ const LogRow = ({
 			onClick={onSelect}
 			style={{ ...ROW_GRID, top, height: ROW_HEIGHT }}
 			className={cn(
-				"absolute inset-x-0 px-4 text-left border-b border-border/60 hover:bg-muted/60",
+				"absolute inset-x-0 px-4 text-left",
+				TABLE_TRAY_SURFACE_ROW_CLASS,
 				isSelected &&
 					"bg-primary/10 hover:bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]",
 			)}
@@ -141,66 +147,78 @@ export const LogsList = ({
 	const isEmpty = !isLoading && events.length === 0;
 
 	return (
-		<div className="flex flex-col flex-1 min-w-0 min-h-0">
-			<ColumnHeaders />
-			{isEmpty ? (
-				<div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
-					<LogsIcon size={28} strokeWidth={1.5} className="opacity-50" />
-					<p className="text-sm">No events match these filters.</p>
-				</div>
-			) : (
-				<div
-					ref={scrollRef}
-					className={cn(
-						"flex-1 min-h-0",
-						isLoading ? "overflow-hidden" : "overflow-y-auto",
-					)}
-				>
-					{isLoading ? (
-						Array.from({ length: LOADING_ROWS }, (_, i) => (
-							<div
-								key={i}
-								className="flex items-center gap-6 px-4 border-b border-border/60"
-								style={{ height: ROW_HEIGHT }}
-							>
-								<Skeleton className="h-2.5 w-28" />
-								<Skeleton className="h-2.5 w-24" />
-								<Skeleton className="h-2.5 w-20" />
-								<Skeleton className="h-2.5 w-1/3" />
-							</div>
-						))
-					) : (
-						<div
-							className="relative w-full"
-							style={{ height: virtualizer.getTotalSize() + ROW_HEIGHT }}
-						>
-							{virtualItems.map((item) => {
-								const event = events[item.index];
-								return (
-									<LogRow
-										key={event.id}
-										event={event}
-										color={colorFor(event.feature_id)}
-										isSelected={event.id === selectedId}
-										top={item.start}
-										onSelect={() => onSelect(event)}
-									/>
-								);
-							})}
-							<div
-								className="absolute inset-x-0 flex items-center justify-center text-xs text-subtle"
-								style={{ top: virtualizer.getTotalSize(), height: ROW_HEIGHT }}
-							>
-								{isFetchingNextPage
-									? "Loading more…"
-									: hasNextPage
-										? ""
-										: `${events.length.toLocaleString()} events`}
-							</div>
-						</div>
-					)}
-				</div>
+		<div
+			className={cn(
+				TABLE_TRAY_CLASS,
+				"m-3 flex flex-col flex-1 min-w-0 min-h-0",
 			)}
+		>
+			<ColumnHeaders />
+			<div
+				className={cn(TABLE_TRAY_SURFACE_CLASS, "flex flex-col flex-1 min-h-0")}
+			>
+				{isEmpty ? (
+					<div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
+						<LogsIcon size={28} strokeWidth={1.5} className="opacity-50" />
+						<p className="text-sm">No events match these filters.</p>
+					</div>
+				) : (
+					<div
+						ref={scrollRef}
+						className={cn(
+							"flex-1 min-h-0",
+							isLoading ? "overflow-hidden" : "overflow-y-auto",
+						)}
+					>
+						{isLoading ? (
+							Array.from({ length: LOADING_ROWS }, (_, i) => (
+								<div
+									key={i}
+									className="flex items-center gap-6 px-4 border-b border-table-row-divider last:border-b-0"
+									style={{ height: ROW_HEIGHT }}
+								>
+									<Skeleton className="h-2.5 w-28" />
+									<Skeleton className="h-2.5 w-24" />
+									<Skeleton className="h-2.5 w-20" />
+									<Skeleton className="h-2.5 w-1/3" />
+								</div>
+							))
+						) : (
+							<div
+								className="relative w-full"
+								style={{ height: virtualizer.getTotalSize() + ROW_HEIGHT }}
+							>
+								{virtualItems.map((item) => {
+									const event = events[item.index];
+									return (
+										<LogRow
+											key={event.id}
+											event={event}
+											color={colorFor(event.feature_id)}
+											isSelected={event.id === selectedId}
+											top={item.start}
+											onSelect={() => onSelect(event)}
+										/>
+									);
+								})}
+								<div
+									className="absolute inset-x-0 flex items-center justify-center text-xs text-subtle"
+									style={{
+										top: virtualizer.getTotalSize(),
+										height: ROW_HEIGHT,
+									}}
+								>
+									{isFetchingNextPage
+										? "Loading more…"
+										: hasNextPage
+											? ""
+											: `${events.length.toLocaleString()} events`}
+								</div>
+							</div>
+						)}
+					</div>
+				)}
+			</div>
 		</div>
 	);
 };

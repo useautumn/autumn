@@ -6,6 +6,10 @@ import {
 } from "@autumn/ui/components/table/table-context";
 import { TableHeader } from "@autumn/ui/components/table/table-header";
 import { TableMobileCards } from "@autumn/ui/components/table/table-mobile-cards";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_TABLE_CLASS,
+} from "@autumn/ui/components/table/table-tray-classes";
 import { Table } from "@autumn/ui/components/ui/table";
 import { cn } from "@autumn/ui/lib/utils";
 import React, { useMemo, useState } from "react";
@@ -17,7 +21,7 @@ export function TableContentVirtualized({
 }: {
 	children: React.ReactNode;
 	className?: string;
-	/** Sits inside the table border, below the scroll area, so it never scrolls away. */
+	/** Sits on the tray below the scroll area, so it never scrolls away. */
 	footer?: React.ReactNode;
 }) {
 	const context = useTableContext();
@@ -85,15 +89,15 @@ export function TableContentVirtualized({
 		<TableContext.Provider value={contextWithRef}>
 			<div
 				className={cn(
-					"rounded-lg border relative z-50 min-w-0 overflow-hidden",
+					"relative z-50 min-w-0 overflow-hidden",
+					TABLE_TRAY_CLASS,
+					TABLE_TRAY_TABLE_CLASS,
 					isFlexFill && "h-full flex flex-col",
-					!rows.length &&
-						"border-dashed bg-interactive-secondary dark:bg-transparent",
 					className,
 				)}
 			>
 				{(isLoading || isTransitioning) && (
-					<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
+					<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-xl -inset-[1px] z-70" />
 				)}
 
 				{enableColumnVisibility && !columnVisibilityInToolbar && (

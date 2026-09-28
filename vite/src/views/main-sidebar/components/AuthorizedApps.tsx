@@ -8,24 +8,22 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	IconButton,
-	TableCell,
-	TableRow,
-} from "@autumn/ui";
-import { EllipsisVertical, Key, Shield, TrashIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { EllipsisVertical, Key, Shield, TrashIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import {
 	SETTINGS_ROW_CLASS,
 	SettingsTable,
+	TableCell,
+	TableRow,
 } from "@/views/settings/SettingsTable";
 
 interface OAuthConsent {

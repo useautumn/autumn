@@ -1,17 +1,27 @@
+import { Skeleton } from "@autumn/ui";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+} from "@/components/general/table";
 import { useCusRequestLogsQuery } from "@/hooks/queries/useCusRequestLogsQuery";
 import { useWorkbenchStore } from "@/hooks/stores/useWorkbenchStore";
+import { cn } from "@/lib/utils";
 import { WorkbenchEmptyState } from "./WorkbenchEmptyState";
 import { WorkbenchLogRow } from "./WorkbenchLogRow";
 import { groupLogsByDay } from "./workbenchUtils";
 
 const LoadingSkeleton = () => (
-	<div className="p-3 space-y-1.5">
+	<div>
 		{Array.from({ length: 12 }).map((_, i) => (
 			<div
 				key={i}
-				className="h-7 bg-stone-100 dark:bg-stone-800/40 rounded animate-pulse"
-				style={{ animationDelay: `${i * 40}ms` }}
-			/>
+				className="flex h-7 items-center px-3 border-b border-table-row-divider last:border-b-0"
+			>
+				<Skeleton
+					className="h-2.5 w-full"
+					style={{ animationDelay: `${i * 40}ms` }}
+				/>
+			</div>
 		))}
 	</div>
 );
@@ -57,8 +67,11 @@ export const WorkbenchLogList = ({
 			);
 		}
 		return groups.map((group) => (
-			<div key={group.label}>
-				<div className="px-3 py-1 text-[10px] uppercase tracking-wide font-semibold text-subtle bg-stone-50 dark:bg-stone-900/50 border-b border-border/40 sticky top-0 z-10">
+			<div
+				key={group.label}
+				className="border-b border-table-row-divider last:border-b-0"
+			>
+				<div className="px-3 py-1 text-[10px] uppercase tracking-wide font-semibold text-subtle bg-table-tray border-b border-table-row-divider sticky top-0 z-10">
 					{group.label}
 				</div>
 				{group.entries.map((log) => (
@@ -80,7 +93,18 @@ export const WorkbenchLogList = ({
 					<div className="h-full w-full bg-blue-500/40 animate-pulse" />
 				)}
 			</div>
-			<div className="flex-1 min-h-0 overflow-y-auto">{renderContent()}</div>
+			<div className={cn(TABLE_TRAY_CLASS, "m-2 flex flex-1 min-h-0 flex-col")}>
+				<div
+					className={cn(
+						TABLE_TRAY_SURFACE_CLASS,
+						"flex flex-1 min-h-0 flex-col",
+					)}
+				>
+					<div className="flex-1 min-h-0 overflow-y-auto">
+						{renderContent()}
+					</div>
+				</div>
+			</div>
 		</div>
 	);
 };
