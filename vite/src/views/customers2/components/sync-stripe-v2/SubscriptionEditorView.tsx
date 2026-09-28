@@ -146,7 +146,11 @@ function SubscriptionEditor({
 						<ArrowLeftIcon size={14} /> Back to subscriptions
 					</button>
 
-					<PlanTraySectionTitle title="Stripe" />
+					<PlanTraySectionTitle
+						title={
+							isNotStartedSchedule ? "Stripe schedule" : "Stripe subscription"
+						}
+					/>
 					<StripeSourceTable
 						proposal={proposal}
 						phaseSections={phaseSections}
@@ -155,7 +159,7 @@ function SubscriptionEditor({
 						previewMismatches={previewMismatches}
 					/>
 
-					<PlanTraySectionTitle title="Autumn" />
+					<PlanTraySectionTitle title="Autumn plans" />
 					<div className="flex flex-col gap-4">
 						{phaseSections.map((section, phaseIndex) => (
 							<CustomerStatePhasePlans
