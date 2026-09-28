@@ -70,7 +70,6 @@ export function useCreateScheduleMutation({
 	};
 
 	return {
-		mutation,
 		handleSubmit,
 		handleInvoiceSubmit,
 		handleCheckoutSubmit,

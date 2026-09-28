@@ -1,5 +1,7 @@
 import type { ProductV2 } from "@autumn/shared";
 
+export type ReviewChangeSystem = "autumn" | "stripe";
+
 export type ReviewChangeStatus =
 	| "starts"
 	| "ends"

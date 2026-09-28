@@ -6,17 +6,16 @@ import type {
 } from "@autumn/shared";
 import {
 	isImmediatePhase,
-	joinDetail,
 	phaseLabel,
 	phaseSummaryLabel,
 	startsNow,
-	withoutEmptyPhases,
 } from "./phaseTiming";
 import {
 	processorItemsTotal,
 	processorItemValue,
 	unitPriceDetail,
 } from "./processorItemPriceLabels";
+import { joinDetail, withoutEmptyPhases } from "./reviewSectionText";
 import type {
 	ReviewChangePhase,
 	ReviewChangeRow,

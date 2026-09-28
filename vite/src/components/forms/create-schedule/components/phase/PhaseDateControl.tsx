@@ -1,17 +1,14 @@
-import {
-	DateInputUnix,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
+import { ConditionalTooltip, DateInputUnix } from "@autumn/ui";
 import { format, subYears } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
-import { canCreateSchedulePhaseStartInPast } from "@/components/forms/customer-state/customerStateSchema";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../../context/CreateScheduleFormProvider";
-import { formatPhaseDate } from "../../utils/review/phaseTiming";
+import {
+	formatPhaseDate,
+	isImmediatePhase,
+} from "../../utils/review/phaseTiming";
 
 const CURRENT_PHASE_TIME_LOCKED_MESSAGE =
 	"You can't edit the time of the current phase.";
@@ -47,7 +44,6 @@ function PhaseDateBox({
 	);
 }
 
-/** "Oct 28, 2026 11:34 AM" with the time muted, or the empty label when unset. */
 function PhaseDateLabel({
 	startsAt,
 	emptyLabel,
@@ -129,7 +125,7 @@ export function PhaseDateControl({
 	const phase = formValues.phases[phaseIndex];
 	if (!phase) return null;
 
-	const isFirstPhase = phaseIndex === 0;
+	const isFirstPhase = isImmediatePhase({ phaseIndex });
 	const isNewFirstPhase = !isExistingSchedule && isFirstPhase;
 	const dateLabel = (startsAt: number | null) => (
 		<PhaseDateLabel
@@ -143,11 +139,7 @@ export function PhaseDateControl({
 		return <PhaseDateBox>{dateLabel(null)}</PhaseDateBox>;
 	}
 
-	const disablePastDates = !canCreateSchedulePhaseStartInPast({
-		phases: formValues.phases,
-		phaseIndex,
-		nowMs,
-	});
+	const disablePastDates = !hasStarted;
 	const limits: PickerLimits = isNewFirstPhase
 		? {
 				disableFutureDates: true,
@@ -160,26 +152,22 @@ export function PhaseDateControl({
 				minUnixDate: disablePastDates ? nowMs : undefined,
 			};
 
-	const picker = (
-		<PhaseDatePicker
-			startsAt={phase.startsAt}
-			label={dateLabel(phase.startsAt)}
-			limits={limits}
-			hasTimingError={hasTimingError}
-			onChange={(startsAt) =>
-				form.setFieldValue(`phases[${phaseIndex}].startsAt`, startsAt)
-			}
-		/>
-	);
-
-	if (!hasStarted || isLocked) return picker;
-
 	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<div className="w-fit">{picker}</div>
-			</TooltipTrigger>
-			<TooltipContent>{CURRENT_PHASE_TIME_LOCKED_MESSAGE}</TooltipContent>
-		</Tooltip>
+		<ConditionalTooltip
+			enabled={hasStarted && !isLocked}
+			content={CURRENT_PHASE_TIME_LOCKED_MESSAGE}
+		>
+			<div className="w-fit">
+				<PhaseDatePicker
+					startsAt={phase.startsAt}
+					label={dateLabel(phase.startsAt)}
+					limits={limits}
+					hasTimingError={hasTimingError}
+					onChange={(startsAt) =>
+						form.setFieldValue(`phases[${phaseIndex}].startsAt`, startsAt)
+					}
+				/>
+			</div>
+		</ConditionalTooltip>
 	);
 }

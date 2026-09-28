@@ -18,8 +18,7 @@ import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
 import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePreview } from "./SchedulePreview";
 
-// Hidden until the per-phase review handles its remaining edge cases.
-const SHOW_SET_PLANS_REVIEW_CHANGES = false;
+const IS_PER_PHASE_REVIEW_READY = false;
 
 export function CreateScheduleSheetContent() {
 	const { form } = useCreateScheduleFormContext();
@@ -134,7 +133,7 @@ export function CreateScheduleReviewContent() {
 			/>
 
 			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-				{SHOW_SET_PLANS_REVIEW_CHANGES && <SetPlansReviewChanges />}
+				{IS_PER_PHASE_REVIEW_READY && <SetPlansReviewChanges />}
 				<CreateScheduleAdvancedSection />
 				<SchedulePreview />
 			</div>

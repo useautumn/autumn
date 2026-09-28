@@ -1,13 +1,19 @@
 import { expect, test } from "bun:test";
-import type { ProcessorItem, ProductV2 } from "@autumn/shared";
+import type { ProductV2 } from "@autumn/shared";
+import { compactPriceLabel } from "@/components/forms/create-schedule/utils/review/compactPriceLabel";
 import { processorItemsTotal } from "@/components/forms/create-schedule/utils/review/processorItemPriceLabels";
 import { recurringTotalLabel } from "@/components/forms/create-schedule/utils/review/recurringTotalLabel";
 import { shortStripeId } from "@/components/forms/create-schedule/utils/review/shortStripeId";
 import { splitPriceLabel } from "@/components/forms/create-schedule/utils/review/splitPriceLabel";
+import { monthlyPrice, processorItem } from "./reviewFixtures";
 
-const planWithBasePrice = (price: number, interval: string) =>
+const planWithBasePrice = (
+	price: number,
+	interval: string,
+	intervalCount = 1,
+) =>
 	({
-		items: [{ price, interval, interval_count: 1 }],
+		items: [{ price, interval, interval_count: intervalCount }],
 	}) as unknown as ProductV2;
 
 test("price labels split the amount from the unit", () => {
@@ -45,37 +51,36 @@ test("short Stripe ids keep the prefix and tail", () => {
 	expect(shortStripeId("sub_1")).toBe("sub_1");
 });
 
-const monthlyItem = (overrides: Partial<ProcessorItem>): ProcessorItem => ({
-	item_id: null,
-	price_id: null,
-	plan_id: "pro",
-	feature_id: null,
-	display_name: "Pro",
-	feature_name: null,
-	quantity: 1,
-	price: {
-		currency: "usd",
-		unit_amount: 50,
-		interval: "month",
-		interval_count: 1,
-		usage_type: "licensed",
-		tiers_mode: null,
-		tiers: null,
-		units_per_quantity: null,
-	},
-	amount: 50,
-	creates_price: false,
-	managed_by_autumn: true,
-	...overrides,
-});
-
 test("phase totals flag usage-based items they can't sum", () => {
-	const licensed = monthlyItem({});
-	const meteredItem = monthlyItem({
+	const licensed = processorItem({});
+	const meteredItem = processorItem({
 		amount: null,
 		price: licensed.price && { ...licensed.price, usage_type: "metered" },
 	});
 
 	expect(processorItemsTotal([licensed])).toBe("$50/mo");
 	expect(processorItemsTotal([licensed, meteredItem])).toBe("$50/mo + usage");
+});
+
+test("price labels abbreviate single and multi-count intervals alike", () => {
+	expect(compactPriceLabel("$20 per month")).toBe("$20/mo");
+	expect(compactPriceLabel("$20 per quarter")).toBe("$20/qtr");
+	expect(compactPriceLabel("$20 per 3 months")).toBe("$20/3 mo");
+	expect(compactPriceLabel("$20 per 2 years")).toBe("$20/2 yr");
+	expect(compactPriceLabel("$20 per half year")).toBe("$20 per half year");
+	expect(compactPriceLabel("$20 one-off")).toBe("$20 one-off");
+});
+
+test("multi-count intervals render the same across base and Stripe totals", () => {
+	expect(
+		recurringTotalLabel({
+			products: [planWithBasePrice(50, "month", 3)],
+			currency: "usd",
+		}),
+	).toBe("$50/3 mo");
+	expect(
+		processorItemsTotal([
+			processorItem({ price: { ...monthlyPrice(50), interval_count: 3 } }),
+		]),
+	).toBe("$50/3 mo");
 });

@@ -1,8 +1,6 @@
 import { expect, test } from "bun:test";
 import type {
 	Feature,
-	ProcessorItem,
-	ProcessorItemPrice,
 	ProductV2,
 	SetPlansPreviewPhase,
 	SetPlansPreviewResponse,
@@ -11,6 +9,7 @@ import { balanceChangesToReviewSection } from "@/components/forms/create-schedul
 import { planChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/planChangesToReviewSection";
 import { processorItemsToReviewSection } from "@/components/forms/create-schedule/utils/review/processorItemsToReviewSection";
 import type { ReviewPlan } from "@/components/forms/create-schedule/utils/review/types/reviewChange";
+import { monthlyPrice, processorItem } from "./reviewFixtures";
 
 const NOW = Date.UTC(2026, 8, 25);
 const NOV_1 = Date.UTC(2026, 10, 1);
@@ -208,38 +207,13 @@ test("balance rows classify reset and carried-over usage", () => {
 	expect(section.summary).toBe("1 reset · 1 carried over");
 });
 
-const monthly = (unitAmount: number): ProcessorItemPrice => ({
-	currency: "usd",
-	unit_amount: unitAmount,
-	interval: "month",
-	interval_count: 1,
-	usage_type: "licensed",
-	tiers_mode: null,
-	tiers: null,
-	units_per_quantity: null,
-});
-
 test("Stripe rows list the end state per phase, named by plan", () => {
-	const item = (overrides: Partial<ProcessorItem>): ProcessorItem => ({
-		item_id: null,
-		price_id: "price_premium",
-		plan_id: "premium",
-		feature_id: null,
-		display_name: "Premium",
-		feature_name: null,
-		quantity: 1,
-		price: monthly(50),
-		amount: 50,
-		creates_price: false,
-		managed_by_autumn: true,
-		...overrides,
-	});
-	const seats = item({
+	const seats = processorItem({
 		price_id: "price_seats",
 		feature_id: "seats",
 		feature_name: "Seats",
 		quantity: 4,
-		price: monthly(10),
+		price: monthlyPrice(10),
 		amount: 40,
 	});
 
@@ -257,8 +231,8 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 			phases: [
 				phase(NOW, {
 					processor_items: [
-						item({}),
-						item({
+						processorItem(),
+						processorItem({
 							price_id: "price_legacy",
 							plan_id: null,
 							display_name: "Legacy Support",
@@ -268,7 +242,7 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 						}),
 					],
 				}),
-				phase(NOV_1, { processor_items: [item({}), seats] }),
+				phase(NOV_1, { processor_items: [processorItem(), seats] }),
 			],
 		}),
 	});
@@ -549,19 +523,7 @@ test("a canceled subscription shows as ending, not as zero items", () => {
 });
 
 test("a schedule that ends into no items shows the subscription ending on that date", () => {
-	const premium: ProcessorItem = {
-		item_id: null,
-		price_id: "price_premium",
-		plan_id: "premium",
-		feature_id: null,
-		display_name: "Premium",
-		feature_name: null,
-		quantity: 1,
-		price: monthly(50),
-		amount: 50,
-		creates_price: false,
-		managed_by_autumn: true,
-	};
+	const premium = processorItem();
 	const section = processorItemsToReviewSection({
 		nowMs: NOW,
 		preview: preview({

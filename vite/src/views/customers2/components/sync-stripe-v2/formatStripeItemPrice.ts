@@ -1,11 +1,5 @@
 import type Stripe from "stripe";
-
-const INTERVAL_SUFFIXES: Record<Stripe.Price.Recurring.Interval, string> = {
-	day: "day",
-	week: "wk",
-	month: "mo",
-	year: "yr",
-};
+import { intervalSuffix } from "@/utils/formatUtils/intervalSuffix";
 
 const formatStripeCurrency = ({
 	amount,
@@ -31,9 +25,10 @@ const formatStripeCurrency = ({
 const formatIntervalSuffix = ({ price }: { price: Stripe.Price }): string => {
 	const recurring = price.recurring;
 	if (!recurring) return "";
-	const unit = INTERVAL_SUFFIXES[recurring.interval] ?? recurring.interval;
-	const count = recurring.interval_count ?? 1;
-	return count > 1 ? `/${count} ${unit}` : `/${unit}`;
+	return intervalSuffix({
+		interval: recurring.interval,
+		intervalCount: recurring.interval_count ?? 1,
+	});
 };
 
 /** A Stripe item's price as billed: "$30,000/yr", "$0.01/unit/mo (metered)". */

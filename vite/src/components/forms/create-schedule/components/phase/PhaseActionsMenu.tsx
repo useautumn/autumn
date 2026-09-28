@@ -5,8 +5,8 @@ import {
 	PlanRowActionsMenu,
 	ROW_ACTION_ICON_SIZE,
 } from "@/components/forms/shared/PlanRowActionsMenu";
+import { isImmediatePhase } from "../../utils/review/phaseTiming";
 
-/** Inserting needs this phase editable; removing needs a later phase that hasn't started. */
 export function PhaseActionsMenu({
 	phaseIndex,
 	hasStarted,
@@ -17,7 +17,7 @@ export function PhaseActionsMenu({
 	isLocked: boolean;
 }) {
 	const { handleInsertPhase, handleRemovePhase } = useCustomerStateContext();
-	const canRemove = phaseIndex > 0 && !hasStarted;
+	const canRemove = !isImmediatePhase({ phaseIndex }) && !hasStarted;
 
 	const actions: PlanRowAction[] = [
 		...(isLocked

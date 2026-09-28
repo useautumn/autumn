@@ -1,4 +1,5 @@
-import { type ReviewChangeSystem, ReviewSystemMark } from "./ReviewSystemMark";
+import type { ReviewChangeSystem } from "../../utils/review/types/reviewChange";
+import { ReviewSystemMark } from "./ReviewSystemMark";
 
 export function ReviewGroupTitle({
 	system,

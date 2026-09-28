@@ -9,13 +9,16 @@ import { matchPlanChangesToDeclaredPlans } from "./matchPlanChangesToDeclaredPla
 import {
 	formatPhaseDate,
 	isImmediatePhase,
-	joinDetail,
 	phaseLabel,
 	phaseSummaryLabel,
-	summarizeCounts,
-	withoutEmptyPhases,
 } from "./phaseTiming";
 import { planChangePlanId } from "./planChangePlanId";
+import { reviewPlansToProducts } from "./reviewPlansToProducts";
+import {
+	joinDetail,
+	summarizeCounts,
+	withoutEmptyPhases,
+} from "./reviewSectionText";
 import { splitPriceLabel } from "./splitPriceLabel";
 import type {
 	ReviewChangePhase,
@@ -205,9 +208,6 @@ export const planChangesToReviewSection = ({
 					: (declaredPlansByPhase[phaseIndex - 1] ?? []),
 				context,
 			});
-			const declaredProducts = declaredPlans.flatMap((plan) =>
-				plan.product ? [plan.product] : [],
-			);
 
 			return {
 				changeCount: changeRows.length,
@@ -215,7 +215,7 @@ export const planChangesToReviewSection = ({
 				phase: {
 					key: `plans-${phaseIndex}`,
 					label: phaseLabel({ phaseIndex, startsAt: phase.starts_at, nowMs }),
-					total: context.phaseTotalFor(declaredProducts),
+					total: context.phaseTotalFor(reviewPlansToProducts(declaredPlans)),
 					rows: [...changeRows, ...keptRows],
 				},
 			};

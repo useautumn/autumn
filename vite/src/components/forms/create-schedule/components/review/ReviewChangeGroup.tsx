@@ -1,12 +1,17 @@
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@autumn/ui";
-import type { ReviewChangeSection } from "../../utils/review/types/reviewChange";
+import { cn } from "@/lib/utils";
+import type {
+	ReviewChangeSection,
+	ReviewChangeSystem,
+} from "../../utils/review/types/reviewChange";
 import {
 	REVIEW_PHASE_LIST_CLASS,
 	ReviewChangePhaseBlock,
 } from "./ReviewChangePhaseBlock";
 import { ReviewGroupTitle } from "./ReviewGroupTitle";
 import { ReviewStripeIdsPopover } from "./ReviewStripeIdsPopover";
-import type { ReviewChangeSystem } from "./ReviewSystemMark";
+
+export const REVIEW_GROUP_HEADER_CLASS = "h-[42px] items-center gap-[9px]";
 
 export function ReviewChangeGroup({
 	value,
@@ -25,7 +30,12 @@ export function ReviewChangeGroup({
 
 	return (
 		<AccordionItem value={value} className="border-none">
-			<AccordionTrigger className="h-[42px] items-center gap-[9px] rounded-none py-0 hover:no-underline [&>svg]:translate-y-0">
+			<AccordionTrigger
+				className={cn(
+					REVIEW_GROUP_HEADER_CLASS,
+					"rounded-none py-0 hover:no-underline [&>svg]:translate-y-0",
+				)}
+			>
 				<ReviewGroupTitle system={system} title={title} />
 				<ReviewStripeIdsPopover stripeIds={section.stripeIds} />
 				<span className="flex-1" />

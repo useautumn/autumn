@@ -1,11 +1,11 @@
 import type { ProductV2, SetPlansPreviewWarning } from "@autumn/shared";
 import { useMemo } from "react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
-import type { CustomerStatePlan } from "@/components/forms/customer-state/customerStateSchema";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { balanceChangesToReviewSection } from "../utils/review/balanceChangesToReviewSection";
 import { customerStatePlansToReviewPlans } from "../utils/review/customerStatePlansToReviewPlans";
+import { phaseReviewPlans } from "../utils/review/phaseReviewPlans";
 import { planChangesToReviewSection } from "../utils/review/planChangesToReviewSection";
 import { processorItemsToReviewSection } from "../utils/review/processorItemsToReviewSection";
 import { recurringTotalLabel } from "../utils/review/recurringTotalLabel";
@@ -19,7 +19,6 @@ export type SetPlansReviewSections = {
 	processor: ReviewChangeSection;
 };
 
-/** Per-phase plan, balance and Stripe changes from the set_plans preview. */
 export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 	const { preview, error, products, features, formValues, nowMs } =
 		useCreateScheduleFormContext();
@@ -30,19 +29,24 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 		if (!preview || error) return null;
 
 		const displayProducts = products.map(productForDisplay);
-		const toReviewPlans = (plans: CustomerStatePlan[]) =>
-			customerStatePlansToReviewPlans({ plans, products, productForDisplay });
-		const unscheduledPlans = toReviewPlans(formValues.unscheduledPlans);
 
 		return {
 			warnings: preview.warnings,
 			plans: planChangesToReviewSection({
 				preview,
-				declaredPlansByPhase: formValues.phases.map((phase) => [
-					...toReviewPlans(phase.plans),
-					...unscheduledPlans,
-				]),
-				existingPlans: toReviewPlans(existingPlans),
+				declaredPlansByPhase: formValues.phases.map((phase) =>
+					phaseReviewPlans({
+						phasePlans: phase.plans,
+						unscheduledPlans: formValues.unscheduledPlans,
+						products,
+						productForDisplay,
+					}),
+				),
+				existingPlans: customerStatePlansToReviewPlans({
+					plans: existingPlans,
+					products,
+					productForDisplay,
+				}),
 				nowMs,
 				context: {
 					products: displayProducts,

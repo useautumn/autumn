@@ -5,19 +5,20 @@ import {
 	type PreviewBalanceChange,
 	type SetPlansPreviewPhase,
 } from "@autumn/shared";
+import { formatPhaseDate, phaseLabel } from "./phaseTiming";
 import {
-	formatPhaseDate,
 	joinDetail,
-	phaseLabel,
 	summarizeCounts,
 	withoutEmptyPhases,
-} from "./phaseTiming";
+} from "./reviewSectionText";
 import type {
 	ReviewChangeRow,
 	ReviewChangeSection,
 	ReviewChangeStatus,
 	ReviewChangeValue,
 } from "./types/reviewChange";
+
+type BalanceTransition = { before: PreviewBalance; after: PreviewBalance };
 
 type BalanceBehavior = Extract<
 	ReviewChangeStatus,
@@ -49,10 +50,7 @@ const balanceBefore = (change: PreviewBalanceChange): PreviewBalance => ({
 const classifyBalanceChange = ({
 	before,
 	after,
-}: {
-	before: PreviewBalance;
-	after: PreviewBalance;
-}): BalanceBehavior => {
+}: BalanceTransition): BalanceBehavior => {
 	if (!before.unlimited && after.unlimited) return "added";
 	if (before.unlimited && !after.unlimited && after.granted === 0) {
 		return "removed";
@@ -68,37 +66,19 @@ const classifyBalanceChange = ({
 
 const formatQuantity = (value: number) => value.toLocaleString();
 
-const describeGranted = ({
-	before,
-	after,
-}: {
-	before: PreviewBalance;
-	after: PreviewBalance;
-}) =>
+const describeGranted = ({ before, after }: BalanceTransition) =>
 	before.granted === after.granted || before.granted === 0
 		? `${formatQuantity(after.granted)} granted`
 		: `${formatQuantity(before.granted)} → ${formatQuantity(after.granted)} granted`;
 
-const describeReset = ({
-	before,
-	after,
-}: {
-	before: PreviewBalance;
-	after: PreviewBalance;
-}) => {
+const describeReset = ({ before, after }: BalanceTransition) => {
 	if (before.next_reset_at === after.next_reset_at) return undefined;
 	if (after.next_reset_at === null) return undefined;
 	return `resets ${formatPhaseDate({ startsAt: after.next_reset_at })}`;
 };
 
 /** Every number is labelled so the row reads as "<feature>: granted, used, left". */
-const describeBalance = ({
-	before,
-	after,
-}: {
-	before: PreviewBalance;
-	after: PreviewBalance;
-}) => {
+const describeBalance = ({ before, after }: BalanceTransition) => {
 	if (after.unlimited) return "Unlimited";
 	return joinDetail([
 		describeGranted({ before, after }),

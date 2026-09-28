@@ -1,7 +1,8 @@
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
-import { customerStatePlansToReviewPlans } from "../utils/review/customerStatePlansToReviewPlans";
+import { phaseReviewPlans } from "../utils/review/phaseReviewPlans";
 import { recurringTotalLabel } from "../utils/review/recurringTotalLabel";
+import { reviewPlansToProducts } from "../utils/review/reviewPlansToProducts";
 
 /** The phase's recurring base total, counting ongoing plans the way the review does. */
 export function usePhaseRecurringTotal({
@@ -12,15 +13,15 @@ export function usePhaseRecurringTotal({
 	const { formValues, products } = useCustomerStateContext();
 	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
-	const phasePlans = formValues.phases[phaseIndex]?.plans ?? [];
-	const reviewPlans = customerStatePlansToReviewPlans({
-		plans: [...phasePlans, ...formValues.unscheduledPlans],
+	const reviewPlans = phaseReviewPlans({
+		phasePlans: formValues.phases[phaseIndex]?.plans ?? [],
+		unscheduledPlans: formValues.unscheduledPlans,
 		products,
 		productForDisplay,
 	});
 
 	return recurringTotalLabel({
-		products: reviewPlans.flatMap(({ product }) => (product ? [product] : [])),
+		products: reviewPlansToProducts(reviewPlans),
 		currency: displayCurrency,
 	});
 }

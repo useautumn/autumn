@@ -1,16 +1,7 @@
 import type { ProcessorItem, ProcessorItemPrice } from "@autumn/shared";
+import { intervalSuffix } from "@/utils/formatUtils/intervalSuffix";
 import { formatMoney } from "./formatMoney";
 import type { ReviewChangeValue } from "./types/reviewChange";
-
-const INTERVAL_ABBREVIATION: Record<
-	NonNullable<ProcessorItemPrice["interval"]>,
-	string
-> = {
-	day: "day",
-	week: "wk",
-	month: "mo",
-	year: "yr",
-};
 
 const ONE_OFF_SUFFIX = "one-off";
 const USAGE_TOTAL_SUFFIX = " + usage";
@@ -20,10 +11,10 @@ type PricedProcessorItem = ProcessorItem & { price: ProcessorItemPrice };
 /** "/mo", "/3 mo", or "one-off" for a price without a recurring interval. */
 const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 	if (!price.interval) return ONE_OFF_SUFFIX;
-	const unit = INTERVAL_ABBREVIATION[price.interval];
-	return price.interval_count > 1
-		? `/${price.interval_count} ${unit}`
-		: `/${unit}`;
+	return intervalSuffix({
+		interval: price.interval,
+		intervalCount: price.interval_count,
+	});
 };
 
 /** How the item is charged, e.g. "4 × $10", "$5 per 100, billed on usage", "10 × Graduated tiers". */

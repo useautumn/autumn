@@ -1,21 +1,23 @@
 import { Skeleton } from "@autumn/ui";
 import { ChevronDownIcon } from "lucide-react";
+import { Fragment } from "react";
 import { PlanSection } from "@/components/forms/customer-state/components/tray/PlanSection";
 import { cn } from "@/lib/utils";
+import type { ReviewChangeSystem } from "../../utils/review/types/reviewChange";
+import { REVIEW_GROUP_HEADER_CLASS } from "./ReviewChangeGroup";
 import {
 	REVIEW_PHASE_HEADER_CLASS,
 	REVIEW_PHASE_LIST_CLASS,
 } from "./ReviewChangePhaseBlock";
-import { REVIEW_ROW_CLASS } from "./ReviewChangeRowItem";
+import {
+	REVIEW_ROW_CLASS,
+	REVIEW_STATUS_COLUMN_CLASS,
+	REVIEW_VALUE_COLUMN_CLASS,
+} from "./ReviewChangeRowItem";
 import { ReviewGroupTitle } from "./ReviewGroupTitle";
-import type { ReviewChangeSystem } from "./ReviewSystemMark";
+import { DEFAULT_OPEN_REVIEW_GROUP, REVIEW_GROUPS } from "./reviewGroups";
 
 const SKELETON_TITLE_WIDTHS = ["w-36", "w-28", "w-40"];
-
-const COLLAPSED_GROUPS: { system: ReviewChangeSystem; title: string }[] = [
-	{ system: "autumn", title: "Balances" },
-	{ system: "stripe", title: "Subscription" },
-];
 
 function SkeletonGroupHeader({
 	system,
@@ -27,7 +29,7 @@ function SkeletonGroupHeader({
 	isOpen: boolean;
 }) {
 	return (
-		<div className="flex h-[42px] items-center gap-[9px]">
+		<div className={cn("flex", REVIEW_GROUP_HEADER_CLASS)}>
 			<ReviewGroupTitle system={system} title={title} />
 			<span className="flex-1" />
 			<Skeleton className="h-3 w-24" />
@@ -47,43 +49,48 @@ function SkeletonRow({ titleWidth }: { titleWidth: string }) {
 			<div className="min-w-0 flex-1">
 				<Skeleton className={cn("h-3.5", titleWidth)} />
 			</div>
-			<div className="w-[108px] shrink-0">
+			<div className={REVIEW_STATUS_COLUMN_CLASS}>
 				<Skeleton className="h-[22px] w-[68px] rounded-md" />
 			</div>
-			<div className="flex w-[104px] shrink-0 justify-end">
+			<div className={REVIEW_VALUE_COLUMN_CLASS}>
 				<Skeleton className="h-3.5 w-14" />
 			</div>
 		</div>
 	);
 }
 
-/** Mirrors the loaded review: Plans open with one phase, the other groups collapsed. */
+/** Mirrors the loaded review: the default group open with one phase, the others collapsed. */
 export function ReviewChangesSkeleton() {
 	return (
 		<div className="flex flex-col px-4 pt-1">
-			<SkeletonGroupHeader system="autumn" title="Plans" isOpen />
-			<div className={cn(REVIEW_PHASE_LIST_CLASS, "pb-4")}>
-				<PlanSection
-					header={
-						<div className={REVIEW_PHASE_HEADER_CLASS}>
-							<Skeleton className="h-3 w-10" />
-							<Skeleton className="h-3 w-14" />
-						</div>
-					}
-				>
-					{SKELETON_TITLE_WIDTHS.map((titleWidth) => (
-						<SkeletonRow key={titleWidth} titleWidth={titleWidth} />
-					))}
-				</PlanSection>
-			</div>
-			{COLLAPSED_GROUPS.map((group) => (
-				<SkeletonGroupHeader
-					key={group.title}
-					system={group.system}
-					title={group.title}
-					isOpen={false}
-				/>
-			))}
+			{REVIEW_GROUPS.map((group) => {
+				const isOpen = group.value === DEFAULT_OPEN_REVIEW_GROUP;
+				return (
+					<Fragment key={group.value}>
+						<SkeletonGroupHeader
+							system={group.system}
+							title={group.title}
+							isOpen={isOpen}
+						/>
+						{isOpen && (
+							<div className={cn(REVIEW_PHASE_LIST_CLASS, "pb-4")}>
+								<PlanSection
+									header={
+										<div className={REVIEW_PHASE_HEADER_CLASS}>
+											<Skeleton className="h-3 w-10" />
+											<Skeleton className="h-3 w-14" />
+										</div>
+									}
+								>
+									{SKELETON_TITLE_WIDTHS.map((titleWidth) => (
+										<SkeletonRow key={titleWidth} titleWidth={titleWidth} />
+									))}
+								</PlanSection>
+							</div>
+						)}
+					</Fragment>
+				);
+			})}
 		</div>
 	);
 }

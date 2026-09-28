@@ -1,6 +1,5 @@
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
-
-export type ReviewChangeSystem = "autumn" | "stripe";
+import type { ReviewChangeSystem } from "../../utils/review/types/reviewChange";
 
 export function ReviewSystemMark({ system }: { system: ReviewChangeSystem }) {
 	if (system === "stripe") {
