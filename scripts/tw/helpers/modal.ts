@@ -210,12 +210,10 @@ const warmImageByName = new Map<string, Image>();
  * account-wide named snapshots (cross-process AND cross-teammate).
  */
 const WARM_IMAGE_REPO = "tw-warm";
-/** Warm image retention — long enough for a week of stale fast-forwards. */
-const WARM_IMAGE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+/** Published warm names must never outlive their underlying image. */
+const WARM_IMAGE_TTL_MS = null;
 /** Warm names served from the STALE `:latest` image — their workers fast-forward. */
 const staleWarmNames = new Set<string>();
-/** Opt-out: force exact-sha warm builds (no stale `:latest` serving). */
-const STALE_WARM_DISABLED = process.env.TW_MODAL_NO_STALE === "1";
 
 /** `tw-warm-<sha12>` → `<sha12>`, or undefined for non-warm sandbox names. */
 const warmShaFromName = (name: string): string | undefined =>
@@ -811,7 +809,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					);
 					return { name, handle: undefined, warmHit: "exact" };
 				}
-				if (!STALE_WARM_DISABLED) {
+				if (process.env.TW_MODAL_NO_STALE !== "1") {
 					const latest = await lookupPublishedWarmImage("latest");
 					if (latest) {
 						warmImageByName.set(name, latest);
