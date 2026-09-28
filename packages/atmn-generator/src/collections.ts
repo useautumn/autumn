@@ -130,8 +130,8 @@ export const SINGLETONS: Readonly<Record<string, SingletonMeta>> = {
 
 /**
  * A list keyed by id that lives outside the catalog: its own preview and sync
- * operations, PATCH semantics (unlisted entries are left alone), and one entry
- * per environment. The item type is the sync body's item plus the env field.
+ * operations, full-set semantics per synced environment (unlisted entries are
+ * deleted), and one entry per environment. The item type is the sync body's item plus the env field.
  */
 export type SyncedListMeta = {
 	readonly builder: string;
@@ -162,6 +162,6 @@ export const SYNCED_LISTS: Readonly<Record<string, SyncedListMeta>> = {
 		envField: "env",
 		openEnums: ["events"],
 		describe:
-			"One Autumn webhook endpoint in one environment, keyed by `env` and `id`. `atmn push` creates or updates it and never deletes one; webhooks your config doesn't list are left alone. Register a webhook in several environments with one `webhook()` per environment; the same `id` may repeat across them. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` (sandboxes; `SANDBOX` for the default one).",
+			"One Autumn webhook endpoint in one environment, keyed by `env` and `id`. `atmn push --yes` creates or updates it, and deletes the endpoints your config no longer lists in each environment it syncs; the preview shows each delete first. Register a webhook in several environments with one `webhook()` per environment; the same `id` may repeat across them. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` (sandboxes; `SANDBOX` for the default one).",
 	},
 };

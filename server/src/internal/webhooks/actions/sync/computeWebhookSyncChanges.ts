@@ -172,6 +172,20 @@ export const computeWebhookSyncChanges = ({
 	});
 
 	const adoptedIds = new Set([...adoptions.values()].map(({ id }) => id));
+	// A refused adoption leaves its dashboard candidates for the user to sort out.
+	const contestedIds = new Set(
+		stated
+			.filter((params) => failedIds.has(params.id) && !ownedById.has(params.id))
+			.flatMap((params) =>
+				uidless
+					.filter(
+						(webhook) =>
+							webhook.url === params.url &&
+							kindOf(webhook) === webhookAppKindOf({ events: params.events }),
+					)
+					.map(({ id }) => id),
+			),
+	);
 	const unstated = remote
 		.filter(
 			(webhook) =>
@@ -180,7 +194,10 @@ export const computeWebhookSyncChanges = ({
 		)
 		.map(
 			(webhook): WebhookSyncChange => ({
-				action: skipDeletions ? "unmanaged" : "delete",
+				action:
+					skipDeletions || contestedIds.has(webhook.id)
+						? "unmanaged"
+						: "delete",
 				id: webhook.id,
 				webhook,
 			}),
