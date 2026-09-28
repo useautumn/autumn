@@ -34,6 +34,12 @@ class Customers(BaseSDK):
                 models.GetOrCreateCustomerConfigTypedDict,
             ]
         ] = None,
+        billing_details: Optional[
+            Union[
+                models.GetOrCreateCustomerBillingDetails,
+                models.GetOrCreateCustomerBillingDetailsTypedDict,
+            ]
+        ] = None,
         expand: Optional[List[models.CustomerExpand]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -56,6 +62,7 @@ class Customers(BaseSDK):
         :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param config: Miscellaneous configurations for the customer.
+        :param billing_details: Billing details to set on the Stripe customer. Creates the Stripe customer if needed.
         :param expand: Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -88,6 +95,9 @@ class Customers(BaseSDK):
             ),
             config=utils.get_pydantic_model(
                 config, Optional[models.GetOrCreateCustomerConfig]
+            ),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.GetOrCreateCustomerBillingDetails]
             ),
             expand=expand,
         )
@@ -176,6 +186,12 @@ class Customers(BaseSDK):
                 models.GetOrCreateCustomerConfigTypedDict,
             ]
         ] = None,
+        billing_details: Optional[
+            Union[
+                models.GetOrCreateCustomerBillingDetails,
+                models.GetOrCreateCustomerBillingDetailsTypedDict,
+            ]
+        ] = None,
         expand: Optional[List[models.CustomerExpand]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -198,6 +214,7 @@ class Customers(BaseSDK):
         :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param config: Miscellaneous configurations for the customer.
+        :param billing_details: Billing details to set on the Stripe customer. Creates the Stripe customer if needed.
         :param expand: Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -230,6 +247,9 @@ class Customers(BaseSDK):
             ),
             config=utils.get_pydantic_model(
                 config, Optional[models.GetOrCreateCustomerConfig]
+            ),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.GetOrCreateCustomerBillingDetails]
             ),
             expand=expand,
         )
@@ -748,6 +768,9 @@ class Customers(BaseSDK):
                 models.UpdateCustomerConfigRequestBodyTypedDict,
             ]
         ] = None,
+        billing_details: Optional[
+            Union[models.BillingDetailsParams, models.BillingDetailsParamsTypedDict]
+        ] = None,
         new_customer_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -766,6 +789,7 @@ class Customers(BaseSDK):
         :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls:
         :param config: Miscellaneous configurations for the customer.
+        :param billing_details: Billing details stored on the linked Stripe customer. Requires a Stripe customer.
         :param new_customer_id: Your unique identifier for the customer
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -797,6 +821,9 @@ class Customers(BaseSDK):
             ),
             config=utils.get_pydantic_model(
                 config, Optional[models.UpdateCustomerConfigRequestBody]
+            ),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.BillingDetailsParams]
             ),
             new_customer_id=new_customer_id,
         )
@@ -883,6 +910,9 @@ class Customers(BaseSDK):
                 models.UpdateCustomerConfigRequestBodyTypedDict,
             ]
         ] = None,
+        billing_details: Optional[
+            Union[models.BillingDetailsParams, models.BillingDetailsParamsTypedDict]
+        ] = None,
         new_customer_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -901,6 +931,7 @@ class Customers(BaseSDK):
         :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls:
         :param config: Miscellaneous configurations for the customer.
+        :param billing_details: Billing details stored on the linked Stripe customer. Requires a Stripe customer.
         :param new_customer_id: Your unique identifier for the customer
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -932,6 +963,9 @@ class Customers(BaseSDK):
             ),
             config=utils.get_pydantic_model(
                 config, Optional[models.UpdateCustomerConfigRequestBody]
+            ),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.BillingDetailsParams]
             ),
             new_customer_id=new_customer_id,
         )

@@ -16,6 +16,7 @@ import {
 	RewardType,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
+import { warmEntityCaches as warmEntityCachesFn } from "@tests/integration/balances/utils/warmEntityCaches.js";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -246,6 +247,7 @@ type RedeemRewardAction = {
 
 type ScenarioAction =
 	| AttachAction
+	| { type: "warmEntityCaches" }
 	| CancelAction
 	| AdvanceClockAction
 	| AttachPaymentMethodAction
@@ -587,6 +589,11 @@ const removePaymentMethod = (): ConfigFn => {
 		],
 	});
 };
+
+const warmEntityCaches = (): ConfigFn => (config) => ({
+	...config,
+	actions: [...config.actions, { type: "warmEntityCaches" }],
+});
 
 /**
  * Track feature usage for the customer or an entity.
@@ -1020,6 +1027,7 @@ export const s = {
 	advanceToNextInvoice,
 	attachPaymentMethod,
 	removePaymentMethod,
+	warmEntityCaches,
 	track,
 	updateSubscription,
 	deleteCustomer,
@@ -1603,6 +1611,17 @@ export async function initScenario({
 			await removeAllPaymentMethods({
 				stripeClient: ctx.stripeCli,
 				stripeCustomerId: stripeCusId,
+			});
+		} else if (action.type === "warmEntityCaches") {
+			if (!customerId) {
+				throw new Error(
+					"Cannot warm entity caches: customerId is required when using s.warmEntityCaches()",
+				);
+			}
+			await warmEntityCachesFn({
+				autumn: autumnV1,
+				customerId,
+				entities: generatedEntities,
 			});
 		} else if (action.type === "track") {
 			if (!customerId) {

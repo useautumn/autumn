@@ -30,6 +30,8 @@
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
+import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 type MockLineItem = {
@@ -56,6 +58,8 @@ const updateLineCalls: Array<{
 const errorLogs: string[] = [];
 const createInvoiceItemCalls: unknown[] = [];
 const batchUpdateCalls: unknown[] = [];
+const cacheClears: unknown[] = [];
+let hasEntitlementUpdates = false;
 const arrearLineItemArgs: Array<Record<string, unknown>> = [];
 
 const makeLineItem = (id: string, amount = 100): MockLineItem => ({
@@ -120,7 +124,18 @@ await mockModuleWithRestore("@/external/stripe/webhookHandlers/common", () => ({
 		return {
 			lineItems: consumableLineItems,
 			invoiceCreditLineItems,
-			updateCustomerEntitlements: [],
+			updateCustomerEntitlements: hasEntitlementUpdates
+				? [
+						{
+							customerEntitlement: customerEntitlements.create({
+								featureId: "messages",
+								featureName: "Messages",
+								allowance: 10,
+								balance: 5,
+							}),
+						},
+					]
+				: [],
 		};
 	},
 }));
@@ -229,7 +244,11 @@ await mockModuleWithRestore(
 
 await mockModuleWithRestore(
 	"@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer",
-	() => ({ deleteCachedFullCustomer: async () => undefined }),
+	() => ({
+		deleteCachedFullCustomer: async (args: unknown) => {
+			cacheClears.push(args);
+		},
+	}),
 );
 
 const { processConsumablePricesForInvoiceCreated } = await import(
@@ -254,6 +273,7 @@ const makeEventContext = ({
 			billing_cycle_anchor: 1_000,
 			items: { data: [] },
 		},
+		results: { customerStateChanged: false },
 		stripeCustomer: { id: "stripe_customer" },
 		stripeSubscriptionId: "sub_test",
 		fullCustomer: {
@@ -299,6 +319,8 @@ describe("invoice.created consumable idempotency", () => {
 		landedLineItemIds.length = 0;
 		createInvoiceItemCalls.length = 0;
 		batchUpdateCalls.length = 0;
+		cacheClears.length = 0;
+		hasEntitlementUpdates = false;
 		arrearLineItemArgs.length = 0;
 		consumableLineItems = usageLineItems;
 		invoiceCreditLineItems = creditLineItems;
@@ -667,6 +689,17 @@ describe("invoice.created consumable idempotency", () => {
 		expect(batchUpdateCalls).toHaveLength(1);
 	});
 
+	test.each([false, true])(
+		"records and invalidates only applied entitlement updates: %s",
+		async (hasUpdates) => {
+			hasEntitlementUpdates = hasUpdates;
+			const eventContext: InvoiceCreatedContext = makeEventContext();
+			await processConsumablePricesForInvoiceCreated({ ctx, eventContext });
+			expect(eventContext.results.customerStateChanged).toBe(hasUpdates);
+			expect(cacheClears).toHaveLength(hasUpdates ? 1 : 0);
+		},
+	);
+
 	test("returns every generated line item for storage even when some were skipped", async () => {
 		liveStripeLineItemIds = [usageLineItems[0]!.id];
 
@@ -675,6 +708,7 @@ describe("invoice.created consumable idempotency", () => {
 			eventContext: makeEventContext(),
 		});
 
+		expect(cacheClears).toHaveLength(0);
 		expect(result.map((lineItem: MockLineItem) => lineItem.id)).toEqual([
 			...usageLineItems.map((lineItem) => lineItem.id),
 			...creditLineItems.map((lineItem) => lineItem.id),

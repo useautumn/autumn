@@ -46,20 +46,17 @@ export const expireAndActivateCustomerProducts = async ({
 		if (!onStripeSubscription) continue;
 
 		// 2. Expire and activate free successor (with tracking)
-		const {
-			expiredCustomerProduct,
-			activatedCustomerProduct,
-			insertedCustomerProduct,
-		} = await expireAndActivateWithTracking({
-			ctx,
-			eventContext,
-			customerProduct,
-		});
+		const { expiredCustomerProduct, activation, insertedCustomerProduct } =
+			await expireAndActivateWithTracking({
+				ctx,
+				eventContext,
+				customerProduct,
+			});
 
 		expiredCustomerProducts.push(expiredCustomerProduct);
 		outgoingCustomerProducts.push(customerProduct);
-		if (activatedCustomerProduct) {
-			incomingCustomerProducts.push(activatedCustomerProduct);
+		if (activation) {
+			incomingCustomerProducts.push(activation.after);
 		}
 		if (insertedCustomerProduct) {
 			incomingCustomerProducts.push(insertedCustomerProduct);

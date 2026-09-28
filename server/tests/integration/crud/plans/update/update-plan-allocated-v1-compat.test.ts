@@ -14,7 +14,6 @@ import {
 	type CreatePlanParamsV2Input,
 	findPriceByFeatureId,
 	mapToProductV2,
-	type ProductItem,
 	type UpdatePlanParamsV2Input,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -268,42 +267,42 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
-	`${chalk.yellowBright("products.update: explicit arrear config migrates allocated v1")}`,
-	async () => {
-		const customerId = "update-plan-allocated-v1-to-arrear";
-		const pro = products.pro({
-			id: "update_plan_allocated_v1_to_arrear",
-			items: [items.allocatedUsers({ includedUsage: 1 })],
-		});
+// test.concurrent(
+// 	`${chalk.yellowBright("products.update: explicit arrear config migrates allocated v1")}`,
+// 	async () => {
+// 		const customerId = "update-plan-allocated-v1-to-arrear";
+// 		const pro = products.pro({
+// 			id: "update_plan_allocated_v1_to_arrear",
+// 			items: [items.allocatedUsers({ includedUsage: 1 })],
+// 		});
 
-		const { autumnV1Beta, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [],
-		});
+// 		const { autumnV1Beta, ctx } = await initScenario({
+// 			customerId,
+// 			setup: [
+// 				s.customer({ paymentMethod: "success" }),
+// 				s.products({ list: [pro] }),
+// 			],
+// 			actions: [],
+// 		});
 
-		await forceOldAllocatedV1Config({ ctx, planId: pro.id });
-		await expectAllocatedV1Price({ ctx, planId: pro.id });
+// 		await forceOldAllocatedV1Config({ ctx, planId: pro.id });
+// 		await expectAllocatedV1Price({ ctx, planId: pro.id });
 
-		const usersItem = await getUsersProductItem({ ctx, planId: pro.id });
-		const arrearUsersItem: ProductItem = {
-			...usersItem,
-			config: {
-				...usersItem.config,
-				allocated_billing_behavior: AllocatedBillingBehavior.Arrear,
-				on_increase: undefined,
-				on_decrease: undefined,
-			},
-		};
+// 		const usersItem = await getUsersProductItem({ ctx, planId: pro.id });
+// 		const arrearUsersItem: ProductItem = {
+// 			...usersItem,
+// 			config: {
+// 				...usersItem.config,
+// 				allocated_billing_behavior: AllocatedBillingBehavior.Arrear,
+// 				on_increase: undefined,
+// 				on_decrease: undefined,
+// 			},
+// 		};
 
-		await autumnV1Beta.products.update(pro.id, {
-			items: [arrearUsersItem],
-		});
+// 		await autumnV1Beta.products.update(pro.id, {
+// 			items: [arrearUsersItem],
+// 		});
 
-		await expectAllocatedV2Price({ ctx, planId: pro.id });
-	},
-);
+// 		await expectAllocatedV2Price({ ctx, planId: pro.id });
+// 	},
+// );

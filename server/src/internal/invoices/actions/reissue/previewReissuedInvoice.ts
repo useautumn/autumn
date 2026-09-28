@@ -5,6 +5,7 @@ import type {
 	PreviewInvoiceCredits,
 } from "@autumn/shared";
 import { secondsToMs, stripeToAtmnAmount } from "@autumn/shared";
+import { fromUnixTime } from "date-fns";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { applyInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/applyInvoiceCredits";
@@ -145,6 +146,9 @@ export const previewReissuedInvoice = ({
 		total,
 		invoice_credits: appliedCredits,
 		amount_due: amountDue,
+		issue_date: fromUnixTime(
+			stripeInvoice.effective_at ?? stripeInvoice.created,
+		).getTime(),
 		due_date: dueDateMs,
 	};
 };

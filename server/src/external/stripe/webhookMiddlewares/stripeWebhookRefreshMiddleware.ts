@@ -1,4 +1,9 @@
 import type { Context, Next } from "hono";
+import { shouldPreserveInvoiceCreatedCache } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/shouldPreserveInvoiceCreatedCache";
+import { shouldPreserveInvoicePaidCache } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/shouldPreserveInvoicePaidCache";
+import { shouldPreserveScheduleReleasedCache } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionScheduleReleased/shouldPreserveScheduleReleasedCache";
+import { shouldPreserveScheduleUpdatedCache } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionScheduleUpdated/shouldPreserveScheduleUpdatedCache";
+import { shouldPreserveSubscriptionUpdateCache } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/shouldPreserveSubscriptionUpdateCache";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type {
 	StripeWebhookContext,
@@ -17,6 +22,7 @@ const updateProductEvents = [
 const coreEvents = [
 	"customer.subscription.deleted",
 	"subscription_schedule.canceled",
+	"subscription_schedule.released",
 	"subscription_schedule.updated",
 	"checkout.session.completed",
 	"checkout.session.expired",
@@ -28,6 +34,48 @@ const updateInvoiceEvents = [
 	"invoice.created",
 	"invoice.finalized",
 ];
+
+export const shouldRefreshAfterWebhookHandler = ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}): boolean => {
+	if (ctx.skipSubjectCacheDeletion) return false;
+
+	const { stripeEvent, handlerResult } = ctx;
+	switch (stripeEvent?.type) {
+		case "invoice.created":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveInvoiceCreatedCache({
+				eventContext: handlerResult.context,
+			});
+		case "invoice.paid":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveInvoicePaidCache({
+				eventContext: handlerResult.context,
+			});
+		case "customer.subscription.updated":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveSubscriptionUpdateCache({
+				event: stripeEvent,
+				eventContext: handlerResult.context,
+			});
+		case "subscription_schedule.updated":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveScheduleUpdatedCache({
+				event: stripeEvent,
+				eventContext: handlerResult.context,
+			});
+		case "subscription_schedule.released":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveScheduleReleasedCache({
+				event: stripeEvent,
+				eventContext: handlerResult.context,
+			});
+		default:
+			return true;
+	}
+};
 
 export const shouldSkipWebhookRefresh = ({
 	ctx,
@@ -70,7 +118,7 @@ export const stripeWebhookRefreshMiddleware = async (
 	const { logger, stripeEvent } = ctx;
 
 	if (!stripeEvent) return;
-	if (ctx.skipSubjectCacheDeletion) return;
+	if (!shouldRefreshAfterWebhookHandler({ ctx })) return;
 
 	const eventType = stripeEvent.type;
 	const data = stripeEvent.data;
@@ -105,7 +153,8 @@ export const stripeWebhookRefreshMiddleware = async (
 			}
 
 			await deleteCachedFullCustomer({
-				customerId: customer.id!,
+				// An id-less customer is read, and cached, by its internal id.
+				customerId: customer.id ?? customer.internal_id,
 				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
 				// Attach-echo invoices are balance-neutral. Cycle handlers bump

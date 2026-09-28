@@ -9,7 +9,7 @@ export const coreBalances: TestGroup = {
 		"integration/balances/check/check-basic.test.ts",
 		"balances/check/credit-systems",
 		"balances/check/send-event",
-		"balances/check/misc",
+		"integration/balances/check/check-misc.test.ts",
 		"integration/balances/check/spend-limit/check-entity-product-spend-limit.test.ts",
 		"integration/balances/check/spend-limit/check-customer-spend-limit.test.ts",
 		"integration/balances/check/pooled-balances",
@@ -19,10 +19,8 @@ export const coreBalances: TestGroup = {
 		"balances/track/allocated",
 		"balances/track/breakdown",
 		"balances/track/concurrency",
-		"balances/track/credit-systems",
 		"balances/track/entity-balances",
 		"balances/track/entity-products",
-		"balances/track/negative",
 		"balances/track/paid-allocated",
 		"integration/balances/track/track-misc.test.ts",
 		"integration/balances/track/spend-limit/track-entity-product-spend-limit.test.ts",
@@ -42,7 +40,7 @@ export const coreBalances: TestGroup = {
 
 		// ── Usage ──
 		"integration/balances/update/usage/update-usage-basic.test.ts",
-		"integration/balances/update/usage/update-usage-paid-allocated.test.ts",
+		"integration/balances/update/usage/allocated/update-usage-paid-allocated.test.ts",
 		"integration/balances/usage-windows/pooled-balances",
 	],
 };

@@ -74,6 +74,7 @@ fi
 #    on-disk state needs preserving. Match the binary path to avoid killing the
 #    pkill/script itself (the config path contains "goaws").
 # ---------------------------------------------------------------------------
+pkill -TERM -f "$BIN_DIR/fakecloud" 2>/dev/null && log "SIGTERM fakecloud"
 if pgrep -f "$BIN_DIR/goaws" >/dev/null 2>&1; then
   log "SIGTERM goaws"
   pkill -TERM -f "$BIN_DIR/goaws" || true
@@ -96,6 +97,17 @@ if pgrep -f 'redpanda --redpanda-cfg' >/dev/null 2>&1; then
   pgrep -f 'redpanda --redpanda-cfg' >/dev/null 2>&1 && log "WARN: Redpanda still running after 30s"
 else
   log "Redpanda not running"
+fi
+
+# 3c. kafka-native (Modal images) — same quiesce-before-snapshot contract.
+if pgrep -f 'kafka.Kafka start' >/dev/null 2>&1; then
+  log "SIGTERM Kafka"
+  pkill -TERM -f 'kafka.Kafka start' || true
+  for _ in $(seq 1 60); do
+    pgrep -f 'kafka.Kafka start' >/dev/null 2>&1 || break
+    sleep 0.5
+  done
+  pgrep -f 'kafka.Kafka start' >/dev/null 2>&1 && log "WARN: Kafka still running after 30s"
 fi
 
 # ---------------------------------------------------------------------------

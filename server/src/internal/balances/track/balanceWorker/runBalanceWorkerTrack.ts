@@ -18,6 +18,7 @@ import {
 import { withPaidAllocatedFallback } from "@/internal/balanceWorker/subject/withPaidAllocatedFallback.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
+import { fireThresholdsReached } from "../../trackWebhooks/thresholdReached/fireThresholdsReached.js";
 import { getTrackFeatureDeductions } from "../utils/getFeatureDeductions.js";
 import { getQueuedTrackResponse } from "../utils/getQueuedTrackResponse.js";
 import { runPostgresTrackV3 } from "../v3/runPostgresTrackV3.js";
@@ -38,17 +39,13 @@ type FeatureTrackScope = {
 	body: TrackParams;
 	client: TrackClient;
 	featureId: string;
+	/** Only a fan-out's first feature records the request's one usage event. */
+	recordsUsageEvent: boolean;
 };
 
 const isDuplicateCommand = (error: unknown): boolean =>
 	error instanceof BalanceWorkerClientError &&
 	error.workerCode === "DUPLICATE_COMMAND";
-
-/** An event can map to features this customer does not hold; the legacy path deducts nothing for those. */
-const isFeatureNotHeld = (error: unknown): boolean =>
-	error instanceof BalanceWorkerClientError &&
-	error.workerCode === "UNSUPPORTED_COMMAND" &&
-	error.workerReason === "feature_not_found";
 
 /** One feature on exactly one engine: the worker, or Postgres when the worker refuses a v1 paid allocated grant. */
 const trackFeature = ({
@@ -56,6 +53,7 @@ const trackFeature = ({
 	body,
 	client,
 	featureId,
+	recordsUsageEvent,
 }: FeatureTrackScope): Promise<FeatureTrackOutcome> =>
 	withPaidAllocatedFallback<FeatureTrackOutcome>({
 		ctx,
@@ -67,6 +65,7 @@ const trackFeature = ({
 					ctx,
 					body: { ...body, feature_id: featureId },
 					isFanOut: !body.feature_id,
+					recordsUsageEvent,
 				}),
 			});
 			return { engine: "worker", featureId, reply };
@@ -76,7 +75,11 @@ const trackFeature = ({
 			const response = await runPostgresTrackV3({
 				ctx,
 				fullSubject,
-				body: { ...body, feature_id: featureId },
+				body: {
+					...body,
+					feature_id: featureId,
+					skip_event: body.skip_event || !recordsUsageEvent,
+				},
 				featureDeductions: getTrackFeatureDeductions({
 					ctx,
 					featureId,
@@ -94,9 +97,9 @@ const trackFeature = ({
 	});
 
 /**
- * One track per feature, in order. On a fan-out, features the customer lacks or already applied under
- * this idempotency key are skipped so a retry finishes a partial run; with nothing applied, a duplicate
- * outranks a feature the customer lacks as the reason the caller hears. Every other error is the API's.
+ * One track per feature, in order; a feature the customer lacks applies as a no-op, as on legacy.
+ * On a fan-out, features already applied under this idempotency key are skipped so a retry finishes
+ * a partial run. Every other error is the API's.
  */
 const trackEachFeature = async ({
 	ctx,
@@ -110,20 +113,25 @@ const trackEachFeature = async ({
 	const isFanOut = !body.feature_id;
 	const outcomes: FeatureTrackOutcome[] = [];
 	const skipped: unknown[] = [];
-	for (const featureId of trackedFeatureIdsOf({ ctx, body })) {
+	const featureIds = trackedFeatureIdsOf({ ctx, body });
+	for (const [index, featureId] of featureIds.entries()) {
 		try {
-			outcomes.push(await trackFeature({ ctx, body, client, featureId }));
+			outcomes.push(
+				await trackFeature({
+					ctx,
+					body,
+					client,
+					featureId,
+					recordsUsageEvent: index === 0,
+				}),
+			);
 		} catch (error) {
-			const isSkippable = isDuplicateCommand(error) || isFeatureNotHeld(error);
-			if (!isFanOut || !isSkippable)
+			if (!isFanOut || !isDuplicateCommand(error))
 				rethrowBalanceWorkerError({ cause: error });
 			skipped.push(error);
 		}
 	}
-	if (outcomes.length === 0)
-		rethrowBalanceWorkerError({
-			cause: skipped.find(isDuplicateCommand) ?? skipped[0],
-		});
+	if (outcomes.length === 0) rethrowBalanceWorkerError({ cause: skipped[0] });
 	return outcomes;
 };
 
@@ -138,6 +146,24 @@ const customerOf = ({
 	return first.engine === "worker"
 		? first.reply.state.customer
 		: first.customer;
+};
+
+/** Behind the response: the deprecated webhook must never delay or fail the track that crossed it. */
+const fireReplyThresholdsReached = ({
+	ctx,
+	body,
+	outcomes,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	outcomes: FeatureTrackOutcome[];
+}): void => {
+	const replies = outcomes.flatMap((outcome) =>
+		outcome.engine === "worker" ? [outcome.reply] : [],
+	);
+	fireThresholdsReached({ ctx, body, replies }).catch((error) => {
+		ctx.logger.error(`[runBalanceWorkerTrack] fireThresholdsReached: ${error}`);
+	});
 };
 
 /** Applied on the worker and answered, or queued for it and answered with the queued response when async. */
@@ -179,6 +205,7 @@ export async function runBalanceWorkerTrack({
 				entityData: body.entity_data,
 				run: async () => {
 					const outcomes = await trackEachFeature({ ctx, body, client });
+					fireReplyThresholdsReached({ ctx, body, outcomes });
 					return {
 						result: trackOutcomesToApiResponse({ ctx, body, outcomes }),
 						customer: customerOf({ outcomes }),

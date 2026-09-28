@@ -37,6 +37,20 @@ const cleanApiCustomer = ({
 	});
 };
 
+const withoutUsageAllowed = ({
+	fullCus,
+}: {
+	fullCus: FullCustomer;
+}): FullCustomer => {
+	const cloned = structuredClone(fullCus);
+	for (const cusProduct of cloned.customer_products) {
+		for (const cusEnt of cusProduct.customer_entitlements) {
+			cusEnt.usage_allowed = false;
+		}
+	}
+	return cloned;
+};
+
 const handleAllowanceUsed = async ({
 	ctx,
 	feature,
@@ -48,16 +62,12 @@ const handleAllowanceUsed = async ({
 	oldFullCus: FullCustomer;
 	newFullCus: FullCustomer;
 }) => {
-	const clonedNewFullCus = structuredClone(newFullCus);
-	for (const cusProduct of clonedNewFullCus.customer_products) {
-		for (const cusEnt of cusProduct.customer_entitlements) {
-			cusEnt.usage_allowed = false;
-		}
-	}
+	// Both sides without overage, so only the track that empties the allowance crosses.
+	const clonedNewFullCus = withoutUsageAllowed({ fullCus: newFullCus });
 
 	const { apiCustomer: prevApiCustomer } = await getApiCustomerBase({
 		ctx,
-		fullCus: oldFullCus,
+		fullCus: withoutUsageAllowed({ fullCus: oldFullCus }),
 	});
 
 	const { apiCustomer: newApiCustomer, legacyData: newLegacyData } =

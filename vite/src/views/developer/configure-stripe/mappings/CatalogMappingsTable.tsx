@@ -1,7 +1,13 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { CopyButton, Skeleton } from "@autumn/ui";
+import { Skeleton } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
+import {
+	SETTINGS_ROW_CLASS,
+	SettingsTable,
+	TableCell,
+	TableRow,
+} from "@/views/settings/SettingsTable";
 import {
 	collectPlanStripeProductIds,
 	findPlanMapping,
@@ -9,6 +15,12 @@ import {
 	rollupPlanStatus,
 } from "./catalogMappingsForm";
 import { MappingStatusBadge } from "./MappingStatusBadge";
+
+const COLUMNS = [
+	{ label: "Plan", width: "50%" },
+	{ label: "Stripe product", width: "28%" },
+	{ label: "Status", width: "17%" },
+];
 
 export const CatalogMappingsTable = ({
 	mappings,
@@ -30,53 +42,32 @@ export const CatalogMappingsTable = ({
 	});
 
 	return (
-		<div>
-			<div className="flex items-center gap-3 border-border/60 border-b py-2 text-tertiary-foreground text-xs">
-				<span className="flex-1">Plan</span>
-				<span className="w-[200px] shrink-0">Stripe product</span>
-				<span className="w-[104px] shrink-0 text-right">Status</span>
-				<span className="w-4 shrink-0" />
-			</div>
-			<div className="-mx-2 max-h-[480px] divide-y divide-border/60 overflow-y-auto overflow-x-clip px-2">
-				{groups.map((group) => {
-					const planMapping = findPlanMapping({
-						mappings,
-						planId: group.base.id,
-					});
-					const baseStripeProductId =
-						planMapping?.mapping.stripe_product_id ?? null;
-					const rollup = rollupPlanStatus({
-						planMapping,
-						stripeConnected: mappings.stripe_connected,
-						stripeProductsById,
-						isResolving,
-					});
+		<SettingsTable columns={COLUMNS}>
+			{groups.map((group) => {
+				const planMapping = findPlanMapping({
+					mappings,
+					planId: group.base.id,
+				});
+				const baseStripeProductId =
+					planMapping?.mapping.stripe_product_id ?? null;
+				const rollup = rollupPlanStatus({
+					planMapping,
+					stripeConnected: mappings.stripe_connected,
+					stripeProductsById,
+					isResolving,
+				});
 
-					return (
-						// biome-ignore lint/a11y/useSemanticElements: row can't be a <button> — the copy chip inside is a button and buttons can't nest
-						<div
-							className="group -mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 text-left hover:bg-accent"
-							key={group.base.id}
-							onClick={() => onSelectPlan(group.base.id)}
-							onKeyDown={(event) => {
-								if (event.key === "Enter" || event.key === " ") {
-									event.preventDefault();
-									onSelectPlan(group.base.id);
-								}
-							}}
-							role="button"
-							tabIndex={0}
-						>
-							<span className="flex min-w-0 flex-1 items-center gap-2">
-								<span className="truncate font-medium text-sm">
+				return (
+					<TableRow
+						className={`${SETTINGS_ROW_CLASS} group cursor-pointer`}
+						key={group.base.id}
+						onClick={() => onSelectPlan(group.base.id)}
+					>
+						<TableCell className="max-w-0 pr-6 pl-4">
+							<span className="flex min-w-0 items-center gap-2">
+								<span className="truncate font-medium text-foreground text-sm">
 									{group.base.name}
 								</span>
-								<CopyButton
-									className="shrink-0 text-tertiary-foreground"
-									innerClassName="max-w-30 text-tiny-id truncate"
-									size="mini"
-									text={group.base.id}
-								/>
 								{group.variants.length > 0 && (
 									<span className="shrink-0 text-tertiary-foreground text-xs">
 										{group.variants.length} variant
@@ -84,27 +75,36 @@ export const CatalogMappingsTable = ({
 									</span>
 								)}
 							</span>
-							<span className="w-[200px] shrink-0 truncate text-tertiary-foreground text-xs">
-								{baseStripeProductId
-									? (stripeProductsById.get(baseStripeProductId)?.name ??
-										baseStripeProductId)
-									: "No Stripe product"}
-							</span>
-							<span className="flex w-[104px] shrink-0 justify-end">
-								{rollup.pending ? (
-									<Skeleton className="h-5 w-16" />
-								) : (
-									<MappingStatusBadge status={rollup.status} />
-								)}
-							</span>
-							<CaretRightIcon
-								className="size-4 shrink-0 text-tertiary-foreground group-hover:text-foreground"
-								size={14}
-							/>
-						</div>
-					);
-				})}
-			</div>
-		</div>
+						</TableCell>
+						<TableCell className="max-w-0 truncate pr-6 text-sm">
+							{baseStripeProductId
+								? (stripeProductsById.get(baseStripeProductId)?.name ??
+									baseStripeProductId)
+								: "No Stripe product"}
+						</TableCell>
+						<TableCell>
+							{rollup.pending ? (
+								<Skeleton className="h-5 w-16" />
+							) : (
+								<MappingStatusBadge status={rollup.status} />
+							)}
+						</TableCell>
+						<TableCell>
+							{/* Keyboard access for the row; its click bubbles to the row handler. */}
+							<button
+								aria-label={`Open ${group.base.name} mapping`}
+								className="flex rounded-sm"
+								type="button"
+							>
+								<CaretRightIcon
+									className="size-4 text-tertiary-foreground group-hover:text-foreground"
+									size={14}
+								/>
+							</button>
+						</TableCell>
+					</TableRow>
+				);
+			})}
+		</SettingsTable>
 	);
 };

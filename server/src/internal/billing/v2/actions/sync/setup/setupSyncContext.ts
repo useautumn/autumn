@@ -135,6 +135,7 @@ const buildProductContext = async ({
 		fullProduct,
 		customPrices,
 		plan,
+		defaultCurrency: ctx.org.default_currency || "usd",
 	});
 
 	return {
@@ -371,6 +372,7 @@ export const setupSyncContext = async ({
 		queuedCustomerProducts,
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],
+		expireUnlistedPlans: params.expire_unlisted_plans === true,
 		carryOverUsage: params.carry_over_usage ?? true,
 		carryOverUsages: await resolveCarryOverUsagesParam({
 			ctx,

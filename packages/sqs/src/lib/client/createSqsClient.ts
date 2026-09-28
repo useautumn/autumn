@@ -19,6 +19,9 @@ export const createSqsClient = ({
 	};
 };
 
+/** An emulator never checks signatures, but the SDK refuses to send unsigned when no provider resolves keys. */
+const EMULATOR_CREDENTIALS = { accessKeyId: "", secretAccessKey: "" };
+
 /** The client config a queue URL implies: its region on AWS, or the emulator it points at. */
 export const sqsClientConfigForQueue = ({
 	queueUrl,
@@ -28,8 +31,11 @@ export const sqsClientConfigForQueue = ({
 	queueUrl: string;
 	defaultRegion: string;
 	credentials?: SqsClientConfig["credentials"];
-}): SqsClientConfig => ({
-	region: queueUrlToRegion({ queueUrl }) ?? defaultRegion,
-	endpoint: queueUrlToLocalEndpoint({ queueUrl }),
-	credentials,
-});
+}): SqsClientConfig => {
+	const endpoint = queueUrlToLocalEndpoint({ queueUrl });
+	return {
+		region: queueUrlToRegion({ queueUrl }) ?? defaultRegion,
+		endpoint,
+		credentials: credentials ?? (endpoint ? EMULATOR_CREDENTIALS : undefined),
+	};
+};

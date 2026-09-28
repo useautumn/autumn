@@ -34,6 +34,7 @@ import {
 	CusProductStatus,
 	FreeTrialDuration,
 } from "@autumn/shared";
+import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -63,7 +64,7 @@ test(
 			cardRequired: false,
 		});
 
-		const { autumnV1 } = await initScenario({
+		const { autumnV1, ctx: scenarioCtx } = await initScenario({
 			customerId,
 			setup: [s.customer({}), s.products({ list: [free, trialProduct] })],
 			actions: [
@@ -74,10 +75,11 @@ test(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		expectProductAttached({
-			customer,
-			product: trialProduct,
-			status: CusProductStatus.Expired,
+		await expectCustomerProductStatuses({
+			ctx: scenarioCtx,
+			customerId,
+			productId: trialProduct.id,
+			expected: { [CusProductStatus.Expired]: 1 },
 		});
 
 		expectProductAttached({
@@ -142,10 +144,11 @@ test(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		expectProductAttached({
-			customer,
-			product: enterprise,
-			status: CusProductStatus.Expired,
+		await expectCustomerProductStatuses({
+			ctx: scenarioCtx,
+			customerId,
+			productId: enterprise.id,
+			expected: { [CusProductStatus.Expired]: 1 },
 		});
 
 		expectProductAttached({

@@ -74,12 +74,13 @@ export const executeStripeInvoiceAction = async ({
 		// 	fullProducts: billingContext.fullProducts,
 		// 	fullCustomer: billingContext.fullCustomer,
 		// });
-		autumnInvoice = await invoiceActions.upsertFromStripe({
+		const invoiceResult = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: invoice,
 			fullCustomer: billingContext.fullCustomer,
 			fullProducts: billingContext.fullProducts,
 		});
+		autumnInvoice = invoiceResult.invoice;
 
 		return {
 			stripeInvoice: invoice,
@@ -92,12 +93,13 @@ export const executeStripeInvoiceAction = async ({
 
 	if (invoice) {
 		logger.debug("[executeStripeInvoiceAction] Upserting invoice from billing");
-		autumnInvoice = await invoiceActions.upsertFromStripe({
+		const invoiceResult = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: invoice,
 			fullCustomer: billingContext.fullCustomer,
 			fullProducts: billingContext.fullProducts,
 		});
+		autumnInvoice = invoiceResult.invoice;
 		// autumnInvoice = await upsertInvoiceFromBilling({
 		// 	ctx,
 		// 	stripeInvoice: invoice,

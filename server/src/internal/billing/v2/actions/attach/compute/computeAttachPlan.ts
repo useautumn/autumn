@@ -103,6 +103,7 @@ export const computeAttachPlan = ({
 	} = cusProductToExistingBalanceCarryOvers({
 		attachBillingContext,
 		params,
+		newCustomerProduct,
 	});
 
 	// Auto-preserve one-off prepaid balances on immediate transitions so the

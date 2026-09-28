@@ -58,6 +58,16 @@ export const readStringArray =
 				)
 			: undefined;
 
+/** `[{reward_id}]` wire lists, as `remove_discounts` carries them. */
+export const readRewardIds =
+	(key: string) =>
+	(request: RequestBody): string[] | undefined =>
+		Array.isArray(request[key])
+			? (request[key] as { reward_id?: unknown }[]).flatMap((entry) =>
+					typeof entry?.reward_id === "string" ? [entry.reward_id] : [],
+				)
+			: undefined;
+
 /** Array entries stamped with the `_id` the form's list components key by. */
 export const readStampedArray =
 	<T extends object>(key: string, idPrefix: string) =>

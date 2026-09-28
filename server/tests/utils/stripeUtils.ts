@@ -15,30 +15,33 @@ import {
 } from "date-fns";
 import type { Stripe } from "stripe";
 import { timeout } from "./genUtils.js";
+import { advanceStripeTestClock } from "./stripeUtils/testClock/advanceStripeTestClock";
+import { waitForStripeClockReady } from "./stripeUtils/testClock/waitForStripeClockReady";
+import { createTestWait } from "./testWait/createTestWait";
 
-const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
-const CLOCK_READY_TIMEOUT_MS = 180_000;
-const CLOCK_READY_POLL_MS = 3000;
+const STRIPE_TEST_CLOCK_TIMING = 20_000;
 
-// Stripe rejects mutations while a clock is advancing; poll until status is "ready".
 export const waitForClockReady = async ({
 	stripeCli,
 	testClockId,
+	signal,
+	timeoutMs = 180_000,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
+	signal?: AbortSignal;
+	timeoutMs?: number;
 }) => {
-	const deadline = Date.now() + CLOCK_READY_TIMEOUT_MS;
-	while (Date.now() < deadline) {
-		const clock = await stripeCli.testHelpers.testClocks.retrieve(testClockId);
-		if (clock.status === "ready") {
-			return;
-		}
-		await timeout(CLOCK_READY_POLL_MS);
+	const wait = createTestWait({
+		timeoutMs,
+		signal,
+		description: `Wait for Stripe test clock ${testClockId}`,
+	});
+	try {
+		await waitForStripeClockReady({ stripeCli, testClockId, wait });
+	} finally {
+		wait.close();
 	}
-	throw new Error(
-		`Test clock ${testClockId} not ready after ${CLOCK_READY_TIMEOUT_MS}ms`,
-	);
 };
 
 export const deleteAllStripeProducts = async ({
@@ -167,6 +170,9 @@ export const advanceTestClock = async ({
 	numberOfMonths,
 	advanceTo,
 	waitForSeconds,
+	minimumWaitForSeconds,
+	signal,
+	timeoutMs,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
@@ -177,6 +183,9 @@ export const advanceTestClock = async ({
 	numberOfMonths?: number;
 	advanceTo?: number;
 	waitForSeconds?: number;
+	minimumWaitForSeconds?: number;
+	signal?: AbortSignal;
+	timeoutMs?: number;
 }) => {
 	if (!startingFrom) {
 		startingFrom = new Date();
@@ -211,15 +220,17 @@ export const advanceTestClock = async ({
 	}
 
 	console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
-	await waitForClockReady({ stripeCli, testClockId });
-	await stripeCli.testHelpers.testClocks.advance(testClockId, {
-		frozen_time: Math.floor(advanceTo / 1000),
+	const defaultSettleSeconds =
+		minimumWaitForSeconds === undefined ? STRIPE_TEST_CLOCK_TIMING / 1000 : 0;
+	await advanceStripeTestClock({
+		stripeCli,
+		testClockId,
+		targetSeconds: Math.floor(advanceTo / 1000),
+		minimumWaitMs: (minimumWaitForSeconds ?? 0) * 1000,
+		settleMs: (waitForSeconds ?? defaultSettleSeconds) * 1000,
+		signal,
+		timeoutMs,
 	});
-	await waitForClockReady({ stripeCli, testClockId });
-
-	await timeout(
-		waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING,
-	);
 
 	return advanceTo;
 };
@@ -237,96 +248,92 @@ export const advanceClockForInvoice = async ({
 	testClockId,
 	waitForMeterUpdate = false,
 	numberOfDays,
-	startingFrom,
+	startingFrom = new Date(),
+	signal,
+	timeoutMs = 300_000,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
 	waitForMeterUpdate?: boolean;
 	numberOfDays?: number;
 	startingFrom?: Date;
+	signal?: AbortSignal;
+	timeoutMs?: number;
 }) => {
-	let advanceTo: number;
-
-	if (!startingFrom) {
-		startingFrom = new Date();
-	}
-
-	if (numberOfDays) {
-		advanceTo = addDays(startingFrom, numberOfDays).getTime();
-	} else {
-		advanceTo = addMonths(startingFrom, 1).getTime();
-	}
-	// advanceTo = subHours(addMonths(Date.now(), 1), 1).getTime();
-
-	await waitForClockReady({ stripeCli, testClockId });
-	await stripeCli.testHelpers.testClocks.advance(testClockId, {
-		frozen_time: Math.ceil(advanceTo / 1000),
+	const invoiceTime = numberOfDays
+		? addDays(startingFrom, numberOfDays).getTime()
+		: addMonths(startingFrom, 1).getTime();
+	const paymentTime = addDays(new Date(invoiceTime), 4).getTime();
+	const stages = [
+		{
+			targetSeconds: Math.ceil(invoiceTime / 1000),
+			settleMs: waitForMeterUpdate ? 200_000 : STRIPE_TEST_CLOCK_TIMING,
+		},
+		{
+			targetSeconds: Math.floor(paymentTime / 1000),
+			settleMs: STRIPE_TEST_CLOCK_TIMING,
+		},
+	];
+	const wait = createTestWait({
+		timeoutMs,
+		signal,
+		description: `Advance invoice clock ${testClockId}`,
 	});
-	await waitForClockReady({ stripeCli, testClockId });
-
-	console.log(
-		"   - advanceClockForInvoice (1): ",
-		format(advanceTo, "dd MMM yyyy HH:mm:ss"),
-	);
-
-	if (waitForMeterUpdate) {
-		const timeoutSeconds = 200;
-		for (let i = 0; i < timeoutSeconds; i += 10) {
-			console.log(`   - ${i} / ${timeoutSeconds}`);
-			await timeout(10000);
+	try {
+		for (const stage of stages) {
+			await advanceStripeTestClock({
+				stripeCli,
+				testClockId,
+				...stage,
+				signal: wait.signal,
+				timeoutMs: wait.remainingMs(),
+			});
 		}
-	} else {
-		await timeout(STRIPE_TEST_CLOCK_TIMING);
+		return paymentTime;
+	} finally {
+		wait.close();
 	}
-
-	// const advanceTo2 = addHours(new Date(advanceTo), 30).getTime();
-	const advanceTo2 = addDays(new Date(advanceTo), 4).getTime();
-	await waitForClockReady({ stripeCli, testClockId });
-	await stripeCli.testHelpers.testClocks.advance(testClockId, {
-		frozen_time: Math.floor(advanceTo2 / 1000),
-	});
-	await waitForClockReady({ stripeCli, testClockId });
-
-	console.log(
-		"   - advanceClockForInvoice (2): ",
-		format(advanceTo2, "dd MMM yyyy HH:mm:ss"),
-	);
-
-	await timeout(STRIPE_TEST_CLOCK_TIMING);
-	return advanceTo2;
 };
 
 export const advanceMonths = async ({
 	stripeCli,
 	testClockId,
 	numberOfMonths,
+	signal,
+	timeoutMs = 300_000,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
 	numberOfMonths: number;
+	signal?: AbortSignal;
+	timeoutMs?: number;
 }) => {
+	const wait = createTestWait({
+		timeoutMs,
+		signal,
+		description: `Advance ${numberOfMonths} months on clock ${testClockId}`,
+	});
 	let advanceTo = new Date();
-	for (let i = 0; i < numberOfMonths; i += 1) {
-		advanceTo = addMonths(advanceTo, 1);
-		console.log(
-			"   - Advancing to: ",
-			format(advanceTo, "dd MMM yyyy HH:mm:ss"),
-		);
-
-		try {
-			await waitForClockReady({ stripeCli, testClockId });
-			await stripeCli.testHelpers.testClocks.advance(testClockId, {
-				frozen_time: Math.floor(advanceTo.getTime() / 1000),
+	try {
+		for (let i = 0; i < numberOfMonths; i += 1) {
+			advanceTo = addMonths(advanceTo, 1);
+			console.log(
+				"   - Advancing to: ",
+				format(advanceTo, "dd MMM yyyy HH:mm:ss"),
+			);
+			const startedAt = performance.now();
+			await advanceStripeTestClock({
+				stripeCli,
+				testClockId,
+				targetSeconds: Math.floor(advanceTo.getTime() / 1000),
+				signal: wait.signal,
+				timeoutMs: wait.remainingMs(),
 			});
-		} catch (error: any) {
-			console.log("   - Advance clock: ", error.message);
-			await timeout(10000);
-			await stripeCli.testHelpers.testClocks.advance(testClockId, {
-				frozen_time: Math.floor(advanceTo.getTime() / 1000),
-			});
+			const remainingSettleMs = 15_000 - (performance.now() - startedAt);
+			if (remainingSettleMs > 0) await wait.sleep(remainingSettleMs);
 		}
-
-		await timeout(15000);
+	} finally {
+		wait.close();
 	}
 };
 

@@ -4,6 +4,7 @@ import type {
 	AutumnBillingPlan,
 } from "@autumn/shared";
 import { CusProductStatus, isFutureStartDate } from "@autumn/shared";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 
 /**
  * Computes the updates to apply to the current customer product during an attach transition.
@@ -30,7 +31,7 @@ export const computeAttachTransitionUpdates = ({
 
 	if (!currentCustomerProduct) return undefined;
 
-	if (trialContext?.onEnd === "revert" && planTiming === "immediate") {
+	if (isRevertTrialContext({ trialContext }) && planTiming === "immediate") {
 		return {
 			customerProduct: currentCustomerProduct,
 			updates: {

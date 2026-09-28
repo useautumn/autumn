@@ -334,6 +334,8 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Platform](docs/sdks/platform/README.md)
 
+* [get_stripe_connection](docs/sdks/platform/README.md#get_stripe_connection) - Read a managed organization's Stripe OAuth connection, account ID, and authorization time in the selected environment.
+* [disconnect_stripe](docs/sdks/platform/README.md#disconnect_stripe) - Revoke Autumn's Stripe OAuth access for a managed organization in the selected environment. Does not delete the Stripe account or cancel subscriptions.
 * [link_revenue_cat](docs/sdks/platform/README.md#link_revenue_cat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
 * [sync_revenue_cat](docs/sdks/platform/README.md#sync_revenue_cat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 * [get_revenue_cat_keys](docs/sdks/platform/README.md#get_revenue_cat_keys) - Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.

@@ -77,12 +77,14 @@ export const handleCancelOnPastDue = async ({
 			`subscription.updated (past_due), cancelling subscription: ${stripeSubscription.id}`,
 		);
 
-		await stripeCli.subscriptions.cancel(stripeSubscription.id);
+		subscriptionUpdatedContext.results.stripeSubscription =
+			await stripeCli.subscriptions.cancel(stripeSubscription.id);
 
 		if (latestInvoice.status === "open") {
 			await stripeCli.invoices.voidInvoice(latestInvoice.id);
 		}
 	} catch (error: unknown) {
+		subscriptionUpdatedContext.results.errors.push(error);
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		logger.error(
 			`subscription.updated: error cancelling / voiding: ${errorMessage}`,

@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { expectLockExpiryCorrect } from "@tests/integration/balances/utils/lockUtils/expectLockExpiryCorrect.js";
@@ -14,7 +14,7 @@ import { addSeconds } from "date-fns";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey";
 import { timeout } from "@/utils/genUtils";
-import { getCustomerEvents } from "../utils/events/getCustomerEvents";
+import { expectCustomerEventsCorrect } from "../utils/events/expectCustomerEventsCorrect";
 
 export const buildExpireLockPayload = ({
 	ctx,
@@ -142,16 +142,10 @@ test.concurrent(
 			remaining: 15,
 		});
 
-		await timeout(3000);
-
-		// Grab events
-		const events = await getCustomerEvents({
+		await expectCustomerEventsCorrect({
 			customerId,
+			events: [{ value: -8 }, { value: 8 }],
 		});
-
-		expect(events).toHaveLength(2);
-		expect(events[0].value).toBe(-8);
-		expect(events[1].value).toBe(8);
 	},
 );
 

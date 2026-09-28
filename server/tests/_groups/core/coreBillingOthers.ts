@@ -7,7 +7,7 @@ export const coreBillingOthers: TestGroup = {
 	paths: [
 		"billing/multi-attach/basic",
 		"billing/multi-attach/checkout/multi-attach-checkout-basic.test.ts",
-		"billing/multi-attach/checkout/multi-attach-customize.test.ts",
+		"billing/multi-attach/customize/multi-attach-customize.test.ts",
 		"billing/multi-attach/multi-attach-errors.test.ts",
 		"billing/multi-attach/multi-attach-trial.test.ts",
 		"billing/create-schedule/phases/create-schedule-phases.test.ts",

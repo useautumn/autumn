@@ -4650,6 +4650,62 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       The customer's default payment method.
     </DynamicResponseField>
 
+    <DynamicResponseField name="billing_details" type="object | null">
+      Billing details read live from the linked Stripe customer. Null when no Stripe customer is linked.
+      <Expandable title="properties">
+        <DynamicResponseField name="address" type="object | null">
+          <Expandable title="properties">
+            <DynamicResponseField name="line1" type="string | null" />
+
+            <DynamicResponseField name="line2" type="string | null" />
+
+            <DynamicResponseField name="city" type="string | null" />
+
+            <DynamicResponseField name="state" type="string | null" />
+
+            <DynamicResponseField name="postal_code" type="string | null" />
+
+            <DynamicResponseField name="country" type="string | null">
+              Two-letter country code (ISO 3166-1 alpha-2).
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="tax_ids" type="object[]">
+          <Expandable title="properties">
+            <DynamicResponseField name="type" type="string">
+              Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+            </DynamicResponseField>
+
+            <DynamicResponseField name="value" type="string">
+              The tax ID, e.g. DE123456789.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="tax_exempt" type="'none' | 'exempt' | 'reverse'" />
+
+        <DynamicResponseField name="invoice_settings" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="custom_fields" type="object[]">
+              <Expandable title="properties">
+                <DynamicResponseField name="name" type="string">
+                  Label, e.g. PO Number.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="value" type="string" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 

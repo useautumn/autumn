@@ -7,9 +7,9 @@ import {
 	type VercelMarketplaceMode,
 	type VercelProcessorConfig,
 } from "@autumn/shared";
-import { createSvixApp } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
+import { ensureVercelSvixAppId } from "@server/internal/webhooks/actions/apps/ensureVercelSvixAppId.js";
 import { OrgService } from "../OrgService.js";
 
 export const getVercelConfigDisplay = ({
@@ -175,76 +175,19 @@ export const handleUpsertVercelConfig = createRoute({
 export const handleGetVercelSink = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
-		const { db, org, env } = c.get("ctx");
-		const vercelConfig = org.processor_configs?.vercel;
-		const svixCli = createSvixCli();
-		let liveApp: { id: string } | undefined;
-		let sandboxApp: { id: string } | undefined;
-
-		if (!vercelConfig) {
+		const ctx = c.get("ctx");
+		if (!ctx.org.processor_configs?.vercel) {
 			throw new InternalError({
-				message: `Vercel config not found for org ${org.id}`,
+				message: `Vercel config not found for org ${ctx.org.id}`,
 			});
 		}
-
-		if (!vercelConfig?.svix?.live_id || !vercelConfig?.svix?.sandbox_id) {
-			liveApp = await createSvixApp({
-				name: `${org.slug}_live_vercel_sink`,
-				orgId: org.id,
-				env: AppEnv.Live,
-			});
-		}
-
-		if (!vercelConfig?.svix?.sandbox_id) {
-			sandboxApp = await createSvixApp({
-				name: `${org.slug}_sandbox_vercel_sink`,
-				orgId: org.id,
-				env: AppEnv.Sandbox,
-			});
-		}
-
-		const updates = {
-			...(liveApp
-				? { svix: { ...(vercelConfig?.svix || {}), live_id: liveApp.id } }
-				: {}),
-			...(sandboxApp
-				? { svix: { ...(vercelConfig?.svix || {}), sandbox_id: sandboxApp.id } }
-				: {}),
-		};
-
-		await OrgService.update({
-			db,
-			orgId: org.id,
-			updates: {
-				processor_configs: {
-					...org.processor_configs,
-					vercel: { ...(vercelConfig || {}), ...updates },
-				},
-			},
-		});
-
-		let url: string | undefined;
-
-		if (env === AppEnv.Live) {
-			url = (
-				await svixCli.authentication.appPortalAccess(
-					liveApp?.id || vercelConfig?.svix?.live_id || "",
-					{
-						featureFlags: ["vercel"],
-					},
-				)
-			).url;
-		} else {
-			url = (
-				await svixCli.authentication.appPortalAccess(
-					sandboxApp?.id || vercelConfig?.svix?.sandbox_id || "",
-					{
-						featureFlags: ["vercel"],
-					},
-				)
-			).url;
-		}
-
+		// Only this env's app, merged into the stored config: never replaces the
+		// other env's app or one webhooks.* already created.
+		const appId = await ensureVercelSvixAppId({ ctx });
+		const { url } = await createSvixCli().authentication.appPortalAccess(
+			appId,
+			{ featureFlags: ["vercel"] },
+		);
 		return c.json({ url });
 	},
 });

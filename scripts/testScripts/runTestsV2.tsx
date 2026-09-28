@@ -342,9 +342,7 @@ async function runTestFile({
 
 	onUpdate(result);
 
-	// Accumulated stdout — fed chunk-by-chunk by the executor, re-parsed on each
-	// chunk so the TUI shows live progress. The parser is a pure
-	// string -> result function; it does not care where the bytes came from.
+	// Executors stream both outputs; returned stderr is diagnostic-only.
 	let output = "";
 	const fileLabel = basename(file);
 
@@ -352,7 +350,7 @@ async function runTestFile({
 		output += text;
 
 		if (verbose) {
-			process.stderr.write(`[${fileLabel}:stdout] ${text}`);
+			process.stderr.write(`[${fileLabel}] ${text}`);
 		}
 
 		// Update with parsed tests
@@ -376,16 +374,9 @@ async function runTestFile({
 			signal,
 		});
 
-		if (verbose && stderr) {
-			process.stderr.write(`[${fileLabel}:stderr] ${stderr}`);
-		}
-
-		const stderrOutput = stderr;
-		const combinedOutput = stderrOutput ? `${output}${stderrOutput}` : output;
-
 		const duration = performance.now() - startTime;
 
-		const tests = parseTestOutput(combinedOutput, file);
+		const tests = parseTestOutput(output, file);
 		const hasFailures = tests.some((t) => t.status === "failed");
 		const hasNoTests = tests.length === 0;
 		const processExitedNonZero = exitCode !== 0;
@@ -405,9 +396,7 @@ async function runTestFile({
 			attempt,
 			passedOnRetry: false,
 			crashError:
-				hasNoTests && stderrOutput.trim()
-					? stderrOutput.trim().slice(0, 1000)
-					: undefined,
+				hasNoTests && stderr.trim() ? stderr.trim().slice(0, 1000) : undefined,
 		};
 
 		onUpdate(finalResult);
@@ -1252,9 +1241,7 @@ async function runHeadlessWithExecutor(
 	);
 
 	if (failedFirstPass.length > 0) {
-		console.log(
-			`\nRetrying ${failedFirstPass.length} failed file(s)…\n`,
-		);
+		console.log(`\nRetrying ${failedFirstPass.length} failed file(s)…\n`);
 		const retryLimit = pLimit(maxParallel);
 		await Promise.all(
 			failedFirstPass.map(async (result) => {

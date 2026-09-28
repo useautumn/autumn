@@ -112,4 +112,14 @@ describe("subjectRowsEnvelope", () => {
 			}).success,
 		).toBe(false);
 	});
+
+	test("a legacy unlimited entity balance stored as null loads as 0", () => {
+		const loaded =
+			subjectRowsEnvelopeSchema.shape.customer_entitlements.element.parse({
+				...envelope.customer_entitlements[0],
+				unlimited: true,
+				entities: { ent_a: { id: "ent_a", balance: null, adjustment: 0 } },
+			});
+		expect(loaded.entities?.ent_a?.balance).toBe(0);
+	});
 });

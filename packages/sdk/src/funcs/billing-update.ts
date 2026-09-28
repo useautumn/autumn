@@ -61,6 +61,7 @@ import { Result } from "../types/fp.js";
  * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
  * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
  * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+ * @param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
  * @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
  * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
  * @param billingCycleAnchor - Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds. (optional)

@@ -4,6 +4,8 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type ModelMarkups,
+	type ModelsDevCost,
+	type ModelsDevModel,
 	type ModelsDevProvider,
 } from "@autumn/shared";
 
@@ -67,6 +69,80 @@ const pricingData: Record<string, ModelsDevProvider> = {
 				id: "no-cache-model",
 				name: "No Cache",
 				cost: { input: 10, output: 20 },
+			},
+		},
+	},
+	"nano-gpt": {
+		id: "nano-gpt",
+		name: "NanoGPT",
+		models: {
+			// Decision-type model from models.dev's ?type=all feed: sub-cent input, free output.
+			"typesafe/jev-latest": {
+				id: "typesafe/jev-latest",
+				name: "Jev",
+				cost: { input: 0.042, output: 0, cache_read: 0.021 },
+			},
+		},
+	},
+	"alibaba-cn": {
+		id: "alibaba-cn",
+		name: "Alibaba (China)",
+		models: {
+			"qwen-tiered": {
+				id: "qwen-tiered",
+				name: "Qwen Tiered",
+				cost: {
+					input: 1,
+					output: 2,
+					reasoning: 2,
+					input_audio: 3,
+					tiers: [
+						{
+							input: 4,
+							output: 8,
+							reasoning: 8,
+							input_audio: 12,
+							tier: { type: "context", size: 128_000 },
+						},
+					],
+				},
+			},
+		},
+	},
+	unsupported: {
+		id: "unsupported",
+		name: "Unsupported pricing shapes",
+		models: {
+			"no-cost": { id: "no-cost", name: "No Cost" } as ModelsDevModel,
+			"unknown-cache-rate": {
+				id: "unknown-cache-rate",
+				name: "Unknown Cache Rate",
+				cost: { input: 1, output: 2, cache_write_1h: 5 } as ModelsDevCost,
+			},
+			"object-cache-rate": {
+				id: "object-cache-rate",
+				name: "Object Cache Rate",
+				cost: {
+					input: 1,
+					output: 2,
+					cache_read: { "5m": 0.1, "1h": 0.2 },
+				} as unknown as ModelsDevCost,
+			},
+			"time-of-day-tier": {
+				id: "time-of-day-tier",
+				name: "Time Of Day Tier",
+				cost: {
+					input: 1,
+					output: 2,
+					tiers: [
+						{ input: 0.5, output: 1, tier: { type: "off_peak", size: 0 } },
+					],
+				},
+			},
+			"per-image": {
+				id: "per-image",
+				name: "Per Image",
+				cost: { input: 1, output: 2, per_image: 0.04 } as ModelsDevCost,
 			},
 		},
 	},
@@ -273,4 +349,87 @@ describe("computeCost — token pools", () => {
 		expect(below.tierApplied).toBe(false);
 		expect(below.rates.input).toBe(1);
 	});
+});
+
+describe("full models.dev feed — decision models", () => {
+	test("prices a sub-cent input rate with a free output rate exactly", async () => {
+		const breakdown = await getModelCreditCostBreakdown({
+			modelName: "nano-gpt/typesafe/jev-latest",
+			creditSystem: makeFeature(),
+			input: 1_000_000_000,
+			output: 5000,
+			cacheRead: 1_000_000,
+		});
+		expect(breakdown.rates.output).toBe(0);
+		expect(breakdown.baseCost).toBe(42 + 0.021);
+	});
+
+	test("the lab-level id without a hosting provider is still not found", async () => {
+		expect(
+			getModelCreditCost({
+				modelName: "typesafe/jev-latest",
+				creditSystem: makeFeature(),
+				input: 1,
+				output: 1,
+			}),
+		).rejects.toThrow(/not found/);
+	});
+});
+
+describe("context tiers — reasoning and audio input rates", () => {
+	test("bills reasoning and audio input at the tier rate above the threshold", async () => {
+		const breakdown = await getModelCreditCostBreakdown({
+			modelName: "alibaba-cn/qwen-tiered",
+			creditSystem: makeFeature(),
+			input: 200_000,
+			output: 1000,
+			reasoning: 1000,
+			audioInput: 1000,
+		});
+		expect(breakdown.tierApplied).toBe(true);
+		expect(breakdown.rates.reasoning).toBe(8);
+		expect(breakdown.rates.audioInput).toBe(12);
+		expect(breakdown.baseCost).toBeCloseTo(
+			(4 * 200_000 + 8 * 1000 + 8 * 1000 + 12 * 1000) / PER_MILLION,
+			10,
+		);
+	});
+
+	test("keeps base reasoning and audio input rates below the threshold", async () => {
+		const breakdown = await getModelCreditCostBreakdown({
+			modelName: "alibaba-cn/qwen-tiered",
+			creditSystem: makeFeature(),
+			input: 1000,
+			output: 0,
+			reasoning: 1000,
+			audioInput: 1000,
+		});
+		expect(breakdown.tierApplied).toBe(false);
+		expect(breakdown.rates.reasoning).toBe(2);
+		expect(breakdown.rates.audioInput).toBe(3);
+	});
+});
+
+describe("unsupported pricing shapes are rejected, never guessed", () => {
+	for (const modelKey of [
+		"no-cost",
+		"unknown-cache-rate",
+		"object-cache-rate",
+		"time-of-day-tier",
+		"per-image",
+	]) {
+		test(`rejects ${modelKey} with a 400`, async () => {
+			expect(
+				getModelCreditCost({
+					modelName: `unsupported/${modelKey}`,
+					creditSystem: makeFeature(),
+					input: 1000,
+					output: 1000,
+				}),
+			).rejects.toMatchObject({
+				statusCode: 400,
+				message: expect.stringContaining("pricing structure"),
+			});
+		});
+	}
 });

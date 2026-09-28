@@ -1,4 +1,8 @@
-import type { ChatAuthMode, UpsertVercelProcessorConfig } from "@autumn/shared";
+import type {
+	ChatAuthMode,
+	ChatReplyMode,
+	UpsertVercelProcessorConfig,
+} from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import type {
 	CreateSsoConnectionParams,
@@ -49,6 +53,17 @@ export class OrgService {
 		},
 	) {
 		return await axiosInstance.post(`/organization/chat/install`, data);
+	}
+
+	static async updateChatSettings(
+		axiosInstance: AxiosInstance,
+		provider: "slack",
+		data: { reply_mode: ChatReplyMode },
+	) {
+		return await axiosInstance.patch(
+			`/organization/chat/${provider}/settings`,
+			data,
+		);
 	}
 
 	static async disconnectChat(axiosInstance: AxiosInstance, provider: "slack") {

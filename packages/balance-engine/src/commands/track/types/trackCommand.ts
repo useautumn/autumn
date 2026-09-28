@@ -37,6 +37,20 @@ export const trackIdempotencySchema = z
 
 export type TrackIdempotency = z.infer<typeof trackIdempotencySchema>;
 
+/** The one usage event a track request records, named the way the legacy event row is. */
+export const trackUsageEventSchema = z
+	.object({
+		/** The request's feature id, or its event name when it named an event instead. */
+		name: nonEmptyStringSchema,
+		/** The caller's own key, unprefixed, as the event row stores it; null when it sent none. */
+		idempotencyKey: nonEmptyStringSchema.nullable(),
+		/** A caller-named event id (`x-event-id`); null lets the event be named by its place in the log. */
+		id: nonEmptyStringSchema.nullable(),
+	})
+	.strict();
+
+export type TrackUsageEvent = z.infer<typeof trackUsageEventSchema>;
+
 export const trackCommandSchema = mutatingCommandSchema
 	.extend({
 		type: z.literal("track"),
@@ -51,6 +65,8 @@ export const trackCommandSchema = mutatingCommandSchema
 		/** A check that deducts honours the org's overdue block, as a plain check does; a plain track does not. */
 		enforceOverdueBlock: z.boolean().optional(),
 		idempotency: trackIdempotencySchema.optional(),
+		/** Null when this command records none: the caller skipped it, or a fan-out already records it on its first feature. */
+		usageEvent: trackUsageEventSchema.nullable(),
 	})
 	.strict();
 

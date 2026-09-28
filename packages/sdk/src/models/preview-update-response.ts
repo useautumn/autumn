@@ -643,6 +643,16 @@ export type PreviewUpdateAttachDiscount = {
   promotionCode?: string | undefined;
 };
 
+/**
+ * A discount to remove from the subscription. Discounts that are no longer applied are ignored.
+ */
+export type PreviewUpdateRemoveDiscount = {
+  /**
+   * The ID of the reward (or Stripe coupon) to remove.
+   */
+  rewardId: string;
+};
+
 export type PreviewUpdateCustomLineItem = {
   /**
    * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
@@ -774,6 +784,10 @@ export type PreviewUpdateParams = {
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
   discounts?: Array<PreviewUpdateAttachDiscount> | undefined;
+  /**
+   * Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
+   */
+  removeDiscounts?: Array<PreviewUpdateRemoveDiscount> | undefined;
   /**
    * Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
    */
@@ -1117,6 +1131,10 @@ export type PreviewUpdateInvoiceCredits = {
    * Stripe customer credit balance available, expressed as a positive number in major currency units.
    */
   balance: number;
+  /**
+   * How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.
+   */
+  applied?: number | undefined;
   /**
    * Three-letter currency code.
    */
@@ -2535,6 +2553,36 @@ export function previewUpdateAttachDiscountToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateRemoveDiscount$Outbound = {
+  reward_id: string;
+};
+
+/** @internal */
+export const PreviewUpdateRemoveDiscount$outboundSchema: z.ZodMiniType<
+  PreviewUpdateRemoveDiscount$Outbound,
+  PreviewUpdateRemoveDiscount
+> = z.pipe(
+  z.object({
+    rewardId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+    });
+  }),
+);
+
+export function previewUpdateRemoveDiscountToJSON(
+  previewUpdateRemoveDiscount: PreviewUpdateRemoveDiscount,
+): string {
+  return JSON.stringify(
+    PreviewUpdateRemoveDiscount$outboundSchema.parse(
+      previewUpdateRemoveDiscount,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateCustomLineItem$Outbound = {
   amount: number;
   description: string;
@@ -2691,6 +2739,7 @@ export type PreviewUpdateParams$Outbound = {
   redirect_mode: string;
   subscription_id?: string | undefined;
   discounts?: Array<PreviewUpdateAttachDiscount$Outbound> | undefined;
+  remove_discounts?: Array<PreviewUpdateRemoveDiscount$Outbound> | undefined;
   custom_line_items?: Array<PreviewUpdateCustomLineItem$Outbound> | undefined;
   cancel_action?: string | undefined;
   billing_cycle_anchor?: string | number | undefined;
@@ -2733,6 +2782,9 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     discounts: z.optional(
       z.array(z.lazy(() => PreviewUpdateAttachDiscount$outboundSchema)),
     ),
+    removeDiscounts: z.optional(
+      z.array(z.lazy(() => PreviewUpdateRemoveDiscount$outboundSchema)),
+    ),
     customLineItems: z.optional(
       z.array(z.lazy(() => PreviewUpdateCustomLineItem$outboundSchema)),
     ),
@@ -2764,6 +2816,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
+      removeDiscounts: "remove_discounts",
       customLineItems: "custom_line_items",
       cancelAction: "cancel_action",
       billingCycleAnchor: "billing_cycle_anchor",
@@ -3222,6 +3275,7 @@ export const PreviewUpdateInvoiceCredits$inboundSchema: z.ZodMiniType<
   unknown
 > = z.object({
   balance: types.number(),
+  applied: types.optional(types.number()),
   currency: types.string(),
 });
 

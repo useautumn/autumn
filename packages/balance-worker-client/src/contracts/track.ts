@@ -1,5 +1,6 @@
 import type {
 	Catalog,
+	MutationEffect,
 	RowChange,
 	SubjectState,
 	TrackCommand,
@@ -19,4 +20,6 @@ export type TrackReply = {
 	state: SubjectState;
 	/** The catalog rows the command was decided against, so the server builds its response without loading them. */
 	catalog: Catalog;
+	/** What the decision caused elsewhere; empty on a retry, which never re-decides. Absent from older workers. */
+	effects?: MutationEffect[];
 };

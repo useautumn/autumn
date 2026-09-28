@@ -1,10 +1,7 @@
 import {
 	AffectedResource,
 	AttachScenario,
-	CusProductAlreadyExistsError,
 	CusProductNotFoundError,
-	customerProductToEffectivePrices,
-	isOneOffProduct,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
@@ -15,13 +12,9 @@ import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRe
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { CusService } from "../CusService.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
+import { findTransferCustomerProduct } from "./handleTransferProduct/findTransferCustomerProduct.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
-import {
-	findExistingTransferTargetProduct,
-	findTransferCustomerProduct,
-	getTransferCustomerProducts,
-	transferRelatedCustomerProducts,
-} from "./handleTransferProduct/transferRelatedCustomerProducts.js";
 
 const TransferProductSchema = z.object({
 	from_entity_id: z.string().nullish(),
@@ -30,6 +23,7 @@ const TransferProductSchema = z.object({
 	customer_product_id: z.string().nullish(),
 });
 
+// Moves exactly one customer product; the target scope is never checked for conflicts.
 // Supports:
 // - Transfer from entity to entity
 // - Transfer from entity to org
@@ -121,31 +115,6 @@ export const handleTransferProductV2 = createRoute({
 			});
 		}
 
-		const toCusProduct = findExistingTransferTargetProduct({
-			fullCustomer: customer,
-			toEntity,
-			product,
-			isOneOff: isOneOffProduct({
-				prices: customerProductToEffectivePrices({
-					customerProduct: cusProduct,
-				}),
-			}),
-			transferringCustomerProducts: getTransferCustomerProducts({
-				fullCustomer: customer,
-				fromEntity,
-				product,
-				customerProductId: customer_product_id,
-			}),
-		});
-
-		if (toCusProduct) {
-			throw new CusProductAlreadyExistsError({
-				productId: toCusProduct.product?.id,
-				entityId: toEntity?.id ?? toEntity?.internal_id,
-				customerId: from_entity_id && !to_entity_id ? customer_id : undefined,
-			});
-		}
-
 		// 1. If cus product has quantity > 1, only transfer 1...
 		if (cusProduct.quantity > 1) {
 			await handleDecreaseAndTransfer({
@@ -155,13 +124,14 @@ export const handleTransferProductV2 = createRoute({
 				toEntity: toEntity,
 			});
 		} else {
-			const updates = await transferRelatedCustomerProducts({
+			const updates = {
+				entity_id: toEntity?.id ?? null,
+				internal_entity_id: toEntity?.internal_id ?? null,
+			};
+			await CusProductService.update({
 				ctx,
-				fullCustomer: customer,
-				fromEntity,
-				toEntity,
-				product,
-				customerProductId: customer_product_id,
+				cusProductId: cusProduct.id,
+				updates,
 			});
 
 			await addProductsUpdatedWebhookTask({

@@ -18,6 +18,8 @@ type CreateInvoiceParams = {
 	daysUntilDue?: number;
 	/** Unix seconds; takes precedence over daysUntilDue for send_invoice. */
 	dueDate?: number;
+	/** Unix seconds; replaces the "Date of issue" printed on the invoice. */
+	effectiveAt?: number;
 	paymentMethodTypes?: InvoicePaymentMethod[];
 	description?: string;
 	footer?: string;
@@ -34,6 +36,7 @@ export const createStripeInvoice = async ({
 	collectionMethod = "charge_automatically",
 	daysUntilDue,
 	dueDate,
+	effectiveAt,
 	paymentMethodTypes,
 	description,
 	footer,
@@ -59,6 +62,7 @@ export const createStripeInvoice = async ({
 					? { due_date: dueDate }
 					: { days_until_due: daysUntilDue ?? 30 }
 				: {}),
+			...(effectiveAt ? { effective_at: effectiveAt } : {}),
 			...(paymentMethodTypes?.length
 				? { payment_settings: { payment_method_types: paymentMethodTypes } }
 				: {}),

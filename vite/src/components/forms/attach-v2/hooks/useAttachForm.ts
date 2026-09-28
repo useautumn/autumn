@@ -44,6 +44,7 @@ export function useAttachForm({
 			billingCycleAnchorMode: "now",
 			billingCycleAnchorDate: null,
 			discounts: [],
+			removedRewardIds: [],
 			grantFree: false,
 			currency: null,
 			noBillingChanges: false,

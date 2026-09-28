@@ -3,6 +3,7 @@ import { LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
@@ -17,7 +18,6 @@ import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
@@ -92,7 +92,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
 			stripeCli,
 			testClockId,
 			advanceTo: addDays(new Date(), 20).getTime(),
-			waitForSeconds: 15,
+			minimumWaitForSeconds: 15,
 		});
 
 		const wordBillingSets = 2;

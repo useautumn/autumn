@@ -1,4 +1,8 @@
-import { findUsageWindowByLimit, type UsageWindowLimit } from "@autumn/shared";
+import {
+	findUsageWindowByLimit,
+	isSameUsageWindow,
+	type UsageWindowLimit,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { WorkerUsageWindow } from "../../../models/subject/rows/workerUsageWindow.js";
@@ -24,7 +28,7 @@ const liveWindowOf = ({
 	if (
 		!existing ||
 		existing.window_end_at <= context.selection.now ||
-		existing.window_start_at !== limit.window_start_at
+		!isSameUsageWindow({ usageWindow: existing, window: limit })
 	)
 		return null;
 	return existing;

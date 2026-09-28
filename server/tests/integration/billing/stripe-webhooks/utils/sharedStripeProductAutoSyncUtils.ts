@@ -7,24 +7,23 @@ import {
 	BillingMethod,
 	CusProductStatus,
 	cusProductToPrices,
-	findPriceByFeatureId,
-	type FullProduct,
 	type FullCusProduct,
+	type FullProduct,
+	findPriceByFeatureId,
 	isFixedPrice,
 	type Price,
+	ProcessorType,
 	ProductItemFeatureType,
 	type ProductV2,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
-	UsageModel,
-	ProcessorType,
 } from "@autumn/shared";
+import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
 	expectCustomerProducts,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import {
 	createVariantPlan,
 	deleteVariantTestPlans,
@@ -40,10 +39,11 @@ import testCtx, {
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
 import { ProductService } from "@/internal/products/ProductService";
+import { initLegacyStripePrices } from "./initLegacyStripePrices";
 
 export type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
@@ -82,13 +82,21 @@ export const getFullProduct = ({
 		env: ctx.env,
 	});
 
-export const requireBasePrice = ({ fullProduct }: { fullProduct: FullProduct }) => {
+export const requireBasePrice = ({
+	fullProduct,
+}: {
+	fullProduct: FullProduct;
+}) => {
 	const price = fullProduct.prices.find(isFixedPrice);
 	if (!price) throw new Error(`Product ${fullProduct.id} has no base price`);
 	return price;
 };
 
-export const requireUsagePrice = ({ fullProduct }: { fullProduct: FullProduct }) => {
+export const requireUsagePrice = ({
+	fullProduct,
+}: {
+	fullProduct: FullProduct;
+}) => {
 	const price = findPriceByFeatureId({
 		prices: fullProduct.prices,
 		featureId: TestFeature.Messages,
@@ -226,11 +234,14 @@ export const trackCustomerUsage = async ({
 	featureId: TestFeature;
 	value: number;
 }) => {
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: featureId,
-		value,
-	}, { skipCache: true });
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			feature_id: featureId,
+			value,
+		},
+		{ skipCache: true },
+	);
 
 	const deadline = Date.now() + 35_000;
 	let lastError: unknown;
@@ -394,7 +405,9 @@ export const expectActiveLinkedCustomerProducts = async ({
 		env: ctx.env,
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
-	expect(linked.map((cp) => cp.product_id).sort()).toEqual([...productIds].sort());
+	expect(linked.map((cp) => cp.product_id).sort()).toEqual(
+		[...productIds].sort(),
+	);
 	return linked;
 };
 
@@ -580,16 +593,6 @@ export const stampStripeSlotsViaV1Attach = async ({
 	}
 };
 
-const prepaidAttachOptions = (product: ProductV2) => {
-	const options = product.items
-		.filter((item) => item.usage_model === UsageModel.Prepaid && item.feature_id)
-		.map((item) => ({
-			feature_id: item.feature_id as string,
-			quantity: 1,
-		}));
-	return options.length > 0 ? options : undefined;
-};
-
 export const setupSharedStripeFamilies = async ({
 	customerId,
 	families,
@@ -623,21 +626,17 @@ export const setupSharedStripeFamilies = async ({
 			s.deleteCustomer({ customerId: v1CustomerId }),
 			s.deleteCustomer({ customerId: `${customerId}-v1-stamp` }),
 			s.customer({ paymentMethod: "success" }),
-			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [...bases, ...additionalProducts], prefix: "" }),
 		],
-		actions: [
-			...families.map((family) =>
-				s.attach({ productId: family.baseId, customerId: v1CustomerId }),
+		actions: [],
+	});
+	await initLegacyStripePrices({
+		ctx,
+		products: await Promise.all(
+			[...bases, ...additionalProducts].map((product) =>
+				getFullProduct({ ctx, productId: product.id }),
 			),
-			...additionalProducts.map((product) =>
-				s.attach({
-					productId: product.id,
-					customerId: v1CustomerId,
-					options: prepaidAttachOptions(product),
-				}),
-			),
-		],
+		),
 	});
 
 	const rpc = new AutumnRpcCli({

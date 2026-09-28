@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { getModelsDevPricing } from "@/internal/features/utils/getModelPricing.js";
+import { isBillableModelCost } from "@/internal/features/utils/isBillableModelCost.js";
 
 export type TokenInput = {
 	input: number;
@@ -43,6 +44,14 @@ const modelNotFoundError = (modelName: string) =>
 		data: { modelName },
 	});
 
+const unsupportedPricingError = (modelName: string) =>
+	new RecaseError({
+		message: `Model ${modelName} uses a models.dev pricing structure Autumn can't bill yet. Use a custom/ model with input_cost and output_cost in model_markups instead.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+		data: { modelName },
+	});
+
 /**
  * Resolve a `model_id` to a models.dev entry by exact `<provider>/<model>` lookup. The id is
  * split on the first `/` (so openrouter slugs like `openrouter/openai/gpt-4o` keep their inner
@@ -64,15 +73,17 @@ const resolveModel = ({
 	if (!(provider && model)) {
 		throw modelNotFoundError(modelName);
 	}
+	if (!isBillableModelCost(model.cost)) {
+		throw unsupportedPricingError(modelName);
+	}
 
 	return { custom: false, providerKey: provider, modelKey, model };
 };
 
 /**
  * Resolve the effective per-token rates for a request, overlaying the active long-context
- * tier (or `context_over_200k`) onto the base rates. Tier-level `cache_read`/`cache_write`
- * override the base cache rates when present, so cache tokens above the threshold are billed
- * at the tier rate too — not just input/output.
+ * tier (or `context_over_200k`) onto the base rates. Tier-level cache, audio-input, and
+ * reasoning rates override the base rates when present, not just input/output.
  */
 const getEffectiveCost = (
 	cost: ModelsDevCost,
@@ -96,6 +107,8 @@ const getEffectiveCost = (
 					output: chosen.output,
 					cache_read: chosen.cache_read ?? cost.cache_read,
 					cache_write: chosen.cache_write ?? cost.cache_write,
+					input_audio: chosen.input_audio ?? cost.input_audio,
+					reasoning: chosen.reasoning ?? cost.reasoning,
 				},
 				tierApplied: true,
 			};

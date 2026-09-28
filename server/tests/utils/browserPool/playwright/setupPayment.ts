@@ -71,7 +71,9 @@ export const setupPayment = async ({
 	// The checkbox input is hidden behind custom styling, so use JS click directly.
 	try {
 		const wasChecked = await page.evaluate(() => {
-			const cb = document.getElementById("enableStripePass") as HTMLInputElement | null;
+			const cb = document.getElementById(
+				"enableStripePass",
+			) as HTMLInputElement | null;
 			if (cb && cb.checked) {
 				cb.click();
 				return true;
@@ -108,13 +110,31 @@ export const setupPayment = async ({
 		// Postal code field not present
 	}
 
-	const submitBtn = page.locator(".SubmitButton-TextContainer").first();
-	if ((await submitBtn.count()) > 0) {
-		await submitBtn.evaluate((el) => (el as HTMLElement).click());
-		console.log("[setupPayment] Submit clicked");
+	// Stripe can confirm setup while an unreachable success URL leaves the page processing.
+	const confirmationResponse = page.waitForResponse(
+		(response) =>
+			response.request().method() === "POST" &&
+			response.url().startsWith("https://api.stripe.com/v1/payment_pages/") &&
+			new URL(response.url()).pathname.endsWith("/confirm"),
+		{ timeout: 30_000 },
+	);
+	const [response] = await Promise.all([
+		confirmationResponse,
+		page.locator("button[type=submit]").click({ timeout: 30_000 }),
+	]);
+	const confirmation: {
+		status?: string;
+		setup_intent?: { status?: string };
+		error?: { code?: string };
+	} = await response.json();
+	if (
+		!response.ok() ||
+		confirmation.status !== "complete" ||
+		confirmation.setup_intent?.status !== "succeeded"
+	) {
+		throw new Error(
+			`Stripe setup not confirmed: HTTP ${response.status()}, session=${confirmation.status}, setup=${confirmation.setup_intent?.status}, error=${confirmation.error?.code}`,
+		);
 	}
-
-	// Wait for form submission to complete
-	await page.waitForTimeout(7000);
 	console.log("[setupPayment] Setup payment complete");
 };

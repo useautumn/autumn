@@ -31,12 +31,14 @@ apps/balance-worker/.data/
 !packages/kafka/tests
 !apps/balance-worker/tests
 !packages/balance-engine/tests
+!packages/balance-webhooks/tests
 !packages/postgres/tests
 !packages/ax-evals/tests
 !packages/mcp/tests
 !packages/gateway/tests
 !apps/leaf/tests
 !packages/render/tests
+!packages/ducklake/tests
 !vite/tests
 .secrets
 

@@ -1346,6 +1346,20 @@ class PreviewAttachLicenseQuantity(BaseModel):
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
+class PreviewAttachRemoveDiscountTypedDict(TypedDict):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
+class PreviewAttachRemoveDiscount(BaseModel):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
 class PreviewAttachParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -1411,6 +1425,8 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
     remove_plan_ids: NotRequired[List[str]]
     r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
+    remove_discounts: NotRequired[List[PreviewAttachRemoveDiscountTypedDict]]
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
 
 
 class PreviewAttachParams(BaseModel):
@@ -1507,6 +1523,9 @@ class PreviewAttachParams(BaseModel):
     remove_plan_ids: Optional[List[str]] = None
     r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
 
+    remove_discounts: Optional[List[PreviewAttachRemoveDiscount]] = None
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1540,6 +1559,7 @@ class PreviewAttachParams(BaseModel):
                 "tax_rate_id",
                 "currency",
                 "remove_plan_ids",
+                "remove_discounts",
             ]
         )
         nullable_fields = set(["free_trial"])
@@ -2128,6 +2148,8 @@ class PreviewAttachInvoiceCreditsTypedDict(TypedDict):
     r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
     currency: str
     r"""Three-letter currency code."""
+    applied: NotRequired[float]
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
 
 
 class PreviewAttachInvoiceCredits(BaseModel):
@@ -2138,6 +2160,25 @@ class PreviewAttachInvoiceCredits(BaseModel):
 
     currency: str
     r"""Three-letter currency code."""
+
+    applied: Optional[float] = None
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["applied"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 class PreviewAttachResponseTypedDict(TypedDict):

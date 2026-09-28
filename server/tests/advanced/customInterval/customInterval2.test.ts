@@ -4,6 +4,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
@@ -11,7 +12,6 @@ import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
@@ -82,7 +82,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 				addMonths(new Date(), 2),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 30,
+			minimumWaitForSeconds: 30,
 		});
 
 		const invoiceAmount = await getExpectedInvoiceTotal({

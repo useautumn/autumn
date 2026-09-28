@@ -629,6 +629,237 @@ class UpdateCustomerConfigRequestBody(BaseModel):
         return m
 
 
+class UpdateCustomerBillingDetailsAddressTypedDict(TypedDict):
+    line1: NotRequired[Nullable[str]]
+    line2: NotRequired[Nullable[str]]
+    city: NotRequired[Nullable[str]]
+    state: NotRequired[Nullable[str]]
+    postal_code: NotRequired[Nullable[str]]
+    country: NotRequired[Nullable[str]]
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+
+class UpdateCustomerBillingDetailsAddress(BaseModel):
+    line1: OptionalNullable[str] = UNSET
+
+    line2: OptionalNullable[str] = UNSET
+
+    city: OptionalNullable[str] = UNSET
+
+    state: OptionalNullable[str] = UNSET
+
+    postal_code: OptionalNullable[str] = UNSET
+
+    country: OptionalNullable[str] = UNSET
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        nullable_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class UpdateCustomerAddBillingDetailsTaxIDTypedDict(TypedDict):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class UpdateCustomerAddBillingDetailsTaxID(BaseModel):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class UpdateCustomerRemoveBillingDetailsTaxIDTypedDict(TypedDict):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class UpdateCustomerRemoveBillingDetailsTaxID(BaseModel):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class UpdateCustomerTaxIdsTypedDict(TypedDict):
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+
+    add: NotRequired[List[UpdateCustomerAddBillingDetailsTaxIDTypedDict]]
+    r"""Tax IDs to add. IDs the customer already has are ignored."""
+    remove: NotRequired[List[UpdateCustomerRemoveBillingDetailsTaxIDTypedDict]]
+    r"""Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored."""
+
+
+class UpdateCustomerTaxIds(BaseModel):
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+
+    add: Optional[List[UpdateCustomerAddBillingDetailsTaxID]] = None
+    r"""Tax IDs to add. IDs the customer already has are ignored."""
+
+    remove: Optional[List[UpdateCustomerRemoveBillingDetailsTaxID]] = None
+    r"""Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["add", "remove"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdateCustomerTaxExempt = Literal[
+    "none",
+    "exempt",
+    "reverse",
+]
+r"""Tax exemption status. Use reverse for reverse-charge customers."""
+
+
+class UpdateCustomerBillingDetailsCustomFieldTypedDict(TypedDict):
+    name: str
+    r"""Label, e.g. PO Number."""
+    value: str
+
+
+class UpdateCustomerBillingDetailsCustomField(BaseModel):
+    name: str
+    r"""Label, e.g. PO Number."""
+
+    value: str
+
+
+class UpdateCustomerInvoiceSettingsTypedDict(TypedDict):
+    custom_fields: NotRequired[
+        Nullable[List[UpdateCustomerBillingDetailsCustomFieldTypedDict]]
+    ]
+    r"""Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it."""
+
+
+class UpdateCustomerInvoiceSettings(BaseModel):
+    custom_fields: OptionalNullable[List[UpdateCustomerBillingDetailsCustomField]] = (
+        UNSET
+    )
+    r"""Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["custom_fields"])
+        nullable_fields = set(["custom_fields"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class BillingDetailsParamsTypedDict(TypedDict):
+    r"""Billing details stored on the linked Stripe customer. Requires a Stripe customer."""
+
+    address: NotRequired[Nullable[UpdateCustomerBillingDetailsAddressTypedDict]]
+    r"""Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it."""
+    tax_ids: NotRequired[UpdateCustomerTaxIdsTypedDict]
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+    tax_exempt: NotRequired[UpdateCustomerTaxExempt]
+    r"""Tax exemption status. Use reverse for reverse-charge customers."""
+    invoice_settings: NotRequired[UpdateCustomerInvoiceSettingsTypedDict]
+
+
+class BillingDetailsParams(BaseModel):
+    r"""Billing details stored on the linked Stripe customer. Requires a Stripe customer."""
+
+    address: OptionalNullable[UpdateCustomerBillingDetailsAddress] = UNSET
+    r"""Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it."""
+
+    tax_ids: Optional[UpdateCustomerTaxIds] = None
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+
+    tax_exempt: Optional[UpdateCustomerTaxExempt] = None
+    r"""Tax exemption status. Use reverse for reverse-charge customers."""
+
+    invoice_settings: Optional[UpdateCustomerInvoiceSettings] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["address", "tax_ids", "tax_exempt", "invoice_settings"])
+        nullable_fields = set(["address"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class UpdateCustomerParamsTypedDict(TypedDict):
     customer_id: str
     r"""ID of the customer to update"""
@@ -649,6 +880,8 @@ class UpdateCustomerParamsTypedDict(TypedDict):
     billing_controls: NotRequired[UpdateCustomerBillingControlsRequestBodyTypedDict]
     config: NotRequired[UpdateCustomerConfigRequestBodyTypedDict]
     r"""Miscellaneous configurations for the customer."""
+    billing_details: NotRequired[BillingDetailsParamsTypedDict]
+    r"""Billing details stored on the linked Stripe customer. Requires a Stripe customer."""
     new_customer_id: NotRequired[str]
     r"""Your unique identifier for the customer"""
 
@@ -683,6 +916,9 @@ class UpdateCustomerParams(BaseModel):
     config: Optional[UpdateCustomerConfigRequestBody] = None
     r"""Miscellaneous configurations for the customer."""
 
+    billing_details: Optional[BillingDetailsParams] = None
+    r"""Billing details stored on the linked Stripe customer. Requires a Stripe customer."""
+
     new_customer_id: Optional[str] = None
     r"""Your unique identifier for the customer"""
 
@@ -699,6 +935,7 @@ class UpdateCustomerParams(BaseModel):
                 "currency",
                 "billing_controls",
                 "config",
+                "billing_details",
                 "new_customer_id",
             ]
         )

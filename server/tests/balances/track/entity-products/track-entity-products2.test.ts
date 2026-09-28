@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type LimitedItem } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -102,12 +103,16 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 		}
 	});
 
-	test("customer should have initial balance of 350 messages (50 customer + 100 monthly per entity)", async () => {
-		const customer = await autumnV1.customers.get(customerId);
+	// The balance worker doesn't aggregate entity data onto the customer.
+	test.skipIf(isBalanceWorkerRoute())(
+		"customer should have initial balance of 350 messages (50 customer + 100 monthly per entity)",
+		async () => {
+			const customer = await autumnV1.customers.get(customerId);
 
-		// 3 entities × (50 lifetime + 100 monthly) = 450 total
-		expect(customer.features[TestFeature.Messages].balance).toBe(350);
-	});
+			// 3 entities × (50 lifetime + 100 monthly) = 450 total
+			expect(customer.features[TestFeature.Messages].balance).toBe(350);
+		},
+	);
 
 	test("each entity should have initial balance of 150 messages (50 customer + 100 monthly)", async () => {
 		for (const entity of entities) {
@@ -126,11 +131,13 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 				value: 20,
 			});
 
-			// // Customer should have 20 less
-			const customer = await autumnV1.customers.get(customerId);
-			expect(customer.features[TestFeature.Messages].balance).toBe(
-				350 - (i + 1) * 20,
-			);
+			// The balance worker doesn't aggregate entity data onto the customer.
+			if (!isBalanceWorkerRoute()) {
+				const customer = await autumnV1.customers.get(customerId);
+				expect(customer.features[TestFeature.Messages].balance).toBe(
+					350 - (i + 1) * 20,
+				);
+			}
 
 			// Check all entity balances
 			for (let j = 0; j < entities.length; j++) {

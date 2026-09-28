@@ -2,6 +2,7 @@ import type { Customer, FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { StripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
+import type { StripeWebhookHandlerResult } from "./types/stripeWebhookHandlerResult";
 
 /** Never-throwing Redis hooks installed by the idempotency middleware. */
 export type StripeWebhookIdempotencyHooks = {
@@ -15,6 +16,7 @@ export interface StripeWebhookContext extends AutumnContext {
 	fullCustomer?: FullCustomer;
 	webhookAckMode?: StripeWebhookAckMode;
 	webhookIdempotency?: StripeWebhookIdempotencyHooks;
+	handlerResult?: StripeWebhookHandlerResult;
 }
 
 export type StripeWebhookHonoEnv = {

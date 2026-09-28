@@ -7,12 +7,14 @@ import {
 } from "@autumn/shared";
 import { getFeatures } from "@tests/setup/v2Features.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { logger } from "../../../src/external/logtail/logtailUtils.js";
 import { generateId } from "../../../src/utils/genUtils.js";
+import { registerTwStripeAccount } from "../stripeUtils/registerTwStripeAccount";
 import type { TestContext } from "./createTestContext.js";
 
 export type TaxRegistrationCountry =
@@ -75,6 +77,9 @@ export const createSubOrgTestContext = async ({
 	}
 
 	// 3. Stripe client scoped to the sub-org's connect account.
+	const stripeAccountId = orgToAccountId({ org: subOrg, env: AppEnv.Sandbox });
+	if (stripeAccountId)
+		await registerTwStripeAccount({ accountId: stripeAccountId });
 	const subStripeCli = createStripeCli({ org: subOrg, env: AppEnv.Sandbox });
 
 	// 4. Stripe Tax jurisdictions. Stripe requires a head office address

@@ -4,4 +4,6 @@ export * from "./apiCusUpcomingInvoice";
 export * from "./apiInvoicePreview/apiInvoicePreviewV0";
 export * from "./apiTrialsUsed/apiTrialsUsedV1";
 export * from "./apiTrialsUsed/prevVersions/apiTrialsUsedV0";
+export * from "./billingDetails/billingDetails";
+export * from "./billingDetails/billingDetailsLabels";
 export * from "./customerExpand/customerExpand";

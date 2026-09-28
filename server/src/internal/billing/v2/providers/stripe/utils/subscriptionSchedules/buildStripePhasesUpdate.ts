@@ -79,41 +79,91 @@ const customerProductsToPhaseItems = ({
 	return [...storedItems, ...inlineItems];
 };
 
+const MONTHLY_PLACEHOLDER_RECURRING = {
+	interval: "month",
+	interval_count: 1,
+} as const;
+
+const findRecurringStripeInterval = (customerProduct: FullCusProduct) => {
+	const recurringPrice = customerProduct.customer_prices.find(
+		({ price }) => !isOneOffPrice(price) && price.config.interval,
+	)?.price;
+	if (!recurringPrice) return undefined;
+
+	const recurring = billingIntervalToStripe({
+		interval: recurringPrice.config.interval,
+		intervalCount: recurringPrice.config.interval_count,
+	});
+	if (!recurring.interval) return undefined;
+	return {
+		interval: recurring.interval,
+		interval_count: recurring.interval_count,
+	};
+};
+
+const buildPlaceholderItem = ({
+	ctx,
+	stripeProductId,
+	recurring,
+}: {
+	ctx: AutumnContext;
+	stripeProductId: string;
+	recurring: {
+		interval: Stripe.PriceCreateParams.Recurring.Interval;
+		interval_count?: number;
+	};
+}): Stripe.SubscriptionScheduleUpdateParams.Phase.Item => ({
+	price_data: {
+		product: stripeProductId,
+		unit_amount: 0,
+		currency: ctx.org.default_currency || "usd",
+		recurring: {
+			interval: recurring.interval,
+			interval_count: recurring.interval_count,
+		},
+	},
+	quantity: 1,
+	metadata: { autumn_free_phase_placeholder: "true" },
+});
+
+/**
+ * $0 item that keeps a Stripe schedule alive through a free phase. It sits on the
+ * free phase's own product and copies a paid interval to keep the billing anchor.
+ */
 export const buildFreeRecurringPlaceholderItem = ({
 	ctx,
 	customerProducts,
+	phaseCustomerProducts = [],
 }: {
 	ctx: AutumnContext;
 	customerProducts: FullCusProduct[];
+	phaseCustomerProducts?: FullCusProduct[];
 }): Stripe.SubscriptionScheduleUpdateParams.Phase.Item | undefined => {
+	const recurring =
+		customerProducts.map(findRecurringStripeInterval).find(Boolean) ??
+		MONTHLY_PLACEHOLDER_RECURRING;
+
+	const phaseStripeProductId = phaseCustomerProducts.find(
+		(customerProduct) => customerProduct.product.processor?.id,
+	)?.product.processor?.id;
+	if (phaseStripeProductId) {
+		return buildPlaceholderItem({
+			ctx,
+			stripeProductId: phaseStripeProductId,
+			recurring,
+		});
+	}
+
 	for (const customerProduct of customerProducts) {
 		const stripeProductId = customerProduct.product.processor?.id;
-		if (!stripeProductId) continue;
+		const productRecurring = findRecurringStripeInterval(customerProduct);
+		if (!stripeProductId || !productRecurring) continue;
 
-		const recurringPrice = customerProduct.customer_prices.find(
-			({ price }) => !isOneOffPrice(price) && price.config.interval,
-		)?.price;
-		if (!recurringPrice) continue;
-
-		const recurring = billingIntervalToStripe({
-			interval: recurringPrice.config.interval,
-			intervalCount: recurringPrice.config.interval_count,
+		return buildPlaceholderItem({
+			ctx,
+			stripeProductId,
+			recurring: productRecurring,
 		});
-		if (!recurring.interval) continue;
-
-		return {
-			price_data: {
-				product: stripeProductId,
-				unit_amount: 0,
-				currency: ctx.org.default_currency || "usd",
-				recurring: {
-					interval: recurring.interval,
-					interval_count: recurring.interval_count,
-				},
-			},
-			quantity: 1,
-			metadata: { autumn_free_phase_placeholder: "true" },
-		};
 	}
 };
 
@@ -195,11 +245,14 @@ export const buildStripePhasesUpdate = ({
 	billingContext,
 	customerProducts,
 	trialEndsAt,
+	useFreePhaseStripeProduct = false,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	trialEndsAt?: number;
+	/** Only create_schedule places free-phase placeholders on the free plan's own product. */
+	useFreePhaseStripeProduct?: boolean;
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
 	// Normalize all timestamps to second-level precision for Stripe compatibility.
 	// This is done once at the entry point so downstream functions work with clean data.
@@ -294,6 +347,9 @@ export const buildStripePhasesUpdate = ({
 			const placeholderItem = buildFreeRecurringPlaceholderItem({
 				ctx,
 				customerProducts: normalizedCustomerProducts,
+				phaseCustomerProducts: useFreePhaseStripeProduct
+					? activeCustomerProducts
+					: [],
 			});
 			if (placeholderItem) phaseItems.push(placeholderItem);
 		}

@@ -309,10 +309,12 @@ export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";
 // Utils
 export * from "./utils/usageWindowUtils/buildUsageWindowKey";
+export * from "./utils/usageWindowUtils/classifyUsageWindow/isSameUsageWindow";
 export * from "./utils/usageWindowUtils/classifyUsageWindow/usageWindowMatchesLimit";
 export * from "./utils/usageWindowUtils/convertUsageWindow/getUsageWindowDimension";
 export * from "./utils/usageWindowUtils/convertUsageWindow/usageLimitToUsageWindowLimit";
 export * from "./utils/usageWindowUtils/convertUsageWindow/usageWindowLimitToWebhookBlock";
+export * from "./utils/usageWindowUtils/convertUsageWindow/usageWindowsToRolls";
 export * from "./utils/usageWindowUtils/findUsageWindow/findUsageWindowByLimit";
 export * from "./utils/usageWindowUtils/findUsageWindow/findUsageWindowLimitByWindow";
 export * from "./utils/usageWindowUtils/findUsageWindowAnchor/findUsageWindowAnchor";

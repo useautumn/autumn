@@ -52,15 +52,17 @@ export const handleIgnorePastDue = async ({
 			});
 		}
 
-		await stripeCli.subscriptions.update(stripeSubscription.id, {
-			collection_method: "send_invoice",
-			days_until_due: SEND_INVOICE_DAYS_UNTIL_DUE,
-		});
+		subscriptionUpdatedContext.results.stripeSubscription =
+			await stripeCli.subscriptions.update(stripeSubscription.id, {
+				collection_method: "send_invoice",
+				days_until_due: SEND_INVOICE_DAYS_UNTIL_DUE,
+			});
 
 		logger.info(
 			`[sub.updated] ignore_past_due: kept subscription ${stripeSubscription.id} alive (send_invoice, invoice auto_advance off)`,
 		);
 	} catch (error: unknown) {
+		subscriptionUpdatedContext.results.errors.push(error);
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		logger.error(
 			`[sub.updated] ignore_past_due: failed to preserve subscription ${stripeSubscription.id}: ${errorMessage}`,

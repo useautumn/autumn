@@ -35,6 +35,7 @@ export const handleStripeInvoiceMetadata = async ({
 			stripeSubscription,
 			stripeInvoice,
 		});
+		invoicePaidContext.results.appliedBillingPlan = true;
 
 		return;
 	}
@@ -52,9 +53,10 @@ export const handleStripeInvoiceMetadata = async ({
 			stripeInvoice,
 			metadata,
 		});
+		invoicePaidContext.results.appliedBillingPlan = true;
 		await deleteCachedFullCustomer({
 			ctx,
-			customerId: data.customer.id ?? "",
+			customerId: data.customer.id ?? data.customer.internal_id,
 			source: "handleStripeInvoiceMetadata",
 		});
 		return;
@@ -64,9 +66,10 @@ export const handleStripeInvoiceMetadata = async ({
 		ctx,
 		metadata,
 	});
+	invoicePaidContext.results.appliedBillingPlan = true;
 	await deleteCachedFullCustomer({
 		ctx,
-		customerId: data.customer.id ?? "",
+		customerId: data.customer.id ?? data.customer.internal_id,
 		source: "handleStripeInvoiceMetadata",
 	});
 };

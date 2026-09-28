@@ -9,7 +9,6 @@ export const AGENT_PROVISIONAL_API_KEY_SCOPES = [
 	Scopes.Features.Write,
 	Scopes.Plans.Read,
 	Scopes.Plans.Write,
-	// Rewards ride on the catalog read, so pull and push need them.
 	Scopes.Rewards.Read,
 	Scopes.Rewards.Write,
 	Scopes.Customers.Read,
@@ -18,6 +17,9 @@ export const AGENT_PROVISIONAL_API_KEY_SCOPES = [
 	Scopes.Balances.Write,
 	Scopes.Billing.Read,
 	Scopes.Billing.Write,
+	Scopes.Analytics.Read,
+	Scopes.Migrations.Read,
+	Scopes.Migrations.Write,
 ] as const;
 
 export const AGENT_USER_API_KEY_SCOPES = [

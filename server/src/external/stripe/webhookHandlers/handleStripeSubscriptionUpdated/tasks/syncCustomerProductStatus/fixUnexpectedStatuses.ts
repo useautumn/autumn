@@ -35,7 +35,7 @@ export const fixUnexpectedStatuses = async ({
 
 	// This is a blind bulk write, so there is no current value to diff against:
 	// mirror trial_end / collection_method only when Stripe changed them.
-	await CusProductService.updateByStripeSubId({
+	return await CusProductService.updateByStripeSubId({
 		db,
 		stripeSubId: stripeSubscription.id,
 		notInStatuses: ALL_STATUSES,

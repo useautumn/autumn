@@ -30,6 +30,7 @@ const makeUpdatedContext = ({
 		fullCustomer: makeFullCustomer(),
 		customerProducts: [],
 		nowMs: NOW,
+		results: { errors: [] },
 		stripeSubscription:
 			{} as StripeSubscriptionUpdatedContext["stripeSubscription"],
 		previousAttributes: {},

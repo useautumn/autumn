@@ -84,6 +84,8 @@ export const CreateInvoiceFormSchema = z.object({
 	taxRateId: z.string().nullable(),
 	periodStart: z.number().nullable(),
 	periodEnd: z.number().nullable(),
+	issueDay: z.number().nullable(),
+	dueDay: z.number().nullable(),
 });
 
 export type CreateInvoiceForm = z.infer<typeof CreateInvoiceFormSchema>;

@@ -1393,6 +1393,58 @@ export type GetCustomerReferral = {
   createdAt: number;
 };
 
+export type GetCustomerBillingDetailsAddress = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postalCode?: string | null | undefined;
+  /**
+   * Two-letter country code (ISO 3166-1 alpha-2).
+   */
+  country?: string | null | undefined;
+};
+
+export type GetCustomerBillingDetailsTaxId = {
+  /**
+   * Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+   */
+  type: string;
+  /**
+   * The tax ID, e.g. DE123456789.
+   */
+  value: string;
+};
+
+export const GetCustomerTaxExempt = {
+  None: "none",
+  Exempt: "exempt",
+  Reverse: "reverse",
+} as const;
+export type GetCustomerTaxExempt = OpenEnum<typeof GetCustomerTaxExempt>;
+
+export type GetCustomerBillingDetailsCustomField = {
+  /**
+   * Label, e.g. PO Number.
+   */
+  name: string;
+  value: string;
+};
+
+export type GetCustomerInvoiceSettings = {
+  customFields: Array<GetCustomerBillingDetailsCustomField>;
+};
+
+/**
+ * Billing details read live from the linked Stripe customer. Null when no Stripe customer is linked.
+ */
+export type GetCustomerBillingDetails = {
+  address: GetCustomerBillingDetailsAddress | null;
+  taxIds: Array<GetCustomerBillingDetailsTaxId>;
+  taxExempt: GetCustomerTaxExempt | null;
+  invoiceSettings: GetCustomerInvoiceSettings;
+};
+
 /**
  * OK
  */
@@ -1493,6 +1545,10 @@ export type GetCustomerResponse = {
    * The customer's default payment method.
    */
   paymentMethod?: any | null | undefined;
+  /**
+   * Billing details from the linked Stripe customer. Returned only if billing_details is provided in the expand parameter.
+   */
+  billingDetails?: GetCustomerBillingDetails | null | undefined;
 };
 
 /** @internal */
@@ -3338,6 +3394,142 @@ export function getCustomerReferralFromJSON(
 }
 
 /** @internal */
+export const GetCustomerBillingDetailsAddress$inboundSchema: z.ZodMiniType<
+  GetCustomerBillingDetailsAddress,
+  unknown
+> = z.pipe(
+  z.object({
+    line1: z.optional(z.nullable(types.string())),
+    line2: z.optional(z.nullable(types.string())),
+    city: z.optional(z.nullable(types.string())),
+    state: z.optional(z.nullable(types.string())),
+    postal_code: z.optional(z.nullable(types.string())),
+    country: z.optional(z.nullable(types.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "postal_code": "postalCode",
+    });
+  }),
+);
+
+export function getCustomerBillingDetailsAddressFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerBillingDetailsAddress, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerBillingDetailsAddress$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerBillingDetailsAddress' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerBillingDetailsTaxId$inboundSchema: z.ZodMiniType<
+  GetCustomerBillingDetailsTaxId,
+  unknown
+> = z.object({
+  type: types.string(),
+  value: types.string(),
+});
+
+export function getCustomerBillingDetailsTaxIdFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerBillingDetailsTaxId, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerBillingDetailsTaxId$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerBillingDetailsTaxId' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerTaxExempt$inboundSchema: z.ZodMiniType<
+  GetCustomerTaxExempt,
+  unknown
+> = openEnums.inboundSchema(GetCustomerTaxExempt);
+
+/** @internal */
+export const GetCustomerBillingDetailsCustomField$inboundSchema: z.ZodMiniType<
+  GetCustomerBillingDetailsCustomField,
+  unknown
+> = z.object({
+  name: types.string(),
+  value: types.string(),
+});
+
+export function getCustomerBillingDetailsCustomFieldFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerBillingDetailsCustomField, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      GetCustomerBillingDetailsCustomField$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerBillingDetailsCustomField' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerInvoiceSettings$inboundSchema: z.ZodMiniType<
+  GetCustomerInvoiceSettings,
+  unknown
+> = z.pipe(
+  z.object({
+    custom_fields: z.array(
+      z.lazy(() => GetCustomerBillingDetailsCustomField$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "custom_fields": "customFields",
+    });
+  }),
+);
+
+export function getCustomerInvoiceSettingsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerInvoiceSettings, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerInvoiceSettings$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerInvoiceSettings' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerBillingDetails$inboundSchema: z.ZodMiniType<
+  GetCustomerBillingDetails,
+  unknown
+> = z.pipe(
+  z.object({
+    address: types.nullable(
+      z.lazy(() => GetCustomerBillingDetailsAddress$inboundSchema),
+    ),
+    tax_ids: z.array(
+      z.lazy(() => GetCustomerBillingDetailsTaxId$inboundSchema),
+    ),
+    tax_exempt: types.nullable(GetCustomerTaxExempt$inboundSchema),
+    invoice_settings: z.lazy(() => GetCustomerInvoiceSettings$inboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tax_ids": "taxIds",
+      "tax_exempt": "taxExempt",
+      "invoice_settings": "invoiceSettings",
+    });
+  }),
+);
+
+export function getCustomerBillingDetailsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerBillingDetails, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerBillingDetails$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerBillingDetails' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetCustomerResponse$inboundSchema: z.ZodMiniType<
   GetCustomerResponse,
   unknown
@@ -3381,6 +3573,9 @@ export const GetCustomerResponse$inboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => GetCustomerReferral$inboundSchema)),
     ),
     payment_method: z.optional(z.nullable(z.any())),
+    billing_details: z.optional(
+      z.nullable(z.lazy(() => GetCustomerBillingDetails$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3391,6 +3586,7 @@ export const GetCustomerResponse$inboundSchema: z.ZodMiniType<
       "invoice_previews": "invoicePreviews",
       "trials_used": "trialsUsed",
       "payment_method": "paymentMethod",
+      "billing_details": "billingDetails",
     });
   }),
 );

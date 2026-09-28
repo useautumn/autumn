@@ -1,3 +1,4 @@
+import { USAGE_WINDOW_BOUND_TOLERANCE_MS } from "@autumn/shared";
 // ============================================================================
 // HELPER MODULES (imported as text — works with both Bun and esbuild)
 // ============================================================================
@@ -20,6 +21,7 @@ import updateCachedInvoiceV2Script from "./fullSubject/updateCachedInvoice.lua";
 import updateCustomerDataV2Script from "./fullSubject/updateCustomerDataV2.lua";
 import updateCustomerProductOptionsScript from "./fullSubject/updateCustomerProduct/updateCustomerProductOptions.lua";
 import updateCustomerProductV2MainScript from "./fullSubject/updateCustomerProduct/updateCustomerProductV2.lua";
+import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 
 // ============================================================================
 // FULL SUBJECT DEDUCTION HELPERS (V2 cache — per-feature hash balances)
@@ -59,6 +61,7 @@ export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${updateCustomerDataV2Script}`;
 export const GETDEL_SHARED_BALANCE_FIELDS_SCRIPT = `${getDelSharedBalanceFieldsScript}`;
 
 /** Atomically update top-level entity fields in the cached FullSubject. */
+export const UPDATE_ENTITY_DATA_V2_SCRIPT = `${updateEntityDataV2Script}`;
 
 /** Atomically upsert an invoice in the cached FullSubject invoices array. */
 export const UPDATE_CACHED_INVOICE_V2_SCRIPT = `${updateCachedInvoiceV2Script}`;
@@ -79,6 +82,7 @@ ${updateCustomerProductV2MainScript}`;
 export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
 ${CREDIT_RATE_UTILS}
 ${READ_SUBJECT_BALANCES}
+local USAGE_WINDOW_BOUND_TOLERANCE_MS = ${USAGE_WINDOW_BOUND_TOLERANCE_MS}
 ${READ_USAGE_WINDOWS}
 ${CONTEXT_UTILS_V2}
 ${GET_TOTAL_BALANCE}

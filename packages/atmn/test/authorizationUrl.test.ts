@@ -57,3 +57,17 @@ test("asks for the scopes the sandbox commands and reset need", () => {
 		expect(scopes).toContain(scope);
 	}
 });
+
+test("asks for the scopes an app needs from the minted key", () => {
+	// Keys land in apps' .env as AUTUMN_SECRET_KEY; track, attach, and usage 403 without these.
+	const scopes = new Set<string>(CLI_OAUTH_SCOPES);
+	for (const scope of [
+		"analytics:read",
+		"balances:read",
+		"balances:write",
+		"billing:read",
+		"billing:write",
+	]) {
+		expect(scopes).toContain(scope);
+	}
+});

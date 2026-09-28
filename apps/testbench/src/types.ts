@@ -18,6 +18,9 @@ export type FileRow = {
 	/** Wall duration of the last completed attempt (dispatch → verdict). */
 	durationMs?: number;
 	currentTest?: string;
+	attempt: number;
+	passedOnRetry: boolean;
+	workerDeaths: number;
 	willRetry: boolean;
 	failedTests: FailedTest[];
 };

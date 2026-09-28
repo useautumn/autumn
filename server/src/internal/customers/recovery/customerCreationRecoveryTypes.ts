@@ -1,6 +1,7 @@
 import type {
 	ApiVersion,
 	AppEnv,
+	BillingDetailsParams,
 	CheckParams,
 	TrackParams,
 } from "@autumn/shared";
@@ -26,6 +27,7 @@ export interface CustomerCreationRecoveryPayload {
 	requestId: string;
 	apiVersion: ApiVersion;
 	params: CustomerCreationRecoveryParams;
+	billingDetails?: BillingDetailsParams;
 	source?: string;
 	withAutumnId?: boolean;
 	failureStage: CustomerCreationRecoveryStage;

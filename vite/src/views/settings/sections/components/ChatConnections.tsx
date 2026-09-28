@@ -1,5 +1,10 @@
-import { AppEnv, ChatAuthMode, type ScopeString } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import {
+	AppEnv,
+	ChatAuthMode,
+	ChatReplyMode,
+	type ScopeString,
+} from "@autumn/shared";
+import { Button, Switch } from "@autumn/ui";
 import { faSlack } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +15,11 @@ import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import {
+	SETTINGS_LIST_CLASS,
+	SettingsGroup,
+} from "../../components/SettingsGroup";
+import { SettingsListRow } from "../../components/SettingsListRow";
 import { SlackScopesSheet } from "./SlackScopesSheet";
 
 type SlackInstallation = {
@@ -18,6 +28,7 @@ type SlackInstallation = {
 	workspace_name: string;
 	default_env: AppEnv;
 	auth_mode: ChatAuthMode | null;
+	reply_mode: ChatReplyMode;
 	agent_scopes: ScopeString[];
 	needs_reconnect?: boolean;
 	updated_at: number;
@@ -95,61 +106,104 @@ export const ChatConnections = () => {
 		},
 	});
 
+	const updateReplyMode = useMutation({
+		mutationFn: async (replyMode: ChatReplyMode) => {
+			await OrgService.updateChatSettings(axiosInstance, "slack", {
+				reply_mode: replyMode,
+			});
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to update chat settings"));
+		},
+	});
+
 	const installation = data?.installations.find(
 		(item) => item.provider === "slack",
 	);
 
+	const isConnected = !!installation && !installation.needs_reconnect;
+
 	return (
-		<div className="flex flex-col gap-3">
-			<span className="text-sm font-medium text-foreground">Connections</span>
+		<SettingsGroup
+			title="Connections"
+			description="Chat with the agent from your team's workspace."
+		>
 			{providers.map((provider) => {
 				const isDisconnecting =
 					disconnect.isPending && disconnect.variables === provider.id;
 				return (
-					<div
-						key={provider.id}
-						className="flex items-center justify-between gap-4 rounded-lg border bg-background p-4"
-					>
-						<div className="flex items-center gap-3">
-							<FontAwesomeIcon
-								icon={provider.icon}
-								className="size-5 shrink-0 text-muted-foreground"
-							/>
-							<div className="flex flex-col gap-0.5">
-								<span className="text-sm font-medium">
-									{provider.name} chat
+					<div key={provider.id} className={SETTINGS_LIST_CLASS}>
+						<SettingsListRow
+							title={provider.name}
+							leading={
+								<span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
+									<FontAwesomeIcon
+										icon={provider.icon}
+										className="size-4 text-muted-foreground"
+									/>
 								</span>
-								<span className="text-xs text-muted-foreground">
-									{installation
-										? installation.needs_reconnect
-											? `Reconnect required for ${installation.workspace_name}`
-											: `Connected to ${installation.workspace_name} (${installation.default_env})`
-										: provider.description}
-								</span>
-							</div>
-						</div>
-						<div className="flex gap-2">
-							{installation && (
+							}
+							description={
+								installation
+									? installation.needs_reconnect
+										? `Reconnect required for ${installation.workspace_name}`
+										: `${installation.workspace_name} · ${installation.default_env}`
+									: provider.description
+							}
+						>
+							<span className="flex w-[84px] shrink-0">
+								{isConnected && (
+									<span className="flex items-center gap-1.5 font-medium text-emerald-500 text-xs">
+										<span className="size-1.5 rounded-full bg-emerald-500" />
+										Connected
+									</span>
+								)}
+							</span>
+							<div className="flex shrink-0 gap-2">
+								{installation && (
+									<Button
+										variant="secondary"
+										onClick={() => disconnect.mutate(provider.id)}
+										isLoading={isDisconnecting}
+									>
+										Disconnect
+									</Button>
+								)}
 								<Button
-									variant="secondary"
-									onClick={() => disconnect.mutate(provider.id)}
-									isLoading={isDisconnecting}
+									variant={isConnected ? "secondary" : "primary"}
+									onClick={() => setSheetOpen(true)}
+									isLoading={isLoading}
 								>
-									Disconnect
+									{installation ? "Reconnect" : `Add ${provider.name}`}
 								</Button>
-							)}
-							<Button
-								variant={
-									installation && !installation.needs_reconnect
-										? "secondary"
-										: "primary"
-								}
-								onClick={() => setSheetOpen(true)}
-								isLoading={isLoading}
+							</div>
+						</SettingsListRow>
+						{installation && (
+							<SettingsListRow
+								title="Reply only when @-mentioned"
+								description="In threads it has joined, the agent stays quiet unless tagged. It still reads along."
 							>
-								{installation ? "Reconnect" : `Add ${provider.name}`}
-							</Button>
-						</div>
+								<Switch
+									aria-label="Reply only when @-mentioned"
+									checked={
+										(updateReplyMode.isPending
+											? updateReplyMode.variables
+											: installation.reply_mode) === ChatReplyMode.MentionsOnly
+									}
+									disabled={updateReplyMode.isPending}
+									onCheckedChange={(checked) =>
+										updateReplyMode.mutate(
+											checked
+												? ChatReplyMode.MentionsOnly
+												: ChatReplyMode.AllMessages,
+										)
+									}
+								/>
+							</SettingsListRow>
+						)}
 					</div>
 				);
 			})}
@@ -164,6 +218,6 @@ export const ChatConnections = () => {
 				isSubmitting={install.isPending}
 				onConfirm={(args) => install.mutate(args)}
 			/>
-		</div>
+		</SettingsGroup>
 	);
 };

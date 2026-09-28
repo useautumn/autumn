@@ -17,6 +17,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addDays, getUnixTime, subDays } from "date-fns";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { generateId } from "@/utils/genUtils";
 import {
@@ -741,5 +742,99 @@ test.concurrent(
 		const line = stripeInvoice.lines.data[0];
 		expect(line.pricing?.price_details?.price).toBe(stripePrice.id);
 		expect(line.quantity).toBe(3);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: issue_date and due_date set the Stripe invoice dates")}`,
+	async () => {
+		const customerId = "inv-create-dates";
+		const pro = products.pro({ id: "pro-create-dates", items: [] });
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const issueDate = subDays(new Date(), 10).getTime();
+		const dueDate = addDays(new Date(), 20).getTime();
+		const response = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				plans: [{ plan_id: pro.id }],
+				net_terms_days: 5,
+				issue_date: issueDate,
+				due_date: dueDate,
+			},
+		});
+
+		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
+			ctx,
+			response,
+			lines: [{ amount: PRO_BASE, prorated: false }],
+			total: PRO_BASE,
+		});
+		expect(stripeInvoice.effective_at).toBe(getUnixTime(issueDate));
+		expect(stripeInvoice.due_date).toBe(getUnixTime(dueDate));
+		expect(response.preview.issue_date).toBe(getUnixTime(issueDate) * 1000);
+		expect(response.preview.due_date).toBe(getUnixTime(dueDate) * 1000);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: a future issue_date, past due_date or due before issue is refused")}`,
+	async () => {
+		const customerId = "inv-create-dates-invalid";
+		const pro = products.pro({ id: "pro-create-dates-invalid", items: [] });
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errMessage: "issue_date cannot be in the future",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id }],
+						issue_date: addDays(new Date(), 1).getTime(),
+					},
+				}),
+		});
+		await expectAutumnError({
+			errMessage: "due_date must be in the future",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id }],
+						due_date: subDays(new Date(), 1).getTime(),
+					},
+				}),
+		});
+		await expectAutumnError({
+			errMessage: "due_date must be after issue_date",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id }],
+						issue_date: subDays(new Date(), 1).getTime(),
+						due_date: subDays(new Date(), 2).getTime(),
+					},
+				}),
+		});
 	},
 );

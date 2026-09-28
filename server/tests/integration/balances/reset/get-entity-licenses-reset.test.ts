@@ -27,6 +27,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq, isNotNull } from "drizzle-orm";
+import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
@@ -168,6 +169,8 @@ test.concurrent(
 			.update(customerEntitlements)
 			.set({ next_reset_at: planted })
 			.where(eq(customerEntitlements.id, seatCusEnt.id));
+		// Written behind the worker's back: it re-hydrates on the next command.
+		await evictBalanceWorkerCustomer({ ctx, customerId });
 
 		const after = await autumnV2_3.entities.get<ApiEntityV2>(
 			customerId,

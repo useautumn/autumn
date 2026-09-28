@@ -30,6 +30,8 @@ const form = (
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
+	issueDay: null,
+	dueDay: null,
 	...overrides,
 });
 

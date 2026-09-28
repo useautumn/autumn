@@ -1,13 +1,5 @@
-/**
- * catalogV2.preview_update — previous_attributes captures each field exactly.
- *
- * Contract: the diff is field-by-field with default-aware equality. An
- * identical entry (any collection order) reports action "none". Omitting
- * display keeps the current one (no diff); omitting event_names wipes them
- * (real diff). Omitting archived preserves the current archived state.
- * Every changed field appears in previous_attributes with its exact previous
- * value, and nothing else does.
- */
+// Feature diffs preserve omitted fields and report exact previous values for explicit changes.
+// Collection ordering and default-equivalent values do not create changes.
 
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
@@ -93,9 +85,13 @@ test.concurrent(
 				],
 			});
 
-			// Omitting event_names wipes them — a real diff
+			// The CLI omits event_names, so omission must preserve existing mappings.
 			expectCatalogPreviewCorrect({
 				preview: await previewOne({ event_names: undefined }),
+				features: [{ featureId, action: "none", previousAttributes: null }],
+			});
+			expectCatalogPreviewCorrect({
+				preview: await previewOne({ event_names: [] }),
 				features: [
 					{
 						featureId,

@@ -9,6 +9,7 @@ import type {
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
 import type { DeductionSelection } from "../types/deductionRequest.js";
+import { usageWindowFeaturesOf } from "../utils/limits/usageWindowFeaturesOf.js";
 
 /** The caps this selection counts against: none when an unlimited row funds it; filtered caps only when the event matches. Overflow skips the gate in the draw, not the caps. */
 export const resolveUsageWindowLimits = ({
@@ -28,9 +29,11 @@ export const resolveUsageWindowLimits = ({
 	)
 		return [];
 
-	const features = customerEntitlements.map(
-		(customerEntitlement) => customerEntitlement.entitlement.feature,
-	);
+	const features = usageWindowFeaturesOf({
+		featureId: selection.featureId,
+		internalFeatureId: selection.internalFeatureId,
+		customerEntitlements,
+	});
 	return fullSubjectToUsageWindowLimits({
 		fullSubject,
 		featureIds: [

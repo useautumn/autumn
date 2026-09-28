@@ -61,7 +61,7 @@ test("self-heals only allowed reward scopes requested by atmn", async () => {
 	await ensureAtmnAuthorizeScopes({
 		db,
 		clientId,
-		scope: "rewards:read billing:write rewards:write",
+		scope: "rewards:read admin rewards:write",
 	});
 
 	expect(addScopes).toHaveBeenCalledWith({
@@ -93,7 +93,7 @@ test("self-heals the platform scopes the v3 CLI requests for sandboxes", async (
 	await ensureAtmnAuthorizeScopes({
 		db,
 		clientId,
-		scope: "organisation:read platform:read platform:write billing:write",
+		scope: "organisation:read platform:read platform:write admin",
 	});
 
 	expect(addScopes).toHaveBeenCalledWith({
@@ -125,7 +125,7 @@ test("self-heals the migration scopes the v3 CLI requests for reset", async () =
 	await ensureAtmnAuthorizeScopes({
 		db,
 		clientId,
-		scope: "migrations:read migrations:write billing:write",
+		scope: "migrations:read migrations:write admin",
 	});
 
 	expect(addScopes).toHaveBeenCalledWith({
@@ -157,7 +157,7 @@ test("self-heals the organisation:write scope the v3 CLI requests for settings",
 	await ensureAtmnAuthorizeScopes({
 		db,
 		clientId,
-		scope: "organisation:read organisation:write billing:write",
+		scope: "organisation:read organisation:write admin",
 	});
 
 	expect(addScopes).toHaveBeenCalledWith({
@@ -189,8 +189,7 @@ test("self-heals the modern write scopes the v3 CLI requests at login", async ()
 	await ensureAtmnAuthorizeScopes({
 		db,
 		clientId,
-		scope:
-			"customers:write features:write plans:write apiKeys:write billing:write",
+		scope: "customers:write features:write plans:write apiKeys:write admin",
 	});
 
 	expect(addScopes).toHaveBeenCalledWith({
@@ -201,6 +200,45 @@ test("self-heals the modern write scopes the v3 CLI requests at login", async ()
 			"features:write",
 			"plans:write",
 			"apiKeys:write",
+		],
+	});
+});
+
+// Keys minted by `atmn login` end up as apps' AUTUMN_SECRET_KEY.
+test("self-heals the app scopes the CLI requests for minted keys", async () => {
+	const db = {} as DrizzleCli;
+	const clientId = "atmn_client";
+	const client = {
+		id: "oauth_client",
+		clientId,
+		name: "atmn",
+		redirectUris: ["http://localhost:31448/"],
+		scopes: ["organisation:read"],
+		metadata: null,
+		createdAt: new Date(),
+	};
+	spyOn(oauthClientRepo, "getByClientId").mockResolvedValue(client);
+	const addScopes = spyOn(
+		oauthClientRepo,
+		"addScopesByClientId",
+	).mockResolvedValue(client);
+
+	await ensureAtmnAuthorizeScopes({
+		db,
+		clientId,
+		scope:
+			"analytics:read balances:read balances:write billing:read billing:write admin",
+	});
+
+	expect(addScopes).toHaveBeenCalledWith({
+		db,
+		clientId,
+		scopes: [
+			"analytics:read",
+			"balances:read",
+			"balances:write",
+			"billing:read",
+			"billing:write",
 		],
 	});
 });

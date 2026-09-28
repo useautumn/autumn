@@ -293,6 +293,7 @@ function trackCommand({
 			value,
 			overageBehavior: "reject",
 			properties: null,
+			usageEvent: { name: customer.featureId, idempotencyKey: null, id: null },
 			occurredAt,
 		},
 	});

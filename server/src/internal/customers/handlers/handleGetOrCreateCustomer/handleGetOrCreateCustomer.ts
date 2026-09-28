@@ -7,8 +7,8 @@ import {
 	CreateCustomerQuerySchema,
 	CustomerDataSchema,
 	CustomerExpand,
-	V0_2_InvoicesAlwaysExpanded,
 	Scopes,
+	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
@@ -65,6 +65,7 @@ export const handlePostCustomer = createRoute({
 				entity_id: createCusParams.entity_id,
 				entity_data: createCusParams.entity_data,
 			},
+			billingDetails: createCusParams.billing_details,
 			source: "handlePostCustomer",
 			withAutumnId: with_autumn_id,
 		});

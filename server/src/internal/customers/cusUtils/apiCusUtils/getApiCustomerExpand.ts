@@ -8,6 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "../../CusService.js";
 import { getCusAutoTopupPurchaseLimits } from "../cusResponseUtils/getCusAutoTopupPurchaseLimits.js";
+import { getCusBillingDetailsRes } from "../cusResponseUtils/getCusBillingDetailsRes.js";
 import { getCusInvoicePreviews } from "../cusResponseUtils/getCusInvoicePreviews.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
@@ -65,6 +66,7 @@ export const getApiCustomerExpand = async ({
 		trialsUsed,
 		autoTopupsWithLimits,
 		invoicePreviews,
+		billingDetails,
 	] = await Promise.all([
 		getCusRewards({
 			org,
@@ -102,6 +104,11 @@ export const getApiCustomerExpand = async ({
 			fullCus,
 			expand: cusExpand,
 		}),
+		getCusBillingDetailsRes({
+			ctx,
+			customer: fullCus,
+			expand: cusExpand,
+		}),
 	]);
 
 	return {
@@ -111,6 +118,7 @@ export const getApiCustomerExpand = async ({
 		invoice_previews: invoicePreviews ?? undefined,
 		referrals: referrals ?? undefined,
 		payment_method: paymentMethod ?? undefined,
+		billing_details: billingDetails,
 		billing_controls_override: autoTopupsWithLimits
 			? { auto_topups: autoTopupsWithLimits }
 			: undefined,

@@ -306,6 +306,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param removePlanIds - Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [createSchedule](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -416,6 +417,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param removePlanIds - Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -479,6 +481,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds. (optional)
@@ -512,6 +515,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds. (optional)
@@ -591,6 +595,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param currency - Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency. (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
 @param config - Miscellaneous configurations for the customer. (optional)
+@param billingDetails - Billing details to set on the Stripe customer. Creates the Stripe customer if needed. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 * [get](docs/sdks/customers/README.md#get) - Fetches a customer by ID, optionally expanding related data such as invoices or entities.
 
@@ -852,6 +857,8 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 ### [Platform](docs/sdks/platform/README.md)
 
+* [getStripeConnection](docs/sdks/platform/README.md#getstripeconnection) - Read a managed organization's Stripe OAuth connection, account ID, and authorization time in the selected environment.
+* [disconnectStripe](docs/sdks/platform/README.md#disconnectstripe) - Revoke Autumn's Stripe OAuth access for a managed organization in the selected environment. Does not delete the Stripe account or cancel subscriptions.
 * [linkRevenueCat](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
 * [syncRevenueCat](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 * [getRevenueCatKeys](docs/sdks/platform/README.md#getrevenuecatkeys) - Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.
@@ -958,6 +965,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param removePlanIds - Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingCreateSchedule`](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -1093,6 +1101,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param removePlanIds - Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -1161,6 +1170,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds. (optional)
@@ -1207,6 +1217,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+@param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds. (optional)
@@ -1292,6 +1303,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param currency - Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency. (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
 @param config - Miscellaneous configurations for the customer. (optional)
+@param billingDetails - Billing details to set on the Stripe customer. Creates the Stripe customer if needed. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
@@ -1506,7 +1518,9 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan
 - [`plansList`](docs/sdks/plans/README.md#list) - List all plans
 - [`plansUpdate`](docs/sdks/plans/README.md#update) - Update a plan
+- [`platformDisconnectStripe`](docs/sdks/platform/README.md#disconnectstripe) - Revoke Autumn's Stripe OAuth access for a managed organization in the selected environment. Does not delete the Stripe account or cancel subscriptions.
 - [`platformGetRevenueCatKeys`](docs/sdks/platform/README.md#getrevenuecatkeys) - Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.
+- [`platformGetStripeConnection`](docs/sdks/platform/README.md#getstripeconnection) - Read a managed organization's Stripe OAuth connection, account ID, and authorization time in the selected environment.
 - [`platformLinkRevenueCat`](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
 - [`platformSyncRevenueCat`](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.

@@ -16,14 +16,17 @@ export const positionToUsageEventId = ({
 /** What the usage a record reports amounts to: which feature, how much, and under which properties. */
 type ReportedUsage = {
 	orgSlug: string | undefined;
-	featureId: string;
+	eventName: string;
+	/** Named by the caller; otherwise the event is named by the record's place in the log. */
+	eventId: string | null;
+	idempotencyKey: string | null;
 	value: number;
 	properties: Record<string, unknown> | null;
 	deductions: EventInsert["deductions"];
 	internalProductId: string | null;
 };
 
-/** Null when the record reports no usage: it was refused, or it is a command that moves none. */
+/** Null when the record reports no usage: it was refused, records no event, or is a command that moves none. */
 const recordToReportedUsage = ({
 	record,
 }: {
@@ -32,10 +35,13 @@ const recordToReportedUsage = ({
 	const { command, result } = record;
 
 	if (command.type === "track" && result.type === "track") {
-		if (result.status !== "applied") return null;
+		// A track that funds nothing still applies, deducting nothing, and records its event like legacy.
+		if (result.status !== "applied" || !command.usageEvent) return null;
 		return {
 			orgSlug: command.org.slug,
-			featureId: command.featureId,
+			eventName: command.usageEvent.name,
+			eventId: command.usageEvent.id,
+			idempotencyKey: command.usageEvent.idempotencyKey,
 			value: command.value,
 			properties: command.properties,
 			deductions: result.deductions,
@@ -50,7 +56,9 @@ const recordToReportedUsage = ({
 		if (difference.isZero()) return null;
 		return {
 			orgSlug: command.org.slug,
-			featureId: command.lock.feature_id,
+			eventName: command.lock.feature_id,
+			eventId: null,
+			idempotencyKey: null,
 			value: difference.toNumber(),
 			properties: command.properties ?? command.lock.properties,
 			deductions: result.deductions,
@@ -72,7 +80,7 @@ export const recordToUsageEvent = ({
 
 	const occurredAt = new Date(command.occurredAt);
 	return {
-		id: positionToUsageEventId({ position }),
+		id: usage.eventId ?? positionToUsageEventId({ position }),
 		org_id: identity.orgId,
 		org_slug: usage.orgSlug ?? "",
 		env: appEnvSchema.parse(identity.env),
@@ -80,13 +88,13 @@ export const recordToUsageEvent = ({
 		internal_customer_id: subject.internalCustomerId,
 		entity_id: identity.entityId,
 		internal_entity_id: subject.internalEntityId,
-		event_name: usage.featureId,
+		event_name: usage.eventName,
 		value: usage.value,
 		properties: usage.properties ?? {},
 		// The caller's instant when it gave one, so both columns agree the way the API server writes them.
 		timestamp: occurredAt,
 		created_at: occurredAt.getTime(),
-		idempotency_key: null,
+		idempotency_key: usage.idempotencyKey,
 		set_usage: false,
 		internal_product_id: usage.internalProductId,
 		deductions:

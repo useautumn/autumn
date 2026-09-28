@@ -458,6 +458,30 @@ const fastForwardCheckout = async (
 	}
 };
 
+/** Binaries the current base image bakes; a `:latest` published from an older base lacks them. */
+const REQUIRED_WARM_BINARIES = [
+	"/opt/kafka/kafka.Kafka",
+	"/opt/autumn-tw/bin/fakecloud",
+];
+
+const assertWarmServicesBaked = async (sandbox: Sandbox): Promise<void> => {
+	const proc = await withExecRetry("warm services check", () =>
+		sandbox.exec(
+			[
+				"bash",
+				"-c",
+				REQUIRED_WARM_BINARIES.map((bin) => `test -x ${bin}`).join(" && "),
+			],
+			{ stdout: "pipe", stderr: "pipe", workdir: "/" },
+		),
+	);
+	if ((await proc.wait()) !== 0) {
+		throw new Error(
+			`modal: warm image predates the base image (needs ${REQUIRED_WARM_BINARIES.join(", ")})`,
+		);
+	}
+};
+
 /** Shared stream-closed classifier (used by runStreaming + the provider method). */
 const isSandboxStreamClosed = (error: unknown): boolean => {
 	const message = error instanceof Error ? error.message : String(error);
@@ -630,8 +654,9 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					const ffDone = stage(
 						`fast-forward warm ${opts.name} from ${WARM_IMAGE_REPO}:latest`,
 					);
+					let sandbox: Sandbox | undefined;
 					try {
-						const sandbox = await createFromImage(
+						sandbox = await createFromImage(
 							latest,
 							{
 								name: opts.name,
@@ -644,6 +669,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 							},
 							v2,
 						);
+						await assertWarmServicesBaked(sandbox);
 						await fastForwardCheckout(
 							sandbox,
 							opts.source.revision,
@@ -653,6 +679,10 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 						return wrap(opts.name, sandbox);
 					} catch (error) {
 						ffDone();
+						// Frees the warm name for the full build below.
+						await sandbox?.terminate().catch(() => {
+							/* best-effort */
+						});
 						narrate(
 							chalk.yellow(
 								`[modal] warm fast-forward failed (${(error as Error).message?.slice(0, 120)}) — falling back to full build`,
@@ -688,12 +718,8 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 		async createIngressSandbox(
 			opts: CreateSandboxOptions,
 		): Promise<ProviderSandbox> {
-			if (!opts.source) {
-				throw new Error("modal: createIngressSandbox requires a git source");
-			}
-			// Ingress runs only a built-ins-only http server — a tiny debian+bun
-			// image, NOT the full services base (which is slow and can fail on its
-			// own, taking the whole run down before fan-out).
+			// Ingress runs only a built-ins-only http server shipped inline — a tiny
+			// debian+bun image with no repo clone, NOT the full services base.
 			const image = await getIngressImage();
 			const sandbox = await createFromImage(
 				image,
@@ -708,7 +734,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				},
 				v2,
 			);
-			await cloneRepo(sandbox, opts.source);
 			return wrap(opts.name, sandbox);
 		},
 
@@ -741,7 +766,12 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				if (!targetSha) {
 					throw new Error("modal: stale worker needs TW_TARGET_SHA in env");
 				}
+				const checkoutStartedAt = Date.now();
 				await fastForwardCheckout(sandbox, targetSha, `worker-ff ${opts.name}`);
+				return {
+					...wrap(opts.name, sandbox),
+					checkoutMs: Date.now() - checkoutStartedAt,
+				};
 			}
 			return wrap(opts.name, sandbox);
 		},

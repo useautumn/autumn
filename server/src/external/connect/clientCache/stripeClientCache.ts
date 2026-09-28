@@ -24,7 +24,6 @@ export const getOrCreateStripeClient = ({
 	// here, so the swarm's concurrency ceiling is enforced in one place.
 	const client = applyTwStripeConcurrencyLimit({
 		client: create(),
-		cacheKey,
 	});
 
 	stripeClientCache.set(cacheKey, client);

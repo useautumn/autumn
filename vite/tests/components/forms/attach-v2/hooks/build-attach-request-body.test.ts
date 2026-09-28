@@ -412,6 +412,31 @@ describe("buildAttachRequestBody — removed plans", () => {
 	});
 });
 
+describe("buildAttachRequestBody — removed discounts", () => {
+	const product = makeProduct({ items: [] });
+
+	test("sends marked rewards as remove_discounts", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			removedRewardIds: ["launch_30"],
+		});
+
+		expect(result?.remove_discounts).toEqual([{ reward_id: "launch_30" }]);
+	});
+
+	test("omits remove_discounts when nothing is marked", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+		});
+
+		expect(result?.remove_discounts).toBeUndefined();
+	});
+});
+
 describe("buildAttachRequestBody — billing cycle anchor", () => {
 	const product = makeProduct({ items: [] });
 	const customAnchor = 1_788_220_800_000;

@@ -3,6 +3,7 @@ import { LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
@@ -11,7 +12,6 @@ import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
@@ -90,7 +90,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 			stripeCli,
 			testClockId,
 			advanceTo: addMonths(new Date(), 1).getTime(),
-			waitForSeconds: 15,
+			minimumWaitForSeconds: 15,
 		});
 
 		await attachAndExpectCorrect({
@@ -113,7 +113,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 				addMonths(new Date(curUnix), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 30,
+			minimumWaitForSeconds: 30,
 		});
 
 		const customer2 = await autumn.customers.get(customerId);

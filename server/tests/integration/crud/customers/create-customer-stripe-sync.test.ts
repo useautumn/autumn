@@ -9,6 +9,7 @@ import { expectProductActive } from "@tests/integration/billing/utils/expectCust
 import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -273,31 +274,26 @@ test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is n
 	expect(fullCustomer.customer_products).toHaveLength(0);
 });
 
-test(`${chalk.yellowBright("customers stripe sync: failed import leaves no partial products")}`, async () => {
+test(`${chalk.yellowBright("customers stripe sync: failed Stripe lookup leaves customer without products")}`, async () => {
 	const customerId = `create-stripe-sync-resume-${runId}`;
-	const pro = products.pro({
-		id: `create-stripe-sync-resume-pro-${runId}`,
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
 	const { autumnV1, ctx } = await initScenario({
-		setup: [s.deleteCustomer({ customerId }), s.products({ list: [pro] })],
+		setup: [s.deleteCustomer({ customerId })],
 		actions: [],
 	});
-	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
-	await createSubscription({
-		ctx,
-		stripeCustomerId: stripeCustomer.id,
-		items: [{ price: await getBasePriceId({ ctx, productId: pro.id }) }],
+	const stripeCustomer = await ctx.stripeCli.customers.create({
+		email: `${customerId}@example.com`,
 	});
+	await ctx.stripeCli.customers.del(stripeCustomer.id);
 
-	await expect(
-		autumnV1.customers.create({
-			id: customerId,
-			stripe_id: stripeCustomer.id,
-			currency: "eur",
-			internalOptions: { disable_defaults: true },
-		} as never),
-	).rejects.toThrow();
+	await expectAutumnError({
+		errMessage: `No such customer: '${stripeCustomer.id}'`,
+		func: () =>
+			createAutumnCustomer({
+				autumnV1,
+				customerId,
+				stripeCustomerId: stripeCustomer.id,
+			}),
+	});
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,

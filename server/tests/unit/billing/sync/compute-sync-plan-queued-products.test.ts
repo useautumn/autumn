@@ -42,6 +42,7 @@ const syncContext = ({
 	queuedCustomerProducts: [queuedAddOn],
 	currentEpochMs: Date.now(),
 	acknowledgedWarnings: [],
+	expireUnlistedPlans: false,
 	carryOverUsage: true,
 });
 

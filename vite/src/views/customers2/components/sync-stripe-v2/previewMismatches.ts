@@ -70,7 +70,7 @@ export type StripeItemMark = "linked" | "links_on_sync" | "out_of_sync";
 /**
  * Linked: verify pairs the Stripe item today. Links on sync: only once this
  * draft syncs. Out of sync: verify would still flag it after the sync.
- * No mark until both answers are in, or when either run skipped the phase.
+ * A phase today's run skipped (e.g. Autumn has no schedule yet) links nothing.
  */
 export const stripeItemMark = ({
 	todayMismatches,
@@ -84,21 +84,16 @@ export const stripeItemMark = ({
 	startsAt: SyncPhase["starts_at"];
 }): StripeItemMark | undefined => {
 	if (!todayMismatches || !previewMismatches) return undefined;
-	const bothRunsComparedPhase = [todayMismatches, previewMismatches].every(
-		(mismatches) => wasPhaseCompared({ mismatches, startsAt }),
-	);
-	if (!bothRunsComparedPhase) return undefined;
+	if (!wasPhaseCompared({ mismatches: previewMismatches, startsAt }))
+		return undefined;
 	if (
 		flagsStripePrice({ mismatches: previewMismatches, stripePriceId, startsAt })
 	)
 		return "out_of_sync";
-	return flagsStripePrice({
-		mismatches: todayMismatches,
-		stripePriceId,
-		startsAt,
-	})
-		? "links_on_sync"
-		: "linked";
+	const isLinkedToday =
+		wasPhaseCompared({ mismatches: todayMismatches, startsAt }) &&
+		!flagsStripePrice({ mismatches: todayMismatches, stripePriceId, startsAt });
+	return isLinkedToday ? "linked" : "links_on_sync";
 };
 
 const isMissingPlanPrice = (mismatch: SubscriptionMismatch) => {
@@ -110,9 +105,9 @@ const isMissingPlanPrice = (mismatch: SubscriptionMismatch) => {
 	return false;
 };
 
-/** A plan with a price verify would find no Stripe item for after the sync. A
+/** The plan's prices verify would find no Stripe item for after the sync. A
  * free plan expects no items, so it is never flagged. */
-export const isPlanPriceMissing = ({
+export const findMissingPlanPrices = ({
 	previewMismatches,
 	planId,
 	startsAt,
@@ -120,11 +115,10 @@ export const isPlanPriceMissing = ({
 	previewMismatches: SubscriptionMismatch[] | undefined;
 	planId: string;
 	startsAt: SyncPhase["starts_at"];
-}) => {
-	if (!previewMismatches) return false;
-	if (!wasPhaseCompared({ mismatches: previewMismatches, startsAt }))
-		return false;
-	return previewMismatches.some(
+}): SubscriptionMismatch[] => {
+	if (!previewMismatches) return [];
+	if (!wasPhaseCompared({ mismatches: previewMismatches, startsAt })) return [];
+	return previewMismatches.filter(
 		(mismatch) =>
 			isMissingPlanPrice(mismatch) &&
 			"plan_id" in mismatch &&

@@ -110,6 +110,53 @@ describe("runRegistry", () => {
 		closeRun({ key: "k1e", run });
 	});
 
+	test("only a turn start after a cancel covers accepted follow-ups", async () => {
+		const accepts: Array<() => void> = [];
+		const run = registerRun({
+			key: "k1f",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: () =>
+				new Promise<void>((resolve) => {
+					accepts.push(resolve);
+				}),
+		});
+		run.resolveSessionId("sesn_1");
+
+		const accepted = run.injectFollowUp({ text: "folded" });
+		const inFlight = run.injectFollowUp({ text: "still posting" });
+		await Bun.sleep(0);
+		accepts[0]?.();
+		await accepted;
+
+		// A start with no cancel after the accept may be a turn that predates
+		// the message, so it covers nothing.
+		run.coverAcceptedFollowUps();
+		expect(run.pendingTurns).toBe(2);
+
+		// The cancel the accepted one caused arms it; the replacement's start
+		// covers it. The other was still posting at the cancel, so stays owed.
+		run.noteTurnCancelled();
+		run.coverAcceptedFollowUps();
+		expect(run.pendingTurns).toBe(1);
+
+		// A claim hands the in-flight post to the reader. Its accept landing
+		// afterwards was already counted, so a later turn start must not use it
+		// to cover a message injected after the claim.
+		expect(run.claimFollowUpsOrSettle()).toBe(true);
+		accepts[1]?.();
+		await inFlight;
+		const later = run.injectFollowUp({ text: "after the claim" });
+		await Bun.sleep(0);
+		run.noteTurnCancelled();
+		run.coverAcceptedFollowUps();
+		expect(run.pendingTurns).toBe(1);
+
+		accepts[2]?.();
+		await later;
+		closeRun({ key: "k1f", run });
+	});
+
 	test("close ignores entries replaced by a newer run", () => {
 		const first = registerRun({
 			key: "k2",

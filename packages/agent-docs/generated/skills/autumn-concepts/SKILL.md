@@ -94,4 +94,6 @@ For distinguishing a customer from an entity (seats, sub-accounts) and their run
 
 For reasoning about billing controls — runtime caps, alerts, overage, and top-ups, read `references/billing-controls.md`.
 
+For setting or reading a customer's billing address, tax IDs, tax exemption, or invoice custom fields, read `references/billing-details.md`.
+
 For reasoning about licenses — seat plans a parent plan hands out, seat pools, assigning and releasing seats, read `references/licenses.md`.

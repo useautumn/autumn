@@ -8,6 +8,7 @@ import {
 	getUsageCusEnt,
 } from "@tests/utils/cusProductUtils/cusEntSearchUtils.js";
 import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
@@ -19,7 +20,6 @@ import {
 	constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
@@ -146,7 +146,7 @@ describe(`${chalk.yellowBright(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo,
-			waitForSeconds: 20,
+			minimumWaitForSeconds: 20,
 		});
 
 		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({

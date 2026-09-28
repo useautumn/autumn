@@ -8,22 +8,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
+import type { CustomerProductActivation } from "../types/customerProductActivation";
 import { activateScheduledCustomerProduct } from "./activateScheduled";
 
-/**
- * Activates a free successor product after a customer product is expired.
- *
- * Priority:
- * 1. Free scheduled customer product in the same group → activate it (UPDATE)
- * 2. Default product in the same group → create and activate it (INSERT)
- *
- * Guardrails (skips activation if):
- * - Customer product is an add-on
- * - Customer product is one-off
- *
- * @returns activatedCustomerProduct if a scheduled product was activated (UPDATE),
- *          or insertedCustomerProduct if a new default product was created (INSERT)
- */
+/** A scheduled free successor takes priority over inserting the default plan. */
 export const activateFreeSuccessorProduct = async ({
 	ctx,
 	fromCustomerProduct,
@@ -35,7 +23,7 @@ export const activateFreeSuccessorProduct = async ({
 	fullCustomer: FullCustomer;
 	activatedAt: number;
 }): Promise<{
-	activatedCustomerProduct?: FullCusProduct;
+	activation?: CustomerProductActivation;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
 	const { logger } = ctx;
@@ -93,7 +81,12 @@ export const activateFreeSuccessorProduct = async ({
 			cp.id === scheduledCustomerProduct.id ? activatedCustomerProduct : cp,
 		);
 
-		return { activatedCustomerProduct };
+		return {
+			activation: {
+				before: scheduledCustomerProduct,
+				after: activatedCustomerProduct,
+			},
+		};
 	}
 
 	// 2. Fall back to default product (creates a new customer product)

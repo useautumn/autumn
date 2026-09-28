@@ -1,6 +1,7 @@
 import type { WorkerCustomer } from "@autumn/balance-engine";
 import {
 	ApiVersion,
+	type BillingDetailsParams,
 	type Customer,
 	type CustomerData,
 	CustomerSchema,
@@ -9,6 +10,7 @@ import {
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
+import { updateStripeBillingDetails } from "@/external/stripe/customers/billingDetails/operations/updateStripeBillingDetails.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { createCustomerWithDefaults } from "@/internal/customers/actions/createWithDefaults/createCustomerWithDefaults.js";
@@ -73,22 +75,26 @@ export const apiVersionCreatesCustomer = ({
 	ctx: AutumnContext;
 }): boolean => !ctx.apiVersion.gte(ApiVersion.V2_1);
 
-/** Fill empty name/email, and create the Stripe customer on `create_in_stripe`; both write through the billing plan executor. */
+/** Fill empty name/email, and create the Stripe customer on `create_in_stripe` or billing details, then write the billing details to it. */
 const applyCustomerData = async ({
 	ctx,
 	customer,
 	customerData,
+	billingDetails,
 }: {
 	ctx: AutumnContext;
 	customer: WorkerCustomer | Customer;
-	customerData: CustomerData;
+	customerData?: CustomerData;
+	billingDetails?: BillingDetailsParams;
 }): Promise<void> => {
 	const customerRow = CustomerSchema.parse(customer);
-	const updates = customerDataToCustomerUpdates({
-		ctx,
-		customer: customerRow,
-		customerData,
-	});
+	const updates = customerData
+		? customerDataToCustomerUpdates({
+				ctx,
+				customer: customerRow,
+				customerData,
+			})
+		: {};
 	if (Object.keys(updates).length > 0)
 		await executeAutumnBillingPlan({
 			ctx,
@@ -98,10 +104,20 @@ const applyCustomerData = async ({
 				updateCustomer: { customer: customerRow, updates },
 			},
 		});
+	// Callers render the row `run` read, so mirror each write onto it, as the legacy path does.
+	Object.assign(customer, updates);
+
 	const needsStripeCustomer =
-		customerData.create_in_stripe && !customerRow.processor?.id;
-	if (needsStripeCustomer)
-		await linkStripeCustomer({ ctx, customer: { ...customerRow, ...updates } });
+		customerData?.create_in_stripe || billingDetails !== undefined;
+	if (!needsStripeCustomer) return;
+
+	const updatedRow = { ...customerRow, ...updates };
+	const stripeCustomerId =
+		updatedRow.processor?.id ??
+		(await linkStripeCustomer({ ctx, customer: updatedRow }))?.id;
+	Object.assign(customer, { processor: updatedRow.processor });
+	if (billingDetails && stripeCustomerId)
+		await updateStripeBillingDetails({ ctx, stripeCustomerId, billingDetails });
 };
 
 /** A missing customer implies its entity is missing too, so one miss says everything a run needs created. */
@@ -169,6 +185,7 @@ export const withCreateIfMissing = async <Result>({
 	ctx,
 	customerId,
 	customerData,
+	billingDetails,
 	entityId,
 	entityData,
 	createEnabled = true,
@@ -177,6 +194,7 @@ export const withCreateIfMissing = async <Result>({
 	ctx: AutumnContext;
 	customerId: string;
 	customerData?: CustomerData;
+	billingDetails?: BillingDetailsParams;
 	entityId?: string | null;
 	entityData?: EntityData;
 	createEnabled?: boolean;
@@ -191,7 +209,7 @@ export const withCreateIfMissing = async <Result>({
 		createEnabled,
 		run,
 	});
-	if (customerData && customer)
-		await applyCustomerData({ ctx, customer, customerData });
+	if ((customerData || billingDetails) && customer)
+		await applyCustomerData({ ctx, customer, customerData, billingDetails });
 	return result;
 };

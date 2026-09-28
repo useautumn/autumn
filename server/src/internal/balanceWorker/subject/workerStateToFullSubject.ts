@@ -143,6 +143,8 @@ const renderedFlagIdsOf = ({
 		priority: number;
 	}) => {
 		if (!isBoolean({ customerEntitlement })) return;
+		// A source never renders, so it must not win the flag from the pool it feeds.
+		if (isPooledContributionSource({ customerEntitlement })) return;
 		const featureId = customerEntitlement.entitlement.feature.id;
 		const winner = winnerByFeatureId.get(featureId);
 		if (winner && winner.priority <= priority) return;

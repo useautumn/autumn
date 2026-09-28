@@ -21,6 +21,7 @@
  *     (real exit code, even non-zero) flows through the normal path.
  */
 
+import { getTestExecutionArgs } from "../../testScripts/testExecutionArgs";
 // NOTE: `TestExecutor` and `WorkerDeathError` are owned + exported by the
 // runner-refactor step from `scripts/testScripts/testExecutor.ts` (see plan §8.2
 // and tw/types.ts). They are imported (NOT redefined) here so the seam — including
@@ -86,7 +87,7 @@ export const buildTestArgv = (
 	file: string,
 	failedTestNames?: string[],
 ): string[] => {
-	const argv = [...TEST_ENV_PREFIX, "bun", "test", "--timeout", "0"];
+	const argv = [...TEST_ENV_PREFIX, "bun", "test", ...getTestExecutionArgs()];
 	if (failedTestNames && failedTestNames.length > 0) {
 		argv.push("--test-name-pattern", joinTestNamePattern(failedTestNames));
 	}

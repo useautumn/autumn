@@ -29,6 +29,7 @@ import {
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -38,10 +39,12 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { getReissuePreviewState } from "./reissue/getReissuePreviewState";
 import { ReissueBillingDetails } from "./reissue/ReissueBillingDetails";
+import { ReissuePaymentMethodTypesSelect } from "./reissue/ReissuePaymentMethodTypesSelect";
 import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
 import {
 	buildReissuePayload,
 	type ReissuePrefill,
+	sendsReplacementInvoice,
 	useReissueForm,
 } from "./reissue/useReissueForm";
 
@@ -77,6 +80,8 @@ export function ReissueInvoiceSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const invoice = sheetData?.invoice as Invoice | undefined;
 	const axiosInstance = useAxiosInstance();
+	// The reissue request targets the active sandbox, so its defaults must too.
+	const { org } = useOrg({ skipSandbox: false });
 
 	const { data: stripeInvoice, isLoading } = useQuery({
 		queryKey: ["stripe-invoice", invoice?.stripe_id],
@@ -89,7 +94,7 @@ export function ReissueInvoiceSheet() {
 		},
 	});
 
-	if (!invoice || isLoading) {
+	if (!invoice || isLoading || !org) {
 		return (
 			<div className="flex h-full flex-col">
 				<SheetHeader title="Reissue Invoice" description="Loading invoice..." />
@@ -102,7 +107,10 @@ export function ReissueInvoiceSheet() {
 		<ReissueInvoiceForm
 			invoice={invoice}
 			lineItems={(sheetData?.lineItems as InvoiceLineItem[] | undefined) ?? []}
-			prefill={stripeInvoiceToPrefill(stripeInvoice)}
+			prefill={{
+				...stripeInvoiceToPrefill(stripeInvoice),
+				paymentMethodTypes: org?.config?.allowed_payment_methods ?? null,
+			}}
 			invoiceDetailData={sheetData ?? {}}
 		/>
 	);
@@ -347,6 +355,15 @@ function ReissueInvoiceForm({
 									onChange={(e) => patch({ netTermsDays: e.target.value })}
 								/>
 							</div>
+
+							{sendsReplacementInvoice({ form, prefill }) && (
+								<ReissuePaymentMethodTypesSelect
+									value={form.paymentMethodTypes}
+									onValueChange={(paymentMethodTypes) =>
+										patch({ paymentMethodTypes })
+									}
+								/>
+							)}
 						</div>
 					</SheetAccordionItem>
 					<SheetAccordionItem

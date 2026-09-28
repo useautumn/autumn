@@ -68,7 +68,7 @@ projected-batch semantics that are new in V2.
 |---|---|
 | Identical entry (collections reordered) → `none` | ✓ t1/t2/t3 |
 | Omitting `display` keeps the current one → `none` | ✓ t1 |
-| Omitting `event_names` wipes them → real diff | ✓ t1 |
+| Omitting `event_names` preserves them → `none`; explicit `[]` clears them → real diff | ✓ t1 |
 | `name`, `consumable`, `display` diffs exact | ✓ t1 |
 | `credit_schema`: order-insensitive; cost + entry changes captured whole | ✓ t2 |
 | `default_markup`, `provider_markups`, `model_markups` diffs exact | ✓ t3 |

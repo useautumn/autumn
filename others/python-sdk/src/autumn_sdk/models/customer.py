@@ -2490,6 +2490,141 @@ class Referral(BaseModel):
     created_at: float
 
 
+class BillingDetailsAddressTypedDict(TypedDict):
+    line1: NotRequired[Nullable[str]]
+    line2: NotRequired[Nullable[str]]
+    city: NotRequired[Nullable[str]]
+    state: NotRequired[Nullable[str]]
+    postal_code: NotRequired[Nullable[str]]
+    country: NotRequired[Nullable[str]]
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+
+class BillingDetailsAddress(BaseModel):
+    line1: OptionalNullable[str] = UNSET
+
+    line2: OptionalNullable[str] = UNSET
+
+    city: OptionalNullable[str] = UNSET
+
+    state: OptionalNullable[str] = UNSET
+
+    postal_code: OptionalNullable[str] = UNSET
+
+    country: OptionalNullable[str] = UNSET
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        nullable_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class BillingDetailsTaxIDTypedDict(TypedDict):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class BillingDetailsTaxID(BaseModel):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+TaxExempt = Union[
+    Literal[
+        "none",
+        "exempt",
+        "reverse",
+    ],
+    UnrecognizedStr,
+]
+
+
+class BillingDetailsCustomFieldTypedDict(TypedDict):
+    name: str
+    r"""Label, e.g. PO Number."""
+    value: str
+
+
+class BillingDetailsCustomField(BaseModel):
+    name: str
+    r"""Label, e.g. PO Number."""
+
+    value: str
+
+
+class InvoiceSettingsTypedDict(TypedDict):
+    custom_fields: List[BillingDetailsCustomFieldTypedDict]
+
+
+class InvoiceSettings(BaseModel):
+    custom_fields: List[BillingDetailsCustomField]
+
+
+class BillingDetailsTypedDict(TypedDict):
+    r"""Billing details read live from the linked Stripe customer. Null when no Stripe customer is linked."""
+
+    address: Nullable[BillingDetailsAddressTypedDict]
+    tax_ids: List[BillingDetailsTaxIDTypedDict]
+    tax_exempt: Nullable[TaxExempt]
+    invoice_settings: InvoiceSettingsTypedDict
+
+
+class BillingDetails(BaseModel):
+    r"""Billing details read live from the linked Stripe customer. Null when no Stripe customer is linked."""
+
+    address: Nullable[BillingDetailsAddress]
+
+    tax_ids: List[BillingDetailsTaxID]
+
+    tax_exempt: Nullable[TaxExempt]
+
+    invoice_settings: InvoiceSettings
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
 class CustomerTypedDict(TypedDict):
     id: Nullable[str]
     r"""Your unique identifier for the customer."""
@@ -2539,6 +2674,8 @@ class CustomerTypedDict(TypedDict):
     r"""Referral records for this customer."""
     payment_method: NotRequired[Nullable[Any]]
     r"""The customer's default payment method."""
+    billing_details: NotRequired[Nullable[BillingDetailsTypedDict]]
+    r"""Billing details from the linked Stripe customer. Returned only if billing_details is provided in the expand parameter."""
 
 
 class Customer(BaseModel):
@@ -2614,6 +2751,9 @@ class Customer(BaseModel):
     payment_method: OptionalNullable[Any] = UNSET
     r"""The customer's default payment method."""
 
+    billing_details: OptionalNullable[BillingDetails] = UNSET
+    r"""Billing details from the linked Stripe customer. Returned only if billing_details is provided in the expand parameter."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -2627,6 +2767,7 @@ class Customer(BaseModel):
                 "rewards",
                 "referrals",
                 "payment_method",
+                "billing_details",
             ]
         )
         nullable_fields = set(
@@ -2638,6 +2779,7 @@ class Customer(BaseModel):
                 "stripe_id",
                 "rewards",
                 "payment_method",
+                "billing_details",
             ]
         )
         serialized = handler(self)

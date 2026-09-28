@@ -26,6 +26,7 @@ import {
 	stripeSubscriptionToScheduleId,
 } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import type { InvoiceUpsertResult } from "@/internal/invoices/actions/types/invoiceUpsertResult";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
 export interface InvoiceCreatedContext {
@@ -38,6 +39,10 @@ export interface InvoiceCreatedContext {
 	fullCustomer: FullCustomer;
 	customerProducts: FullCusProduct[];
 	billingCycleAnchorResetCustomerProductIds: string[];
+	results: {
+		customerStateChanged: boolean;
+		invoice?: InvoiceUpsertResult;
+	};
 
 	/** Current time in ms, respecting test clocks */
 	nowMs: number;
@@ -168,6 +173,7 @@ export const setupInvoiceCreatedContext = async ({
 		fullCustomer,
 		customerProducts,
 		billingCycleAnchorResetCustomerProductIds,
+		results: { customerStateChanged: false },
 		nowMs,
 		paymentMethod,
 	};

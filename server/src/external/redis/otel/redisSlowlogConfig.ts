@@ -88,6 +88,11 @@ export const REDIS_THRESHOLDS: RedisThresholdConfig[] = [
 		severeMs: 300,
 	}),
 	threshold({
+		operation: "updateFullSubjectEntityDataV2",
+		slowMs: 50,
+		severeMs: 300,
+	}),
+	threshold({
 		operation: "getDelFullSubjectBalanceFields",
 		slowMs: 50,
 		severeMs: 300,

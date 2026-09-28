@@ -3,7 +3,6 @@ import {
 	cusProductToProduct,
 	deduplicateArray,
 	type FullCusProduct,
-	type Invoice,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import {
@@ -12,22 +11,9 @@ import {
 } from "@/external/stripe/subscriptions";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { invoiceActions } from "@/internal/invoices/actions";
+import type { InvoiceUpsertResult } from "@/internal/invoices/actions/types/invoiceUpsertResult";
 
-/**
- * Upserts an Autumn invoice record from a Stripe invoice webhook.
- * Used by invoice.created, invoice.finalized, and invoice.paid handlers.
- *
- * Handles:
- * - Merging scheduled-but-started customer products into product IDs
- * - Try update existing invoice first, then create if not found
- * - Computing invoice items from prices
- *
- * For non-subscription invoices (e.g., one-off checkout), pass undefined for
- * stripeSubscription and customerProducts. The function will try to update
- * an existing invoice but skip creation.
- *
- * @returns The invoice record (existing or new), or null if skipped
- */
+/** Returns the saved invoice and cache patch outcome so callers can decide whether refresh is needed. */
 export const upsertAutumnInvoice = async ({
 	ctx,
 	stripeInvoice,
@@ -43,7 +29,7 @@ export const upsertAutumnInvoice = async ({
 		skipNonCycleInvoices?: boolean;
 		// skipSubscriptionCreateInvoice?: boolean;
 	};
-}): Promise<Invoice | undefined> => {
+}): Promise<InvoiceUpsertResult | undefined> => {
 	const { logger, stripeCli, fullCustomer } = ctx;
 
 	// 1. Skip non-cycle invoices if requested (invoice.created uses this)
@@ -103,7 +89,7 @@ export const upsertAutumnInvoice = async ({
 		internalEntityIds.length === 1 ? internalEntityIds[0] : null;
 
 	// 8. Create new invoice
-	const autumnInvoice = await invoiceActions.upsertFromStripe({
+	return invoiceActions.upsertFromStripe({
 		ctx,
 		stripeInvoice,
 		fullCustomer,
@@ -112,6 +98,4 @@ export const upsertAutumnInvoice = async ({
 		),
 		internalEntityId: internalEntityId ?? undefined,
 	});
-
-	return autumnInvoice;
 };

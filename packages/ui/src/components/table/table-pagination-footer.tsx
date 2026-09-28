@@ -4,10 +4,13 @@ import {
 } from "@autumn/ui/components/table/cursor-pagination";
 import { cn } from "@autumn/ui/lib/utils";
 
+const numberFormat = new Intl.NumberFormat("en-US");
+
 export function TablePaginationFooter({
 	currentPage,
 	totalPages,
 	totalCount,
+	isTotalCountApproximate = false,
 	canGoPrev,
 	canGoNext,
 	onPrev,
@@ -22,6 +25,7 @@ export function TablePaginationFooter({
 	currentPage: number;
 	totalPages: number | null;
 	totalCount?: number;
+	isTotalCountApproximate?: boolean;
 	canGoPrev: boolean;
 	canGoNext: boolean;
 	onPrev: () => void;
@@ -46,7 +50,10 @@ export function TablePaginationFooter({
 					disabled={disabled}
 				/>
 				{typeof totalCount === "number" && (
-					<span className="tabular-nums">{totalCount} total</span>
+					<span className="tabular-nums">
+						{isTotalCountApproximate && "~"}
+						{numberFormat.format(totalCount)} total
+					</span>
 				)}
 			</div>
 			<CursorPagination

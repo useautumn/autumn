@@ -10,6 +10,7 @@ import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoic
 import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
 import { handleStripeSubscriptionCreated } from "./webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
+import { handleStripeSubscriptionScheduleReleased } from "./webhookHandlers/handleStripeSubscriptionScheduleReleased/handleStripeSubscriptionScheduleReleased.js";
 import { handleStripeSubscriptionScheduleUpdated } from "./webhookHandlers/handleStripeSubscriptionScheduleUpdated/handleStripeSubscriptionScheduleUpdated.js";
 import { handleStripeTestClockReady } from "./webhookHandlers/handleStripeTestClockReady.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
@@ -72,6 +73,11 @@ export const runStripeWebhookHandlers = async ({
 
 		case "subscription_schedule.updated": {
 			await handleStripeSubscriptionScheduleUpdated({ ctx, event });
+			break;
+		}
+
+		case "subscription_schedule.released": {
+			await handleStripeSubscriptionScheduleReleased({ ctx, event });
 			break;
 		}
 

@@ -1,6 +1,8 @@
 import { afterAll } from "bun:test";
 import { type Browser, chromium } from "playwright-core";
+import { createTestWait } from "../testWait/createTestWait";
 import { getChromiumPath, HEADLESS } from "./browserConfig.js";
+import { limitStripeBrowserRequests } from "./limitStripeBrowserRequests.js";
 
 /**
  * Singleton Playwright browser pool for local development.
@@ -33,12 +35,15 @@ class PlaywrightPool {
 				],
 			});
 			this.browser = browser;
-			this.initPromise = null;
 			console.log("[PlaywrightPool] Chromium launched");
 			return browser;
 		})();
 
-		return this.initPromise;
+		try {
+			return await this.initPromise;
+		} finally {
+			this.initPromise = null;
+		}
 	}
 
 	/**
@@ -48,27 +53,46 @@ class PlaywrightPool {
 	async runInPage({
 		fn,
 		args,
+		timeoutMs = 120_000,
+		signal,
 	}: {
 		// biome-ignore lint/suspicious/noExplicitAny: must accept any self-contained playwright function
 		fn: (params: any) => Promise<any>;
 		args: Record<string, unknown>;
+		timeoutMs?: number;
+		signal?: AbortSignal;
 	}): Promise<unknown> {
 		const browser = await this.getBrowser();
 		const context = await browser.newContext({
 			viewport: { width: 1280, height: 800 },
 		});
-		const page = await context.newPage();
-
+		const wait = createTestWait({
+			timeoutMs,
+			signal,
+			description: "Browser checkout",
+		});
+		let admission: Awaited<ReturnType<typeof limitStripeBrowserRequests>>;
 		try {
-			return await fn({ page, ...args });
+			return await wait.run(async () => {
+				admission = await limitStripeBrowserRequests({ context });
+				wait.remainingMs();
+				const page = await context.newPage();
+				wait.remainingMs();
+				return fn({ ...args, page });
+			});
 		} finally {
-			await page.close();
-			await context.close();
+			wait.close();
+			try {
+				await context.close();
+			} finally {
+				await admission?.close();
+			}
 		}
 	}
 
 	/** Close the shared browser */
 	async close(): Promise<void> {
+		await this.initPromise?.catch(() => undefined);
 		if (this.browser) {
 			await this.browser.close();
 			this.browser = null;

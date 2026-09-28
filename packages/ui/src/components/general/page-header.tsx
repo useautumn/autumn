@@ -7,10 +7,12 @@ import type { ReactNode } from "react";
 export function PageHeader({
 	icon,
 	title,
+	titleAccessory,
 	children,
 }: {
 	icon: ReactNode;
 	title: string;
+	titleAccessory?: ReactNode;
 	children?: ReactNode;
 }) {
 	return (
@@ -19,6 +21,7 @@ export function PageHeader({
 				<div className="text-muted-foreground text-md py-0 px-2 rounded-lg flex gap-2 items-center">
 					{icon}
 					{title}
+					{titleAccessory && <div className="ml-2">{titleAccessory}</div>}
 				</div>
 				<div className="flex items-center gap-2">{children}</div>
 			</div>

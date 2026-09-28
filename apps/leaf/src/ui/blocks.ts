@@ -40,6 +40,7 @@ import {
 import { attachBillingEditsFromRequest } from "../internal/approvals/domain/attachBillingEdits.js";
 import { isFailedApprovalPreview } from "../internal/approvals/utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
+import { billingDetailsFields } from "./billingDetailsFields.js";
 import {
 	catalogActionToChange,
 	catalogItemActionToChange,
@@ -246,6 +247,43 @@ const removedPlansFromPreview = (preview: unknown) => {
 	});
 };
 
+/** A trial that reverts on end hands the replaced plan back afterwards, so
+ * that plan is paused rather than removed. Mirrors the dashboard's attach
+ * sheet: only a trial set on the request with a positive length counts. */
+const attachPausesOutgoing = (request: Record<string, unknown>) => {
+	const trial = getRecord(
+		getRecord(customizeWithFreeTrial(request)).free_trial,
+	);
+	return (
+		(getNumber(trial.duration_length) ?? 0) > 0 && trial.on_end === "revert"
+	);
+};
+
+/** The one outgoing plan a revert trial pauses: like the server's
+ * findMainActiveCustomerProductByGroup, the main (non-add-on) plan in the
+ * incoming plan's group. Read from the preview's resolved plans, so request
+ * aliases never matter; any other outgoing plan is expired. */
+const pausedPlanIdFromPreview = (preview: unknown) => {
+	const body = getPreviewBody(preview);
+	const plansOf = (value: unknown) =>
+		(Array.isArray(value) ? value : []).map((entry) => {
+			const record = getRecord(entry);
+			const plan = getRecord(record.plan);
+			return {
+				addOn: plan.add_on === true,
+				group: getString(plan.group),
+				planId: getString(record.plan_id),
+			};
+		});
+	const incoming = plansOf(body.incoming).find(({ addOn }) => !addOn);
+	if (!incoming) return null;
+	return (
+		plansOf(body.outgoing).find(
+			({ addOn, group }) => !addOn && group === incoming.group,
+		)?.planId ?? null
+	);
+};
+
 // Tier 1 of the card hierarchy: customer and plan are the subject of the
 // action, so they render as a sentence — never as label/value fields.
 const actionPhrases = ({
@@ -309,23 +347,39 @@ const actionPhrases = ({
 		switch (name) {
 			case "attach": {
 				const target = `${planLabel} to ${customerLabel}${entitySuffix}`;
-				const removedLabels = removedPlansFromPreview(preview)
-					.map((change) =>
-						autumnDashboardLabel({
-							env,
-							id: change.planId,
-							label: change.name,
-							resource: "products",
-						}),
-					)
-					.join(", ");
-				const removing = (verb: string) =>
-					removedLabels ? ` and ${verb} ${removedLabels}` : "";
+				const pausedPlanId = attachPausesOutgoing(request)
+					? pausedPlanIdFromPreview(preview)
+					: null;
+				const outgoingLabels = ({ paused }: { paused: boolean }) =>
+					removedPlansFromPreview(preview)
+						.filter((change) => (change.planId === pausedPlanId) === paused)
+						.map((change) =>
+							autumnDashboardLabel({
+								env,
+								id: change.planId,
+								label: change.name,
+								resource: "products",
+							}),
+						)
+						.join(", ");
+				const pausedLabels = outgoingLabels({ paused: true });
+				const removedLabels = outgoingLabels({ paused: false });
+				const outgoing = ({
+					pause,
+					remove,
+				}: {
+					pause: string;
+					remove: string;
+				}) =>
+					[
+						pausedLabels ? ` and ${pause} ${pausedLabels}` : "",
+						removedLabels ? ` and ${remove} ${removedLabels}` : "",
+					].join("");
 				return {
-					done: `Attached ${target}${removing("removed")}`,
+					done: `Attached ${target}${outgoing({ pause: "paused", remove: "removed" })}`,
 					failed: `Couldn't attach ${target}`,
-					pending: `Attach ${target}${removing("remove")}`,
-					running: `Attaching ${target}${removing("removing")}`,
+					pending: `Attach ${target}${outgoing({ pause: "pause", remove: "remove" })}`,
+					running: `Attaching ${target}${outgoing({ pause: "pausing", remove: "removing" })}`,
 				};
 			}
 			case "updateSubscription": {
@@ -650,19 +704,39 @@ const compactValue = (value: unknown): string | null => {
 
 // Bare CRUD writes (update customer, create entity…) have no billing preview —
 // show what's being written as label/value fields so the card is never empty.
+type RequestField = { label: string; value: string };
+
+/** Request keys whose nested value renders as several readable fields. Never capped:
+ * approvers must see every change they approve. */
+const REQUEST_FIELD_EXPANDERS = new Map<
+	string,
+	(value: unknown) => RequestField[]
+>([["billing_details", billingDetailsFields]]);
+
+const isVisibleRequestKey = (key: string) =>
+	!HIDDEN_REQUEST_KEYS.has(key) && !key.startsWith("_");
+
+const compactRequestField = (key: string, value: unknown): RequestField[] => {
+	const rendered = compactValue(value);
+	return rendered === null
+		? []
+		: [{ label: humanizeKey(key), value: rendered }];
+};
+
 const requestSummaryFields = (
 	toolArgs?: Record<string, unknown>,
 ): FieldElement[] => {
-	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const fields: FieldElement[] = [];
-	for (const [key, value] of Object.entries(request)) {
-		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
-		const rendered = compactValue(value);
-		if (rendered === null) continue;
-		fields.push(Field({ label: humanizeKey(key), value: rendered }));
-		if (fields.length >= MAX_REQUEST_FIELDS) break;
-	}
-	return fields;
+	const entries = Object.entries(toolRequestFromArgs(toolArgs) ?? {}).filter(
+		([key]) => isVisibleRequestKey(key),
+	);
+	const compactFields = entries
+		.filter(([key]) => !REQUEST_FIELD_EXPANDERS.has(key))
+		.flatMap(([key, value]) => compactRequestField(key, value))
+		.slice(0, MAX_REQUEST_FIELDS);
+	const expandedFields = entries.flatMap(
+		([key, value]) => REQUEST_FIELD_EXPANDERS.get(key)?.(value) ?? [],
+	);
+	return [...compactFields, ...expandedFields].map((field) => Field(field));
 };
 
 const catalogApprovalContext = (preview: unknown) => {

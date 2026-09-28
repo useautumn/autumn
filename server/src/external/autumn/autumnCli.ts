@@ -13,6 +13,7 @@ import {
 	type AttachBodyV0,
 	type AttachLicenseParamsV0,
 	type AttachParamsV0Input,
+	type BillingDetailsParams,
 	type CancelBody,
 	type CatalogPreviewUpdateResponse,
 	type CatalogUpdateParamsInput,
@@ -648,6 +649,7 @@ export class AutumnInt {
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
 				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
+				billing_details?: BillingDetailsParams;
 				config?: CustomerData["config"];
 			},
 		) => {
@@ -669,6 +671,7 @@ export class AutumnInt {
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
 				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
+				billing_details?: BillingDetailsParams;
 				config?: CustomerData["config"];
 			},
 		) => {

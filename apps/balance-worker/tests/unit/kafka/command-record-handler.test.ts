@@ -174,7 +174,7 @@ describe("command record handler", () => {
 		expect(duplicate.logs).toEqual(["info:Queued track already applied"]);
 
 		const refused = createFixture({
-			outcome: new UnsupportedCommandError({ reason: "feature_not_found" }),
+			outcome: new UnsupportedCommandError({ reason: "entity_not_found" }),
 		});
 		await refused.handler.applyRecord(recordOf({ command }));
 		expect(refused.completed).toEqual([{ commandOffset: "7" }]);

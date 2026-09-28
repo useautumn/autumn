@@ -228,6 +228,87 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="billing_details" type="object">
+  Billing details stored on the linked Stripe customer. Requires a Stripe customer.
+  <Expandable title="properties">
+    <DynamicParamField body="address" type="object | null">
+      Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it.
+      <Expandable title="properties">
+        <DynamicParamField body="line1" type="string | null" />
+
+        <DynamicParamField body="line2" type="string | null" />
+
+        <DynamicParamField body="city" type="string | null" />
+
+        <DynamicParamField body="state" type="string | null" />
+
+        <DynamicParamField body="postal_code" type="string | null" />
+
+        <DynamicParamField body="country" type="string | null">
+          Two-letter country code (ISO 3166-1 alpha-2).
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="tax_ids" type="object">
+      Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept.
+      <Expandable title="properties">
+        <DynamicParamField body="add" type="object[]">
+          Tax IDs to add. IDs the customer already has are ignored.
+          <Expandable title="properties">
+            <DynamicParamField body="type" type="string" required>
+              Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+            </DynamicParamField>
+
+            <DynamicParamField body="value" type="string" required>
+              The tax ID, e.g. DE123456789.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="remove" type="object[]">
+          Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored.
+          <Expandable title="properties">
+            <DynamicParamField body="type" type="string" required>
+              Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+            </DynamicParamField>
+
+            <DynamicParamField body="value" type="string" required>
+              The tax ID, e.g. DE123456789.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="tax_exempt" type="'none' | 'exempt' | 'reverse'">
+      Tax exemption status. Use reverse for reverse-charge customers.
+    </DynamicParamField>
+
+    <DynamicParamField body="invoice_settings" type="object">
+      <Expandable title="properties">
+        <DynamicParamField body="custom_fields" type="object[] | null">
+          Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it.
+          <Expandable title="properties">
+            <DynamicParamField body="name" type="string" required>
+              Label, e.g. PO Number.
+            </DynamicParamField>
+
+            <DynamicParamField body="value" type="string" required />
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="new_customer_id" type="string">
   New ID for the customer
 </DynamicParamField>

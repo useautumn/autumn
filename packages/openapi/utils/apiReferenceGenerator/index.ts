@@ -27,6 +27,7 @@ export interface GeneratedWebhookPage {
  *
  * Also generates webhook MDX files from the `webhooks` section
  * and returns group metadata so callers can update navigation.
+ * Schemaless registry entries are absent from the spec, so they get no page.
  */
 export async function generateApiReference({
 	openApiPath,
@@ -105,36 +106,6 @@ export async function generateApiReference({
 
 			console.log(`  Generated webhook: webhooks/${webhook.operationId}.mdx`);
 		}
-	}
-
-	// Also generate placeholder pages for registry entries without schemas
-	// (they won't be in the OpenAPI spec but we still want a docs page)
-	const generatedOperationIds = new Set(webhooks.map((w) => w.operationId));
-	for (const definition of webhookRegistry) {
-		if (generatedOperationIds.has(definition.operationId)) continue;
-
-		const title = definition.title;
-		const mdx = `---\ntitle: "${title}"\n---\n\n${definition.description}\n\n<Note>Schema documentation for this event type is coming soon.</Note>\n`;
-
-		const relativePage = `api-reference/webhooks/${definition.operationId}`;
-		const outputPath = path.join(
-			outputDir,
-			"webhooks",
-			`${definition.operationId}.mdx`,
-		);
-		mkdirSync(path.dirname(outputPath), { recursive: true });
-		writeFileSync(outputPath, mdx, "utf-8");
-		generatedPages.push(relativePage);
-		generated++;
-
-		webhookPages.push({
-			group: definition.group,
-			pagePath: relativePage,
-		});
-
-		console.log(
-			`  Generated webhook placeholder: webhooks/${definition.operationId}.mdx`,
-		);
 	}
 
 	console.log(`  API reference generation complete: ${generated} generated`);

@@ -54,6 +54,8 @@ export function CreateInvoicePreviewColumn() {
 						issuerName={org?.name ?? "Your company"}
 						memo={template?.memo}
 						preview={preview}
+						issueDay={formValues.issueDay}
+						dueDay={formValues.dueDay}
 					/>
 				</div>
 			) : (

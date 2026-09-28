@@ -32,7 +32,7 @@ import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Premium -> Pro, advance clock
@@ -91,7 +91,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 1: premium -> pro, advan
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 30,
+		minimumWaitForSeconds: 30,
 	});
 
 	// Verify: Pro is active, Premium is gone
@@ -166,7 +166,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 2: premium -> free, adva
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 30,
+		minimumWaitForSeconds: 30,
 	});
 
 	// Verify: Free is active
@@ -339,13 +339,13 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: pro-quarter -> premiu
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfWeeks: 6,
-		waitForSeconds: 30,
+		minimumWaitForSeconds: 30,
 	});
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addWeeks(advancedTo, 8).getTime(),
-		waitForSeconds: 30,
+		minimumWaitForSeconds: 30,
 	});
 
 	// Verify: Pro (monthly) is active
@@ -448,7 +448,7 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 5: premium -> pro schedu
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 30,
+		minimumWaitForSeconds: 30,
 	});
 
 	// Verify: Pro is active with correct features

@@ -118,6 +118,10 @@
 			"entry": ["scripts/**/*.ts"],
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		},
+		"packages/ducklake": {
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
 		"packages/render": {
 			"project": ["src/**/*.ts"]
 		},

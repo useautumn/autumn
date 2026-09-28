@@ -237,7 +237,88 @@ Pass `currency` to bill this customer in a currency other than your organization
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="expand" type="('invoices' | 'invoice_previews' | 'trials_used' | 'rewards' | 'entities' | 'referrals' | 'payment_method' | 'subscriptions.plan' | 'purchases.plan' | 'balances.feature' | 'flags.feature' | 'billing_controls.auto_topups.purchase_limit')[]">
+<DynamicParamField body="billing_details" type="object">
+  Billing details to set on the Stripe customer. Creates the Stripe customer if needed.
+  <Expandable title="properties">
+    <DynamicParamField body="address" type="object | null">
+      Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it.
+      <Expandable title="properties">
+        <DynamicParamField body="line1" type="string | null" />
+
+        <DynamicParamField body="line2" type="string | null" />
+
+        <DynamicParamField body="city" type="string | null" />
+
+        <DynamicParamField body="state" type="string | null" />
+
+        <DynamicParamField body="postal_code" type="string | null" />
+
+        <DynamicParamField body="country" type="string | null">
+          Two-letter country code (ISO 3166-1 alpha-2).
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="tax_ids" type="object">
+      Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept.
+      <Expandable title="properties">
+        <DynamicParamField body="add" type="object[]">
+          Tax IDs to add. IDs the customer already has are ignored.
+          <Expandable title="properties">
+            <DynamicParamField body="type" type="string" required>
+              Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+            </DynamicParamField>
+
+            <DynamicParamField body="value" type="string" required>
+              The tax ID, e.g. DE123456789.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="remove" type="object[]">
+          Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored.
+          <Expandable title="properties">
+            <DynamicParamField body="type" type="string" required>
+              Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+            </DynamicParamField>
+
+            <DynamicParamField body="value" type="string" required>
+              The tax ID, e.g. DE123456789.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="tax_exempt" type="'none' | 'exempt' | 'reverse'">
+      Tax exemption status. Use reverse for reverse-charge customers.
+    </DynamicParamField>
+
+    <DynamicParamField body="invoice_settings" type="object">
+      <Expandable title="properties">
+        <DynamicParamField body="custom_fields" type="object[] | null">
+          Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it.
+          <Expandable title="properties">
+            <DynamicParamField body="name" type="string" required>
+              Label, e.g. PO Number.
+            </DynamicParamField>
+
+            <DynamicParamField body="value" type="string" required />
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="expand" type="('invoices' | 'invoice_previews' | 'trials_used' | 'rewards' | 'entities' | 'referrals' | 'payment_method' | 'billing_details' | 'subscriptions.plan' | 'purchases.plan' | 'balances.feature' | 'flags.feature' | 'billing_controls.auto_topups.purchase_limit')[]">
   Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
 </DynamicParamField>
 
@@ -4687,6 +4768,62 @@ Pass `currency` to bill this customer in a currency other than your organization
 
 <DynamicResponseField name="payment_method" type="any | null">
   The customer's default payment method.
+</DynamicResponseField>
+
+<DynamicResponseField name="billing_details" type="object | null">
+  Billing details read live from the linked Stripe customer. Null when no Stripe customer is linked.
+  <Expandable title="properties">
+    <DynamicResponseField name="address" type="object | null">
+      <Expandable title="properties">
+        <DynamicResponseField name="line1" type="string | null" />
+
+        <DynamicResponseField name="line2" type="string | null" />
+
+        <DynamicResponseField name="city" type="string | null" />
+
+        <DynamicResponseField name="state" type="string | null" />
+
+        <DynamicResponseField name="postal_code" type="string | null" />
+
+        <DynamicResponseField name="country" type="string | null">
+          Two-letter country code (ISO 3166-1 alpha-2).
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="tax_ids" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="type" type="string">
+          Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+        </DynamicResponseField>
+
+        <DynamicResponseField name="value" type="string">
+          The tax ID, e.g. DE123456789.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="tax_exempt" type="'none' | 'exempt' | 'reverse'" />
+
+    <DynamicResponseField name="invoice_settings" type="object">
+      <Expandable title="properties">
+        <DynamicResponseField name="custom_fields" type="object[]">
+          <Expandable title="properties">
+            <DynamicResponseField name="name" type="string">
+              Label, e.g. PO Number.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="value" type="string" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
 </DynamicResponseField>
 
 

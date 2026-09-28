@@ -116,6 +116,7 @@ export const V1_2_CustomerChange = defineVersionChange({
 			rewards: input.rewards ?? undefined,
 			referrals: input.referrals ?? undefined,
 			payment_method: input.payment_method ?? undefined,
+			billing_details: input.billing_details,
 		} satisfies z.infer<typeof ApiCustomerV3Schema>;
 	},
 });

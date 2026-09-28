@@ -1489,6 +1489,16 @@ A customer who has paid is locked to their currency: passing a different one, or
   Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
 </DynamicParamField>
 
+<DynamicParamField body="remove_discounts" type="object[]">
+  Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string" required>
+      The ID of the reward (or Stripe coupon) to remove.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 
 ### Response
 

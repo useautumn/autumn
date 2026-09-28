@@ -32,10 +32,15 @@ const UNAVAILABLE_CLIENT_CODES = new Set([
 ]);
 
 const STALE_SUBJECT_CODE = "balance_worker_stale_subject";
+const UNAVAILABLE_CODE = "balance_worker_unavailable";
 
 /** The worker's copy of the customer was behind Postgres: it dropped the copy and wrote nothing. */
 export const isBalanceWorkerStaleSubjectError = (error: unknown): boolean =>
 	error instanceof RecaseError && error.code === STALE_SUBJECT_CODE;
+
+/** The worker was unreachable and the command was never submitted, so answering another way loses nothing. */
+export const isBalanceWorkerUnavailableError = (error: unknown): boolean =>
+	error instanceof RecaseError && error.code === UNAVAILABLE_CODE;
 
 export function rethrowBalanceWorkerError({
 	cause,
@@ -174,9 +179,7 @@ export function rethrowBalanceWorkerError({
 		// must reuse its idempotency key rather than retry blind.
 		const mayHaveApplied = cause.outcome === "unknown";
 		throw new RecaseError({
-			code: mayHaveApplied
-				? "balance_worker_result_unknown"
-				: "balance_worker_unavailable",
+			code: mayHaveApplied ? "balance_worker_result_unknown" : UNAVAILABLE_CODE,
 			statusCode: 503,
 			message: mayHaveApplied
 				? "Balance worker did not confirm the command; it may already have been applied"

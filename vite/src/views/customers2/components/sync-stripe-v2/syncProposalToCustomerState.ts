@@ -242,10 +242,8 @@ export const syncProposalToCustomerState = ({
 		!customerProduct.ended_at;
 
 	const toPlans = ({
-		phase,
 		customerProducts: phaseCustomerProducts,
 	}: {
-		phase: ProposalPhase;
 		customerProducts: FullCusProduct[];
 	}) =>
 		phaseCustomerProducts.map((customerProduct) =>
@@ -256,14 +254,12 @@ export const syncProposalToCustomerState = ({
 			}),
 		);
 
-	const firstPhase = proposal.phases[0];
 	return {
 		...options,
 		phases: proposal.phases.map((phase) =>
 			toCustomerStatePhase({
 				phase,
 				plans: toPlans({
-					phase,
 					customerProducts: findCopiesOnPhase({
 						customerProducts: linkedCustomerProducts,
 						startsAt: phase.starts_at,
@@ -271,11 +267,8 @@ export const syncProposalToCustomerState = ({
 				}),
 			}),
 		),
-		unscheduledPlans: firstPhase
-			? toPlans({
-					phase: firstPhase,
-					customerProducts: linkedCustomerProducts.filter(isOpenEnded),
-				})
-			: [],
+		unscheduledPlans: toPlans({
+			customerProducts: linkedCustomerProducts.filter(isOpenEnded),
+		}),
 	};
 };

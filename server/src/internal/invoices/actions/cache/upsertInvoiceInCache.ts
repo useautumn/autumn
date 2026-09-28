@@ -1,5 +1,6 @@
 import type { Invoice } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { UpsertCachedInvoiceV2Result } from "@/internal/customers/cache/fullSubject/actions/upsertCachedInvoiceV2.js";
 import { upsertCachedInvoiceV2 } from "@/internal/customers/cache/fullSubject/index.js";
 
 /**
@@ -14,18 +15,18 @@ export const upsertInvoiceInCache = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	invoice: Invoice;
-}): Promise<void> => {
+}): Promise<UpsertCachedInvoiceV2Result | null> => {
 	const { logger } = ctx;
 
 	if (!customerId) {
 		logger.warn(
 			`[upsertInvoiceInCache] Skipping cache update for invoice ${invoice.stripe_id} because customerId is missing`,
 		);
-		return;
+		return null;
 	}
 
 	try {
-		await upsertCachedInvoiceV2({
+		return await upsertCachedInvoiceV2({
 			ctx,
 			customerId,
 			invoice,
@@ -35,5 +36,6 @@ export const upsertInvoiceInCache = async ({
 			`[upsertInvoiceInCache] FullSubject upsert failed for customer ${customerId}, invoice ${invoice.stripe_id}`,
 			error,
 		);
+		return null;
 	}
 };

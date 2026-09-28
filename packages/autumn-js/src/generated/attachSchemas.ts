@@ -128,6 +128,10 @@ export const attachLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const attachRemoveDiscountSchema = z.object({
+	rewardId: z.string(),
+});
+
 export const attachInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -407,6 +411,10 @@ export const attachCarryOverUsagesOutboundSchema = z.object({
 export const attachLicenseQuantityOutboundSchema = z.object({
 	license_plan_id: z.string(),
 	quantity: z.number(),
+});
+
+export const attachRemoveDiscountOutboundSchema = z.object({
+	reward_id: z.string(),
 });
 
 const closedEnumSchema = z.any();
@@ -770,6 +778,9 @@ export const attachParamsSchema = z.object({
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+	removeDiscounts: z
+		.union([z.array(attachRemoveDiscountSchema), z.undefined()])
+		.optional(),
 });
 
 export const attachCodeSchema = openEnumSchema;
@@ -930,4 +941,7 @@ export const attachParamsOutboundSchema = z.object({
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+	remove_discounts: z
+		.union([z.array(attachRemoveDiscountOutboundSchema), z.undefined()])
+		.optional(),
 });

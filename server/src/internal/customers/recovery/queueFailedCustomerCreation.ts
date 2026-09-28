@@ -1,3 +1,4 @@
+import type { BillingDetailsParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -12,11 +13,13 @@ export const CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID =
 const getDeduplicationId = ({
 	ctx,
 	params,
+	billingDetails,
 	withAutumnId,
 	failureStage,
 }: {
 	ctx: AutumnContext;
 	params: CustomerCreationRecoveryParams;
+	billingDetails?: BillingDetailsParams;
 	withAutumnId?: boolean;
 	failureStage: CustomerCreationRecoveryStage;
 }) =>
@@ -26,6 +29,7 @@ const getDeduplicationId = ({
 			env: ctx.env,
 			apiVersion: ctx.apiVersion.value,
 			params,
+			billingDetails,
 			withAutumnId,
 			failureStage,
 		}),
@@ -34,12 +38,14 @@ const getDeduplicationId = ({
 export const queueFailedCustomerCreation = async ({
 	ctx,
 	params,
+	billingDetails,
 	source,
 	withAutumnId,
 	failureStage,
 }: {
 	ctx: AutumnContext;
 	params: CustomerCreationRecoveryParams;
+	billingDetails?: BillingDetailsParams;
 	source?: string;
 	withAutumnId?: boolean;
 	failureStage: CustomerCreationRecoveryStage;
@@ -60,6 +66,7 @@ export const queueFailedCustomerCreation = async ({
 			messageDeduplicationId: getDeduplicationId({
 				ctx,
 				params,
+				billingDetails,
 				withAutumnId,
 				failureStage,
 			}),
@@ -71,6 +78,7 @@ export const queueFailedCustomerCreation = async ({
 				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				params,
+				billingDetails,
 				source,
 				withAutumnId,
 				failureStage,

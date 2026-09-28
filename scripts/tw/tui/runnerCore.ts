@@ -19,7 +19,12 @@ import {
 	getFileOutput,
 	isSkipRequested,
 } from "../dashboard/hub.ts";
-import { setRunTotal, type TuiTestFile, upsertTestFile } from "./store.ts";
+import {
+	getTuiState,
+	setRunTotal,
+	type TuiTestFile,
+	upsertTestFile,
+} from "./store.ts";
 import {
 	extractCurrentTest,
 	type ParsedTest,
@@ -128,6 +133,7 @@ const emit = (result: InternalResult, willRetry: boolean): void => {
 		attempt: result.attempt,
 		willRetry,
 		passedOnRetry: result.passedOnRetry,
+		workerDeaths: getTuiState().files.get(result.file)?.workerDeaths ?? 0,
 		failedTests: toFailedTests(failures),
 		crashError: result.crashError,
 	});
@@ -180,8 +186,7 @@ const runOneFile = async (params: {
 			failedTestNames,
 			onChunk,
 		});
-		const combined = stderr ? `${output}${stderr}` : output;
-		const tests = parseTestOutput(combined, file);
+		const tests = parseTestOutput(output, file);
 		const hasFailures = tests.some((test) => test.status === "failed");
 		const isFailed = hasFailures || exitCode !== 0;
 		const result: InternalResult = {
@@ -246,6 +251,13 @@ const runWithReschedule = async (params: {
 				throw error;
 			}
 			lastWorkerDeath = error;
+			const current = getTuiState().files.get(params.file);
+			if (current) {
+				upsertTestFile({
+					...current,
+					workerDeaths: (current.workerDeaths ?? 0) + 1,
+				});
+			}
 		}
 	}
 
@@ -274,9 +286,9 @@ const runWithReschedule = async (params: {
 export const runSwarmTests = async (
 	files: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number },
+	opts: { maxParallel: number; totalFiles?: number },
 ): Promise<void> => {
-	setRunTotal(files.length);
+	setRunTotal(opts.totalFiles ?? files.length);
 	const limit = pLimit(opts.maxParallel);
 
 	const runFileWithRetry = async (file: string): Promise<void> => {

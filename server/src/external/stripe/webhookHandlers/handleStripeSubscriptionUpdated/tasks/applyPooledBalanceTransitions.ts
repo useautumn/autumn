@@ -16,11 +16,19 @@ export const applyPooledBalanceTransitions = async ({
 			insertedCustomerProducts: eventContext.insertedCustomerProducts,
 		});
 
-	await applyPooledBalanceCustomerProductTransitions({
-		ctx,
-		fullCustomer: eventContext.fullCustomer,
-		outgoingCustomerProducts,
-		incomingCustomerProducts,
-		now: eventContext.nowMs,
-	});
+	const hasPools =
+		(eventContext.fullCustomer.pooled_customer_entitlements?.length ?? 0) > 0;
+	const hasTransitions =
+		outgoingCustomerProducts.length > 0 || incomingCustomerProducts.length > 0;
+	// Nothing to reset or move; running anyway would flush balances a deduction may still be writing.
+	if (!hasPools && !hasTransitions) return;
+
+	eventContext.results.pooledBalances =
+		await applyPooledBalanceCustomerProductTransitions({
+			ctx,
+			fullCustomer: eventContext.fullCustomer,
+			outgoingCustomerProducts,
+			incomingCustomerProducts,
+			now: eventContext.nowMs,
+		});
 };

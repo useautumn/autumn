@@ -53,6 +53,7 @@ export interface BuildAttachRequestBodyParams {
 	billingCycleAnchorMode: BillingCycleAnchorMode;
 	billingCycleAnchorDate: number | null;
 	discounts: FormDiscount[];
+	removedRewardIds?: string[];
 	noBillingChanges: boolean;
 	enablePlanImmediately: boolean;
 	carryOverBalances: boolean;
@@ -91,6 +92,7 @@ export function buildAttachRequestBody({
 	billingCycleAnchorMode,
 	billingCycleAnchorDate,
 	discounts,
+	removedRewardIds = [],
 	noBillingChanges,
 	enablePlanImmediately,
 	carryOverBalances,
@@ -215,6 +217,12 @@ export function buildAttachRequestBody({
 		body.discounts = validDiscounts;
 	}
 
+	if (removedRewardIds.length > 0) {
+		body.remove_discounts = removedRewardIds.map((rewardId) => ({
+			reward_id: rewardId,
+		}));
+	}
+
 	if (noBillingChanges) {
 		body.no_billing_changes = true;
 	}
@@ -280,6 +288,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		billingCycleAnchorMode,
 		billingCycleAnchorDate,
 		discounts,
+		removedRewardIds,
 		noBillingChanges,
 		enablePlanImmediately,
 		carryOverBalances,
@@ -319,6 +328,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				billingCycleAnchorMode,
 				billingCycleAnchorDate,
 				discounts,
+				removedRewardIds,
 				noBillingChanges,
 				enablePlanImmediately,
 				carryOverBalances,
@@ -355,6 +365,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			billingCycleAnchorMode,
 			billingCycleAnchorDate,
 			discounts,
+			removedRewardIds,
 			noBillingChanges,
 			enablePlanImmediately,
 			carryOverBalances,

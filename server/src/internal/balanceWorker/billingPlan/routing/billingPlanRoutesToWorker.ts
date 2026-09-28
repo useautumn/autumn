@@ -41,9 +41,10 @@ export const workerCanApplyBillingPlan = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): boolean =>
 	billingPlanToWorkerCustomerId({ autumnBillingPlan }) !== null &&
-	billingPlanNamesItsEntities({ autumnBillingPlan }) &&
 	claimsNoEntities({ autumnBillingPlan }) &&
+	// Before the entity walk: a seat update's product may carry no grants to walk.
 	writesNoLicenseSeats({ autumnBillingPlan }) &&
+	billingPlanNamesItsEntities({ autumnBillingPlan }) &&
 	topUpNamesItsPurchase({ autumnBillingPlan });
 
 /** Whether the customer's rows land through the worker instead of one Postgres transaction. */

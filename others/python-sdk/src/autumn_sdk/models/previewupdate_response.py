@@ -1227,6 +1227,20 @@ class PreviewUpdateAttachDiscount(BaseModel):
         return m
 
 
+class PreviewUpdateRemoveDiscountTypedDict(TypedDict):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
+class PreviewUpdateRemoveDiscount(BaseModel):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
 class PreviewUpdateCustomLineItemTypedDict(TypedDict):
     amount: float
     r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
@@ -1360,6 +1374,8 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[PreviewUpdateAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
+    remove_discounts: NotRequired[List[PreviewUpdateRemoveDiscountTypedDict]]
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
     custom_line_items: NotRequired[List[PreviewUpdateCustomLineItemTypedDict]]
     r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
     cancel_action: NotRequired[PreviewUpdateCancelAction]
@@ -1417,6 +1433,9 @@ class PreviewUpdateParams(BaseModel):
     discounts: Optional[List[PreviewUpdateAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
+    remove_discounts: Optional[List[PreviewUpdateRemoveDiscount]] = None
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
+
     custom_line_items: Optional[List[PreviewUpdateCustomLineItem]] = None
     r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
 
@@ -1459,6 +1478,7 @@ class PreviewUpdateParams(BaseModel):
                 "redirect_mode",
                 "subscription_id",
                 "discounts",
+                "remove_discounts",
                 "custom_line_items",
                 "cancel_action",
                 "billing_cycle_anchor",
@@ -2060,6 +2080,8 @@ class PreviewUpdateInvoiceCreditsTypedDict(TypedDict):
     r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
     currency: str
     r"""Three-letter currency code."""
+    applied: NotRequired[float]
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
 
 
 class PreviewUpdateInvoiceCredits(BaseModel):
@@ -2070,6 +2092,25 @@ class PreviewUpdateInvoiceCredits(BaseModel):
 
     currency: str
     r"""Three-letter currency code."""
+
+    applied: Optional[float] = None
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["applied"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 class PreviewUpdateResponseTypedDict(TypedDict):

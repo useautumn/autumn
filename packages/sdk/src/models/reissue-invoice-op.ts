@@ -6,13 +6,815 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type ReissueInvoiceGlobals = {
   xApiVersion?: string | undefined;
+};
+
+export type CustomField = {
+  name: string;
+  value: string;
+};
+
+export const PaymentMethodType = {
+  Card: "card",
+  CustomerBalance: "customer_balance",
+  UsBankAccount: "us_bank_account",
+  SepaDebit: "sepa_debit",
+  BacsDebit: "bacs_debit",
+  AcssDebit: "acss_debit",
+  Link: "link",
+} as const;
+export type PaymentMethodType = ClosedEnum<typeof PaymentMethodType>;
+
+/**
+ * Changes that apply to the replacement invoice only.
+ */
+export type ReissueInvoiceInvoiceRequestBody = {
+  /**
+   * Enable or disable Stripe automatic tax on the replacement. Omit to inherit. Enabling clears inherited manual tax rates; use tax_rate_id: null to remove all tax.
+   */
+  automaticTax?: boolean | undefined;
+  /**
+   * Fields shown on this invoice only, such as a PO number. Up to four; pass an empty array to clear them.
+   */
+  customFields?: Array<CustomField> | undefined;
+  /**
+   * Stripe tax rate applied to every line. Omit to keep the original's tax, or pass null to issue the replacement with no tax.
+   */
+  taxRateId?: string | null | undefined;
+  /**
+   * Your own Stripe tax registrations (atx_...) shown as the seller's tax numbers. Not the customer's.
+   */
+  accountTaxIds?: Array<string> | null | undefined;
+  /**
+   * Footer text, overriding the original's and any template's.
+   */
+  footer?: string | null | undefined;
+  /**
+   * Memo shown near the top of the invoice.
+   */
+  memo?: string | null | undefined;
+  /**
+   * Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements.
+   */
+  paymentMethodTypes?: Array<PaymentMethodType> | undefined;
+};
+
+/**
+ * Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement.
+ */
+export type Address = {
+  line1?: string | undefined;
+  line2?: string | undefined;
+  city?: string | undefined;
+  state?: string | undefined;
+  postalCode?: string | undefined;
+  country?: string | undefined;
+};
+
+export type TaxId = {
+  type: string;
+  value: string;
+};
+
+export type InvoiceSettingsCustomFields = {
+  name: string;
+  value: string;
+};
+
+/**
+ * Changes written to the customer, which the replacement snapshots and later invoices inherit.
+ */
+export type ReissueInvoiceCustomer = {
+  /**
+   * Billing email. Same as update_customer_email; passing both with different values is rejected.
+   */
+  email?: string | undefined;
+  /**
+   * Customer name shown on this and every later invoice.
+   */
+  name?: string | undefined;
+  /**
+   * Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement.
+   */
+  address?: Address | undefined;
+  /**
+   * The customer's own tax registrations, e.g. { type: 'eu_vat', value: 'FR123...' }. Replaces the existing set; pass an empty array to remove them.
+   */
+  taxIds?: Array<TaxId> | undefined;
+  /**
+   * Custom fields shown on this and every future invoice. Use invoice.custom_fields for this invoice alone.
+   */
+  invoiceSettingsCustomFields?:
+    | Array<InvoiceSettingsCustomFields>
+    | null
+    | undefined;
+};
+
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export const ReissueInvoiceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export type ReissueInvoiceInterval = ClosedEnum<typeof ReissueInvoiceInterval>;
+
+export type ReissueInvoiceStripe = {
+  /**
+   * Stripe price ID. For prepaid with included > 0 this is the V2 price.
+   */
+  priceId: string;
+};
+
+/**
+ * Bill this line under an existing Stripe price instead of an inline one.
+ */
+export type ReissueInvoiceProcessors = {
+  stripe?: ReissueInvoiceStripe | null | undefined;
+};
+
+export type ReissueInvoicePrice = {
+  /**
+   * Base price amount for the plan, in major currency units (e.g. dollars).
+   */
+  amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
+  interval: ReissueInvoiceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Bill this line under an existing Stripe price instead of an inline one.
+   */
+  processors?: ReissueInvoiceProcessors | undefined;
+};
+
+export type ReissueInvoicePriceTo = number | string;
+
+export type ReissueInvoiceAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
+
+export type ReissueInvoicePriceTier = {
+  to: number | string;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?: Array<ReissueInvoiceAdditionalCurrency> | undefined;
+};
+
+export const ReissueInvoiceTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type ReissueInvoiceTierBehavior = ClosedEnum<
+  typeof ReissueInvoiceTierBehavior
+>;
+
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export const ReissueInvoiceItemInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export type ReissueInvoiceItemInterval = ClosedEnum<
+  typeof ReissueInvoiceItemInterval
+>;
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const ReissueInvoiceBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type ReissueInvoiceBillingMethod = ClosedEnum<
+  typeof ReissueInvoiceBillingMethod
+>;
+
+export type ReissueInvoiceItemStripe = {
+  /**
+   * Stripe price ID. For prepaid with included > 0 this is the V2 price.
+   */
+  priceId: string;
+};
+
+/**
+ * Bill this line under an existing Stripe price instead of an inline one.
+ */
+export type ReissueInvoiceItemProcessors = {
+  stripe?: ReissueInvoiceItemStripe | null | undefined;
+};
+
+/**
+ * Pricing to use for this feature on this invoice.
+ */
+export type ReissueInvoiceItemPrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<ReissueInvoicePriceTier> | undefined;
+  tierBehavior?: ReissueInvoiceTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: ReissueInvoiceItemInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits?: number | undefined;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: ReissueInvoiceBillingMethod;
+  /**
+   * Bill this line under an existing Stripe price instead of an inline one.
+   */
+  processors?: ReissueInvoiceItemProcessors | undefined;
+};
+
+export type ReissueInvoiceDimensionsMatch4 = string | number | boolean;
+
+export type ReissueInvoiceDimensions4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type ReissueInvoiceDimensionsMatch3 = string | number | boolean;
+
+export const ReissueInvoiceDimensionsToEnum2 = {
+  Inf: "inf",
+} as const;
+export type ReissueInvoiceDimensionsToEnum2 = ClosedEnum<
+  typeof ReissueInvoiceDimensionsToEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type ReissueInvoiceDimensionsToUnion2 =
+  | number
+  | ReissueInvoiceDimensionsToEnum2;
+
+export type ReissueInvoiceDimensionsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | ReissueInvoiceDimensionsToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type ReissueInvoiceDimensions3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<ReissueInvoiceDimensionsTier2>;
+};
+
+export type ReissueInvoiceDimensionsUnion2 =
+  | ReissueInvoiceDimensions3
+  | ReissueInvoiceDimensions4;
+
+export type ReissueInvoiceMultipliersMatch2 = string | number | boolean;
+
+export type ReissueInvoiceMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export type ReissueInvoiceCreditSchema2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: ReissueInvoiceDimensions3 | ReissueInvoiceDimensions4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: ReissueInvoiceMultipliers2 } | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type ReissueInvoiceDimensionsMatch2 = string | number | boolean;
+
+export type ReissueInvoiceDimensions2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type ReissueInvoiceDimensionsMatch1 = string | number | boolean;
+
+export const ReissueInvoiceDimensionsToEnum1 = {
+  Inf: "inf",
+} as const;
+export type ReissueInvoiceDimensionsToEnum1 = ClosedEnum<
+  typeof ReissueInvoiceDimensionsToEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type ReissueInvoiceDimensionsToUnion1 =
+  | number
+  | ReissueInvoiceDimensionsToEnum1;
+
+export type ReissueInvoiceDimensionsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | ReissueInvoiceDimensionsToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type ReissueInvoiceDimensions1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<ReissueInvoiceDimensionsTier1>;
+};
+
+export type ReissueInvoiceDimensionsUnion1 =
+  | ReissueInvoiceDimensions1
+  | ReissueInvoiceDimensions2;
+
+export type ReissueInvoiceMultipliersMatch1 = string | number | boolean;
+
+export type ReissueInvoiceMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const ReissueInvoiceToEnum = {
+  Inf: "inf",
+} as const;
+export type ReissueInvoiceToEnum = ClosedEnum<typeof ReissueInvoiceToEnum>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type ReissueInvoiceFeatureOverrideToUnion =
+  | number
+  | ReissueInvoiceToEnum;
+
+export type ReissueInvoiceFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | ReissueInvoiceToEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type ReissueInvoiceCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: ReissueInvoiceDimensions1 | ReissueInvoiceDimensions2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: ReissueInvoiceMultipliers1 } | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<ReissueInvoiceFeatureOverrideTier>;
+};
+
+export type ReissueInvoiceCreditSchemaUnion =
+  | ReissueInvoiceCreditSchema1
+  | ReissueInvoiceCreditSchema2;
+
+/**
+ * For credit-system features: a credit rate card to use when converting `usage` on this invoice.
+ */
+export type ReissueInvoiceFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<ReissueInvoiceCreditSchema1 | ReissueInvoiceCreditSchema2>
+    | undefined;
+};
+
+export type AddItem = {
+  /**
+   * The feature whose pricing is overridden on this invoice.
+   */
+  featureId: string;
+  /**
+   * Pricing to use for this feature on this invoice.
+   */
+  price?: ReissueInvoiceItemPrice | undefined;
+  /**
+   * For credit-system features: a credit rate card to use when converting `usage` on this invoice.
+   */
+  featureOverride?: ReissueInvoiceFeatureOverride | undefined;
+};
+
+/**
+ * Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed.
+ */
+export type ReissueInvoiceInvoiceCustomize = {
+  /**
+   * Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line.
+   */
+  price?: ReissueInvoicePrice | null | undefined;
+  /**
+   * Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice.
+   */
+  items?: Array<AddItem> | undefined;
+};
+
+/**
+ * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+ */
+export const ReissueInvoiceBillingBehavior = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+ */
+export type ReissueInvoiceBillingBehavior = ClosedEnum<
+  typeof ReissueInvoiceBillingBehavior
+>;
+
+export type ReissueInvoiceUsage = {
+  /**
+   * The metered feature whose units are being converted.
+   */
+  featureId: string;
+  /**
+   * Billable units of the metered feature. Converted to the credit-system feature through its rate card.
+   */
+  quantity: number;
+  /**
+   * Event properties used to pick the rate card dimension and multipliers.
+   */
+  properties?: { [k: string]: any } | undefined;
+};
+
+export type ReissueInvoiceFeatureQuantity = {
+  /**
+   * The feature to bill.
+   */
+  featureId: string;
+  /**
+   * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+   */
+  billingBehavior: ReissueInvoiceBillingBehavior;
+  /**
+   * Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits.
+   */
+  quantity?: number | undefined;
+  /**
+   * For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity.
+   */
+  usage?: Array<ReissueInvoiceUsage> | undefined;
+  /**
+   * Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+   */
+  prorate?: boolean | undefined;
+};
+
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export const ReissueInvoiceLicenseQuantityInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export type ReissueInvoiceLicenseQuantityInterval = ClosedEnum<
+  typeof ReissueInvoiceLicenseQuantityInterval
+>;
+
+export type ReissueInvoiceLicenseQuantityStripe = {
+  /**
+   * Stripe price ID. For prepaid with included > 0 this is the V2 price.
+   */
+  priceId: string;
+};
+
+/**
+ * Bill this line under an existing Stripe price instead of an inline one.
+ */
+export type ReissueInvoiceLicenseQuantityProcessors = {
+  stripe?: ReissueInvoiceLicenseQuantityStripe | null | undefined;
+};
+
+export type ReissueInvoiceLicenseQuantityPrice = {
+  /**
+   * Base price amount for the plan, in major currency units (e.g. dollars).
+   */
+  amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
+  interval: ReissueInvoiceLicenseQuantityInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Bill this line under an existing Stripe price instead of an inline one.
+   */
+  processors?: ReissueInvoiceLicenseQuantityProcessors | undefined;
+};
+
+/**
+ * Override the license's per-seat price on this invoice.
+ */
+export type ReissueInvoiceCustomize = {
+  price?: ReissueInvoiceLicenseQuantityPrice | null | undefined;
+};
+
+/**
+ * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+ */
+export const ReissueInvoiceLicenseQuantityBillingBehavior = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+ */
+export type ReissueInvoiceLicenseQuantityBillingBehavior = ClosedEnum<
+  typeof ReissueInvoiceLicenseQuantityBillingBehavior
+>;
+
+export type ReissueInvoiceLicenseQuantityUsage = {
+  /**
+   * The metered feature whose units are being converted.
+   */
+  featureId: string;
+  /**
+   * Billable units of the metered feature. Converted to the credit-system feature through its rate card.
+   */
+  quantity: number;
+  /**
+   * Event properties used to pick the rate card dimension and multipliers.
+   */
+  properties?: { [k: string]: any } | undefined;
+};
+
+export type ReissueInvoiceLicenseQuantityFeatureQuantity = {
+  /**
+   * The feature to bill.
+   */
+  featureId: string;
+  /**
+   * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+   */
+  billingBehavior: ReissueInvoiceLicenseQuantityBillingBehavior;
+  /**
+   * Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits.
+   */
+  quantity?: number | undefined;
+  /**
+   * For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity.
+   */
+  usage?: Array<ReissueInvoiceLicenseQuantityUsage> | undefined;
+  /**
+   * Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+   */
+  prorate?: boolean | undefined;
+};
+
+export type ReissueInvoiceLicenseQuantity = {
+  /**
+   * The license plan linked to the parent plan.
+   */
+  licensePlanId: string;
+  /**
+   * Billable seats, exclusive of any included seats.
+   */
+  quantity: number;
+  /**
+   * Override the license's per-seat price on this invoice.
+   */
+  customize?: ReissueInvoiceCustomize | undefined;
+  /**
+   * Feature charges priced through the license plan.
+   */
+  featureQuantities?:
+    | Array<ReissueInvoiceLicenseQuantityFeatureQuantity>
+    | undefined;
+  /**
+   * Whether to prorate seat charges against period_start / period_end. Defaults to true.
+   */
+  prorate?: boolean | undefined;
+};
+
+/**
+ * A discount to apply. Can be either a reward ID or a promotion code.
+ */
+export type ReissueInvoiceAttachDiscount = {
+  /**
+   * The ID of the reward to apply as a discount.
+   */
+  rewardId?: string | undefined;
+  /**
+   * The promotion code to apply as a discount.
+   */
+  promotionCode?: string | undefined;
+};
+
+export type Add2 = {
+  /**
+   * The catalog plan (or variant) whose pricing to use.
+   */
+  planId: string;
+  /**
+   * Plan version. Defaults to the active version.
+   */
+  version?: number | undefined;
+  /**
+   * Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed.
+   */
+  customize?: ReissueInvoiceInvoiceCustomize | undefined;
+  featureQuantities?: Array<ReissueInvoiceFeatureQuantity> | undefined;
+  licenseQuantities?: Array<ReissueInvoiceLicenseQuantity> | undefined;
+  /**
+   * Discounts applied only to this plan's lines.
+   */
+  discounts?: Array<ReissueInvoiceAttachDiscount> | undefined;
+  /**
+   * Whether to prorate the base price against period_start / period_end. Defaults to true.
+   */
+  prorate?: boolean | undefined;
+};
+
+export type Add1 = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+};
+
+/**
+ * Either a custom charge (description + amount) or a catalog plan priced like invoices.create.
+ */
+export type AddUnion = Add1 | Add2;
+
+export type ReissueInvoiceUpdate = {
+  /**
+   * The invoice line item ID from invoices.list items.
+   */
+  id: string;
+  amount?: number | undefined;
+  description?: string | undefined;
+};
+
+/**
+ * Add, change or drop lines relative to the original.
+ */
+export type Lines = {
+  add?: Array<Add1 | Add2> | undefined;
+  update?: Array<ReissueInvoiceUpdate> | undefined;
+  /**
+   * Invoice line item IDs to leave off the replacement.
+   */
+  remove?: Array<string> | undefined;
 };
 
 export type ReissueInvoiceParams = {
@@ -25,13 +827,29 @@ export type ReissueInvoiceParams = {
    */
   invoiceTemplateId?: string | undefined;
   /**
-   * Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed.
+   * Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead.
    */
   netTermsDays?: number | undefined;
+  /**
+   * If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.
+   */
+  preview?: boolean | undefined;
   /**
    * Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.
    */
   updateCustomerEmail?: string | undefined;
+  /**
+   * Changes that apply to the replacement invoice only.
+   */
+  invoice?: ReissueInvoiceInvoiceRequestBody | undefined;
+  /**
+   * Changes written to the customer, which the replacement snapshots and later invoices inherit.
+   */
+  customer?: ReissueInvoiceCustomer | undefined;
+  /**
+   * Add, change or drop lines relative to the original.
+   */
+  lines?: Lines | undefined;
 };
 
 /**
@@ -63,7 +881,11 @@ export type ReissueInvoiceEntity = {
   amount: number;
 };
 
-export type ReissueInvoiceItem = {
+export type ReissueInvoiceInvoiceItem = {
+  /**
+   * The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls.
+   */
+  id: string;
   /**
    * Description of the invoice line item
    */
@@ -102,10 +924,7 @@ export type ReissueInvoiceItem = {
   entities: Array<ReissueInvoiceEntity>;
 };
 
-/**
- * The replacement invoice.
- */
-export type ReissueInvoiceInvoice = {
+export type ReissueInvoiceInvoiceResponse = {
   /**
    * Array of plan IDs included in this invoice
    */
@@ -161,7 +980,72 @@ export type ReissueInvoiceInvoice = {
   /**
    * Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
    */
-  items?: Array<ReissueInvoiceItem> | undefined;
+  items?: Array<ReissueInvoiceInvoiceItem> | undefined;
+};
+
+export type ReissueInvoiceLine = {
+  planId: string | null;
+  featureId: string | null;
+  description: string;
+  amount: number;
+  amountAfterDiscounts: number;
+  quantity: number | null;
+  prorated: boolean;
+  periodStart: number | null;
+  periodEnd: number | null;
+};
+
+export const ReissueInvoiceStatus = {
+  Complete: "complete",
+  Incomplete: "incomplete",
+} as const;
+export type ReissueInvoiceStatus = OpenEnum<typeof ReissueInvoiceStatus>;
+
+export type ReissueInvoiceTax = {
+  total: number;
+  amountInclusive: number;
+  amountExclusive: number;
+  status: ReissueInvoiceStatus;
+};
+
+/**
+ * The customer's Stripe credit balance and how much of it this invoice consumes.
+ */
+export type ReissueInvoiceInvoiceCredits = {
+  /**
+   * Stripe customer credit balance available, expressed as a positive number in major currency units.
+   */
+  balance: number;
+  /**
+   * How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.
+   */
+  applied?: number | undefined;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+};
+
+/**
+ * The replacement's lines and totals.
+ */
+export type ReissueInvoicePreview = {
+  currency: string;
+  lines: Array<ReissueInvoiceLine>;
+  subtotal: number;
+  discountTotal: number;
+  tax: ReissueInvoiceTax | null;
+  total: number;
+  /**
+   * The customer's Stripe credit balance and how much of it this invoice consumes.
+   */
+  invoiceCredits?: ReissueInvoiceInvoiceCredits | undefined;
+  /**
+   * What the customer pays: the total less any credit applied.
+   */
+  amountDue: number;
+  issueDate: number;
+  dueDate: number | null;
 };
 
 /**
@@ -169,21 +1053,1794 @@ export type ReissueInvoiceInvoice = {
  */
 export type ReissueInvoiceResponse = {
   /**
-   * The replacement invoice.
+   * The replacement invoice. Null when preview is true.
    */
-  invoice: ReissueInvoiceInvoice;
+  invoice: ReissueInvoiceInvoiceResponse | null;
   /**
-   * The Autumn ID of the original invoice, now void.
+   * The Autumn ID of the original invoice, now void. Null when previewing, and when the original was paid and got a credit note instead.
    */
-  voidedInvoiceId: string;
+  voidedInvoiceId: string | null;
+  /**
+   * The Stripe credit note issued against a paid original, whose amount lands on the customer's balance and covers the replacement. Null when the original was open and voided instead.
+   */
+  creditNoteId: string | null;
+  /**
+   * The replacement's lines and totals.
+   */
+  preview: ReissueInvoicePreview;
 };
+
+/** @internal */
+export type CustomField$Outbound = {
+  name: string;
+  value: string;
+};
+
+/** @internal */
+export const CustomField$outboundSchema: z.ZodMiniType<
+  CustomField$Outbound,
+  CustomField
+> = z.object({
+  name: z.string(),
+  value: z.string(),
+});
+
+export function customFieldToJSON(customField: CustomField): string {
+  return JSON.stringify(CustomField$outboundSchema.parse(customField));
+}
+
+/** @internal */
+export const PaymentMethodType$outboundSchema: z.ZodMiniEnum<
+  typeof PaymentMethodType
+> = z.enum(PaymentMethodType);
+
+/** @internal */
+export type ReissueInvoiceInvoiceRequestBody$Outbound = {
+  automatic_tax?: boolean | undefined;
+  custom_fields?: Array<CustomField$Outbound> | undefined;
+  tax_rate_id?: string | null | undefined;
+  account_tax_ids?: Array<string> | null | undefined;
+  footer?: string | null | undefined;
+  memo?: string | null | undefined;
+  payment_method_types?: Array<string> | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceInvoiceRequestBody$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceInvoiceRequestBody$Outbound,
+  ReissueInvoiceInvoiceRequestBody
+> = z.pipe(
+  z.object({
+    automaticTax: z.optional(z.boolean()),
+    customFields: z.optional(z.array(z.lazy(() => CustomField$outboundSchema))),
+    taxRateId: z.optional(z.nullable(z.string())),
+    accountTaxIds: z.optional(z.nullable(z.array(z.string()))),
+    footer: z.optional(z.nullable(z.string())),
+    memo: z.optional(z.nullable(z.string())),
+    paymentMethodTypes: z.optional(z.array(PaymentMethodType$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      automaticTax: "automatic_tax",
+      customFields: "custom_fields",
+      taxRateId: "tax_rate_id",
+      accountTaxIds: "account_tax_ids",
+      paymentMethodTypes: "payment_method_types",
+    });
+  }),
+);
+
+export function reissueInvoiceInvoiceRequestBodyToJSON(
+  reissueInvoiceInvoiceRequestBody: ReissueInvoiceInvoiceRequestBody,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceInvoiceRequestBody$outboundSchema.parse(
+      reissueInvoiceInvoiceRequestBody,
+    ),
+  );
+}
+
+/** @internal */
+export type Address$Outbound = {
+  line1?: string | undefined;
+  line2?: string | undefined;
+  city?: string | undefined;
+  state?: string | undefined;
+  postal_code?: string | undefined;
+  country?: string | undefined;
+};
+
+/** @internal */
+export const Address$outboundSchema: z.ZodMiniType<Address$Outbound, Address> =
+  z.pipe(
+    z.object({
+      line1: z.optional(z.string()),
+      line2: z.optional(z.string()),
+      city: z.optional(z.string()),
+      state: z.optional(z.string()),
+      postalCode: z.optional(z.string()),
+      country: z.optional(z.string()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        postalCode: "postal_code",
+      });
+    }),
+  );
+
+export function addressToJSON(address: Address): string {
+  return JSON.stringify(Address$outboundSchema.parse(address));
+}
+
+/** @internal */
+export type TaxId$Outbound = {
+  type: string;
+  value: string;
+};
+
+/** @internal */
+export const TaxId$outboundSchema: z.ZodMiniType<TaxId$Outbound, TaxId> = z
+  .object({
+    type: z.string(),
+    value: z.string(),
+  });
+
+export function taxIdToJSON(taxId: TaxId): string {
+  return JSON.stringify(TaxId$outboundSchema.parse(taxId));
+}
+
+/** @internal */
+export type InvoiceSettingsCustomFields$Outbound = {
+  name: string;
+  value: string;
+};
+
+/** @internal */
+export const InvoiceSettingsCustomFields$outboundSchema: z.ZodMiniType<
+  InvoiceSettingsCustomFields$Outbound,
+  InvoiceSettingsCustomFields
+> = z.object({
+  name: z.string(),
+  value: z.string(),
+});
+
+export function invoiceSettingsCustomFieldsToJSON(
+  invoiceSettingsCustomFields: InvoiceSettingsCustomFields,
+): string {
+  return JSON.stringify(
+    InvoiceSettingsCustomFields$outboundSchema.parse(
+      invoiceSettingsCustomFields,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceCustomer$Outbound = {
+  email?: string | undefined;
+  name?: string | undefined;
+  address?: Address$Outbound | undefined;
+  tax_ids?: Array<TaxId$Outbound> | undefined;
+  invoice_settings_custom_fields?:
+    | Array<InvoiceSettingsCustomFields$Outbound>
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceCustomer$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceCustomer$Outbound,
+  ReissueInvoiceCustomer
+> = z.pipe(
+  z.object({
+    email: z.optional(z.string()),
+    name: z.optional(z.string()),
+    address: z.optional(z.lazy(() => Address$outboundSchema)),
+    taxIds: z.optional(z.array(z.lazy(() => TaxId$outboundSchema))),
+    invoiceSettingsCustomFields: z.optional(z.nullable(z.array(z.lazy(() =>
+      InvoiceSettingsCustomFields$outboundSchema
+    )))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      taxIds: "tax_ids",
+      invoiceSettingsCustomFields: "invoice_settings_custom_fields",
+    });
+  }),
+);
+
+export function reissueInvoiceCustomerToJSON(
+  reissueInvoiceCustomer: ReissueInvoiceCustomer,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceCustomer$outboundSchema.parse(reissueInvoiceCustomer),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceInterval$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceInterval
+> = z.enum(ReissueInvoiceInterval);
+
+/** @internal */
+export type ReissueInvoiceStripe$Outbound = {
+  price_id: string;
+};
+
+/** @internal */
+export const ReissueInvoiceStripe$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceStripe$Outbound,
+  ReissueInvoiceStripe
+> = z.pipe(
+  z.object({
+    priceId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      priceId: "price_id",
+    });
+  }),
+);
+
+export function reissueInvoiceStripeToJSON(
+  reissueInvoiceStripe: ReissueInvoiceStripe,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceStripe$outboundSchema.parse(reissueInvoiceStripe),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceProcessors$Outbound = {
+  stripe?: ReissueInvoiceStripe$Outbound | null | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceProcessors$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceProcessors$Outbound,
+  ReissueInvoiceProcessors
+> = z.object({
+  stripe: z.optional(
+    z.nullable(z.lazy(() => ReissueInvoiceStripe$outboundSchema)),
+  ),
+});
+
+export function reissueInvoiceProcessorsToJSON(
+  reissueInvoiceProcessors: ReissueInvoiceProcessors,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceProcessors$outboundSchema.parse(reissueInvoiceProcessors),
+  );
+}
+
+/** @internal */
+export type ReissueInvoicePrice$Outbound = {
+  amount: number;
+  interval: string;
+  interval_count: number;
+  processors?: ReissueInvoiceProcessors$Outbound | undefined;
+};
+
+/** @internal */
+export const ReissueInvoicePrice$outboundSchema: z.ZodMiniType<
+  ReissueInvoicePrice$Outbound,
+  ReissueInvoicePrice
+> = z.pipe(
+  z.object({
+    amount: z.number(),
+    interval: ReissueInvoiceInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    processors: z.optional(
+      z.lazy(() => ReissueInvoiceProcessors$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function reissueInvoicePriceToJSON(
+  reissueInvoicePrice: ReissueInvoicePrice,
+): string {
+  return JSON.stringify(
+    ReissueInvoicePrice$outboundSchema.parse(reissueInvoicePrice),
+  );
+}
+
+/** @internal */
+export type ReissueInvoicePriceTo$Outbound = number | string;
+
+/** @internal */
+export const ReissueInvoicePriceTo$outboundSchema: z.ZodMiniType<
+  ReissueInvoicePriceTo$Outbound,
+  ReissueInvoicePriceTo
+> = smartUnion([z.number(), z.string()]);
+
+export function reissueInvoicePriceToToJSON(
+  reissueInvoicePriceTo: ReissueInvoicePriceTo,
+): string {
+  return JSON.stringify(
+    ReissueInvoicePriceTo$outboundSchema.parse(reissueInvoicePriceTo),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceAdditionalCurrency$Outbound,
+  ReissueInvoiceAdditionalCurrency
+> = z.pipe(
+  z.object({
+    currency: z.string(),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
+
+export function reissueInvoiceAdditionalCurrencyToJSON(
+  reissueInvoiceAdditionalCurrency: ReissueInvoiceAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceAdditionalCurrency$outboundSchema.parse(
+      reissueInvoiceAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoicePriceTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<ReissueInvoiceAdditionalCurrency$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const ReissueInvoicePriceTier$outboundSchema: z.ZodMiniType<
+  ReissueInvoicePriceTier$Outbound,
+  ReissueInvoicePriceTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => ReissueInvoiceAdditionalCurrency$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
+    });
+  }),
+);
+
+export function reissueInvoicePriceTierToJSON(
+  reissueInvoicePriceTier: ReissueInvoicePriceTier,
+): string {
+  return JSON.stringify(
+    ReissueInvoicePriceTier$outboundSchema.parse(reissueInvoicePriceTier),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceTierBehavior
+> = z.enum(ReissueInvoiceTierBehavior);
+
+/** @internal */
+export const ReissueInvoiceItemInterval$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceItemInterval
+> = z.enum(ReissueInvoiceItemInterval);
+
+/** @internal */
+export const ReissueInvoiceBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceBillingMethod
+> = z.enum(ReissueInvoiceBillingMethod);
+
+/** @internal */
+export type ReissueInvoiceItemStripe$Outbound = {
+  price_id: string;
+};
+
+/** @internal */
+export const ReissueInvoiceItemStripe$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceItemStripe$Outbound,
+  ReissueInvoiceItemStripe
+> = z.pipe(
+  z.object({
+    priceId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      priceId: "price_id",
+    });
+  }),
+);
+
+export function reissueInvoiceItemStripeToJSON(
+  reissueInvoiceItemStripe: ReissueInvoiceItemStripe,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceItemStripe$outboundSchema.parse(reissueInvoiceItemStripe),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceItemProcessors$Outbound = {
+  stripe?: ReissueInvoiceItemStripe$Outbound | null | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceItemProcessors$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceItemProcessors$Outbound,
+  ReissueInvoiceItemProcessors
+> = z.object({
+  stripe: z.optional(
+    z.nullable(z.lazy(() => ReissueInvoiceItemStripe$outboundSchema)),
+  ),
+});
+
+export function reissueInvoiceItemProcessorsToJSON(
+  reissueInvoiceItemProcessors: ReissueInvoiceItemProcessors,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceItemProcessors$outboundSchema.parse(
+      reissueInvoiceItemProcessors,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceItemPrice$Outbound = {
+  amount?: number | undefined;
+  tiers?: Array<ReissueInvoicePriceTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
+  interval: string;
+  interval_count: number;
+  billing_units: number;
+  billing_method: string;
+  processors?: ReissueInvoiceItemProcessors$Outbound | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceItemPrice$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceItemPrice$Outbound,
+  ReissueInvoiceItemPrice
+> = z.pipe(
+  z.object({
+    amount: z.optional(z.number()),
+    tiers: z.optional(
+      z.array(z.lazy(() => ReissueInvoicePriceTier$outboundSchema)),
+    ),
+    tierBehavior: z.optional(ReissueInvoiceTierBehavior$outboundSchema),
+    interval: ReissueInvoiceItemInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    billingUnits: z._default(z.number(), 1),
+    billingMethod: ReissueInvoiceBillingMethod$outboundSchema,
+    processors: z.optional(
+      z.lazy(() => ReissueInvoiceItemProcessors$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+      intervalCount: "interval_count",
+      billingUnits: "billing_units",
+      billingMethod: "billing_method",
+    });
+  }),
+);
+
+export function reissueInvoiceItemPriceToJSON(
+  reissueInvoiceItemPrice: ReissueInvoiceItemPrice,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceItemPrice$outboundSchema.parse(reissueInvoiceItemPrice),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsMatch4$Outbound = string | number | boolean;
+
+/** @internal */
+export const ReissueInvoiceDimensionsMatch4$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsMatch4$Outbound,
+  ReissueInvoiceDimensionsMatch4
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function reissueInvoiceDimensionsMatch4ToJSON(
+  reissueInvoiceDimensionsMatch4: ReissueInvoiceDimensionsMatch4,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsMatch4$outboundSchema.parse(
+      reissueInvoiceDimensionsMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensions4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const ReissueInvoiceDimensions4$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensions4$Outbound,
+  ReissueInvoiceDimensions4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function reissueInvoiceDimensions4ToJSON(
+  reissueInvoiceDimensions4: ReissueInvoiceDimensions4,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensions4$outboundSchema.parse(reissueInvoiceDimensions4),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsMatch3$Outbound = string | number | boolean;
+
+/** @internal */
+export const ReissueInvoiceDimensionsMatch3$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsMatch3$Outbound,
+  ReissueInvoiceDimensionsMatch3
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function reissueInvoiceDimensionsMatch3ToJSON(
+  reissueInvoiceDimensionsMatch3: ReissueInvoiceDimensionsMatch3,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsMatch3$outboundSchema.parse(
+      reissueInvoiceDimensionsMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceDimensionsToEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceDimensionsToEnum2
+> = z.enum(ReissueInvoiceDimensionsToEnum2);
+
+/** @internal */
+export type ReissueInvoiceDimensionsToUnion2$Outbound = number | string;
+
+/** @internal */
+export const ReissueInvoiceDimensionsToUnion2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsToUnion2$Outbound,
+  ReissueInvoiceDimensionsToUnion2
+> = smartUnion([z.number(), ReissueInvoiceDimensionsToEnum2$outboundSchema]);
+
+export function reissueInvoiceDimensionsToUnion2ToJSON(
+  reissueInvoiceDimensionsToUnion2: ReissueInvoiceDimensionsToUnion2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsToUnion2$outboundSchema.parse(
+      reissueInvoiceDimensionsToUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsTier2$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const ReissueInvoiceDimensionsTier2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsTier2$Outbound,
+  ReissueInvoiceDimensionsTier2
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      ReissueInvoiceDimensionsToEnum2$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function reissueInvoiceDimensionsTier2ToJSON(
+  reissueInvoiceDimensionsTier2: ReissueInvoiceDimensionsTier2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsTier2$outboundSchema.parse(
+      reissueInvoiceDimensionsTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensions3$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<ReissueInvoiceDimensionsTier2$Outbound>;
+};
+
+/** @internal */
+export const ReissueInvoiceDimensions3$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensions3$Outbound,
+  ReissueInvoiceDimensions3
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.lazy(() => ReissueInvoiceDimensionsTier2$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function reissueInvoiceDimensions3ToJSON(
+  reissueInvoiceDimensions3: ReissueInvoiceDimensions3,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensions3$outboundSchema.parse(reissueInvoiceDimensions3),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsUnion2$Outbound =
+  | ReissueInvoiceDimensions3$Outbound
+  | ReissueInvoiceDimensions4$Outbound;
+
+/** @internal */
+export const ReissueInvoiceDimensionsUnion2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsUnion2$Outbound,
+  ReissueInvoiceDimensionsUnion2
+> = smartUnion([
+  z.lazy(() => ReissueInvoiceDimensions3$outboundSchema),
+  z.lazy(() => ReissueInvoiceDimensions4$outboundSchema),
+]);
+
+export function reissueInvoiceDimensionsUnion2ToJSON(
+  reissueInvoiceDimensionsUnion2: ReissueInvoiceDimensionsUnion2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsUnion2$outboundSchema.parse(
+      reissueInvoiceDimensionsUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceMultipliersMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const ReissueInvoiceMultipliersMatch2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceMultipliersMatch2$Outbound,
+  ReissueInvoiceMultipliersMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function reissueInvoiceMultipliersMatch2ToJSON(
+  reissueInvoiceMultipliersMatch2: ReissueInvoiceMultipliersMatch2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceMultipliersMatch2$outboundSchema.parse(
+      reissueInvoiceMultipliersMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceMultipliers2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceMultipliers2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceMultipliers2$Outbound,
+  ReissueInvoiceMultipliers2
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function reissueInvoiceMultipliers2ToJSON(
+  reissueInvoiceMultipliers2: ReissueInvoiceMultipliers2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceMultipliers2$outboundSchema.parse(reissueInvoiceMultipliers2),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceCreditSchema2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | ReissueInvoiceDimensions3$Outbound
+      | ReissueInvoiceDimensions4$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: ReissueInvoiceMultipliers2$Outbound }
+    | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const ReissueInvoiceCreditSchema2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceCreditSchema2$Outbound,
+  ReissueInvoiceCreditSchema2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => ReissueInvoiceDimensions3$outboundSchema),
+        z.lazy(() => ReissueInvoiceDimensions4$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => ReissueInvoiceMultipliers2$outboundSchema),
+    )),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function reissueInvoiceCreditSchema2ToJSON(
+  reissueInvoiceCreditSchema2: ReissueInvoiceCreditSchema2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceCreditSchema2$outboundSchema.parse(
+      reissueInvoiceCreditSchema2,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsMatch2$Outbound = string | number | boolean;
+
+/** @internal */
+export const ReissueInvoiceDimensionsMatch2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsMatch2$Outbound,
+  ReissueInvoiceDimensionsMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function reissueInvoiceDimensionsMatch2ToJSON(
+  reissueInvoiceDimensionsMatch2: ReissueInvoiceDimensionsMatch2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsMatch2$outboundSchema.parse(
+      reissueInvoiceDimensionsMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensions2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const ReissueInvoiceDimensions2$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensions2$Outbound,
+  ReissueInvoiceDimensions2
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function reissueInvoiceDimensions2ToJSON(
+  reissueInvoiceDimensions2: ReissueInvoiceDimensions2,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensions2$outboundSchema.parse(reissueInvoiceDimensions2),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsMatch1$Outbound = string | number | boolean;
+
+/** @internal */
+export const ReissueInvoiceDimensionsMatch1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsMatch1$Outbound,
+  ReissueInvoiceDimensionsMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function reissueInvoiceDimensionsMatch1ToJSON(
+  reissueInvoiceDimensionsMatch1: ReissueInvoiceDimensionsMatch1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsMatch1$outboundSchema.parse(
+      reissueInvoiceDimensionsMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceDimensionsToEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceDimensionsToEnum1
+> = z.enum(ReissueInvoiceDimensionsToEnum1);
+
+/** @internal */
+export type ReissueInvoiceDimensionsToUnion1$Outbound = number | string;
+
+/** @internal */
+export const ReissueInvoiceDimensionsToUnion1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsToUnion1$Outbound,
+  ReissueInvoiceDimensionsToUnion1
+> = smartUnion([z.number(), ReissueInvoiceDimensionsToEnum1$outboundSchema]);
+
+export function reissueInvoiceDimensionsToUnion1ToJSON(
+  reissueInvoiceDimensionsToUnion1: ReissueInvoiceDimensionsToUnion1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsToUnion1$outboundSchema.parse(
+      reissueInvoiceDimensionsToUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsTier1$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const ReissueInvoiceDimensionsTier1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsTier1$Outbound,
+  ReissueInvoiceDimensionsTier1
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      ReissueInvoiceDimensionsToEnum1$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function reissueInvoiceDimensionsTier1ToJSON(
+  reissueInvoiceDimensionsTier1: ReissueInvoiceDimensionsTier1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsTier1$outboundSchema.parse(
+      reissueInvoiceDimensionsTier1,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensions1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<ReissueInvoiceDimensionsTier1$Outbound>;
+};
+
+/** @internal */
+export const ReissueInvoiceDimensions1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensions1$Outbound,
+  ReissueInvoiceDimensions1
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.lazy(() => ReissueInvoiceDimensionsTier1$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function reissueInvoiceDimensions1ToJSON(
+  reissueInvoiceDimensions1: ReissueInvoiceDimensions1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensions1$outboundSchema.parse(reissueInvoiceDimensions1),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceDimensionsUnion1$Outbound =
+  | ReissueInvoiceDimensions1$Outbound
+  | ReissueInvoiceDimensions2$Outbound;
+
+/** @internal */
+export const ReissueInvoiceDimensionsUnion1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceDimensionsUnion1$Outbound,
+  ReissueInvoiceDimensionsUnion1
+> = smartUnion([
+  z.lazy(() => ReissueInvoiceDimensions1$outboundSchema),
+  z.lazy(() => ReissueInvoiceDimensions2$outboundSchema),
+]);
+
+export function reissueInvoiceDimensionsUnion1ToJSON(
+  reissueInvoiceDimensionsUnion1: ReissueInvoiceDimensionsUnion1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceDimensionsUnion1$outboundSchema.parse(
+      reissueInvoiceDimensionsUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceMultipliersMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const ReissueInvoiceMultipliersMatch1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceMultipliersMatch1$Outbound,
+  ReissueInvoiceMultipliersMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function reissueInvoiceMultipliersMatch1ToJSON(
+  reissueInvoiceMultipliersMatch1: ReissueInvoiceMultipliersMatch1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceMultipliersMatch1$outboundSchema.parse(
+      reissueInvoiceMultipliersMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceMultipliers1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceMultipliers1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceMultipliers1$Outbound,
+  ReissueInvoiceMultipliers1
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function reissueInvoiceMultipliers1ToJSON(
+  reissueInvoiceMultipliers1: ReissueInvoiceMultipliers1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceMultipliers1$outboundSchema.parse(reissueInvoiceMultipliers1),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceToEnum$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceToEnum
+> = z.enum(ReissueInvoiceToEnum);
+
+/** @internal */
+export type ReissueInvoiceFeatureOverrideToUnion$Outbound = number | string;
+
+/** @internal */
+export const ReissueInvoiceFeatureOverrideToUnion$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceFeatureOverrideToUnion$Outbound,
+  ReissueInvoiceFeatureOverrideToUnion
+> = smartUnion([z.number(), ReissueInvoiceToEnum$outboundSchema]);
+
+export function reissueInvoiceFeatureOverrideToUnionToJSON(
+  reissueInvoiceFeatureOverrideToUnion: ReissueInvoiceFeatureOverrideToUnion,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceFeatureOverrideToUnion$outboundSchema.parse(
+      reissueInvoiceFeatureOverrideToUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceFeatureOverrideTier$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const ReissueInvoiceFeatureOverrideTier$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceFeatureOverrideTier$Outbound,
+  ReissueInvoiceFeatureOverrideTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), ReissueInvoiceToEnum$outboundSchema]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function reissueInvoiceFeatureOverrideTierToJSON(
+  reissueInvoiceFeatureOverrideTier: ReissueInvoiceFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceFeatureOverrideTier$outboundSchema.parse(
+      reissueInvoiceFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceCreditSchema1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | ReissueInvoiceDimensions1$Outbound
+      | ReissueInvoiceDimensions2$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: ReissueInvoiceMultipliers1$Outbound }
+    | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<ReissueInvoiceFeatureOverrideTier$Outbound>;
+};
+
+/** @internal */
+export const ReissueInvoiceCreditSchema1$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceCreditSchema1$Outbound,
+  ReissueInvoiceCreditSchema1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => ReissueInvoiceDimensions1$outboundSchema),
+        z.lazy(() => ReissueInvoiceDimensions2$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => ReissueInvoiceMultipliers1$outboundSchema),
+    )),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.lazy(() =>
+      ReissueInvoiceFeatureOverrideTier$outboundSchema
+    )),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function reissueInvoiceCreditSchema1ToJSON(
+  reissueInvoiceCreditSchema1: ReissueInvoiceCreditSchema1,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceCreditSchema1$outboundSchema.parse(
+      reissueInvoiceCreditSchema1,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceCreditSchemaUnion$Outbound =
+  | ReissueInvoiceCreditSchema1$Outbound
+  | ReissueInvoiceCreditSchema2$Outbound;
+
+/** @internal */
+export const ReissueInvoiceCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceCreditSchemaUnion$Outbound,
+  ReissueInvoiceCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => ReissueInvoiceCreditSchema1$outboundSchema),
+  z.lazy(() => ReissueInvoiceCreditSchema2$outboundSchema),
+]);
+
+export function reissueInvoiceCreditSchemaUnionToJSON(
+  reissueInvoiceCreditSchemaUnion: ReissueInvoiceCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceCreditSchemaUnion$outboundSchema.parse(
+      reissueInvoiceCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | ReissueInvoiceCreditSchema1$Outbound
+      | ReissueInvoiceCreditSchema2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceFeatureOverride$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceFeatureOverride$Outbound,
+  ReissueInvoiceFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => ReissueInvoiceCreditSchema1$outboundSchema),
+      z.lazy(() =>
+        ReissueInvoiceCreditSchema2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function reissueInvoiceFeatureOverrideToJSON(
+  reissueInvoiceFeatureOverride: ReissueInvoiceFeatureOverride,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceFeatureOverride$outboundSchema.parse(
+      reissueInvoiceFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
+export type AddItem$Outbound = {
+  feature_id: string;
+  price?: ReissueInvoiceItemPrice$Outbound | undefined;
+  feature_override?: ReissueInvoiceFeatureOverride$Outbound | undefined;
+};
+
+/** @internal */
+export const AddItem$outboundSchema: z.ZodMiniType<AddItem$Outbound, AddItem> =
+  z.pipe(
+    z.object({
+      featureId: z.string(),
+      price: z.optional(z.lazy(() => ReissueInvoiceItemPrice$outboundSchema)),
+      featureOverride: z.optional(
+        z.lazy(() => ReissueInvoiceFeatureOverride$outboundSchema),
+      ),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+        featureOverride: "feature_override",
+      });
+    }),
+  );
+
+export function addItemToJSON(addItem: AddItem): string {
+  return JSON.stringify(AddItem$outboundSchema.parse(addItem));
+}
+
+/** @internal */
+export type ReissueInvoiceInvoiceCustomize$Outbound = {
+  price?: ReissueInvoicePrice$Outbound | null | undefined;
+  items?: Array<AddItem$Outbound> | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceInvoiceCustomize$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceInvoiceCustomize$Outbound,
+  ReissueInvoiceInvoiceCustomize
+> = z.object({
+  price: z.optional(
+    z.nullable(z.lazy(() => ReissueInvoicePrice$outboundSchema)),
+  ),
+  items: z.optional(z.array(z.lazy(() => AddItem$outboundSchema))),
+});
+
+export function reissueInvoiceInvoiceCustomizeToJSON(
+  reissueInvoiceInvoiceCustomize: ReissueInvoiceInvoiceCustomize,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceInvoiceCustomize$outboundSchema.parse(
+      reissueInvoiceInvoiceCustomize,
+    ),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceBillingBehavior
+> = z.enum(ReissueInvoiceBillingBehavior);
+
+/** @internal */
+export type ReissueInvoiceUsage$Outbound = {
+  feature_id: string;
+  quantity: number;
+  properties?: { [k: string]: any } | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceUsage$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceUsage$Outbound,
+  ReissueInvoiceUsage
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    quantity: z.number(),
+    properties: z.optional(z.record(z.string(), z.any())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function reissueInvoiceUsageToJSON(
+  reissueInvoiceUsage: ReissueInvoiceUsage,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceUsage$outboundSchema.parse(reissueInvoiceUsage),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceFeatureQuantity$Outbound = {
+  feature_id: string;
+  billing_behavior: string;
+  quantity?: number | undefined;
+  usage?: Array<ReissueInvoiceUsage$Outbound> | undefined;
+  prorate?: boolean | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceFeatureQuantity$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceFeatureQuantity$Outbound,
+  ReissueInvoiceFeatureQuantity
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    billingBehavior: ReissueInvoiceBillingBehavior$outboundSchema,
+    quantity: z.optional(z.number()),
+    usage: z.optional(
+      z.array(z.lazy(() => ReissueInvoiceUsage$outboundSchema)),
+    ),
+    prorate: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingBehavior: "billing_behavior",
+    });
+  }),
+);
+
+export function reissueInvoiceFeatureQuantityToJSON(
+  reissueInvoiceFeatureQuantity: ReissueInvoiceFeatureQuantity,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceFeatureQuantity$outboundSchema.parse(
+      reissueInvoiceFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantityInterval$outboundSchema:
+  z.ZodMiniEnum<typeof ReissueInvoiceLicenseQuantityInterval> = z.enum(
+    ReissueInvoiceLicenseQuantityInterval,
+  );
+
+/** @internal */
+export type ReissueInvoiceLicenseQuantityStripe$Outbound = {
+  price_id: string;
+};
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantityStripe$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceLicenseQuantityStripe$Outbound,
+  ReissueInvoiceLicenseQuantityStripe
+> = z.pipe(
+  z.object({
+    priceId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      priceId: "price_id",
+    });
+  }),
+);
+
+export function reissueInvoiceLicenseQuantityStripeToJSON(
+  reissueInvoiceLicenseQuantityStripe: ReissueInvoiceLicenseQuantityStripe,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceLicenseQuantityStripe$outboundSchema.parse(
+      reissueInvoiceLicenseQuantityStripe,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceLicenseQuantityProcessors$Outbound = {
+  stripe?: ReissueInvoiceLicenseQuantityStripe$Outbound | null | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantityProcessors$outboundSchema:
+  z.ZodMiniType<
+    ReissueInvoiceLicenseQuantityProcessors$Outbound,
+    ReissueInvoiceLicenseQuantityProcessors
+  > = z.object({
+    stripe: z.optional(
+      z.nullable(
+        z.lazy(() => ReissueInvoiceLicenseQuantityStripe$outboundSchema),
+      ),
+    ),
+  });
+
+export function reissueInvoiceLicenseQuantityProcessorsToJSON(
+  reissueInvoiceLicenseQuantityProcessors:
+    ReissueInvoiceLicenseQuantityProcessors,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceLicenseQuantityProcessors$outboundSchema.parse(
+      reissueInvoiceLicenseQuantityProcessors,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceLicenseQuantityPrice$Outbound = {
+  amount: number;
+  interval: string;
+  interval_count: number;
+  processors?: ReissueInvoiceLicenseQuantityProcessors$Outbound | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantityPrice$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceLicenseQuantityPrice$Outbound,
+  ReissueInvoiceLicenseQuantityPrice
+> = z.pipe(
+  z.object({
+    amount: z.number(),
+    interval: ReissueInvoiceLicenseQuantityInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    processors: z.optional(
+      z.lazy(() => ReissueInvoiceLicenseQuantityProcessors$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function reissueInvoiceLicenseQuantityPriceToJSON(
+  reissueInvoiceLicenseQuantityPrice: ReissueInvoiceLicenseQuantityPrice,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceLicenseQuantityPrice$outboundSchema.parse(
+      reissueInvoiceLicenseQuantityPrice,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceCustomize$Outbound = {
+  price?: ReissueInvoiceLicenseQuantityPrice$Outbound | null | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceCustomize$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceCustomize$Outbound,
+  ReissueInvoiceCustomize
+> = z.object({
+  price: z.optional(
+    z.nullable(z.lazy(() => ReissueInvoiceLicenseQuantityPrice$outboundSchema)),
+  ),
+});
+
+export function reissueInvoiceCustomizeToJSON(
+  reissueInvoiceCustomize: ReissueInvoiceCustomize,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceCustomize$outboundSchema.parse(reissueInvoiceCustomize),
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantityBillingBehavior$outboundSchema:
+  z.ZodMiniEnum<typeof ReissueInvoiceLicenseQuantityBillingBehavior> = z.enum(
+    ReissueInvoiceLicenseQuantityBillingBehavior,
+  );
+
+/** @internal */
+export type ReissueInvoiceLicenseQuantityUsage$Outbound = {
+  feature_id: string;
+  quantity: number;
+  properties?: { [k: string]: any } | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantityUsage$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceLicenseQuantityUsage$Outbound,
+  ReissueInvoiceLicenseQuantityUsage
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    quantity: z.number(),
+    properties: z.optional(z.record(z.string(), z.any())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function reissueInvoiceLicenseQuantityUsageToJSON(
+  reissueInvoiceLicenseQuantityUsage: ReissueInvoiceLicenseQuantityUsage,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceLicenseQuantityUsage$outboundSchema.parse(
+      reissueInvoiceLicenseQuantityUsage,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceLicenseQuantityFeatureQuantity$Outbound = {
+  feature_id: string;
+  billing_behavior: string;
+  quantity?: number | undefined;
+  usage?: Array<ReissueInvoiceLicenseQuantityUsage$Outbound> | undefined;
+  prorate?: boolean | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantityFeatureQuantity$outboundSchema:
+  z.ZodMiniType<
+    ReissueInvoiceLicenseQuantityFeatureQuantity$Outbound,
+    ReissueInvoiceLicenseQuantityFeatureQuantity
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      billingBehavior:
+        ReissueInvoiceLicenseQuantityBillingBehavior$outboundSchema,
+      quantity: z.optional(z.number()),
+      usage: z.optional(
+        z.array(
+          z.lazy(() => ReissueInvoiceLicenseQuantityUsage$outboundSchema),
+        ),
+      ),
+      prorate: z.optional(z.boolean()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+        billingBehavior: "billing_behavior",
+      });
+    }),
+  );
+
+export function reissueInvoiceLicenseQuantityFeatureQuantityToJSON(
+  reissueInvoiceLicenseQuantityFeatureQuantity:
+    ReissueInvoiceLicenseQuantityFeatureQuantity,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceLicenseQuantityFeatureQuantity$outboundSchema.parse(
+      reissueInvoiceLicenseQuantityFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceLicenseQuantity$Outbound = {
+  license_plan_id: string;
+  quantity: number;
+  customize?: ReissueInvoiceCustomize$Outbound | undefined;
+  feature_quantities?:
+    | Array<ReissueInvoiceLicenseQuantityFeatureQuantity$Outbound>
+    | undefined;
+  prorate?: boolean | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceLicenseQuantity$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceLicenseQuantity$Outbound,
+  ReissueInvoiceLicenseQuantity
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+    quantity: z.int(),
+    customize: z.optional(z.lazy(() => ReissueInvoiceCustomize$outboundSchema)),
+    featureQuantities: z.optional(z.array(z.lazy(() =>
+      ReissueInvoiceLicenseQuantityFeatureQuantity$outboundSchema
+    ))),
+    prorate: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+      featureQuantities: "feature_quantities",
+    });
+  }),
+);
+
+export function reissueInvoiceLicenseQuantityToJSON(
+  reissueInvoiceLicenseQuantity: ReissueInvoiceLicenseQuantity,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceLicenseQuantity$outboundSchema.parse(
+      reissueInvoiceLicenseQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type ReissueInvoiceAttachDiscount$Outbound = {
+  reward_id?: string | undefined;
+  promotion_code?: string | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceAttachDiscount$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceAttachDiscount$Outbound,
+  ReissueInvoiceAttachDiscount
+> = z.pipe(
+  z.object({
+    rewardId: z.optional(z.string()),
+    promotionCode: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+      promotionCode: "promotion_code",
+    });
+  }),
+);
+
+export function reissueInvoiceAttachDiscountToJSON(
+  reissueInvoiceAttachDiscount: ReissueInvoiceAttachDiscount,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceAttachDiscount$outboundSchema.parse(
+      reissueInvoiceAttachDiscount,
+    ),
+  );
+}
+
+/** @internal */
+export type Add2$Outbound = {
+  plan_id: string;
+  version?: number | undefined;
+  customize?: ReissueInvoiceInvoiceCustomize$Outbound | undefined;
+  feature_quantities?:
+    | Array<ReissueInvoiceFeatureQuantity$Outbound>
+    | undefined;
+  license_quantities?:
+    | Array<ReissueInvoiceLicenseQuantity$Outbound>
+    | undefined;
+  discounts?: Array<ReissueInvoiceAttachDiscount$Outbound> | undefined;
+  prorate?: boolean | undefined;
+};
+
+/** @internal */
+export const Add2$outboundSchema: z.ZodMiniType<Add2$Outbound, Add2> = z.pipe(
+  z.object({
+    planId: z.string(),
+    version: z.optional(z.number()),
+    customize: z.optional(z.lazy(() =>
+      ReissueInvoiceInvoiceCustomize$outboundSchema
+    )),
+    featureQuantities: z.optional(z.array(z.lazy(() =>
+      ReissueInvoiceFeatureQuantity$outboundSchema
+    ))),
+    licenseQuantities: z.optional(z.array(z.lazy(() =>
+      ReissueInvoiceLicenseQuantity$outboundSchema
+    ))),
+    discounts: z.optional(z.array(z.lazy(() =>
+      ReissueInvoiceAttachDiscount$outboundSchema
+    ))),
+    prorate: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      planId: "plan_id",
+      featureQuantities: "feature_quantities",
+      licenseQuantities: "license_quantities",
+    });
+  }),
+);
+
+export function add2ToJSON(add2: Add2): string {
+  return JSON.stringify(Add2$outboundSchema.parse(add2));
+}
+
+/** @internal */
+export type Add1$Outbound = {
+  amount: number;
+  description: string;
+};
+
+/** @internal */
+export const Add1$outboundSchema: z.ZodMiniType<Add1$Outbound, Add1> = z.object(
+  {
+    amount: z.number(),
+    description: z.string(),
+  },
+);
+
+export function add1ToJSON(add1: Add1): string {
+  return JSON.stringify(Add1$outboundSchema.parse(add1));
+}
+
+/** @internal */
+export type AddUnion$Outbound = Add1$Outbound | Add2$Outbound;
+
+/** @internal */
+export const AddUnion$outboundSchema: z.ZodMiniType<
+  AddUnion$Outbound,
+  AddUnion
+> = smartUnion([
+  z.lazy(() => Add1$outboundSchema),
+  z.lazy(() => Add2$outboundSchema),
+]);
+
+export function addUnionToJSON(addUnion: AddUnion): string {
+  return JSON.stringify(AddUnion$outboundSchema.parse(addUnion));
+}
+
+/** @internal */
+export type ReissueInvoiceUpdate$Outbound = {
+  id: string;
+  amount?: number | undefined;
+  description?: string | undefined;
+};
+
+/** @internal */
+export const ReissueInvoiceUpdate$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceUpdate$Outbound,
+  ReissueInvoiceUpdate
+> = z.object({
+  id: z.string(),
+  amount: z.optional(z.number()),
+  description: z.optional(z.string()),
+});
+
+export function reissueInvoiceUpdateToJSON(
+  reissueInvoiceUpdate: ReissueInvoiceUpdate,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceUpdate$outboundSchema.parse(reissueInvoiceUpdate),
+  );
+}
+
+/** @internal */
+export type Lines$Outbound = {
+  add?: Array<Add1$Outbound | Add2$Outbound> | undefined;
+  update?: Array<ReissueInvoiceUpdate$Outbound> | undefined;
+  remove?: Array<string> | undefined;
+};
+
+/** @internal */
+export const Lines$outboundSchema: z.ZodMiniType<Lines$Outbound, Lines> = z
+  .object({
+    add: z.optional(
+      z.array(smartUnion([
+        z.lazy(() => Add1$outboundSchema),
+        z.lazy(() =>
+          Add2$outboundSchema
+        ),
+      ])),
+    ),
+    update: z.optional(
+      z.array(z.lazy(() => ReissueInvoiceUpdate$outboundSchema)),
+    ),
+    remove: z.optional(z.array(z.string())),
+  });
+
+export function linesToJSON(lines: Lines): string {
+  return JSON.stringify(Lines$outboundSchema.parse(lines));
+}
 
 /** @internal */
 export type ReissueInvoiceParams$Outbound = {
   invoice_id: string;
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
+  preview?: boolean | undefined;
   update_customer_email?: string | undefined;
+  invoice?: ReissueInvoiceInvoiceRequestBody$Outbound | undefined;
+  customer?: ReissueInvoiceCustomer$Outbound | undefined;
+  lines?: Lines$Outbound | undefined;
 };
 
 /** @internal */
@@ -195,7 +2852,13 @@ export const ReissueInvoiceParams$outboundSchema: z.ZodMiniType<
     invoiceId: z.string(),
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
+    preview: z.optional(z.boolean()),
     updateCustomerEmail: z.optional(z.string()),
+    invoice: z.optional(
+      z.lazy(() => ReissueInvoiceInvoiceRequestBody$outboundSchema),
+    ),
+    customer: z.optional(z.lazy(() => ReissueInvoiceCustomer$outboundSchema)),
+    lines: z.optional(z.lazy(() => Lines$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -249,11 +2912,12 @@ export function reissueInvoiceEntityFromJSON(
 }
 
 /** @internal */
-export const ReissueInvoiceItem$inboundSchema: z.ZodMiniType<
-  ReissueInvoiceItem,
+export const ReissueInvoiceInvoiceItem$inboundSchema: z.ZodMiniType<
+  ReissueInvoiceInvoiceItem,
   unknown
 > = z.pipe(
   z.object({
+    id: types.string(),
     description: types.string(),
     period_start: types.nullable(types.number()),
     period_end: types.nullable(types.number()),
@@ -275,19 +2939,19 @@ export const ReissueInvoiceItem$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function reissueInvoiceItemFromJSON(
+export function reissueInvoiceInvoiceItemFromJSON(
   jsonString: string,
-): SafeParseResult<ReissueInvoiceItem, SDKValidationError> {
+): SafeParseResult<ReissueInvoiceInvoiceItem, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ReissueInvoiceItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ReissueInvoiceItem' from JSON`,
+    (x) => ReissueInvoiceInvoiceItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ReissueInvoiceInvoiceItem' from JSON`,
   );
 }
 
 /** @internal */
-export const ReissueInvoiceInvoice$inboundSchema: z.ZodMiniType<
-  ReissueInvoiceInvoice,
+export const ReissueInvoiceInvoiceResponse$inboundSchema: z.ZodMiniType<
+  ReissueInvoiceInvoiceResponse,
   unknown
 > = z.pipe(
   z.object({
@@ -308,7 +2972,7 @@ export const ReissueInvoiceInvoice$inboundSchema: z.ZodMiniType<
     amount_paid: types.nullable(types.number()),
     refunded_amount: types.number(),
     items: types.optional(
-      z.array(z.lazy(() => ReissueInvoiceItem$inboundSchema)),
+      z.array(z.lazy(() => ReissueInvoiceInvoiceItem$inboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -326,13 +2990,145 @@ export const ReissueInvoiceInvoice$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function reissueInvoiceInvoiceFromJSON(
+export function reissueInvoiceInvoiceResponseFromJSON(
   jsonString: string,
-): SafeParseResult<ReissueInvoiceInvoice, SDKValidationError> {
+): SafeParseResult<ReissueInvoiceInvoiceResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ReissueInvoiceInvoice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ReissueInvoiceInvoice' from JSON`,
+    (x) => ReissueInvoiceInvoiceResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ReissueInvoiceInvoiceResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceLine$inboundSchema: z.ZodMiniType<
+  ReissueInvoiceLine,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_id: types.nullable(types.string()),
+    feature_id: types.nullable(types.string()),
+    description: types.string(),
+    amount: types.number(),
+    amount_after_discounts: types.number(),
+    quantity: types.nullable(types.number()),
+    prorated: types.boolean(),
+    period_start: types.nullable(types.number()),
+    period_end: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "feature_id": "featureId",
+      "amount_after_discounts": "amountAfterDiscounts",
+      "period_start": "periodStart",
+      "period_end": "periodEnd",
+    });
+  }),
+);
+
+export function reissueInvoiceLineFromJSON(
+  jsonString: string,
+): SafeParseResult<ReissueInvoiceLine, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ReissueInvoiceLine$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ReissueInvoiceLine' from JSON`,
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceStatus$inboundSchema: z.ZodMiniType<
+  ReissueInvoiceStatus,
+  unknown
+> = openEnums.inboundSchema(ReissueInvoiceStatus);
+
+/** @internal */
+export const ReissueInvoiceTax$inboundSchema: z.ZodMiniType<
+  ReissueInvoiceTax,
+  unknown
+> = z.pipe(
+  z.object({
+    total: types.number(),
+    amount_inclusive: types.number(),
+    amount_exclusive: types.number(),
+    status: ReissueInvoiceStatus$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_inclusive": "amountInclusive",
+      "amount_exclusive": "amountExclusive",
+    });
+  }),
+);
+
+export function reissueInvoiceTaxFromJSON(
+  jsonString: string,
+): SafeParseResult<ReissueInvoiceTax, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ReissueInvoiceTax$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ReissueInvoiceTax' from JSON`,
+  );
+}
+
+/** @internal */
+export const ReissueInvoiceInvoiceCredits$inboundSchema: z.ZodMiniType<
+  ReissueInvoiceInvoiceCredits,
+  unknown
+> = z.object({
+  balance: types.number(),
+  applied: types.optional(types.number()),
+  currency: types.string(),
+});
+
+export function reissueInvoiceInvoiceCreditsFromJSON(
+  jsonString: string,
+): SafeParseResult<ReissueInvoiceInvoiceCredits, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ReissueInvoiceInvoiceCredits$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ReissueInvoiceInvoiceCredits' from JSON`,
+  );
+}
+
+/** @internal */
+export const ReissueInvoicePreview$inboundSchema: z.ZodMiniType<
+  ReissueInvoicePreview,
+  unknown
+> = z.pipe(
+  z.object({
+    currency: types.string(),
+    lines: z.array(z.lazy(() => ReissueInvoiceLine$inboundSchema)),
+    subtotal: types.number(),
+    discount_total: types.number(),
+    tax: types.nullable(z.lazy(() => ReissueInvoiceTax$inboundSchema)),
+    total: types.number(),
+    invoice_credits: types.optional(
+      z.lazy(() => ReissueInvoiceInvoiceCredits$inboundSchema),
+    ),
+    amount_due: types.number(),
+    issue_date: types.number(),
+    due_date: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "discount_total": "discountTotal",
+      "invoice_credits": "invoiceCredits",
+      "amount_due": "amountDue",
+      "issue_date": "issueDate",
+      "due_date": "dueDate",
+    });
+  }),
+);
+
+export function reissueInvoicePreviewFromJSON(
+  jsonString: string,
+): SafeParseResult<ReissueInvoicePreview, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ReissueInvoicePreview$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ReissueInvoicePreview' from JSON`,
   );
 }
 
@@ -342,12 +3138,17 @@ export const ReissueInvoiceResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    invoice: z.lazy(() => ReissueInvoiceInvoice$inboundSchema),
-    voided_invoice_id: types.string(),
+    invoice: types.nullable(
+      z.lazy(() => ReissueInvoiceInvoiceResponse$inboundSchema),
+    ),
+    voided_invoice_id: types.nullable(types.string()),
+    credit_note_id: types.nullable(types.string()),
+    preview: z.lazy(() => ReissueInvoicePreview$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "voided_invoice_id": "voidedInvoiceId",
+      "credit_note_id": "creditNoteId",
     });
   }),
 );

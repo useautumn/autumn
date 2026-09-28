@@ -160,17 +160,69 @@ describe("track computation", () => {
 				command: createTrackCommand({ entityId: "entity_1" }),
 			}),
 		).toThrow(new UnsupportedCommandError({ reason: "entity_not_found" }));
-		expect(() =>
-			trackMutation({
-				state: createState({ customerEntitlements: [] }),
-				command: createTrackCommand(),
-			}),
-		).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
-		expect(() =>
-			trackMutation({
-				state: createState(),
-				command: createTrackCommand({ featureId: "constructor" }),
-			}),
-		).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
 	});
+
+	test.concurrent(
+		"applies a track nothing funds as a no-op, as legacy does",
+		() => {
+			for (const { state, featureId } of [
+				{
+					state: createState({ customerEntitlements: [] }),
+					featureId: "messages",
+				},
+				{ state: createState(), featureId: "constructor" },
+			]) {
+				const mutation = trackMutation({
+					state,
+					command: createTrackCommand({ featureId, overageBehavior: "cap" }),
+				});
+
+				// Logged like any track, so its usage event is still recorded.
+				expect(mutation.revision).toEqual({ before: 0, after: 1 });
+				expect(mutation.changes).toEqual([]);
+				expect(trackResultOf({ mutation })).toEqual({
+					type: "track",
+					status: "applied",
+					reason: null,
+					deltas: [],
+					deductions: [],
+					internalProductId: null,
+					fundingFeatureId: featureId,
+					fundingCreditCost: 1,
+				});
+			}
+		},
+	);
+
+	test.concurrent(
+		"rejects a reject-mode track nothing funds, as legacy does",
+		() => {
+			const mutation = trackMutation({
+				state: createState({ customerEntitlements: [] }),
+				command: createTrackCommand({ overageBehavior: "reject" }),
+			});
+
+			expect(mutation.changes).toEqual([]);
+			expect(trackResultOf({ mutation })).toMatchObject({
+				status: "rejected",
+				reason: "insufficient_balance",
+				deltas: [],
+			});
+		},
+	);
+
+	test.concurrent(
+		"refuses a deducting check nothing funds, so it answers not attached",
+		() => {
+			expect(() =>
+				trackMutation({
+					state: createState({ customerEntitlements: [] }),
+					command: {
+						...createTrackCommand({ overageBehavior: "cap" }),
+						enforceOverdueBlock: true,
+					},
+				}),
+			).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
+		},
+	);
 });

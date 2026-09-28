@@ -54,6 +54,18 @@ export type ActiveRun = {
 	 * turn is coming and it must keep reading, because the message is already
 	 * posted and its reply would otherwise run with nobody attached. */
 	claimFollowUpsOrSettle: () => boolean;
+	/** A follow-up that lands mid-turn makes eve cancel that turn and start a
+	 * replacement holding every message it has taken. So a follow-up eve had
+	 * accepted before a cancel the reader sees is answered by the next turn
+	 * start. The reader calls this on each `turn.cancelled`. */
+	noteTurnCancelled: () => void;
+	/** Covers the follow-ups armed by `noteTurnCancelled`; without it a
+	 * follow-up folded into the reply it is waiting on reads as still owed
+	 * after that reply. A start with no cancel after the accept does not
+	 * cover: that turn may predate the message (a reader running behind eve),
+	 * and the message then gets its own turn, claimed at the boundary. A post
+	 * still in flight at the cancel stays owed, for the same reason. */
+	coverAcceptedFollowUps: () => void;
 	/** The turn settled locally and nobody reads the stream any more: a message
 	 * posted now would run unread. Set the instant the reader returns, before
 	 * the reply or approval card is presented, so late arrivals queue instead. */
@@ -121,6 +133,13 @@ export const registerRun = ({
 	// Reservations are taken before the post lands, so a reader that is about
 	// to stop needs to know an answer is still outstanding.
 	const inFlightPosts = new Set<Promise<unknown>>();
+	// Accepted posts wait for a cancel, then for the replacement's start. A
+	// claim hands every reservation to the reader at once, so it opens a new
+	// generation: a post that lands after the claim was already counted and
+	// must not count again.
+	let acceptedFollowUps = 0;
+	let coverableFollowUps = 0;
+	let claimGeneration = 0;
 
 	const assertAcceptingFollowUps = () => {
 		if (run.closed || run.stop) throw new Error("Run is closing");
@@ -143,16 +162,20 @@ export const registerRun = ({
 			const send = transport.sendUserMessage;
 			if (!send) throw new Error("Run has no follow-up transport");
 			run.pendingTurns += 1;
+			const generation = claimGeneration;
 			// No separate interrupt: the post itself steers, so the cancel and
 			// the replacement message travel as one durable command.
 			const post = send({ ...input, sessionId: resolved });
 			inFlightPosts.add(post);
 			try {
 				await post;
+				if (generation === claimGeneration) acceptedFollowUps += 1;
 			} catch (error) {
 				// The reader may have claimed this reservation while the post was
 				// in flight, which would already have zeroed the count.
-				run.pendingTurns = Math.max(0, run.pendingTurns - 1);
+				if (generation === claimGeneration) {
+					run.pendingTurns = Math.max(0, run.pendingTurns - 1);
+				}
 				throw error;
 			} finally {
 				inFlightPosts.delete(post);
@@ -194,10 +217,21 @@ export const registerRun = ({
 				// turn, so claim them all; anything injected after this claim is
 				// caught by the next boundary.
 				run.pendingTurns = 0;
+				acceptedFollowUps = 0;
+				coverableFollowUps = 0;
+				claimGeneration += 1;
 				return true;
 			}
 			run.settling = true;
 			return false;
+		},
+		noteTurnCancelled: () => {
+			coverableFollowUps += acceptedFollowUps;
+			acceptedFollowUps = 0;
+		},
+		coverAcceptedFollowUps: () => {
+			run.pendingTurns = Math.max(0, run.pendingTurns - coverableFollowUps);
+			coverableFollowUps = 0;
 		},
 		settle: () => {
 			run.settling = true;

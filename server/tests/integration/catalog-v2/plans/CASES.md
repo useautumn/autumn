@@ -1364,7 +1364,7 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | Child edit, archived parent omitted from propagate → parent pinned | ✓ `remove/remove-plans-archived.test.ts` |
 | `propagate.license_parents` / `propagate.variants` naming archived → 400 | ✓ `remove/remove-plans-archived.test.ts` |
 | `variants[]` customize on archived without `archived: false` → 400 | ✓ `remove/remove-plans-archived.test.ts` |
-| `variants[].archived: false` unarchives | ✓ `remove/remove-plans-archived.test.ts` |
+| Declaring an unchanged archived variant preserves its state; `variants[].archived: false` unarchives | ✓ `remove/remove-plans-archived.test.ts` |
 | Details / billing_controls still fan out to archived variants | ✓ `remove/remove-plans-archived.test.ts` |
 | `migration.draft` on an archived plan → no draft | ✓ `remove/remove-plans-archived.test.ts` |
 | `plans[].archived: false` still unarchives (existing path) | ✓ already in `update/update-plan-details.test.ts` |

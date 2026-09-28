@@ -179,6 +179,10 @@ export const replaceInstallation = async ({
 		for (const installation of existingInstallations) {
 			await deleteInstallationArtifacts(tx, installation);
 		}
+		// A reconnect replaces the row; settings chosen on the dashboard carry over.
+		const previousOrgInstallation = existingInstallations.find(
+			(installation) => installation.org_id === state.orgId,
+		);
 
 		await tx.delete(chatInstallations).where(or(sameOrg, sameWorkspace));
 		const [installation] = await tx
@@ -193,6 +197,7 @@ export const replaceInstallation = async ({
 				bot_access_token: encrypt(botAccessToken),
 				scopes,
 				auth_mode: authMode,
+				reply_mode: previousOrgInstallation?.reply_mode,
 				default_env: state.env,
 				installed_by_user_id: state.userId,
 				installed_by_provider_user_id: installedByProviderUserId,

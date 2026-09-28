@@ -5,6 +5,7 @@ import type { AgentTurnResult } from "../../../internal/agentRuntime/domain/agen
 import type {
 	AgentActionProgress,
 	AgentContextMessage,
+	AgentMissedMessages,
 	AgentTurnSpeaker,
 } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import type { ActiveRun } from "../../../internal/runs/runRegistry.js";
@@ -23,6 +24,7 @@ export type SlackAgentTurnParams = Readonly<{
 	clientContext?: Readonly<Record<string, unknown>>;
 	installation: SlackChatInstallation;
 	logger?: AutumnLogger;
+	missedMessages?: AgentMissedMessages;
 	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
 	onReasoning?: (input: { id: string; text: string }) => void;
 	/** Receives a turn that settled while a follow-up was still to be read, so

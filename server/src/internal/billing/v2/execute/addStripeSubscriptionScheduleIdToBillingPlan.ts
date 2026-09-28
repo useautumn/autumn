@@ -1,8 +1,6 @@
+import type { AutumnBillingPlan, StripeBillingPlan } from "@autumn/shared";
 import { CusProductStatus, cp } from "@autumn/shared";
-import type {
-	AutumnBillingPlan,
-	StripeBillingPlan,
-} from "@autumn/shared";
+import { isFreePhasePlaceholderCustomerProduct } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isFreePhasePlaceholderCustomerProduct";
 import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
 export const addStripeSubscriptionScheduleIdToBillingPlan = ({
@@ -14,10 +12,18 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	stripeBillingPlan: StripeBillingPlan;
 	stripeSubscriptionScheduleId: string;
 }) => {
-	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
-		const { valid } = cp(customerProduct).paid().recurring();
+	// Only create_schedule puts free plans on a Stripe schedule via a $0 placeholder.
+	const linksFreePlaceholders =
+		autumnBillingPlan.ownsSchedulePersistence === true;
 
-		if (!valid) continue;
+	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
+		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
+		const isOnStripeSchedule =
+			isPaidRecurring ||
+			(linksFreePlaceholders &&
+				isFreePhasePlaceholderCustomerProduct(customerProduct));
+
+		if (!isOnStripeSchedule) continue;
 
 		customerProduct.scheduled_ids = [stripeSubscriptionScheduleId];
 	}

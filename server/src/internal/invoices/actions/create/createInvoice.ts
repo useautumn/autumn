@@ -43,13 +43,14 @@ export const createInvoice = async ({
 	const stripePlan = evaluateStripeInvoicePlan({
 		invoiceContext,
 		lines,
-		dueDateMs: nowMs + ms.days(invoiceContext.daysUntilDue),
+		issueDateMs: params.issue_date ?? nowMs,
+		dueDateMs: params.due_date ?? nowMs + ms.days(invoiceContext.daysUntilDue),
 	});
 
 	if (preview) return { invoice: null, preview: stripePlan.preview };
 
 	// 4. Execute
-	const { invoice, dueDateMs } = await executeStripeInvoicePlan({
+	const { invoice, issueDateMs, dueDateMs } = await executeStripeInvoicePlan({
 		ctx,
 		invoiceContext,
 		lines,
@@ -58,6 +59,10 @@ export const createInvoice = async ({
 
 	return {
 		invoice,
-		preview: { ...stripePlan.preview, due_date: dueDateMs },
+		preview: {
+			...stripePlan.preview,
+			issue_date: issueDateMs,
+			due_date: dueDateMs,
+		},
 	};
 };

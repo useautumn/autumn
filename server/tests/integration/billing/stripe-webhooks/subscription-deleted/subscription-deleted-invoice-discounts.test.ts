@@ -15,7 +15,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, findPriceByFeatureId } from "@autumn/shared";
 import {
 	applyCustomerDiscount,
 	applySubscriptionDiscount,
@@ -494,9 +494,10 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: consumable price on
 	});
 
 	// Find the consumable price and get its stripe_product_id
-	const consumablePrice = fullProduct?.prices.find(
-		(price) => price.config?.stripe_product_id,
-	);
+	const consumablePrice = findPriceByFeatureId({
+		prices: fullProduct?.prices ?? [],
+		featureId: TestFeature.Messages,
+	});
 
 	const consumableProductId = consumablePrice?.config?.stripe_product_id;
 	if (!consumableProductId) {

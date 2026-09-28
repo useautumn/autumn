@@ -52,21 +52,68 @@ const countRowsByEventName = ({
 	return counts;
 };
 
+// The gated rollup carries small historical seams (backfill boundaries) that
+// exact coverage exposes. Recovering them means a raw-events scan over the whole
+// window, which times out on long windows. A shortfall a reader could notice
+// retries outright; a smaller one is judged by the value-aware totals check,
+// which shares the rollup's seams and only fires on real loss.
+const RETRY_SHORTFALL_RATIO = 0.005;
+const RETRY_SHORTFALL_FLOOR = 10_000;
+
+export type CoverageShortfall = "none" | "minor" | "major";
+
+export const propertyRollupCoverageShortfall = ({
+	rows,
+	coverage,
+}: {
+	rows: AggregateGroupablePipeRow[];
+	coverage: Record<string, number>;
+}): CoverageShortfall => {
+	const groupedCounts = countRowsByEventName({ rows });
+	if (!groupedCounts) return "none";
+
+	let worst: CoverageShortfall = "none";
+	for (const [eventName, propertyEventCount] of Object.entries(coverage)) {
+		const shortfall = propertyEventCount - (groupedCounts[eventName] ?? 0);
+		if (shortfall <= 0) continue;
+		if (
+			propertyEventCount < RETRY_SHORTFALL_FLOOR ||
+			shortfall / propertyEventCount >= RETRY_SHORTFALL_RATIO
+		) {
+			return "major";
+		}
+		worst = "minor";
+	}
+	return worst;
+};
+
+/**
+ * Value-only judgement for a minor count shortfall. The all-events totals also
+ * count events without the key, so their count proves nothing here; only a
+ * material share of value missing from the groups is worth the ungated scan.
+ */
+export const groupedValueIsMateriallyShort = ({
+	rows,
+	totals,
+}: {
+	rows: AggregateGroupablePipeRow[];
+	totals: EventTotals;
+}): boolean => {
+	const groupedSums = sumGroupedRowsByEventName({ rows });
+	return Object.entries(totals).some(([eventName, total]) => {
+		if (total.sum <= 0) return false;
+		const missing = total.sum - (groupedSums[eventName] ?? 0);
+		return missing / total.sum >= RETRY_SHORTFALL_RATIO;
+	});
+};
+
 export const propertyRollupCoverageIsIncomplete = ({
 	rows,
 	coverage,
 }: {
 	rows: AggregateGroupablePipeRow[];
 	coverage: Record<string, number>;
-}): boolean => {
-	const groupedCounts = countRowsByEventName({ rows });
-	if (!groupedCounts) return false;
-
-	return Object.entries(coverage).some(
-		([eventName, propertyEventCount]) =>
-			(groupedCounts[eventName] ?? 0) < propertyEventCount,
-	);
-};
+}): boolean => propertyRollupCoverageShortfall({ rows, coverage }) === "major";
 
 /**
  * Every grouped event carries the key, so populated coverage can never report

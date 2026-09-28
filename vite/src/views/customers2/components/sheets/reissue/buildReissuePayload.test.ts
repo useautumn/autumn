@@ -42,6 +42,7 @@ const untouched = (): ReissueFormState => ({
 	},
 	taxIdOptionId: "FR:eu_vat",
 	taxIdValue: "FR12345678901",
+	paymentMethodTypes: ["card"],
 });
 
 describe("buildReissuePayload", () => {
@@ -240,6 +241,54 @@ describe("buildReissuePayload", () => {
 				prefill: { ...prefill, taxIdOptionId: null, taxIdValue: null },
 				lineItems,
 			}).customer,
+		).toBeUndefined();
+	});
+});
+
+describe("reissue payment method types", () => {
+	const orgTypes = { ...prefill, paymentMethodTypes: ["card" as const] };
+	const withBankTransfer: ReissueFormState = {
+		...untouched(),
+		paymentMethodTypes: ["card", "customer_balance"],
+	};
+	const typesSent = ({
+		form,
+		nextPrefill,
+	}: {
+		form: ReissueFormState;
+		nextPrefill: typeof orgTypes & { sendsInvoice?: boolean };
+	}) =>
+		buildReissuePayload({
+			invoiceId: "inv_1",
+			form,
+			prefill: nextPrefill,
+			lineItems,
+		}).invoice?.payment_method_types;
+
+	it("sends changed types for a send-invoice replacement", () => {
+		expect(
+			typesSent({
+				form: withBankTransfer,
+				nextPrefill: { ...orgTypes, sendsInvoice: true },
+			}),
+		).toEqual(["card", "customer_balance"]);
+		expect(
+			typesSent({
+				form: { ...withBankTransfer, netTermsDays: "14" },
+				nextPrefill: orgTypes,
+			}),
+		).toEqual(["card", "customer_balance"]);
+	});
+
+	it("omits types when unchanged or when the replacement is charged automatically", () => {
+		expect(
+			typesSent({
+				form: untouched(),
+				nextPrefill: { ...orgTypes, sendsInvoice: true },
+			}),
+		).toBeUndefined();
+		expect(
+			typesSent({ form: withBankTransfer, nextPrefill: orgTypes }),
 		).toBeUndefined();
 	});
 });

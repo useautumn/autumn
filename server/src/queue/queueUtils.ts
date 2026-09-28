@@ -183,7 +183,14 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	delayMs?: number;
 	queueUrl?: string;
 }) => {
-	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL_V2;
+	// TW-only queue isolation; leave BALANCE_SYNC_SQS_QUEUE_URL unset outside test workers.
+	const isBalanceSync =
+		jobName === JobName.SyncBalanceBatchV4 ||
+		jobName === JobName.SyncCustomerDirty;
+	const resolvedQueueUrl =
+		queueUrl ||
+		(isBalanceSync ? process.env.BALANCE_SYNC_SQS_QUEUE_URL : undefined) ||
+		process.env.SQS_QUEUE_URL_V2;
 
 	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient({ queueUrl: resolvedQueueUrl });

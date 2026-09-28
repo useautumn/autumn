@@ -1445,6 +1445,10 @@ export type PreviewMultiAttachInvoiceCredits = {
    */
   balance: number;
   /**
+   * How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.
+   */
+  applied?: number | undefined;
+  /**
    * Three-letter currency code.
    */
   currency: string;
@@ -4029,6 +4033,7 @@ export const PreviewMultiAttachInvoiceCredits$inboundSchema: z.ZodMiniType<
   unknown
 > = z.object({
   balance: types.number(),
+  applied: types.optional(types.number()),
   currency: types.string(),
 });
 

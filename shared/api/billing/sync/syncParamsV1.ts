@@ -116,6 +116,12 @@ export const SyncParamsV1Schema = z
 				"When a synced plan expires an existing plan (via expire_previous), carry the existing plan's consumed usage onto the new plan's balances for any shared feature on the same subject. Defaults to true. Set false to sync without touching balances.",
 		}),
 
+		expire_unlisted_plans: z.boolean().optional().meta({
+			description:
+				"Treat the request as the subscription's full plan list: expire any live plan linked to it that no plan in the request replaces.",
+			internal: true,
+		}),
+
 		acknowledge_warnings: z.array(z.string()).optional().meta({
 			description:
 				"Detection warning types the caller accepts (e.g. 'extra_items_under_plan').",

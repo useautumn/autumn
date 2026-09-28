@@ -181,6 +181,7 @@ export const autoSyncUpdatedSubscription = async ({
 		params: incremental.params,
 		tags: ["sync:customer.subscription.updated"],
 	});
+	subscriptionUpdatedContext.results.autoSync = result;
 	logger.info(
 		`sub.updated auto-sync applied ${stripeSubscription.id}: expired=${result.expired_cus_product_ids.length}, inserted=${result.inserted_cus_product_ids.length}, removed=${incremental.removedCustomerProducts.length}`,
 	);

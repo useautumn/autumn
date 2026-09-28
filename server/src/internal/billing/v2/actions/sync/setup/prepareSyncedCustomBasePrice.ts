@@ -11,19 +11,22 @@ import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/conver
 const findReusableCustomBasePrice = ({
 	currentCustomerProduct,
 	baseCurrency,
+	defaultCurrency,
 	stripePriceId,
 }: {
 	currentCustomerProduct?: FullCusProduct;
 	baseCurrency: string;
+	defaultCurrency: string;
 	stripePriceId: string;
 }): Price | undefined => {
 	const existingCustomBase = currentCustomerProduct
 		? customerProductToBasePrice({ customerProduct: currentCustomerProduct })
 		: undefined;
+	const existingCurrency =
+		existingCustomBase?.config.base_currency ?? defaultCurrency;
 	const matchesSource =
 		existingCustomBase?.is_custom &&
-		existingCustomBase.config.base_currency?.toLowerCase() ===
-			baseCurrency.toLowerCase() &&
+		existingCurrency.toLowerCase() === baseCurrency.toLowerCase() &&
 		getAllPriceStripeIds({ config: existingCustomBase.config }).includes(
 			stripePriceId,
 		);
@@ -35,33 +38,36 @@ export const prepareSyncedCustomBasePrice = ({
 	fullProduct,
 	customPrices,
 	plan,
+	defaultCurrency,
 }: {
 	currentCustomerProduct?: FullCusProduct;
 	fullProduct: FullProduct;
 	customPrices: Price[];
 	plan: SyncPlanInstance;
+	/** Prices saved without a base currency bill in this one. */
+	defaultCurrency: string;
 }): { fullProduct: FullProduct; customPrices: Price[] } => {
 	const customBaseParams = plan.customize?.price;
 	const generatedCustomBase = customPrices.find(isFixedPrice);
-	if (
-		!customBaseParams?.base_currency ||
-		!customBaseParams.stripe_price_id ||
-		!generatedCustomBase
-	) {
+	if (!customBaseParams?.stripe_price_id || !generatedCustomBase) {
 		return { fullProduct, customPrices };
 	}
+	const baseCurrency = (
+		customBaseParams.base_currency ?? defaultCurrency
+	).toLowerCase();
 
 	const importedCustomBase = {
 		...generatedCustomBase,
 		config: {
 			...generatedCustomBase.config,
-			base_currency: customBaseParams.base_currency.toLowerCase(),
+			base_currency: baseCurrency,
 			stripe_price_id: customBaseParams.stripe_price_id,
 		},
 	};
 	const reusableCustomBase = findReusableCustomBasePrice({
 		currentCustomerProduct,
-		baseCurrency: customBaseParams.base_currency,
+		baseCurrency,
+		defaultCurrency,
 		stripePriceId: customBaseParams.stripe_price_id,
 	});
 	const customBase = reusableCustomBase ?? importedCustomBase;

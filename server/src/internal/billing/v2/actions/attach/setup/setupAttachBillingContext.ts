@@ -29,6 +29,7 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPaymentBehaviorIntent";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
@@ -216,7 +217,7 @@ export const setupAttachBillingContext = async ({
 	});
 
 	const skipBillingChanges =
-		skipBillingChangesBase || trialContext?.onEnd === "revert";
+		skipBillingChangesBase || isRevertTrialContext({ trialContext });
 
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,

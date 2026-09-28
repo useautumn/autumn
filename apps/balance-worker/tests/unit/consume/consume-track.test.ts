@@ -109,7 +109,7 @@ describe("consumeTrack", () => {
 
 	test("a refused track releases the claim and lets the stream's boundary settle it", async () => {
 		const { ctx, keys } = createFixture({
-			outcome: new UnsupportedCommandError({ reason: "feature_not_found" }),
+			outcome: new UnsupportedCommandError({ reason: "entity_not_found" }),
 		});
 		await expect(
 			consumeTrack({

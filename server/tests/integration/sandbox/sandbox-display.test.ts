@@ -25,7 +25,7 @@ beforeAll(async () => {
 		db,
 		masterOrg,
 		actorUser,
-		name: "Display IntTest",
+		name: "Display-IntTest",
 		color: "blue",
 		icon: "Rocket",
 	});
@@ -57,10 +57,10 @@ describe("per-sandbox colour + icon (create + update persistence)", () => {
 			db,
 			masterOrg,
 			sandboxId,
-			updates: { name: "Renamed Display", color: "amber", icon: "Bug" },
+			updates: { name: "Renamed-Display", color: "amber", icon: "Bug" },
 		});
 		const after = await getRow();
-		expect(after.name).toBe("Renamed Display");
+		expect(after.name).toBe("Renamed-Display");
 		expect(after.sandbox_color).toBe("amber");
 		expect(after.sandbox_icon).toBe("Bug");
 		expect(after.slug).toBe(before.slug);
@@ -75,7 +75,7 @@ describe("per-sandbox colour + icon (create + update persistence)", () => {
 		});
 		const after = await getRow();
 		expect(after.sandbox_color).toBe("green");
-		expect(after.name).toBe("Renamed Display");
+		expect(after.name).toBe("Renamed-Display");
 		expect(after.sandbox_icon).toBe("Bug");
 	});
 

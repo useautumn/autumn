@@ -20,6 +20,7 @@ import {
 	type WebhookTestSetup,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -41,6 +42,9 @@ const INVALIDATION_SETTLE_MS = 3000;
 /** Herald reads the log behind the worker; give its first record time to land in its cache. */
 const HERALD_SETTLE_MS = 3000;
 
+/** The Kafka catalog invalidation is the worker's; an in-place plan edit never reached legacy's cached customers. */
+const workerOnlyTest = test.skipIf(!isBalanceWorkerRoute());
+
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -57,96 +61,102 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-test(`${chalk.yellowBright("catalog-invalidation-worker: a plan usage limit added after the worker cached the product gates the next check")}`, async () => {
-	const plan = products.base({
-		id: "cat-inv-worker",
-		items: [items.monthlyMessages({ includedUsage: 1000 })],
-	});
-	const customerId = "cat-inv-worker-1";
-	await initScenario({
-		customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
-		actions: [s.billing.attach({ productId: plan.id })],
-	});
+workerOnlyTest(
+	`${chalk.yellowBright("catalog-invalidation-worker: a plan usage limit added after the worker cached the product gates the next check")}`,
+	async () => {
+		const plan = products.base({
+			id: "cat-inv-worker",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+		const customerId = "cat-inv-worker-1";
+		await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
+			actions: [s.billing.attach({ productId: plan.id })],
+		});
 
-	// The worker caches the product as it is now: no cap.
-	const before = await autumnV2_3.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 1,
-	});
-	expect(before.allowed).toBe(true);
+		// The worker caches the product as it is now: no cap.
+		const before = await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 1,
+		});
+		expect(before.allowed).toBe(true);
 
-	// In place: a new version would leave the customer on the row the caches already hold.
-	await rpc.plans.update(plan.id, {
-		disable_version: true,
-		billing_controls: {
-			usage_limits: [
-				{
-					feature_id: TestFeature.Messages,
-					enabled: true,
-					limit: 5,
-					interval: ResetInterval.Day,
-				},
-			],
-		},
-	});
-	await timeout(INVALIDATION_SETTLE_MS);
+		// In place: a new version would leave the customer on the row the caches already hold.
+		await rpc.plans.update(plan.id, {
+			disable_version: true,
+			billing_controls: {
+				usage_limits: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						limit: 5,
+						interval: ResetInterval.Day,
+					},
+				],
+			},
+		});
+		await timeout(INVALIDATION_SETTLE_MS);
 
-	await autumnV2_3.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 5,
-	});
-	const after = await autumnV2_3.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 1,
-	});
-	expect(after.allowed).toBe(false);
-});
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 5,
+		});
+		const after = await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 1,
+		});
+		expect(after.allowed).toBe(false);
+	},
+);
 
-test(`${chalk.yellowBright("catalog-invalidation-herald: a plan usage alert added after herald cached the product fires on the next crossing")}`, async () => {
-	const plan = products.base({
-		id: "cat-inv-herald",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
-	const customerId = "cat-inv-herald-1";
-	await initScenario({
-		customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
-		actions: [s.billing.attach({ productId: plan.id })],
-	});
+workerOnlyTest(
+	`${chalk.yellowBright("catalog-invalidation-herald: a plan usage alert added after herald cached the product fires on the next crossing")}`,
+	async () => {
+		const plan = products.base({
+			id: "cat-inv-herald",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const customerId = "cat-inv-herald-1";
+		await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
+			actions: [s.billing.attach({ productId: plan.id })],
+		});
 
-	// Herald caches the product as it is now: no alert.
-	await autumnV2_3.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 1,
-	});
-	await timeout(HERALD_SETTLE_MS);
+		// Herald caches the product as it is now: no alert.
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 1,
+		});
+		await timeout(HERALD_SETTLE_MS);
 
-	// In place: a new version would leave the customer on the row the caches already hold.
-	await rpc.plans.update(plan.id, {
-		disable_version: true,
-		billing_controls: {
-			usage_alerts: [
-				{
-					feature_id: TestFeature.Messages,
-					threshold: 50,
-					threshold_type: "remaining",
-					enabled: true,
-				},
-			],
-		},
-	});
-	await timeout(INVALIDATION_SETTLE_MS);
+		// In place: a new version would leave the customer on the row the caches already hold.
+		await rpc.plans.update(plan.id, {
+			disable_version: true,
+			billing_controls: {
+				usage_alerts: [
+					{
+						feature_id: TestFeature.Messages,
+						threshold: 50,
+						threshold_type: "remaining",
+						enabled: true,
+					},
+				],
+			},
+		});
+		await timeout(INVALIDATION_SETTLE_MS);
 
-	// 99 remaining → 39: crosses the alert herald could only know from the fresh row.
-	await autumnV2_3.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 60,
-	});
-	await waitForUsageAlert({ token: playToken, customerId, threshold: 50 });
-});
+		// 99 remaining → 39: crosses the alert herald could only know from the fresh row.
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 60,
+		});
+		await waitForUsageAlert({ token: playToken, customerId, threshold: 50 });
+	},
+);

@@ -97,6 +97,78 @@ describe("approval card", () => {
 		);
 	});
 
+	test("a revert-on-end trial pauses the replaced plan", () => {
+		const preview = wrapMcpResult({
+			preview: {
+				currency: "usd",
+				incoming: [{ plan_id: "scale", plan: { name: "Scale" } }],
+				outgoing: [{ plan_id: "launch", plan: { name: "Launch" } }],
+				total: 0,
+			},
+		});
+		const cardFor = (freeTrial: Record<string, unknown>) =>
+			JSON.stringify(
+				approvalCard({
+					id: "approval_1",
+					env: AppEnv.Sandbox,
+					toolName: "attach",
+					toolArgs: {
+						request: { ...attachArgs.request, free_trial: freeTrial },
+					},
+					preview,
+				}),
+			);
+		const trial = { duration_length: 14, duration_type: "day" };
+
+		const reverting = cardFor({ ...trial, on_end: "revert" });
+		expect(reverting).toContain(
+			"and pausing **<https://app.useautumn.com/sandbox/products/launch|Launch>**",
+		);
+		expect(reverting).not.toContain("and removing");
+		expect(cardFor({ ...trial, on_end: "bill" })).toContain(
+			"and removing **<https://app.useautumn.com/sandbox/products/launch|Launch>**",
+		);
+	});
+
+	// remove_plan_ids plans are expired, never handed back after the trial —
+	// even when the request names them by an alias the preview resolved.
+	test("a revert-on-end trial still removes extra plans", () => {
+		const card = JSON.stringify(
+			approvalCard({
+				id: "approval_1",
+				env: AppEnv.Sandbox,
+				toolName: "attach",
+				toolArgs: {
+					request: {
+						...attachArgs.request,
+						free_trial: {
+							duration_length: 14,
+							duration_type: "day",
+							on_end: "revert",
+						},
+						// The replaced plan listed here is still paused, not removed.
+						remove_plan_ids: ["launch", "addon-alias"],
+					},
+				},
+				preview: wrapMcpResult({
+					preview: {
+						currency: "usd",
+						incoming: [{ plan_id: "scale", plan: { name: "Scale" } }],
+						outgoing: [
+							{ plan_id: "launch", plan: { name: "Launch" } },
+							{ plan_id: "addon", plan: { name: "Add-on", add_on: true } },
+						],
+						total: 0,
+					},
+				}),
+			}),
+		);
+
+		expect(card).toContain(
+			"and pausing **<https://app.useautumn.com/sandbox/products/launch|Launch>** and removing **<https://app.useautumn.com/sandbox/products/addon|Add-on>**",
+		);
+	});
+
 	test("an in-place plan update is not shown as a removal", () => {
 		const card = approvalCard({
 			id: "approval_1",
@@ -849,6 +921,105 @@ describe("approval card", () => {
 		expect(json).toContain('"label":"Name","value":"Acme"');
 		expect(json).toContain('"label":"Email","value":"billing@example.com"');
 		expect(json).not.toContain('"customer_id"');
+	});
+
+	test("renders billing details as one readable field each", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					billing_details: {
+						address: { line1: "1 Main St", city: "Berlin", country: "DE" },
+						tax_ids: {
+							add: [{ type: "eu_vat", value: "DE123456789" }],
+							remove: [{ type: "gb_vat", value: "GB123456789" }],
+						},
+						tax_exempt: "reverse",
+						invoice_settings: {
+							custom_fields: [{ name: "PO Number", value: "4500463831" }],
+						},
+					},
+				},
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('"label":"Address","value":"1 Main St, Berlin, DE"');
+		expect(json).toContain(
+			'"label":"Add tax IDs","value":"EU VAT DE123456789"',
+		);
+		expect(json).toContain(
+			'"label":"Remove tax IDs","value":"GB VAT GB123456789"',
+		);
+		expect(json).toContain('"label":"Tax exempt","value":"Reverse charge"');
+		expect(json).toContain('"label":"PO Number","value":"4500463831"');
+		expect(json).not.toContain("Billing details");
+	});
+
+	test("shows every billing change even past the field cap", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					billing_details: {
+						address: { line1: "1 Main St", country: "DE" },
+						tax_ids: {
+							add: [{ type: "eu_vat", value: "DE123456789" }],
+							remove: [{ type: "gb_vat", value: "GB123456789" }],
+						},
+						tax_exempt: "reverse",
+						invoice_settings: {
+							custom_fields: [
+								{ name: "PO Number", value: "PO-1" },
+								{ name: "Cost Center", value: "42" },
+								{ name: "Project", value: "Apollo" },
+							],
+						},
+					},
+				},
+			},
+		});
+
+		expect(JSON.stringify(card)).toContain(
+			'"label":"Project","value":"Apollo"',
+		);
+	});
+
+	test("ignores a __proto__ request key", () => {
+		const request = JSON.parse(
+			'{"customer_id":"cus_1","__proto__":"x","name":"Acme"}',
+		);
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: { request },
+		});
+
+		expect(JSON.stringify(card)).toContain('"label":"Name","value":"Acme"');
+	});
+
+	test("renders cleared billing details explicitly", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					billing_details: {
+						address: null,
+						invoice_settings: { custom_fields: null },
+					},
+				},
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('"label":"Address","value":"Cleared"');
+		expect(json).toContain('"label":"Invoice custom fields","value":"Cleared"');
 	});
 
 	test("omits the changes block when nothing is customized", () => {

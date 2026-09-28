@@ -1,6 +1,7 @@
 import { CusProductStatus } from "@autumn/shared";
 import pLimit from "p-limit";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import type { BatchResetCusEntsPayload } from "@/queue/workflows.js";
 import { CusService } from "../../CusService.js";
 import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
@@ -10,6 +11,7 @@ const BATCH_SIZE = 100;
 
 /**
  * SQS worker handler: rehydrates each subject, which triggers lazy reset internally.
+ * An entity of a balance-worker customer is reset through the worker, never on the SQL lane.
  */
 export const batchResetCustomerEntitlements = async ({
 	ctx,
@@ -30,7 +32,17 @@ export const batchResetCustomerEntitlements = async ({
 		await Promise.all(
 			batch.map((reset) =>
 				limit(async () => {
-					if (reset.internalEntityId || reset.entityId) {
+					const isEntityReset = Boolean(
+						reset.internalEntityId || reset.entityId,
+					);
+					// The worker is the sole reset writer for its customers; getFull resets every due subject through it.
+					const resetsOnSqlLane =
+						isEntityReset &&
+						!isBalanceWorkerRolloutEnabled({
+							ctx,
+							customerId: reset.customerId,
+						});
+					if (resetsOnSqlLane) {
 						await getFullSubject({
 							ctx,
 							customerId: reset.internalCustomerId,

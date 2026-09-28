@@ -319,3 +319,44 @@ test(`${chalk.yellowBright(
 		api_calls: 5,
 	});
 });
+
+test(`${chalk.yellowBright(
+	"property rollup: a shortfall below the retry tolerance is not worth an ungated scan",
+)}`, () => {
+	// A ten-month day-binned group-by whose gated rollup is 0.009% short: the
+	// ungated raw-events retry reads hundreds of millions of rows and times out,
+	// and no dashboard can see the difference.
+	const rows = [
+		row({
+			groupValue: "proxy_usage",
+			totalValue: 100_000_000,
+			eventCount: 100_000_000,
+		}),
+		row({
+			groupValue: "egress_usage",
+			totalValue: 76_467_193,
+			eventCount: 76_467_193,
+		}),
+	];
+
+	expect(
+		propertyRollupCoverageIsIncomplete({
+			rows,
+			coverage: { action_calls: 176_483_286 },
+		}),
+	).toBe(false);
+	// Real gate loss, a whole value's worth of events, is far above the line.
+	expect(
+		propertyRollupCoverageIsIncomplete({
+			rows,
+			coverage: { action_calls: 178_000_000 },
+		}),
+	).toBe(true);
+	// Small results keep exact semantics: one missing event out of ninety matters.
+	expect(
+		propertyRollupCoverageIsIncomplete({
+			rows: [row({ groupValue: "a", totalValue: 89, eventCount: 89 })],
+			coverage: { action_calls: 90 },
+		}),
+	).toBe(true);
+});

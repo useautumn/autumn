@@ -4,6 +4,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 
 /**
@@ -26,7 +27,8 @@ export const handleAttachInvoiceModeErrors = ({
 
 	// Check: Invoice mode + no-card trial (revert trials never touch Stripe, so they're fine)
 	const isNoCardTrial =
-		trialContext?.cardRequired === false && trialContext.onEnd !== "revert";
+		trialContext?.cardRequired === false &&
+		!isRevertTrialContext({ trialContext });
 	if (invoiceMode && isNoCardTrial) {
 		throw new RecaseError({
 			message:

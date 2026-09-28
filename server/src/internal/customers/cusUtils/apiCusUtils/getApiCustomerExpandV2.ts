@@ -11,6 +11,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { getCusAutoTopupPurchaseLimits } from "../cusResponseUtils/getCusAutoTopupPurchaseLimits.js";
+import { getCusBillingDetailsRes } from "../cusResponseUtils/getCusBillingDetailsRes.js";
 import { getCusInvoicePreviews } from "../cusResponseUtils/getCusInvoicePreviews.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
@@ -88,6 +89,7 @@ export const getApiCustomerExpandV2 = async ({
 		trialsUsed,
 		autoTopupsWithLimits,
 		invoicePreviews,
+		billingDetails,
 	] = await Promise.all([
 		getApiEntities(),
 		getCusRewards({
@@ -124,6 +126,11 @@ export const getApiCustomerExpandV2 = async ({
 			fullCus,
 			expand: cusExpand,
 		}),
+		getCusBillingDetailsRes({
+			ctx,
+			customer: fullCus,
+			expand: cusExpand,
+		}),
 	]);
 
 	return {
@@ -133,6 +140,7 @@ export const getApiCustomerExpandV2 = async ({
 		rewards: rewards ?? undefined,
 		referrals: referrals ?? undefined,
 		payment_method: paymentMethod ?? undefined,
+		billing_details: billingDetails,
 		billing_controls_override: autoTopupsWithLimits
 			? { auto_topups: autoTopupsWithLimits }
 			: undefined,

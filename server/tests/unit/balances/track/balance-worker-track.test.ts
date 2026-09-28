@@ -71,6 +71,14 @@ beforeEach(resetExecution);
 test("new and duplicate replies return the API track shape", successContract);
 test("responses read the committed row, not the request", outcomeContract);
 test("worker refusals become existing API errors", errorContract);
+test(
+	"a feature the customer holds no grant for answers 200 with no balance, as legacy does",
+	unheldFeatureContract,
+);
+test(
+	"an event name records its one usage event on the first feature only",
+	eventNameContract,
+);
 test("track responses respect the requested API version", versionContract);
 test("transport failures propagate without retry", failureContract);
 test(
@@ -177,6 +185,7 @@ function commandContract() {
 		value: 3,
 		overageBehavior: "cap",
 		properties: null,
+		usageEvent: { name: "messages", idempotencyKey: null, id: null },
 		occurredAt: ctx.timestamp,
 	});
 	expect(
@@ -203,7 +212,15 @@ function commandContract() {
 		properties: { model: "model" },
 		overageBehavior: "reject",
 		occurredAt: 500,
+		// The event row carries the caller's key as sent, as legacy's does.
+		usageEvent: { name: "messages", idempotencyKey: "stable", id: null },
 	});
+	expect(
+		trackParamsToTrackCommand({
+			ctx: { ...ctx, testOptions: { eventId: "evt_caller" } },
+			body,
+		}).usageEvent,
+	).toEqual({ name: "messages", idempotencyKey: null, id: "evt_caller" });
 	for (const value of [0, -1]) {
 		expect(
 			trackParamsToTrackCommand({ ctx, body: { ...body, value } }).value,
@@ -296,7 +313,7 @@ async function errorContract() {
 		});
 	}
 	for (const [workerCode, workerReason, code, statusCode] of [
-		["UNSUPPORTED_COMMAND", "feature_not_found", ErrCode.InvalidRequest, 400],
+		["UNSUPPORTED_COMMAND", "entity_not_found", ErrCode.InvalidRequest, 400],
 		["COMMAND_CONFLICT", undefined, ErrCode.DuplicateIdempotencyKey, 409],
 	] as const) {
 		execution.failure = new BalanceWorkerClientError({
@@ -312,6 +329,71 @@ async function errorContract() {
 		});
 		execution.failure = undefined;
 	}
+}
+
+/** The fixture customer, whose catalog also has a `words` feature it holds no grant for, both under event `chat`. */
+function unheldFeatureFixture() {
+	const customer = fixture();
+	const { ctx, feature } = customer;
+	ctx.features = [
+		{ ...feature, event_names: ["chat"] },
+		{
+			...feature,
+			id: "words",
+			internal_id: "internal_words",
+			event_names: ["chat"],
+		},
+	];
+	return customer;
+}
+
+async function unheldFeatureContract() {
+	const customer = unheldFeatureFixture();
+	const { ctx } = customer;
+	const body: TrackParams = { ...customer.body, feature_id: "words" };
+	execution.reply = trackReplyOf({ customer, body });
+	expect(execution.reply.result).toMatchObject({
+		status: "applied",
+		deltas: [],
+		deductions: [],
+	});
+	expect(await runBalanceWorkerTrack({ ctx, body })).toEqual({
+		customer_id: "cus_test",
+		entity_id: undefined,
+		value: 3,
+		balance: null,
+		deductions: [],
+	});
+}
+
+async function eventNameContract() {
+	const customer = unheldFeatureFixture();
+	const { ctx } = customer;
+	execution.reply = trackReplyOf({ customer });
+	const body: TrackParams = {
+		customer_id: "cus_test",
+		event_name: "chat",
+		value: 3,
+	};
+	await runBalanceWorkerTrack({ ctx, body });
+	expect(
+		execution.commands.map(({ featureId, usageEvent }) => ({
+			featureId,
+			usageEvent,
+		})),
+	).toEqual([
+		{
+			featureId: "messages",
+			usageEvent: { name: "chat", idempotencyKey: null, id: null },
+		},
+		{ featureId: "words", usageEvent: null },
+	]);
+	expect(
+		trackParamsToTrackCommand({
+			ctx,
+			body: { ...customer.body, skip_event: true },
+		}).usageEvent,
+	).toBeNull();
 }
 
 async function versionContract() {
@@ -357,9 +439,11 @@ async function failureContract() {
 /** What the worker replies for this customer's track: the logged result and the rows after it. A retry replies the same. */
 function trackReplyOf({
 	customer,
+	body = customer.body,
 	overageBehavior = "cap",
 }: {
 	customer: ReturnType<typeof fixture>;
+	body?: TrackParams;
 	overageBehavior?: OverageBehavior;
 	duplicate?: boolean;
 }): TrackReply {
@@ -371,7 +455,7 @@ function trackReplyOf({
 	});
 	const command = trackParamsToTrackCommand({
 		ctx,
-		body: { ...customer.body, overage_behavior: overageBehavior },
+		body: { ...body, overage_behavior: overageBehavior },
 	});
 	const mutation = computeTrack({
 		fullSubject: subjectStateToFullSubject({ state, catalog }),
@@ -509,6 +593,6 @@ async function paidAllocatedContract() {
 		"evict",
 	]);
 	expect(execution.postgresBodies).toEqual([
-		{ ...body, feature_id: "messages" },
+		{ ...body, feature_id: "messages", skip_event: false },
 	]);
 }

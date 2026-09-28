@@ -7,7 +7,10 @@ import {
 	chatThreadContexts,
 	createChatInstallState,
 } from "@autumn/shared";
-import type { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
+import type {
+	ChatAuthMode,
+	ChatReplyMode,
+} from "@autumn/shared/models/chatModels/chatEnums";
 import { addMinutes } from "date-fns";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -52,6 +55,7 @@ export class ChatService {
 				bot_user_id: installation.bot_user_id,
 				default_env: installation.default_env,
 				auth_mode: installation.auth_mode,
+				reply_mode: installation.reply_mode,
 				scopes: installation.scopes,
 				agent_scopes:
 					scopesByInstallationEnv.get(
@@ -95,6 +99,23 @@ export class ChatService {
 		});
 
 		return url;
+	}
+
+	static async updateSettings(
+		ctx: AutumnContext,
+		{ replyMode }: { replyMode: ChatReplyMode },
+	) {
+		const updated = await ctx.db
+			.update(chatInstallations)
+			.set({ reply_mode: replyMode, updated_at: Date.now() })
+			.where(
+				and(
+					eq(chatInstallations.org_id, ctx.org.id),
+					eq(chatInstallations.provider, slackProvider),
+				),
+			)
+			.returning({ id: chatInstallations.id });
+		return updated.length > 0;
 	}
 
 	static async disconnect(ctx: AutumnContext) {

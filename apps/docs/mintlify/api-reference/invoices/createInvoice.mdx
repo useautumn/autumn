@@ -422,6 +422,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Days until the invoice is due. Defaults to the template's terms, then the org default.
 </DynamicParamField>
 
+<DynamicParamField body="issue_date" type="integer">
+  Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
+</DynamicParamField>
+
+<DynamicParamField body="due_date" type="integer">
+  When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
+</DynamicParamField>
+
 <DynamicParamField body="tax_rate_id" type="string">
   Stripe tax rate ID (txr_...) applied to every line.
 </DynamicParamField>
@@ -499,6 +507,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     <DynamicResponseField name="items" type="object[]">
       Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
       <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls.
+        </DynamicResponseField>
+
         <DynamicResponseField name="description" type="string">
           Description of the invoice line item
         </DynamicResponseField>
@@ -601,6 +613,30 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
     <DynamicResponseField name="total" type="number" />
 
+    <DynamicResponseField name="invoice_credits" type="object">
+      The customer's Stripe credit balance and how much of it this invoice consumes.
+      <Expandable title="properties">
+        <DynamicResponseField name="balance" type="number">
+          Stripe customer credit balance available, expressed as a positive number in major currency units.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="applied" type="number">
+          How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="currency" type="string">
+          Three-letter currency code.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_due" type="number">
+      What the customer pays: the total less any credit applied.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="issue_date" type="number" />
+
     <DynamicResponseField name="due_date" type="number | null" />
 
   </Expandable>
@@ -628,6 +664,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456",
     "items": [
       {
+        "id": "invoice_li_2b3c4d5e6f7g8h",
         "description": "Pro plan",
         "plan_id": "pro_plan",
         "feature_id": null,
@@ -639,6 +676,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         "entities": []
       },
       {
+        "id": "invoice_li_3c4d5e6f7g8h9i",
         "description": "AI credits",
         "plan_id": "pro_plan",
         "feature_id": "ai_credits",
@@ -664,6 +702,12 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     "discount_total": 0,
     "tax": null,
     "total": 29.99,
+    "invoice_credits": {
+      "balance": 10,
+      "applied": 10,
+      "currency": "usd"
+    },
+    "amount_due": 19.99,
     "due_date": 1761839877000
   }
 }

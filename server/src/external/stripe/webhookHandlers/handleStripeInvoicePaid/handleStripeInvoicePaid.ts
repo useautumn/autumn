@@ -33,14 +33,15 @@ export const handleStripeInvoicePaid = async ({
 		"threshold_billing";
 
 	if (isThresholdBillingInvoice && ctx.fullCustomer) {
-		await clearThresholdPastDue({
-			ctx,
-			fullCustomer: ctx.fullCustomer,
-			customerProductId:
-				invoicePaidContext.stripeInvoice.metadata?.[
-					AUTUMN_ACTION_CUSTOMER_PRODUCT_METADATA_KEY
-				] ?? undefined,
-		});
+		invoicePaidContext.results.updatedCustomerProductIds =
+			await clearThresholdPastDue({
+				ctx,
+				fullCustomer: ctx.fullCustomer,
+				customerProductId:
+					invoicePaidContext.stripeInvoice.metadata?.[
+						AUTUMN_ACTION_CUSTOMER_PRODUCT_METADATA_KEY
+					] ?? undefined,
+			});
 	}
 
 	ctx.logger.debug(
@@ -54,12 +55,13 @@ export const handleStripeInvoicePaid = async ({
 	await handleStripeInvoiceDiscounts({ ctx, invoicePaidContext });
 
 	// 3. Upsert Autumn invoice (uses invoice from context - already expanded)
-	await upsertAutumnInvoice({
+	const invoiceResult = await upsertAutumnInvoice({
 		ctx,
 		stripeInvoice: invoicePaidContext.stripeInvoice,
 		stripeSubscription: invoicePaidContext.stripeSubscription,
 		customerProducts: invoicePaidContext.customerProducts,
 	});
+	invoicePaidContext.results.invoiceCache = invoiceResult?.cacheResult ?? null;
 
 	if (invoicePaidContext.stripeSubscriptionId) {
 		await convertToChargeAutomatically({ ctx, invoicePaidContext });
@@ -84,4 +86,6 @@ export const handleStripeInvoicePaid = async ({
 			);
 		}
 	}
+
+	ctx.handlerResult = { type: "invoice.paid", context: invoicePaidContext };
 };

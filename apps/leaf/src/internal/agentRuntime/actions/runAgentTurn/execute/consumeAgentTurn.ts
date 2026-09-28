@@ -18,6 +18,7 @@ import {
 	MAX_IDLE_RETRIES,
 	MAX_QUIET_MS,
 	MAX_TURN_DURATION_MS,
+	STREAM_IDLE_TIMEOUT_MS,
 	STREAM_RETRY_DELAY_MS,
 } from "../../../turnBudget.js";
 import { applyEveEvent, type EveEventContext } from "./applyEveEvent.js";
@@ -31,6 +32,32 @@ import { createTurnActivity, type TurnActivity } from "./turnActivity.js";
 import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
+
+/** Keeps a window that opens just before a budget runs out from spinning
+ * through reopens; the loop settles on its next check either way. */
+const MIN_IDLE_WINDOW_MS = ms.seconds(1);
+
+/** A quiet window must end by the time the turn may settle. A full window
+ * opened near the deadline outlives the caller's backstop, which then kills
+ * the run with a timeout warning instead of letting it settle on its own.
+ * Read again at every arm, since each event restarts the window. The deadline
+ * always lands before the quiet cap, because activity starts after it is set.
+ * A working child keeps the full window: the deadline does not settle it. */
+const idleWindowFor = ({
+	activity,
+	deadlineAt,
+}: {
+	activity: TurnActivity;
+	deadlineAt?: number;
+}) => {
+	if (deadlineAt === undefined || activity.activeChildren() > 0) {
+		return STREAM_IDLE_TIMEOUT_MS;
+	}
+	return Math.max(
+		MIN_IDLE_WINDOW_MS,
+		Math.min(STREAM_IDLE_TIMEOUT_MS, deadlineAt - Date.now()),
+	);
+};
 
 /** A post that hangs must not pin the reader to the stream. Proceeding after
  * this is no worse than never having waited. */
@@ -87,6 +114,7 @@ const streamPassEvents = async ({
 	abandonForStop,
 	activity,
 	emitSettledTurn,
+	idleTimeoutMs,
 	onFirstStreamEvent,
 	run,
 	signal,
@@ -98,6 +126,7 @@ const streamPassEvents = async ({
 		stop: NonNullable<ActiveRun["stop"]>;
 	}) => Promise<EveTurnOutcome>;
 	emitSettledTurn: (outcome: EveTurnOutcome) => Promise<void>;
+	idleTimeoutMs: () => number;
 	onFirstStreamEvent?: () => void;
 	run?: ActiveRun;
 	signal: AbortSignal;
@@ -109,6 +138,7 @@ const streamPassEvents = async ({
 	try {
 		for await (const event of streamEveEvents({
 			auth,
+			idleTimeoutMs,
 			session,
 			signal,
 		})) {
@@ -124,6 +154,9 @@ const streamPassEvents = async ({
 					sawEvent,
 				};
 			}
+
+			if (event.type === "turn.cancelled") run?.noteTurnCancelled();
+			if (event.type === "turn.started") run?.coverAcceptedFollowUps();
 
 			const result = await applyEveEvent({ ...turn, event, progress });
 			progress = result.progress;
@@ -356,6 +389,7 @@ export const consumeAgentTurn = async ({
 				abandonForStop,
 				activity,
 				emitSettledTurn,
+				idleTimeoutMs: () => idleWindowFor({ activity, deadlineAt }),
 				onFirstStreamEvent: streamedAnyEvent ? undefined : onFirstStreamEvent,
 				run,
 				signal: abortController.signal,

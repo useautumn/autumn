@@ -1,4 +1,4 @@
-import { ms } from "@autumn/shared";
+import { isCustomerProductRevertingTrial, ms } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService";
 import type { CronContext } from "../utils/CronContext";
 import {
@@ -13,7 +13,7 @@ export const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
 	const revert: ExpiredTrialRow[] = [];
 	const standard: ExpiredTrialRow[] = [];
 	for (const row of rows) {
-		if (row.customerProduct.on_trial_end === "revert") {
+		if (isCustomerProductRevertingTrial(row.customerProduct)) {
 			revert.push(row);
 		} else {
 			standard.push(row);

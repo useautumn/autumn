@@ -34,6 +34,7 @@ const baseCommand: TrackCommand = {
 	value: 1,
 	overageBehavior: "reject",
 	properties: null,
+	usageEvent: { name: "feature", idempotencyKey: null, id: null },
 	occurredAt: 0,
 };
 

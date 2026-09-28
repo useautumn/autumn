@@ -62,6 +62,7 @@ export const AttachFormSchema = z.object({
 	billingCycleAnchorMode: z.enum(["now", "custom"]),
 	billingCycleAnchorDate: z.number().nullable(),
 	discounts: z.custom<FormDiscount[]>(),
+	removedRewardIds: z.array(z.string()),
 	grantFree: z.boolean(),
 	currency: z.string().nullable(),
 

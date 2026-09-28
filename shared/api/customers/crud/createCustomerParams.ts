@@ -5,6 +5,7 @@ import {
 import { CustomerIdSchema } from "@api/common/customerId";
 import { EntityDataSchema } from "@api/common/entityData";
 import { queryStringArray } from "@api/common/queryHelpers";
+import { BillingDetailsParamsSchema } from "@api/customers/components/billingDetails/billingDetails";
 import { CustomerExpandEnum } from "@api/customers/components/customerExpand/customerExpand";
 import { z } from "zod/v4";
 
@@ -22,6 +23,10 @@ export const CreateCustomerParamsV0Schema = z
 		...CustomerDataSchema.shape,
 	})
 	.extend({
+		billing_details: BillingDetailsParamsSchema.optional().meta({
+			description:
+				"Billing details to set on the Stripe customer. Creates the Stripe customer if needed.",
+		}),
 		expand: z.array(CustomerExpandEnum).optional().meta({
 			description:
 				"Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.",

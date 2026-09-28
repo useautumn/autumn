@@ -36,6 +36,7 @@ import {
 	applyProductTrialConfig,
 	handleFreeTrialParam,
 } from "@/internal/billing/v2/setup/trialContext";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 
 type ImmediateMultiProductParams = MultiAttachParamsV0 & {
 	no_billing_changes?: boolean;
@@ -405,7 +406,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 		customEnts,
 		trialContext,
 		skipBillingChanges:
-			params.no_billing_changes === true || trialContext?.onEnd === "revert",
+			params.no_billing_changes === true ||
+			isRevertTrialContext({ trialContext }),
 		isCustom: customPrices.length > 0 || customEnts.length > 0,
 		checkoutMode: setupImmediateMultiProductCheckoutMode({
 			paymentMethod,

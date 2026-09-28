@@ -36,6 +36,8 @@ export interface ModelsDevCostTier {
 	output: number;
 	cache_read?: number;
 	cache_write?: number;
+	input_audio?: number;
+	reasoning?: number;
 	tier: { type: string; size: number };
 }
 

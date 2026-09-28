@@ -28,7 +28,7 @@ export type ImmediatePhaseResult = {
 	customerLicenseUpdates: CustomerLicenseUpdate[];
 };
 
-const expireCustomerProduct = ({
+export const expireCustomerProduct = ({
 	customerProduct,
 	currentEpochMs,
 }: {

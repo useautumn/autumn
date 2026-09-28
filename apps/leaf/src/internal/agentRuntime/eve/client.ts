@@ -242,7 +242,7 @@ export async function* streamEveEvents({
 	signal,
 }: {
 	auth: EveAuthContext;
-	idleTimeoutMs?: number;
+	idleTimeoutMs?: number | (() => number);
 	session: EveSessionRef;
 	signal?: AbortSignal;
 }): AsyncGenerator<EveEvent> {

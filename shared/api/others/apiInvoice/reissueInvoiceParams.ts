@@ -1,4 +1,5 @@
 import { CustomLineItemSchema } from "@api/billing/common/customLineItem.js";
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig.js";
 import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
 import {
@@ -39,6 +40,14 @@ export const ReissueInvoiceOverridesSchema = z
 		memo: z.string().nullable().optional().meta({
 			description: "Memo shown near the top of the invoice.",
 		}),
+		payment_method_types: z
+			.array(InvoicePaymentMethodSchema)
+			.min(1)
+			.optional()
+			.meta({
+				description:
+					"Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements.",
+			}),
 	})
 	.strict()
 	.refine(

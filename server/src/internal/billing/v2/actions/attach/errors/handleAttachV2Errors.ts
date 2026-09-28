@@ -20,10 +20,11 @@ import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors
 import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleLicenseAttachTargetErrors } from "@/internal/billing/v2/common/errors/handleLicenseAttachTargetErrors";
+import { handleRevertTrialErrors } from "@/internal/billing/v2/common/errors/handleRevertTrialErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
-import { handleRevertTrialErrors } from "./handleRevertTrialErrors";
+import { handleRemoveDiscountsErrors } from "./handleRemoveDiscountsErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
 export const handleAttachV2Errors = async ({
@@ -115,6 +116,9 @@ export const handleAttachV2Errors = async ({
 
 	// 13. Revert trial errors (card_required + revert, missing existing plan)
 	handleRevertTrialErrors({ billingContext });
+
+	// 14. Adding and removing the same discount in one request
+	handleRemoveDiscountsErrors({ params });
 
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };

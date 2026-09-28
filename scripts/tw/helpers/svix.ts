@@ -1,17 +1,5 @@
-/**
- * Build-time Svix partitioner for the `bun tw` swarm (plan §7).
- *
- * Detection rule (exact, verified): a test file needs Svix iff it imports
- * `@tests/integration/utils/svixWebhookTestUtils`. There is a single entrypoint,
- * imported directly (no barrel), so a one-hop static scan over each `.test.ts`
- * has zero false positives/negatives.
- *
- * Routing: per §7's recommendation, ALL Svix files (26 at time of writing) are
- * routed onto ONE dedicated "svix shard" — a single worker that runs them
- * sequentially. They're simple, fast tests, and a single shard means exactly one
- * `createSvixApp` + one worker with `SVIX_API_KEY` injected per run. Every other
- * worker leaves `SVIX_API_KEY` unset, keeping the general pool fully isolated.
- */
+// Svix files run on a separate pool with an application per worker.
+// Normal workers never receive Svix credentials or application bindings.
 
 import { readFile } from "node:fs/promises";
 import { AppEnv } from "@autumn/shared";
@@ -77,19 +65,7 @@ export const partitionShards = async (
 	return { svixFiles, normalFiles };
 };
 
-/**
- * Orchestrator-side Svix app creation (plan §7/§9a). The orchestrator creates +
- * records the one dedicated svix-shard app BEFORE the worker boots, so a
- * fork/boot failure can never orphan an untracked Svix app. The worker then only
- * BINDS this id into `svix_config` (it no longer calls `createSvixApp` itself).
- *
- * Reuses the server's `createSvixApp` via the `@server/*` alias (the `svix`
- * package isn't resolvable from the scripts workspace — it's nested under
- * `server/node_modules`). `createSvixApp` is wrapped in `safeSvix`, so it returns
- * undefined when `SVIX_API_KEY` is unset; we throw loudly because a mixed/svix run
- * cannot proceed without a real app id. Mirrors `boot.ts`'s former naming so the
- * Svix app is recognizable in the dashboard.
- */
+// Record each application before its worker boots so provisioning failures remain cleanable.
 export const createSvixApp = async (orgId: string): Promise<string> => {
 	if (!process.env.SVIX_API_KEY) {
 		throw new Error(

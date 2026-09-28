@@ -1,4 +1,4 @@
-import type { InvoiceLineItem } from "@autumn/shared";
+import type { InvoiceLineItem, InvoicePaymentMethod } from "@autumn/shared";
 import { useCallback, useMemo, useState } from "react";
 
 export type ReissueCustomField = { _id: string; name: string; value: string };
@@ -32,6 +32,7 @@ export type ReissueFormState = {
 	address: ReissueAddress;
 	taxIdOptionId: string | null;
 	taxIdValue: string;
+	paymentMethodTypes: InvoicePaymentMethod[] | null;
 };
 
 export type ReissueTaxId = { type: string; value: string };
@@ -45,6 +46,9 @@ export type ReissuePrefill = {
 	otherTaxIds?: ReissueTaxId[];
 	/** Stripe returned one page of registrations, so a replacement would drop the rest. */
 	taxIdsIncomplete?: boolean;
+	sendsInvoice?: boolean;
+	/** The org's allowed types, which a send-invoice replacement uses unless changed. */
+	paymentMethodTypes?: InvoicePaymentMethod[] | null;
 };
 
 const EMPTY_ADDRESS: ReissueAddress = {
@@ -60,6 +64,32 @@ let rowCounter = 0;
 const rowId = (prefix: string) => `${prefix}_${Date.now()}_${rowCounter++}`;
 
 const trimmed = (value: string) => value.trim();
+
+/** Payment method types only apply when the replacement is sent for payment. */
+export const sendsReplacementInvoice = ({
+	form,
+	prefill,
+}: {
+	form: ReissueFormState;
+	prefill: ReissuePrefill;
+}) => Boolean(prefill.sendsInvoice) || form.netTermsDays.trim() !== "";
+
+const paymentMethodTypesChanged = ({
+	form,
+	prefill,
+}: {
+	form: ReissueFormState;
+	prefill: ReissuePrefill;
+}) => {
+	const selected = form.paymentMethodTypes ?? [];
+	const inherited = prefill.paymentMethodTypes ?? [];
+	return (
+		sendsReplacementInvoice({ form, prefill }) &&
+		selected.length > 0 &&
+		(selected.length !== inherited.length ||
+			selected.some((type) => !inherited.includes(type)))
+	);
+};
 
 /** Only fields the user actually changed are sent, so an untouched sheet is a plain reissue. */
 export const buildReissuePayload = ({
@@ -111,6 +141,9 @@ export const buildReissuePayload = ({
 		...(customFields.length ? { custom_fields: customFields } : {}),
 		...(trimmed(form.memo) ? { memo: trimmed(form.memo) } : {}),
 		...(trimmed(form.footer) ? { footer: trimmed(form.footer) } : {}),
+		...(paymentMethodTypesChanged({ form, prefill })
+			? { payment_method_types: form.paymentMethodTypes ?? [] }
+			: {}),
 	};
 
 	const addressChanged = (
@@ -188,6 +221,7 @@ export const useReissueForm = ({ prefill }: { prefill: ReissuePrefill }) => {
 		address: { ...EMPTY_ADDRESS, ...(prefill.address ?? {}) },
 		taxIdOptionId: prefill.taxIdOptionId ?? null,
 		taxIdValue: prefill.taxIdValue ?? "",
+		paymentMethodTypes: prefill.paymentMethodTypes ?? null,
 	}));
 
 	const patch = useCallback(

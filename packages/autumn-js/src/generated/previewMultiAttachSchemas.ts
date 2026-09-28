@@ -270,6 +270,7 @@ export const previewMultiAttachOutgoingFeatureQuantitySchema = z.object({
 
 export const previewMultiAttachInvoiceCreditsSchema = z.object({
 	balance: z.number(),
+	applied: z.union([z.number(), z.undefined()]).optional(),
 	currency: z.string(),
 });
 

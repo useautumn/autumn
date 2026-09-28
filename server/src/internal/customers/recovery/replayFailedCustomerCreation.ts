@@ -22,6 +22,7 @@ export const replayFailedCustomerCreation = async ({
 		disableReplicaRead: true,
 		ctx,
 		params: payload.params,
+		billingDetails: payload.billingDetails,
 		source: "customerCreationRecovery",
 		withAutumnId: payload.withAutumnId,
 		enqueueRecoveryOnTransientFailure: false,

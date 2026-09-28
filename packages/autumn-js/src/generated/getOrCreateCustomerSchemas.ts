@@ -41,6 +41,55 @@ export const getOrCreateCustomerConfigSchema = z.object({
 	disableOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerBillingDetailsAddressSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postalCode: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const getOrCreateCustomerAddBillingDetailsTaxIdSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
+export const getOrCreateCustomerRemoveBillingDetailsTaxIdSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
+export const getOrCreateCustomerTaxIdsSchema = z.object({
+	add: z
+		.union([
+			z.array(getOrCreateCustomerAddBillingDetailsTaxIdSchema),
+			z.undefined(),
+		])
+		.optional(),
+	remove: z
+		.union([
+			z.array(getOrCreateCustomerRemoveBillingDetailsTaxIdSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const getOrCreateCustomerBillingDetailsCustomFieldSchema = z.object({
+	name: z.string(),
+	value: z.string(),
+});
+
+export const getOrCreateCustomerInvoiceSettingsSchema = z.object({
+	customFields: z
+		.union([
+			z.array(getOrCreateCustomerBillingDetailsCustomFieldSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
+
 export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
@@ -156,6 +205,76 @@ export const getOrCreateCustomerConfigOutboundSchema = z.object({
 	disable_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerBillingDetailsAddressOutboundSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postal_code: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const getOrCreateCustomerAddBillingDetailsTaxIdOutboundSchema = z.object(
+	{
+		type: z.string(),
+		value: z.string(),
+	},
+);
+
+export const getOrCreateCustomerRemoveBillingDetailsTaxIdOutboundSchema =
+	z.object({
+		type: z.string(),
+		value: z.string(),
+	});
+
+export const getOrCreateCustomerTaxIdsOutboundSchema = z.object({
+	add: z
+		.union([
+			z.array(getOrCreateCustomerAddBillingDetailsTaxIdOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	remove: z
+		.union([
+			z.array(getOrCreateCustomerRemoveBillingDetailsTaxIdOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const getOrCreateCustomerBillingDetailsCustomFieldOutboundSchema =
+	z.object({
+		name: z.string(),
+		value: z.string(),
+	});
+
+export const getOrCreateCustomerInvoiceSettingsOutboundSchema = z.object({
+	custom_fields: z
+		.union([
+			z.array(getOrCreateCustomerBillingDetailsCustomFieldOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
+
+export const getOrCreateCustomerBillingDetailsOutboundSchema = z.object({
+	address: z
+		.union([
+			getOrCreateCustomerBillingDetailsAddressOutboundSchema,
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	tax_ids: z
+		.union([getOrCreateCustomerTaxIdsOutboundSchema, z.undefined()])
+		.optional(),
+	tax_exempt: z.union([z.string(), z.undefined()]).optional(),
+	invoice_settings: z
+		.union([getOrCreateCustomerInvoiceSettingsOutboundSchema, z.undefined()])
+		.optional(),
+});
+
 export const getOrCreateCustomerParamsOutboundSchema = z.object({
 	customer_id: z.string().nullable(),
 	name: z.union([z.string(), z.undefined()]).optional().nullable(),
@@ -175,6 +294,9 @@ export const getOrCreateCustomerParamsOutboundSchema = z.object({
 		.optional(),
 	config: z
 		.union([getOrCreateCustomerConfigOutboundSchema, z.undefined()])
+		.optional(),
+	billing_details: z
+		.union([getOrCreateCustomerBillingDetailsOutboundSchema, z.undefined()])
 		.optional(),
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
@@ -264,6 +386,22 @@ export const getOrCreateCustomerBillingControlsSchema = z.object({
 		.optional(),
 });
 
+export const getOrCreateCustomerTaxExemptSchema = closedEnumSchema;
+
+export const getOrCreateCustomerBillingDetailsSchema = z.object({
+	address: z
+		.union([getOrCreateCustomerBillingDetailsAddressSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	taxIds: z.union([getOrCreateCustomerTaxIdsSchema, z.undefined()]).optional(),
+	taxExempt: z
+		.union([getOrCreateCustomerTaxExemptSchema, z.undefined()])
+		.optional(),
+	invoiceSettings: z
+		.union([getOrCreateCustomerInvoiceSettingsSchema, z.undefined()])
+		.optional(),
+});
+
 export const getOrCreateCustomerParamsSchema = z.object({
 	customerId: z.string().nullable(),
 	name: z.union([z.string(), z.undefined()]).optional().nullable(),
@@ -282,5 +420,8 @@ export const getOrCreateCustomerParamsSchema = z.object({
 		.union([getOrCreateCustomerBillingControlsSchema, z.undefined()])
 		.optional(),
 	config: z.union([getOrCreateCustomerConfigSchema, z.undefined()]).optional(),
+	billingDetails: z
+		.union([getOrCreateCustomerBillingDetailsSchema, z.undefined()])
+		.optional(),
 	expand: z.union([z.array(customerExpandSchema), z.undefined()]).optional(),
 });

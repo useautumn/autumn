@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { withTwStripeWebhookPriority } from "@/external/connect/clientCache/twStripeLimiter/twStripeRequestContext";
 import { stripeLoggerMiddleware } from "@/external/stripe/webhookMiddlewares/stripeLoggerMiddleware.js";
 import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import { handleStripeWebhookEvent } from "./handleStripeWebhookEvent.js";
@@ -12,6 +13,10 @@ import type { StripeWebhookHonoEnv } from "./webhookMiddlewares/stripeWebhookCon
 import { stripeWebhookRefreshMiddleware } from "./webhookMiddlewares/stripeWebhookRefreshMiddleware.js";
 
 export const stripeWebhookRouter = new Hono<StripeWebhookHonoEnv>();
+
+stripeWebhookRouter.use("/webhooks/*", (_c, next) =>
+	withTwStripeWebhookPriority(next),
+);
 
 // Legacy webhook - for orgs that pasted their Stripe secret keys
 stripeWebhookRouter.post(

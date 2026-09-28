@@ -117,6 +117,11 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 
 	route({
 		method: "POST",
+		url: "/billing.multi_update",
+	}),
+
+	route({
+		method: "POST",
 		url: "/billing.create_schedule",
 	}),
 
@@ -151,12 +156,6 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/entities.create",
-	}),
-
-	route({
-		method: "POST",
-		url: "/entities.update",
-		flushBalances: true,
 	}),
 
 	route({

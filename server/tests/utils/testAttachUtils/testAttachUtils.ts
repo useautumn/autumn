@@ -7,8 +7,9 @@ import {
 import { addHours, addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
+import { advanceStripeTestClock } from "../stripeUtils/testClock/advanceStripeTestClock";
+import { createTestWait } from "../testWait/createTestWait";
 
 export const getCurrentOptions = ({
 	preview,
@@ -141,61 +142,50 @@ export const getAttachTotal = ({
 	return dueTodayTotal.toDecimalPlaces(2).toNumber();
 };
 
-const isParallelRun = () => {
-	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
-	return concurrency > 1;
-};
-
-/**
- * Advances the test clock to the next invoice (1 month from current time).
- * Waits longer when running in parallel (TEST_FILE_CONCURRENCY > 1) to
- * account for increased Stripe webhook processing time.
- *
- * @param stripeCli - Stripe client
- * @param testClockId - Test clock ID
- * @param currentEpochMs - Current epoch in ms (use this for consecutive advances). If not provided, uses Date.now().
- * @param withPause - If true, advances in two steps (to month boundary, then to finalize)
- * @returns The new epoch time in ms after advancing
- */
 export const advanceToNextInvoice = async ({
 	stripeCli,
 	testClockId,
 	currentEpochMs,
 	withPause = false,
+	timeoutMs = 180_000,
+	signal,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
 	currentEpochMs?: number;
 	withPause?: boolean;
+	timeoutMs?: number;
+	signal?: AbortSignal;
 }): Promise<number> => {
 	const baseTime = currentEpochMs ? new Date(currentEpochMs) : new Date();
-	const parallel = isParallelRun();
-
-	if (withPause) {
-		const newUnix = await advanceTestClock({
-			stripeCli,
-			testClockId,
-			advanceTo: addMonths(baseTime, 1).getTime(),
-			waitForSeconds: parallel ? 80 : 50,
-		});
-
-		await advanceTestClock({
-			stripeCli,
-			testClockId,
-			advanceTo: addHours(newUnix, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 30,
-		});
-
-		return newUnix;
-	}
-
-	return await advanceTestClock({
-		stripeCli,
-		testClockId,
-		advanceTo: addHours(
-			addMonths(baseTime, 1),
-			hoursToFinalizeInvoice,
-		).getTime(),
-		waitForSeconds: 30,
+	const invoiceTime = addMonths(baseTime, 1).getTime();
+	const finalizationTime = addHours(
+		invoiceTime,
+		hoursToFinalizeInvoice,
+	).getTime();
+	// Clock readiness does not guarantee Autumn's webhook work has finished.
+	const stages = [
+		...(withPause ? [{ targetMs: invoiceTime, minimumWaitMs: 50_000 }] : []),
+		{ targetMs: finalizationTime, minimumWaitMs: 30_000 },
+	];
+	const wait = createTestWait({
+		timeoutMs,
+		signal,
+		description: `Advance to next invoice on clock ${testClockId}`,
 	});
+	try {
+		for (const { targetMs, minimumWaitMs } of stages) {
+			await advanceStripeTestClock({
+				stripeCli,
+				testClockId,
+				targetSeconds: Math.floor(targetMs / 1000),
+				minimumWaitMs,
+				signal: wait.signal,
+				timeoutMs: wait.remainingMs(),
+			});
+		}
+		return withPause ? invoiceTime : finalizationTime;
+	} finally {
+		wait.close();
+	}
 };

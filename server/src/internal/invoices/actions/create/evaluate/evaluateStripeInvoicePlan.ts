@@ -48,10 +48,12 @@ const percentOffTotal = ({
 export const evaluateStripeInvoicePlan = ({
 	invoiceContext,
 	lines,
+	issueDateMs,
 	dueDateMs,
 }: {
 	invoiceContext: CreateInvoiceContext;
 	lines: InvoiceLine[];
+	issueDateMs: number;
 	dueDateMs: number | null;
 }): StripeInvoicePlan => {
 	const { currency } = invoiceContext;
@@ -201,6 +203,7 @@ export const evaluateStripeInvoicePlan = ({
 			total,
 			invoice_credits: credits,
 			amount_due: amountDue,
+			issue_date: issueDateMs,
 			due_date: dueDateMs,
 		},
 	};

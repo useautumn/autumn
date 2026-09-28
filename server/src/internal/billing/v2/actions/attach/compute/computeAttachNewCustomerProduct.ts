@@ -8,6 +8,7 @@ import {
 	isFutureStartDate,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProductWithBalanceTransitions } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
@@ -126,7 +127,7 @@ const computeAttachNewCustomerProductResult = ({
 			: undefined;
 
 	const isRevertTrial =
-		trialContext?.onEnd === "revert" && planTiming === "immediate";
+		isRevertTrialContext({ trialContext }) && planTiming === "immediate";
 	const preservedBillingLinkage = params.no_billing_changes
 		? currentCustomerProduct
 		: undefined;

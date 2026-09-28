@@ -131,4 +131,11 @@ export DATABASE_CRITICAL_URL="$DATABASE_URL"
 bun db generate >/dev/null 2>&1 || true
 bun db migrate --bootstrap
 
+# Stored procedures (balance sync/deduction) are not migrations. Without them
+# Redis -> Postgres balance sync fails ("function sync_balances_v2 does not exist").
+# Import the loader directly: migrate-functions.ts force-loads server/.env.local,
+# which in a Neon worktree would retarget the DATABASE_URL exported above.
+log "Loading DB functions"
+bun -e 'const { initializeDatabaseFunctions } = await import("./server/src/db/initializeDatabaseFunctions.ts"); await initializeDatabaseFunctions(); process.exit(0);'
+
 log "All services ready"

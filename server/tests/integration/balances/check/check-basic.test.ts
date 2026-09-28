@@ -337,7 +337,7 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 			usage: 0,
 			overage_allowed: false,
 			max_purchase: null,
-			reset: null,
+			reset: { interval: ResetInterval.OneOff, resets_at: null },
 			breakdown: [
 				{
 					current_balance: 0,
@@ -346,7 +346,7 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 					overage_allowed: false,
 					plan_id: freeProd.id,
 					purchased_balance: 0,
-					reset: null,
+					reset: { interval: ResetInterval.OneOff, resets_at: null },
 					usage: 0,
 				},
 			],
@@ -371,14 +371,14 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 		next_reset_at: null,
 		overage_allowed: false,
 		balance: 0,
-		interval: null,
-		interval_count: null,
+		interval: EntInterval.Lifetime,
+		interval_count: 1,
 		breakdown: [
 			{
 				balance: 0,
 				included_usage: 0,
-				interval: null,
-				interval_count: null,
+				interval: EntInterval.Lifetime,
+				interval_count: 1,
 				next_reset_at: null,
 				overage_allowed: false,
 				expires_at: null,
@@ -387,7 +387,7 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 		],
 	};
 
-	expect(expectedResV1).toMatchObject(resV1);
+	expect(resV1).toMatchObject(expectedResV1);
 
 	// v0 response
 	const resV0 = (await autumnV0.check({

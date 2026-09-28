@@ -143,8 +143,9 @@ const rowsOwnedBy = ({
 	state: SubjectState;
 	internalEntityId: string | null;
 }) => {
+	// A plan-inserted row may omit the column; absent means customer-level, as in Postgres.
 	const customerProducts = state.customerProducts.filter(
-		(row) => row.internal_entity_id === internalEntityId,
+		(row) => (row.internal_entity_id ?? null) === internalEntityId,
 	);
 	const productIds = new Set(customerProducts.map((row) => row.id));
 	const customerPrices = state.customerPrices.filter((row) =>
@@ -210,10 +211,12 @@ const isOwnCustomerPart = ({ state }: { state: SubjectState }): boolean => {
 	const hasEntitlement = (id: string) =>
 		state.customerEntitlements.some((row) => row.id === id);
 	return (
-		state.customerProducts.every((row) => row.internal_entity_id === null) &&
+		state.customerProducts.every(
+			(row) => (row.internal_entity_id ?? null) === null,
+		) &&
 		state.customerPrices.every((row) => hasProduct(row.customer_product_id)) &&
 		state.customerEntitlements.every(
-			(row) => row.internal_entity_id === null,
+			(row) => (row.internal_entity_id ?? null) === null,
 		) &&
 		state.rollovers.every((row) => hasEntitlement(row.cus_ent_id)) &&
 		state.replaceables.every((row) => hasEntitlement(row.cus_ent_id)) &&

@@ -29,8 +29,11 @@ export type WorkerCheckAnswer = {
 	catalog: Catalog | null;
 };
 
-const requiredBalanceOf = ({ body }: { body: ParsedCheckParams }): number =>
-	body.required_balance ?? body.required_quantity ?? 1;
+export const requiredBalanceOf = ({
+	body,
+}: {
+	body: ParsedCheckParams;
+}): number => body.required_balance ?? body.required_quantity ?? 1;
 
 /** The legacy path refuses these before deducting, so the worker path does too. */
 const assertCheckCanDeduct = ({
@@ -40,6 +43,12 @@ const assertCheckCanDeduct = ({
 	ctx: AutumnContext;
 	body: ParsedCheckParams;
 }): void => {
+	if (ctx.isPublic)
+		throw new RecaseError({
+			message:
+				"Can't use send_event: true with a publishable key. Use your secret API key instead.",
+			statusCode: 400,
+		});
 	const feature = findFeatureById({
 		features: ctx.features,
 		featureId: body.feature_id ?? "",
@@ -137,6 +146,7 @@ export async function runDeductingCheck({
 			feature_id: body.feature_id,
 			value: requiredBalanceOf({ body }),
 			properties: body.properties,
+			skip_event: body.skip_event,
 			// A lock keeps its overage behaviour for a later confirm above the lock.
 			overage_behavior: body.lock?.overage_behavior ?? "reject",
 		},
