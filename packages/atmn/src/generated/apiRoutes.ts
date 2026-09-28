@@ -2334,6 +2334,37 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	},
 	{
 		group: "billing",
+		method: "verify",
+		path: "/v1/billing.verify",
+		description:
+			"Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: true,
+				description:
+					"Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.",
+			},
+			{
+				name: "subscription_ids",
+				type: "json",
+				required: false,
+				description:
+					"Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.",
+			},
+			{
+				name: "strict",
+				type: "boolean",
+				required: false,
+				description:
+					"When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false.",
+			},
+		],
+	},
+	{
+		group: "billing",
 		method: "import",
 		path: "/v1/billing.import",
 		description:
