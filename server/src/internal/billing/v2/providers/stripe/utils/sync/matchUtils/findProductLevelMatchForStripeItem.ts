@@ -199,10 +199,14 @@ export const findProductLevelMatchForStripeItem = ({
 	item,
 	candidates,
 	org,
+	linkedInternalProductIds,
 }: {
 	item: StripeItemSnapshot;
 	candidates: ProductLevelMatchCandidate[];
 	org?: Organization;
+	/** Products already linked to the item's subscription — an unclaimed item
+	 * stays on one of these instead of swapping to a sibling plan. */
+	linkedInternalProductIds?: ReadonlySet<string>;
 }): ProductLevelMatch | null => {
 	if (candidates.length === 0) return null;
 
@@ -218,7 +222,7 @@ export const findProductLevelMatchForStripeItem = ({
 		const only = resolved[0];
 		if (!only) return null;
 		if (only.priceMatch) return only;
-		return basePlanFallback({ item, resolved });
+		return basePlanFallback({ item, resolved, linkedInternalProductIds });
 	}
 
 	// Ambiguous candidates resolve only via price claims, strongest kind
@@ -236,24 +240,33 @@ export const findProductLevelMatchForStripeItem = ({
 		if (claims.length > 1) return null;
 	}
 
-	return basePlanFallback({ item, resolved });
+	return basePlanFallback({ item, resolved, linkedInternalProductIds });
 };
 
 /**
- * No price claims at all: a plausible custom base falls back to the base plan
- * (variants defer to their base); first base plan wins if several.
+ * No price claims at all: a plausible custom base stays on the plan already
+ * linked to the subscription (a custom amount is a price change, not a plan
+ * swap); otherwise it falls back to the base plan (variants defer to their
+ * base), first base plan winning if several.
  */
 const basePlanFallback = ({
 	item,
 	resolved,
+	linkedInternalProductIds,
 }: {
 	item: StripeItemSnapshot;
 	resolved: ProductLevelMatch[];
+	linkedInternalProductIds?: ReadonlySet<string>;
 }): ProductLevelMatch | null => {
 	// Mirrors stripeItemToBasePrice's gate — metered/tiered items are never a
 	// custom base and must stay unmatched so the anchored rematch can claim them.
 	if (item.recurring_usage_type === "metered") return null;
 	if (item.unit_amount === null || !item.recurring_interval) return null;
+
+	const linkedPlans = resolved.filter((match) =>
+		linkedInternalProductIds?.has(match.product.internal_id),
+	);
+	if (linkedPlans.length === 1) return linkedPlans[0] ?? null;
 
 	const basePlans = resolved.filter((match) => !match.product.base_variant_id);
 	return basePlans[0] ?? null;

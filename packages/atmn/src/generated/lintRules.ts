@@ -2206,15 +2206,12 @@ export const LINT_RULES: LintRules = {
 	webhooks: {
 		label: "webhook",
 		idField: "id",
-		required: ["events", "id", "url"],
+		required: ["id", "url"],
 		fields: {
 			id: {
 				minLength: 1,
 				maxLength: 256,
 				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			events: {
-				minItems: 1,
 			},
 		},
 		rules: [

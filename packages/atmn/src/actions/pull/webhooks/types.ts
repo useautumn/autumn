@@ -17,4 +17,6 @@ export type WebhookEditResult = {
 	/** Values the config states in code pull must not rewrite. */
 	warnings: string[];
 	unlocated: { id: string; action: string }[];
+	/** Shared fields left alone because an env in the url map went unread. */
+	frozen: { id: string; warning: string }[];
 };

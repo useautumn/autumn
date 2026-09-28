@@ -22,23 +22,28 @@ const statedFrom = ({
 	row,
 	webhook,
 	envKey,
+	keepShared,
 }: {
 	row: StatedWebhook | undefined;
 	webhook: RemoteWebhook;
 	envKey: string;
+	keepShared: boolean;
 }): StatedWebhook => ({
 	...row,
 	id: webhook.id,
 	url: { ...row?.url, [envKey]: webhook.url },
-	events: webhook.events.length > 0 ? webhook.events : row?.events,
-	description: webhook.description,
-	disabled: webhook.disabled,
+	...(!keepShared && {
+		events: webhook.events.length > 0 ? webhook.events : undefined,
+		description: webhook.description,
+		disabled: webhook.disabled,
+	}),
 });
 
 const merge = (target: WebhookEditResult, source: WebhookEditResult): void => {
 	target.lines.push(...source.lines);
 	target.warnings.push(...source.warnings);
 	target.unlocated.push(...source.unlocated);
+	target.frozen.push(...source.frozen);
 };
 
 /**
@@ -52,6 +57,7 @@ export const applyWebhooksPull = ({
 	remote,
 	stated,
 	envKey,
+	readEnvKeys,
 	newId = newWebhookId,
 }: {
 	pull: PullFiles;
@@ -59,10 +65,17 @@ export const applyWebhooksPull = ({
 	/** The config's webhooks as evaluated; absent when it states none. */
 	stated: StatedWebhook[] | undefined;
 	envKey: string;
+	/** Every env this pull read; absent counts every url-map env as read. */
+	readEnvKeys?: ReadonlySet<string>;
 	/** Mints the id a dashboard webhook is written under. */
 	newId?: () => string;
 }): WebhookEditResult & { stated: StatedWebhook[] } => {
-	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
+	const result: WebhookEditResult = {
+		lines: [],
+		warnings: [],
+		unlocated: [],
+		frozen: [],
+	};
 	const statedById = new Map((stated ?? []).map((row) => [row.id, row]));
 	// What the next env pulled into the same files sees as the config.
 	const next = new Map(statedById);
@@ -70,6 +83,11 @@ export const applyWebhooksPull = ({
 	const fromDashboard = (webhook: RemoteWebhook): boolean =>
 		!statedById.has(webhook.id) && isDashboardWebhook(webhook);
 	const present = new Set<string>();
+	// Shared fields hold for every env, so only a pull that read them all moves them.
+	const unreadEnvKeysOf = (row: StatedWebhook): string[] =>
+		Object.keys(row.url ?? {}).filter(
+			(key) => readEnvKeys !== undefined && !readEnvKeys.has(key),
+		);
 
 	for (const webhook of remote) {
 		if (fromDashboard(webhook)) {
@@ -91,12 +109,14 @@ export const applyWebhooksPull = ({
 				);
 			if (represented !== undefined) {
 				present.add(represented.id);
+				const unreadEnvKeys = unreadEnvKeysOf(represented);
 				next.set(
 					represented.id,
 					statedFrom({
 						row: represented,
 						webhook: { ...webhook, id: represented.id },
 						envKey,
+						keepShared: unreadEnvKeys.length > 0,
 					}),
 				);
 				merge(
@@ -106,13 +126,8 @@ export const applyWebhooksPull = ({
 						webhook: { ...webhook, id: represented.id },
 						stated: represented,
 						envKey,
+						unreadEnvKeys,
 					}),
-				);
-				continue;
-			}
-			if (webhook.events.length === 0) {
-				result.lines.push(
-					`· webhook ${webhook.id} receives every event; give it an event list in the dashboard, or add it to your config, to manage it here`,
 				);
 				continue;
 			}
@@ -125,7 +140,12 @@ export const applyWebhooksPull = ({
 			if (failure === null) {
 				next.set(
 					id,
-					statedFrom({ row: undefined, webhook: { ...webhook, id }, envKey }),
+					statedFrom({
+						row: undefined,
+						webhook: { ...webhook, id },
+						envKey,
+						keepShared: false,
+					}),
 				);
 				result.lines.push(
 					`+ webhook ${id} (made in the dashboard; push adopts it by URL)`,
@@ -135,9 +155,21 @@ export const applyWebhooksPull = ({
 		}
 		present.add(webhook.id);
 		const row = statedById.get(webhook.id);
-		next.set(webhook.id, statedFrom({ row, webhook, envKey }));
+		const unreadEnvKeys = row === undefined ? [] : unreadEnvKeysOf(row);
+		next.set(
+			webhook.id,
+			statedFrom({
+				row,
+				webhook,
+				envKey,
+				keepShared: unreadEnvKeys.length > 0,
+			}),
+		);
 		if (row !== undefined) {
-			merge(result, updateWebhook({ pull, webhook, stated: row, envKey }));
+			merge(
+				result,
+				updateWebhook({ pull, webhook, stated: row, envKey, unreadEnvKeys }),
+			);
 			continue;
 		}
 		const failure = appendWebhook({ pull, webhook, envKey });

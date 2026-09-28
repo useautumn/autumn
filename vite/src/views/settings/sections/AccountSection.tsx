@@ -6,7 +6,13 @@ import {
 	CardTitle,
 } from "@autumn/ui";
 import { UserDetails } from "@/views/main-sidebar/components/UserDetails";
+import {
+	SETTINGS_LIST_CLASS,
+	SettingsGroup,
+} from "../components/SettingsGroup";
+import { SettingsListRow } from "../components/SettingsListRow";
 import { SettingsSection } from "../SettingsSection";
+import { DeleteAccountPopover } from "./components/DeleteAccountPopover";
 import { PasskeysManager } from "./components/PasskeysManager";
 
 export const AccountSection = () => {
@@ -37,6 +43,16 @@ export const AccountSection = () => {
 					<PasskeysManager />
 				</CardContent>
 			</Card>
+			<SettingsGroup title="Danger zone">
+				<div className={SETTINGS_LIST_CLASS}>
+					<SettingsListRow
+						title="Delete account"
+						description="Permanently deletes your account and any organization you're the only member of. This can't be undone."
+					>
+						<DeleteAccountPopover />
+					</SettingsListRow>
+				</div>
+			</SettingsGroup>
 		</SettingsSection>
 	);
 };

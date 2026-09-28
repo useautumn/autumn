@@ -384,6 +384,58 @@ describe("findProductLevelMatchForStripeItem", () => {
 		expect(match?.priceMatch).toBeNull();
 	});
 
+	test("fallback keeps the plan already linked to the subscription over the first base plan", () => {
+		const cheap = candidate({ id: "cheap", price: fixedPrice({ amount: 20 }) });
+		const linked = candidate({
+			id: "linked",
+			price: fixedPrice({ amount: 50 }),
+		});
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem({ unitAmountDecimal: "7500" }),
+			candidates: [cheap, linked],
+			linkedInternalProductIds: new Set([linked.product.internal_id]),
+		});
+
+		expect(match?.product).toBe(linked.product);
+		expect(match?.priceMatch).toBeNull();
+	});
+
+	test("fallback keeps a linked variant instead of re-anchoring on its base plan", () => {
+		const base = candidate({ id: "base", price: fixedPrice({ amount: 20 }) });
+		const linkedVariant = candidate({
+			id: "variant",
+			price: fixedPrice({ amount: 50 }),
+			baseVariantId: "base",
+		});
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem({ unitAmountDecimal: "7500" }),
+			candidates: [base, linkedVariant],
+			linkedInternalProductIds: new Set([linkedVariant.product.internal_id]),
+		});
+
+		expect(match?.product).toBe(linkedVariant.product);
+	});
+
+	test("a unique price claim still beats the linked plan", () => {
+		const claimingPrice = fixedPrice({ id: "price_claim", amount: 75 });
+		const claiming = candidate({ id: "claiming", price: claimingPrice });
+		const linked = candidate({
+			id: "linked",
+			price: fixedPrice({ amount: 50 }),
+		});
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem({ unitAmountDecimal: "7500" }),
+			candidates: [linked, claiming],
+			linkedInternalProductIds: new Set([linked.product.internal_id]),
+		});
+
+		expect(match?.product).toBe(claiming.product);
+		expect(match?.priceMatch?.price).toBe(claimingPrice);
+	});
+
 	test("base-plan fallback stays null for metered items and variant-only candidates", () => {
 		const variants = [
 			candidate({

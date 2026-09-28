@@ -231,10 +231,19 @@
 							"api-reference/customers/getCustomer",
 							"api-reference/customers/listCustomers",
 							"api-reference/customers/updateCustomer",
-							"api-reference/customers/deleteCustomer",
-							"api-reference/invoices/insertInvoices",
+							"api-reference/customers/deleteCustomer"
+						]
+					},
+					{
+						"group": "Invoices",
+						"pages": [
 							"api-reference/invoices/listInvoices",
-							"api-reference/invoices/payInvoice"
+							"api-reference/invoices/createInvoice",
+							"api-reference/invoices/payInvoice",
+							"api-reference/invoices/voidInvoice",
+							"api-reference/invoices/reissueInvoice",
+							"api-reference/invoices/insertInvoices",
+							"api-reference/invoices/listInvoiceTemplates"
 						]
 					},
 					{
