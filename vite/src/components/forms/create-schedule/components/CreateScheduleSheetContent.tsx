@@ -39,7 +39,7 @@ export function CreateScheduleSheetContent() {
 				action={<BillingPromptToggle />}
 			/>
 
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
 				<SheetSection withSeparator={false} className="pb-0">
 					<CreateScheduleGenerationBar />
 				</SheetSection>
@@ -149,7 +149,7 @@ export function CreateScheduleReviewContent() {
 				]}
 			/>
 
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
 				<SetPlansReviewChanges />
 				<CreateScheduleAdvancedSection />
 				<SchedulePreview />
