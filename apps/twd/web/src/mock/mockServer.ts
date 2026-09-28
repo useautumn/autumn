@@ -173,7 +173,7 @@ const branches: Branch[] = [
 
 // ---- keys + accounts ------------------------------------------------------
 
-const UNUSABLE: Record<number, string> = {
+const UNUSABLE: Partial<Record<number, string>> = {
 	17: "Invalid API key provided (rk_…) — key was rolled",
 	88: "Account restricted: Connect platform profile incomplete",
 	203: "Rate limited on every probe for 30 min",
@@ -207,19 +207,32 @@ const keys = Array.from({ length: 445 }, (_, i) => {
 	};
 });
 
+const BROKEN_REASONS = [
+	"nuke: Stripe 429 rate_limit after 5 retries deleting customers",
+	"verify: 3 subscriptions still active after nuke (sub_1Q…)",
+	"nuke: No such account: 'acct_1Q…' (deleted in Stripe?)",
+	"verify: test clock still advancing; delete timed out after 60s",
+	"nuke: webhook endpoint delete returned 500 from Stripe",
+];
+
 const accounts: StripeAccount[] = keys.flatMap((k, ki) =>
 	k.usable
-		? Array.from({ length: 3 }, (_, j) => ({
-				id: `acc_${String(ki * 3 + j).padStart(5, "0")}`,
-				platformAccountId: k.platformAccountId,
-				state:
-					ki % 97 === 5 && j === 2 ? ("broken" as const) : ("clean" as const),
-				heldBy: null,
-				runId: null,
-				reservationId: null,
-				reservedUntil: null,
-				stateChangedAt: iso(START - rand() * 6 * HOUR),
-			}))
+		? Array.from({ length: 3 }, (_, j) => {
+				const broken = ki % 97 === 5 && j === 2;
+				return {
+					id: `acc_${String(ki * 3 + j).padStart(5, "0")}`,
+					platformAccountId: k.platformAccountId,
+					state: broken ? ("broken" as const) : ("clean" as const),
+					heldBy: null,
+					runId: null,
+					reservationId: null,
+					reservedUntil: null,
+					stateChangedAt: iso(START - rand() * 6 * HOUR),
+					brokenReason: broken
+						? BROKEN_REASONS[Math.floor(ki / 97) % BROKEN_REASONS.length]
+						: null,
+				};
+			})
 		: [],
 );
 
@@ -257,6 +270,7 @@ const claim = ({
 const releaseAccounts = (match: (a: StripeAccount) => boolean) => {
 	for (const a of accounts.filter(match)) {
 		a.state = "nuking";
+		a.brokenReason = null;
 		a.runId = null;
 		a.reservationId = null;
 		a.heldBy = null;
@@ -388,6 +402,63 @@ const enqueue = (kind: Job["kind"], singletonKey: string): EnqueueResponse => {
 	return { job, deduped: false };
 };
 
+const FULL_NUKE_REASON = "full nuke in progress";
+const FULL_NUKE_MS = 20_000;
+
+/** Simulated full nuke: ~20s to delete, re-register the webhook, then top up. */
+const fullNukeKey = ({
+	key,
+	targetPerKey,
+}: {
+	key: (typeof keys)[number];
+	targetPerKey: number;
+}) => {
+	const res = enqueue(
+		"full_nuke_key",
+		`full_nuke_key:${key.platformAccountId}`,
+	);
+	if (res.deduped) return res;
+	key.usable = false;
+	key.unusableReason = FULL_NUKE_REASON;
+	const owned = accounts.filter(
+		(a) =>
+			a.platformAccountId === key.platformAccountId &&
+			a.state !== "reserved" &&
+			a.state !== "in_use",
+	);
+	for (const a of owned) {
+		a.state = "nuking";
+		a.brokenReason = null;
+		a.stateChangedAt = iso(Date.now());
+	}
+	setTimeout(() => {
+		key.webhookRegistered = false;
+		for (const a of owned) accounts.splice(accounts.indexOf(a), 1);
+	}, FULL_NUKE_MS * 0.6);
+	setTimeout(() => {
+		const ki = keys.indexOf(key);
+		for (let j = 0; j < targetPerKey; j++)
+			accounts.push({
+				id: `acc_${ki}_${hex(6)}`,
+				platformAccountId: key.platformAccountId,
+				state: "clean",
+				heldBy: null,
+				runId: null,
+				reservationId: null,
+				reservedUntil: null,
+				stateChangedAt: iso(Date.now()),
+				brokenReason: null,
+			});
+		key.usable = true;
+		key.unusableReason = null;
+		key.webhookRegistered = true;
+		key.probedAt = iso(Date.now());
+		res.job.status = "succeeded";
+		res.job.finishedAt = iso(Date.now());
+	}, FULL_NUKE_MS);
+	return res;
+};
+
 // ---- runs -----------------------------------------------------------------
 
 type Sim = { queue: string[]; logSeq: number };
@@ -510,6 +581,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		id: `run_${hex(10, r)}`,
 		branch: branch.name,
 		sha: hex(40, r),
+		pinnedSha: !baseline && i % 5 === 3,
 		status: cancelled ? "cancelled" : "passed",
 		purpose: baseline ? "baseline" : "adhoc",
 		selection,
@@ -545,9 +617,11 @@ const startLiveRun = ({
 	progress = 0,
 	workerCap = 40,
 	purpose = "adhoc",
+	pinnedSha = false,
 }: {
 	branch: string;
 	sha: string;
+	pinnedSha?: boolean;
 	selection: RunSummary["selection"];
 	createdBy: RunSummary["createdBy"];
 	progress?: number;
@@ -567,6 +641,7 @@ const startLiveRun = ({
 		id: runId,
 		branch,
 		sha,
+		pinnedSha,
 		status: progress > 0 ? "running" : "queued",
 		purpose,
 		selection,
@@ -735,6 +810,7 @@ startLiveRun({
 	selection: { groups: ["billing-v2", "track"] },
 	createdBy: ACTORS[3],
 	workerCap: 24,
+	pinnedSha: true,
 });
 
 setInterval(() => {
@@ -983,6 +1059,7 @@ export const handle = ({
 		const run = startLiveRun({
 			branch: branch.name,
 			sha: b.sha ?? branch.sha,
+			pinnedSha: b.sha !== undefined,
 			selection: b.selection,
 			createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
 			purpose: b.purpose,
@@ -1041,6 +1118,7 @@ export const handle = ({
 			const next = startLiveRun({
 				branch: run.branch,
 				sha: run.sha,
+				pinnedSha: run.pinnedSha,
 				selection: { files: failed },
 				createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
 			});
@@ -1067,6 +1145,75 @@ export const handle = ({
 			for (const k of keys) if (k.usable) k.webhookRegistered = true;
 		}, 25_000);
 		return ok(res);
+	}
+
+	if (route === "GET /jobs") return ok({ jobs });
+
+	if (method === "POST" && seg[0] === "keys" && seg[2] === "full-nuke") {
+		const pid = decodeURIComponent(seg[1]);
+		const key = keys.find((k) => k.platformAccountId === pid);
+		if (!key)
+			return err(
+				404,
+				"key_not_found",
+				`No key for platform account ${pid}.`,
+				"GET /keys for valid platform account ids.",
+			);
+		if (!key.present)
+			return err(
+				409,
+				"key_not_in_env",
+				`${pid} is no longer in TW_V3_KEYS.`,
+				"Nothing to nuke with; pick a key that is present.",
+				"Ask a twd admin to add the key back to TW_V3_KEYS.",
+			);
+		const target = (body as { targetPerKey?: number } | undefined)
+			?.targetPerKey;
+		return ok(fullNukeKey({ key, targetPerKey: target ?? 2 }));
+	}
+
+	if (route === "POST /accounts/nuke") {
+		const ids = (body as { accountIds?: string[] } | undefined)?.accountIds;
+		const found = accounts.filter((a) => ids?.includes(a.id));
+		const held = found.filter(
+			(a) => a.state === "reserved" || a.state === "in_use",
+		);
+		if (held.length)
+			return err(
+				409,
+				"accounts_held",
+				`Accounts are held by a reservation or run: ${held.map((a) => a.id).join(", ")}.`,
+				"Release the reservation or wait for the run to finish; its teardown nukes them.",
+			);
+		const res = found.map((a) => enqueue("nuke", `nuke:${a.id}`));
+		releaseAccounts((a) => found.includes(a));
+		for (const r of res)
+			setTimeout(() => {
+				r.job.status = "succeeded";
+				r.job.finishedAt = iso(Date.now());
+			}, 8_000);
+		return ok(res);
+	}
+
+	if (method === "DELETE" && seg[0] === "accounts" && seg[1]) {
+		const i = accounts.findIndex((a) => a.id === seg[1]);
+		if (i === -1)
+			return err(
+				404,
+				"account_not_found",
+				`${seg[1]} is not in the twd ledger.`,
+				"GET /accounts for valid ids.",
+			);
+		const a = accounts[i];
+		if (a.state === "in_use" || a.state === "reserved")
+			return err(
+				409,
+				"account_held",
+				`${a.id} is ${a.state.replace("_", " ")}.`,
+				"Release the reservation or wait for the run to finish, then forget it.",
+			);
+		accounts.splice(i, 1);
+		return ok(a);
 	}
 
 	if (route === "POST /reservations") {

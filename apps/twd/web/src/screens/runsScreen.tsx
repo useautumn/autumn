@@ -6,6 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { RunSummary } from "../../../src/api/contract.ts";
 import { type RunsFilter, useRuns } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
+import { RunLabel } from "../components/runLabel.tsx";
 import {
 	Actor,
 	ErrorCallout,
@@ -20,7 +21,7 @@ import {
 	SectionTag,
 	Segmented,
 } from "../components/ui.tsx";
-import { cn, elapsed, num, sha7, timeAgo } from "../lib/format.ts";
+import { cn, elapsed, num, timeAgo } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
 
 const FINISHED_FILTERS = ["all", "passed", "failed", "cancelled"] as const;
@@ -46,13 +47,12 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 		meta: { grow: true },
 		cell: ({ row: { original: run } }) => (
 			<div className="flex min-w-0 items-center gap-2 pr-4">
-				<span className="truncate font-medium text-foreground">
-					{run.branch}
-				</span>
-				<span className="shrink-0 text-tiny-id text-subtle">
-					{sha7(run.sha)}
-				</span>
-				{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}
+				<RunLabel run={run} />
+				{run.purpose === "baseline" && (
+					<Pill tone="info" className="shrink-0">
+						baseline
+					</Pill>
+				)}
 			</div>
 		),
 	},

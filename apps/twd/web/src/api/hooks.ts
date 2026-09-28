@@ -13,6 +13,7 @@ import {
 	CreateApiKeyResponse,
 	type CreateRunBody,
 	EnqueueResponse,
+	Job,
 	KeysOverview,
 	Me,
 	Reservation,
@@ -145,6 +146,20 @@ export const useAccounts = () =>
 		refetchInterval: whileDisconnected,
 	});
 
+/** Seeded by GET /jobs, then kept current by the "jobs" live topic. */
+export const useJobs = () =>
+	useQuery({
+		queryKey: qk.jobs,
+		queryFn: async () =>
+			(
+				await api({
+					path: "/jobs?status=all&limit=200",
+					schema: z.object({ jobs: z.array(Job) }),
+				})
+			).jobs,
+		refetchInterval: whileDisconnected,
+	});
+
 export const useReservations = () =>
 	useQuery({
 		queryKey: qk.reservations,
@@ -222,6 +237,66 @@ export const useReinitKeys = () => {
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: qk.keys });
 			qc.invalidateQueries({ queryKey: qk.capacity });
+		},
+	});
+};
+
+const upsertJob = (jobs: Job[] | undefined, job: Job) =>
+	jobs ? [job, ...jobs.filter((j) => j.id !== job.id)] : [job];
+
+export const useFullNukeKey = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			platformAccountId,
+			targetPerKey,
+		}: {
+			platformAccountId: string;
+			targetPerKey: number;
+		}) =>
+			api({
+				method: "POST",
+				path: `/keys/${encodeURIComponent(platformAccountId)}/full-nuke`,
+				body: { targetPerKey },
+				schema: EnqueueResponse,
+			}),
+		onSuccess: ({ job }) => {
+			qc.setQueryData<Job[]>(qk.jobs, (jobs) => upsertJob(jobs, job));
+			qc.invalidateQueries({ queryKey: qk.keys });
+		},
+	});
+};
+
+export const useNukeAccounts = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (accountIds: string[]) =>
+			api({
+				method: "POST",
+				path: "/accounts/nuke",
+				body: { accountIds },
+				schema: z.array(EnqueueResponse),
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: qk.accounts });
+			qc.invalidateQueries({ queryKey: qk.capacity });
+		},
+	});
+};
+
+export const useForgetAccount = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			api({
+				method: "DELETE",
+				path: `/accounts/${encodeURIComponent(id)}`,
+				schema: z.unknown(),
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: qk.accounts });
+			qc.invalidateQueries({ queryKey: qk.capacity });
+			qc.invalidateQueries({ queryKey: qk.keys });
 		},
 	});
 };

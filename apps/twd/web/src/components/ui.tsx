@@ -30,6 +30,7 @@ import {
 } from "@tanstack/react-table";
 import {
 	type ComponentProps,
+	type CSSProperties,
 	type ReactElement,
 	type ReactNode,
 	useId,
@@ -222,13 +223,20 @@ export const DataTable = <T,>({
 				rowClassName,
 			}}
 		>
-			<Table.Container>
-				<Table.Content>
-					<Table.Header />
-					<Table.Body />
-				</Table.Content>
-				{footer}
-			</Table.Container>
+			<div
+				className="contents [&_table]:min-w-(--twd-table-min)"
+				style={
+					{ "--twd-table-min": `${table.getTotalSize()}px` } as CSSProperties
+				}
+			>
+				<Table.Container>
+					<Table.Content>
+						<Table.Header />
+						<Table.Body />
+					</Table.Content>
+					{footer}
+				</Table.Container>
+			</div>
 		</Table.Provider>
 	);
 };

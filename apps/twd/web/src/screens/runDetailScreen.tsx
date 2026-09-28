@@ -22,6 +22,7 @@ import {
 import { useLiveTopics } from "../api/live.ts";
 import type { LogLine } from "../api/liveCache.ts";
 import { AnsiLog, AnsiText } from "../components/ansi.tsx";
+import { RunLabel } from "../components/runLabel.tsx";
 import {
 	Actor,
 	ErrorCallout,
@@ -221,8 +222,8 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 							</BreadcrumbLink>
 						</BreadcrumbItem>
 						<BreadcrumbSeparator />
-						<BreadcrumbItem className="max-w-60 truncate">
-							{run.branch}
+						<BreadcrumbItem className="max-w-60 min-w-0">
+							<RunLabel run={run} showSha={false} primaryClassName="" />
 						</BreadcrumbItem>
 					</BreadcrumbList>
 				</Breadcrumb>
@@ -248,8 +249,8 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 				</div>
 			</div>
 			<div className="flex min-w-0 items-center gap-2">
-				<h3 className="truncate text-md font-semibold text-foreground">
-					{run.branch}
+				<h3 className="min-w-0 text-md font-semibold text-foreground">
+					<RunLabel run={run} showSha={false} primaryClassName="" />
 				</h3>
 				<RunStatusBadge status={run.status} />
 				{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}

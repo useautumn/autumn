@@ -1,9 +1,23 @@
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@autumn/ui/components/ui/dropdown-menu";
 import { KeyIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Check, Loader2, RefreshCw, ShieldAlert, X } from "lucide-react";
+import {
+	Bomb,
+	Check,
+	Loader2,
+	MoreHorizontal,
+	RefreshCw,
+	ShieldAlert,
+	X,
+} from "lucide-react";
 import { useState } from "react";
-import type { StripeKey } from "../../../src/api/contract.ts";
-import { useKeys, useProbeKeys, useReinitKeys } from "../api/hooks.ts";
+import type { Job, StripeKey } from "../../../src/api/contract.ts";
+import { useJobs, useKeys, useProbeKeys, useReinitKeys } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
 import { ErrorCallout, Pill } from "../components/status.tsx";
 import {
@@ -16,11 +30,38 @@ import {
 	TableMore,
 	Tooltip,
 } from "../components/ui.tsx";
-import { cn, num, timeAgo } from "../lib/format.ts";
+import { cn, elapsed, num, timeAgo } from "../lib/format.ts";
+import { useNow } from "../lib/useNow.ts";
+import { FullNukeDialog } from "./keys/fullNukeDialog.tsx";
 
 const FILTERS = ["all", "unusable", "no webhook", "missing"] as const;
 type Filter = (typeof FILTERS)[number];
 const PAGE = 100;
+
+const isFullNuking = (k: StripeKey) =>
+	!k.usable &&
+	!!k.unusableReason?.toLowerCase().startsWith("full nuke in progress");
+const isLiveJob = (j: Job | undefined) =>
+	j?.status === "queued" || j?.status === "running";
+const RECENT_MS = 15 * 60_000;
+
+const FullNukeStatus = ({ job, now }: { job: Job; now: number }) => {
+	if (isLiveJob(job))
+		return (
+			<Pill tone="info" className="tabular-nums">
+				{job.status === "queued"
+					? "queued"
+					: elapsed({ from: job.startedAt, to: null, now })}
+			</Pill>
+		);
+	if (job.status === "succeeded")
+		return <Pill tone="ok">nuked {timeAgo(job.finishedAt, now)}</Pill>;
+	return (
+		<Tooltip content={job.error ?? job.status}>
+			<Pill tone="bad">full nuke {job.status}</Pill>
+		</Tooltip>
+	);
+};
 
 const matches = (k: StripeKey, filter: Filter) =>
 	filter === "all" ||
@@ -36,7 +77,28 @@ export const KeysScreen = () => {
 	const [filter, setFilter] = useState<Filter>("all");
 	const [query, setQuery] = useState("");
 	const [limit, setLimit] = useState(PAGE);
+	const [nuking, setNuking] = useState<StripeKey | null>(null);
+	const jobs = useJobs();
 	useLiveTopics("keys", "jobs");
+
+	const fullNukeJobs = new Map<string, Job>();
+	for (const j of jobs.data ?? []) {
+		if (j.kind !== "full_nuke_key") continue;
+		const pid = j.singletonKey.split(":").at(-1) ?? "";
+		const prev = fullNukeJobs.get(pid);
+		if (!prev || Date.parse(j.createdAt) > Date.parse(prev.createdAt))
+			fullNukeJobs.set(pid, j);
+	}
+	const anyLive = [...fullNukeJobs.values()].some(isLiveJob);
+	const now = useNow({ active: anyLive });
+	const jobFor = (k: StripeKey) => {
+		const j = fullNukeJobs.get(k.platformAccountId);
+		if (!j) return undefined;
+		if (isLiveJob(j)) return j;
+		return now - Date.parse(j.finishedAt ?? j.createdAt) < RECENT_MS
+			? j
+			: undefined;
+	};
 
 	const data = keys.data;
 	const all = data?.keys ?? [];
@@ -103,29 +165,40 @@ export const KeysScreen = () => {
 			header: "Usable",
 			size: 220,
 			meta: { grow: true },
-			cell: ({ row: { original: k } }) => (
-				<span className="flex min-w-0 items-center gap-1.5 text-xs">
-					{k.usable ? (
-						<Check
-							className="size-3.5 shrink-0 text-green-600 dark:text-green-500"
-							aria-label="Usable"
-						/>
-					) : (
-						<>
-							<X
-								className="size-3.5 shrink-0 text-red-600 dark:text-red-400"
-								aria-label="Unusable"
-							/>
-							<Tooltip content={k.unusableReason}>
-								<span className="truncate text-red-600 dark:text-red-400">
-									{k.unusableReason}
+			cell: ({ row: { original: k } }) => {
+				const job = jobFor(k);
+				return (
+					<span className="flex min-w-0 items-center gap-1.5 text-xs">
+						{isFullNuking(k) || isLiveJob(job) ? (
+							<>
+								<Loader2 className="size-3.5 shrink-0 animate-spin text-blue-600 dark:text-blue-400" />
+								<span className="shrink-0 text-blue-600 dark:text-blue-400">
+									Nuking…
 								</span>
-							</Tooltip>
-						</>
-					)}
-					{!k.present && <Pill tone="warn">not in env</Pill>}
-				</span>
-			),
+							</>
+						) : k.usable ? (
+							<Check
+								className="size-3.5 shrink-0 text-green-600 dark:text-green-500"
+								aria-label="Usable"
+							/>
+						) : (
+							<>
+								<X
+									className="size-3.5 shrink-0 text-red-600 dark:text-red-400"
+									aria-label="Unusable"
+								/>
+								<Tooltip content={k.unusableReason}>
+									<span className="truncate text-red-600 dark:text-red-400">
+										{k.unusableReason}
+									</span>
+								</Tooltip>
+							</>
+						)}
+						{job && <FullNukeStatus job={job} now={now} />}
+						{!k.present && <Pill tone="warn">not in env</Pill>}
+					</span>
+				);
+			},
 		},
 		{
 			id: "webhook",
@@ -183,6 +256,33 @@ export const KeysScreen = () => {
 				</span>
 			),
 		},
+		{
+			id: "actions",
+			header: "",
+			size: 44,
+			cell: ({ row: { original: k } }) => (
+				<span className="flex justify-end">
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							aria-label={`Actions for ${k.keyHint}`}
+							className="flex size-6 cursor-pointer items-center justify-center rounded-md text-subtle hover:bg-muted hover:text-foreground"
+						>
+							<MoreHorizontal className="size-3.5" />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-44">
+							<DropdownMenuItem
+								disabled={isFullNuking(k) || isLiveJob(jobFor(k)) || !k.present}
+								onClick={() => setNuking(k)}
+								className="text-red-600 dark:text-red-400"
+							>
+								<Bomb className="size-3.5" />
+								Full Nuke…
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</span>
+			),
+		},
 	];
 
 	return (
@@ -227,7 +327,7 @@ export const KeysScreen = () => {
 				</div>
 			)}
 			<ErrorCallout
-				error={keys.error ?? probe.error ?? reinit.error}
+				error={keys.error ?? jobs.error ?? probe.error ?? reinit.error}
 				className="mb-4"
 			/>
 
@@ -312,6 +412,10 @@ export const KeysScreen = () => {
 				</div>
 			)}
 
+			<FullNukeDialog
+				stripeKey={nuking}
+				onOpenChange={(o) => !o && setNuking(null)}
+			/>
 			<ConfirmDialog
 				open={confirm}
 				onOpenChange={setConfirm}

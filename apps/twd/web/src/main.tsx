@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ApiRequestError } from "./api/client.ts";
 import { connectLiveCache } from "./api/liveCache.ts";
 import { AppShell } from "./components/appShell.tsx";
+import { RouteError } from "./components/routeError.tsx";
 import { TooltipProvider } from "./components/ui.tsx";
 import { AccountsScreen } from "./screens/accountsScreen.tsx";
 import { KeysScreen } from "./screens/keysScreen.tsx";
@@ -28,16 +29,26 @@ const queryClient = new QueryClient({
 connectLiveCache(queryClient);
 
 const router = createBrowserRouter([
-	{ path: "/sign-in", element: <SignInScreen /> },
+	{
+		path: "/sign-in",
+		element: <SignInScreen />,
+		errorElement: <RouteError />,
+	},
 	{
 		element: <AppShell />,
+		errorElement: <RouteError />,
 		children: [
-			{ path: "/", element: <RunsScreen /> },
-			{ path: "/runs/new", element: <NewRunScreen /> },
-			{ path: "/runs/:id", element: <RunDetailScreen /> },
-			{ path: "/keys", element: <KeysScreen /> },
-			{ path: "/accounts", element: <AccountsScreen /> },
-			{ path: "/settings", element: <SettingsScreen /> },
+			{
+				errorElement: <RouteError />,
+				children: [
+					{ path: "/", element: <RunsScreen /> },
+					{ path: "/runs/new", element: <NewRunScreen /> },
+					{ path: "/runs/:id", element: <RunDetailScreen /> },
+					{ path: "/keys", element: <KeysScreen /> },
+					{ path: "/accounts", element: <AccountsScreen /> },
+					{ path: "/settings", element: <SettingsScreen /> },
+				],
+			},
 		],
 	},
 ]);

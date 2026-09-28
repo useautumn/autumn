@@ -2,11 +2,13 @@ import { UsersIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import type { Reservation } from "../../../src/api/contract.ts";
+import type { Reservation, StripeAccount } from "../../../src/api/contract.ts";
 import {
 	useAccounts,
 	useCapacity,
 	useCreateReservation,
+	useForgetAccount,
+	useNukeAccounts,
 	useReleaseReservation,
 	useReservations,
 } from "../api/hooks.ts";
@@ -23,6 +25,7 @@ import {
 	SectionTag,
 	Segmented,
 	Skeleton,
+	Tooltip,
 } from "../components/ui.tsx";
 import { cn, formatDate, num, timeAgo } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
@@ -137,6 +140,9 @@ export const AccountsScreen = () => {
 	const now = useNow({ intervalMs: 30_000 });
 	const [creating, setCreating] = useState(false);
 	const [releasing, setReleasing] = useState<Reservation | null>(null);
+	const nuke = useNukeAccounts();
+	const forget = useForgetAccount();
+	const [forgetting, setForgetting] = useState<StripeAccount | null>(null);
 	useLiveTopics("accounts");
 
 	const counts = capacity.data?.accounts;
@@ -148,8 +154,85 @@ export const AccountsScreen = () => {
 	);
 	const isActive = (r: Reservation) =>
 		!r.releasedAt && Date.parse(r.expiresAt) >= now;
-	const brokenAccounts =
-		accounts.data?.filter((a) => a.state === "broken") ?? [];
+	const brokenAccounts = accounts.data
+		?.filter((a) => a.state === "broken")
+		.sort(
+			(a, b) => Date.parse(b.stateChangedAt) - Date.parse(a.stateChangedAt),
+		);
+
+	const brokenColumns: ColumnDef<StripeAccount>[] = [
+		{
+			id: "account",
+			header: "Account",
+			size: 150,
+			cell: ({ row: { original: a } }) => (
+				<span className="text-tiny-id text-foreground">{a.id}</span>
+			),
+		},
+		{
+			id: "key",
+			header: "Key",
+			size: 190,
+			cell: ({ row: { original: a } }) => (
+				<span className="block truncate text-tiny-id text-tertiary-foreground">
+					{a.platformAccountId}
+				</span>
+			),
+		},
+		{
+			id: "reason",
+			header: "Reason",
+			size: 320,
+			meta: { grow: true },
+			cell: ({ row: { original: a } }) =>
+				a.brokenReason ? (
+					<Tooltip content={a.brokenReason}>
+						<span className="block truncate pr-2 text-xs text-red-600 dark:text-red-400">
+							{a.brokenReason}
+						</span>
+					</Tooltip>
+				) : (
+					<span className="text-xs text-subtle">No reason recorded</span>
+				),
+		},
+		{
+			id: "when",
+			header: "Broken",
+			size: 90,
+			cell: ({ row: { original: a } }) => (
+				<span
+					className="text-xs text-subtle tabular-nums"
+					title={formatDate(a.stateChangedAt)}
+				>
+					{timeAgo(a.stateChangedAt, now)}
+				</span>
+			),
+		},
+		{
+			id: "actions",
+			header: "",
+			size: 170,
+			cell: ({ row: { original: a } }) => (
+				<span className="flex justify-end gap-1.5">
+					<Button
+						variant="secondary"
+						size="sm"
+						isLoading={nuke.isPending && nuke.variables?.includes(a.id)}
+						onClick={() => nuke.mutate([a.id])}
+					>
+						Retry nuke
+					</Button>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => setForgetting(a)}
+					>
+						Forget
+					</Button>
+				</span>
+			),
+		},
+	];
 
 	const columns: ColumnDef<Reservation>[] = [
 		{
@@ -230,7 +313,7 @@ export const AccountsScreen = () => {
 				</Button>
 			</PageHeader>
 			<ErrorCallout
-				error={capacity.error ?? reservations.error}
+				error={capacity.error ?? accounts.error ?? reservations.error}
 				className="mb-4"
 			/>
 
@@ -261,25 +344,21 @@ export const AccountsScreen = () => {
 								/>
 							))}
 						</div>
-						{brokenAccounts.length > 0 && (
-							<p className="text-xs text-tertiary-foreground">
-								Broken:{" "}
-								<span className="text-tiny-id">
-									{brokenAccounts
-										.slice(0, 6)
-										.map((a) => a.id)
-										.join(", ")}
-								</span>
-								{brokenAccounts.length > 6 &&
-									` +${brokenAccounts.length - 6} more`}
-								. These need a manual nuke or a key re-initialise.
-							</p>
-						)}
 					</div>
 				) : (
 					<Skeleton className="h-8 w-full" />
 				)}
 			</Panel>
+
+			<SectionTag>Broken accounts</SectionTag>
+			<DataTable
+				data={brokenAccounts}
+				isLoading={accounts.isLoading}
+				columns={brokenColumns}
+				emptyText="No broken accounts. Accounts land here when a nuke or verify fails."
+			/>
+			<ErrorCallout error={nuke.error ?? forget.error} className="mt-3" />
+			<div className="mb-6" />
 
 			<SectionTag>Reservations</SectionTag>
 			<DataTable
@@ -313,6 +392,30 @@ export const AccountsScreen = () => {
 						{num(releasing.accountIds.length)} accounts held by{" "}
 						{releasing.owner.email} go to nuking and return to the clean pool.
 						Any run pinned to this reservation loses them.
+					</>
+				)}
+			</ConfirmDialog>
+			<ConfirmDialog
+				open={forgetting !== null}
+				onOpenChange={(o) => !o && setForgetting(null)}
+				title="Forget this account?"
+				confirmLabel="Forget"
+				destructive
+				pending={forget.isPending}
+				onConfirm={() =>
+					forgetting &&
+					forget.mutate(forgetting.id, {
+						onSettled: () => setForgetting(null),
+					})
+				}
+			>
+				{forgetting && (
+					<>
+						<span className="font-mono text-foreground">{forgetting.id}</span>{" "}
+						is removed from twd's ledger only. Nothing is deleted in Stripe: if
+						the account still exists there, it stays, and twd will no longer
+						nuke or hand it to runs. Use this for accounts already deleted in
+						Stripe.
 					</>
 				)}
 			</ConfirmDialog>

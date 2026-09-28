@@ -2,6 +2,7 @@ import { PageContainer } from "@autumn/ui/components/general/page-container";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -184,25 +185,27 @@ const UserMenu = () => {
 				/>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" className="w-56">
-				<DropdownMenuLabel className="text-xs text-subtle">
-					{me.email}
-				</DropdownMenuLabel>
-				{(["light", "dark", "system"] as const).map((m) => {
-					const Icon = THEME_ICONS[m];
-					return (
-						<DropdownMenuItem
-							key={m}
-							onClick={() => theme.apply(m)}
-							className={cn(theme.mode === m && "text-foreground")}
-						>
-							<Icon className="size-3.5" strokeWidth={ICON_STROKE} />
-							<span className="capitalize">{m}</span>
-							{theme.mode === m && (
-								<span className="ml-auto text-xs text-subtle">Active</span>
-							)}
-						</DropdownMenuItem>
-					);
-				})}
+				<DropdownMenuGroup>
+					<DropdownMenuLabel className="text-xs text-subtle">
+						{me.email}
+					</DropdownMenuLabel>
+					{(["light", "dark", "system"] as const).map((m) => {
+						const Icon = THEME_ICONS[m];
+						return (
+							<DropdownMenuItem
+								key={m}
+								onClick={() => theme.apply(m)}
+								className={cn(theme.mode === m && "text-foreground")}
+							>
+								<Icon className="size-3.5" strokeWidth={ICON_STROKE} />
+								<span className="capitalize">{m}</span>
+								{theme.mode === m && (
+									<span className="ml-auto text-xs text-subtle">Active</span>
+								)}
+							</DropdownMenuItem>
+						);
+					})}
+				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={() => navigate("/settings")}>
 					<KeyRound className="size-3.5" strokeWidth={ICON_STROKE} />
