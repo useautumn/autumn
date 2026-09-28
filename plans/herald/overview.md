@@ -13,6 +13,8 @@ status: ready-for-review
 
 - `data-model/what-a-usage-event-is-today.md` — the event row, the two stores it goes to, and exactly what a track, a lock and a finalize write.
 - `units.md` — the ordered units of work, and what is decided and parked.
+- `lifecycle.md` — rolling deploys: the fence, the ledger, the honest stop.
+- `blue-green.md` — the swap: the worker's record, gate and heartbeat, moving group membership.
 - `how-others-stop-duplicates.md` — OpenMeter, Stripe, Orb, Metronome, m3ter, Lago: everyone dedupes before the store, on an event id, inside a window.
 - `data-model/what-is-on-the-log.md` — *(next)* the record herald will read, and the three things it does not tell you.
 - `code-paths/how-an-event-is-written-today.md` — *(next)* request to Tinybird, and where events get lost or doubled.

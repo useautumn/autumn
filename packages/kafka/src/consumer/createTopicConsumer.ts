@@ -108,4 +108,8 @@ function validateConsumerConfig(config: TopicConsumerConfig): void {
 	if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
 		throw new RangeError(`Invalid concurrent partition count: ${concurrency}`);
 	}
+	const recordsPerSlice = config.recordsPerSlice ?? 1;
+	if (!Number.isSafeInteger(recordsPerSlice) || recordsPerSlice < 1) {
+		throw new RangeError(`Invalid records per slice: ${recordsPerSlice}`);
+	}
 }

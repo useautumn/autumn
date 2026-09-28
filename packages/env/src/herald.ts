@@ -50,8 +50,18 @@ export function createHeraldEnv(
 		HERALD_DATABASE_URL: runtimeEnv.DATABASE_URL,
 		/** Absent where Svix is not set up: herald then decides webhooks and delivers none. */
 		HERALD_SVIX_API_KEY: runtimeEnv.SVIX_API_KEY || null,
+		HERALD_DEPLOYMENT: deployment,
+		/** Read by the blue/green identity: absent off ECS, where the gate fails open. */
+		ECS_CONTAINER_METADATA_URI_V4: trimmedOrUndefined(
+			runtimeEnv.ECS_CONTAINER_METADATA_URI_V4,
+		),
+		FC_GIT_COMMIT_SHA: trimmedOrUndefined(runtimeEnv.FC_GIT_COMMIT_SHA),
+		IMAGE_TAG: trimmedOrUndefined(runtimeEnv.IMAGE_TAG),
 	};
 }
+
+const trimmedOrUndefined = (value: string | undefined): string | undefined =>
+	value?.trim() ? value.trim() : undefined;
 
 export type HeraldEnv = ReturnType<typeof createHeraldEnv>;
 let heraldEnv: HeraldEnv | undefined;

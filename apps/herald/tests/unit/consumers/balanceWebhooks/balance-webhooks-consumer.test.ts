@@ -145,3 +145,27 @@ test("a record with no webhook effects delivers nothing", async () => {
 
 	expect(sent).toEqual([]);
 });
+
+test("the key the worker stored on the record reaches Svix unchanged, and again unchanged when the record lands again", async () => {
+	const keys: (string | undefined)[] = [];
+	const consumer = createBalanceWebhooksConsumer({
+		ctx: {
+			logger,
+			svix: svixThat(async ({ message }) => {
+				keys.push(message.idempotencyKey);
+			}),
+		},
+	});
+	const keyed: MutationEffect = {
+		...limitReached,
+		idempotencyKey:
+			"limit_reached:org_1:sandbox:cus_1:_:messages:included:_:cmd_1",
+	};
+	const record = trackWith({ effects: [keyed] });
+	await consumer.handle({ records: [record] });
+	await consumer.handle({ records: [record] });
+	expect(keys).toEqual([
+		"limit_reached:org_1:sandbox:cus_1:_:messages:included:_:cmd_1",
+		"limit_reached:org_1:sandbox:cus_1:_:messages:included:_:cmd_1",
+	]);
+});

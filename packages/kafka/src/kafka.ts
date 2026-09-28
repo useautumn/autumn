@@ -61,9 +61,12 @@ export type {
 	TopicConsumer,
 	TopicConsumerConfig,
 	TopicConsumerDependencies,
+	TopicConsumerHandler,
 	TopicRecord,
 	TopicRecordHandler,
 	TopicRecordResult,
+	TopicRecordSlice,
+	TopicRecordsHandler,
 	TopicResumePosition,
 } from "./consumer/types/consumer.js";
 export type {
@@ -145,10 +148,13 @@ export { createMeteringConsumer } from "./topics/metering/consumer/createMeterin
 export { createMeteringReader } from "./topics/metering/consumer/createMeteringReader.js";
 export type {
 	MeteringConsumerDependencies,
+	MeteringConsumerHandler,
 	MeteringFenceApplication,
 	MeteringRecordApplication,
 	MeteringRecordFailure,
 	MeteringRecordHandler,
+	MeteringRecordSlice,
+	MeteringRecordsHandler,
 } from "./topics/metering/consumer/types/meteringConsumer.js";
 export type {
 	MeteringLogEntry,

@@ -122,6 +122,7 @@
         "@autumn/auto-topup": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
         "@autumn/balance-webhooks": "workspace:*",
+        "@autumn/blue-green": "workspace:*",
         "@autumn/cache": "workspace:*",
         "@autumn/catalog-lru": "workspace:*",
         "@autumn/edge-config": "workspace:*",
@@ -542,6 +543,21 @@
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
+        "typescript": "~5.8.3",
+      },
+    },
+    "packages/blue-green": {
+      "name": "@autumn/blue-green",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/edge-config": "workspace:*",
+        "@autumn/logging": "workspace:*",
+        "@aws-sdk/client-s3": "^3.1017.0",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/node": "^24.9.1",
         "typescript": "~5.8.3",
       },
     },
@@ -1357,6 +1373,8 @@
     "@autumn/balance-worker": ["@autumn/balance-worker@workspace:apps/balance-worker"],
 
     "@autumn/balance-worker-client": ["@autumn/balance-worker-client@workspace:packages/balance-worker-client"],
+
+    "@autumn/blue-green": ["@autumn/blue-green@workspace:packages/blue-green"],
 
     "@autumn/cache": ["@autumn/cache@workspace:packages/cache"],
 
@@ -7091,6 +7109,8 @@
     "@autumn/balance-webhooks/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/balance-worker/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
+    "@autumn/blue-green/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/ducklake/@types/node": ["@types/node@18.19.130", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg=="],
 

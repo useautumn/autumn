@@ -1,4 +1,5 @@
 import { type EventInsert, events } from "@autumn/shared";
+import { and, inArray, isNull } from "drizzle-orm";
 import type { PostgresDb } from "../../types/postgresClient.js";
 
 // 17 columns a row, so this stays far under Postgres's 65,535 parameters per statement.
@@ -84,4 +85,37 @@ export const insertUsageEvents = async ({
 		});
 	}
 	return result;
+};
+
+/** The ids among these that Tinybird has not confirmed: what a slice still owes it, however many times it has landed. */
+export const readUnsentToTinybirdIds = async ({
+	ctx,
+	ids,
+}: {
+	ctx: { db: PostgresDb };
+	ids: string[];
+}): Promise<string[]> => {
+	if (ids.length === 0) return [];
+	const rows = await ctx.db
+		.select({ id: events.id })
+		.from(events)
+		.where(and(inArray(events.id, ids), isNull(events.sent_to_tinybird_at)));
+	return rows.map((row) => row.id);
+};
+
+/** Written only after Tinybird confirmed the rows; marking first would turn a failed send into a lost row. */
+export const markSentToTinybird = async ({
+	ctx,
+	ids,
+	at,
+}: {
+	ctx: { db: PostgresDb };
+	ids: string[];
+	at: Date;
+}): Promise<void> => {
+	if (ids.length === 0) return;
+	await ctx.db
+		.update(events)
+		.set({ sent_to_tinybird_at: at })
+		.where(inArray(events.id, ids));
 };

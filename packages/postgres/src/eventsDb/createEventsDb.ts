@@ -1,5 +1,10 @@
+import { sql } from "drizzle-orm";
 import { createPostgresClient } from "../createPostgresClient.js";
-import { insertUsageEvents } from "./repos/usageEvents.js";
+import {
+	insertUsageEvents,
+	markSentToTinybird,
+	readUnsentToTinybirdIds,
+} from "./repos/usageEvents.js";
 import type { EventsDb, EventsDbConfig } from "./types/eventsDb.js";
 
 const CONNECT_TIMEOUT_SECONDS = 10;
@@ -23,6 +28,11 @@ export const createEventsDb = ({
 	const ctx = { db: postgres.db };
 	return {
 		insertUsageEvents: ({ events }) => insertUsageEvents({ ctx, events }),
+		readUnsentToTinybirdIds: ({ ids }) => readUnsentToTinybirdIds({ ctx, ids }),
+		markSentToTinybird: ({ ids, at }) => markSentToTinybird({ ctx, ids, at }),
+		ping: async () => {
+			await ctx.db.execute(sql`select 1`);
+		},
 		close: () => postgres.close(),
 	};
 };

@@ -12,5 +12,9 @@ export type EventsDb = {
 	insertUsageEvents(params: {
 		events: EventInsert[];
 	}): Promise<UsageEventsInsertResult>;
+	readUnsentToTinybirdIds(params: { ids: string[] }): Promise<string[]>;
+	markSentToTinybird(params: { ids: string[]; at: Date }): Promise<void>;
+	/** One round trip that proves the database answers; a readiness probe. */
+	ping(): Promise<void>;
 	close(): Promise<void>;
 };

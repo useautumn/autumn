@@ -617,6 +617,13 @@
       "when": 1790589308467,
       "tag": "0087_owner_fence",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1790609921198,
+      "tag": "0088_events_sent_to_tinybird_at",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,14 @@
 import { expect, test } from "bun:test";
-import { TinybirdError } from "@autumn/tinybird";
+import {
+	createTinybirdClient,
+	ingestRows,
+	TinybirdError,
+} from "@autumn/tinybird";
+import {
+	createFakeTinybirdFetch,
+	refused,
+	taken,
+} from "../../../../../packages/tinybird/tests/unit/fakeTinybirdFetch.js";
 import { landRecords } from "../../../src/stream/landRecords/landRecords.js";
 import type {
 	StreamConsumer,
@@ -111,6 +120,50 @@ test("a Tinybird reply is the store's failure too", async () => {
 
 	expect(batches).toHaveLength(2);
 	expect(delays).toEqual([200]);
+});
+
+test("Tinybird HTTP 500 retries the whole slice until recovery without splitting or skipping", async () => {
+	const { ctx, logs, delays, heartbeats } = createContext();
+	const fake = createFakeTinybirdFetch({
+		replies: [refused({ status: 500 }), refused({ status: 500 }), taken()],
+	});
+	const tinybird = createTinybirdClient({
+		config: {
+			region: { baseUrl: "https://tinybird.test", token: "token_123" },
+			timeoutMs: 1_000,
+			fetch: fake.fetch,
+		},
+	});
+	async function handle({
+		records,
+	}: {
+		records: StreamRecord[];
+	}): Promise<void> {
+		await ingestRows({
+			ctx: { tinybird },
+			datasource: "events",
+			rows: records.map(({ position }) => ({
+				offset: position.offset.toString(),
+			})),
+			rowsPerRequest: 500,
+		});
+	}
+
+	const settled = await landRecords({
+		ctx,
+		job: { name: "usage-events", handle },
+		records: [recordAt(1), recordAt(2)],
+	});
+
+	expect(settled).toBe(true);
+	expect(fake.requests.map(({ rows }) => rows)).toEqual([
+		[{ offset: "1" }, { offset: "2" }],
+		[{ offset: "1" }, { offset: "2" }],
+		[{ offset: "1" }, { offset: "2" }],
+	]);
+	expect(delays).toEqual([200, 800]);
+	expect(heartbeats.count).toBe(2);
+	expect(logs).toEqual([]);
 });
 
 test("a record the job cannot handle is narrowed down and skipped; every other record lands", async () => {

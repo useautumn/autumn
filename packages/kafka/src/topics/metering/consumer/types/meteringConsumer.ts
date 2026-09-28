@@ -48,9 +48,36 @@ export type MeteringRecordHandler = {
 	onRecordError?(failure: MeteringRecordFailure): TopicRecordResult;
 };
 
+/** One partition's decoded records, in order; fence markers and records the handler declined are already gone. */
+export type MeteringRecordSlice = {
+	topic: string;
+	partition: number;
+	applications: MeteringRecordApplication[];
+	heartbeat: () => Promise<void>;
+};
+
+/** Lands records a slice at a time: one store round trip per slice, one resolve-and-heartbeat after it. */
+export type MeteringRecordsHandler = {
+	readResumeOffset(
+		position: TopicResumePosition,
+	): bigint | null | Promise<bigint | null>;
+	shouldApply?(position: {
+		topic: string;
+		partition: number;
+		offset: bigint;
+	}): boolean;
+	applyRecords(slice: MeteringRecordSlice): void | Promise<void>;
+	/** A record that will not decode: throw to fail the slice, or return to drop that one record. */
+	onRecordError?(failure: MeteringRecordFailure): void;
+};
+
+export type MeteringConsumerHandler =
+	| MeteringRecordHandler
+	| MeteringRecordsHandler;
+
 export type MeteringConsumerDependencies = {
 	consumer: KafkaConsumerClient;
-	handler: MeteringRecordHandler;
+	handler: MeteringConsumerHandler;
 	progress: ProgressTracker;
 	/** Other topics on the same group membership, each with its own raw record handler. */
 	secondaryHandlers?: Readonly<Record<string, TopicRecordHandler>>;

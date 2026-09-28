@@ -45,6 +45,30 @@ export type TopicRecordHandler = {
 	): TopicRecordResult | Promise<TopicRecordResult>;
 };
 
+/** One partition's records, in order, sized by `recordsPerSlice`; the handler heartbeats through a long apply. */
+export type TopicRecordSlice = {
+	topic: string;
+	partition: number;
+	messages: TopicRecord["message"][];
+	heartbeat: () => Promise<void>;
+};
+
+/** A handler that lands records a slice at a time; the slice's last offset is resolved once it returns. */
+export type TopicRecordsHandler = {
+	readResumeOffset(
+		position: TopicResumePosition,
+	): bigint | null | Promise<bigint | null>;
+	applyRecords(slice: TopicRecordSlice): void | Promise<void>;
+};
+
+export type TopicConsumerHandler = TopicRecordHandler | TopicRecordsHandler;
+
+export function isRecordsHandler(
+	handler: TopicConsumerHandler,
+): handler is TopicRecordsHandler {
+	return "applyRecords" in handler;
+}
+
 export type TopicConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
@@ -61,11 +85,13 @@ export type TopicConsumerConfig = {
 	/** Subscribed alongside `topic`; their records reach the handler with their own topic name. */
 	secondaryTopics?: readonly string[];
 	partitionsConsumedConcurrently?: number;
+	/** Slice-mode handlers only: how many records land between one resolve-and-heartbeat and the next. */
+	recordsPerSlice?: number;
 };
 
 export type TopicConsumerDependencies = {
 	consumer: KafkaConsumerClient;
-	handler: TopicRecordHandler;
+	handler: TopicConsumerHandler;
 	progress: ProgressTracker;
 };
 

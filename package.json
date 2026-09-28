@@ -29,6 +29,7 @@
 			"packages/balance-engine",
 			"packages/catalog-lru",
 			"packages/edge-config",
+			"packages/blue-green",
 			"packages/postgres",
 			"packages/auto-topup",
 			"packages/sqs",

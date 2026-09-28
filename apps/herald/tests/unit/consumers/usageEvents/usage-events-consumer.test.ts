@@ -39,135 +39,158 @@ const trackStreamRecord = ({
 };
 
 const logger = { error: () => {} };
+const at = new Date("2026-09-28T00:00:00Z");
 
-test("the same event goes to Tinybird first, then Postgres", async () => {
-	const calls: { store: string; ids: string[] }[] = [];
-	const consumer = createUsageEventsConsumer({
-		ctx: {
-			logger,
-			eventsTinybird: {
-				sendUsageEvents: async ({ events }) => {
-					calls.push({ store: "tinybird", ids: events.map(({ id }) => id) });
-				},
-			},
-			eventsDb: {
-				insertUsageEvents: async ({ events }) => {
-					calls.push({ store: "postgres", ids: events.map(({ id }) => id) });
-					return { insertedIds: [], refused: [] };
-				},
-			},
-		},
-	});
-
-	await consumer.handle({ records: [trackStreamRecord()] });
-
-	expect(calls).toEqual([
-		{ store: "tinybird", ids: ["local-events:0:1"] },
-		{ store: "postgres", ids: ["local-events:0:1"] },
-	]);
-});
-
-test("a Tinybird failure fails the batch before Postgres is touched", async () => {
-	let insertedIntoPostgres = false;
-	const consumer = createUsageEventsConsumer({
-		ctx: {
-			logger,
-			eventsTinybird: {
-				sendUsageEvents: async () => {
-					throw new Error("Tinybird is down");
-				},
-			},
-			eventsDb: {
-				insertUsageEvents: async () => {
-					insertedIntoPostgres = true;
-					return { insertedIds: [], refused: [] };
-				},
-			},
-		},
-	});
-
-	const failure = await consumer
-		.handle({ records: [trackStreamRecord()] })
-		.catch((error: unknown) => error);
-
-	expect(failure).toBeInstanceOf(Error);
-	expect(insertedIntoPostgres).toBe(false);
-});
-
-/** Records every store call; Tinybird fails once with `tinybirdFailure`, Postgres fails `postgresFailures` times. */
-const createRecordingStores = ({
-	tinybirdFailure,
+/**
+ * The ledger as Postgres would keep it, plus a Tinybird that can be told to fail: every call recorded in order.
+ * Rows survive across handles, the way the table does; nothing here lives in the consumer.
+ */
+const createStores = ({
+	tinybirdFailures = [],
 	postgresFailures = 0,
 }: {
-	tinybirdFailure?: Error;
+	tinybirdFailures?: Error[];
 	postgresFailures?: number;
-}) => {
-	const tinybirdIds: string[][] = [];
-	let pendingTinybirdFailure = tinybirdFailure;
+} = {}) => {
+	const calls: string[] = [];
+	const rows = new Map<string, { sent: boolean }>();
+	const pendingTinybirdFailures = [...tinybirdFailures];
 	let pendingPostgresFailures = postgresFailures;
 	const consumer = createUsageEventsConsumer({
 		ctx: {
 			logger,
+			now: () => at,
 			eventsTinybird: {
 				sendUsageEvents: async ({ events }) => {
-					tinybirdIds.push(events.map(({ id }) => id));
-					const failure = pendingTinybirdFailure;
-					pendingTinybirdFailure = undefined;
+					calls.push(`tinybird:${events.map(({ id }) => id).join(",")}`);
+					const failure = pendingTinybirdFailures.shift();
 					if (failure) throw failure;
 				},
 			},
 			eventsDb: {
-				insertUsageEvents: async () => {
+				insertUsageEvents: async ({ events }) => {
 					if (pendingPostgresFailures > 0) {
 						pendingPostgresFailures -= 1;
 						throw new Error("Postgres is down");
 					}
-					return { insertedIds: [], refused: [] };
+					const insertedIds: string[] = [];
+					for (const { id } of events) {
+						if (rows.has(id)) continue;
+						rows.set(id, { sent: false });
+						insertedIds.push(id);
+					}
+					calls.push(`insert:${insertedIds.join(",")}`);
+					return { insertedIds, refused: [] };
+				},
+				readUnsentToTinybirdIds: async ({ ids }) =>
+					ids.filter((id) => rows.get(id)?.sent === false),
+				markSentToTinybird: async ({ ids, at: markedAt }) => {
+					calls.push(`mark:${ids.join(",")}@${markedAt.toISOString()}`);
+					for (const id of ids) {
+						const row = rows.get(id);
+						if (row) row.sent = true;
+					}
 				},
 			},
 		},
 	});
-	return { consumer, tinybirdIds };
+	return { consumer, calls };
 };
 
-test("a retried batch resends to Tinybird only the events its failed attempt did not write", async () => {
-	const { consumer, tinybirdIds } = createRecordingStores({
-		tinybirdFailure: new TinybirdIngestError({
-			writtenRows: 1,
-			cause: new Error("socket hang up"),
-		}),
-	});
-	const records = [
-		trackStreamRecord({ offset: 1n }),
-		trackStreamRecord({ offset: 2n }),
-	];
+const one = () => [trackStreamRecord()];
+const two = () => [
+	trackStreamRecord({ offset: 1n }),
+	trackStreamRecord({ offset: 2n }),
+];
 
-	await consumer.handle({ records }).catch(() => {});
-	await consumer.handle({ records });
-
-	expect(tinybirdIds).toEqual([
-		["local-events:0:1", "local-events:0:2"],
-		["local-events:0:2"],
+test("a slice inserts into Postgres, sends Tinybird what is unsent, then marks it", async () => {
+	const { consumer, calls } = createStores();
+	await consumer.handle({ records: one() });
+	expect(calls).toEqual([
+		"insert:local-events:0:1",
+		"tinybird:local-events:0:1",
+		"mark:local-events:0:1@2026-09-28T00:00:00.000Z",
 	]);
 });
 
-test("a batch retried after Postgres failed does not resend to Tinybird", async () => {
-	const { consumer, tinybirdIds } = createRecordingStores({
-		postgresFailures: 1,
-	});
-	const records = [trackStreamRecord()];
-
-	await consumer.handle({ records }).catch(() => {});
-	await consumer.handle({ records });
-
-	expect(tinybirdIds).toEqual([["local-events:0:1"], []]);
+test("the same slice landed again sends nothing to Tinybird", async () => {
+	const { consumer, calls } = createStores();
+	await consumer.handle({ records: one() });
+	await consumer.handle({ records: one() });
+	expect(calls).toEqual([
+		"insert:local-events:0:1",
+		"tinybird:local-events:0:1",
+		"mark:local-events:0:1@2026-09-28T00:00:00.000Z",
+		"insert:",
+	]);
 });
 
-test("the same records in a new batch are sent in full", async () => {
-	const { consumer, tinybirdIds } = createRecordingStores({});
+test("a slice that failed at Tinybird after inserting sends on the retry: inserted, never lost", async () => {
+	const { consumer, calls } = createStores({
+		tinybirdFailures: [new Error("Tinybird is down")],
+	});
+	await consumer.handle({ records: one() }).catch(() => {});
+	await consumer.handle({ records: one() });
+	expect(calls).toEqual([
+		"insert:local-events:0:1",
+		"tinybird:local-events:0:1",
+		"insert:",
+		"tinybird:local-events:0:1",
+		"mark:local-events:0:1@2026-09-28T00:00:00.000Z",
+	]);
+});
 
-	await consumer.handle({ records: [trackStreamRecord()] });
-	await consumer.handle({ records: [trackStreamRecord()] });
+test("a request that wrote some rows before failing marks those, so the retry sends only the rest", async () => {
+	const { consumer, calls } = createStores({
+		tinybirdFailures: [
+			new TinybirdIngestError({
+				writtenRows: 1,
+				cause: new Error("socket hang up"),
+			}),
+		],
+	});
+	await consumer.handle({ records: two() }).catch(() => {});
+	await consumer.handle({ records: two() });
+	expect(calls).toEqual([
+		"insert:local-events:0:1,local-events:0:2",
+		"tinybird:local-events:0:1,local-events:0:2",
+		"mark:local-events:0:1@2026-09-28T00:00:00.000Z",
+		"insert:",
+		"tinybird:local-events:0:2",
+		"mark:local-events:0:2@2026-09-28T00:00:00.000Z",
+	]);
+});
 
-	expect(tinybirdIds).toEqual([["local-events:0:1"], ["local-events:0:1"]]);
+test("a Postgres failure fails the slice before Tinybird is touched", async () => {
+	const { consumer, calls } = createStores({ postgresFailures: 1 });
+	const failure = await consumer
+		.handle({ records: one() })
+		.catch((error: unknown) => error);
+	expect(failure).toBeInstanceOf(Error);
+	expect(calls).toEqual([]);
+});
+
+test("without Tinybird, Postgres is the only store and nothing is marked", async () => {
+	const calls: string[] = [];
+	const consumer = createUsageEventsConsumer({
+		ctx: {
+			logger,
+			eventsTinybird: null,
+			eventsDb: {
+				insertUsageEvents: async ({ events }) => {
+					calls.push(`insert:${events.map(({ id }) => id).join(",")}`);
+					return { insertedIds: [], refused: [] };
+				},
+				readUnsentToTinybirdIds: async () => {
+					calls.push("read");
+					return [];
+				},
+				markSentToTinybird: async () => {
+					calls.push("mark");
+				},
+			},
+		},
+	});
+	await consumer.handle({ records: one() });
+	expect(calls).toEqual(["insert:local-events:0:1"]);
 });

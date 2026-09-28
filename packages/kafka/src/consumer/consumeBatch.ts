@@ -5,11 +5,15 @@ import {
 	hasCurrentBatchGeneration,
 	reconcilePartitionOffset,
 } from "./batchOffsets.js";
-import type {
-	TopicBatchParams,
-	TopicConsumerContext,
-	TopicConsumerState,
+import {
+	isRecordsHandler,
+	type TopicBatchParams,
+	type TopicConsumerContext,
+	type TopicConsumerState,
+	type TopicRecord,
 } from "./types/consumer.js";
+
+const DEFAULT_RECORDS_PER_SLICE = 500;
 
 export async function consumeBatch({
 	ctx,
@@ -78,6 +82,12 @@ async function applyBatch({
 		}
 	}
 
+	if (isRecordsHandler(ctx.handler)) {
+		const settled = await applySlices({ ctx, state, payload, generation });
+		if (settled) await commitBatchOffsets({ ctx, state, payload, generation });
+		return;
+	}
+
 	for (const message of messages) {
 		if (
 			!payload.isRunning() ||
@@ -109,6 +119,45 @@ async function applyBatch({
 	}
 
 	await commitBatchOffsets({ ctx, state, payload, generation });
+}
+
+/**
+ * Lands the batch a slice at a time: a slice is resolved only once it returned, and the heartbeat after it
+ * is where a lost partition surfaces, so nothing past the slice in flight is ever written under an old lease.
+ * False when the batch was cut short; its resolved slices are still committed by the caller's runner.
+ */
+async function applySlices({
+	ctx,
+	state,
+	payload,
+	generation,
+}: TopicBatchParams): Promise<boolean> {
+	if (!isRecordsHandler(ctx.handler)) return true;
+	const { topic, partition, messages } = payload.batch;
+	const size = ctx.config.recordsPerSlice ?? DEFAULT_RECORDS_PER_SLICE;
+	for (let start = 0; start < messages.length; start += size) {
+		if (
+			!payload.isRunning() ||
+			!hasCurrentBatchGeneration({ state, payload, generation })
+		)
+			return false;
+		const slice: TopicRecord["message"][] = messages.slice(start, start + size);
+		await ctx.handler.applyRecords({
+			topic,
+			partition,
+			messages: slice,
+			heartbeat: payload.heartbeat,
+		});
+		if (
+			!payload.isRunning() ||
+			!hasCurrentBatchGeneration({ state, payload, generation })
+		)
+			return false;
+		const last = slice.at(-1);
+		if (last) payload.resolveOffset(last.offset);
+		await payload.heartbeat();
+	}
+	return true;
 }
 
 function readOffsetOrNull({ offset }: { offset: string }): bigint | null {

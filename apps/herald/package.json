@@ -6,14 +6,17 @@
 	"scripts": {
 		"start": "bun --config=./bunfig.toml src/main.ts",
 		"dev": "NODE_ENV=development KAFKA_AUTH_MODE=${KAFKA_AUTH_MODE:-none} bun --watch --no-clear-screen --config=./bunfig.toml src/main.ts",
+		"dev:restart": "bun scripts/devWithRestart.ts",
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/kafka",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/auto-topup": "workspace:*",
 		"@autumn/balance-webhooks": "workspace:*",
+		"@autumn/blue-green": "workspace:*",
 		"@autumn/cache": "workspace:*",
 		"@autumn/edge-config": "workspace:*",
 		"@autumn/encryption": "workspace:*",

@@ -1,28 +1,32 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb } from "@autumn/postgres";
 import type { EventInsert } from "@autumn/shared";
-import type { EventsTinybird } from "@autumn/tinybird";
+import { type EventsTinybird, TinybirdIngestError } from "@autumn/tinybird";
 import type {
 	StreamConsumer,
 	StreamRecord,
 } from "../../stream/types/streamConsumer.js";
 import { recordToUsageEvent } from "./actions/recordToUsageEvent.js";
-import {
-	sendUnsentToTinybird,
-	type TinybirdProgress,
-} from "./actions/sendUnsentToTinybird.js";
 
-/** One event built once feeds both stores. A replayed record makes the same event id, which the insert skips. */
+/**
+ * Postgres is the ledger, Tinybird follows it. A slice inserts (a repeat is skipped by id), sends Tinybird only the
+ * rows it has not confirmed, then marks them. So a slice landed twice sends once, and a crash before the mark
+ * sends again rather than never: Tinybird cannot skip a repeat, so the mark comes last.
+ */
 export function createUsageEventsConsumer({
 	ctx,
 }: {
 	ctx: {
-		eventsDb: Pick<EventsDb, "insertUsageEvents">;
+		eventsDb: Pick<
+			EventsDb,
+			"insertUsageEvents" | "readUnsentToTinybirdIds" | "markSentToTinybird"
+		>;
 		eventsTinybird: EventsTinybird | null;
 		logger: Pick<AutumnLogger, "error">;
+		now?: () => Date;
 	};
 }): StreamConsumer {
-	const tinybirdProgress: TinybirdProgress = new WeakMap();
+	const now = ctx.now ?? defaultNow;
 
 	async function handle({
 		records,
@@ -34,15 +38,7 @@ export function createUsageEventsConsumer({
 			const event = recordToUsageEvent(record);
 			if (event) events.push(event);
 		}
-		// Tinybird first: it cannot skip a repeat, so a crash after it may repeat one batch, never lose one.
-		await sendUnsentToTinybird({
-			eventsTinybird: ctx.eventsTinybird,
-			progress: tinybirdProgress,
-			records,
-			events,
-		});
 		const { refused } = await ctx.eventsDb.insertUsageEvents({ events });
-		tinybirdProgress.delete(records);
 		// Set aside so the rest of the batch lands; loud, because a refused event is usage nobody will see.
 		for (const { event, cause } of refused) {
 			ctx.logger.error(
@@ -54,7 +50,43 @@ export function createUsageEventsConsumer({
 				"Herald could not store a usage event",
 			);
 		}
+		await sendUnsentToTinybird({ events });
+	}
+
+	/** A request that failed after writing some rows marks those, so the retry does not send them twice. */
+	async function sendUnsentToTinybird({
+		events,
+	}: {
+		events: EventInsert[];
+	}): Promise<void> {
+		if (!ctx.eventsTinybird) return;
+		const unsentIds = new Set(
+			await ctx.eventsDb.readUnsentToTinybirdIds({
+				ids: events.map(({ id }) => id),
+			}),
+		);
+		const unsent = events.filter(({ id }) => unsentIds.has(id));
+		if (unsent.length === 0) return;
+		try {
+			await ctx.eventsTinybird.sendUsageEvents({ events: unsent });
+		} catch (cause) {
+			if (cause instanceof TinybirdIngestError)
+				await markSent({ events: unsent.slice(0, cause.writtenRows) });
+			throw cause;
+		}
+		await markSent({ events: unsent });
+	}
+
+	function markSent({ events }: { events: EventInsert[] }): Promise<void> {
+		return ctx.eventsDb.markSentToTinybird({
+			ids: events.map(({ id }) => id),
+			at: now(),
+		});
 	}
 
 	return { name: "usage-events", handle };
+}
+
+function defaultNow(): Date {
+	return new Date();
 }

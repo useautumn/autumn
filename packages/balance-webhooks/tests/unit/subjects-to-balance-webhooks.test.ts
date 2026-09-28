@@ -93,8 +93,25 @@ describe("limit reached", () => {
 					limit_type: "included",
 				},
 				tags: [`customer_id.${identity.customerId}`],
+				idempotencyKey: `limit_reached:${identity.orgId}:${identity.env}:${identity.customerId}:_:messages:included:_:cmd_1`,
 			},
 		]);
+	});
+
+	test("the same crossing decided again keys the same; the next crossing keys differently", () => {
+		const keyOf = (webhooks: ReturnType<typeof webhooksOf>) =>
+			webhooks[0]?.idempotencyKey;
+		expect(keyOf(webhooksOf(trackOn({ balance: 10, value: 10 })))).toBe(
+			keyOf(webhooksOf(trackOn({ balance: 10, value: 10 }))),
+		);
+		const state = stateWith({ balance: 10 });
+		const later = computeTrackDecision({
+			fullSubject: subjectOf({ state }),
+			command: createTrackCommand({ value: 10, commandId: "cmd_2" }),
+		});
+		expect(keyOf(webhooksOf({ state, decision: later }))).not.toBe(
+			keyOf(webhooksOf(trackOn({ balance: 10, value: 10 }))),
+		);
 	});
 
 	test("a track that leaves some allowance does not fire", () => {

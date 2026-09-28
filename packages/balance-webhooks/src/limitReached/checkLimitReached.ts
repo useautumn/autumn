@@ -11,6 +11,7 @@ import {
 	WebhookEventType,
 } from "@autumn/shared";
 import { findBlockingUsageLimit } from "./findBlockingUsageLimit.js";
+import { buildLimitReachedIdempotencyKey } from "./limitReachedIdempotencyKey.js";
 
 /** Fires when the feature went from allowed to refused: what prod's checkLimitReached sends, decided from the log alone. */
 export const checkLimitReached = ({
@@ -30,7 +31,7 @@ export const checkLimitReached = ({
 	if (now.allowed) return [];
 	if (!check.before().allowed) return [];
 
-	const { customerId, entityId } = command.identity;
+	const { orgId, env, customerId, entityId } = command.identity;
 	const limitType = now.limitType ?? "included";
 
 	// A windowed cap is named in full, its live window and filter with it, so the receiver knows which one closed.
@@ -53,6 +54,17 @@ export const checkLimitReached = ({
 			eventType: WebhookEventType.BalancesLimitReached,
 			data,
 			tags: customerToSvixTags({ customerId, entityId }),
+			idempotencyKey: buildLimitReachedIdempotencyKey({
+				orgId: command.org.id ?? orgId,
+				env,
+				customerId,
+				entityId,
+				featureId: command.featureId,
+				limitType,
+				filter: blockingUsageLimit?.filter,
+				// The check is derived from the mutation, whose id is the command's own.
+				commandId: command.requestId,
+			}),
 		},
 	];
 };
