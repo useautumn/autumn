@@ -145,7 +145,10 @@ describe("plan fields", () => {
 			}),
 		});
 
-		expect(plan.config).toEqual({ ignore_past_due: false });
+		expect(plan.config).toEqual({
+			ignore_past_due: false,
+			anchor_to_month_start: false,
+		});
 		expect(plan.metadata).toEqual({});
 		expect(plan.env).toBe(AppEnv.Sandbox);
 	});
