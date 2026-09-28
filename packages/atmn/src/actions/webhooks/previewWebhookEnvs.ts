@@ -45,30 +45,40 @@ const isLive = (env: WebhookPullEnv): boolean =>
 	env.keyName === "AUTUMN_PROD_SECRET_KEY";
 
 /**
- * Two slugs like `qa-team` and `qa_team` name one variable. A create in one
- * refuses when another synced env states the same id: its saved secret would be overwritten.
+ * Two slugs like `qa-team` and `qa_team` name one variable. A create refuses when
+ * another env's create writes it too, or another env's secret is already saved under it.
  */
 const assertDistinctSecretNames = ({
 	lanes,
+	savedEnv,
 }: {
 	lanes: WebhooksLane[];
+	/** The loaded env files: a secret saved under its legacy name never clashes. */
+	savedEnv: Record<string, string | undefined>;
 }): void => {
 	const secretName = ({ lane, id }: { lane: WebhooksLane; id: string }) =>
 		webhookSecretName({
 			id,
 			...(lane.env.live ? {} : { envKey: lane.env.key }),
 		});
+	const creates = (lane: WebhooksLane) =>
+		lane.preview.changes.filter((change) => change.action === "create");
 	const clashes = new Map<string, string>();
 	for (const lane of lanes) {
-		for (const change of lane.preview.changes) {
-			if (change.action !== "create") continue;
+		for (const change of creates(lane)) {
 			const name = secretName({ lane, id: change.id });
+			const saved = savedEnv[name] !== undefined;
 			for (const other of lanes) {
 				if (other === lane) continue;
-				const shares = other.body.webhooks.some(
-					(webhook) => secretName({ lane: other, id: webhook.id }) === name,
+				const writesToo = creates(other).some(
+					({ id }) => secretName({ lane: other, id }) === name,
 				);
-				if (!shares) continue;
+				const alreadyOwns =
+					saved &&
+					other.body.webhooks.some(
+						({ id }) => secretName({ lane: other, id }) === name,
+					);
+				if (!writesToo && !alreadyOwns) continue;
 				const [first, second] = [other.env.key, lane.env.key].sort();
 				clashes.set(
 					`${first}|${second}|${name}`,
@@ -188,7 +198,7 @@ export const previewWebhookEnvs = async ({
 		envCount: synced.length,
 		warnings: skipped,
 	});
-	assertDistinctSecretNames({ lanes });
+	assertDistinctSecretNames({ lanes, savedEnv: process.env });
 
 	const productionDiffers: string[] = [];
 	for (const result of probedResults) {
