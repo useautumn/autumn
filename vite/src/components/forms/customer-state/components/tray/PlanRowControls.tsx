@@ -1,4 +1,4 @@
-import { IconButton } from "@autumn/ui";
+import { ButtonGroup, IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import {
 	type PlanRowAction,
@@ -19,7 +19,7 @@ export function PlanRowControls({
 	if (!onCustomize) return <PlanRowActionsMenu actions={actions} />;
 
 	return (
-		<div className="flex shrink-0 items-center rounded-md border border-border transition-colors hover:bg-muted/40">
+		<ButtonGroup className="shrink-0">
 			<IconButton
 				aria-label={isCustom ? "Edit custom plan" : "Customize plan"}
 				className={cn(
@@ -30,14 +30,11 @@ export function PlanRowControls({
 				onClick={onCustomize}
 				size="sm"
 				type="button"
-				variant="muted"
+				variant="secondary"
 			/>
 			{actions.length > 0 && (
-				<>
-					<span className="h-3.5 w-px bg-border" />
-					<PlanRowActionsMenu actions={actions} />
-				</>
+				<PlanRowActionsMenu actions={actions} variant="secondary" />
 			)}
-		</div>
+		</ButtonGroup>
 	);
 }

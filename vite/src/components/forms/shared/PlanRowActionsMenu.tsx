@@ -20,9 +20,12 @@ export type PlanRowAction = {
 export function PlanRowActionsMenu({
 	actions,
 	label = "Plan actions",
+	variant = "muted",
 }: {
 	actions: PlanRowAction[];
 	label?: string;
+	/** "secondary" when the trigger sits in a bordered button group. */
+	variant?: "muted" | "secondary";
 }) {
 	if (actions.length === 0) return null;
 
@@ -35,7 +38,7 @@ export function PlanRowActionsMenu({
 					icon={<DotsThreeIcon />}
 					size="sm"
 					type="button"
-					variant="muted"
+					variant={variant}
 				/>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="max-w-64">
