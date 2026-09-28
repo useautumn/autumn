@@ -11,6 +11,7 @@ export function SchedulePhaseCard({ phaseIndex }: { phaseIndex: number }) {
 		<CustomerStatePhasePlans
 			phaseIndex={phaseIndex}
 			header={<PhaseHeader phaseIndex={phaseIndex} />}
+			insetForRail
 		/>
 	);
 
