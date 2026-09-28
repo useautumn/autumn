@@ -95,7 +95,8 @@ const otherColumnFor = ({ column }: { column: string }): string | null => {
 export function dropZeroSeries({ events }: { events: EventsData }): EventsData {
 	const meta = events.meta.filter(
 		(m) =>
-			m.name === "period" || sumSeriesColumn({ events, column: m.name }) !== 0,
+			m.name === "period" ||
+			events.data.some((row) => Number(row[m.name] ?? 0) !== 0),
 	);
 	return { ...events, meta };
 }
