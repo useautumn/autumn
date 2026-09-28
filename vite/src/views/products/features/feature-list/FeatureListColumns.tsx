@@ -3,7 +3,7 @@ import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
-import { getFeatureIcon, getFeatureIconConfig } from "../utils/getFeatureIcon";
+import { FeatureTypeChip } from "../components/FeatureTypeChip";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 export const createFeatureListColumns = ({
@@ -48,17 +48,11 @@ export const createFeatureListColumns = ({
 		accessorKey: "type",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			const feature = row.original;
-			const config = getFeatureIconConfig(
-				feature.type,
-				feature.config?.usage_type,
-			);
 			return (
-				<div className="flex items-center gap-2 text-muted-foreground">
-					{getFeatureIcon({ feature })}
-					<span className="text-xs text-tertiary-foreground">
-						{config.label}
-					</span>
-				</div>
+				<FeatureTypeChip
+					featureType={feature.type}
+					usageType={feature.config?.usage_type}
+				/>
 			);
 		},
 	},
