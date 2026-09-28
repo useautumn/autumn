@@ -6,12 +6,15 @@ infisical scan git-changes --staged --redact --verbose --silent --telemetry=fals
 
 changed_files="$(git diff --cached --name-only)"
 
-bunx turbo run knip
+filters="--filter=//"
 
 if printf '%s\n' "$changed_files" | grep -q '^server/'; then
-	bunx turbo run ts --filter=@autumn/server
+	filters="$filters --filter=@autumn/server"
 fi
 
 if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
-	bunx turbo run ts --filter=@autumn/vite
+	filters="$filters --filter=@autumn/vite"
 fi
+
+# One turbo invocation so knip and typechecks run in parallel.
+bunx turbo run knip ts $filters
