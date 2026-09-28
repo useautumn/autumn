@@ -48,13 +48,13 @@ export const forwardConnectEvent = async ({
 			redirect: "manual",
 		});
 		await response.text();
-		const outcome = {
-			...description,
-			status: response.status,
-			elapsedMs: Date.now() - startedAt,
-		};
-		if (response.ok) logger.info("ingress: forward acknowledged", outcome);
-		else logger.warn("ingress: forward failed", outcome);
+		// Successes are thousands per run and trip Railway's log rate limit; only failures are logged.
+		if (!response.ok)
+			logger.warn("ingress: forward failed", {
+				...description,
+				status: response.status,
+				elapsedMs: Date.now() - startedAt,
+			});
 		return response.status;
 	} catch (error) {
 		logger.error("ingress: forward failed", {
