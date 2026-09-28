@@ -116,29 +116,31 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 			name: "start_run",
 			description:
 				"Step 2 of 'test my branch'. Starts a test run on Modal for a pushed branch and returns its run id immediately. Select tests with groups (names from list_catalog), files (exact paths), and/or grep (test-name pattern); at least one is required. Next: wait_for_run with the returned id.",
-			input: z.object({
-				branch: z.string().min(1).describe("Pushed git branch."),
-				sha: z
-					.string()
-					.optional()
-					.describe("Commit to test; defaults to the branch head."),
-				groups: z
-					.array(z.string())
-					.optional()
-					.describe("Group names from list_catalog, e.g. ['core']."),
-				files: z
-					.array(z.string())
-					.optional()
-					.describe("Exact test file paths from list_catalog."),
-				grep: z
-					.string()
-					.optional()
-					.describe("Only run tests whose name matches this pattern."),
-				reservation_id: z
-					.string()
-					.optional()
-					.describe("Run on accounts pinned by reserve_accounts."),
-			}),
+			input: z
+				.object({
+					branch: z.string().min(1).describe("Pushed git branch."),
+					sha: z
+						.string()
+						.optional()
+						.describe("Commit to test; defaults to the branch head."),
+					groups: z
+						.array(z.string())
+						.optional()
+						.describe("Group names from list_catalog, e.g. ['core']."),
+					files: z
+						.array(z.string())
+						.optional()
+						.describe("Exact test file paths from list_catalog."),
+					grep: z
+						.string()
+						.optional()
+						.describe("Only run tests whose name matches this pattern."),
+					reservation_id: z
+						.string()
+						.optional()
+						.describe("Run on accounts pinned by reserve_accounts."),
+				})
+				.strict(),
 			run: async ({ branch, sha, groups, files, grep, reservation_id }) => {
 				const run = await createRun({
 					ctx,

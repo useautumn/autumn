@@ -10,7 +10,7 @@ const CATALOG_HINT =
 
 /**
  * Selection → sorted server/tests-relative files, using the same `_groups` + path
- * resolution as `bun tw`. No groups and no files means the `core` group.
+ * resolution as `bun tw`. A grep-only selection searches the `core` group.
  */
 export const resolveTestSelection = async ({
 	selection,
@@ -19,6 +19,14 @@ export const resolveTestSelection = async ({
 }): Promise<string[]> => {
 	const groups = selection.groups ?? [];
 	const paths = selection.files ?? [];
+	if (groups.length === 0 && paths.length === 0 && !selection.grep) {
+		throw new TwdError({
+			status: 400,
+			code: "empty_selection",
+			message: "Select at least one group, file, or grep pattern.",
+			next: CATALOG_HINT,
+		});
+	}
 	const resolver = await createTestFileResolver({ rootDir: TESTS_DIR });
 	const files = new Set<string>();
 
