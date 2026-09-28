@@ -9,7 +9,7 @@ import { resolveBranchSha } from "../../catalog/actions/gitRemote.ts";
 import { resolveTestSelection } from "../../catalog/actions/resolveTestSelection.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import { toRunSummary, updateRun } from "../repos/runsRepo.ts";
-import { getWarmImage } from "../repos/warmImagesRepo.ts";
+import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
 import type { RunProgress } from "../types/runProgress.ts";
 
 /** Gate → sha → files → runs row → warm:<sha> (if not ready) → swarm:<runId>. */
@@ -73,7 +73,7 @@ export const createRun = async ({
 		.returning();
 
 	try {
-		if ((await getWarmImage({ ctx, sha }))?.status !== "ready") {
+		if (!isWarmImageFresh({ row: await getWarmImage({ ctx, sha }) })) {
 			await enqueueJob({
 				ctx,
 				kind: "warm",

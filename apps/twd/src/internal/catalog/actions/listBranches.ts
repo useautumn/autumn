@@ -1,6 +1,9 @@
 import type { Branch } from "../../../api/contract.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import { listWarmImages } from "../../runs/repos/warmImagesRepo.ts";
+import {
+	isWarmImageFresh,
+	listWarmImages,
+} from "../../runs/repos/warmImagesRepo.ts";
 import { getRepoSlug, listRemoteHeads } from "./gitRemote.ts";
 
 const BASE_BRANCHES = ["main", "dev"];
@@ -70,7 +73,12 @@ export const listBranches = async ({
 	const warm = new Map(
 		(
 			await listWarmImages({ ctx, shas: branches.map((branch) => branch.sha) })
-		).map((row) => [row.sha, row.status]),
+		).map((row) => [
+			row.sha,
+			row.status === "ready" && !isWarmImageFresh({ row })
+				? ("none" as const)
+				: row.status,
+		]),
 	);
 	return branches.map((branch) => ({
 		...branch,

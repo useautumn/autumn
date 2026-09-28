@@ -32,7 +32,7 @@ import {
 	type RunRow,
 	updateRun,
 } from "../repos/runsRepo.ts";
-import { getWarmImage } from "../repos/warmImagesRepo.ts";
+import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
 import { spawnTwChild } from "../spawnTwChild.ts";
 import { type RunProgress, readRunProgress } from "../types/runProgress.ts";
 import type { SwarmChildMessage, SwarmInit } from "../types/swarmMessages.ts";
@@ -71,7 +71,8 @@ const waitForWarm = async ({
 	run: RunRow;
 	signal: AbortSignal;
 }) => {
-	if ((await getWarmImage({ ctx, sha: run.sha }))?.status === "ready") return;
+	if (isWarmImageFresh({ row: await getWarmImage({ ctx, sha: run.sha }) }))
+		return;
 	const { job: warmJob } = await enqueueJob({
 		ctx,
 		kind: "warm",
@@ -80,7 +81,7 @@ const waitForWarm = async ({
 	});
 	while (!signal.aborted) {
 		const warm = await getWarmImage({ ctx, sha: run.sha });
-		if (warm?.status === "ready") return;
+		if (isWarmImageFresh({ row: warm })) return;
 		const [job] = await ctx.db
 			.select()
 			.from(jobs)

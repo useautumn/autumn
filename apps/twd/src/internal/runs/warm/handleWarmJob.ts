@@ -1,7 +1,11 @@
 import { resolve } from "node:path";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
 import { warmImageExists, warmImageTag } from "../modal/modalClient.ts";
-import { upsertWarmImage } from "../repos/warmImagesRepo.ts";
+import {
+	getWarmImage,
+	isWarmImageFresh,
+	upsertWarmImage,
+} from "../repos/warmImagesRepo.ts";
 import { spawnTwChild } from "../spawnTwChild.ts";
 import type { WarmChildMessage } from "../types/swarmMessages.ts";
 
@@ -12,17 +16,12 @@ const LOG_TAIL_LINES = 40;
 export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 	const { sha, branch } = job.payload as { sha: string; branch: string };
 	const imageTag = warmImageTag({ sha });
-	if (await warmImageExists({ sha })) {
-		await upsertWarmImage({
-			ctx,
-			sha,
-			branch,
-			status: "ready",
-			jobId: job.id,
-			imageTag,
-		});
+	// Only trust an existing tag we know is young; an unknown or ageing one is rebuilt with a fresh TTL.
+	if (
+		isWarmImageFresh({ row: await getWarmImage({ ctx, sha }) }) &&
+		(await warmImageExists({ sha }))
+	)
 		return;
-	}
 
 	await upsertWarmImage({
 		ctx,
