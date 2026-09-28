@@ -1,15 +1,20 @@
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+	AnimatePresence,
+	motion,
+	type Transition,
+	useReducedMotion,
+} from "motion/react";
 import { Children, isValidElement, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const EASE_DRAWER = [0.32, 0.72, 0, 1] as const;
-const HEIGHT_TRANSITION = { duration: 0.22, ease: EASE_DRAWER };
+const HEIGHT_TRANSITION: Transition = { duration: 0.22, ease: EASE_DRAWER };
 
-const ENTER_TRANSITION = {
+const ENTER_TRANSITION: Transition = {
 	height: HEIGHT_TRANSITION,
 	opacity: { duration: 0.18, delay: 0.04, ease: "easeOut" },
 };
-const EXIT_TRANSITION = {
+const EXIT_TRANSITION: Transition = {
 	height: HEIGHT_TRANSITION,
 	opacity: { duration: 0.12, ease: "easeOut" },
 };
