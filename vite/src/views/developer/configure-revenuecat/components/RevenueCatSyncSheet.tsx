@@ -168,7 +168,7 @@ export function RevenueCatSyncSheet({
 												{row.id}
 											</span>
 										</div>
-										<div className="flex shrink-0 items-center gap-1.5">
+										<div className="flex min-w-0 max-w-[60%] items-center gap-1.5">
 											{row.priceWarning && (
 												<StatusChip tone="amber" glyph="alert">
 													{row.priceWarning}

@@ -17,7 +17,7 @@ function resolveModelName(
 ): string {
 	const { provider, modelKey } = splitModelId(fullId);
 	if (!provider) return fullId;
-	return providers[provider]?.models[modelKey]?.name ?? modelKey;
+	return providers[provider]?.models[modelKey]?.name ?? fullId;
 }
 
 export const createCreditListColumns = ({

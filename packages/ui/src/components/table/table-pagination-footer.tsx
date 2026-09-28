@@ -46,13 +46,13 @@ export function TablePaginationFooter({
 
 	return (
 		<div className={cn(TABLE_TRAY_FOOTER_CLASS, className)}>
-			<span className="text-xs text-tertiary-foreground tabular-nums">
+			<span className="hidden min-w-0 truncate text-xs text-tertiary-foreground tabular-nums sm:block">
 				{hasTotal &&
 					`Showing ${numberFormat.format(firstRowNumber)}–${numberFormat.format(lastRowNumber)} of ${isTotalCountApproximate ? "~" : ""}${numberFormat.format(totalCount)}`}
 			</span>
-			<div className="flex items-center gap-3">
+			<div className="ml-auto flex items-center gap-3">
 				<div className="flex items-center gap-1.5 text-xs text-tertiary-foreground">
-					<span>Rows</span>
+					<span className="hidden sm:inline">Rows</span>
 					<PageSizeSelector
 						pageSize={pageSize}
 						options={pageSizeOptions}

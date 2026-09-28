@@ -1,17 +1,18 @@
 import { cn } from "@autumn/ui/lib/utils";
 import type { ComponentProps } from "react";
 
+/** Light glyphs on the fill in light mode; dark glyphs in dark mode and on light fills. */
 const STATUS_TONES = {
-	green: "text-[#30A46C] [--glyph:#0E1C15]",
-	blue: "text-[#3E8BD9] [--glyph:#0C1726]",
-	red: "text-[#E5484D] [--glyph:#2A0C0D]",
-	orange: "text-[#E8742C] [--glyph:#2A1405]",
+	green: "text-[#30A46C] [--glyph:#fff] dark:[--glyph:#0E1C15]",
+	blue: "text-[#3E8BD9] [--glyph:#fff] dark:[--glyph:#0C1726]",
+	red: "text-[#E5484D] [--glyph:#fff] dark:[--glyph:#2A0C0D]",
+	orange: "text-[#E8742C] [--glyph:#fff] dark:[--glyph:#2A1405]",
 	amber: "text-[#E5A21F] [--glyph:#2A1C05]",
 	yellow: "text-[#E2B93B] [--glyph:#261F06]",
-	purple: "text-[#9A6BFF] [--glyph:#1A0F33]",
-	pink: "text-[#D6409F] [--glyph:#2A0C1E]",
-	fuchsia: "text-[#C050D8] [--glyph:#240C2A]",
-	neutral: "text-[#8A8A8A] [--glyph:#161616]",
+	purple: "text-[#9A6BFF] [--glyph:#fff] dark:[--glyph:#1A0F33]",
+	pink: "text-[#D6409F] [--glyph:#fff] dark:[--glyph:#2A0C1E]",
+	fuchsia: "text-[#C050D8] [--glyph:#fff] dark:[--glyph:#240C2A]",
+	neutral: "text-[#8A8A8A] [--glyph:#fff] dark:[--glyph:#161616]",
 };
 
 const CIRCLE = "M8 4.8a3.2 3.2 0 1 1 0 6.4a3.2 3.2 0 1 1 0-6.4";
@@ -111,7 +112,11 @@ export function StatusChip({
 			{...props}
 		>
 			{glyph && <StatusChipIcon tone={tone ?? "neutral"} glyph={glyph} />}
-			<span className="min-w-0 truncate">{children}</span>
+			{typeof children === "string" ? (
+				<span className="min-w-0 truncate">{children}</span>
+			) : (
+				children
+			)}
 		</span>
 	);
 }

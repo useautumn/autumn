@@ -69,7 +69,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 	},
 	{
 		header: "Source",
-		size: 100,
+		size: 140,
 		accessorKey: "meta",
 		cell: ({ row }: { row: Row<ApiKey> }) => {
 			const source = getSourceInfo(row.original.meta);
