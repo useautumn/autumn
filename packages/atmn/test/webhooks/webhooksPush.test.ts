@@ -4,14 +4,8 @@
  * and save their secrets alongside it. Every failing lane is reported at once.
  */
 
-import { expect, test } from "bun:test";
-import {
-	chmodSync,
-	existsSync,
-	mkdtempSync,
-	readFileSync,
-	writeFileSync,
-} from "node:fs";
+import { expect, spyOn, test } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OrgInfo } from "../../src/actions/env/types/orgInfo";
@@ -19,6 +13,7 @@ import { applyWebhooksPull } from "../../src/actions/pull/webhooks/applyWebhooks
 import { webhookPullEnvs } from "../../src/actions/pull/webhooks/webhookPullEnvs";
 import { pushExitCode, runPush } from "../../src/actions/push";
 import type { WebhookClient } from "../../src/actions/webhooks/previewWebhookEnvs";
+import * as writer from "../../src/actions/webhooks/writeWebhookSecrets";
 import { AutumnApiError } from "../../src/generated/client";
 
 const SRC = join(import.meta.dir, "../../src/generated");
@@ -942,8 +937,8 @@ const pushOrdersIntoQaTeam = ({
 	savedEnv: string;
 	/** qa-team's own preview and sync; by default it has nothing to change. */
 	qaTeam?: { changes?: unknown[]; secrets?: { id: string; secret: string }[] };
-	/** qa_team's sync hook; it always creates `orders`. */
-	qaTeamTwo?: { beforeSync?: () => Promise<void> };
+	/** qa_team's preview (a create of `orders` by default) and sync hook. */
+	qaTeamTwo?: { changes?: unknown[]; beforeSync?: () => Promise<void> };
 }) => {
 	const dir = projectWith({
 		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "orders", env: "qa-team", url: "https://qa.example.com/a" }),\n\t\twebhook({ id: "orders", env: "qa_team", url: "https://qa2.example.com/a" }),\n\t],`,
@@ -1079,25 +1074,48 @@ test("one stalled sync never holds back another sandbox's new secret", async () 
 });
 
 test("a secret that failed to save never blocks another sandbox saving under that name", async () => {
-	const { push, dir } = pushOrdersIntoQaTeam({
-		savedEnv: "",
-		// qa-team's save fails on a read-only .env; qa_team answers once it's writable again.
-		qaTeam: {
-			changes: UPDATE_ORDERS,
-			secrets: [{ id: "orders", secret: "whsec_qa1" }],
+	const failed: string[] = [];
+	const spy = spyOn(writer, "writeWebhookSecrets").mockImplementationOnce(
+		async ({ secrets }) => {
+			failed.push(...secrets.map(({ secret }) => secret));
+			throw new Error("disk full");
 		},
-		qaTeamTwo: {
-			beforeSync: async () => {
-				await new Promise((resolve) => setTimeout(resolve, 50));
-				chmodSync(join(dir, ".env"), 0o644);
-			},
-		},
-	});
-	chmodSync(join(dir, ".env"), 0o444);
-	await expect(push).rejects.toThrow("qa-team");
-	expect(readFileSync(join(dir, ".env"), "utf8")).toContain(
-		"AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_qa2",
 	);
+	try {
+		// Both syncs answer in the same turn, so the second save starts before the first fails.
+		const { push, dir } = pushOrdersIntoQaTeam({
+			savedEnv: "",
+			qaTeam: {
+				changes: UPDATE_ORDERS,
+				secrets: [{ id: "orders", secret: "whsec_qa1" }],
+			},
+		});
+		await expect(push).rejects.toThrow("disk full");
+		const kept = failed[0] === "whsec_qa1" ? "whsec_qa2" : "whsec_qa1";
+		expect(readFileSync(join(dir, ".env"), "utf8")).toContain(
+			`AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=${kept}`,
+		);
+	} finally {
+		spy.mockRestore();
+	}
+});
+
+test("a previewed update the server created instead never overwrites a secret another sandbox saved", async () => {
+	try {
+		const { push, dir } = pushOrdersIntoQaTeam({
+			savedEnv: "AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_saved\n",
+			// qa-team has nothing to change; qa_team's `orders` vanished after the preview.
+			qaTeamTwo: { changes: UPDATE_ORDERS },
+		});
+		await expect(push).rejects.toThrow(
+			"qa-team states orders too, and a secret is already saved as AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET: kept it. Rename one of those sandboxes, then rotate qa_team's orders secret in the dashboard.",
+		);
+		const saved = readFileSync(join(dir, ".env"), "utf8");
+		expect(saved).toContain("AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_saved");
+		expect(saved).not.toContain("whsec_qa2");
+	} finally {
+		delete process.env.AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET;
+	}
 });
 
 test("a skipped live key never reads as No changes", async () => {
