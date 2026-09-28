@@ -414,10 +414,8 @@ export function InvoiceDetailSheet({
 						key={productGroup.productId ?? "unknown"}
 						className="border-b px-3 pt-3 pb-2 dark:border-[#232323]"
 					>
-						<div className="mb-1">
-							<span className="text-xs font-medium text-tertiary-foreground truncate">
-								{productGroup.productName}
-							</span>
+						<div className="mb-1 truncate text-xs font-medium leading-4 text-tertiary-foreground">
+							{productGroup.productName}
 						</div>
 
 						<div className="flex flex-col gap-2">
