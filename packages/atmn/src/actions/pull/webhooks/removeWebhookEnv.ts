@@ -92,7 +92,12 @@ export const removeWebhookEnv = ({
 	stated: StatedWebhook;
 	envKey: string;
 }): WebhookEditResult => {
-	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
+	const result: WebhookEditResult = {
+		lines: [],
+		warnings: [],
+		unlocated: [],
+		frozen: [],
+	};
 	const located = locateWebhook({ pull, id: stated.id });
 	const patched =
 		located === null
