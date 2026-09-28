@@ -13,7 +13,7 @@ export function PlanTrayRow({
 	return (
 		<div
 			className={cn(
-				"flex flex-col gap-1.5",
+				"flex flex-col gap-1.5 animate-in fade-in-0 duration-150 ease-out motion-reduce:animate-none",
 				!flush && "px-2 py-1",
 				TABLE_TRAY_SURFACE_ROW_CLASS,
 			)}

@@ -1,13 +1,6 @@
 import type { ReactNode } from "react";
-import {
-	TABLE_TRAY_SURFACE_CLASS,
-	TABLE_TRAY_SURFACE_ROW_CLASS,
-} from "@/components/general/table";
-import { PlanRowPresence } from "./PlanRowPresence";
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { PlanScopeLabel } from "./PlanScopeLabel";
-
-// A new scope table only appears when a row moves into it, so it lands after the row leaves.
-const NEW_SCOPE_ENTER_DELAY = 0.18;
 
 type ScopedPlan = { productId: string; entityId?: string | null };
 
@@ -43,9 +36,7 @@ export function PlanScopeGroups({
 
 	const rows = (planIndexes: number[]) => (
 		<div className={TABLE_TRAY_SURFACE_CLASS}>
-			<PlanRowPresence itemClassName={TABLE_TRAY_SURFACE_ROW_CLASS}>
-				{planIndexes.map(renderPlan)}
-			</PlanRowPresence>
+			{planIndexes.map(renderPlan)}
 		</div>
 	);
 
@@ -60,7 +51,7 @@ export function PlanScopeGroups({
 	if (groups.length === 0) return rows(pickerPlanIndexes);
 
 	return (
-		<PlanRowPresence enterDelay={NEW_SCOPE_ENTER_DELAY}>
+		<>
 			{groups.map(([entityId, planIndexes], groupIndex) => (
 				<div key={entityId ?? "customer"} className="pb-1">
 					<PlanScopeLabel entityId={entityId} />
@@ -71,6 +62,6 @@ export function PlanScopeGroups({
 					)}
 				</div>
 			))}
-		</PlanRowPresence>
+		</>
 	);
 }
