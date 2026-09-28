@@ -301,12 +301,13 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 
 	balanceWorkerEnv = createClientEnv({ rolloutEnabled: true });
 	asyncEnabled = true;
+	// Async (by body or org config) queues on the worker and answers 202, as legacy does.
 	for (const async of [true, false]) {
 		const response = await postTrack({ async });
 		await expectSelectedPath({
 			response,
-			status: 200,
-			path: ["balanceWorker"],
+			status: 202,
+			path: async ? ["balanceWorker"] : ["async-config", "balanceWorker"],
 		});
 		expect(await response.json()).toEqual(balanceWorkerResponse);
 	}
@@ -328,21 +329,21 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 	await expectSelectedPath({
 		response: await postTrack(),
 		status: 202,
-		path: ["feature-deductions", "async-config", "async"],
+		path: ["async-config", "feature-deductions", "async"],
 	});
 	asyncEnabled = false;
 	const response = await postTrack();
 	await expectSelectedPath({
 		response,
 		status: 200,
-		path: ["feature-deductions", "async-config", "legacy"],
+		path: ["async-config", "feature-deductions", "legacy"],
 	});
 	expect(await response.json()).toEqual(legacyResponse);
 	queuedForReplay = true;
 	await expectSelectedPath({
 		response: await postTrack(),
 		status: 202,
-		path: ["feature-deductions", "async-config", "legacy"],
+		path: ["async-config", "feature-deductions", "legacy"],
 	});
 	expect(readClientConfig).not.toHaveBeenCalled();
 }

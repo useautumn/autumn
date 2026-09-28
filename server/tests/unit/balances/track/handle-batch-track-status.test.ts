@@ -1,4 +1,12 @@
-import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -78,6 +86,9 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 };
 
 describe("batch track handlers", () => {
+	// The rollout spy would otherwise force the worker off for later files in the same process.
+	afterEach(() => mock.restore());
+
 	beforeEach(() => {
 		mockState.batchTrackBodies = [];
 		mockState.workerBatchTrackBodies = [];

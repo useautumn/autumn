@@ -105,7 +105,11 @@ export async function runBalanceWorkerFinalize({
 		ctx,
 		source: "finalize",
 		run: () => finalizeOnWorker({ ctx, command, client }),
-		fallback: () => queueFinalize({ ctx, command, client }),
+		// An unconfirmed finalize may have been rejected; queueing it would answer success for a verdict never heard.
+		fallback: ({ error, reason }) =>
+			reason === "balance_worker_result_unknown"
+				? Promise.reject(error)
+				: queueFinalize({ ctx, command, client }),
 	});
 	return result;
 }

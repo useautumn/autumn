@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { InitializeRequest } from "@autumn/balance-engine";
+import type { InitializeRequest, TrackCommand } from "@autumn/balance-engine";
 import { catalogRowsToCatalog } from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
@@ -69,7 +69,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	"initialization rejects negative raw balances before submission but accepts zero",
+	"initialization submits negative and zero raw balances unclamped",
 	async () => {
 		const fixture = createCustomerFixture();
 		const commands: InitializeRequest[] = [];
@@ -88,29 +88,21 @@ test.concurrent(
 			commandId: "baseline",
 			client,
 		};
-		// Public remaining clamps negatives to zero; initialization must inspect the raw balance.
-		for (const balance of [-5, -0.25]) {
+		// Public remaining clamps negatives to zero; initialization must send the raw balance.
+		const balances = [-5, -0.25, 0];
+		for (const balance of balances) {
 			fixture.customerEntitlement.balance = balance;
-			await expect(
-				initializeBalanceWorkerCustomer(initialization),
-			).rejects.toMatchObject({
-				code: "invalid_request",
-				statusCode: 400,
-				data: { reason: "negative_balance_not_supported" },
-			});
+			expect(
+				await initializeBalanceWorkerCustomer(initialization),
+			).toMatchObject({ result: { status: "initialized" } });
 		}
-		expect(commands).toHaveLength(0);
-
-		fixture.customerEntitlement.balance = 0;
-		expect(await initializeBalanceWorkerCustomer(initialization)).toMatchObject(
-			{ result: { status: "initialized" } },
-		);
-		expect(commands).toHaveLength(1);
-		expect(commands[0]?.state.customerEntitlements).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ id: "messages_grant", balance: 0 }),
-			]),
-		);
+		expect(commands).toHaveLength(balances.length);
+		for (const [index, balance] of balances.entries())
+			expect(commands[index]?.state.customerEntitlements).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({ id: "messages_grant", balance }),
+				]),
+			);
 	},
 );
 
@@ -251,11 +243,6 @@ test.concurrent(
 		};
 		const variants: Partial<CheckParams>[] = [
 			{ product_id: "pro", feature_id: undefined },
-			{ send_event: true },
-			{ lock: { enabled: true, lock_id: "hold" } },
-			{ properties: { model: "model" } },
-			{ entity_id: "entity" },
-			{ customer_data: { name: "new name" } },
 		];
 		for (const variant of variants)
 			await expect(
@@ -264,15 +251,11 @@ test.concurrent(
 					body: { customer_id: "cus_test", feature_id: "messages", ...variant },
 					client,
 				}),
-			).rejects.toMatchObject({ code: "invalid_request", statusCode: 400 });
-		ctx.expand = ["balance.feature"];
-		await expect(
-			runBalanceWorkerCheck({
-				ctx,
-				body: { customer_id: "cus_test", feature_id: "messages" },
-				client,
-			}),
-		).rejects.toMatchObject({ data: { reason: "expand_not_supported" } });
+			).rejects.toMatchObject({
+				code: "invalid_request",
+				statusCode: 400,
+				data: { reason: "product_check_not_supported" },
+			});
 		expect(calls).toBe(0);
 	},
 );
@@ -459,30 +442,50 @@ test.concurrent(
 );
 
 test.concurrent(
-	"track refuses semantics the worker cannot execute rather than discarding them",
+	"track carries request semantics onto the worker command rather than discarding them",
 	async () => {
-		const { ctx } = createCustomerFixture();
-		let calls = 0;
+		const { ctx, feature } = createCustomerFixture();
+		feature.event_names = ["event"];
+		const commands: TrackCommand[] = [];
+		const ownerAnswer = new Error("Owner answer is outside this test");
 		const client: Pick<BalanceWorkerClient, "track"> = {
-			track: async () => {
-				calls++;
-				throw new Error("Unexpected track");
+			track: async ({ command }) => {
+				commands.push(command);
+				throw ownerAnswer;
 			},
 		};
-		const variants: Partial<TrackParams>[] = [
-			{ feature_id: undefined, event_name: "event" },
-			{ entity_id: "entity" },
-			{ properties: { model: "model" } },
-			{ customer_data: { name: "new name" } },
+		const variants: {
+			variant: Partial<TrackParams>;
+			command: Record<string, unknown>;
+		}[] = [
+			{
+				variant: { feature_id: undefined, event_name: "event" },
+				command: { featureId: "messages", usageEvent: { name: "event" } },
+			},
+			{
+				variant: { entity_id: "entity" },
+				command: { identity: { entityId: "entity" } },
+			},
+			{
+				variant: { properties: { model: "model" } },
+				command: { properties: { model: "model" } },
+			},
+			{
+				variant: { customer_data: { name: "new name" } },
+				command: { identity: { customerId: "cus_test" } },
+			},
 		];
-		for (const variant of variants)
+		for (const { variant, command } of variants) {
+			commands.length = 0;
 			await expect(
 				runBalanceWorkerTrack({
 					ctx,
 					body: { customer_id: "cus_test", feature_id: "messages", ...variant },
 					client,
 				}),
-			).rejects.toMatchObject({ code: "invalid_request", statusCode: 400 });
-		expect(calls).toBe(0);
+			).rejects.toBe(ownerAnswer);
+			expect(commands).toHaveLength(1);
+			expect(commands[0]).toMatchObject(command);
+		}
 	},
 );

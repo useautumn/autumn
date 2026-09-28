@@ -58,6 +58,8 @@ test.concurrent(
 			featureIds: ["messages"],
 			commandId: "baseline",
 		};
+		// Skips the DynamoDB body-key claim so retries reach the worker's own command-id dedup.
+		const validateTrackBodyIdempotencyKey = false;
 		const body: TrackParams = {
 			customer_id: fullSubject.customerId,
 			feature_id: "messages",
@@ -104,6 +106,7 @@ test.concurrent(
 					runBalanceWorkerTrack({
 						ctx,
 						body: { ...body, idempotency_key: idempotencyKey },
+						validateTrackBodyIdempotencyKey,
 						client: live.client,
 					}),
 				),
@@ -135,16 +138,16 @@ test.concurrent(
 				"track",
 				"track",
 			]);
-			const firstResult = results[0];
-			if (firstResult.status !== "fulfilled")
-				throw new Error("Expected the first track to apply");
-			expect(
-				await runBalanceWorkerTrack({
-					ctx,
-					body,
-					client: live.client,
-				}),
-			).toEqual(firstResult.value);
+			// A retried command id replies with the current state and never deducts twice.
+			const retried = await runBalanceWorkerTrack({
+				ctx,
+				body,
+				validateTrackBodyIdempotencyKey,
+				client: live.client,
+			});
+			expect(retried).toMatchObject({
+				balance: { granted: 110, remaining: 0, usage: 110 },
+			});
 			expect(
 				await initializeBalanceWorkerCustomer({
 					...initialization,
@@ -210,9 +213,10 @@ test.concurrent(
 				await runBalanceWorkerTrack({
 					ctx,
 					body,
+					validateTrackBodyIdempotencyKey,
 					client: restored.client,
 				}),
-			).toEqual(firstResult.value);
+			).toEqual(retried);
 			expect(
 				await initializeBalanceWorkerCustomer({
 					...initialization,
