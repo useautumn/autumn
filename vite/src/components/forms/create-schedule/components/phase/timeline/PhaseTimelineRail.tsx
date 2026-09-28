@@ -39,7 +39,7 @@ export function PhaseTimelineRail({
 					type="button"
 					aria-label="Insert phase after"
 					onClick={() => handleInsertPhase({ afterIndex: phaseIndex })}
-					className="absolute bottom-0.5 left-1/2 z-10 flex size-4 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-subtle opacity-0 transition-opacity hover:border-primary hover:text-foreground focus-visible:opacity-100 group-hover/phase-row:opacity-100"
+					className="absolute bottom-0.5 left-1/2 z-10 flex size-4 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-subtle opacity-0 transition-opacity hover:border-foreground hover:text-foreground focus-visible:opacity-100 group-hover/phase-row:opacity-100"
 				>
 					<PlusIcon size={9} weight="bold" />
 				</button>
