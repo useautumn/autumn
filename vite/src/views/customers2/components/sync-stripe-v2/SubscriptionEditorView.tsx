@@ -1,6 +1,6 @@
 import type { SyncParamsV1, SyncProposalV2 } from "@autumn/shared";
 import { Button, SmallSpinner } from "@autumn/ui";
-import { ArrowDownIcon, ArrowLeftIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { useCallback, useMemo, useState } from "react";
 import { CustomerStateProvider } from "@/components/forms/customer-state/CustomerStateProvider";
@@ -146,7 +146,7 @@ function SubscriptionEditor({
 						<ArrowLeftIcon size={14} /> Back to subscriptions
 					</button>
 
-					<PlanTraySectionTitle title="From Stripe" />
+					<PlanTraySectionTitle title="Stripe" />
 					<StripeSourceTable
 						proposal={proposal}
 						phaseSections={phaseSections}
@@ -155,13 +155,7 @@ function SubscriptionEditor({
 						previewMismatches={previewMismatches}
 					/>
 
-					<ArrowDownIcon
-						aria-hidden
-						size={12}
-						className="mx-auto mt-1 text-subtle"
-					/>
-
-					<PlanTraySectionTitle title="To Autumn" />
+					<PlanTraySectionTitle title="Autumn" />
 					<div className="flex flex-col gap-4">
 						{phaseSections.map((section, phaseIndex) => (
 							<CustomerStatePhasePlans
