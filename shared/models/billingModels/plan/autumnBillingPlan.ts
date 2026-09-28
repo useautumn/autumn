@@ -79,6 +79,8 @@ export const CustomerProductUpdateSchema = z.object({
 		updated_at: z.number().optional(),
 		billing_version: z.enum(BillingVersion).optional(),
 		is_custom: z.boolean().optional(),
+		// Already merged against the DB row (e.g. RevenueCat period/id), so it replaces wholesale.
+		processor: FullCusProductSchema.shape.processor.optional(),
 	}),
 });
 

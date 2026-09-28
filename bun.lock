@@ -333,7 +333,6 @@
         "yaml": "2.9.0",
       },
       "devDependencies": {
-        "@autumn/ksuid": "workspace:*",
         "@types/bun": "latest",
         "@typescript/native-preview": "catalog:",
       },

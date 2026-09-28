@@ -258,7 +258,7 @@ export const emitEmitModule = ({
 								.map((path) => path.slice(prefix.length))
 								.sort(),
 							pull: true,
-							envKeyed: meta.envKeyed,
+							envField: meta.envField,
 						},
 					];
 				}),

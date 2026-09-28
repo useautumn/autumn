@@ -17,7 +17,10 @@ import { products } from "../productModels/productTable.js";
 
 export type CustomerProductProcessor = {
 	type: "stripe" | "revenuecat";
-	id: string;
+	id?: string | null;
+	// Store-owned billing period (ms); only set for RevenueCat plans.
+	current_period_start?: number | null;
+	current_period_end?: number | null;
 };
 
 export const customerProducts = pgTable(

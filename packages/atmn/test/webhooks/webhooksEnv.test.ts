@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { OrgInfo } from "../../src/actions/env/types/orgInfo";
-import { resolveWebhookEnv } from "../../src/actions/webhooks/resolveWebhookEnv";
+import { webhookPullEnvs } from "../../src/actions/pull/webhooks/webhookPullEnvs";
 import { resolveWebhooksForEnv } from "../../src/actions/webhooks/resolveWebhooksForEnv";
 import { webhookSecretName } from "../../src/actions/webhooks/webhookSecretName";
 import { writeWebhookSecrets } from "../../src/actions/webhooks/writeWebhookSecrets";
@@ -41,20 +41,24 @@ const countingFetch = (info: OrgInfo) => {
 	};
 };
 
+const listWebhooks = async () => ({ list: [] });
+
 test("-p reads url.live and the default sandbox reads url.sandbox, neither looking anything up", async () => {
 	const { calls, fetchOrgInfo } = countingFetch(orgInfo());
-	const live = await resolveWebhookEnv({
-		target: { secretKeyName: "AUTUMN_PROD_SECRET_KEY", clientId: "c" },
-		prod: true,
+	const [live] = webhookPullEnvs({
+		env: { AUTUMN_PROD_SECRET_KEY: "sk_live" },
+		targetKeyName: "AUTUMN_PROD_SECRET_KEY",
+		listWebhooks,
 		fetchOrgInfo,
 	});
-	const sandbox = await resolveWebhookEnv({
-		target: { secretKeyName: "AUTUMN_SECRET_KEY", clientId: "c" },
-		prod: false,
+	const [sandbox] = webhookPullEnvs({
+		env: { AUTUMN_SECRET_KEY: "sk_sandbox" },
+		targetKeyName: "AUTUMN_SECRET_KEY",
+		listWebhooks,
 		fetchOrgInfo,
 	});
-	expect([live.key, live.live]).toEqual(["live", true]);
-	expect([sandbox.key, sandbox.live]).toEqual(["sandbox", false]);
+	expect(await live?.envKey()).toBe("live");
+	expect(await sandbox?.envKey()).toBe("sandbox");
 	expect(calls.count).toBe(0);
 });
 
@@ -62,33 +66,27 @@ test("a named sandbox reads its slug, from one lookup of its own org", async () 
 	const { calls, fetchOrgInfo } = countingFetch(
 		orgInfo({ id: "org_qa99xyz", name: "QA-Team", is_sandbox: true }),
 	);
-	const env = await resolveWebhookEnv({
-		target: {
-			secretKeyName: "AUTUMN_SANDBOX_ORG_QA99XYZ_SECRET_KEY",
-			clientId: "c",
-			sandboxId: "org_qa99xyz",
-		},
-		prod: false,
+	const [env] = webhookPullEnvs({
+		env: { AUTUMN_SANDBOX_ORG_QA99XYZ_SECRET_KEY: "sk_qa" },
+		targetKeyName: "AUTUMN_SANDBOX_ORG_QA99XYZ_SECRET_KEY",
+		listWebhooks,
 		fetchOrgInfo,
 	});
-	expect(env.key).toBe("qa-team");
-	expect(await env.orgId()).toBe("org_qa99xyz");
+	expect(await env?.envKey()).toBe("qa-team");
 	expect(calls.count).toBe(1);
 });
 
-test("a webhook with no url for the env is not sent, the rest are sent as that env's url", () => {
+test("each env is sent only its own entries, without the env field", () => {
 	const webhooks = resolveWebhooksForEnv({
 		rows: [
+			{ id: "billing", env: "live", url: "https://a.dev/h" },
 			{
 				id: "billing",
-				url: { live: "https://a.dev/h", sandbox: "https://s.dev/h" },
+				env: "sandbox",
+				url: "https://s.dev/h",
 				events: ["billing.updated"],
 			},
-			{
-				id: "prod-only",
-				url: { live: "https://a.dev/p" },
-				events: ["billing.updated"],
-			},
+			{ id: "prod-only", env: "live", url: "https://a.dev/p" },
 		],
 		envKey: "sandbox",
 	});
@@ -97,12 +95,18 @@ test("a webhook with no url for the env is not sent, the rest are sent as that e
 	]);
 });
 
-test("secret names: prod has no org suffix; a sandbox adds ORG4; - becomes _", () => {
+test("secret names: prod has no suffix; a sandbox adds its slug, every non-alphanumeric run as _", () => {
 	expect(webhookSecretName({ id: "billing" })).toBe(
 		"AUTUMN_WEBHOOK_BILLING_SECRET",
 	);
-	expect(webhookSecretName({ id: "billing-v2", orgId: "org_ab12cd34" })).toBe(
-		"AUTUMN_WEBHOOK_BILLING_V2_AB12_SECRET",
+	expect(webhookSecretName({ id: "billing-v2", envKey: "sandbox" })).toBe(
+		"AUTUMN_WEBHOOK_BILLING_V2_SANDBOX_SECRET",
+	);
+	expect(webhookSecretName({ id: "billing", envKey: "qa-team" })).toBe(
+		"AUTUMN_WEBHOOK_BILLING_QA_TEAM_SECRET",
+	);
+	expect(webhookSecretName({ id: "billing", envKey: "qa--team.é" })).toBe(
+		"AUTUMN_WEBHOOK_BILLING_QA_TEAM__SECRET",
 	);
 });
 
@@ -118,7 +122,7 @@ test("prod secrets go to .env.prod and never touch .env.local", async () => {
 	writeFileSync(join(dir, ".env.local"), "AUTUMN_SECRET_KEY=sk_test\n");
 	const lines = await writeWebhookSecrets({
 		secrets: [{ id: "billing", secret: "whsec_live" }],
-		env: { key: "live", live: true, orgId: async () => "org_ab12" },
+		env: { key: "live", live: true },
 		envDirs: [dir],
 		cwd: dir,
 	});
@@ -140,16 +144,16 @@ test("sandbox secrets follow .env.local over .env, and the log names variable an
 	writeFileSync(join(dir, ".env.local"), "B=2\n");
 	const lines = await writeWebhookSecrets({
 		secrets: [{ id: "billing", secret: "whsec_sb" }],
-		env: { key: "sandbox", live: false, orgId: async () => "org_ab12cd34" },
+		env: { key: "sandbox", live: false },
 		envDirs: [dir],
 		cwd: dir,
 	});
 	expect(readFileSync(join(dir, ".env.local"), "utf8")).toBe(
-		"B=2\nAUTUMN_WEBHOOK_BILLING_AB12_SECRET=whsec_sb\n",
+		"B=2\nAUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET=whsec_sb\n",
 	);
 	expect(readFileSync(join(dir, ".env"), "utf8")).toBe("A=1\n");
 	expect(existsSync(join(dir, ".env.prod"))).toBe(false);
 	expect(lines).toEqual([
-		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_AB12_SECRET in .env.local",
+		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET in .env.local",
 	]);
 });

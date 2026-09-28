@@ -36,6 +36,7 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 		case "rejects":
 		case "knownValues":
 		case "uniformPrefix":
+		case "notMap":
 			return [rule.field];
 		case "compare":
 			return [rule.field, rule.than];
