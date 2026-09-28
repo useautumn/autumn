@@ -1,7 +1,8 @@
 import type { ProductV2 } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useState } from "react";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
+import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanPickerScopeRow } from "./PlanPickerScopeRow";
 import { PlanPickerTrigger } from "./PlanPickerTrigger";
 
@@ -25,6 +26,8 @@ export function CustomerStatePlanPicker({
 	onSelect: (productId: string) => void;
 	onDismiss?: () => void;
 }) {
+	const { shouldOpenPickerImmediately } = useCustomerStateContext();
+	const [open, setOpen] = useState(shouldOpenPickerImmediately);
 	const isGroupUsed = (product: ProductV2) =>
 		usedKeys.has(getProductGroupKey({ productId: product.id, products }));
 
@@ -60,8 +63,10 @@ export function CustomerStatePlanPicker({
 			searchPlaceholder="Search plans..."
 			emptyText="No plans found"
 			defaultOpen
-			onOpenChange={(open) => {
-				if (!open) onDismiss?.();
+			open={open}
+			onOpenChange={(isOpen) => {
+				setOpen(isOpen);
+				if (!isOpen) onDismiss?.();
 			}}
 			disabled={disabled}
 		/>

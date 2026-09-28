@@ -60,11 +60,17 @@ export function useCustomerStateHandlers({
 	);
 
 	const lastSelectedEntityId = useRef<string | null>(null);
-	const newEmptyPlan = useCallback(
-		(): CustomerStatePlan => ({
+	// Pickers present at mount wait for the sheet to settle; user-added ones open at once.
+	const hasAddedEmptyPlan = useRef(false);
+	const newEmptyPlan = useCallback((): CustomerStatePlan => {
+		hasAddedEmptyPlan.current = true;
+		return {
 			...EMPTY_CUSTOMER_STATE_PLAN,
 			entityId: lastSelectedEntityId.current,
-		}),
+		};
+	}, []);
+	const shouldOpenPickerImmediately = useCallback(
+		() => hasAddedEmptyPlan.current,
 		[],
 	);
 
@@ -265,6 +271,7 @@ export function useCustomerStateHandlers({
 	return useMemo(
 		() => ({
 			isPhaseLocked,
+			shouldOpenPickerImmediately,
 			handleAddPhase,
 			handleInsertPhase,
 			handleRemovePhase,
@@ -281,6 +288,7 @@ export function useCustomerStateHandlers({
 		}),
 		[
 			isPhaseLocked,
+			shouldOpenPickerImmediately,
 			handleAddPhase,
 			handleInsertPhase,
 			handleRemovePhase,
