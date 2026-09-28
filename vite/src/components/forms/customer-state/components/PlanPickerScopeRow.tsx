@@ -26,10 +26,10 @@ function ScopeTab({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex h-6 min-w-0 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
+				"flex h-6 min-w-0 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
 				isActive
-					? "bg-muted text-foreground"
-					: "text-tertiary-foreground hover:text-foreground",
+					? "border-border bg-interactive-secondary-hover text-foreground shadow-xs"
+					: "border-transparent text-tertiary-foreground hover:text-foreground",
 			)}
 		>
 			<Icon className="shrink-0" size={12} />
