@@ -12,3 +12,8 @@ export type ApiKey = {
 	meta: any;
 	scopes: string[] | null;
 };
+
+export type ApiKeyListItem = Pick<
+	ApiKey,
+	"id" | "name" | "prefix" | "created_at" | "env" | "meta" | "scopes"
+>;

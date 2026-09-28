@@ -2,6 +2,7 @@ import {
 	AppEnv,
 	ErrCode,
 	isScopeSubset,
+	makeScopeChecker,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
@@ -15,11 +16,12 @@ export const handleCreateSecretKey = createRoute({
 	body: z.object({
 		name: z.string().min(1),
 		scopes: z.array(z.string()).optional(),
+		hidden: z.boolean().optional().default(false),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, env, org } = ctx;
-		const { name, scopes: requestedScopes } = c.req.valid("json");
+		const { hidden, name, scopes: requestedScopes } = c.req.valid("json");
 
 		// Privilege-escalation guard: a caller may only mint a key with
 		// scopes that are a subset of their own.
@@ -43,12 +45,27 @@ export const handleCreateSecretKey = createRoute({
 		const session = await auth.api.getSession({
 			headers: c.req.raw.headers,
 		});
+		const impersonatedBy = session?.session?.impersonatedBy;
+		if (
+			hidden &&
+			(!makeScopeChecker(ctx.scopes).isSuperuser || !impersonatedBy)
+		) {
+			throw new RecaseError({
+				message: "Hidden API keys require an impersonating superuser",
+				code: ErrCode.InsufficientScopes,
+				statusCode: 403,
+			});
+		}
 
 		const meta: Record<string, string> = {};
 
 		// Check if this is an impersonation session (Autumn Support)
-		if (session?.session?.impersonatedBy) {
+		if (impersonatedBy) {
 			meta.created_via = "autumn_support";
+			if (hidden) {
+				meta.visibility = "superuser";
+				meta.created_by = impersonatedBy;
+			}
 		} else if (session?.user?.name) {
 			// Regular user creation
 			meta.author = session.user.name;
@@ -72,6 +89,7 @@ export const handleCreateSecretKey = createRoute({
 			properties: {
 				org_slug: org.slug,
 				env,
+				hidden,
 			},
 		});
 

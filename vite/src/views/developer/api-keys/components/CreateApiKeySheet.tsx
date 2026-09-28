@@ -7,12 +7,12 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@autumn/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import { ScopeSelector } from "@/components/v2/scope-selector";
-import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useSession } from "@/lib/auth-client";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -24,11 +24,13 @@ const createApiKeySchema = z.object({
 export const CreateApiKeySheet = ({
 	open,
 	onOpenChange,
+	hidden = false,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	hidden?: boolean;
 }) => {
-	const { refetch } = useDevQuery();
+	const queryClient = useQueryClient();
 	const axiosInstance = useAxiosInstance();
 	const { data: session } = useSession();
 	// better-auth's TS inference doesn't auto-propagate customSession
@@ -51,12 +53,14 @@ export const CreateApiKeySheet = ({
 			setCopied(false);
 			setValidationError(null);
 		} else if (!open) {
-			refetch();
+			queryClient.invalidateQueries({
+				queryKey: [hidden ? "hidden-api-keys" : "dev"],
+			});
 			setTimeout(() => {
 				setApiKey("");
 			}, 500);
 		}
-	}, [open, refetch]);
+	}, [hidden, open, queryClient]);
 
 	useEffect(() => {
 		const result = createApiKeySchema.safeParse({ name });
@@ -85,6 +89,7 @@ export const CreateApiKeySheet = ({
 			const { api_key } = await DevService.createAPIKey(axiosInstance, {
 				name,
 				scopes,
+				hidden,
 			});
 
 			setApiKey(api_key);
@@ -115,7 +120,9 @@ export const CreateApiKeySheet = ({
 				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"
 			>
 				<SheetHeader>
-					<SheetTitle>Create Secret API Key</SheetTitle>
+					<SheetTitle>
+						Create {hidden ? "Hidden " : ""}Secret API Key
+					</SheetTitle>
 					{apiKey && (
 						<p className="text-muted-foreground text-sm">
 							Please copy your API Key and keep it somewhere safe. You won't be

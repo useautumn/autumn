@@ -721,6 +721,23 @@
       "isWebhookExempt": false
     },
     {
+      "handlerName": "handleListHiddenApiKeys",
+      "handlerFile": "src/internal/dev/handlers/handleListHiddenApiKeys.ts",
+      "method": "GET",
+      "path": "/dev/api_key/hidden",
+      "style": "REST",
+      "group": "dev",
+      "mountChain": [
+        "",
+        "/dev",
+        "/api_key/hidden"
+      ],
+      "sourceRouterFile": "src/internal/dev/devRouter.ts",
+      "routeKind": "createRoute",
+      "needsScopes": true,
+      "isWebhookExempt": false
+    },
+    {
       "handlerName": "handleGetDevData",
       "handlerFile": "src/internal/dev/handlers/handleGetDevData.ts",
       "method": "GET",
