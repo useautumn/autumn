@@ -71,39 +71,39 @@ describe("ECS task identity", () => {
 		expect(harness.errors).toEqual([]);
 	});
 
-	test("after every attempt fails it still fails open, and says so at error level", async () => {
+	test("after every attempt fails it refuses to start: a task without its identity would join the wrong group with an open gate", async () => {
 		const harness = createHarness({
 			responses: Array.from({ length: 5 }, () => new Error("ECONNREFUSED")),
 		});
-		const identity = await resolveTaskIdentity({
-			ctx: {
-				logger: harness.logger,
-				fetch: harness.fetch,
-				sleep: harness.sleep,
-			},
-			env: { ECS_CONTAINER_METADATA_URI_V4: metadataUri },
-		});
-		expect(identity).toEqual({ serviceArn: null, imageSha: null });
+		await expect(
+			resolveTaskIdentity({
+				ctx: {
+					logger: harness.logger,
+					fetch: harness.fetch,
+					sleep: harness.sleep,
+				},
+				env: { ECS_CONTAINER_METADATA_URI_V4: metadataUri },
+			}),
+		).rejects.toThrow("ECS task metadata unavailable after 5 attempts");
 		expect(harness.calls).toHaveLength(5);
 		expect(harness.waits).toEqual([500, 1_000, 2_000, 4_000]);
-		expect(harness.errors).toHaveLength(1);
-		expect(harness.errors[0]).toContain("fails open");
+		expect(harness.warnings).toHaveLength(4);
 	});
 
-	test("metadata without a parseable cluster ARN is not retried, but is an error", async () => {
+	test("metadata without a parseable cluster ARN is not retried, and refuses to start", async () => {
 		const harness = createHarness({
 			responses: [Response.json({ Cluster: "autumn", ServiceName: "x" })],
 		});
-		const identity = await resolveTaskIdentity({
-			ctx: {
-				logger: harness.logger,
-				fetch: harness.fetch,
-				sleep: harness.sleep,
-			},
-			env: { ECS_CONTAINER_METADATA_URI_V4: metadataUri },
-		});
-		expect(identity.serviceArn).toBeNull();
+		await expect(
+			resolveTaskIdentity({
+				ctx: {
+					logger: harness.logger,
+					fetch: harness.fetch,
+					sleep: harness.sleep,
+				},
+				env: { ECS_CONTAINER_METADATA_URI_V4: metadataUri },
+			}),
+		).rejects.toThrow("names no service");
 		expect(harness.calls).toHaveLength(1);
-		expect(harness.errors).toHaveLength(1);
 	});
 });

@@ -43,16 +43,17 @@ async function fetchTaskMetadata({
 }
 
 /**
- * Reads the ECS task metadata once at boot, retrying a slow or absent endpoint for ~10s.
- * Still fails open after that (a null service ARN), but says so at error level: a green
- * task without its identity would otherwise take blue's partitions.
+ * Reads the ECS task metadata once at boot, retrying a slow or absent endpoint for ~10s,
+ * then refuses to start: the service ARN names this task's consumer group and its fleet,
+ * so a task without it would join the base group with an open gate and take partitions
+ * from its healthy peers. Off ECS (no metadata URI) there is no fleet, and the gate fails open.
  */
 export async function resolveTaskIdentity({
 	ctx,
 	env,
 }: {
 	ctx: {
-		logger?: Pick<AutumnLogger, "warn" | "error">;
+		logger?: Pick<AutumnLogger, "warn">;
 		fetch?: MetadataFetch;
 		sleep?: (ms: number) => Promise<void>;
 	};
@@ -66,33 +67,17 @@ export async function resolveTaskIdentity({
 	if (!metadataUri) return { serviceArn: null, imageSha };
 	const sleep = ctx.sleep ?? Bun.sleep;
 	let backoffMs = METADATA_FIRST_BACKOFF_MS;
-	for (let attempt = 1; attempt <= METADATA_ATTEMPTS; attempt++) {
+	let metadata: TaskMetadata | undefined;
+	let reason = "";
+	for (let attempt = 1; attempt <= METADATA_ATTEMPTS && !metadata; attempt++) {
 		try {
-			const metadata = await fetchTaskMetadata({
+			metadata = await fetchTaskMetadata({
 				ctx: { fetch: ctx.fetch ?? fetch },
 				metadataUri,
 			});
-			const serviceArn =
-				typeof metadata.ServiceName === "string" &&
-				typeof metadata.Cluster === "string"
-					? serviceArnOf({
-							clusterArn: metadata.Cluster,
-							serviceName: metadata.ServiceName,
-						})
-					: null;
-			if (!serviceArn)
-				ctx.logger?.error(
-					`ECS task metadata names no service (${JSON.stringify(metadata)}); blue-green gate fails open`,
-				);
-			return { serviceArn, imageSha };
 		} catch (cause) {
-			const reason = cause instanceof Error ? cause.message : String(cause);
-			if (attempt === METADATA_ATTEMPTS) {
-				ctx.logger?.error(
-					`ECS task metadata unavailable after ${attempt} attempts (${reason}); blue-green gate fails open`,
-				);
-				return { serviceArn: null, imageSha };
-			}
+			reason = cause instanceof Error ? cause.message : String(cause);
+			if (attempt === METADATA_ATTEMPTS) break;
 			ctx.logger?.warn(
 				`ECS task metadata attempt ${attempt} failed (${reason}); retrying in ${backoffMs}ms`,
 			);
@@ -100,5 +85,21 @@ export async function resolveTaskIdentity({
 			backoffMs *= 2;
 		}
 	}
-	return { serviceArn: null, imageSha };
+	if (!metadata)
+		throw new Error(
+			`ECS task metadata unavailable after ${METADATA_ATTEMPTS} attempts (${reason}); refusing to start without a fleet identity`,
+		);
+	const serviceArn =
+		typeof metadata.ServiceName === "string" &&
+		typeof metadata.Cluster === "string"
+			? serviceArnOf({
+					clusterArn: metadata.Cluster,
+					serviceName: metadata.ServiceName,
+				})
+			: null;
+	if (!serviceArn)
+		throw new Error(
+			`ECS task metadata names no service (${JSON.stringify(metadata)}); refusing to start without a fleet identity`,
+		);
+	return { serviceArn, imageSha };
 }
