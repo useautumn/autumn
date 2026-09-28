@@ -56,6 +56,8 @@ export const createWorkerEdgeConfigs = ({
 		schema: activeSlotEdgeConfig.schema,
 		defaultValue: activeSlotEdgeConfig.defaultValue,
 		pollIntervalMs: ACTIVE_SLOT_POLL_INTERVAL_MS,
+		// The default names no service and would open the gate; a read error must keep the last record instead.
+		retainOnError: true,
 	});
 
 	async function start(): Promise<void> {

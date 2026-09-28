@@ -5,6 +5,7 @@ import {
 } from "@autumn/edge-config";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { activeSlotEdgeConfig } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
+import { createWorkerEdgeConfigs } from "../../../src/edgeConfig/createWorkerEdgeConfigs.js";
 
 const ours = "arn:aws:ecs:us-east-2:1:service/autumn/balance-workers-green";
 const theirs = "arn:aws:ecs:us-east-2:1:service/autumn/balance-workers-blue";
@@ -55,6 +56,40 @@ const settled = async (promise: Promise<unknown>) => {
 		pending
 	);
 };
+
+describe("the worker's active slot store", () => {
+	test("a failed poll after a good read keeps the last record, so the gate stays closed", async () => {
+		let failing = false;
+		const memory = createMemoryS3Client();
+		const s3Client: EdgeConfigS3Client = {
+			send: (command) => {
+				if (failing) throw new Error("S3 unreachable");
+				return memory.send(command);
+			},
+		};
+		const edgeConfigs = createWorkerEdgeConfigs({
+			ctx: { s3Client },
+			config: { location: { bucket: "test", region: "us-east-2" } },
+		});
+		await edgeConfigs.activeSlot.writeToSource({
+			config: record({ flightcontrolBlueArn: theirs }),
+		});
+		await edgeConfigs.activeSlot.refresh();
+		const gate = createSlotGate({
+			ctx: {
+				identity: { serviceArn: ours, imageSha: null },
+				activeSlot: edgeConfigs.activeSlot,
+			},
+		});
+		expect(gate.isActive()).toBe(false);
+
+		failing = true;
+		await edgeConfigs.activeSlot.refresh();
+		expect(edgeConfigs.activeSlot.getStatus().healthy).toBe(false);
+		expect(edgeConfigs.activeSlot.get().flightcontrolBlueArn).toBe(theirs);
+		expect(gate.isActive()).toBe(false);
+	});
+});
 
 describe("awaitReadyAnnouncement from the slot gate", () => {
 	test("resolves at once while active or failing open", async () => {
