@@ -75,6 +75,7 @@ export function createSlotHeartbeat({
 		]);
 		const health = ctx.readPartitions();
 		const gate = ctx.gate.describe();
+		const storeHealthy = ctx.readStoreHealthy();
 		return {
 			serviceName: "balance-workers",
 			slot: config.slot,
@@ -85,8 +86,9 @@ export function createSlotHeartbeat({
 			identity: config.identity,
 			declaredActive: gate.active,
 			gate: gate.reason,
-			storeHealthy: ctx.readStoreHealthy(),
-			ok: kafka.ok && postgres.ok,
+			storeHealthy,
+			// A task that cannot read the flip record is not one a swap should count on.
+			ok: kafka.ok && postgres.ok && storeHealthy,
 			checks: { kafka, postgres },
 			partitions: {
 				prepared: health.filter((p) => p.status === "prepared").length,

@@ -150,6 +150,20 @@ describe("blue-green slot heartbeat", () => {
 		});
 	});
 
+	test("an unhealthy slot store alone makes the heartbeat not ok", async () => {
+		const { heartbeat, written } = createHarness({
+			gate: { active: true, reason: "active" },
+			partitions: [],
+			storeHealthy: false,
+		});
+		await heartbeat.start();
+		const parsed = SlotHeartbeatSchema.parse(written[0].body);
+		expect(parsed.checks.kafka.ok).toBe(true);
+		expect(parsed.checks.postgres.ok).toBe(true);
+		expect(parsed.storeHealthy).toBe(false);
+		expect(parsed.ok).toBe(false);
+	});
+
 	test("a failing probe marks the heartbeat not ok and the write still lands; stop cancels the schedule", async () => {
 		const { heartbeat, written, cancelled } = createHarness({
 			gate: { active: true, reason: "blue-green-disabled" },
