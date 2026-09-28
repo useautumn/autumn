@@ -36,7 +36,7 @@ export const formatLogTime = ({ timestamp }: { timestamp: number }) =>
 const ColumnHeaders = () => (
 	<div
 		style={ROW_GRID}
-		className="h-8 px-4 shrink-0 text-xs text-tertiary-foreground"
+		className="h-7 px-4 shrink-0 text-xs text-tertiary-foreground"
 	>
 		<span className={CELL}>Time</span>
 		<span className={CELL}>Event</span>
