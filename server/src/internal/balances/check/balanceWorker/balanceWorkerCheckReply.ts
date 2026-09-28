@@ -10,6 +10,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
+	type CheckResponseWithPreview,
+	getCheckPreview,
+} from "@/internal/api/check/getCheckPreview.js";
+import {
 	workerReplyToFullSubject,
 	workerStateToApiBalance,
 } from "../../balanceWorker/workerStateToApiBalance.js";
@@ -17,18 +21,20 @@ import { workerSubjectsToApiBalances } from "../../balanceWorker/workerSubjectsT
 import type { WorkerCheckAnswer } from "./runDeductingCheck.js";
 
 /** The one place a worker's answer becomes the API's check response, whether it came from a check or a track. */
-export function checkAnswerToApiResponse({
+export async function checkAnswerToApiResponse({
 	ctx,
 	command,
 	answer,
 	isDeductingCheck = false,
+	withPreview = false,
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
 	answer: WorkerCheckAnswer;
 	/** The check deducts (`send_event` or a lock), so it also answers with the legacy track `balances` map. */
 	isDeductingCheck?: boolean;
-}): CheckResponseV3 {
+	withPreview?: boolean;
+}): Promise<CheckResponseWithPreview> {
 	const { result, state, catalog } = answer;
 	// The worker names the feature that answers: the checked one, or the credit system funding it.
 	const featureToUse = findFeatureById({
@@ -73,7 +79,7 @@ export function checkAnswerToApiResponse({
 					subjects: [{ featureId: command.featureId, fullSubject }],
 				})
 			: {};
-	return applyResponseVersionChanges<CheckResponseV3>({
+	const response = applyResponseVersionChanges<CheckResponseV3>({
 		ctx,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Check,
@@ -88,4 +94,15 @@ export function checkAnswerToApiResponse({
 		},
 		legacyData: { noCusEnts: !isAttached, featureToUse },
 	});
+	const preview = withPreview
+		? await getCheckPreview({
+				ctx,
+				allowed: result.allowed,
+				apiBalance: balance,
+				feature: featureToUse,
+				customerId: command.identity.customerId,
+				entityId: command.identity.entityId ?? undefined,
+			})
+		: undefined;
+	return { ...response, preview };
 }

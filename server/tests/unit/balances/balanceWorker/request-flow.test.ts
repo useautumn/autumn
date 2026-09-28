@@ -252,7 +252,6 @@ test.concurrent(
 		const variants: Partial<CheckParams>[] = [
 			{ product_id: "pro", feature_id: undefined },
 			{ send_event: true },
-			{ with_preview: true },
 			{ lock: { enabled: true, lock_id: "hold" } },
 			{ properties: { model: "model" } },
 			{ entity_id: "entity" },
@@ -384,6 +383,9 @@ test.concurrent(
 					evict: async () => {
 						throw cause;
 					},
+					finalize: async () => {
+						throw cause;
+					},
 				},
 				catalog: {
 					invalidateOrgCatalog: async () => {
@@ -471,7 +473,6 @@ test.concurrent(
 			{ feature_id: undefined, event_name: "event" },
 			{ entity_id: "entity" },
 			{ properties: { model: "model" } },
-			{ lock: { enabled: true, lock_id: "hold" } },
 			{ customer_data: { name: "new name" } },
 		];
 		for (const variant of variants)

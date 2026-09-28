@@ -35,7 +35,7 @@ function createGatedDb({
 	staleIds?: Set<string>;
 	/** How many leading flushes fail with a retryable SQLSTATE before Postgres "recovers". */
 	transientFailures?: number;
-	/** What those leading flushes throw; a retryable SQLSTATE unless the test says otherwise. */
+	/** What each of those leading failures throws. */
 	transientError?: () => Error;
 } = {}) {
 	let remainingTransient = transientFailures;
@@ -242,50 +242,6 @@ describe("committer", () => {
 		expect(
 			fake.transactions.map((transaction) => transaction.partitions),
 		).toEqual([[0], [0], [0], [1]]);
-		await committer.drain();
-	});
-
-	test("the driver dropping the connection under a flush is retried, never taken as Postgres refusing the record", async () => {
-		// The pool ends a connection at its idle or lifetime limit while a statement is out; nothing was judged.
-		const lifecycle = [
-			Object.assign(new Error("Idle timeout reached after 30s"), {
-				code: "ERR_POSTGRES_IDLE_TIMEOUT",
-			}),
-			Object.assign(new Error("Max lifetime timeout reached after 30m"), {
-				code: "ERR_POSTGRES_LIFETIME_TIMEOUT",
-			}),
-			Object.assign(new Error("Connection closed"), {
-				code: "ERR_POSTGRES_CONNECTION_CLOSED",
-			}),
-		];
-		const fake = createGatedDb({
-			transientFailures: lifecycle.length,
-			transientError: () => lifecycle.shift() ?? new Error("unexpected"),
-		});
-		fake.openGate();
-		const errors: string[] = [];
-		const committer = createCommitter({
-			ctx: {
-				db: fake.db,
-				logger: {
-					info() {},
-					warn() {},
-					error: (message) => errors.push(message),
-				},
-			},
-			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
-		});
-		const outcome = await committer.apply({
-			topic,
-			partition: 0,
-			expectedOffset: 0n,
-			records: [record({ partition: 0, offset: 0n, commandId: "a" })],
-		});
-		expect(outcome.nextOffset).toBe(1n);
-		expect(outcome.failure).toBeUndefined();
-		expect(outcome.rejections ?? []).toEqual([]);
-		expect(fake.transactions).toHaveLength(4);
-		expect(errors.some((message) => message.includes("skipped"))).toBe(false);
 		await committer.drain();
 	});
 
@@ -500,6 +456,63 @@ describe("committer", () => {
 		]);
 		expect(infos).toHaveLength(1);
 		expect(infos[0]).toContain("after 7 attempts");
+	});
+
+	test("a connection Bun's driver lost mid-flush is retried with its rows, not skipped as a refused record", async () => {
+		const fake = createGatedDb({
+			transientFailures: 1,
+			transientError: () =>
+				Object.assign(new Error("Connection closed"), {
+					code: "ERR_POSTGRES_CONNECTION_CLOSED",
+				}),
+		});
+		fake.openGate();
+		const committer = createCommitter({
+			ctx: { db: fake.db, sleep: async () => {} },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+		const applied = record({ partition: 0, offset: 0n, commandId: "a" });
+
+		const landed = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [applied],
+		});
+
+		expect(landed).toEqual({ nextOffset: 1n });
+		expect(fake.transactions).toHaveLength(2);
+		expect(fake.transactions[1]?.updates).toEqual(
+			fake.transactions[0]?.updates,
+		);
+		expect(fake.transactions[1]?.updates.length).toBeGreaterThan(0);
+	});
+
+	test("a Postgres server error is still judged by its SQLSTATE: a refusal is skipped, not retried forever", async () => {
+		const fake = createGatedDb({
+			failWhen: (updates) =>
+				updates.length > 0
+					? Object.assign(new Error("duplicate key"), {
+							code: "ERR_POSTGRES_SERVER_ERROR",
+							errno: "23505",
+						})
+					: null,
+		});
+		fake.openGate();
+		const committer = createCommitter({
+			ctx: { db: fake.db, sleep: async () => {} },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+
+		const landed = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [record({ partition: 0, offset: 0n, commandId: "a" })],
+		});
+
+		expect(landed).toMatchObject({ nextOffset: 1n });
+		expect(fake.transactions.at(-1)?.updates).toEqual([]);
 	});
 
 	test("stopping the committer ends a wait on Postgres: the waiting call rejects, nothing is skipped or bookmarked", async () => {

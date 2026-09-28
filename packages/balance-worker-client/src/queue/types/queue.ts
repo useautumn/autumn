@@ -1,5 +1,6 @@
 import type {
 	EvictCommand,
+	FinalizeCommand,
 	ResetCommand,
 	TrackCommand,
 	UpdateBalanceCommand,
@@ -39,6 +40,11 @@ export type CommandQueue = {
 	/** Batch writers' evict: the owner drops each customer's copy in log order, after the store has its earlier writes. */
 	evict(params: {
 		commands: readonly EvictCommand[];
+		signal?: AbortSignal;
+	}): Promise<void>;
+	/** A lock's finalize while its owner is unreachable: the owner settles it in log order. */
+	finalize(params: {
+		commands: readonly FinalizeCommand[];
 		signal?: AbortSignal;
 	}): Promise<void>;
 };

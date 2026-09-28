@@ -1,4 +1,5 @@
 import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
+import type { PartitionRuntimeContext } from "../types/partitionRuntime.js";
 import type { PartitionRuntimeScope } from "../types/partitionRuntimeState.js";
 import {
 	cancelRuntimeReaders,
@@ -50,9 +51,19 @@ export async function waitForRuntimeQuiescence({
 	state,
 }: PartitionRuntimeScope): Promise<void> {
 	await settleRuntimeStartup({ state });
-	await ctx.processor.drain();
+	await settleProcessor({ ctx });
 	await state.preparationStopPromise;
 	await state.stopFollowerPromise;
+}
+
+/** Settlement only: stop and quiescence finish whatever the store decided, while
+ *  the verdict itself belongs to `drainRuntime`, whose caller names a successor on it. */
+export async function settleProcessor({
+	ctx,
+}: {
+	ctx: PartitionRuntimeContext;
+}): Promise<void> {
+	await Promise.allSettled([ctx.processor.drain()]);
 }
 
 async function finishRuntimeStop({
@@ -60,7 +71,7 @@ async function finishRuntimeStop({
 	state,
 }: PartitionRuntimeScope): Promise<void> {
 	await settleRuntimeStartup({ state });
-	await ctx.processor.drain();
+	await settleProcessor({ ctx });
 	await disposeRuntimeResources({ ctx, state });
 	state.status = state.terminalError ? "recovery_required" : "stopped";
 }

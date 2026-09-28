@@ -32,8 +32,18 @@ export type PartitionOwnershipPublication = {
 	claim(params?: { endpoint: string }): Promise<{ routeEpoch: string }>;
 	release(): Promise<void>;
 	announceReady(): Promise<void>;
+	/** Tells the successor this worker has withdrawn and is draining, so it holds its claim timeout. */
+	announceDraining(params: { successor: string }): Promise<void>;
 	/** Resolves with the successor's endpoint on its `ready`, rejects with the signal's reason. */
 	awaitReady(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
+	/** A drain the current owner began before this worker started listening, or null. */
+	readActiveDrain(): { endpoint: string } | null;
+	/** Resolves with the predecessor's endpoint on its `draining`, rejects with the signal's reason. */
+	awaitDraining(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
+	/** Resolves when a `claimed` names another worker, rejects with the signal's reason. */
+	awaitForeignClaim(params: {
+		signal: AbortSignal;
+	}): Promise<{ endpoint: string }>;
 	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason. */
 	awaitClaim(params: { signal: AbortSignal }): Promise<{ routeEpoch: string }>;
 };
@@ -146,12 +156,15 @@ export type PartitionsConfig = {
 	handoffReadyTimeoutMs?: number;
 	/** How long a prepared partition waits to be named owner before it claims for itself. */
 	handoffClaimTimeoutMs?: number;
+	/** How long it keeps waiting after the predecessor announced `draining`. */
+	handoffDrainCapMs?: number;
 };
 
 export interface ResolvedPartitionsConfig extends PartitionsConfig {
 	partitionBootstrapRetryIntervalMs: number;
 	handoffReadyTimeoutMs: number;
 	handoffClaimTimeoutMs: number;
+	handoffDrainCapMs: number;
 }
 
 export type Partitions = {

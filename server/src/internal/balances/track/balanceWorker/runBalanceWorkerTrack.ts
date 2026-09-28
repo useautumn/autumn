@@ -83,7 +83,6 @@ const trackFeature = ({
 				featureDeductions: getTrackFeatureDeductions({
 					ctx,
 					featureId,
-					lock: body.lock,
 					value: body.value,
 				}),
 			});

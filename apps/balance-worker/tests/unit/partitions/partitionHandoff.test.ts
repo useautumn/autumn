@@ -30,6 +30,7 @@ const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
 
 type OwnershipEvent =
 	| { type: "ready"; partition: number; endpoint: string }
+	| { type: "draining"; partition: number; endpoint: string; successor: string }
 	| { type: "claimed"; partition: number; endpoint: string; routeEpoch: string }
 	| { type: "unowned"; partition: number; endpoint: string };
 
@@ -67,12 +68,37 @@ const createOwnershipLog = () => {
 			listeners.add(listener);
 			signal.addEventListener("abort", abort, { once: true });
 		});
+	/** The latest claim or release for a partition, as the tail would have seen it. */
+	const owner = ({ partition }: { partition: number }) => {
+		for (let i = records.length - 1; i >= 0; i--) {
+			const event = records[i];
+			if (!event || event.partition !== partition) continue;
+			if (event.type === "claimed") return event.endpoint;
+			if (event.type === "unowned") return null;
+		}
+		return undefined;
+	};
+	/** A drain by the current owner not yet concluded by a claim. */
+	const activeDrain = ({ partition }: { partition: number }) => {
+		for (let i = records.length - 1; i >= 0; i--) {
+			const event = records[i];
+			if (!event || event.partition !== partition) continue;
+			if (event.type === "claimed" || event.type === "unowned") return null;
+			if (event.type === "draining")
+				return event.endpoint === owner({ partition })
+					? { endpoint: event.endpoint }
+					: null;
+		}
+		return null;
+	};
 	return {
 		records,
 		events,
 		nextEpoch: () => String(++offset),
 		publish,
 		await: await_,
+		owner,
+		activeDrain,
 	};
 };
 
@@ -81,6 +107,8 @@ type WorkerOptions = {
 	log: ReturnType<typeof createOwnershipLog>;
 	config?: Partial<PartitionsConfig>;
 	drainGate?: Promise<void>;
+	/** Holds the `draining` send; a slow topic must never hold the drain itself. */
+	announceDrainingGate?: Promise<void>;
 	prepareGate?: Promise<void>;
 	activateGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
@@ -91,6 +119,7 @@ const createWorker = ({
 	log,
 	config,
 	drainGate,
+	announceDrainingGate,
 	prepareGate,
 	activateGate,
 	awaitReadyAnnouncement,
@@ -165,6 +194,40 @@ const createWorker = ({
 				record("announce");
 				log.publish({ type: "ready", partition, endpoint });
 			},
+			announceDraining: async ({ successor }) => {
+				record("draining");
+				await announceDrainingGate;
+				log.publish({ type: "draining", partition, endpoint, successor });
+			},
+			readActiveDrain: () => {
+				const drain = log.activeDrain({ partition });
+				return drain && drain.endpoint !== endpoint ? drain : null;
+			},
+			awaitDraining: ({ signal }) =>
+				log.await({
+					signal,
+					match: (event) => {
+						if (event.type !== "draining" || event.partition !== partition)
+							return undefined;
+						if (event.endpoint === endpoint) return undefined;
+						if (event.successor === endpoint)
+							return { endpoint: event.endpoint };
+						const owner = log.owner({ partition });
+						return owner === undefined || owner === event.endpoint
+							? { endpoint: event.endpoint }
+							: undefined;
+					},
+				}),
+			awaitForeignClaim: ({ signal }) =>
+				log.await({
+					signal,
+					match: (event) =>
+						event.type === "claimed" &&
+						event.partition === partition &&
+						event.endpoint !== endpoint
+							? { endpoint: event.endpoint }
+							: undefined,
+				}),
 			awaitReady: ({ signal }) =>
 				log.await({
 					signal,
@@ -407,6 +470,210 @@ describe("partition handoff", () => {
 			).toBeDefined();
 			expect(B.errors).toEqual([]);
 		} finally {
+			await B.ownership.stop();
+		}
+	});
+
+	test("a slow predecessor that announced draining is not fenced by the claim timeout", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("draining:2"));
+			expect(A.index("withdraw:2")).toBeLessThan(A.index("draining:2"));
+			// Well past the claim timeout: B heard A draining and keeps waiting.
+			await Bun.sleep(60);
+			expect(B.has("activate:2")).toBe(false);
+			expect(B.status(2)).toBe("prepared");
+
+			drain.resolve();
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("drained:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(A.index("claim:B:2")).toBeLessThan(B.index("activate:2"));
+			expect(B.has("claim:B:2")).toBe(false);
+			expect(A.errors).toEqual([]);
+			expect(B.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("the partition moves on mid-drain: the replacement waits out the drain, then claims after silence", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({ name: "B", log });
+		const C = createWorker({
+			name: "C",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			// B is chosen, then the roster moves the partition on to C before A finishes.
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("draining:2"));
+			B.revoke();
+			await C.ownership.start();
+			C.assign([2]);
+			await waitFor(() => C.has("announce:2"));
+			// A's drain names B, but A still owns the partition: C must not fence it at its own timeout.
+			await Bun.sleep(60);
+			expect(C.has("activate:2")).toBe(false);
+			expect(C.has("claim:C:2")).toBe(false);
+
+			// A finishes and names B, who is gone. Silence follows, so C claims for itself.
+			drain.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			await waitFor(() => C.has("claim:C:2"));
+			expect(A.index("drained:2")).toBeLessThan(C.index("claim:C:2"));
+			expect(B.has("activate:2")).toBe(false);
+			expect(C.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+			await C.ownership.stop();
+		}
+	});
+
+	test("a late draining record from a past owner does not hold the next successor", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({ name: "A", log });
+		const B = createWorker({ name: "B", log });
+		const C = createWorker({
+			name: "C",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			// B owns it and never answers (it is not revoked here, standing in for a dead owner).
+			await C.ownership.start();
+			C.assign([2]);
+			await waitFor(() => C.has("announce:2"));
+			const announcedAt = Date.now();
+			// A's drain record lands late: A is a past owner, so it says nothing about B being alive.
+			log.publish({
+				type: "draining",
+				partition: 2,
+				endpoint: "http://A",
+				successor: "http://B",
+			});
+			await waitFor(() => C.has("claim:C:2"));
+			// Silence timeout, not the drain cap.
+			expect(Date.now() - announcedAt).toBeLessThan(1_000);
+			expect(C.errors).toEqual([]);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+			await C.ownership.stop();
+		}
+	});
+
+	test("a slow draining send does not hold the drain or the claim", async () => {
+		const log = createOwnershipLog();
+		const send = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			announceDrainingGate: send.promise,
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			// The send never completes, yet A drains and names B regardless.
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("drained:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(B.has("claim:B:2")).toBe(false);
+			expect(A.errors).toEqual([]);
+		} finally {
+			send.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a drain the store refused names no successor; the successor claims for itself", async () => {
+		const log = createOwnershipLog();
+		const refused = Promise.reject(new Error("store refused the apply"));
+		void refused.catch(() => undefined);
+		const A = createWorker({ name: "A", log, drainGate: refused });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 40 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("stop:2"));
+			expect(A.has("claim:B:2")).toBe(false);
+			expect(A.has("release:2")).toBe(false);
+			expect(
+				log.records.some(
+					(event) => event.type === "claimed" && event.endpoint === B.endpoint,
+				),
+			).toBe(false);
+			await waitFor(() => B.status(2) === "ready", 1_000);
+			expect(B.has("claim:B:2")).toBe(true);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("the drain cap bounds how long a draining predecessor can hold the successor", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 100 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("draining:2"));
+			await Bun.sleep(50);
+			expect(B.status(2)).toBe("prepared");
+			// The predecessor never finishes: past the cap the successor claims for itself, as it would in silence.
+			await waitFor(() => B.status(2) === "ready", 1_000);
+			expect(B.index("activate:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(A.has("claim:B:2")).toBe(false);
+			expect(B.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
 			await B.ownership.stop();
 		}
 	});

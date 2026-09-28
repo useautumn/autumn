@@ -54,6 +54,7 @@ export type WorkerPartitionsConfig = {
 	partitionBootstrapRetryIntervalMs?: number;
 	handoffReadyTimeoutMs?: number;
 	handoffClaimTimeoutMs?: number;
+	handoffDrainCapMs?: number;
 };
 
 export type WorkerPartitionHighWatermarks = {

@@ -1,11 +1,15 @@
 import { LockAlreadyExistsError } from "@autumn/balance-engine";
-import { FlushBookmarkConflictError } from "@autumn/postgres";
+import {
+	FlushBookmarkConflictError,
+	isTransientPostgresError,
+	PostgresSqlState,
+	postgresSqlStateOf,
+} from "@autumn/postgres";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,
 } from "../../processor/subject/subjectErrors.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
-import type { OwnerFence } from "../../state/types/stateStore.js";
 import {
 	BillingPlanRowCollisionError,
 	CommitterStoppedError,
@@ -22,42 +26,9 @@ import type {
 } from "../types/committer.js";
 import { runFlush } from "./runFlush.js";
 
-/** SQLSTATE classes worth a retry: the connection, a concurrency abort, a cancelled statement, a full pool. */
-const TRANSIENT_SQLSTATE = /^(08|40001|40P01|57014|53300|57P0[123])/;
-const TRANSIENT_SOCKET_CODES = new Set([
-	"ECONNRESET",
-	"ECONNREFUSED",
-	"EPIPE",
-	"ETIMEDOUT",
-]);
-/** The driver ending or losing the connection under a statement: Postgres never judged the record, so it is retried. */
-const TRANSIENT_CLIENT_CODES = new Set([
-	"ERR_POSTGRES_CONNECTION_CLOSED",
-	"ERR_POSTGRES_CONNECTION_FAILED",
-	"ERR_POSTGRES_CONNECTION_REFUSED",
-	"ERR_POSTGRES_CONNECTION_TIMEOUT",
-	"ERR_POSTGRES_IDLE_TIMEOUT",
-	"ERR_POSTGRES_LIFETIME_TIMEOUT",
-	"ERR_POSTGRES_QUERY_CANCELLED",
-	"ERR_POSTGRES_TLS_NOT_AVAILABLE",
-	"ERR_POSTGRES_TLS_UPGRADE_FAILED",
-	"ERR_POSTGRES_UNEXPECTED_MESSAGE",
-]);
-
-const isTransientFailure = (cause: unknown): boolean => {
-	if (!(cause instanceof Error)) return false;
-	const { errno, code } = cause as Error & { errno?: unknown; code?: unknown };
-	if (typeof errno === "string" && TRANSIENT_SQLSTATE.test(errno)) return true;
-	if (typeof code !== "string") return false;
-	return TRANSIENT_SOCKET_CODES.has(code) || TRANSIENT_CLIENT_CODES.has(code);
-};
-
 /** Another writer moved this partition's bookmark: the record is fine, this worker no longer owns it. */
 const isOwnershipLost = (cause: unknown): boolean =>
 	cause instanceof FlushBookmarkConflictError;
-
-const UNIQUE_VIOLATION = "23505";
-const FOREIGN_KEY_VIOLATION = "23503";
 
 /**
  * Why this record is skipped, or null when the failure is the store's or the partition's, not the record's own.
@@ -70,22 +41,26 @@ const refusalOf = ({
 	record: DurableMutationRecord;
 	cause: unknown;
 }): Error | null => {
-	if (isTransientFailure(cause) || isOwnershipLost(cause)) return null;
+	if (isTransientPostgresError({ error: cause }) || isOwnershipLost(cause))
+		return null;
 	const { command, identity } = record.mutation;
 	if (cause instanceof StaleSubjectRowsError)
 		return new SubjectStaleError({ identity, cause });
 
 	// A lock id is unique across the org but a writer knows only its own customers' locks, and a customer can be
 	// deleted between the decision and the write: both are the request's problem, with an answer of their own.
-	const { errno } = cause as Error & { errno?: unknown };
-	if (command.type === "applyBillingPlan" && errno === UNIQUE_VIOLATION)
+	const sqlState = postgresSqlStateOf({ error: cause });
+	if (
+		command.type === "applyBillingPlan" &&
+		sqlState === PostgresSqlState.UniqueViolation
+	)
 		return new BillingPlanRowCollisionError({ identity, cause });
 	const lockId = command.type === "track" ? command.lock?.lockId : undefined;
 	const isLockRow =
 		lockId && cause instanceof Error && cause.message.includes("balance_locks");
-	if (isLockRow && errno === UNIQUE_VIOLATION)
+	if (isLockRow && sqlState === PostgresSqlState.UniqueViolation)
 		return new LockAlreadyExistsError({ lockId });
-	if (isLockRow && errno === FOREIGN_KEY_VIOLATION)
+	if (isLockRow && sqlState === PostgresSqlState.ForeignKeyViolation)
 		return new SubjectNotFoundError({ identity });
 	return new FlushRecordRefusedError({ mutationId: record.mutation.id, cause });
 };
@@ -184,7 +159,7 @@ const runWithRetries = async ({
 			reportStoreRecovered({ scope, attempt });
 			return outcomes;
 		} catch (cause) {
-			if (!isTransientFailure(cause)) throw cause;
+			if (!isTransientPostgresError({ error: cause })) throw cause;
 			reportStoreWaiting({ scope, attempt, cause });
 			await sleep({ delayMs, signal });
 			if (signal.aborted) throw new CommitterStoppedError({ cause });
@@ -266,7 +241,6 @@ const landRecordsOneByOne = async ({
 }): Promise<FlushOutcome> => {
 	let nextOffset = call.expectedOffset;
 	let commandNextOffset: bigint | undefined;
-	let ownerFence: OwnerFence | undefined;
 	const rejections: FlushRejection[] = [];
 	for (const record of call.records) {
 		const single = recordCall({ call, record, expectedOffset: nextOffset });
@@ -278,7 +252,6 @@ const landRecordsOneByOne = async ({
 			nextOffset = outcomes.get(single)?.nextOffset ?? nextOffset;
 			commandNextOffset =
 				outcomes.get(single)?.commandNextOffset ?? commandNextOffset;
-			ownerFence = outcomes.get(single)?.ownerFence ?? ownerFence;
 		} catch (cause) {
 			const refused = await settleRefusedRecord({
 				scope,
@@ -292,7 +265,6 @@ const landRecordsOneByOne = async ({
 				return {
 					nextOffset,
 					commandNextOffset,
-					ownerFence,
 					failure: refused.failure,
 					rejections,
 				};
@@ -300,7 +272,7 @@ const landRecordsOneByOne = async ({
 			rejections.push(refused.rejection);
 		}
 	}
-	return { nextOffset, commandNextOffset, ownerFence, rejections };
+	return { nextOffset, commandNextOffset, rejections };
 };
 
 /**

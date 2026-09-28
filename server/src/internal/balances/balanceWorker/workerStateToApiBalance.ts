@@ -8,9 +8,10 @@ import {
 	type ApiBalanceV1,
 	fullSubjectToCustomerEntitlements,
 	getApiBalanceV2,
+	orgToInStatuses,
+	scopeExpandForCtx,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { BalanceWorkerUnsupportedError } from "./balanceWorkerErrors.js";
 
 /** The customer as the worker decided on it: its rows joined with the catalog rows the reply carried. */
 export const workerReplyToFullSubject = ({
@@ -24,7 +25,8 @@ export const workerReplyToFullSubject = ({
 }): WorkerFullSubject =>
 	subjectStateToFullSubject({ state, catalog, entityId: entityId ?? null });
 
-/** The API balance for one feature, read off the worker's own rows: nothing is loaded from Postgres. */
+/** The API balance for one feature, read off the worker's own rows: nothing is loaded from Postgres.
+ *  Only plans in the org's statuses count, as legacy renders it; none left is null. */
 export function workerStateToApiBalance({
 	ctx,
 	fullSubject,
@@ -33,16 +35,17 @@ export function workerStateToApiBalance({
 	ctx: AutumnContext;
 	fullSubject: WorkerFullSubject;
 	featureId: string;
-}): ApiBalanceV1 {
+}): ApiBalanceV1 | null {
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
 		featureIds: [featureId],
+		inStatuses: orgToInStatuses({ org: ctx.org }),
 	});
 	const [first] = customerEntitlements;
-	if (!first)
-		throw new BalanceWorkerUnsupportedError({ reason: "feature_not_found" });
+	if (!first) return null;
 	const { data } = getApiBalanceV2({
-		ctx,
+		// Same scoping as legacy's balances: `balance.feature` expands the feature, a bare `feature` does not.
+		ctx: scopeExpandForCtx({ ctx, prefix: ["balances", "balance"] }),
 		fullSubject,
 		customerEntitlements,
 		feature: first.entitlement.feature,

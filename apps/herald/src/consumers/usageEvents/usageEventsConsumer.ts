@@ -7,6 +7,10 @@ import type {
 	StreamRecord,
 } from "../../stream/types/streamConsumer.js";
 import { recordToUsageEvent } from "./actions/recordToUsageEvent.js";
+import {
+	sendUnsentToTinybird,
+	type TinybirdProgress,
+} from "./actions/sendUnsentToTinybird.js";
 
 /** One event built once feeds both stores. A replayed record makes the same event id, which the insert skips. */
 export function createUsageEventsConsumer({
@@ -18,6 +22,8 @@ export function createUsageEventsConsumer({
 		logger: Pick<AutumnLogger, "error">;
 	};
 }): StreamConsumer {
+	const tinybirdProgress: TinybirdProgress = new WeakMap();
+
 	async function handle({
 		records,
 	}: {
@@ -29,8 +35,14 @@ export function createUsageEventsConsumer({
 			if (event) events.push(event);
 		}
 		// Tinybird first: it cannot skip a repeat, so a crash after it may repeat one batch, never lose one.
-		await ctx.eventsTinybird?.sendUsageEvents({ events });
+		await sendUnsentToTinybird({
+			eventsTinybird: ctx.eventsTinybird,
+			progress: tinybirdProgress,
+			records,
+			events,
+		});
 		const { refused } = await ctx.eventsDb.insertUsageEvents({ events });
+		tinybirdProgress.delete(records);
 		// Set aside so the rest of the batch lands; loud, because a refused event is usage nobody will see.
 		for (const { event, cause } of refused) {
 			ctx.logger.error(

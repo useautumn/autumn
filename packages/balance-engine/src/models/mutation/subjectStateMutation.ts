@@ -107,7 +107,7 @@ export const refineSubjectStateMutation = (
 			path: ["id"],
 		});
 	}
-	// A plan that creates the customer starts its log; an entity initialize re-inserts the customer row mid-log.
+	// A plan that creates the customer starts its log.
 	const planCreatesCustomer =
 		mutation.command.type === "applyBillingPlan" &&
 		changesInsertCustomer({ changes: mutation.changes });

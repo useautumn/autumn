@@ -7,12 +7,14 @@ import type { InitializeCommand } from "./types/initializeCommand.js";
 const byId = <Row extends { id: string }>(rows: Row[]): Row[] =>
 	[...rows].sort((left, right) => left.id.localeCompare(right.id));
 
-/** The subject first, then its tables in referential order; row order within a table is by id. */
+/**
+ * The subject first, then its tables in referential order; row order within a table is by id.
+ * An entity joins a customer already resident, whose row the worker may have moved past what this read saw.
+ */
 const insertChangesOf = ({ state }: { state: SubjectState }): RowChange[] => [
-	{ table: "customer", op: "insert", row: state.customer },
 	...(state.entity
 		? [{ table: "entity", op: "insert", row: state.entity } as const]
-		: []),
+		: [{ table: "customer", op: "insert", row: state.customer } as const]),
 	...byId(state.customerProducts).map(
 		(row): RowChange => ({ table: "customerProducts", op: "insert", row }),
 	),

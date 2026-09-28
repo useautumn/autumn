@@ -21,6 +21,7 @@ function fixture({ failure }: { failure?: Error } = {}) {
 			reset: async () => undefined,
 			updateBalance: async () => undefined,
 			evict: async () => undefined,
+			finalize: async () => undefined,
 		},
 	};
 	const body: TrackParams = {

@@ -361,6 +361,56 @@ describe("usage windows", () => {
 	);
 
 	test.concurrent(
+		"a cap on a graduated credit pool counts what each tier charged, not a flat rate",
+		() => {
+			const state = createSubjectState({
+				identity,
+				customer: dailyCap({ limit: 100, featureId: "credits" }),
+				customerProducts: [createCustomerProduct()],
+				customerEntitlements: [
+					createCustomerEntitlement({
+						id: "credits_row",
+						featureId: "credits",
+						balance: 100,
+					}),
+				],
+			});
+			const catalog = createCatalogFor({ state });
+			const credits = catalog.features.feat_credits;
+			if (!credits) throw new Error("credits feature row missing");
+			credits.type = FeatureType.CreditSystem;
+			credits.config = {
+				schema: [
+					{
+						metered_feature_id: "messages",
+						feature_amount: 1,
+						tier_behavior: "graduated",
+						tiers: [
+							{ to: 2, credit_amount: 1 },
+							{ to: "inf", credit_amount: 3 },
+						],
+					},
+				],
+			};
+			const outcome = deduct({
+				fullSubject: subjectStateToFullSubject({ state, catalog }),
+				request: createDeductionRequest({
+					internalFeatureId: "feat_messages",
+					org,
+					value: 4,
+				}),
+			});
+
+			// Units 1-2 at 1 credit, units 3-4 at 3: the window counts 8, what the balance lost.
+			expect(windowChangesOf(outcome)).toEqual([
+				expect.objectContaining({
+					row: expect.objectContaining({ feature_id: "credits", usage: 8 }),
+				}),
+			]);
+		},
+	);
+
+	test.concurrent(
 		"a cap on a feature funded only by credits counts its tracked units",
 		() => {
 			const outcome = deduct({

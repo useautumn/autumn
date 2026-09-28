@@ -410,7 +410,11 @@ test.concurrent(
 			latestTotal: 20,
 		});
 
-		await completeInvoiceCheckout({ url: response.payment_url! });
+		await completeInvoiceCheckout({
+			url: response.payment_url!,
+			ctx,
+			customerId,
+		});
 		await timeout(4000);
 
 		const customerAfter =

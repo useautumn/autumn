@@ -98,6 +98,7 @@ export const getOrCreateCustomer = async ({
 			entityData: {
 				name: entityData?.name,
 				feature_id: entityData?.feature_id || "",
+				billing_controls: entityData?.billing_controls,
 			},
 		})) as Entity;
 

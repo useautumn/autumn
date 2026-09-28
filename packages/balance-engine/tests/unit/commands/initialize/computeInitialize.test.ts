@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	applyMutation,
 	computeInitialize,
 	parseInitializeRequest,
 } from "../../../../src/balanceEngine.js";
@@ -103,10 +104,29 @@ describe("initialization computation", () => {
 			});
 			expect(mutation.command).toMatchObject({ type: "initialize" });
 			expect(mutation.changes.map((change) => change.table)).toEqual([
-				"customer",
 				"entity",
 				"customerEntitlements",
 			]);
+		},
+	);
+
+	test.concurrent(
+		"an entity initialize leaves the customer the worker already holds as it is",
+		() => {
+			const resident = {
+				...createState(),
+				revision: 7,
+				customer: { ...createState().customer, name: "renamed since the read" },
+			};
+			const mutation = computeInitialize({
+				...createInitializeRequest({ state: createEntityState() }),
+				revisionBefore: 7,
+			});
+
+			const next = applyMutation({ state: resident, mutation });
+
+			expect(next.customer.name).toBe("renamed since the read");
+			expect(next.entity?.id).toBe(entity.id);
 		},
 	);
 

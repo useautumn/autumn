@@ -32,7 +32,7 @@ test.concurrent(`${chalk.yellowBright("invoice-action: no payment method")}`, as
 		items: [messagesItem, priceItem],
 	});
 
-	const { customerId, autumnV1 } = await initScenario({
+	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "inv-action-no-pm",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -73,6 +73,8 @@ test.concurrent(`${chalk.yellowBright("invoice-action: no payment method")}`, as
 	// Complete checkout with new payment method
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
+		ctx,
+		customerId,
 	});
 
 	const customerAfterCheckout =

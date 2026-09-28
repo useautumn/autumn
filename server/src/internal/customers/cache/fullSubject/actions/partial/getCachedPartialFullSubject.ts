@@ -7,6 +7,7 @@ import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "@/internal/customers/actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
+import { resolveRolloutOrgId } from "@/internal/misc/rollouts/resolveRolloutOrgId.js";
 import {
 	ACTIVE_ROLLOUT_ID,
 	isRolloutCacheStale,
@@ -175,7 +176,7 @@ export const getCachedPartialFullSubject = async ({
 		operation: () => {
 			const stale = isRolloutCacheStale({
 				rolloutId: ACTIVE_ROLLOUT_ID,
-				orgId: ctx.org.id,
+				orgId: resolveRolloutOrgId({ org: ctx.org }),
 				customerId,
 				cachedAt: cached._cachedAt,
 			});

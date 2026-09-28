@@ -23,6 +23,23 @@ describe("withBalanceWorkerFailOpen", () => {
 		});
 	});
 
+	test("an org over its rate cap never reaches the worker and falls back with that reason", async () => {
+		let ran = false;
+		const ctx = { ...contexts.create({}), orgRateLimitDegraded: true };
+		expect(
+			await withBalanceWorkerFailOpen({
+				ctx,
+				source: "test",
+				run: async () => {
+					ran = true;
+					return "worker";
+				},
+				fallback: async ({ reason }) => reason,
+			}),
+		).toEqual({ result: "org_rate_limit", failedOpen: true });
+		expect(ran).toBe(false);
+	});
+
 	test("an unreachable worker that never got the command falls back", async () => {
 		const unreachable = new BalanceWorkerClientError({
 			code: "NO_OWNER",

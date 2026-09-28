@@ -186,13 +186,16 @@ export type {
 	OwnershipTailContext,
 	OwnershipTailKafka,
 	OwnershipTailRecord,
+	OwnershipTailView,
 } from "./topics/ownership/consumer/types/ownershipTail.js";
 export { ownershipTopic } from "./topics/ownership/ownershipTopic.js";
+export { announceDraining } from "./topics/ownership/publisher/announceDraining.js";
 export { announceReady } from "./topics/ownership/publisher/announceReady.js";
 export { claimPartition } from "./topics/ownership/publisher/claimPartition.js";
 export { createOwnershipPublisher } from "./topics/ownership/publisher/createOwnershipPublisher.js";
 export { releasePartition } from "./topics/ownership/publisher/releasePartition.js";
 export type {
+	OwnershipDraining,
 	OwnershipPublisher,
 	OwnershipReadiness,
 } from "./topics/ownership/publisher/types/ownershipPublisher.js";
