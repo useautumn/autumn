@@ -610,6 +610,13 @@
       "when": 1790512936482,
       "tag": "0086_perpetual_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1790589308467,
+      "tag": "0087_owner_fence",
+      "breakpoints": true
     }
   ]
 }

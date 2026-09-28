@@ -22,6 +22,9 @@ import type {
 /** Where a fetched baseline goes: onto the log as an initialize mutation, or straight into the writer's map. */
 export type SubjectBaseline = "log" | "map";
 
+/** The latest ownership fence a partition's log carried: records above `offset` from an epoch below `epoch` are a stale owner's. */
+export type OwnerFence = { epoch: bigint; offset: bigint };
+
 /** One partition's resident state: subject states, mutation receipts, Kafka progress. */
 export type StateStore = {
 	/** "log" when the store is private and must learn baselines from the log; "map" when Postgres already holds them. */
@@ -51,6 +54,17 @@ export type StateStore = {
 		topic: string;
 		partition: number;
 		commandNextOffset: bigint;
+	}): void | Promise<void>;
+	/** Null for a store that keeps no fence, or a partition whose log has carried none. */
+	readOwnerFence?(params: {
+		topic: string;
+		partition: number;
+	}): OwnerFence | null;
+	/** Keeps a fence only when its epoch is higher than the stored one; lower or equal is a no-op. */
+	advanceOwnerFence?(params: {
+		topic: string;
+		partition: number;
+		fence: OwnerFence;
 	}): void | Promise<void>;
 	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either. */
 	applyDurableMutations(params: {

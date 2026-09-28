@@ -33,6 +33,18 @@ const UNAVAILABLE_CLIENT_CODES = new Set([
 
 const STALE_SUBJECT_CODE = "balance_worker_stale_subject";
 const UNAVAILABLE_CODE = "balance_worker_unavailable";
+const OVERLOADED_CODE = "balance_worker_overloaded";
+const RESULT_UNKNOWN_CODE = "balance_worker_result_unknown";
+/** The worker never took the command, or never confirmed it; a fallback that is safe to repeat may answer instead. */
+export type BalanceWorkerFailOpenReason =
+	| typeof UNAVAILABLE_CODE
+	| typeof OVERLOADED_CODE
+	| typeof RESULT_UNKNOWN_CODE;
+const FAIL_OPEN_CODES: ReadonlySet<string> = new Set([
+	UNAVAILABLE_CODE,
+	OVERLOADED_CODE,
+	RESULT_UNKNOWN_CODE,
+]);
 
 /** The worker's copy of the customer was behind Postgres: it dropped the copy and wrote nothing. */
 export const isBalanceWorkerStaleSubjectError = (error: unknown): boolean =>
@@ -41,6 +53,23 @@ export const isBalanceWorkerStaleSubjectError = (error: unknown): boolean =>
 /** The worker was unreachable and the command was never submitted, so answering another way loses nothing. */
 export const isBalanceWorkerUnavailableError = (error: unknown): boolean =>
 	error instanceof RecaseError && error.code === UNAVAILABLE_CODE;
+
+/**
+ * Why a request may fail open, or null when the worker gave a verdict. Three cases
+ * qualify: the worker was unreachable, it shed the command as overloaded, or it took
+ * the command and never confirmed it. The last one is only safe for a fallback that
+ * cannot apply twice: a track queued under the same command ids is deduplicated by
+ * the worker, and a check's fallback writes nothing.
+ */
+export const balanceWorkerFailOpenReasonOf = (
+	error: unknown,
+): BalanceWorkerFailOpenReason | null => {
+	if (!(error instanceof RecaseError)) return null;
+	const { code } = error;
+	return typeof code === "string" && FAIL_OPEN_CODES.has(code)
+		? (code as BalanceWorkerFailOpenReason)
+		: null;
+};
 
 export function rethrowBalanceWorkerError({
 	cause,
@@ -164,7 +193,7 @@ export function rethrowBalanceWorkerError({
 		cause.workerCode === "OVERLOADED"
 	) {
 		throw new RecaseError({
-			code: "balance_worker_overloaded",
+			code: OVERLOADED_CODE,
 			statusCode: 429,
 			message:
 				"Too many concurrent requests for this customer; retry with backoff",
@@ -179,7 +208,7 @@ export function rethrowBalanceWorkerError({
 		// must reuse its idempotency key rather than retry blind.
 		const mayHaveApplied = cause.outcome === "unknown";
 		throw new RecaseError({
-			code: mayHaveApplied ? "balance_worker_result_unknown" : UNAVAILABLE_CODE,
+			code: mayHaveApplied ? RESULT_UNKNOWN_CODE : UNAVAILABLE_CODE,
 			statusCode: 503,
 			message: mayHaveApplied
 				? "Balance worker did not confirm the command; it may already have been applied"

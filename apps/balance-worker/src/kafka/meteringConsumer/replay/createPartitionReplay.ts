@@ -47,6 +47,14 @@ export function createPartitionReplay({
 		return ctx.positionTracker.readProgress(position);
 	}
 
+	function awaitNextOffset(params: {
+		topic: string;
+		partition: number;
+		nextOffset: bigint;
+		signal?: AbortSignal;
+	}): Promise<void> {
+		return ctx.positionTracker.waitUntil(params);
+	}
 	function stop(): Promise<void> {
 		return stopReplay({ ctx, state });
 	}
@@ -55,5 +63,12 @@ export function createPartitionReplay({
 		markReplayUnavailable({ ctx, state, cause });
 	}
 
-	return { readLogRange, startAndCatchUp, readProgress, stop, markUnavailable };
+	return {
+		readLogRange,
+		startAndCatchUp,
+		readProgress,
+		awaitNextOffset,
+		stop,
+		markUnavailable,
+	};
 }

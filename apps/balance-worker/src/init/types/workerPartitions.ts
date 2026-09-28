@@ -3,6 +3,7 @@ import type { KafkaConsumerClient } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionReplay } from "../../kafka/meteringConsumer/types/partitionReplay.js";
+import type { OwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import type {
 	PartitionRuntimeResources,
 	PartitionsDependencies,
@@ -24,6 +25,8 @@ export type KafkaPartitionRuntimeFactory = (position: {
 	preparation: PartitionReplay;
 	recentCommands: RecentCommands;
 	producedOffsets?: ProducedOffsets;
+	/** Written by the runtime on its claim; the follower reads it to recognise a fence from a later owner. */
+	ownerEpoch?: OwnerEpochCell;
 }) => Omit<PartitionRuntimeResources, "markUnavailable">;
 
 export type WorkerPartitionsContext = {

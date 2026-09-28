@@ -6,6 +6,8 @@ export interface PartitionRuntimePort {
 	prepare(): Promise<void>;
 	/** Fences and catches up from the bookmark; only after the predecessor has drained. */
 	activate(): Promise<void>;
+	/** After a claim won outright: writes the fence marker under the new epoch and reads up to it. */
+	fence?(): Promise<void>;
 	stop(): Promise<void>;
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;

@@ -11,6 +11,7 @@ import {
 } from "@autumn/kafka";
 import { createCommandRecordHandler } from "../../kafka/commandConsumer/createCommandRecordHandler.js";
 import { createMeteringConsumer } from "../../kafka/meteringConsumer/createMeteringConsumer.js";
+import { createOwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import { createPartitions } from "../../partitions/createPartitions.js";
 import type {
 	PartitionChangeListeners,
@@ -100,10 +101,13 @@ export function createWorkerPartitions({
 		});
 		// Also one per runtime: the writer remembers what it produced, the replay passes those records unread.
 		const producedOffsets = createProducedOffsets();
+		// The claim's epoch, written by the runtime, read by its follower to spot a fence from a later owner.
+		const ownerEpoch = createOwnerEpochCell();
 		const follower = meteringConsumer.createReplay({
 			partition,
 			recentCommands,
 			producedOffsets,
+			ownerEpoch: ownerEpoch.read,
 		});
 		const preparation = meteringConsumer.createReplay({
 			partition,
@@ -117,6 +121,7 @@ export function createWorkerPartitions({
 			preparation,
 			recentCommands,
 			producedOffsets,
+			ownerEpoch,
 		});
 		function markUnavailable(failure: PartitionFailure): void {
 			preparation.markUnavailable(failure);

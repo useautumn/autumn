@@ -1,4 +1,4 @@
-import type { Consumer, EachBatchPayload } from "kafkajs";
+import type { Consumer, EachBatchPayload, IHeaders } from "kafkajs";
 import type { ProgressTracker } from "./progress.js";
 
 export type KafkaConsumerClient = Pick<
@@ -19,7 +19,13 @@ export type KafkaConsumerClient = Pick<
 export type TopicRecord = {
 	topic: string;
 	partition: number;
-	message: { offset: string; key: Buffer | null; value: Buffer | null };
+	message: {
+		offset: string;
+		key: Buffer | null;
+		value: Buffer | null;
+		/** Record headers as Kafka delivered them; the owner epoch and fence markers ride here. */
+		headers?: IHeaders;
+	};
 };
 
 // biome-ignore lint/suspicious/noConfusingVoidType: Handlers may apply records without returning an offset.

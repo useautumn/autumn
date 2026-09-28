@@ -33,6 +33,7 @@ function createFakeCommitterDb({
 } = {}) {
 	const progress = new Map<string, bigint>();
 	const commandProgress = new Map<string, bigint>();
+	const fences = new Map<string, { epoch: bigint; offset: bigint }>();
 	if (storedNextOffset !== null)
 		progress.set(`${topic}[${partition}]`, storedNextOffset);
 	const updates: SubjectRowChange[] = [];
@@ -45,6 +46,7 @@ function createFakeCommitterDb({
 			return {
 				nextOffset,
 				commandNextOffset: commandProgress.get(key) ?? null,
+				ownerFence: fences.get(key) ?? null,
 			};
 		},
 		insertPartitionProgress: async ({ topic, partition, nextOffset }) => {
@@ -80,12 +82,15 @@ function createFakeCommitterDb({
 				progress.set(key, bookmark.nextOffset);
 				if (bookmark.commandNextOffset !== undefined)
 					commandProgress.set(key, bookmark.commandNextOffset);
+				const fence = bookmark.ownerFence;
+				if (fence && (fences.get(key)?.epoch ?? -1n) < fence.epoch)
+					fences.set(key, fence);
 			}
 			transactions.push("committed");
 			return { applied };
 		},
 	};
-	return { db, progress, commandProgress, updates, transactions };
+	return { db, progress, commandProgress, fences, updates, transactions };
 }
 
 function createStore(fake: ReturnType<typeof createFakeCommitterDb>) {
@@ -95,6 +100,48 @@ function createStore(fake: ReturnType<typeof createFakeCommitterDb>) {
 }
 
 describe("committer state store", () => {
+	test("an owner fence lands beside the bookmark, reloads with it, and a lower epoch never replaces it", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+		expect(store.readOwnerFence?.({ topic, partition })).toBeNull();
+
+		await store.advanceOwnerFence?.({
+			topic,
+			partition,
+			fence: { epoch: 512n, offset: 40n },
+		});
+		expect(fake.transactions).toEqual(["committed"]);
+		expect(fake.fences.get(`${topic}[${partition}]`)).toEqual({
+			epoch: 512n,
+			offset: 40n,
+		});
+		// The marker moves no bookmark: the record after it does.
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
+		expect(store.readOwnerFence?.({ topic, partition })).toEqual({
+			epoch: 512n,
+			offset: 40n,
+		});
+
+		await store.advanceOwnerFence?.({
+			topic,
+			partition,
+			fence: { epoch: 500n, offset: 41n },
+		});
+		expect(fake.transactions).toEqual(["committed"]);
+		expect(store.readOwnerFence?.({ topic, partition })).toEqual({
+			epoch: 512n,
+			offset: 40n,
+		});
+
+		const reloaded = createStore(fake);
+		await reloaded.loadProgress({ topic, partition });
+		expect(reloaded.readOwnerFence?.({ topic, partition })).toEqual({
+			epoch: 512n,
+			offset: 40n,
+		});
+	});
+
 	test("a track lands as one guarded update and one bookmark advance, in one transaction", async () => {
 		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
 		const store = createStore(fake);

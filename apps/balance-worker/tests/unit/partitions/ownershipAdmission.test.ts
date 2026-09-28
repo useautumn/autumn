@@ -87,6 +87,9 @@ const fixture = ({
 				if (!unready) status = "ready";
 				events.push(`ready:${partition}`);
 			},
+			fence: async () => {
+				events.push(`fence:${partition}`);
+			},
 			drain: async () => {
 				events.push(`gate-closed:${partition}`);
 				if (status === "recovery_required")
@@ -262,6 +265,10 @@ describe("Ownership publication and admission", () => {
 		).toBeUndefined();
 		expect(f.events.indexOf("ready:2")).toBeLessThan(
 			f.events.indexOf("claim:2"),
+		);
+		// The marker under the new epoch goes in once the claim names it, before any request is admitted.
+		expect(f.events.indexOf("claimed:2")).toBeLessThan(
+			f.events.indexOf("fence:2"),
 		);
 		await f.ownership.stop();
 	});

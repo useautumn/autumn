@@ -4,7 +4,7 @@ import { withBalanceWorkerFailOpen } from "../../balanceWorker/failOpen/withBala
 import { runBalanceWorkerTrack } from "./runBalanceWorkerTrack.js";
 
 /** A track route on the worker: queued when async, else applied, and queued instead when the org is over its
- *  rate cap or the owner is unreachable. */
+ *  rate cap, the owner is unreachable or overloaded, or the owner took the command and never confirmed it. */
 export async function trackOnBalanceWorker({
 	ctx,
 	body,
@@ -23,7 +23,8 @@ export async function trackOnBalanceWorker({
 		ctx,
 		source: "track",
 		run: () => runBalanceWorkerTrack({ ctx, body }),
-		// Queued on the command log, applied once the worker is back; each feature keeps its command id, so none applies twice.
+		// Queued on the command log, applied once the worker has room; each feature keeps its command id, so a
+		// command the worker did take before going quiet is a no-op on replay, never a second deduction.
 		fallback: () => runBalanceWorkerTrack({ ctx, body, isAsync: true }),
 	});
 	return { result, status: failedOpen ? 202 : 200 };

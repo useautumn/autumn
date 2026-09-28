@@ -43,6 +43,39 @@ export class OwnedPartitionProducerFencedError extends OwnedPartitionRecoveryReq
 	}
 }
 
+/** The partition's log carried a fence from a higher epoch: another worker owns it now, whatever this one still believes. */
+export class OwnerEpochSupersededError extends Error {
+	readonly retriable = false;
+	readonly topic: string;
+	readonly partition: number;
+	readonly ownEpoch: bigint;
+	readonly fenceEpoch: bigint;
+	readonly fenceOffset: bigint;
+	constructor({
+		topic,
+		partition,
+		ownEpoch,
+		fenceEpoch,
+		fenceOffset,
+	}: {
+		topic: string;
+		partition: number;
+		ownEpoch: bigint;
+		fenceEpoch: bigint;
+		fenceOffset: bigint;
+	}) {
+		super(
+			`Partition ${topic}[${partition}] was fenced at epoch ${fenceEpoch} (log offset ${fenceOffset}); this worker holds epoch ${ownEpoch}`,
+		);
+		this.name = "OwnerEpochSupersededError";
+		this.topic = topic;
+		this.partition = partition;
+		this.ownEpoch = ownEpoch;
+		this.fenceEpoch = fenceEpoch;
+		this.fenceOffset = fenceOffset;
+	}
+}
+
 function findFencedCause(
 	cause: unknown,
 ): OwnedPartitionProducerFencedError | undefined {

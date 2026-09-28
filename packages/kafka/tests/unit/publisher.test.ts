@@ -13,7 +13,10 @@ import {
 	type KafkaTransaction,
 	KafkaTransactionStateUnknownError,
 	OWNER_EPOCH_HEADER,
+	OWNER_FENCE_HEADER,
+	OWNER_FENCE_KEY,
 	sendIdempotentBatch,
+	sendOwnerFence,
 	sendTransactionalBatch,
 	sendTransactionalOffsets,
 } from "../../src/kafka.js";
@@ -496,6 +499,109 @@ describe("idempotent batches", () => {
 		expect(committed).toEqual([offsets]);
 		expect(fake.records[0]?.messages[0]?.headers).toEqual({
 			[OWNER_EPOCH_HEADER]: "99",
+		});
+	});
+});
+
+describe("owner fence marker", () => {
+	const topic = "metering-events-v1";
+	const partition = 3;
+
+	function createFakeSender({
+		sendError,
+		metadata = [
+			{ topicName: topic, partition, errorCode: 0, baseOffset: "41" },
+		],
+	}: {
+		sendError?: Error;
+		metadata?: RecordMetadata[];
+	} = {}) {
+		const records: ProducerRecord[] = [];
+		async function send(record: ProducerRecord): Promise<RecordMetadata[]> {
+			records.push(record);
+			if (sendError) throw sendError;
+			return metadata;
+		}
+		return { records, sender: { send } };
+	}
+
+	test("one record with acks=all, keyed as a fence and stamped with the epoch; its offset comes back", async () => {
+		const fake = createFakeSender();
+		const fenced = await sendOwnerFence({
+			sender: fake.sender,
+			topic,
+			partition,
+			ownerEpoch: "2516",
+		});
+		expect(fenced.offset).toBe(41n);
+		expect(fake.records).toHaveLength(1);
+		const [record] = fake.records;
+		expect(record?.acks).toBe(-1);
+		expect(record?.topic).toBe(topic);
+		expect(record?.messages).toHaveLength(1);
+		const [message] = record?.messages ?? [];
+		expect(message?.partition).toBe(partition);
+		expect(message?.key?.toString()).toBe(OWNER_FENCE_KEY);
+		expect(message?.headers).toEqual({
+			[OWNER_EPOCH_HEADER]: "2516",
+			[OWNER_FENCE_HEADER]: "1",
+		});
+		expect(JSON.parse(String(message?.value))).toEqual({
+			type: "owner_fence",
+			ownerEpoch: "2516",
+		});
+	});
+
+	test("an epoch that is not a log offset is refused before anything is sent", async () => {
+		const fake = createFakeSender();
+		await expect(
+			sendOwnerFence({
+				sender: fake.sender,
+				topic,
+				partition,
+				ownerEpoch: "x1",
+			}),
+		).rejects.toBeInstanceOf(RangeError);
+		expect(fake.records).toHaveLength(0);
+	});
+
+	test("a lost reply leaves the fence's fate unknown, like a batch", async () => {
+		const lost = createFakeSender({
+			sendError: new Error("request timed out"),
+		});
+		await expect(
+			sendOwnerFence({
+				sender: lost.sender,
+				topic,
+				partition,
+				ownerEpoch: "1",
+			}),
+		).rejects.toBeInstanceOf(KafkaTransactionStateUnknownError);
+	});
+
+	test("the publisher writes the marker only under idempotent commits; a transactional producer is fenced by the broker", async () => {
+		const fake = createFakeSender();
+		const producer = {
+			transaction: async () => {
+				throw new Error("no transactions");
+			},
+			send: fake.sender.send,
+		};
+		const transactional = createMeteringPublisher({ ctx: { producer } });
+		expect(
+			await transactional.fence({ topic, partition, ownerEpoch: "5" }),
+		).toBeNull();
+		expect(fake.records).toHaveLength(0);
+
+		const idempotent = createMeteringPublisher({
+			ctx: { producer, commit: { mode: "idempotent" } },
+		});
+		expect(
+			await idempotent.fence({ topic, partition, ownerEpoch: "5" }),
+		).toEqual({ offset: 41n });
+		expect(fake.records[0]?.messages[0]?.headers).toEqual({
+			[OWNER_EPOCH_HEADER]: "5",
+			[OWNER_FENCE_HEADER]: "1",
 		});
 	});
 });

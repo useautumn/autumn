@@ -98,6 +98,11 @@ export {
 	sendIdempotentBatch,
 } from "./producer/sendIdempotentBatch.js";
 export {
+	OWNER_FENCE_HEADER,
+	OWNER_FENCE_KEY,
+	sendOwnerFence,
+} from "./producer/sendOwnerFence.js";
+export {
 	sendTransactionalBatch,
 	sendTransactionalOffsets,
 } from "./producer/sendTransactionalBatch.js";
@@ -140,6 +145,7 @@ export { createMeteringConsumer } from "./topics/metering/consumer/createMeterin
 export { createMeteringReader } from "./topics/metering/consumer/createMeteringReader.js";
 export type {
 	MeteringConsumerDependencies,
+	MeteringFenceApplication,
 	MeteringRecordApplication,
 	MeteringRecordFailure,
 	MeteringRecordHandler,
@@ -153,6 +159,8 @@ export {
 	parseMeteringRecord,
 	serializeMeteringRecord,
 } from "./topics/metering/meteringTopic.js";
+export type { OwnerHeaders } from "./topics/metering/ownerHeaders.js";
+export { readOwnerHeaders } from "./topics/metering/ownerHeaders.js";
 export { createMeteringPublisher } from "./topics/metering/publisher/createMeteringPublisher.js";
 export type {
 	MeteringAppend,

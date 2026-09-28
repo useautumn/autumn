@@ -10,6 +10,7 @@ import {
 	BALANCE_WORKER_MAX_REQUEST_BYTES,
 	BALANCE_WORKER_PARTITION_COUNT,
 	BALANCE_WORKER_RECEIPT_RETENTION_MS,
+	BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
 	BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
 } from "./balanceWorkerConstants.js";
 import {
@@ -37,6 +38,11 @@ const listener = z.object({
 	BALANCE_WORKER_HOST: loopbackHost.default("127.0.0.1"),
 	BALANCE_WORKER_PORT: positiveInteger.max(65535).default(8082),
 	BALANCE_WORKER_ENDPOINT: z.string().url().optional(),
+	BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE: z.coerce
+		.number()
+		.min(0)
+		.max(1)
+		.default(BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE),
 });
 
 const state = z.object({

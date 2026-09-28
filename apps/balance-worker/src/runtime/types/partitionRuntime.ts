@@ -25,6 +25,8 @@ import type { PartitionRuntimeStatus } from "./partitionRuntimeState.js";
 export type OwnedPartitionProducer = {
 	connect(): Promise<void>;
 	fence(): Promise<void>;
+	/** Writes the owner's fence marker once the epoch is known; null when there is nothing to write. */
+	fenceOwnership?(): Promise<{ offset: bigint } | null>;
 	disconnect(): Promise<void>;
 };
 
@@ -46,6 +48,13 @@ export type PartitionOutcomeFollowerPort = {
 		topic: string;
 		partition: number;
 	}): OwnedPartitionFollowerProgress;
+	/** Resolves once everything below `nextOffset` has been applied. */
+	awaitNextOffset?(params: {
+		topic: string;
+		partition: number;
+		nextOffset: bigint;
+		signal?: AbortSignal;
+	}): Promise<void>;
 	stop(): Promise<void>;
 };
 
@@ -99,6 +108,8 @@ export type PartitionRuntime = {
 	/** Read-only, on the preparation follower: its stop settles before activation starts the real one. */
 	prepare(): Promise<void>;
 	activate(): Promise<void>;
+	/** After the claim: writes the owner's fence marker and reads up to it, so nothing a stale owner appends can slip in. */
+	fence(): Promise<void>;
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;
 	start(): Promise<void>;

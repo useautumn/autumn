@@ -136,6 +136,9 @@ export async function createBalanceWorker({
 				ownership: partitions,
 				partitionResolver: resources.partitionResolver,
 				logger: dependencies.logger,
+				requestLog: {
+					successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
+				},
 			},
 		});
 

@@ -1,16 +1,29 @@
-import type { KafkaProducerSession, KafkaTransaction } from "@autumn/kafka";
+import {
+	type KafkaProducerSession,
+	type KafkaTransaction,
+	sendOwnerFence,
+} from "@autumn/kafka";
 
 export { createWorkerProducerConfig } from "../init/workerConfig.js";
 
 import { translateKafkaProducerError } from "./workerKafkaErrors.js";
 
+export type WorkerProducer = KafkaProducerSession & {
+	/** Idempotent mode with a known epoch: writes the fence marker and returns where it landed; otherwise null. */
+	fenceOwnership(): Promise<{ offset: bigint } | null>;
+};
+
 export function createWorkerProducer({
 	ctx,
 	config,
 }: {
-	ctx: { session: KafkaProducerSession };
+	ctx: {
+		session: KafkaProducerSession;
+		/** The epoch the partition's writer holds; undefined until a claim names it. */
+		ownerEpoch?: () => string | undefined;
+	};
 	config: { topic: string; partition: number };
-}): KafkaProducerSession {
+}): WorkerProducer {
 	const { session } = ctx;
 	const { topic, partition } = config;
 	const { isUsable } = session;
@@ -38,6 +51,23 @@ export function createWorkerProducer({
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}
+		// A handoff names the epoch before activation: the marker goes in here and the catch-up covers it.
+		await fenceOwnership();
+	}
+	async function fenceOwnership(): Promise<{ offset: bigint } | null> {
+		if (session.mode !== "idempotent") return null;
+		const ownerEpoch = ctx.ownerEpoch?.();
+		if (ownerEpoch === undefined) return null;
+		try {
+			return await sendOwnerFence({
+				sender: session,
+				topic,
+				partition,
+				ownerEpoch,
+			});
+		} catch (cause) {
+			throw translateKafkaProducerError({ topic, partition, cause });
+		}
 	}
 
 	async function transaction(): Promise<KafkaTransaction> {
@@ -61,6 +91,7 @@ export function createWorkerProducer({
 	return {
 		connect,
 		fence,
+		fenceOwnership,
 		disconnect,
 		transaction,
 		send,

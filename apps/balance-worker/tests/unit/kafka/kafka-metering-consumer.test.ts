@@ -27,6 +27,11 @@ import {
 import { createProducedOffsets } from "../../../src/processor/writer/producedOffsets/createProducedOffsets.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
+	OwnedPartitionProducerFencedError,
+	OwnerEpochSupersededError,
+} from "../../../src/runtime/runtimeErrors.js";
+import type { OwnerFence } from "../../../src/state/types/stateStore.js";
+import {
 	applyDurableMutation,
 	createInitializeMutation,
 	restoreSubjectStates,
@@ -1968,4 +1973,261 @@ test("the handler passes offsets this partition's writer produced and reads ever
 	} finally {
 		fixture.store.close();
 	}
+});
+
+describe("owner fences", () => {
+	function createFencedHandler({
+		ownEpoch,
+		readOnly = false,
+	}: {
+		ownEpoch?: string;
+		readOnly?: boolean;
+	} = {}) {
+		const fixture = createStoreFixture({ nextOffset: 3n });
+		const state = createState();
+		restoreSubjectStates({
+			store: fixture.store,
+			topic,
+			partition,
+			states: [state],
+		});
+		const recentCommands = createRecentCommands({
+			windowMs: 600_000,
+			now: () => 0,
+		});
+		const warnings: unknown[][] = [];
+		const parked: unknown[] = [];
+		const advanced: OwnerFence[] = [];
+		let clock = 0;
+		const handler = createMeteringRecordHandler({
+			ctx: {
+				stateStore: {
+					...fixture.store,
+					readOwnerFence: () => null,
+					advanceOwnerFence: ({ fence }) => {
+						advanced.push(fence);
+					},
+				},
+				partitionOffsets: {
+					fetchTopicOffsets: async () => {
+						throw new Error("No broker read expected");
+					},
+				},
+				recentCommandsByPartition: new Map([[partition, recentCommands]]),
+				replayFloorByPartition: new Map(),
+				replayByPartition: new Map([
+					[
+						partition,
+						{
+							markUnavailable: ({ cause }: { cause: unknown }) =>
+								parked.push(cause),
+						},
+					],
+				]),
+				readOnlyPartitions: readOnly ? new Set([partition]) : undefined,
+				ownerEpochByPartition:
+					ownEpoch === undefined
+						? undefined
+						: new Map([[partition, () => ownEpoch]]),
+				logger: { warn: (...args: unknown[]) => warnings.push(args) },
+				now: () => clock,
+			},
+		});
+		/** Only the drops: parking a partition warns too. */
+		function staleLines() {
+			return warnings.filter(
+				([message]) => message === "Stale owner record skipped",
+			);
+		}
+		function tick(ms: number) {
+			clock += ms;
+		}
+		return {
+			fixture,
+			state,
+			recentCommands,
+			handler,
+			warnings,
+			staleLines,
+			tick,
+			parked,
+			advanced,
+		};
+	}
+
+	test("after the marker a lower epoch's record is dropped and counted; the owner's own epoch still applies", async () => {
+		const f = createFencedHandler({ ownEpoch: "7" });
+		try {
+			expect(
+				await f.handler.applyFence?.({
+					position: { topic, partition, offset: 3n },
+					ownerEpoch: 7n,
+				}),
+			).toBeUndefined();
+			expect(f.parked).toEqual([]);
+			expect(f.advanced).toEqual([{ epoch: 7n, offset: 3n }]);
+
+			const stale = createMutation({ state: f.state, commandId: "cmd_stale" });
+			expect(
+				await f.handler.applyRecord({
+					position: { topic, partition, offset: 4n },
+					record: stale,
+					ownerEpoch: 6n,
+				}),
+			).toBeUndefined();
+			expect(f.fixture.store.readNextOffset({ topic, partition })).toBe(3n);
+			expect(
+				f.recentCommands.read({ identity, commandId: "cmd_stale" }),
+			).toBeNull();
+			expect(f.staleLines()).toEqual([
+				[
+					"Stale owner record skipped",
+					{
+						topic,
+						partition,
+						offset: "4",
+						ownerEpoch: "6",
+						fenceEpoch: "7",
+						fenceOffset: "3",
+						count: 1,
+					},
+				],
+			]);
+
+			const own = createMutation({ state: f.state, commandId: "cmd_own" });
+			await f.handler.applyRecord({
+				position: { topic, partition, offset: 5n },
+				record: own,
+				ownerEpoch: 7n,
+			});
+			expect(f.fixture.store.readNextOffset({ topic, partition })).toBe(6n);
+			expect(f.recentCommands.read({ identity, commandId: "cmd_own" })).toEqual(
+				{ fingerprint: own.receipt.fingerprint },
+			);
+		} finally {
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a marker above this worker's own epoch parks the partition as fenced and keeps its later records out", async () => {
+		const f = createFencedHandler({ ownEpoch: "7" });
+		try {
+			await f.handler.applyFence?.({
+				position: { topic, partition, offset: 3n },
+				ownerEpoch: 9n,
+			});
+			expect(f.parked).toHaveLength(1);
+			const [cause] = f.parked;
+			expect(cause).toBeInstanceOf(OwnedPartitionProducerFencedError);
+			const superseded = (cause as Error).cause;
+			expect(superseded).toBeInstanceOf(OwnerEpochSupersededError);
+			expect(superseded).toMatchObject({
+				topic,
+				partition,
+				ownEpoch: 7n,
+				fenceEpoch: 9n,
+				fenceOffset: 3n,
+			});
+			// The new owner lands the fence; the fenced worker only steps aside.
+			expect(f.advanced).toEqual([]);
+
+			expect(
+				await f.handler.applyRecord({
+					position: { topic, partition, offset: 4n },
+					record: createMutation({ state: f.state, commandId: "cmd_late" }),
+					ownerEpoch: 7n,
+				}),
+			).toBeUndefined();
+			expect(f.fixture.store.readNextOffset({ topic, partition })).toBe(3n);
+			expect(f.staleLines()).toHaveLength(1);
+		} finally {
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a read-only replay tracks the fence for its dedup window: before the marker or from a higher epoch counts, after it from a lower epoch does not", async () => {
+		const f = createFencedHandler({ readOnly: true });
+		try {
+			await f.handler.applyFence?.({
+				position: { topic, partition, offset: 5n },
+				ownerEpoch: 7n,
+			});
+			expect(f.parked).toEqual([]);
+			expect(f.advanced).toEqual([]);
+
+			const before = createMutation({
+				state: f.state,
+				commandId: "cmd_before",
+			});
+			await f.handler.applyRecord({
+				position: { topic, partition, offset: 4n },
+				record: before,
+				ownerEpoch: 6n,
+			});
+			expect(
+				f.recentCommands.read({ identity, commandId: "cmd_before" }),
+			).toEqual({ fingerprint: before.receipt.fingerprint });
+
+			await f.handler.applyRecord({
+				position: { topic, partition, offset: 6n },
+				record: createMutation({ state: f.state, commandId: "cmd_after" }),
+				ownerEpoch: 6n,
+			});
+			expect(
+				f.recentCommands.read({ identity, commandId: "cmd_after" }),
+			).toBeNull();
+
+			const newer = createMutation({ state: f.state, commandId: "cmd_newer" });
+			await f.handler.applyRecord({
+				position: { topic, partition, offset: 7n },
+				record: newer,
+				ownerEpoch: 8n,
+			});
+			expect(
+				f.recentCommands.read({ identity, commandId: "cmd_newer" }),
+			).toEqual({ fingerprint: newer.receipt.fingerprint });
+
+			// Markers from an epoch at or below the fence change nothing.
+			await f.handler.applyFence?.({
+				position: { topic, partition, offset: 8n },
+				ownerEpoch: 5n,
+			});
+			await f.handler.applyFence?.({
+				position: { topic, partition, offset: 9n },
+				ownerEpoch: 7n,
+			});
+			f.tick(1_000);
+			await f.handler.applyRecord({
+				position: { topic, partition, offset: 10n },
+				record: createMutation({ state: f.state, commandId: "cmd_still" }),
+				ownerEpoch: 6n,
+			});
+			expect(
+				f.recentCommands.read({ identity, commandId: "cmd_still" }),
+			).toBeNull();
+			expect(f.fixture.store.readNextOffset({ topic, partition })).toBe(3n);
+			expect(f.staleLines()).toHaveLength(2);
+		} finally {
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a record without an epoch, written under a transaction, is never judged by the fence", async () => {
+		const f = createFencedHandler({ ownEpoch: "7" });
+		try {
+			await f.handler.applyFence?.({
+				position: { topic, partition, offset: 3n },
+				ownerEpoch: 7n,
+			});
+			const transactional = createMutation({ state: f.state });
+			await f.handler.applyRecord({
+				position: { topic, partition, offset: 4n },
+				record: transactional,
+			});
+			expect(f.fixture.store.readNextOffset({ topic, partition })).toBe(5n);
+			expect(f.staleLines()).toEqual([]);
+		} finally {
+			closeStoreFixture(f.fixture);
+		}
+	});
 });
