@@ -64,6 +64,8 @@ export const fetchEventsAggregate = async ({
 			timezone,
 			group_by: publicGroupBy,
 			max_groups: publicGroupBy ? (maxGroups ?? undefined) : undefined,
+			// One top-N set for the whole range, so a group never drops to a fake 0.
+			group_ranking: publicGroupBy ? "window" : undefined,
 			aggregate_on: aggregateOn,
 		},
 	);

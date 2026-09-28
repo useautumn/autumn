@@ -49,6 +49,7 @@ import { formatBinStartLabel } from "./utils/parseTimestamp";
 import { assignSeriesColors } from "./utils/seriesColors";
 import {
 	generateChartConfig,
+	orderSeriesByVolume,
 	parseSeriesKey,
 	transformGroupedData,
 	trimToTopSeries,
@@ -61,15 +62,17 @@ const STALE_OPACITY = 0.35;
 // Matches the default of charting the top three events.
 const PLACEHOLDER_TABLE_ROWS = 3;
 
-/** Pivots aggregate rows into one column per group×feature, top series only. */
+/** Pivots aggregate rows into one column per group×feature. */
 const toChartSeries = ({
 	events,
 	groupBy,
 	chartGroupBy,
+	isDeducted,
 }: {
 	events: EventsData;
 	groupBy: string | null;
 	chartGroupBy: string | null;
+	isDeducted: boolean;
 }): EventsData => {
 	// Dropping all-zero rows first skips ~95% of a grouped response before the pivot.
 	const nonZeroEvents = dropZeroRowsKeepingPeriods({
@@ -80,6 +83,8 @@ const toChartSeries = ({
 		events: nonZeroEvents,
 		groupBy: chartGroupBy,
 	});
+	// The events pipe already caps groups and folds the rest into "Other".
+	if (!isDeducted) return orderSeriesByVolume({ events: pivoted });
 	return trimToTopSeries({ events: pivoted, maxSeries: MAX_CHART_SERIES });
 };
 
@@ -194,9 +199,14 @@ export const AnalyticsView = () => {
 	const seriesColors = useMemo(() => {
 		if (!chartSource) return {};
 		return assignSeriesColors({
-			events: toChartSeries({ events: chartSource, groupBy, chartGroupBy }),
+			events: toChartSeries({
+				events: chartSource,
+				groupBy,
+				chartGroupBy,
+				isDeducted,
+			}),
 		});
-	}, [chartSource, groupBy, chartGroupBy]);
+	}, [chartSource, groupBy, chartGroupBy, isDeducted]);
 
 	// Transform and configure chart data
 	const { chartData, chartConfig } = useMemo(() => {
@@ -223,6 +233,7 @@ export const AnalyticsView = () => {
 			events: filteredEvents,
 			groupBy,
 			chartGroupBy,
+			isDeducted,
 		});
 
 		const config = generateChartConfig({
