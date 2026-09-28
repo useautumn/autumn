@@ -14,6 +14,7 @@ import Editor from "@monaco-editor/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { TABLE_TRAY_CLASS } from "@/components/general/table";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import {
@@ -93,7 +94,7 @@ export const RawEdgeConfigForm = ({
 							No orgs are blocked right now.
 						</p>
 					) : (
-						<div className="overflow-hidden rounded-lg border border-border">
+						<div className={TABLE_TRAY_CLASS}>
 							<Table className="text-xs">
 								<TableHeader>
 									<TableRow>

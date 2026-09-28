@@ -1,11 +1,6 @@
 import type { MigrationItemRunSkipReason } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
-import {
-	CheckCircleIcon,
-	type Icon,
-	MinusCircleIcon,
-	XCircleIcon,
-} from "@phosphor-icons/react";
+import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
+import { CheckIcon, type Icon, MinusIcon, XIcon } from "@phosphor-icons/react";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
 import { skipBadgeSpec, skipReasonFromResponse } from "./skipBadge";
@@ -19,16 +14,16 @@ export function ActiveRunDot({ className }: { className?: string }) {
 	);
 }
 
-const LIVE_STYLES: Record<MigrationItemEventStatus, string> = {
-	succeeded: "bg-green-500/10 text-green-500 border-green-500/20",
-	skipped: "bg-muted text-muted-foreground border-border",
-	failed: "bg-red-500/10 text-red-500 border-red-500/20",
+const LIVE_ICON_CLASSES: Record<MigrationItemEventStatus, string> = {
+	succeeded: "bg-green-500",
+	skipped: NEUTRAL_STATUS_ICON_CLASS,
+	failed: "bg-red-500",
 };
 
-const DRY_STYLES: Record<MigrationItemEventStatus, string> = {
-	succeeded: "bg-blue-500/10 text-blue-500 border-blue-500/30 border-dashed",
-	skipped: "bg-muted text-muted-foreground border-border border-dashed",
-	failed: "bg-orange-500/10 text-orange-500 border-orange-500/30 border-dashed",
+const DRY_ICON_CLASSES: Record<MigrationItemEventStatus, string> = {
+	succeeded: "bg-blue-500",
+	skipped: NEUTRAL_STATUS_ICON_CLASS,
+	failed: "bg-orange-500",
 };
 
 const STATUS_LABELS: Record<MigrationItemEventStatus, string> = {
@@ -38,9 +33,9 @@ const STATUS_LABELS: Record<MigrationItemEventStatus, string> = {
 };
 
 const STATUS_ICONS: Record<MigrationItemEventStatus, Icon> = {
-	succeeded: CheckCircleIcon,
-	skipped: MinusCircleIcon,
-	failed: XCircleIcon,
+	succeeded: CheckIcon,
+	skipped: MinusIcon,
+	failed: XIcon,
 };
 
 export function ItemEventStatusBadge({
@@ -54,40 +49,23 @@ export function ItemEventStatusBadge({
 	response?: Record<string, unknown> | null;
 	skipReason?: MigrationItemRunSkipReason | null;
 }) {
-	if (status === "skipped") {
-		const spec = skipBadgeSpec({
-			skipReason: skipReason ?? skipReasonFromResponse(response),
-			response,
-		});
-		const styles = dryRun ? DRY_STYLES : LIVE_STYLES;
-		return (
-			<Badge
-				variant="muted"
-				className={cn(
-					"gap-1",
-					spec.noChanges
-						? cn(
-								"bg-muted text-tertiary-foreground border-border",
-								dryRun && "border-dashed",
-							)
-						: styles.skipped,
-				)}
-			>
-				<MinusCircleIcon size={12} weight="fill" />
-				{spec.label}
-			</Badge>
-		);
-	}
-
 	const StatusIcon = STATUS_ICONS[status];
+	const iconClassName = (dryRun ? DRY_ICON_CLASSES : LIVE_ICON_CLASSES)[status];
+	const label =
+		status === "skipped"
+			? skipBadgeSpec({
+					skipReason: skipReason ?? skipReasonFromResponse(response),
+					response,
+				}).label
+			: STATUS_LABELS[status];
 
 	return (
-		<Badge
-			variant="muted"
-			className={cn("gap-1", (dryRun ? DRY_STYLES : LIVE_STYLES)[status])}
+		<StatusChip
+			dashed={dryRun}
+			icon={<StatusIcon weight="bold" />}
+			iconClassName={iconClassName}
 		>
-			<StatusIcon size={12} weight="fill" />
-			{STATUS_LABELS[status]}
-		</Badge>
+			{label}
+		</StatusChip>
 	);
 }

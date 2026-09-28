@@ -11,6 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui/components/ui/select";
+import { cn } from "@autumn/ui/lib/utils";
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { useHotkeys } from "react-hotkeys-hook";
 
@@ -59,46 +60,51 @@ export function CursorPagination({
 	const nextDisabled = disabled || !canGoNext;
 
 	return (
-		<div className="flex justify-center items-center gap-2 text-xs text-tertiary-foreground shrink-0 select-none">
-			<Pagination className="w-fit h-7 text-xs">
-				<PaginationContent className="w-full flex justify-between items-center gap-2">
-					{/* Fixed width fits "999,999 / 999,999" so loading or paging never pushes the toolbar. */}
-					<PaginationItem className="w-[17ch] text-right text-muted-foreground font-medium tabular-nums whitespace-nowrap">
-						{totalPages === null
-							? "..."
-							: `${numberFormat.format(currentPage)} / ${numberFormat.format(totalPages)}`}
-					</PaginationItem>
-					<PaginationItem>
-						<IconButton
-							variant="secondary"
-							size="default"
-							icon={<CaretLeftIcon size={12} weight="bold" />}
-							onClick={(e) => {
-								e.preventDefault();
-								if (prevDisabled) return;
-								onPrev();
-							}}
-							disabled={prevDisabled}
-							className={prevDisabled ? "pointer-events-none opacity-50" : ""}
-						/>
-					</PaginationItem>
-					<PaginationItem>
-						<IconButton
-							variant="secondary"
-							size="default"
-							icon={<CaretRightIcon size={12} weight="bold" />}
-							onClick={(e) => {
-								e.preventDefault();
-								if (nextDisabled) return;
-								onNext();
-							}}
-							disabled={nextDisabled}
-							className={nextDisabled ? "pointer-events-none opacity-50" : ""}
-						/>
-					</PaginationItem>
-				</PaginationContent>
-			</Pagination>
-		</div>
+		<Pagination className="w-fit shrink-0 select-none">
+			<PaginationContent className="flex items-center gap-1 rounded-lg bg-foreground/4 p-px">
+				<PaginationItem>
+					<IconButton
+						variant="muted"
+						size="default"
+						aria-label="Previous page"
+						icon={<CaretLeftIcon size={12} weight="bold" />}
+						onClick={(e) => {
+							e.preventDefault();
+							if (prevDisabled) return;
+							onPrev();
+						}}
+						disabled={prevDisabled}
+						className={cn(
+							"size-7 rounded-md bg-transparent",
+							prevDisabled && "pointer-events-none opacity-50",
+						)}
+					/>
+				</PaginationItem>
+				<PaginationItem className="min-w-[9ch] px-1.5 text-center text-xs text-tertiary-foreground tabular-nums whitespace-nowrap">
+					{totalPages === null
+						? "..."
+						: `${numberFormat.format(currentPage)} / ${numberFormat.format(totalPages)}`}
+				</PaginationItem>
+				<PaginationItem>
+					<IconButton
+						variant="muted"
+						size="default"
+						aria-label="Next page"
+						icon={<CaretRightIcon size={12} weight="bold" />}
+						onClick={(e) => {
+							e.preventDefault();
+							if (nextDisabled) return;
+							onNext();
+						}}
+						disabled={nextDisabled}
+						className={cn(
+							"size-7 rounded-md bg-foreground/4",
+							nextDisabled && "pointer-events-none bg-transparent opacity-50",
+						)}
+					/>
+				</PaginationItem>
+			</PaginationContent>
+		</Pagination>
 	);
 }
 
@@ -127,7 +133,7 @@ export function PageSizeSelector({
 			)}
 		>
 			<SelectTrigger
-				className="h-7 w-fit justify-between px-2 text-xs tabular-nums"
+				className="h-7 w-fit justify-between rounded-lg border-transparent bg-foreground/4 px-2 text-xs tabular-nums shadow-none"
 				style={{ minWidth: `calc(${widestOptionLength}ch + 1.75rem)` }}
 			>
 				<SelectValue />

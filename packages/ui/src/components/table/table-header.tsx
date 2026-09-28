@@ -113,7 +113,7 @@ export function TableHeader({ className }: { className?: string }) {
 						return (
 							<TableHead
 								className={cn(
-									"h-7 px-2 text-subtle text-tiny font-medium!",
+									"px-2",
 									index === 0 && "pl-4",
 									isLast && enableColumnVisibility && "pr-8",
 								)}

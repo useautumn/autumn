@@ -31,6 +31,7 @@ export * from "@autumn/ui/components/general/sheet-close-button";
 export * from "@autumn/ui/components/general/shortcut-button";
 export * from "@autumn/ui/components/general/small-spinner";
 export * from "@autumn/ui/components/general/stack-badge";
+export * from "@autumn/ui/components/general/status-chip";
 export * from "@autumn/ui/components/general/step-badge";
 export * from "@autumn/ui/components/general/tag-input";
 export * from "@autumn/ui/components/general/tag-select";

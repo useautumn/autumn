@@ -1,5 +1,6 @@
 import { type CusProductStatus, formatMsToDate } from "@autumn/shared";
 import {
+	StatusChipIcon,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
@@ -7,67 +8,8 @@ import {
 } from "@autumn/ui";
 import { DotIcon } from "@phosphor-icons/react";
 import { formatDistance } from "date-fns";
-import {
-	AlertTriangleIcon,
-	BanIcon,
-	CalendarIcon,
-	CheckIcon,
-	ClockIcon,
-	HourglassIcon,
-	PauseIcon,
-	XIcon,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { PLAN_STATUS_CONFIG } from "./planStatusConfig";
 import { resolvePlanStatus } from "./resolvePlanStatus";
-
-type StatusConfig = {
-	icon: React.ElementType;
-	label: string;
-	iconClassName: string;
-};
-
-const STATUS_CONFIG: Record<string, StatusConfig> = {
-	active: {
-		icon: CheckIcon,
-		label: "Active",
-		iconClassName: "bg-green-500 dark:bg-green-600",
-	},
-	trialing: {
-		icon: ClockIcon,
-		label: "Trial",
-		iconClassName: "bg-blue-500 dark:bg-blue-600",
-	},
-	paused: {
-		icon: PauseIcon,
-		label: "Paused",
-		iconClassName: "bg-yellow-500 dark:bg-yellow-600 fill-white",
-	},
-	canceling: {
-		icon: BanIcon,
-		label: "Cancelling",
-		iconClassName: "bg-orange-500 dark:bg-orange-600",
-	},
-	past_due: {
-		icon: AlertTriangleIcon,
-		label: "Past Due",
-		iconClassName: "bg-red-500 dark:bg-red-600",
-	},
-	expired: {
-		icon: XIcon,
-		label: "Expired",
-		iconClassName: "bg-black dark:bg-black",
-	},
-	scheduled: {
-		icon: CalendarIcon,
-		label: "Scheduled",
-		iconClassName: "bg-purple-500 dark:bg-purple-600",
-	},
-	pending: {
-		icon: HourglassIcon,
-		label: "Pending",
-		iconClassName: "bg-zinc-400 dark:bg-zinc-500",
-	},
-};
 
 function getSubtext({
 	resolvedStatus,
@@ -94,21 +36,6 @@ function getSubtext({
 	return null;
 }
 
-function StatusIcon({
-	icon: Icon,
-	className,
-}: {
-	icon: React.ElementType;
-	className: string;
-}) {
-	return (
-		<Icon
-			className={cn("text-white rounded-full p-0.5", className)}
-			size={12}
-		/>
-	);
-}
-
 export function CustomerProductsStatus({
 	tooltip,
 	status,
@@ -130,9 +57,7 @@ export function CustomerProductsStatus({
 }) {
 	const effectiveNowMs = nowMs ?? Date.now();
 	const resolvedStatus = resolvePlanStatus({ status, canceled, trialing });
-	const config = STATUS_CONFIG[resolvedStatus];
-
-	if (!config) return <div>Unknown</div>;
+	const config = PLAN_STATUS_CONFIG[resolvedStatus];
 
 	const subtext = getSubtext({
 		resolvedStatus,
@@ -142,8 +67,12 @@ export function CustomerProductsStatus({
 		nowMs: effectiveNowMs,
 	});
 
+	const StatusIcon = config.icon;
 	const iconElement = (
-		<StatusIcon icon={config.icon} className={config.iconClassName} />
+		<StatusChipIcon
+			icon={<StatusIcon strokeWidth={3} />}
+			className={config.iconClassName}
+		/>
 	);
 
 	if (tooltip) {

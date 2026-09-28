@@ -1,4 +1,5 @@
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@autumn/ui";
+import { TABLE_TRAY_CLASS } from "@/components/general/table";
 
 interface SettingsTableColumn {
 	readonly label: string;
@@ -10,24 +11,22 @@ interface SettingsTableProps {
 	readonly children: React.ReactNode;
 }
 
-const HEAD_CELL_CLASS = "h-7 text-subtle text-tiny font-medium!";
-
 export const SettingsTable = ({ columns, children }: SettingsTableProps) => {
 	return (
-		<div className="rounded-lg shadow-card border">
+		<div className={TABLE_TRAY_CLASS}>
 			<Table className="p-0 rounded-lg overflow-hidden" flexibleTableColumns>
 				<TableHeader>
 					<TableRow className="border-b bg-card text-subtle">
 						{columns.map((col, i) => (
 							<TableHead
 								key={col.label || i}
-								className={`${HEAD_CELL_CLASS}${i === 0 ? " pl-4" : ""}`}
+								className={i === 0 ? "pl-4" : undefined}
 								style={{ width: col.width }}
 							>
 								{col.label}
 							</TableHead>
 						))}
-						<TableHead className="h-7 w-10" style={{ width: "5%" }} />
+						<TableHead className="w-10" style={{ width: "5%" }} />
 					</TableRow>
 				</TableHeader>
 				<TableBody className="bg-interactive-secondary">{children}</TableBody>

@@ -1,35 +1,41 @@
 import type { MigrationStatus } from "@autumn/shared";
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
-	CheckCircleIcon,
+	NEUTRAL_STATUS_ICON_CLASS,
+	StatusChip,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import {
+	CheckIcon,
 	ClockIcon,
 	type Icon,
-	MinusCircleIcon,
+	MinusIcon,
 	PencilSimpleIcon,
-	PlayCircleIcon,
+	PlayIcon,
 	ProhibitIcon,
-	XCircleIcon,
+	XIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { statusLabel, waitingExplanation } from "./migrationStatus";
 
-const STATUS_STYLES: Record<MigrationStatus, string> = {
-	draft: "bg-muted text-tertiary-foreground border-border",
-	waiting: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-	running: "bg-green-500/10 text-green-500 border-green-500/20",
-	run: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-	no_changes: "bg-muted text-tertiary-foreground border-border",
-	failed: "bg-red-500/10 text-red-500 border-red-500/20",
-	canceled: "bg-muted text-tertiary-foreground border-border",
+const STATUS_ICON_CLASSES: Record<MigrationStatus, string> = {
+	draft: NEUTRAL_STATUS_ICON_CLASS,
+	waiting: "bg-yellow-500",
+	running: "bg-green-500",
+	run: "bg-blue-500",
+	no_changes: NEUTRAL_STATUS_ICON_CLASS,
+	failed: "bg-red-500",
+	canceled: NEUTRAL_STATUS_ICON_CLASS,
 };
 
 const STATUS_ICONS: Record<MigrationStatus, Icon> = {
 	draft: PencilSimpleIcon,
 	waiting: ClockIcon,
-	running: PlayCircleIcon,
-	run: CheckCircleIcon,
-	no_changes: MinusCircleIcon,
-	failed: XCircleIcon,
+	running: PlayIcon,
+	run: CheckIcon,
+	no_changes: MinusIcon,
+	failed: XIcon,
 	canceled: ProhibitIcon,
 };
 
@@ -46,20 +52,16 @@ export function MigrationStatusBadge({
 }) {
 	const StatusIcon = STATUS_ICONS[status];
 	const badge = (
-		<Badge
-			variant="muted"
+		<StatusChip
 			tabIndex={status === "waiting" ? 0 : undefined}
-			className={cn(
-				"max-w-56 gap-1 whitespace-nowrap",
-				STATUS_STYLES[status],
-				className,
-			)}
+			className={cn("max-w-56", className)}
+			icon={<StatusIcon weight="bold" />}
+			iconClassName={STATUS_ICON_CLASSES[status]}
 		>
-			<StatusIcon size={12} weight="fill" className="shrink-0" />
 			<span className="truncate">
 				{statusLabel({ status, blockedBy: labelBlocker ? blockedBy : null })}
 			</span>
-		</Badge>
+		</StatusChip>
 	);
 	if (status !== "waiting") return badge;
 

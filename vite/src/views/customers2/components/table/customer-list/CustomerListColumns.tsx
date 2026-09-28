@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import {
 	MiniCopyButton,
+	StatusChip,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
@@ -94,7 +95,7 @@ const getCusProductsInfo = ({
 				.slice(0, 1)
 				.map((cusProduct: (typeof activeProducts)[number], index: number) => {
 					return (
-						<div key={index} className="flex items-center gap-2 w-full min-w-0">
+						<div key={index} className="flex items-center gap-1 w-full min-w-0">
 							<PlanStatusChip
 								customerProduct={cusProduct as FullCusProduct}
 								display="icon"
@@ -104,9 +105,9 @@ const getCusProductsInfo = ({
 								<TooltipProvider>
 									<Tooltip delayDuration={150}>
 										<TooltipTrigger>
-											<span className="ml-1 bg-muted text-tertiary-foreground px-1 py-0.5 rounded-md font-medium shrink-0">
+											<StatusChip className="px-1.5 text-tertiary-foreground tabular-nums">
 												+{extraCount}
-											</span>
+											</StatusChip>
 										</TooltipTrigger>
 										<TooltipContent>
 											{activeProducts

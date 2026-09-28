@@ -37,35 +37,44 @@ export function TablePaginationFooter({
 	enableHotkeys?: boolean;
 	className?: string;
 }) {
+	const hasTotal = typeof totalCount === "number";
+	const firstRowNumber = (currentPage - 1) * pageSize + 1;
+	const lastRowNumber = hasTotal
+		? Math.min(currentPage * pageSize, totalCount)
+		: currentPage * pageSize;
+
 	return (
 		<div
-			className={cn("flex items-center justify-between gap-2 pt-4", className)}
+			className={cn(
+				"flex h-11 shrink-0 items-center justify-between gap-2 pr-1.5 pl-3",
+				className,
+			)}
 		>
-			<div className="flex items-center gap-2 text-xs text-tertiary-foreground">
-				<span>Rows</span>
-				<PageSizeSelector
-					pageSize={pageSize}
-					options={pageSizeOptions}
-					onChange={onPageSizeChange}
+			<span className="text-xs text-tertiary-foreground tabular-nums">
+				{hasTotal &&
+					`Showing ${numberFormat.format(firstRowNumber)}–${numberFormat.format(lastRowNumber)} of ${isTotalCountApproximate ? "~" : ""}${numberFormat.format(totalCount)}`}
+			</span>
+			<div className="flex items-center gap-3">
+				<div className="flex items-center gap-1.5 text-xs text-tertiary-foreground">
+					<span>Rows</span>
+					<PageSizeSelector
+						pageSize={pageSize}
+						options={pageSizeOptions}
+						onChange={onPageSizeChange}
+						disabled={disabled}
+					/>
+				</div>
+				<CursorPagination
+					currentPage={currentPage}
+					totalPages={totalPages}
+					canGoPrev={canGoPrev}
+					canGoNext={canGoNext}
+					onPrev={onPrev}
+					onNext={onNext}
 					disabled={disabled}
+					enableHotkeys={enableHotkeys}
 				/>
-				{typeof totalCount === "number" && (
-					<span className="tabular-nums">
-						{isTotalCountApproximate && "~"}
-						{numberFormat.format(totalCount)} total
-					</span>
-				)}
 			</div>
-			<CursorPagination
-				currentPage={currentPage}
-				totalPages={totalPages}
-				canGoPrev={canGoPrev}
-				canGoNext={canGoNext}
-				onPrev={onPrev}
-				onNext={onNext}
-				disabled={disabled}
-				enableHotkeys={enableHotkeys}
-			/>
 		</div>
 	);
 }
