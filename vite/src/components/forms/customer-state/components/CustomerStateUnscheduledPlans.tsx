@@ -1,8 +1,8 @@
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanScopeGroups } from "./tray/PlanScopeGroups";
-import { PlanSectionTitle } from "./tray/PlanSection";
 import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
+import { PlanTraySectionTitle } from "./tray/PlanTraySectionTitle";
 import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 
 /** Ongoing plans: billed with the first phase and never ended by the schedule. */
@@ -16,7 +16,7 @@ export function CustomerStateUnscheduledPlans() {
 
 	return (
 		<div className="flex flex-col gap-1.5">
-			<PlanSectionTitle
+			<PlanTraySectionTitle
 				title="Ongoing plans"
 				hint="Billed now & kept across every phase"
 			/>

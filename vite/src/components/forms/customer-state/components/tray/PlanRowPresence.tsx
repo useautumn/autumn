@@ -6,9 +6,9 @@ import {
 } from "motion/react";
 import { Children, isValidElement, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { SHEET_EASE } from "@/views/customers2/customer/customerAnimations";
 
-const EASE_DRAWER = [0.32, 0.72, 0, 1] as const;
-const HEIGHT_TRANSITION: Transition = { duration: 0.22, ease: EASE_DRAWER };
+const HEIGHT_TRANSITION: Transition = { duration: 0.22, ease: SHEET_EASE };
 
 const enterTransition = (delay: number): Transition => ({
 	height: { ...HEIGHT_TRANSITION, delay },

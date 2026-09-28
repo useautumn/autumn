@@ -1,13 +1,14 @@
-import {
-	ArrowsLeftRightIcon,
-	CopySimpleIcon,
-	InfinityIcon,
-} from "@phosphor-icons/react";
+import { CopySimpleIcon, InfinityIcon } from "@phosphor-icons/react";
 import { CopyExistingPlansButton } from "@/components/forms/customer-state/components/CopyExistingPlansButton";
-import { getUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
-import { findPreviousPhasePlan } from "@/components/forms/customer-state/useCustomerStateHandlers";
+import {
+	filterUnarchivedProducts,
+	findPreviousPhasePlan,
+	getSiblingProductIds,
+	getUsedGroupKeys,
+} from "@/components/forms/customer-state/customerStateUtils";
 import { usePlanScopeField } from "@/components/forms/shared";
 import {
+	buildMoveToAction,
 	type PlanRowAction,
 	ROW_ACTION_ICON_SIZE,
 } from "@/components/forms/shared/PlanRowActionsMenu";
@@ -50,18 +51,13 @@ export function CustomerStatePlanRow({
 	if (!plan) return null;
 
 	if (!plan.productId) {
+		const phasePlans = formValues.phases[phaseIndex]?.plans ?? [];
 		const usedKeys = getUsedGroupKeys({
-			plans: formValues.phases[phaseIndex]?.plans ?? [],
+			plans: phasePlans,
 			products,
 			excludePlanIndex: planIndex,
 			entityId: plan.entityId ?? null,
 		});
-		const selectedProductIdsInPhase = new Set(
-			formValues.phases[phaseIndex]?.plans
-				.filter((_, index) => index !== planIndex)
-				.map((other) => other.productId)
-				.filter(Boolean),
-		);
 
 		return (
 			<PlanPickerTrayRow
@@ -69,9 +65,12 @@ export function CustomerStatePlanRow({
 					value: plan.entityId ?? null,
 					onChange: (entityId) => handleSelectPlanScope({ location, entityId }),
 				}}
-				products={products.filter((product) => !product.archived)}
+				products={filterUnarchivedProducts({ products })}
 				usedKeys={usedKeys}
-				siblingProductIds={selectedProductIdsInPhase}
+				siblingProductIds={getSiblingProductIds({
+					plans: phasePlans,
+					planIndex,
+				})}
 				header={
 					isOpeningPhase ? (
 						<CopyExistingPlansButton
@@ -106,15 +105,7 @@ export function CustomerStatePlanRow({
 					},
 				]
 			: []),
-		...(!isLocked && hasEntities
-			? [
-					{
-						label: "Move to",
-						icon: <ArrowsLeftRightIcon size={ROW_ACTION_ICON_SIZE} />,
-						submenu: scopeMenu,
-					},
-				]
-			: []),
+		...(!isLocked && hasEntities ? [buildMoveToAction({ scopeMenu })] : []),
 		...(!isLocked && canMakeUnscheduled
 			? [
 					{

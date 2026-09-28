@@ -4,6 +4,8 @@ import { SearchableSelect } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { EntityOptionRow } from "@/components/forms/shared/EntityOptionRow";
+import { entityKey } from "@/components/forms/shared/utils/entityKey";
+import { CUSTOMER_LEVEL_LABEL } from "@/components/forms/shared/utils/scopeLabel";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 // Non-empty sentinel: cmdk derives a value from text content for empty ones,
@@ -15,7 +17,7 @@ type EntityOption = Entity | null | typeof INHERITED_VALUE;
 const getOptionValue = (option: EntityOption) => {
 	if (option === INHERITED_VALUE) return INHERITED_VALUE;
 	if (option === null) return CUSTOMER_LEVEL_VALUE;
-	return option.id || option.internal_id;
+	return entityKey(option);
 };
 
 export function PlanEntityScopeSelector({
@@ -62,7 +64,7 @@ export function PlanEntityScopeSelector({
 
 	const getLabel = (option: EntityOption) => {
 		if (option === INHERITED_VALUE) return inheritLabel ?? "Default scope";
-		if (option === null) return "Customer-level";
+		if (option === null) return CUSTOMER_LEVEL_LABEL;
 		return option.name || option.id || "PENDING";
 	};
 

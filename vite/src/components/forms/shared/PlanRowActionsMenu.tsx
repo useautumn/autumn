@@ -8,7 +8,7 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 } from "@autumn/ui";
-import { DotsThreeIcon } from "@phosphor-icons/react";
+import { ArrowsLeftRightIcon, DotsThreeIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
 export const ROW_ACTION_ICON_SIZE = 14;
@@ -17,6 +17,18 @@ export type PlanRowAction = {
 	label: string;
 	icon: ReactNode;
 } & ({ onSelect: () => void } | { submenu: ReactNode });
+
+export function buildMoveToAction({
+	scopeMenu,
+}: {
+	scopeMenu: ReactNode;
+}): PlanRowAction {
+	return {
+		label: "Move to",
+		icon: <ArrowsLeftRightIcon size={ROW_ACTION_ICON_SIZE} />,
+		submenu: scopeMenu,
+	};
+}
 
 /** Row-level actions behind a "…" button, sitting next to the scope picker. */
 export function PlanRowActionsMenu({

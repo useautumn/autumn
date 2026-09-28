@@ -3,8 +3,8 @@ import { DropdownMenuItem } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { EntityOptionRow } from "./EntityOptionRow";
-
-const entityValue = (entity: Entity) => entity.id || entity.internal_id;
+import { entityKey } from "./utils/entityKey";
+import { CUSTOMER_LEVEL_LABEL } from "./utils/scopeLabel";
 
 /** The scope picker's options as menu items, for a "Move to" submenu. */
 export function PlanScopeMenuItems({
@@ -36,17 +36,17 @@ export function PlanScopeMenuItems({
 				placeholder="Search entities..."
 			/>
 			<DropdownMenuItem onClick={() => onChange(null)}>
-				<span className="flex-1 truncate text-sm">Customer-level</span>
+				<span className="flex-1 truncate text-sm">{CUSTOMER_LEVEL_LABEL}</span>
 				{value === null && <CheckIcon className="size-4 shrink-0" />}
 			</DropdownMenuItem>
 			{entities.map((entity) => (
 				<DropdownMenuItem
-					key={entityValue(entity)}
-					onClick={() => onChange(entityValue(entity))}
+					key={entityKey(entity)}
+					onClick={() => onChange(entityKey(entity))}
 				>
 					<EntityOptionRow
 						entity={entity}
-						isSelected={value === entityValue(entity)}
+						isSelected={value === entityKey(entity)}
 					/>
 				</DropdownMenuItem>
 			))}

@@ -1,4 +1,5 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
+import { getSelectedPlanPriceProduct } from "@/components/forms/shared/selectedPlanRowUtils";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { getBasePriceLabel } from "../customerStatePlanPrice";
 
@@ -12,7 +13,9 @@ export function PlanPriceLabel({
 }) {
 	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 	const label = getBasePriceLabel({
-		product: productForDisplay(items ? { ...product, items } : product),
+		product: productForDisplay(
+			getSelectedPlanPriceProduct({ product, customItems: items }),
+		),
 		currency: displayCurrency,
 	});
 

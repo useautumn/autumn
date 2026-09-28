@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_ROW_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import { SHEET_EASE } from "@/views/customers2/customer/customerAnimations";
 import {
 	type ConfigRowLayout,
 	ConfigRowLayoutProvider,
@@ -10,7 +11,7 @@ import {
 
 const EXPAND_TRANSITION = {
 	duration: 0.2,
-	ease: [0.32, 0.72, 0, 1] as const,
+	ease: SHEET_EASE,
 };
 
 const CONFIG_ROW_LAYOUT_CLASSES: Record<
@@ -39,10 +40,7 @@ const CONFIG_ROW_LAYOUT_CLASSES: Record<
 	},
 };
 
-/**
- * Label + control row used across plan config and advanced sections; renders as a tray row inside AdvancedTray.
- * Pass `expanded` to animate children in/out; omit it to render children statically.
- */
+/** Pass `expanded` to animate children in/out; omit it to render children statically. */
 export function ConfigRow({
 	title,
 	description,

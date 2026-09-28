@@ -1,7 +1,10 @@
-import { ArrowsLeftRightIcon } from "@phosphor-icons/react";
-import { getUnscheduledUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
+import {
+	filterUnarchivedProducts,
+	getSiblingProductIds,
+	getUnscheduledUsedGroupKeys,
+} from "@/components/forms/customer-state/customerStateUtils";
 import { usePlanScopeField } from "@/components/forms/shared";
-import { ROW_ACTION_ICON_SIZE } from "@/components/forms/shared/PlanRowActionsMenu";
+import { buildMoveToAction } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanPickerTrayRow } from "./tray/PlanPickerTrayRow";
 import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
@@ -34,12 +37,6 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 			products,
 			entityId: plan.entityId ?? null,
 		});
-		const siblingProductIds = new Set(
-			formValues.unscheduledPlans
-				.filter((_, index) => index !== planIndex)
-				.map((other) => other.productId)
-				.filter(Boolean),
-		);
 
 		return (
 			<PlanPickerTrayRow
@@ -47,9 +44,12 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 					value: plan.entityId ?? null,
 					onChange: (entityId) => handleSelectPlanScope({ location, entityId }),
 				}}
-				products={products.filter((product) => !product.archived)}
+				products={filterUnarchivedProducts({ products })}
 				usedKeys={usedKeys}
-				siblingProductIds={siblingProductIds}
+				siblingProductIds={getSiblingProductIds({
+					plans: formValues.unscheduledPlans,
+					planIndex,
+				})}
 				onSelect={(productId) =>
 					handleSelectPlanProduct({ location, productId })
 				}
@@ -61,17 +61,7 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		<SelectedPlanTrayRow
 			location={location}
 			plan={plan}
-			actions={
-				hasEntities
-					? [
-							{
-								label: "Move to",
-								icon: <ArrowsLeftRightIcon size={ROW_ACTION_ICON_SIZE} />,
-								submenu: scopeMenu,
-							},
-						]
-					: []
-			}
+			actions={hasEntities ? [buildMoveToAction({ scopeMenu })] : []}
 			onCustomize={() => setEditingPlan(location)}
 			onRemove={() => handleRemoveUnscheduledPlan({ planIndex })}
 		/>

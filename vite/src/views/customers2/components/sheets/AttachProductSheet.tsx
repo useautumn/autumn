@@ -34,6 +34,7 @@ import {
 	PreviewLoadingSection,
 } from "@/components/forms/shared/PreviewSection";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
+import { scopeLabel } from "@/components/forms/shared/utils/scopeLabel";
 import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
@@ -202,7 +203,7 @@ function SelectContent() {
 			trigger={
 				<PlanScopeChip
 					isEntityScoped={!!entityId}
-					label={entityId ? (fullEntity?.name ?? entityId) : "Customer-level"}
+					label={scopeLabel({ entityId, entity: fullEntity })}
 				/>
 			}
 		/>

@@ -1,54 +1,16 @@
 import type { Entity } from "@autumn/shared";
-import { CaretRightIcon } from "@phosphor-icons/react";
-import { type ComponentProps, useState } from "react";
+import { useState } from "react";
 import { PlanEntityScopeSelector } from "@/components/forms/shared/PlanEntityScopeSelector";
-import { cn } from "@/lib/utils";
+import { entityKey } from "@/components/forms/shared/utils/entityKey";
+import {
+	CUSTOMER_LEVEL_LABEL,
+	scopeLabel,
+} from "@/components/forms/shared/utils/scopeLabel";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
+import { MoreEntitiesButton } from "./MoreEntitiesButton";
+import { ScopeTab } from "./ScopeTab";
 
 const INLINE_ENTITY_COUNT = 3;
-
-const entityKey = (entity: Entity) => entity.id || entity.internal_id;
-
-function ScopeTab({
-	label,
-	isActive,
-	onClick,
-}: {
-	label: string;
-	isActive: boolean;
-	onClick: () => void;
-}) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className={cn(
-				"flex h-5.5 min-w-0 shrink-0 cursor-pointer items-center rounded-sm border px-2 text-[11.5px] font-medium transition-colors",
-				isActive
-					? "border-foreground/15 bg-foreground/10 text-foreground"
-					: "border-foreground/10 bg-transparent text-tertiary-foreground hover:text-foreground",
-			)}
-		>
-			<span className="max-w-24 truncate">{label}</span>
-		</button>
-	);
-}
-
-function MoreEntitiesButton({
-	count,
-	...props
-}: ComponentProps<"button"> & { count: number }) {
-	return (
-		<button
-			type="button"
-			{...props}
-			className="flex h-5.5 shrink-0 cursor-pointer items-center gap-1 rounded-sm border border-foreground/10 pr-1.5 pl-2 text-[11.5px] font-medium text-tertiary-foreground transition-colors hover:text-foreground data-popup-open:border-foreground/15 data-popup-open:bg-foreground/10 data-popup-open:text-foreground"
-		>
-			{count} more
-			<CaretRightIcon size={11} />
-		</button>
-	);
-}
 
 /** Picks the scope a new plan is added under, from inside the plan picker. */
 export function PlanPickerScopeRow({
@@ -86,14 +48,14 @@ export function PlanPickerScopeRow({
 				For
 			</span>
 			<ScopeTab
-				label="Customer-level"
+				label={CUSTOMER_LEVEL_LABEL}
 				isActive={value === null}
 				onClick={() => onChange(null)}
 			/>
 			{tabEntities.map((entity) => (
 				<ScopeTab
 					key={entityKey(entity)}
-					label={entity.name || entityKey(entity)}
+					label={scopeLabel({ entityId: entityKey(entity), entity })}
 					isActive={entityKey(entity) === value}
 					onClick={() => onChange(entityKey(entity))}
 				/>

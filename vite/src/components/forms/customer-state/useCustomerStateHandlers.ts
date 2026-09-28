@@ -8,6 +8,8 @@ import {
 	planLocationToFieldPath,
 } from "@/components/forms/customer-state/customerStateSchema";
 import {
+	findPreviousPhasePlan,
+	isSameScope,
 	resolveCopySourceScope,
 	resolveNextPhaseStartsAt,
 } from "@/components/forms/customer-state/customerStateUtils";
@@ -20,28 +22,6 @@ const clonePlans = (plans: CustomerStatePlan[]): CustomerStatePlan[] =>
 		licenseQuantities: { ...plan.licenseQuantities },
 		items: plan.items ? [...plan.items] : null,
 	}));
-
-/** The same plan in the phase before, preferring one at the same scope. Its
- * scope is copied along with the rest of the row. */
-export const findPreviousPhasePlan = ({
-	phases,
-	phaseIndex,
-	plan,
-}: {
-	phases: { plans: CustomerStatePlan[] }[];
-	phaseIndex: number;
-	plan: CustomerStatePlan;
-}) => {
-	const candidates =
-		phases[phaseIndex - 1]?.plans.filter(
-			(previous) => previous.productId === plan.productId,
-		) ?? [];
-	return (
-		candidates.find(
-			(previous) => (previous.entityId ?? null) === (plan.entityId ?? null),
-		) ?? candidates[0]
-	);
-};
 
 export function useCustomerStateHandlers({
 	form,
@@ -178,7 +158,7 @@ export function useCustomerStateHandlers({
 
 			const isSamePlan = (other: CustomerStatePlan) =>
 				other.productId === plan.productId &&
-				(other.entityId ?? null) === (plan.entityId ?? null);
+				isSameScope({ entityId: other.entityId, otherEntityId: plan.entityId });
 
 			form.setFieldValue(
 				"phases",

@@ -15,7 +15,7 @@ import { CustomerStateProvider } from "@/components/forms/customer-state/Custome
 import { CustomerStatePhasePlans } from "@/components/forms/customer-state/components/CustomerStatePhasePlans";
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
 import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
-import { PlanSectionTitle } from "@/components/forms/customer-state/components/tray/PlanSection";
+import { PlanTraySectionTitle } from "@/components/forms/customer-state/components/tray/PlanTraySectionTitle";
 import type { PlanLocation } from "@/components/forms/customer-state/customerStateSchema";
 import { useCustomerStateForm } from "@/components/forms/customer-state/useCustomerStateForm";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
@@ -440,7 +440,7 @@ function SubscriptionEditor({
 
 							<CustomerStatePhasePlans
 								phaseIndex={phaseIndex}
-								header={<PlanSectionTitle title="Autumn plans" />}
+								header={<PlanTraySectionTitle title="Autumn plans" />}
 							/>
 						</div>
 					))}

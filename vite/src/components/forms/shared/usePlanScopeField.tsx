@@ -1,3 +1,4 @@
+import type { Entity } from "@autumn/shared";
 import { useState } from "react";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { PlanEntityScopeSelector } from "./PlanEntityScopeSelector";
@@ -5,6 +6,18 @@ import { PlanScopeChip } from "./PlanScopeChip";
 import { PlanScopeMenuItems } from "./PlanScopeMenuItems";
 import type { PlanRowScope } from "./ScopedPlanRow";
 import { resolvePlanEntityId } from "./utils/resolvePlanEntityId";
+import { scopeLabel } from "./utils/scopeLabel";
+
+const explicitScopeLabel = ({
+	planEntityId,
+	selectedEntity,
+}: {
+	planEntityId: string | null | undefined;
+	selectedEntity: Entity | undefined;
+}): string | undefined => {
+	if (planEntityId === undefined) return undefined;
+	return scopeLabel({ entityId: planEntityId, entity: selectedEntity });
+};
 
 /**
  * Per-plan entity scope for a plan row: resolves the effective scope, loads the
@@ -17,7 +30,6 @@ export function usePlanScopeField({
 	disabled,
 	disabledReason,
 }: {
-	/** Undefined follows `defaultEntityId`; null is an explicit customer level. */
 	planEntityId?: string | null;
 	defaultEntityId?: string;
 	onChange: (entityId: string | null | undefined) => void;
@@ -35,17 +47,10 @@ export function usePlanScopeField({
 	const isUnset = planEntityId === undefined;
 	// An unset row shows the sheet's scope rather than an "inherit" option.
 	const pickerValue = isUnset ? (defaultEntityId ?? null) : planEntityId;
-	const selectedLabel = isUnset
-		? undefined
-		: planEntityId === null
-			? "Customer-level"
-			: (selectedEntity?.name ?? planEntityId);
-
+	const selectedLabel = explicitScopeLabel({ planEntityId, selectedEntity });
 	const chipLabel =
 		selectedLabel ??
-		(effectiveEntityId
-			? (selectedEntity?.name ?? effectiveEntityId)
-			: "Customer-level");
+		scopeLabel({ entityId: effectiveEntityId, entity: selectedEntity });
 
 	const scope: PlanRowScope | undefined = hasEntities
 		? {

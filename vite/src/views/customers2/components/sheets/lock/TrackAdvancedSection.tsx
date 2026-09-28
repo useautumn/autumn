@@ -36,7 +36,7 @@ export function TrackAdvancedSection({
 	const isConfirm = finalize.action === "confirm";
 
 	return (
-		<AdvancedSection title="Advanced" collapsible>
+		<AdvancedSection title="Advanced" collapsible withSeparator={false}>
 			<ConfigRow
 				title="Finalize a lock"
 				description="Settle a balance reserved by a previous check with a lock instead of recording new usage"

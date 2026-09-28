@@ -3,21 +3,8 @@ import {
 	TABLE_TRAY_SURFACE_CLASS,
 	TABLE_TRAY_SURFACE_ROW_CLASS,
 } from "@/components/general/table";
-import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { PlanRowPresence } from "./PlanRowPresence";
-
-function PlanScopeLabel({ entityId }: { entityId: string | null }) {
-	const { selectedEntity } = useScopeEntitySearch({
-		selectedEntityId: entityId ?? undefined,
-	});
-	const label = entityId ? selectedEntity?.name || entityId : "Customer-level";
-
-	return (
-		<p className="truncate px-2 pt-1.5 pb-1 text-xs font-medium text-tertiary-foreground">
-			{label}
-		</p>
-	);
-}
+import { PlanScopeLabel } from "./PlanScopeLabel";
 
 // A new scope table only appears when a row moves into it, so it lands after the row leaves.
 const NEW_SCOPE_ENTER_DELAY = 0.18;
@@ -29,7 +16,12 @@ const groupPlanIndexesByScope = ({ plans }: { plans: ScopedPlan[] }) => {
 	for (const [planIndex, plan] of plans.entries()) {
 		if (!plan.productId) continue;
 		const entityId = plan.entityId ?? null;
-		groups.set(entityId, [...(groups.get(entityId) ?? []), planIndex]);
+		const planIndexes = groups.get(entityId);
+		if (planIndexes) {
+			planIndexes.push(planIndex);
+			continue;
+		}
+		groups.set(entityId, [planIndex]);
 	}
 	return [...groups.entries()];
 };

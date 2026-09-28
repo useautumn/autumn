@@ -10,12 +10,28 @@ import { AdvancedTray } from "./AdvancedTray";
 const SHOW_BILLING_OPTIONS_TRAY = false;
 
 function PlainAdvancedSection({
+	title,
+	collapsible,
+	withSeparator,
 	moreOptions,
 	children,
 }: {
+	title: string;
+	collapsible: boolean;
+	withSeparator: boolean;
 	moreOptions?: ReactNode;
 	children: ReactNode;
 }) {
+	if (collapsible) {
+		return (
+			<SheetAccordion withSeparator={withSeparator}>
+				<SheetAccordionItem value="advanced" title={title}>
+					{children}
+				</SheetAccordionItem>
+			</SheetAccordion>
+		);
+	}
+
 	return (
 		<>
 			<SheetSection withSeparator={!moreOptions}>
@@ -36,17 +52,24 @@ function PlainAdvancedSection({
 export function AdvancedSection({
 	title = "Billing",
 	collapsible = false,
+	withSeparator = true,
 	moreOptions,
 	children,
 }: {
 	title?: string;
 	collapsible?: boolean;
+	withSeparator?: boolean;
 	moreOptions?: ReactNode;
 	children: ReactNode;
 }) {
 	if (!SHOW_BILLING_OPTIONS_TRAY) {
 		return (
-			<PlainAdvancedSection moreOptions={moreOptions}>
+			<PlainAdvancedSection
+				title={title}
+				collapsible={collapsible}
+				withSeparator={withSeparator}
+				moreOptions={moreOptions}
+			>
 				{children}
 			</PlainAdvancedSection>
 		);

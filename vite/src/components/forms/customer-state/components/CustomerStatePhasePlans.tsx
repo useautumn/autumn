@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 import { cn } from "@/lib/utils";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
-import { getUsedGroupKeys } from "../customerStateUtils";
+import { areAllPlansAdded } from "../customerStateUtils";
 import { CustomerStatePlanRow } from "./CustomerStatePlanRow";
 import { PlanScopeGroups } from "./tray/PlanScopeGroups";
 import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
@@ -26,15 +25,7 @@ export function CustomerStatePhasePlans({
 	const phase = formValues.phases[phaseIndex];
 	if (!phase) return null;
 
-	const usedKeys = getUsedGroupKeys({
-		plans: phase.plans,
-		products,
-	});
-	const allPlansAdded = products
-		.filter((product) => !product.archived)
-		.every((product) =>
-			usedKeys.has(getProductGroupKey({ productId: product.id, products })),
-		);
+	const allPlansAdded = areAllPlansAdded({ plans: phase.plans, products });
 
 	return (
 		<div className="flex flex-col gap-1.5">
