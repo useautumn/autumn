@@ -1,0 +1,60 @@
+import type { ConsumerConfig } from "kafkajs";
+import type { KafkaConsumerGroupTimings } from "../../../../client/types/kafkaLimits.js";
+import type { KafkaConsumerClient } from "../../../../consumer/types/consumer.js";
+import type { OwnershipRecord } from "../../types/ownershipRecord.js";
+
+export type OwnershipTailRecord = {
+	partition: number;
+	offset: bigint;
+	record: OwnershipRecord;
+};
+
+export type OwnershipTailListener = (record: OwnershipTailRecord) => void;
+
+/** What the tail has seen of one partition since it started: who owns it, and
+ *  whether that owner has announced a drain it has not yet concluded with a claim. */
+export type OwnershipTailView = {
+	owner: string | null;
+	activeDrain: { endpoint: string; successor: string } | null;
+};
+
+/** One consumer per worker following the ownership log from where it stood at
+ *  start; a partition tail is a listener on it, never a consumer of its own. */
+export type OwnershipTail = {
+	start(): Promise<void>;
+	stop(): Promise<void>;
+	/** Delivers every record the tail reads for `partition` until `signal` aborts. */
+	tailPartition(params: {
+		partition: number;
+		onRecord: OwnershipTailListener;
+		signal: AbortSignal;
+	}): void;
+	/** Null until the tail has read a claim or release for the partition since it started. */
+	readView(params: { partition: number }): OwnershipTailView | null;
+};
+
+export type OwnershipTailKafka = {
+	consumer(config: ConsumerConfig): KafkaConsumerClient;
+};
+
+export type OwnershipTailContext = {
+	kafka: OwnershipTailKafka;
+	onError?(failure: { cause: unknown }): void;
+};
+
+export type OwnershipTailConfig = {
+	topic: string;
+	groupIdPrefix?: string;
+	/** How long start waits for the first fetch, which is when the position settles at the log end. */
+	startTimeoutMs?: number;
+	timings?: KafkaConsumerGroupTimings;
+};
+
+export type OwnershipTailState = {
+	status: "created" | "starting" | "started" | "stopped";
+	listenersByPartition: Map<number, Set<OwnershipTailListener>>;
+	viewByPartition: Map<number, OwnershipTailView>;
+	/** Consumer event listeners and abort listeners on callers' signals; every one is removed by stop. */
+	removeListeners: Set<() => void>;
+	stopping: Promise<void> | null;
+};

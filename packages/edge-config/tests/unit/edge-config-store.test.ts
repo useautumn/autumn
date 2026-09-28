@@ -1,0 +1,514 @@
+import { afterEach, describe, expect, jest, test } from "bun:test";
+import type { S3Client } from "@aws-sdk/client-s3";
+import { z } from "zod/v4";
+import {
+	createEdgeConfigStore,
+	EDGE_CONFIG_TIMESTAMP_KEY,
+} from "../../src/edgeConfig.js";
+
+const location = () => ({ bucket: "autumn-test-server", region: "us-east-2" });
+
+const TestConfigSchema = z.object({
+	enabled: z.boolean().default(false),
+	message: z.string().default("hello"),
+});
+
+type TestConfig = z.infer<typeof TestConfigSchema>;
+
+const defaultConfig = (): TestConfig => ({ enabled: false, message: "hello" });
+
+const createMockS3Client = ({
+	getResponse,
+}: {
+	getResponse: () => {
+		Body?: { transformToString: () => Promise<string> } | null;
+	};
+}): S3Client => {
+	const sendFn = jest.fn(async (command: unknown) => {
+		const commandName =
+			command?.constructor?.name ?? (command as { name?: string })?.name;
+
+		if (commandName === "GetObjectCommand") {
+			return getResponse();
+		}
+
+		if (commandName === "PutObjectCommand") {
+			return {};
+		}
+
+		throw new Error(`Unexpected command: ${commandName}`);
+	});
+
+	return { send: sendFn } as unknown as S3Client;
+};
+
+const makeBody = (data: unknown) => ({
+	Body: {
+		transformToString: async () => JSON.stringify(data),
+	},
+});
+
+const makeNoSuchKeyError = () => {
+	const error = new Error("NoSuchKey");
+	error.name = "NoSuchKey";
+	return error;
+};
+
+describe("createEdgeConfigStore", () => {
+	let store: ReturnType<typeof createEdgeConfigStore<TestConfig>>;
+
+	afterEach(() => {
+		store?.stopPolling();
+	});
+
+	describe("initial fetch via startPolling", () => {
+		test("populates get() with parsed config from S3", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody({ enabled: true, message: "from-s3" }),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+
+			expect(store.get()).toEqual({ enabled: true, message: "from-s3" });
+			expect(store.getStatus().healthy).toBe(true);
+			expect(store.getStatus().configured).toBe(true);
+			expect(store.getStatus().lastSuccessAt).toBeDefined();
+		});
+
+		test("uses defaultValue before startPolling is called", () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody({ enabled: true, message: "from-s3" }),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			expect(store.get()).toEqual(defaultConfig());
+		});
+	});
+
+	describe("fail-open behavior", () => {
+		test("returns defaultValue when S3 throws a network error", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					throw new Error("NetworkingError: socket hang up");
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+
+			expect(store.get()).toEqual(defaultConfig());
+			expect(store.getStatus().healthy).toBe(false);
+			expect(store.getStatus().error).toContain("NetworkingError");
+		});
+
+		test("returns defaultValue when S3 file does not exist (NoSuchKey)", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					throw makeNoSuchKeyError();
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+
+			expect(store.get()).toEqual(defaultConfig());
+			expect(store.getStatus().healthy).toBe(true);
+		});
+
+		test("returns defaultValue when S3 body is malformed JSON", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => ({
+					Body: {
+						transformToString: async () => "not-valid-json{{{",
+					},
+				}),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+
+			expect(store.get()).toEqual(defaultConfig());
+			expect(store.getStatus().healthy).toBe(false);
+		});
+
+		test("returns defaultValue when S3 body is null", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => ({ Body: null }),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+
+			expect(store.get()).toEqual(defaultConfig());
+			expect(store.getStatus().healthy).toBe(true);
+		});
+
+		test("returns defaultValue when S3 body is empty string", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => ({
+					Body: { transformToString: async () => "   " },
+				}),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+
+			expect(store.get()).toEqual(defaultConfig());
+			expect(store.getStatus().healthy).toBe(true);
+		});
+
+		test("returns defaultValue when schema validation fails", async () => {
+			const strictSchema = z.object({
+				enabled: z.boolean(),
+				message: z.string(),
+				requiredField: z.string(),
+			});
+
+			const mockClient = createMockS3Client({
+				getResponse: () =>
+					makeBody({ enabled: true, message: "no-required-field" }),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: strictSchema as unknown as z.ZodType<TestConfig>,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+
+			expect(store.get()).toEqual(defaultConfig());
+			expect(store.getStatus().healthy).toBe(false);
+		});
+	});
+
+	describe("refresh", () => {
+		test("updates cached config when S3 content changes", async () => {
+			let callCount = 0;
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					callCount++;
+					if (callCount === 1) {
+						return makeBody({ enabled: false, message: "first" });
+					}
+					return makeBody({ enabled: true, message: "second" });
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+			expect(store.get().message).toBe("first");
+
+			await store.refresh();
+			expect(store.get().message).toBe("second");
+			expect(store.get().enabled).toBe(true);
+		});
+
+		test("retains cached config on refresh error when configured", async () => {
+			let callCount = 0;
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					if (callCount++ === 0) {
+						return makeBody({ enabled: true, message: "cached" });
+					}
+					throw new Error("NetworkingError");
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				retainOnError: true,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+			await store.refresh();
+
+			expect(store.get()).toEqual({ enabled: true, message: "cached" });
+			expect(store.getStatus().healthy).toBe(false);
+		});
+	});
+
+	describe("writeToSource", () => {
+		// The config object is already durable at this point; only the propagation
+		// signal failed, and the registry backstop still picks it up.
+		test("keeps the written config locally when the timestamp write fails", async () => {
+			const send = jest.fn(async (command: unknown) => {
+				const input = (command as { input?: { Key?: string; Body?: string } })
+					.input;
+				const name = command?.constructor?.name;
+				if (name === "GetObjectCommand") return makeBody(defaultConfig());
+				if (input?.Key === EDGE_CONFIG_TIMESTAMP_KEY) {
+					throw new Error("AccessDenied");
+				}
+				return {};
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: { send } as unknown as S3Client },
+			});
+
+			await store.writeToSource({
+				config: { enabled: true, message: "written" },
+			});
+
+			expect(store.get()).toEqual({ enabled: true, message: "written" });
+		});
+
+		test("updates local cache immediately after write", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody(defaultConfig()),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+			expect(store.get().enabled).toBe(false);
+
+			await store.writeToSource({
+				config: { enabled: true, message: "written" },
+			});
+
+			expect(store.get()).toEqual({ enabled: true, message: "written" });
+			expect(store.getStatus().healthy).toBe(true);
+		});
+
+		test("writes the config followed by the shared timestamp", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody(defaultConfig()),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.writeToSource({
+				config: { enabled: true, message: "test-write" },
+			});
+
+			const sendFn = (
+				mockClient as unknown as { send: ReturnType<typeof jest.fn> }
+			).send;
+			const putCommands = sendFn.mock.calls
+				.map(([command]) => command)
+				.filter(
+					(command) => command?.constructor?.name === "PutObjectCommand",
+				) as { input: { Key: string; Body: string } }[];
+
+			expect(putCommands.map(({ input }) => input.Key)).toEqual([
+				"admin/test-config.json",
+				EDGE_CONFIG_TIMESTAMP_KEY,
+			]);
+			expect(JSON.parse(putCommands[0]!.input.Body)).toEqual({
+				enabled: true,
+				message: "test-write",
+			});
+			expect(JSON.parse(putCommands[1]!.input.Body).updatedAt).toBeString();
+		});
+	});
+
+	describe("readFromSource", () => {
+		test("returns fresh data from S3 without updating cache", async () => {
+			let callCount = 0;
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					callCount++;
+					return makeBody({
+						enabled: callCount > 1,
+						message: `call-${callCount}`,
+					});
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+			expect(store.get().message).toBe("call-1");
+
+			const fresh = await store.readFromSource();
+			expect(fresh.message).toBe("call-2");
+			expect(store.get().message).toBe("call-1");
+		});
+	});
+
+	describe("polling lifecycle", () => {
+		test("double startPolling does not create a second interval", async () => {
+			let callCount = 0;
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					callCount++;
+					return makeBody(defaultConfig());
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				pollIntervalMs: 50,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+			await store.startPolling();
+
+			const countAfterStart = callCount;
+
+			await new Promise((resolve) => setTimeout(resolve, 130));
+
+			const countAfterWait = callCount;
+			const intervalFetchCount = countAfterWait - countAfterStart;
+
+			expect(intervalFetchCount).toBeGreaterThanOrEqual(1);
+			expect(intervalFetchCount).toBeLessThanOrEqual(3);
+		});
+
+		test("stopPolling prevents further refreshes", async () => {
+			let callCount = 0;
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					callCount++;
+					return makeBody(defaultConfig());
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				pollIntervalMs: 50,
+				ctx: { location, s3Client: mockClient },
+			});
+
+			await store.startPolling();
+			store.stopPolling();
+
+			const countAfterStop = callCount;
+			await new Promise((resolve) => setTimeout(resolve, 150));
+
+			expect(callCount).toBe(countAfterStop);
+		});
+	});
+
+	describe("subscribe", () => {
+		test("notifies once per changed value, not per refresh, and stops after unsubscribe", async () => {
+			let response = { enabled: false, message: "hello" };
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody(response),
+			});
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+			const seen: TestConfig[] = [];
+			const unsubscribe = store.subscribe((config) => seen.push(config));
+
+			await store.refresh();
+			await store.refresh();
+			expect(seen).toEqual([]);
+
+			response = { enabled: true, message: "flipped" };
+			await store.refresh();
+			await store.refresh();
+			expect(seen).toEqual([{ enabled: true, message: "flipped" }]);
+
+			unsubscribe();
+			response = { enabled: false, message: "again" };
+			await store.refresh();
+			expect(seen).toHaveLength(1);
+		});
+
+		test("a write and the test setter notify too", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody(defaultConfig()),
+			});
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+			const seen: TestConfig[] = [];
+			store.subscribe((config) => seen.push(config));
+
+			await store.writeToSource({
+				config: { enabled: true, message: "written" },
+			});
+			store._setRuntimeConfigForTesting({ enabled: true, message: "set" });
+			expect(seen).toEqual([
+				{ enabled: true, message: "written" },
+				{ enabled: true, message: "set" },
+			]);
+		});
+	});
+});

@@ -15,7 +15,7 @@ export type FullCustomerLicense = DbCustomerLicense & {
 
 /** Schema mirror of the drizzle row, used by the cache sanitize walker —
  * keep fields in sync with customerLicenseTable. */
-const dbCustomerLicenseShape = z.object({
+export const CustomerLicenseRowSchema = z.object({
 	id: z.string(),
 	link_id: z.string(),
 	internal_customer_id: z.string(),
@@ -30,9 +30,9 @@ const dbCustomerLicenseShape = z.object({
 });
 
 export const DbCustomerLicenseSchema: z.ZodType<DbCustomerLicense> =
-	dbCustomerLicenseShape;
+	CustomerLicenseRowSchema;
 
 export const FullCustomerLicenseSchema: z.ZodType<FullCustomerLicense> =
-	dbCustomerLicenseShape.extend({
+	CustomerLicenseRowSchema.extend({
 		planLicense: FullPlanLicenseSchema.nullable(),
 	});

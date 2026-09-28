@@ -148,13 +148,18 @@ export const CLICKHOUSE_PORT = 8123;
 /** dynoxide (native DynamoDB emulator — no JVM in the µVM; the Docker flows
  *  use amazon/dynamodb-local instead). Backs the idempotency-key store. */
 export const DYNAMODB_PORT = 8000;
+/** Redpanda (native Kafka; the Docker flows use apache/kafka). Same port as dw's base worktree. */
+export const KAFKA_PORT = 19092;
+export const KAFKA_BROKERS = `127.0.0.1:${KAFKA_PORT}`;
+/** The balance worker's loopback listener (`BALANCE_WORKER_PORT` default). */
+export const BALANCE_WORKER_PORT = 8082;
 
 /**
  * Build-time localhost service URLs for a worker (plan §5a / §11a). All point at
  * the µVM's own daemons; `DATABASE_CRITICAL_URL` equals `DATABASE_URL`.
  */
 /** Serves every edge config from memory (no S3 in the µVM) and pins the
- * v2-cache rollout to 100% — mirrors ADMIN_ROLLOUT_CONFIG_KEY on the server. */
+ * balance-worker rollout to 100% — mirrors ADMIN_ROLLOUT_CONFIG_KEY on the server. */
 export const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
 	JSON.stringify({
 		"admin/job-queue-config.json": {
@@ -162,7 +167,7 @@ export const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
 		},
 		"admin/rollout-config.json": {
 			rollouts: {
-				"v2-cache": {
+				"balance-worker": {
 					percent: 100,
 					previousPercent: 100,
 					changedAt: 0,

@@ -1,11 +1,11 @@
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { AllowanceType } from "../../../models/productModels/entModels/entModels.js";
 
 export const cusEntsHaveUnlimited = ({
 	cusEnts,
 	internalFeatureId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	internalFeatureId: string;
 }) => {
 	return cusEnts.some(

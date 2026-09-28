@@ -1,13 +1,13 @@
 import { nullish } from "@utils/utils";
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import { isEntityScopedCusEnt } from "../classifyCusEntUtils";
 
 export const cusEntToInvoiceOverage = ({
 	cusEnt,
 	entityId,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithPricesView;
 	entityId?: string;
 }) => {
 	// 1. If entity scoped

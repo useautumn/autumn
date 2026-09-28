@@ -1,6 +1,7 @@
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusEntWithFullCusProductView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { notNullish, nullish } from "../utils.js";
 export const cusEntMatchesEntity = ({
@@ -8,8 +9,8 @@ export const cusEntMatchesEntity = ({
 	entity,
 	features,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
-	entity?: Entity;
+	cusEnt: FullCusEntWithFullCusProductView;
+	entity?: Pick<Entity, "id" | "internal_id" | "feature_id"> | null;
 	features?: Feature[];
 }) => {
 	if (!entity) {

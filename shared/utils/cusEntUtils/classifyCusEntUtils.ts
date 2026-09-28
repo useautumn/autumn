@@ -20,6 +20,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "../../models/featureModels/featureEnums";
+import type { Feature } from "../../models/featureModels/featureModels";
 import {
 	AllowanceType,
 	type Entitlement,
@@ -28,8 +29,8 @@ import type { Price } from "../../models/productModels/priceModels/priceModels";
 import { billingAndEntIntervalsDifferent } from "../intervalUtils";
 import { notNullish, nullish } from "../utils";
 import {
-	cusEntToCusPrice,
 	type CustomerEntitlementWithCustomerPrices,
+	cusEntToCusPrice,
 } from "./convertCusEntUtils/cusEntToCusPrice";
 
 export const isBooleanCusEnt = ({
@@ -40,7 +41,9 @@ export const isBooleanCusEnt = ({
 	return cusEnt.entitlement.feature.type === FeatureType.Boolean;
 };
 
-export const isUnlimitedCusEnt = (cusEnt: FullCustomerEntitlement) => {
+export const isUnlimitedCusEnt = (cusEnt: {
+	entitlement: Pick<Entitlement, "allowance_type">;
+}) => {
 	return cusEnt.entitlement.allowance_type === AllowanceType.Unlimited;
 };
 
@@ -48,7 +51,9 @@ export const isUnlimitedCusEnt = (cusEnt: FullCustomerEntitlement) => {
  * Type guard that narrows cusEnt to have non-null entities.
  * Use directly with cusEnt (not wrapped in object) for type narrowing to work.
  */
-export const isEntityScopedCusEnt = <T extends FullCustomerEntitlement>(
+export const isEntityScopedCusEnt = <
+	T extends { entitlement: Pick<Entitlement, "entity_feature_id"> },
+>(
 	cusEnt: T,
 ): cusEnt is T & { entities: Record<string, EntityBalance> } => {
 	return notNullish(cusEnt.entitlement.entity_feature_id);
@@ -66,22 +71,22 @@ export const cusEntsHavePrice = ({
 };
 
 export const isFreeCustomerEntitlement = (
-	customerEntitlement: FullCusEntWithFullCusProduct,
+	customerEntitlement: CustomerEntitlementWithCustomerPrices,
 ) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 	return nullish(cusPrice);
 };
 
 export const isPaidCustomerEntitlement = (
-	customerEntitlement: FullCusEntWithFullCusProduct,
+	customerEntitlement: CustomerEntitlementWithCustomerPrices,
 ) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 	return notNullish(cusPrice);
 };
 
-export const isAllocatedCustomerEntitlement = (
-	customerEntitlement: FullCusEntWithFullCusProduct,
-) => {
+export const isAllocatedCustomerEntitlement = (customerEntitlement: {
+	entitlement: { feature: Pick<Feature, "config"> };
+}) => {
 	const feature = customerEntitlement.entitlement.feature;
 	const isContinuous =
 		feature.config?.usage_type === FeatureUsageType.Continuous;
@@ -152,8 +157,7 @@ export const customerEntitlementShouldBeBilled = ({
 		});
 
 		return (
-			Math.abs(cycleEnd - invoicePeriodEndMs) <=
-			INVOICE_PERIOD_END_TOLERANCE_MS
+			Math.abs(cycleEnd - invoicePeriodEndMs) <= INVOICE_PERIOD_END_TOLERANCE_MS
 		);
 	}
 

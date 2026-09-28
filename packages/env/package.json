@@ -10,10 +10,40 @@
 			"import": "./src/index.ts",
 			"default": "./src/index.ts"
 		},
+		"./balanceWorker": {
+			"types": "./src/balanceWorker/balanceWorkerEnv.ts",
+			"import": "./src/balanceWorker/balanceWorkerEnv.ts",
+			"default": "./src/balanceWorker/balanceWorkerEnv.ts"
+		},
+		"./balanceWorkerConstants": {
+			"types": "./src/balanceWorker/balanceWorkerConstants.ts",
+			"import": "./src/balanceWorker/balanceWorkerConstants.ts",
+			"default": "./src/balanceWorker/balanceWorkerConstants.ts"
+		},
+		"./balanceWorkerClient": {
+			"types": "./src/balanceWorkerClient.ts",
+			"import": "./src/balanceWorkerClient.ts",
+			"default": "./src/balanceWorkerClient.ts"
+		},
 		"./viteDev": {
 			"types": "./src/viteDev.ts",
 			"import": "./src/viteDev.ts",
 			"default": "./src/viteDev.ts"
+		},
+		"./herald": {
+			"types": "./src/herald.ts",
+			"import": "./src/herald.ts",
+			"default": "./src/herald.ts"
+		},
+		"./cache": {
+			"types": "./src/cache.ts",
+			"import": "./src/cache.ts",
+			"default": "./src/cache.ts"
+		},
+		"./sqs": {
+			"types": "./src/sqs.ts",
+			"import": "./src/sqs.ts",
+			"default": "./src/sqs.ts"
 		}
 	},
 	"scripts": {
@@ -25,7 +55,7 @@
 		"zod": "^3.25.23"
 	},
 	"devDependencies": {
-		"@types/bun": "1.3.14",
+		"@types/bun": "1.4.2",
 		"@types/node": "^25.0.7",
 		"typescript": "^5.7.3"
 	}
