@@ -100,6 +100,12 @@ export const knownValues = (rule: RuleOf<"knownValues">): LintRule => ({
 	...rule,
 });
 
+/** A stated field is a plain value, never an object map. */
+export const notMap = (rule: RuleOf<"notMap">): LintRule => ({
+	kind: "notMap",
+	...rule,
+});
+
 /** A list holds only names with `prefix`, or none of them. */
 export const uniformPrefix = (rule: RuleOf<"uniformPrefix">): LintRule => ({
 	kind: "uniformPrefix",

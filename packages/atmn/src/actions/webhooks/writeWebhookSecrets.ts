@@ -35,9 +35,12 @@ export const writeWebhookSecrets = async ({
 	cwd: string;
 }): Promise<string[]> => {
 	if (secrets.length === 0) return [];
-	const orgId = env.live ? undefined : await env.orgId();
+	const envKey = env.live ? undefined : env.key;
 	const values = Object.fromEntries(
-		secrets.map(({ id, secret }) => [webhookSecretName({ id, orgId }), secret]),
+		secrets.map(({ id, secret }) => [
+			webhookSecretName({ id, envKey }),
+			secret,
+		]),
 	);
 	let path: string;
 	if (env.live) {

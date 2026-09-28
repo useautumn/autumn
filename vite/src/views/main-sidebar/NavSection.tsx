@@ -13,7 +13,7 @@ export const NavSection = ({
 	return (
 		<div className="flex flex-col gap-px">
 			{title && expanded && (
-				<span className="px-2.5 pb-1.5 text-xs font-medium leading-4 text-[#8A8A8A] dark:text-[#6B6B6B]">
+				<span className="px-2.5 pb-[5px] text-[11.5px] font-[450] leading-4 text-[#8A8A8A] dark:text-[#5C5C5C]">
 					{title}
 				</span>
 			)}

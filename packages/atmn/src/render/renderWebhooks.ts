@@ -4,8 +4,10 @@ import type { PreviewSyncWebhooksResponse } from "../generated/client";
 type WebhookChange = PreviewSyncWebhooksResponse["changes"][number];
 type WebhookState = Extract<WebhookChange, { action: "create" }>["webhook"];
 
-/** One push's webhook lane: the server's diff for the target env. */
+/** One env's webhook lane: the server's diff for that env. */
 export type WebhooksPreview = {
+	/** The `url` map key the diff is for: `live`, `sandbox` or a sandbox's slug. */
+	env?: string;
 	changes: WebhookChange[];
 };
 
@@ -19,7 +21,7 @@ export const webhooksHaveWork = ({
 const DETAIL_INDENT = "      ";
 
 const list = (values: readonly string[]): string =>
-	values.length === 0 ? "(none)" : values.join(", ");
+	values.length === 0 ? "every event" : values.join(", ");
 
 /** Every field that moved, one line each; the URL first, since it is the one that bites. */
 const updateDetails = ({
@@ -88,5 +90,9 @@ export const renderWebhooks = ({
 	const count = webhooks.changes.filter(
 		(change) => change.action !== "unmanaged",
 	).length;
-	return [chalk.bold(`Webhooks (${count})`), ...rows].join("\n");
+	const heading =
+		webhooks.env === undefined
+			? `Webhooks (${count})`
+			: `Webhooks · ${webhooks.env} (${count})`;
+	return [chalk.bold(heading), ...rows].join("\n");
 };

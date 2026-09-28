@@ -30,7 +30,9 @@ export const LeaveOrgPopover = () => {
 		}
 
 		if (organizations.length === 1) {
-			toast.error("You must have at least one organization");
+			toast.error(
+				"This is your only organization. To remove it, delete your account in Settings → Account.",
+			);
 			return;
 		}
 

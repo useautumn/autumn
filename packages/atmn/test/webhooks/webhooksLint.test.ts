@@ -1,7 +1,8 @@
 /**
- * The webhooks block is linted before anything is sent. The id, https and
- * events rules come from the sync body's spec; url keys, env-var collisions,
- * the localhost guard and the empty-map warning are the config's own.
+ * The webhooks block is linted before anything is sent. One entry is one
+ * endpoint in one env. The id, https and events rules come from the sync
+ * body's spec; `(env, id)` uniqueness, env-var collisions, the localhost guard
+ * and the old url-map refusal are the config's own.
  */
 
 import { expect, test } from "bun:test";
@@ -12,8 +13,9 @@ import { atmn, splitWire } from "../../src/generated/wire";
 const billing = (overrides: Partial<Webhook> = {}): Webhook =>
 	webhook({
 		id: "billing",
+		env: "sandbox",
 		events: ["billing.updated"],
-		url: { sandbox: "https://staging.example.com/autumn" },
+		url: "https://staging.example.com/autumn",
 		...overrides,
 	});
 
@@ -32,94 +34,99 @@ const messages = (webhooks: Webhook[]): string =>
 		.map((issue) => `${issue.path}: ${issue.message}`)
 		.join("\n");
 
-test("a clean webhook lints clean and rides the wire with its url map intact", () => {
+test("a clean webhook lints clean and rides the wire with its env and url", () => {
 	const document = atmn({
 		webhooks: [
-			billing({
-				url: {
-					live: "https://example.com/autumn",
-					"qa-team": "https://qa.example.com/autumn",
-				},
-			}),
+			billing({ env: "live", url: "https://example.com/autumn" }),
+			billing({ env: "qa-team", url: "https://qa.example.com/autumn" }),
 		],
 	});
 	const { lists, catalog, warnings } = splitWire(document);
 	expect(warnings).toEqual([]);
 	expect("webhooks" in catalog).toBe(false);
-	expect(lists.webhooks?.[0]?.url).toEqual({
-		live: "https://example.com/autumn",
-		"qa-team": "https://qa.example.com/autumn",
-	});
+	expect(lists.webhooks?.map((row) => [row.env, row.url])).toEqual([
+		["live", "https://example.com/autumn"],
+		["qa-team", "https://qa.example.com/autumn"],
+	]);
 });
 
-test("spec rules: id charset, https, and at least one event", () => {
+test("spec rules: id charset, https, and env is required", () => {
 	expect(messages([billing({ id: "bill ing" })])).toContain(
 		"id must match ^[a-zA-Z0-9_-]+$",
 	);
-	expect(
-		messages([billing({ url: { sandbox: "http://example.com/autumn" } })]),
-	).toContain("url.sandbox must match ^[Hh][Tt][Tt][Pp][Ss]:");
-	expect(messages([billing({ events: [] })])).toContain(
-		"events must have at least 1 entry",
+	expect(messages([billing({ url: "http://example.com/autumn" })])).toContain(
+		"url must match ^[Hh][Tt][Tt][Pp][Ss]:",
 	);
+	expect(
+		messages([
+			// biome-ignore lint/suspicious/noExplicitAny: a config missing env
+			webhook({ id: "billing", url: "https://x.dev/h" } as any),
+		]),
+	).toContain("env");
 });
 
-test("localhost and private networks are refused in every env; a tunnel is not", () => {
+test("env is live, sandbox or a sandbox slug: no spaces, no capitals", () => {
+	expect(messages([billing({ env: "qa team" })])).toContain(
+		"env must match ^[a-z0-9_-]+$",
+	);
+	expect(messages([billing({ env: "Live" })])).toContain("env must match");
+});
+
+test("the old url map is refused with how to split it", () => {
+	expect(
+		messages([
+			billing({
+				// biome-ignore lint/suspicious/noExplicitAny: the 2.0.36–2.0.42 shape
+				url: { live: "https://a.dev/h", sandbox: "https://b.dev/h" } as any,
+			}),
+		]),
+	).toContain("split into one webhook() per env");
+});
+
+test("an omitted events list lints clean: the webhook receives every event", () => {
+	expect(
+		issuesOf([
+			webhook({ id: "billing", env: "sandbox", url: "https://x.dev/h" }),
+		]),
+	).toEqual([]);
+});
+
+test("localhost and private networks are refused; a tunnel is not", () => {
 	for (const url of [
 		"https://localhost:3000/hook",
 		"https://api.local/hook",
 		"https://10.0.0.4/hook",
 		"https://[fd12::1]/hook",
 	]) {
-		expect(messages([billing({ url: { live: url } })])).toContain(
+		expect(messages([billing({ url })])).toContain(
 			`url ${JSON.stringify(url)} is refused`,
 		);
 	}
-	expect(
-		issuesOf([billing({ url: { sandbox: "https://abc.ngrok.app/hook" } })]),
-	).toEqual([]);
+	expect(issuesOf([billing({ url: "https://abc.ngrok.app/hook" })])).toEqual(
+		[],
+	);
 });
 
-test("ids must be unique, and must not collide once turned into an env var name", () => {
+test("an id is unique per env: the same id may sit in several envs, never twice in one", () => {
+	expect(issuesOf([billing(), billing({ env: "live" })])).toEqual([]);
 	expect(messages([billing(), billing()])).toContain(
-		'id "billing" is used more than once',
-	);
-	expect(messages([billing({ id: "Billing" }), billing()])).toContain(
-		'id "billing" and "Billing" both read as BILLING in an env var name',
+		'id "billing" with env "sandbox" is used more than once',
 	);
 	expect(messages([billing({ id: "a-b" }), billing({ id: "a_b" })])).toContain(
 		'id "a_b" and "a-b" both read as A_B',
 	);
+	expect(
+		issuesOf([billing({ id: "a-b" }), billing({ id: "a_b", env: "live" })]),
+	).toEqual([]);
 });
 
 test("the https scheme is matched case-insensitively, as the server reads it", () => {
 	expect(
-		issuesOf([
-			billing({ url: { sandbox: "HTTPS://staging.example.com/autumn" } }),
-		]),
+		issuesOf([billing({ url: "HTTPS://staging.example.com/autumn" })]),
 	).toEqual([]);
 	expect(
-		messages([
-			billing({ url: { sandbox: "HTTP://staging.example.com/autumn" } }),
-		]),
-	).toContain("url.sandbox must match");
-});
-
-test("url keys are live, sandbox or a sandbox slug: no spaces, no capitals", () => {
-	expect(
-		messages([billing({ url: { "qa team": "https://x.dev/h" } })]),
-	).toContain('url key "qa team" must match ^[a-z0-9_-]+$');
-	expect(messages([billing({ url: { Live: "https://x.dev/h" } })])).toContain(
-		'url key "Live" must match',
-	);
-});
-
-test("an empty url map is a warning carried beside the document, never a refusal", () => {
-	const document = atmn({ webhooks: [billing({ url: {} })] });
-	const { warnings } = splitWire(document);
-	expect(warnings).toHaveLength(1);
-	expect(warnings[0]?.path).toBe('webhook "billing"');
-	expect(warnings[0]?.message).toContain("registered nowhere");
+		messages([billing({ url: "HTTP://staging.example.com/autumn" })]),
+	).toContain("url must match");
 });
 
 test("an event name this atmn doesn't know is a warning, never a refusal: the server checks it", () => {

@@ -5,13 +5,13 @@ import {
 	fullCustomerToCustomerEntitlements,
 	isEntityScopedCusEnt,
 	isPooledBalanceSourceCustomerEntitlement,
-	priceToProrationConfig,
 	type UpdateCustomerEntitlement,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
+import { billingContextToQuantityProrationConfig } from "./billingContextToQuantityProrationConfig";
 
 export const computeUpdateQuantityCustomerEntitlementChanges = ({
 	ctx: _ctx,
@@ -46,7 +46,8 @@ export const computeUpdateQuantityCustomerEntitlementChanges = ({
 
 	const isUpgrade = quantityDifference > 0;
 
-	const { shouldApplyProration } = priceToProrationConfig({
+	const { shouldApplyProration } = billingContextToQuantityProrationConfig({
+		billingContext: updateSubscriptionContext,
 		price: customerPrice.price,
 		isUpgrade,
 	});

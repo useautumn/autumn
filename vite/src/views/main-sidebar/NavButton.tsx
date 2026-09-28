@@ -90,6 +90,8 @@ export const NavButton = ({
 
 	const outerDivClass = cn(
 		sidebarRowClass({ isActive, isCollapsed: !expanded }),
+		isActive &&
+			"rounded-[7px] font-medium bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.06)] dark:bg-[#1C1C1C] dark:text-[#F4F4F4] dark:shadow-[inset_0_0_0_1px_#262626,inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)]",
 		isSubNav && "pl-4",
 		className,
 	);

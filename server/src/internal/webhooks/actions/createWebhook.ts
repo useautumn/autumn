@@ -1,5 +1,6 @@
 import type { Webhook, WebhookParams } from "@autumn/shared";
 import { svixEndpointToWebhook } from "@/external/svix/endpoints/svixEndpointToWebhook.js";
+import { toSvixFilterTypes } from "@/external/svix/endpoints/toSvixFilterTypes.js";
 import { withSvixErrors } from "@/external/svix/endpoints/withSvixErrors.js";
 import { createSvixCli } from "@/external/svix/svixUtils.js";
 
@@ -18,7 +19,7 @@ export const createWebhook = async ({
 			svix.endpoint.create(appId, {
 				uid: params.id,
 				url: params.url,
-				filterTypes: params.events,
+				filterTypes: toSvixFilterTypes({ events: params.events }),
 				description: params.description,
 				disabled: params.disabled,
 			}),

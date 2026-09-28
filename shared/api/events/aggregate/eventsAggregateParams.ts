@@ -69,6 +69,8 @@ export const ExtEventsAggregateParamsSchema = z.object({
 		description:
 			"Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9",
 	}),
+	// Dashboard-only: "window" ranks the top max_groups once over the whole range.
+	group_ranking: z.enum(["bin", "window"]).optional().meta({ internal: true }),
 	// z.enum, not z.literal: a literal renders as OpenAPI `const`, which
 	// Speakeasy turns into an always-sent default in generated SDKs.
 	aggregate_on: z.enum(["deducted"]).optional().meta({

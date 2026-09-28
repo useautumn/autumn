@@ -32,7 +32,6 @@ import {
 	staleSkillsHint,
 	updateSkills,
 } from "./actions/skills/skills";
-import { resolveWebhookEnv } from "./actions/webhooks/resolveWebhookEnv";
 import { configPackageName } from "./config/configPackageName";
 import { assertSandboxTarget } from "./env/assertSandboxTarget";
 import { loadEnvFiles } from "./env/loadEnv";
@@ -206,18 +205,26 @@ const pinnedSandboxName = async ({
 	}
 };
 
-/** The env a push or pull's webhook lane addresses, resolved only when asked. */
-const webhookEnvFor =
-	({ target, command }: { target: Target; command: Command }) =>
+/** A client for one env's own key, at the target's base URL. */
+const webhookClientFor =
+	({ target }: { target: Target }) =>
+	({ secretKey }: { secretKey: string }) =>
+		createClient({
+			secretKey,
+			fetch: autumnFetch,
+			...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+		});
+
+/** Every env the env files hold a key for, listed only when a webhook lane asks. */
+const webhookEnvsFor =
+	({ target }: { target: Target }) =>
 	() =>
-		resolveWebhookEnv({
-			target,
-			prod: command.optsWithGlobals<GlobalFlags>().prod === true,
-			fetchOrgInfo: () =>
-				fetchOrgInfo({
-					baseUrl: targetBaseUrl({ target }),
-					secretKey: requireSecretKey({ target }),
-				}),
+		webhookPullEnvs({
+			targetKeyName: target.secretKeyName,
+			listWebhooks: ({ secretKey }) =>
+				webhookClientFor({ target })({ secretKey }).listWebhooks({}),
+			fetchOrgInfo: ({ secretKey }) =>
+				fetchOrgInfo({ baseUrl: targetBaseUrl({ target }), secretKey }),
 		});
 
 /** `/organization/me` for the main key: what `sandbox use` and `init` report the org as. */
@@ -405,7 +412,9 @@ Linking a keyless org to an account:
 					client: clientFor({ target }),
 					configPath: configFlagOf({ command }),
 					dryRun: !apply,
-					webhookEnv: webhookEnvFor({ target, command }),
+					prod: command.optsWithGlobals<GlobalFlags>().prod === true,
+					webhookEnvs: webhookEnvsFor({ target }),
+					webhookClientFor: webhookClientFor({ target }),
 				});
 				// A dry run that never saw the catalog must not read as clean.
 				process.exitCode = pushExitCode({ apply, result });
@@ -501,18 +510,7 @@ Linking a keyless org to an account:
 					overwrite: options.overwrite === true,
 					yes: options.yes === true,
 					prompter: prompterFor({ command }),
-					webhookEnvs: () =>
-						webhookPullEnvs({
-							targetKeyName: target.secretKeyName,
-							listWebhooks: ({ secretKey }) =>
-								createClient({
-									secretKey,
-									fetch: autumnFetch,
-									...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
-								}).listWebhooks({}),
-							fetchOrgInfo: ({ secretKey }) =>
-								fetchOrgInfo({ baseUrl: targetBaseUrl({ target }), secretKey }),
-						}),
+					webhookEnvs: webhookEnvsFor({ target }),
 				});
 				writeStaleSkillsHint({ command });
 			},

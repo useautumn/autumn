@@ -9,17 +9,16 @@ export const testOrgSandboxAppId = () => {
 	return appId;
 };
 
-/** Raw POST so tests see status codes, not AutumnInt's thrown errors. */
-export const postWebhooks = async ({
-	route,
+const postRpc = async ({
+	path,
 	body,
 	key = defaultCtx.orgSecretKey,
 }: {
-	route: string;
+	path: string;
 	body: unknown;
 	key?: string;
 }) => {
-	const res = await fetch(`${apiBase}/webhooks.${route}`, {
+	const res = await fetch(`${apiBase}/${path}`, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${key}`,
@@ -30,6 +29,25 @@ export const postWebhooks = async ({
 	// biome-ignore lint/suspicious/noExplicitAny: response shapes vary per route
 	return { status: res.status, body: (await res.json()) as any };
 };
+
+/** Raw POST so tests see status codes, not AutumnInt's thrown errors. */
+export const postWebhooks = ({
+	route,
+	...rest
+}: {
+	route: string;
+	body: unknown;
+	key?: string;
+}) => postRpc({ path: `webhooks.${route}`, ...rest });
+
+export const postSandboxes = ({
+	route,
+	...rest
+}: {
+	route: string;
+	body: unknown;
+	key?: string;
+}) => postRpc({ path: `sandboxes.${route}`, ...rest });
 
 /** Real Svix endpoints outlive the test run, so tests delete what they made. */
 export const deleteSvixEndpoints = async ({
