@@ -5,7 +5,7 @@ import type {
 
 export type OwnershipPublisherContext = {
 	producer: KafkaProducer;
-	/** A plain producer for `ready`; without one the publisher can only claim and release. */
+	/** A plain producer for `ready` and `draining`; without one the publisher can only claim and release. */
 	sender?: KafkaSender;
 };
 
@@ -34,6 +34,14 @@ export type OwnershipReadiness = {
 	readyAt: number;
 };
 
+export type OwnershipDraining = {
+	partition: number;
+	/** The owner that has withdrawn and is draining before naming its successor. */
+	endpoint: string;
+	successor: string;
+	drainingAt: number;
+};
+
 export type OwnershipPublication = {
 	routeEpoch: string;
 };
@@ -42,4 +50,5 @@ export type OwnershipPublisher = {
 	claim(params: OwnershipClaim): Promise<OwnershipPublication>;
 	release(params: OwnershipRelease): Promise<OwnershipPublication>;
 	announceReady(params: OwnershipReadiness): Promise<void>;
+	announceDraining(params: OwnershipDraining): Promise<void>;
 };

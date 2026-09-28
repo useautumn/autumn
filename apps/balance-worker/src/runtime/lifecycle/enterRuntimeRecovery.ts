@@ -6,6 +6,7 @@ import {
 import type { PartitionRuntimeContext } from "../types/partitionRuntime.js";
 import type { PartitionRuntimeScope } from "../types/partitionRuntimeState.js";
 import { disposeRuntimeResources } from "./disposeRuntimeResources.js";
+import { settleProcessor } from "./stopRuntime.js";
 
 export function enterRuntimeRecovery({
 	ctx,
@@ -83,7 +84,7 @@ async function drainWithinRecoveryTimeout({
 	}
 	try {
 		await Promise.race([
-			ctx.processor.drain(),
+			settleProcessor({ ctx }),
 			new Promise<void>(scheduleTimeout),
 		]);
 	} finally {

@@ -8,6 +8,7 @@ import type {
 	OwnershipTailContext,
 	OwnershipTailListener,
 	OwnershipTailState,
+	OwnershipTailView,
 } from "./types/ownershipTail.js";
 
 export function createOwnershipTail({
@@ -34,12 +35,43 @@ export function createOwnershipTail({
 	const state: OwnershipTailState = {
 		status: "created",
 		listenersByPartition: new Map(),
-		removeListeners: [],
+		viewByPartition: new Map(),
+		removeListeners: new Set(),
 		stopping: null,
 	};
 
 	function report({ cause }: { cause: unknown }): void {
 		ctx.onError?.({ cause });
+	}
+
+	/** A drain counts only while its author still owns the partition; a claim or release ends it. */
+	function remember({ record }: Parameters<OwnershipTailListener>[0]): void {
+		const view = state.viewByPartition.get(record.partition);
+		if (record.type === "claimed") {
+			state.viewByPartition.set(record.partition, {
+				owner: record.endpoint,
+				activeDrain: null,
+			});
+		} else if (record.type === "unowned") {
+			state.viewByPartition.set(record.partition, {
+				owner: null,
+				activeDrain: null,
+			});
+		} else if (record.type === "draining" && view?.owner === record.endpoint) {
+			view.activeDrain = {
+				endpoint: record.endpoint,
+				successor: record.successor,
+			};
+		}
+	}
+
+	function readView({
+		partition,
+	}: {
+		partition: number;
+	}): OwnershipTailView | null {
+		const view = state.viewByPartition.get(partition);
+		return view ? { ...view } : null;
 	}
 
 	function deliver({
@@ -49,8 +81,6 @@ export function createOwnershipTail({
 		partition: number;
 		message: { offset: string; key: Buffer | null; value: Buffer | null };
 	}): void {
-		const listeners = state.listenersByPartition.get(partition);
-		if (!listeners || listeners.size === 0) return;
 		let entry: Parameters<OwnershipTailListener>[0];
 		try {
 			entry = {
@@ -63,6 +93,9 @@ export function createOwnershipTail({
 			report({ cause });
 			return;
 		}
+		remember(entry);
+		const listeners = state.listenersByPartition.get(partition);
+		if (!listeners || listeners.size === 0) return;
 		for (const listener of [...listeners]) {
 			try {
 				listener(entry);
@@ -103,10 +136,19 @@ export function createOwnershipTail({
 		function onStartTimeout(): void {
 			firstFetch.reject(new Error("Ownership tail did not fetch in time"));
 		}
-		state.removeListeners.push(
-			consumer.on(consumer.events.CRASH, onCrash),
-			consumer.on(consumer.events.FETCH, onFetch),
-		);
+		// The timeout can fire while connect or subscribe is still pending, before
+		// the promise is awaited; without an observer that is an unhandled rejection.
+		async function observeFirstFetch(): Promise<void> {
+			try {
+				await firstFetch.promise;
+			} catch {
+				// Surfaces where start awaits it.
+			}
+		}
+		void observeFirstFetch();
+		state.removeListeners
+			.add(consumer.on(consumer.events.CRASH, onCrash))
+			.add(consumer.on(consumer.events.FETCH, onFetch));
 		const timer = setTimeout(onStartTimeout, startTimeoutMs);
 		try {
 			await consumer.connect();
@@ -117,7 +159,8 @@ export function createOwnershipTail({
 			});
 			await consumer.run({ autoCommit: false, eachBatch });
 			await firstFetch.promise;
-			state.status = "started";
+			// A stop that landed meanwhile wins; started must not overwrite it.
+			if (state.status === "starting") state.status = "started";
 		} catch (cause) {
 			await stop();
 			throw cause;
@@ -144,18 +187,23 @@ export function createOwnershipTail({
 		listeners.add(onRecord);
 		state.listenersByPartition.set(partition, listeners);
 		function remove(): void {
+			signal.removeEventListener("abort", remove);
+			state.removeListeners.delete(remove);
 			listeners.delete(onRecord);
 			if (listeners.size === 0) state.listenersByPartition.delete(partition);
 		}
-		signal.addEventListener("abort", remove, { once: true });
+		signal.addEventListener("abort", remove);
+		// Tracked so stop() detaches from the caller's signal, which may outlive the tail.
+		state.removeListeners.add(remove);
 	}
 
 	function stop(): Promise<void> {
 		if (state.stopping) return state.stopping;
 		const started = state.status !== "created";
 		state.status = "stopped";
+		for (const remove of [...state.removeListeners]) remove();
+		state.removeListeners.clear();
 		state.listenersByPartition.clear();
-		for (const remove of state.removeListeners.splice(0)) remove();
 		state.stopping = started ? closeTail() : Promise.resolve();
 		return state.stopping;
 	}
@@ -168,5 +216,5 @@ export function createOwnershipTail({
 		}
 	}
 
-	return { start, stop, tailPartition };
+	return { start, stop, tailPartition, readView };
 }

@@ -209,11 +209,25 @@ function awaitSignal<Result>({
 		else signal.addEventListener("abort", abort, { once: true });
 	});
 }
-async function announceReady(): Promise<void> {}
+async function announceNothing(): Promise<void> {}
 export const noHandoffPublication: Pick<
 	PartitionOwnershipPublication,
-	"announceReady" | "awaitReady" | "awaitClaim"
-> = { announceReady, awaitReady: awaitSignal, awaitClaim: awaitSignal };
+	| "announceReady"
+	| "announceDraining"
+	| "awaitReady"
+	| "readActiveDrain"
+	| "awaitDraining"
+	| "awaitForeignClaim"
+	| "awaitClaim"
+> = {
+	announceReady: announceNothing,
+	announceDraining: announceNothing,
+	awaitReady: awaitSignal,
+	readActiveDrain: () => null,
+	awaitDraining: awaitSignal,
+	awaitForeignClaim: awaitSignal,
+	awaitClaim: awaitSignal,
+};
 export type KafkaOwnedPartitionGroupConsumerPort = KafkaConsumerClient;
 export type KafkaPartitionRuntimeFactory = (
 	input: Parameters<WorkerPartitionsContext["createRuntime"]>[0],

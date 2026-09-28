@@ -66,7 +66,7 @@ type OwnershipEvent = {
 	seenAt: number;
 	partition: number;
 	offset: string;
-	type: "claimed" | "unowned" | "ready";
+	type: "claimed" | "unowned" | "ready" | "draining";
 	endpoint?: string;
 	at: number;
 };
@@ -166,7 +166,9 @@ await watcher.run({
 					? record.claimedAt
 					: record.type === "ready"
 						? record.readyAt
-						: record.releasedAt,
+						: record.type === "draining"
+							? record.drainingAt
+							: record.releasedAt,
 		});
 	},
 });
