@@ -42,7 +42,7 @@ export function assertKafkaBalanceWorkerTimings({
 
 /**
  * Each ECS fleet consumes in its own group, so a green boot never rebalances blue's
- * partitions away; off ECS (local, tests, a fail-open boot) the base group is the whole fleet.
+ * partitions away; off ECS (local, tests) the base group is the whole fleet.
  */
 export function workerConsumerGroupIdOf({
 	env,

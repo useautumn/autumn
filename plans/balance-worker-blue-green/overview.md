@@ -76,8 +76,9 @@ ARN that is not ours → hold. A record naming ours → go.
   of its ECS fleets receive it verbatim, so anything set there is the same on blue and green.
 - The worker derives its group at boot, after `resolveTaskIdentity`: `${base}-${fleetId}` with
   `fleetId = sha256(identity.serviceArn)[0:8]` (`blueGreen/fleetIdOf.ts`); no ECS identity (local,
-  tests, fail-open) → the base group, unchanged. Topics, transactional-id prefix
-  (`createWorkerProducerConfig`), checkpoint prefix, catalog invalidation group prefix: deployment only.
+  tests) → the base group, unchanged; an ECS task whose ARN does not resolve refuses to start.
+  Topics, transactional-id prefix (`createWorkerProducerConfig`), checkpoint prefix, catalog
+  invalidation group prefix: deployment only.
 - Tests: the base group off ECS, the suffixed group on it, the two fleets' ids differ.
 
 ### 2. `apps/balance-worker`: slot store, gate, hook, heartbeat
@@ -89,9 +90,10 @@ ARN that is not ours → hold. A record naming ours → go.
   `awaitReadyAnnouncement` that resolves when `isActiveSlot()` (same rules as
   `server/src/queue/blueGreen/blueGreenGate.ts`), re-checking on every store change, aborting on
   the partition's signal.
-- Heartbeat writer, 20s, key `admin/blue-green-heartbeats/balance-workers.json` (one object per
-  fleet, last writer wins, like workers/cron): identity, fleet id, `partitions: { prepared, ready,
-  admitted, total }`, per-partition `{ status, lagRecords }`, probes `{ kafka, postgres }`, `ok`.
+- Heartbeat writer, 20s, key `admin/blue-green-heartbeats/balance-workers/<fleetId>/<instanceId>.json`
+  (one object per task): identity, fleet id, `partitions: { prepared, ready, admitted, total }`,
+  per-partition `{ status, lagRecords }`, probes `{ kafka, postgres }`, `ok`. The dashboard sums
+  fresh task heartbeats by fleet.
 - A worker that is the active slot (or fail-open) must behave byte-for-byte as today: the tests in
   `tests/unit/partitions/partitionHandoff.test.ts` keep passing with no hook set.
 - Unit tests: gate rules (no identity / no record / ours / not ours), hook resolves on flip and
@@ -186,10 +188,16 @@ Recorded while implementing items 1–3 (2026-09-28, PR "feat(balance-worker): b
   (`blueGreen/fleetIdOf.ts`, group in `init/workerConfig.ts`). Off ECS it is the plain
   `${deployment}-workers`, so local runs and tests are unchanged. Runbook: nothing to set in
   Flightcontrol; the fleet id is in the boot log and the heartbeat.
-- **The slot store retains its last record through a read error** (`retainOnError`), the task
-  identity retries the ECS metadata endpoint (~10s) before failing open and logs at error level
-  when it does, and the heartbeat's `ok` includes the store's health: each of those defaults would
-  otherwise have opened green's gate without a flip.
+- **The slot store retains its last record through a read error** (`retainOnError`), and the
+  heartbeat's `ok` includes the store's health: each of those defaults would otherwise have opened
+  green's gate without a flip.
+- **An ECS task that cannot resolve its service refuses to start.** `resolveTaskIdentity` retries
+  the metadata endpoint (~10s) and then throws, so the process exits non-zero and ECS replaces the
+  task. It used to fail open at error level; once the ARN also names the consumer group that is no
+  longer safe: a task with no ARN would join the unsuffixed base group as a one-task fleet with an
+  open gate, take every partition and fence its healthy peers, and two such tasks would share the
+  base group, the very bug the fleet id fixes. Fail-open stays only for runs with no metadata URI
+  (local, tests), where there is no fleet.
 - **The first rollout renames the existing fleet's group, once.** The running fleet is in
   `${deployment}-workers`; the first task with this code joins `${deployment}-workers-<fleetId>`, a
   second, unrevoked group beside it, and the partitions move by release-then-claim with the fence:
