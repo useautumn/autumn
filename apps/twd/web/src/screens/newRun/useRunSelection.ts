@@ -75,6 +75,13 @@ export const useRunSelection = ({
 			};
 		});
 
+	/** Batch add (select all / paint). Removal goes through toggleFile to split groups. */
+	const addFiles = (paths: string[]) =>
+		setSelection((s) => ({
+			...s,
+			files: [...new Set([...s.files, ...paths])],
+		}));
+
 	const setGrep = (grep: string) => setSelection((s) => ({ ...s, grep }));
 	const clear = () => setSelection({ groups: [], files: [], grep: "" });
 
@@ -85,6 +92,7 @@ export const useRunSelection = ({
 		groupState,
 		toggleGroup,
 		toggleFile,
+		addFiles,
 		setGrep,
 		clear,
 		filesOf,

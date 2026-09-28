@@ -38,6 +38,13 @@ const Highlight = ({ text, indexes }: { text: string; indexes: number[] }) => {
 	);
 };
 
+/** Drag-to-select: press on a row sets the target state, entering other rows applies it. */
+let paintTarget: boolean | null = null;
+if (typeof window !== "undefined")
+	window.addEventListener("pointerup", () => {
+		paintTarget = null;
+	});
+
 const FileRow = ({
 	path,
 	indexes,
@@ -53,14 +60,35 @@ const FileRow = ({
 	onToggle: (on: boolean) => void;
 	indent?: boolean;
 }) => (
-	// biome-ignore lint/a11y/noLabelWithoutControl: Base UI Checkbox renders the native input inside
-	<label
+	<div
+		role="checkbox"
+		aria-checked={checked}
+		aria-label={path}
+		tabIndex={0}
+		onPointerDown={(e) => {
+			if (e.button !== 0) return;
+			e.preventDefault();
+			paintTarget = !checked;
+			onToggle(!checked);
+		}}
+		onPointerEnter={() => {
+			if (paintTarget !== null && paintTarget !== checked)
+				onToggle(paintTarget);
+		}}
+		onKeyDown={(e) => {
+			if (e.key === " " || e.key === "Enter") {
+				e.preventDefault();
+				onToggle(!checked);
+			}
+		}}
 		className={cn(
-			"flex h-7 cursor-pointer items-center gap-2.5 pr-3 text-tiny-id hover:bg-interactive-secondary-hover",
+			"flex h-7 cursor-pointer select-none items-center gap-2.5 pr-3 text-tiny-id hover:bg-interactive-secondary-hover",
 			indent ? "pl-10" : "pl-3",
 		)}
 	>
-		<Checkbox checked={checked} onCheckedChange={onToggle} label={path} />
+		<span className="pointer-events-none flex">
+			<Checkbox checked={checked} onCheckedChange={() => {}} label={path} />
+		</span>
 		{indexes ? (
 			<Highlight text={path} indexes={indexes} />
 		) : (
@@ -74,7 +102,7 @@ const FileRow = ({
 		<span className="ml-auto shrink-0 pl-3 font-sans text-[11px] text-subtle tabular-nums">
 			{p90 === null ? "new" : `p90 ${formatMs(p90)}`}
 		</span>
-	</label>
+	</div>
 );
 
 export const TestSelector = ({
@@ -184,10 +212,18 @@ export const TestSelector = ({
 					onKeyDown={(e) => e.key === "Escape" && setQuery("")}
 					placeholder={`Fuzzy search ${num(catalog.files.length)} files and ${catalog.groups.length} groups`}
 				/>
-				{query && (
+				{query ? (
 					<span className="absolute top-1/2 right-4 -translate-y-1/2">
 						<Kbd>esc</Kbd>
 					</span>
+				) : (
+					<button
+						type="button"
+						className="absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer rounded px-1.5 text-xs text-primary hover:bg-muted"
+						onClick={() => sel.addFiles(catalog.files.map((f) => f.path))}
+					>
+						Select all {num(catalog.files.length)}
+					</button>
 				)}
 			</div>
 			<div className="max-h-[calc(100dvh-16rem)] min-h-80 overflow-auto">
@@ -202,7 +238,25 @@ export const TestSelector = ({
 							</div>
 						)}
 						<p className="flex items-center justify-between px-3 pt-2 pb-1 text-[11px] font-medium text-subtle">
-							<span>Files</span>
+							<span className="flex items-center gap-2">
+								Files
+								{results.length > 0 && (
+									<button
+										type="button"
+										className="cursor-pointer rounded px-1 text-primary hover:bg-muted"
+										onClick={() => {
+											const paths = results.map((r) => r.file.path);
+											const allOn = paths.every((p) => sel.selectedSet.has(p));
+											if (!allOn) return sel.addFiles(paths);
+											for (const r of results) sel.toggleFile(r.file, false);
+										}}
+									>
+										{results.every((r) => sel.selectedSet.has(r.file.path))
+											? "Deselect all"
+											: `Select all ${num(results.length)}`}
+									</button>
+								)}
+							</span>
 							<span className="tabular-nums">
 								{results.length > MAX_RESULTS
 									? `top ${MAX_RESULTS} of ${num(results.length)}`
