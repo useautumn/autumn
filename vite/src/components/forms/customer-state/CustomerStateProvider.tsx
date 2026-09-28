@@ -3,6 +3,7 @@ import { useStore } from "@tanstack/react-form";
 import {
 	createContext,
 	type ReactNode,
+	useCallback,
 	useContext,
 	useMemo,
 	useState,
@@ -16,6 +17,7 @@ import type { UseCustomerStateForm } from "@/components/forms/customer-state/use
 import { useCustomerStateHandlers } from "@/components/forms/customer-state/useCustomerStateHandlers";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 type CustomerStateHandlers = ReturnType<typeof useCustomerStateHandlers>;
 
@@ -66,7 +68,18 @@ export function CustomerStateProvider({
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 	const formValues = useStore(form.store, (state) => state.values);
-	const [editingPlan, setEditingPlan] = useState<PlanLocation | null>(null);
+	const [editingPlan, setEditingPlanState] = useState<PlanLocation | null>(
+		null,
+	);
+	const { setIsInlineEditorOpen } = useCustomerContext();
+	// Same commit as the editor mount, so the sheet fades out with it rather than after.
+	const setEditingPlan = useCallback(
+		(editing: PlanLocation | null) => {
+			setEditingPlanState(editing);
+			setIsInlineEditorOpen(Boolean(editing));
+		},
+		[setIsInlineEditorOpen],
+	);
 
 	const editingPlanValue = useMemo(() => {
 		if (!editingPlan) return null;
