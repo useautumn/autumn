@@ -30,11 +30,11 @@ const deleteChange = async ({
 	id: string;
 }): Promise<ItemOutcome> => {
 	try {
-		const appId = remote.appIdOf.get(id) as string;
-		await withSvixErrors({
-			webhookId: id,
-			run: () => createSvixCli().endpoint.delete(appId, id),
-		});
+		for (const appId of remote.appIdsOf.get(id) ?? [])
+			await withSvixErrors({
+				webhookId: id,
+				run: () => createSvixCli().endpoint.delete(appId, id),
+			});
 		return { ok: true };
 	} catch (error) {
 		return { ok: false, id, error };
@@ -130,11 +130,15 @@ export const syncWebhooks = async ({
 		now: Date.now(),
 	});
 	const statedById = new Map(stated.map((params) => [params.id, params]));
+	const deletedIds = new Set<string>();
 
 	const outcomes = await Promise.all(
 		changes.flatMap((change) => {
-			if (change.action === "delete")
+			if (change.action === "delete") {
+				if (deletedIds.has(change.id)) return [];
+				deletedIds.add(change.id);
 				return [deleteChange({ remote: synced, id: change.id })];
+			}
 			const params = statedById.get(change.id);
 			if (!params || change.action === "unmanaged") return [];
 			return [applyChange({ remote: synced, appIdForKind, change, params })];
@@ -144,10 +148,7 @@ export const syncWebhooks = async ({
 	const successes = outcomes.filter((outcome) => outcome.ok);
 	const failures = outcomes.filter((outcome) => !outcome.ok);
 	const failedCount = failures.length + planned.length;
-	const deleteCount = changes.filter(
-		(change) => change.action === "delete",
-	).length;
-	if (failedCount > 0 && failedCount === stated.length + deleteCount) {
+	if (failedCount > 0 && failedCount === stated.length + deletedIds.size) {
 		throwWhenNothingSucceeded({ failures, planned });
 	}
 

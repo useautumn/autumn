@@ -337,6 +337,22 @@ describe("skipDeletions: false", () => {
 		expect(changes.changes.map((change) => change.action)).toEqual(["adopt"]);
 	});
 
+	test("dashboard webhooks a refused adoption points at stay unmanaged, never deleted", () => {
+		const twin = remote({ id: "ep_twin" });
+		const changes = computeWebhookSyncChanges({
+			remote: [dashboard, twin],
+			uidlessIds: new Set([dashboard.id, twin.id]),
+			stated: [stated({ id: "billing" })],
+			skipDeletions: false,
+			now: NOW,
+		});
+		expect(changes.errors.map((error) => error.id)).toEqual(["billing"]);
+		expect(changes.changes.map((change) => change.action)).toEqual([
+			"unmanaged",
+			"unmanaged",
+		]);
+	});
+
 	test("by default an unstated webhook stays unmanaged", () => {
 		const changes = computeWebhookSyncChanges({
 			remote: [unstated, dashboard],
