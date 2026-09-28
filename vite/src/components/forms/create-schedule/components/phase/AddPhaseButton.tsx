@@ -17,7 +17,7 @@ export function AddPhaseButton({
 			<span
 				className={cn("flex shrink-0 justify-center", alignsWithRail && "w-2")}
 			>
-				<span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-dashed border-tertiary-foreground bg-card transition-colors group-hover/add-phase:border-foreground">
+				<span className="relative z-10 flex size-4 shrink-0 items-center justify-center rounded-full border border-dashed border-tertiary-foreground bg-card transition-colors group-hover/add-phase:border-foreground">
 					<PlusIcon size={9} weight="bold" />
 				</span>
 			</span>
