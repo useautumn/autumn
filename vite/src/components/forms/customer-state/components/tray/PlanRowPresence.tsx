@@ -1,11 +1,19 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Children, isValidElement, type ReactNode } from "react";
-import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
 
-const COLLAPSED = { height: 0, opacity: 0 };
-const EXPANDED = { height: "auto", opacity: 1 };
-const FADED = { opacity: 0 };
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+
+const ENTER_TRANSITION = {
+	duration: 0.18,
+	ease: EASE_OUT,
+	opacity: { duration: 0.12, ease: EASE_OUT },
+};
+const EXIT_TRANSITION = { duration: 0.14, ease: EASE_OUT };
+
+const COLLAPSED = { height: 0, opacity: 0, transition: EXIT_TRANSITION };
+const EXPANDED = { height: "auto", opacity: 1, transition: ENTER_TRANSITION };
+const FADED = { opacity: 0, transition: EXIT_TRANSITION };
 
 export function PlanRowPresence({
 	children,
@@ -26,7 +34,6 @@ export function PlanRowPresence({
 						initial={hidden}
 						animate={EXPANDED}
 						exit={hidden}
-						transition={LAYOUT_TRANSITION}
 						className={cn("overflow-hidden", itemClassName)}
 					>
 						{child}
