@@ -5,21 +5,21 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/compute/computeCreateSchedulePlan";
+import { scheduleActionToParams } from "./scheduleActionToParams";
 import { toProcessorItem } from "./toProcessorItem";
 import type { ProcessorItemContext } from "./types/processorItemContext";
 
 type SchedulePhase = Stripe.SubscriptionScheduleUpdateParams.Phase;
 
-const scheduleActionToStripePhases = (
-	subscriptionScheduleAction?: StripeSubscriptionScheduleAction,
-): SchedulePhase[] => {
-	switch (subscriptionScheduleAction?.type) {
-		case "create":
-		case "update":
-			return subscriptionScheduleAction.params.phases ?? [];
-		default:
-			return [];
-	}
+/** A schedule that ends by canceling leaves the subscription with nothing after its last phase. */
+const scheduleCancelsAtSeconds = (
+	scheduleParams?: Stripe.SubscriptionScheduleUpdateParams,
+) => {
+	if (scheduleParams?.end_behavior !== "cancel") return undefined;
+
+	const stripePhases = scheduleParams.phases ?? [];
+	const lastEndDate = stripePhases[stripePhases.length - 1]?.end_date;
+	return typeof lastEndDate === "number" ? lastEndDate : undefined;
 };
 
 const startsBy = ({
@@ -54,9 +54,16 @@ export const scheduleActionToProcessorItems = ({
 	phases: SchedulePhasePlan[];
 	context: ProcessorItemContext;
 }): ProcessorItem[][] => {
-	const stripePhases = scheduleActionToStripePhases(subscriptionScheduleAction);
+	const scheduleParams = scheduleActionToParams(subscriptionScheduleAction);
+	const stripePhases = scheduleParams?.phases ?? [];
+	const cancelsAtSeconds = scheduleCancelsAtSeconds(scheduleParams);
 
 	return phases.slice(1).map((phase) => {
+		const subscriptionCanceled =
+			cancelsAtSeconds !== undefined &&
+			msToSeconds(phase.startsAt) >= cancelsAtSeconds;
+		if (subscriptionCanceled) return [];
+
 		const stripePhase = stripePhaseActiveAt({
 			stripePhases,
 			startsAt: phase.startsAt,

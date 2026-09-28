@@ -72,4 +72,82 @@ describe("setPlansPhasesToPlanChanges", () => {
 			],
 		]);
 	});
+
+	test("a kept plan ending at a later phase only appears as that phase's expiry", () => {
+		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
+		const premium = makeFullCusProduct({
+			planId: "premium",
+			status: CusProductStatus.Scheduled,
+			startedAt: PHASE_TWO,
+		});
+		const originalFullCustomer = makeFullCustomer({ customerProducts: [pro] });
+		const autumnBillingPlan = makeAutumnBillingPlan({
+			inserts: [premium],
+			updates: [
+				makeUpdate({
+					customerProduct: pro,
+					updates: { ended_at: PHASE_TWO },
+				}),
+			],
+		});
+		const phases = [
+			{ startsAt: NOW, customerProductIds: [] },
+			{ startsAt: PHASE_TWO, customerProductIds: [premium.id] },
+		];
+
+		const planChanges = setPlansPhasesToPlanChanges({
+			autumnBillingPlan,
+			originalFullCustomer,
+			phases,
+			phaseCustomers: buildSetPlansPhaseCustomers({
+				ctx,
+				fullCustomer: originalFullCustomer,
+				autumnBillingPlan,
+				phases,
+			}),
+		});
+
+		expect(
+			planChanges.map((changes) =>
+				changes.map((change) => [change.action, change.subscription?.plan_id]),
+			),
+		).toEqual([
+			[],
+			[
+				["scheduled", "premium"],
+				["expired", "pro"],
+			],
+		]);
+	});
+
+	test("an immediate lifecycle change on a kept plan stays in the first phase", () => {
+		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
+		const originalFullCustomer = makeFullCustomer({ customerProducts: [pro] });
+		const autumnBillingPlan = makeAutumnBillingPlan({
+			updates: [
+				makeUpdate({
+					customerProduct: pro,
+					updates: { canceled_at: NOW, ended_at: PHASE_TWO },
+				}),
+			],
+		});
+		const phases = [
+			{ startsAt: NOW, customerProductIds: [] },
+			{ startsAt: PHASE_TWO, customerProductIds: [] },
+		];
+
+		const planChanges = setPlansPhasesToPlanChanges({
+			autumnBillingPlan,
+			originalFullCustomer,
+			phases,
+			phaseCustomers: buildSetPlansPhaseCustomers({
+				ctx,
+				fullCustomer: originalFullCustomer,
+				autumnBillingPlan,
+				phases,
+			}),
+		});
+
+		expect(planChanges[0].map((change) => change.action)).toEqual(["updated"]);
+	});
 });

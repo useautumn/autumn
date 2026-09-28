@@ -44,11 +44,16 @@ const resetsUsage = (balanceChange: PreviewBalanceChange) => {
 	);
 };
 
+const SCHEDULE_REPLACING_ACTIONS: ProcessorChange["action"][] = [
+	"released",
+	"canceled",
+];
+
 const replacesExistingSchedule = (processorChanges: ProcessorChange[]) =>
 	processorChanges.some(
 		(processorChange) =>
 			processorChange.type === "subscription_schedule" &&
-			processorChange.action !== "created",
+			SCHEDULE_REPLACING_ACTIONS.includes(processorChange.action),
 	);
 
 const hasPendingQuantityChange = (customerProduct: FullCusProduct) =>

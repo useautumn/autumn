@@ -1,16 +1,6 @@
-import { type ProcessorItemPrice, stripeToAtmnAmount } from "@autumn/shared";
+import type { ProcessorItemPrice } from "@autumn/shared";
 import type Stripe from "stripe";
-
-const toMajorUnits = ({
-	amount,
-	currency,
-}: {
-	amount: number | null | undefined;
-	currency: string;
-}) =>
-	amount === null || amount === undefined
-		? null
-		: stripeToAtmnAmount({ amount, currency });
+import { stripeAmountToMajorUnits } from "./stripeAmountToMajorUnits";
 
 const stripeTierToProcessorItemTier = ({
 	tier,
@@ -20,8 +10,8 @@ const stripeTierToProcessorItemTier = ({
 	currency: string;
 }) => ({
 	up_to: tier.up_to,
-	unit_amount: toMajorUnits({ amount: tier.unit_amount, currency }),
-	flat_amount: toMajorUnits({ amount: tier.flat_amount, currency }),
+	unit_amount: stripeAmountToMajorUnits({ amount: tier.unit_amount, currency }),
+	flat_amount: stripeAmountToMajorUnits({ amount: tier.flat_amount, currency }),
 });
 
 export const stripePriceToProcessorItemPrice = (
@@ -34,7 +24,7 @@ export const stripePriceToProcessorItemPrice = (
 		currency,
 		unit_amount: isTiered
 			? null
-			: toMajorUnits({ amount: stripePrice.unit_amount, currency }),
+			: stripeAmountToMajorUnits({ amount: stripePrice.unit_amount, currency }),
 		interval: stripePrice.recurring?.interval ?? null,
 		interval_count: stripePrice.recurring?.interval_count ?? 1,
 		usage_type: stripePrice.recurring?.usage_type ?? "licensed",

@@ -127,4 +127,23 @@ describe("setPlansPreviewToWarnings", () => {
 		expect(warnings[0].message).toContain("Support add-on");
 		expect(warnings[4].message).toContain("enterprise");
 	});
+
+	test("updating a standalone schedule in place doesn't warn about replacing it", () => {
+		expect(
+			setPlansPreviewToWarnings({
+				phases: [phase({})],
+				liveProcessorItems: [],
+				processorChanges: [
+					{
+						type: "subscription_schedule",
+						processor: "stripe",
+						id: "sub_sched_standalone",
+						action: "updated",
+					},
+				],
+				deletedCustomerProducts: [],
+				outgoingCustomerProducts: [],
+			}),
+		).toEqual([]);
+	});
 });

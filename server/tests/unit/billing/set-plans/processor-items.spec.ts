@@ -302,6 +302,31 @@ describe("checkoutSessionActionToProcessorItems", () => {
 
 		expect(items.map((item) => item.plan_id)).toEqual(["pro"]);
 	});
+
+	test("one-off line items are invoiced, not held by the subscription", () => {
+		const items = checkoutSessionActionToProcessorItems({
+			checkoutSessionAction: {
+				type: "create",
+				params: {
+					mode: "subscription",
+					line_items: [
+						{ price: "price_pro_base", quantity: 1 },
+						{
+							price_data: {
+								currency: "usd",
+								product: "prod_setup",
+								unit_amount: 5000,
+							},
+							quantity: 1,
+						},
+					],
+				},
+			},
+			context,
+		});
+
+		expect(items.map((item) => item.plan_id)).toEqual(["pro"]);
+	});
 });
 
 const PHASE_THREE = PHASE_TWO + 30 * 24 * 60 * 60 * 1000;
@@ -380,5 +405,49 @@ describe("scheduleActionToProcessorItems", () => {
 		});
 
 		expect(items).toEqual([[]]);
+	});
+
+	test("a schedule that cancels holds nothing once its last phase ends", () => {
+		const items = scheduleActionToProcessorItems({
+			subscriptionScheduleAction: {
+				type: "create",
+				params: {
+					end_behavior: "cancel",
+					phases: [
+						{
+							start_date: toSeconds(NOW),
+							end_date: toSeconds(PHASE_TWO),
+							items: [{ price: "price_pro_base" }],
+						},
+					],
+				},
+			},
+			phases: phasesAt(NOW, PHASE_TWO),
+			context,
+		});
+
+		expect(items).toEqual([[]]);
+	});
+
+	test("a schedule that releases keeps its last phase's items", () => {
+		const items = scheduleActionToProcessorItems({
+			subscriptionScheduleAction: {
+				type: "create",
+				params: {
+					end_behavior: "release",
+					phases: [
+						{
+							start_date: toSeconds(NOW),
+							end_date: toSeconds(PHASE_TWO),
+							items: [{ price: "price_pro_base" }],
+						},
+					],
+				},
+			},
+			phases: phasesAt(NOW, PHASE_TWO),
+			context,
+		});
+
+		expect(items.map(summarize)).toEqual([[["pro", null, null]]]);
 	});
 });

@@ -7,6 +7,8 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/compute/computeCreateSchedulePlan";
+import { applyExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/applyExistingRollovers";
+import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
@@ -34,7 +36,8 @@ const statusAtPhaseStart = ({
 		? CusProductStatus.Trialing
 		: CusProductStatus.Active;
 
-const carryUsagesIntoStartingProduct = ({
+/** Mirrors scheduled activation, which carries both usages and rollovers from the outgoing plan. */
+const carryExistingStatesIntoStartingProduct = ({
 	ctx,
 	previousCustomer,
 	customerProduct,
@@ -60,6 +63,12 @@ const carryUsagesIntoStartingProduct = ({
 		}),
 		entities: previousCustomer.entities,
 	});
+	applyExistingRollovers({
+		customerProduct,
+		existingRollovers: cusProductToExistingRollovers({
+			cusProduct: sourceCustomerProduct,
+		}),
+	});
 };
 
 export const applySchedulePhaseToFullCustomer = ({
@@ -76,7 +85,7 @@ export const applySchedulePhaseToFullCustomer = ({
 
 	for (const customerProduct of phaseCustomer.customer_products) {
 		if (startingIds.has(customerProduct.id)) {
-			carryUsagesIntoStartingProduct({
+			carryExistingStatesIntoStartingProduct({
 				ctx,
 				previousCustomer: fullCustomer,
 				customerProduct,

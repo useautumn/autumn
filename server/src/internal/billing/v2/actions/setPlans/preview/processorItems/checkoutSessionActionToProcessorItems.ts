@@ -5,7 +5,9 @@ import type {
 import { toProcessorItem } from "./toProcessorItem";
 import type { ProcessorItemContext } from "./types/processorItemContext";
 
-/** A subscription checkout creates the subscription with exactly its line items. */
+const isOneOffItem = (item: ProcessorItem) => item.price?.interval === null;
+
+/** A subscription checkout creates the subscription with its recurring line items; one-offs are only invoiced. */
 export const checkoutSessionActionToProcessorItems = ({
 	checkoutSessionAction,
 	context,
@@ -15,12 +17,14 @@ export const checkoutSessionActionToProcessorItems = ({
 }): ProcessorItem[] => {
 	if (checkoutSessionAction?.params.mode !== "subscription") return [];
 
-	return (checkoutSessionAction.params.line_items ?? []).map((lineItem) =>
-		toProcessorItem({
-			stripePriceId: lineItem.price,
-			inlinePriceData: lineItem.price_data,
-			quantity: lineItem.quantity,
-			context,
-		}),
-	);
+	return (checkoutSessionAction.params.line_items ?? [])
+		.map((lineItem) =>
+			toProcessorItem({
+				stripePriceId: lineItem.price,
+				inlinePriceData: lineItem.price_data,
+				quantity: lineItem.quantity,
+				context,
+			}),
+		)
+		.filter((item) => !isOneOffItem(item));
 };

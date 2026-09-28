@@ -1,4 +1,5 @@
-import { type ProcessorItemPrice, stripeToAtmnAmount } from "@autumn/shared";
+import type { ProcessorItemPrice } from "@autumn/shared";
+import { stripeAmountToMajorUnits } from "./stripeAmountToMajorUnits";
 
 /** The shared shape of `price_data` on subscription, schedule and checkout items. */
 export type InlinePriceData = {
@@ -21,17 +22,12 @@ const inlineUnitAmount = (priceData: InlinePriceData) => {
 export const inlinePriceDataToProcessorItemPrice = (
 	priceData: InlinePriceData,
 ): ProcessorItemPrice => {
-	const unitAmount = inlineUnitAmount(priceData);
-
 	return {
 		currency: priceData.currency,
-		unit_amount:
-			unitAmount === null
-				? null
-				: stripeToAtmnAmount({
-						amount: unitAmount,
-						currency: priceData.currency,
-					}),
+		unit_amount: stripeAmountToMajorUnits({
+			amount: inlineUnitAmount(priceData),
+			currency: priceData.currency,
+		}),
 		interval: priceData.recurring?.interval ?? null,
 		interval_count: priceData.recurring?.interval_count ?? 1,
 		usage_type: "licensed",

@@ -1,5 +1,4 @@
 import {
-	BillingInterval,
 	Infinite,
 	isConsumablePrice,
 	isFixedPrice,
@@ -7,20 +6,7 @@ import {
 	type ProcessorItemPrice,
 	type UsageTier,
 } from "@autumn/shared";
-
-type StripeInterval = NonNullable<ProcessorItemPrice["interval"]>;
-
-const INTERVAL_TO_STRIPE: Record<
-	BillingInterval,
-	{ interval: StripeInterval; count: number } | null
-> = {
-	[BillingInterval.OneOff]: null,
-	[BillingInterval.Week]: { interval: "week", count: 1 },
-	[BillingInterval.Month]: { interval: "month", count: 1 },
-	[BillingInterval.Quarter]: { interval: "month", count: 3 },
-	[BillingInterval.SemiAnnual]: { interval: "month", count: 6 },
-	[BillingInterval.Year]: { interval: "year", count: 1 },
-};
+import { billingIntervalToStripe } from "@/external/stripe/stripePriceUtils";
 
 const usageTierToProcessorItemTier = (tier: UsageTier) => ({
 	up_to: tier.to === Infinite ? null : Number(tier.to),
@@ -41,10 +27,13 @@ export const autumnPriceToProcessorItemPrice = ({
 }): ProcessorItemPrice => {
 	const { config } = price;
 	const currencyOverride = config.currencies?.[currency.toLowerCase()];
-	const stripeInterval = INTERVAL_TO_STRIPE[config.interval];
+	const stripeRecurring = billingIntervalToStripe({
+		interval: config.interval,
+		intervalCount: config.interval_count,
+	});
 	const recurrence = {
-		interval: stripeInterval?.interval ?? null,
-		interval_count: (stripeInterval?.count ?? 1) * (config.interval_count ?? 1),
+		interval: stripeRecurring.interval ?? null,
+		interval_count: stripeRecurring.interval_count ?? 1,
 	};
 
 	if (isFixedPrice(price)) {
