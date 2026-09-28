@@ -23,6 +23,7 @@ import {
 } from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
+import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
 type MatchedRcItem = { id: string; active: boolean; timestamp: number };
@@ -38,7 +39,7 @@ const subscriptionGivesAccess = (sub: RevenueCatSubscription): boolean =>
  * slows the insert — on any error/no-match the product stays inserted without
  * the id. Logs the outcome under `rc_id_fetch`.
  */
-const storeRevenueCatProcessorId = async ({
+export const storeRevenueCatProcessorId = async ({
 	ctx,
 	cusProduct,
 	product,
@@ -139,11 +140,20 @@ const storeRevenueCatProcessorId = async ({
 		}
 
 		// Merge, not replace: the period stamped at provisioning must survive this async write.
-		await customerProductRepo.mergeProcessor({
+		const processor = await customerProductRepo.mergeProcessor({
 			db,
 			cusProductId: cusProduct.id,
 			processor: { type: ProcessorType.RevenueCat, id: matchedId },
 		});
+		// A cache rebuilt before this landed would otherwise keep the id-less processor.
+		if (processor) {
+			await updateCachedCustomerProductV2({
+				ctx,
+				customerId: cusProduct.customer_id ?? "",
+				customerProductId: cusProduct.id,
+				updates: { processor },
+			});
+		}
 
 		logExtras({
 			attempted: true,
