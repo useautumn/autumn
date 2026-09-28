@@ -10,7 +10,7 @@ function PlanScopeGroupHeader({ entityId }: { entityId: string | null }) {
 	const label = entityId ? selectedEntity?.name || entityId : "Customer-level";
 
 	return (
-		<div className="flex h-8 items-center gap-1.5 border-b border-table-row-divider bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
+		<div className="flex h-8 items-center gap-1.5 border-b border-table-row-divider bg-table-tray/50 px-3 text-xs font-medium text-muted-foreground">
 			<Icon className="shrink-0 text-tertiary-foreground" size={12} />
 			<span className="truncate">{label}</span>
 		</div>
