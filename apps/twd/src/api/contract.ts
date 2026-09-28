@@ -222,6 +222,8 @@ export const StripeAccount = z.object({
 	reservationId: z.string().nullable(),
 	reservedUntil: z.string().nullable(),
 	stateChangedAt: z.string(),
+	/** Why the account is broken (last nuke/verify error); null otherwise. */
+	brokenReason: z.string().nullable(),
 });
 export const CreateReservationBody = z.object({
 	count: z.number().int().min(1).max(2000),
@@ -243,7 +245,7 @@ export const Reservation = z.object({
 
 export const Job = z.object({
 	id: z.string(),
-	kind: z.enum(["warm", "swarm", "nuke", "reinit_keys"]),
+	kind: z.enum(["warm", "swarm", "nuke", "reinit_keys", "full_nuke_key"]),
 	singletonKey: z.string(),
 	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
 	error: z.string().nullable(),
@@ -393,6 +395,8 @@ export const ROUTES = {
 	keys: "GET /keys",
 	probeKeys: "POST /keys/probe",
 	reinitKeys: "POST /keys/reinit",
+	/** Deletes every connected account + webhook on one key (rate-limited), re-registers, tops up. */
+	fullNukeKey: "POST /keys/:platformAccountId/full-nuke",
 
 	// accounts (http/routes/accounts.ts)
 	listAccounts: "GET /accounts",
@@ -400,6 +404,8 @@ export const ROUTES = {
 	createReservation: "POST /reservations",
 	releaseReservation: "DELETE /reservations/:id",
 	nukeAccounts: "POST /accounts/nuke",
+	/** Drop an account from the ledger (e.g. deleted in Stripe). Not allowed while held by a run. */
+	forgetAccount: "DELETE /accounts/:id",
 
 	// jobs (http/routes/jobs.ts)
 	listJobs: "GET /jobs",

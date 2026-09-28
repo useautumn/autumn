@@ -1,6 +1,12 @@
 import type { JobKind } from "../../../db/schema/jobs.ts";
 
-export const JOB_KINDS: JobKind[] = ["reinit_keys", "swarm", "warm", "nuke"];
+export const JOB_KINDS: JobKind[] = [
+	"reinit_keys",
+	"full_nuke_key",
+	"swarm",
+	"warm",
+	"nuke",
+];
 
 export const JOB_RUNNER_DEFAULTS = {
 	concurrency: {
@@ -8,6 +14,7 @@ export const JOB_RUNNER_DEFAULTS = {
 		warm: 20,
 		nuke: 64,
 		reinit_keys: 1,
+		full_nuke_key: 8,
 	} satisfies Record<JobKind, number>,
 	leaseMs: 30_000,
 	heartbeatMs: 10_000,

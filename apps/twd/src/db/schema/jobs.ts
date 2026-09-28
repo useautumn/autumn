@@ -10,7 +10,12 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-export type JobKind = "warm" | "swarm" | "nuke" | "reinit_keys";
+export type JobKind =
+	| "warm"
+	| "swarm"
+	| "nuke"
+	| "reinit_keys"
+	| "full_nuke_key";
 export type JobStatus =
 	| "queued"
 	| "running"

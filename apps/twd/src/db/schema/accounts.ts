@@ -23,6 +23,7 @@ export const stripeAccounts = pgTable(
 		reservationId: text("reservation_id"),
 		reservedUntil: timestamp("reserved_until", { withTimezone: true }),
 		lastNukedAt: timestamp("last_nuked_at", { withTimezone: true }),
+		brokenReason: text("broken_reason"),
 		stateChangedAt: timestamp("state_changed_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),

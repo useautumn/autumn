@@ -34,5 +34,6 @@ export const listAccounts = async ({
 		reservationId: row.reservationId,
 		reservedUntil: row.reservedUntil?.toISOString() ?? null,
 		stateChangedAt: row.stateChangedAt.toISOString(),
+		brokenReason: row.brokenReason,
 	}));
 };

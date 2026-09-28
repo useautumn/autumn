@@ -15,6 +15,13 @@
 			"when": 1790605864762,
 			"tag": "0001_live_notify_triggers",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1790607576143,
+			"tag": "0002_account_broken_reason",
+			"breakpoints": true
 		}
 	]
 }
