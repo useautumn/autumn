@@ -1,6 +1,6 @@
-/** Prints the markdown tables for a run.ts output file: bun summarize.ts <json> */
+/** Prints the markdown tables for run.ts output files: bun summarize.ts <json> [<json> ...]; several files merge their samples. */
 export {};
-const data = JSON.parse(await Bun.file(process.argv[2] ?? "").text()) as {
+type Output = {
 	samples: {
 		scenario: string;
 		run: number;
@@ -32,6 +32,25 @@ const data = JSON.parse(await Bun.file(process.argv[2] ?? "").text()) as {
 			probe: Record<string, number>;
 			okLatencyMs: { p50: number | null; p99: number | null };
 		}[];
+		slots?: {
+			ownershipRecords: Record<string, number>;
+			claimsByFleet: Record<string, number>;
+			longestDetourMs: number | null;
+			flipObservedMs: { min: number; max: number } | null;
+			greenPreparedPartitions: number;
+			heartbeats: Record<
+				string,
+				{
+					tasks: number;
+					declaredActive: boolean[];
+					ok: boolean;
+					prepared: number;
+					ready: number;
+					admitted: number;
+					total: number;
+				} | null
+			>;
+		};
 	}[];
 	reconciliation: {
 		partition: number;
@@ -40,6 +59,16 @@ const data = JSON.parse(await Bun.file(process.argv[2] ?? "").text()) as {
 		applied: number;
 	}[];
 };
+const files = process.argv.slice(2);
+const outputs: Output[] = [];
+for (const file of files) outputs.push(JSON.parse(await Bun.file(file).text()));
+const data: Output = {
+	samples: outputs.flatMap((output, index) =>
+		output.samples.map((sample) => ({ ...sample, run: index + 1 })),
+	),
+	reconciliation: outputs.at(-1)?.reconciliation ?? [],
+};
+const slotsMode = data.samples.some((s) => s.slots);
 
 const median = (values: number[]) => {
 	const sorted = [...values].sort((a, b) => a - b);
@@ -61,8 +90,90 @@ const table = (headers: string[], rows: string[][]) =>
 		...rows.map((r) => `| ${r.join(" | ")} |`),
 	].join("\n");
 
-for (const scenario of ["JOIN", "GRACEFUL_LEAVE", "HARD_KILL"]) {
+const scenarios = slotsMode
+	? [...new Set(data.samples.map((s) => s.scenario))].sort()
+	: ["JOIN", "GRACEFUL_LEAVE", "HARD_KILL"];
+if (slotsMode) {
+	console.log(
+		`\n### Blue-green steps (${outputs.length} passes, 4 partitions, 20 req/s per partition) — summed over passes\n`,
+	);
+	console.log(
+		table(
+			[
+				"step",
+				"client outcomes",
+				"raw HTTP statuses",
+				"longest failure run ms (median / max)",
+				"longest detour ms (max)",
+				"ownership records",
+				"claims by fleet",
+				"flip seen by green ms (min / max)",
+				"green heartbeat at step end (prepared/ready/admitted/total, active)",
+				"applied − 200s (per pass)",
+			],
+			scenarios.map((scenario) => {
+				const samples = data.samples.filter((s) => s.scenario === scenario);
+				const counts: Record<string, number> = {};
+				const raw: Record<string, number> = {};
+				const longest: number[] = [];
+				for (const s of samples)
+					for (const t of s.traffic) {
+						for (const [k, v] of Object.entries(t.counts))
+							counts[k] = (counts[k] ?? 0) + v;
+						for (const [k, v] of Object.entries(t.rawStatuses))
+							raw[k] = (raw[k] ?? 0) + v;
+						longest.push(t.longestFailureRunMs);
+					}
+				const records: Record<string, number> = {};
+				const claims: Record<string, number> = {};
+				for (const s of samples) {
+					for (const [k, v] of Object.entries(s.slots?.ownershipRecords ?? {}))
+						records[k] = (records[k] ?? 0) + v;
+					for (const [k, v] of Object.entries(s.slots?.claimsByFleet ?? {}))
+						claims[k] = (claims[k] ?? 0) + v;
+				}
+				const detours = samples.map((s) => s.slots?.longestDetourMs ?? null);
+				const flips = samples.map((s) => s.slots?.flipObservedMs ?? null);
+				const seen = flips.filter((f) => f !== null);
+				return [
+					scenario,
+					JSON.stringify(counts),
+					JSON.stringify(raw),
+					stat(longest),
+					detours.some((d) => d !== null)
+						? String(Math.max(...detours.map((d) => d ?? 0)))
+						: "—",
+					JSON.stringify(records),
+					JSON.stringify(claims),
+					seen.length
+						? `${Math.min(...seen.map((f) => f.min))} / ${Math.max(...seen.map((f) => f.max))}`
+						: "—",
+					samples
+						.map((s) => {
+							const green = s.slots?.heartbeats.green;
+							if (!green) return "—";
+							return `${green.prepared}/${green.ready}/${green.admitted}/${green.total} (${green.tasks} tasks, active ${green.declaredActive.join(",")})`;
+						})
+						.join("; "),
+					samples
+						.map((s) =>
+							(s.reconciliation ?? [])
+								.map(
+									(r) =>
+										`${r.applied - r.ok}${r.unknown ? ` (unk ${r.unknown})` : ""}`,
+								)
+								.join(" "),
+						)
+						.join("; "),
+				];
+			}),
+		),
+	);
+}
+
+for (const scenario of scenarios) {
 	const samples = data.samples.filter((s) => s.scenario === scenario);
+	if (slotsMode && !samples.some((s) => s.perPartition.length > 0)) continue;
 	console.log(
 		`\n### ${scenario} (${samples.length} runs, 4 partitions each) — median / max in ms\n`,
 	);
