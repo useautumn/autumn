@@ -198,7 +198,7 @@ export const CreateScheduleParamsV0Schema = z
 		}),
 		billing_behavior: BillingBehaviorSchema.optional().meta({
 			description:
-				"Whether to prorate the immediate phase. 'none' skips proration charges and credits.",
+				"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.",
 		}),
 		no_billing_changes: z.boolean().optional().meta({
 			description: "If true, skips any billing changes for the schedule.",

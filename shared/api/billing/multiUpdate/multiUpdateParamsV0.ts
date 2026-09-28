@@ -61,7 +61,7 @@ const extMultiUpdateItemShape = z.object({
 	}),
 	proration_behavior: BillingBehaviorSchema.optional().meta({
 		description:
-			"How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
+			"How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 	}),
 });
 
