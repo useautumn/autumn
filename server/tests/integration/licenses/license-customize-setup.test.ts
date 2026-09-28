@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { BillingInterval, ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -232,16 +231,15 @@ test.concurrent(
 			idPrefix: "lic-resolver-overflow",
 		});
 
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				setupCustomPlanLicenses({
-					ctx,
-					parentProduct: parentFull,
-					upsertLicenses: [
-						{ license_plan_id: licenseFull.id, prepaid_only: false },
-					],
-				}),
-		});
+		// In-process call: the server throws RecaseError, not the client's AutumnError.
+		await expect(
+			setupCustomPlanLicenses({
+				ctx,
+				parentProduct: parentFull,
+				upsertLicenses: [
+					{ license_plan_id: licenseFull.id, prepaid_only: false },
+				],
+			}),
+		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
 	},
 );
