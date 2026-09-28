@@ -1231,6 +1231,32 @@ export const handle = ({
 				"List runs with GET /runs?status=all.",
 			);
 		if (method === "GET" && seg.length === 2) return ok(run);
+		if (method === "GET" && seg[2] === "logs" && seg[3] === "failed") {
+			const failed = run.files.filter(
+				(f) => f.status === "failed" || f.status === "crashed",
+			);
+			return ok(
+				failed
+					.map(
+						(f) =>
+							`===== ${f.file} (${f.status} · attempt ${f.attempt}) =====\n${fileLog(run, f.file) ?? ""}`,
+					)
+					.join("\n"),
+			);
+		}
+		if (method === "GET" && seg[2] === "logs") {
+			const worker = url.searchParams.get("worker");
+			const file = url.searchParams.get("file");
+			if (file) return ok(fileLog(run, file) ?? "");
+			const files = run.files.filter((f) => !worker || f.worker === worker);
+			return ok(
+				`[tw-boot] ${worker ?? "run"} booted\n` +
+					files
+						.slice(0, 5)
+						.map((f) => fileLog(run, f.file) ?? "")
+						.join("\n"),
+			);
+		}
 		if (method === "GET" && seg[2] === "files" && seg[3] === "log") {
 			const log = fileLog(run, url.searchParams.get("file") ?? "");
 			if (log === null)

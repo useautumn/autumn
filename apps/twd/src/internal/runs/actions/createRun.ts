@@ -69,6 +69,7 @@ export const createRun = async ({
 			pinnedSha: body.sha !== undefined,
 			selection: body.selection,
 			purpose: body.purpose,
+			maxWorkers: body.maxWorkers ?? null,
 			fileCount: files.length,
 			progress,
 			createdBy: actor.userId,

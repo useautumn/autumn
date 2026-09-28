@@ -7,6 +7,7 @@ import { warmBranch } from "../../catalog/actions/warmBranch.ts";
 import { cancelRun } from "../../runs/actions/cancelRun.ts";
 import { createRun } from "../../runs/actions/createRun.ts";
 import { getRun } from "../../runs/actions/getRun.ts";
+import { getFailedLogs, getRunLogs } from "../../runs/logs/getRunLogs.ts";
 import { toolOk } from "./toolResult.ts";
 import { defineTool, serveTools } from "./toolServer.ts";
 
@@ -139,13 +140,23 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 						.string()
 						.optional()
 						.describe("Only run tests whose name matches this pattern."),
+					max_workers: z
+						.number()
+						.int()
+						.min(1)
+						.max(5_000)
+						.optional()
+						.describe(
+							"Cap on workers; default one per file (bounded by the Stripe key budget).",
+						),
 				})
 				.strict(),
-			run: async ({ branch, sha, groups, files, grep }) => {
+			run: async ({ branch, sha, groups, files, grep, max_workers }) => {
 				const run = await createRun({
 					ctx,
 					branch,
 					sha,
+					maxWorkers: max_workers,
 					selection: { groups, files, grep },
 					purpose: "adhoc",
 				});
@@ -206,6 +217,32 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 						? summary
 						: `${summary} Still in progress; call wait_for_run again.`,
 					data,
+				});
+			},
+		}),
+		defineTool({
+			name: "get_run_logs",
+			description:
+				"Read a run's raw output as text. Use failed_only=true after wait_for_run reports failures: it returns every failed file's log under a header. Or pass file (server/tests-relative path) or worker for one slice. Long logs are truncated to max_chars from the end.",
+			input: z.object({
+				run_id: z.string().min(1),
+				failed_only: z.boolean().optional(),
+				file: z.string().optional(),
+				worker: z.string().optional(),
+				max_chars: z.number().int().min(1_000).max(500_000).optional(),
+			}),
+			run: async ({ run_id, failed_only, file, worker, max_chars }) => {
+				const text = failed_only
+					? await getFailedLogs({ ctx, runId: run_id })
+					: await getRunLogs({ ctx, runId: run_id, file, worker });
+				const limit = max_chars ?? 60_000;
+				const clipped =
+					text.length > limit
+						? `…(${text.length - limit} earlier chars omitted)\n${text.slice(-limit)}`
+						: text;
+				return toolOk({
+					summary: `${text.length} chars of ${failed_only ? "failed-file" : file ? "file" : worker ? "worker" : "run"} logs for ${run_id}.`,
+					data: { text: clipped },
 				});
 			},
 		}),

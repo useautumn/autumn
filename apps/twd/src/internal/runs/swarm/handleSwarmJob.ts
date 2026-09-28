@@ -36,6 +36,7 @@ import {
 	publishRunEvent,
 	retireLiveRun,
 } from "../live/liveRuns.ts";
+import { createRunLogWriter } from "../logs/runLogWriter.ts";
 import { terminateSandboxes } from "../modal/modalClient.ts";
 import {
 	getRunWithEmail,
@@ -295,6 +296,7 @@ export const handleSwarmJob: JobHandler = async ({
 	let exitCode: number | null = 0;
 	let failure: string | undefined;
 	const flushTimer = setInterval(flush, FLUSH_MS);
+	const logWriter = createRunLogWriter({ ctx, runId });
 	const accrueTimer = setInterval(() => void accrue(), ACCRUE_MS);
 	try {
 		const files = await orderFilesLongestFirst({
@@ -307,6 +309,7 @@ export const handleSwarmJob: JobHandler = async ({
 			.where(usableKey);
 		const workersWanted = Math.min(
 			files.length,
+			run.maxWorkers ?? Number.POSITIVE_INFINITY,
 			usableKeys * ACCOUNTS_PER_KEY_CAP,
 			MAX_RUN_WORKERS,
 		);
@@ -423,6 +426,15 @@ export const handleSwarmJob: JobHandler = async ({
 					}
 				} else {
 					const event: RunEvent = message;
+					if (event.type === "log") {
+						logWriter.append({
+							file: event.file,
+							worker: event.worker,
+							chunk: event.text,
+						});
+						// Worker server output is stored for /logs?worker= but too chatty to stream live.
+						if (event.worker && !event.file) return;
+					}
 					publishRunEvent({ runId, event });
 				}
 			},
@@ -440,6 +452,7 @@ export const handleSwarmJob: JobHandler = async ({
 		sendToChild = undefined;
 		unregister();
 		clearInterval(flushTimer);
+		await logWriter.close();
 		clearInterval(accrueTimer);
 		if (exitCode !== 0) await terminateSandboxes({ sandboxIds });
 		await writes;

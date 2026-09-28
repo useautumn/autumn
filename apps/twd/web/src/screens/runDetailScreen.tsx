@@ -8,6 +8,8 @@ import {
 } from "@autumn/ui/components/ui/breadcrumb";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+	Check,
+	Copy,
 	GitCommitHorizontal,
 	Hourglass,
 	RotateCcw,
@@ -17,6 +19,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Drift, RunDetail, RunFile } from "../../../src/api/contract.ts";
 import {
+	fetchRunLogs,
 	useCancelRun,
 	useCatalog,
 	useCostRates,
@@ -24,6 +27,7 @@ import {
 	useLiveLog,
 	useRerunFailed,
 	useRun,
+	useWorkerLog,
 } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
 import type { LogLine } from "../api/liveCache.ts";
@@ -131,12 +135,53 @@ const DurationCell = ({
 	);
 };
 
+/** Copies text produced on click (fetched lazily), with brief "Copied" feedback. */
+const CopyTextButton = ({
+	label,
+	getText,
+	size = "sm",
+}: {
+	label: string;
+	getText: () => Promise<string> | string;
+	size?: "sm" | "default";
+}) => {
+	const [state, setState] = useState<"idle" | "busy" | "done" | "error">(
+		"idle",
+	);
+	return (
+		<Button
+			variant="secondary"
+			size={size}
+			isLoading={state === "busy"}
+			onClick={async () => {
+				setState("busy");
+				try {
+					await navigator.clipboard.writeText(await getText());
+					setState("done");
+				} catch {
+					setState("error");
+				}
+				setTimeout(() => setState("idle"), 1500);
+			}}
+		>
+			{state === "done" ? (
+				<Check className="size-3.5" />
+			) : (
+				<Copy className="size-3.5" />
+			)}
+			{state === "done" ? "Copied" : state === "error" ? "Copy failed" : label}
+		</Button>
+	);
+};
+
 const WorkerGrid = ({
 	workers,
 	wanted,
+	onOpen,
 }: {
 	workers: RunDetail["workers"];
 	wanted: number;
+	onOpen: (worker: string) => void;
 }) => {
 	const counts = workers.reduce<Record<string, number>>((acc, w) => {
 		acc[w.status] = (acc[w.status] ?? 0) + 1;
@@ -159,14 +204,15 @@ const WorkerGrid = ({
 							</span>
 						}
 					>
-						<span
+						<button
+							type="button"
+							onClick={() => onOpen(w.name)}
 							className={cn(
-								"twd-pop size-2.5 rounded-[2px]",
+								"twd-pop size-2.5 cursor-pointer rounded-[2px] hover:ring-1 hover:ring-foreground/40",
 								WORKER_COLOR[w.status],
 								w.status === "busy" && "twd-pulse",
 							)}
-							role="img"
-							aria-label={`${w.name} ${w.status}`}
+							aria-label={`${w.name} ${w.status} — open logs`}
 						/>
 					</Tooltip>
 				))}
@@ -260,6 +306,13 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 				</Breadcrumb>
 				<div className="flex items-center gap-2">
 					{run.failed > 0 && (
+						<CopyTextButton
+							size="default"
+							label="Copy failed logs"
+							getText={() => fetchRunLogs({ runId: run.id, failed: true })}
+						/>
+					)}
+					{run.failed > 0 && (
 						<Button
 							variant="secondary"
 							isLoading={rerun.isPending}
@@ -344,6 +397,8 @@ export const RunDetailScreen = () => {
 	const [limit, setLimit] = useState(PAGE);
 	const [openFile, setOpenFile] = useState<string | null>(null);
 	const fileLog = useFileLog({ runId: id, file: openFile });
+	const [openWorker, setOpenWorker] = useState<string | null>(null);
+	const workerLog = useWorkerLog({ runId: id, worker: openWorker });
 
 	if (run.error) return <ErrorCallout error={run.error} />;
 	if (!run.data)
@@ -560,7 +615,7 @@ export const RunDetailScreen = () => {
 				/>
 			</div>
 
-			<div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+			<div className="flex flex-col gap-6">
 				<div className="flex min-w-0 flex-col gap-6">
 					{attention.length > 0 && (
 						<section>
@@ -630,7 +685,7 @@ export const RunDetailScreen = () => {
 					</section>
 				</div>
 
-				<aside className="flex flex-col gap-6 xl:sticky xl:top-0">
+				<div className="flex flex-col gap-6">
 					<section>
 						<SectionTag>
 							Workers{" "}
@@ -654,6 +709,7 @@ export const RunDetailScreen = () => {
 								<WorkerGrid
 									workers={r.workers}
 									wanted={live ? (r.workersWanted ?? 0) : 0}
+									onOpen={setOpenWorker}
 								/>
 							) : (
 								<p className="text-xs text-subtle">No workers yet.</p>
@@ -666,13 +722,21 @@ export const RunDetailScreen = () => {
 							<LiveLog lines={log} onOpen={setOpenFile} />
 						</section>
 					)}
-				</aside>
+				</div>
 			</div>
 
 			<Drawer
 				open={openFile !== null}
 				onOpenChange={(o) => !o && setOpenFile(null)}
 				title={openFile ?? ""}
+				actions={
+					openFile && (
+						<CopyTextButton
+							label="Copy"
+							getText={() => fetchRunLogs({ runId: id, file: openFile })}
+						/>
+					)
+				}
 				subtitle={
 					opened && (
 						<span className="flex flex-wrap items-center gap-3">
@@ -707,6 +771,35 @@ export const RunDetailScreen = () => {
 						</div>
 					) : (
 						<AnsiLog text={fileLog.data} />
+					)}
+				</div>
+			</Drawer>
+
+			<Drawer
+				open={openWorker !== null}
+				onOpenChange={(o) => !o && setOpenWorker(null)}
+				title={openWorker ?? ""}
+				subtitle="Worker log: boot, server output, and every file it ran"
+				actions={
+					openWorker && (
+						<CopyTextButton
+							label="Copy"
+							getText={() => fetchRunLogs({ runId: id, worker: openWorker })}
+						/>
+					)
+				}
+			>
+				<div className="p-4">
+					{workerLog.error ? (
+						<ErrorCallout error={workerLog.error} />
+					) : workerLog.data === undefined ? (
+						<Skeleton className="h-4 w-full" />
+					) : workerLog.data ? (
+						<AnsiLog text={workerLog.data} />
+					) : (
+						<p className="text-xs text-subtle">
+							No output recorded for this worker yet.
+						</p>
 					)}
 				</div>
 			</Drawer>

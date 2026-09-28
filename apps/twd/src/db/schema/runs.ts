@@ -1,4 +1,5 @@
 import {
+	bigserial,
 	boolean,
 	index,
 	integer,
@@ -42,6 +43,8 @@ export const runs = pgTable(
 			.notNull()
 			.default("adhoc"),
 		workersWanted: integer("workers_wanted"),
+		/** Caller-chosen worker cap; null = one per file. */
+		maxWorkers: integer("max_workers"),
 		costUsd: real("cost_usd").notNull().default(0),
 		workerSeconds: real("worker_seconds").notNull().default(0),
 		jobId: text("job_id"),
@@ -104,5 +107,25 @@ export const runWorkers = pgTable(
 	(t) => [
 		index("run_workers_run_idx").on(t.runId),
 		index("run_workers_started_idx").on(t.startedAt),
+	],
+);
+
+/** Append-only run output; file/worker null for orchestrator lines. */
+export const runLogs = pgTable(
+	"run_logs",
+	{
+		id: bigserial("id", { mode: "number" }).primaryKey(),
+		runId: text("run_id").notNull(),
+		file: text("file"),
+		worker: text("worker"),
+		chunk: text("chunk").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [
+		index("run_logs_run_file_idx").on(t.runId, t.file, t.id),
+		index("run_logs_run_worker_idx").on(t.runId, t.worker, t.id),
+		index("run_logs_created_idx").on(t.createdAt),
 	],
 );

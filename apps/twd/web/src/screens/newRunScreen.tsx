@@ -80,9 +80,13 @@ export const NewRunScreen = () => {
 	const p90ByPath = new Map(
 		catalog.data?.files.map((f) => [f.path, f.baselineP90Ms]),
 	);
-	const workers = capacity.data
+	const [maxWorkers, setMaxWorkers] = useState("");
+	const workerCap = Number.parseInt(maxWorkers, 10);
+	const autoWorkers = capacity.data
 		? Math.min(fileCount, capacity.data.poolCap)
 		: fileCount;
+	const workers =
+		workerCap > 0 ? Math.min(workerCap, autoWorkers) : autoWorkers;
 	const p90s = sel.effective.map((f) => p90ByPath.get(f) ?? null);
 	const estimate = estimateWallMs({ p90s, workers });
 	const rates = useCostRates();
@@ -105,6 +109,7 @@ export const NewRunScreen = () => {
 			{
 				branch: branch.name,
 				sha: branch.sha,
+				...(workerCap > 0 && { maxWorkers: workerCap }),
 				selection: {
 					groups: groups.length ? groups : undefined,
 					files: files.length ? files : undefined,
@@ -214,6 +219,17 @@ export const NewRunScreen = () => {
 							{unseen > 0 &&
 								` ${unseen} file${unseen === 1 ? " has" : "s have"} no baseline yet (counted as 1 min).`}
 						</p>
+
+						<Field
+							label="Workers"
+							hint={`(auto: ${num(autoWorkers)})`}
+							type="number"
+							min={1}
+							value={maxWorkers}
+							onChange={(e) => setMaxWorkers(e.target.value)}
+							placeholder={`auto · one per file, up to ${num(capacity.data?.poolCap ?? 0)}`}
+							inputClassName="text-xs tabular-nums"
+						/>
 
 						<Field
 							label="Path filter"

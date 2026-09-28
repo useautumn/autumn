@@ -106,6 +106,8 @@ export const CreateRunBody = z.object({
 	/** Defaults to the branch head. */
 	sha: z.string().optional(),
 	selection: RunSelection,
+	/** Cap on workers for this run (default: one per file, bounded by the key budget). */
+	maxWorkers: z.number().int().min(1).max(5_000).optional(),
 	purpose: z.enum(["adhoc", "baseline"]).default("adhoc"),
 });
 
@@ -458,6 +460,10 @@ export const ROUTES = {
 	getRun: "GET /runs/:id",
 	runEvents: "GET /runs/:id/events",
 	fileLog: "GET /runs/:id/files/log?file=",
+	/** text/plain. No params = whole run; ?file= one file; ?worker= one worker (incl. its server output); ?scope=run orchestrator only. */
+	runLogs: "GET /runs/:id/logs",
+	/** text/plain: every failed/crashed file's output under a header. */
+	failedLogs: "GET /runs/:id/logs/failed",
 	cancelRun: "POST /runs/:id/cancel",
 	rerunFailed: "POST /runs/:id/rerun-failed",
 

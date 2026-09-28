@@ -151,6 +151,13 @@ const main = async (init: SwarmInit) => {
 				worker: getWorkerOf(event.file) ?? null,
 				text: event.chunk,
 			});
+		} else if (event.type === "workerOutput") {
+			send({
+				type: "log",
+				file: null,
+				worker: event.worker,
+				text: event.chunk,
+			});
 		} else if (event.type === "workerStatus") {
 			workerFile.delete(event.worker);
 			send({

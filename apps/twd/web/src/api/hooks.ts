@@ -99,6 +99,40 @@ export const useLiveLog = (id: string) => {
 	);
 };
 
+/** Fetch-on-demand log text (for copy buttons); not cached. */
+export const fetchRunLogs = ({
+	runId,
+	failed,
+	worker,
+	file,
+}: {
+	runId: string;
+	failed?: boolean;
+	worker?: string;
+	file?: string;
+}) =>
+	apiText({
+		path: failed
+			? `/runs/${runId}/logs/failed`
+			: `/runs/${runId}/logs${qs({ worker, file })}`,
+	});
+
+export const useWorkerLog = ({
+	runId,
+	worker,
+}: {
+	runId: string;
+	worker: string | null;
+}) =>
+	useQuery({
+		queryKey: ["workerLog", runId, worker ?? ""],
+		queryFn: () =>
+			apiText({
+				path: `/runs/${runId}/logs${qs({ worker: worker ?? undefined })}`,
+			}),
+		enabled: worker !== null,
+	});
+
 export const useFileLog = ({
 	runId,
 	file,

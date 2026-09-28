@@ -351,20 +351,25 @@ export const Drawer = ({
 	onOpenChange,
 	title,
 	subtitle,
+	actions,
 	children,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	title: ReactNode;
 	subtitle?: ReactNode;
+	actions?: ReactNode;
 	children: ReactNode;
 }) => (
 	<Sheet open={open} onOpenChange={onOpenChange}>
 		<SheetContent className="md:max-w-3xl">
 			<SheetHeader className="border-b pr-10">
-				<SheetTitle className="truncate font-mono text-sm font-medium">
-					{title}
-				</SheetTitle>
+				<div className="flex min-w-0 items-center gap-2">
+					<SheetTitle className="min-w-0 flex-1 truncate font-mono text-sm font-medium">
+						{title}
+					</SheetTitle>
+					{actions}
+				</div>
 				{subtitle && (
 					<div className="text-xs text-tertiary-foreground">{subtitle}</div>
 				)}

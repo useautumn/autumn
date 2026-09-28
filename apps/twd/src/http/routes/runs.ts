@@ -11,7 +11,6 @@ import {
 import type { RunStatus } from "../../db/schema/runs.ts";
 import { cancelRun } from "../../internal/runs/actions/cancelRun.ts";
 import { createRun } from "../../internal/runs/actions/createRun.ts";
-import { getFileLog } from "../../internal/runs/actions/getFileLog.ts";
 import { getRun } from "../../internal/runs/actions/getRun.ts";
 import { listRuns } from "../../internal/runs/actions/listRuns.ts";
 import { rerunFailed } from "../../internal/runs/actions/rerunFailed.ts";
@@ -19,6 +18,10 @@ import {
 	getLiveRun,
 	subscribeRunEvents,
 } from "../../internal/runs/live/liveRuns.ts";
+import {
+	getFailedLogs,
+	getRunLogs,
+} from "../../internal/runs/logs/getRunLogs.ts";
 import {
 	getRunWithEmail,
 	isTerminalRunStatus,
@@ -79,9 +82,26 @@ export const runsRoutes = new Hono<TwdHono>()
 			});
 		}
 		return c.text(
-			await getFileLog({ ctx: c.get("ctx"), runId: c.req.param("id"), file }),
+			await getRunLogs({ ctx: c.get("ctx"), runId: c.req.param("id"), file }),
 		);
 	})
+	.get("/runs/:id/logs", async (c) => {
+		const scope = c.req.query("scope");
+		return c.text(
+			await getRunLogs({
+				ctx: c.get("ctx"),
+				runId: c.req.param("id"),
+				file: c.req.query("file") || undefined,
+				worker: c.req.query("worker") || undefined,
+				scope: scope === "run" ? "run" : undefined,
+			}),
+		);
+	})
+	.get("/runs/:id/logs/failed", async (c) =>
+		c.text(
+			await getFailedLogs({ ctx: c.get("ctx"), runId: c.req.param("id") }),
+		),
+	)
 	.post("/runs/:id/cancel", async (c) =>
 		c.json(await cancelRun({ ctx: c.get("ctx"), runId: c.req.param("id") })),
 	)
