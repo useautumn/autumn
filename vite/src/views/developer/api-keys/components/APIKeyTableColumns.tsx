@@ -1,12 +1,12 @@
 import { type ApiKey, groupAndFormatScopes } from "@autumn/shared";
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
-import type { ColumnDef, Row } from "@tanstack/react-table";
 import {
-	CalendarIcon,
-	ShieldCheckIcon,
-	TerminalIcon,
-	UserIcon,
-} from "lucide-react";
+	StatusChip,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import type { ColumnDef, Row } from "@tanstack/react-table";
+import { CalendarIcon } from "lucide-react";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
@@ -76,34 +76,25 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 
 			if (source.type === "cli") {
 				return (
-					<div className="flex justify-start items-center">
-						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded-md">
-							<TerminalIcon size={12} />
-							CLI
-						</span>
-					</div>
+					<StatusChip tone="purple" glyph="terminal">
+						CLI
+					</StatusChip>
 				);
 			}
 
 			if (source.type === "autumn_support") {
 				return (
-					<div className="flex justify-start items-center">
-						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md">
-							<ShieldCheckIcon size={12} />
-							Autumn Support
-						</span>
-					</div>
+					<StatusChip tone="blue" glyph="shield">
+						Autumn Support
+					</StatusChip>
 				);
 			}
 
 			if (source.type === "dashboard" && source.author) {
 				return (
-					<div className="flex justify-start items-center">
-						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-muted text-muted-foreground rounded-md">
-							<UserIcon size={12} className="shrink-0" />
-							{source.author}
-						</span>
-					</div>
+					<StatusChip glyph="user" className="max-w-full">
+						<span className="truncate">{source.author}</span>
+					</StatusChip>
 				);
 			}
 
@@ -118,19 +109,19 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		cell: ({ row }: { row: Row<ApiKey> }) => {
 			const scopes = row.original.scopes;
 			if (!scopes || scopes.length === 0) {
-				return <Badge variant="muted">Full access (unrestricted)</Badge>;
+				return <StatusChip>Full access (unrestricted)</StatusChip>;
 			}
 
 			const grouped = groupAndFormatScopes(scopes);
 			if (grouped.length === 0) {
-				return <Badge variant="muted">Full access (unrestricted)</Badge>;
+				return <StatusChip>Full access (unrestricted)</StatusChip>;
 			}
 
 			return (
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<span>
-							<Badge variant="muted">Scoped</Badge>
+							<StatusChip>Scoped</StatusChip>
 						</span>
 					</TooltipTrigger>
 					<TooltipContent>

@@ -8,6 +8,7 @@ import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
 import { FeatureTypeChip } from "../components/FeatureTypeChip";
+import { CreditSystemFeatureChips } from "./CreditSystemFeatureChips";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 function resolveModelName(
@@ -16,12 +17,16 @@ function resolveModelName(
 ): string {
 	const { provider, modelKey } = splitModelId(fullId);
 	if (!provider) return fullId;
-	return providers[provider]?.models[modelKey]?.name ?? fullId;
+	return providers[provider]?.models[modelKey]?.name ?? modelKey;
 }
 
-export const createCreditListColumns = (
-	providers: Record<string, ModelsDevProvider>,
-): ColumnDef<Feature, unknown>[] => [
+export const createCreditListColumns = ({
+	providers,
+	features,
+}: {
+	providers: Record<string, ModelsDevProvider>;
+	features: Feature[];
+}): ColumnDef<Feature, unknown>[] => [
 	{
 		size: 150,
 		header: "Name",
@@ -70,22 +75,17 @@ export const createCreditListColumns = (
 			const modelMarkupEntries = creditSystem.model_markups
 				? Object.entries(creditSystem.model_markups)
 				: null;
-			const featureIds =
+			const labels =
 				modelMarkupEntries && modelMarkupEntries.length > 0
-					? modelMarkupEntries
-							.map(([fullId]) => resolveModelName(fullId, providers))
-							.join(", ")
-					: creditSystem.config?.schema
-							?.map(
-								(schema: { metered_feature_id: string }) =>
-									schema.metered_feature_id,
-							)
-							.join(", ") || "—";
-			return (
-				<div className="text-muted-foreground truncate font-mono text-xs">
-					{featureIds}
-				</div>
-			);
+					? modelMarkupEntries.map(([fullId]) =>
+							resolveModelName(fullId, providers),
+						)
+					: (creditSystem.config?.schema ?? []).map(
+							({ metered_feature_id }: { metered_feature_id: string }) =>
+								features.find((feature) => feature.id === metered_feature_id)
+									?.name ?? metered_feature_id,
+						);
+			return <CreditSystemFeatureChips labels={labels} />;
 		},
 	},
 	{
