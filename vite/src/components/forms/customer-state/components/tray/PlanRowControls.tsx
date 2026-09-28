@@ -1,4 +1,10 @@
-import { ButtonGroup, IconButton } from "@autumn/ui";
+import {
+	ButtonGroup,
+	IconButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import {
 	type PlanRowAction,
@@ -20,20 +26,27 @@ export function PlanRowControls({
 
 	return (
 		<ButtonGroup className="shrink-0">
-			<IconButton
-				aria-label={isCustom ? "Edit custom plan" : "Customize plan"}
-				className={cn(
-					"size-6 shrink-0",
-					isCustom
-						? "bg-primary/15 text-primary hover:bg-primary/25"
-						: "text-tertiary-foreground hover:text-foreground",
-				)}
-				icon={<PencilSimpleIcon />}
-				onClick={onCustomize}
-				size="sm"
-				type="button"
-				variant="secondary"
-			/>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<IconButton
+						aria-label={isCustom ? "Edit custom plan" : "Customize plan"}
+						className={cn(
+							"size-6 shrink-0",
+							isCustom
+								? "bg-primary/15 text-primary hover:bg-primary/25"
+								: "text-tertiary-foreground hover:text-foreground",
+						)}
+						icon={<PencilSimpleIcon />}
+						onClick={onCustomize}
+						size="sm"
+						type="button"
+						variant="secondary"
+					/>
+				</TooltipTrigger>
+				<TooltipContent side="top">
+					{isCustom ? "Customized · click to edit" : "Customize plan"}
+				</TooltipContent>
+			</Tooltip>
 			{actions.length > 0 && (
 				<PlanRowActionsMenu actions={actions} variant="secondary" />
 			)}
