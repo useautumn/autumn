@@ -1,11 +1,12 @@
 import {
 	customers,
 	type Entity,
+	EntityAlreadyExistsError,
 	EntityErrorCode,
 	ErrCode,
 	entities,
 } from "@autumn/shared";
-import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -215,6 +216,31 @@ export class EntityService {
 		});
 
 		return entity;
+	}
+
+	/** Gives an id-less entity its id; a row already claimed (or gone) is left alone and refused. */
+	static async claim({
+		db,
+		internalId,
+		update,
+	}: {
+		db: DrizzleCli;
+		internalId: string;
+		update: Partial<Entity>;
+	}) {
+		const results = await db
+			.update(entities)
+			.set(update)
+			.where(and(eq(entities.internal_id, internalId), isNull(entities.id)))
+			.returning();
+
+		if (results.length === 0) {
+			throw new EntityAlreadyExistsError({
+				entityId: update.id ?? internalId,
+			});
+		}
+
+		return results[0] as Entity;
 	}
 
 	static async deleteInInternalIds({

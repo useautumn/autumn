@@ -23,8 +23,8 @@ import {
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
-import { multiUpdateItemToParams } from "@/internal/billing/v2/actions/multiUpdate/setup/setupMultiUpdateItemParams";
 import chalk from "chalk";
+import { multiUpdateItemToParams } from "@/internal/billing/v2/actions/multiUpdate/setup/setupMultiUpdateItemParams";
 
 const parseMultiUpdate = ({
 	updates,

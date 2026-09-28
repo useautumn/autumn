@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import type { ApiCustomerV3, TrackResponseV2 } from "@autumn/shared";
+import { roundCacheBalance, type ApiCustomerV3, type TrackResponseV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -8,7 +8,6 @@ import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { roundCacheBalance } from "@/internal/customers/cache/fullSubject/roundCacheBalance";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════

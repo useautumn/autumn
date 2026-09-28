@@ -1,6 +1,6 @@
+import type { ScopedUsageAlerts } from "@autumn/balance-webhooks";
 import type { Feature, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { ScopedUsageAlerts } from "../types/scopedUsageAlerts.js";
 import { resolveCustomerScopeAlerts } from "./resolveCustomerScopeAlerts.js";
 import { resolveEntityScopeAlerts } from "./resolveEntityScopeAlerts.js";
 import { resolveOrgScopeAlerts } from "./resolveOrgScopeAlerts.js";

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { ErrCode, type ApiCustomerV3, type TrackResponseV2 } from "@autumn/shared";
+import { ErrCode, roundCacheBalance, type ApiCustomerV3, type TrackResponseV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -9,7 +9,6 @@ import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { roundCacheBalance } from "@/internal/customers/cache/fullSubject/roundCacheBalance";
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-EVENT-NAME1: Track using event_name instead of feature_id (single feature)
@@ -45,6 +44,7 @@ test.concurrent(`${chalk.yellowBright("track-event-name1: track with event_name 
 		value: deductValue,
 	});
 
+	expect(trackRes.event_name).toBe("action-event");
 	expect(trackRes.balance).toBeDefined();
 	expect(trackRes.balance?.feature_id).toBe(TestFeature.Action1);
 	expect(trackRes.balance?.current_balance).toBe(expectedBalance);
@@ -110,6 +110,7 @@ test.concurrent(`${chalk.yellowBright("track-event-name2: track with event_name 
 		value: deductValue,
 	});
 
+	expect(trackRes.event_name).toBe("action-event");
 	expect(trackRes.value).toBe(deductValue);
 	expect(trackRes.balance).toBeNull();
 	expect(trackRes.balances).toBeDefined();

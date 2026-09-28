@@ -8,7 +8,7 @@
  *   New behaviors:
  *     - overdue subscription-mode pool resets on customer read (lazy path):
  *       balance -> pooled_balances.granted, next_reset_at advances past now;
- *     - the V1 cron loader (CusEntService.getActiveResetPassed) selects
+ *     - the V2 cron scan selects
  *       overdue subscription-mode pools and resetCustomerEntitlement resets
  *       them to the pooled grant;
  *     - the pool keeps reset_mode 'subscription' and its Stripe sub linkage —
@@ -31,13 +31,15 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import {
+	findResetEligibleRow,
+	runResetOnCustomerEntitlement,
+} from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
-import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { expectPooledBalanceCorrect } from "./utils/expectPooledBalanceCorrect.js";
 import { expirePooledBalanceForReset } from "./utils/expirePooledBalanceForReset.js";
 import { getPooledBalanceDbState } from "./utils/getPooledBalanceDbState.js";
@@ -162,25 +164,20 @@ test.concurrent(
 			resetMode: PooledBalanceResetMode.Subscription,
 		});
 
-		// ── Contract: cron loader includes the overdue subscription pool ──
-		const resettable = await CusEntService.getActiveResetPassed({
-			db: ctx.db,
-			customDateUnix: Date.now(),
-		});
-		const cronCustomerEntitlement = resettable.find(
-			(candidate) => candidate.id === pooledCustomerEntitlement.id,
-		);
-		if (!cronCustomerEntitlement) {
-			throw new Error(
-				"Expected cron to return the subscription pooled balance",
-			);
-		}
+		// ── Contract: the cron scan includes the overdue subscription pool ──
+		expect(
+			await findResetEligibleRow({
+				ctx,
+				customerEntitlementId: pooledCustomerEntitlement.id,
+			}),
+			"Expected the cron scan to select the subscription pooled balance",
+		).not.toBeNull();
 
 		// ── Contract: cron reset refills to the pooled grant ──
-		await resetCustomerEntitlement({
+		await runResetOnCustomerEntitlement({
 			ctx,
-			cusEnt: cronCustomerEntitlement,
-			updatedCusEnts: [],
+			customerId,
+			customerEntitlementId: pooledCustomerEntitlement.id,
 		});
 		const afterReset = await ctx.db.query.customerEntitlements.findFirst({
 			where: eq(customerEntitlements.id, pooledCustomerEntitlement.id),

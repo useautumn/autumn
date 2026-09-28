@@ -8,6 +8,10 @@ import { products } from "@tests/utils/fixtures/db/products.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct.js";
 
+// These cover the legacy Redis lane; the worker lane never overlays.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 const cachedSubjectCalls: Record<string, unknown>[] = [];
 let runtimeFullCustomer = customers.create({});
 
@@ -31,6 +35,12 @@ import {
 	overlayAttachRuntimeBalances,
 } from "@/internal/billing/v2/actions/attach/setup/overlayAttachRuntimeBalances.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
+// Routing reads ctx.org, so the context needs a real org.
+const attachContext = (): AutumnContext => ({
+	...contexts.create({}),
+	skipCache: false,
+});
 
 describe("attach runtime balance overlay", () => {
 	test("keeps Postgres structure but takes mutable balance state from Redis", () => {
@@ -94,7 +104,7 @@ describe("attach runtime balance overlay", () => {
 		});
 
 		const result = await overlayAttachRuntimeBalances({
-			ctx: { skipCache: false } as AutumnContext,
+			ctx: attachContext(),
 			fullCustomer: postgresFullCustomer,
 		});
 
@@ -136,7 +146,7 @@ describe("attach runtime balance overlay", () => {
 			],
 		});
 		const overlaidCustomer = await overlayAttachRuntimeBalances({
-			ctx: { skipCache: false } as AutumnContext,
+			ctx: attachContext(),
 			fullCustomer: customers.create({ customerProducts: [sourceProduct] }),
 		});
 
@@ -191,6 +201,25 @@ describe("attach runtime balance overlay", () => {
 	});
 });
 
+test("with the balance worker on, the Postgres customer is used as-is", async () => {
+	process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+	try {
+		const fullCustomer = customers.create({});
+		const calledBefore = cachedSubjectCalls.length;
+		const result = await overlayAttachRuntimeBalances({
+			ctx: attachContext(),
+			fullCustomer,
+		});
+		expect(result).toBe(fullCustomer);
+		expect(cachedSubjectCalls).toHaveLength(calledBefore);
+	} finally {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+	}
+});
+
 afterAll(() => {
 	mock.restore();
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });

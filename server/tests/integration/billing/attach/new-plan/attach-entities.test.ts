@@ -21,6 +21,7 @@ import {
 import { calculateCrossIntervalUpgrade } from "@tests/integration/billing/utils/proration";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
@@ -474,13 +475,16 @@ test.concurrent(
 		});
 
 		// Features are inherited across scopes: customer (100) + entity (100) = 200
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			includedUsage: 200,
-			balance: 200,
-			usage: 0,
-		});
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expectCustomerFeatureCorrect({
+				customer,
+				featureId: TestFeature.Messages,
+				includedUsage: 200,
+				balance: 200,
+				usage: 0,
+			});
+		}
 		expectCustomerFeatureCorrect({
 			customer: entity,
 			featureId: TestFeature.Messages,
@@ -577,13 +581,16 @@ test.concurrent(
 		});
 
 		// Features are inherited across scopes: customer (50) + entity (50) = 100
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-			balance: 100,
-			usage: 0,
-		});
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expectCustomerFeatureCorrect({
+				customer,
+				featureId: TestFeature.Messages,
+				includedUsage: 100,
+				balance: 100,
+				usage: 0,
+			});
+		}
 		expectCustomerFeatureCorrect({
 			customer: entity,
 			featureId: TestFeature.Messages,
@@ -709,13 +716,16 @@ test.concurrent(
 		});
 
 		// Verify features at customer level: customer (10000) + entity (500) = 10500
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			includedUsage: 10500,
-			balance: 10500,
-			usage: 0,
-		});
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expectCustomerFeatureCorrect({
+				customer,
+				featureId: TestFeature.Messages,
+				includedUsage: 10500,
+				balance: 10500,
+				usage: 0,
+			});
+		}
 
 		// Verify invoices:
 		// 1. Entity monthly ($20)
@@ -830,13 +840,16 @@ test.concurrent(
 		});
 
 		// Verify features at customer level: customer (10000) + entity pro (500) + entity addon (1000) = 11500
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			includedUsage: 11500,
-			balance: 11500,
-			usage: 0,
-		});
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expectCustomerFeatureCorrect({
+				customer,
+				featureId: TestFeature.Messages,
+				includedUsage: 11500,
+				balance: 11500,
+				usage: 0,
+			});
+		}
 
 		// Verify invoices:
 		// 1. Entity pro monthly ($20)

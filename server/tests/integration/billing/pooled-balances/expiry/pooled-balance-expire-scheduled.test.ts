@@ -24,11 +24,13 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
+	type ApiEntityV2,
 	type AttachParamsV1Input,
 	EntInterval,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
@@ -238,8 +240,11 @@ test(
 		expect(afterTransition.pools[0].expires_at).not.toBeNull();
 
 		// ── Contract: the regular balance from the incoming plan is visible ─
-		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		expect(customer.balances?.[TestFeature.Messages]?.remaining).toBe(
+		// The balance worker doesn't aggregate entity data onto the customer, so it is read off the entity.
+		const subject = isBalanceWorkerRoute()
+			? await autumnV2_3.entities.get<ApiEntityV2>(customerId, entities[0].id)
+			: await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expect(subject.balances?.[TestFeature.Messages]?.remaining).toBe(
 			REGULAR_GRANT,
 		);
 	},

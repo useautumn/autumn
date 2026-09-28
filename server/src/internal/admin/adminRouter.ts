@@ -27,8 +27,10 @@ import {
 import { handleGetAdminAgentProvisionRateLimitConfig } from "./handleGetAdminAgentProvisionRateLimitConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
+import { handleGetAdminBalanceShadowConfig } from "./handleGetAdminBalanceShadowConfig.js";
 import { handleGetAdminBatchResetConfig } from "./handleGetAdminBatchResetConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
+import { handleGetAdminDbControlConfig } from "./handleGetAdminDbControlConfig.js";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
 import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubjectGateConfig";
@@ -41,7 +43,6 @@ import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimi
 import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRateLimitRedisAllowlistConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
-import { handleGetAdminResetJobConfig } from "./handleGetAdminResetJobConfig";
 import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
@@ -61,8 +62,10 @@ import {
 import { handleUpsertAdminAgentProvisionRateLimitConfig } from "./handleUpsertAdminAgentProvisionRateLimitConfig";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
 import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
+import { handleUpsertAdminBalanceShadowConfig } from "./handleUpsertAdminBalanceShadowConfig.js";
 import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
+import { handleUpsertAdminDbControlConfig } from "./handleUpsertAdminDbControlConfig.js";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
@@ -74,7 +77,6 @@ import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRa
 import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAdminRateLimitRedisAllowlistConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
-import { handleUpsertAdminResetJobConfig } from "./handleUpsertAdminResetJobConfig";
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
@@ -158,6 +160,16 @@ honoAdminRouter.put(
 	...handleUpsertAdminAsyncTrackConfig,
 );
 honoAdminRouter.get(
+	"/balance-shadow-config",
+	...handleGetAdminBalanceShadowConfig,
+);
+honoAdminRouter.put(
+	"/balance-shadow-config",
+	...handleUpsertAdminBalanceShadowConfig,
+);
+honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
+honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);
+honoAdminRouter.get(
 	"/full-subject-gate-config",
 	...handleGetAdminFullSubjectGateConfig,
 );
@@ -206,8 +218,6 @@ honoAdminRouter.put(
 	"/batch-reset-config",
 	...handleUpsertAdminBatchResetConfig,
 );
-honoAdminRouter.get("/reset-job-config", ...handleGetAdminResetJobConfig);
-honoAdminRouter.put("/reset-job-config", ...handleUpsertAdminResetJobConfig);
 honoAdminRouter.get("/reset-job-v2-config", ...handleGetAdminResetJobV2Config);
 honoAdminRouter.put(
 	"/reset-job-v2-config",

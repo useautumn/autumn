@@ -132,7 +132,7 @@ export const intentToUpsertProductPlan = ({
 	});
 
 	// The plan as this update leaves it: a free plan has no card gate, so the
-	// trial's card_required is inert there (resolveTrialCardRequired's rule).
+	// trial's card_required is inert there (isTrialCardRequired's rule).
 	const resultingPrices = entitlementPricesPlan
 		? [
 				...entitlementPricesPlan.prices.same,

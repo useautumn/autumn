@@ -10,7 +10,11 @@ type SyncItemResult =
 			updateCount: number;
 			rolloverUpdateCount: number;
 	  }
-	| { kind: "skipped"; reason: "cache_miss" | "no_entries"; feature?: string };
+	| {
+			kind: "skipped";
+			reason: "cache_miss" | "no_entries" | "customer_on_worker";
+			feature?: string;
+	  };
 
 const formatEntry = (entry: SyncEntry): string => {
 	const entitiesStr =
