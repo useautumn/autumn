@@ -1,4 +1,9 @@
-import { CompressionTypes, KafkaJSProtocolError } from "kafkajs";
+import {
+	CompressionTypes,
+	KafkaJSError,
+	KafkaJSNumberOfRetriesExceeded,
+	KafkaJSProtocolError,
+} from "kafkajs";
 import {
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -32,17 +37,24 @@ async function abortTransaction({
 }
 
 /**
- * The coordinator answers CONCURRENT_TRANSACTIONS while it is still finishing
- * the producer's previous transaction; the protocol lists it as final but the
- * broker expects a retry (kafkajs marks it retriable for that reason). Nothing
- * of the new transaction has been appended when it arrives, so it is aborted
- * and begun again after a short wait, a few times, before it counts as a batch
- * that did not commit.
+ * A refusal the broker itself expects to be retried never counts as a failed
+ * batch straight away. The coordinator answers CONCURRENT_TRANSACTIONS while it
+ * is still finishing the producer's previous transaction; a broker being
+ * replaced answers NOT_LEADER_OR_FOLLOWER until leadership has moved; a
+ * coordinator on the move answers NOT_COORDINATOR. kafkajs marks all of these
+ * retriable and retries a few times itself; when it gives up, nothing of the
+ * new transaction has been kept, because the batch is aborted before it is
+ * reported here. So the transaction is begun again after a short, fixed wait,
+ * for as long as the deadline allows, and only then counts as a batch that did
+ * not commit.
  */
 export type TransactionRetry = {
-	attempts: number;
-	initialBackoffMs: number;
+	/** How long refusals are waited out before the batch counts as not committed. */
+	deadlineMs: number;
+	/** Fixed, not doubling: a refusal clears in milliseconds, and a longer wait only adds latency. */
+	backoffMs: number;
 	sleep(ms: number): Promise<void>;
+	now(): number;
 };
 
 function sleepFor(ms: number): Promise<void> {
@@ -51,10 +63,15 @@ function sleepFor(ms: number): Promise<void> {
 	return wake.promise;
 }
 
+function monotonicNow(): number {
+	return performance.now();
+}
+
 const DEFAULT_TRANSACTION_RETRY: TransactionRetry = {
-	attempts: 6,
-	initialBackoffMs: 25,
+	deadlineMs: 5_000,
+	backoffMs: 25,
 	sleep: sleepFor,
+	now: monotonicNow,
 };
 
 export function isConcurrentTransactionsError(cause: unknown): boolean {
@@ -62,6 +79,14 @@ export function isConcurrentTransactionsError(cause: unknown): boolean {
 		cause instanceof KafkaJSProtocolError &&
 		cause.type === "CONCURRENT_TRANSACTIONS"
 	);
+}
+
+/** kafkajs takes retriability from the protocol's error table, and keeps the
+ *  original refusal as the cause of the error it throws once its own retries run out. */
+export function isRetriableKafkaError(cause: unknown): boolean {
+	if (cause instanceof KafkaJSNumberOfRetriesExceeded)
+		return isRetriableKafkaError(cause.cause);
+	return cause instanceof KafkaJSError && cause.retriable === true;
 }
 
 export async function sendTransactionalBatch({
@@ -149,7 +174,7 @@ export async function sendTransactionalOffsets({
 	return runTransactionWithRetry({ producer, send, retry });
 }
 
-/** Retries only the refusal the coordinator asks to be retried; anything else keeps its verdict. */
+/** Waits out any refusal the broker asks to be retried; every other verdict stands. */
 async function runTransactionWithRetry<Result>({
 	producer,
 	send,
@@ -159,18 +184,19 @@ async function runTransactionWithRetry<Result>({
 	send(transaction: KafkaTransaction): Promise<Result>;
 	retry: TransactionRetry;
 }): Promise<Result> {
-	let backoffMs = retry.initialBackoffMs;
-	for (let attempt = 1; ; attempt++) {
+	const startedAt = retry.now();
+	for (;;) {
 		try {
 			return await runTransaction({ producer, send });
 		} catch (cause) {
-			const refusedConcurrent =
+			const refused =
 				cause instanceof KafkaBatchNotCommittedError &&
-				isConcurrentTransactionsError(cause.cause);
-			if (!refusedConcurrent || attempt >= retry.attempts) throw cause;
+				isRetriableKafkaError(cause.cause);
+			const waitedMs = retry.now() - startedAt;
+			if (!refused || waitedMs + retry.backoffMs > retry.deadlineMs)
+				throw cause;
 		}
-		await retry.sleep(backoffMs);
-		backoffMs *= 2;
+		await retry.sleep(retry.backoffMs);
 	}
 }
 
