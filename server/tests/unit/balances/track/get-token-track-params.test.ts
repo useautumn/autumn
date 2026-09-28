@@ -29,13 +29,11 @@ await mockModuleWithRestore(
 // Markups are resolved through the customer's own entitlement, so the
 // resolver reads the subject even when feature_id is explicit.
 await mockModuleWithRestore(
-	"@/internal/balances/utils/getSubjectFullCustomer.js",
+	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
-		getSubjectFullCustomer: async () => ({
-			id: "cus_123",
+		getOrSetCachedFullSubject: async () => ({
+			customer: { id: "cus_123" },
 			customer_products: [],
-			extra_customer_entitlements: [],
-			entities: [],
 		}),
 	}),
 );

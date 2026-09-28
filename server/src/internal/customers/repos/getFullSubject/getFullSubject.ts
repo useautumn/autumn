@@ -5,7 +5,6 @@ import {
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
 	type SubjectQueryRow,
-	shouldAggregateEntityData,
 } from "@autumn/shared";
 import { isTransientDbError } from "@/db/dbUtils.js";
 import { executePrepared } from "@/db/executePrepared.js";
@@ -23,6 +22,7 @@ import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitle
 import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { markReplicaSourced } from "../../cache/fullSubject/subjectProvenance.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
+import { shouldAggregateEntityData } from "../../cusUtils/customerEntityData.js";
 import {
 	type FullSubjectGateLane,
 	isFullSubjectGateRejection,
@@ -52,7 +52,6 @@ const runRoutedHydration = async ({
 	readFrom,
 	routeSource,
 	useDelayedPostgresBackupRead,
-	asOfTimestampMs,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -62,7 +61,6 @@ const runRoutedHydration = async ({
 	readFrom: SubjectReadFrom;
 	routeSource?: string;
 	useDelayedPostgresBackupRead: boolean;
-	asOfTimestampMs?: number;
 }): Promise<{ rows: SubjectQueryRow[]; source: SubjectReadSource }> => {
 	const { org, env } = ctx;
 
@@ -96,7 +94,6 @@ const runRoutedHydration = async ({
 							aggregateEntityData: shouldAggregateEntityData({
 								apiVersion: ctx.apiVersion,
 							}),
-							asOfTimestampMs,
 						}),
 					});
 
@@ -270,7 +267,6 @@ export async function getFullSubjectNormalized({
 	readFrom = "primary",
 	routeSource,
 	useDelayedPostgresBackupRead = false,
-	asOfTimestampMs,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -281,8 +277,6 @@ export async function getFullSubjectNormalized({
 	readFrom?: SubjectReadFrom;
 	routeSource?: string;
 	useDelayedPostgresBackupRead?: boolean;
-	/** Replay-only expiry clock; this does not provide historical row time travel. */
-	asOfTimestampMs?: number;
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
 > {
@@ -295,7 +289,6 @@ export async function getFullSubjectNormalized({
 		readFrom,
 		routeSource,
 		useDelayedPostgresBackupRead,
-		asOfTimestampMs,
 	});
 	if (!subjectRows.length) return undefined;
 

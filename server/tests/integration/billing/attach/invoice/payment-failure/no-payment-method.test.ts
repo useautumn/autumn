@@ -35,7 +35,7 @@ test.concurrent(`${chalk.yellowBright("no-pm 2: upgrade")}`, async () => {
 		items: [premiumMessagesItem],
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -64,11 +64,7 @@ test.concurrent(`${chalk.yellowBright("no-pm 2: upgrade")}`, async () => {
 		usage: 0,
 	});
 
-	await completeInvoiceCheckout({
-		url: result.payment_url!,
-		ctx,
-		customerId,
-	});
+	await completeInvoiceCheckout({ url: result.payment_url! });
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 

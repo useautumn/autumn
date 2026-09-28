@@ -1,9 +1,5 @@
-import type {
-	ApiPlanLicenseV1,
-	Feature,
-	FullPlanLicense,
-} from "@autumn/shared";
-import { fullPlanLicensesToApiPlanLicenses } from "@autumn/shared";
+import type { ApiPlanLicenseV1, Feature, FullPlanLicense } from "@autumn/shared";
+import { toApiPlanLicenses } from "@/internal/licenses/licenseUtils";
 import { fullPlanLicenseToCustomize } from "./fullPlanLicenseToCustomize.js";
 
 export const toApiPlanLicenseSnapshot = ({
@@ -15,7 +11,7 @@ export const toApiPlanLicenseSnapshot = ({
 }): ApiPlanLicenseV1 => {
 	const customize = fullPlanLicenseToCustomize({ license, features });
 	return {
-		...fullPlanLicensesToApiPlanLicenses({ licenses: [license] })[0],
+		...toApiPlanLicenses([license])[0],
 		...(customize ? { customize } : {}),
 	};
 };

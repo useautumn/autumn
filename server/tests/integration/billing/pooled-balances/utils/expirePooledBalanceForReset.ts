@@ -5,7 +5,6 @@ import {
 import { setCachedSubjectBalanceField } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
-import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { getPooledBalanceDbState } from "./getPooledBalanceDbState.js";
 
 export const expirePooledBalanceForReset = async ({
@@ -61,8 +60,6 @@ export const expirePooledBalanceForReset = async ({
 		field: "next_reset_at",
 		value: pastTimeMs,
 	});
-	// Written behind the worker's back: it re-hydrates on the next command.
-	await evictBalanceWorkerCustomer({ ctx, customerId });
 
 	return { pool, pooledCustomerEntitlement, pastTimeMs };
 };

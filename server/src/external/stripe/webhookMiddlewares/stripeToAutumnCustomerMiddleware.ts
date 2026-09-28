@@ -1,8 +1,7 @@
 import { RELEVANT_STATUSES } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
-import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { CusService } from "../../../internal/customers/CusService";
 import type {
 	StripeWebhookContext,
@@ -45,10 +44,6 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 
 	if (!cus) return;
 
-	// The worker holds the live balances: land its writes first, so a cycle's arrears and resets read all of the usage.
-	if (cus.id && isBalanceWorkerRolloutEnabled({ ctx, customerId: cus.id }))
-		await flushBalanceWorkerCustomer({ ctx, customerId: cus.id });
-
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: cus.internal_id,
@@ -82,6 +77,10 @@ export const attachStripeEventCustomer = async ({
 		ctx: {
 			...ctx,
 			customerId,
+			rolloutSnapshot: computeRolloutSnapshot({
+				orgId: ctx.org.id,
+				customerId,
+			}),
 		},
 		customerId,
 	});

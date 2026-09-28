@@ -9,7 +9,7 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { pollUntilAsserted, timeout } from "../../../utils/genUtils";
+import { timeout } from "../../../utils/genUtils";
 
 const userItem = constructFeatureItem({
 	featureId: TestFeature.Users,
@@ -102,14 +102,10 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 			}
 			expect(userFeature.balance).toBe(startingBalance);
 
-			// Settle so a late extra event is caught, then poll: herald lands worker events seconds late under load.
+			// Check that there are X events in the database
 			await timeout(2000);
-			const expectedEventCount = numberOfTracks;
-			await pollUntilAsserted({
-				fetch: () => getCustomerEvents({ customerId }),
-				assert: (events) => expect(events.length).toBe(expectedEventCount),
-				timeoutMs: 30_000,
-			});
+			const events = await getCustomerEvents({ customerId });
+			expect(events.length).toBe(numberOfTracks);
 		}
 	});
 });

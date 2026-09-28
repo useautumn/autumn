@@ -6,8 +6,7 @@ import type { Logger } from "../external/logtail/logtailUtils.js";
 import { getCtxWithCustomerRedis } from "../external/redis/customerRedisRouting.js";
 import { resolveRedisV2 } from "../external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
-import { isBalanceWorkerRolloutEnabled } from "../internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
-import { getCustomerBucket } from "../internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "../internal/misc/rollouts/rolloutUtils.js";
 import { generateId } from "../utils/genUtils.js";
 
 export const createWorkerContext = async ({
@@ -51,6 +50,11 @@ export const createWorkerContext = async ({
 		createdAt: org.created_at ?? Date.now(),
 	});
 
+	const rolloutSnapshot = computeRolloutSnapshot({
+		orgId: org.id,
+		customerId,
+	});
+
 	const workerLogger = addAppContextToLogs({
 		logger: logger,
 		appContext: {
@@ -61,10 +65,10 @@ export const createWorkerContext = async ({
 			auth_type: AuthType.Worker,
 			api_version: apiVersion.semver,
 			full_subject_bucket: customerId
-				? getCustomerBucket({ customerId })
+				? (rolloutSnapshot.customerBucket ?? undefined)
 				: undefined,
-			balance_worker_rollout_enabled: customerId
-				? isBalanceWorkerRolloutEnabled({ ctx: { org }, customerId })
+			full_subject_rollout_enabled: customerId
+				? rolloutSnapshot.enabled
 				: undefined,
 		},
 	});
@@ -89,6 +93,7 @@ export const createWorkerContext = async ({
 		expand: [],
 		skipCache,
 		extraLogs: {},
+		rolloutSnapshot,
 	};
 	return getCtxWithCustomerRedis({ ctx, customerId }).ctx;
 };

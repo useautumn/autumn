@@ -1,18 +1,14 @@
-import {
-	AppEnv,
-	AuthType,
-	type Organization,
-	productAliases,
-} from "@autumn/shared";
+import { AppEnv, AuthType, type Organization, productAliases } from "@autumn/shared";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import {
 	addVercelCustomerToContext,
@@ -62,6 +58,10 @@ export const vercelSeederMiddleware = async (
 		env,
 		features,
 		authType: AuthType.Vercel,
+		rolloutSnapshot: computeRolloutSnapshot({
+			orgId: org?.id,
+			customerId: ctx.customerId,
+		}),
 	};
 
 	const routedCtx = org

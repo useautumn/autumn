@@ -1,12 +1,17 @@
-import type { BillingContext, StripeBillingPlanResult } from "@autumn/shared";
+import type {
+	BillingContext,
+	StripeBillingPlanResult,
+} from "@autumn/shared";
+import { invoices } from "@autumn/shared";
+import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import {
 	createRefundAndUpdateInvoice,
 	resolveChargeFromInvoice,
 } from "@/internal/customers/handlers/handleRefundInvoice/invoiceRefundUtils";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { upsertInvoiceInCache } from "@/internal/invoices/actions/cache/upsertInvoiceInCache";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
@@ -55,10 +60,9 @@ const rollbackInvoiceAction = async ({
 
 	if (stripeInvoice.status === "draft") {
 		await stripeCli.invoices.del(stripeInvoice.id);
-		await InvoiceService.deleteByStripeId({
-			db: ctx.db,
-			stripeId: stripeInvoice.id,
-		});
+		await ctx.db
+			.delete(invoices)
+			.where(eq(invoices.stripe_id, stripeInvoice.id));
 		await deleteCachedFullCustomer({
 			ctx,
 			customerId,
@@ -74,9 +78,7 @@ const rollbackInvoiceAction = async ({
 		stripeInvoice.status === "open" ||
 		stripeInvoice.status === "uncollectible"
 	) {
-		const voidedInvoice = await stripeCli.invoices.voidInvoice(
-			stripeInvoice.id,
-		);
+		const voidedInvoice = await stripeCli.invoices.voidInvoice(stripeInvoice.id);
 		await invoiceActions.updateFromStripe({
 			ctx,
 			customerId,

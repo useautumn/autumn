@@ -1,6 +1,7 @@
 import type { AutoTopup, Customer } from "@autumn/shared";
+import { RedisUnavailableError } from "@/external/redis/utils/errors";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { dispatchAutoTopup } from "./helpers/dispatchAutoTopup.js";
+import { enqueueAutoTopupWithBurstSuppression } from "./helpers/enqueueAutoTopupWithBurstSuppression";
 import { sendAutoTopupFailedWebhook } from "./webhooks/sendAutoTopupFailedWebhook";
 
 /** Triggers an auto top-up for the first feature that transitions to enabled. */
@@ -32,13 +33,24 @@ export const triggerAutoTopUpsOnEnabled = async ({
 			continue;
 		}
 
-		const dispatched = await dispatchAutoTopup({
-			ctx,
-			customerId,
-			featureId: feature.id,
-		});
+		let enqueueResult: Awaited<
+			ReturnType<typeof enqueueAutoTopupWithBurstSuppression>
+		>;
+		try {
+			enqueueResult = await enqueueAutoTopupWithBurstSuppression({
+				ctx,
+				customerId,
+				featureId: feature.id,
+			});
+		} catch (error) {
+			if (!(error instanceof RedisUnavailableError)) throw error;
+			enqueueResult = {
+				enqueued: false as const,
+				reason: "redis_unavailable" as const,
+			};
+		}
 
-		if (dispatched.reason === "redis_unavailable") {
+		if (enqueueResult?.reason === "redis_unavailable") {
 			await sendAutoTopupFailedWebhook({
 				ctx,
 				customerId,

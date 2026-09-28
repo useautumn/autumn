@@ -1,7 +1,6 @@
 import type { CustomerLicenseTransition } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { batchTransition } from "@/internal/billing/v2/actions/batchTransition/batchTransition";
-import { batchTransitionInBackground } from "@/internal/billing/v2/actions/batchTransition/batchTransitionInBackground";
 import { batchTransitionTask } from "@/internal/billing/v2/actions/batchTransition/tasks/batchTransitionTask";
 import { SYNC_BATCH_TRANSITION_MAX_ENTITIES } from "@/internal/billing/v2/actions/batchTransition/utils/batchTransitionConstants";
 import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
@@ -10,24 +9,15 @@ import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRe
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline";
 import { generateId } from "@/utils/genUtils";
 
-/** A seat transition whose pool row is written, waiting to converge its seats. */
-export type PendingBatchTransition = {
-	transition: CustomerLicenseTransition;
-	executionScope: { batchTransitionId: string; assignmentCutoffMs: number };
-	runSynchronously: boolean;
-};
-
 /** Converges license pools and their assigned seat definitions.
- * Persists pre-existing successor pools during scheduled activation.
- * Writes the pool rows only; the seat convergence is started by `startBatchTransitions` once they commit. */
+ * Persists pre-existing successor pools during scheduled activation. */
 export const executeCustomerLicenseTransitions = async ({
 	ctx,
 	customerLicenseTransitions,
 }: {
 	ctx: AutumnContext;
 	customerLicenseTransitions: CustomerLicenseTransition[] | undefined;
-}): Promise<PendingBatchTransition[]> => {
-	const pending: PendingBatchTransition[] = [];
+}) => {
 	const hasTransitions = (customerLicenseTransitions ?? []).length > 0;
 	// Small customers get their transition awaited in-request so upgrades are
 	// synchronous; the capped count keeps this probe O(threshold) for whales.
@@ -80,45 +70,27 @@ export const executeCustomerLicenseTransitions = async ({
 			});
 		}
 
-		pending.push({
-			transition,
-			executionScope: {
-				batchTransitionId: generateId("batch_transition"),
-				assignmentCutoffMs: Date.now(),
-			},
-			runSynchronously,
-		});
-	}
-	return pending;
-};
+		const executionScope = {
+			batchTransitionId: generateId("batch_transition"),
+			assignmentCutoffMs: Date.now(),
+		};
 
-/** Converges each written pool's seats: awaited for small customers, backgrounded for large ones. */
-export const startBatchTransitions = async ({
-	ctx,
-	pending,
-}: {
-	ctx: AutumnContext;
-	pending: PendingBatchTransition[];
-}): Promise<void> => {
-	for (const { transition, executionScope, runSynchronously } of pending) {
 		if (runSynchronously) {
 			await batchTransition({ ctx, transition, executionScope });
 			continue;
 		}
 
 		if (shouldRunTriggerTasksInline()) {
-			void batchTransitionInBackground({
-				ctx,
-				transition,
-				executionScope,
-			}).catch((error) => {
-				ctx.logger.error("[licenseTransitions] batch transition failed", {
-					data: {
-						customerLicenseLinkId: transition.updates.linkId,
-						error: error instanceof Error ? error.message : String(error),
-					},
-				});
-			});
+			void batchTransition({ ctx, transition, executionScope }).catch(
+				(error) => {
+					ctx.logger.error("[licenseTransitions] batch transition failed", {
+						data: {
+							customerLicenseLinkId: updates.linkId,
+							error: error instanceof Error ? error.message : String(error),
+						},
+					});
+				},
+			);
 			continue;
 		}
 
@@ -130,7 +102,7 @@ export const startBatchTransitions = async ({
 				transition,
 				executionScope,
 			},
-			{ concurrencyKey: transition.updates.linkId },
+			{ concurrencyKey: updates.linkId },
 		);
 	}
 };

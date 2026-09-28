@@ -74,14 +74,10 @@ export const runFinalizeLockV2 = async ({
 			await runRedisFinalizeLockV2({ ctx, finalizeLockContext });
 		}
 	} catch (error) {
-		if (!isBalanceRejection(error)) throw error;
-		await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
-		// The caller's refusal, not a 500: the lock stays open for a finalize that fits.
-		if (error instanceof InsufficientBalanceError) throw error;
-		throw new InsufficientBalanceError({
-			value: new Decimal(finalValue).toNumber(),
-			featureId: receipt.feature_id,
-		});
+		if (isBalanceRejection(error)) {
+			await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
+		}
+		throw error;
 	}
 
 	try {

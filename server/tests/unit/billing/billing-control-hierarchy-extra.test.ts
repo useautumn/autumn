@@ -56,7 +56,7 @@ describe("resolveBillingControl chokepoint", () => {
 			customer?: LeveledControl[];
 			plan?: LeveledControl[];
 		}) =>
-			resolveBillingControl<"spend_limits", LeveledControl>({
+			resolveBillingControl<LeveledControl, "spend_limits">({
 				controlLists: [entity ?? [], customer ?? []],
 				customerProducts: [planProductWith("spend_limits", plan ?? [])],
 				controlKey: "spend_limits",
@@ -93,7 +93,7 @@ describe("resolveBillingControl chokepoint", () => {
 			customer?: LeveledControl[];
 			plan?: LeveledControl[];
 		}) =>
-			resolveBillingControl<"auto_topups", LeveledControl>({
+			resolveBillingControl<LeveledControl, "auto_topups">({
 				controlLists: [customer ?? []],
 				customerProducts: [planProductWith("auto_topups", plan ?? [])],
 				controlKey: "auto_topups",

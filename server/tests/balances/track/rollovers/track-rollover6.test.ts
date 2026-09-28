@@ -120,11 +120,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 			freeMsges.included_usage + freeRolloverBalance,
 		);
 
-		// Two cycles' rollovers: one full, one trimmed to the max; the order follows expiry.
 		const rollovers = msgesFeature?.rollovers;
-		expect(
-			rollovers?.map((rollover) => rollover.balance).sort((a, b) => a - b),
-		).toEqual([100, 500]);
+		expect(rollovers?.[0].balance).toBe(100);
+		expect(rollovers?.[1].balance).toBe(500);
 
 		// Verify non-cached customer balance
 		await timeout(2000);
@@ -138,10 +136,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 		);
 
 		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
-		expect(
-			nonCachedRollovers
-				?.map((rollover) => rollover.balance)
-				.sort((a, b) => a - b),
-		).toEqual([100, 500]);
+		expect(nonCachedRollovers?.[0].balance).toBe(100);
+		expect(nonCachedRollovers?.[1].balance).toBe(500);
 	});
 });

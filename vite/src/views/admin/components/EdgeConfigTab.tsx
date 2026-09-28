@@ -4,10 +4,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AgentProvisionRateLimitDialog } from "./AgentProvisionRateLimitDialog";
 import { AsyncBalanceUpdateDialog } from "./AsyncBalanceUpdateDialog";
 import { AsyncTrackDialog } from "./AsyncTrackDialog";
-import { BalanceShadowDialog } from "./BalanceShadowDialog";
 import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
-import { DbControlDialog } from "./DbControlDialog";
 import { EdgeConfigCard } from "./EdgeConfigCard";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { EDGE_CONFIG_SECTIONS, type EdgeConfigCardId } from "./edgeConfigCards";
@@ -117,16 +115,6 @@ export function EdgeConfigTab() {
 
 			<AsyncTrackDialog
 				open={openConfig === "async-track"}
-				onOpenChange={closeDialog}
-			/>
-
-			<BalanceShadowDialog
-				open={openConfig === "balance-shadow"}
-				onOpenChange={closeDialog}
-			/>
-
-			<DbControlDialog
-				open={openConfig === "db-control"}
 				onOpenChange={closeDialog}
 			/>
 

@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -50,152 +49,146 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-describe.skipIf(isBalanceWorkerRoute())(
-	`${chalk.yellowBright("track-race-condition1: sync should not wipe out attached credits")}`,
-	() => {
-		const customerId = testCase;
-		const autumnV2 = new AutumnInt({
-			version: ApiVersion.V2_1,
-		});
-		const autumnV2SkipCacheDeletion: AutumnInt = new AutumnInt({
-			version: ApiVersion.V2_1,
-			skipCacheDeletion: true,
-		});
+describe(`${chalk.yellowBright("track-race-condition1: sync should not wipe out attached credits")}`, () => {
+	const customerId = testCase;
+	const autumnV2 = new AutumnInt({
+		version: ApiVersion.V2_1,
+	});
+	const autumnV2SkipCacheDeletion: AutumnInt = new AutumnInt({
+		version: ApiVersion.V2_1,
+		skipCacheDeletion: true,
+	});
 
-		beforeAll(async () => {
-			await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
+	beforeAll(async () => {
+		await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
 
-			await initCustomerV3({
-				ctx,
-				customerId,
-				withTestClock: true,
-				attachPm: "success",
-			});
-
-			await initProductsV0({
-				ctx,
-				products: [pro, oneOffCredits],
-				prefix: testCase,
-			});
-
-			await autumnV2.attach({
-				customer_id: customerId,
-				product_id: pro.id,
-			});
+		await initCustomerV3({
+			ctx,
+			customerId,
+			withTestClock: true,
+			attachPm: "success",
 		});
 
-		test("should manually reproduce race condition where sync wipes out attached credits", async () => {
-			console.log(
-				chalk.cyan("\n=== Manually orchestrating race condition steps ===\n"),
-			);
+		await initProductsV0({
+			ctx,
+			products: [pro, oneOffCredits],
+			prefix: testCase,
+		});
 
-			console.log(chalk.yellow("Step 1: Setting up subject in Redis cache..."));
+		await autumnV2.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
+	});
 
-			const fullSubject = await getOrSetCachedFullSubject({
-				ctx,
-				customerId,
-				source: "test-setup",
-			});
-			console.log(chalk.green("✓ Subject cached in Redis"));
+	test("should manually reproduce race condition where sync wipes out attached credits", async () => {
+		console.log(
+			chalk.cyan("\n=== Manually orchestrating race condition steps ===\n"),
+		);
 
-			console.log(
-				chalk.yellow(
-					"\nStep 2: Tracking 5 messages directly via executeRedisDeductionV2() (no auto sync)...",
-				),
-			);
+		console.log(chalk.yellow("Step 1: Setting up subject in Redis cache..."));
 
-			const messagesFeature = ctx.features.find(
-				(f) => f.id === TestFeature.Messages,
-			)!;
+		const fullSubject = await getOrSetCachedFullSubject({
+			ctx,
+			customerId,
+			source: "test-setup",
+		});
+		console.log(chalk.green("✓ Subject cached in Redis"));
 
-			const deductionResult = await executeRedisDeductionV2({
-				ctx,
-				deductions: [
-					{
-						feature: messagesFeature,
-						deduction: 5,
-					},
-				],
-				fullSubject,
-				deductionOptions: {
-					overageBehaviour: "cap",
-				},
-			});
+		console.log(
+			chalk.yellow(
+				"\nStep 2: Tracking 5 messages directly via executeRedisDeductionV2() (no auto sync)...",
+			),
+		);
 
-			console.log(
-				chalk.green("✓ Tracked 5 messages in Redis (no sync queued)"),
-			);
-			console.log(
-				"  Modified breakdown IDs:",
-				Object.keys(deductionResult.updates),
-			);
+		const messagesFeature = ctx.features.find(
+			(f) => f.id === TestFeature.Messages,
+		)!;
 
-			// Get the customer from Redis to see current balance
-			const customerAfterTrack =
-				await autumnV2.customers.get<ApiCustomer>(customerId);
-
-			console.log(
-				chalk.blue(
-					`  Current balance in Redis: ${getMessagesRemaining(customerAfterTrack)}`,
-				),
-			);
-
-			// STEP 3: Attach 250 credits (this updates DB directly)
-			console.log(
-				chalk.yellow("\nStep 3: Attaching 250 one-off credits (updates DB)..."),
-			);
-			await autumnV2SkipCacheDeletion.attach({
-				customer_id: customerId,
-				product_id: oneOffCredits.id,
-			});
-			console.log(chalk.green("✓ Attached 250 credits to DB"));
-
-			console.log(
-				chalk.yellow(
-					"\nStep 4: Manually syncing OLD Redis balance to DB (testing race condition)...",
-				),
-			);
-
-			await syncItemV4({
-				ctx,
-				payload: {
-					customerId,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					timestamp: Date.now(),
-					rolloverIds: Object.keys(deductionResult.rolloverUpdates),
-					modifiedCusEntIdsByFeatureId:
-						deductionResult.modifiedCusEntIdsByFeatureId,
-					usageWindowUpdates: deductionResult.usageWindowUpdates,
-				},
-			});
-			console.log(chalk.red("✓ Sync completed"));
-
-			await invalidateCachedFullSubject({
-				ctx,
-				customerId,
-				source: "test-setup",
-			});
-
-			// 1. Check that credits weren't wiped out
-			const cachedCustomer =
-				await autumnV2.customers.get<ApiCustomer>(customerId);
-
-			// Expected: 100 (pro) - 5 (tracked) + 250 (one-off credits) = 345
-			const currentBalance = getMessagesRemaining(cachedCustomer);
-			expect(currentBalance).toBeGreaterThanOrEqual(345);
-			expect(currentBalance).toBeLessThanOrEqual(350);
-
-			const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
-				customerId,
+		const deductionResult = await executeRedisDeductionV2({
+			ctx,
+			deductions: [
 				{
-					skip_cache: "true",
+					feature: messagesFeature,
+					deduction: 5,
 				},
-			);
-			const currentBalanceAfterSync = getMessagesRemaining(customerAfterSync);
-			expect(currentBalanceAfterSync).toBeGreaterThanOrEqual(345);
-			expect(currentBalanceAfterSync).toBeLessThanOrEqual(350);
+			],
+			fullSubject,
+			deductionOptions: {
+				overageBehaviour: "cap",
+			},
 		});
-	},
-);
+
+		console.log(chalk.green("✓ Tracked 5 messages in Redis (no sync queued)"));
+		console.log(
+			"  Modified breakdown IDs:",
+			Object.keys(deductionResult.updates),
+		);
+
+		// Get the customer from Redis to see current balance
+		const customerAfterTrack =
+			await autumnV2.customers.get<ApiCustomer>(customerId);
+
+		console.log(
+			chalk.blue(
+				`  Current balance in Redis: ${getMessagesRemaining(customerAfterTrack)}`,
+			),
+		);
+
+		// STEP 3: Attach 250 credits (this updates DB directly)
+		console.log(
+			chalk.yellow("\nStep 3: Attaching 250 one-off credits (updates DB)..."),
+		);
+		await autumnV2SkipCacheDeletion.attach({
+			customer_id: customerId,
+			product_id: oneOffCredits.id,
+		});
+		console.log(chalk.green("✓ Attached 250 credits to DB"));
+
+		console.log(
+			chalk.yellow(
+				"\nStep 4: Manually syncing OLD Redis balance to DB (testing race condition)...",
+			),
+		);
+
+		await syncItemV4({
+			ctx,
+			payload: {
+				customerId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				timestamp: Date.now(),
+				rolloverIds: Object.keys(deductionResult.rolloverUpdates),
+				modifiedCusEntIdsByFeatureId:
+					deductionResult.modifiedCusEntIdsByFeatureId,
+				usageWindowUpdates: deductionResult.usageWindowUpdates,
+			},
+		});
+		console.log(chalk.red("✓ Sync completed"));
+
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			source: "test-setup",
+		});
+
+		// 1. Check that credits weren't wiped out
+		const cachedCustomer =
+			await autumnV2.customers.get<ApiCustomer>(customerId);
+
+		// Expected: 100 (pro) - 5 (tracked) + 250 (one-off credits) = 345
+		const currentBalance = getMessagesRemaining(cachedCustomer);
+		expect(currentBalance).toBeGreaterThanOrEqual(345);
+		expect(currentBalance).toBeLessThanOrEqual(350);
+
+		const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
+			customerId,
+			{
+				skip_cache: "true",
+			},
+		);
+		const currentBalanceAfterSync = getMessagesRemaining(customerAfterSync);
+		expect(currentBalanceAfterSync).toBeGreaterThanOrEqual(345);
+		expect(currentBalanceAfterSync).toBeLessThanOrEqual(350);
+	});
+});

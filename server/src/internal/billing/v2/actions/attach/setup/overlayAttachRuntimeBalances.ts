@@ -5,7 +5,6 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 const runtimeCustomerEntitlements = ({
 	fullSubject,
@@ -48,12 +47,7 @@ export const overlayAttachRuntimeBalances = async ({
 	fullCustomer: FullCustomer;
 	entityId?: string;
 }): Promise<FullCustomer> => {
-	// The worker holds the live balances; the Redis subject is not kept fresh on its path.
-	// An id-less customer never routes to the worker.
-	const routedToWorker = fullCustomer.id
-		? isBalanceWorkerRolloutEnabled({ ctx, customerId: fullCustomer.id })
-		: false;
-	if (ctx.skipCache || routedToWorker) return fullCustomer;
+	if (ctx.skipCache) return fullCustomer;
 
 	const { fullSubject } = await getCachedFullSubject({
 		ctx,

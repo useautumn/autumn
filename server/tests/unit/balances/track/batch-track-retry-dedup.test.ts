@@ -43,7 +43,6 @@
  *   Fix layer: declined — no-key fallback behavior is intentional
  */
 
-import { toBatchTrackEntries } from "@/internal/balances/track/batchTrackEntries.js";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	ApiVersion,
@@ -148,14 +147,14 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 	test("two requests with the same body produce DIFFERENT MessageDeduplicationId values per index (current accepted behavior — client retry duplicates)", async () => {
 		await runBatchTrack({
 			ctx: buildCtx({ requestId: "req_pin_first" }),
-			entries: toBatchTrackEntries({ body }),
+			body,
 		});
 		const firstCall = mockState.queueCommands[0];
 		mockState.queueCommands = [];
 
 		await runBatchTrack({
 			ctx: buildCtx({ requestId: "req_pin_second" }),
-			entries: toBatchTrackEntries({ body }),
+			body,
 		});
 		const secondCall = mockState.queueCommands[0];
 
@@ -189,7 +188,7 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 	test("within ONE call, MessageDeduplicationId is deterministic per index — protects against AWS SDK auto-retry of the same SendMessageBatch", async () => {
 		const ctx = buildCtx({ requestId: "req_pin_stable" });
 
-		await runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: body }) });
+		await runBatchTrack({ ctx, body });
 
 		const entries = mockState.queueCommands[0]?.Entries ?? [];
 		expect(entries).toHaveLength(body.length);
@@ -211,7 +210,7 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 	test("MessageGroupId preserves the org, environment, customer, and entity routing prefix", async () => {
 		const ctx = buildCtx({ requestId: "req_pin_group" });
 
-		await runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: body }) });
+		await runBatchTrack({ ctx, body });
 
 		const entries = mockState.queueCommands[0]?.Entries ?? [];
 		expect(entries).toHaveLength(3);

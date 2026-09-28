@@ -66,7 +66,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 	// Use v1.2 client (matches original test)
 	const autumnV1_2 = new AutumnInt({ version: LegacyVersion.v1_2 });
 
-	const { entities, ctx } = await initScenario({
+	const { entities } = await initScenario({
 		customerId,
 		setup: [
 			// No payment method — invoice checkout will provide the payment page
@@ -86,7 +86,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		invoice: true,
 		entity_id: entities[0].id,
 	});
-	await completeInvoiceCheckout({ url: res1.checkout_url, ctx, customerId });
+	await completeInvoiceCheckout({ url: res1.checkout_url });
 
 	// Attach Pro to entity 2 with invoice: true
 	const res2 = await autumnV1_2.attach({
@@ -95,7 +95,7 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		invoice: true,
 		entity_id: entities[1].id,
 	});
-	await completeInvoiceCheckout({ url: res2.checkout_url, ctx, customerId });
+	await completeInvoiceCheckout({ url: res2.checkout_url });
 
 	// Verify different subscription IDs per entity
 	const fullCus = await CusService.getFull({

@@ -21,7 +21,6 @@
 import { expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -38,8 +37,7 @@ import { getPooledBalanceDbState } from "../utils/getPooledBalanceDbState.js";
 const GRANT = 100;
 const USAGE = 20;
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-test.skipIf(isBalanceWorkerRoute())(
+test(
 	chalk.yellowBright(
 		"pooled race: a stale sync must not wipe a contribution added after the snapshot",
 	),

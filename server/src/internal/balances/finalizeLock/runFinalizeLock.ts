@@ -3,8 +3,6 @@ import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { releaseLockClaimMarker } from "@/internal/balances/utils/lockV2/releaseLockClaimMarker.js";
-import { getBalanceLock } from "./balanceWorker/getBalanceLock.js";
-import { runBalanceWorkerFinalize } from "./balanceWorker/runBalanceWorkerFinalize.js";
 import { queueFinalizeLock } from "./queueFinalizeLock.js";
 import { runFinalizeLockV2 } from "./runFinalizeLockV2.js";
 
@@ -13,21 +11,10 @@ type RunFinalizeLockArgs = {
 	params: FinalizeLockParamsV0;
 };
 
-/** A lock lives where it was taken and names its customer; the request names only the lock. */
-export const finalizeWhereTheLockLives = async ({
-	ctx,
-	params,
-}: RunFinalizeLockArgs) => {
-	const workerLock = await getBalanceLock({ ctx, lockId: params.lock_id });
-	return workerLock
-		? runBalanceWorkerFinalize({ ctx, params, lock: workerLock })
-		: runFinalizeLockInner({ ctx, params });
-};
-
-export const runFinalizeLock = async (args: RunFinalizeLockArgs) =>
-	withRedisFailOpen({
+export const runFinalizeLock = async (args: RunFinalizeLockArgs) => {
+	return withRedisFailOpen({
 		source: "runFinalizeLock",
-		run: () => finalizeWhereTheLockLives(args),
+		run: () => runFinalizeLockInner(args),
 		fallback: async (error) => {
 			// The dying attempt may have claimed the receipt; release so the
 			// queued replay can reclaim.
@@ -43,6 +30,7 @@ export const runFinalizeLock = async (args: RunFinalizeLockArgs) =>
 			throw error;
 		},
 	});
+};
 
 export const runFinalizeLockInner = async ({
 	ctx,

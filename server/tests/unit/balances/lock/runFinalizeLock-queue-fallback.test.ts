@@ -75,10 +75,6 @@ await mockModuleWithRestore(
 );
 
 await mockModuleWithRestore(
-	"@/internal/balances/finalizeLock/balanceWorker/getBalanceLock.js",
-	() => ({ getBalanceLock: async () => null }),
-);
-await mockModuleWithRestore(
 	"@/internal/balances/utils/lock/fetchLockReceipt.js",
 	() => ({
 		fetchLockReceipt: async () => {

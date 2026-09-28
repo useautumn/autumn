@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { expectUsageLimitCorrect } from "@tests/integration/utils/expectUsageLimitCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -16,7 +15,6 @@ import chalk from "chalk";
 import { sql } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createHonoApp } from "@/initHono.js";
-import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { CHECK_DB_HYDRATION_BUDGET_MS } from "@/internal/balances/check/getCheckDataV2.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { setCustomerUsageLimit } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
@@ -201,10 +199,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// The worker writes its roll to Postgres after replying.
-		if (isBalanceWorkerRoute())
-			await flushBalanceWorkerCustomer({ ctx, customerId });
-
 		// The row PERSISTS, rolled in place: usage zeroed, bounds advanced to the
 		// current derivation (the messages ent's cycle).
 		const messagesEnt = await fetchActivePlanCusEnt({
@@ -224,8 +218,6 @@ test.concurrent(
 		);
 
 		// The cache field is rolled too (the DB-path roll patches both stores).
-		// Worker-routed customers have no Redis subject cache.
-		if (isBalanceWorkerRoute()) return;
 		const balanceKey = buildSharedFullSubjectBalanceKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -244,8 +236,7 @@ test.concurrent(
 // GET /customers (cached) — cache path lazy reset
 // ─────────────────────────────────────────────────────────────────
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-test.concurrent.skipIf(isBalanceWorkerRoute())(
+test.concurrent(
 	`${chalk.yellowBright("usage-window-reset2 (cache): cached GET prunes an expired window")}`,
 	async () => {
 		const freePlan = products.base({
@@ -332,8 +323,7 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 // must already handle entity-scoped counter rows (seeded here directly) so the
 // future entity path inherits a working lazy roll. The customer-scoped live
 // counter must survive the entity-scoped zeroing.
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-test.concurrent.skipIf(isBalanceWorkerRoute())(
+test.concurrent(
 	`${chalk.yellowBright("usage-window-reset3 (entity): an entity read zeroes its expired window, customer counter untouched")}`,
 	async () => {
 		const freePlan = products.base({
@@ -480,84 +470,77 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 
 // Red: competing checks queue on one expired-window UPDATE until the 2s fail-open.
 // Green: one check rolls while advisory-lock losers skip persistence and continue.
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-test.skipIf(isBalanceWorkerRoute())(
-	`${chalk.yellowBright("usage-window-reset4 (contention): competing checks do not queue behind the lazy roll")}`,
-	async () => {
-		const freePlan = products.base({
-			id: "uw-reset-contention",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
+test(`${chalk.yellowBright("usage-window-reset4 (contention): competing checks do not queue behind the lazy roll")}`, async () => {
+	const freePlan = products.base({
+		id: "uw-reset-contention",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
 
-		const customerId = "uw-reset-contention-1";
-		const { ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [freePlan] }),
-			],
-			actions: [s.billing.attach({ productId: freePlan.id })],
-		});
+	const customerId = "uw-reset-contention-1";
+	const { ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [freePlan] })],
+		actions: [s.billing.attach({ productId: freePlan.id })],
+	});
 
-		await setCustomerUsageLimit({
-			autumn: autumnV2_3,
-			customerId,
-			featureId: TestFeature.Messages,
-			limit: 5,
-		});
-		await autumnV2_3.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 3,
-		});
-		await timeout(4000);
-		await expireUsageWindowForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
+	await setCustomerUsageLimit({
+		autumn: autumnV2_3,
+		customerId,
+		featureId: TestFeature.Messages,
+		limit: 5,
+	});
+	await autumnV2_3.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 3,
+	});
+	await timeout(4000);
+	await expireUsageWindowForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
 
-		const rowLock = holdUsageWindowRowLock({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		let firstCheck: Promise<Response> | undefined;
+	const rowLock = holdUsageWindowRowLock({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	let firstCheck: Promise<Response> | undefined;
 
-		try {
-			await rowLock.acquired;
-			const app = createHonoApp();
-			const check = () =>
-				app.fetch(
-					new Request("http://localhost/v1/balances.check", {
-						method: "POST",
-						headers: {
-							Authorization: `Bearer ${process.env.UNIT_TEST_AUTUMN_SECRET_KEY || ""}`,
-							"Content-Type": "application/json",
-							"x-api-version": ApiVersion.V2_3.toString(),
-						},
-						body: JSON.stringify({
-							customer_id: customerId,
-							feature_id: TestFeature.Messages,
-						}),
+	try {
+		await rowLock.acquired;
+		const app = createHonoApp();
+		const check = () =>
+			app.fetch(
+				new Request("http://localhost/v1/balances.check", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${process.env.UNIT_TEST_AUTUMN_SECRET_KEY || ""}`,
+						"Content-Type": "application/json",
+						"x-api-version": ApiVersion.V2_3.toString(),
+					},
+					body: JSON.stringify({
+						customer_id: customerId,
+						feature_id: TestFeature.Messages,
 					}),
-				);
+				}),
+			);
 
-			const pendingFirstCheck = Promise.resolve(check());
-			firstCheck = pendingFirstCheck;
-			void pendingFirstCheck.catch(() => undefined);
-			await waitForBlockedUsageWindowUpdate({ ctx });
+		const pendingFirstCheck = Promise.resolve(check());
+		firstCheck = pendingFirstCheck;
+		void pendingFirstCheck.catch(() => undefined);
+		await waitForBlockedUsageWindowUpdate({ ctx });
 
-			const startedAt = performance.now();
-			const response = await check();
-			await expectCheckAvoidedHydrationTimeout({
-				response,
-				elapsedMs: performance.now() - startedAt,
-			});
-		} finally {
-			rowLock.release();
-			await rowLock.settled;
-			if (firstCheck) await firstCheck;
-		}
-	},
-);
+		const startedAt = performance.now();
+		const response = await check();
+		await expectCheckAvoidedHydrationTimeout({
+			response,
+			elapsedMs: performance.now() - startedAt,
+		});
+	} finally {
+		rowLock.release();
+		await rowLock.settled;
+		if (firstCheck) await firstCheck;
+	}
+});

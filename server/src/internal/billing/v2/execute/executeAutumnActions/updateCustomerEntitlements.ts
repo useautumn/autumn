@@ -1,9 +1,11 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 
-/** Grant field updates and balance changes; their replaceable rows are written with the Postgres-only rows. */
+/**
+ * Update customer entitlement balances and replaceables based on quantity changes.
+ */
 export const updateCustomerEntitlements = async ({
 	ctx,
 	customerId,
@@ -18,10 +20,10 @@ export const updateCustomerEntitlements = async ({
 	for (const updateDetail of updates ?? []) {
 		const {
 			balanceChange = 0,
-			entityBalanceChanges,
-			moveEntityBalances,
 			customerEntitlement,
 			updates,
+			insertReplaceables,
+			deletedReplaceables,
 		} = updateDetail;
 
 		logger.debug(
@@ -53,19 +55,19 @@ export const updateCustomerEntitlements = async ({
 			});
 		}
 
-		// 3. Per-entity moves and deltas (Postgres only; the route's refresh middleware refreshes the cache)
-		if (moveEntityBalances && Object.keys(moveEntityBalances).length > 0) {
-			await CusEntService.moveEntityBalances({
+		// 3. Handle replaceable inserts
+		if (insertReplaceables && insertReplaceables.length > 0) {
+			await RepService.insert({
 				ctx,
-				id: customerEntitlement.id,
-				moves: moveEntityBalances,
+				data: insertReplaceables,
 			});
 		}
-		if (entityBalanceChanges && Object.keys(entityBalanceChanges).length > 0) {
-			await CusEntService.incrementEntityBalances({
+
+		// 4. Handle replaceable deletes
+		if (deletedReplaceables && deletedReplaceables.length > 0) {
+			await RepService.deleteInIds({
 				ctx,
-				id: customerEntitlement.id,
-				changes: entityBalanceChanges,
+				ids: deletedReplaceables.map((r) => r.id),
 			});
 		}
 	}

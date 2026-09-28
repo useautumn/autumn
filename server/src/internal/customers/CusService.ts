@@ -40,14 +40,12 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { resetCustomerEntitlementsViaWorker } from "@/internal/balances/balanceWorker/resetCustomerEntitlementsViaWorker.js";
 import {
 	markCustomersUpdatedAtByInternalIds,
 	markCustomerUpdatedAt,
 } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import {
 	getOrgCusProductLimit,
@@ -287,46 +285,18 @@ export class CusService {
 					customerProducts: fullCus.customer_products ?? [],
 				});
 
-				if (usedReplica || skipReset) return fullCus;
-
-				// Skip reset only when executeWithHealthTracking explicitly chose the
-				// replica. Lazy reset writes themselves go through dbGeneral.
-				if (
-					fullCus.id &&
-					isBalanceWorkerRolloutEnabled({ ctx, customerId: fullCus.id })
-				) {
-					// The worker owns the rows: it refills and lands them, then the read is repeated on fresh rows.
-					const refilled = await resetCustomerEntitlementsViaWorker({
-						ctx,
-						fullCus,
-					});
-					if (refilled) {
-						return CusService.getFull({
-							ctx,
-							idOrInternalId,
-							inStatuses,
-							withEntities,
-							entityId,
-							expand,
-							withSubs,
-							allowNotFound,
-							withEvents,
-							explain,
-							skipReset: true,
-							cusProductLimit: cusProductLimitOverride,
-							includeExpiredLooseEntitlements,
-						});
-					}
-				} else {
+				if (!usedReplica && !skipReset) {
+					// Skip reset only when executeWithHealthTracking explicitly chose the
+					// replica. Lazy reset writes themselves go through dbGeneral.
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,
 					});
+					await checkPendingMigrationsForCustomer({
+						ctx,
+						fullCustomer: fullCus,
+					});
 				}
-				await checkPendingMigrationsForCustomer({
-					ctx,
-					fullCustomer: fullCus,
-				});
 
 				return fullCus;
 			},

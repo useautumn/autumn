@@ -1,6 +1,5 @@
 import {
 	type FullCusEntWithProduct,
-	performMaximumClearing,
 	type Rollover,
 	rollovers,
 } from "@autumn/shared";
@@ -9,6 +8,7 @@ import type { CronContext } from "@/cron/utils/CronContext.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext.js";
+import { performMaximumClearing } from "./rolloverUtils.js";
 
 export class RolloverService {
 	static async update({

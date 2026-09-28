@@ -11,18 +11,16 @@ import {
 	type TrackResponseV2,
 } from "@autumn/shared";
 import { getCustomerEvents } from "@tests/integration/balances/utils/events/getCustomerEvents.js";
-import {
-	EVENTS_ARRIVAL_TIMEOUT_MS,
-	expectCustomerEventsCorrect,
-} from "@tests/integration/balances/utils/events/expectCustomerEventsCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { EventService } from "@/internal/api/events/EventService.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-MISC1: Auto-create customer and entity via track
@@ -113,9 +111,23 @@ test.concurrent(`${chalk.yellowBright("track-misc2: track event stores custom pr
 		},
 	});
 
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [{ value: 5, properties: { hello: "world", foo: "bar" } }],
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
+		with_autumn_id: true,
+	});
+
+	await timeout(2000);
+
+	const events = await EventService.getByCustomerId({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		internalCustomerId: customer.autumn_id!,
+		env: ctx.env,
+	});
+
+	expect(events).toHaveLength(1);
+	expect(events?.[0].properties).toMatchObject({
+		hello: "world",
+		foo: "bar",
 	});
 });
 
@@ -145,16 +157,23 @@ test.concurrent(`${chalk.yellowBright("track-misc3: track creates events when cu
 		}),
 	);
 
-	await pollUntilAsserted({
-		fetch: () => getCustomerEvents({ customerId }),
-		assert: (events) => {
-			expect(events).toHaveLength(trackCount);
-			expect(
-				sumValues(events.map((event) => event.value ?? 0)).toFixed(10),
-			).toBe(totalValue.toFixed(10));
-		},
-		timeoutMs: EVENTS_ARRIVAL_TIMEOUT_MS,
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
+		with_autumn_id: true,
 	});
+
+	await timeout(2000);
+
+	const events = await EventService.getByCustomerId({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		internalCustomerId: customer.autumn_id ?? "",
+		env: ctx.env,
+	});
+
+	expect(events).toHaveLength(trackCount);
+	expect(sumValues(events.map((event) => event.value ?? 0)).toFixed(10)).toBe(
+		totalValue.toFixed(10),
+	);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -224,10 +243,17 @@ test.concurrent(`${chalk.yellowBright("track-misc5: V1.2 properties.value maps t
 	);
 	expect(customer.features[TestFeature.Messages].usage).toBe(42.1532);
 
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [{ value: 42.1532 }],
+	await timeout(2000);
+
+	const events = await EventService.getByCustomerId({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		internalCustomerId: customer.autumn_id!,
+		env: ctx.env,
 	});
+
+	expect(events).toHaveLength(1);
+	expect(events[0].value).toBe(42.1532);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -247,7 +273,21 @@ test.concurrent(`${chalk.yellowBright("track-misc7: track defaults to value 1 wh
 		feature_id: TestFeature.Messages,
 	});
 
-	await expectCustomerEventsCorrect({ customerId, events: [{ value: 1 }] });
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
+		with_autumn_id: true,
+	});
+
+	await timeout(2000);
+
+	const events = await EventService.getByCustomerId({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		internalCustomerId: customer.autumn_id!,
+		env: ctx.env,
+	});
+
+	expect(events).toHaveLength(1);
+	expect(events[0].value).toBe(1);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -272,11 +312,27 @@ test.concurrent(`${chalk.yellowBright("track-misc8: V1.2 properties.value is rem
 		},
 	});
 
-	// `value` is lifted out of the stored properties; the rest stay.
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [{ value: 25, properties: { hello: "world", foo: "bar" } }],
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
+		with_autumn_id: true,
 	});
+
+	await timeout(2000);
+
+	const events = await EventService.getByCustomerId({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		internalCustomerId: customer.autumn_id!,
+		env: ctx.env,
+	});
+
+	expect(events).toHaveLength(1);
+	expect(events[0].value).toBe(25);
+	// Verify value was removed from properties but other props remain
+	expect(events[0].properties).toMatchObject({
+		hello: "world",
+		foo: "bar",
+	});
+	expect(events[0].properties).not.toHaveProperty("value");
 });
 
 // ═══════════════════════════════════════════════════════════════════

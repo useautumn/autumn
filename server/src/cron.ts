@@ -11,6 +11,7 @@ await warmupRegionalRedis();
 await import("./internal/misc/redisV2Cache/redisV2CacheStore.js");
 await import("./internal/misc/miscRedisConfig/miscRedisConfigStore.js");
 await import("./internal/misc/cacheV2Ramp/cacheV2RampStore.js");
+await import("./internal/misc/resetJob/resetJobStore.js");
 await import("./internal/misc/resetJobV2/resetJobV2Store.js");
 await import(
 	"./internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js"
@@ -31,16 +32,5 @@ const { startBlueGreenSlotStorePolling } = await import(
 	"./queue/blueGreen/blueGreenSlotStore.js"
 );
 await startBlueGreenSlotStorePolling({ serviceName: "cron", logger });
-
-// The lock sweep evicts customers from the balance worker, so it needs to know who owns each partition.
-const { startBalanceWorkerClient } = await import(
-	"./external/balanceWorker/getBalanceWorkerClient.js"
-);
-void startBalanceWorkerClient().catch((error) => {
-	logger.error(
-		{ error },
-		"[balance-worker] Client startup failed; routing will retry",
-	);
-});
 
 await import("./cron/cronInit.js");

@@ -1,4 +1,3 @@
-import { usesSubjectCache } from "../../usesSubjectCache.js";
 import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
@@ -31,8 +30,8 @@ export const getOrSetCachedPartialFullSubject = async ({
 	readFrom?: SubjectReadFrom;
 	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject> => {
-	const { logger } = ctx;
-	const useRedis = usesSubjectCache({ ctx, customerId });
+	const { skipCache, logger } = ctx;
+	const useRedis = !skipCache;
 
 	let fetchedSubjectViewEpoch = 0;
 

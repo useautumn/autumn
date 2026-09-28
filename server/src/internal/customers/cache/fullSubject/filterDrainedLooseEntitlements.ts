@@ -1,17 +1,30 @@
 import {
+	type FullCustomerEntitlement,
 	type FullSubject,
-	isLiveLooseCustomerEntitlement,
+	isBooleanCusEnt,
+	isUnlimitedCusEnt,
+	notNullish,
 } from "@autumn/shared";
 
-/** A cached subject can hold a loose grant a deduction has since patched to zero; the read's rule runs on the way out too. */
+/**
+ * Mirrors the `looseEntitlementIsLiveSql` predicate the hydration queries apply.
+ * A cached subject can still hold a loose grant that a deduction has since
+ * patched to zero, so the same rule has to run on the way out of the cache —
+ * otherwise customers.get reports a drained grant that customers.list filtered.
+ */
+const isLiveLooseEntitlement = (cusEnt: FullCustomerEntitlement): boolean =>
+	(notNullish(cusEnt.balance) && cusEnt.balance !== 0) ||
+	cusEnt.unlimited === true ||
+	isUnlimitedCusEnt(cusEnt) ||
+	isBooleanCusEnt({ cusEnt });
+
 export const filterDrainedLooseEntitlements = ({
 	fullSubject,
 }: {
 	fullSubject: FullSubject;
 }): FullSubject => {
 	const live = fullSubject.extra_customer_entitlements.filter(
-		(customerEntitlement) =>
-			isLiveLooseCustomerEntitlement({ customerEntitlement }),
+		isLiveLooseEntitlement,
 	);
 	if (live.length === fullSubject.extra_customer_entitlements.length) {
 		return fullSubject;

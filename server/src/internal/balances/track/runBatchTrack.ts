@@ -1,6 +1,5 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { type BatchTrackParams, ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { BatchTrackEntry } from "./batchTrackEntries.js";
 import { getAsyncTrackMessageGroupId } from "./utils/getAsyncTrackMessageGroupId.js";
 import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
 import { queueTrack } from "./utils/queueTrack.js";
@@ -11,19 +10,19 @@ const LOGGED_FAILURE_LIMIT = 25;
 
 export const runBatchTrack = async ({
 	ctx,
-	entries,
+	body,
 }: {
 	ctx: AutumnContext;
-	entries: BatchTrackEntry[];
+	body: BatchTrackParams;
 }): Promise<void> => {
-	for (const { item } of entries) {
+	for (const item of body) {
 		getTrackFeatureDeductionsForBody({ ctx, body: item });
 	}
 
 	// One queueTrack per item — the SQS send batcher packs them into
 	// SendMessageBatch calls, and each item resolves/fails independently.
 	const results = await Promise.all(
-		entries.map(({ item, index }) => {
+		body.map((item, index) => {
 			const messageDeduplicationId = `${ctx.id}-${index}`;
 
 			return queueTrack({
@@ -51,8 +50,8 @@ export const runBatchTrack = async ({
 		}),
 	);
 
-	const failures = results.flatMap((result, position) =>
-		result === null ? [{ index: entries[position].index }] : [],
+	const failures = results.flatMap((result, index) =>
+		result === null ? [{ index }] : [],
 	);
 	const successCount = results.length - failures.length;
 

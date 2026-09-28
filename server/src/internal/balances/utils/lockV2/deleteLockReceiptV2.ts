@@ -14,8 +14,7 @@ export const deleteLockReceiptV2 = async ({
 	redisInstance: Redis;
 }) => {
 	await tryRedisWrite(
-		() =>
-			redisInstance.del(lockReceiptKey, buildClaimMarkerKey(lockReceiptKey)),
+		() => redisInstance.del(lockReceiptKey, buildClaimMarkerKey(lockReceiptKey)),
 		redisInstance,
 	);
 };

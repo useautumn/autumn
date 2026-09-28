@@ -14,8 +14,6 @@ import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -28,7 +26,6 @@ import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.j
 import { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
 import { prepareFeatureDeductionV2 } from "./prepareFeatureDeductionV2.js";
 import { rollbackDeductionV2 } from "./rollbackDeductionV2.js";
-import { syncDeductionBalancesToFullSubjectCache } from "./syncDeductionBalancesToFullSubjectCache.js";
 import { syncDeductionUpdatesToFullSubjectCache } from "./syncDeductionUpdatesToFullSubjectCache.js";
 
 interface RolloverOverwrite {
@@ -61,11 +58,6 @@ export const executePostgresDeductionV2 = async ({
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 }> => {
 	const { db, org, env } = ctx;
-	// A worker-routed customer's balances never live in the Redis subject cache.
-	const mirrorsSubjectCache = !isBalanceWorkerRolloutEnabled({
-		ctx,
-		customerId,
-	});
 
 	ctx.logger.info(
 		`executing postgres deduction v2, deductions: ${JSON.stringify(
@@ -195,16 +187,6 @@ export const executePostgresDeductionV2 = async ({
 				syncState.modifiedCusEntIdsByFeatureId,
 			);
 
-			if (mirrorsSubjectCache)
-				await syncDeductionBalancesToFullSubjectCache({
-					ctx,
-					customerId,
-					fullSubject: oldFullSubject,
-					cusEntUpdates: allSyncUpdates,
-					rolloverOverwrites: allRolloverOverwrites,
-					modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
-				});
-
 			const oldFullCustomer = fullSubjectToFullCustomer({
 				fullSubject: oldFullSubject,
 			});
@@ -270,13 +252,6 @@ export const executePostgresDeductionV2 = async ({
 					oldFullSubject,
 					updates,
 				});
-				// The cache already mirrors the rolled-back balances and Postgres is right again, so drop it unflushed.
-				if (mirrorsSubjectCache)
-					await invalidateCachedFullSubject({
-						ctx,
-						customerId,
-						source: "executePostgresDeductionV2:rollback",
-					});
 				throw error;
 			}
 
@@ -284,6 +259,8 @@ export const executePostgresDeductionV2 = async ({
 				fullSubject,
 				mutationLogs: mutation_logs ?? [],
 			});
+
+			const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
 			fireTrackWebhooks({
 				ctx,
@@ -297,7 +274,7 @@ export const executePostgresDeductionV2 = async ({
 			if (resolvedOptions.triggerAutoTopUp) {
 				triggerAutoTopUp({
 					ctx,
-					fullSubject,
+					newFullCus: newFullCustomer,
 					feature: deduction.feature,
 				}).catch((error) => {
 					ctx.logger.error(

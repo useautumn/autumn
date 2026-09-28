@@ -2,7 +2,7 @@ import type { AppEnv, Organization } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { getSentryTags } from "@/external/sentry/sentryUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getSvixAppId, getSvixClient, safeSvix } from "./svixUtils.js";
+import { createSvixCli, getSvixAppId, safeSvix } from "./svixUtils.js";
 
 export const createSvixApp = safeSvix({
 	fn: async ({
@@ -16,16 +16,24 @@ export const createSvixApp = safeSvix({
 		env: AppEnv;
 		meta?: Record<string, unknown>;
 	}) => {
-		const svix = getSvixClient();
-		if (!svix) return;
-		return await svix.createApp({ name, orgId, env, metadata: meta });
+		const svix = createSvixCli();
+		const app = await svix.application.create({
+			name,
+			metadata: {
+				org_id: orgId,
+				env,
+				...meta,
+			},
+		});
+		return app;
 	},
 	action: "createSvixApp",
 });
 
 export const deleteSvixApp = safeSvix({
 	fn: async ({ appId }: { appId: string }) => {
-		await getSvixClient()?.deleteApp({ appId });
+		const svix = createSvixCli();
+		await svix.application.delete(appId);
 	},
 	action: "deleteSvixApp",
 });
@@ -52,9 +60,8 @@ export const sendSvixEvent = async ({
 	try {
 		ctx.logger.info(`[svix] Firing webhook: ${eventType}`);
 
-		const svix = getSvixClient();
+		const svix = createSvixCli();
 		const appId = getSvixAppId({ org, env });
-		if (!svix) return;
 		if (!appId) {
 			ctx.logger.warn(
 				`[svix] No app id for org ${org.id} (${env}); skipping ${eventType}`,
@@ -62,10 +69,19 @@ export const sendSvixEvent = async ({
 			return null;
 		}
 
-		return await svix.sendMessage({
+		return await svix.message.create(
 			appId,
-			message: { eventType, data, payloadFields, idempotencyKey, tags },
-		});
+			{
+				eventType,
+				payload: {
+					type: eventType,
+					...payloadFields,
+					data,
+				},
+				...(tags && tags.length > 0 ? { tags } : {}),
+			},
+			idempotencyKey ? { idempotencyKey } : undefined,
+		);
 	} catch (error) {
 		// Log the tags (the usual culprit) so tag-validation rejections aren't
 		// invisible. Don't log Svix's raw error body — it can echo request data.
@@ -97,10 +113,18 @@ export const sendCustomSvixEvent = safeSvix({
 		appId: string;
 		idempotencyKey?: string;
 	}) => {
-		return await getSvixClient()?.sendMessage({
+		const svix = createSvixCli();
+		return await svix.message.create(
 			appId,
-			message: { eventType, data, idempotencyKey },
-		});
+			{
+				eventType,
+				payload: {
+					type: eventType,
+					data,
+				},
+			},
+			idempotencyKey ? { idempotencyKey } : undefined,
+		);
 	},
 	action: "sendSvixEvent",
 });
@@ -111,7 +135,9 @@ export const getSvixDashboardUrl = safeSvix({
 		if (!appId) {
 			return null;
 		}
-		return (await getSvixClient()?.appPortalUrl({ appId })) ?? null;
+		const svix = createSvixCli();
+		const dashboard = await svix.authentication.appPortalAccess(appId, {});
+		return dashboard.url;
 	},
 	action: "getSvixDashboardUrl",
 });

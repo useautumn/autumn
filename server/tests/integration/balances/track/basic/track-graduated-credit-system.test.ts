@@ -11,7 +11,6 @@ import {
 	fullSubjectToCustomerEntitlements,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -436,8 +435,7 @@ test.concurrent(
 	{ timeout: 120_000 },
 );
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-test.concurrent.skipIf(isBalanceWorkerRoute())(
+test.concurrent(
 	`${chalk.yellowBright("graduated-credit-rating: Postgres fallback matches marginal rating")}`,
 	async () => {
 		const customerId = "graduated-credit-rating-postgres";

@@ -223,11 +223,7 @@ test.concurrent(
 
 		expect(await getDbCustomerCurrency({ ctx, customerId })).toBeNull();
 
-		await completeInvoiceCheckoutV2({
-			url: result.payment_url as string,
-			ctx,
-			customerId,
-		});
+		await completeInvoiceCheckoutV2({ url: result.payment_url as string });
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductActive({ customer, productId: planId });

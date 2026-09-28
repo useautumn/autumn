@@ -2,10 +2,8 @@
  * balance refill. */
 
 import { describe, expect, test } from "bun:test";
-import {
-	type FullCustomerEntitlement,
-	getResetBalancesUpdate,
-} from "@autumn/shared";
+import type { FullCustomerEntitlement } from "@autumn/shared";
+import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 
 const makeCustomerEntitlement = ({
 	entityFeatureId,

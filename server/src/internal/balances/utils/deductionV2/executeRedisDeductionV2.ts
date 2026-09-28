@@ -418,6 +418,8 @@ export const executeRedisDeductionV2 = async ({
 			mutationLogs,
 		});
 
+		const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
+
 		fireTrackWebhooks({
 			ctx,
 			oldFullSubject: currentSegmentOldFullSubject,
@@ -429,13 +431,15 @@ export const executeRedisDeductionV2 = async ({
 		});
 
 		if (options.triggerAutoTopUp) {
-			triggerAutoTopUp({ ctx, fullSubject, feature: deduction.feature }).catch(
-				(error) => {
-					ctx.logger.error(
-						`[executeRedisDeductionV2] Failed to trigger auto top-up: ${error}`,
-					);
-				},
-			);
+			triggerAutoTopUp({
+				ctx,
+				newFullCus: newFullCustomer,
+				feature: deduction.feature,
+			}).catch((error) => {
+				ctx.logger.error(
+					`[executeRedisDeductionV2] Failed to trigger auto top-up: ${error}`,
+				);
+			});
 		}
 	}
 

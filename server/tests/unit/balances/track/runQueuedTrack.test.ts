@@ -7,14 +7,8 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
-
-// These cover the legacy replay; the worker case turns the rollout on itself.
-const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
 const mockState = {
-	workerTrackCalls: [] as Record<string, unknown>[],
 	runTrackV3Calls: [] as Record<string, unknown>[],
 	getFeatureDeductionCalls: [] as Record<string, unknown>[],
 	runTrackV3Error: null as unknown,
@@ -26,16 +20,6 @@ await mockModuleWithRestore(
 		getTrackFeatureDeductionsForBody: (args: Record<string, unknown>) => {
 			mockState.getFeatureDeductionCalls.push(args);
 			return [];
-		},
-	}),
-);
-
-await mockModuleWithRestore(
-	"@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js",
-	() => ({
-		runBalanceWorkerTrack: async (args: Record<string, unknown>) => {
-			mockState.workerTrackCalls.push(args);
-			return { customer_id: "cus_123", balance: null };
 		},
 	}),
 );
@@ -67,11 +51,11 @@ const fakeMiscRedis = {
 	set: async () => "OK",
 	del: async () => 1,
 } as never;
-const fakeMiscCache = createFakeMiscCache({ main: fakeMiscRedis });
 await mockModuleWithRestore(
-	"@/external/redis/miscCache/getMiscCache.js",
+	"@/external/redis/miscCache/miscRedisInstances.js",
 	() => ({
-		getMiscCache: () => fakeMiscCache,
+		getMiscMainRedis: () => fakeMiscRedis,
+		getMiscBackupRedis: () => null,
 	}),
 );
 
@@ -94,32 +78,9 @@ const ctx = {
 
 describe("runQueuedTrack", () => {
 	beforeEach(() => {
-		mockState.workerTrackCalls = [];
 		mockState.runTrackV3Calls = [];
 		mockState.getFeatureDeductionCalls = [];
 		mockState.runTrackV3Error = null;
-	});
-
-	test("with the balance worker on, replays on the worker without claiming the key twice", async () => {
-		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
-		try {
-			const body = {
-				customer_id: "cus_123",
-				feature_id: "messages",
-				idempotency_key: "queued-track-worker",
-				value: 1,
-			};
-			await runQueuedTrack({ ctx, body, apiVersion: ApiVersion.V2_1 });
-
-			expect(mockState.workerTrackCalls).toHaveLength(1);
-			expect(mockState.workerTrackCalls[0]).toMatchObject({
-				body,
-				validateTrackBodyIdempotencyKey: false,
-			});
-			expect(mockState.runTrackV3Calls).toHaveLength(0);
-		} finally {
-			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
-		}
 	});
 
 	test("replays queued track through runTrackV3", async () => {
@@ -193,7 +154,4 @@ describe("runQueuedTrack", () => {
 
 afterAll(() => {
 	mock.restore();
-	if (previousRollout === undefined)
-		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });

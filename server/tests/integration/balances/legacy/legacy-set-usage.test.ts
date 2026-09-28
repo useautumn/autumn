@@ -166,8 +166,7 @@ test.concurrent(`${chalk.yellowBright("legacy-set-usage1: proration cycle simula
 // Verifies subscription quantity sync and upcoming invoice items
 // =============================================================================
 
-// Known bug: a second allocated change in one period re-credits an already-refunded charge (storedLineItemUtils).
-test.failing(`${chalk.yellowBright("legacy-set-usage2: ProrateNextCycle sub quantity and upcoming items")}`, async () => {
+test.concurrent(`${chalk.yellowBright("legacy-set-usage2: ProrateNextCycle sub quantity and upcoming items")}`, async () => {
 	const userItem = constructArrearProratedItem({
 		featureId: TestFeature.Users,
 		pricePerUnit: 50,

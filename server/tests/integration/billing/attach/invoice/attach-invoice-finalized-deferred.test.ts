@@ -58,7 +58,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 		items: [messagesItem, priceItem],
 	});
 
-	const { autumnV1, ctx: testCtx } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -119,8 +119,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx: testCtx,
-		customerId,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -229,8 +227,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx: testCtx,
-		customerId,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -340,8 +336,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx: testCtx,
-		customerId,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -399,7 +393,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 		items: [oneOffMessagesItem],
 	});
 
-	const { autumnV1, ctx: testCtx } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -446,8 +440,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx: testCtx,
-		customerId,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -509,7 +501,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 		isAddOn: true,
 	});
 
-	const { autumnV1, ctx: testCtx } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -576,8 +568,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx: testCtx,
-		customerId,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);

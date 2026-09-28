@@ -31,19 +31,15 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	findResetEligibleRow,
-	runBatchResetOnCustomerEntitlements,
-	runResetOnCustomerEntitlement,
-} from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq, inArray } from "drizzle-orm";
+import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getResetContextByIds } from "@/internal/customers/cusProducts/cusEnts/repos/getResetContextByIds.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { expectPooledBalanceCorrect } from "./utils/expectPooledBalanceCorrect.js";
 import { expirePooledBalanceForReset } from "./utils/expirePooledBalanceForReset.js";
 import { getPooledBalanceDbState } from "./utils/getPooledBalanceDbState.js";
@@ -487,31 +483,27 @@ test.concurrent(
 			.set({ next_reset_at: Date.now() - 1_000 })
 			.where(inArray(customerEntitlements.id, sourceCustomerEntitlementIds));
 
-		expect(
-			await findResetEligibleRow({
-				ctx,
-				customerEntitlementId: pooledCustomerEntitlement.id,
-			}),
-			"Expected the cron scan to select the lazy pooled balance",
-		).not.toBeNull();
+		const resettable = await CusEntService.getActiveResetPassed({
+			db: ctx.db,
+			customDateUnix: Date.now(),
+		});
+		const resettableIds = resettable.map((candidate) => candidate.id);
+		expect(resettableIds).toContain(pooledCustomerEntitlement.id);
 		for (const sourceCustomerEntitlementId of sourceCustomerEntitlementIds) {
-			expect(
-				await findResetEligibleRow({
-					ctx,
-					customerEntitlementId: sourceCustomerEntitlementId,
-				}),
-			).toBeNull();
+			expect(resettableIds).not.toContain(sourceCustomerEntitlementId);
 		}
 
-		const hydrated = await getResetContextByIds({
-			db: ctx.db,
-			customerEntitlementIds: [pooledCustomerEntitlement.id],
-		});
-		expect(hydrated.customerEntitlements[0]?.pooled_balance?.id).toBe(pool.id);
-		await runResetOnCustomerEntitlement({
+		const cronCustomerEntitlement = resettable.find(
+			(candidate) => candidate.id === pooledCustomerEntitlement.id,
+		);
+		if (!cronCustomerEntitlement) {
+			throw new Error("Expected cron to return the lazy pooled balance");
+		}
+		expect(cronCustomerEntitlement.pooled_balance?.id).toBe(pool.id);
+		await resetCustomerEntitlement({
 			ctx,
-			customerId,
-			customerEntitlementId: pooledCustomerEntitlement.id,
+			cusEnt: cronCustomerEntitlement,
+			updatedCusEnts: [],
 		});
 
 		const afterReset = await ctx.db.query.customerEntitlements.findFirst({
@@ -528,21 +520,12 @@ test.concurrent(
 			.set({ reset_mode: PooledBalanceResetMode.Lifetime })
 			.where(eq(pooledBalances.id, pool.id));
 
-		// A lifetime pool is never reset: the cron classifies it as no action and leaves the balance.
-		const lifetimeRun = await runBatchResetOnCustomerEntitlements({
-			ctx,
-			customerEntitlementIds: [pooledCustomerEntitlement.id],
+		const afterLifetime = await CusEntService.getActiveResetPassed({
+			db: ctx.db,
+			customDateUnix: Date.now(),
 		});
-		expect(
-			lifetimeRun.verdicts.some(
-				(verdict) =>
-					verdict.customerEntitlementId === pooledCustomerEntitlement.id &&
-					verdict.reason === "pooled_balance_lifetime",
-			),
-		).toBe(true);
-		const afterLifetime = await ctx.db.query.customerEntitlements.findFirst({
-			where: eq(customerEntitlements.id, pooledCustomerEntitlement.id),
-		});
-		expect(afterLifetime?.balance).toBe(grant * 2);
+		expect(afterLifetime.map((candidate) => candidate.id)).not.toContain(
+			pooledCustomerEntitlement.id,
+		);
 	},
 );

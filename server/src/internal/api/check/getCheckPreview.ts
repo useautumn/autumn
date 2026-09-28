@@ -1,8 +1,6 @@
 import {
-	type ApiBalanceV1,
 	type CheckResponseV3,
 	cusProductToProduct,
-	type Feature,
 	FeaturePreviewScenario,
 	type FullCusProduct,
 	type FullEntitlement,
@@ -21,23 +19,24 @@ import {
 import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../customers/CusService.js";
+import type { CheckData } from "./checkTypes/CheckData.js";
 
 export const getCheckPreview = async ({
 	ctx,
-	allowed,
-	apiBalance,
-	feature,
+	checkResponse,
+	checkData,
 	customerId,
 	entityId,
 }: {
 	ctx: AutumnContext;
-	allowed: boolean;
-	/** The checked feature's balance; none means the preview is for a feature the plan lacks. */
-	apiBalance: ApiBalanceV1 | null | undefined;
-	feature: Feature;
+	checkResponse: CheckResponseV3;
+	checkData: CheckData;
 	customerId: string;
 	entityId?: string;
 }) => {
+	const { allowed } = checkResponse;
+	const { apiBalance, featureToUse: feature } = checkData;
+
 	if (allowed) return null;
 
 	const { db, org, env, features: allFeatures } = ctx;
@@ -195,13 +194,4 @@ export const getCheckPreview = async ({
 		// Will depracate
 		upgrade_product_id: nextTier?.id || null,
 	};
-};
-
-/** A check response as sent: the preview also names `upgrade_product_id`, and is null when the check was allowed. */
-export type CheckResponseWithPreview = Omit<CheckResponseV3, "preview"> & {
-	preview?:
-		| (NonNullable<CheckResponseV3["preview"]> & {
-				upgrade_product_id?: string | null;
-		  })
-		| null;
 };

@@ -98,7 +98,6 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
 			customerId,
 			products: productsList,
 			results: productsList,
-			ctx,
 			db,
 			org,
 			env,

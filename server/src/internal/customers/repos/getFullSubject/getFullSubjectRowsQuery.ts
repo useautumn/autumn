@@ -88,22 +88,6 @@ const emptyEntityFragments = {
 	selectKeyValue: sql``,
 };
 
-const getExpiryTimestampSql = ({
-	asOfTimestampMs,
-}: {
-	asOfTimestampMs?: number;
-}): SQL => {
-	if (asOfTimestampMs === undefined) {
-		return sql`EXTRACT(EPOCH FROM now()) * 1000`;
-	}
-
-	if (!Number.isSafeInteger(asOfTimestampMs) || asOfTimestampMs < 0) {
-		throw new Error("asOfTimestampMs must be a non-negative safe integer");
-	}
-
-	return sql`${asOfTimestampMs}`;
-};
-
 export const getFullSubjectRowsQuery = ({
 	leadingCtes,
 	inStatuses,
@@ -111,7 +95,6 @@ export const getFullSubjectRowsQuery = ({
 	includeEntityAggregations,
 	entityScopedOnly = false,
 	queryTag = "getFullSubject",
-	asOfTimestampMs,
 }: {
 	leadingCtes: SQL;
 	inStatuses: CusProductStatus[];
@@ -120,10 +103,7 @@ export const getFullSubjectRowsQuery = ({
 	/** Only hydrate rows scoped to the subject's entity (requires non-null internal_entity_id on every subject). Customer-level rows must be merged back in separately. */
 	entityScopedOnly?: boolean;
 	queryTag?: string;
-	/** Evaluate expiry predicates at a captured instant; omitted keeps DB-now semantics. */
-	asOfTimestampMs?: number;
 }) => {
-	const expiryTimestampSql = getExpiryTimestampSql({ asOfTimestampMs });
 	const entityAggregationStatuses =
 		inStatuses.length > 0
 			? ACTIVE_STATUSES.filter((status) => inStatuses.includes(status))
@@ -156,7 +136,6 @@ export const getFullSubjectRowsQuery = ({
 	const entityFragments = includeEntityAggregations
 		? getEntityAggregateFragments({
 				statusFilter: entityAggregationStatusFilter,
-				expiryTimestampSql,
 			})
 		: emptyEntityFragments;
 	const customerLevelProductPredicate = sql`
@@ -321,7 +300,7 @@ export const getFullSubjectRowsQuery = ({
 					AND ce.customer_product_id IS NULL
 					AND ce.pooled_balance_id IS NULL
 					AND ce.pooled_contribution_id IS NULL
-					AND (ce.expires_at IS NULL OR ce.expires_at > ${expiryTimestampSql})
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 					AND (${looseEntitlementIsLiveSql()} OR ce.next_reset_at IS NOT NULL)
 					${customerEntitlementSubjectPredicate}
 				ORDER BY subject_entity_priority ASC, ce.id DESC
@@ -351,7 +330,7 @@ export const getFullSubjectRowsQuery = ({
 					AND ce.customer_product_id IS NULL
 					AND ce.pooled_balance_id IS NOT NULL
 					AND ce.pooled_contribution_id IS NULL
-					AND (ce.expires_at IS NULL OR ce.expires_at > ${expiryTimestampSql})
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 					${customerEntitlementSubjectPredicate}
 				ORDER BY subject_entity_priority ASC, ce.id DESC
 				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
@@ -370,7 +349,7 @@ export const getFullSubjectRowsQuery = ({
 			SELECT ro.*
 			FROM rollovers ro
 			WHERE ro.cus_ent_id IN (SELECT id FROM all_cus_ent_ids)
-				AND (ro.expires_at IS NULL OR ro.expires_at > ${expiryTimestampSql})
+				AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 		),
 
 		cus_usage_windows AS (

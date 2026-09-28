@@ -22,14 +22,6 @@ import {
 	startReplicaRoutingProber,
 	stopReplicaRoutingProber,
 } from "./db/replicaRoutingState.js";
-import {
-	startBalanceShadow,
-	stopBalanceShadow,
-} from "./external/balanceWorker/balanceShadow.js";
-import {
-	startBalanceWorkerClient,
-	stopBalanceWorkerClient,
-} from "./external/balanceWorker/getBalanceWorkerClient.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
 	startAllEdgeConfigPolling,
@@ -48,6 +40,7 @@ import "./internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
+import "./internal/misc/resetJob/resetJobStore.js";
 import "./internal/misc/resetJobV2/resetJobV2Store.js";
 import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import "./internal/misc/asyncTrack/asyncTrackStore.js";
@@ -74,7 +67,6 @@ import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { globalEventBatchingManager } from "./internal/balances/events/EventBatchingManager.js";
 import { globalSyncBatchingManagerV3 } from "./internal/balances/utils/sync/SyncBatchingManagerV3.js";
-import { getSqsJobs } from "./queue/getSqsJobs.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
@@ -134,16 +126,6 @@ const init = async ({
 	prewarmMotherDuckResolver();
 
 	await startAllEdgeConfigPolling({ logger });
-	// Ownership discovery must not gate the HTTP listener: start() waits for the
-	// initial catch-up, and the load balancer kills the task long before a slow or
-	// failing Kafka connect finishes. Routing refreshes on its own afterwards.
-	void startBalanceWorkerClient().catch((error) => {
-		logger.error(
-			{ error },
-			"[balance-worker] Client startup failed; routing will retry",
-		);
-	});
-	startBalanceShadow();
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 	startRedisMonitor();
 	startRedisV2Monitor();
@@ -366,8 +348,6 @@ async function gracefulShutdown() {
 		// their delayed timers enqueue SQS work, so the batchers close LAST.
 		stopAcceptingRequests?.();
 		await waitForInFlightRequestsToSettle({ timeoutMs: 10_000 });
-		await stopBalanceShadow();
-		await stopBalanceWorkerClient();
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
@@ -393,7 +373,6 @@ async function gracefulShutdown() {
 			}
 		}
 		await shutdownSqsSendBatchers();
-		await getSqsJobs().shutdown();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),

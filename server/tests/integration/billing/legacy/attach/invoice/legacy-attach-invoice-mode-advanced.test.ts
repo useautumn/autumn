@@ -53,7 +53,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 1: /checkout endpoint
 		items: [messagesItem],
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: true }),
@@ -70,7 +70,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 1: /checkout endpoint
 
 	expect(res.url).toBeDefined();
 
-	await completeInvoiceCheckoutV2({ url: res.url!, ctx, customerId });
+	await completeInvoiceCheckoutV2({ url: res.url! });
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -204,7 +204,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 3: one-off add-on wit
 		items: [addOnMessagesItem],
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: true }),
@@ -229,7 +229,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 3: one-off add-on wit
 
 	expect(res.url).toBeDefined();
 
-	await completeInvoiceCheckoutV2({ url: res.url!, ctx, customerId });
+	await completeInvoiceCheckoutV2({ url: res.url! });
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -278,7 +278,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 	const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	const { autumnV1, entities, ctx } = await initScenario({
+	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true }),
@@ -299,11 +299,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 			invoice: true,
 		});
 
-		await completeInvoiceCheckoutV2({
-			url: res.checkout_url,
-			ctx,
-			customerId,
-		});
+		await completeInvoiceCheckoutV2({ url: res.checkout_url });
 	}
 
 	// Verify separate subscriptions

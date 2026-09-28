@@ -12,16 +12,9 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
-import { balanceRowsNotFoundError } from "../utils/balanceRowsNotFoundError.js";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
 import { reapplyFeatureUsageDeduction } from "../utils/reapplyFeatureUsageDeduction";
 import { validateInvoiceCreditBalanceMutation } from "../utils/validateInvoiceCreditBalanceMutation.js";
-import { runBalanceWorkerDeleteBalance } from "./balanceWorker/runBalanceWorkerDeleteBalance.js";
-import {
-	paidBalanceNotDeletableError,
-	pooledBalanceNotDeletableError,
-} from "./deleteBalanceErrors.js";
 import {
 	findOverageCusEnt,
 	markCusProductCustom,
@@ -46,15 +39,6 @@ export const deleteBalance = async ({
 		});
 	}
 
-	// The worker holds no expired grant, and only the dashboard deletes one.
-	if (
-		isBalanceWorkerRolloutEnabled({ ctx, customerId: customer_id }) &&
-		!includeExpired
-	) {
-		await runBalanceWorkerDeleteBalance({ ctx, params });
-		return;
-	}
-
 	// 1. Get full customer
 	const fullCustomer = await CusService.getFull({
 		ctx,
@@ -74,9 +58,9 @@ export const deleteBalance = async ({
 	});
 
 	if (customerEntitlements.length === 0) {
-		throw balanceRowsNotFoundError({
-			customerId: params.customer_id,
-			featureId: params.feature_id,
+		throw new RecaseError({
+			message: `Balance not found for feature ${feature_id} and customer ${customer_id}`,
+			statusCode: 404,
 		});
 	}
 
@@ -84,7 +68,10 @@ export const deleteBalance = async ({
 		validateInvoiceCreditBalanceMutation({ customerEntitlement: cusEnt });
 
 		if (isPaidCustomerEntitlement(cusEnt)) {
-			throw paidBalanceNotDeletableError({ params });
+			throw new RecaseError({
+				message: `Cannot delete paid balance for feature ${feature_id} and customer ${customer_id}`,
+				statusCode: 409,
+			});
 		}
 
 		// Deleting either half orphans the other: the pool would keep granted for a
@@ -95,7 +82,10 @@ export const deleteBalance = async ({
 			}) ||
 			isPooledBalanceSourceCustomerEntitlement({ customerEntitlement: cusEnt })
 		) {
-			throw pooledBalanceNotDeletableError({ params });
+			throw new RecaseError({
+				message: `Cannot delete pooled balance for feature ${feature_id} and customer ${customer_id}. Remove the contributing plans instead.`,
+				statusCode: 409,
+			});
 		}
 	}
 

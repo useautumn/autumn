@@ -5,7 +5,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { runBatchTrackByRollout } from "@/internal/balances/track/runBatchTrackByRollout.js";
+import { runBatchTrack } from "@/internal/balances/track/runBatchTrack.js";
 
 export const handleBatchTrack = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -16,7 +16,7 @@ export const handleBatchTrack = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		await runBatchTrackByRollout({ ctx, body });
+		await runBatchTrack({ ctx, body });
 
 		return c.json({ success: true }, 200);
 	},

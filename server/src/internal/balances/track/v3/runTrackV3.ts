@@ -9,10 +9,8 @@ import {
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
-import { getBalanceShadowSession } from "@/external/balanceWorker/balanceShadow.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackQueueIdempotencyKey } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
-import { runWithBalanceShadow } from "@/internal/balances/shadow/runWithBalanceShadow.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -71,22 +69,15 @@ export const runTrackV3 = async ({
 
 	const redisIdempotencyKey = getTrackQueueIdempotencyKey({ ctx });
 
-	const response: TrackResponseV3 = await runWithBalanceShadow({
+	const response: TrackResponseV3 = await runRedisTrackV3({
 		ctx,
-		body,
 		fullSubject,
-		session: getBalanceShadowSession(),
-		run: () =>
-			runRedisTrackV3({
-				ctx,
-				fullSubject,
-				featureDeductions,
-				overageBehavior: body.overage_behavior || "cap",
-				body,
-				idempotencyKey: redisIdempotencyKey,
-				refreshFullSubject: () =>
-					getTrackFullSubject({ ctx, body, forceFresh: true }),
-			}),
+		featureDeductions,
+		overageBehavior: body.overage_behavior || "cap",
+		body,
+		idempotencyKey: redisIdempotencyKey,
+		refreshFullSubject: () =>
+			getTrackFullSubject({ ctx, body, forceFresh: true }),
 	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({

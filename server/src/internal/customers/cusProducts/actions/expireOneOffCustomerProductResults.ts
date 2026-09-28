@@ -8,7 +8,6 @@ import type { RepoContext } from "@/db/repoContext.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { generateId } from "@/utils/genUtils.js";
 import { batchUpdateCustomerProducts } from "../repos/batchUpdateCustomerProducts.js";
 import type { OneOffCustomerProductResult } from "./oneOffCustomerProductResult.js";
 
@@ -52,12 +51,6 @@ export const expireOneOffCustomerProductResults = async ({
 			logger: ctx.logger,
 			redisV2: resolveRedisV2(),
 		};
-		// The worker evict is a command: it needs a request id and a clock the repo context lacks.
-		const evictionContext = {
-			...repoContext,
-			id: generateId("cron"),
-			timestamp: Date.now(),
-		};
 
 		await batchUpdateCustomerProducts({
 			ctx: repoContext,
@@ -70,7 +63,7 @@ export const expireOneOffCustomerProductResults = async ({
 		await Promise.all(
 			[...group.customerIds].map((customerId) =>
 				deleteCachedFullCustomer({
-					ctx: evictionContext as unknown as AutumnContext,
+					ctx: repoContext as unknown as AutumnContext,
 					customerId,
 					source,
 				}),

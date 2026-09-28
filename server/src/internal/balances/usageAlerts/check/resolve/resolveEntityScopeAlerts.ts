@@ -1,8 +1,6 @@
-import {
-	filterUsageAlertsForFeature,
-	type ScopedUsageAlerts,
-} from "@autumn/balance-webhooks";
 import type { Feature, FullCustomer } from "@autumn/shared";
+import type { ScopedUsageAlerts } from "../types/scopedUsageAlerts.js";
+import { filterUsageAlertsForFeature } from "./filterUsageAlertsForFeature.js";
 
 export const resolveEntityScopeAlerts = ({
 	fullCustomer,

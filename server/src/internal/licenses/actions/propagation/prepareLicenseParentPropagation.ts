@@ -4,9 +4,9 @@ import type {
 	PlanLicenseParams,
 	UpdateLicenseParentParams,
 } from "@autumn/shared";
-import { fullPlanLicenseToApiPlanLicense } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
+import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	type LicenseParentContext,
@@ -64,9 +64,10 @@ export const prepareLicenseParentPropagation = async ({
 	const toPlanLicenseParams = async (
 		license: NonNullable<FullProduct["licenses"]>[number],
 	): Promise<PlanLicenseParams> => {
-		const { version: _, ...params } = await fullPlanLicenseToApiPlanLicense({
-			ctx: { ...ctx, expand: [] },
+		const { version: _, ...params } = await buildApiPlanLicense({
+			ctx,
 			license,
+			features: ctx.features,
 		});
 		return params;
 	};

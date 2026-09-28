@@ -56,7 +56,7 @@ export const handleStripeInvoiceMetadata = async ({
 		invoicePaidContext.results.appliedBillingPlan = true;
 		await deleteCachedFullCustomer({
 			ctx,
-			customerId: data.customer.id ?? data.customer.internal_id,
+			customerId: data.customer.id ?? "",
 			source: "handleStripeInvoiceMetadata",
 		});
 		return;
@@ -69,7 +69,7 @@ export const handleStripeInvoiceMetadata = async ({
 	invoicePaidContext.results.appliedBillingPlan = true;
 	await deleteCachedFullCustomer({
 		ctx,
-		customerId: data.customer.id ?? data.customer.internal_id,
+		customerId: data.customer.id ?? "",
 		source: "handleStripeInvoiceMetadata",
 	});
 };

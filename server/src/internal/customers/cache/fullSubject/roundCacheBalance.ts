@@ -1,4 +1,14 @@
-import { roundCacheBalance, type SubjectBalance } from "@autumn/shared";
+import type { SubjectBalance } from "@autumn/shared";
+import { Decimal } from "decimal.js";
+
+/**
+ * Round a number to avoid floating-point precision issues from Lua 5.1 double arithmetic.
+ * Uses Decimal.js toDecimalPlaces(10) — enough precision while eliminating float drift.
+ */
+export const roundCacheBalance = (value: number | null | undefined): number => {
+	if (value === null || value === undefined) return 0;
+	return new Decimal(value).toDecimalPlaces(10).toNumber();
+};
 
 /**
  * Round all balance-related numeric fields on a SubjectBalance in-place.

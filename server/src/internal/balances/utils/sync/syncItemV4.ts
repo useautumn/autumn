@@ -4,7 +4,6 @@ import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/RefreshEntityAggregateBatchingManager";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import {
@@ -92,16 +91,6 @@ export const syncItemV4 = async ({
 		usageWindowUpdates,
 	} = payload;
 	const { db } = ctx;
-
-	// The worker owns a routed customer's rows: a sync that lands after the flip carries a pre-flip
-	// absolute balance and would overwrite what the worker has since acked. Those last deductions are dropped.
-	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) {
-		logSyncItem({
-			ctx,
-			result: { kind: "skipped", reason: "customer_on_worker" },
-		});
-		return;
-	}
 
 	// Read targeted balance hashes
 	let allSubjectBalances: SubjectBalance[] = [];

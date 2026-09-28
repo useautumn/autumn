@@ -1,4 +1,3 @@
-import type { UnavailableReason } from "@autumn/cache";
 import { withTimeout } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -66,7 +65,11 @@ const warnRedisUnavailable = ({
 	);
 };
 
-export type { UnavailableReason };
+export type UnavailableReason =
+	| "not_ready"
+	| "timeout"
+	| "connection"
+	| "other";
 
 /**
  * Runs a Redis operation. Returns the operation's value on success; throws

@@ -29,7 +29,7 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: free → paid (finalize
 		items: [dashboardItem],
 	});
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1 } = await initScenario({
 		customerId: "inv-def-free-paid-fin",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -91,8 +91,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: free → paid (finalize
 
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx,
-		customerId,
 	});
 
 	const customerAfterPayment =
@@ -129,7 +127,7 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: free → paid (draft, d
 		items: [dashboardItem],
 	});
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1 } = await initScenario({
 		customerId: "inv-def-free-paid-draft",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -200,8 +198,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: free → paid (draft, d
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: finalizedInvoice.hosted_invoice_url!,
-		ctx,
-		customerId,
 	});
 
 	const customerAfterPayment =

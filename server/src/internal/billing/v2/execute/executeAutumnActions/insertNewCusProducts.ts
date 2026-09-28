@@ -2,32 +2,42 @@ import {
 	customerProductHasActiveStatus,
 	type FullCusProduct,
 } from "@autumn/shared";
+import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { CusProductService } from "../../../../customers/cusProducts/CusProductService";
 import { CusEntService } from "../../../../customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "../../../../customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { CusPriceService } from "../../../../customers/cusProducts/cusPrices/CusPriceService";
-import { insertCustomerLicensePools } from "./insertCustomerLicensePools";
 
-/** A plan's new products with their grants, prices and carried rollovers: the rows the balance worker holds. */
-export const insertCustomerProductRows = async ({
+export const insertNewCusProducts = async ({
 	ctx,
-	customerProducts,
+	newCusProducts,
 }: {
 	ctx: AutumnContext;
-	customerProducts: FullCusProduct[];
+	newCusProducts: FullCusProduct[];
 }) => {
-	const cusEnts = customerProducts.flatMap(
+	const cusEnts = newCusProducts.flatMap(
 		(cusProduct) => cusProduct.customer_entitlements,
 	);
-	const cusPrices = customerProducts.flatMap(
+	const cusPrices = newCusProducts.flatMap(
 		(cusProduct) => cusProduct.customer_prices,
 	);
 
 	// 4. Insert cusProducts
 	await CusProductService.insert({
 		db: ctx.db,
-		data: customerProducts,
+		data: newCusProducts,
+	});
+
+	// License pools born with their parent (after it, for the FK). Conflicts
+	// defer to upsertGranted/reconcile.
+	await customerLicenseRepo.insertMany({
+		db: ctx.db,
+		rows: newCusProducts.flatMap((cusProduct) =>
+			(cusProduct.customer_licenses ?? []).map(
+				({ planLicense: _planLicense, ...row }) => row,
+			),
+		),
 	});
 
 	// 2. Insert cusEnts
@@ -44,7 +54,7 @@ export const insertCustomerProductRows = async ({
 
 	// 1. Upsert rollovers (use upsert to handle carried-over rollovers from plan switches)
 	const rolloverInsertPromises = cusEnts.flatMap((cusEnt) => {
-		const cusProduct = customerProducts.find(
+		const cusProduct = newCusProducts.find(
 			(cusProduct) => cusProduct.id === cusEnt.customer_product_id,
 		);
 		if (!customerProductHasActiveStatus(cusProduct)) return [];
@@ -65,21 +75,4 @@ export const insertCustomerProductRows = async ({
 		];
 	});
 	await Promise.all(rolloverInsertPromises);
-};
-
-/** New products and the license pools born with them. */
-export const insertNewCusProducts = async ({
-	ctx,
-	newCusProducts,
-}: {
-	ctx: AutumnContext;
-	newCusProducts: FullCusProduct[];
-}) => {
-	await insertCustomerProductRows({ ctx, customerProducts: newCusProducts });
-	await insertCustomerLicensePools({
-		ctx,
-		customerLicenses: newCusProducts.flatMap(
-			(customerProduct) => customerProduct.customer_licenses ?? [],
-		),
-	});
 };

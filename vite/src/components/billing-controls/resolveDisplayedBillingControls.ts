@@ -86,8 +86,8 @@ const resolveByIdentity = ({
 	for (const identity of planIdentities) {
 		if (!identity || taken.has(identity)) continue;
 		const resolved = findPlanBillingControlWithProduct<
-			BillingControlKey,
-			BillingControlItem
+			BillingControlItem,
+			BillingControlKey
 		>({
 			customerProducts: planProducts,
 			controlKey: key,

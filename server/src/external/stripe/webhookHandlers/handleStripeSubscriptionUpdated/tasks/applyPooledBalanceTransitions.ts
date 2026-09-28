@@ -1,3 +1,4 @@
+import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
@@ -20,8 +21,10 @@ export const applyPooledBalanceTransitions = async ({
 		(eventContext.fullCustomer.pooled_customer_entitlements?.length ?? 0) > 0;
 	const hasTransitions =
 		outgoingCustomerProducts.length > 0 || incomingCustomerProducts.length > 0;
-	// Nothing to reset or move; running anyway would flush balances a deduction may still be writing.
-	if (!hasPools && !hasTransitions) return;
+	const autumnOriginated = isAutumnOriginatedStripeEvent({
+		event: ctx.stripeEvent,
+	});
+	if (autumnOriginated && !hasPools && !hasTransitions) return;
 
 	eventContext.results.pooledBalances =
 		await applyPooledBalanceCustomerProductTransitions({

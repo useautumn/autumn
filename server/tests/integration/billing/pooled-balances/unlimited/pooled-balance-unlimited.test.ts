@@ -13,7 +13,6 @@ import {
 } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/index.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -98,8 +97,7 @@ test.concurrent(
 			db: ctx.db,
 			customerId,
 			pool: {
-				// The worker counts an unlimited row's usage down on its balance.
-				balance: isBalanceWorkerRoute() ? -trackValue : 0,
+				balance: 0,
 				adjustment: 0,
 				cacheVersion: 0,
 				granted: 0,

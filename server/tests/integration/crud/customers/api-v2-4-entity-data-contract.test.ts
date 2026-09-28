@@ -8,7 +8,6 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, ApiEntityV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -155,17 +154,14 @@ test.concurrent(
 
 		for (const [label, customer] of reads) {
 			expect(customer, `${label}: customer missing`).toBeDefined();
-			// The balance worker doesn't aggregate entity data onto the customer.
-			if (!isBalanceWorkerRoute()) {
-				expect(
-					hasPlan({ customer, planId: entityPlan.id }),
-					`${label}: v2.3 keeps the entity plan`,
-				).toBe(true);
-				expect(
-					grantedFor({ customer, featureId: TestFeature.Words }),
-					`${label}: v2.3 keeps the entity grant`,
-				).toBe(ENTITY_GRANT);
-			}
+			expect(
+				hasPlan({ customer, planId: entityPlan.id }),
+				`${label}: v2.3 keeps the entity plan`,
+			).toBe(true);
+			expect(
+				grantedFor({ customer, featureId: TestFeature.Words }),
+				`${label}: v2.3 keeps the entity grant`,
+			).toBe(ENTITY_GRANT);
 			expect(
 				hasPlan({ customer, planId: customerPlan.id }),
 				`${label}: v2.3 keeps the customer plan`,

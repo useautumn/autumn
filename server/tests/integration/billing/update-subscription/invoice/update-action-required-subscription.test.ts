@@ -32,7 +32,7 @@ test.concurrent(`${chalk.yellowBright("subscription-create: no payment method")}
 		isDefault: true,
 	});
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1 } = await initScenario({
 		customerId: "sub-create-no-pm",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -73,8 +73,6 @@ test.concurrent(`${chalk.yellowBright("subscription-create: no payment method")}
 	// Complete checkout with new payment method
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx,
-		customerId,
 	});
 
 	const customerAfterCheckout =

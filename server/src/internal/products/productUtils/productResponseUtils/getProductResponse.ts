@@ -15,7 +15,6 @@ import {
 	isFreeProduct,
 	isOneOffProduct,
 	isPrepaidPrice,
-	isTrialCardRequired,
 	type Price,
 	type ProductItem,
 	productToEffectivePrices,
@@ -31,6 +30,7 @@ import { getItemType } from "../../product-items/productItemUtils/getItemType.js
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { getAttachScenario } from "./getAttachScenario.js";
+import { resolveTrialCardRequired } from "./resolveTrialCardRequired.js";
 
 export const getProductItemResponse = ({
 	item,
@@ -97,7 +97,7 @@ const getFreeTrialResponse = async ({
 	fullCus?: FullCustomer;
 	attachScenario: AttachScenario;
 }) => {
-	const cardRequired = isTrialCardRequired({ product });
+	const cardRequired = resolveTrialCardRequired({ product });
 
 	if (!db) {
 		return product.free_trial

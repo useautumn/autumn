@@ -49,7 +49,6 @@ export const autoCreateEntity = async ({
 		id: entityId,
 		name: entityData.name,
 		feature_id: entityData.feature_id,
-		billing_controls: entityData.billing_controls,
 	};
 
 	if (!fullCus) {
@@ -93,10 +92,6 @@ export const autoCreateEntity = async ({
 			update: {
 				id: entityId,
 				name: entityData.name,
-				spend_limits: entityData.billing_controls?.spend_limits,
-				usage_limits: entityData.billing_controls?.usage_limits,
-				usage_alerts: entityData.billing_controls?.usage_alerts,
-				overage_allowed: entityData.billing_controls?.overage_allowed,
 			},
 		});
 	} else {

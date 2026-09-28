@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-	ApiVersion,
-	ApiVersionClass,
-	shouldAggregateEntityData,
-} from "@autumn/shared";
+import { ApiVersion, ApiVersionClass } from "@autumn/shared";
+import { shouldAggregateEntityData } from "@/internal/customers/cusUtils/customerEntityData.js";
 
 describe("shouldAggregateEntityData", () => {
 	test("is on for V2.3 and earlier", () => {

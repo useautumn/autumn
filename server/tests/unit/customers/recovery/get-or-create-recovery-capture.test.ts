@@ -24,7 +24,6 @@ const mockState = {
 // mocks leak across test files (mock.restore does not undo them).
 const MOCKED_MODULE_PATHS = [
 	"@/internal/misc/rollouts/fullSubjectRolloutUtils.js",
-	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
 	"@/internal/customers/cache/fullSubject/index.js",
 	"@/internal/customers/recovery/queueFailedCustomerCreation.js",
 	"@/internal/customers/actions/ensureStripeCustomerFromCustomerData.js",
@@ -44,14 +43,6 @@ afterAll(() => {
 mock.module("@/internal/misc/rollouts/fullSubjectRolloutUtils.js", () => ({
 	isFullSubjectRolloutEnabled: () => true,
 }));
-
-// Recovery capture is exercised on the Postgres lookup, not the balance worker's.
-mock.module(
-	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
-	() => ({
-		isBalanceWorkerRolloutEnabled: () => false,
-	}),
-);
 
 mock.module("@/internal/customers/cache/fullSubject/index.js", () => ({
 	getOrCreateCachedFullSubject: async () => {

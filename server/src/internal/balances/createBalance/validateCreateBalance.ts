@@ -5,7 +5,6 @@ import {
 	type Feature,
 	FeatureType,
 	type FullCustomer,
-	getNextResetAt,
 	isContUseFeature,
 	RecaseError,
 	ResetInterval,
@@ -14,6 +13,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase";
+import { getNextResetAt } from "@/utils/timeUtils";
 
 export const validateCreateBalanceParams = async ({
 	ctx,
@@ -73,7 +73,6 @@ export const validateCreateBalanceParams = async ({
 			curReset: null,
 			interval: params.reset.interval as unknown as EntInterval,
 			intervalCount: params.reset.interval_count,
-			now: Date.now(),
 		});
 
 		if (nextResetAt > params.expires_at) {

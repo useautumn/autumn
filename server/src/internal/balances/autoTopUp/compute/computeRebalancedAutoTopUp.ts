@@ -2,8 +2,9 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
-	isCustomerEntitlementInOverage,
-	sortCusEntsForPaydown,
+	isBooleanCusEnt,
+	isEntityScopedCusEnt,
+	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import { runDeductionPass } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript.js";
 import type { DeductionUpdates } from "@/internal/balances/utils/types/deductionUpdate.js";
@@ -16,11 +17,35 @@ export type AutoTopupRebalanceDelta = {
 	delta: number;
 };
 
-/** The entity that owns the row, or null for a customer-level one. */
-const ownerEntityOf = (customerEntitlement: FullCusEntWithFullCusProduct) =>
-	customerEntitlement.internal_entity_id ??
-	customerEntitlement.customer_product?.internal_entity_id ??
-	null;
+/**
+ * Sort order for paydown — mirrors deductFromCusEntsTypescript's pass-2 sort so overage
+ * heals on the cusEnts that accrued it first (`usage_allowed: true`), with a stable
+ * `created_at` tiebreaker.
+ */
+const sortForPaydown = (
+	cusEnts: FullCusEntWithFullCusProduct[],
+): FullCusEntWithFullCusProduct[] => {
+	return [...cusEnts].sort((a, b) => {
+		const leftUsageAllowed = a.usage_allowed ?? false;
+		const rightUsageAllowed = b.usage_allowed ?? false;
+
+		if (leftUsageAllowed !== rightUsageAllowed) {
+			return leftUsageAllowed ? -1 : 1;
+		}
+
+		return (a.created_at ?? 0) - (b.created_at ?? 0);
+	});
+};
+
+const isPaydownCandidate = (cusEnt: FullCusEntWithFullCusProduct): boolean => {
+	if (isBooleanCusEnt({ cusEnt })) return false;
+	if (isUnlimitedCusEnt(cusEnt)) return false;
+	if (isEntityScopedCusEnt(cusEnt)) return false;
+	return true;
+};
+
+const hasTopLevelOverage = (cusEnt: FullCusEntWithFullCusProduct): boolean =>
+	(cusEnt.balance ?? 0) < 0;
 
 /**
  * Compute the list of balance deltas needed to rebalance an auto top-up:
@@ -58,26 +83,24 @@ export const computeRebalancedAutoTopUp = ({
 
 	validateInvoiceCreditBalanceMutation({ customerEntitlement: prepaidCusEnt });
 
-	// Only the purchased row's own customer or entity is paid down, as the worker does.
-	const prepaidOwner = ownerEntityOf(prepaidCusEnt);
-	const candidates = sortCusEntsForPaydown({
-		customerEntitlements: cusEntsForFeature.filter(
-			(customerEntitlement) =>
-				customerEntitlement.id !== prepaidCustomerEntitlementId &&
-				ownerEntityOf(customerEntitlement) === prepaidOwner &&
-				isCustomerEntitlementInOverage({ customerEntitlement }),
-		),
-	});
+	const candidates = cusEntsForFeature.filter(
+		(cusEnt) =>
+			cusEnt.id !== prepaidCustomerEntitlementId &&
+			isPaydownCandidate(cusEnt) &&
+			hasTopLevelOverage(cusEnt),
+	);
 
 	const deltas: AutoTopupRebalanceDelta[] = [];
 	let remainder = quantity;
 
 	if (candidates.length > 0) {
+		const sortedCandidates = sortForPaydown(candidates);
+
 		const updates: DeductionUpdates = {};
 		const mutationLogs: MutationLogItem[] = [];
 
 		const passResult = runDeductionPass({
-			cusEnts: candidates,
+			cusEnts: sortedCandidates,
 			amountToDeduct: -quantity,
 			maxBalance: 0,
 			updates,

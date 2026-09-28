@@ -5,7 +5,6 @@ import type { RepoContext } from "@/db/repoContext";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { generateId } from "@/utils/genUtils.js";
 import type { CronContext } from "../utils/CronContext.js";
 
 const PAGE_SIZE = 500;
@@ -148,12 +147,6 @@ const invalidateAffectedCustomers = async ({
 			logger: ctx.logger,
 			redisV2: resolveRedisV2(),
 		};
-		// The worker evict is a command: it needs a request id and a clock the repo context lacks.
-		const evictionContext = {
-			...repoContext,
-			id: generateId("cron"),
-			timestamp: Date.now(),
-		};
 		const customerIds = [
 			...new Set(orgRows.map((row) => row.customer_id as string)),
 		];
@@ -168,7 +161,7 @@ const invalidateAffectedCustomers = async ({
 					.slice(index, index + INVALIDATION_CONCURRENCY)
 					.map((customerId) =>
 						deleteCachedFullCustomer({
-							ctx: evictionContext as unknown as AutumnContext,
+							ctx: repoContext as unknown as AutumnContext,
 							customerId,
 							source: "seat-sync-cron",
 						}),

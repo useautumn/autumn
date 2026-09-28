@@ -6,7 +6,7 @@ import {
 
 // ============ FIFO Queue (primary) ============
 
-/** Returns a base endpoint URL if the queue URL points to a non-AWS host (e.g. the local fakecloud emulator). */
+/** Returns a base endpoint URL if the queue URL points to a non-AWS host (e.g. ElasticMQ). */
 export const extractLocalEndpoint = ({
 	queueUrl,
 }: {

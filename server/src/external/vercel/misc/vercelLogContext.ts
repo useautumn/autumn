@@ -2,8 +2,8 @@ import { AuthType } from "@autumn/shared";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
-import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import {
 	addAppContextToLogs,
 	addVercelEventToLogs,
@@ -31,11 +31,16 @@ export const buildVercelEventContext = (
 	};
 };
 
-export const enrichVercelAppLogger = ({ ctx }: { ctx: AutumnContext }) => {
+export const enrichVercelAppLogger = ({
+	ctx,
+}: {
+	ctx: AutumnContext;
+}) => {
 	const customerId = ctx.customerId;
-	const fullSubjectBucket = customerId
-		? getCustomerBucket({ customerId })
-		: undefined;
+	const fullSubjectBucket =
+		customerId && ctx.rolloutSnapshot?.customerBucket !== undefined
+			? (ctx.rolloutSnapshot.customerBucket ?? undefined)
+			: undefined;
 
 	return addAppContextToLogs({
 		logger: ctx.logger,
@@ -49,10 +54,9 @@ export const enrichVercelAppLogger = ({ ctx }: { ctx: AutumnContext }) => {
 			api_version: ctx.apiVersion?.semver,
 			scopes: ctx.scopes,
 			full_subject_bucket: fullSubjectBucket,
-			balance_worker_rollout_enabled:
-				ctx.org && customerId
-					? isBalanceWorkerRolloutEnabled({ ctx, customerId })
-					: undefined,
+			full_subject_rollout_enabled: customerId
+				? isFullSubjectRolloutEnabled({ ctx })
+				: undefined,
 		},
 	});
 };
@@ -86,7 +90,15 @@ export const addVercelCustomerToContext = async ({
 	const nextCtx = {
 		...ctx,
 		fullCustomer: customer ?? undefined,
-		...(customerId ? { customerId } : {}),
+		...(customerId
+			? {
+					customerId,
+					rolloutSnapshot: computeRolloutSnapshot({
+						orgId: ctx.org?.id,
+						customerId,
+					}),
+				}
+			: {}),
 	};
 
 	const routedCtx = customerId

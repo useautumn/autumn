@@ -1,25 +1,25 @@
-import { invalidateSubscriptionCache } from "@autumn/cache";
 import { ErrCode, type Subscription, subscriptions } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import { getMiscCacheContext } from "@server/external/redis/miscCache/getMiscCacheContext.js";
 import { subToPeriodStartEnd } from "@server/external/stripe/stripeSubUtils/convertSubUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import { eq, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
 
-/** Every write ends here: the written rows name their own keys, so no caller has to remember. */
-const invalidateWrittenRows = async ({
-	rows,
-}: {
-	rows: Pick<Subscription, "stripe_id">[];
-}): Promise<void> => {
-	await invalidateSubscriptionCache({
-		ctx: getMiscCacheContext(),
-		stripeIds: rows.map(({ stripe_id }) => stripe_id),
-	});
-};
-
 export class SubService {
+	static async createSub({ db, sub }: { db: DrizzleCli; sub: Subscription }) {
+		const data = await db.insert(subscriptions).values(sub).returning();
+
+		if (data.length === 0) {
+			throw new RecaseError({
+				code: ErrCode.InsertSubscriptionFailed,
+				message: "Failed to create subscription",
+				statusCode: 500,
+			});
+		}
+
+		return data[0] as Subscription;
+	}
+
 	/**
 	 * Insert, or return null when a concurrent writer already claimed the
 	 * stripe id. Callers that check-then-insert must handle the null by
@@ -38,9 +38,7 @@ export class SubService {
 			.onConflictDoNothing()
 			.returning();
 
-		const created = (data[0] as Subscription | undefined) ?? null;
-		if (created) await invalidateWrittenRows({ rows: [created] });
-		return created;
+		return (data[0] as Subscription | undefined) ?? null;
 	}
 
 	static async update({
@@ -52,14 +50,11 @@ export class SubService {
 		subscriptionId: string;
 		updates: Partial<Subscription>;
 	}) {
-		const rows = await db
+		return await db
 			.update(subscriptions)
 			.set(updates)
 			.where(eq(subscriptions.id, subscriptionId))
 			.returning();
-
-		await invalidateWrittenRows({ rows });
-		return rows;
 	}
 
 	static async updateFromStripe({
@@ -80,7 +75,6 @@ export class SubService {
 			.where(eq(subscriptions.stripe_id, stripeSub.id))
 			.returning();
 
-		await invalidateWrittenRows({ rows: results });
 		if (results.length === 0) {
 			return null;
 		}
@@ -105,6 +99,42 @@ export class SubService {
 		}
 
 		return data[0] as Subscription;
+	}
+
+	static async deleteFromScheduleId({
+		db,
+		scheduleId,
+	}: {
+		db: DrizzleCli;
+		scheduleId: string;
+	}) {
+		await db
+			.delete(subscriptions)
+			.where(eq(subscriptions.stripe_schedule_id, scheduleId));
+
+		return;
+	}
+
+	static async updateFromScheduleId({
+		db,
+		scheduleId,
+		updates,
+	}: {
+		db: DrizzleCli;
+		scheduleId: string;
+		updates: any;
+	}) {
+		const results = await db
+			.update(subscriptions)
+			.set(updates)
+			.where(eq(subscriptions.stripe_schedule_id, scheduleId))
+			.returning();
+
+		if (results.length === 0) {
+			return null;
+		}
+
+		return results[0] as Subscription;
 	}
 
 	static async getInStripeIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {

@@ -50,8 +50,7 @@ const checkMessages = async ({
 		...(entityId ? { entity_id: entityId } : {}),
 	});
 
-// Serial: each test flips the shared org's block_overdue_entitlements and restores it in `finally`.
-test(
+test.concurrent(
 	"overdue access: custom plan exemption can be added and removed",
 	async () => {
 		const standard = products.base({
@@ -80,14 +79,14 @@ test(
 				allowed: false,
 			});
 			await autumn.products.update(standard.id, {
-				config: { ignore_past_due: true },
+				config: { ignorePastDue: true, allowOverdueEntitlements: true },
 			});
 			await markPastDue({ ctx, customerId });
 			expect(await checkMessages({ autumn, customerId })).toMatchObject({
 				allowed: true,
 			});
 			await autumn.products.update(standard.id, {
-				config: { ignore_past_due: false },
+				config: { ignorePastDue: false },
 			});
 			await invalidateCachedFullSubject({
 				ctx,
@@ -106,7 +105,7 @@ test(
 	{ timeout: 120_000 },
 );
 
-test(
+test.concurrent(
 	"overdue access: entity plans keep exemptions isolated",
 	async () => {
 		const standard = products.base({
@@ -165,7 +164,7 @@ test(
 	{ timeout: 120_000 },
 );
 
-test(
+test.concurrent(
 	"overdue access: boolean and customized license plans",
 	async () => {
 		const parent = products.base({
@@ -234,13 +233,12 @@ test(
 					entityId: entities[1].id,
 				}),
 			).toMatchObject({ allowed: false });
-			// The parent is past due and not exempt, so its flag is blocked (see unit overdue-entitlements.test.ts).
 			expect(
 				await autumn.check<CheckResponseV3>({
 					customer_id: customerId,
 					feature_id: TestFeature.Dashboard,
 				}),
-			).toMatchObject({ allowed: false });
+			).toMatchObject({ allowed: true });
 		} finally {
 			await autumn.patch("/organization/config", {
 				block_overdue_entitlements: ctx.org.config.block_overdue_entitlements,

@@ -16,15 +16,12 @@ import { expirePooledBalanceForReset } from "@tests/integration/billing/pooled-b
 import { getPooledBalanceDbState } from "@tests/integration/billing/pooled-balances/utils/getPooledBalanceDbState.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	findResetEligibleRow,
-	runBatchResetOnCustomerEntitlements,
-	runResetOnCustomerEntitlement,
-} from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq, inArray } from "drizzle-orm";
+import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getResetContextByIds } from "@/internal/customers/cusProducts/cusEnts/repos/getResetContextByIds.js";
 import {
 	expectLicensePooledGrant,
@@ -203,31 +200,27 @@ test.concurrent(
 			.set({ next_reset_at: Date.now() - 1_000 })
 			.where(inArray(customerEntitlements.id, sourceCustomerEntitlementIds));
 
-		expect(
-			await findResetEligibleRow({
-				ctx,
-				customerEntitlementId: pooledCustomerEntitlement.id,
-			}),
-			"Expected the cron scan to select the license pooled balance",
-		).not.toBeNull();
+		const resettable = await CusEntService.getActiveResetPassed({
+			db: ctx.db,
+			customDateUnix: Date.now(),
+		});
+		const resettableIds = resettable.map((candidate) => candidate.id);
+		expect(resettableIds).toContain(pooledCustomerEntitlement.id);
 		for (const sourceCustomerEntitlementId of sourceCustomerEntitlementIds) {
-			expect(
-				await findResetEligibleRow({
-					ctx,
-					customerEntitlementId: sourceCustomerEntitlementId,
-				}),
-			).toBeNull();
+			expect(resettableIds).not.toContain(sourceCustomerEntitlementId);
 		}
 
-		const hydrated = await getResetContextByIds({
-			db: ctx.db,
-			customerEntitlementIds: [pooledCustomerEntitlement.id],
-		});
-		expect(hydrated.customerEntitlements[0]?.pooled_balance?.id).toBe(pool.id);
-		await runResetOnCustomerEntitlement({
+		const cronCustomerEntitlement = resettable.find(
+			(candidate) => candidate.id === pooledCustomerEntitlement.id,
+		);
+		if (!cronCustomerEntitlement) {
+			throw new Error("Expected cron to return the license pooled balance");
+		}
+		expect(cronCustomerEntitlement.pooled_balance?.id).toBe(pool.id);
+		await resetCustomerEntitlement({
 			ctx,
-			customerId,
-			customerEntitlementId: pooledCustomerEntitlement.id,
+			cusEnt: cronCustomerEntitlement,
+			updatedCusEnts: [],
 		});
 
 		const afterReset = await ctx.db.query.customerEntitlements.findFirst({
@@ -264,19 +257,13 @@ test.concurrent(
 		expect(hydrated.missingIds).toContain(pooledCustomerEntitlement.id);
 		expect(hydrated.customerEntitlements).toHaveLength(0);
 
-		// Nothing to hydrate means nothing to reset: the row is left as it was.
-		const before = await ctx.db.query.customerEntitlements.findFirst({
-			where: eq(customerEntitlements.id, pooledCustomerEntitlement.id),
+		const resettable = await CusEntService.getActiveResetPassed({
+			db: ctx.db,
+			customDateUnix: Date.now(),
 		});
-		await runBatchResetOnCustomerEntitlements({
-			ctx,
-			customerEntitlementIds: [pooledCustomerEntitlement.id],
-		});
-		const after = await ctx.db.query.customerEntitlements.findFirst({
-			where: eq(customerEntitlements.id, pooledCustomerEntitlement.id),
-		});
-		expect(after?.balance).toBe(before?.balance);
-		expect(after?.next_reset_at).toBe(before?.next_reset_at);
+		expect(resettable.map((candidate) => candidate.id)).not.toContain(
+			pooledCustomerEntitlement.id,
+		);
 	},
 );
 

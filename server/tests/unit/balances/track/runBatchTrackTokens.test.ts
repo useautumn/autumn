@@ -1,12 +1,4 @@
-import {
-	afterAll,
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	test,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { BatchTrackTokensParams } from "@autumn/shared";
 import {
 	ApiVersion,
@@ -18,12 +10,7 @@ import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 
-// The legacy lane is what the queue cases cover; the worker case turns the rollout on itself.
-const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
-
 const mockState = {
-	workerBatches: [] as unknown[][],
 	modelNames: [] as string[],
 	queueCommands: [] as Record<string, unknown>[],
 	originalSend: null as null | SQSClient["send"],
@@ -62,27 +49,12 @@ await mockModuleWithRestore(
 );
 
 await mockModuleWithRestore(
-	"@/internal/balances/utils/getSubjectFullCustomer.js",
+	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
-		getSubjectFullCustomer: async () => ({
-			id: "cus_123",
+		getOrSetCachedFullSubject: async () => ({
+			customer: { id: "cus_123" },
 			customer_products: [],
-			extra_customer_entitlements: [],
-			entities: [],
 		}),
-	}),
-);
-
-await mockModuleWithRestore(
-	"@/internal/balances/track/balanceWorker/runBalanceWorkerBatchTrack.js",
-	() => ({
-		runBalanceWorkerBatchTrack: async ({
-			entries,
-		}: {
-			entries: { item: unknown }[];
-		}) => {
-			mockState.workerBatches.push(entries.map(({ item }) => item));
-		},
 	}),
 );
 
@@ -107,14 +79,7 @@ const buildCtx = () =>
 describe("runBatchTrackTokens", () => {
 	let restoreQueueEnv: (() => void) | undefined;
 
-	afterAll(() => {
-		if (previousRollout === undefined)
-			delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-		else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
-	});
-
 	beforeEach(() => {
-		mockState.workerBatches = [];
 		mockState.modelNames = [];
 		mockState.queueCommands = [];
 		restoreQueueEnv = pinTrackProducerQueueToFifo({
@@ -141,31 +106,6 @@ describe("runBatchTrackTokens", () => {
 		}
 		restoreQueueEnv?.();
 		restoreQueueEnv = undefined;
-	});
-
-	test("with the balance worker on, sends the converted bodies to the worker", async () => {
-		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
-		try {
-			await runBatchTrackTokens({
-				ctx: buildCtx(),
-				body: [
-					{
-						customer_id: "cus_123",
-						feature_id: "ai_credits",
-						model_id: "openai/gpt-4o",
-						input_tokens: 100,
-						output_tokens: 20,
-					},
-				],
-			});
-			expect(mockState.workerBatches).toHaveLength(1);
-			expect(mockState.workerBatches[0]).toMatchObject([
-				{ customer_id: "cus_123", feature_id: "ai_credits", value: 0.5 },
-			]);
-			expect(mockState.queueCommands).toHaveLength(0);
-		} finally {
-			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
-		}
 	});
 
 	test("converts token items to queued track bodies with per-item idempotency keys", async () => {

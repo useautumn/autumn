@@ -6,6 +6,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService";
+import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
 import { applyCustomerProductPatch } from "../../utils/billingPlan/customerProductPlanMutations";
 
 export const executePatchCustomerProducts = async ({
@@ -26,6 +27,13 @@ export const executePatchCustomerProducts = async ({
 		await CusPriceService.insert({
 			db: ctx.db,
 			data: patchCustomerProduct.insertCustomerPrices,
+		});
+
+		await customerLicenseRepo.insertMany({
+			db: ctx.db,
+			rows: (patchCustomerProduct.insertCustomerLicenses ?? []).map(
+				({ planLicense: _planLicense, ...row }) => row,
+			),
 		});
 
 		const finalCustomerProduct = applyCustomerProductPatch({

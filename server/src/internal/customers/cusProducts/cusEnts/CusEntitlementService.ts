@@ -12,6 +12,7 @@ import {
 	customers,
 	ErrCode,
 	entitlements,
+	type FullCusEntWithProduct,
 	type FullCustomerEntitlement,
 	features,
 	type InsertCustomerEntitlement,
@@ -19,6 +20,7 @@ import {
 	pooledBalances,
 	prices,
 	products,
+	type ResetCusEnt,
 	rollovers,
 } from "@autumn/shared";
 import {
@@ -38,6 +40,7 @@ import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
+import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { licensePooledBalanceIsLiveSql } from "@/internal/customers/licensePooledBalanceIsLiveSql.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -517,6 +520,91 @@ export class CusEntService {
 			.limit(batchSize);
 	}
 
+	static async getActiveResetPassed({
+		db,
+		customDateUnix,
+		batchSize = 1000,
+		limit,
+		includeSeparateIntervalResets = true,
+		onPageFetched,
+	}: {
+		db: DrizzleCli;
+		customDateUnix?: number;
+		batchSize?: number;
+		limit?: number;
+		includeSeparateIntervalResets?: boolean;
+		/** Test seam: runs between pages to exercise mid-pagination mutations. */
+		onPageFetched?: (page: ResetCusEnt[]) => void | Promise<void>;
+	}) {
+		const allResults: FullCusEntWithProduct[] = [];
+		const now = customDateUnix ?? Date.now();
+		let cursor: { nextResetAt: number; id: string } | null = null;
+		const emittedIds = new Set<string>();
+
+		while (true) {
+			const page = await withStatementTimeout(db, async (tx) =>
+				CusEntService.buildActiveResetPassedPage({
+					db: tx,
+					now,
+					batchSize,
+					cursor,
+					includeSeparateIntervalResets,
+				}),
+			);
+
+			if (page.length === 0) break;
+
+			const freshRows: typeof page = [];
+			for (const item of page) {
+				const id = item.customer_entitlements.id;
+				if (emittedIds.has(id)) continue;
+				emittedIds.add(id);
+				freshRows.push(item);
+			}
+
+			const mappedData = freshRows.map((item) => ({
+				...item.customer_entitlements,
+				entitlement: {
+					...item.entitlements,
+					feature: item.features,
+				},
+				// Seats inherit the parent's lifecycle so downstream reset logic
+				// (resetsViaInvoice, Stripe anchor) behaves like the parent's.
+				customer_product: item.customer_products
+					? {
+							...item.customer_products,
+							status:
+								(item.parent_status as CusProductStatus | null) ??
+								item.customer_products.status,
+							subscription_ids:
+								(item.parent_subscription_ids as string[] | null) ??
+								item.customer_products.subscription_ids,
+						}
+					: item.customer_products,
+				customer: item.customers,
+				pooled_balance: item.pooled_balances ?? undefined,
+				replaceables: [],
+				rollovers: [],
+			})) as ResetCusEnt[];
+
+			allResults.push(...mappedData);
+			console.log(`Fetched ${allResults.length} entitlements to reset`);
+
+			const lastRow = page[page.length - 1].customer_entitlements;
+			cursor = {
+				nextResetAt: Number(lastRow.next_reset_at),
+				id: lastRow.id,
+			};
+
+			if (onPageFetched) await onPageFetched(mappedData);
+
+			if (page.length < batchSize) break;
+			if (limit && allResults.length >= limit) break;
+		}
+
+		return allResults as ResetCusEnt[];
+	}
+
 	static async update({
 		ctx,
 		id,
@@ -640,80 +728,6 @@ export class CusEntService {
 			.returning();
 
 		return data;
-	}
-
-	/** `entities[id].balance += delta` per key, seeding a missing entry at 0; other fields of the entry are kept. */
-	static async incrementEntityBalances({
-		ctx,
-		id,
-		changes,
-	}: {
-		ctx: RepoContext;
-		id: string;
-		changes: Record<string, number>;
-	}) {
-		const { db } = ctx;
-		const current = sql`coalesce(${customerEntitlements.entities}, '{}'::jsonb)`;
-		const deltas = sql.join(
-			Object.entries(changes).map(
-				([entityId, delta]) => sql`(${entityId}::text, ${delta}::numeric)`,
-			),
-			sql`, `,
-		);
-		const entry = sql`coalesce(${current} -> v.id, '{}'::jsonb)`;
-		const changed = sql`(
-			SELECT jsonb_object_agg(v.id, ${entry} || jsonb_build_object(
-				'id', v.id,
-				'balance', coalesce((${entry} ->> 'balance')::numeric, 0) + v.delta,
-				'adjustment', coalesce((${entry} ->> 'adjustment')::numeric, 0)
-			))
-			FROM (VALUES ${deltas}) AS v(id, delta)
-		)`;
-		return await db
-			.update(customerEntitlements)
-			.set({
-				entities: sql`${current} || ${changed}`,
-				cache_version: sql`${customerEntitlements.cache_version} + 1`,
-			})
-			.where(eq(customerEntitlements.id, id))
-			.returning();
-	}
-
-	/** Re-keys `entities[from]` as `entities[to]` (its `id` updated); a missing `from` moves nothing. */
-	static async moveEntityBalances({
-		ctx,
-		id,
-		moves,
-	}: {
-		ctx: RepoContext;
-		id: string;
-		moves: Record<string, string>;
-	}) {
-		const { db } = ctx;
-		const current = sql`coalesce(${customerEntitlements.entities}, '{}'::jsonb)`;
-		const pairs = sql.join(
-			Object.entries(moves).map(
-				([from, to]) => sql`(${from}::text, ${to}::text)`,
-			),
-			sql`, `,
-		);
-		const moved = sql`(
-			SELECT coalesce(jsonb_object_agg(v.to_key, (${current} -> v.from_key) || jsonb_build_object('id', v.to_key)), '{}'::jsonb)
-			FROM (VALUES ${pairs}) AS v(from_key, to_key)
-			WHERE ${current} ? v.from_key
-		)`;
-		const fromKeys = sql.join(
-			Object.keys(moves).map((from) => sql`${from}::text`),
-			sql`, `,
-		);
-		return await db
-			.update(customerEntitlements)
-			.set({
-				entities: sql`(${current} - array[${fromKeys}]) || ${moved}`,
-				cache_version: sql`${customerEntitlements.cache_version} + 1`,
-			})
-			.where(eq(customerEntitlements.id, id))
-			.returning();
 	}
 
 	static async decrement({

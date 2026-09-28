@@ -69,8 +69,7 @@ const initCustomer = ({
 		usage_limits: customerData?.billing_controls?.usage_limits,
 		usage_alerts: customerData?.billing_controls?.usage_alerts,
 		overage_allowed: customerData?.billing_controls?.overage_allowed,
-		// Mirrors the column default: the worker renders this row as inserted, never re-read from Postgres.
-		config: customerData?.config ?? {},
+		config: customerData?.config,
 	};
 };
 

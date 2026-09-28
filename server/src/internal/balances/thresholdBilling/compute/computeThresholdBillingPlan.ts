@@ -63,13 +63,7 @@ export const computeThresholdBillingPlan = ({
 			insertCustomerProducts: [],
 			lineItems: [lineItem],
 			updateCustomerEntitlements: [],
-			autoTopupRebalance: {
-				deltas,
-				customerEntitlementId: customerEntitlement.id,
-				featureId: feature.id,
-				quantity: chargeUnits,
-				creditedCustomerEntitlementId: customerEntitlement.id,
-			},
+			autoTopupRebalance: { deltas },
 		},
 		stripeBillingPlan: {
 			invoiceAction: {

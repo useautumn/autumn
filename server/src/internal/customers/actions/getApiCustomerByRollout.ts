@@ -1,13 +1,12 @@
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject.js";
 import { coalescedSubjectRead } from "@/internal/customers/cache/fullSubject/coalesceSubjectRead.js";
 import {
 	buildSubjectReadFlightKey,
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 
 export const getApiCustomerByRollout = async ({
@@ -27,13 +26,7 @@ export const getApiCustomerByRollout = async ({
 	singleflight?: boolean;
 	disableReplicaRead?: boolean;
 }) => {
-	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) {
-		const fullSubject = await readBalanceWorkerSubject({
-			ctx,
-			customerId,
-			entityId,
-		});
-		return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
+	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
 	const lookup = async ({ skipCache }: { skipCache: boolean }) => {

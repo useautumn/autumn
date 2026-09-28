@@ -1,9 +1,6 @@
-import {
-	CusProductStatus,
-	type FullSubject,
-	isThresholdBillingCustomerProduct,
-} from "@autumn/shared";
+import { CusProductStatus, type FullSubject } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { isThresholdBillingProduct } from "@/internal/balances/thresholdBilling/isThresholdBillingProduct.js";
 
 export const getCheckSubject = ({
 	ctx,
@@ -18,7 +15,7 @@ export const getCheckSubject = ({
 		customerProduct.status === CusProductStatus.PastDue &&
 		!customerProduct.product.config?.ignore_past_due &&
 		(ctx.org.config.block_overdue_entitlements ||
-			isThresholdBillingCustomerProduct({ customerProduct }));
+			isThresholdBillingProduct({ customerProduct }));
 
 	if (!fullSubject.customer_products.some(shouldBlockPastDue)) {
 		return fullSubject;

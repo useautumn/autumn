@@ -1,7 +1,6 @@
 import { ms } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { CronContext } from "@/cron/utils/CronContext.js";
-import { getBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import type {
 	ResetEligibleCustomerEntitlementRow,
 	ResetScanCursor,
@@ -18,7 +17,6 @@ import {
 } from "./concurrency/batchResetScanGates.js";
 import { sleepWithAbort } from "./concurrency/sleepWithAbort.js";
 import { enqueueBatchResetTask } from "./enqueueBatchResetTask.js";
-import { enqueueWorkerResets } from "./enqueueWorkerResets/enqueueWorkerResets.js";
 import { logResetBacklogGauge } from "./logs/logResetBacklogGauge.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "./types.js";
 
@@ -26,15 +24,11 @@ const JOB_NAME = "reset-cus-ents-v2";
 const IDLE_DELAY_MS = ms.seconds(5);
 const BACKLOG_GAUGE_INTERVAL_MS = ms.minutes(5);
 
-/** Where a sweep's due rows are refilled: by the balance worker, or by the SQL batch lane. Fixed for the whole sweep. */
-type ResetLane = "worker" | "sql";
-
 /** Progress of the sweep currently in flight. */
 type SweepState = {
 	cursor: ResetScanCursor | null;
 	dueBefore: number | null;
 	startedAt: number | null;
-	lane: ResetLane | null;
 	pages: number;
 	scanned: number;
 	messages: number;
@@ -44,18 +38,10 @@ const newSweepState = (): SweepState => ({
 	cursor: null,
 	dueBefore: null,
 	startedAt: null,
-	lane: null,
 	pages: 0,
 	scanned: 0,
 	messages: 0,
 });
-
-/**
- * SQL until every customer is on the worker: its invalidation drops the Redis fields and queues a worker
- * evict, so both populations rehydrate from Postgres. A worker reset would leave a legacy customer's Redis view stale.
- */
-const chooseLane = (): ResetLane =>
-	getBalanceWorkerRolloutOverride() === true ? "worker" : "sql";
 
 /** Chunks one scanned page into compact ID-only SQS payloads. */
 export const pageToBatchResetPayloads = ({
@@ -94,34 +80,22 @@ const enqueuePage = async ({
 	sweep: SweepState;
 	workerBatchSize: number;
 }) => {
-	let messages: number;
-	if (sweep.lane === "worker" && sweep.dueBefore !== null) {
-		messages = await enqueueWorkerResets({
-			ctx,
-			page,
-			dueBefore: sweep.dueBefore,
-			now: Date.now(),
-		});
-	} else {
-		const payloads = pageToBatchResetPayloads({ page, workerBatchSize });
-		for (const payload of payloads) {
-			await enqueueBatchResetTask({ payload, logger: ctx.logger });
-		}
-		messages = payloads.length;
+	const payloads = pageToBatchResetPayloads({ page, workerBatchSize });
+	for (const payload of payloads) {
+		await enqueueBatchResetTask({ payload, logger: ctx.logger });
 	}
 
 	const lastRow = page[page.length - 1];
 	sweep.cursor = { nextResetAt: lastRow.nextResetAt, id: lastRow.id };
 	sweep.pages++;
 	sweep.scanned += page.length;
-	sweep.messages += messages;
+	sweep.messages += payloads.length;
 
 	ctx.logger.info("[reset-cus-ents-v2] page enqueued", {
 		jobName: JOB_NAME,
 		data: {
-			lane: sweep.lane,
 			fetched: page.length,
-			messages,
+			messages: payloads.length,
 			dueBefore: sweep.dueBefore,
 			sweepPages: sweep.pages,
 			sweepScanned: sweep.scanned,
@@ -153,7 +127,6 @@ const completeSweep = async ({
 			sweepPages: sweep.pages,
 			sweepScanned: sweep.scanned,
 			sweepMessages: sweep.messages,
-			lane: sweep.lane,
 			sweepDurationMs: Date.now() - sweep.startedAt,
 			drainWaitMs: Date.now() - barrierStartedAt,
 			dueBefore: sweep.dueBefore,
@@ -203,7 +176,6 @@ export const runResetLoopV2 = async ({
 
 				sweep.dueBefore ??= Date.now();
 				sweep.startedAt ??= Date.now();
-				sweep.lane ??= chooseLane();
 				const page =
 					await customerEntitlementsRepo.getResetEligibleCustomerEntitlementsPage(
 						{

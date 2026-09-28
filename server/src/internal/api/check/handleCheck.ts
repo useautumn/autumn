@@ -2,7 +2,6 @@ import {
 	AffectedResource,
 	ApiVersion,
 	applyResponseVersionChanges,
-	type CheckParams,
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV3,
@@ -11,78 +10,44 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
-import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
-import {
-	type CheckFailOpenReason,
-	getCheckFailOpenFallback,
-} from "./checkUtils/getCheckFailOpenFallback.js";
-import {
-	type CheckResponseWithPreview,
-	getCheckPreview,
-} from "./getCheckPreview.js";
+import { getCheckFailOpenFallback } from "./checkUtils/getCheckFailOpenFallback.js";
+import { getCheckPreview } from "./getCheckPreview.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
-// Legacy checks fail open past this budget; worker checks use their client deadline.
+// check is the hottest-path route: past this budget we answer allowed rather
+// than make the caller wait, no matter what work (locks included) is in flight.
 const CHECK_FAIL_OPEN_TIMEOUT_MS = 3_000;
-
-/** The allowed fallback a check answers with when it can't reach its balances. */
-const checkFailOpenResponse = ({
-	ctx,
-	params,
-	error,
-	reason,
-}: {
-	ctx: AutumnContext;
-	params: CheckParams;
-	error: unknown;
-	reason: CheckFailOpenReason;
-}) => {
-	const body = parseCheckParamsForLock({ params });
-	return getCheckFailOpenFallback({
-		ctx,
-		body,
-		requiredBalance:
-			body.required_balance ??
-			body.required_quantity ??
-			DEFAULT_REQUIRED_BALANCE,
-		error,
-		reason,
-	});
-};
 
 export const handleCheck = createRoute({
 	scopes: [Scopes.Balances.Read],
 	failOpen: {
 		timeoutMs: CHECK_FAIL_OPEN_TIMEOUT_MS,
-		// Worker checks fail open on their own, past their client deadline. Lock checks
-		// must settle their reservation; product checks return a non-feature shape.
+		// Lock checks must settle (the abandoned run would still create a lock
+		// receipt → leaked reservation); product checks return a non-feature shape.
 		skip: (c) => {
 			const body = c.req.valid("json");
-			const ctx = c.get("ctx");
-			return Boolean(
-				isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id }) ||
-					body.lock?.enabled ||
-					body.product_id,
-			);
+			return Boolean(body.lock?.enabled || body.product_id);
 		},
-		respond: (c) =>
-			c.json(
-				checkFailOpenResponse({
-					ctx: c.get("ctx"),
-					params: c.req.valid("json"),
-					error: new Error(
-						`check exceeded the ${CHECK_FAIL_OPEN_TIMEOUT_MS}ms blanket fail-open timeout`,
-					),
-					reason: "route_timeout",
-				}),
-				202,
-			),
+		respond: (c) => {
+			const ctx = c.get("ctx");
+			const body = parseCheckParamsForLock({ params: c.req.valid("json") });
+			const response = getCheckFailOpenFallback({
+				ctx,
+				body,
+				requiredBalance:
+					body.required_balance ??
+					body.required_quantity ??
+					DEFAULT_REQUIRED_BALANCE,
+				error: new Error(
+					`check exceeded the ${CHECK_FAIL_OPEN_TIMEOUT_MS}ms blanket fail-open timeout`,
+				),
+				reason: "route_timeout",
+			});
+			return c.json(response, 202);
+		},
 	},
 	routeGroup: RouteGroup.Balances,
 	versionedQuery: {
@@ -95,45 +60,27 @@ export const handleCheck = createRoute({
 		const rawBody = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		// Plans, not balances, answer a product check, so it runs the same on both routes.
-		if (rawBody.product_id) {
-			const body = parseCheckParamsForLock({ params: rawBody });
-			return c.json(
-				await handleProductCheck({
-					ctx,
-					body: { ...body, product_id: rawBody.product_id },
-				}),
-			);
-		}
-
-		if (
-			isBalanceWorkerRolloutEnabled({ ctx, customerId: rawBody.customer_id })
-		) {
-			const runOnWorker = () => runBalanceWorkerCheck({ ctx, body: rawBody });
-			// A lock must settle its reservation, so a lock check never answers without the worker.
-			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
-			const { result, failedOpen } =
-				await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
-					ctx,
-					source: "check",
-					run: runOnWorker,
-					fallback: async ({ error, reason }) =>
-						checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
-				});
-			return c.json(result, failedOpen ? 202 : 200);
-		}
-
 		const body: ParsedCheckParams = parseCheckParamsForLock({
 			params: rawBody,
 		});
 
 		const {
 			customer_id,
+			product_id,
 			entity_id,
 			required_quantity,
 			required_balance,
 			with_preview,
 		} = body;
+
+		// Legacy path - product check
+		if (product_id) {
+			const checkProductResult = await handleProductCheck({
+				ctx: c.get("ctx"),
+				body: { ...body, product_id }, // Ensure product_id is passed as string
+			});
+			return c.json(checkProductResult);
+		}
 
 		const requiredBalance =
 			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
@@ -152,9 +99,8 @@ export const handleCheck = createRoute({
 		const preview = with_preview
 			? await getCheckPreview({
 					ctx,
-					allowed: response.allowed,
-					apiBalance: checkData.apiBalance,
-					feature: checkData.featureToUse,
+					checkResponse: response,
+					checkData,
 					customerId: customer_id,
 					entityId: entity_id,
 				})

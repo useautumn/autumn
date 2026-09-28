@@ -102,7 +102,6 @@ export const mapToProductV2 = ({
 
 		items: items,
 		stripe_id: product.processor?.id || null,
-		stripe_additional_ids: product.processor?.additional_ids ?? null,
 		archived: product.archived || false,
 		base_internal_product_id: product.base_internal_product_id ?? null,
 		config: product.config ?? undefined,

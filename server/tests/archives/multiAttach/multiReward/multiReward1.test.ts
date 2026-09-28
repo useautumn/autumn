@@ -72,7 +72,6 @@ describe(`${chalk.yellowBright("multiReward1: Testing multi attach with rewards"
 			customerId,
 			products: productsList,
 			results: productsList,
-			ctx,
 			db,
 			org,
 			env,

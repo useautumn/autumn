@@ -5,7 +5,9 @@ describe("runTrackWithRollout", () => {
 	test("enables track v3 now that the FullSubject rollout is complete", () => {
 		expect(
 			shouldUseTrackV3({
-				ctx: {} as never,
+				ctx: {
+					rolloutSnapshot: undefined,
+				} as never,
 			}),
 		).toBe(true);
 	});

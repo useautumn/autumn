@@ -45,6 +45,16 @@ mock.module(
 );
 
 mock.module(
+	"@/internal/balances/autoTopUp/helpers/enqueueAutoTopupWithBurstSuppression.js",
+	() => ({
+		enqueueAutoTopupWithBurstSuppression: async () => ({
+			enqueued: false,
+			reason: "pending_key_exists" as const,
+		}),
+	}),
+);
+
+mock.module(
 	"@/external/redis/actions/autoTopUpSuppression/autoTopUpSuppression.js",
 	() => ({
 		buildAutoTopupPendingKey: () => "auto_topup:pending:test",

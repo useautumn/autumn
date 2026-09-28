@@ -30,13 +30,12 @@
 
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
-import { items } from "@tests/utils/fixtures/items.js";
-import { products } from "@tests/utils/fixtures/products.js";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { sql } from "drizzle-orm";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 
 const INCLUDED_USAGE = 1_000_000;
 
@@ -110,8 +109,7 @@ const pgBalance = async ({
 };
 
 // ── Contract 1+2: gate ON — dirty key lifecycle + exact burst convergence ──
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-test.concurrent.skipIf(isBalanceWorkerRoute())(
+test.concurrent(
 	`${chalk.yellowBright("sync-coalesce: dirty key lifecycle and burst convergence (gate on)")}`,
 	async () => {
 		const customerId = "sync-coalesce-burst";
@@ -122,10 +120,7 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 
 		const { autumnV1, ctx } = await initScenario({
 			customerId,
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [product] }),
-			],
+			setup: [s.customer({ testClock: false }), s.products({ list: [product] })],
 			actions: [s.attach({ productId: product.id })],
 		});
 
@@ -192,10 +187,7 @@ test.concurrent(
 
 		const { autumnV1, ctx } = await initScenario({
 			customerId,
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [product] }),
-			],
+			setup: [s.customer({ testClock: false }), s.products({ list: [product] })],
 			actions: [s.attach({ productId: product.id })],
 		});
 

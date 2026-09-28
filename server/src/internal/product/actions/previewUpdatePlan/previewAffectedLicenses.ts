@@ -2,7 +2,6 @@ import {
 	type ApiPlanLicenseV1,
 	diffLicensePlanCustomize,
 	type FullProduct,
-	fullPlanLicenseToApiPlanLicense,
 	type PlanUpdatePreviewLicenseChange,
 	PlanUpdatePreviewLicenseChangeSchema,
 	PlanUpdatePreviewPlanChangesSchema,
@@ -10,6 +9,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ResolvedPlanLicenseLink } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 
@@ -76,9 +76,10 @@ export const previewAffectedLicenses = async ({
 
 		if (!targetLink) {
 			if (!currentLink || structuralChange?.action !== "remove") continue;
-			const current = await fullPlanLicenseToApiPlanLicense({
-				ctx: { ...ctx, expand: [] },
+			const current = await buildApiPlanLicense({
+				ctx,
 				license: currentLink,
+				features: ctx.features,
 			});
 			changes.push(
 				PlanUpdatePreviewLicenseChangeSchema.parse({
@@ -127,9 +128,10 @@ export const previewAffectedLicenses = async ({
 					})
 				: null,
 			currentLink
-				? fullPlanLicenseToApiPlanLicense({
-						ctx: { ...ctx, expand: [] },
+				? buildApiPlanLicense({
+						ctx,
 						license: currentLink,
+						features: ctx.features,
 					})
 				: null,
 		]);

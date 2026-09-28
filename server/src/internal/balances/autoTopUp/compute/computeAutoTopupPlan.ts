@@ -97,18 +97,14 @@ export const computeAutoTopupPlan = ({
 		prepaidCustomerEntitlementId: customerEntitlement.id,
 	});
 
-	const {
-		deltas,
-		customEntitlements,
-		insertCustomerEntitlements,
-		creditedCustomerEntitlementId,
-	} = routeRemainderToExpiringGrant({
-		deltas: rebalance.deltas,
-		customerEntitlement,
-		source: "auto_topup",
-		orgId: org.id,
-		now: Date.now(),
-	});
+	const { deltas, customEntitlements, insertCustomerEntitlements } =
+		routeRemainderToExpiringGrant({
+			deltas: rebalance.deltas,
+			customerEntitlement,
+			source: "auto_topup",
+			orgId: org.id,
+			now: Date.now(),
+		});
 
 	// D. Build autumn billing plan. `options.quantity` bumps by the FULL topUpPacks
 	// because the customer is charged for the full purchase regardless of where the
@@ -118,13 +114,7 @@ export const computeAutoTopupPlan = ({
 		insertCustomerProducts: [],
 		lineItems: [lineItem],
 		updateCustomerEntitlements: [],
-		autoTopupRebalance: {
-			deltas,
-			customerEntitlementId: customerEntitlement.id,
-			featureId: feature.id,
-			quantity,
-			creditedCustomerEntitlementId,
-		},
+		autoTopupRebalance: { deltas },
 		...(customEntitlements.length ? { customEntitlements } : {}),
 		...(insertCustomerEntitlements.length
 			? { insertCustomerEntitlements }

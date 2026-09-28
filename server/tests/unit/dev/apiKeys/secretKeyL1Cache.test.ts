@@ -34,12 +34,11 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
-import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
 
-// CI has no misc cache env, and the real misc cache throws without one. These tests
+// CI has no misc cache env, and getMiscMainRedis throws without one. These tests
 // only need SET/GET/DEL semantics, so back the client with an in-memory map.
-const realGetMiscCache = {
-	...(await import("@/external/redis/miscCache/getMiscCache.js")),
+const realInstances = {
+	...(await import("@/external/redis/miscCache/miscRedisInstances.js")),
 };
 const fakeStore = new Map<string, string>();
 const fakeMiscRedis = {
@@ -52,15 +51,15 @@ const fakeMiscRedis = {
 	del: async (key: string) => (fakeStore.delete(key) ? 1 : 0),
 } as never;
 
-const fakeMiscCache = createFakeMiscCache({ main: fakeMiscRedis });
-mock.module("@/external/redis/miscCache/getMiscCache.js", () => ({
-	getMiscCache: () => fakeMiscCache,
+mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
+	getMiscMainRedis: () => fakeMiscRedis,
+	getMiscBackupRedis: () => null,
 }));
 
 afterAll(() => {
 	mock.module(
-		"@/external/redis/miscCache/getMiscCache.js",
-		() => realGetMiscCache,
+		"@/external/redis/miscCache/miscRedisInstances.js",
+		() => realInstances,
 	);
 });
 

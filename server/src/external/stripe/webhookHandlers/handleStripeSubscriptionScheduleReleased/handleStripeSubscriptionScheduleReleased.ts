@@ -1,8 +1,13 @@
 import type Stripe from "stripe";
+import { isAutumnManagedStripeSchedule } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import type { StripeScheduleReleasedContext } from "./stripeScheduleReleasedContext.js";
-import { detachReleasedSchedulePhases } from "./tasks/detachReleasedSchedulePhases.js";
 
+/**
+ * Releasing a schedule leaves the subscription running on its current items
+ * indefinitely, so any phase end and future phase Autumn imported from it are
+ * stale. Autumn-managed schedules are left alone: restore rebuilds those.
+ */
 export const handleStripeSubscriptionScheduleReleased = async ({
 	ctx,
 	event,
@@ -10,12 +15,23 @@ export const handleStripeSubscriptionScheduleReleased = async ({
 	ctx: StripeWebhookContext;
 	event: Stripe.SubscriptionScheduleReleasedEvent;
 }) => {
-	const eventContext: StripeScheduleReleasedContext = {
-		schedule: event.data.object,
-		results: {},
-	};
+	const { logger, fullCustomer } = ctx;
+	const schedule = event.data.object;
 
-	await detachReleasedSchedulePhases({ ctx, eventContext });
+	if (isAutumnManagedStripeSchedule({ schedule })) {
+		logger.info(`[schedule.released] skipping ${schedule.id}: autumn-managed`);
+		return;
+	}
+	if (!fullCustomer) return;
 
-	ctx.handlerResult = { type: event.type, context: eventContext };
+	const { detachedCount, clearedCount } =
+		await customerProductActions.detachSchedulePhases({
+			ctx,
+			fullCustomer,
+			schedule,
+		});
+
+	logger.info(
+		`[schedule.released] ${schedule.id}: detached ${detachedCount} scheduled plan(s), cleared ${clearedCount} phase end(s)`,
+	);
 };

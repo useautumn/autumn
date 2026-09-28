@@ -26,14 +26,11 @@ export const setupAllocatedInvoiceContext = async ({
 	oldFullCustomer,
 	customerEntitlement,
 	update,
-	deductionPersisted = true,
 }: {
 	ctx: AutumnContext;
 	oldFullCustomer: FullCustomer;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 	update: DeductionUpdate;
-	/** False when the plan itself writes the deduction: evaluate projects the plan, so the context must hold the state before it. */
-	deductionPersisted?: boolean;
 }): Promise<AllocatedInvoiceContext | null> => {
 	// Fetch full customer again just in case...
 	const fullCustomer = await setupFullCustomerContext({
@@ -45,13 +42,11 @@ export const setupAllocatedInvoiceContext = async ({
 	});
 
 	// Need to have the "latest" full customer so that when we apply the new updates, the state is correct, and stripe subscription state is correct too.
-	if (deductionPersisted) {
-		applyDeductionUpdateToFullCustomer({
-			fullCus: fullCustomer,
-			cusEntId: customerEntitlement.id,
-			update,
-		});
-	}
+	applyDeductionUpdateToFullCustomer({
+		fullCus: fullCustomer,
+		cusEntId: customerEntitlement.id,
+		update,
+	});
 
 	const { logger } = ctx;
 

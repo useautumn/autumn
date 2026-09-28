@@ -1,19 +1,12 @@
 import { expect, test } from "bun:test";
-import {
-	ACTIVE_STATUSES,
-	type AttachParamsV1Input,
-	type CheckResponseV3,
-	type FullProduct,
-} from "@autumn/shared";
+import type { AttachParamsV1Input, CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { billingActions } from "@/internal/billing/v2/actions/index.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { getMigrationCustomers } from "@/internal/migrations/migrationSteps/getMigrationCustomers.js";
+import { migrateCustomer } from "@/internal/migrations/migrationSteps/migrateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	assignLicense,
@@ -21,44 +14,6 @@ import {
 	listLicenseAssignments,
 	listLicensePools,
 } from "./licenseTestUtils.js";
-
-/** Every active plan on `fromProduct` migrated through the billing action, as the v1 migration task did; false when the action rejects. */
-const migrateCustomer = async ({
-	ctx,
-	customerId,
-	fromProduct,
-	toProduct,
-}: {
-	ctx: TestContext;
-	customerId: string;
-	fromProduct: FullProduct;
-	toProduct: FullProduct;
-}): Promise<boolean> => {
-	try {
-		const fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			withEntities: true,
-			inStatuses: ACTIVE_STATUSES,
-		});
-		const customerProducts = fullCustomer.customer_products.filter(
-			(customerProduct) =>
-				customerProduct.product.internal_id === fromProduct.internal_id,
-		);
-		for (const customerProduct of customerProducts) {
-			await billingActions.migrate({
-				ctx,
-				fullCustomer,
-				currentCustomerProduct: customerProduct,
-				newProduct: toProduct,
-			});
-			await deleteCachedFullCustomer({ ctx, customerId });
-		}
-		return true;
-	} catch {
-		return false;
-	}
-};
 
 const expectUnsafeMigrationRejected = async ({
 	customerId,
@@ -430,17 +385,13 @@ test.concurrent(
 		await autumnV1.products.update(parent.id, {
 			items: [items.dashboard(), items.monthlyWords({ includedUsage: 100 })],
 		});
-		const fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			inStatuses: ACTIVE_STATUSES,
+		const migrationCustomers = await getMigrationCustomers({
+			db: ctx.db,
+			fromProduct: parentV1,
 		});
-		expect(
-			fullCustomer.customer_products.some(
-				(customerProduct) =>
-					customerProduct.product.internal_id === parentV1.internal_id,
-			),
-		).toBe(false);
+		expect(migrationCustomers.map((customer) => customer.id)).not.toContain(
+			customerId,
+		);
 
 		const migratedCustomer = await autumnV1.customers.get<{
 			products: { id: string; version?: number }[];

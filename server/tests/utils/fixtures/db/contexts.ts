@@ -7,7 +7,6 @@ import {
 	type Feature,
 	type FullCusProduct,
 	type FullProduct,
-	OrgConfigSchema,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -31,8 +30,6 @@ const createOrg = () => ({
 	slug: "test-org",
 	default_currency: "usd",
 	stripe_account_id: "acct_test",
-	// Every default, as a freshly created org has: code that reads a config flag needs the object to exist.
-	config: OrgConfigSchema.parse({}),
 });
 
 /**

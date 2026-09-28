@@ -33,7 +33,7 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: increase price (finaliz
 		items: [messagesItem, priceItem],
 	});
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1 } = await initScenario({
 		customerId: "inv-def-increase-fin",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -100,8 +100,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: increase price (finaliz
 
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
-		ctx,
-		customerId,
 	});
 
 	const customerAfterPayment =
@@ -298,7 +296,7 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: increase price (draft, 
 		items: [messagesItem, priceItem],
 	});
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1 } = await initScenario({
 		customerId: "inv-def-increase-draft",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -370,8 +368,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: increase price (draft, 
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: finalizedInvoice.hosted_invoice_url!,
-		ctx,
-		customerId,
 	});
 
 	const customerAfterPayment =

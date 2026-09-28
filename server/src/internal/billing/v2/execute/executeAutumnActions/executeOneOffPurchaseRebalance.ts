@@ -8,7 +8,6 @@ type OneOffPurchaseRebalance = NonNullable<
 	AutumnBillingPlan["oneOffPurchaseRebalance"]
 >;
 
-/** Each purchase is sized against the balances the one before it left, as the worker sizes them. */
 export const executeOneOffPurchaseRebalance = async ({
 	ctx,
 	customerId,
@@ -18,21 +17,19 @@ export const executeOneOffPurchaseRebalance = async ({
 	customerId: string;
 	rebalance: OneOffPurchaseRebalance;
 }): Promise<void> => {
-	for (const {
-		customerEntitlementId,
-		featureId,
-		quantity,
-	} of rebalance.purchases) {
-		const fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-		});
-		const { deltas } = computeRebalancedAutoTopUp({
-			fullCustomer,
-			featureId,
-			quantity,
-			prepaidCustomerEntitlementId: customerEntitlementId,
-		});
-		await executeAutoTopupRebalance({ ctx, customerId, deltas });
-	}
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const deltas = rebalance.purchases.flatMap(
+		({ customerEntitlementId, featureId, quantity }) =>
+			computeRebalancedAutoTopUp({
+				fullCustomer,
+				featureId,
+				quantity,
+				prepaidCustomerEntitlementId: customerEntitlementId,
+			}).deltas,
+	);
+
+	await executeAutoTopupRebalance({ ctx, customerId, deltas });
 };

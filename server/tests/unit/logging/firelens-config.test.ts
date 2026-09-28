@@ -20,8 +20,6 @@ test.concurrent(
 		expect(config).toContain("Key_Name log");
 		expect(config).toContain("Parser json");
 		expect(config).toContain("Reserve_Data On");
-		// The raw line is not kept: it would double every record shipped to Axiom.
-		expect(config).toContain("Preserve_Key Off");
 		expect(config).toContain(
 			"Rule $level ^(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)$ axiom_express false",
 		);

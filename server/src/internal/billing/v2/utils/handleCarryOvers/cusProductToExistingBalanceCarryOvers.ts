@@ -2,7 +2,6 @@ import {
 	type AttachBillingContext,
 	type AttachParamsV1,
 	addCusProductToCusEnt,
-	calculateNextExpiry,
 	cusEntToCusPrice,
 	cusProductsToCusEnts,
 	type Entitlement,
@@ -21,6 +20,7 @@ import {
 	initCarryOverCustomerEntitlement,
 	initCarryOverEntitlement,
 } from "@/internal/billing/v2/utils/handleCarryOvers/initCarryOverEntitlements";
+import { calculateNextExpiry } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 
 /**
  * A carried-over balance would have expired at the old plan's next reset. If

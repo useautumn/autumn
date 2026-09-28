@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type CheckResponseV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -56,12 +55,9 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
-		// The balance worker doesn't aggregate entity data onto the customer.
-		if (!isBalanceWorkerRoute()) {
-			// Customer should see merged: 200 (customer) + 300 (entity) = 500
-			expect(res.balance?.granted_balance).toBe(500);
-			expect(res.balance?.current_balance).toBe(500);
-		}
+		// Customer should see merged: 200 (customer) + 300 (entity) = 500
+		expect(res.balance?.granted_balance).toBe(500);
+		expect(res.balance?.current_balance).toBe(500);
 	});
 
 	test("v2: entity level should see customer + entity balance (200 + 300 = 500)", async () => {
@@ -107,10 +103,7 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 
 		// Legacy/new cache paths differ on this allowed behavior for now.
 		// expect(customerRes.allowed).toBe(false);
-		// The balance worker doesn't aggregate entity data onto the customer.
-		if (!isBalanceWorkerRoute()) {
-			expect(customerRes.balance?.current_balance).toBe(500);
-		}
+		expect(customerRes.balance?.current_balance).toBe(500);
 
 		// Entity can still use merged (customer + entity) balance in its own scope.
 		const entityRes = (await autumnV2.check({

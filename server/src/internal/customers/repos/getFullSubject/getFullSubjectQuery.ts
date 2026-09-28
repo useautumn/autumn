@@ -161,7 +161,6 @@ export const getFullSubjectQuery = ({
 	inStatuses = RELEVANT_STATUSES,
 	allowMissingEntity = false,
 	aggregateEntityData = true,
-	asOfTimestampMs,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -178,8 +177,6 @@ export const getFullSubjectQuery = ({
 	allowMissingEntity?: boolean;
 	/** Entity aggregation scales with the customer's entity count; V2_4+ drops it. */
 	aggregateEntityData?: boolean;
-	/** Evaluate expiry predicates at a captured instant; omitted keeps DB-now semantics. */
-	asOfTimestampMs?: number;
 }) => {
 	const page = pagination.page ?? 50;
 	const offset = pagination.offset ?? 0;
@@ -229,6 +226,5 @@ export const getFullSubjectQuery = ({
 		inStatuses,
 		includeInvoices: !entityId,
 		includeEntityAggregations: !entityId && aggregateEntityData,
-		asOfTimestampMs,
 	});
 };

@@ -16,10 +16,6 @@ mock.module("@/queue/queueUtils.js", () => ({
 
 process.env.TRACK_SQS_QUEUE_URL ??= "https://sqs.test/gate-failopen";
 
-// The FullSubject gate lives on the legacy lane; every call after setup runs in-process.
-const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
-
 const { ParsedCheckParamsSchema } = await import("@autumn/shared");
 const { TestFeature } = await import("@tests/setup/v2Features.js");
 const { items } = await import("@tests/utils/fixtures/items.js");
@@ -64,13 +60,18 @@ _setFullSubjectGateConfigForTesting({
 
 afterAll(() => {
 	_setFullSubjectGateConfigForTesting({ config: {} });
-	if (previousRollout === undefined)
-		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });
 
 const buildContext = async ({ customerId }: { customerId: string }) => {
 	const ctx = (await createTestContext()) as unknown as AutumnContext;
+	ctx.rolloutSnapshot = {
+		rolloutId: "v2-cache",
+		enabled: true,
+		percent: 100,
+		previousPercent: 100,
+		changedAt: 0,
+		customerBucket: 0,
+	};
 	ctx.customerId = customerId;
 	return ctx;
 };

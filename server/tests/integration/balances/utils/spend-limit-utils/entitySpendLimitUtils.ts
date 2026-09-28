@@ -155,7 +155,6 @@ export const expectSendEventBlocked = async ({
 	customer,
 	expectedFeatureId = requestFeatureId,
 	expectedResponseRequiredBalance = requiredBalance,
-	checkCustomer = true,
 }: {
 	autumn: AutumnV2_1Client;
 	customerId: string;
@@ -178,7 +177,6 @@ export const expectSendEventBlocked = async ({
 	};
 	expectedFeatureId?: string;
 	expectedResponseRequiredBalance?: number;
-	checkCustomer?: boolean;
 }) => {
 	const customerExpectation = customer ?? entity;
 
@@ -225,8 +223,6 @@ export const expectSendEventBlocked = async ({
 		maxPurchase: entity.maxPurchase,
 		breakdownLength: entity.breakdownLength,
 	});
-
-	if (!checkCustomer) return;
 
 	await expectCustomerFeatureCachedAndDb({
 		autumn,

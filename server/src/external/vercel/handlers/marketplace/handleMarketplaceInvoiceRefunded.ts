@@ -1,3 +1,4 @@
+import { invoices } from "@autumn/shared";
 import { Marketplace } from "@vercel/sdk/sdk/marketplace.js";
 import { eq } from "drizzle-orm";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -103,11 +104,11 @@ export const handleMarketplaceInvoiceRefunded = async ({
 	}
 
 	if (refundTotal !== undefined) {
-		const updated = await InvoiceService.update({
-			db,
-			query: { stripeId: externalInvoiceId },
-			updates: { refunded_amount: refundTotal },
-		});
+		const [updated] = await db
+			.update(invoices)
+			.set({ refunded_amount: refundTotal })
+			.where(eq(invoices.stripe_id, externalInvoiceId))
+			.returning({ id: invoices.id });
 
 		if (!updated) {
 			logger.warn("[vercel/marketplace.invoice.refunded] no Autumn invoice", {
