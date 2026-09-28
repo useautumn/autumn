@@ -26,7 +26,7 @@ export function CustomerStateUnscheduledPlans() {
 					showHeaders={hasEntities}
 					renderPlan={(planIndex) => (
 						<UnscheduledPlanRow
-							key={`unscheduled-${planIndex}-${unscheduledPlans[planIndex]?.productId || "empty"}`}
+							key={`unscheduled-${planIndex}`}
 							planIndex={planIndex}
 						/>
 					)}

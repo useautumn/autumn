@@ -33,7 +33,7 @@ const groupPlanIndexesByScope = ({ plans }: { plans: ScopedPlan[] }) => {
 
 /**
  * One surface of plan rows per customer or entity scope. Rows still picking a
- * plan get their own surface below, so choosing their scope doesn't move them.
+ * plan join the last surface, so choosing their scope doesn't move them.
  */
 export function PlanScopeGroups({
 	plans,
@@ -59,20 +59,23 @@ export function PlanScopeGroups({
 	const pickerPlanIndexes = [...plans.keys()].filter(
 		(planIndex) => !plans[planIndex]?.productId,
 	);
+	const groups = groupPlanIndexesByScope({ plans });
+	const lastGroupIndex = groups.length - 1;
+
+	if (groups.length === 0) return rows(pickerPlanIndexes);
 
 	return (
 		<PlanRowPresence>
-			{groupPlanIndexesByScope({ plans }).map(([entityId, planIndexes]) => (
+			{groups.map(([entityId, planIndexes], groupIndex) => (
 				<div key={entityId ?? "customer"} className="pb-1">
 					<PlanScopeLabel entityId={entityId} />
-					{rows(planIndexes)}
+					{rows(
+						groupIndex === lastGroupIndex
+							? [...planIndexes, ...pickerPlanIndexes]
+							: planIndexes,
+					)}
 				</div>
 			))}
-			{pickerPlanIndexes.length > 0 && (
-				<div key="picking" className="pb-1">
-					{rows(pickerPlanIndexes)}
-				</div>
-			)}
 		</PlanRowPresence>
 	);
 }

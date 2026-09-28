@@ -42,7 +42,7 @@ export function CustomerStatePhasePlans({
 					showHeaders={hasEntities}
 					renderPlan={(planIndex) => (
 						<CustomerStatePlanRow
-							key={`plan-${phaseIndex}-${planIndex}-${phase.plans[planIndex]?.productId || "empty"}`}
+							key={`plan-${phaseIndex}-${planIndex}`}
 							phaseIndex={phaseIndex}
 							planIndex={planIndex}
 						/>
