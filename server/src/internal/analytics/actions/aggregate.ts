@@ -63,7 +63,7 @@ const buildFilterParams = ({
 const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
 /** Validates and sanitizes timezone string to prevent injection */
-const sanitizeTimezone = ({ timezone }: { timezone?: string }): string => {
+export const sanitizeTimezone = ({ timezone }: { timezone?: string }): string => {
 	if (!timezone) return "UTC";
 	if (!/^[a-zA-Z0-9_/+-]+$/.test(timezone)) return "UTC";
 	if (timezone.length > 50) return "UTC";

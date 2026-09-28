@@ -21,6 +21,7 @@ import { BillingControlPlanManagedSheet } from "../components/sheets/BillingCont
 import { BillingOverageAllowedSheet } from "../components/sheets/BillingOverageAllowedSheet";
 import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSheet";
 import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
+import { BillingUsageAlertsFeatureSheet } from "../components/sheets/BillingUsageAlertsFeatureSheet";
 import { BillingUsageLimitSheet } from "../components/sheets/BillingUsageLimitSheet";
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
 import { CreateInvoiceSheet } from "../components/sheets/CreateInvoiceSheet";
@@ -114,6 +115,8 @@ export function CustomerSheets() {
 			case "billing-usage-alert-add":
 			case "billing-usage-alert-edit":
 				return <BillingUsageAlertSheet />;
+			case "billing-usage-alerts-feature":
+				return <BillingUsageAlertsFeatureSheet />;
 			case "billing-overage-allowed-add":
 			case "billing-overage-allowed-edit":
 				return <BillingOverageAllowedSheet />;

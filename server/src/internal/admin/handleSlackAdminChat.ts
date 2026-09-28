@@ -1,4 +1,4 @@
-import crypto, { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
@@ -17,6 +17,7 @@ import {
 	slackAdminThreads,
 } from "@autumn/shared";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { SLACK_CONNECT_ADMIN_SCOPES } from "@autumn/shared/utils/auth/slackScopes";
 import { addMinutes } from "date-fns";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -24,6 +25,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	createSlackInstallUrl,
+	decryptChatToken,
 	getChatStateSecret,
 	getSlackAdminProvider,
 } from "../chat/chatUtils.js";
@@ -65,25 +67,6 @@ const getOrgSummary = async ({
 		},
 	});
 
-const decryptChatCredentialToken = ({ token }: { token: string }) => {
-	const key = crypto
-		.createHash("sha256")
-		.update(process.env.ENCRYPTION_PASSWORD ?? "")
-		.digest();
-	const buffer = Buffer.from(token, "base64");
-	if (buffer[0] !== 1) throw new Error("Unsupported encrypted payload");
-	const decipher = crypto.createDecipheriv(
-		"aes-256-gcm",
-		key,
-		buffer.subarray(1, 13),
-	);
-	decipher.setAuthTag(buffer.subarray(13, 29));
-	return Buffer.concat([
-		decipher.update(buffer.subarray(29)),
-		decipher.final(),
-	]).toString("utf8");
-};
-
 const getStoredOAuthTokenValues = async ({
 	token,
 	stripPrefix = false,
@@ -116,13 +99,13 @@ const revokeSlackAdminOAuthArtifacts = async ({
 		for (const credential of credentials) {
 			accessTokenValues.push(
 				...(await getStoredOAuthTokenValues({
-					token: decryptChatCredentialToken({ token: credential.access_token }),
+					token: decryptChatToken({ token: credential.access_token }),
 					stripPrefix: true,
 				})),
 			);
 			refreshTokenValues.push(
 				...(await getStoredOAuthTokenValues({
-					token: decryptChatCredentialToken({
+					token: decryptChatToken({
 						token: credential.refresh_token,
 					}),
 				})),
@@ -167,7 +150,11 @@ export const handleCreateSlackAdminInstall = createRoute({
 			nonce: randomUUID(),
 		});
 
-		return c.json({ url: createSlackInstallUrl(state) });
+		return c.json({
+			url: createSlackInstallUrl(state, {
+				extraScopes: SLACK_CONNECT_ADMIN_SCOPES,
+			}),
+		});
 	},
 });
 

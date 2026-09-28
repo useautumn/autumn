@@ -58,6 +58,7 @@ import { useCustomerPropertyKeys } from "./useCustomerPropertyKeys";
 
 export function BillingUsageAlertSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
 	const { customer, refetch } = useCusQuery();
@@ -68,6 +69,10 @@ export function BillingUsageAlertSheet() {
 	const isEdit = sheetType === "billing-usage-alert-edit";
 	const existingItem = sheetData?.item as DbUsageAlert | undefined;
 	const existingIndex = sheetData?.index as number | undefined;
+	const returnTo = sheetData?.returnTo as
+		| Parameters<typeof setSheet>[0]
+		| undefined;
+	const finish = () => (returnTo ? setSheet(returnTo) : closeSheet());
 
 	const fullCustomer = customer as FullCustomer | undefined;
 	const selectedEntity = entityId
@@ -231,7 +236,7 @@ export function BillingUsageAlertSheet() {
 		try {
 			await saveBillingControls({ usageAlerts: currentUsageAlerts });
 			await refetch();
-			closeSheet();
+			finish();
 			toast.success(isEdit ? "Usage alert updated" : "Usage alert added");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to save usage alert"));
@@ -250,7 +255,7 @@ export function BillingUsageAlertSheet() {
 		try {
 			await saveBillingControls({ usageAlerts: currentUsageAlerts });
 			await refetch();
-			closeSheet();
+			finish();
 			toast.success("Usage alert deleted");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to delete usage alert"));
@@ -407,7 +412,7 @@ export function BillingUsageAlertSheet() {
 					<Button
 						variant="secondary"
 						className="w-full"
-						onClick={closeSheet}
+						onClick={finish}
 						disabled={isSaving}
 					>
 						Cancel

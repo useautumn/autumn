@@ -3,9 +3,7 @@ import type {
 	CatalogStripeMapping,
 	CatalogStripeProduct,
 	ProductV2,
-	UpdateCatalogParamsInput,
 } from "@autumn/shared";
-import { productV2ToBasePrice } from "@autumn/shared";
 
 export type PlanMappingGroup = {
 	base: ProductV2;
@@ -152,8 +150,10 @@ export const rollupPlanStatus = ({
 		return { status: "unmapped", stripeProduct: null, pending: false };
 	}
 
-	const resolved = [planMapping.mapping, ...planMapping.additional_mappings].map(
-		(mapping) =>
+	const resolved = [
+		planMapping.mapping,
+		...planMapping.additional_mappings,
+	].map((mapping) =>
 		resolveMapping({
 			stripeProductId: mapping.stripe_product_id,
 			backendStatus: mapping.status,
@@ -172,103 +172,4 @@ export const rollupPlanStatus = ({
 			? entry
 			: worst,
 	);
-};
-
-export type PlanDetailFormValues = {
-	stripe_product_id: string | null;
-};
-
-const normalizeFormStripeProductId = (stripeProductId: string | null) =>
-	stripeProductId?.trim() || null;
-
-export const buildPlanDetailFormValues = (
-	planMapping: CatalogPlanMapping,
-): PlanDetailFormValues => ({
-	stripe_product_id: planMapping.mapping.stripe_product_id,
-});
-
-/**
- * A plan's product is plan-wide, so this writes through catalogV2 and the
- * server fans it out to every version and variant. Aliases are carried back
- * unchanged: an omitted list would clear the ones the plan already holds.
- */
-export const buildPlanProcessorsUpdate = ({
-	planMapping,
-	values,
-}: {
-	planMapping: CatalogPlanMapping;
-	values: PlanDetailFormValues;
-}): UpdateCatalogParamsInput => {
-	const stripeProductId = normalizeFormStripeProductId(values.stripe_product_id);
-	const additionalProductIds = planMapping.additional_mappings
-		.map((mapping) => normalizeFormStripeProductId(mapping.stripe_product_id))
-		.filter((id): id is string => Boolean(id));
-
-	return {
-		plans: [
-			{
-				plan_id: planMapping.plan_id,
-				processors: {
-					stripe: stripeProductId
-						? {
-								product_id: stripeProductId,
-								...(additionalProductIds.length
-									? { additional_product_ids: additionalProductIds }
-									: {}),
-							}
-						: null,
-				},
-			},
-		],
-	};
-};
-
-export const getPlanFamilyProductVersions = ({
-	base,
-	products,
-}: {
-	base: ProductV2;
-	products: ProductV2[];
-}) => {
-	const baseVersions = products.filter((product) => product.id === base.id);
-	const baseInternalIds = new Set(
-		baseVersions
-			.map((product) => product.internal_id)
-			.filter((id): id is string => Boolean(id)),
-	);
-	const variants = products.filter((product) => {
-		const baseInternalProductId = product.base_internal_product_id;
-		return Boolean(
-			baseInternalProductId && baseInternalIds.has(baseInternalProductId),
-		);
-	});
-
-	return [...baseVersions, ...variants];
-};
-
-/** Base prices across the family — the rows a product change re-points. */
-export const getAffectedCatalogPriceIds = ({
-	base,
-	products,
-	planMapping,
-	values,
-}: {
-	base: ProductV2;
-	products: ProductV2[];
-	planMapping: CatalogPlanMapping;
-	// Aliases never touch Stripe price resources, so they can't affect prices.
-	values: PlanDetailFormValues;
-}) => {
-	const mappingChanged =
-		normalizeFormStripeProductId(planMapping.mapping.stripe_product_id) !==
-		normalizeFormStripeProductId(values.stripe_product_id);
-	if (!mappingChanged) return [];
-
-	const affectedPriceIds = new Set<string>();
-	for (const product of getPlanFamilyProductVersions({ base, products })) {
-		const basePriceId = productV2ToBasePrice({ product })?.price_id;
-		if (basePriceId) affectedPriceIds.add(basePriceId);
-	}
-
-	return [...affectedPriceIds];
 };

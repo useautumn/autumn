@@ -7,12 +7,20 @@ import {
 } from "../../../../src/internal/runs/runRegistry.js";
 import { shouldSkipUntaggedReply as shouldSkip } from "../../../../src/providers/slack/routing/replyMode.js";
 
-let installation: { bot_user_id: string | null; reply_mode: string } | null;
+type TestInstallation = {
+	bot_user_id: string | null;
+	provider: string;
+	reply_mode: string;
+};
+
+let installation: TestInstallation | null;
+let lockedInstallation: TestInstallation | undefined;
 let lookupError: Error | null = null;
 const findSlackInstallationForWorkspace = mock(async () => {
 	if (lookupError) throw lookupError;
 	return installation;
 });
+const findLockedInstallation = mock(async () => lockedInstallation);
 
 const shouldSkipUntaggedReply = (input: { message: Message; thread: Thread }) =>
 	shouldSkip({
@@ -21,6 +29,9 @@ const shouldSkipUntaggedReply = (input: { message: Message; thread: Thread }) =>
 			findSlackInstallationForWorkspace as unknown as NonNullable<
 				Parameters<typeof shouldSkip>[0]["findInstallation"]
 			>,
+		findLockedInstallation: findLockedInstallation as unknown as NonNullable<
+			Parameters<typeof shouldSkip>[0]["findLockedInstallation"]
+		>,
 	});
 
 const thread = { channelId: "C1", id: "slack:C1:1" } as Thread;
@@ -34,9 +45,15 @@ const reply = ({ text, userId = "U1" }: { text: string; userId?: string }) =>
 	}) as unknown as Message;
 
 beforeEach(() => {
-	installation = { bot_user_id: "U_BOT", reply_mode: "mentions_only" };
+	installation = {
+		bot_user_id: "U_BOT",
+		provider: "slack",
+		reply_mode: "mentions_only",
+	};
+	lockedInstallation = undefined;
 	lookupError = null;
 	findSlackInstallationForWorkspace.mockClear();
+	findLockedInstallation.mockClear();
 });
 
 describe("shouldSkipUntaggedReply", () => {
@@ -68,7 +85,11 @@ describe("shouldSkipUntaggedReply", () => {
 	});
 
 	test("answers every reply in all-messages mode", async () => {
-		installation = { bot_user_id: "U_BOT", reply_mode: "all_messages" };
+		installation = {
+			bot_user_id: "U_BOT",
+			provider: "slack",
+			reply_mode: "all_messages",
+		};
 
 		expect(
 			await shouldSkipUntaggedReply({
@@ -141,5 +162,57 @@ describe("shouldSkipUntaggedReply", () => {
 				thread,
 			}),
 		).toBe(false);
+	});
+
+	test("an admin reply in a customer thread follows the customer's reply mode", async () => {
+		installation = {
+			bot_user_id: "U_ADMIN_BOT",
+			provider: "slack_admin:client",
+			reply_mode: "all_messages",
+		};
+		lockedInstallation = {
+			bot_user_id: "U_CUSTOMER_BOT",
+			provider: "slack",
+			reply_mode: "mentions_only",
+		};
+
+		expect(
+			await shouldSkipUntaggedReply({
+				message: reply({ text: "don't approve that one" }),
+				thread,
+			}),
+		).toBe(true);
+		for (const bot of ["U_CUSTOMER_BOT", "U_ADMIN_BOT"]) {
+			expect(
+				await shouldSkipUntaggedReply({
+					message: reply({ text: `<@${bot}> withdraw it` }),
+					thread,
+				}),
+			).toBe(false);
+		}
+	});
+
+	test("an admin reply in an unlocked thread keeps the admin reply mode", async () => {
+		installation = {
+			bot_user_id: "U_ADMIN_BOT",
+			provider: "slack_admin:client",
+			reply_mode: "all_messages",
+		};
+
+		expect(
+			await shouldSkipUntaggedReply({
+				message: reply({ text: "make it annual" }),
+				thread,
+			}),
+		).toBe(false);
+		expect(findLockedInstallation).toHaveBeenCalledTimes(1);
+	});
+
+	test("a customer reply never looks up the thread lock", async () => {
+		await shouldSkipUntaggedReply({
+			message: reply({ text: "make it annual" }),
+			thread,
+		});
+		expect(findLockedInstallation).not.toHaveBeenCalled();
 	});
 });

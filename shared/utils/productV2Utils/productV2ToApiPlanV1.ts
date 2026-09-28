@@ -110,6 +110,7 @@ export const productV2ToApiPlanV1 = ({
 		config: {
 			...product.config,
 			ignore_past_due: product.config?.ignore_past_due ?? false,
+			anchor_to_month_start: product.config?.anchor_to_month_start ?? false,
 		},
 		billing_controls: product.billing_controls,
 		metadata: product.metadata ?? {},

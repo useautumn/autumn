@@ -145,7 +145,7 @@ export const meterDecision = ({
 	return { type: "adopt", meterId };
 };
 
-const applyMeterDecision = async ({
+export const applyMeterDecision = async ({
 	stripeCli,
 	decision,
 	config,
@@ -167,7 +167,7 @@ const applyMeterDecision = async ({
 };
 
 /** Expanded prices carry the product object; unexpanded ones carry its id. */
-const productIdOf = ({
+export const productIdOf = ({
 	stripePrice,
 }: {
 	stripePrice: Stripe.Price;

@@ -11,9 +11,9 @@ import {
 	priceToEnt,
 	priceToRequiredStripeSlots,
 	priceUtils,
-	type StripePriceNicknameSource,
 	RecaseError,
 	type RequiredStripeResourceSlot,
+	type StripePriceNicknameSource,
 	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -228,12 +228,14 @@ export const createStripePriceIFNotExist = async ({
 	config.stripe_product_id = stripeProd?.id;
 
 	if (!isFixed && !stripeProd) {
-		const feature = priceToEnt({ price, entitlements })?.feature;
+		const entitlement = priceToEnt({ price, entitlements });
+		const feature = entitlement?.feature;
 		if (feature) {
 			config.stripe_product_id = await resolveStripeProductForFeaturePrice({
 				db,
 				stripeCli,
 				feature,
+				entityFeatureId: entitlement.entity_feature_id ?? null,
 				price,
 			});
 			await PriceService.update({

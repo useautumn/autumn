@@ -23,7 +23,7 @@ export function SharedStripeProductTooltip() {
 					To target a variant on its own,{" "}
 					<Link
 						className="underline"
-						to={getRedirectUrl("/dev?tab=stripe", env)}
+						to={getRedirectUrl("/settings?tab=stripe", env)}
 						onClick={(e) => e.stopPropagation()}
 					>
 						give it a separate Stripe product

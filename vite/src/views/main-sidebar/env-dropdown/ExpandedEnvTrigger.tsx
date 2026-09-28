@@ -1,69 +1,49 @@
 import { AppEnv } from "@autumn/shared";
-import { ChevronDown, FlaskConical, Sailboat } from "lucide-react";
 import { DropdownMenuTrigger } from "@autumn/ui";
-import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
-import { sandboxPillClass } from "@/hooks/sandbox/sandboxDisplay";
+import { ChevronsUpDown } from "lucide-react";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";
+import { EnvironmentIcon } from "./EnvironmentIcon";
 
-const sandboxStyles = "text-sandbox bg-sandbox/10 border-sandbox ";
-const liveStyles = "text-primary bg-primary/10 border-primary";
-
-export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
+export const ExpandedEnvTrigger = () => {
 	const env = useEnv();
 	const activeSandbox = useActiveSandbox();
 	const { expanded } = useSidebarContext();
 
-	const isSandbox = env === AppEnv.Sandbox;
-	const TriggerIcon = isSandbox ? FlaskConical : Sailboat;
-	const resolvePillClass = () => {
-		if (!isSandbox) {
-			return liveStyles;
-		}
-		return activeSandbox
-			? sandboxPillClass(activeSandbox.color)
-			: sandboxStyles;
-	};
+	const isLive = env === AppEnv.Live;
+	const label = isLive ? "Production" : (activeSandbox?.name ?? "Sandbox");
+
 	return (
 		<DropdownMenuTrigger
-			className={cn(
-				"ring-0 focus:ring-0 text-muted-foreground  w-full flex items-center bg-transparent h-6 transition-all duration-300 cursor-pointer select-none",
-			)}
+			aria-label={`Environment: ${label}`}
+			className="flex w-full cursor-pointer select-none items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
 		>
 			<div
 				className={cn(
-					"flex items-center border gap-2 rounded-md !w-full transition-all duration-300 overflow-hidden justify-between",
-					resolvePillClass(),
-					expanded ? "h-6 pl-1 pr-1" : "w-7 h-6 p-1",
+					"flex h-8 w-full items-center gap-2 overflow-hidden rounded-lg border bg-interactive-secondary text-foreground transition-colors duration-150 ease-out hover:bg-interactive-secondary-hover dark:border-[#262626] dark:bg-[#1A1A1A] dark:text-[#EDEDED] dark:hover:bg-[#1F1F1F]",
+					expanded ? "justify-between px-2.5" : "justify-center px-0",
 				)}
 			>
-				<div className="flex items-center gap-2">
-					<div
-						className={cn(
-							"transition-all duration-200 flex items-center justify-center",
-							isHovered && "-translate-x-[1px]",
-						)}
-					>
-						{isSandbox && activeSandbox ? (
-							<PhosphorIcon name={activeSandbox.icon} className="size-4" />
-						) : (
-							<TriggerIcon size={14} className="!h-4 w-4" />
-						)}
-					</div>
-					<p
-						className={cn(
-							"text-sm transition-all duration-200",
-							// expanded
-							//   ? "opacity-100 translate-x-0"
-							//   : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0"
-						)}
-					>
-						{isSandbox ? (activeSandbox?.name ?? "Sandbox") : "Production"}
-					</p>
-				</div>
-				<ChevronDown size={14} className="!h-4 w-4" />
+				<span className="flex min-w-0 items-center gap-2">
+					<EnvironmentIcon
+						isLive={isLive}
+						sandbox={isLive ? null : activeSandbox}
+						className="size-3.5"
+					/>
+					{expanded && (
+						<span className="truncate text-[13px] font-[550] leading-4">
+							{label}
+						</span>
+					)}
+				</span>
+				{expanded && (
+					<ChevronsUpDown
+						className="size-3.5 shrink-0 text-[#8A8A8A] dark:text-[#6B6B6B]"
+						strokeWidth={1.75}
+					/>
+				)}
 			</div>
 		</DropdownMenuTrigger>
 	);

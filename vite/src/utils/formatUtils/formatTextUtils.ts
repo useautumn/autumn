@@ -58,3 +58,17 @@ export const formatIntervalText = ({
 		? "per half year"
 		: `per ${finalInterval}`;
 };
+
+/** Keeps both ends of an ID readable, e.g. "6ab71b3b…6277be7e". */
+export const truncateMiddle = ({
+	text,
+	headLength = 8,
+	tailLength = 6,
+}: {
+	text: string;
+	headLength?: number;
+	tailLength?: number;
+}) => {
+	if (text.length <= headLength + tailLength + 1) return text;
+	return `${text.slice(0, headLength)}…${text.slice(-tailLength)}`;
+};

@@ -3,6 +3,10 @@ import {
 	SandboxColorSchema,
 	SandboxIconSchema,
 } from "../../models/orgModels/sandboxDisplay";
+import {
+	SANDBOX_NAME_SPACES_MESSAGE,
+	validateSandboxName,
+} from "../../models/orgModels/sandboxName";
 
 /**
  * Sandbox request/response models. Shared between the server handlers (request
@@ -16,9 +20,15 @@ export const CreateSandboxParamsSchema = z.object({
 		.min(1)
 		.max(100)
 		// The server trims before validating, which no client can see; the pattern
-		// states the same rule for generated SDKs.
-		.regex(/\S/, "Name must include a non-whitespace character")
-		.describe("A name for the sandbox, unique within your organization."),
+		// states the no-whitespace rule for generated SDKs and atmn's lint.
+		.regex(/^\S+$/, SANDBOX_NAME_SPACES_MESSAGE)
+		.superRefine((name, ctx) => {
+			const error = validateSandboxName(name);
+			if (error) ctx.addIssue({ code: "custom", message: error });
+		})
+		.describe(
+			"A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`.",
+		),
 	color: SandboxColorSchema.optional().describe(
 		"Colour the dashboard uses to label the sandbox. Defaults to `gray`.",
 	),

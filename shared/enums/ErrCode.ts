@@ -47,6 +47,12 @@ export const ErrCode = {
 	InvalidEventName: "invalid_event_name",
 	FeatureLimitReached: "feature_limit_reached",
 
+	// Webhooks
+	WebhookNotFound: "webhook_not_found",
+	DuplicateWebhookId: "duplicate_webhook_id",
+	AmbiguousWebhookUrl: "ambiguous_webhook_url",
+	WebhooksUnavailable: "webhooks_unavailable",
+
 	// Internal
 	InternalError: "internal_error",
 	DuplicateCustomerId: "duplicate_customer_id",

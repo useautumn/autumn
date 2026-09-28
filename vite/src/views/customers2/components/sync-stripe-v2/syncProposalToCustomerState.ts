@@ -1,7 +1,6 @@
 import type {
 	Entity,
 	Feature,
-	FeatureQuantityParamsV0,
 	FullCusProduct,
 	ProductV2,
 	SyncPhase,
@@ -20,6 +19,7 @@ import {
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { quantityRecordFrom } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import { applyCustomizeToProduct } from "./applyCustomizeToProduct";
 
 type ProposalPhase = SyncProposalV2["phases"][number];
@@ -119,17 +119,6 @@ const savedPlanToCustomerStatePlan = ({
 	};
 };
 
-const featureQuantitiesToPrepaidOptions = ({
-	featureQuantities = [],
-}: {
-	featureQuantities?: FeatureQuantityParamsV0[];
-}): Record<string, number> =>
-	Object.fromEntries(
-		featureQuantities.flatMap(({ feature_id, quantity }) =>
-			quantity === undefined ? [] : [[feature_id, quantity]],
-		),
-	);
-
 /** A plan the matcher guessed from Stripe's prices, for a subscription Autumn
  * has never linked a plan to. */
 const matchedPlanToCustomerStatePlan = ({
@@ -153,9 +142,11 @@ const matchedPlanToCustomerStatePlan = ({
 		...EMPTY_CUSTOMER_STATE_PLAN,
 		productId: plan.plan_id,
 		version: plan.version,
-		prepaidOptions: featureQuantitiesToPrepaidOptions({
-			featureQuantities: plan.feature_quantities,
-		}),
+		prepaidOptions: quantityRecordFrom(plan.feature_quantities, "feature_id"),
+		licenseQuantities: quantityRecordFrom(
+			plan.license_quantities,
+			"license_plan_id",
+		),
 		items:
 			isCustom && product
 				? applyCustomizeToProduct({ product, customize, features }).items
@@ -167,7 +158,6 @@ const matchedPlanToCustomerStatePlan = ({
 			entities,
 		}),
 		quantity: plan.quantity,
-		licenseQuantities: plan.license_quantities,
 	};
 };
 

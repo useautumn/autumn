@@ -42,7 +42,9 @@
  */
 
 export { calculateAnchorResetNoPartialRefundTotal } from "./calculateAnchorResetNoPartialRefundTotal";
+export { calculateAnchorStubUpgradeTotal } from "./calculateAnchorStubUpgradeTotal";
 export { calculateCrossIntervalUpgrade } from "./calculateCrossIntervalUpgrade";
+export { calculateNewSubscriptionAnchorStub } from "./calculateNewSubscriptionAnchorStub";
 export { calculateProratedDiff } from "./calculateProratedDiff";
 export {
 	calculateBillingCycleAnchorResetNextCycle,

@@ -1,10 +1,15 @@
 import { useIsMobile } from "@autumn/ui";
-import { TerminalWindowIcon } from "@phosphor-icons/react";
+import { SquareTerminal } from "lucide-react";
 import { useMatch } from "react-router";
 import { useWorkbenchStore } from "@/hooks/stores/useWorkbenchStore";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useSidebarContext } from "@/views/main-sidebar/SidebarContext";
+import {
+	sidebarIconClass,
+	sidebarRowClass,
+	sidebarRowContentClass,
+} from "@/views/main-sidebar/sidebarRowClass";
 
 export const WorkbenchButton = () => {
 	const { isAdmin } = useAdmin();
@@ -22,31 +27,25 @@ export const WorkbenchButton = () => {
 
 	return (
 		<button
+			aria-label={expanded ? undefined : "Workbench"}
+			title={expanded ? undefined : "Workbench"}
 			type="button"
 			onClick={(e) => {
 				e.currentTarget.blur();
 				toggle();
 			}}
-			className={cn(
-				"cursor-pointer font-medium text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent focus:outline-none focus-visible:outline-none",
-				isOpen &&
-					"border border-border !text-foreground bg-interactive-secondary",
-			)}
+			className={sidebarRowClass({
+				isActive: isOpen,
+				isCollapsed: !expanded,
+			})}
 		>
-			<div className="flex items-center gap-2">
-				<div className="flex justify-center w-4 h-4 items-center rounded-sm">
-					<TerminalWindowIcon size={16} weight="duotone" />
+			<div className={sidebarRowContentClass({ isCollapsed: !expanded })}>
+				<div className={sidebarIconClass({ isActive: isOpen })}>
+					<SquareTerminal strokeWidth={1.5} />
 				</div>
-				<span
-					className={cn(
-						"whitespace-nowrap",
-						expanded
-							? "opacity-100 translate-x-0"
-							: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
-					)}
-				>
-					Workbench
-				</span>
+				{expanded && (
+					<span className="truncate whitespace-nowrap">Workbench</span>
+				)}
 			</div>
 		</button>
 	);

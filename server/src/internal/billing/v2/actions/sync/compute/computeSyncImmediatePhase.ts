@@ -86,7 +86,11 @@ const computeStartingNowProductContexts = ({
 
 	for (const productContext of productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
-		if (currentCustomerProduct?.product_id === productContext.fullProduct.id) {
+		// Only the exact same version resizes in place; a new version must replace it.
+		if (
+			currentCustomerProduct?.internal_product_id ===
+			productContext.fullProduct.internal_id
+		) {
 			const licenseQuantityChanges = computeCustomerLicenseQuantityChanges({
 				customerProduct: currentCustomerProduct,
 				customerLicenseQuantities: productContext.customerLicenseQuantities,
