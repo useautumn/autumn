@@ -23,8 +23,10 @@ export function PlanRowControls({
 			<IconButton
 				aria-label={isCustom ? "Edit custom plan" : "Customize plan"}
 				className={cn(
-					"size-6 shrink-0 hover:text-foreground",
-					isCustom ? "text-emerald-500" : "text-tertiary-foreground",
+					"size-6 shrink-0",
+					isCustom
+						? "bg-primary/15 text-primary hover:bg-primary/25"
+						: "text-tertiary-foreground hover:text-foreground",
 				)}
 				icon={<PencilSimpleIcon />}
 				onClick={onCustomize}
