@@ -91,11 +91,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 			}
 
 			if (source.type === "dashboard" && source.author) {
-				return (
-					<StatusChip glyph="user" className="max-w-full">
-						<span className="truncate">{source.author}</span>
-					</StatusChip>
-				);
+				return <StatusChip glyph="user">{source.author}</StatusChip>;
 			}
 
 			return <div className="text-subtle">—</div>;

@@ -69,12 +69,8 @@ export function EdgeConfigCard<Id extends string>({
 				)}
 
 				{!isPending && status && (
-					<StatusChip
-						title={status.label}
-						className="shrink"
-						{...STATUS_INDICATORS[status.tone]}
-					>
-						<span className="truncate">{status.label}</span>
+					<StatusChip {...STATUS_INDICATORS[status.tone]}>
+						{status.label}
 					</StatusChip>
 				)}
 

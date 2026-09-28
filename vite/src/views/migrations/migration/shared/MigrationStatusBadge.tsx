@@ -40,9 +40,7 @@ export function MigrationStatusBadge({
 			className={cn("max-w-56", className)}
 			{...STATUS_INDICATORS[status]}
 		>
-			<span className="truncate">
-				{statusLabel({ status, blockedBy: labelBlocker ? blockedBy : null })}
-			</span>
+			{statusLabel({ status, blockedBy: labelBlocker ? blockedBy : null })}
 		</StatusChip>
 	);
 	if (status !== "waiting") return badge;

@@ -102,15 +102,16 @@ export function StatusChip({
 	return (
 		<span
 			className={cn(
-				"inline-flex h-[22px] min-w-0 max-w-full shrink-0 items-center gap-1.5 rounded-md border border-black/6 bg-black/4 pr-[7px] pl-1 text-xs leading-4 font-medium tracking-[-0.005em] whitespace-nowrap text-foreground dark:border-white/6 dark:bg-white/4",
+				"inline-flex h-[22px] min-w-0 max-w-full items-center gap-1.5 rounded-md border border-black/6 bg-black/4 pr-[7px] pl-1 text-xs leading-4 font-medium tracking-[-0.005em] whitespace-nowrap text-foreground dark:border-white/6 dark:bg-white/4",
 				!glyph && "pl-[7px]",
 				dashed && "border-dashed border-black/15 dark:border-white/15",
 				className,
 			)}
+			title={typeof children === "string" ? children : undefined}
 			{...props}
 		>
 			{glyph && <StatusChipIcon tone={tone ?? "neutral"} glyph={glyph} />}
-			{children}
+			<span className="min-w-0 truncate">{children}</span>
 		</span>
 	);
 }
