@@ -30,6 +30,8 @@ export type WebhookLanes = {
 	lanes: WebhooksLane[];
 	/** Live webhooks a `-p` push would change; a plain push only reads them. */
 	productionDiffers: string[];
+	/** The read-only live check failed, so the preview can't claim production matches. */
+	productionUnchecked: boolean;
 	/** One warning per env whose key was rejected or belongs to another org. */
 	skipped: string[];
 };
@@ -134,6 +136,16 @@ export const previewWebhookEnvs = async ({
 
 	const lanes: WebhooksLane[] = [];
 	const skipped: string[] = [];
+	// Live is only read here, so its failure is a warning, never a blocked sandbox push.
+	probedResults.forEach((result, index) => {
+		if (result.status === "rejected")
+			skipped.push(
+				`⚠ webhooks: couldn't check ${probed[index]?.label ?? "live"} for changes (${messageOf(result.reason)})`,
+			);
+	});
+	const productionUnchecked = probedResults.some(
+		(result) => result.status === "rejected",
+	);
 	// Refused items (several dashboard webhooks on one URL, say) fail the lane
 	// here, beside every other lane's errors, rather than at apply.
 	const failures: WebhookEnvFailure[] = [];
@@ -166,13 +178,6 @@ export const previewWebhookEnvs = async ({
 	assertDistinctSecretNames({ lanes });
 
 	const productionDiffers: string[] = [];
-	// Live is only read here, so its failure is a warning, never a blocked sandbox push.
-	probedResults.forEach((result, index) => {
-		if (result.status === "rejected")
-			skipped.push(
-				`⚠ webhooks: couldn't check ${probed[index]?.label ?? "live"} for changes (${messageOf(result.reason)})`,
-			);
-	});
 	for (const result of probedResults) {
 		if (result.status === "rejected") continue;
 		const preview = result.value;
@@ -191,5 +196,5 @@ export const previewWebhookEnvs = async ({
 			]),
 		);
 	}
-	return { lanes, productionDiffers, skipped };
+	return { lanes, productionDiffers, productionUnchecked, skipped };
 };

@@ -868,6 +868,63 @@ test("a live preview that fails only warns: the sandbox push still applies", asy
 	expect(calls).toContain("sandbox:sync");
 });
 
+test("a failed live check never reads as No changes, and survives a failing sandbox preview", async () => {
+	const failingLive = {
+		previewSyncWebhooks: async () => {
+			throw new Error("503 Service Unavailable");
+		},
+	};
+	const dir = projectWith({ body: `\tfeatures: [],\n${SHARED_URL}` });
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_PROD_SECRET_KEY: "sk_live",
+			},
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: envClient({ name: "sandbox", calls: [] }),
+				sk_live: failingLive,
+			},
+		}),
+	});
+	expect(output).not.toContain("No changes");
+	expect(output).toContain("Production webhooks weren't checked");
+
+	const push = runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: () => {},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_PROD_SECRET_KEY: "sk_live",
+			},
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: {
+					previewSyncWebhooks: async () => ({
+						changes: [],
+						errors: [{ id: "billing", message: "Webhook URL must use https." }],
+					}),
+				},
+				sk_live: failingLive,
+			},
+		}),
+	});
+	await expect(push).rejects.toThrow(
+		"⚠ webhooks: couldn't check live for changes (503 Service Unavailable)",
+	);
+});
+
 test("a failing sandbox preview still names the envs whose keys were skipped", async () => {
 	const dir = projectWith({ body: `\tfeatures: [],\n${SHARED_URL}` });
 	const calls: string[] = [];

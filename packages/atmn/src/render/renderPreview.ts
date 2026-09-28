@@ -137,6 +137,8 @@ export type CatalogPreview = {
 	webhooks?: WebhooksPreview[];
 	/** Live webhook ids a plain push found out of date but leaves to `-p`. */
 	productionWebhooks?: string[];
+	/** The read-only live check failed: "No changes" would be a claim nobody checked. */
+	productionWebhooksUnchecked?: boolean;
 };
 
 const MARKERS: Record<
@@ -849,11 +851,15 @@ export const renderPreview = ({
 		.filter((block): block is string => block !== null);
 	const productionWebhooks = preview.productionWebhooks ?? [];
 	const productionHint =
-		productionWebhooks.length === 0
-			? null
-			: chalk.yellow(
+		productionWebhooks.length > 0
+			? chalk.yellow(
 					`Production webhooks differ from your config (${productionWebhooks.join(", ")}). Run atmn push -p to update production.`,
-				);
+				)
+			: preview.productionWebhooksUnchecked === true
+				? chalk.yellow(
+						"Production webhooks weren't checked, so this push can't say they match your config.",
+					)
+				: null;
 
 	if (
 		features.length === 0 &&

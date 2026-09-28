@@ -405,6 +405,7 @@ export const runPush = async ({
 			: {
 					webhooks: webhooks.lanes.map((lane) => lane.preview),
 					productionWebhooks: webhooks.productionDiffers,
+					productionWebhooksUnchecked: webhooks.productionUnchecked,
 				}),
 	};
 	if (webhooks !== undefined && webhooks.skipped.length > 0)
