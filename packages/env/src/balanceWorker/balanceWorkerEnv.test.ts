@@ -49,7 +49,7 @@ describe("Balance worker environment", () => {
 		);
 		expect(env.BALANCE_WORKER_SLOT).toBe("blue");
 		expect(env.BALANCE_WORKER_GROUP_ID).toBe(
-			"tf-balance-staging-v2-64-blue-workers",
+			"tf-balance-staging-v2-64-workers",
 		);
 	});
 	test("only the consumer group carries the slot; topics stay shared by both fleets", () => {
@@ -67,8 +67,9 @@ describe("Balance worker environment", () => {
 		expect(green.BALANCE_WORKER_GROUP_ID).toBe(
 			"tf-balance-staging-v2-64-green-workers",
 		);
-		expect(green.BALANCE_WORKER_GROUP_ID).not.toBe(
-			blue.BALANCE_WORKER_GROUP_ID,
+		// Blue is the group the fleet already runs in; only green gets a slot in its name.
+		expect(blue.BALANCE_WORKER_GROUP_ID).toBe(
+			"tf-balance-staging-v2-64-workers",
 		);
 		for (const name of [
 			"BALANCE_WORKER_DEPLOYMENT",

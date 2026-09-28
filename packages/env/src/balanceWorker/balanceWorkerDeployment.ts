@@ -54,6 +54,10 @@ export function balanceWorkerDeploymentToKafkaNames({
 		ownershipTopic: `${deployment}-ownership`,
 		commandTopic: `${deployment}-commands`,
 		catalogInvalidationTopic: `${deployment}-catalog-invalidations`,
-		consumerGroup: `${deployment}-${slot}-workers`,
+		// Blue keeps the pre-slot name so the first deploy of this code is a rolling deploy of the existing group.
+		consumerGroup:
+			slot === "blue"
+				? `${deployment}-workers`
+				: `${deployment}-${slot}-workers`,
 	};
 }
