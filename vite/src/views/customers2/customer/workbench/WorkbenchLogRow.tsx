@@ -1,3 +1,4 @@
+import { TABLE_TRAY_SURFACE_ROW_CLASS } from "@/components/general/table";
 import type { RequestLogEntry } from "@/hooks/queries/useCusRequestLogsQuery";
 import { cn } from "@/lib/utils";
 import {
@@ -19,7 +20,8 @@ export const WorkbenchLogRow = ({
 		type="button"
 		onClick={onSelect}
 		className={cn(
-			"w-full flex items-center gap-2.5 px-3 py-1.5 text-xs border-b border-border/40 hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors text-left cursor-pointer",
+			"w-full flex items-center gap-2.5 px-3 py-1.5 text-xs transition-colors text-left cursor-pointer",
+			TABLE_TRAY_SURFACE_ROW_CLASS,
 			selected &&
 				"bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-50 dark:hover:bg-blue-950/30",
 		)}

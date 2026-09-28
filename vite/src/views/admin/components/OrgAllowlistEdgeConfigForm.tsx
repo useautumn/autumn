@@ -1,10 +1,11 @@
-import { Badge, Button, DialogFooter, Input, Separator } from "@autumn/ui";
+import { Button, DialogFooter, Input, Separator } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import {
 	buildOrgAllowlistJsonText,
 	type OrgAllowlistEdgeConfig,
@@ -224,11 +225,7 @@ export const OrgAllowlistEdgeConfigForm = ({
 					<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 						<Separator />
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge variant="muted">
-								{editor.config.configHealthy
-									? "Config healthy"
-									: "Config unavailable"}
-							</Badge>
+							<ConfigHealthChip healthy={editor.config.configHealthy} />
 							{editor.config.lastSuccessAt && (
 								<span className="tabular-nums">
 									Last refresh:{" "}

@@ -1,25 +1,37 @@
 import { InvoiceStatus } from "@autumn/shared";
+import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
 
-const statusConfig = {
+type InvoiceStatusDisplay = {
+	label: string;
+	tone: StatusTone;
+	glyph: StatusGlyph;
+};
+
+const statusConfig: Record<InvoiceStatus, InvoiceStatusDisplay> = {
 	[InvoiceStatus.Draft]: {
-		color: "bg-gray-400 dark:bg-gray-600",
 		label: "Draft",
+		tone: "neutral",
+		glyph: "pencil",
 	},
 	[InvoiceStatus.Open]: {
-		color: "bg-orange-500 dark:bg-orange-600",
 		label: "Open",
+		tone: "orange",
+		glyph: "clock",
 	},
 	[InvoiceStatus.Void]: {
-		color: "bg-red-500 dark:bg-red-600",
 		label: "Voided",
+		tone: "red",
+		glyph: "x",
 	},
 	[InvoiceStatus.Paid]: {
-		color: "bg-green-500 dark:bg-green-600",
 		label: "Paid",
+		tone: "green",
+		glyph: "check",
 	},
 	[InvoiceStatus.Uncollectible]: {
-		color: "bg-gray-500 dark:bg-gray-600",
 		label: "Uncollectible",
+		tone: "neutral",
+		glyph: "minus",
 	},
 };
 
@@ -29,25 +41,28 @@ const getRefundStatus = ({
 }: {
 	refundableAmount: number;
 	refundedAmount: number;
-}): { color: string; label: string } | null => {
+}): InvoiceStatusDisplay | null => {
 	if (refundedAmount <= 0) return null;
 	if (refundedAmount >= refundableAmount) {
 		return {
-			color: "bg-amber-500 dark:bg-amber-600",
 			label: "Fully Refunded",
+			tone: "amber",
+			glyph: "refresh",
 		};
 	}
 	return {
-		color: "bg-amber-400 dark:bg-amber-500",
 		label: "Partially Refunded",
+		tone: "amber",
+		glyph: "refresh",
 	};
 };
 
 /** An invoice preview has no InvoiceStatus — it isn't an invoice yet. */
-export const UPCOMING_INVOICE_STATUS = {
-	color: "bg-orange-500 dark:bg-orange-600",
+export const UPCOMING_INVOICE_STATUS: InvoiceStatusDisplay = {
 	label: "Upcoming",
-} as const;
+	tone: "orange",
+	glyph: "calendar",
+};
 
 export function CustomerInvoiceStatus({
 	status,
@@ -60,7 +75,7 @@ export function CustomerInvoiceStatus({
 	total?: number;
 	amountPaid?: number | null;
 	refundedAmount?: number;
-	override?: { color: string; label: string };
+	override?: InvoiceStatusDisplay;
 }) {
 	if (!(override || status)) return null;
 
@@ -80,9 +95,8 @@ export function CustomerInvoiceStatus({
 	if (!config) return <div>{status}</div>;
 
 	return (
-		<div className="flex items-center gap-1">
-			<div className={`w-1.5 h-1.5 rounded-full ${config.color}`} />
-			<span>{config.label}</span>
-		</div>
+		<StatusChip tone={config.tone} glyph={config.glyph}>
+			{config.label}
+		</StatusChip>
 	);
 }

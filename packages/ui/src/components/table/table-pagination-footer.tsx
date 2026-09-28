@@ -2,6 +2,7 @@ import {
 	CursorPagination,
 	PageSizeSelector,
 } from "@autumn/ui/components/table/cursor-pagination";
+import { TABLE_TRAY_FOOTER_CLASS } from "@autumn/ui/components/table/table-tray-classes";
 import { cn } from "@autumn/ui/lib/utils";
 
 const numberFormat = new Intl.NumberFormat("en-US");
@@ -37,35 +38,41 @@ export function TablePaginationFooter({
 	enableHotkeys?: boolean;
 	className?: string;
 }) {
+	const hasTotal = typeof totalCount === "number";
+	const firstRowNumber = (currentPage - 1) * pageSize + 1;
+	const lastRowNumber = hasTotal
+		? Math.min(currentPage * pageSize, totalCount)
+		: currentPage * pageSize;
+
 	return (
-		<div
-			className={cn("flex items-center justify-between gap-2 pt-4", className)}
-		>
-			<div className="flex items-center gap-2 text-xs text-tertiary-foreground">
-				<span>Rows</span>
-				<PageSizeSelector
-					pageSize={pageSize}
-					options={pageSizeOptions}
-					onChange={onPageSizeChange}
+		<div className={cn(TABLE_TRAY_FOOTER_CLASS, className)}>
+			{hasTotal && (
+				<span className="min-w-0 truncate text-xs text-tertiary-foreground tabular-nums">
+					<span className="hidden sm:inline">Showing </span>
+					{`${numberFormat.format(firstRowNumber)}–${numberFormat.format(lastRowNumber)} of ${isTotalCountApproximate ? "~" : ""}${numberFormat.format(totalCount)}`}
+				</span>
+			)}
+			<div className="ml-auto flex items-center gap-3">
+				<div className="flex items-center gap-1.5 text-xs text-tertiary-foreground">
+					<span className="hidden sm:inline">Rows</span>
+					<PageSizeSelector
+						pageSize={pageSize}
+						options={pageSizeOptions}
+						onChange={onPageSizeChange}
+						disabled={disabled}
+					/>
+				</div>
+				<CursorPagination
+					currentPage={currentPage}
+					totalPages={totalPages}
+					canGoPrev={canGoPrev}
+					canGoNext={canGoNext}
+					onPrev={onPrev}
+					onNext={onNext}
 					disabled={disabled}
+					enableHotkeys={enableHotkeys}
 				/>
-				{typeof totalCount === "number" && (
-					<span className="tabular-nums">
-						{isTotalCountApproximate && "~"}
-						{numberFormat.format(totalCount)} total
-					</span>
-				)}
 			</div>
-			<CursorPagination
-				currentPage={currentPage}
-				totalPages={totalPages}
-				canGoPrev={canGoPrev}
-				canGoNext={canGoNext}
-				onPrev={onPrev}
-				onNext={onNext}
-				disabled={disabled}
-				enableHotkeys={enableHotkeys}
-			/>
 		</div>
 	);
 }

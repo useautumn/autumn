@@ -1,10 +1,17 @@
-import { Badge, Button, DialogFooter, Separator, Switch } from "@autumn/ui";
+import {
+	Button,
+	DialogFooter,
+	Separator,
+	StatusChip,
+	Switch,
+} from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import {
 	DELAYED_POSTGRES_BACKUP_READ_LIMITS,
 	FULL_SUBJECT_GATE_LIMITS,
@@ -222,12 +229,10 @@ export const FullSubjectGateConfigForm = ({
 				<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 					<Separator />
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge variant="muted">
-							{config.configHealthy ? "Config healthy" : "Config unavailable"}
-						</Badge>
-						<Badge variant="muted">
+						<ConfigHealthChip healthy={config.configHealthy} />
+						<StatusChip>
 							{config.configConfigured ? "S3 set" : "Using defaults"}
-						</Badge>
+						</StatusChip>
 						{config.lastSuccessAt && (
 							<span className="tabular-nums">
 								Last refresh: {new Date(config.lastSuccessAt).toLocaleString()}

@@ -1,6 +1,5 @@
 import { AppEnv, type MigrationFilter, type Operations } from "@autumn/shared";
 import {
-	Badge,
 	Button,
 	Dialog,
 	DialogContent,
@@ -15,6 +14,9 @@ import {
 	Input,
 	Separator,
 	ShortcutButton,
+	StatusChip,
+	type StatusGlyph,
+	type StatusTone,
 	Switch,
 } from "@autumn/ui";
 import {
@@ -84,7 +86,6 @@ import { isRunDisabled, runButtonLabel } from "../shared/migrationStatus";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { VersionOnlyWarnings } from "../shared/VersionOnlyWarnings";
-import { ActiveDot } from "./ActiveDot";
 import {
 	EXECUTION_STATUS_VALUES,
 	type ExecutionStatus,
@@ -116,6 +117,14 @@ type CustomerRow = MigrationPreviewCustomer & {
 
 const PROGRESS_FOOTER_PX = 26;
 
+const ACTIVE_ITEM_INDICATORS: Record<
+	"running" | "queued",
+	{ tone: StatusTone; glyph: StatusGlyph }
+> = {
+	running: { tone: "green", glyph: "spinner" },
+	queued: { tone: "orange", glyph: "clock" },
+};
+
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	id: "migration_status",
 	header: "Status",
@@ -133,10 +142,9 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 				? "Waiting"
 				: "Queued";
 			return (
-				<Badge variant="muted" className="gap-1.5">
-					<ActiveDot color={isQueued ? "orange" : "green"} />
+				<StatusChip {...ACTIVE_ITEM_INDICATORS[status.kind]}>
 					{isQueued ? queuedLabel : "Running"}
-				</Badge>
+				</StatusChip>
 			);
 		}
 
@@ -150,7 +158,7 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 				/>
 			);
 
-		return <Badge variant="muted">Not Run</Badge>;
+		return <StatusChip glyph="dashed">Not Run</StatusChip>;
 	},
 };
 

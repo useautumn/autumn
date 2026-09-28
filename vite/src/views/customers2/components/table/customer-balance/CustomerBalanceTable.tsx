@@ -175,8 +175,8 @@ export function CustomerBalanceTable({
 					// No click target, so it must not inherit the table's pointer.
 					getRowClassName: (balance: CustomerBalanceRowData) =>
 						cn(
-							subRowEnts.has(balance) && "bg-card",
-							innerSubRowEnts.has(balance) && "border-b-0",
+							subRowEnts.has(balance) && "[&>td]:bg-card",
+							innerSubRowEnts.has(balance) && "[&>td]:border-b-0",
 							isCusEntDisplayExpired({ cusEnt: balance }) &&
 								(balance.subRows?.length ?? 0) === 0 &&
 								"cursor-default!",

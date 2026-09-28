@@ -1,11 +1,11 @@
 import {
-	Badge,
 	Button,
 	Checkbox,
 	Sheet,
 	SheetContent,
 	ShortcutButton,
 	Skeleton,
+	StatusChip,
 } from "@autumn/ui";
 import { WarningIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
@@ -168,24 +168,20 @@ export function RevenueCatSyncSheet({
 												{row.id}
 											</span>
 										</div>
-										<div className="flex shrink-0 items-center gap-1.5">
+										<div className="flex min-w-0 max-w-[60%] items-center gap-1.5">
 											{row.priceWarning && (
-												<Badge
-													variant="muted"
-													size="sm"
-													className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-500"
-												>
+												<StatusChip tone="amber" glyph="alert">
 													{row.priceWarning}
-												</Badge>
+												</StatusChip>
 											)}
 											{row.action === "in_sync" ? (
-												<Badge variant="green" size="sm">
+												<StatusChip tone="green" glyph="check">
 													In sync
-												</Badge>
+												</StatusChip>
 											) : (
-												<Badge variant="muted" size="sm">
+												<StatusChip>
 													{row.action === "create" ? "Create" : "Rename"}
-												</Badge>
+												</StatusChip>
 											)}
 										</div>
 									</button>

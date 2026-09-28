@@ -1,4 +1,4 @@
-import { Badge } from "@autumn/ui";
+import { StatusChip } from "@autumn/ui";
 import { CheckCircleIcon } from "@phosphor-icons/react";
 import type { SsoConnection } from "@/lib/sso/ssoTypes";
 import { SsoConnectionSummary } from "./SsoConnectionSummary";
@@ -24,7 +24,9 @@ export const SsoActiveCard = ({
 				<span className="text-sm font-medium text-foreground">
 					{connection.domain}
 				</span>
-				<Badge variant="green">Active</Badge>
+				<StatusChip tone="green" glyph="check">
+					Active
+				</StatusChip>
 			</div>
 			<p className="text-sm text-tertiary-foreground">
 				Everyone with an @{connection.domain} email signs in to Autumn through

@@ -84,6 +84,13 @@ html {
 	--border-table: #e5e5e5;
 	--card-border: #d1d1d1;
 
+	--table-tray: #f3f3f2;
+	--table-tray-border: #e7e7e5;
+	--table-surface: #ffffff;
+	--table-surface-border: #e5e5e5;
+	--table-row-divider: #efefee;
+	--table-row-hover: #fafaf9;
+
 	--input: #dddddd;
 
 	--icon1: #888;
@@ -177,6 +184,13 @@ html {
 
 	--card: #121212;
 	--border: #222222;
+
+	--table-tray: #111111;
+	--table-tray-border: #1f1f1f;
+	--table-surface: #191919;
+	--table-surface-border: #262626;
+	--table-row-divider: #232323;
+	--table-row-hover: #1e1e1e;
 
 	--chart-grid-stroke: #262626;
 
@@ -472,6 +486,18 @@ html {
 	border-bottom-style: dashed;
 }
 
+/* Presets keep their own palette; tables derive from their surface tokens. */
+.preset-modern,
+.preset-cursed,
+.preset-scraps {
+	--table-tray: var(--card);
+	--table-tray-border: var(--border);
+	--table-surface: var(--interactive-secondary);
+	--table-surface-border: var(--border);
+	--table-row-divider: var(--border);
+	--table-row-hover: var(--interactive-secondary-hover);
+}
+
 @theme inline {
 	/* CUSTOM STUFF */
 	--color-tertiary-foreground: var(--tertiary-foreground);
@@ -593,6 +619,12 @@ html {
 	--color-focus: rgba(139, 92, 246, 0.95);
 
 	--color-table-hover: #f3f3f3;
+	--color-table-tray: var(--table-tray);
+	--color-table-tray-border: var(--table-tray-border);
+	--color-table-surface: var(--table-surface);
+	--color-table-surface-border: var(--table-surface-border);
+	--color-table-row-divider: var(--table-row-divider);
+	--color-table-row-hover: var(--table-row-hover);
 
 	/* Inline color consolidation */
 	--color-light-purple: #f9f5ff;

@@ -1,36 +1,26 @@
 import type { MigrationStatus } from "@autumn/shared";
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
-	CheckCircleIcon,
-	ClockIcon,
-	type Icon,
-	MinusCircleIcon,
-	PencilSimpleIcon,
-	PlayCircleIcon,
-	ProhibitIcon,
-	XCircleIcon,
-} from "@phosphor-icons/react";
+	StatusChip,
+	type StatusGlyph,
+	type StatusTone,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { statusLabel, waitingExplanation } from "./migrationStatus";
 
-const STATUS_STYLES: Record<MigrationStatus, string> = {
-	draft: "bg-muted text-tertiary-foreground border-border",
-	waiting: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-	running: "bg-green-500/10 text-green-500 border-green-500/20",
-	run: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-	no_changes: "bg-muted text-tertiary-foreground border-border",
-	failed: "bg-red-500/10 text-red-500 border-red-500/20",
-	canceled: "bg-muted text-tertiary-foreground border-border",
-};
-
-const STATUS_ICONS: Record<MigrationStatus, Icon> = {
-	draft: PencilSimpleIcon,
-	waiting: ClockIcon,
-	running: PlayCircleIcon,
-	run: CheckCircleIcon,
-	no_changes: MinusCircleIcon,
-	failed: XCircleIcon,
-	canceled: ProhibitIcon,
+const STATUS_INDICATORS: Record<
+	MigrationStatus,
+	{ tone: StatusTone; glyph: StatusGlyph }
+> = {
+	draft: { tone: "neutral", glyph: "pencil" },
+	waiting: { tone: "yellow", glyph: "clock" },
+	running: { tone: "green", glyph: "play" },
+	run: { tone: "blue", glyph: "check" },
+	no_changes: { tone: "neutral", glyph: "minus" },
+	failed: { tone: "red", glyph: "x" },
+	canceled: { tone: "neutral", glyph: "ban" },
 };
 
 export function MigrationStatusBadge({
@@ -44,22 +34,14 @@ export function MigrationStatusBadge({
 	labelBlocker?: boolean;
 	className?: string;
 }) {
-	const StatusIcon = STATUS_ICONS[status];
 	const badge = (
-		<Badge
-			variant="muted"
+		<StatusChip
 			tabIndex={status === "waiting" ? 0 : undefined}
-			className={cn(
-				"max-w-56 gap-1 whitespace-nowrap",
-				STATUS_STYLES[status],
-				className,
-			)}
+			className={cn("max-w-56", className)}
+			{...STATUS_INDICATORS[status]}
 		>
-			<StatusIcon size={12} weight="fill" className="shrink-0" />
-			<span className="truncate">
-				{statusLabel({ status, blockedBy: labelBlocker ? blockedBy : null })}
-			</span>
-		</Badge>
+			{statusLabel({ status, blockedBy: labelBlocker ? blockedBy : null })}
+		</StatusChip>
 	);
 	if (status !== "waiting") return badge;
 

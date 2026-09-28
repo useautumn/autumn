@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Card,
 	CardAction,
@@ -7,6 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 	Separator,
+	StatusChip,
 } from "@autumn/ui";
 import { Fragment } from "react";
 
@@ -32,9 +32,9 @@ export function RateLimitOverrideOrgCard({
 			<CardHeader className="border-b py-3">
 				<CardTitle className="truncate font-mono text-xs">{orgId}</CardTitle>
 				<CardAction>
-					<Badge variant="muted">
+					<StatusChip>
 						{entries.length} {countLabel}
-					</Badge>
+					</StatusChip>
 				</CardAction>
 			</CardHeader>
 			<CardContent>
