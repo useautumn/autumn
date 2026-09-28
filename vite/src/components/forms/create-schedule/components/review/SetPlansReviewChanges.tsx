@@ -1,21 +1,30 @@
 import { Accordion } from "@autumn/ui";
+import { cn } from "@/lib/utils";
+import { useCreateScheduleFormContext } from "../../context/CreateScheduleFormProvider";
 import { useSetPlansReviewSections } from "../../hooks/useSetPlansReviewSections";
 import { ReviewChangeGroup } from "./ReviewChangeGroup";
+import { ReviewChangesSkeleton } from "./ReviewChangesSkeleton";
 import { ReviewWarnings } from "./ReviewWarnings";
 
 const DEFAULT_OPEN_GROUPS = ["plans"];
 
 /** What set_plans changes in Autumn and Stripe, grouped by system and phase. */
 export function SetPlansReviewChanges() {
+	const { isPreviewLoading } = useCreateScheduleFormContext();
 	const sections = useSetPlansReviewSections();
-	if (!sections) return null;
+	if (!sections) return isPreviewLoading ? <ReviewChangesSkeleton /> : null;
 
 	const { warnings, plans, balances, processor } = sections;
 	const hasProcessorChanges =
 		processor.phases.length > 0 || processor.stripeIds.length > 0;
 
 	return (
-		<div className="flex flex-col">
+		<div
+			className={cn(
+				"flex flex-col transition-opacity",
+				isPreviewLoading && "opacity-60",
+			)}
+		>
 			<ReviewWarnings warnings={warnings} />
 			<Accordion
 				type="multiple"

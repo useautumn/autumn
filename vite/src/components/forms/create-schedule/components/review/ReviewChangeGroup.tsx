@@ -16,6 +16,10 @@ export function ReviewChangeGroup({
 	title: string;
 	section: ReviewChangeSection;
 }) {
+	const showsStatus = section.phases.some((phase) =>
+		phase.rows.some((row) => row.status),
+	);
+
 	return (
 		<AccordionItem value={value} className="border-none">
 			<AccordionTrigger className="h-[42px] items-center gap-[9px] rounded-none py-0 hover:no-underline [&>svg]:translate-y-0">
@@ -30,7 +34,11 @@ export function ReviewChangeGroup({
 			<AccordionContent className="pb-4">
 				<div className={TABLE_TRAY_CLASS}>
 					{section.phases.map((phase) => (
-						<ReviewChangePhaseBlock key={phase.key} phase={phase} />
+						<ReviewChangePhaseBlock
+							key={phase.key}
+							phase={phase}
+							showsStatus={showsStatus}
+						/>
 					))}
 				</div>
 			</AccordionContent>

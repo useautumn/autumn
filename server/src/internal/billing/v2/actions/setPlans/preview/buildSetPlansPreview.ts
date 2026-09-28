@@ -29,11 +29,14 @@ export const buildSetPlansPreview = async ({
 	phases: SchedulePhasePlan[];
 	outgoingCustomerProducts: FullCusProduct[];
 }): Promise<SetPlansPreviewResponse> => {
-	const attachPreview = await billingPlanToAttachPreview({
-		ctx,
-		billingContext,
-		billingPlan,
-	});
+	const [attachPreview, stripePrices] = await Promise.all([
+		billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),
+		buildStripePriceLookup({
+			ctx,
+			stripeBillingPlan: billingPlan.stripe,
+			stripeSubscription: billingContext.stripeSubscription,
+		}),
+	]);
 	const processorItemContext: ProcessorItemContext = {
 		priceIndex: buildAutumnStripePriceIndex({
 			customerProducts: [
@@ -42,11 +45,7 @@ export const buildSetPlansPreview = async ({
 			],
 			features: ctx.features,
 		}),
-		stripePrices: await buildStripePriceLookup({
-			ctx,
-			stripeBillingPlan: billingPlan.stripe,
-			stripeSubscription: billingContext.stripeSubscription,
-		}),
+		stripePrices,
 		currency: attachPreview.currency,
 	};
 	const previewPhases = await buildSetPlansPreviewPhases({

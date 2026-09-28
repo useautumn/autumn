@@ -3,7 +3,14 @@ import { cn } from "@/lib/utils";
 import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
 import { ReviewStatusChip } from "./ReviewStatusChip";
 
-export function ReviewChangeRowItem({ row }: { row: ReviewChangeRow }) {
+/** Status and value sit in fixed columns so chips line up across rows. */
+export function ReviewChangeRowItem({
+	row,
+	showsStatus,
+}: {
+	row: ReviewChangeRow;
+	showsStatus: boolean;
+}) {
 	return (
 		<div
 			className={cn(
@@ -26,23 +33,25 @@ export function ReviewChangeRowItem({ row }: { row: ReviewChangeRow }) {
 					</span>
 				)}
 			</div>
-			{row.status && (
+			{showsStatus && (
 				<div className="w-[108px] shrink-0">
-					<ReviewStatusChip status={row.status} />
+					{row.status && <ReviewStatusChip status={row.status} />}
 				</div>
 			)}
-			{row.value && (
-				<span className="flex w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap">
-					<span className="text-sm font-medium tabular-nums text-foreground">
-						{row.value.amount}
-					</span>
-					{row.value.suffix && (
-						<span className="text-xs text-tertiary-foreground">
-							{row.value.suffix}
+			<span className="flex w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap">
+				{row.value && (
+					<>
+						<span className="text-sm font-medium tabular-nums text-foreground">
+							{row.value.amount}
 						</span>
-					)}
-				</span>
-			)}
+						{row.value.suffix && (
+							<span className="text-xs text-tertiary-foreground">
+								{row.value.suffix}
+							</span>
+						)}
+					</>
+				)}
+			</span>
 		</div>
 	);
 }

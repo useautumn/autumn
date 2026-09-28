@@ -23,13 +23,13 @@ const toPlanIds = (plans: CustomerStatePlan[]) =>
 
 /** Per-phase plan, balance and Stripe changes from the set_plans preview. */
 export function useSetPlansReviewSections(): SetPlansReviewSections | null {
-	const { preview, isPreviewLoading, error, products, features, formValues } =
+	const { preview, error, products, features, formValues } =
 		useCreateScheduleFormContext();
 	const { existingPlans } = useCustomerStateContext();
 	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
 	return useMemo(() => {
-		if (!preview || isPreviewLoading || error) return null;
+		if (!preview || error) return null;
 
 		const unscheduledPlanIds = toPlanIds(formValues.unscheduledPlans);
 		const priceLabelFor = (product: ProductV2) =>
@@ -65,7 +65,6 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 		};
 	}, [
 		preview,
-		isPreviewLoading,
 		error,
 		formValues,
 		existingPlans,

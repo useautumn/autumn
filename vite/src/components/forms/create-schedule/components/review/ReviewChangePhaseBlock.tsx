@@ -4,8 +4,10 @@ import { ReviewChangeRowItem } from "./ReviewChangeRowItem";
 
 export function ReviewChangePhaseBlock({
 	phase,
+	showsStatus,
 }: {
 	phase: ReviewChangePhase;
+	showsStatus: boolean;
 }) {
 	return (
 		<div className="flex flex-col">
@@ -19,7 +21,11 @@ export function ReviewChangePhaseBlock({
 			</div>
 			<div className={TABLE_TRAY_SURFACE_CLASS}>
 				{phase.rows.map((row) => (
-					<ReviewChangeRowItem key={row.key} row={row} />
+					<ReviewChangeRowItem
+						key={row.key}
+						row={row}
+						showsStatus={showsStatus}
+					/>
 				))}
 			</div>
 		</div>
