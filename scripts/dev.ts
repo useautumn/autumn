@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isCloudAgent } from "@autumn/env";
+import { parseEnvFile } from "./dw/helpers/env-files.ts";
 import { resolveTriggerDevBranch } from "./triggerDevBranch.ts";
 
 function spawnTriggerDevBranchReaper({
@@ -72,6 +73,91 @@ const AUTUMN_PUBLIC_API_URL =
 const publicApiUrl = AUTUMN_PUBLIC_API_URL.replace(/\/$/, "");
 const CHAT_URL = process.env.CHAT_URL ?? publicApiUrl;
 const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicApiUrl;
+
+/** Slack only delivers events for the LOCAL dev app to a laptop (via the
+ * chat tunnel), so non-dev runs must verify with the local app's credentials
+ * from server/.env — the injected prod/staging ones belong to the deployed
+ * bot. */
+const localSlackAppEnv = (): Record<string, string> => {
+	if (viteAppEnv === "dev") return {};
+	const envPath = join(
+		dirname(fileURLToPath(import.meta.url)),
+		"../server/.env",
+	);
+	if (!existsSync(envPath)) return {};
+	const { values } = parseEnvFile(readFileSync(envPath, "utf8"));
+	const overrides = Object.fromEntries(
+		["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "SLACK_SIGNING_SECRET"].flatMap(
+			(key) => (values[key] ? [[key, values[key]]] : []),
+		),
+	);
+	if (Object.keys(overrides).length) {
+		console.log("[dev] using local Slack app credentials from server/.env");
+	}
+	return overrides;
+};
+
+/** Ensures the local app's slack_admin installation exists in the target DB
+ * so a non-dev run gets the admin org+env flow. The bot token lives encrypted
+ * in the dev DB, so a missing row is seeded via a dev-env token fetch.
+ * Fire-and-forget: failures log a hint and never block or delay startup. */
+const ensureLocalSlackAdminInstall = async ({
+	spawnEnv,
+}: {
+	spawnEnv: Record<string, string>;
+}) => {
+	const run = async (cmd: string[], env: Record<string, string>) => {
+		const proc = Bun.spawn(cmd, { env, stderr: "pipe", stdout: "pipe" });
+		const [exitCode, stdout, stderr] = await Promise.all([
+			proc.exited,
+			new Response(proc.stdout).text(),
+			new Response(proc.stderr).text(),
+		]);
+		return { exitCode, stderr: stderr.trim(), stdout: stdout.trim() };
+	};
+	const seed = (extraEnv: Record<string, string>) =>
+		run(["bun", "apps/leaf/scripts/seedSlackAdminInstall.ts", "--if-missing"], {
+			...spawnEnv,
+			...extraEnv,
+		});
+	const probe = await seed({});
+	if (probe.exitCode === 0) return;
+	if (probe.exitCode !== 42) {
+		console.log(
+			`[dev] slack_admin seed probe failed: ${probe.stderr.slice(0, 200)}`,
+		);
+		return;
+	}
+	const fetched = await run(
+		[
+			"infisical",
+			"run",
+			"--env=dev",
+			"--recursive",
+			"--",
+			"bun",
+			"apps/leaf/scripts/printLocalSlackBotToken.ts",
+		],
+		{
+			HOME: process.env.HOME ?? "",
+			PATH: process.env.PATH ?? "",
+			SLACK_ADMIN_WORKSPACE_ID: spawnEnv.SLACK_ADMIN_WORKSPACE_ID ?? "",
+		},
+	);
+	const token = fetched.stdout.split("\n").at(-1) ?? "";
+	if (!token.startsWith("xoxb")) {
+		console.log(
+			"[dev] could not fetch the local Slack bot token from the dev DB — run apps/leaf/scripts/seedSlackAdminInstall.ts manually with SLACK_BOT_TOKEN set",
+		);
+		return;
+	}
+	const seeded = await seed({ SLACK_BOT_TOKEN: token });
+	console.log(
+		seeded.exitCode === 0
+			? "[dev] seeded the local slack_admin installation"
+			: `[dev] slack_admin seed failed: ${seeded.stderr.slice(0, 200)}`,
+	);
+};
 const TRIGGER_API_URL =
 	(process.env.TRIGGER_API_URL ?? "https://api.trigger.dev")
 		.trim()
@@ -392,8 +478,10 @@ async function startDev() {
 			];
 		}
 
+		const localSlackEnv = localSlackAppEnv();
 		const spawnEnv: Record<string, string> = {
 			...process.env,
+			...localSlackEnv,
 			TRIGGER_DEV_BRANCH: triggerDevBranch,
 			TRIGGER_API_URL,
 			// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
@@ -462,6 +550,11 @@ async function startDev() {
 		};
 		if (useLocalMiscCache) {
 			delete spawnEnv.MISC_CACHE_DRAGONFLY_PRIVATE_URL;
+		}
+		if (localSlackEnv.SLACK_CLIENT_ID && localSlackEnv.SLACK_SIGNING_SECRET) {
+			void ensureLocalSlackAdminInstall({ spawnEnv }).catch((error) => {
+				console.log(`[dev] slack_admin seed errored: ${error}`);
+			});
 		}
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
