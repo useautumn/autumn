@@ -15,7 +15,7 @@ export function PlanTrayRow({
 	return (
 		<div
 			className={cn(
-				"flex flex-col gap-1.5 animate-in fade-in-0 duration-150 ease-out motion-reduce:animate-none",
+				"flex flex-col gap-1.5 transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none",
 				!flush && "px-2 py-1",
 				PLAN_TRAY_ROW_DIVIDER_CLASS,
 			)}
