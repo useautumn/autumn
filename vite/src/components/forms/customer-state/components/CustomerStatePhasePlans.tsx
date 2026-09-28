@@ -36,7 +36,7 @@ export function CustomerStatePhasePlans({
 	return (
 		<div className="flex flex-col gap-1.5">
 			{header}
-			<div className="flex flex-col gap-1 pl-8.5">
+			<div className="flex flex-col pl-8.5">
 				<PlanScopeGroups
 					plans={phase.plans}
 					showHeaders={hasEntities}

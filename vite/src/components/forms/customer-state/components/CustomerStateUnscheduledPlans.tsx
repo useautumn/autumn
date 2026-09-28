@@ -20,7 +20,7 @@ export function CustomerStateUnscheduledPlans() {
 				title="Ongoing plans"
 				hint="Billed now & kept across every phase"
 			/>
-			<div className="flex flex-col gap-1">
+			<div className="flex flex-col">
 				<PlanScopeGroups
 					plans={unscheduledPlans}
 					showHeaders={hasEntities}

@@ -1,6 +1,10 @@
-import { Fragment, type ReactNode } from "react";
-import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
+import type { ReactNode } from "react";
+import {
+	TABLE_TRAY_SURFACE_CLASS,
+	TABLE_TRAY_SURFACE_ROW_CLASS,
+} from "@/components/general/table";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
+import { PlanRowPresence } from "./PlanRowPresence";
 
 function PlanScopeLabel({ entityId }: { entityId: string | null }) {
 	const { selectedEntity } = useScopeEntitySearch({
@@ -9,7 +13,7 @@ function PlanScopeLabel({ entityId }: { entityId: string | null }) {
 	const label = entityId ? selectedEntity?.name || entityId : "Customer-level";
 
 	return (
-		<p className="truncate px-2 pt-1.5 text-xs font-medium text-tertiary-foreground">
+		<p className="truncate px-2 pt-1.5 pb-1 text-xs font-medium text-tertiary-foreground">
 			{label}
 		</p>
 	);
@@ -42,33 +46,33 @@ export function PlanScopeGroups({
 }) {
 	if (plans.length === 0) return null;
 
-	if (!showHeaders) {
-		return (
-			<div className={TABLE_TRAY_SURFACE_CLASS}>
-				{plans.map((_, planIndex) => renderPlan(planIndex))}
-			</div>
-		);
-	}
+	const rows = (planIndexes: number[]) => (
+		<div className={TABLE_TRAY_SURFACE_CLASS}>
+			<PlanRowPresence itemClassName={TABLE_TRAY_SURFACE_ROW_CLASS}>
+				{planIndexes.map(renderPlan)}
+			</PlanRowPresence>
+		</div>
+	);
+
+	if (!showHeaders) return rows([...plans.keys()]);
 
 	const pickerPlanIndexes = [...plans.keys()].filter(
 		(planIndex) => !plans[planIndex]?.productId,
 	);
 
 	return (
-		<>
+		<PlanRowPresence>
 			{groupPlanIndexesByScope({ plans }).map(([entityId, planIndexes]) => (
-				<Fragment key={entityId ?? "customer"}>
+				<div key={entityId ?? "customer"} className="pb-1">
 					<PlanScopeLabel entityId={entityId} />
-					<div className={TABLE_TRAY_SURFACE_CLASS}>
-						{planIndexes.map(renderPlan)}
-					</div>
-				</Fragment>
+					{rows(planIndexes)}
+				</div>
 			))}
 			{pickerPlanIndexes.length > 0 && (
-				<div className={TABLE_TRAY_SURFACE_CLASS}>
-					{pickerPlanIndexes.map(renderPlan)}
+				<div key="picking" className="pb-1">
+					{rows(pickerPlanIndexes)}
 				</div>
 			)}
-		</>
+		</PlanRowPresence>
 	);
 }

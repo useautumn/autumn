@@ -14,7 +14,7 @@ export function PlanTrayRow({
 		<div
 			className={cn(
 				"flex flex-col gap-1.5",
-				!flush && "px-2 py-1.5",
+				!flush && "px-2 py-1",
 				TABLE_TRAY_SURFACE_ROW_CLASS,
 			)}
 		>
