@@ -1,41 +1,14 @@
 import type { CustomerExportResponse } from "@autumn/shared";
-import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
-import {
-	CheckIcon,
-	ClockClockwiseIcon,
-	type Icon,
-	SpinnerIcon,
-	XIcon,
-} from "@phosphor-icons/react";
+import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
 
 const STATUS_CONFIG = {
-	queued: {
-		label: "Queued",
-		icon: ClockClockwiseIcon,
-		className: NEUTRAL_STATUS_ICON_CLASS,
-		iconClassName: "",
-	},
-	running: {
-		label: "Running",
-		icon: SpinnerIcon,
-		className: "bg-amber-500",
-		iconClassName: "animate-spin",
-	},
-	completed: {
-		label: "Completed",
-		icon: CheckIcon,
-		className: "bg-green-500",
-		iconClassName: "",
-	},
-	failed: {
-		label: "Failed",
-		icon: XIcon,
-		className: "bg-red-500",
-		iconClassName: "",
-	},
+	queued: { label: "Queued", tone: "neutral", glyph: "refresh" },
+	running: { label: "Running", tone: "amber", glyph: "spinner" },
+	completed: { label: "Completed", tone: "green", glyph: "check" },
+	failed: { label: "Failed", tone: "red", glyph: "x" },
 } satisfies Record<
 	CustomerExportResponse["status"],
-	{ label: string; icon: Icon; className: string; iconClassName: string }
+	{ label: string; tone: StatusTone; glyph: StatusGlyph }
 >;
 
 export function CustomerExportStatusBadge({
@@ -43,15 +16,11 @@ export function CustomerExportStatusBadge({
 }: {
 	status: CustomerExportResponse["status"];
 }) {
-	const config = STATUS_CONFIG[status];
-	const StatusIcon = config.icon;
+	const { label, tone, glyph } = STATUS_CONFIG[status];
 
 	return (
-		<StatusChip
-			icon={<StatusIcon weight="bold" className={config.iconClassName} />}
-			iconClassName={config.className}
-		>
-			{config.label}
+		<StatusChip tone={tone} glyph={glyph}>
+			{label}
 		</StatusChip>
 	);
 }

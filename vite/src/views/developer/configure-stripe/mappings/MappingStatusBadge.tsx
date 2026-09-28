@@ -1,51 +1,16 @@
 import type { CatalogStripeMapping } from "@autumn/shared";
-import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
-import {
-	CheckIcon,
-	CircleDashedIcon,
-	ClockClockwiseIcon,
-	ExclamationMarkIcon,
-	type Icon,
-} from "@phosphor-icons/react";
+import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
 
 const statusConfig = {
-	ok: {
-		label: "Verified",
-		icon: CheckIcon,
-		className: "bg-green-500",
-	},
-	unmapped: {
-		label: "Unmapped",
-		icon: CircleDashedIcon,
-		className: NEUTRAL_STATUS_ICON_CLASS,
-	},
-	unchecked: {
-		label: "Unchecked",
-		icon: ClockClockwiseIcon,
-		className: NEUTRAL_STATUS_ICON_CLASS,
-	},
-	missing: {
-		label: "Missing",
-		icon: ExclamationMarkIcon,
-		className: "bg-red-500",
-	},
-	inactive: {
-		label: "Inactive",
-		icon: ExclamationMarkIcon,
-		className: "bg-amber-500",
-	},
-	conflict: {
-		label: "Mixed",
-		icon: ExclamationMarkIcon,
-		className: "bg-amber-500",
-	},
+	ok: { label: "Verified", tone: "green", glyph: "check" },
+	unmapped: { label: "Unmapped", tone: "neutral", glyph: "dashed" },
+	unchecked: { label: "Unchecked", tone: "neutral", glyph: "refresh" },
+	missing: { label: "Missing", tone: "red", glyph: "alert" },
+	inactive: { label: "Inactive", tone: "amber", glyph: "alert" },
+	conflict: { label: "Mixed", tone: "amber", glyph: "alert" },
 } satisfies Record<
 	CatalogStripeMapping["status"],
-	{
-		label: string;
-		icon: Icon;
-		className: string;
-	}
+	{ label: string; tone: StatusTone; glyph: StatusGlyph }
 >;
 
 export const MappingStatusBadge = ({
@@ -55,16 +20,11 @@ export const MappingStatusBadge = ({
 	status: CatalogStripeMapping["status"];
 	className?: string;
 }) => {
-	const config = statusConfig[status];
-	const StatusIcon = config.icon;
+	const { label, tone, glyph } = statusConfig[status];
 
 	return (
-		<StatusChip
-			className={className}
-			icon={<StatusIcon weight="bold" />}
-			iconClassName={config.className}
-		>
-			{config.label}
+		<StatusChip className={className} tone={tone} glyph={glyph}>
+			{label}
 		</StatusChip>
 	);
 };

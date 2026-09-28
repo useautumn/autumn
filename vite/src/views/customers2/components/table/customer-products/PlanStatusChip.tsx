@@ -101,11 +101,7 @@ export function PlanStatusChip({
 		canceled: customerProduct.canceled,
 		trialing: Boolean(isCustomerProductTrialing(customerProduct, { nowMs })),
 	});
-	const {
-		icon: StatusIcon,
-		iconClassName,
-		label,
-	} = PLAN_STATUS_CONFIG[planStatus];
+	const { tone, glyph, label } = PLAN_STATUS_CONFIG[planStatus];
 	const { shortText, tooltipText, tooltipSubtext } = getStatusDetail({
 		planStatus,
 		customerProduct,
@@ -125,8 +121,8 @@ export function PlanStatusChip({
 			<Tooltip delayDuration={150}>
 				<TooltipTrigger asChild>
 					<StatusChip
-						icon={<StatusIcon strokeWidth={3} />}
-						iconClassName={iconClassName}
+						tone={tone}
+						glyph={glyph}
 						dashed={isPending}
 						className={cn(isExpired && "bg-transparent", className)}
 					>

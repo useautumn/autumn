@@ -67,12 +67,8 @@ export function CustomerProductsStatus({
 		nowMs: effectiveNowMs,
 	});
 
-	const StatusIcon = config.icon;
 	const iconElement = (
-		<StatusChipIcon
-			icon={<StatusIcon strokeWidth={3} />}
-			className={config.iconClassName}
-		/>
+		<StatusChipIcon tone={config.tone} glyph={config.glyph} />
 	);
 
 	if (tooltip) {
