@@ -73,9 +73,6 @@ export const SetPlansPreviewChangesSchema = z.object({
 });
 
 export type ProcessorChange = z.infer<typeof ProcessorChangeSchema>;
-export type ProcessorItemPriceTier = z.infer<
-	typeof ProcessorItemPriceTierSchema
->;
 export type ProcessorItemPrice = z.infer<typeof ProcessorItemPriceSchema>;
 export type ProcessorItem = z.infer<typeof ProcessorItemSchema>;
 export type SetPlansPreviewPhase = z.infer<typeof SetPlansPreviewPhaseSchema>;

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
 	type FullCustomer,
+	ms,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
@@ -16,7 +17,7 @@ import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullC
 import { makeFullCustomer } from "../billing-change-response/helpers/makeFullCustomer";
 
 const NOW = 1_710_000_000_000;
-const PHASE_TWO = NOW + 30 * 24 * 60 * 60 * 1000;
+const PHASE_TWO = NOW + ms.days(30);
 const ctx = {} as AutumnContext;
 
 const statusesByPlan = (fullCustomer: FullCustomer) =>
@@ -80,7 +81,7 @@ describe("buildSetPlansPhaseCustomers", () => {
 				status: CusProductStatus.Scheduled,
 				startedAt: PHASE_TWO,
 			}),
-			trial_ends_at: PHASE_TWO + 14 * 24 * 60 * 60 * 1000,
+			trial_ends_at: PHASE_TWO + ms.days(14),
 		};
 
 		const phaseCustomers = buildSetPlansPhaseCustomers({

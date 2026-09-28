@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { scheduleActionToParams } from "../scheduleActionToParams";
+import { scheduleActionToParams } from "../../scheduleActionToParams";
 
 const TIERS_EXPAND = ["tiers"];
 

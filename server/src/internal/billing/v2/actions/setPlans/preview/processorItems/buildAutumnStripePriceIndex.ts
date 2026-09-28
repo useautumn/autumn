@@ -1,4 +1,5 @@
 import {
+	cusProductToPrices,
 	type Feature,
 	type FullCusProduct,
 	findFeatureById,
@@ -22,7 +23,7 @@ export const buildAutumnStripePriceIndex = ({
 	};
 
 	for (const customerProduct of customerProducts) {
-		for (const { price } of customerProduct.customer_prices) {
+		for (const price of cusProductToPrices({ cusProduct: customerProduct })) {
 			const featureId = price.config.feature_id ?? null;
 			const feature = featureId
 				? findFeatureById({ features, featureId })

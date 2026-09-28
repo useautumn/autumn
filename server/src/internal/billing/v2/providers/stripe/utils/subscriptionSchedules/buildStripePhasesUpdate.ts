@@ -101,6 +101,16 @@ const findRecurringStripeInterval = (customerProduct: FullCusProduct) => {
 	};
 };
 
+export const FREE_PHASE_PLACEHOLDER_METADATA_KEY =
+	"autumn_free_phase_placeholder";
+
+export const isFreePhasePlaceholderItem = (item: {
+	metadata?: Stripe.Emptyable<Stripe.MetadataParam> | null;
+}): boolean =>
+	item.metadata
+		? item.metadata[FREE_PHASE_PLACEHOLDER_METADATA_KEY] === "true"
+		: false;
+
 const buildPlaceholderItem = ({
 	ctx,
 	stripeProductId,
@@ -123,7 +133,7 @@ const buildPlaceholderItem = ({
 		},
 	},
 	quantity: 1,
-	metadata: { autumn_free_phase_placeholder: "true" },
+	metadata: { [FREE_PHASE_PLACEHOLDER_METADATA_KEY]: "true" },
 });
 
 /**

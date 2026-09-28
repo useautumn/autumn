@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildSetPlansPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPhaseCustomers";
 import { setPlansPhasesToPlanChanges } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPhasesToPlanChanges";
@@ -11,7 +11,7 @@ import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullC
 import { makeFullCustomer } from "../billing-change-response/helpers/makeFullCustomer";
 
 const NOW = 1_710_000_000_000;
-const PHASE_TWO = NOW + 30 * 24 * 60 * 60 * 1000;
+const PHASE_TWO = NOW + ms.days(30);
 const ctx = {} as AutumnContext;
 
 describe("setPlansPhasesToPlanChanges", () => {

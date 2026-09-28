@@ -1,5 +1,6 @@
 import { isPreviewStripeId, type ProcessorItem } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isFreePhasePlaceholderItem } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type { InlinePriceData } from "./price/inlinePriceDataToProcessorItemPrice";
 import { processorItemAmount } from "./price/processorItemAmount";
 import { resolveProcessorItemPrice } from "./price/resolveProcessorItemPrice";
@@ -29,8 +30,7 @@ const findAutumnStripePrice = ({
 	);
 };
 
-const isFreePhasePlaceholder = (metadata?: StripeItemMetadata) =>
-	metadata ? metadata.autumn_free_phase_placeholder === "true" : false;
+const FALLBACK_DISPLAY_NAME = "Stripe item";
 
 /** Names an item after the Autumn plan it bills for and describes how Stripe charges it. */
 export const toProcessorItem = ({
@@ -72,7 +72,7 @@ export const toProcessorItem = ({
 			autumnStripePrice?.planName ??
 			fallbackName ??
 			stripePriceId ??
-			"Stripe item",
+			FALLBACK_DISPLAY_NAME,
 		feature_name: autumnStripePrice?.featureName ?? null,
 		quantity: itemQuantity,
 		price,
@@ -81,6 +81,7 @@ export const toProcessorItem = ({
 			inlinePriceData !== undefined ||
 			isPreviewStripeId({ stripeId: stripePriceId }),
 		managed_by_autumn:
-			autumnStripePrice !== undefined || isFreePhasePlaceholder(metadata),
+			autumnStripePrice !== undefined ||
+			isFreePhasePlaceholderItem({ metadata }),
 	};
 };

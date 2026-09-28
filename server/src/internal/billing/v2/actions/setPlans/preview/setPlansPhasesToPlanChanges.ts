@@ -14,7 +14,7 @@ import {
 } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildCustomerPlanChange";
 import { buildLifecyclePreviousAttributes } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildLifecyclePreviousAttributes";
 import { mergeUpdatedPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/mergeUpdatedPlanChanges";
-import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/compute/computeCreateSchedulePlan";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
 
 const IMMEDIATE_PHASE_INDEX = 0;
 
@@ -47,11 +47,11 @@ const onlyEndsAtLaterPhase = ({
 	const changedAttributes = Object.keys(
 		buildLifecyclePreviousAttributes({ before, after }) ?? {},
 	);
-	const onlyEndedAtChanged =
+	const onlyExpiresAtChanged =
 		changedAttributes.length === 1 && changedAttributes[0] === "expires_at";
 
 	return (
-		onlyEndedAtChanged &&
+		onlyExpiresAtChanged &&
 		phases
 			.slice(IMMEDIATE_PHASE_INDEX + 1)
 			.some((phase) => phase.startsAt === after.ended_at)

@@ -293,6 +293,28 @@ export class AutumnInt {
 			code: ErrCode.InternalError,
 		});
 	}
+
+	private async postAndSettle({
+		path,
+		params,
+		timeout,
+	}: {
+		path: string;
+		params: unknown;
+		timeout?: number;
+	}) {
+		const data = await this.post(path, params);
+
+		const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+		const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+		const finalTimeout = timeout ?? defaultTimeout;
+		if (finalTimeout) {
+			await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+		}
+
+		return data;
+	}
+
 	async patch(path: string, body: any) {
 		const response = await fetch(`${this.baseUrl}${path}`, {
 			method: "PATCH",
@@ -1498,18 +1520,12 @@ export class AutumnInt {
 		>(
 			params: TInput,
 			{ timeout }: { timeout?: number } = {},
-		): Promise<TResponse> => {
-			const data = await this.post(`/billing.create_schedule`, params);
-
-			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
-			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
-			const finalTimeout = timeout ?? defaultTimeout;
-			if (finalTimeout) {
-				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
-			}
-
-			return data;
-		},
+		): Promise<TResponse> =>
+			this.postAndSettle({
+				path: `/billing.create_schedule`,
+				params,
+				timeout,
+			}),
 
 		setPlans: async <
 			TInput = CreateScheduleParamsV0Input,
@@ -1517,18 +1533,12 @@ export class AutumnInt {
 		>(
 			params: TInput,
 			{ timeout }: { timeout?: number } = {},
-		): Promise<TResponse> => {
-			const data = await this.post(`/billing.set_plans`, params);
-
-			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
-			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
-			const finalTimeout = timeout ?? defaultTimeout;
-			if (finalTimeout) {
-				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
-			}
-
-			return data;
-		},
+		): Promise<TResponse> =>
+			this.postAndSettle({
+				path: `/billing.set_plans`,
+				params,
+				timeout,
+			}),
 
 		previewSetPlans: async <TInput = CreateScheduleParamsV0Input>(
 			params: TInput,

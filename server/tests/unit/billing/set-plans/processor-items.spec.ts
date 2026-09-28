@@ -4,6 +4,8 @@ import {
 	BillWhen,
 	type Feature,
 	type FullCusProduct,
+	ms,
+	msToSeconds,
 	PriceType,
 	type ProcessorItem,
 	type ProcessorItemPrice,
@@ -17,7 +19,7 @@ import type { ProcessorItemContext } from "@/internal/billing/v2/actions/setPlan
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
 
 const NOW = 1_710_000_000_000;
-const PHASE_TWO = NOW + 30 * 24 * 60 * 60 * 1000;
+const PHASE_TWO = NOW + ms.days(30);
 
 const withPrices = ({
 	planId,
@@ -329,8 +331,7 @@ describe("checkoutSessionActionToProcessorItems", () => {
 	});
 });
 
-const PHASE_THREE = PHASE_TWO + 30 * 24 * 60 * 60 * 1000;
-const toSeconds = (epochMs: number) => Math.floor(epochMs / 1000);
+const PHASE_THREE = PHASE_TWO + ms.days(30);
 const phasesAt = (...startsAts: number[]) =>
 	startsAts.map((startsAt) => ({ startsAt, customerProductIds: [] }));
 const scheduleCreate = (
@@ -342,14 +343,14 @@ describe("scheduleActionToProcessorItems", () => {
 		const items = scheduleActionToProcessorItems({
 			subscriptionScheduleAction: scheduleCreate([
 				{
-					start_date: toSeconds(NOW),
+					start_date: msToSeconds(NOW),
 					items: [
 						{ price: "price_pro_base" },
 						{ price: "price_pro_seats", quantity: 3 },
 					],
 				},
 				{
-					start_date: toSeconds(PHASE_TWO),
+					start_date: msToSeconds(PHASE_TWO),
 					items: [
 						{ price: "price_PREVIEW_abc" },
 						{ price: "price_pro_seats", quantity: 4 },
@@ -369,16 +370,16 @@ describe("scheduleActionToProcessorItems", () => {
 	});
 
 	test("Stripe phases between Autumn phases resolve to the latest one", () => {
-		const midPhase = NOW + 10 * 24 * 60 * 60 * 1000;
+		const midPhase = NOW + ms.days(10);
 		const items = scheduleActionToProcessorItems({
 			subscriptionScheduleAction: scheduleCreate([
-				{ start_date: toSeconds(NOW), items: [{ price: "price_pro_base" }] },
+				{ start_date: msToSeconds(NOW), items: [{ price: "price_pro_base" }] },
 				{
-					start_date: toSeconds(midPhase),
+					start_date: msToSeconds(midPhase),
 					items: [{ price: "price_pro_seats", quantity: 2 }],
 				},
 				{
-					start_date: toSeconds(PHASE_THREE),
+					start_date: msToSeconds(PHASE_THREE),
 					items: [{ price: "price_PREVIEW_abc" }],
 				},
 			]),
@@ -396,7 +397,7 @@ describe("scheduleActionToProcessorItems", () => {
 		const items = scheduleActionToProcessorItems({
 			subscriptionScheduleAction: scheduleCreate([
 				{
-					start_date: toSeconds(PHASE_THREE),
+					start_date: msToSeconds(PHASE_THREE),
 					items: [{ price: "price_pro_base" }],
 				},
 			]),
@@ -415,8 +416,8 @@ describe("scheduleActionToProcessorItems", () => {
 					end_behavior: "cancel",
 					phases: [
 						{
-							start_date: toSeconds(NOW),
-							end_date: toSeconds(PHASE_TWO),
+							start_date: msToSeconds(NOW),
+							end_date: msToSeconds(PHASE_TWO),
 							items: [{ price: "price_pro_base" }],
 						},
 					],
@@ -437,8 +438,8 @@ describe("scheduleActionToProcessorItems", () => {
 					end_behavior: "release",
 					phases: [
 						{
-							start_date: toSeconds(NOW),
-							end_date: toSeconds(PHASE_TWO),
+							start_date: msToSeconds(NOW),
+							end_date: msToSeconds(PHASE_TWO),
 							items: [{ price: "price_pro_base" }],
 						},
 					],

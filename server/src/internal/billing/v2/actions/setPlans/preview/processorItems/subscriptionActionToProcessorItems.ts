@@ -55,7 +55,7 @@ const applyUpdateToLiveItems = ({
 		return [
 			liveItemToProcessorItem({
 				liveItem,
-				quantity: update?.quantity ?? liveItem.quantity,
+				quantity: update?.quantity,
 				context,
 			}),
 		];
