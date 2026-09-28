@@ -1,6 +1,9 @@
 import { topicName } from "./primitives.js";
 
 const LOCAL_DEPLOYMENT = "local";
+const DEFAULT_SLOT = "blue";
+
+export type BalanceWorkerSlot = "blue" | "green";
 
 /** The one name a server and its workers share; every Kafka name derives from it. */
 export function getBalanceWorkerDeployment({
@@ -16,10 +19,29 @@ export function getBalanceWorkerDeployment({
 	return LOCAL_DEPLOYMENT;
 }
 
+/** Which of the deployment's two fleets this worker belongs to; only the consumer group carries it. */
+export function getBalanceWorkerSlot({
+	runtimeEnv,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+}): BalanceWorkerSlot {
+	const configured = runtimeEnv.BALANCE_WORKER_SLOT?.trim();
+	if (configured === "blue" || configured === "green") return configured;
+	if (configured) {
+		throw new Error(`BALANCE_WORKER_SLOT must be blue or green: ${configured}`);
+	}
+	if (runtimeEnv.NODE_ENV === "production") {
+		throw new Error("BALANCE_WORKER_SLOT is required in production");
+	}
+	return DEFAULT_SLOT;
+}
+
 export function balanceWorkerDeploymentToKafkaNames({
 	deployment,
+	slot = DEFAULT_SLOT,
 }: {
 	deployment: string;
+	slot?: BalanceWorkerSlot;
 }): {
 	meteringTopic: string;
 	ownershipTopic: string;
@@ -32,6 +54,6 @@ export function balanceWorkerDeploymentToKafkaNames({
 		ownershipTopic: `${deployment}-ownership`,
 		commandTopic: `${deployment}-commands`,
 		catalogInvalidationTopic: `${deployment}-catalog-invalidations`,
-		consumerGroup: `${deployment}-workers`,
+		consumerGroup: `${deployment}-${slot}-workers`,
 	};
 }
