@@ -8,6 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
+import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/utils/billingContext/billingContextToNewSubscriptionAnchorMs";
 
@@ -65,6 +66,11 @@ export const finalizeLineItems = ({
 	// 2. Filter out unchanged prices (refund + charge pairs that cancel out)
 	finalizedLineItems = filterUnchangedPricesFromLineItems({
 		lineItems: finalizedLineItems,
+	});
+
+	finalizedLineItems = prorateBillDifferenceCredits({
+		lineItems: finalizedLineItems,
+		billingContext,
 	});
 
 	// 3. Add line items for sibling products affected by trial state changes
