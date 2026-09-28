@@ -27,7 +27,7 @@ jobs:
     concurrency:
       group: shipped-summary-${{ github.event.pull_request.number }}
       cancel-in-progress: false
-    runs-on: ubuntu-latest
+    runs-on: "peak"
 
     steps:
       - name: Post summary to shipped
@@ -109,7 +109,7 @@ jobs:
     concurrency:
       group: shipped-summary-${{ github.event.pull_request.number }}
       cancel-in-progress: false
-    runs-on: ubuntu-latest
+    runs-on: "peak"
 
     steps:
       - name: Post fallback to shipped
@@ -164,7 +164,7 @@ jobs:
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
       github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: "peak"
 
     steps:
       - name: Reply in shipped thread
