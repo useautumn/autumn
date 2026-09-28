@@ -163,6 +163,19 @@ Recorded while implementing items 1–3 (2026-09-28, PR "feat(balance-worker): b
   the partition, so it pauses that partition's commands itself and does not re-prepare it; a later
   re-deal (a blue restart) prepares and holds at the gate because the record names green. Re-armed
   after an A→A cancel, torn down by the entry's abort.
+- **A partition handed to another fleet is prepared again.** The first cut stopped the runtime and
+  dropped the entry after a foreign handoff, while the owner's roster kept the partition assigned;
+  a rollback flip then had nothing to announce. The entry is now re-prepared (read-only follower,
+  held at the gate), the state a green task is in before a swap, so flipping the record back runs
+  the same handoff in reverse (benchmark steps 3b/3c). Only with a gate: without one it would
+  announce at once and take the partition straight back, so a gate-less worker stays stopped.
+- **`BALANCE_WORKER_SLOT` is required in production on purpose.** It must be set (`blue`) on the
+  existing Flightcontrol service before this code is deployed there; a worker that boots without
+  it refuses to start rather than guess which fleet it is.
+- **The slot store retains its last record through a read error** (`retainOnError`), the task
+  identity retries the ECS metadata endpoint (~10s) before failing open and logs at error level
+  when it does, and the heartbeat's `ok` includes the store's health: each of those defaults would
+  otherwise have opened green's gate without a flip.
 - **Blue keeps the legacy group name.** `blue → ${deployment}-workers`, `green → ${deployment}-green-workers`.
   Renaming blue would have made the first deploy of this code a second, unrevoked group beside the
   running fleet: prepare, silence, self-claim, fence. Keeping the name makes it a rolling deploy of
