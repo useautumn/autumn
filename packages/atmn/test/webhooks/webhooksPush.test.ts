@@ -5,7 +5,13 @@
  */
 
 import { expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OrgInfo } from "../../src/actions/env/types/orgInfo";
@@ -623,11 +629,14 @@ const envClient = ({
 	calls,
 	changes = [],
 	secrets = [],
+	beforeSync,
 }: {
 	name: string;
 	calls: string[];
 	changes?: unknown[];
 	secrets?: { id: string; secret: string }[];
+	/** Runs before the sync answers: a stall or a mid-push change. */
+	beforeSync?: () => Promise<void>;
 }) => ({
 	previewSyncWebhooks: async (body: unknown) => {
 		calls.push(`${name}:preview ${JSON.stringify(body)}`);
@@ -635,6 +644,7 @@ const envClient = ({
 	},
 	syncWebhooks: async () => {
 		calls.push(`${name}:sync`);
+		await beforeSync?.();
 		return { webhooks: [], secrets, errors: [] };
 	},
 });
@@ -927,10 +937,13 @@ test("a failed live check never reads as No changes, and survives a failing sand
 const pushOrdersIntoQaTeam = ({
 	savedEnv,
 	qaTeam = {},
+	qaTeamTwo = {},
 }: {
 	savedEnv: string;
 	/** qa-team's own preview and sync; by default it has nothing to change. */
 	qaTeam?: { changes?: unknown[]; secrets?: { id: string; secret: string }[] };
+	/** qa_team's sync hook; it always creates `orders`. */
+	qaTeamTwo?: { beforeSync?: () => Promise<void> };
 }) => {
 	const dir = projectWith({
 		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "orders", env: "qa-team", url: "https://qa.example.com/a" }),\n\t\twebhook({ id: "orders", env: "qa_team", url: "https://qa2.example.com/a" }),\n\t],`,
@@ -966,6 +979,7 @@ const pushOrdersIntoQaTeam = ({
 						},
 					],
 					secrets: [{ id: "orders", secret: "whsec_qa2" }],
+					...qaTeamTwo,
 				}),
 			},
 		}),
@@ -1024,6 +1038,66 @@ test("a sandbox whose previewed update the server created instead never overwrit
 	const saved = readFileSync(join(dir, ".env"), "utf8");
 	expect(saved).toContain("AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_qa1");
 	expect(saved).not.toContain("whsec_qa2");
+});
+
+const UPDATE_ORDERS = [
+	{
+		action: "update",
+		id: "orders",
+		before: state("https://old.example.com/a"),
+		after: state("https://qa.example.com/a"),
+	},
+];
+
+test("one stalled sync never holds back another sandbox's new secret", async () => {
+	let release: () => void = () => {};
+	const stalled = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const { push, dir } = pushOrdersIntoQaTeam({
+		savedEnv: "",
+		qaTeam: {
+			changes: UPDATE_ORDERS,
+			secrets: [{ id: "created", secret: "whsec_created" }],
+		},
+		qaTeamTwo: { beforeSync: () => stalled },
+	});
+	const settled = push.catch(() => {});
+	try {
+		for (let tick = 0; tick < 50; tick++) {
+			if (readFileSync(join(dir, ".env"), "utf8").includes("whsec_created"))
+				break;
+			await new Promise((resolve) => setTimeout(resolve, 10));
+		}
+		expect(readFileSync(join(dir, ".env"), "utf8")).toContain(
+			"AUTUMN_WEBHOOK_CREATED_QA_TEAM_SECRET=whsec_created",
+		);
+	} finally {
+		release();
+		await settled;
+	}
+});
+
+test("a secret that failed to save never blocks another sandbox saving under that name", async () => {
+	const { push, dir } = pushOrdersIntoQaTeam({
+		savedEnv: "",
+		// qa-team's save fails on a read-only .env; qa_team answers once it's writable again.
+		qaTeam: {
+			changes: UPDATE_ORDERS,
+			secrets: [{ id: "orders", secret: "whsec_qa1" }],
+		},
+		qaTeamTwo: {
+			beforeSync: async () => {
+				await new Promise((resolve) => setTimeout(resolve, 50));
+				chmodSync(join(dir, ".env"), 0o644);
+			},
+		},
+	});
+	chmodSync(join(dir, ".env"), 0o444);
+	await expect(push).rejects.toThrow("qa-team");
+	expect(readFileSync(join(dir, ".env"), "utf8")).toContain(
+		"AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_qa2",
+	);
 });
 
 test("a skipped live key never reads as No changes", async () => {
