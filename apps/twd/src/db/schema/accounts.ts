@@ -3,7 +3,6 @@ import { stripeKeys } from "./keys.ts";
 
 export type AccountState =
 	| "clean"
-	| "reserved"
 	| "in_use"
 	| "nuking"
 	| "broken";
@@ -17,11 +16,9 @@ export const stripeAccounts = pgTable(
 			.notNull()
 			.references(() => stripeKeys.platformAccountId),
 		state: text("state").$type<AccountState>().notNull().default("clean"),
-		/** Set while reserved/in_use. */
+		/** Set while in_use. */
 		heldBy: text("held_by"),
 		runId: text("run_id"),
-		reservationId: text("reservation_id"),
-		reservedUntil: timestamp("reserved_until", { withTimezone: true }),
 		lastNukedAt: timestamp("last_nuked_at", { withTimezone: true }),
 		brokenReason: text("broken_reason"),
 		stateChangedAt: timestamp("state_changed_at", { withTimezone: true })
@@ -33,15 +30,3 @@ export const stripeAccounts = pgTable(
 	},
 	(t) => [index("stripe_accounts_state_idx").on(t.state, t.platformAccountId)],
 );
-
-export const reservations = pgTable("reservations", {
-	id: text("id").primaryKey(),
-	userId: text("user_id").notNull(),
-	via: text("via").notNull(),
-	note: text("note"),
-	expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-	releasedAt: timestamp("released_at", { withTimezone: true }),
-	createdAt: timestamp("created_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
-});

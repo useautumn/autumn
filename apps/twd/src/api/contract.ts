@@ -106,8 +106,6 @@ export const CreateRunBody = z.object({
 	/** Defaults to the branch head. */
 	sha: z.string().optional(),
 	selection: RunSelection,
-	/** Optional pinned accounts from a reservation. */
-	reservationId: z.string().optional(),
 	purpose: z.enum(["adhoc", "baseline"]).default("adhoc"),
 });
 
@@ -135,6 +133,14 @@ export const RunFile = z.object({
 	failureSummary: z.string().nullable(),
 });
 
+/** Modal compute cost of a run: Σ worker lifetime × (cores × core rate + GiB × memory rate). */
+export const RunCost = z.object({
+	usd: z.number(),
+	workerSeconds: z.number(),
+	/** false while the run is live (accruing). */
+	final: z.boolean(),
+});
+
 export const RunSummary = z.object({
 	id: z.string(),
 	branch: z.string(),
@@ -145,7 +151,13 @@ export const RunSummary = z.object({
 	purpose: z.enum(["adhoc", "baseline"]),
 	selection: RunSelection,
 	fileCount: z.number().nullable(),
+	/** Workers currently attached; grows as accounts free up (elastic, FIFO). */
 	workerCount: z.number().nullable(),
+	/** Workers this run wants: min(files, key budget). */
+	workersWanted: z.number().nullable(),
+	/** 1-based place in the FIFO account queue while waiting for any account; null otherwise. */
+	queuePosition: z.number().nullable(),
+	cost: RunCost,
 	passed: z.number(),
 	failed: z.number(),
 	createdBy: ActorRef,
@@ -197,7 +209,6 @@ export const StripeKey = z.object({
 	probedAt: z.string().nullable(),
 	accounts: z.object({
 		clean: z.number(),
-		reserved: z.number(),
 		inUse: z.number(),
 		nuking: z.number(),
 		broken: z.number(),
@@ -213,34 +224,17 @@ export const KeysOverview = z.object({
 	keys: z.array(StripeKey),
 });
 
-// ---- accounts + reservations ---------------------------------------------
+// ---- accounts ---------------------------------------------------------------
 
 export const StripeAccount = z.object({
 	id: z.string(),
 	platformAccountId: z.string(),
-	state: z.enum(["clean", "reserved", "in_use", "nuking", "broken"]),
+	state: z.enum(["clean", "in_use", "nuking", "broken"]),
 	heldBy: z.string().nullable(),
 	runId: z.string().nullable(),
-	reservationId: z.string().nullable(),
-	reservedUntil: z.string().nullable(),
 	stateChangedAt: z.string(),
 	/** Why the account is broken (last nuke/verify error); null otherwise. */
 	brokenReason: z.string().nullable(),
-});
-export const CreateReservationBody = z.object({
-	count: z.number().int().min(1).max(2000),
-	/** e.g. "2h", "30m". Max 24h. */
-	ttl: z.string().default("2h"),
-	note: z.string().optional(),
-});
-export const Reservation = z.object({
-	id: z.string(),
-	owner: ActorRef,
-	note: z.string().nullable(),
-	accountIds: z.array(z.string()),
-	expiresAt: z.string(),
-	releasedAt: z.string().nullable(),
-	createdAt: z.string(),
 });
 
 // ---- jobs -----------------------------------------------------------------
@@ -267,12 +261,17 @@ export const Capacity = z.object({
 	usableKeys: z.number(),
 	accounts: z.object({
 		clean: z.number(),
-		reserved: z.number(),
 		inUse: z.number(),
 		nuking: z.number(),
 		broken: z.number(),
 	}),
 	liveRuns: z.number(),
+	/** Runs waiting in the FIFO queue for their first account. */
+	queuedRuns: z.number(),
+	/** Accounts live runs still want beyond what they hold. */
+	accountsWanted: z.number(),
+	/** Pool ceiling: usable keys × per-key cap. */
+	poolCap: z.number(),
 	/** Largest run (in files) that can start right now without waiting. */
 	maxFilesNow: z.number(),
 	warmBuilds: z.number(),
@@ -313,7 +312,7 @@ export const LiveEvent = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("capacity.updated"), capacity: Capacity }),
 	/** Refetch GET /keys; debounced, sent after probes, reinit steps, gate changes. */
 	z.object({ type: z.literal("keys.changed") }),
-	/** Refetch GET /accounts + /reservations; debounced. */
+	/** Refetch GET /accounts; debounced. */
 	z.object({ type: z.literal("accounts.changed") }),
 	z.object({
 		type: z.literal("warm.updated"),
@@ -361,6 +360,38 @@ export const LiveServerMessage = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("error"), error: ApiError.shape.error }),
 ]);
 
+// ---- costs ------------------------------------------------------------------
+
+export const CostRates = z.object({
+	usdPerCoreSecond: z.number(),
+	usdPerGibSecond: z.number(),
+	workerCores: z.number(),
+	workerMemoryGib: z.number(),
+});
+export const CostsQuery = z.object({
+	/** ISO dates; default the last 30 days. */
+	from: z.string().optional(),
+	to: z.string().optional(),
+	bucket: z.enum(["day", "week"]).default("day"),
+});
+export const Costs = z.object({
+	rates: CostRates,
+	totals: z.object({ usd: z.number(), runs: z.number(), workerSeconds: z.number(), warmUsd: z.number() }),
+	/** Time series for the chart; one row per bucket, per-user split in `byUser`. */
+	buckets: z.array(
+		z.object({
+			start: z.string(),
+			usd: z.number(),
+			warmUsd: z.number(),
+			runs: z.number(),
+			byUser: z.record(z.number()),
+		}),
+	),
+	users: z.array(z.object({ userId: z.string(), email: z.string(), usd: z.number(), runs: z.number() })),
+	/** Most expensive runs in the window. */
+	topRuns: z.array(RunSummary),
+});
+
 // ---- route table ----------------------------------------------------------
 
 /**
@@ -402,9 +433,6 @@ export const ROUTES = {
 
 	// accounts (http/routes/accounts.ts)
 	listAccounts: "GET /accounts",
-	listReservations: "GET /reservations",
-	createReservation: "POST /reservations",
-	releaseReservation: "DELETE /reservations/:id",
 	nukeAccounts: "POST /accounts/nuke",
 	/** Drop an account from the ledger (e.g. deleted in Stripe). Not allowed while held by a run. */
 	forgetAccount: "DELETE /accounts/:id",
@@ -416,6 +444,7 @@ export const ROUTES = {
 
 	// results (http/routes/results.ts)
 	baselines: "GET /baselines",
+	costs: "GET /costs",
 	fileHistory: "GET /files/history?file=",
 
 	// capacity + MCP (http/routes/capacity.ts, http/routes/mcp.ts)
@@ -443,12 +472,13 @@ export type Drift = z.infer<typeof Drift>;
 export type StripeKey = z.infer<typeof StripeKey>;
 export type KeysOverview = z.infer<typeof KeysOverview>;
 export type StripeAccount = z.infer<typeof StripeAccount>;
-export type Reservation = z.infer<typeof Reservation>;
 export type Capacity = z.infer<typeof Capacity>;
 export type ApiError = z.infer<typeof ApiError>;
 export type LiveTopic = z.infer<typeof LiveTopic>;
 export type LiveEvent = z.infer<typeof LiveEvent>;
 export type LiveClientMessage = z.infer<typeof LiveClientMessage>;
 export type LiveServerMessage = z.infer<typeof LiveServerMessage>;
+export type RunCost = z.infer<typeof RunCost>;
+export type Costs = z.infer<typeof Costs>;
 export type Job = z.infer<typeof Job>;
 export type EnqueueResponse = z.infer<typeof EnqueueResponse>;

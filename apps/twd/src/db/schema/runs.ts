@@ -3,6 +3,7 @@ import {
 	index,
 	integer,
 	jsonb,
+	real,
 	pgTable,
 	text,
 	timestamp,
@@ -40,7 +41,9 @@ export const runs = pgTable(
 			.$type<"adhoc" | "baseline">()
 			.notNull()
 			.default("adhoc"),
-		reservationId: text("reservation_id"),
+		workersWanted: integer("workers_wanted"),
+		costUsd: real("cost_usd").notNull().default(0),
+		workerSeconds: real("worker_seconds").notNull().default(0),
 		jobId: text("job_id"),
 		fileCount: integer("file_count"),
 		workerCount: integer("worker_count"),
@@ -76,4 +79,25 @@ export const warmImages = pgTable("warm_images", {
 		.notNull()
 		.defaultNow(),
 	readyAt: timestamp("ready_at", { withTimezone: true }),
+	/** Modal cost of building this warm image (warm sandbox lifetime). */
+	buildSeconds: real("build_seconds"),
+	costUsd: real("cost_usd"),
+	createdBy: text("created_by"),
 });
+
+/** One row per worker sandbox; cost = (ended_at ?? now) - started_at priced at its cores/memory. */
+export const runWorkers = pgTable(
+	"run_workers",
+	{
+		id: text("id").primaryKey(),
+		runId: text("run_id").notNull(),
+		name: text("name").notNull(),
+		sandboxId: text("sandbox_id"),
+		accountId: text("account_id"),
+		cores: real("cores").notNull(),
+		memoryGib: real("memory_gib").notNull(),
+		startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+		endedAt: timestamp("ended_at", { withTimezone: true }),
+	},
+	(t) => [index("run_workers_run_idx").on(t.runId), index("run_workers_started_idx").on(t.startedAt)],
+);
