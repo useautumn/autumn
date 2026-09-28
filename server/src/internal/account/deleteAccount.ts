@@ -10,15 +10,17 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { deleteOrg } from "@/internal/orgs/deleteOrg/deleteOrg.js";
-import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
+import {
+	deleteOrg,
+	listOrgSandboxes,
+} from "@/internal/orgs/deleteOrg/deleteOrg.js";
 import { auth } from "@/utils/auth.js";
 
 const isOwnerRole = (role: string) => role.split(",").includes("owner");
 
 /**
  * Works out which orgs go away with the user. Orgs where the user is the only
- * member are deleted (with their sandboxes). Orgs with other members are left
+ * member are deleted (deleteOrg also removes their sandboxes). Orgs with other members are left
  * alone, but the user can't be their last owner.
  */
 const getOrgsToDelete = async ({
@@ -70,19 +72,7 @@ const getOrgsToDelete = async ({
 		}
 	}
 
-	// Sandbox sub-orgs belong to their master org, so they go with it.
-	const masterOrgIds = orgsToDelete.map((org) => org.id);
-	const sandboxes =
-		masterOrgIds.length > 0
-			? await db.query.organizations.findMany({
-					where: and(
-						inArray(organizations.created_by, masterOrgIds),
-						eq(organizations.is_sandbox, true),
-					),
-				})
-			: [];
-
-	return [...(sandboxes as Organization[]), ...orgsToDelete];
+	return orgsToDelete;
 };
 
 /**
@@ -100,20 +90,26 @@ export const deleteAccount = async ({
 }) => {
 	const orgsToDelete = await getOrgsToDelete({ db, userId });
 
-	// Check every org up front so we never leave the account half-deleted.
+	// Check every org (and sandbox) up front so we never leave the account
+	// half-deleted.
 	if (orgsToDelete.length > 0) {
+		const sandboxes = await listOrgSandboxes({
+			db,
+			orgIds: orgsToDelete.map((org) => org.id),
+		});
+		const orgsToCheck = [...orgsToDelete, ...sandboxes];
 		const liveCustomer = await db.query.customers.findFirst({
 			where: and(
 				inArray(
 					customers.org_id,
-					orgsToDelete.map((org) => org.id),
+					orgsToCheck.map((org) => org.id),
 				),
 				eq(customers.env, AppEnv.Live),
 			),
 		});
 
 		if (liveCustomer) {
-			const org = orgsToDelete.find((o) => o.id === liveCustomer.org_id);
+			const org = orgsToCheck.find((o) => o.id === liveCustomer.org_id);
 			throw new RecaseError({
 				message: `${org?.name ?? "One of your organizations"} has production mode customers. Contact support to delete your account.`,
 				code: ErrCode.OrgHasCustomers,
@@ -124,11 +120,7 @@ export const deleteAccount = async ({
 
 	for (const org of orgsToDelete) {
 		logger.info(`Deleting org ${org.id} (${org.slug}) for account deletion`);
-		if (org.is_sandbox) {
-			await deletePlatformSubOrg({ db, org, logger });
-		} else {
-			await deleteOrg({ db, org, logger, deleteOrgFromDb: true });
-		}
+		await deleteOrg({ db, org, logger, deleteOrgFromDb: true });
 	}
 
 	// Goes through better-auth so sessions/accounts are cleared and the
