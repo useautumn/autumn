@@ -20,16 +20,16 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
 		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(4);
 	});
-	test("commits idempotently unless a deployment says otherwise", () => {
+	test("commits transactionally unless a deployment opts into the one-trip commit", () => {
 		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_COMMIT_MODE).toBe(
-			"idempotent",
+			"transactional",
 		);
 		expect(
 			createBalanceWorkerEnv({
 				...valid,
-				BALANCE_WORKER_COMMIT_MODE: "transactional",
+				BALANCE_WORKER_COMMIT_MODE: "idempotent",
 			}).BALANCE_WORKER_COMMIT_MODE,
-		).toBe("transactional");
+		).toBe("idempotent");
 		expect(() =>
 			createBalanceWorkerEnv({ ...valid, BALANCE_WORKER_COMMIT_MODE: "fast" }),
 		).toThrow();

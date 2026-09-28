@@ -91,9 +91,10 @@ export const BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES = 33_554_432;
  *  trip: the batch goes out with acks=all and the acknowledgement is the
  *  commit, while the owner's epoch travels in a record header for readers to
  *  judge by. Tracks wait on a commit twice over (the one in flight, then their
- *  own), so the mode sets the track tail directly. Overridable per deployment
- *  with BALANCE_WORKER_COMMIT_MODE. */
-export const BALANCE_WORKER_COMMIT_MODE = "idempotent" as const;
+ *  own), so the mode sets the track tail directly. The default is the
+ *  broker-fenced mode; a deployment opts into the one-trip commit with
+ *  BALANCE_WORKER_COMMIT_MODE=idempotent once its fence has been exercised. */
+export const BALANCE_WORKER_COMMIT_MODE = "transactional" as const;
 
 /** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
  *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
