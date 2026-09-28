@@ -1,11 +1,12 @@
 import type {
+	CustomerLicenseTransition,
 	FullCusProduct,
 	FullCustomer,
 	PooledBalancePlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyIncomingPooledBalanceSources } from "./applyIncomingPooledBalanceSources/applyIncomingPooledBalanceSources";
-import { applyLicensePooledGranted } from "./applyLicensePooledGranted/applyLicensePooledGranted";
+import { applyLicensePooledBalances } from "./applyLicensePooledBalances/applyLicensePooledBalances";
 import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceSources/applyOutgoingPooledBalanceSources";
 import { applyPooledBalancePlanToIncomingCustomerProducts } from "./applyPooledBalancePlanToIncomingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
@@ -17,6 +18,7 @@ export const computePooledBalanceTransitionPlan = ({
 	outgoingCustomerProducts = [],
 	incomingCustomerProducts: inputIncomingCustomerProducts = [],
 	stripeSubscriptionId,
+	customerLicenseTransitions,
 	now,
 }: {
 	ctx: AutumnContext;
@@ -24,6 +26,8 @@ export const computePooledBalanceTransitionPlan = ({
 	outgoingCustomerProducts?: FullCusProduct[];
 	incomingCustomerProducts?: FullCusProduct[];
 	stripeSubscriptionId?: string;
+	/** Lets license pools reset usage when the plan change alters their item. */
+	customerLicenseTransitions?: CustomerLicenseTransition[];
 	now: number;
 }): {
 	pooledBalancePlan?: PooledBalancePlan;
@@ -76,7 +80,7 @@ export const computePooledBalanceTransitionPlan = ({
 	const incomingLicenseLinkIds = new Set(
 		incomingCustomerLicenses.map((customerLicense) => customerLicense.link_id),
 	);
-	applyLicensePooledGranted({
+	applyLicensePooledBalances({
 		ctx,
 		computeContext,
 		customerLicenses: [
@@ -90,6 +94,12 @@ export const computePooledBalanceTransitionPlan = ({
 						),
 			),
 		],
+		parentCustomerProducts: [
+			...incomingCustomerProducts,
+			...outgoingCustomerProducts,
+		],
+		customerLicenseTransitions,
+		customerCreatedAt: fullCustomer.created_at,
 		now,
 	});
 

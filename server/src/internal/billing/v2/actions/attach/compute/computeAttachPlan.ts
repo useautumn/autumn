@@ -159,6 +159,7 @@ export const computeAttachPlan = ({
 			ctx,
 			attachBillingContext,
 			newCustomerProduct,
+			customerLicenseTransitions,
 		});
 
 	// Lock the customer's currency on the first paid attach (only when they have

@@ -15,6 +15,7 @@ import { logBatchTransitionContext } from "./logs/logBatchTransitionContext";
 import { logBatchTransitionOperations } from "./logs/logBatchTransitionOperations";
 import { logBatchTransitionProductTransitions } from "./logs/logBatchTransitionProductTransitions";
 import { logBatchTransitionResult } from "./logs/logBatchTransitionResult";
+import { resolveLicensePooledBalanceIds } from "./setup/resolveLicensePooledBalanceIds";
 import { setupBatchTransitionContext } from "./setup/setupBatchTransitionContext";
 import { setupCustomerEntitlementBatchTransition } from "./setup/setupCustomerEntitlementBatchTransition";
 import type { BatchTransitionExecutionScope } from "./types/types";
@@ -92,6 +93,11 @@ export const batchTransition = async ({
 		logBatchTransitionOperations({
 			ctx,
 			batchTransition: computedBatchTransition,
+		});
+		await resolveLicensePooledBalanceIds({
+			ctx,
+			batchTransitionContext,
+			operations: computedBatchTransition.operations.entitlementPrices,
 		});
 		basePriceResult = await executeBasePriceOperation({
 			ctx,

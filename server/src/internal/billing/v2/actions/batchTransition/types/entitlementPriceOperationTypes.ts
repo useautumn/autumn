@@ -2,7 +2,6 @@ import type {
 	EntInterval,
 	EntitlementPrice,
 	PooledBalanceResetMode,
-	RolloverConfig,
 } from "@autumn/shared";
 import type { InitCustomerEntitlementFields } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementFields";
 
@@ -38,7 +37,6 @@ export type PooledAddIdentity = {
 	unlimited: boolean;
 	interval: EntInterval;
 	intervalCount: number;
-	resetCycleAnchor: number | null;
 	resetMode: PooledBalanceResetMode;
 	stripeSubscriptionId: null;
 	customerLicenseLinkId: string;
@@ -48,9 +46,8 @@ export type PooledAddIdentity = {
 export type PooledAddSpec = {
 	contributionAmount: number;
 	identity: PooledAddIdentity;
-	nextResetAt: number | null;
-	featureId: string;
-	rollover: RolloverConfig | null;
+	/** Resolved at execution from the pool billing created for the link. */
+	pooledBalanceId?: string;
 };
 
 export type AddEntitlementPriceOperation = {

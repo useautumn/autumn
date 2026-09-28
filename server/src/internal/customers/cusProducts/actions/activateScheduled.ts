@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
@@ -74,6 +75,18 @@ export const activateScheduledCustomerProduct = async ({
 				}),
 			})
 		: [];
+	// Pools must exist before the seat batch runs; later webhook re-runs are no-ops.
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer,
+		outgoingCustomerProducts: transitionSource ? [transitionSource] : [],
+		incomingCustomerProducts: [
+			{ ...customerProduct, ...updates } as FullCusProduct,
+		],
+		stripeSubscriptionId: subscriptionIds?.[0],
+		customerLicenseTransitions,
+		now: activatedAt,
+	});
 
 	await executeAutumnBillingPlan({
 		ctx,
@@ -86,6 +99,7 @@ export const activateScheduledCustomerProduct = async ({
 					updates: updates as CustomerProductUpdate["updates"],
 				},
 			],
+			pooledBalancePlan,
 			customerLicenseTransitions,
 		},
 	});

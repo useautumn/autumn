@@ -586,15 +586,11 @@ const pooledAddOperation = ({
 				unlimited: false,
 				interval: "month",
 				intervalCount: 1,
-				resetCycleAnchor: null,
 				resetMode: "lazy",
 				stripeSubscriptionId: null,
 				customerLicenseLinkId: linkId,
 				rolloverSignature: "none",
 			},
-			nextResetAt: null,
-			featureId: FEATURE_ID,
-			rollover: null,
 		},
 	}) as AddEntitlementPriceOperation;
 
