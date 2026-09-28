@@ -110,7 +110,7 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 			],
 		],
 		[
-			"Nov 1",
+			"Nov 1, 2026",
 			"2 plans",
 			[
 				["Seats", undefined, "starts", { amount: "$5", suffix: "/mo" }],
@@ -118,7 +118,7 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 			],
 		],
 	]);
-	expect(section.summary).toBe("2 now · 1 on Nov 1");
+	expect(section.summary).toBe("2 now · 1 on Nov 1, 2026");
 });
 
 test("balance rows classify reset and carried-over usage", () => {
@@ -175,7 +175,7 @@ test("balance rows classify reset and carried-over usage", () => {
 			],
 		],
 		[
-			"Nov 1",
+			"Nov 1, 2026",
 			[
 				[
 					"500 → 100 granted · 0 used",
@@ -273,7 +273,7 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 			],
 		],
 		[
-			"Nov 1",
+			"Nov 1, 2026",
 			"$90/mo",
 			[
 				["Premium", "Base price", undefined, { amount: "$50", suffix: "/mo" }],
@@ -286,7 +286,7 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 			],
 		],
 	]);
-	expect(section.summary).toBe("2 items now · 2 on Nov 1");
+	expect(section.summary).toBe("2 items now · 2 on Nov 1, 2026");
 	expect(section.stripeIds.map((stripeId) => stripeId.id)).toEqual([
 		"sub_1",
 		"price_premium",
