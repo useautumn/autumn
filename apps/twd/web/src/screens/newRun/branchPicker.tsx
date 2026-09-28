@@ -18,6 +18,10 @@ export const WarmBadge = ({ warm }: { warm: Branch["warm"] }) => (
 	</Pill>
 );
 
+const uniqueByName = ({ branches }: { branches: Branch[] }) => [
+	...new Map(branches.map((b) => [b.name, b])).values(),
+];
+
 export const BranchPicker = ({
 	branches,
 	value,
@@ -28,7 +32,7 @@ export const BranchPicker = ({
 	onChange: (branch: Branch | null) => void;
 }) => (
 	<Combobox.Root
-		items={branches}
+		items={uniqueByName({ branches })}
 		value={value}
 		onValueChange={(b) => onChange(b)}
 		itemToStringLabel={(b: Branch) => b.name}

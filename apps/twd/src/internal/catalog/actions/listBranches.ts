@@ -85,7 +85,12 @@ export const listBranches = async ({
 		listRemoteHeads(),
 		getRepoSlug().then((slug) => listOpenPullsCached({ ctx, slug })),
 	]);
-	const branches = [
+	// One entry per branch: a PR whose head is dev/main adds its number to the base entry.
+	const byName = new Map<
+		string,
+		{ name: string; sha: string; prNumber: number | null }
+	>();
+	for (const branch of [
 		...BASE_BRANCHES.flatMap((name) => {
 			const sha = heads.get(name);
 			return sha ? [{ name, sha, prNumber: null }] : [];
@@ -95,7 +100,12 @@ export const listBranches = async ({
 			sha: heads.get(pull.head.ref) ?? pull.head.sha,
 			prNumber: pull.number,
 		})),
-	];
+	])
+		byName.set(branch.name, {
+			...branch,
+			prNumber: branch.prNumber ?? byName.get(branch.name)?.prNumber ?? null,
+		});
+	const branches = [...byName.values()];
 	const warm = new Map(
 		(
 			await listWarmImages({ ctx, shas: branches.map((branch) => branch.sha) })
