@@ -1318,6 +1318,22 @@ export const handle = ({
 		for (const k of keys) k.probedAt = iso(Date.now());
 		return ok(keysOverview());
 	}
+	if (
+		route === "POST /keys/reinit" &&
+		(body as { scope?: string } | undefined)?.scope &&
+		(body as { scope?: string }).scope !== "all"
+	) {
+		const res = enqueue(
+			"reinit_keys",
+			`reinit_keys:${(body as { scope: string }).scope}`,
+		);
+		setTimeout(() => {
+			res.job.status = "succeeded";
+			res.job.finishedAt = iso(Date.now());
+			for (const k of keys) if (k.usable) k.webhookRegistered = true;
+		}, 8_000);
+		return ok(res);
+	}
 	if (route === "POST /keys/reinit") {
 		const res = enqueue("reinit_keys", "reinit_keys");
 		gate = {

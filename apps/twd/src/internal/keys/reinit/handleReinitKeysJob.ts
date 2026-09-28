@@ -15,6 +15,7 @@ import { topUpAccounts } from "../actions/topUpAccounts.ts";
 import { knownKeySecrets, peekKeySecret } from "../keySecrets.ts";
 import { isFullNukeLockReason } from "../repos/fullNukeLockRepo.ts";
 import { setKeyGate } from "../repos/keyGateRepo.ts";
+import { reinitScopedKeys } from "./reinitScopedKeys.ts";
 
 const PHASES = [
 	"drain",
@@ -77,6 +78,8 @@ export const handleReinitKeysJob: JobHandler = async ({
 	checkpoint,
 	signal,
 }) => {
+	if (job.payload.scope && job.payload.scope !== "all")
+		return reinitScopedKeys({ ctx, job, checkpoint, signal });
 	const keyLimit = pLimit(KEY_CONCURRENCY);
 	const targetPerKey = Number(job.payload.targetPerKey) || 0;
 	const resumeAt = PHASES.indexOf(job.state.phase as Phase);

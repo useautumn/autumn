@@ -29,8 +29,14 @@ const RETAG_CONCURRENCY = 4;
 /** Adopt accounts tagged autumn_twd_pool=1 or legacy autumn_tw_pool=1; legacy ones are re-tagged twd, dirty ones nuked. */
 export const discoverPoolAccounts = async ({
 	ctx,
+	platformAccountIds,
+	includeLocked = false,
 }: {
 	ctx: TwdContext;
+	/** Only these keys (scoped reinit); default every known key. */
+	platformAccountIds?: string[];
+	/** A scoped reinit discovers on keys it has locked itself. */
+	includeLocked?: boolean;
 }): Promise<{ discovered: number; nuking: number; retagged: number }> => {
 	const locked = new Set(
 		(
@@ -46,7 +52,12 @@ export const discoverPoolAccounts = async ({
 	const limit = pLimit(KEY_CONCURRENCY);
 	await Promise.all(
 		knownKeySecrets()
-			.filter(({ platformAccountId }) => !locked.has(platformAccountId))
+			.filter(
+				({ platformAccountId }) =>
+					(includeLocked || !locked.has(platformAccountId)) &&
+					(!platformAccountIds ||
+						platformAccountIds.includes(platformAccountId)),
+			)
 			.map(({ platformAccountId, secret }) =>
 				limit(async () => {
 					const stripe = stripeForKey({ secret });

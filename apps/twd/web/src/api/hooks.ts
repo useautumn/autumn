@@ -5,6 +5,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
+import type { ReinitScope } from "../../../src/api/contract.ts";
 import {
 	ApiKey,
 	Branch,
@@ -282,11 +283,22 @@ export const useRemoveKey = () => {
 	});
 };
 
+export type ReinitRequest = {
+	scope: ReinitScope;
+	platformAccountIds?: string[];
+	targetPerKey?: number;
+};
+
 export const useReinitKeys = () => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: () =>
-			api({ method: "POST", path: "/keys/reinit", schema: EnqueueResponse }),
+		mutationFn: (body: ReinitRequest = { scope: "all" }) =>
+			api({
+				method: "POST",
+				path: "/keys/reinit",
+				body,
+				schema: EnqueueResponse,
+			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: qk.keys });
 			qc.invalidateQueries({ queryKey: qk.capacity });

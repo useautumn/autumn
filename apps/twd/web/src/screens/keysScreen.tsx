@@ -2,6 +2,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@autumn/ui/components/ui/dropdown-menu";
 import { KeyIcon } from "@phosphor-icons/react";
@@ -9,6 +10,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
 	Bomb,
 	Check,
+	ChevronDown,
 	Loader2,
 	MoreHorizontal,
 	Plus,
@@ -20,6 +22,7 @@ import {
 import { useState } from "react";
 import type { Job, StripeKey } from "../../../src/api/contract.ts";
 import {
+	type ReinitRequest,
 	useImportKeys,
 	useJobs,
 	useKeys,
@@ -90,6 +93,7 @@ export const KeysScreen = () => {
 	const [nuking, setNuking] = useState<StripeKey | null>(null);
 	const [removing, setRemoving] = useState<StripeKey | null>(null);
 	const [importing, setImporting] = useState(false);
+	const [picking, setPicking] = useState(false);
 	const remove = useRemoveKey();
 	const jobs = useJobs();
 	useLiveTopics("keys", "jobs");
@@ -207,7 +211,7 @@ export const KeysScreen = () => {
 							</>
 						)}
 						{job && <FullNukeStatus job={job} now={now} />}
-						{!k.present && <Pill tone="warn">not in env</Pill>}
+						{!k.present && <Pill tone="warn">removed</Pill>}
 					</span>
 				);
 			},
@@ -287,6 +291,18 @@ export const KeysScreen = () => {
 								Full Nuke…
 							</DropdownMenuItem>
 							<DropdownMenuItem
+								disabled={!k.present || draining}
+								onClick={() =>
+									reinit.mutate({
+										scope: "selected",
+										platformAccountIds: [k.platformAccountId],
+									})
+								}
+							>
+								<RefreshCw className="size-3.5" />
+								Re-initialise this key
+							</DropdownMenuItem>
+							<DropdownMenuItem
 								disabled={!k.present || k.accounts.inUse > 0}
 								onClick={() => setRemoving(k)}
 							>
@@ -317,13 +333,14 @@ export const KeysScreen = () => {
 				>
 					<RefreshCw className="size-3.5" /> Probe keys
 				</Button>
-				<Button
-					variant="secondary"
+				<ReinitMenu
+					keys={all}
 					disabled={draining}
-					onClick={() => setConfirm(true)}
-				>
-					Re-initialise
-				</Button>
+					pending={reinit.isPending}
+					onRun={(request) => reinit.mutate(request)}
+					onAll={() => setConfirm(true)}
+					onPick={() => setPicking(true)}
+				/>
 			</PageHeader>
 
 			{draining && (
@@ -435,6 +452,18 @@ export const KeysScreen = () => {
 				onOpenChange={(o) => !o && setNuking(null)}
 			/>
 			<ImportKeysDialog open={importing} onOpenChange={setImporting} />
+			<PickKeysDialog
+				open={picking}
+				onOpenChange={setPicking}
+				keys={all}
+				pending={reinit.isPending}
+				onConfirm={(platformAccountIds) =>
+					reinit.mutate(
+						{ scope: "selected", platformAccountIds },
+						{ onSuccess: () => setPicking(false) },
+					)
+				}
+			/>
 			<ConfirmDialog
 				open={removing !== null}
 				onOpenChange={(open) => !open && setRemoving(null)}
@@ -459,11 +488,14 @@ export const KeysScreen = () => {
 			<ConfirmDialog
 				open={confirm}
 				onOpenChange={setConfirm}
-				title="Re-initialise every Stripe key?"
+				title="Re-initialise every Stripe key (drain)?"
 				confirmLabel="Drain and re-initialise"
 				pending={reinit.isPending}
 				onConfirm={() =>
-					reinit.mutate(undefined, { onSettled: () => setConfirm(false) })
+					reinit.mutate(
+						{ scope: "all" },
+						{ onSettled: () => setConfirm(false) },
+					)
 				}
 			>
 				<ol className="list-decimal space-y-1.5 pl-4">
@@ -473,8 +505,7 @@ export const KeysScreen = () => {
 					</li>
 					<li>
 						<span className="text-foreground">Delete webhooks.</span> Every
-						webhook endpoint on each{" "}
-						<span className="font-mono">TW_V3_KEYS</span> key is removed.
+						webhook endpoint on every stored key is removed.
 					</li>
 					<li>
 						<span className="text-foreground">Re-register.</span> One Connect
@@ -485,8 +516,9 @@ export const KeysScreen = () => {
 				</ol>
 				<p className="mt-3 flex items-start gap-2 text-xs">
 					<ShieldAlert className="mt-px size-3.5 shrink-0 text-orange-600 dark:text-orange-400" />
-					Idempotent and safe to rerun, but it blocks everyone's runs until it
-					finishes.
+					Blocks everyone's runs until it finishes. Only needed when twd's
+					public URL changes; for new or broken keys use the scoped options
+					instead.
 				</p>
 			</ConfirmDialog>
 		</>
@@ -578,6 +610,187 @@ const ImportKeysDialog = ({
 					<ErrorCallout error={importKeys.error} className="mt-3" />
 				</>
 			)}
+		</Dialog>
+	);
+};
+
+const ReinitMenu = ({
+	keys,
+	disabled,
+	pending,
+	onRun,
+	onAll,
+	onPick,
+}: {
+	keys: StripeKey[];
+	disabled: boolean;
+	pending: boolean;
+	onRun: (request: ReinitRequest) => void;
+	onAll: () => void;
+	onPick: () => void;
+}) => {
+	const live = keys.filter((k) => k.present);
+	const missing = live.filter((k) => k.usable && !k.webhookRegistered).length;
+	const unhealthy = live.filter(
+		(k) => !k.usable || !k.webhookRegistered,
+	).length;
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				disabled={disabled || pending}
+				className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2.5 text-sm hover:bg-muted disabled:opacity-50"
+			>
+				{pending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+				Re-initialise
+				<ChevronDown className="size-3.5 text-subtle" />
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="w-72">
+				<ReinitOption
+					title="Missing webhooks"
+					detail="Register a webhook on usable keys that lack one. No drain."
+					count={missing}
+					onClick={() => onRun({ scope: "missing_webhooks" })}
+				/>
+				<ReinitOption
+					title="New / unhealthy keys"
+					detail="Re-probe, add missing webhooks, top up accounts. No drain."
+					count={unhealthy}
+					onClick={() => onRun({ scope: "unhealthy" })}
+				/>
+				<ReinitOption
+					title="Selected keys…"
+					detail="Pick keys; only runs on those keys are waited for."
+					onClick={onPick}
+				/>
+				<DropdownMenuSeparator />
+				<ReinitOption
+					title="Everything (drain)"
+					detail="Pauses all runs. Use when twd's URL changes."
+					onClick={onAll}
+					destructive
+				/>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+};
+
+const ReinitOption = ({
+	title,
+	detail,
+	count,
+	onClick,
+	destructive,
+}: {
+	title: string;
+	detail: string;
+	count?: number;
+	onClick: () => void;
+	destructive?: boolean;
+}) => (
+	<DropdownMenuItem
+		disabled={count === 0}
+		onClick={onClick}
+		className="flex flex-col items-start gap-0.5 py-1.5"
+	>
+		<span
+			className={cn(
+				"flex w-full items-center justify-between text-sm",
+				destructive && "text-red-600 dark:text-red-400",
+			)}
+		>
+			{title}
+			{count !== undefined && (
+				<span className="text-xs text-subtle">{count}</span>
+			)}
+		</span>
+		<span className="text-xs text-subtle">{detail}</span>
+	</DropdownMenuItem>
+);
+
+const PickKeysDialog = ({
+	open,
+	onOpenChange,
+	keys,
+	pending,
+	onConfirm,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	keys: StripeKey[];
+	pending: boolean;
+	onConfirm: (platformAccountIds: string[]) => void;
+}) => {
+	const [query, setQuery] = useState("");
+	const [picked, setPicked] = useState<Set<string>>(new Set());
+	const q = query.trim().toLowerCase();
+	const shown = keys
+		.filter((k) => k.present)
+		.filter(
+			(k) =>
+				!q ||
+				k.keyHint.toLowerCase().includes(q) ||
+				k.platformAccountId.toLowerCase().includes(q) ||
+				(k.displayName ?? "").toLowerCase().includes(q),
+		)
+		.slice(0, 200);
+	const toggle = (id: string) =>
+		setPicked((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={(next) => {
+				onOpenChange(next);
+				if (!next) setPicked(new Set());
+			}}
+			title="Re-initialise selected keys"
+			description="Each selected key is locked, waits for its own runs to finish, gets its webhooks replaced, and is topped up. Other keys keep serving runs."
+			footer={
+				<>
+					<Button variant="secondary" onClick={() => onOpenChange(false)}>
+						Cancel
+					</Button>
+					<Button
+						variant="primary"
+						disabled={picked.size === 0}
+						isLoading={pending}
+						onClick={() => onConfirm([...picked])}
+					>
+						Re-initialise {picked.size || ""}
+					</Button>
+				</>
+			}
+		>
+			<SearchInput
+				value={query}
+				onChange={setQuery}
+				placeholder="acct_…, sk_test_…, name"
+			/>
+			<ul className="mt-2 max-h-72 overflow-auto rounded-md border border-border">
+				{shown.map((k) => (
+					<li key={k.platformAccountId}>
+						<label className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted">
+							<input
+								type="checkbox"
+								checked={picked.has(k.platformAccountId)}
+								onChange={() => toggle(k.platformAccountId)}
+							/>
+							<span className="text-tiny-id">{k.keyHint}</span>
+							<span className="truncate text-subtle">
+								{k.displayName ?? k.platformAccountId}
+							</span>
+							{!k.usable && <Pill tone="bad">unusable</Pill>}
+							{k.usable && !k.webhookRegistered && (
+								<Pill tone="warn">no webhook</Pill>
+							)}
+						</label>
+					</li>
+				))}
+			</ul>
 		</Dialog>
 	);
 };

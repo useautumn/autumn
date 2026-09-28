@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { ImportKeysBody } from "../../api/contract.ts";
+import { ImportKeysBody, ReinitKeysBody } from "../../api/contract.ts";
 import { enqueueFullNukeKey } from "../../internal/keys/actions/enqueueFullNukeKey.ts";
 import { enqueueReinitKeys } from "../../internal/keys/actions/enqueueReinitKeys.ts";
 import { getKeysOverview } from "../../internal/keys/actions/getKeysOverview.ts";
@@ -62,12 +62,17 @@ export const keysRoutes = new Hono<TwdHono>()
 		),
 	)
 	.post("/keys/reinit", async (c) => {
-		const body = parseTargetPerKeyBody({ raw: await c.req.text() });
+		const raw = await c.req.text();
+		const body = ReinitKeysBody.safeParse(parseJsonOrNull({ raw }));
+		if (!body.success)
+			throw new TwdError({
+				status: 400,
+				code: "invalid_body",
+				message: body.error.message,
+				next: 'Send { scope: "all" | "missing_webhooks" | "unhealthy" | "selected", platformAccountIds?, targetPerKey? }.',
+			});
 		return c.json(
-			await enqueueReinitKeys({
-				ctx: c.get("ctx"),
-				targetPerKey: body.targetPerKey,
-			}),
+			await enqueueReinitKeys({ ctx: c.get("ctx"), ...body.data }),
 			202,
 		);
 	})
@@ -82,3 +87,12 @@ export const keysRoutes = new Hono<TwdHono>()
 			202,
 		);
 	});
+
+const parseJsonOrNull = ({ raw }: { raw: string }): unknown => {
+	if (!raw) return {};
+	try {
+		return JSON.parse(raw);
+	} catch {
+		return null;
+	}
+};

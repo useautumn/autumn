@@ -219,6 +219,20 @@ export const KeyGate = z.object({
 	reason: z.string().nullable(),
 	jobId: z.string().nullable(),
 });
+/** all = drain every run + replace every webhook (only needed when the public URL changes). */
+export const ReinitScope = z.enum([
+	"all",
+	"missing_webhooks",
+	"unhealthy",
+	"selected",
+]);
+export const ReinitKeysBody = z.object({
+	scope: ReinitScope.default("all"),
+	/** Required for scope=selected. */
+	platformAccountIds: z.array(z.string()).optional(),
+	/** Accounts to top each touched key up to (default 0 for all, 2 for scoped). */
+	targetPerKey: z.number().int().min(0).max(200).optional(),
+});
 export const ImportKeysBody = z.object({ text: z.string().min(1) });
 export const ImportKeysResponse = z.object({
 	parsed: z.number(),
@@ -497,6 +511,7 @@ export type RunEvent = z.infer<typeof RunEvent>;
 export type WorkerState = z.infer<typeof WorkerState>;
 export type Drift = z.infer<typeof Drift>;
 export type StripeKey = z.infer<typeof StripeKey>;
+export type ReinitScope = z.infer<typeof ReinitScope>;
 export type ImportKeysResponse = z.infer<typeof ImportKeysResponse>;
 export type KeysOverview = z.infer<typeof KeysOverview>;
 export type StripeAccount = z.infer<typeof StripeAccount>;

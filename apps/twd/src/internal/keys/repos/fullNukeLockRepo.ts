@@ -1,19 +1,22 @@
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, like, or } from "drizzle-orm";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { TwdDb } from "../../../lib/getDb.ts";
 import type { TwdTx } from "../../accounts/repos/cleanAccountsRepo.ts";
 
-/** Every lock reason starts with this; syncKeys never overwrites a locked key. */
+/** Key-level locks (full nuke, scoped reinit); syncKeys never overwrites a locked key. */
 const FULL_NUKE_PREFIX = "full nuke";
+const REINIT_PREFIX = "re-initialising";
 export const FULL_NUKE_IN_PROGRESS = `${FULL_NUKE_PREFIX} in progress`;
+export const REINIT_IN_PROGRESS = `${REINIT_PREFIX} this key`;
 
-export const fullNukeLocked = like(
-	stripeKeys.unusableReason,
-	`${FULL_NUKE_PREFIX}%`,
+export const fullNukeLocked = or(
+	like(stripeKeys.unusableReason, `${FULL_NUKE_PREFIX}%`),
+	like(stripeKeys.unusableReason, `${REINIT_PREFIX}%`),
 );
 
 export const isFullNukeLockReason = (reason: string | null): boolean =>
-	reason?.startsWith(FULL_NUKE_PREFIX) ?? false;
+	(reason?.startsWith(FULL_NUKE_PREFIX) || reason?.startsWith(REINIT_PREFIX)) ??
+	false;
 
 type KeyProbe = { retrieve?: unknown; v2List?: unknown };
 
