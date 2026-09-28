@@ -18,6 +18,7 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
 import { customerLicenseToLineItems } from "./customerLicenseToLineItems";
@@ -86,7 +87,11 @@ export const customerProductToLineItems = ({
 			price,
 		});
 
-		let effectiveNow = currentEpochMs;
+		let effectiveNow = billingContextToProrationNow({
+			billingContext,
+			billingPeriod,
+			now: currentEpochMs,
+		});
 
 		if (direction === "refund" && billingPeriod) {
 			const action = augmentBillingContextForAnchorResetRefund({

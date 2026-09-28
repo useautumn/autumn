@@ -375,7 +375,7 @@ export const runPull = async ({
 
 	const webhookWarnings = [...webhooks.skipped];
 	let stated = lists.webhooks as StatedWebhook[] | undefined;
-	// Only an env whose list succeeded may remove its urls from the config.
+	// Only an env whose list succeeded may remove its entries from the config.
 	for (const { envKey, list } of webhooks.read) {
 		const applied = applyWebhooksPull({
 			pull: { configPath, files },

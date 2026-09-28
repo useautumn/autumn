@@ -1,0 +1,221 @@
+import { describe, expect, test } from "bun:test";
+import {
+	applyMutation,
+	computeInitialize,
+	computeTrack,
+	createSubjectState,
+	MutationSubjectMismatchError,
+	OutOfOrderMutationError,
+	StaleMutationError,
+	type SubjectState,
+	type SubjectStateMutation,
+} from "../../../src/balanceEngine.js";
+import {
+	createCustomerEntitlement,
+	createCustomerProduct,
+	createEntityState,
+	createInitializeRequest,
+	createState,
+	createSubjectFor,
+	createTrackCommand,
+	identity,
+} from "../engineFixtures.js";
+
+const initializeMutation = computeInitialize(createInitializeRequest());
+
+const trackMutationOn = ({ state }: { state: SubjectState }) =>
+	computeTrack({
+		fullSubject: createSubjectFor({ state }),
+		command: createTrackCommand(),
+	});
+
+const withChanges = ({
+	mutation,
+	changes,
+}: {
+	mutation: SubjectStateMutation;
+	changes: SubjectStateMutation["changes"];
+}): SubjectStateMutation => ({ ...mutation, changes });
+
+describe("mutation application", () => {
+	test.concurrent("initializes a customer that has no state yet", () => {
+		const state = applyMutation({ state: null, mutation: initializeMutation });
+
+		expect(state).toEqual({
+			...createState(),
+			revision: 1,
+		});
+	});
+
+	test.concurrent("applies a track onto the initialized state", () => {
+		const initializedState = applyMutation({
+			state: null,
+			mutation: initializeMutation,
+		});
+		const nextState = applyMutation({
+			state: initializedState,
+			mutation: trackMutationOn({ state: initializedState }),
+		});
+
+		expect(nextState.revision).toBe(2);
+		expect(
+			nextState.customerEntitlements.find(
+				(row) => row.id === "messages_monthly",
+			),
+		).toMatchObject({ balance: 5 });
+	});
+
+	test.concurrent(
+		"a mutation decided against another balance still lands: its adds compose with it",
+		() => {
+			const state = createState();
+			const mutation = trackMutationOn({ state });
+			const [change] = mutation.changes;
+			if (change?.op !== "increment" || change.table !== "customerEntitlements")
+				throw new Error("expected a customer entitlement increment");
+
+			const landed = applyMutation({
+				state: createState({ balance: 9 }),
+				mutation,
+			});
+			expect(landed.customerEntitlements[0]?.balance).toBe(
+				9 + (change.add.balance ?? 0),
+			);
+		},
+	);
+
+	test.concurrent("refuses a mutation decided against another revision", () => {
+		const state = createState();
+		const mutation = trackMutationOn({ state });
+		const advancedState = applyMutation({ state, mutation });
+
+		expect(() => applyMutation({ state: advancedState, mutation })).toThrow(
+			OutOfOrderMutationError,
+		);
+	});
+
+	test.concurrent("refuses a mutation owned by another customer", () => {
+		const otherIdentity = { ...identity, customerId: "cus_2" };
+		const otherState = createSubjectState({
+			identity: otherIdentity,
+			customerProducts: [createCustomerProduct()],
+			customerEntitlements: [createCustomerEntitlement()],
+		});
+		const otherMutation = computeTrack({
+			fullSubject: createSubjectFor({ state: otherState }),
+			command: { ...createTrackCommand(), identity: otherIdentity },
+		});
+
+		expect(() =>
+			applyMutation({ state: createState(), mutation: otherMutation }),
+		).toThrow(MutationSubjectMismatchError);
+	});
+
+	test.concurrent(
+		"refuses a customer initialize onto an existing state",
+		() => {
+			expect(() =>
+				applyMutation({ state: createState(), mutation: initializeMutation }),
+			).toThrow(OutOfOrderMutationError);
+		},
+	);
+
+	test.concurrent(
+		"an entity initialize adds the entity and its rows to the view",
+		() => {
+			const state = { ...createState(), revision: 4 };
+			const mutation = computeInitialize({
+				...createInitializeRequest({ state: createEntityState() }),
+				revisionBefore: 4,
+			});
+
+			const next = applyMutation({ state, mutation });
+
+			expect(next.revision).toBe(5);
+			expect(next.entity?.id).toBe("ent_42");
+			expect(next.customerEntitlements.map((row) => row.id)).toEqual([
+				"messages_monthly",
+				"seats_ent_42",
+			]);
+			expect(() => applyMutation({ state: next, mutation })).toThrow(
+				OutOfOrderMutationError,
+			);
+		},
+	);
+
+	test.concurrent(
+		"refuses changes that address rows the state disagrees on",
+		() => {
+			const state = createState();
+			const mutation = trackMutationOn({ state });
+
+			expect(() =>
+				applyMutation({
+					state,
+					mutation: withChanges({
+						mutation,
+						changes: [
+							{
+								table: "customerEntitlements",
+								op: "update",
+								id: "messages_rollover",
+								before: { balance: 10 },
+								after: { balance: 5 },
+							},
+						],
+					}),
+				}),
+			).toThrow(StaleMutationError);
+			expect(() =>
+				applyMutation({
+					state: null,
+					mutation: withChanges({
+						mutation: initializeMutation,
+						changes: [
+							...initializeMutation.changes,
+							...initializeMutation.changes,
+						],
+					}),
+				}),
+			).toThrow(StaleMutationError);
+			expect(() =>
+				applyMutation({
+					state,
+					mutation: withChanges({
+						mutation,
+						changes: [
+							{
+								table: "customerEntitlements",
+								op: "delete",
+								id: "messages_rollover",
+							},
+						],
+					}),
+				}),
+			).toThrow(StaleMutationError);
+		},
+	);
+
+	test.concurrent("deletes the row a change names", () => {
+		const state = createState();
+		const nextState = applyMutation({
+			state,
+			mutation: withChanges({
+				mutation: trackMutationOn({ state }),
+				changes: [
+					{
+						table: "customerEntitlements",
+						op: "delete",
+						id: "messages_monthly",
+					},
+				],
+			}),
+		});
+
+		expect(nextState).toEqual({
+			...createState(),
+			revision: 1,
+			customerEntitlements: [],
+		});
+	});
+});

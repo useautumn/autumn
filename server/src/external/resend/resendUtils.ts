@@ -73,3 +73,35 @@ export const sendHtmlEmail = async ({
 		replyTo,
 	});
 };
+
+/** Removes a contact from every Resend audience so no broadcast reaches them. */
+export const deleteResendContacts = async ({ email }: { email: string }) => {
+	if (!process.env.RESEND_API_KEY) return;
+
+	const resend = createResendCli();
+
+	try {
+		const { data, error } = await resend.audiences.list();
+		if (error || !data) {
+			logger.error("Failed to list resend audiences", { error, email });
+			return;
+		}
+
+		for (const audience of data.data) {
+			const { error: removeError } = await resend.contacts.remove({
+				audienceId: audience.id,
+				email,
+			});
+
+			if (removeError && removeError.name !== "not_found") {
+				logger.warn("Failed to remove resend contact", {
+					error: removeError,
+					audienceId: audience.id,
+					email,
+				});
+			}
+		}
+	} catch (error) {
+		logger.error("Failed to delete resend contacts", { error, email });
+	}
+};

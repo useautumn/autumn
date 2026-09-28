@@ -1,5 +1,7 @@
-import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
-import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type {
+	FullCusEntWithFullCusProductView,
+	FullSubjectView,
+} from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { customerEntitlementFundsFeature } from "../cusEntUtils/classifyCusEnt/customerEntitlementFundsFeature.js";
@@ -20,13 +22,13 @@ export const fullSubjectToCreditSystems = ({
 	featureId,
 	features,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: FullSubjectView;
 	featureId: string;
 	features: Feature[];
 }): Feature[] => {
 	const cusEntsByCreditSystemId = new Map<
 		string,
-		FullCusEntWithFullCusProduct[]
+		FullCusEntWithFullCusProductView[]
 	>();
 	for (const customerEntitlement of fullSubjectToCustomerEntitlements({
 		fullSubject,

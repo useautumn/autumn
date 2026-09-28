@@ -38039,6 +38039,26 @@ paths:
                           title: FeatureQuantity
                           description: Quantity configuration for a prepaid feature.
                         description: Optional prepaid feature quantities for this phase's plan.
+                      license_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            license_plan_id:
+                              type: string
+                              description: The license plan to set seat quantity for.
+                            quantity:
+                              type: integer
+                              minimum: 0
+                              maximum: 9007199254740991
+                              description: Total seats for the license, inclusive of the plan's included
+                                amount — seats beyond it are paid.
+                          required:
+                            - license_plan_id
+                            - quantity
+                        description: Seat quantities for this phase's licenses, keyed by license plan.
+                          Omitted on a later phase, the phase grants only the
+                          included seats.
                       version:
                         type: number
                         description: Optional explicit plan version to schedule.
@@ -40437,6 +40457,26 @@ paths:
                                   title: FeatureQuantity
                                   description: Quantity configuration for a prepaid feature.
                                 description: Optional prepaid feature quantities for this phase's plan.
+                              license_quantities:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    license_plan_id:
+                                      type: string
+                                      description: The license plan to set seat quantity for.
+                                    quantity:
+                                      type: integer
+                                      minimum: 0
+                                      maximum: 9007199254740991
+                                      description: Total seats for the license, inclusive of the plan's included
+                                        amount — seats beyond it are paid.
+                                  required:
+                                    - license_plan_id
+                                    - quantity
+                                description: Seat quantities for this phase's licenses, keyed by license plan.
+                                  Omitted on a later phase, the phase grants
+                                  only the included seats.
                               version:
                                 type: number
                                 description: Optional explicit plan version to schedule.
@@ -42864,6 +42904,26 @@ paths:
                                 title: FeatureQuantity
                                 description: Quantity configuration for a prepaid feature.
                               description: Optional prepaid feature quantities for this phase's plan.
+                            license_quantities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  license_plan_id:
+                                    type: string
+                                    description: The license plan to set seat quantity for.
+                                  quantity:
+                                    type: integer
+                                    minimum: 0
+                                    maximum: 9007199254740991
+                                    description: Total seats for the license, inclusive of the plan's included
+                                      amount — seats beyond it are paid.
+                                required:
+                                  - license_plan_id
+                                  - quantity
+                              description: Seat quantities for this phase's licenses, keyed by license plan.
+                                Omitted on a later phase, the phase grants only
+                                the included seats.
                             version:
                               type: number
                               description: Optional explicit plan version to schedule.
@@ -77568,7 +77628,6 @@ paths:
                     addresses are rejected; tunnels such as ngrok work.
                 events:
                   type: array
-                  minItems: 1
                   items:
                     enum:
                       - customer.products.updated
@@ -77585,8 +77644,9 @@ paths:
                       - vercel.webhooks.event
                     type: string
                     description: An event type the webhook receives.
-                  description: The events sent to this webhook. At least one. `vercel.*` events
-                    can't be mixed with other events.
+                  description: The events sent to this webhook. Leave it out to send every event.
+                    `vercel.*` events can't be mixed with other events.
+                  default: []
                 description:
                   type: string
                   description: A note for your own reference.
@@ -77596,7 +77656,6 @@ paths:
               required:
                 - id
                 - url
-                - events
               title: CreateWebhookParams
               examples:
                 - &a150
@@ -77632,9 +77691,8 @@ paths:
                     items:
                       type: string
                     description: The events sent to this webhook, as `WebhookEventType` names; a
-                      type newer than your client is returned as-is. Empty only
-                      for a webhook made in the dashboard that receives every
-                      event.
+                      type newer than your client is returned as-is. Empty means
+                      the webhook receives every event.
                   disabled:
                     type: boolean
                     description: When true, no events are sent to the webhook.
@@ -77729,9 +77787,8 @@ paths:
                     items:
                       type: string
                     description: The events sent to this webhook, as `WebhookEventType` names; a
-                      type newer than your client is returned as-is. Empty only
-                      for a webhook made in the dashboard that receives every
-                      event.
+                      type newer than your client is returned as-is. Empty means
+                      the webhook receives every event.
                   disabled:
                     type: boolean
                     description: When true, no events are sent to the webhook.
@@ -77814,8 +77871,7 @@ paths:
                             type: string
                           description: The events sent to this webhook, as `WebhookEventType` names; a
                             type newer than your client is returned as-is. Empty
-                            only for a webhook made in the dashboard that
-                            receives every event.
+                            means the webhook receives every event.
                         disabled:
                           type: boolean
                           description: When true, no events are sent to the webhook.
@@ -77882,7 +77938,6 @@ paths:
                     addresses are rejected; tunnels such as ngrok work.
                 events:
                   type: array
-                  minItems: 1
                   items:
                     enum:
                       - customer.products.updated
@@ -77899,8 +77954,9 @@ paths:
                       - vercel.webhooks.event
                     type: string
                     description: An event type the webhook receives.
-                  description: The events sent to this webhook. At least one. `vercel.*` events
-                    can't be mixed with other events.
+                  description: The events sent to this webhook. Pass `[]` to send every event;
+                    omit it to keep the current list. `vercel.*` events can't be
+                    mixed with other events.
                 description:
                   type: string
                   description: A note for your own reference.
@@ -77940,9 +77996,8 @@ paths:
                     items:
                       type: string
                     description: The events sent to this webhook, as `WebhookEventType` names; a
-                      type newer than your client is returned as-is. Empty only
-                      for a webhook made in the dashboard that receives every
-                      event.
+                      type newer than your client is returned as-is. Empty means
+                      the webhook receives every event.
                   disabled:
                     type: boolean
                     description: When true, no events are sent to the webhook.
@@ -78059,7 +78114,6 @@ paths:
                           addresses are rejected; tunnels such as ngrok work.
                       events:
                         type: array
-                        minItems: 1
                         items:
                           enum:
                             - customer.products.updated
@@ -78076,8 +78130,9 @@ paths:
                             - vercel.webhooks.event
                           type: string
                           description: An event type the webhook receives.
-                        description: The events sent to this webhook. At least one. `vercel.*` events
-                          can't be mixed with other events.
+                        description: The events sent to this webhook. Leave it out to send every event.
+                          `vercel.*` events can't be mixed with other events.
+                        default: []
                       description:
                         type: string
                         description: A note for your own reference.
@@ -78087,7 +78142,6 @@ paths:
                     required:
                       - id
                       - url
-                      - events
                   description: The webhooks to create or update. Webhooks not listed are left
                     alone; nothing is deleted.
               required:
@@ -78142,8 +78196,8 @@ paths:
                                     type: string
                                   description: The events sent to this webhook, as `WebhookEventType` names; a
                                     type newer than your client is returned
-                                    as-is. Empty only for a webhook made in the
-                                    dashboard that receives every event.
+                                    as-is. Empty means the webhook receives
+                                    every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78192,8 +78246,8 @@ paths:
                                     type: string
                                   description: The events sent to this webhook, as `WebhookEventType` names; a
                                     type newer than your client is returned
-                                    as-is. Empty only for a webhook made in the
-                                    dashboard that receives every event.
+                                    as-is. Empty means the webhook receives
+                                    every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78232,8 +78286,8 @@ paths:
                                     type: string
                                   description: The events sent to this webhook, as `WebhookEventType` names; a
                                     type newer than your client is returned
-                                    as-is. Empty only for a webhook made in the
-                                    dashboard that receives every event.
+                                    as-is. Empty means the webhook receives
+                                    every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78283,8 +78337,8 @@ paths:
                                     type: string
                                   description: The events sent to this webhook, as `WebhookEventType` names; a
                                     type newer than your client is returned
-                                    as-is. Empty only for a webhook made in the
-                                    dashboard that receives every event.
+                                    as-is. Empty means the webhook receives
+                                    every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78323,8 +78377,8 @@ paths:
                                     type: string
                                   description: The events sent to this webhook, as `WebhookEventType` names; a
                                     type newer than your client is returned
-                                    as-is. Empty only for a webhook made in the
-                                    dashboard that receives every event.
+                                    as-is. Empty means the webhook receives
+                                    every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78374,8 +78428,8 @@ paths:
                                     type: string
                                   description: The events sent to this webhook, as `WebhookEventType` names; a
                                     type newer than your client is returned
-                                    as-is. Empty only for a webhook made in the
-                                    dashboard that receives every event.
+                                    as-is. Empty means the webhook receives
+                                    every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78476,7 +78530,6 @@ paths:
                           addresses are rejected; tunnels such as ngrok work.
                       events:
                         type: array
-                        minItems: 1
                         items:
                           enum:
                             - customer.products.updated
@@ -78493,8 +78546,9 @@ paths:
                             - vercel.webhooks.event
                           type: string
                           description: An event type the webhook receives.
-                        description: The events sent to this webhook. At least one. `vercel.*` events
-                          can't be mixed with other events.
+                        description: The events sent to this webhook. Leave it out to send every event.
+                          `vercel.*` events can't be mixed with other events.
+                        default: []
                       description:
                         type: string
                         description: A note for your own reference.
@@ -78504,7 +78558,6 @@ paths:
                     required:
                       - id
                       - url
-                      - events
                   description: The webhooks to create or update. Webhooks not listed are left
                     alone; nothing is deleted.
               required:
@@ -78551,8 +78604,7 @@ paths:
                             type: string
                           description: The events sent to this webhook, as `WebhookEventType` names; a
                             type newer than your client is returned as-is. Empty
-                            only for a webhook made in the dashboard that
-                            receives every event.
+                            means the webhook receives every event.
                         disabled:
                           type: boolean
                           description: When true, no events are sent to the webhook.
