@@ -38,6 +38,7 @@ import { getAttachAccessStartsAt } from "./getAttachAccessStartsAt";
 import { overlayAttachRuntimeBalances } from "./overlayAttachRuntimeBalances.js";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
+import { setupAttachLicenseTransitionSource } from "./setupAttachLicenseTransitionSource";
 import { setupAttachProductContext } from "./setupAttachProductContext";
 import { setupAttachTransitionContext } from "./setupAttachTransitionContext";
 import { setupAttachTrialContext } from "./setupAttachTrialContext";
@@ -114,6 +115,13 @@ export const setupAttachBillingContext = async ({
 	const carryOverSourceCustomerProduct =
 		currentCustomerProduct ?? removedCarrySource ?? undefined;
 
+	const licenseTransitionSourceCustomerProduct =
+		setupAttachLicenseTransitionSource({
+			fullCustomer,
+			params,
+			currentCustomerProduct,
+		});
+
 	const isAttachPaidRecurring = isProductPaidAndRecurring(attachProduct);
 
 	const hasPaidRecurringSubscription = hasActivePaidSubscription({
@@ -182,7 +190,7 @@ export const setupAttachBillingContext = async ({
 	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
 		params,
 		fullProduct: attachProduct,
-		customerProduct: currentCustomerProduct,
+		customerProduct: licenseTransitionSourceCustomerProduct,
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({
@@ -327,6 +335,7 @@ export const setupAttachBillingContext = async ({
 		currentCustomerProduct,
 		scheduledCustomerProduct,
 		carryOverSourceCustomerProduct,
+		licenseTransitionSourceCustomerProduct,
 		canceledStripeSubscriptionId,
 
 		planTiming,
