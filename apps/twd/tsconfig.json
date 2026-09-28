@@ -1,0 +1,26 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "Preserve",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"types": ["bun"],
+		"paths": {
+			"@twd/*": ["./src/*"],
+			"@tw/*": ["../../scripts/tw/*"],
+			"@server/*": ["../../server/src/*"],
+			"@tests/*": ["../../server/tests/*"],
+			"@autumn/shared": ["../../shared/index.ts"],
+			"@autumn/shared/*": ["../../shared/*"]
+		}
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules", "web"]
+}

@@ -1,0 +1,31 @@
+{
+	"name": "@autumn/twd",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun --watch src/main.ts",
+		"start": "bun src/main.ts",
+		"web": "vite --config web/vite.config.ts",
+		"web:build": "vite build --config web/vite.config.ts",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "bun src/db/migrate.ts",
+		"ts": "bunx tsgo --noEmit -p tsconfig.json"
+	},
+	"dependencies": {
+		"@autumn/shared": "workspace:*",
+		"drizzle-orm": "catalog:",
+		"hono": "4.12.27",
+		"modal": "^0.8.0",
+		"p-limit": "^7.2.0",
+		"postgres": "3.4.7",
+		"stripe": "catalog:",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "1.3.14",
+		"@typescript/native-preview": "catalog:",
+		"drizzle-kit": "catalog:",
+		"typescript": "~5.9.3"
+	}
+}

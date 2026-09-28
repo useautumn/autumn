@@ -15,6 +15,7 @@
 			"apps/sdk-test",
 			"apps/sso-test-idp",
 			"apps/testbench",
+			"apps/twd",
 			"packages/agent-docs",
 			"packages/atmn",
 			"packages/atmn-old",

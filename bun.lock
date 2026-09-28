@@ -208,6 +208,26 @@
         "vite": "catalog:",
       },
     },
+    "apps/twd": {
+      "name": "@autumn/twd",
+      "version": "0.0.0",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "hono": "4.12.27",
+        "modal": "^0.8.0",
+        "p-limit": "^7.2.0",
+        "postgres": "3.4.7",
+        "stripe": "catalog:",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@typescript/native-preview": "catalog:",
+        "drizzle-kit": "catalog:",
+        "typescript": "~5.9.3",
+      },
+    },
     "apps/website": {
       "name": "@autumn/website",
       "version": "0.1.0",
@@ -1161,6 +1181,8 @@
     "@autumn/stripe-sync": ["@autumn/stripe-sync@workspace:packages/stripe-sync"],
 
     "@autumn/testbench": ["@autumn/testbench@workspace:apps/testbench"],
+
+    "@autumn/twd": ["@autumn/twd@workspace:apps/twd"],
 
     "@autumn/ui": ["@autumn/ui@workspace:packages/ui"],
 
@@ -6903,6 +6925,10 @@
     "@autumn/testbench/react-dom": ["react-dom@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0", "scheduler": "^0.23.2" }, "peerDependencies": { "react": "^18.3.1" } }, "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw=="],
 
     "@autumn/testbench/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@autumn/twd/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@autumn/twd/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/ui/ai": ["ai@6.0.264", "", { "dependencies": { "@ai-sdk/gateway": "3.0.179", "@ai-sdk/provider": "3.0.15", "@ai-sdk/provider-utils": "4.0.46", "@opentelemetry/api": "^1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-te59gArDNXoQYWuOkZNdM7n3McETAPWFuwT/iKWRJXySV/doIuKm8Az4X6IOalaGp3K8zqGT/ICn08z5ZZNDuw=="],
 
