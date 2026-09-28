@@ -1,42 +1,26 @@
 import type { MigrationStatus } from "@autumn/shared";
 import {
-	NEUTRAL_STATUS_ICON_CLASS,
 	StatusChip,
+	type StatusGlyph,
+	type StatusTone,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import {
-	CheckIcon,
-	ClockIcon,
-	type Icon,
-	MinusIcon,
-	PencilSimpleIcon,
-	PlayIcon,
-	ProhibitIcon,
-	XIcon,
-} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { statusLabel, waitingExplanation } from "./migrationStatus";
 
-const STATUS_ICON_CLASSES: Record<MigrationStatus, string> = {
-	draft: NEUTRAL_STATUS_ICON_CLASS,
-	waiting: "bg-yellow-500",
-	running: "bg-green-500",
-	run: "bg-blue-500",
-	no_changes: NEUTRAL_STATUS_ICON_CLASS,
-	failed: "bg-red-500",
-	canceled: NEUTRAL_STATUS_ICON_CLASS,
-};
-
-const STATUS_ICONS: Record<MigrationStatus, Icon> = {
-	draft: PencilSimpleIcon,
-	waiting: ClockIcon,
-	running: PlayIcon,
-	run: CheckIcon,
-	no_changes: MinusIcon,
-	failed: XIcon,
-	canceled: ProhibitIcon,
+const STATUS_INDICATORS: Record<
+	MigrationStatus,
+	{ tone: StatusTone; glyph: StatusGlyph }
+> = {
+	draft: { tone: "neutral", glyph: "pencil" },
+	waiting: { tone: "yellow", glyph: "clock" },
+	running: { tone: "green", glyph: "play" },
+	run: { tone: "blue", glyph: "check" },
+	no_changes: { tone: "neutral", glyph: "minus" },
+	failed: { tone: "red", glyph: "x" },
+	canceled: { tone: "neutral", glyph: "ban" },
 };
 
 export function MigrationStatusBadge({
@@ -50,13 +34,11 @@ export function MigrationStatusBadge({
 	labelBlocker?: boolean;
 	className?: string;
 }) {
-	const StatusIcon = STATUS_ICONS[status];
 	const badge = (
 		<StatusChip
 			tabIndex={status === "waiting" ? 0 : undefined}
 			className={cn("max-w-56", className)}
-			icon={<StatusIcon weight="bold" />}
-			iconClassName={STATUS_ICON_CLASSES[status]}
+			{...STATUS_INDICATORS[status]}
 		>
 			<span className="truncate">
 				{statusLabel({ status, blockedBy: labelBlocker ? blockedBy : null })}

@@ -1,22 +1,15 @@
 import type { SyncProposalV2 } from "@autumn/shared";
-import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
-import {
-	CheckIcon,
-	ExclamationMarkIcon,
-	type Icon,
-	MinusIcon,
-	XIcon,
-} from "@phosphor-icons/react";
+import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
 import { type StripeStatusTone, stripeObjectToStatus } from "./stripeStatus";
 
 const TONE_INDICATORS: Record<
 	StripeStatusTone,
-	{ icon: Icon; className: string }
+	{ tone: StatusTone; glyph: StatusGlyph }
 > = {
-	good: { icon: CheckIcon, className: "bg-green-500" },
-	warning: { icon: ExclamationMarkIcon, className: "bg-amber-500" },
-	bad: { icon: XIcon, className: "bg-red-500" },
-	neutral: { icon: MinusIcon, className: NEUTRAL_STATUS_ICON_CLASS },
+	good: { tone: "green", glyph: "check" },
+	warning: { tone: "amber", glyph: "alert" },
+	bad: { tone: "red", glyph: "x" },
+	neutral: { tone: "neutral", glyph: "minus" },
 };
 
 /** The Stripe subscription's (or not-yet-started schedule's) live status. */
@@ -27,11 +20,7 @@ export function StripeStatusBadge({ proposal }: { proposal: SyncProposalV2 }) {
 	});
 	if (!status) return null;
 
-	const { icon: ToneIcon, className } = TONE_INDICATORS[status.tone];
-
 	return (
-		<StatusChip icon={<ToneIcon weight="bold" />} iconClassName={className}>
-			{status.label}
-		</StatusChip>
+		<StatusChip {...TONE_INDICATORS[status.tone]}>{status.label}</StatusChip>
 	);
 }

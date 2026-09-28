@@ -1,6 +1,5 @@
 import type { MigrationItemRunSkipReason } from "@autumn/shared";
-import { NEUTRAL_STATUS_ICON_CLASS, StatusChip } from "@autumn/ui";
-import { CheckIcon, type Icon, MinusIcon, XIcon } from "@phosphor-icons/react";
+import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
 import { skipBadgeSpec, skipReasonFromResponse } from "./skipBadge";
@@ -14,16 +13,16 @@ export function ActiveRunDot({ className }: { className?: string }) {
 	);
 }
 
-const LIVE_ICON_CLASSES: Record<MigrationItemEventStatus, string> = {
-	succeeded: "bg-green-500",
-	skipped: NEUTRAL_STATUS_ICON_CLASS,
-	failed: "bg-red-500",
+const LIVE_TONES: Record<MigrationItemEventStatus, StatusTone> = {
+	succeeded: "green",
+	skipped: "neutral",
+	failed: "red",
 };
 
-const DRY_ICON_CLASSES: Record<MigrationItemEventStatus, string> = {
-	succeeded: "bg-blue-500",
-	skipped: NEUTRAL_STATUS_ICON_CLASS,
-	failed: "bg-orange-500",
+const DRY_TONES: Record<MigrationItemEventStatus, StatusTone> = {
+	succeeded: "blue",
+	skipped: "neutral",
+	failed: "orange",
 };
 
 const STATUS_LABELS: Record<MigrationItemEventStatus, string> = {
@@ -32,10 +31,10 @@ const STATUS_LABELS: Record<MigrationItemEventStatus, string> = {
 	failed: "Failed",
 };
 
-const STATUS_ICONS: Record<MigrationItemEventStatus, Icon> = {
-	succeeded: CheckIcon,
-	skipped: MinusIcon,
-	failed: XIcon,
+const STATUS_GLYPHS: Record<MigrationItemEventStatus, StatusGlyph> = {
+	succeeded: "check",
+	skipped: "minus",
+	failed: "x",
 };
 
 export function ItemEventStatusBadge({
@@ -49,8 +48,6 @@ export function ItemEventStatusBadge({
 	response?: Record<string, unknown> | null;
 	skipReason?: MigrationItemRunSkipReason | null;
 }) {
-	const StatusIcon = STATUS_ICONS[status];
-	const iconClassName = (dryRun ? DRY_ICON_CLASSES : LIVE_ICON_CLASSES)[status];
 	const label =
 		status === "skipped"
 			? skipBadgeSpec({
@@ -62,8 +59,8 @@ export function ItemEventStatusBadge({
 	return (
 		<StatusChip
 			dashed={dryRun}
-			icon={<StatusIcon weight="bold" />}
-			iconClassName={iconClassName}
+			tone={(dryRun ? DRY_TONES : LIVE_TONES)[status]}
+			glyph={STATUS_GLYPHS[status]}
 		>
 			{label}
 		</StatusChip>
