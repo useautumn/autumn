@@ -39,8 +39,6 @@ const context = {
 	products,
 	priceLabelFor: (product: ProductV2) =>
 		`$${product.items?.[0]?.price ?? product.id.length}/mo`,
-	phaseTotalFor: (phaseProducts: ProductV2[]) =>
-		`${phaseProducts.length} plans`,
 };
 
 const subscriptionChange = (planId: string, action: string) =>
@@ -104,7 +102,6 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 	expect(
 		section.phases.map((phase) => [
 			phase.label,
-			phase.total,
 			phase.rows.map((row) => [
 				row.title,
 				row.description,
@@ -115,7 +112,6 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 	).toEqual([
 		[
 			"Now",
-			"2 plans",
 			[
 				["Premium", undefined, "starts", { amount: "$7", suffix: "/mo" }],
 				[
@@ -129,7 +125,6 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 		],
 		[
 			"Nov 1, 2026",
-			"2 plans",
 			[
 				["Seats", undefined, "starts", { amount: "$5", suffix: "/mo" }],
 				["Premium", undefined, "kept", { amount: "$7", suffix: "/mo" }],
@@ -250,7 +245,6 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 	expect(
 		section.phases.map((phase) => [
 			phase.label,
-			phase.total,
 			phase.rows.map((row) => [
 				row.title,
 				row.description,
@@ -261,7 +255,6 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 	).toEqual([
 		[
 			"Now",
-			"$50/mo",
 			[
 				["Premium", "Base price", undefined, { amount: "$50", suffix: "/mo" }],
 				["Legacy Support", undefined, "unmanaged", undefined],
@@ -269,7 +262,6 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 		],
 		[
 			"Nov 1, 2026",
-			"$90/mo",
 			[
 				["Premium", "Base price", undefined, { amount: "$50", suffix: "/mo" }],
 				[
@@ -411,8 +403,7 @@ test("starting and kept plans show their own custom price, not the catalog's", (
 	]);
 });
 
-test("a plan declared for several entities counts once per entity in the total", () => {
-	const phaseTotals: number[] = [];
+test("a plan declared for several entities keeps a row per entity", () => {
 	const section = planChangesToReviewSection({
 		preview: preview({ phases: [phase(NOW, {})] }),
 		declaredPlansByPhase: [
@@ -426,16 +417,9 @@ test("a plan declared for several entities counts once per entity in the total",
 			reviewPlan("pro", { entityId: "ent_b" }),
 		],
 		nowMs: NOW,
-		context: {
-			...context,
-			phaseTotalFor: (phaseProducts) => {
-				phaseTotals.push(phaseProducts.length);
-				return undefined;
-			},
-		},
+		context,
 	});
 
-	expect(phaseTotals).toEqual([2]);
 	expect(section.phases[0]?.rows.map((row) => [row.key, row.status])).toEqual([
 		["plan-0-pro-ent_a-kept-0", "kept"],
 		["plan-0-pro-ent_b-kept-1", "kept"],

@@ -8,7 +8,6 @@ import { customerStatePlansToReviewPlans } from "../utils/review/customerStatePl
 import { phaseReviewPlans } from "../utils/review/phaseReviewPlans";
 import { planChangesToReviewSection } from "../utils/review/planChangesToReviewSection";
 import { processorItemsToReviewSection } from "../utils/review/processorItemsToReviewSection";
-import { recurringTotalLabel } from "../utils/review/recurringTotalLabel";
 import { reviewPlanPriceLabel } from "../utils/review/reviewPlanPriceLabel";
 import type { ReviewChangeSection } from "../utils/review/types/reviewChange";
 
@@ -54,11 +53,6 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 						reviewPlanPriceLabel({
 							product,
 							features,
-							currency: displayCurrency,
-						}),
-					phaseTotalFor: (phaseProducts: ProductV2[]) =>
-						recurringTotalLabel({
-							products: phaseProducts,
 							currency: displayCurrency,
 						}),
 				},

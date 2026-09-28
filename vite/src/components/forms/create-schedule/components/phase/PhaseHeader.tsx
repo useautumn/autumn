@@ -4,13 +4,11 @@ import {
 	getPhaseTimingError,
 	hasCreateSchedulePhaseStarted,
 } from "@/components/forms/customer-state/customerStateSchema";
-import { usePhaseRecurringTotal } from "../../hooks/usePhaseRecurringTotal";
-import { PhaseActionsMenu } from "./PhaseActionsMenu";
 import { PhaseDateControl } from "./PhaseDateControl";
+import { PhaseDeleteButton } from "./PhaseDeleteButton";
 
 export function PhaseHeader({ phaseIndex }: { phaseIndex: number }) {
 	const { formValues, nowMs, isPhaseLocked } = useCustomerStateContext();
-	const recurringTotal = usePhaseRecurringTotal({ phaseIndex });
 
 	const isLocked = isPhaseLocked({ phaseIndex });
 	const hasStarted = hasCreateSchedulePhaseStarted({
@@ -36,16 +34,7 @@ export function PhaseHeader({ phaseIndex }: { phaseIndex: number }) {
 					/>
 				</div>
 				<span className="flex-1" />
-				{recurringTotal && (
-					<span className="tabular-nums text-tertiary-foreground">
-						{recurringTotal}
-					</span>
-				)}
-				<PhaseActionsMenu
-					phaseIndex={phaseIndex}
-					hasStarted={hasStarted}
-					isLocked={isLocked}
-				/>
+				<PhaseDeleteButton phaseIndex={phaseIndex} hasStarted={hasStarted} />
 			</div>
 			{timingError && (
 				<p className="pt-1 text-xs text-destructive">{timingError}</p>

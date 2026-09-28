@@ -88,7 +88,7 @@ function PhaseDatePicker({
 		<div className="group/phase-date relative w-fit">
 			<PhaseDateBox
 				className={cn(
-					"group-hover/phase-date:border-foreground group-has-[:focus-visible]/phase-date:border-foreground",
+					"group-hover/phase-date:border-foreground/30 group-has-[:focus-visible]/phase-date:border-foreground/50",
 					limits.disabled &&
 						"text-tertiary-foreground group-hover/phase-date:border-table-surface-border",
 					hasTimingError && "border-destructive",

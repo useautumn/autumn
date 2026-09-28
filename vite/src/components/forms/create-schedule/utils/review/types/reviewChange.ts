@@ -29,7 +29,6 @@ export type ReviewChangeRow = {
 export type ReviewChangePhase = {
 	key: string;
 	label: string;
-	total?: string;
 	rows: ReviewChangeRow[];
 };
 

@@ -27,11 +27,6 @@ export function ReviewChangePhaseBlock({
 					<span className="font-medium text-muted-foreground">
 						{phase.label}
 					</span>
-					{phase.total && (
-						<span className="tabular-nums text-tertiary-foreground">
-							{phase.total}
-						</span>
-					)}
 				</div>
 			}
 		>

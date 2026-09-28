@@ -4,9 +4,6 @@ import { formatMoney } from "./formatMoney";
 import type { ReviewChangeValue } from "./types/reviewChange";
 
 const ONE_OFF_SUFFIX = "one-off";
-const USAGE_TOTAL_SUFFIX = " + usage";
-
-type PricedProcessorItem = ProcessorItem & { price: ProcessorItemPrice };
 
 /** "/mo", "/3 mo", or "one-off" for a price without a recurring interval. */
 const priceIntervalSuffix = (price: ProcessorItemPrice) => {
@@ -69,30 +66,4 @@ export const processorItemValue = (
 	if (price.usage_type === "metered") return { amount: "Usage-based" };
 	if (price.tiers) return { amount: "Tiered" };
 	return undefined;
-};
-
-const isPricedItem = (item: ProcessorItem): item is PricedProcessorItem =>
-	item.price !== null;
-
-/** Sum of fixed charges in a phase, when every priced item shares one interval and currency. */
-export const processorItemsTotal = (items: ProcessorItem[]) => {
-	const pricedItems = items.filter(isPricedItem);
-	const fixedItems = pricedItems.filter((item) => item.amount !== null);
-	const [first] = fixedItems;
-	if (!first) return undefined;
-
-	const sharesBilling = fixedItems.every(
-		(item) =>
-			item.price.currency === first.price.currency &&
-			priceIntervalSuffix(item.price) === priceIntervalSuffix(first.price),
-	);
-	if (!sharesBilling) return undefined;
-
-	const total = fixedItems.reduce((sum, item) => sum + (item.amount ?? 0), 0);
-	const hasVariableItems = fixedItems.length < pricedItems.length;
-	return [
-		formatMoney({ amount: total, currency: first.price.currency }),
-		priceIntervalSuffix(first.price),
-		hasVariableItems ? USAGE_TOTAL_SUFFIX : "",
-	].join("");
 };

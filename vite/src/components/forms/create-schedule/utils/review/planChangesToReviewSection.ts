@@ -13,7 +13,6 @@ import {
 	phaseSummaryLabel,
 } from "./phaseTiming";
 import { planChangePlanId } from "./planChangePlanId";
-import { reviewPlansToProducts } from "./reviewPlansToProducts";
 import {
 	joinDetail,
 	summarizeCounts,
@@ -46,7 +45,6 @@ const PLAN_CHANGE_STATUS: Record<
 type PlanRowContext = {
 	products: ProductV2[];
 	priceLabelFor: (product: ProductV2) => string;
-	phaseTotalFor: (products: ProductV2[]) => string | undefined;
 };
 
 const findProduct = ({
@@ -215,7 +213,6 @@ export const planChangesToReviewSection = ({
 				phase: {
 					key: `plans-${phaseIndex}`,
 					label: phaseLabel({ phaseIndex, startsAt: phase.starts_at, nowMs }),
-					total: context.phaseTotalFor(reviewPlansToProducts(declaredPlans)),
 					rows: [...changeRows, ...keptRows],
 				},
 			};

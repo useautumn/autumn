@@ -11,7 +11,6 @@ import {
 	startsNow,
 } from "./phaseTiming";
 import {
-	processorItemsTotal,
 	processorItemValue,
 	unitPriceDetail,
 } from "./processorItemPriceLabels";
@@ -167,7 +166,6 @@ export const processorItemsToReviewSection = ({
 			const reviewPhase: ReviewChangePhase = {
 				key: `processor-${phaseIndex}`,
 				label: phaseLabel({ phaseIndex, startsAt: phase.starts_at, nowMs }),
-				total: processorItemsTotal(phase.processor_items),
 				rows: endsSubscription
 					? [subscriptionEndRow({ phaseIndex })]
 					: phase.processor_items.map(
