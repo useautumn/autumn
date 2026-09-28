@@ -39,8 +39,14 @@ export const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 		: `/${unit}`;
 };
 
-/** How one unit is charged, e.g. "$10 each", "$5 per 100", "Graduated tiers". */
-export const unitPriceDetail = (price: ProcessorItemPrice) => {
+/** How the item is charged, e.g. "4 × $10", "$5 per 100, billed on usage", "Graduated tiers". */
+export const unitPriceDetail = ({
+	price,
+	quantity,
+}: {
+	price: ProcessorItemPrice;
+	quantity: number | null;
+}) => {
 	if (price.tiers) {
 		return price.tiers_mode === "volume" ? "Volume tiers" : "Graduated tiers";
 	}
@@ -51,14 +57,18 @@ export const unitPriceDetail = (price: ProcessorItemPrice) => {
 		currency: price.currency,
 	});
 	const unitsPerQuantity = price.units_per_quantity ?? 1;
-	const perUnit =
+	const unitLabel =
 		unitsPerQuantity > 1
 			? `${unitPrice} per ${unitsPerQuantity.toLocaleString()}`
-			: `${unitPrice} each`;
+			: unitPrice;
 
-	return price.usage_type === "metered"
-		? `${perUnit}, billed on usage`
-		: perUnit;
+	if (price.usage_type === "metered") {
+		const perUnit = unitsPerQuantity > 1 ? unitLabel : `${unitLabel} each`;
+		return `${perUnit}, billed on usage`;
+	}
+	return quantity === null
+		? `${unitLabel} each`
+		: `${quantity.toLocaleString()} × ${unitLabel}`;
 };
 
 /** What the item costs each interval, or how it's billed when that depends on usage. */

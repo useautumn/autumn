@@ -1,3 +1,4 @@
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import type { ReviewChangePhase } from "../../utils/review/types/reviewChange";
 import { ReviewChangeRowItem } from "./ReviewChangeRowItem";
 
@@ -8,20 +9,19 @@ export function ReviewChangePhaseBlock({
 }) {
 	return (
 		<div className="flex flex-col">
-			<div className="flex items-center gap-2 pt-0.5 pb-1">
-				<span className="text-xs font-medium text-tertiary-foreground">
-					{phase.label}
-				</span>
-				<span className="h-px flex-1 bg-border/60" />
+			<div className="flex items-center justify-between px-2 pt-2 pb-1.5 text-xs">
+				<span className="font-medium text-muted-foreground">{phase.label}</span>
 				{phase.total && (
-					<span className="text-xs font-medium tabular-nums text-subtle">
+					<span className="tabular-nums text-tertiary-foreground">
 						{phase.total}
 					</span>
 				)}
 			</div>
-			{phase.rows.map((row) => (
-				<ReviewChangeRowItem key={row.key} row={row} />
-			))}
+			<div className={TABLE_TRAY_SURFACE_CLASS}>
+				{phase.rows.map((row) => (
+					<ReviewChangeRowItem key={row.key} row={row} />
+				))}
+			</div>
 		</div>
 	);
 }

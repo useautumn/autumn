@@ -90,7 +90,7 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 			phase.rows.map((row) => [
 				row.title,
 				row.description,
-				row.tone,
+				row.status,
 				row.value,
 			]),
 		]),
@@ -99,22 +99,22 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 			"Now",
 			"2 plans",
 			[
-				["Premium", "Starts", "new", { amount: "$7", suffix: "/mo" }],
+				["Premium", undefined, "starts", { amount: "$7", suffix: "/mo" }],
 				[
 					"Pro",
 					"Unused time credited",
-					"ending",
+					"ends",
 					{ amount: "-$13.33", suffix: "credit" },
 				],
-				["Seats", "Kept", "kept", { amount: "$5", suffix: "/mo" }],
+				["Seats", undefined, "kept", { amount: "$5", suffix: "/mo" }],
 			],
 		],
 		[
 			"Nov 1",
 			"2 plans",
 			[
-				["Seats", "Starts", "new", { amount: "$5", suffix: "/mo" }],
-				["Premium", "Kept", "kept", { amount: "$7", suffix: "/mo" }],
+				["Seats", undefined, "starts", { amount: "$5", suffix: "/mo" }],
+				["Premium", undefined, "kept", { amount: "$7", suffix: "/mo" }],
 			],
 		],
 	]);
@@ -161,7 +161,7 @@ test("balance rows classify reset and carried-over usage", () => {
 	expect(
 		section.phases.map((phase) => [
 			phase.label,
-			phase.rows.map((row) => [row.description, row.value]),
+			phase.rows.map((row) => [row.description, row.status, row.value]),
 		]),
 	).toEqual([
 		[
@@ -169,6 +169,7 @@ test("balance rows classify reset and carried-over usage", () => {
 			[
 				[
 					"100 → 500 granted · 240 used",
+					"carried",
 					{ amount: "260", suffix: "of 500 left" },
 				],
 			],
@@ -178,6 +179,7 @@ test("balance rows classify reset and carried-over usage", () => {
 			[
 				[
 					"500 → 100 granted · 0 used",
+					"reset",
 					{ amount: "100", suffix: "of 100 left" },
 				],
 			],
@@ -257,9 +259,8 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 			phase.rows.map((row) => [
 				row.title,
 				row.description,
-				row.flag,
+				row.status,
 				row.value,
-				row.quantity,
 			]),
 		]),
 	).toEqual([
@@ -267,33 +268,20 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 			"Now",
 			"$50/mo",
 			[
-				[
-					"Premium",
-					"Base price",
-					undefined,
-					{ amount: "$50", suffix: "/mo" },
-					undefined,
-				],
-				["Legacy Support", undefined, "Not in Autumn", undefined, undefined],
+				["Premium", "Base price", undefined, { amount: "$50", suffix: "/mo" }],
+				["Legacy Support", undefined, "unmanaged", undefined],
 			],
 		],
 		[
 			"Nov 1",
 			"$90/mo",
 			[
+				["Premium", "Base price", undefined, { amount: "$50", suffix: "/mo" }],
 				[
 					"Premium",
-					"Base price",
-					undefined,
-					{ amount: "$50", suffix: "/mo" },
-					undefined,
-				],
-				[
-					"Premium",
-					"Seats · $10 each",
+					"Seats · 4 × $10",
 					undefined,
 					{ amount: "$40", suffix: "/mo" },
-					{ current: 4 },
 				],
 			],
 		],

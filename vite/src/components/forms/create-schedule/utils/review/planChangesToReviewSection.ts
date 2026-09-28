@@ -19,29 +19,23 @@ import type {
 	ReviewChangePhase,
 	ReviewChangeRow,
 	ReviewChangeSection,
-	ReviewChangeTone,
+	ReviewChangeStatus,
 	ReviewChangeValue,
 } from "./types/reviewChange";
 
-type PlanChangeKind = "starts" | "ends" | "updated";
+type PlanChangeStatus = Extract<
+	ReviewChangeStatus,
+	"starts" | "ends" | "updated"
+>;
 
-const PLAN_CHANGE_KIND: Record<CustomerPlanChange["action"], PlanChangeKind> = {
+const PLAN_CHANGE_STATUS: Record<
+	CustomerPlanChange["action"],
+	PlanChangeStatus
+> = {
 	activated: "starts",
 	scheduled: "starts",
 	expired: "ends",
 	updated: "updated",
-};
-
-const KIND_TONE: Record<PlanChangeKind, ReviewChangeTone> = {
-	starts: "new",
-	ends: "ending",
-	updated: "changed",
-};
-
-const KIND_LABEL: Record<PlanChangeKind, string> = {
-	starts: "Starts",
-	ends: "Ends",
-	updated: "Updated",
 };
 
 const CREDIT_DESCRIPTION = "Unused time credited";
@@ -91,13 +85,13 @@ const immediateCredit = ({
 
 const planChangeExtras = ({
 	change,
-	kind,
+	status,
 }: {
 	change: CustomerPlanChange;
-	kind: PlanChangeKind;
+	status: PlanChangeStatus;
 }) => {
 	const expiresAt = change.subscription?.expires_at;
-	const endsLater = kind === "updated" && expiresAt;
+	const endsLater = status === "updated" && expiresAt;
 
 	return [
 		change.entity_id ? `Entity ${change.entity_id}` : undefined,
@@ -127,9 +121,9 @@ const planChangeToRow = ({
 }): ReviewChangeRow => {
 	const planId = planChangePlanId(change);
 	const product = findProduct({ products: context.products, planId });
-	const kind = PLAN_CHANGE_KIND[change.action];
+	const status = PLAN_CHANGE_STATUS[change.action];
 	const credit =
-		kind === "ends" && isImmediatePhase({ phaseIndex })
+		status === "ends" && isImmediatePhase({ phaseIndex })
 			? immediateCredit({ preview, planId })
 			: undefined;
 
@@ -137,27 +131,27 @@ const planChangeToRow = ({
 		key: `plan-${phaseIndex}-${planId}-${change.entity_id ?? ""}-${change.action}`,
 		title: product?.name ?? planId,
 		description: joinDetail([
-			credit ? CREDIT_DESCRIPTION : KIND_LABEL[kind],
-			...planChangeExtras({ change, kind }),
+			credit ? CREDIT_DESCRIPTION : undefined,
+			...planChangeExtras({ change, status }),
 		]),
-		tone: KIND_TONE[kind],
-		value: planRowValue({ kind, credit, product, context }),
+		status,
+		value: planRowValue({ status, credit, product, context }),
 	};
 };
 
 /** Ending plans show their credit, if any; live plans show their price. */
 const planRowValue = ({
-	kind,
+	status,
 	credit,
 	product,
 	context,
 }: {
-	kind: PlanChangeKind;
+	status: PlanChangeStatus;
 	credit: ReviewChangeValue | undefined;
 	product: ProductV2 | undefined;
 	context: PlanRowContext;
 }) => {
-	if (kind === "ends") return credit;
+	if (status === "ends") return credit;
 	return productPrice({ product, context });
 };
 
@@ -185,8 +179,7 @@ const keptPlanRows = ({
 			return {
 				key: `plan-${phaseIndex}-${planId}-kept`,
 				title: product?.name ?? planId,
-				description: "Kept",
-				tone: "kept",
+				status: "kept",
 				value: productPrice({ product, context }),
 			};
 		});

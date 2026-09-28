@@ -1,9 +1,5 @@
 import { expect, test } from "bun:test";
 import type { ProductV2 } from "@autumn/shared";
-import {
-	formatQuantityDelta,
-	quantityDelta,
-} from "@/components/forms/create-schedule/utils/review/quantityChange";
 import { recurringTotalLabel } from "@/components/forms/create-schedule/utils/review/recurringTotalLabel";
 import { shortStripeId } from "@/components/forms/create-schedule/utils/review/shortStripeId";
 import { splitPriceLabel } from "@/components/forms/create-schedule/utils/review/splitPriceLabel";
@@ -43,10 +39,7 @@ test("phase totals sum base prices on a shared interval only", () => {
 	).toBeUndefined();
 });
 
-test("quantity deltas and short Stripe ids", () => {
-	expect(quantityDelta({ current: 4, previous: 2 })).toBe(2);
-	expect(quantityDelta({ current: 1 })).toBeUndefined();
-	expect(formatQuantityDelta(-3)).toBe("−3");
+test("short Stripe ids keep the prefix and tail", () => {
 	expect(shortStripeId("sub_1Q2wXcAutumnDemo")).toBe("sub_…mnDemo");
 	expect(shortStripeId("sub_1")).toBe("sub_1");
 });

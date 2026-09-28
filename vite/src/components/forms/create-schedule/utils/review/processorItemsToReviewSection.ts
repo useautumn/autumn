@@ -33,15 +33,11 @@ const itemDescription = (item: ProcessorItem) =>
 	joinDetail([
 		item.feature_name ??
 			(item.managed_by_autumn ? BASE_PRICE_LABEL : undefined),
-		item.feature_id && item.price ? unitPriceDetail(item.price) : undefined,
+		item.feature_id && item.price
+			? unitPriceDetail({ price: item.price, quantity: item.quantity })
+			: undefined,
 		item.creates_price ? "New price" : undefined,
 	]);
-
-/** Per-unit items show their quantity; base prices are always one. */
-const itemQuantity = (item: ProcessorItem) =>
-	item.feature_id && item.quantity !== null
-		? { current: item.quantity }
-		: undefined;
 
 const processorItemToRow = ({
 	item,
@@ -55,9 +51,8 @@ const processorItemToRow = ({
 	key: `item-${phaseIndex}-${itemIndex}-${item.price_id ?? item.display_name}`,
 	title: item.display_name,
 	description: itemDescription(item),
-	flag: item.managed_by_autumn ? undefined : "Not in Autumn",
+	status: item.managed_by_autumn ? undefined : "unmanaged",
 	value: processorItemValue(item),
-	quantity: itemQuantity(item),
 });
 
 const pluralizeItems = (count: number) =>

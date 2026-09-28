@@ -1,23 +1,25 @@
-export type ReviewChangeTone = "new" | "ending" | "kept" | "changed";
+export type ReviewChangeStatus =
+	| "starts"
+	| "ends"
+	| "kept"
+	| "updated"
+	| "added"
+	| "removed"
+	| "reset"
+	| "carried"
+	| "unmanaged";
 
 export type ReviewChangeValue = {
 	amount: string;
 	suffix?: string;
 };
 
-export type ReviewChangeQuantity = {
-	current: number;
-	previous?: number;
-};
-
 export type ReviewChangeRow = {
 	key: string;
 	title: string;
 	description?: string;
-	flag?: string;
-	tone?: ReviewChangeTone;
+	status?: ReviewChangeStatus;
 	value?: ReviewChangeValue;
-	quantity?: ReviewChangeQuantity;
 };
 
 export type ReviewChangePhase = {

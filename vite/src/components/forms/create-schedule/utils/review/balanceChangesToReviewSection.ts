@@ -15,11 +15,14 @@ import {
 import type {
 	ReviewChangeRow,
 	ReviewChangeSection,
-	ReviewChangeTone,
+	ReviewChangeStatus,
 	ReviewChangeValue,
 } from "./types/reviewChange";
 
-type BalanceBehavior = "added" | "removed" | "reset" | "carried" | "updated";
+type BalanceBehavior = Extract<
+	ReviewChangeStatus,
+	"added" | "removed" | "reset" | "carried" | "updated"
+>;
 
 const BEHAVIOR_ORDER: BalanceBehavior[] = [
 	"reset",
@@ -28,14 +31,6 @@ const BEHAVIOR_ORDER: BalanceBehavior[] = [
 	"removed",
 	"updated",
 ];
-
-const BEHAVIOR_TONE: Record<BalanceBehavior, ReviewChangeTone> = {
-	added: "new",
-	removed: "ending",
-	reset: "changed",
-	carried: "kept",
-	updated: "kept",
-};
 
 const BEHAVIOR_SUMMARY_LABEL: Record<BalanceBehavior, string> = {
 	added: "new",
@@ -124,7 +119,7 @@ const balanceChangeToRow = ({
 	change: PreviewBalanceChange;
 	phaseIndex: number;
 	features: Feature[];
-}): ReviewChangeRow & { behavior: BalanceBehavior } => {
+}): ReviewChangeRow => {
 	const before = balanceBefore(change);
 	const after = change.balance;
 	const behavior = classifyBalanceChange({ before, after });
@@ -132,10 +127,9 @@ const balanceChangeToRow = ({
 
 	return {
 		key: `balance-${phaseIndex}-${change.feature_id}`,
-		behavior,
 		title: feature?.name ?? change.feature_id,
 		description: describeBalance({ before, after }),
-		tone: BEHAVIOR_TONE[behavior],
+		status: behavior,
 		value: balanceValue(after),
 	};
 };
@@ -161,7 +155,7 @@ export const balanceChangesToReviewSection = ({
 		summary: summarizeCounts({
 			counts: BEHAVIOR_ORDER.map((behavior) => [
 				BEHAVIOR_SUMMARY_LABEL[behavior],
-				rows.filter((row) => row.behavior === behavior).length,
+				rows.filter((row) => row.status === behavior).length,
 			]),
 			emptyLabel: "No changes",
 		}),
