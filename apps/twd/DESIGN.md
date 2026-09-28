@@ -119,3 +119,13 @@ actions the REST routes call — no MCP-only behaviour.
 Every error is `{ error: { code, message, next, escalate } }`: `next` tells an
 agent what to do now; `escalate` is non-null when only a human can fix it
 (e.g. "branch not pushed", "no usable Stripe keys — ask a twd admin").
+
+## Deploy (Railway)
+
+One service built from `apps/twd/Dockerfile` (repo root as context), plus Railway Postgres.
+
+- `/api/*` is the API (dashboard, CLI, agents). Fixed external URLs also live at the root:
+  `/auth/google/callback`, `/webhooks/github`, `/ingress/connect/:env`, `/mcp`, `/ws`, `/health`.
+  Everything else serves the dashboard SPA from `web/dist`.
+- Run a single replica: the FIFO allocator and per-key cap are enforced in-process.
+- After a public URL change, hit **Re-initialise** on the Stripe keys page.

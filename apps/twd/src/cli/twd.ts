@@ -60,7 +60,7 @@ const api = async <T>({
 	schema: z.ZodType<T, z.ZodTypeDef, unknown>;
 	apiKey?: string;
 }): Promise<T> => {
-	const res = await fetch(`${BASE_URL}${path}`, {
+	const res = await fetch(`${BASE_URL}/api${path}`, {
 		method,
 		headers: {
 			authorization: `Bearer ${apiKey ?? (await readApiKey())}`,
@@ -123,7 +123,7 @@ const followRun = async ({ id }: { id: string }) => {
 	printRun(run);
 	if (TERMINAL.includes(run.status)) return run.status;
 
-	const res = await fetch(`${BASE_URL}/runs/${id}/events`, {
+	const res = await fetch(`${BASE_URL}/api/runs/${id}/events`, {
 		headers: {
 			authorization: `Bearer ${await readApiKey()}`,
 			accept: "text/event-stream",

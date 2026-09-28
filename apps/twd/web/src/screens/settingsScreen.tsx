@@ -246,7 +246,7 @@ export const SettingsScreen = () => {
 						<div className="flex flex-col gap-1.5">
 							<span className="text-xs text-subtle">Start a run with curl</span>
 							<CodeBlock
-								code={`curl -X POST ${origin}/runs \\
+								code={`curl -X POST ${origin}/api/runs \\
   -H "Authorization: Bearer $TWD_API_KEY" \\
   -H "content-type: application/json" \\
   -d '{"branch":"my-branch","selection":{"groups":["core"]}}'`}

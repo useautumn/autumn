@@ -7,6 +7,7 @@ import { authRoutes } from "./routes/auth.ts";
 import { capacityRoutes } from "./routes/capacity.ts";
 import { catalogRoutes } from "./routes/catalog.ts";
 import { costsRoutes } from "./routes/costs.ts";
+import { dashboardRoutes } from "./routes/dashboard.ts";
 import { ingressRoutes } from "./routes/ingress.ts";
 import { jobsRoutes } from "./routes/jobs.ts";
 import { keysRoutes } from "./routes/keys.ts";
@@ -17,11 +18,9 @@ import { runsRoutes } from "./routes/runs.ts";
 import { webhooksRoutes } from "./routes/webhooks.ts";
 import type { TwdHono } from "./types/twdHono.ts";
 
-/** CORS, then auth (sets ctx); public prefixes: /health /auth /webhooks /ingress. */
-export const createApp = () =>
+/** The one API, mounted under /api for the dashboard and every client. */
+const createApi = () =>
 	new Hono<TwdHono>()
-		.use("*", corsMiddleware())
-		.use("*", authMiddleware)
 		.get("/health", (c) => c.json({ ok: true }))
 		.route("/", authRoutes)
 		.route("/", webhooksRoutes)
@@ -35,7 +34,24 @@ export const createApp = () =>
 		.route("/", capacityRoutes)
 		.route("/", costsRoutes)
 		.route("/", mcpRoutes)
+		.route("/", liveRoutes);
+
+/**
+ * /api/* is the API. Fixed external URLs (OAuth callback, Stripe/GitHub webhooks, MCP, /ws)
+ * also live at the root; every other GET serves the dashboard SPA.
+ */
+export const createApp = () =>
+	new Hono<TwdHono>()
+		.use("*", corsMiddleware())
+		.use("*", authMiddleware)
+		.route("/api", createApi())
+		.get("/health", (c) => c.json({ ok: true }))
+		.route("/", authRoutes)
+		.route("/", webhooksRoutes)
+		.route("/", ingressRoutes)
+		.route("/", mcpRoutes)
 		.route("/", liveRoutes)
+		.route("/", dashboardRoutes)
 		.onError((error, c) =>
 			error instanceof TwdError
 				? renderTwdError({ c, error })

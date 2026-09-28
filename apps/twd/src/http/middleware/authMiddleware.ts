@@ -5,16 +5,34 @@ import { TwdError } from "../apiError.ts";
 import type { TwdHono } from "../types/twdHono.ts";
 
 const PUBLIC_PREFIXES = ["/auth/", "/webhooks/", "/ingress/"];
+/** Root paths outside /api that still need an actor; the rest of the root is the SPA. */
+const AUTHED_ROOT_PATHS = new Set(["/ws", "/mcp"]);
 
-export const isPublicPath = ({ path }: { path: string }) =>
-	path === "/health" ||
-	PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
+const stripApiPrefix = ({ path }: { path: string }) =>
+	path === "/api"
+		? "/"
+		: path.startsWith("/api/")
+			? path.slice("/api".length)
+			: null;
+
+export const isPublicPath = ({ path }: { path: string }) => {
+	const apiPath = stripApiPrefix({ path });
+	if (apiPath === null) return !AUTHED_ROOT_PATHS.has(path);
+	return (
+		apiPath === "/health" ||
+		PUBLIC_PREFIXES.some((prefix) => apiPath.startsWith(prefix))
+	);
+};
 
 /** Browsers can't set headers on a WebSocket, so /ws also accepts `?token=twd_…`. */
 const withQueryToken = ({ request }: { request: Request }): Request => {
 	const url = new URL(request.url);
 	const token = url.searchParams.get("token");
-	if (url.pathname !== "/ws" || !token || request.headers.has("authorization"))
+	if (
+		(url.pathname !== "/ws" && url.pathname !== "/api/ws") ||
+		!token ||
+		request.headers.has("authorization")
+	)
 		return request;
 	const headers = new Headers(request.headers);
 	headers.set("authorization", `Bearer ${token}`);
