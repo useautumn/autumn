@@ -6,7 +6,10 @@ import { cusProductToPrices } from "../convertCusProduct";
 export const customerProductToEffectivePrices = ({
 	customerProduct,
 }: {
-	customerProduct: FullCusProduct;
+	customerProduct: Pick<
+		FullCusProduct,
+		"customer_prices" | "customer_licenses"
+	>;
 }): Price[] => [
 	...cusProductToPrices({ cusProduct: customerProduct }),
 	...(customerProduct.customer_licenses ?? []).flatMap(

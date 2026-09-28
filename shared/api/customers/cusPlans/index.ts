@@ -10,6 +10,8 @@ export * from "./previousVersions/apiCusProductV0";
 export * from "./previousVersions/apiCusProductV1";
 export * from "./previousVersions/apiCusProductV2";
 export * from "./previousVersions/apiCusProductV3";
+export * from "./utils/getApiSubscriptionsV2";
+export * from "./utils/getApiSubscriptionV2";
 
 export const apiSubscription = {
 	map: {

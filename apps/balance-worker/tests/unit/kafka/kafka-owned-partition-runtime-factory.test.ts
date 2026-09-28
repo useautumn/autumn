@@ -1,0 +1,129 @@
+import { describe, expect, test } from "bun:test";
+import type { KafkaProducerClient as OwnedPartitionProducerPort } from "@autumn/kafka";
+import type { ProducerConfig } from "kafkajs";
+import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
+import type { PartitionReplay as KafkaPartitionOutcomeFollower } from "../../../src/kafka/meteringConsumer/types/partitionReplay.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import {
+	closeStoreFixture,
+	createKafkaOwnedPartitionRuntimeFactory,
+	createStoreFixture,
+	topic,
+} from "./kafka-test-fixtures.js";
+
+const timings = {
+	fetchMaxWaitTimeMs: 250,
+	healthRefreshIntervalMs: 5_000,
+	heartbeatIntervalMs: 3_000,
+	recoveryDrainTimeoutMs: 5_000,
+	rebalanceTimeoutMs: 60_000,
+	sessionTimeoutMs: 30_000,
+} satisfies KafkaBalanceWorkerTimings;
+
+const checkpointConfiguration = {
+	checkpointSource: { latest: async () => null },
+	checkpointRestoreLimits: {
+		maxSerializedBytes: 1_000_000,
+		maxStates: 1_000,
+		maxReceipts: 10_000,
+	},
+	checkpointRetryPolicy: {
+		maxAttempts: 3,
+		initialBackoffMs: 10,
+		maxBackoffMs: 100,
+	},
+};
+
+describe("Kafka owned partition runtime factory", () => {
+	test("rejects invalid receipt retention before accepting assignments", () => {
+		const fixture = createStoreFixture();
+		try {
+			expect(() =>
+				createKafkaOwnedPartitionRuntimeFactory({
+					kafka: { producer: () => ({}) as OwnedPartitionProducerPort },
+					deploymentEnvironment: "staging",
+					stateStore: fixture.store,
+					...checkpointConfiguration,
+					partitionResolver: { partitionForIdentity: () => 0 },
+					writerLimits: {
+						maxBatchSize: 100,
+						maxPendingCommands: 1_000,
+						maxPendingCommandsPerCustomer: 100,
+					},
+					trackReceiptRetentionMs: 0,
+					producerLimits: {
+						transactionTimeoutMs: 15_000,
+						retryCount: 3,
+						initialRetryTimeMs: 100,
+						maxRetryTimeMs: 2_000,
+					},
+					timings,
+				}),
+			).toThrow("trackReceiptRetentionMs must be a positive safe integer");
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("creates each assigned runtime with its partition-scoped producer", () => {
+		const fixture = createStoreFixture();
+		try {
+			const producerConfigs: ProducerConfig[] = [];
+			const producer = {} as OwnedPartitionProducerPort;
+			const createRuntime = createKafkaOwnedPartitionRuntimeFactory({
+				kafka: {
+					producer: (config) => {
+						producerConfigs.push(config);
+						return producer;
+					},
+				},
+				deploymentEnvironment: "staging",
+				stateStore: fixture.store,
+				...checkpointConfiguration,
+				partitionResolver: { partitionForIdentity: () => 0 },
+				writerLimits: {
+					maxBatchSize: 100,
+					maxPendingCommands: 1_000,
+					maxPendingCommandsPerCustomer: 100,
+				},
+				trackReceiptRetentionMs: 86_400_000,
+				producerLimits: {
+					transactionTimeoutMs: 15_000,
+					retryCount: 3,
+					initialRetryTimeMs: 100,
+					maxRetryTimeMs: 2_000,
+				},
+				timings,
+			});
+			const follower = {} as KafkaPartitionOutcomeFollower;
+
+			createRuntime({
+				topic,
+				partition: 0,
+				follower,
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			});
+			createRuntime({
+				topic,
+				partition: 1,
+				follower,
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			});
+
+			expect(
+				producerConfigs.map(({ transactionalId }) => transactionalId),
+			).toEqual([
+				"autumn-balance-worker:staging:metering-events-v1:0",
+				"autumn-balance-worker:staging:metering-events-v1:1",
+			]);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+});

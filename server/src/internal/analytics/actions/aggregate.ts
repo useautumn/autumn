@@ -63,7 +63,11 @@ const buildFilterParams = ({
 const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
 /** Validates and sanitizes timezone string to prevent injection */
-export const sanitizeTimezone = ({ timezone }: { timezone?: string }): string => {
+export const sanitizeTimezone = ({
+	timezone,
+}: {
+	timezone?: string;
+}): string => {
 	if (!timezone) return "UTC";
 	if (!/^[a-zA-Z0-9_/+-]+$/.test(timezone)) return "UTC";
 	if (timezone.length > 50) return "UTC";
@@ -290,10 +294,8 @@ const formatSimpleResults = ({
 };
 
 /**
- * Formats groupable pipe results using per-bin ranking.
- * The Tinybird pipe already ranks per-bin and buckets overflow into AUTUMN_RESERVED.
- * This function trusts that ranking — each bin keeps its own top N groups,
- * so different bins can show different entities.
+ * Formats groupable pipe results, trusting the pipe's ranking and AUTUMN_RESERVED bucket.
+ * Per-bin ranking (the default) lets different bins show different groups.
  */
 const formatGroupableResults = ({
 	rows,
@@ -508,6 +510,7 @@ export const aggregate = async ({
 			property_key: propertyKey,
 			...filterParams,
 			max_groups: params.max_groups,
+			group_ranking: params.group_ranking,
 			use_daily_rollup: useDailyRollup ? ("1" as const) : undefined,
 			use_monthly_rollup: useMonthlyRollup ? ("1" as const) : undefined,
 			use_org_dimension_rollup: useOrgDimensionRollup

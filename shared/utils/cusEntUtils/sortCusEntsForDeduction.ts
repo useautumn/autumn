@@ -1,17 +1,19 @@
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusEntWithFullCusProductView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
 import { entIntervalToValue } from "../intervalUtils.js";
 import { isEntityCusEnt } from "./cusEntUtils.js";
 
-export const sortCusEntsForDeduction = ({
+export const sortCusEntsForDeduction = <
+	T extends FullCusEntWithFullCusProductView,
+>({
 	cusEnts,
 	reverseOrder = false,
 	entityId,
 	customerEntitlementFilters,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: T[];
 	reverseOrder?: boolean;
 	entityId?: string;
 	customerEntitlementFilters?: CustomerEntitlementFilters;

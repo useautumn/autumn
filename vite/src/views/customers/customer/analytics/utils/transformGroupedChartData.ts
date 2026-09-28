@@ -91,6 +91,16 @@ const otherColumnFor = ({ column }: { column: string }): string | null => {
 	return parsed ? `${parsed.featureKey}__${RESERVED_GROUP}` : null;
 };
 
+/** Drops series that are zero in every period, e.g. a group paired with an event it never sent. */
+export function dropZeroSeries({ events }: { events: EventsData }): EventsData {
+	const meta = events.meta.filter(
+		(m) =>
+			m.name === "period" ||
+			events.data.some((row) => Number(row[m.name] ?? 0) !== 0),
+	);
+	return { ...events, meta };
+}
+
 /**
  * Keeps the top-N series by total volume, folding the rest into their
  * feature's "Other" series so period totals stay intact.

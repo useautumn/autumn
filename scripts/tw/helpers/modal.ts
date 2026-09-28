@@ -458,6 +458,30 @@ const fastForwardCheckout = async (
 	}
 };
 
+/** Binaries the current base image bakes; a `:latest` published from an older base lacks them. */
+const REQUIRED_WARM_BINARIES = [
+	"/opt/kafka/kafka.Kafka",
+	"/opt/autumn-tw/bin/fakecloud",
+];
+
+const assertWarmServicesBaked = async (sandbox: Sandbox): Promise<void> => {
+	const proc = await withExecRetry("warm services check", () =>
+		sandbox.exec(
+			[
+				"bash",
+				"-c",
+				REQUIRED_WARM_BINARIES.map((bin) => `test -x ${bin}`).join(" && "),
+			],
+			{ stdout: "pipe", stderr: "pipe", workdir: "/" },
+		),
+	);
+	if ((await proc.wait()) !== 0) {
+		throw new Error(
+			`modal: warm image predates the base image (needs ${REQUIRED_WARM_BINARIES.join(", ")})`,
+		);
+	}
+};
+
 /** Shared stream-closed classifier (used by runStreaming + the provider method). */
 const isSandboxStreamClosed = (error: unknown): boolean => {
 	const message = error instanceof Error ? error.message : String(error);
@@ -630,8 +654,9 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					const ffDone = stage(
 						`fast-forward warm ${opts.name} from ${WARM_IMAGE_REPO}:latest`,
 					);
+					let sandbox: Sandbox | undefined;
 					try {
-						const sandbox = await createFromImage(
+						sandbox = await createFromImage(
 							latest,
 							{
 								name: opts.name,
@@ -644,6 +669,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 							},
 							v2,
 						);
+						await assertWarmServicesBaked(sandbox);
 						await fastForwardCheckout(
 							sandbox,
 							opts.source.revision,
@@ -653,6 +679,10 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 						return wrap(opts.name, sandbox);
 					} catch (error) {
 						ffDone();
+						// Frees the warm name for the full build below.
+						await sandbox?.terminate().catch(() => {
+							/* best-effort */
+						});
 						narrate(
 							chalk.yellow(
 								`[modal] warm fast-forward failed (${(error as Error).message?.slice(0, 120)}) — falling back to full build`,

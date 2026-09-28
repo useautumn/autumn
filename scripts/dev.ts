@@ -2,6 +2,8 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isCloudAgent } from "@autumn/env";
+import { assertBalanceWorkerPortAvailable } from "./devServices/assertBalanceWorkerPortAvailable.ts";
+import { balanceWorkerDevConfig } from "./devServices/balanceWorkerDevConfig.ts";
 import { resolveTriggerDevBranch } from "./triggerDevBranch.ts";
 
 function spawnTriggerDevBranchReaper({
@@ -86,6 +88,11 @@ const viteAppEnv = envFile.includes(".env.prod")
 		? "staging"
 		: "dev";
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
+const launchBalanceWorker = useLocalAuthUrls && !isCloudAgent();
+const balanceWorkerEnv = balanceWorkerDevConfig({
+	worktreeNum,
+	runtimeEnv: process.env,
+});
 // `bun dev:services up` runs misc-cache Dragonfly on :6379 and cache-v2 on
 // :6380. Worktrees provision their own and set these in their env file.
 const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";
@@ -163,6 +170,11 @@ async function startDev() {
 	const rootDir = dirname(fileURLToPath(import.meta.url));
 	const projectRoot = join(rootDir, "..");
 	const serverOnly = process.argv.includes("--server-only");
+	if (launchBalanceWorker && !serverOnly) {
+		await assertBalanceWorkerPortAvailable({
+			port: Number(balanceWorkerEnv.BALANCE_WORKER_PORT),
+		});
+	}
 
 	// Isolate local Trigger runs from coworkers sharing the Autumn DEV project.
 	// Server SDK + CLI both read TRIGGER_DEV_BRANCH (x-trigger-branch).
@@ -262,6 +274,23 @@ async function startDev() {
 					: `"cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} bun ${serverScript}"`,
 			];
 
+			if (launchBalanceWorker) {
+				names.push("balance-worker");
+				colors.push("blueBright");
+				// Restarted when it exits: the worker ends its own process to be replaced, and only production has a replacer.
+				cmds.push('"cd apps/balance-worker && bun dev:restart"');
+				console.log(
+					`  balance-worker: ${balanceWorkerEnv.BALANCE_WORKER_ENDPOINT}/health (liveness only)`,
+				);
+			}
+
+			// Herald follows the balance worker's log, so it only runs where the worker does.
+			if (launchBalanceWorker) {
+				names.push("herald");
+				colors.push("magentaBright");
+				cmds.push('"cd apps/herald && bun dev"');
+			}
+
 			if (!skipWorkers) {
 				names.push("workers");
 				colors.push("yellow");
@@ -308,8 +337,8 @@ async function startDev() {
 				colors.push("white");
 				cmds.push(
 					isWindows
-						? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
-						: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
+						? `"cd apps/leaf && bun run eve dev --no-ui --port ${EVE_PORT}"`
+						: `"cd apps/leaf && bun run eve dev --no-ui --port ${EVE_PORT}"`,
 				);
 			} else {
 				console.error("CLOUD_AGENT=1 — skipping eve\n");
@@ -394,6 +423,7 @@ async function startDev() {
 
 		const spawnEnv: Record<string, string> = {
 			...process.env,
+			...(launchBalanceWorker && balanceWorkerEnv),
 			TRIGGER_DEV_BRANCH: triggerDevBranch,
 			TRIGGER_API_URL,
 			// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
@@ -425,6 +455,10 @@ async function startDev() {
 			VITE_APP_ENV: viteAppEnv,
 			VITE_WORKTREE_NUM: String(worktreeNum),
 			...(useLocalAuthUrls && {
+				...(!isCloudAgent() && {
+					KAFKA_BROKERS: process.env.KAFKA_BROKERS ?? "127.0.0.1:19092",
+					KAFKA_AUTH_MODE: process.env.KAFKA_AUTH_MODE ?? "none",
+				}),
 				CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
 				VITE_BACKEND_URL: localUrl(
 					process.env.VITE_BACKEND_URL,

@@ -1,9 +1,11 @@
 import type { UpdateWebhookParams, Webhook } from "@autumn/shared";
 import { svixEndpointToWebhook } from "@/external/svix/endpoints/svixEndpointToWebhook.js";
+import { toSvixFilterTypes } from "@/external/svix/endpoints/toSvixFilterTypes.js";
 import { withSvixErrors } from "@/external/svix/endpoints/withSvixErrors.js";
 import { createSvixCli } from "@/external/svix/svixUtils.js";
 
-/** Patches only the stated fields; the id is the lookup key and never changes. */
+/** Patches only the stated fields; `events: []` widens to every event. The id
+ * is the lookup key and never changes. */
 export const updateWebhook = async ({
 	appId,
 	params,
@@ -17,7 +19,7 @@ export const updateWebhook = async ({
 		run: () =>
 			createSvixCli().endpoint.patch(appId, id, {
 				url,
-				filterTypes: events,
+				filterTypes: toSvixFilterTypes({ events }),
 				description,
 				disabled,
 			}),

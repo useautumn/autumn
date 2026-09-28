@@ -4,7 +4,8 @@
  *   rejected in every env; tunnels pass.
  * - ids follow `[a-zA-Z0-9_-]` (Svix's uid rule minus `.`), 1..256; get/update/delete
  *   also accept the `ep_…` id list shows for dashboard-made endpoints.
- * - `events` is required and non-empty (empty would mean "all events" in Svix).
+ * - omitting `events`, or passing `[]`, means every event; update keeps an
+ *   omitted list and widens on `[]`.
  * - sync rejects the same id twice.
  */
 
@@ -96,15 +97,26 @@ describe("webhook params", () => {
 		);
 	});
 
-	test("events: required, non-empty, known types only", () => {
-		expect(accepts({ events: [] })).toBe(false);
-		expect(accepts({ events: undefined })).toBe(false);
+	test("events: omitted or [] means every event; known types only", () => {
+		expect(
+			CreateWebhookParamsSchema.parse(params({ events: [] })).events,
+		).toEqual([]);
+		expect(
+			CreateWebhookParamsSchema.parse(params({ events: undefined })).events,
+		).toEqual([]);
+		expect(
+			SyncWebhooksParamsSchema.parse({
+				webhooks: [params({ events: undefined })],
+			}).webhooks[0]?.events,
+		).toEqual([]);
 		expect(accepts({ events: ["not.a.type"] })).toBe(false);
 		expect(accepts({ events: ["vercel.webhooks.event"] })).toBe(true);
 		expect(
-			UpdateWebhookParamsSchema.safeParse({ id: "billing", events: [] })
-				.success,
-		).toBe(false);
+			UpdateWebhookParamsSchema.parse({ id: "billing", events: [] }).events,
+		).toEqual([]);
+		expect(
+			UpdateWebhookParamsSchema.parse({ id: "billing" }).events,
+		).toBeUndefined();
 	});
 
 	test("update has no way to rename: an unknown new id is stripped", () => {

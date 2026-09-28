@@ -12,6 +12,7 @@ import {
 	type SettingsPreview,
 	settingsHaveWork,
 } from "../render/renderPreview";
+import type { WebhookPullEnv } from "./pull/webhooks/webhookPullEnvs";
 import {
 	backfillInternalIds,
 	identityRowsFromApplied,
@@ -23,8 +24,11 @@ import {
 import { PushLanesError, settleLanes } from "./push/pushLanesError";
 import { withSettingsScopeHint } from "./sandbox/withSandboxScopeHint";
 import { applyWebhooks } from "./webhooks/applyWebhooks";
-import { previewWebhooks, type WebhooksLane } from "./webhooks/previewWebhooks";
-import type { WebhookEnv } from "./webhooks/types/webhookEnv";
+import {
+	previewWebhookEnvs,
+	type WebhookClientFor,
+	type WebhookLanes,
+} from "./webhooks/previewWebhookEnvs";
 
 export type PushResult = {
 	configPath: string;
@@ -61,8 +65,12 @@ export type PushOptions = {
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
 	migrationLinkBase?: string;
-	/** The target env for the webhook lane; resolved only when the config states webhooks. */
-	webhookEnv?: () => Promise<WebhookEnv>;
+	/** `-p`: the catalog and webhooks go to live, and no sandbox is touched. */
+	prod?: boolean;
+	/** Every env with a key; listed only when the config states webhooks. */
+	webhookEnvs?: () => WebhookPullEnv[];
+	/** A client for one env's own key. */
+	webhookClientFor?: WebhookClientFor;
 };
 
 type RewardBody = { id?: string; internal_id?: string };
@@ -340,7 +348,9 @@ export const runPush = async ({
 	dryRun = false,
 	write = (text) => process.stdout.write(text),
 	migrationLinkBase,
-	webhookEnv,
+	prod = false,
+	webhookEnvs,
+	webhookClientFor,
 }: PushOptions): Promise<PushResult> => {
 	const project = resolveProject({ cwd, configFlag });
 	const dirs = configSearchDirs({ cwd, configPath: configFlag });
@@ -362,14 +372,15 @@ export const runPush = async ({
 	const previews = await settleLanes<{
 		settings: SettingsPreview | undefined;
 		catalog: CatalogPreview;
-		webhooks: WebhooksLane | undefined;
+		webhooks: WebhookLanes | undefined;
 	}>({
 		settings: previewSettings({ client, body: settingsBody }),
 		catalog: client.previewUpdate(wire) as Promise<CatalogPreview>,
-		webhooks: previewWebhooks({
-			client,
+		webhooks: previewWebhookEnvs({
 			rows: lists.webhooks,
-			webhookEnv,
+			envs: webhookEnvs,
+			prod,
+			clientFor: webhookClientFor,
 		}),
 	});
 	const { settings, webhooks } = previews.values;
@@ -389,8 +400,16 @@ export const runPush = async ({
 	const preview: CatalogPreview = {
 		...catalogPreview,
 		settings,
-		...(webhooks === undefined ? {} : { webhooks: webhooks.preview }),
+		...(webhooks === undefined
+			? {}
+			: {
+					webhooks: webhooks.lanes.map((lane) => lane.preview),
+					productionWebhooks: webhooks.productionDiffers,
+					productionWebhooksUnchecked: webhooks.productionUnchecked,
+				}),
 	};
+	if (webhooks !== undefined && webhooks.skipped.length > 0)
+		write(`${webhooks.skipped.join("\n")}\n\n`);
 	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
 	if (catalogDeferral !== undefined)
 		write(`\n${renderCatalogDeferral({ error: catalogDeferral.error })}\n`);
@@ -434,8 +453,7 @@ export const runPush = async ({
 				? settingsStep().then(catalogStep)
 				: catalogStep(settled),
 		webhooks: applyWebhooks({
-			client,
-			lane: webhooks,
+			lanes: webhooks?.lanes ?? [],
 			envDirs: project.envDirs,
 			cwd,
 			write,

@@ -6,7 +6,6 @@ import {
 	isPastStartDate,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
-	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
@@ -15,7 +14,10 @@ import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillin
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupReplacedScheduleCustomerProductIds } from "@/internal/customers/schedules/setup/setupReplacedScheduleCustomerProductIds";
 import { isStripeConnected } from "@/internal/orgs/orgUtils";
-import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
+import {
+	type ImmediateMultiProductParams,
+	setupImmediateMultiProductBillingContext,
+} from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
 	getInitialCreateSchedulePhase,
@@ -101,8 +103,7 @@ const phaseToImmediateParams = ({
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 	phase: CreateScheduleParamsV0["phases"][number];
-}): MultiAttachParamsV0 &
-	Pick<CreateScheduleParamsV0, "no_billing_changes"> => ({
+}): ImmediateMultiProductParams => ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
 	no_billing_changes: resolveNoBillingChanges({ ctx, params }),
@@ -113,6 +114,7 @@ const phaseToImmediateParams = ({
 		entity_id: plan.entity_id,
 		customize: plan.customize,
 		feature_quantities: plan.feature_quantities,
+		license_quantities: plan.license_quantities,
 		version: plan.version,
 		subscription_id: plan.subscription_id,
 	})),

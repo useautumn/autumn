@@ -133,8 +133,12 @@ export type CatalogPreview = {
 	migrations?: PlannedMigration[];
 	/** Absent when the config states no `settings`. */
 	settings?: SettingsPreview;
-	/** Absent when the config states no `webhooks`. */
-	webhooks?: WebhooksPreview;
+	/** One block per env the push syncs; absent when the config states no `webhooks`. */
+	webhooks?: WebhooksPreview[];
+	/** Live webhook ids a plain push found out of date but leaves to `-p`. */
+	productionWebhooks?: string[];
+	/** The read-only live check failed: "No changes" would be a claim nobody checked. */
+	productionWebhooksUnchecked?: boolean;
 };
 
 const MARKERS: Record<
@@ -842,10 +846,20 @@ export const renderPreview = ({
 	const referralPrograms = (preview.referralPrograms ?? []).filter(rowHasWork);
 	const migrations = preview.migrations ?? [];
 	const settings = settingChanges(preview.settings);
-	const webhooks =
-		preview.webhooks === undefined
-			? null
-			: renderWebhooks({ webhooks: preview.webhooks });
+	const webhooks = (preview.webhooks ?? [])
+		.map((lane) => renderWebhooks({ webhooks: lane }))
+		.filter((block): block is string => block !== null);
+	const productionWebhooks = preview.productionWebhooks ?? [];
+	const productionHint =
+		productionWebhooks.length > 0
+			? chalk.yellow(
+					`Production webhooks differ from your config (${productionWebhooks.join(", ")}). Run atmn push -p to update production.`,
+				)
+			: preview.productionWebhooksUnchecked === true
+				? chalk.yellow(
+						"Production webhooks weren't checked, so this push can't say they match your config.",
+					)
+				: null;
 
 	if (
 		features.length === 0 &&
@@ -853,7 +867,8 @@ export const renderPreview = ({
 		rewards.length === 0 &&
 		referralPrograms.length === 0 &&
 		settings.length === 0 &&
-		webhooks === null
+		webhooks.length === 0 &&
+		productionHint === null
 	) {
 		return chalk.dim("No changes. Your catalog matches your config.");
 	}
@@ -935,7 +950,8 @@ export const renderPreview = ({
 		);
 	}
 
-	if (webhooks !== null) sections.push(webhooks);
+	sections.push(...webhooks);
+	if (productionHint !== null) sections.push(productionHint);
 
 	if (migrations.length > 0) {
 		// The server saying customers would need moving. Nothing is drafted by a
@@ -957,4 +973,4 @@ export const previewIsEmpty = ({
 	!(preview.rewards ?? []).some(rowHasWork) &&
 	!(preview.referralPrograms ?? []).some(rowHasWork) &&
 	!settingsHaveWork({ settings: preview.settings }) &&
-	!webhooksHaveWork({ webhooks: preview.webhooks });
+	!(preview.webhooks ?? []).some((webhooks) => webhooksHaveWork({ webhooks }));

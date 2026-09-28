@@ -44,7 +44,7 @@ export const BillingParamsBaseV1Schema = z.object({
 
 	proration_behavior: BillingBehaviorSchema.optional().meta({
 		description:
-			"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
+			"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 	}),
 
 	transition_rules: TransitionRulesSchema.optional().meta({
