@@ -66,7 +66,8 @@ mock.module(pooledModulePath, () => ({
 		calls.push({ name: "pooled", args });
 		return {
 			...(args.fullCustomer as Record<string, unknown>),
-			customer_products: args.incomingCustomerProducts,
+			customer_products: (args.fullCustomer as MockedCustomer)
+				.customer_products,
 			pooled_customer_entitlements: pooledEntitlements,
 		};
 	},
@@ -109,9 +110,9 @@ describe("entity default products", () => {
 
 		expect(calls.map(({ name }) => name)).toEqual([
 			"execute",
+			"pooled",
 			"customer.products.updated",
 			"billing.updated",
-			"pooled",
 		]);
 
 		const autumnBillingPlan = {
@@ -125,17 +126,17 @@ describe("entity default products", () => {
 			entity,
 		};
 		expect(calls[0]?.args.autumnBillingPlan).toEqual(autumnBillingPlan);
-		expect(calls[1]?.args).toMatchObject({
+		expect(calls[2]?.args).toMatchObject({
 			autumnBillingPlan,
 			billingContext: { fullCustomer: webhookCustomer },
 		});
-		expect(calls[2]?.args).toMatchObject({
+		expect(calls[3]?.args).toMatchObject({
 			autumnBillingPlan,
 			originalFullCustomer: webhookCustomer,
 		});
 		expect(
 			(
-				calls[2]?.args.originalFullCustomer as {
+				calls[3]?.args.originalFullCustomer as {
 					customer_products: unknown[];
 				}
 			).customer_products,
@@ -145,13 +146,13 @@ describe("entity default products", () => {
 		expect(withDefaults.pooled_customer_entitlements).toEqual(
 			pooledEntitlements,
 		);
-		expect(calls[3]?.args).toMatchObject({
+		expect(calls[1]?.args).toMatchObject({
 			outgoingCustomerProducts: [],
 			incomingCustomerProducts: [customerProduct],
 		});
 	});
 
-	test("runs one pooled transition across every entity's inserts", async () => {
+	test("pools and announces each entity before the next starts", async () => {
 		const fullCustomer = {
 			id: "customer_1",
 			internal_id: "internal_customer_1",
@@ -167,13 +168,18 @@ describe("entity default products", () => {
 			entities: [{ id: "entity_1" }, { id: "entity_2" }] as never,
 		})) as unknown as MockedCustomer;
 
-		const byName = (name: string) => calls.filter((call) => call.name === name);
-		expect(byName("execute")).toHaveLength(2);
-		expect(byName("pooled")).toHaveLength(1);
-		expect(calls[calls.length - 1]?.name).toBe("pooled");
-		expect(byName("pooled")[0]?.args).toMatchObject({
-			incomingCustomerProducts: [customerProduct, customerProduct],
-		});
+		const perEntity = [
+			"execute",
+			"pooled",
+			"customer.products.updated",
+			"billing.updated",
+		];
+		expect(calls.map(({ name }) => name)).toEqual([...perEntity, ...perEntity]);
+		for (const call of calls.filter((call) => call.name === "pooled")) {
+			expect(call.args).toMatchObject({
+				incomingCustomerProducts: [customerProduct],
+			});
+		}
 		expect(fullCustomer.customer_products).toEqual([]);
 		expect(withDefaults.customer_products).toEqual([
 			customerProduct,

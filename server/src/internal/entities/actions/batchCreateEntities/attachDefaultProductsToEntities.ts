@@ -1,7 +1,6 @@
 import {
 	type CustomerData,
 	type Entity,
-	type FullCusProduct,
 	type FullCustomer,
 	isFreeProduct,
 	orgDefaultAppliesToEntities,
@@ -39,7 +38,7 @@ export const attachDefaultProductsToEntities = async ({
 
 	const currentEpochMs = Date.now();
 	let customerProducts = fullCustomer.customer_products;
-	const insertedCustomerProducts: FullCusProduct[] = [];
+	let pooledFullCustomer = fullCustomer;
 	for (const entity of entities) {
 		const entityFullCustomer = {
 			...fullCustomer,
@@ -66,6 +65,16 @@ export const attachDefaultProductsToEntities = async ({
 			autumnBillingPlan,
 		});
 
+		customerProducts = [...customerProducts, ...insertCustomerProducts];
+		// Each entity is saved, pooled and announced before the next one starts.
+		pooledFullCustomer = await applyPooledBalanceCustomerProductTransitions({
+			ctx,
+			fullCustomer: { ...fullCustomer, customer_products: customerProducts },
+			outgoingCustomerProducts: [],
+			incomingCustomerProducts: insertCustomerProducts,
+			now: currentEpochMs,
+		});
+
 		await billingPlanToSendProductsUpdated({
 			ctx,
 			autumnBillingPlan,
@@ -77,16 +86,7 @@ export const attachDefaultProductsToEntities = async ({
 			autumnBillingPlan,
 			originalFullCustomer: entityFullCustomer,
 		});
-
-		customerProducts = [...customerProducts, ...insertCustomerProducts];
-		insertedCustomerProducts.push(...insertCustomerProducts);
 	}
 
-	return applyPooledBalanceCustomerProductTransitions({
-		ctx,
-		fullCustomer,
-		outgoingCustomerProducts: [],
-		incomingCustomerProducts: insertedCustomerProducts,
-		now: currentEpochMs,
-	});
+	return pooledFullCustomer;
 };
