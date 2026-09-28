@@ -148,3 +148,56 @@ hammer against staging, flip from the dashboard, count C2S 503s in Axiom. Expect
 - Whether the dashboard's "all partitions admitted" wait reads the ownership topic directly or the
   fleet heartbeat. Heartbeat is simpler (S3 read); the topic is exact. Start with the heartbeat and
   a 20s cadence; revisit if the wait is too coarse.
+
+## Decisions
+
+Recorded while implementing items 1–3 (2026-09-28, PR "feat(balance-worker): blue-green slots drive the partition handoff").
+
+- **The owner reacts to a foreign `ready`, not only to a revoke.** The design above assumed "blue
+  sees ready → withdraws" was shipped; it was shipped for a *revoked* entry only
+  (`beginPartitionHandoffs` ran from revoke and stop). Two fleets have two rosters, so blue is never
+  revoked: in the first benchmark pass green announced, heard 3s of silence, self-claimed and fenced
+  blue mid-commit, and green's first flush conflicted with the bookmark blue was still advancing.
+  Every admitted entry now listens for another endpoint's `ready` (`watchForSuccessor`) and runs
+  the same withdraw → draining → drain → `claimed{successor}` path. Its own roster still deals it
+  the partition, so it pauses that partition's commands itself and does not re-prepare it; a later
+  re-deal (a blue restart) prepares and holds at the gate because the record names green. Re-armed
+  after an A→A cancel, torn down by the entry's abort.
+- **Blue keeps the legacy group name.** `blue → ${deployment}-workers`, `green → ${deployment}-green-workers`.
+  Renaming blue would have made the first deploy of this code a second, unrevoked group beside the
+  running fleet: prepare, silence, self-claim, fence. Keeping the name makes it a rolling deploy of
+  the existing group, which the handoff already covers.
+- **Heartbeat per task, every task writes.** `admin/blue-green-heartbeats/balance-workers/<slot>/<instanceId>.json`
+  rather than one object per fleet: with two tasks per fleet a last-writer-wins key shows one task's
+  `prepared/total`, so `prepared == total` cannot be read and the post-flip "admitted by green" count
+  cannot either. `declaredActive` carries the gate's answer; the dashboard lists the prefix, keeps
+  objects with `writtenAt` under 90s (a killed task's last object stays behind) and sums per slot.
+- **Steps 5 → 6.** Step 5 (record → blue with blue gone) is asserted a no-op for 5s and the record is
+  then restored to green before the SIGKILL. A survivor whose record names the gone fleet prepares
+  the dead task's partitions and holds at the gate for good, the same hazard the dashboard's
+  "target has running tasks" preflight refuses.
+- **`/v1/track-batch` now holds mid-handoff.** The batch route lacked the `awaitHandoff` hold of
+  `/v1/track`, so every handoff on this branch (rolling and slot alike) answered 409 before
+  `claimed{successor}` was durable and the client's one refresh still found the old owner:
+  ROUTE_STILL_STALE on ~8% of the tracks in the window. Fixed in the same PR; the rolling JOIN and
+  LEAVE rows are back to zero failures.
+- **Where the gate lives.** `apps/balance-worker/src/blueGreen/` (`resolveTaskIdentity`, `isActiveSlot`,
+  `createSlotGate`, `createSlotHeartbeat`), not `packages/env`: the identity is a fetch of the ECS
+  task metadata, not an env read. The slot store is `edgeConfig/activeSlotEdgeConfig.ts` beside
+  `dbControl`, on its own 2s poll (the dashboard writes the record without the registry's timestamp).
+  `createEdgeConfigStore` gained `subscribe()`, notified only when the served value changes, so the
+  hook never runs a timer of its own.
+- **Detour is ~0.7–0.77s on this rig, not < 300ms.** A track that meets blue between withdraw and
+  `claimed{green}` is held for blue's drain (350–600ms here: the accepted tracks' Postgres apply on
+  Neon, ~200ms RTT from the benchmark machine) then answered 409, refreshed and resent (~250ms to
+  green's first 200). The latency target depends on the Postgres round trip, as the handoff plan's
+  "Drain includes the store apply" decision already implied; the drain itself is not on the
+  customer's clock for tracks that were not in flight at the withdraw.
+- **One `ROUTE_STILL_STALE` in 1,024 flip-window tracks (3 passes).** A batch held at blue was
+  answered 409 4ms after `claimed{green}` landed; the client's refresh read the log before the
+  routing consumer had the record and the resend met blue again. This is the client-side tail the
+  Decided section lists as out of scope ("the 0.2% join tail"); the batcher's two route attempts
+  versus `sendToOwner`'s four is where a fix would go.
+- **The dead-owner fixture is deaf.** `partitionHandoff.test.ts`'s "late draining record" case stood
+  a live, unrevoked worker in for a dead owner; a live owner now answers a `ready`, so the fixture
+  says explicitly that it never hears one.
