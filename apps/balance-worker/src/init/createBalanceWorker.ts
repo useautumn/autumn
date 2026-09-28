@@ -1,4 +1,6 @@
 import type { KafkaOffsetCommit } from "@autumn/kafka";
+import { createSlotGate } from "../blueGreen/createSlotGate.js";
+import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
@@ -43,6 +45,10 @@ export async function createBalanceWorker({
 	const { env } = config;
 	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
+	const identity = await resolveTaskIdentity({
+		ctx: { logger: dependencies.logger },
+		env,
+	});
 	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: address.endpoint,
@@ -58,6 +64,20 @@ export async function createBalanceWorker({
 		},
 	});
 	try {
+		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
+		const slotGate = resources.edgeConfigs
+			? createSlotGate({
+					ctx: {
+						identity,
+						activeSlot: resources.edgeConfigs.activeSlot,
+						logger: dependencies.logger,
+					},
+				})
+			: undefined;
+		if (identity.serviceArn)
+			dependencies.logger.info(
+				`Blue-green slot ${env.BALANCE_WORKER_SLOT}: service ${identity.serviceArn}, build ${identity.imageSha ?? "unknown"}`,
+			);
 		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
 		const consumer = resources.kafka.consumer(
@@ -103,6 +123,14 @@ export async function createBalanceWorker({
 			config: runtimeConfig,
 		});
 
+		function awaitReadyAnnouncement({
+			signal,
+		}: {
+			signal: AbortSignal;
+		}): Promise<void> {
+			return slotGate ? slotGate.awaitActive({ signal }) : Promise.resolve();
+		}
+
 		function createRuntime(
 			params: PartitionRuntimeFactoryInput,
 		): ConstructedPartitionRuntime {
@@ -120,6 +148,7 @@ export async function createBalanceWorker({
 				createRuntime,
 				served: partitionLoad,
 				ownershipLink: ownershipHandoff,
+				awaitReadyAnnouncement,
 				onError: dependencies.onError,
 				onUnhealthyPartition: dependencies.onError,
 				onServiceStopped: dependencies.onServiceStopped,

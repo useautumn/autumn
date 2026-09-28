@@ -457,4 +457,58 @@ describe("createEdgeConfigStore", () => {
 			expect(callCount).toBe(countAfterStop);
 		});
 	});
+
+	describe("subscribe", () => {
+		test("notifies once per changed value, not per refresh, and stops after unsubscribe", async () => {
+			let response = { enabled: false, message: "hello" };
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody(response),
+			});
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+			const seen: TestConfig[] = [];
+			const unsubscribe = store.subscribe((config) => seen.push(config));
+
+			await store.refresh();
+			await store.refresh();
+			expect(seen).toEqual([]);
+
+			response = { enabled: true, message: "flipped" };
+			await store.refresh();
+			await store.refresh();
+			expect(seen).toEqual([{ enabled: true, message: "flipped" }]);
+
+			unsubscribe();
+			response = { enabled: false, message: "again" };
+			await store.refresh();
+			expect(seen).toHaveLength(1);
+		});
+
+		test("a write and the test setter notify too", async () => {
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody(defaultConfig()),
+			});
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				ctx: { location, s3Client: mockClient },
+			});
+			const seen: TestConfig[] = [];
+			store.subscribe((config) => seen.push(config));
+
+			await store.writeToSource({
+				config: { enabled: true, message: "written" },
+			});
+			store._setRuntimeConfigForTesting({ enabled: true, message: "set" });
+			expect(seen).toEqual([
+				{ enabled: true, message: "written" },
+				{ enabled: true, message: "set" },
+			]);
+		});
+	});
 });

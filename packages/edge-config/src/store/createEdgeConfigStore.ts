@@ -71,6 +71,15 @@ export const createEdgeConfigStore = <T>({
 		error: "Edge config not yet initialized",
 	};
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	const listeners = new Set<(config: T) => void>();
+
+	// Listeners hear a new value, not every poll: a fleet re-checking on each tick is noise.
+	const setRuntimeConfig = (next: T) => {
+		const changed = JSON.stringify(next) !== JSON.stringify(runtimeConfig);
+		runtimeConfig = next;
+		if (!changed) return;
+		for (const listener of [...listeners]) listener(next);
+	};
 
 	// Override mode seeds the config once and never touches S3.
 	const override = getEdgeConfigOverride();
@@ -125,7 +134,7 @@ export const createEdgeConfigStore = <T>({
 		logger?: EdgeConfigLogger;
 	}) => {
 		if (override) {
-			runtimeConfig = config;
+			setRuntimeConfig(config);
 			runtimeStatus = {
 				configured: true,
 				healthy: true,
@@ -154,7 +163,7 @@ export const createEdgeConfigStore = <T>({
 				`Edge config "${s3Key}" written but timestamp signal failed; propagation waits for the backstop refresh: ${error}`,
 			);
 		}
-		runtimeConfig = config;
+		setRuntimeConfig(config);
 		runtimeStatus = {
 			configured: true,
 			healthy: true,
@@ -168,7 +177,7 @@ export const createEdgeConfigStore = <T>({
 		const { configured } = getConfigLocation();
 		runtimeStatus = { ...runtimeStatus, configured, lastFetchAt: nowIso() };
 		if (!configured) {
-			runtimeConfig = defaultValue();
+			setRuntimeConfig(defaultValue());
 			runtimeStatus = {
 				configured: false,
 				healthy: false,
@@ -179,7 +188,7 @@ export const createEdgeConfigStore = <T>({
 			return;
 		}
 		try {
-			runtimeConfig = await readFromSource();
+			setRuntimeConfig(await readFromSource());
 			runtimeStatus = {
 				configured: true,
 				healthy: true,
@@ -191,7 +200,7 @@ export const createEdgeConfigStore = <T>({
 				error instanceof Error ? error.message : "Failed to load config";
 			const previouslyHealthy = runtimeStatus.healthy;
 			const sameError = runtimeStatus.error === message;
-			if (!retainOnError) runtimeConfig = defaultValue();
+			if (!retainOnError) setRuntimeConfig(defaultValue());
 			runtimeStatus = {
 				configured: true,
 				healthy: false,
@@ -223,6 +232,13 @@ export const createEdgeConfigStore = <T>({
 		pollTimer = null;
 	};
 
+	const subscribe = (listener: (config: T) => void) => {
+		listeners.add(listener);
+		return () => {
+			listeners.delete(listener);
+		};
+	};
+
 	return {
 		get: () => runtimeConfig,
 		getStatus: () => runtimeStatus,
@@ -231,10 +247,10 @@ export const createEdgeConfigStore = <T>({
 		stopPolling,
 		readFromSource,
 		writeToSource,
+		/** Called with each new value the store starts serving; returns the unsubscribe. */
+		subscribe,
 		/** Sets in-memory config without writing to S3. For testing only. */
-		_setRuntimeConfigForTesting: (config: T) => {
-			runtimeConfig = config;
-		},
+		_setRuntimeConfigForTesting: setRuntimeConfig,
 	};
 };
 
