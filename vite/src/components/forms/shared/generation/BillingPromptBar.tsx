@@ -1,5 +1,6 @@
 import { InputGroupButton } from "@autumn/ui";
-import { ArrowElbowDownLeftIcon, SpinnerIcon } from "@phosphor-icons/react";
+import { ArrowElbowDownLeftIcon } from "@phosphor-icons/react";
+import { LoaderIcon } from "lucide-react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 import { useBillingPromptVisibility } from "./useBillingPromptVisibility";
@@ -40,13 +41,12 @@ export function BillingPromptBar({
 
 	return (
 		<form onSubmit={handleSubmit} className="relative block w-full">
-			<SpinnerIcon
-				size={16}
+			<LoaderIcon
 				className={cn(
-					"pointer-events-none absolute left-2.5 top-1.5 transition-colors duration-150",
+					"pointer-events-none absolute top-1.5 left-2.5 size-4 transition-colors duration-150",
 					isGenerating
 						? "animate-spin text-foreground"
-						: "text-tertiary-foreground",
+						: "text-muted-foreground",
 				)}
 			/>
 			<textarea
