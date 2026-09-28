@@ -4,13 +4,17 @@ import { sandboxSlug } from "../../../generated/sandboxName";
 import type { OrgInfo } from "../../env/types/orgInfo";
 import type { RemoteWebhook } from "./types";
 
-/** One env a pull reads webhooks from, through that env's own key. */
+/** One env a pull reads webhooks from, or a push syncs them to, through that env's own key. */
 export type WebhookPullEnv = {
 	keyName: SecretKeyName;
 	/** How a skipped-env warning names it, before its key is known to work. */
 	label: string;
+	/** This env's own key: push syncs each env through it. */
+	secretKey: string;
 	/** The `url` map key; a named sandbox's slug costs one lookup. */
 	envKey: () => Promise<string>;
+	/** The env's org id, which names a sandbox's webhook secrets. */
+	orgId: () => Promise<string>;
 	listWebhooks: () => Promise<{ list: RemoteWebhook[] }>;
 };
 
@@ -76,7 +80,9 @@ export const webhookPullEnvs = ({
 			{
 				keyName,
 				label,
+				secretKey,
 				envKey,
+				orgId: async () => (await infoOf(secretKey)).id,
 				listWebhooks: () => listWebhooks({ secretKey }),
 			},
 		];

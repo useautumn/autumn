@@ -1,10 +1,6 @@
-import { AutumnApiError } from "../../../generated/client";
 import type { RemoteWebhook } from "./types";
-import { ForeignOrgKeyError, type WebhookPullEnv } from "./webhookPullEnvs";
-
-const isRejectedKey = (error: unknown): boolean =>
-	error instanceof AutumnApiError &&
-	(error.status === 401 || error.status === 403);
+import { webhookEnvSkipWarning } from "./webhookEnvSkipWarning";
+import type { WebhookPullEnv } from "./webhookPullEnvs";
 
 /**
  * Lists every env in parallel. A rejected key, or one for another org, skips
@@ -27,10 +23,9 @@ export const readWebhookEnvs = async ({
 				]);
 				return { envKey, list };
 			} catch (error) {
-				if (error instanceof ForeignOrgKeyError)
-					return `⚠ webhooks: skipped ${env.label} (${env.keyName} belongs to another org)`;
-				if (!isRejectedKey(error)) throw error;
-				return `⚠ webhooks: skipped ${env.label} (${env.keyName} was rejected)`;
+				const warning = webhookEnvSkipWarning({ env, error });
+				if (warning === undefined) throw error;
+				return warning;
 			}
 		}),
 	);

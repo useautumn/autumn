@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { OrgInfo } from "../../src/actions/env/types/orgInfo";
-import { resolveWebhookEnv } from "../../src/actions/webhooks/resolveWebhookEnv";
+import { webhookPullEnvs } from "../../src/actions/pull/webhooks/webhookPullEnvs";
 import { resolveWebhooksForEnv } from "../../src/actions/webhooks/resolveWebhooksForEnv";
 import { webhookSecretName } from "../../src/actions/webhooks/webhookSecretName";
 import { writeWebhookSecrets } from "../../src/actions/webhooks/writeWebhookSecrets";
@@ -41,20 +41,24 @@ const countingFetch = (info: OrgInfo) => {
 	};
 };
 
+const listWebhooks = async () => ({ list: [] });
+
 test("-p reads url.live and the default sandbox reads url.sandbox, neither looking anything up", async () => {
 	const { calls, fetchOrgInfo } = countingFetch(orgInfo());
-	const live = await resolveWebhookEnv({
-		target: { secretKeyName: "AUTUMN_PROD_SECRET_KEY", clientId: "c" },
-		prod: true,
+	const [live] = webhookPullEnvs({
+		env: { AUTUMN_PROD_SECRET_KEY: "sk_live" },
+		targetKeyName: "AUTUMN_PROD_SECRET_KEY",
+		listWebhooks,
 		fetchOrgInfo,
 	});
-	const sandbox = await resolveWebhookEnv({
-		target: { secretKeyName: "AUTUMN_SECRET_KEY", clientId: "c" },
-		prod: false,
+	const [sandbox] = webhookPullEnvs({
+		env: { AUTUMN_SECRET_KEY: "sk_sandbox" },
+		targetKeyName: "AUTUMN_SECRET_KEY",
+		listWebhooks,
 		fetchOrgInfo,
 	});
-	expect([live.key, live.live]).toEqual(["live", true]);
-	expect([sandbox.key, sandbox.live]).toEqual(["sandbox", false]);
+	expect(await live?.envKey()).toBe("live");
+	expect(await sandbox?.envKey()).toBe("sandbox");
 	expect(calls.count).toBe(0);
 });
 
@@ -62,17 +66,14 @@ test("a named sandbox reads its slug, from one lookup of its own org", async () 
 	const { calls, fetchOrgInfo } = countingFetch(
 		orgInfo({ id: "org_qa99xyz", name: "QA-Team", is_sandbox: true }),
 	);
-	const env = await resolveWebhookEnv({
-		target: {
-			secretKeyName: "AUTUMN_SANDBOX_ORG_QA99XYZ_SECRET_KEY",
-			clientId: "c",
-			sandboxId: "org_qa99xyz",
-		},
-		prod: false,
+	const [env] = webhookPullEnvs({
+		env: { AUTUMN_SANDBOX_ORG_QA99XYZ_SECRET_KEY: "sk_qa" },
+		targetKeyName: "AUTUMN_SANDBOX_ORG_QA99XYZ_SECRET_KEY",
+		listWebhooks,
 		fetchOrgInfo,
 	});
-	expect(env.key).toBe("qa-team");
-	expect(await env.orgId()).toBe("org_qa99xyz");
+	expect(await env?.envKey()).toBe("qa-team");
+	expect(await env?.orgId()).toBe("org_qa99xyz");
 	expect(calls.count).toBe(1);
 });
 

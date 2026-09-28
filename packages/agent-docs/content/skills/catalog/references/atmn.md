@@ -165,7 +165,7 @@ export default atmn({
       url: {
         live: "https://myapp.com/api/autumn",            // atmn push -p
         sandbox: "https://staging.myapp.com/api/autumn", // the default sandbox
-        "qa-team": "https://qa.myapp.com/api/autumn",    // atmn sandbox use qa-team
+        "qa-team": "https://qa.myapp.com/api/autumn",    // the sandbox named qa-team
       },
     }),
   ],
@@ -177,8 +177,10 @@ export default atmn({
 - Leave `events` out to receive every event. Don't write `events: []`.
 - Vercel webhooks require their own distinct webhook and are a mutually exclusive variant to the rest. It can only listen to Vercel events and cannot later be changed to listen to non-Vercel events.
 - `id` is permanent: changing it registers a new webhook. Two ids that differ only by case or `-`/`_` are refused.
+- `push` syncs webhooks to every sandbox with a key in your env files (`AUTUMN_SECRET_KEY` → `sandbox`, each `AUTUMN_SANDBOX_<id>_SECRET_KEY` → its slug), each through its own key, whichever sandbox is pinned. The preview shows one `Webhooks · <env>` block per env with changes. A key that's rejected or belongs to another org skips its env with a warning. The catalog and settings still go to the targeted env only.
+- Production webhooks change only with `-p`, which syncs `live` and no sandbox. When `AUTUMN_PROD_SECRET_KEY` is set, a plain push also previews `live` read-only, and if production would change it prints `Production webhooks differ from your config (<ids>). Run atmn push -p to update production.` Relay that line, and run `-p` only when the user asks.
 - The preview gives a changed URL its own line (`billing url: old → new`). Read it out to the user before `--yes`.
-- `push --yes` writes each new webhook's signing secret once and prints exactly where: `AUTUMN_WEBHOOK_<ID>_SECRET` in `.env.prod` for `-p`, `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` in `.env.local` (or `.env`) for a sandbox. Relay the variable name and file; never print or read the secret.
+- `push --yes` writes each new webhook's signing secret once and prints exactly where: `AUTUMN_WEBHOOK_<ID>_SECRET` in `.env.prod` for `-p`, `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` in `.env.local` (or `.env`) for each sandbox, with that sandbox's own org id. Relay the variable name and file; never print or read the secret.
 - `pull` reads webhooks from every env with a key in your env files (`AUTUMN_SECRET_KEY` → `sandbox`, `AUTUMN_PROD_SECRET_KEY` → `live`, each `AUTUMN_SANDBOX_<id>_SECRET_KEY` → its slug), whatever the target; a key that's rejected or belongs to another org skips its env with a warning and leaves that env's keys alone. Per env it adds webhooks it finds, sets a changed URL, removes the env's key when the server no longer has that webhook, and deletes a webhook whose map ends up empty. A URL written as code (`process.env.X`) is never rewritten; pull warns when it differs from the server. `events`, `description` and `disabled` are shared by every env, so pull only updates them when it read every env in that webhook's `url` map; otherwise it leaves them and warns if the server differs. Webhooks already in the dashboard will be pulled and be editable in the config once you pull as usual. Since the dashboard doesn't let you set an ID, a permanent ID will be assigned to this for future reference.
 
 ## Sandboxes and keys
