@@ -50,12 +50,13 @@ export function CustomerStatePlanQuantities({
 				quantities={plan.prepaidOptions}
 				currency={displayCurrency}
 				readOnly={readOnly}
-				trigger="chip"
+				layout="inline"
 				renderField={({ featureId, step, stops }) => (
 					<form.AppField name={`${path}.prepaidOptions.${featureId}`}>
 						{(field) => (
 							<field.QuantityField
-								fullWidth
+								className="shrink-0 [&_button]:text-tertiary-foreground [&_input]:text-tertiary-foreground"
+								compact
 								hideFieldInfo
 								label=""
 								min={0}

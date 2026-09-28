@@ -8,8 +8,6 @@ import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { type ReactNode, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-export type QuantityTrigger = "button" | "chip";
-
 /**
  * Quantity display whose pencil opens the editable field in a popover, so the
  * stepper never has to share a row with the item label.
@@ -22,7 +20,6 @@ export function QuantityEditControl({
 	onEditingChange,
 	title,
 	hint,
-	trigger = "button",
 	children,
 }: {
 	readOnly: boolean;
@@ -34,7 +31,6 @@ export function QuantityEditControl({
 	title?: string;
 	/** Helper line under the stepper, e.g. the billing-unit step. */
 	hint?: string;
-	trigger?: QuantityTrigger;
 	children: ReactNode;
 }) {
 	const contentRef = useRef<HTMLDivElement>(null);
@@ -49,8 +45,6 @@ export function QuantityEditControl({
 		);
 	}
 
-	const ariaLabel = title ? `Edit ${title} quantity` : "Edit quantity";
-
 	return (
 		<div
 			className={cn(
@@ -58,37 +52,23 @@ export function QuantityEditControl({
 				showRing && "ring-1 ring-inset ring-amber-500/50",
 			)}
 		>
-			{trigger === "button" && displayText !== undefined && (
+			{displayText !== undefined && (
 				<span className="text-sm tabular-nums text-tertiary-foreground">
 					{displayText}
 				</span>
 			)}
 			<Popover onOpenChange={onEditingChange} open={isEditing}>
 				<PopoverTrigger asChild>
-					{trigger === "chip" ? (
-						<button
-							aria-label={ariaLabel}
-							className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 text-xs font-medium tabular-nums text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 data-popup-open:bg-muted"
-							type="button"
-						>
-							{displayText}
-							<PencilSimpleIcon
-								className="shrink-0 text-tertiary-foreground"
-								size={12}
-							/>
-						</button>
-					) : (
-						<IconButton
-							aria-label={ariaLabel}
-							icon={<PencilSimpleIcon size={14} />}
-							iconOrientation="center"
-							size="sm"
-							variant="secondary"
-						/>
-					)}
+					<IconButton
+						aria-label={title ? `Edit ${title} quantity` : "Edit quantity"}
+						icon={<PencilSimpleIcon size={14} />}
+						iconOrientation="center"
+						size="sm"
+						variant="secondary"
+					/>
 				</PopoverTrigger>
 				<PopoverContent
-					align={trigger === "chip" ? "start" : "end"}
+					align="end"
 					className="w-44 p-3"
 					initialFocus={() => {
 						const input = contentRef.current?.querySelector("input");
