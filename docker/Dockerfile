@@ -49,6 +49,7 @@ COPY packages/balance-webhooks/package.json packages/balance-webhooks/
 COPY packages/balance-worker-client/package.json packages/balance-worker-client/
 COPY packages/kafka/package.json packages/kafka/
 COPY packages/edge-config/package.json packages/edge-config/
+COPY packages/blue-green/package.json packages/blue-green/
 COPY packages/postgres/package.json packages/postgres/
 COPY packages/auto-topup/package.json packages/auto-topup/
 COPY packages/sqs/package.json packages/sqs/
