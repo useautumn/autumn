@@ -91,7 +91,7 @@ const table = (headers: string[], rows: string[][]) =>
 	].join("\n");
 
 const scenarios = slotsMode
-	? [...new Set(data.samples.map((s) => s.scenario))].sort()
+	? [...new Set(data.samples.map((s) => s.scenario))]
 	: ["JOIN", "GRACEFUL_LEAVE", "HARD_KILL"];
 if (slotsMode) {
 	console.log(
@@ -108,7 +108,7 @@ if (slotsMode) {
 				"ownership records",
 				"claims by fleet",
 				"flip seen by green ms (min / max)",
-				"green heartbeat at step end (prepared/ready/admitted/total, active)",
+				"fleet heartbeats at step end (prepared/ready/admitted/total, live tasks)",
 				"applied − 200s (per pass)",
 			],
 			scenarios.map((scenario) => {
@@ -149,11 +149,15 @@ if (slotsMode) {
 						? `${Math.min(...seen.map((f) => f.min))} / ${Math.max(...seen.map((f) => f.max))}`
 						: "—",
 					samples
-						.map((s) => {
-							const green = s.slots?.heartbeats.green;
-							if (!green) return "—";
-							return `${green.prepared}/${green.ready}/${green.admitted}/${green.total} (${green.tasks} tasks, active ${green.declaredActive.join(",")})`;
-						})
+						.map((s) =>
+							["blue", "green"]
+								.map((fleet) => {
+									const beat = s.slots?.heartbeats[fleet];
+									if (!beat || beat.tasks === 0) return `${fleet[0]} —`;
+									return `${fleet[0]} ${beat.prepared}/${beat.ready}/${beat.admitted}/${beat.total} (${beat.tasks})`;
+								})
+								.join(" "),
+						)
 						.join("; "),
 					samples
 						.map((s) =>

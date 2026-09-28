@@ -1138,6 +1138,22 @@ async function runSlotScenario(): Promise<Worker[]> {
 		isSettled: (t0) => slotSettled({ t0, claimsExpected: PARTITION_COUNT }),
 	});
 
+	// Rollback with blue still running: blue's re-prepared partitions announce and green hands them back.
+	await runScenario({
+		scenario: "S3B_ROLLBACK_TO_BLUE",
+		run: 1,
+		trigger: () =>
+			writeSlotRecord({ fleet: fleets.blue, reason: "rollback to blue" }),
+		isSettled: (t0) => slotSettled({ t0, claimsExpected: PARTITION_COUNT }),
+	});
+	await runScenario({
+		scenario: "S3C_FLIP_TO_GREEN_AGAIN",
+		run: 1,
+		trigger: () =>
+			writeSlotRecord({ fleet: fleets.green, reason: "swap to green again" }),
+		isSettled: (t0) => slotSettled({ t0, claimsExpected: PARTITION_COUNT }),
+	});
+
 	await runScenario({
 		scenario: "S4_BLUE_SIGTERM",
 		run: 1,
