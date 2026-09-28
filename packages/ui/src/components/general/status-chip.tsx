@@ -9,6 +9,8 @@ const STATUS_TONES = {
 	amber: "text-[#E5A21F] [--glyph:#2A1C05]",
 	yellow: "text-[#E2B93B] [--glyph:#261F06]",
 	purple: "text-[#9A6BFF] [--glyph:#1A0F33]",
+	pink: "text-[#D6409F] [--glyph:#2A0C1E]",
+	fuchsia: "text-[#C050D8] [--glyph:#240C2A]",
 	neutral: "text-[#8A8A8A] [--glyph:#161616]",
 };
 
@@ -29,6 +31,12 @@ const STATUS_GLYPHS = {
 	pencil: "M5 11l.5-2 4-4 1.5 1.5-4 4z",
 	refresh: "M5 8a3 3 0 1 0 1-2.2M5 4.6v1.8h1.8",
 	spinner: CIRCLE,
+	toggle: "M6 5.8h4a2.2 2.2 0 0 1 0 4.4H6a2.2 2.2 0 0 1 0-4.4zM10 8h.01",
+	battery: "M4.2 6h6.6v4H4.2zM11.8 7.3v1.4",
+	ticket: "M4.4 5.6h7.2v1.5a.9.9 0 0 0 0 1.8v1.5H4.4V8.9a.9.9 0 0 0 0-1.8z",
+	coins:
+		"M5 6.3c0-.7 1.3-1.3 3-1.3s3 .6 3 1.3-1.3 1.3-3 1.3-3-.6-3-1.3zM5 6.3v3.4c0 .7 1.3 1.3 3 1.3s3-.6 3-1.3V6.3",
+	cpu: "M5.4 5.4h5.2v5.2H5.4zM7.2 7.2h1.6v1.6H7.2z",
 	dashed: CIRCLE,
 };
 

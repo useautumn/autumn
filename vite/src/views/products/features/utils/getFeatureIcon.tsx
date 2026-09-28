@@ -5,6 +5,7 @@ import {
 	isAiCreditSystem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
+import type { StatusGlyph, StatusTone } from "@autumn/ui";
 import {
 	BatteryHighIcon,
 	CoinsIcon,
@@ -21,6 +22,8 @@ interface FeatureIconConfig {
 	icon: React.ReactNode;
 	color: string;
 	label: string;
+	tone: StatusTone;
+	glyph: StatusGlyph;
 }
 
 type FeatureTypeInput =
@@ -52,6 +55,8 @@ export const getFeatureIconConfig = (
 			icon: <TicketIcon size={size} weight={weight} />,
 			color: "text-blue-500",
 			label: "Non-consumable",
+			tone: "blue",
+			glyph: "ticket",
 		};
 	}
 
@@ -67,6 +72,8 @@ export const getFeatureIconConfig = (
 			icon: <ToggleRightIcon size={size} weight={weight} />,
 			color: "text-red-500",
 			label: "Boolean",
+			tone: "red",
+			glyph: "toggle",
 		};
 	}
 
@@ -76,6 +83,8 @@ export const getFeatureIconConfig = (
 			icon: <CpuIcon size={size} weight={weight} />,
 			color: "text-yellow-500",
 			label: "AI Credit System",
+			tone: "yellow",
+			glyph: "cpu",
 		};
 	}
 
@@ -85,6 +94,8 @@ export const getFeatureIconConfig = (
 			icon: <CoinsIcon size={size} weight={weight} />,
 			color: "text-pink-500",
 			label: "Credit System",
+			tone: "pink",
+			glyph: "coins",
 		};
 	}
 
@@ -99,6 +110,8 @@ export const getFeatureIconConfig = (
 			icon: <BatteryHighIcon size={size} weight={weight} />,
 			color: "text-fuchsia-500",
 			label: "Consumable",
+			tone: "fuchsia",
+			glyph: "battery",
 		};
 	}
 
@@ -107,6 +120,8 @@ export const getFeatureIconConfig = (
 		icon: <BatteryHighIcon size={size} weight={weight} />,
 		color: "text-fuchsia-500",
 		label: "Consumable",
+		tone: "fuchsia",
+		glyph: "battery",
 	};
 };
 

@@ -1,14 +1,13 @@
 import {
 	type Feature,
-	isAiCreditSystem,
 	type ModelsDevProvider,
 	splitModelId,
 } from "@autumn/shared";
 import { MiniCopyButton } from "@autumn/ui";
-import { CoinsIcon, CpuIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
+import { FeatureTypeChip } from "../components/FeatureTypeChip";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 function resolveModelName(
@@ -58,24 +57,9 @@ export const createCreditListColumns = (
 		header: "Type",
 		size: 160,
 		accessorKey: "type",
-		cell: ({ row }: { row: Row<Feature> }) => {
-			const isAi = isAiCreditSystem(row.original.type);
-			return (
-				<div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-					{isAi ? (
-						<>
-							<CpuIcon size={14} weight="fill" className="text-yellow-500" />
-							AI Credit System
-						</>
-					) : (
-						<>
-							<CoinsIcon size={14} weight="fill" className="text-pink-500" />
-							Credit System
-						</>
-					)}
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<Feature> }) => (
+			<FeatureTypeChip featureType={row.original.type} />
+		),
 	},
 	{
 		header: "Features",
