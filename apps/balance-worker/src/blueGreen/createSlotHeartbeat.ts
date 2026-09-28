@@ -15,19 +15,16 @@ import {
 import type { TaskIdentity } from "./types/taskIdentity.js";
 
 const HEARTBEAT_INTERVAL_MS = 20_000;
-const ADMITTED_STATUSES = new Set<OwnedPartitionHealth["status"]>([
-	"activating",
-	"fencing",
-	"bootstrapping",
-	"catching_up",
-	"ready",
-]);
 
 type SlotHeartbeatContext = {
 	s3Client: EdgeConfigS3Client;
 	location: EdgeConfigLocation;
 	gate: Pick<SlotGate, "describe">;
 	readPartitions(): OwnedPartitionHealth[];
+	/** True only for a partition this worker has claimed and admitted to its route directory. */
+	isAdmitted(params: { partition: number }): boolean;
+	/** False until the partition service is running and has been dealt its assignment. */
+	readAssignmentSettled(): boolean;
 	readStoreHealthy(): boolean;
 	probes: { kafka(): Promise<void>; postgres(): Promise<void> };
 	logger?: Pick<AutumnLogger, "warn">;
@@ -76,6 +73,8 @@ export function createSlotHeartbeat({
 		const health = ctx.readPartitions();
 		const gate = ctx.gate.describe();
 		const storeHealthy = ctx.readStoreHealthy();
+		// A heartbeat with no partitions would satisfy `prepared == total` vacuously.
+		const assigned = ctx.readAssignmentSettled() && health.length > 0;
 		return {
 			serviceName: "balance-workers",
 			slot: config.slot,
@@ -88,12 +87,15 @@ export function createSlotHeartbeat({
 			gate: gate.reason,
 			storeHealthy,
 			// A task that cannot read the flip record is not one a swap should count on.
-			ok: kafka.ok && postgres.ok && storeHealthy,
+			ok: kafka.ok && postgres.ok && storeHealthy && assigned,
 			checks: { kafka, postgres },
 			partitions: {
 				prepared: health.filter((p) => p.status === "prepared").length,
 				ready: health.filter((p) => p.status === "ready").length,
-				admitted: health.filter((p) => ADMITTED_STATUSES.has(p.status)).length,
+				// Routable, not merely activating: the ownership topic may still name the predecessor.
+				admitted: health.filter((p) =>
+					ctx.isAdmitted({ partition: p.partition }),
+				).length,
 				total: health.length,
 				byPartition: health.map((p) => ({
 					partition: p.partition,

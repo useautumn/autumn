@@ -258,6 +258,8 @@ const slotHeartbeat =
 					...resources.edgeConfigs.adminBucket,
 					gate: slotGate,
 					readPartitions: partitions.partitions,
+					isAdmitted: partitions.isAdmitted,
+					readAssignmentSettled: partitions.hasAssignment,
 					readStoreHealthy: () =>
 						resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false,
 					probes: {

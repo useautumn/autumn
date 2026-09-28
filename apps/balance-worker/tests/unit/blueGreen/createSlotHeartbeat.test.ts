@@ -34,11 +34,15 @@ const createHarness = ({
 	partitions,
 	probes = { kafka: async () => undefined, postgres: async () => undefined },
 	storeHealthy = true,
+	admitted = new Set<number>(),
+	assignmentSettled = true,
 }: {
 	gate: SlotGateDescription;
 	partitions: ReturnType<typeof health>[];
 	probes?: { kafka(): Promise<void>; postgres(): Promise<void> };
 	storeHealthy?: boolean;
+	admitted?: Set<number>;
+	assignmentSettled?: boolean;
 }) => {
 	const written: { key: string; body: unknown }[] = [];
 	const s3Client: EdgeConfigS3Client = {
@@ -56,6 +60,8 @@ const createHarness = ({
 			location: { bucket: "autumn-test-server", region: "us-east-2" },
 			gate: { describe: () => gate },
 			readPartitions: () => partitions,
+			isAdmitted: ({ partition }) => admitted.has(partition),
+			readAssignmentSettled: () => assignmentSettled,
 			readStoreHealthy: () => storeHealthy,
 			probes,
 			schedule: ({ run }) => {
@@ -130,14 +136,16 @@ describe("blue-green slot heartbeat", () => {
 		);
 	});
 
-	test("an active fleet keeps writing: admitted partitions and the gate result travel with it", async () => {
+	test("an active fleet keeps writing: admitted counts routable partitions only, and the gate result travels with it", async () => {
 		const { heartbeat, written, tick } = createHarness({
 			gate: { active: true, reason: "active" },
 			partitions: [
 				health({ partition: 0, status: "ready" }),
+				// Activating after a silent predecessor: the ownership topic may still name the old owner.
 				health({ partition: 1, status: "catching_up", lag: 5n }),
 				health({ partition: 2, status: "stopped" }),
 			],
+			admitted: new Set([0]),
 		});
 		await heartbeat.start();
 		tick();
@@ -146,8 +154,30 @@ describe("blue-green slot heartbeat", () => {
 		expect(SlotHeartbeatSchema.parse(written[1].body)).toMatchObject({
 			declaredActive: true,
 			gate: "active",
-			partitions: { prepared: 0, ready: 1, admitted: 2, total: 3 },
+			ok: true,
+			partitions: { prepared: 0, ready: 1, admitted: 1, total: 3 },
 		});
+	});
+
+	test("a heartbeat before the first assignment is not ok: it would satisfy prepared == total vacuously", async () => {
+		const booting = createHarness({
+			gate: { active: false, reason: "idle", expectedServiceArn: "arn:blue" },
+			partitions: [],
+			assignmentSettled: false,
+		});
+		await booting.heartbeat.start();
+		expect(SlotHeartbeatSchema.parse(booting.written[0].body)).toMatchObject({
+			ok: false,
+			partitions: { prepared: 0, total: 0 },
+		});
+		// Assigned but dealt nothing (more workers than partitions) is not ok either.
+		const empty = createHarness({
+			gate: { active: false, reason: "idle", expectedServiceArn: "arn:blue" },
+			partitions: [],
+			assignmentSettled: true,
+		});
+		await empty.heartbeat.start();
+		expect(SlotHeartbeatSchema.parse(empty.written[0].body).ok).toBe(false);
 	});
 
 	test("an unhealthy slot store alone makes the heartbeat not ok", async () => {

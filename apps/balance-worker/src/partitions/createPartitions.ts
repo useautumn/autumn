@@ -42,6 +42,14 @@ export function createPartitions({
 		return listPartitionHealth({ state });
 	}
 
+	function hasAssignment(): boolean {
+		return state.status === "running" && state.generation > 0;
+	}
+
+	function isAdmitted(target: PartitionTarget): boolean {
+		return state.directory.findOwnedRuntime(target) !== undefined;
+	}
+
 	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
 		return state.handoffSettlements.get(partition) ?? Promise.resolve();
 	}
@@ -50,6 +58,8 @@ export function createPartitions({
 		start,
 		stop,
 		partitions,
+		hasAssignment,
+		isAdmitted,
 		findRuntime,
 		findOwnedRuntime,
 		awaitHandoff,
