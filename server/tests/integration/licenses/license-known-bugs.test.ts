@@ -157,18 +157,20 @@ test.concurrent(
 				customerProduct.status === "active",
 		);
 		expect(activePrevious).toBeDefined();
-		expect(
-			dbState.assignments.find(({ id }) => id === assignment.id),
-		).toMatchObject({
-			status: "active",
-			license_parent_customer_product_id: activePrevious?.id,
-		});
+		const assignmentRow = dbState.assignments.find(
+			({ id }) => id === assignment.id,
+		);
+		expect(assignmentRow).toMatchObject({ status: "active" });
 		expect(dbState.pools).toHaveLength(1);
 		expect(dbState.pools[0]).toMatchObject({
 			parent_customer_product_id: activePrevious?.id,
 			granted: 1,
 			remaining: 0,
 		});
+		// Assignments anchor to their pool via the plan-license link.
+		expect(assignmentRow?.customer_license_link_id).toBe(
+			dbState.pools[0].link_id,
+		);
 	},
 );
 
@@ -223,8 +225,8 @@ test.concurrent(
 
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		const poolsAfter = await listLicensePools({

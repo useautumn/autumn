@@ -157,9 +157,12 @@ test.concurrent(
 				customerProduct.status === "active",
 		);
 		expect(activeParent).toBeDefined();
+		const activePool = dbState.pools.find(
+			(pool) => pool.parent_customer_product_id === activeParent?.id,
+		);
 		expect(dbState.assignments[0]).toMatchObject({
 			status: "active",
-			license_parent_customer_product_id: activeParent?.id,
+			customer_license_link_id: activePool?.link_id,
 		});
 		expect(dbState.pools).toHaveLength(1);
 		expect(dbState.pools[0]).toMatchObject({

@@ -93,16 +93,16 @@ test.concurrent(
 			func: () =>
 				autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
-					entity_id: entities[1].id,
 					plan_id: license.id,
+					entities: [{ entity_id: entities[1].id }],
 				}),
 		});
 
 		await setParentStatus({ ctx, customerId, status: CusProductStatus.Active });
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[1].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[1].id }],
 		});
 		const state = await getLicenseDbState({ db: ctx.db, customerId });
 		expect(
@@ -138,8 +138,8 @@ test.concurrent(
 			func: () =>
 				autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
-					entity_id: entities[1].id,
 					plan_id: license.id,
+					entities: [{ entity_id: entities[1].id }],
 				}),
 		});
 	},

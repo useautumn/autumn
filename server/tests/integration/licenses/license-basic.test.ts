@@ -14,9 +14,9 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
+	assignLicense,
 	listLicenseAssignments,
 	listLicensePools,
-	type TestLicenseAssignment,
 } from "./licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
@@ -93,11 +93,12 @@ test.concurrent(
 		});
 		expect(customerBefore.allowed).toBe(false);
 
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		})) as { assignment: TestLicenseAssignment };
+		const assignment = await assignLicense({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+		});
 		expect(assignment).toMatchObject({
 			entity_id: entities[0].id,
 			license_plan_id: license.id,
@@ -166,8 +167,8 @@ test.concurrent(
 			func: () =>
 				autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
-					entity_id: entities[1].id,
 					plan_id: license.id,
+					entities: [{ entity_id: entities[1].id }],
 				}),
 		});
 
@@ -200,25 +201,11 @@ test.concurrent(
 			false,
 		);
 
-		const { assignment: endedAssignment } = (await autumnV2_2.post(
-			"/licenses.update",
-			{
-				customer_id: customerId,
-				cancel_action: "cancel_immediately",
-				assignment_id: assignmentId,
-			},
-		)) as {
-			assignment: {
-				id: string;
-				entity_id: string;
-				license_plan_id: string;
-				ended_at: number | null;
-			};
-		};
-		expect(endedAssignment.id).toBe(assignmentId);
-		expect(endedAssignment.entity_id).toBe(entities[0].id);
-		expect(endedAssignment.license_plan_id).toBe(license.id);
-		expect(endedAssignment.ended_at).toBeGreaterThan(0);
+		await autumnV2_2.post("/licenses.release", {
+			customer_id: customerId,
+			entity_ids: [entities[0].id],
+			license_plan_id: license.id,
+		});
 
 		const activeAssignmentsAfterUnassign = await listLicenseAssignments({
 			autumn: autumnV2_2,

@@ -53,8 +53,8 @@ test.concurrent(
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		const healthy = (await autumnV2_2.post("/licenses.list", {
@@ -141,8 +141,8 @@ test.concurrent(
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
@@ -206,8 +206,8 @@ test.concurrent(
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		// Second live parent, distinct group so A stays live (not an upgrade).
@@ -288,8 +288,8 @@ test.concurrent(
 		for (const licensePlanId of [licenseX.id, licenseY.id]) {
 			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
-				entity_id: entities[0].id,
 				plan_id: licensePlanId,
+				entities: [{ entity_id: entities[0].id }],
 			});
 		}
 
@@ -368,8 +368,8 @@ test.concurrent(
 		for (const entity of entities) {
 			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
-				entity_id: entity.id,
 				plan_id: license.id,
+				entities: [{ entity_id: entity.id }],
 			});
 		}
 
