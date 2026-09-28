@@ -9,6 +9,7 @@ import { catalogRoutes } from "./routes/catalog.ts";
 import { ingressRoutes } from "./routes/ingress.ts";
 import { jobsRoutes } from "./routes/jobs.ts";
 import { keysRoutes } from "./routes/keys.ts";
+import { liveRoutes } from "./routes/live.ts";
 import { mcpRoutes } from "./routes/mcp.ts";
 import { resultsRoutes } from "./routes/results.ts";
 import { runsRoutes } from "./routes/runs.ts";
@@ -32,6 +33,7 @@ export const createApp = () =>
 		.route("/", resultsRoutes)
 		.route("/", capacityRoutes)
 		.route("/", mcpRoutes)
+		.route("/", liveRoutes)
 		.onError((error, c) =>
 			error instanceof TwdError
 				? renderTwdError({ c, error })

@@ -294,11 +294,17 @@ export const ApiError = z.object({
  * Topics: "runs" (every run's summary), "run:<id>" (that run's worker/file/log stream),
  * "jobs", "keys", "accounts", "capacity", "warm". Subscribing sends a snapshot first.
  */
-export const LiveTopic = z.string().regex(/^(runs|jobs|keys|accounts|capacity|warm|run:[\w-]+)$/);
+export const LiveTopic = z
+	.string()
+	.regex(/^(runs|jobs|keys|accounts|capacity|warm|run:[\w-]+)$/);
 
 export const LiveEvent = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("run.updated"), run: RunSummary }),
-	z.object({ type: z.literal("run.event"), runId: z.string(), event: RunEvent }),
+	z.object({
+		type: z.literal("run.event"),
+		runId: z.string(),
+		event: RunEvent,
+	}),
 	z.object({ type: z.literal("job.updated"), job: Job }),
 	z.object({ type: z.literal("capacity.updated"), capacity: Capacity }),
 	/** Refetch GET /keys; debounced, sent after probes, reinit steps, gate changes. */
@@ -315,20 +321,38 @@ export const LiveEvent = z.discriminatedUnion("type", [
 
 export const LiveClientMessage = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("subscribe"), topics: z.array(LiveTopic).min(1) }),
-	z.object({ type: z.literal("unsubscribe"), topics: z.array(LiveTopic).min(1) }),
+	z.object({
+		type: z.literal("unsubscribe"),
+		topics: z.array(LiveTopic).min(1),
+	}),
 	z.object({ type: z.literal("ping") }),
 ]);
 
 export const LiveServerMessage = z.discriminatedUnion("type", [
-	z.object({ type: z.literal("hello"), connectionId: z.string(), actor: ActorRef }),
+	z.object({
+		type: z.literal("hello"),
+		connectionId: z.string(),
+		actor: ActorRef,
+	}),
 	/** Full state of a topic, sent on subscribe and after the server drops events for a slow client. */
 	z.object({
 		type: z.literal("snapshot"),
 		topic: LiveTopic,
-		data: z.union([z.array(RunSummary), RunDetail, z.array(Job), Capacity, z.null()]),
+		data: z.union([
+			z.array(RunSummary),
+			RunDetail,
+			z.array(Job),
+			Capacity,
+			z.null(),
+		]),
 	}),
 	/** seq is per-connection and gap-free; a gap means reconnect + resubscribe. */
-	z.object({ type: z.literal("event"), topic: LiveTopic, seq: z.number(), event: LiveEvent }),
+	z.object({
+		type: z.literal("event"),
+		topic: LiveTopic,
+		seq: z.number(),
+		event: LiveEvent,
+	}),
 	z.object({ type: z.literal("pong") }),
 	z.object({ type: z.literal("error"), error: ApiError.shape.error }),
 ]);

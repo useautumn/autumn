@@ -1,5 +1,6 @@
 import type { RunEvent, RunFile, WorkerState } from "../../../api/contract.ts";
 import type { RunStatus } from "../../../db/schema/runs.ts";
+import { publishLive } from "../../live/liveHub/liveHub.ts";
 
 /** Per-file output kept in memory while a run is live in this process. */
 const FILE_LOG_MAX_CHARS = 64_000;
@@ -65,6 +66,10 @@ export const publishRunEvent = ({
 		run.fileLogs.set(event.file, next.slice(-FILE_LOG_MAX_CHARS));
 	}
 	for (const listener of run.listeners) listener(event);
+	publishLive({
+		topic: `run:${runId}`,
+		event: { type: "run.event", runId, event },
+	});
 };
 
 export const subscribeRunEvents = ({
