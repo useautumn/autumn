@@ -1,10 +1,17 @@
-import { Badge, Button, DialogFooter, Separator, Switch } from "@autumn/ui";
+import {
+	Button,
+	DialogFooter,
+	Separator,
+	StatusChip,
+	Switch,
+} from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import {
 	JOB_QUEUE_QUERY_KEY,
 	type JobQueueConfig,
@@ -78,7 +85,7 @@ export const JobQueuesForm = ({
 												{queue.label}
 											</span>
 											{!queue.defaultEnabled && (
-												<Badge variant="muted">Off by default</Badge>
+												<StatusChip>Off by default</StatusChip>
 											)}
 										</div>
 										<div className="text-pretty text-xs text-tertiary-foreground">
@@ -99,11 +106,11 @@ export const JobQueuesForm = ({
 				<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 					<Separator />
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge variant="muted">
-							{config.configHealthy ? "Config healthy" : "Config unavailable"}
-						</Badge>
+						<ConfigHealthChip healthy={config.configHealthy} />
 						{pausedCount > 0 && (
-							<Badge variant="muted">{pausedCount} paused</Badge>
+							<StatusChip tone="amber" glyph="pause">
+								{pausedCount} paused
+							</StatusChip>
 						)}
 						{config.lastSuccessAt && (
 							<span className="tabular-nums">

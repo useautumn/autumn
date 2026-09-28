@@ -14,7 +14,7 @@ export const cusProductToFeatureOptions = ({
 	cusProduct,
 	feature,
 }: {
-	cusProduct?: FullCusProduct;
+	cusProduct?: Pick<FullCusProduct, "options"> | null;
 	feature: Feature;
 }): FeatureOptions | undefined => {
 	return cusProduct?.options.find(

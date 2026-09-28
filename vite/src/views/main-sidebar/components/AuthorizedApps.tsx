@@ -1,6 +1,5 @@
 import { groupAndFormatScopes } from "@autumn/shared";
 import {
-	Badge,
 	Button,
 	Dialog,
 	DialogContent,
@@ -8,19 +7,18 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	IconButton,
+	StatusChip,
 	TableCell,
 	TableRow,
 } from "@autumn/ui";
 import { EllipsisVertical, Key, Shield, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import {
@@ -47,6 +45,9 @@ interface ApiKeyPreview {
 	readonly name: string;
 	readonly env: string;
 }
+
+const LIVE_ENV_CHIP = { tone: "green", glyph: "play" } as const;
+const SANDBOX_ENV_CHIP = { tone: "amber", glyph: "terminal" } as const;
 
 const COLUMNS = [
 	{ label: "Application", width: "20%" },
@@ -238,9 +239,9 @@ export const AuthorizedApps = () => {
 										</span>
 									) : (
 										grouped.map((p) => (
-											<Badge key={p.resource} variant="muted" size="sm">
+											<StatusChip key={p.resource}>
 												{p.resourceName}: {p.actions.join(", ")}
-											</Badge>
+											</StatusChip>
 										))
 									)}
 								</div>
@@ -297,15 +298,13 @@ export const AuthorizedApps = () => {
 											<span className="text-tertiary-foreground text-xs">
 												{key.name}
 											</span>
-											<span
-												className={`text-xs px-1.5 py-0.5 rounded ${
-													key.env === "live"
-														? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-														: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-												}`}
+											<StatusChip
+												{...(key.env === "live"
+													? LIVE_ENV_CHIP
+													: SANDBOX_ENV_CHIP)}
 											>
 												{key.env}
-											</span>
+											</StatusChip>
 										</div>
 									</div>
 								))}

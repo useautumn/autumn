@@ -1,72 +1,15 @@
 import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
 import {
+	StatusChip,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@autumn/ui";
 import { differenceInCalendarDays, format, formatDistance } from "date-fns";
-import {
-	AlertTriangleIcon,
-	BanIcon,
-	CalendarIcon,
-	CheckIcon,
-	ClockIcon,
-	HourglassIcon,
-	PauseIcon,
-	XIcon,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PLAN_STATUS_CONFIG } from "./planStatusConfig";
 import { type PlanStatus, resolvePlanStatus } from "./resolvePlanStatus";
-
-type ChipStyle = {
-	icon: React.ElementType;
-	label: string;
-	toneClassName: string;
-};
-
-const CHIP_STYLES: Record<PlanStatus, ChipStyle> = {
-	active: {
-		icon: CheckIcon,
-		label: "Active",
-		toneClassName: "text-green-600 dark:text-green-500",
-	},
-	trialing: {
-		icon: ClockIcon,
-		label: "Trial",
-		toneClassName: "text-blue-600 dark:text-blue-400",
-	},
-	canceling: {
-		icon: BanIcon,
-		label: "Cancelling",
-		toneClassName: "text-orange-600 dark:text-orange-400",
-	},
-	past_due: {
-		icon: AlertTriangleIcon,
-		label: "Past due",
-		toneClassName: "text-red-600 dark:text-red-400",
-	},
-	scheduled: {
-		icon: CalendarIcon,
-		label: "Scheduled",
-		toneClassName: "text-purple-600 dark:text-purple-400",
-	},
-	paused: {
-		icon: PauseIcon,
-		label: "Paused",
-		toneClassName: "text-yellow-600 dark:text-yellow-400",
-	},
-	expired: {
-		icon: XIcon,
-		label: "Expired",
-		toneClassName: "text-subtle",
-	},
-	pending: {
-		icon: HourglassIcon,
-		label: "Pending",
-		toneClassName: "text-tertiary-foreground",
-	},
-};
 
 const SHORT_DATE = "d MMM";
 const LONG_DATE = "d MMM yyyy";
@@ -134,7 +77,7 @@ function getStatusDetail({
 		};
 	}
 
-	const { label } = CHIP_STYLES[planStatus];
+	const { label } = PLAN_STATUS_CONFIG[planStatus];
 	const showsLabel = planStatus !== "active" && planStatus !== "expired";
 	return { shortText: showsLabel ? label : null, tooltipText: label };
 }
@@ -158,7 +101,7 @@ export function PlanStatusChip({
 		canceled: customerProduct.canceled,
 		trialing: Boolean(isCustomerProductTrialing(customerProduct, { nowMs })),
 	});
-	const { icon: Icon, label, toneClassName } = CHIP_STYLES[planStatus];
+	const { tone, glyph, label } = PLAN_STATUS_CONFIG[planStatus];
 	const { shortText, tooltipText, tooltipSubtext } = getStatusDetail({
 		planStatus,
 		customerProduct,
@@ -177,38 +120,16 @@ export function PlanStatusChip({
 		<TooltipProvider>
 			<Tooltip delayDuration={150}>
 				<TooltipTrigger asChild>
-					<div
-						className={cn(
-							"inline-flex h-[22px] min-w-0 max-w-full items-center rounded-[5px] border border-border bg-background text-xs font-medium",
-							isExpired && "bg-transparent",
-							isPending && "border-dashed",
-							className,
-						)}
+					<StatusChip
+						tone={tone}
+						glyph={glyph}
+						dashed={isPending}
+						className={cn(isExpired && "bg-transparent", className)}
 					>
-						<span
-							className={cn(
-								"flex h-full shrink-0 items-center gap-1 px-1.5",
-								showsName && "border-r border-inherit",
-								isPending && "border-dashed",
-								toneClassName,
-							)}
-						>
-							<Icon className="size-3" strokeWidth={2.25} />
-							{showsLabel && <span>{label}</span>}
-							{showsDetail && (
-								<span
-									className={cn(
-										showsLabel && "font-normal text-tertiary-foreground",
-									)}
-								>
-									{showsLabel ? `· ${detailText}` : detailText}
-								</span>
-							)}
-						</span>
 						{showsName && (
 							<span
 								className={cn(
-									"truncate px-[7px] text-foreground",
+									"truncate",
 									isExpired && "text-subtle line-through",
 								)}
 							>
@@ -218,7 +139,13 @@ export function PlanStatusChip({
 								)}
 							</span>
 						)}
-					</div>
+						{showsLabel && <span className="shrink-0">{label}</span>}
+						{showsDetail && (
+							<span className="shrink-0 font-normal text-tertiary-foreground">
+								· {detailText}
+							</span>
+						)}
+					</StatusChip>
 				</TooltipTrigger>
 				<TooltipContent>
 					<div>{tooltipText}</div>

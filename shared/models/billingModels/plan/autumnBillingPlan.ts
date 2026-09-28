@@ -5,6 +5,7 @@ import {
 	type AppEnv,
 	BillingVersion,
 	CusProductStatus,
+	CustomerSchema,
 	EntitlementSchema,
 	EntityBalanceSchema,
 	EntitySchema,
@@ -35,6 +36,10 @@ import { PooledBalancePlanSchema } from "./pooledBalancePlan";
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
 	balanceChange: z.number().optional(),
+	/** Per-entity balance deltas; a missing entry is seeded at 0, so it composes with tracks like `balanceChange`. */
+	entityBalanceChanges: z.record(z.string(), z.number()).optional(),
+	/** Per-entity entries re-keyed (`from → to`): a freed seat's balance parks under its replaceable id and returns on reuse. */
+	moveEntityBalances: z.record(z.string(), z.string()).optional(),
 
 	// For arrear billing:
 	updates: z
@@ -79,6 +84,30 @@ export const CustomerProductUpdateSchema = z.object({
 	}),
 });
 
+/** An id-less entity taking the id a create request names; written only while it is still id-less. */
+export const EntityClaimSchema = z.object({
+	entity: EntitySchema,
+	updates: EntitySchema.pick({
+		id: true,
+		name: true,
+		spend_limits: true,
+		usage_limits: true,
+		usage_alerts: true,
+		overage_allowed: true,
+	}).partial(),
+});
+
+/** Customer columns a billing plan writes: filled from `customer_data`, or the Stripe customer it links. */
+export const CustomerUpdateSchema = z.object({
+	customer: CustomerSchema,
+	updates: CustomerSchema.pick({
+		name: true,
+		email: true,
+		send_email_receipts: true,
+		processor: true,
+	}).partial(),
+});
+
 export const PatchCustomerProductSchema = z.object({
 	customerProduct: FullCusProductSchema,
 	insertCustomerEntitlements: z.array(FullCustomerEntitlementSchema),
@@ -118,8 +147,16 @@ export const BalanceTransitionPlanSchema = z.object({
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	balanceTransitionPlan: BalanceTransitionPlanSchema.optional(),
+	// Inserted first and only if absent: the insert elects the one request that creates the customer.
+	insertCustomer: CustomerSchema.optional(),
+	updateCustomer: CustomerUpdateSchema.optional(),
 	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
+	/** Existing entities the plan writes rows for, so it can name them by external id (a grant created for an entity). */
+	existingEntities: z
+		.array(EntitySchema.pick({ internal_id: true, id: true }))
+		.optional(),
+	claimEntities: z.array(EntityClaimSchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
 	updateCustomerProduct: CustomerProductUpdateSchema.optional(),
@@ -174,9 +211,8 @@ export const AutumnBillingPlanSchema = z.object({
 	pooledBalancePlan: PooledBalancePlanSchema.optional(),
 
 	/**
-	 * Pre-computed auto top-up rebalance deltas. The compute step sizes paydown + prepaid
-	 * remainder from the context's FullCustomer snapshot; the executor just loops these
-	 * and applies each via adjustBalanceDbAndCache (atomic SQL balance + delta).
+	 * A purchase's paydown + remainder, sized at compute time from the context's FullCustomer; the
+	 * Postgres lane applies these deltas. The worker re-sizes live from the purchase fields below.
 	 */
 	autoTopupRebalance: z
 		.object({
@@ -187,6 +223,12 @@ export const AutumnBillingPlanSchema = z.object({
 					delta: z.number(),
 				}),
 			),
+			/** The purchased cusEnt; absent on plans saved before the worker sized rebalances. */
+			customerEntitlementId: z.string().optional(),
+			featureId: z.string().optional(),
+			quantity: z.number().optional(),
+			/** Where the remainder lands: the purchased cusEnt, an expiring grant, or null when none was planned. */
+			creditedCustomerEntitlementId: z.string().nullable().optional(),
 		})
 		.optional(),
 
@@ -230,12 +272,14 @@ export const AutumnBillingPlanSchema = z.object({
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
+export type EntityClaim = z.infer<typeof EntityClaimSchema>;
 export type BalanceTransition = z.infer<typeof BalanceTransitionSchema>;
 export type BalanceTransitionPlan = z.infer<typeof BalanceTransitionPlanSchema>;
 export type BalanceTransitionUnsupportedReason = z.infer<
 	typeof BalanceTransitionUnsupportedReasonSchema
 >;
 export type CustomerProductUpdate = z.infer<typeof CustomerProductUpdateSchema>;
+export type CustomerUpdate = z.infer<typeof CustomerUpdateSchema>;
 
 export type UpdateCustomerEntitlement = z.infer<
 	typeof UpdateCustomerEntitlementSchema

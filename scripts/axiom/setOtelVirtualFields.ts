@@ -125,9 +125,9 @@ const TARGET_FIELDS: VirtualField[] = [
 		description: "API version (semver)",
 	}),
 	custom({
-		name: "fullSubjectRolloutEnabled",
-		attr: "full_subject_rollout_enabled",
-		description: "FullSubject rollout flag",
+		name: "balanceWorkerRolloutEnabled",
+		attr: "balance_worker_rollout_enabled",
+		description: "Balance worker rollout decision",
 	}),
 	custom({
 		name: "workflowId",

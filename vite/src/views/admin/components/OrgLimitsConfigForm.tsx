@@ -1,10 +1,11 @@
-import { Badge, Button, DialogFooter, Input, Separator } from "@autumn/ui";
+import { Button, DialogFooter, Input, Separator } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import {
 	buildOrgLimitsJsonText,
 	DEFAULT_CUS_PRODUCT_LIMIT,
@@ -211,9 +212,7 @@ export const OrgLimitsConfigForm = ({
 					<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 						<Separator />
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge variant="muted">
-								{config.configHealthy ? "Config healthy" : "Config unavailable"}
-							</Badge>
+							<ConfigHealthChip healthy={config.configHealthy} />
 							{config.lastSuccessAt && (
 								<span className="tabular-nums">
 									Last refresh:{" "}

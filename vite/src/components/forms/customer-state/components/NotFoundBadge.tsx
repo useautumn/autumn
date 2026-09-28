@@ -1,4 +1,9 @@
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
+import {
+	StatusChip,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 
 /** A plan Autumn holds that nothing in Stripe bills; each reason names a price. */
 export function NotFoundBadge({ reasons }: { reasons: string[] }) {
@@ -7,14 +12,14 @@ export function NotFoundBadge({ reasons }: { reasons: string[] }) {
 	return (
 		<Tooltip delayDuration={150}>
 			<TooltipTrigger asChild>
-				<Badge
-					variant="muted"
-					size="sm"
-					className="cursor-default text-amber-500"
+				<StatusChip
+					tone="amber"
+					glyph="alert"
+					className="cursor-default"
 					tabIndex={0}
 				>
 					Not found
-				</Badge>
+				</StatusChip>
 			</TooltipTrigger>
 			<TooltipContent side="top" className="max-w-72">
 				<ul className="space-y-1">

@@ -127,8 +127,8 @@ export function PooledBalanceContributions({
 										rangeStart={pageStart + 1}
 										rangeEnd={pageStart + contributions.length}
 										total={totalFilteredCount}
-										canPrev={page > 0}
-										canNext={page < pageCount - 1}
+										pageIndex={page}
+										pageCount={pageCount}
 										onPrev={() => setPage(page - 1)}
 										onNext={() => setPage(page + 1)}
 									/>

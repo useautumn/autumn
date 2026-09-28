@@ -1,0 +1,163 @@
+diff --git a/src/network/requestQueue/index.js b/src/network/requestQueue/index.js
+index eee14d66c3869d90f7bac0ac755ecbad3f2a2741..ac44131f5148611a3e3c6d412559b4f5837b4498 100644
+--- a/src/network/requestQueue/index.js
++++ b/src/network/requestQueue/index.js
+@@ -314,6 +314,9 @@ module.exports = class RequestQueue extends EventEmitter {
+       if (this.pending.length > 0) {
+         scheduleAt = scheduleAt > 0 ? scheduleAt : CHECK_PENDING_REQUESTS_INTERVAL
+       }
++      // Nothing pending and no throttle: a negative delay would become a 1ms
++      // timer that re-arms itself forever. The next enqueue or response checks again.
++      if (scheduleAt <= 0) return
+       this.throttleCheckTimeoutId = setTimeout(() => {
+         this.throttleCheckTimeoutId = null
+         this.checkPendingRequests()
+diff --git a/src/producer/eosManager/index.js b/src/producer/eosManager/index.js
+index 3010db7857a05eccf62d3f47ed8532e928f2c67b..f3154ffd5442515f5855c8b0e3b2e4dec816751f 100644
+--- a/src/producer/eosManager/index.js
++++ b/src/producer/eosManager/index.js
+@@ -88,11 +88,37 @@ module.exports = ({
+     }
+   })
+ 
++  // The coordinator for a transactional id only moves when its __transaction_state
++  // partition changes leader, but kafkajs looked it up (a FindCoordinator round
++  // trip) before every AddPartitionsToTxn, AddOffsetsToTxn and EndTxn. Keep it, and
++  // forget it on any error except the routine CONCURRENT_TRANSACTIONS, so a moved
++  // or unreachable coordinator is looked up again on the retry.
++  let cachedTransactionCoordinator = null
++  const forgetTransactionCoordinator = () => {
++    cachedTransactionCoordinator = null
++  }
+   const findTransactionCoordinator = () => {
+-    return cluster.findGroupCoordinator({
+-      groupId: transactionalId,
+-      coordinatorType: COORDINATOR_TYPES.TRANSACTION,
+-    })
++    if (!cachedTransactionCoordinator) {
++      cachedTransactionCoordinator = cluster
++        .findGroupCoordinator({
++          groupId: transactionalId,
++          coordinatorType: COORDINATOR_TYPES.TRANSACTION,
++        })
++        .catch(e => {
++          forgetTransactionCoordinator()
++          throw e
++        })
++    }
++    return cachedTransactionCoordinator
++  }
++  const withTransactionCoordinator = async request => {
++    const broker = await findTransactionCoordinator()
++    try {
++      return await request(broker)
++    } catch (e) {
++      if (e.type !== 'CONCURRENT_TRANSACTIONS') forgetTransactionCoordinator()
++      throw e
++    }
+   }
+ 
+   const transactionalGuard = () => {
+@@ -149,14 +175,14 @@ module.exports = ({
+             await cluster.refreshMetadataIfNecessary()
+ 
+             // If non-transactional we can request the PID from any broker
+-            const broker = await (transactional
+-              ? findTransactionCoordinator()
+-              : cluster.findControllerBroker())
+-
+-            const result = await broker.initProducerId({
+-              transactionalId: transactional ? transactionalId : undefined,
+-              transactionTimeout,
+-            })
++            const initProducerId = broker =>
++              broker.initProducerId({
++                transactionalId: transactional ? transactionalId : undefined,
++                transactionTimeout,
++              })
++            const result = transactional
++              ? await withTransactionCoordinator(initProducerId)
++              : await initProducerId(await cluster.findControllerBroker())
+ 
+             stateMachine.transitionTo(STATES.READY)
+             producerId = result.producerId
+@@ -271,8 +297,9 @@ module.exports = ({
+         }))
+ 
+         if (topics.length) {
+-          const broker = await findTransactionCoordinator()
+-          await broker.addPartitionsToTxn({ transactionalId, producerId, producerEpoch, topics })
++          await withTransactionCoordinator(broker =>
++            broker.addPartitionsToTxn({ transactionalId, producerId, producerEpoch, topics })
++          )
+         }
+ 
+         topics.forEach(({ topic, partitions }) => {
+@@ -296,13 +323,14 @@ module.exports = ({
+           return
+         }
+ 
+-        const broker = await findTransactionCoordinator()
+-        await broker.endTxn({
+-          producerId,
+-          producerEpoch,
+-          transactionalId,
+-          transactionResult: true,
+-        })
++        await withTransactionCoordinator(broker =>
++          broker.endTxn({
++            producerId,
++            producerEpoch,
++            transactionalId,
++            transactionResult: true,
++          })
++        )
+ 
+         stateMachine.transitionTo(STATES.READY)
+       },
+@@ -321,13 +349,14 @@ module.exports = ({
+           return
+         }
+ 
+-        const broker = await findTransactionCoordinator()
+-        await broker.endTxn({
+-          producerId,
+-          producerEpoch,
+-          transactionalId,
+-          transactionResult: false,
+-        })
++        await withTransactionCoordinator(broker =>
++          broker.endTxn({
++            producerId,
++            producerEpoch,
++            transactionalId,
++            transactionResult: false,
++          })
++        )
+ 
+         stateMachine.transitionTo(STATES.READY)
+       },
+@@ -379,15 +408,15 @@ module.exports = ({
+         assert(consumerGroupId, 'Missing consumerGroupId')
+         assert(topics, 'Missing offset topics')
+ 
+-        const transactionCoordinator = await findTransactionCoordinator()
+-
+         // Do we need to add offsets if we've already done so for this consumer group?
+-        await transactionCoordinator.addOffsetsToTxn({
+-          transactionalId,
+-          producerId,
+-          producerEpoch,
+-          groupId: consumerGroupId,
+-        })
++        await withTransactionCoordinator(transactionCoordinator =>
++          transactionCoordinator.addOffsetsToTxn({
++            transactionalId,
++            producerId,
++            producerEpoch,
++            groupId: consumerGroupId,
++          })
++        )
+ 
+         hasOffsetsAddedToTransaction = true
+ 

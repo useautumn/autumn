@@ -104,8 +104,7 @@ export function CustomerUsageAnalyticsTable() {
 					enableSorting: false,
 					isLoading: false,
 					onRowClick: handleRowClick,
-					rowClassName:
-						"h-8 bg-interactive-secondary border-b! cursor-pointer hover:bg-interactive-secondary-hover",
+					rowClassName: "h-8 cursor-pointer",
 					flexibleTableColumns: true,
 					enableColumnVisibility: true,
 					columnVisibilityStorageKey: "customer-usage-analytics",
@@ -140,7 +139,7 @@ export function CustomerUsageAnalyticsTable() {
 									text={<LoadingShimmerText text="Loading events" />}
 								/>
 							) : hasEvents ? (
-								<Table.VirtualizedContent className="rounded-lg w-full h-full bg-interactive-secondary">
+								<Table.VirtualizedContent className="w-full h-full">
 									<Table.VirtualizedBody />
 								</Table.VirtualizedContent>
 							) : (

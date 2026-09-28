@@ -1,5 +1,6 @@
 import type { UsageWindowLimit } from "../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import type { UsageWindow } from "../../models/cusProductModels/cusEntModels/usageWindowTable.js";
+import { isSameUsageWindow } from "./classifyUsageWindow/isSameUsageWindow.js";
 import { findUsageWindowByLimit } from "./findUsageWindow/findUsageWindowByLimit.js";
 
 /**
@@ -21,7 +22,7 @@ export const getCurrentUsageWindowUsage = ({
 	if (
 		!scopeRow ||
 		Number(scopeRow.window_end_at) <= now ||
-		Number(scopeRow.window_start_at) !== limit.window_start_at
+		!isSameUsageWindow({ usageWindow: scopeRow, window: limit })
 	)
 		return 0;
 

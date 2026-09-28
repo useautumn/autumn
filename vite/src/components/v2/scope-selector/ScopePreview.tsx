@@ -1,5 +1,5 @@
 import { groupAndFormatScopes, type ScopeActionType } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { StatusChip } from "@autumn/ui";
 
 export type ScopePreviewProps = {
 	scopes: string[] | null | undefined;
@@ -27,7 +27,7 @@ export function ScopePreview({
 	emptyLabel = "Full access (unrestricted)",
 }: ScopePreviewProps) {
 	if (!scopes || scopes.length === 0) {
-		return <Badge variant="muted">{emptyLabel}</Badge>;
+		return <StatusChip>{emptyLabel}</StatusChip>;
 	}
 
 	const grouped = groupAndFormatScopes(scopes);
@@ -36,15 +36,15 @@ export function ScopePreview({
 	// returns an empty list. Fall back to the empty label to avoid rendering
 	// nothing silently.
 	if (grouped.length === 0) {
-		return <Badge variant="muted">{emptyLabel}</Badge>;
+		return <StatusChip>{emptyLabel}</StatusChip>;
 	}
 
 	return (
 		<div className="flex flex-wrap gap-1">
 			{grouped.map((g) => (
-				<Badge key={g.resource} variant="muted">
+				<StatusChip key={g.resource}>
 					{g.resourceName}: {formatActionsCompact(g.actions)}
-				</Badge>
+				</StatusChip>
 			))}
 		</div>
 	);

@@ -5,7 +5,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Badge, Button, CopyButton, InfoRow } from "@autumn/ui";
+import { Button, CopyButton, InfoRow, StatusChip } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -193,9 +193,9 @@ export function SubscriptionDetailSheet() {
 								<span className="flex items-center gap-1.5 min-w-0">
 									<span className="truncate">{cusProduct.product.name}</span>
 									{cusProduct.is_custom && (
-										<Badge variant="green" size="sm">
+										<StatusChip tone="fuchsia" glyph="pencil">
 											Custom
-										</Badge>
+										</StatusChip>
 									)}
 								</span>
 							}

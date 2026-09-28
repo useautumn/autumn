@@ -1,8 +1,12 @@
 import { InternalError } from "@api/errors/base/InternalError.js";
-import type { FullCustomerEntitlement } from "../../../models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCustomerPrice } from "../../../models/cusProductModels/cusPriceModels/cusPriceModels";
+import type { Entitlement } from "../../../models/productModels/entModels/entModels";
 
-export type CustomerEntitlementWithCustomerPrices = FullCustomerEntitlement & {
+/** The columns the price lookup reads; a FullCusEntWithFullCusProduct and the balance worker's leaner row both qualify. */
+export type CustomerEntitlementWithCustomerPrices = {
+	id: string;
+	customer_product_id: string | null;
+	entitlement: Entitlement;
 	customer_product: { customer_prices: FullCustomerPrice[] } | null;
 };
 

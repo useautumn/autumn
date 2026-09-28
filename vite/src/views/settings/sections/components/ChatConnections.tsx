@@ -4,7 +4,7 @@ import {
 	ChatReplyMode,
 	type ScopeString,
 } from "@autumn/shared";
-import { Button, Switch } from "@autumn/ui";
+import { Button, StatusChip, Switch } from "@autumn/ui";
 import { faSlack } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -154,12 +154,11 @@ export const ChatConnections = () => {
 									: provider.description
 							}
 						>
-							<span className="flex w-[84px] shrink-0">
+							<span className="flex w-[100px] shrink-0">
 								{isConnected && (
-									<span className="flex items-center gap-1.5 font-medium text-emerald-500 text-xs">
-										<span className="size-1.5 rounded-full bg-emerald-500" />
+									<StatusChip tone="green" glyph="check">
 										Connected
-									</span>
+									</StatusChip>
 								)}
 							</span>
 							<div className="flex shrink-0 gap-2">
