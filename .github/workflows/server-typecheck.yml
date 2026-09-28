@@ -10,7 +10,7 @@ permissions:
 jobs:
   changes:
     name: Check changed files
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: peak
     outputs:
       server: ${{ steps.filter.outputs.server }}
     steps:
@@ -30,8 +30,7 @@ jobs:
     name: Type Check
     needs: changes
     if: needs.changes.outputs.server == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-
+    runs-on: peak
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
