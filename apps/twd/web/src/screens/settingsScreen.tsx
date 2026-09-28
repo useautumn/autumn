@@ -9,6 +9,7 @@ import {
 	useApiKeys,
 	useCreateApiKey,
 	useMe,
+	useRefreshBranches,
 	useRevokeApiKey,
 } from "../api/hooks.ts";
 import { ErrorCallout, Pill } from "../components/status.tsx";
@@ -228,6 +229,8 @@ export const SettingsScreen = () => {
 					<ErrorCallout error={keys.error ?? revoke.error} className="mt-3" />
 				</section>
 
+				<BranchCacheSection />
+
 				<section>
 					<SectionTag>For agents</SectionTag>
 					<Panel className="flex flex-col gap-3 p-3 text-sm">
@@ -280,5 +283,31 @@ export const SettingsScreen = () => {
 				gets 401 on its next request. This can't be undone.
 			</ConfirmDialog>
 		</>
+	);
+};
+
+const BranchCacheSection = () => {
+	const refresh = useRefreshBranches();
+	return (
+		<section>
+			<SectionTag>Branches</SectionTag>
+			<Panel className="flex items-center justify-between gap-3 p-3 text-sm">
+				<p className="text-pretty text-tertiary-foreground">
+					Open PRs are cached for a minute to stay under GitHub&apos;s anonymous
+					rate limit. Refresh if a new PR is missing from the branch picker.
+				</p>
+				<Button
+					variant="secondary"
+					size="sm"
+					isLoading={refresh.isPending}
+					onClick={() => refresh.mutate()}
+				>
+					{refresh.isSuccess
+						? `Refreshed · ${refresh.data.length} branches`
+						: "Refresh branches"}
+				</Button>
+			</Panel>
+			<ErrorCallout error={refresh.error} className="mt-3" />
+		</section>
 	);
 };

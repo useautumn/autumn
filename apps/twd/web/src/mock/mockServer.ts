@@ -1136,7 +1136,8 @@ export const handle = ({
 
 	if (route === "GET /me") return ok(ME);
 	if (route === "GET /catalog") return ok(catalog);
-	if (route === "GET /branches") return ok(branches);
+	if (route === "GET /branches" || route === "POST /branches/refresh")
+		return ok(branches);
 	if (route === "GET /capacity") return ok(capacity());
 	if (route === "GET /keys") return ok(keysOverview());
 	if (route === "GET /accounts") return ok(accounts);

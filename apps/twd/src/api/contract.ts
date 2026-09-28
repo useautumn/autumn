@@ -426,6 +426,8 @@ export const ROUTES = {
 	// catalog (http/routes/catalog.ts)
 	catalog: "GET /catalog",
 	branches: "GET /branches",
+	/** Drops the cached open-PR list (1 min TTL) and returns fresh branches. */
+	refreshBranches: "POST /branches/refresh",
 	warmBranch: "POST /branches/:branch/warm",
 
 	// runs (http/routes/runs.ts)

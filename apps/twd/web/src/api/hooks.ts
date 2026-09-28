@@ -185,6 +185,19 @@ export const useApiKeys = () =>
 		queryFn: () => api({ path: "/api-keys", schema: z.array(ApiKey) }),
 	});
 
+export const useRefreshBranches = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			api({
+				method: "POST",
+				path: "/branches/refresh",
+				schema: z.array(Branch),
+			}),
+		onSuccess: (branches) => qc.setQueryData(qk.branches, branches),
+	});
+};
+
 export const useWarmBranch = () => {
 	const qc = useQueryClient();
 	return useMutation({

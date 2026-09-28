@@ -14,7 +14,33 @@ type GithubPull = {
 	head: { ref: string; sha: string; repo: { full_name: string } | null };
 };
 
-/** Open same-repo PRs; GITHUB_TOKEN raises the anonymous rate limit. */
+/** Anonymous GitHub allows 60 req/h; cache the PR list so the picker stays well under it. */
+const PULLS_TTL_MS = 60_000;
+let pullsCache: { at: number; slug: string; pulls: GithubPull[] } | undefined;
+
+export const clearBranchCache = () => {
+	pullsCache = undefined;
+};
+
+const listOpenPullsCached = async ({
+	ctx,
+	slug,
+}: {
+	ctx: TwdContext;
+	slug: string;
+}) => {
+	if (
+		pullsCache &&
+		pullsCache.slug === slug &&
+		Date.now() - pullsCache.at < PULLS_TTL_MS
+	)
+		return pullsCache.pulls;
+	const pulls = await listOpenPulls({ ctx, slug });
+	pullsCache = { at: Date.now(), slug, pulls };
+	return pulls;
+};
+
+/** Open same-repo PRs; GITHUB_TOKEN (optional) raises the anonymous rate limit. */
 const listOpenPulls = async ({
 	ctx,
 	slug,
@@ -57,7 +83,7 @@ export const listBranches = async ({
 }): Promise<Branch[]> => {
 	const [heads, pulls] = await Promise.all([
 		listRemoteHeads(),
-		getRepoSlug().then((slug) => listOpenPulls({ ctx, slug })),
+		getRepoSlug().then((slug) => listOpenPullsCached({ ctx, slug })),
 	]);
 	const branches = [
 		...BASE_BRANCHES.flatMap((name) => {
