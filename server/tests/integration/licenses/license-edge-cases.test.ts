@@ -21,7 +21,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getLicenseDbState } from "./licenseTestUtils.js";
+import {
+	getLicenseDbState,
+	listLicenseAssignments,
+} from "./licenseTestUtils.js";
+import { expectLiveLicensePools } from "./utils/expectLiveLicensePools.js";
 
 const makeParentProduct = ({
 	id = "license-parent",
@@ -189,9 +193,16 @@ test.concurrent(
 			remaining: 2,
 		});
 
+		const { pools: poolRows } = await getLicenseDbState({
+			db: ctx.db,
+			customerId,
+		});
 		const customRows = await ctx.db.query.planLicenses.findMany({
 			where: and(
-				eq(planLicenses.license_internal_product_id, license.internal_id!),
+				eq(
+					planLicenses.license_internal_product_id,
+					poolRows[0].license_internal_product_id,
+				),
 				eq(planLicenses.is_custom, true),
 			),
 		});
@@ -219,18 +230,16 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [firstParent, secondParent, license] }),
 			],
-			actions: [s.billing.attach({ productId: firstParent.id })],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: firstParent.id,
-			licenses: [
-				{
-					license_plan_id: license.id,
+			actions: [
+				s.licenses.link({
+					parentProductId: firstParent.id,
+					licenseProductId: license.id,
 					included: 1,
-				},
+				}),
+				s.billing.attach({ productId: firstParent.id }),
 			],
 		});
+
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
 			plan_id: license.id,
@@ -250,17 +259,27 @@ test.concurrent(
 			},
 		});
 
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0]).toMatchObject({
-			license_plan_id: license.id,
-			granted: 1,
-			usage: 1,
-			remaining: 0,
-			assignments: [{ entity_id: entities[0].id }],
+		await expectLiveLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			pools: [
+				{
+					license_plan_id: license.id,
+					parent_plan_id: secondParent.id,
+					granted: 1,
+					usage: 1,
+					remaining: 0,
+				},
+			],
 		});
+		const assignments = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			licensePlanId: license.id,
+		});
+		expect(assignments.map((assignment) => assignment.entity_id)).toEqual([
+			entities[0].id,
+		]);
 	},
 );
 
@@ -288,13 +307,14 @@ test.concurrent(
 							},
 						],
 					},
+					license_quantities: [{ license_plan_id: license.id, quantity: 0 }],
 				}),
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-edge: provisioned license stays entity-level internally and hidden from API products")}`,
+	`${chalk.yellowBright("licenses-edge: provisioned license stays entity-level internally and shows on entity subscriptions")}`,
 	async () => {
 		const { customerId, entities, autumnV2_2, ctx, parent, license } =
 			await setupAssignedLicense({
@@ -328,7 +348,9 @@ test.concurrent(
 
 		const fullSubject = fullCustomerToFullSubject({ fullCustomer });
 		const apiProducts = fullSubjectToApiCustomerProducts({ fullSubject });
-		expect(apiProducts.map((item) => item.product.id)).toEqual([parent.id]);
+		expect(apiProducts.map((item) => item.product.id).sort()).toEqual(
+			[license.id, parent.id].sort(),
+		);
 
 		const entity = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
@@ -346,7 +368,7 @@ test.concurrent(
 			entity.subscriptions.some(
 				(subscription) => subscription.plan_id === license.id,
 			),
-		).toBe(false);
+		).toBe(true);
 	},
 );
 
@@ -670,7 +692,7 @@ test.todo(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-edge: non-license assign and priced customize are rejected")}`,
+	`${chalk.yellowBright("licenses-edge: non-license assign is rejected and priced customize persists a custom license")}`,
 	async () => {
 		const parent = makeParentProduct({ id: "license-negative-parent" });
 		const license = makeLicenseProduct({ id: "license-negative-seat" });
@@ -710,9 +732,16 @@ test.concurrent(
 				],
 			},
 		});
+		const { pools: poolRows } = await getLicenseDbState({
+			db: ctx.db,
+			customerId,
+		});
 		const customRows = await ctx.db.query.planLicenses.findMany({
 			where: and(
-				eq(planLicenses.license_internal_product_id, license.internal_id!),
+				eq(
+					planLicenses.license_internal_product_id,
+					poolRows[0].license_internal_product_id,
+				),
 				eq(planLicenses.is_custom, true),
 			),
 		});

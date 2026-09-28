@@ -59,6 +59,7 @@ test.concurrent(
 				autumnV2_2.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,
 					plan_id: target.id,
+					license_quantities: [{ license_plan_id: license.id, quantity: 2 }],
 				}),
 		});
 

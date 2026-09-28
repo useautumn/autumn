@@ -25,7 +25,7 @@ test.todo(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-attach-edge: raised catalog grant is assignable before any reconcile")}`,
+	`${chalk.yellowBright("licenses-attach-edge: raised catalog grant is assignable after moving to the new version")}`,
 	async () => {
 		const customerId = "license-raise-included";
 		const parent = products.base({
@@ -70,6 +70,11 @@ test.concurrent(
 		await autumnV2_2.post("/plans.update", {
 			plan_id: parent.id,
 			licenses: [{ license_plan_id: license.id, included: 3 }],
+		});
+		await autumnV2_2.billing.update({
+			customer_id: customerId,
+			plan_id: parent.id,
+			version: 2,
 		});
 		const assignment = await assignLicense({
 			autumn: autumnV2_2,

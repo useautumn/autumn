@@ -8,6 +8,7 @@ import {
 	FreeTrialDuration,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -92,7 +93,7 @@ test.concurrent(
 			customerId: "license-trial-revert",
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
-				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
 				s.products({ list: [previous, trial, license] }),
 			],
 			actions: [
@@ -161,16 +162,25 @@ test.concurrent(
 			({ id }) => id === assignment.id,
 		);
 		expect(assignmentRow).toMatchObject({ status: "active" });
-		expect(dbState.pools).toHaveLength(1);
-		expect(dbState.pools[0]).toMatchObject({
-			parent_customer_product_id: activePrevious?.id,
-			granted: 1,
-			remaining: 0,
-		});
-		// Assignments anchor to their pool via the plan-license link.
-		expect(assignmentRow?.customer_license_link_id).toBe(
-			dbState.pools[0].link_id,
+		// The ended trial keeps its (hidden) row; check the restored parent's.
+		const restoredPool = dbState.pools.find(
+			(pool) => pool.parent_customer_product_id === activePrevious?.id,
 		);
+		expect(restoredPool).toMatchObject({ granted: 1, remaining: 0 });
+		// Assignments anchor to their pool via the plan-license link.
+		expect(assignmentRow?.customer_license_link_id).toBe(restoredPool?.link_id);
+
+		// Capacity reads the stored remaining: the only seat is taken, so a
+		// second attach (before any licenses.list reconcile) must be rejected.
+		await expectAutumnError({
+			errMessage: "No available licenses",
+			func: () =>
+				autumnV2_2.post("/licenses.attach", {
+					customer_id: customerId,
+					plan_id: license.id,
+					entities: [{ entity_id: entities[1].id }],
+				}),
+		});
 	},
 );
 

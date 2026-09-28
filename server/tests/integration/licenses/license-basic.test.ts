@@ -15,6 +15,7 @@ import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
 	assignLicense,
+	getLicenseDbState,
 	listLicenseAssignments,
 	listLicensePools,
 } from "./licenseTestUtils.js";
@@ -215,15 +216,17 @@ test.concurrent(
 		});
 		expect(activeAssignmentsAfterUnassign).toHaveLength(0);
 
-		const allAssignmentsAfterUnassign = await listLicenseAssignments({
-			autumn: autumnV2_2,
+		// Release unlinks the seat for reuse rather than ending it.
+		const { assignments: seatRows } = await getLicenseDbState({
+			db: ctx.db,
 			customerId,
-			entityId: entities[0].id,
-			licensePlanId: license.id,
-			active: false,
 		});
-		expect(allAssignmentsAfterUnassign[0].id).toBe(assignmentId);
-		expect(allAssignmentsAfterUnassign[0].ended_at).toBeGreaterThan(0);
+		expect(seatRows).toHaveLength(1);
+		expect(seatRows[0]).toMatchObject({
+			id: assignmentId,
+			internal_entity_id: null,
+		});
+		expect(Number(seatRows[0].released_at)).toBeGreaterThan(0);
 
 		const poolsAfterUnassign = await listLicensePools({
 			autumn: autumnV2_2,

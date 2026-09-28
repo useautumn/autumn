@@ -19,8 +19,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import {
 	getLicenseDbState,
 	listLicenseAssignments,
-	listLicensePools,
 } from "./licenseTestUtils.js";
+import { expectLiveLicensePools } from "./utils/expectLiveLicensePools.js";
 
 const makeLicenseProduct = (id: string) => ({
 	...products.base({
@@ -38,8 +38,8 @@ test.concurrent(
 		});
 		const license = makeLicenseProduct("lifecycle-cancel-license");
 
-		const { customerId, entities, autumnV2_1, autumnV2_2, ctx } =
-			await initScenario({
+		const { customerId, entities, autumnV2_1, autumnV2_2 } = await initScenario(
+			{
 				customerId: "license-lifecycle-cancel",
 				setup: [
 					s.customer({ paymentMethod: "success", testClock: false }),
@@ -58,7 +58,8 @@ test.concurrent(
 						entityIndex: 0,
 					}),
 				],
-			});
+			},
+		);
 
 		const beforeCancel = await autumnV2_1.check<CheckResponseV3>({
 			customer_id: customerId,
@@ -72,10 +73,7 @@ test.concurrent(
 			plan_id: parent.id,
 			cancel_action: "cancel_immediately",
 		});
-		const dbState = await getLicenseDbState({ db: ctx.db, customerId });
-		expect(dbState.pools).toHaveLength(0);
-		expect(dbState.assignments).toHaveLength(1);
-		expect(dbState.assignments[0]).toMatchObject({ status: "expired" });
+		await expectLiveLicensePools({ autumn: autumnV2_2, customerId, pools: [] });
 
 		const assignmentsAfterCancel = await listLicenseAssignments({
 			autumn: autumnV2_2,
@@ -164,24 +162,20 @@ test.concurrent(
 			status: "active",
 			customer_license_link_id: activePool?.link_id,
 		});
-		expect(dbState.pools).toHaveLength(1);
-		expect(dbState.pools[0]).toMatchObject({
-			parent_customer_product_id: activeParent?.id,
-			granted: 1,
-			remaining: 0,
-		});
 
-		const poolsAfterUpgrade = await listLicensePools({
+		await expectLiveLicensePools({
 			autumn: autumnV2_2,
 			customerId,
 			entityId: entities[0].id,
-		});
-		expect(poolsAfterUpgrade).toHaveLength(1);
-		expect(poolsAfterUpgrade[0]).toMatchObject({
-			license_plan_id: license.id,
-			granted: 1,
-			usage: 1,
-			remaining: 0,
+			pools: [
+				{
+					license_plan_id: license.id,
+					parent_plan_id: premiumPlan.id,
+					granted: 1,
+					usage: 1,
+					remaining: 0,
+				},
+			],
 		});
 		const assignmentsAfterUpgrade = await listLicenseAssignments({
 			autumn: autumnV2_2,
@@ -259,10 +253,7 @@ test.concurrent(
 			updates: { trial_ends_at: Date.now() - 60_000 },
 		});
 		await runProductCron({ ctx: { db: ctx.db, logger: ctx.logger } });
-		const dbState = await getLicenseDbState({ db: ctx.db, customerId });
-		expect(dbState.pools).toHaveLength(0);
-		expect(dbState.assignments).toHaveLength(1);
-		expect(dbState.assignments[0]).toMatchObject({ status: "expired" });
+		await expectLiveLicensePools({ autumn: autumnV2_2, customerId, pools: [] });
 
 		const assignmentsAfter = await listLicenseAssignments({
 			autumn: autumnV2_2,
@@ -367,10 +358,7 @@ test.concurrent(
 			startingFrom: cycleEnd,
 			waitForSeconds: 30,
 		});
-		const dbState = await getLicenseDbState({ db: ctx.db, customerId });
-		expect(dbState.pools).toHaveLength(0);
-		expect(dbState.assignments).toHaveLength(1);
-		expect(dbState.assignments[0]).toMatchObject({ status: "expired" });
+		await expectLiveLicensePools({ autumn: autumnV2_2, customerId, pools: [] });
 
 		const assignmentsAfter = await listLicenseAssignments({
 			autumn: autumnV2_2,

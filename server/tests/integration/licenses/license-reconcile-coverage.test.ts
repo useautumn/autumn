@@ -374,9 +374,12 @@ test.concurrent(
 		}
 
 		// Drop capacity to exactly the active count; both assignments survive.
-		await autumnV2_2.post("/plans.update", {
+		await autumnV2_2.billing.update({
+			customer_id: customerId,
 			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 2 }],
+			customize: {
+				upsert_licenses: [{ license_plan_id: license.id, included: 2 }],
+			},
 		});
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
@@ -403,9 +406,12 @@ test.concurrent(
 		expect(openActive).toHaveLength(2);
 
 		// Raising capacity frees the difference back into availability.
-		await autumnV2_2.post("/plans.update", {
+		await autumnV2_2.billing.update({
+			customer_id: customerId,
 			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 4 }],
+			customize: {
+				upsert_licenses: [{ license_plan_id: license.id, included: 4 }],
+			},
 		});
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
