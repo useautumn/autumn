@@ -1,0 +1,35 @@
+import type { RunSummary } from "../../../api/contract.ts";
+import { TwdError } from "../../../http/apiError.ts";
+import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { createRun } from "./createRun.ts";
+import { getRun } from "./getRun.ts";
+
+/** New run on the same branch + sha with only the failed/crashed files. */
+export const rerunFailed = async ({
+	ctx,
+	runId,
+}: {
+	ctx: TwdContext;
+	runId: string;
+}): Promise<RunSummary> => {
+	const run = await getRun({ ctx, runId });
+	const failed = run.files
+		.filter((file) => file.status === "failed" || file.status === "crashed")
+		.map((file) => file.file);
+	if (failed.length === 0) {
+		throw new TwdError({
+			status: 409,
+			code: "no_failed_files",
+			message: `Run ${runId} has no failed or crashed files${run.finishedAt ? "" : " yet"}.`,
+			next: run.finishedAt
+				? "Nothing to rerun."
+				: "Wait for the run to finish (GET /runs/:id), then retry.",
+		});
+	}
+	return createRun({
+		ctx,
+		branch: run.branch,
+		sha: run.sha,
+		selection: { files: failed, grep: run.selection.grep },
+	});
+};

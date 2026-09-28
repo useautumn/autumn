@@ -254,7 +254,7 @@ const CULL_DISABLED = process.env.TW_DISABLE_CULL === "1";
  * `cullIdle` only ever removes idle workers and never drops below the buffer, so
  * retries always have spare capacity. Returns a stop function; no-op if disabled.
  */
-const startCulling = (
+export const startCulling = (
 	pool: WorkerPool,
 	resolveSandbox: (worker: WorkerHandle) => ProviderSandbox | undefined,
 ): (() => void) => {
@@ -546,7 +546,7 @@ let stripeBudget = stripeBudgetForRun({
 	keys: stripeKeyPoolSize(),
 });
 
-const buildWorkerEnv = ({
+export const buildWorkerEnv = ({
 	stripeAccountId,
 	stripeSecretKey,
 	isSvixShard,
@@ -732,7 +732,7 @@ const resolveRefSha = (ref: string): string => {
  * cache. (Pruning old warm parents is a follow-up `kill --warm-gc`.) Returns the
  * warm parent's name (the fork source for every worker).
  */
-const getOrBuildWarmParent = async ({
+export const getOrBuildWarmParent = async ({
 	ref,
 	sha,
 	signal,
@@ -855,7 +855,7 @@ type ProvisionedWorker = {
  * streaming its boot output to stdout. Resolves once READY is seen; rejects if
  * the boot command exits first (boot failed) or the timeout elapses.
  */
-const waitForReady = async ({
+export const waitForReady = async ({
 	sandbox,
 	name,
 	signal,
@@ -2017,7 +2017,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
  * `server/tests/...` suffix, so we rebase off the local PROJECT_ROOT onto the
  * in-sandbox repo root.
  */
-const toSandboxPath = (localFile: string): string => {
+export const toSandboxPath = (localFile: string): string => {
 	if (localFile.startsWith(`${PROJECT_ROOT}/`)) {
 		return `${sandboxRepoRoot()}/${localFile.slice(PROJECT_ROOT.length + 1)}`;
 	}

@@ -1,10 +1,35 @@
+import { runMigrations } from "./db/migrate.ts";
 import { createApp } from "./http/createApp.ts";
+import { startJobRunner } from "./internal/jobs/runner/jobRunner.ts";
 import { getTwdEnv } from "./lib/env.ts";
 import { getLogger } from "./lib/logger.ts";
+import { startSweepers } from "./lib/startSweepers.ts";
 
 const env = getTwdEnv();
-const app = createApp();
+const logger = getLogger();
 
-Bun.serve({ port: env.TWD_PORT, fetch: app.fetch, idleTimeout: 0 });
-getLogger().info("twd listening", { port: env.TWD_PORT });
-// The jobs task starts the job runner here.
+await runMigrations();
+
+const app = createApp();
+const server = Bun.serve({
+	port: env.TWD_PORT,
+	fetch: app.fetch,
+	idleTimeout: 0,
+});
+logger.info("twd listening", { port: env.TWD_PORT });
+
+const runner = startJobRunner();
+const stopSweepers = startSweepers();
+
+let shuttingDown = false;
+const shutdown = async (signal: string) => {
+	if (shuttingDown) return;
+	shuttingDown = true;
+	logger.info("twd shutting down", { signal });
+	stopSweepers();
+	await runner.stop();
+	await server.stop(true);
+	process.exit(0);
+};
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

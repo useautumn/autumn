@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { renderTwdError, TwdError } from "./apiError.ts";
+import { authMiddleware } from "./middleware/authMiddleware.ts";
+import { corsMiddleware } from "./middleware/corsMiddleware.ts";
 import { accountsRoutes } from "./routes/accounts.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { capacityRoutes } from "./routes/capacity.ts";
@@ -13,9 +15,11 @@ import { runsRoutes } from "./routes/runs.ts";
 import { webhooksRoutes } from "./routes/webhooks.ts";
 import type { TwdHono } from "./types/twdHono.ts";
 
-/** Auth middleware is added by the auth task; public prefixes: /health /auth /webhooks /ingress. */
+/** CORS, then auth (sets ctx); public prefixes: /health /auth /webhooks /ingress. */
 export const createApp = () =>
 	new Hono<TwdHono>()
+		.use("*", corsMiddleware())
+		.use("*", authMiddleware)
 		.get("/health", (c) => c.json({ ok: true }))
 		.route("/", authRoutes)
 		.route("/", webhooksRoutes)

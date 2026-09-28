@@ -1,4 +1,13 @@
+import { and, count, eq, inArray, ne } from "drizzle-orm";
+import { reservations, stripeAccounts } from "../../../db/schema/accounts.ts";
+import { stripeKeys } from "../../../db/schema/keys.ts";
+import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { clearIngressRoutesForAccounts } from "../../ingress/actions/clearIngressRoutesForAccounts.ts";
+import { resolveKeySecret } from "../../keys/actions/resolveKeySecret.ts";
+import { getKeyGate } from "../../keys/repos/keyGateRepo.ts";
+import { lockCleanAccounts, usableKey } from "../repos/cleanAccountsRepo.ts";
+import { enqueueNukeJobs } from "./enqueueNukeJobs.ts";
 
 /**
  * Frozen cross-task API for the account ledger. OWNED BY THE KEYS TASK.
@@ -11,20 +20,169 @@ export type ClaimedAccount = {
 	secretKey: string;
 };
 
+const insufficient = ({
+	need,
+	have,
+	pool,
+}: {
+	need: number;
+	have: number;
+	pool: number;
+}) =>
+	new TwdError({
+		status: 409,
+		code: "insufficient_accounts",
+		message: `Need ${need} clean Stripe accounts on usable keys, only ${have} free right now.`,
+		next: "Reduce the selection or wait for nukes to finish; GET /capacity shows maxFilesNow.",
+		escalate:
+			pool < need
+				? `The whole pool is ${pool} accounts — ask a twd admin to add Stripe accounts/keys (POST /keys/reinit with targetPerKey).`
+				: undefined,
+		details: { need, have, pool },
+	});
+
 /** clean → in_use (or reserved → in_use when reservationId is given). */
-export const claimAccountsForRun = async (_args: {
+export const claimAccountsForRun = async ({
+	ctx,
+	runId,
+	count: need,
+	reservationId,
+}: {
 	ctx: TwdContext;
 	runId: string;
 	count: number;
 	reservationId?: string;
 }): Promise<ClaimedAccount[]> => {
-	throw new Error("claimAccountsForRun: not implemented");
+	const gate = await getKeyGate({ db: ctx.db });
+	if (gate.state === "draining") {
+		throw new TwdError({
+			status: 503,
+			code: "keys_draining",
+			message: `Stripe keys are being re-initialised${gate.reason ? `: ${gate.reason}` : ""}.`,
+			next: "Wait for the reinit_keys job to finish (GET /keys shows the gate), then retry.",
+			escalate: gate.reason?.startsWith("reinit failed")
+				? "Key re-init failed — ask a twd admin to fix it and rerun POST /keys/reinit."
+				: undefined,
+			details: { jobId: gate.jobId },
+		});
+	}
+
+	const claimed = await ctx.db.transaction(async (tx) => {
+		const heldBy = ctx.actor?.userId ?? "system";
+		const now = new Date();
+		const take = async (ids: string[]) =>
+			ids.length === 0
+				? []
+				: tx
+						.update(stripeAccounts)
+						.set({ state: "in_use", runId, heldBy, stateChangedAt: now })
+						.where(inArray(stripeAccounts.id, ids))
+						.returning({
+							accountId: stripeAccounts.id,
+							platformAccountId: stripeAccounts.platformAccountId,
+						});
+
+		if (reservationId) {
+			const [reservation] = await tx
+				.select()
+				.from(reservations)
+				.where(eq(reservations.id, reservationId));
+			if (
+				!reservation ||
+				reservation.releasedAt ||
+				reservation.expiresAt < now
+			) {
+				throw new TwdError({
+					status: 404,
+					code: "reservation_not_active",
+					message: `Reservation ${reservationId} does not exist, was released, or expired.`,
+					next: "Drop reservationId, or POST /reservations for a new one.",
+				});
+			}
+			if (ctx.actor && reservation.userId !== ctx.actor.userId) {
+				throw new TwdError({
+					status: 403,
+					code: "forbidden",
+					message: `Reservation ${reservationId} belongs to another user.`,
+					next: "Use your own reservation or drop reservationId.",
+					escalate: `Ask the reservation owner (user ${reservation.userId}) to run it or release it.`,
+				});
+			}
+			const rows = await tx
+				.select({ id: stripeAccounts.id })
+				.from(stripeAccounts)
+				.innerJoin(
+					stripeKeys,
+					eq(stripeKeys.platformAccountId, stripeAccounts.platformAccountId),
+				)
+				.where(
+					and(
+						eq(stripeAccounts.reservationId, reservationId),
+						eq(stripeAccounts.state, "reserved"),
+						usableKey,
+					),
+				)
+				.limit(need)
+				.for("update", { of: stripeAccounts, skipLocked: true });
+			if (rows.length < need) {
+				throw new TwdError({
+					status: 409,
+					code: "insufficient_accounts",
+					message: `Reservation ${reservationId} has ${rows.length} free accounts on usable keys; the run needs ${need}.`,
+					next: "Reduce the selection, wait for the reservation's accounts to finish nuking, or run without reservationId.",
+					details: { need, have: rows.length },
+				});
+			}
+			return take(rows.map((row) => row.id));
+		}
+
+		const ids = await lockCleanAccounts({ tx, need });
+		if (ids.length < need) {
+			const [pool] = await tx
+				.select({ n: count() })
+				.from(stripeAccounts)
+				.innerJoin(
+					stripeKeys,
+					eq(stripeKeys.platformAccountId, stripeAccounts.platformAccountId),
+				)
+				.where(and(ne(stripeAccounts.state, "broken"), usableKey));
+			throw insufficient({ need, have: ids.length, pool: pool.n });
+		}
+		return take(ids);
+	});
+
+	return Promise.all(
+		claimed.map(async (account) => ({
+			...account,
+			secretKey: await resolveKeySecret({
+				ctx,
+				platformAccountId: account.platformAccountId,
+			}),
+		})),
+	);
 };
 
 /** in_use → nuking; enqueues one nuke:<acct> job per account. Idempotent. */
-export const releaseRunAccounts = async (_args: {
+export const releaseRunAccounts = async ({
+	ctx,
+	runId,
+}: {
 	ctx: TwdContext;
 	runId: string;
 }): Promise<void> => {
-	throw new Error("releaseRunAccounts: not implemented");
+	await ctx.db
+		.update(stripeAccounts)
+		.set({ state: "nuking", stateChangedAt: new Date() })
+		.where(
+			and(eq(stripeAccounts.runId, runId), eq(stripeAccounts.state, "in_use")),
+		);
+	const nuking = await ctx.db
+		.select({ id: stripeAccounts.id })
+		.from(stripeAccounts)
+		.where(
+			and(eq(stripeAccounts.runId, runId), eq(stripeAccounts.state, "nuking")),
+		);
+	const accountIds = nuking.map((row) => row.id);
+	clearIngressRoutesForAccounts({ accountIds });
+	await enqueueNukeJobs({ ctx, accountIds });
 };

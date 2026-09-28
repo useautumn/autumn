@@ -122,6 +122,7 @@
 		"scenario": "cd server && bun scenario",
 		"atmn-test": "echo 'deprecated: v1 atmn integration — use bun atl (nightly). see packages/atmn-old/test/integration/DEPRECATED.md' && exit 0",
 		"atest": "echo 'deprecated: v1 atmn integration — use bun atl (nightly). see packages/atmn-old/test/integration/DEPRECATED.md' && exit 0",
+		"twd": "bun apps/twd/src/cli/twd.ts",
 		"tw": "ENV_FILE=.env bun scripts/withSecrets.ts --env=dev -- bun scripts/tw/index.ts",
 		"tw:pk": "ENV_FILE=.env bun scripts/withSecrets.ts --env=dev -- bun scripts/tw/probe-stripe-keys.ts",
 		"tw:list": "ENV_FILE=.env bun scripts/withSecrets.ts --env=dev -- bun scripts/tw/index.ts list",

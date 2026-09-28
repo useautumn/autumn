@@ -213,6 +213,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@autumn/shared": "workspace:*",
+        "@modelcontextprotocol/sdk": "1.29.0",
         "drizzle-orm": "catalog:",
         "hono": "4.12.27",
         "modal": "^0.8.0",
