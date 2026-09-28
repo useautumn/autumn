@@ -33,7 +33,7 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: peak-x64-16
+    runs-on: peak
     timeout-minutes: 5
 
     steps:
