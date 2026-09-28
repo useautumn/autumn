@@ -26,7 +26,6 @@ import {
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
-import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import {
 	addCustomLineItem,
 	CustomLineItemRows,
@@ -35,6 +34,7 @@ import {
 } from "@/components/forms/shared/CustomLineItemRows";
 import { AppliedDiscountRow } from "@/components/forms/shared/discount-row/AppliedDiscountRow";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
+import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
@@ -475,23 +475,10 @@ export function AttachAdvancedSection() {
 			/>
 
 			{rules.proration.visible && (
-				<ConfigRow
-					title="Prorate Changes"
-					description="Prorate price differences when changing plans mid-cycle"
-					action={
-						<BillingOptionToggle
-							rule={rules.proration}
-							checked={
-								showProrationBehavior &&
-								effectiveProrationBehavior === "prorate_immediately"
-							}
-							onCheckedChange={(checked) =>
-								handleProrationBehaviorChange(
-									checked ? "prorate_immediately" : "none",
-								)
-							}
-						/>
-					}
+				<ProrationBehaviorConfigRow
+					rule={rules.proration}
+					value={showProrationBehavior ? effectiveProrationBehavior : "none"}
+					onChange={handleProrationBehaviorChange}
 				/>
 			)}
 
