@@ -26,7 +26,7 @@ const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 		: `/${unit}`;
 };
 
-/** How the item is charged, e.g. "4 × $10", "$5 per 100, billed on usage", "Graduated tiers". */
+/** How the item is charged, e.g. "4 × $10", "$5 per 100, billed on usage", "10 × Graduated tiers". */
 export const unitPriceDetail = ({
 	price,
 	quantity,
@@ -35,7 +35,11 @@ export const unitPriceDetail = ({
 	quantity: number | null;
 }) => {
 	if (price.tiers) {
-		return price.tiers_mode === "volume" ? "Volume tiers" : "Graduated tiers";
+		const tierLabel =
+			price.tiers_mode === "volume" ? "Volume tiers" : "Graduated tiers";
+		return quantity === null
+			? tierLabel
+			: `${quantity.toLocaleString()} × ${tierLabel}`;
 	}
 	if (price.unit_amount === null) return undefined;
 

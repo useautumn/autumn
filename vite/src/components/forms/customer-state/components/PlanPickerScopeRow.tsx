@@ -67,14 +67,18 @@ export function PlanPickerScopeRow({
 
 	if (!hasEntities) return null;
 
+	const isSelected = (entity: Entity) => entityKey(entity) === value;
 	const inlineEntities = knownEntities.slice(0, INLINE_ENTITY_COUNT);
-	const hiddenSelectedEntity = knownEntities
-		.slice(INLINE_ENTITY_COUNT)
-		.find((entity) => entityKey(entity) === value);
-	const tabEntities = hiddenSelectedEntity
-		? [...inlineEntities, hiddenSelectedEntity]
+	const selectedOutsideInline = inlineEntities.some(isSelected)
+		? undefined
+		: (knownEntities.find(isSelected) ?? entitySearch.selectedEntity);
+	const tabEntities = selectedOutsideInline
+		? [...inlineEntities, selectedOutsideInline]
 		: inlineEntities;
-	const hiddenCount = knownEntities.length - tabEntities.length;
+	const hiddenCount = knownEntities.filter(
+		(entity) =>
+			!tabEntities.some((tab) => entityKey(tab) === entityKey(entity)),
+	).length;
 
 	return (
 		<div className="flex items-center gap-1 overflow-hidden border-b border-border/50 px-2 py-1">

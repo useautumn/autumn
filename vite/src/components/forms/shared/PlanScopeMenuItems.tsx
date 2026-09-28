@@ -1,6 +1,7 @@
 import type { Entity } from "@autumn/shared";
 import { DropdownMenuItem } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { EntityOptionRow } from "./EntityOptionRow";
 
 const entityValue = (entity: Entity) => entity.id || entity.internal_id;
@@ -19,9 +20,15 @@ export function PlanScopeMenuItems({
 	onSearchChange: (search: string) => void;
 	onChange: (entityId: string | null) => void;
 }) {
+	const searchRef = useRef<HTMLInputElement>(null);
+	useEffect(() => {
+		searchRef.current?.focus();
+	}, []);
+
 	return (
 		<>
 			<input
+				ref={searchRef}
 				aria-label="Search entities"
 				className="mb-1 h-7 w-full rounded-md border border-border bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-tertiary-foreground focus-visible:border-primary"
 				onChange={(event) => onSearchChange(event.target.value)}
