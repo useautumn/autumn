@@ -2,10 +2,25 @@ import { useCustomerStateContext } from "@/components/forms/customer-state/Custo
 import { getCurrentCreateSchedulePhaseIndex } from "@/components/forms/customer-state/customerStateSchema";
 import { SchedulePhaseCard } from "../../SchedulePhaseCard";
 import { AddPhaseButton } from "../AddPhaseButton";
-import { PhaseTimelineRail } from "./PhaseTimelineRail";
+import {
+	PhaseTimelineRail,
+	type PhaseTimelineStatus,
+} from "./PhaseTimelineRail";
 import { PhaseTimelineRow } from "./PhaseTimelineRow";
 
 const MIN_PHASES_FOR_RAIL = 2;
+
+const phaseTimelineStatus = ({
+	phaseIndex,
+	currentPhaseIndex,
+}: {
+	phaseIndex: number;
+	currentPhaseIndex: number;
+}): PhaseTimelineStatus => {
+	if (phaseIndex < currentPhaseIndex) return "past";
+	if (phaseIndex === currentPhaseIndex) return "current";
+	return "scheduled";
+};
 
 /** Phases stacked in order, joined by a rail once there's more than one. */
 export function PhaseTimeline() {
@@ -27,7 +42,7 @@ export function PhaseTimeline() {
 					rail={
 						<PhaseTimelineRail
 							phaseIndex={phaseIndex}
-							isCurrent={phaseIndex === currentPhaseIndex}
+							status={phaseTimelineStatus({ phaseIndex, currentPhaseIndex })}
 							isLast={phaseIndex === lastPhaseIndex}
 							connectsToNext
 						/>
