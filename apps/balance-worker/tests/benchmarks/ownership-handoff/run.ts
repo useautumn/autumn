@@ -185,13 +185,14 @@ const client = createBalanceWorkerClient({
 		http: {
 			async postJson({ url, body, signal }) {
 				const sentAt = Date.now();
-				const { route, command } = body as {
+				// Tracks travel batched per partition now; the lane is the batch's, and every batch here is one lane.
+				const { route, command, commands } = body as {
 					route: { partition: number };
-					command: { requestId: string };
+					command?: { requestId: string };
+					commands?: { requestId: string }[];
 				};
-				const lane = command.requestId.startsWith("probe-")
-					? "probe"
-					: "hammer";
+				const requestId = command?.requestId ?? commands?.[0]?.requestId ?? "";
+				const lane = requestId.startsWith("probe-") ? "probe" : "hammer";
 				const endpoint = new URL(url).origin;
 				try {
 					const response = await fetch(url, {
