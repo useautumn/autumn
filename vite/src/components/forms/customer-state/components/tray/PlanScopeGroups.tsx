@@ -19,10 +19,6 @@ const groupPlanIndexesByScope = ({ plans }: { plans: ScopedPlan[] }) => {
 	return [...groups.entries()];
 };
 
-/**
- * One surface of plan rows per customer or entity scope. Rows still picking a
- * plan join the last surface, so choosing their scope doesn't move them.
- */
 export function PlanScopeGroups({
 	plans,
 	showHeaders,
@@ -32,7 +28,10 @@ export function PlanScopeGroups({
 	showHeaders: boolean;
 	renderPlan: (planIndex: number) => ReactNode;
 }) {
-	if (plans.length === 0) return null;
+	const chosenPlanIndexes = [...plans.keys()].filter(
+		(planIndex) => plans[planIndex]?.productId,
+	);
+	if (chosenPlanIndexes.length === 0) return null;
 
 	const rows = (planIndexes: number[]) => (
 		<div className={TABLE_TRAY_SURFACE_CLASS}>
@@ -40,26 +39,14 @@ export function PlanScopeGroups({
 		</div>
 	);
 
-	if (!showHeaders) return rows([...plans.keys()]);
-
-	const pickerPlanIndexes = [...plans.keys()].filter(
-		(planIndex) => !plans[planIndex]?.productId,
-	);
-	const groups = groupPlanIndexesByScope({ plans });
-	const lastGroupIndex = groups.length - 1;
-
-	if (groups.length === 0) return rows(pickerPlanIndexes);
+	if (!showHeaders) return rows(chosenPlanIndexes);
 
 	return (
 		<>
-			{groups.map(([entityId, planIndexes], groupIndex) => (
+			{groupPlanIndexesByScope({ plans }).map(([entityId, planIndexes]) => (
 				<div key={entityId ?? "customer"} className="pb-1">
 					<PlanScopeLabel entityId={entityId} />
-					{rows(
-						groupIndex === lastGroupIndex
-							? [...planIndexes, ...pickerPlanIndexes]
-							: planIndexes,
-					)}
+					{rows(planIndexes)}
 				</div>
 			))}
 		</>

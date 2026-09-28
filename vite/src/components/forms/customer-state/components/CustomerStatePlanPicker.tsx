@@ -14,6 +14,7 @@ export function CustomerStatePlanPicker({
 	scope,
 	disabled,
 	onSelect,
+	onDismiss,
 }: {
 	products: ProductV2[];
 	usedKeys: Set<string>;
@@ -22,6 +23,7 @@ export function CustomerStatePlanPicker({
 	scope?: ComponentProps<typeof PlanPickerScopeRow>;
 	disabled?: boolean;
 	onSelect: (productId: string) => void;
+	onDismiss?: () => void;
 }) {
 	const isGroupUsed = (product: ProductV2) =>
 		usedKeys.has(getProductGroupKey({ productId: product.id, products }));
@@ -58,6 +60,9 @@ export function CustomerStatePlanPicker({
 			searchPlaceholder="Search plans..."
 			emptyText="No plans found"
 			defaultOpen
+			onOpenChange={(open) => {
+				if (!open) onDismiss?.();
+			}}
 			disabled={disabled}
 		/>
 	);

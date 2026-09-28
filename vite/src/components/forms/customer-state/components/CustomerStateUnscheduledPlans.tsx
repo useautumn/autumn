@@ -11,6 +11,7 @@ export function CustomerStateUnscheduledPlans() {
 		useCustomerStateContext();
 	const { hasEntities } = useScopeEntitySearch({ selectedEntityId: undefined });
 	const { unscheduledPlans } = formValues;
+	const pickerPlanIndex = unscheduledPlans.findIndex((plan) => !plan.productId);
 
 	if (!canMakeUnscheduled && unscheduledPlans.length === 0) return null;
 
@@ -31,10 +32,17 @@ export function CustomerStateUnscheduledPlans() {
 						/>
 					)}
 				/>
-				{canMakeUnscheduled && (
-					<PlanTrayAddRow
-						label="Add ongoing plan"
-						onClick={handleAddUnscheduledPlan}
+				{pickerPlanIndex === -1 ? (
+					canMakeUnscheduled && (
+						<PlanTrayAddRow
+							label="Add ongoing plan"
+							onClick={handleAddUnscheduledPlan}
+						/>
+					)
+				) : (
+					<UnscheduledPlanRow
+						key={`unscheduled-${pickerPlanIndex}`}
+						planIndex={pickerPlanIndex}
 					/>
 				)}
 			</div>

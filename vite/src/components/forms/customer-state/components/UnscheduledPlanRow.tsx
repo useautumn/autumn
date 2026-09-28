@@ -11,6 +11,7 @@ import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	const {
+		form,
 		formValues,
 		products,
 		handleRemoveUnscheduledPlan,
@@ -53,6 +54,12 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 				onSelect={(productId) =>
 					handleSelectPlanProduct({ location, productId })
 				}
+				onDismiss={() => {
+					const current = form.store.state.values.unscheduledPlans[planIndex];
+					if (current && !current.productId) {
+						handleRemoveUnscheduledPlan({ planIndex });
+					}
+				}}
 			/>
 		);
 	}
