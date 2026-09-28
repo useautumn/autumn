@@ -22,8 +22,8 @@ const mainOrgIdOf = (info: OrgInfo): string =>
 	info.is_sandbox && info.created_by ? info.created_by : info.id;
 
 /**
- * Every env the loaded env files hold a key for. Live comes last, so when envs
- * disagree on shared fields like `events`, prod's value is the one written.
+ * Every env the loaded env files hold a key for, live last. Shared fields like
+ * `events` move only when every env in a webhook's url map was read.
  */
 export const webhookPullEnvs = ({
 	env = process.env,

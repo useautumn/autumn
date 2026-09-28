@@ -327,3 +327,94 @@ test("a url left as code in one env is not re-appended by the next env", async (
 	expect(source).toContain("process.env.ATMN_TEST_HOOK_URL");
 	expect(source).toContain(`live: "https://example.com/autumn"`);
 });
+
+const sharedFieldsProject = () =>
+	projectWith({
+		webhooks: `	webhooks: [
+		webhook({
+			id: "billing",
+			events: ["billing.updated"],
+			url: {
+				sandbox: "https://staging.example.com/autumn",
+				"qa-team": "https://qa.example.com/autumn",
+				live: "https://example.com/autumn",
+			},
+		}),
+	],`,
+	});
+
+const everyEvent = (url: string): RemoteWebhook => ({
+	...remote("billing", url),
+	events: [],
+});
+
+test("a pull that never read live leaves shared fields alone and warns once", async () => {
+	const { source, output } = await pullWith({
+		dir: sharedFieldsProject(),
+		env: {
+			AUTUMN_SECRET_KEY: "sk_sandbox",
+			AUTUMN_SANDBOX_QA_TEAM_SECRET_KEY: "sk_qa",
+		},
+		lists: {
+			sk_sandbox: [everyEvent("https://staging.example.com/autumn")],
+			sk_qa: [everyEvent("https://qa.example.com/autumn")],
+		},
+	});
+	expect(source).toContain(`events: ["billing.updated"]`);
+	expect(output.match(/⚠ billing: events differ/g)?.length).toBe(1);
+	expect(output).toContain(
+		"⚠ billing: events differ in sandbox; live wasn't read, so left unchanged",
+	);
+});
+
+test("a pull that read every env in the url map rewrites shared fields", async () => {
+	const { source } = await pullWith({
+		dir: sharedFieldsProject(),
+		env: {
+			AUTUMN_SECRET_KEY: "sk_sandbox",
+			AUTUMN_SANDBOX_QA_TEAM_SECRET_KEY: "sk_qa",
+			AUTUMN_PROD_SECRET_KEY: "sk_live",
+		},
+		lists: {
+			sk_sandbox: [everyEvent("https://staging.example.com/autumn")],
+			sk_qa: [everyEvent("https://qa.example.com/autumn")],
+			sk_live: [everyEvent("https://example.com/autumn")],
+		},
+	});
+	expect(source).not.toContain("events");
+});
+
+test("a pull that never read live stays quiet when shared fields already match", async () => {
+	const { source, output } = await pullWith({
+		dir: sharedFieldsProject(),
+		env: { AUTUMN_SECRET_KEY: "sk_sandbox" },
+		lists: {
+			sk_sandbox: [remote("billing", "https://staging.example.com/autumn")],
+		},
+	});
+	expect(source).toContain(`events: ["billing.updated"]`);
+	expect(output).not.toContain("⚠");
+});
+
+test("a pull that never read live stays quiet when the config's events: [] already means every event", async () => {
+	const dir = projectWith({
+		webhooks: `	webhooks: [
+		webhook({
+			id: "billing",
+			events: [],
+			url: {
+				sandbox: "https://staging.example.com/autumn",
+				live: "https://example.com/autumn",
+			},
+		}),
+	],`,
+	});
+	const { output } = await pullWith({
+		dir,
+		env: { AUTUMN_SECRET_KEY: "sk_sandbox" },
+		lists: {
+			sk_sandbox: [everyEvent("https://staging.example.com/autumn")],
+		},
+	});
+	expect(output).not.toContain("⚠");
+});
