@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import { openSecret } from "../../../lib/secretBox.ts";
@@ -22,6 +22,21 @@ const loadStoredSecret = async ({
 	const secret = openSecret({ sealed: row.sealed });
 	rememberKeySecret({ platformAccountId, secret });
 	return secret;
+};
+
+/** Decrypts every stored key into memory; run at boot so the first claim after a deploy never waits. */
+export const preloadKeySecrets = async ({ ctx }: { ctx: TwdContext }) => {
+	const rows = await ctx.db
+		.select({
+			platformAccountId: stripeKeys.platformAccountId,
+			sealed: stripeKeys.secretCiphertext,
+		})
+		.from(stripeKeys)
+		.where(isNotNull(stripeKeys.secretCiphertext));
+	for (const { platformAccountId, sealed } of rows)
+		if (sealed)
+			rememberKeySecret({ platformAccountId, secret: openSecret({ sealed }) });
+	return rows.length;
 };
 
 /** Secret for a platform account: memory, then the encrypted DB copy, then (last resort) a full key re-probe. */
