@@ -13,8 +13,6 @@ export type WebhookPullEnv = {
 	secretKey: string;
 	/** The `url` map key; a named sandbox's slug costs one lookup. */
 	envKey: () => Promise<string>;
-	/** The env's org id, which names a sandbox's webhook secrets. */
-	orgId: () => Promise<string>;
 	listWebhooks: () => Promise<{ list: RemoteWebhook[] }>;
 };
 
@@ -82,7 +80,6 @@ export const webhookPullEnvs = ({
 				label,
 				secretKey,
 				envKey,
-				orgId: async () => (await infoOf(secretKey)).id,
 				listWebhooks: () => listWebhooks({ secretKey }),
 			},
 		];

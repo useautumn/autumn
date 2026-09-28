@@ -32,5 +32,5 @@ export type Webhook = {
 	disabled?: boolean;
 };
 
-/** An Autumn webhook, keyed by `id`. `atmn push` creates or updates it in the target environment and never deletes one; webhooks your config doesn't list are left alone. `url` is a map keyed by environment, so one config registers different URLs in prod and each sandbox, and an environment with no key skips the webhook. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` (sandboxes). */
+/** An Autumn webhook, keyed by `id`. `atmn push` creates or updates it in the target environment and never deletes one; webhooks your config doesn't list are left alone. `url` is a map keyed by environment, so one config registers different URLs in prod and each sandbox, and an environment with no key skips the webhook. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` (sandboxes; `SANDBOX` for the default one). */
 export const webhook = (input: Webhook): Webhook => input;

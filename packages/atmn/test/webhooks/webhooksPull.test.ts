@@ -416,7 +416,6 @@ export default atmn({
 				label: "sandbox",
 				secretKey: "sk_sandbox",
 				envKey: async () => "sandbox",
-				orgId: async () => "org_ab12cd34",
 				listWebhooks: client.listWebhooks,
 			},
 		],

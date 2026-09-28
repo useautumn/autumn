@@ -73,7 +73,6 @@ test("a named sandbox reads its slug, from one lookup of its own org", async () 
 		fetchOrgInfo,
 	});
 	expect(await env?.envKey()).toBe("qa-team");
-	expect(await env?.orgId()).toBe("org_qa99xyz");
 	expect(calls.count).toBe(1);
 });
 
@@ -98,12 +97,18 @@ test("a webhook with no url for the env is not sent, the rest are sent as that e
 	]);
 });
 
-test("secret names: prod has no org suffix; a sandbox adds ORG4; - becomes _", () => {
+test("secret names: prod has no suffix; a sandbox adds its slug, every non-alphanumeric run as _", () => {
 	expect(webhookSecretName({ id: "billing" })).toBe(
 		"AUTUMN_WEBHOOK_BILLING_SECRET",
 	);
-	expect(webhookSecretName({ id: "billing-v2", orgId: "org_ab12cd34" })).toBe(
-		"AUTUMN_WEBHOOK_BILLING_V2_AB12_SECRET",
+	expect(webhookSecretName({ id: "billing-v2", envKey: "sandbox" })).toBe(
+		"AUTUMN_WEBHOOK_BILLING_V2_SANDBOX_SECRET",
+	);
+	expect(webhookSecretName({ id: "billing", envKey: "qa-team" })).toBe(
+		"AUTUMN_WEBHOOK_BILLING_QA_TEAM_SECRET",
+	);
+	expect(webhookSecretName({ id: "billing", envKey: "qa--team.é" })).toBe(
+		"AUTUMN_WEBHOOK_BILLING_QA_TEAM__SECRET",
 	);
 });
 
@@ -119,7 +124,7 @@ test("prod secrets go to .env.prod and never touch .env.local", async () => {
 	writeFileSync(join(dir, ".env.local"), "AUTUMN_SECRET_KEY=sk_test\n");
 	const lines = await writeWebhookSecrets({
 		secrets: [{ id: "billing", secret: "whsec_live" }],
-		env: { key: "live", live: true, orgId: async () => "org_ab12" },
+		env: { key: "live", live: true },
 		envDirs: [dir],
 		cwd: dir,
 	});
@@ -141,16 +146,16 @@ test("sandbox secrets follow .env.local over .env, and the log names variable an
 	writeFileSync(join(dir, ".env.local"), "B=2\n");
 	const lines = await writeWebhookSecrets({
 		secrets: [{ id: "billing", secret: "whsec_sb" }],
-		env: { key: "sandbox", live: false, orgId: async () => "org_ab12cd34" },
+		env: { key: "sandbox", live: false },
 		envDirs: [dir],
 		cwd: dir,
 	});
 	expect(readFileSync(join(dir, ".env.local"), "utf8")).toBe(
-		"B=2\nAUTUMN_WEBHOOK_BILLING_AB12_SECRET=whsec_sb\n",
+		"B=2\nAUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET=whsec_sb\n",
 	);
 	expect(readFileSync(join(dir, ".env"), "utf8")).toBe("A=1\n");
 	expect(existsSync(join(dir, ".env.prod"))).toBe(false);
 	expect(lines).toEqual([
-		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_AB12_SECRET in .env.local",
+		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET in .env.local",
 	]);
 });

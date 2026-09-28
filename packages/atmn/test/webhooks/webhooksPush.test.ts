@@ -296,10 +296,10 @@ test("--yes: settings apply before the catalog, and webhooks sync alongside, sav
 	]);
 	expect(order.indexOf("syncWebhooks")).toBeLessThan(order.indexOf("update"));
 	expect(readFileSync(join(dir, ".env"), "utf8")).toContain(
-		"AUTUMN_WEBHOOK_BILLING_AB12_SECRET=whsec_test",
+		"AUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET=whsec_test",
 	);
 	expect(output).toContain(
-		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_AB12_SECRET in .env",
+		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET in .env",
 	);
 });
 
@@ -601,7 +601,7 @@ test("a previewed adopt that the server created instead reports the saved secret
 	});
 	expect(output).not.toContain("Adopted billing");
 	expect(output).toContain(
-		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_AB12_SECRET in .env",
+		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET in .env",
 	);
 });
 
@@ -904,6 +904,50 @@ test("a failing sandbox preview still names the envs whose keys were skipped", a
 	await expect(push).rejects.toThrow(
 		"⚠ webhooks: skipped sandbox stg (AUTUMN_SANDBOX_STG_SECRET_KEY was rejected)",
 	);
+});
+
+test("two sandboxes whose slugs name the same secret variable refuse the push before any write", async () => {
+	const dir = projectWith({
+		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", url: { "qa-team": "https://qa.example.com/a", qa_team: "https://qa2.example.com/a" } }),\n\t],`,
+	});
+	const calls: string[] = [];
+	const create = (url: string) => [
+		{ action: "create", id: "billing", webhook: state(url) },
+	];
+	const push = runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: () => {},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_SANDBOX_QA1_SECRET_KEY: "sk_qa1",
+				AUTUMN_SANDBOX_QA2_SECRET_KEY: "sk_qa2",
+			},
+			orgs: {
+				sk_sandbox: orgInfo({ id: "org_ab12cd34" }),
+				sk_qa1: orgInfo({ id: "org_qa111111", name: "qa-team" }),
+				sk_qa2: orgInfo({ id: "org_qa222222", name: "qa_team" }),
+			},
+			clients: {
+				sk_qa1: envClient({
+					name: "qa1",
+					calls,
+					changes: create("https://qa.example.com/a"),
+				}),
+				sk_qa2: envClient({
+					name: "qa2",
+					calls,
+					changes: create("https://qa2.example.com/a"),
+				}),
+			},
+		}),
+	});
+	await expect(push).rejects.toThrow(
+		"qa-team and qa_team would both save billing's signing secret as AUTUMN_WEBHOOK_BILLING_QA_TEAM_SECRET",
+	);
+	expect(calls.filter((call) => call.endsWith(":sync"))).toEqual([]);
 });
 
 test("pull then push of a webhook receiving every event sends no events, so the server keeps it receiving every event", async () => {

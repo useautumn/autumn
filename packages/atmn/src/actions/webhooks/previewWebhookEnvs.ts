@@ -9,6 +9,7 @@ import {
 	throwWebhookEnvFailures,
 	type WebhookEnvFailure,
 } from "./webhookEnvFailures";
+import { webhookSecretName } from "./webhookSecretName";
 
 export type WebhookClient = Pick<
 	AutumnClient,
@@ -41,6 +42,32 @@ type EnvPreview =
 const isLive = (env: WebhookPullEnv): boolean =>
 	env.keyName === "AUTUMN_PROD_SECRET_KEY";
 
+/** Two slugs like `qa-team` and `qa_team` name one variable: refuse before either secret overwrites the other. */
+const assertDistinctSecretNames = ({
+	lanes,
+}: {
+	lanes: WebhooksLane[];
+}): void => {
+	const writers = new Map<string, string>();
+	const clashes: string[] = [];
+	for (const { env, preview } of lanes) {
+		for (const change of preview.changes) {
+			if (change.action !== "create") continue;
+			const name = webhookSecretName({
+				id: change.id,
+				...(env.live ? {} : { envKey: env.key }),
+			});
+			const other = writers.get(name);
+			if (other === undefined) writers.set(name, env.key);
+			else
+				clashes.push(
+					`${other} and ${env.key} would both save ${change.id}'s signing secret as ${name}. Rename one of those sandboxes so their names differ by more than punctuation.`,
+				);
+		}
+	}
+	if (clashes.length > 0) throw new Error(clashes.join("\n"));
+};
+
 /** Undefined when the config registers nothing in this env: there is nothing to preview. */
 const previewEnv = async ({
 	env,
@@ -62,7 +89,7 @@ const previewEnv = async ({
 			lane: {
 				preview: { env: key, changes },
 				body,
-				env: { key, live: isLive(env), orgId: env.orgId },
+				env: { key, live: isLive(env) },
 				client,
 			},
 			errors,
@@ -136,6 +163,7 @@ export const previewWebhookEnvs = async ({
 		envCount: synced.length,
 		warnings: skipped,
 	});
+	assertDistinctSecretNames({ lanes });
 
 	const productionDiffers: string[] = [];
 	// Live is only read here, so its failure is a warning, never a blocked sandbox push.
