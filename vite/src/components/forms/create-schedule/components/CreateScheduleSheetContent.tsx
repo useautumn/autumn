@@ -49,7 +49,7 @@ export function CreateScheduleSheetContent() {
 				</SheetSection>
 			</div>
 
-			<SheetFooter>
+			<SheetFooter className="border-t border-border pt-4">
 				<Button variant="secondary" onClick={closeSheet} className="w-full">
 					Cancel
 				</Button>
