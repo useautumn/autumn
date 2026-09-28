@@ -55,7 +55,7 @@ const byNewest = (a: RunSummary, b: RunSummary) =>
 
 /** Folds a batch of events into one new RunDetail: O(events + workers + files), one render. */
 const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
-	let { status, phase, finishedAt } = run;
+	let { status, phase, finishedAt, milestones } = run;
 	const workers = new Map(run.workers.map((w) => [w.name, w]));
 	const files = new Map(run.files.map((f) => [f.file, f]));
 	let touchedFiles = false;
@@ -63,6 +63,7 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 		if (event.type === "status") {
 			status = event.status;
 			phase = event.phase;
+			milestones = event.milestones ?? milestones;
 			if (TERMINAL.has(status) && !finishedAt)
 				finishedAt = new Date().toISOString();
 		} else if (event.type === "worker") {
@@ -78,6 +79,7 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 		status,
 		phase,
 		finishedAt,
+		milestones,
 		workers: [...workers.values()],
 		files: fileList,
 		...(touchedFiles && {

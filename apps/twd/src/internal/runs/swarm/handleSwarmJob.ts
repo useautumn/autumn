@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { count, eq } from "drizzle-orm";
-import type { RunEvent } from "../../../api/contract.ts";
+import type { RunEvent, RunMilestones } from "../../../api/contract.ts";
 import { jobs } from "../../../db/schema/jobs.ts";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { RunStatus } from "../../../db/schema/runs.ts";
@@ -178,6 +178,12 @@ export const handleSwarmJob: JobHandler = async ({
 		cancel: () => abort.abort(),
 	});
 	const progress: RunProgress = readRunProgress({ progress: run.progress });
+	const milestones: RunMilestones = progress.milestones ?? {
+		warmReadyAt: null,
+		accountsAt: null,
+	};
+	const fileFinishedAt = new Map<string, string>();
+	const workerReadyAt = new Map<string, string>();
 
 	let writes = Promise.resolve();
 	const enqueueWrite = (write: () => Promise<unknown>) => {
@@ -197,13 +203,17 @@ export const handleSwarmJob: JobHandler = async ({
 		phase: string;
 		set?: Partial<RunRow>;
 	}) => {
-		publishRunEvent({ runId, event: { type: "status", status, phase } });
+		publishRunEvent({
+			runId,
+			event: { type: "status", status, phase, milestones },
+		});
 		enqueueWrite(() =>
 			updateRun({ ctx, runId, set: { ...set, status, progress: snapshot() } }),
 		);
 	};
 	const snapshot = (): RunProgress => ({
 		...progress,
+		milestones,
 		phase: live.phase,
 		workers: [...live.workers.values()],
 		files: [...live.files.values()],
@@ -327,6 +337,7 @@ export const handleSwarmJob: JobHandler = async ({
 		}
 		await waitForWarm({ ctx, run, signal: abort.signal });
 		if (abort.signal.aborted) return;
+		milestones.warmReadyAt = new Date().toISOString();
 
 		// From here a crash-resume must clean up (accounts, sandboxes), never re-run.
 		await checkpoint({ committed: true, sandboxIds: [] });
@@ -335,6 +346,7 @@ export const handleSwarmJob: JobHandler = async ({
 		unregister = registerRunDemand({ runId, demand });
 		await firstAccounts;
 		if (abort.signal.aborted) return;
+		milestones.accountsAt = new Date().toISOString();
 
 		setStatus({ status: "provisioning", phase: "provisioning workers" });
 		const init: SwarmInit = {
@@ -409,10 +421,13 @@ export const handleSwarmJob: JobHandler = async ({
 					demand.wants = abort.signal.aborted ? 0 : message.workers;
 					if (grew) kickAllocator();
 				} else if (message.type === "file") {
-					publishRunEvent({
-						runId,
-						event: { type: "file", file: message.file },
-					});
+					if (message.final)
+						fileFinishedAt.set(message.file.file, new Date().toISOString());
+					const file = {
+						...message.file,
+						finishedAt: fileFinishedAt.get(message.file.file) ?? null,
+					};
+					publishRunEvent({ runId, event: { type: "file", file } });
 					if (message.final) {
 						enqueueWrite(() =>
 							recordFileResult({
@@ -420,12 +435,28 @@ export const handleSwarmJob: JobHandler = async ({
 								runId,
 								branch: run.branch,
 								sha: run.sha,
-								result: message.file,
+								result: file,
 							}),
 						);
 					}
 				} else {
-					const event: RunEvent = message;
+					let event: RunEvent = message;
+					if (event.type === "worker") {
+						const { worker } = event;
+						if (
+							worker.status === "ready" &&
+							worker.boot &&
+							!workerReadyAt.has(worker.name)
+						)
+							workerReadyAt.set(worker.name, new Date().toISOString());
+						event = {
+							...event,
+							worker: {
+								...worker,
+								readyAt: workerReadyAt.get(worker.name) ?? null,
+							},
+						};
+					}
 					if (event.type === "log") {
 						logWriter.append({
 							file: event.file,

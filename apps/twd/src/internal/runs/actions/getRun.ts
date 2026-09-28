@@ -42,5 +42,6 @@ export const getRun = async ({
 		workers: live ? [...live.workers.values()] : (progress.workers ?? []),
 		files,
 		drift: await computeRunDrift({ ctx, runId }),
+		milestones: progress.milestones ?? null,
 	};
 };

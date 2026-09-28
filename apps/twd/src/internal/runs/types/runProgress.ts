@@ -1,4 +1,8 @@
-import type { RunFile, WorkerState } from "../../../api/contract.ts";
+import type {
+	RunFile,
+	RunMilestones,
+	WorkerState,
+} from "../../../api/contract.ts";
 
 /** Shape of `runs.progress` (jsonb). Written by createRun + the swarm job. */
 export type RunProgress = {
@@ -10,6 +14,7 @@ export type RunProgress = {
 	/** Output tail for non-passing files, persisted when the run finishes. */
 	fileLogTails?: Record<string, string>;
 	error?: string;
+	milestones?: RunMilestones;
 };
 
 export const readRunProgress = ({

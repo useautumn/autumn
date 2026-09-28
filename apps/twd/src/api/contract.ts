@@ -128,6 +128,13 @@ export const WorkerState = z.object({
 	]),
 	file: z.string().nullable(),
 	boot: WorkerBoot.nullable().optional(),
+	/** When the worker was mapped and serving. */
+	readyAt: z.string().nullable().optional(),
+});
+/** Run-level phase boundaries not derivable from workers/files. */
+export const RunMilestones = z.object({
+	warmReadyAt: z.string().nullable(),
+	accountsAt: z.string().nullable(),
 });
 
 export const RunFile = z.object({
@@ -139,6 +146,8 @@ export const RunFile = z.object({
 	failedTests: z.number(),
 	worker: z.string().nullable(),
 	failureSummary: z.string().nullable(),
+	/** When twd saw the file's final result (latest attempt). */
+	finishedAt: z.string().nullable().optional(),
 });
 
 /** Modal compute cost of a run: Σ worker lifetime × (cores × core rate + GiB × memory rate). */
@@ -179,6 +188,7 @@ export const RunDetail = RunSummary.extend({
 	workers: z.array(WorkerState),
 	files: z.array(RunFile),
 	drift: z.array(Drift),
+	milestones: RunMilestones.nullable().optional(),
 });
 
 export const RunOutcome = z.enum(["all", "passed", "failed", "cancelled"]);
@@ -204,6 +214,7 @@ export const RunEvent = z.discriminatedUnion("type", [
 		type: z.literal("status"),
 		status: RunStatus,
 		phase: z.string().nullable(),
+		milestones: RunMilestones.optional(),
 	}),
 	z.object({ type: z.literal("worker"), worker: WorkerState }),
 	z.object({ type: z.literal("file"), file: RunFile }),
@@ -534,6 +545,7 @@ export type RunFile = z.infer<typeof RunFile>;
 export type RunEvent = z.infer<typeof RunEvent>;
 export type WorkerState = z.infer<typeof WorkerState>;
 export type WorkerBoot = z.infer<typeof WorkerBoot>;
+export type RunMilestones = z.infer<typeof RunMilestones>;
 export type Drift = z.infer<typeof Drift>;
 export type StripeKey = z.infer<typeof StripeKey>;
 export type ReinitScope = z.infer<typeof ReinitScope>;

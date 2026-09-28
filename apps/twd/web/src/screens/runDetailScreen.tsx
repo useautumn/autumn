@@ -58,6 +58,7 @@ import {
 import { cn, elapsed, formatDate, formatMs, num, sha7 } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
 import { BootBreakdown } from "./runDetail/bootBreakdown.tsx";
+import { RunTimingPanel } from "./runDetail/runTiming.tsx";
 
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
 const FILTERS = ["all", "failed", "drift", "running", "passed"] as const;
@@ -633,6 +634,8 @@ export const RunDetailScreen = () => {
 							/>
 						</section>
 					)}
+
+					<RunTimingPanel run={r} onOpenFile={setOpenFile} />
 
 					<section className="flex flex-col">
 						<div className="flex flex-wrap items-center gap-2 pb-2">

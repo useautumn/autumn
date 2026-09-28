@@ -566,6 +566,19 @@ const makeFinishedRun = (i: number): RunDetail => {
 	const wall = Math.max(0, ...files.map((f) => f.durationMs ?? 0)) + 90_000;
 	const cancelled = i === 6;
 	const kept = cancelled ? files.slice(0, Math.floor(files.length / 3)) : files;
+	const workers = Array.from({ length: workerCount }, (_, w) => {
+		const boot = mockBoot();
+		return {
+			name: workerName(w),
+			status: "dead" as const,
+			file: null,
+			boot,
+			readyAt: iso(startedAt + boot.totalMs),
+		};
+	});
+	const workerFree = new Map(
+		workers.map((w) => [w.name, Date.parse(w.readyAt)]),
+	);
 	const workerSeconds =
 		kept.reduce((sum, f) => sum + (f.durationMs ?? 0), 0) / 1000 +
 		BOOT_S * workerCount;
@@ -589,14 +602,18 @@ const makeFinishedRun = (i: number): RunDetail => {
 		startedAt: iso(startedAt),
 		finishedAt: iso(startedAt + (cancelled ? wall / 3 : wall)),
 		phase: null,
-		workers: Array.from({ length: workerCount }, (_, w) => ({
-			name: workerName(w),
-			status: "dead" as const,
-			file: null,
-			boot: mockBoot(),
-		})),
-		files: kept,
+		workers,
+		files: kept.map((f) => {
+			const cursor =
+				(workerFree.get(f.worker ?? "") ?? startedAt) + (f.durationMs ?? 0);
+			workerFree.set(f.worker ?? "", cursor);
+			return { ...f, finishedAt: iso(cursor) };
+		}),
 		drift: [],
+		milestones: {
+			warmReadyAt: iso(createdAt + (startedAt - createdAt) * 0.6),
+			accountsAt: iso(startedAt),
+		},
 	};
 	summarize(run);
 	if (!cancelled && run.failed > 0) run.status = "failed";
@@ -863,7 +880,12 @@ function mockBoot() {
 const bootWorkers = (run: RunDetail) => {
 	const ready = run.workers.filter((w) => w.status === "booting").slice(0, 4);
 	for (const w of ready)
-		setWorker(run, { ...w, status: "ready", boot: mockBoot() });
+		setWorker(run, {
+			...w,
+			status: "ready",
+			boot: mockBoot(),
+			readyAt: iso(Date.now()),
+		});
 	const waiting = run.workers.filter((w) => w.status === "provisioning");
 	for (const w of waiting.slice(0, 6))
 		setWorker(run, { ...w, status: "booting" });
@@ -922,7 +944,10 @@ const tickRun = (run: RunDetail) => {
 			? run.files.find((f) => f.file === w.file)
 			: undefined;
 		if (current && Math.random() < 0.1) {
-			const done = finishedFile(current.file, Math.random, w.name, 0.015);
+			const done = {
+				...finishedFile(current.file, Math.random, w.name, 0.015),
+				finishedAt: iso(Date.now()),
+			};
 			setFile(run, done);
 			if (done.status !== "passed")
 				emit(run.id, {
