@@ -169,7 +169,11 @@ export const OrgDropdown = () => {
 									</span>
 								</DropdownMenuSubTrigger>
 								<DropdownMenuPortal>
-									<DropdownMenuSubContent className="w-55 rounded-md max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto">
+									<DropdownMenuSubContent
+										sideOffset={9}
+										alignOffset={-5}
+										className="w-55 rounded-md max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto"
+									>
 										{orgs.map((listedOrg) => (
 											<SwitchOrgItem
 												key={listedOrg.id}
