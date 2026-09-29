@@ -121,3 +121,30 @@ export const expectCycleResetPhase = async ({
 	);
 	expect(resetPhase?.billing_cycle_anchor).toBe("phase_start");
 };
+
+export const expectPlansEndAt = async ({
+	ctx,
+	customerId,
+	productIds,
+	endsAt,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productIds: string[];
+	endsAt: number;
+}) => {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const endedAtByProductId = Object.fromEntries(
+		productIds.map((productId) => [
+			productId,
+			findActiveCustomerProductById({ fullCus: fullCustomer, productId })
+				?.ended_at,
+		]),
+	);
+	expect(endedAtByProductId).toEqual(
+		Object.fromEntries(productIds.map((productId) => [productId, endsAt])),
+	);
+};
