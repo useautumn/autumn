@@ -72,7 +72,7 @@ const toNonEmptyResolvedPhases = ({
 	return [firstPhase, ...remainingPhases];
 };
 
-export const getInitialCreateSchedulePhase = ({
+export const getInitialSetPlansPhase = ({
 	phases,
 }: {
 	phases: CreateScheduleParamsV0["phases"];
@@ -136,7 +136,7 @@ const snapResolvedPhasesToCycleBoundary = ({
 };
 
 /** Sort phases for downstream create_schedule setup and execution. */
-export const normalizeCreateSchedulePhases = ({
+export const normalizeSetPlansPhases = ({
 	phases,
 	currentEpochMs,
 	cycleBoundaryMs,

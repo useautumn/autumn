@@ -72,7 +72,7 @@ const deleteExistingSchedules = async ({
 };
 
 /** Persist the schedule rows and scheduled customer products. */
-export const persistCreateSchedule = async ({
+export const persistSetPlansSchedule = async ({
 	ctx,
 	customerId,
 	currentEpochMs,

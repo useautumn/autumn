@@ -7,22 +7,22 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import {
-	type CreateSchedulePlanResult,
-	computeCreateSchedulePlan,
-} from "../compute/computeCreateSchedulePlan";
+	computeSetPlansPlan,
+	type SetPlansPlanResult,
+} from "../compute/computeSetPlansPlan";
 import {
-	handleCreateScheduleBillingPlanErrors,
-	handleCreateScheduleComputeErrors,
-	handleCreateScheduleErrors,
-} from "../errors/handleCreateScheduleErrors";
-import { setupCreateScheduleBillingContext } from "../setup/setupCreateScheduleBillingContext";
+	handleSetPlansBillingPlanErrors,
+	handleSetPlansComputeErrors,
+	handleSetPlansErrors,
+} from "../errors/handleSetPlansErrors";
+import { setupSetPlansBillingContext } from "../setup/setupSetPlansBillingContext";
 import { ensureFreePhaseStripeProducts } from "./ensureFreePhaseStripeProducts";
 
 type PreparedSetPlans = {
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
-	phases: CreateSchedulePlanResult["phases"];
-	immediatePhaseTransition: CreateSchedulePlanResult["immediatePhaseTransition"];
+	phases: SetPlansPlanResult["phases"];
+	immediatePhaseTransition: SetPlansPlanResult["immediatePhaseTransition"];
 };
 
 /** Setup, compute and evaluate a create_schedule call, checking errors between each step. */
@@ -35,17 +35,17 @@ export const prepareSetPlans = async ({
 	params: CreateScheduleParamsV0;
 	preview: boolean;
 }): Promise<PreparedSetPlans> => {
-	const billingContext = await setupCreateScheduleBillingContext({
+	const billingContext = await setupSetPlansBillingContext({
 		ctx,
 		params,
 		preview,
 	});
 
-	await handleCreateScheduleErrors({ billingContext, preview });
+	await handleSetPlansErrors({ billingContext, preview });
 
 	const { autumnBillingPlan, phases, immediatePhaseTransition } =
-		computeCreateSchedulePlan({ ctx, billingContext });
-	await handleCreateScheduleComputeErrors({
+		computeSetPlansPlan({ ctx, billingContext });
+	await handleSetPlansComputeErrors({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
@@ -71,7 +71,7 @@ export const prepareSetPlans = async ({
 		stripe: stripeBillingPlan,
 	};
 
-	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
+	handleSetPlansBillingPlanErrors({ ctx, billingContext, billingPlan });
 
 	if (preview) {
 		billingPlan.preview = await computeAttachPreviewBillingPlan({

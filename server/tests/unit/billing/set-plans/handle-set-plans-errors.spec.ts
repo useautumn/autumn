@@ -17,9 +17,9 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
-	handleCreateScheduleComputeErrors,
-	handleCreateScheduleErrors,
-} from "@/internal/billing/v2/actions/setPlans/errors/handleCreateScheduleErrors";
+	handleSetPlansComputeErrors,
+	handleSetPlansErrors,
+} from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansErrors";
 import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
 
 const buildContext = ({
@@ -52,12 +52,12 @@ const buildContext = ({
 		},
 	}) as unknown as CreateScheduleBillingContext;
 
-describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
+describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 	test("allows an immediate phase within the tolerance window", async () => {
 		const now = Date.now();
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				billingContext: buildContext({
 					immediateStartsAt: now,
 					currentEpochMs: now,
@@ -70,7 +70,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		const now = Date.now();
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -89,7 +89,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		});
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -112,7 +112,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		});
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				billingContext: buildContext({
 					immediateStartsAt: startsAt,
 					currentEpochMs: now,
@@ -130,7 +130,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		});
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -151,7 +151,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		});
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				preview: true,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
@@ -167,7 +167,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		const now = Date.now();
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				billingContext: buildContext({
 					immediateStartsAt: now + ms.hours(1),
 					currentEpochMs: now,
@@ -184,7 +184,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		const now = Date.now();
 
 		await expect(
-			handleCreateScheduleErrors({
+			handleSetPlansErrors({
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.days(30),
 					currentEpochMs: now,
@@ -212,7 +212,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		} as unknown as AutumnBillingPlan;
 
 		await expect(
-			handleCreateScheduleComputeErrors({
+			handleSetPlansComputeErrors({
 				ctx: {} as unknown as AutumnContext,
 				billingContext: buildContext({
 					immediateStartsAt: Date.now(),
@@ -234,7 +234,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		} as unknown as AutumnBillingPlan;
 
 		await expect(
-			handleCreateScheduleComputeErrors({
+			handleSetPlansComputeErrors({
 				ctx: {} as unknown as AutumnContext,
 				billingContext: buildContext({
 					immediateStartsAt: Date.now(),

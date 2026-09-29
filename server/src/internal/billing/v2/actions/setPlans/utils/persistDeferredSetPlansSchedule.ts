@@ -4,10 +4,10 @@ import type {
 	CreateScheduleBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { persistCreateSchedule } from "./persistCreateSchedule";
+import { persistSetPlansSchedule } from "./persistSetPlansSchedule";
 import { resolveUnscheduledProductContexts } from "./unscheduledProductContexts";
 
-export const isCreateScheduleBillingContext = (
+export const isSetPlansBillingContext = (
 	billingContext: BillingContext,
 ): billingContext is CreateScheduleBillingContext =>
 	"immediatePhase" in billingContext &&
@@ -63,7 +63,7 @@ const buildDeferredSchedulePhases = ({
 	return phases;
 };
 
-export const persistDeferredCreateSchedule = async ({
+export const persistDeferredSetPlansSchedule = async ({
 	ctx,
 	billingContext,
 	billingPlan,
@@ -72,11 +72,11 @@ export const persistDeferredCreateSchedule = async ({
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }) => {
-	if (!isCreateScheduleBillingContext(billingContext)) {
+	if (!isSetPlansBillingContext(billingContext)) {
 		return;
 	}
 
-	await persistCreateSchedule({
+	await persistSetPlansSchedule({
 		ctx,
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,

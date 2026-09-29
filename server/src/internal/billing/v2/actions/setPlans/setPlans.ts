@@ -12,7 +12,7 @@ import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnC
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { hashJson } from "@/utils/hash/hashJson";
-import { persistCreateSchedule } from "./utils/persistCreateSchedule";
+import { persistSetPlansSchedule } from "./utils/persistSetPlansSchedule";
 import { prepareSetPlans } from "./utils/prepareSetPlans";
 
 const buildPendingSetPlansResponse = ({
@@ -121,7 +121,7 @@ export const setPlans = async ({
 		});
 	}
 
-	const { insertedPhases, scheduleId } = await persistCreateSchedule({
+	const { insertedPhases, scheduleId } = await persistSetPlansSchedule({
 		ctx,
 		customerId: params.customer_id,
 		currentEpochMs: billingContext.currentEpochMs,

@@ -27,7 +27,7 @@ const assertPlanOffersLicenses = ({
 };
 
 /** Every phase's license_quantities must name licenses its plan offers. */
-export const handleCreateScheduleLicenseQuantityErrors = ({
+export const handleSetPlansLicenseQuantityErrors = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;

@@ -10,7 +10,7 @@ import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookH
 import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredCreateSchedule";
+import { persistDeferredSetPlansSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -135,7 +135,7 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 	});
 
 	// 7. Persist the Autumn schedule rows (createSchedule only — no-op for attach).
-	await persistDeferredCreateSchedule({
+	await persistDeferredSetPlansSchedule({
 		ctx,
 		billingContext: updatedDeferredData.billingContext,
 		billingPlan: updatedDeferredData.billingPlan,

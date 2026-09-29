@@ -10,7 +10,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
-import { resolveCreateScheduleRecurringProducts } from "@/internal/billing/v2/actions/setPlans/utils/resolveCreateScheduleRecurringProducts";
+import { resolveSetPlansRecurringProducts } from "@/internal/billing/v2/actions/setPlans/utils/resolveSetPlansRecurringProducts";
 
 const entity = (internalId: string) =>
 	({ internal_id: internalId, id: internalId }) as unknown as Entity;
@@ -60,7 +60,7 @@ const buildBillingContext = ({
 		replacedScheduleCustomerProductIds,
 	}) as unknown as CreateScheduleBillingContext;
 
-describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
+describe(chalk.yellowBright("resolveSetPlansRecurringProducts"), () => {
 	test("expires a product whose group the immediate phase claims", () => {
 		const existing = customerProducts.create({
 			id: "cus_prod_pro",
@@ -68,7 +68,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 		});
 
 		const { recurringOutgoing, recurringEndingAtPhase } =
-			resolveCreateScheduleRecurringProducts({
+			resolveSetPlansRecurringProducts({
 				billingContext: buildBillingContext({
 					existingCustomerProducts: [existing],
 					openingPlans: [
@@ -89,7 +89,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 			product: productInGroup({ id: "legacy", group: "other" }),
 		});
 
-		const { recurringOutgoing } = resolveCreateScheduleRecurringProducts({
+		const { recurringOutgoing } = resolveSetPlansRecurringProducts({
 			billingContext: buildBillingContext({
 				existingCustomerProducts: [existing],
 				openingPlans: [
@@ -109,7 +109,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 		});
 
 		const { recurringOutgoing, recurringEndingAtPhase } =
-			resolveCreateScheduleRecurringProducts({
+			resolveSetPlansRecurringProducts({
 				billingContext: buildBillingContext({
 					existingCustomerProducts: [existing],
 					openingPlans: [
@@ -156,7 +156,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 		});
 
 		const { recurringOutgoing, recurringEndingAtPhase } =
-			resolveCreateScheduleRecurringProducts({
+			resolveSetPlansRecurringProducts({
 				billingContext: buildBillingContext({
 					existingCustomerProducts: [existing],
 					openingPlans: [
@@ -191,7 +191,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 			product: productInGroup({ id: "credits", group: "main", isAddOn: true }),
 		});
 
-		const claimedByGroup = resolveCreateScheduleRecurringProducts({
+		const claimedByGroup = resolveSetPlansRecurringProducts({
 			billingContext: buildBillingContext({
 				existingCustomerProducts: [existingAddOn],
 				openingPlans: [
@@ -201,7 +201,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 		});
 		expect(claimedByGroup.recurringOutgoing).toEqual([]);
 
-		const claimedById = resolveCreateScheduleRecurringProducts({
+		const claimedById = resolveSetPlansRecurringProducts({
 			billingContext: buildBillingContext({
 				existingCustomerProducts: [existingAddOn],
 				openingPlans: [
@@ -228,7 +228,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 		});
 
 		const { recurringOutgoing, recurringEndingAtPhase } =
-			resolveCreateScheduleRecurringProducts({
+			resolveSetPlansRecurringProducts({
 				billingContext: buildBillingContext({
 					existingCustomerProducts: [existingOnEntity],
 					openingPlans: [
@@ -269,7 +269,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 			prices: [prices.createOneOff({ id: "price_setup_fee" })],
 		};
 
-		const { recurringOutgoing } = resolveCreateScheduleRecurringProducts({
+		const { recurringOutgoing } = resolveSetPlansRecurringProducts({
 			billingContext: buildBillingContext({
 				existingCustomerProducts: [existing],
 				openingPlans: [{ fullProduct: oneOffProduct }],
@@ -287,7 +287,7 @@ describe(chalk.yellowBright("resolveCreateScheduleRecurringProducts"), () => {
 		});
 
 		const { recurringActive, recurringScheduled } =
-			resolveCreateScheduleRecurringProducts({
+			resolveSetPlansRecurringProducts({
 				billingContext: buildBillingContext({
 					existingCustomerProducts: [scheduled],
 					openingPlans: [

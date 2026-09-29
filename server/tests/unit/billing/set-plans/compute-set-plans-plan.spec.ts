@@ -13,7 +13,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
-import { computeCreateSchedulePlan } from "@/internal/billing/v2/actions/setPlans/compute/computeCreateSchedulePlan";
+import { computeSetPlansPlan } from "@/internal/billing/v2/actions/setPlans/compute/computeSetPlansPlan";
 
 const createBillingContext = ({
 	productContexts,
@@ -79,7 +79,7 @@ const createBillingContext = ({
 	};
 };
 
-describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
+describe(chalk.yellowBright("computeSetPlansPlan"), () => {
 	test("creates immediate customer products for all first-phase plans", () => {
 		const ctx = contexts.create({});
 		const baseProduct = products.createFull({
@@ -115,7 +115,7 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 			},
 		});
 
-		const result = computeCreateSchedulePlan({
+		const result = computeSetPlansPlan({
 			ctx,
 			billingContext,
 		});
@@ -161,7 +161,7 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 			},
 		});
 
-		const result = computeCreateSchedulePlan({
+		const result = computeSetPlansPlan({
 			ctx,
 			billingContext,
 		});
@@ -230,7 +230,7 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 			},
 		});
 
-		const result = computeCreateSchedulePlan({
+		const result = computeSetPlansPlan({
 			ctx,
 			billingContext,
 		});
@@ -323,7 +323,7 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 			],
 		});
 
-		const result = computeCreateSchedulePlan({ ctx, billingContext });
+		const result = computeSetPlansPlan({ ctx, billingContext });
 		const scheduledCustomerProduct =
 			result.autumnBillingPlan.insertCustomerProducts.find(
 				(customerProduct) => customerProduct.product_id === scheduledProduct.id,

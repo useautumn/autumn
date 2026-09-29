@@ -102,7 +102,7 @@ test.concurrent(
 // 2. Webhook-driven phase advance preserves the one-off prepaid balance.
 //
 //    Unlike test 1 (immediate-phase replacement, handled at compute time by
-//    computeCreateSchedulePlan), this test exercises the webhook path:
+//    computeSetPlansPlan), this test exercises the webhook path:
 //      handleStripeSubscriptionUpdated → handleSchedulePhaseChanges →
 //      expireEndedCustomerProducts.
 //    The customer rolls from pro+one-off-prepaid into premium at the phase

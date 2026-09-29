@@ -98,7 +98,7 @@ const resolveRecurringProductFate = ({
 	return { kind: "untouched" };
 };
 
-export const resolveCreateScheduleRecurringProducts = ({
+export const resolveSetPlansRecurringProducts = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;

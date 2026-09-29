@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredCreateSchedule";
+import { persistDeferredSetPlansSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/promotePendingCustomerProducts";
@@ -78,7 +78,7 @@ export const executeDeferredBillingPlan = async ({
 		autumnInvoice: stripeBillingResult.autumnInvoice,
 	});
 
-	await persistDeferredCreateSchedule({
+	await persistDeferredSetPlansSchedule({
 		ctx,
 		billingContext,
 		billingPlan,
