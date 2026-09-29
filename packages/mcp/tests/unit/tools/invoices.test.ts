@@ -35,6 +35,7 @@ afterEach(() => {
 const INVOICE_TOOL_NAMES = [
 	"listInvoices",
 	"listInvoiceTemplates",
+	"getInvoice",
 	"getStripeInvoice",
 	"previewCreateInvoice",
 	"createInvoice",
@@ -167,5 +168,29 @@ test("summarizeStripeInvoice keeps payment state and drops everything else", () 
 			decline_code: "insufficient_funds",
 			message: "Your card has insufficient funds.",
 		},
+	});
+});
+
+test("getInvoice looks the invoice up by its Autumn ID", async () => {
+	const invoice = { id: "inv_123", status: "open", total: 50 };
+	const fetch = mock(
+		async (_url: string | URL | Request, _init?: RequestInit) =>
+			Response.json({ list: [invoice], next_cursor: null }),
+	);
+	globalThis.fetch = fetch as unknown as typeof globalThis.fetch;
+	const tools = createRawAutumnOperationTools({ requireIntent: false });
+	const context = { mcp: { extra: { authInfo: auth } } };
+
+	const result = await tools.getInvoice?.execute?.(
+		{ request: { invoice_id: "inv_123" } },
+		context as never,
+	);
+
+	expect(result).toEqual(invoice);
+	const [url, init] = fetch.mock.calls[0] ?? [];
+	expect(new URL(String(url)).pathname).toBe("/v1/invoices.list");
+	expect(JSON.parse(String(init?.body))).toEqual({
+		invoice_id: "inv_123",
+		limit: 1,
 	});
 });

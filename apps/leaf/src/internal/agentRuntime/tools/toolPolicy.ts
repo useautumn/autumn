@@ -83,6 +83,7 @@ const gerunds: Record<string, string> = {
 	listBalances: "Checking balances",
 	listRewards: "Looking through your rewards",
 	listInvoices: "Looking through invoices",
+	getInvoice: "Looking up the invoice",
 	getStripeInvoice: "Checking the invoice in Stripe",
 	listInvoiceTemplates: "Checking invoice templates",
 	previewCreateInvoice: "Previewing the invoice",

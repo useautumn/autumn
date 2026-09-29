@@ -206,6 +206,9 @@ export class InvoiceService {
 		if (query.entity_id) {
 			conditions.push(eq(entities.id, query.entity_id));
 		}
+		if (query.invoice_id) {
+			conditions.push(eq(invoices.id, query.invoice_id));
+		}
 		if (query.stripe_id) {
 			conditions.push(eq(invoices.stripe_id, query.stripe_id));
 		}

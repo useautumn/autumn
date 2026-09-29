@@ -43,6 +43,7 @@ export const toolAllowlists = {
 		"createSchedule",
 		"finalizeInvoice",
 		"getCurrentOrganization",
+		"getInvoice",
 		"getOrCreateCustomer",
 		"getPlan",
 		"getStripeInvoice",

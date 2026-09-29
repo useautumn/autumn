@@ -12,7 +12,7 @@ import * as z from "zod/v4";
 import { getAutumnAuth } from "../server/auth/auth.js";
 import { mcpAnnotations } from "./utils/annotations.js";
 import { createDomainTools } from "./utils/builders.js";
-import { callAutumnGet } from "./utils/client.js";
+import { callAutumn, callAutumnGet } from "./utils/client.js";
 import type { OperationToolConfig, ToolDomain } from "./utils/types.js";
 
 // Create and reissue preview through a `preview` flag on the write endpoint.
@@ -204,7 +204,55 @@ const signalOf = (context: { mcp?: { extra?: { signal?: AbortSignal } } }) =>
 	context?.mcp?.extra?.signal;
 
 /** Built per toolset: the intent and analytics layers mutate tools in place. */
+const getInvoiceSchema = z
+	.object({
+		invoice_id: z.string().meta({
+			description: "The Autumn invoice ID (inv_...).",
+		}),
+	})
+	.strict();
+
+const invoiceListSchema = z.object({ list: z.array(z.unknown()) });
+
+/** One invoice by its Autumn ID. It takes the same request as voidInvoice,
+ * payInvoice and finalizeInvoice, so it doubles as their approval preview. */
+const getInvoice = async ({
+	auth,
+	invoiceId,
+	signal,
+}: {
+	auth: ReturnType<typeof getAutumnAuth>;
+	invoiceId: string;
+	signal?: AbortSignal;
+}) => {
+	const { list } = invoiceListSchema.parse(
+		await callAutumn({
+			auth,
+			endpoint: "/v1/invoices.list",
+			request: { invoice_id: invoiceId, limit: 1 },
+			retryable: true,
+			signal,
+		}),
+	);
+	const [invoice] = list;
+	if (!invoice) throw new Error(`Invoice ${invoiceId} not found`);
+	return invoice;
+};
+
 export const createInvoiceTools = () => ({
+	getInvoice: createTool({
+		id: "getInvoice",
+		description:
+			"Fetch one invoice Autumn has recorded by its Autumn ID (inv_...): customer, status, total, currency, amount paid and line items.",
+		inputSchema: z.object({ request: getInvoiceSchema }).strict(),
+		mcp: { annotations: mcpAnnotations() },
+		execute: async ({ request }, context) =>
+			getInvoice({
+				auth: getAutumnAuth(context),
+				invoiceId: request.invoice_id,
+				signal: signalOf(context),
+			}),
+	}),
 	getStripeInvoice: createTool({
 		id: "getStripeInvoice",
 		description:

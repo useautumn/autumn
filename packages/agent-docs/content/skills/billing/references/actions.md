@@ -34,6 +34,7 @@
 ### Invoices
 
 - Act on an existing invoice with its Autumn `id` from `listInvoices` (`inv_...`), not its Stripe `in_...` ID.
+- `getInvoice` fetches one invoice by that ID; it is also what the approval card shows for void, pay and finalize.
 - `voidInvoice`: the customer no longer owes an open or uncollectible invoice. Paid invoices cannot be voided.
 - `payInvoice`: mark an open invoice paid out of band (bank transfer, cheque). Nothing is charged.
 - `finalizeInvoice`: issue a draft invoice (emailed if send-invoice, charged if charge-automatically).

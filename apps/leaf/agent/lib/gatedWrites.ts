@@ -61,11 +61,13 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 	},
 	{
 		agents: ["leaf"],
+		previewTool: "getInvoice",
 		scopes: ["billing:write"],
 		toolName: "finalizeInvoice",
 	},
 	{
 		agents: ["leaf"],
+		previewTool: "getInvoice",
 		scopes: ["billing:write"],
 		toolName: "payInvoice",
 	},
@@ -106,6 +108,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 	},
 	{
 		agents: ["leaf"],
+		previewTool: "getInvoice",
 		scopes: ["billing:write"],
 		toolName: "voidInvoice",
 	},

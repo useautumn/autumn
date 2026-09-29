@@ -68627,6 +68627,10 @@ paths:
                   description: Filter invoices to a single entity by ID. Must be provided together
                     with customer_id, since entity IDs are only unique per
                     customer.
+                invoice_id:
+                  type: string
+                  description: Filter to the invoice with this Autumn invoice ID (e.g.
+                    inv_2b3c4d5e6f7g8h).
                 stripe_id:
                   type: string
                   description: Filter to the invoice with this Stripe invoice ID (e.g.

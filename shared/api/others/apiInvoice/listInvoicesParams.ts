@@ -23,6 +23,11 @@ export const ListInvoicesParamsSchema = z
 				"Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.",
 		}),
 
+		invoice_id: z.string().optional().meta({
+			description:
+				"Filter to the invoice with this Autumn invoice ID (e.g. inv_2b3c4d5e6f7g8h).",
+		}),
+
 		stripe_id: z.string().optional().meta({
 			description:
 				"Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H).",

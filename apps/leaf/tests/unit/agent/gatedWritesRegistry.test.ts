@@ -77,15 +77,15 @@ describe("gated-write registry derivations", () => {
 			createPlan: "previewUpdateCatalog",
 			createReward: undefined,
 			createSchedule: "previewCreateSchedule",
-			finalizeInvoice: undefined,
-			payInvoice: undefined,
+			finalizeInvoice: "getInvoice",
+			payInvoice: "getInvoice",
 			reissueInvoice: "previewReissueInvoice",
 			updateAgentRules: undefined,
 			updateCatalog: "previewUpdateCatalog",
 			updateCustomer: undefined,
 			updatePlan: "previewUpdateCatalog",
 			updateSubscription: "previewUpdateSubscription",
-			voidInvoice: undefined,
+			voidInvoice: "getInvoice",
 		});
 	});
 

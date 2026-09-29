@@ -50,6 +50,10 @@ export type ListInvoicesParams = {
    */
   entityId?: string | undefined;
   /**
+   * Filter to the invoice with this Autumn invoice ID (e.g. inv_2b3c4d5e6f7g8h).
+   */
+  invoiceId?: string | undefined;
+  /**
    * Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H).
    */
   stripeId?: string | undefined;
@@ -224,6 +228,7 @@ export type ListInvoicesParams$Outbound = {
   limit: number;
   customer_id?: string | undefined;
   entity_id?: string | undefined;
+  invoice_id?: string | undefined;
   stripe_id?: string | undefined;
   status?: Array<string> | undefined;
   processor_types?: Array<string> | undefined;
@@ -239,6 +244,7 @@ export const ListInvoicesParams$outboundSchema: z.ZodMiniType<
     limit: z._default(z.int(), 50),
     customerId: z.optional(z.string()),
     entityId: z.optional(z.string()),
+    invoiceId: z.optional(z.string()),
     stripeId: z.optional(z.string()),
     status: z.optional(z.array(ListInvoicesStatus$outboundSchema)),
     processorTypes: z.optional(
@@ -250,6 +256,7 @@ export const ListInvoicesParams$outboundSchema: z.ZodMiniType<
       startCursor: "start_cursor",
       customerId: "customer_id",
       entityId: "entity_id",
+      invoiceId: "invoice_id",
       stripeId: "stripe_id",
       processorTypes: "processor_types",
     });

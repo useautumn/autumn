@@ -4,6 +4,7 @@
  * Contract:
  *   invoices.list { stripe_id }             → only that invoice (with or without customer_id)
  *   invoices.list { stripe_id: unknown }    → empty list
+ *   invoices.list { invoice_id }            → only that invoice
  *   GET /invoices/:stripe_id/stripe         → payments expanded to their payment intents
  */
 
@@ -77,6 +78,13 @@ test.concurrent(
 			stripe_id: "in_does_not_exist",
 		})) as { list: ApiListInvoiceV1[] };
 		expect(byUnknownStripeId.list).toHaveLength(0);
+
+		const byInvoiceId = (await autumnV2_3.post("/invoices.list", {
+			invoice_id: attachInvoice.id,
+		})) as { list: ApiListInvoiceV1[] };
+		expect(byInvoiceId.list.map((invoice) => invoice.id)).toEqual([
+			attachInvoice.id,
+		]);
 
 		const stripeInvoice = (await autumnV2_3.get(
 			`/invoices/${attachInvoice.stripe_id}/stripe`,
