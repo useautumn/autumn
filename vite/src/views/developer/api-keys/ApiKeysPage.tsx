@@ -11,12 +11,12 @@ import { CreateApiKeySheet } from "./components/CreateApiKeySheet";
 
 export const ApiKeysPage = () => {
 	const { apiKeys } = useDevQuery();
-	const { lastUsed, isLoading: lastUsedLoading } = useApiKeysLastUsedQuery();
+	const lastUsed = useApiKeysLastUsedQuery();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
 	const columns = useMemo(
-		() => createAPIKeyTableColumns({ lastUsed, lastUsedLoading }),
-		[lastUsed, lastUsedLoading],
+		() => createAPIKeyTableColumns({ lastUsed }),
+		[lastUsed],
 	);
 
 	const apiKeyTable = useProductTable({

@@ -37,10 +37,8 @@ function getSourceInfo(meta: ApiKey["meta"]): {
 
 export const createAPIKeyTableColumns = ({
 	lastUsed,
-	lastUsedLoading,
 }: {
-	lastUsed?: ApiKeysLastUsed;
-	lastUsedLoading: boolean;
+	lastUsed: ApiKeysLastUsed;
 }): ColumnDef<ApiKey, unknown>[] => [
 	{
 		size: 120,
@@ -179,18 +177,31 @@ export const createAPIKeyTableColumns = ({
 		size: 120,
 		enableSorting: false,
 		cell: ({ row }: { row: Row<ApiKey> }) => {
-			if (lastUsedLoading) {
+			if (lastUsed.isLoading) {
 				return <Skeleton className="h-4 w-20" aria-label="Loading" />;
 			}
 
-			const lastUsedAt = lastUsed?.[row.original.id];
+			if (!lastUsed.isAvailable) {
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<div className="text-subtle w-fit">—</div>
+						</TooltipTrigger>
+						<TooltipContent>Usage data unavailable</TooltipContent>
+					</Tooltip>
+				);
+			}
+
+			const lastUsedAt = lastUsed.lastUsed[row.original.id];
 			if (!lastUsedAt) {
 				return (
 					<div className="text-xs text-tertiary-foreground">Not used in 7d</div>
 				);
 			}
 
-			const { date, time } = formatUnixToDateTime(lastUsedAt);
+			const { date, time } = formatUnixToDateTime(lastUsedAt, {
+				withYear: true,
+			});
 			return (
 				<Tooltip>
 					<TooltipTrigger asChild>

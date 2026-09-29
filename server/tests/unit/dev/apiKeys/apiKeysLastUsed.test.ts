@@ -7,7 +7,9 @@
  *   2. buildApiKeysLastUsedQuery scopes to org + env + last 7 days and
  *      returns max(_time) per `context.api_key_id`.
  *   3. getApiKeysLastUsed maps Axiom rows to { [apiKeyId]: epochMs }.
- *   4. getApiKeysLastUsed returns {} when Axiom isn't configured.
+ *   4. getApiKeysLastUsed reports available: false when Axiom isn't configured,
+ *      so the UI never shows "not used" for missing telemetry.
+ *   5. queryAxiomTabular flattens tabular tables into row records.
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -19,10 +21,12 @@ const realOrgRepo = { ...(await import("@/internal/orgs/repos/index.js")) };
 let axiomConfigured = true;
 let axiomRows: Record<string, unknown>[] = [];
 let lastQuery: { apl: string; options?: unknown } | null = null;
+let tabularResult: unknown = { tables: [] };
 
 mock.module("@/external/axiom/initAxiom.js", () => ({
 	...realInitAxiom,
 	isAxiomConfigured: () => axiomConfigured,
+	getAxiomClient: () => ({ query: async () => tabularResult }),
 }));
 
 mock.module("@/external/axiom/queryAxiom.js", () => ({
@@ -121,11 +125,14 @@ describe("api key last used", () => {
 			{ api_key_id: "", last_used: "2026-09-28T09:30:00Z" },
 		];
 
-		const lastUsed = await getApiKeysLastUsed({ ctx });
+		const result = await getApiKeysLastUsed({ ctx });
 
-		expect(lastUsed).toEqual({
-			key_a: Date.parse("2026-09-29T10:00:00Z"),
-			key_b: Date.parse("2026-09-28T09:30:00.123Z"),
+		expect(result).toEqual({
+			available: true,
+			lastUsed: {
+				key_a: Date.parse("2026-09-29T10:00:00Z"),
+				key_b: Date.parse("2026-09-28T09:30:00.123Z"),
+			},
 		});
 		expect(lastQuery?.apl).toContain("['context.org_id'] == 'org_1'");
 	});
@@ -134,15 +141,35 @@ describe("api key last used", () => {
 		axiomRows = [{ api_key_id: "key_a", last_used: 1790710284920088000 }];
 
 		expect(await getApiKeysLastUsed({ ctx })).toEqual({
-			key_a: 1790710284920,
+			available: true,
+			lastUsed: { key_a: 1790710284920 },
 		});
 	});
 
-	test("returns empty map when axiom is not configured", async () => {
+	test("reports unavailable when axiom is not configured", async () => {
 		axiomConfigured = false;
 		axiomRows = [{ api_key_id: "key_a", last_used: "2026-09-29T10:00:00Z" }];
 
-		expect(await getApiKeysLastUsed({ ctx })).toEqual({});
+		expect(await getApiKeysLastUsed({ ctx })).toEqual({
+			available: false,
+			lastUsed: {},
+		});
 		expect(lastQuery).toBeNull();
+	});
+
+	test("tabular adapter flattens table events into rows", async () => {
+		const rows = [{ api_key_id: "key_a", last_used: "2026-09-29T10:00:00Z" }];
+		tabularResult = {
+			tables: [
+				{
+					events: function* () {
+						yield* rows;
+					},
+				},
+				{ events: function* () {} },
+			],
+		};
+
+		expect(await realQueryAxiom.queryAxiomTabular({ apl: "x" })).toEqual(rows);
 	});
 });

@@ -14,8 +14,8 @@ export const getApiKeysLastUsed = async ({
 	ctx,
 }: {
 	ctx: AutumnContext;
-}): Promise<Record<string, number>> => {
-	if (!isAxiomConfigured()) return {};
+}): Promise<{ available: boolean; lastUsed: Record<string, number> }> => {
+	if (!isAxiomConfigured()) return { available: false, lastUsed: {} };
 
 	const rows = await queryAxiomTabular({
 		apl: buildApiKeysLastUsedQuery({ orgId: ctx.org.id, env: ctx.env }),
@@ -28,5 +28,5 @@ export const getApiKeysLastUsed = async ({
 		const lastUsedAt = toEpochMs(row.last_used);
 		if (apiKeyId && !Number.isNaN(lastUsedAt)) lastUsed[apiKeyId] = lastUsedAt;
 	}
-	return lastUsed;
+	return { available: true, lastUsed };
 };
