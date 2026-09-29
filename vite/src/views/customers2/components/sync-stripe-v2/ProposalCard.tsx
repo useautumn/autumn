@@ -4,12 +4,12 @@ import { CaretRightIcon } from "@phosphor-icons/react";
 import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { cn } from "@/lib/utils";
-import { useProposalItemMarks } from "./hooks/useProposalItemMarks";
 import { useTodayMismatches } from "./hooks/useTodayMismatches";
 import {
 	PROPOSAL_SYNC_STATES,
 	ProposalSyncStateChip,
 } from "./ProposalSyncStateChip";
+import { stripeItemMark } from "./previewMismatches";
 import { proposalSyncSummary } from "./proposalSyncSummary";
 import { STRIPE_ROW_CLASS, StripeItemRow } from "./StripeItemRow";
 import { buildPhaseSections } from "./syncPhaseSections";
@@ -28,15 +28,19 @@ export function ProposalCard({
 	const { mismatches, isVerifying } = useTodayMismatches({ proposal });
 	const { state, planNames, note } = proposalSyncSummary({
 		proposal,
-		mismatches: isVerifying ? undefined : (mismatches ?? []),
+		mismatches: isVerifying ? undefined : mismatches,
 		productNamesById,
 	});
 	const [section] = buildPhaseSections({ proposal });
-	const itemMark = useProposalItemMarks({
-		proposal,
-		section,
-		todayMismatches: mismatches,
-	});
+	// The list uses today's verify only; "matched after sync" needs a preview, which runs once a subscription is opened.
+	const itemMark = (stripePriceId: string) =>
+		section &&
+		stripeItemMark({
+			todayMismatches: mismatches,
+			previewMismatches: mismatches,
+			stripePriceId,
+			startsAt: section.phase.starts_at,
+		});
 
 	return (
 		<button

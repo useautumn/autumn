@@ -1,5 +1,4 @@
 import type { SyncPhase, SyncProposalV2 } from "@autumn/shared";
-import { secondsToMilliseconds } from "date-fns";
 import type Stripe from "stripe";
 import { formatPhaseDate } from "@/components/forms/create-schedule/utils/schedulePhaseTiming";
 import { formatStripeItemPrice } from "./formatStripeItemPrice";
@@ -62,10 +61,9 @@ export const buildPhaseSections = ({
 	const sub = proposal.stripe_subscription;
 	const schedule = proposal.stripe_schedule;
 
-	const openSchedulePhases = (schedule?.phases ?? []).filter(
-		(schedulePhase) =>
-			!schedulePhase.end_date ||
-			Date.now() < secondsToMilliseconds(schedulePhase.end_date),
+	// The server drops phases that had ended at load; align from the end so a phase ending mid-review can't shift items.
+	const openSchedulePhases = (schedule?.phases ?? []).slice(
+		-proposal.phases.length,
 	);
 
 	return proposal.phases.map((phase, phaseIndex): PhaseSection => {

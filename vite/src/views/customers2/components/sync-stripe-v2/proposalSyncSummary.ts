@@ -25,7 +25,11 @@ const planNamesOf = ({
 }: {
 	plans: SyncPlanInstance[];
 	productNamesById: Record<string, string>;
-}) => plans.map(({ plan_id }) => productNamesById[plan_id] ?? plan_id);
+}) =>
+	plans.map(({ plan_id, quantity }) => {
+		const name = productNamesById[plan_id] ?? plan_id;
+		return quantity && quantity > 1 ? `${name} × ${quantity}` : name;
+	});
 
 const scheduledChangeNote = ({
 	proposal,
@@ -34,7 +38,7 @@ const scheduledChangeNote = ({
 	proposal: SyncProposalV2;
 	productNamesById: Record<string, string>;
 }) => {
-	const nextPhase = proposal.phases[1];
+	const nextPhase = proposal.phases.find((phase) => phase.starts_at !== "now");
 	if (!nextPhase || nextPhase.starts_at === "now") return undefined;
 	const names = planNamesOf({ plans: nextPhase.plans, productNamesById });
 	const date = formatPhaseDate({ startsAt: nextPhase.starts_at });

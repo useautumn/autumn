@@ -14,6 +14,7 @@ import { previewRestore } from "@/internal/billing/v2/actions/restore/previewRes
 import { restore } from "@/internal/billing/v2/actions/restore/restore";
 import { rollback } from "@/internal/billing/v2/actions/rollback/rollback";
 import { previewSetPlans } from "@/internal/billing/v2/actions/setPlans/previewSetPlans";
+import { setPlans } from "@/internal/billing/v2/actions/setPlans/setPlans";
 import { setupPayment } from "@/internal/billing/v2/actions/setupPayment/setupPayment";
 import { previewSyncV2 } from "@/internal/billing/v2/actions/sync/previewSyncV2";
 import { sync } from "@/internal/billing/v2/actions/sync/sync";
@@ -29,6 +30,7 @@ export const billingActions = {
 	createSchedule: createSchedule,
 	previewCreateSchedule: previewCreateSchedule,
 	multiAttach: multiAttach,
+	setPlans: setPlans,
 	previewSetPlans: previewSetPlans,
 	multiUpdate: multiUpdate,
 	setupPayment: setupPayment,

@@ -3,6 +3,7 @@ import {
 	getFeatureName,
 	getProductItemDisplay,
 	type ProductItem,
+	roundUsageToNearestBillingUnit,
 	UsageModel,
 } from "@autumn/shared";
 import type { ReactNode } from "react";
@@ -87,11 +88,19 @@ export function PlanPrepaidQuantityFields({
 						feature: findFeatureById({ features, featureId }),
 						units: quantity ?? 0,
 					});
+					const billedQuantity = roundUsageToNearestBillingUnit({
+						usage: quantity ?? 0,
+						billingUnits: step,
+					});
+					const billedNote =
+						billedQuantity !== (quantity ?? 0)
+							? ` (billed as ${billedQuantity})`
+							: "";
 					return (
 						<InlinePrepaidQuantity
 							key={featureId}
 							priceNote={priceNote}
-							quantityLabel={`${quantity ?? 0} ${unitLabel}`.trim()}
+							quantityLabel={`${quantity ?? 0} ${unitLabel}${billedNote}`.trim()}
 							readOnly={readOnly}
 						>
 							{field}
