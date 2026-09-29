@@ -1,6 +1,8 @@
 import type { Context, Next } from "hono";
 import { shouldPreserveInvoiceCreatedCache } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/shouldPreserveInvoiceCreatedCache";
 import { shouldPreserveInvoicePaidCache } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/shouldPreserveInvoicePaidCache";
+import { shouldPreserveScheduleReleasedCache } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionScheduleReleased/shouldPreserveScheduleReleasedCache";
+import { shouldPreserveScheduleUpdatedCache } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionScheduleUpdated/shouldPreserveScheduleUpdatedCache";
 import { shouldPreserveSubscriptionUpdateCache } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/shouldPreserveSubscriptionUpdateCache";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type {
@@ -55,6 +57,18 @@ export const shouldRefreshAfterWebhookHandler = ({
 		case "customer.subscription.updated":
 			if (handlerResult?.type !== stripeEvent.type) return true;
 			return !shouldPreserveSubscriptionUpdateCache({
+				event: stripeEvent,
+				eventContext: handlerResult.context,
+			});
+		case "subscription_schedule.updated":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveScheduleUpdatedCache({
+				event: stripeEvent,
+				eventContext: handlerResult.context,
+			});
+		case "subscription_schedule.released":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveScheduleReleasedCache({
 				event: stripeEvent,
 				eventContext: handlerResult.context,
 			});
@@ -139,7 +153,8 @@ export const stripeWebhookRefreshMiddleware = async (
 			}
 
 			await deleteCachedFullCustomer({
-				customerId: customer.id!,
+				// An id-less customer is read, and cached, by its internal id.
+				customerId: customer.id ?? customer.internal_id,
 				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
 				// Attach-echo invoices are balance-neutral. Cycle handlers bump

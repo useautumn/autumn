@@ -270,7 +270,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 		],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -339,6 +339,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 	// Complete payment via checkout using Puppeteer
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
+		ctx,
+		customerId,
 	});
 
 	// Wait for webhook processing

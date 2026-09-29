@@ -1,3 +1,4 @@
+import { toBatchTrackEntries } from "@/internal/balances/track/batchTrackEntries.js";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	ApiVersion,
@@ -137,7 +138,7 @@ describe("runBatchTrack", () => {
 	test("validates all items before enqueueing one batch with per-item deduplication", async () => {
 		const ctx = buildCtx();
 
-		await runBatchTrack({ ctx, body });
+		await runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: body }) });
 
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
@@ -193,7 +194,7 @@ describe("runBatchTrack", () => {
 			},
 		];
 
-		await runBatchTrack({ ctx, body: bodyWithIdempotency });
+		await runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: bodyWithIdempotency  }) });
 
 		expect(mockState.queueCommands[0]?.Entries?.[0]).toMatchObject({
 			MessageDeduplicationId: "req_batch_1-0",
@@ -217,7 +218,7 @@ describe("runBatchTrack", () => {
 		const ctx = buildCtx();
 
 		try {
-			await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
+			await expect(runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: body }) })).rejects.toMatchObject({
 				code: ErrCode.InternalError,
 				statusCode: 503,
 				message: "Async track is not available right now",
@@ -234,7 +235,7 @@ describe("runBatchTrack", () => {
 		mockState.queueFailure = { batchIndex: 0, entryId: "1" };
 		const ctx = buildCtx();
 
-		await expect(runBatchTrack({ ctx, body })).resolves.toBeUndefined();
+		await expect(runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: body }) })).resolves.toBeUndefined();
 
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(ctx.logger.error).toHaveBeenCalledWith(
@@ -265,7 +266,7 @@ describe("runBatchTrack", () => {
 		}) as typeof sqsClient.send;
 		const ctx = buildCtx();
 
-		await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
+		await expect(runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: body }) })).rejects.toMatchObject({
 			code: ErrCode.InternalError,
 			statusCode: 503,
 			message: "Async track is not available right now",
@@ -299,7 +300,7 @@ describe("runBatchTrack", () => {
 		}) as typeof sqsClient.send;
 
 		await expect(
-			runBatchTrack({ ctx, body: largeBody }),
+			runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: largeBody  }) }),
 		).resolves.toBeUndefined();
 
 		expect(mockState.queueCommands).toHaveLength(2);
@@ -324,7 +325,7 @@ describe("runBatchTrack", () => {
 			}),
 		);
 
-		await runBatchTrack({ ctx, body: largeBody });
+		await runBatchTrack({ ctx, entries: toBatchTrackEntries({ body: largeBody  }) });
 
 		expect(mockState.queueCommands).toHaveLength(100);
 

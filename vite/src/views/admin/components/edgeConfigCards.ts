@@ -29,6 +29,7 @@ export type EdgeConfigCardId =
 	| "feature-flags"
 	| "async-balance-update"
 	| "async-track"
+	| "balance-shadow"
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
@@ -40,12 +41,12 @@ export type EdgeConfigCardId =
 	| "misc-redis"
 	| "cache-v2-ramp"
 	| "full-subject-gate"
+	| "db-control"
 	| "miscellaneous";
 
 export type QueueCronCardId =
 	| "job-queues"
 	| "batch-reset-v2"
-	| "reset-job"
 	| "lazy-batch-resets";
 
 export type EdgeConfigCardDef<Id extends string = EdgeConfigCardId> = {
@@ -349,6 +350,30 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 				},
 			},
 			{
+				id: "balance-shadow",
+				title: "Balance Shadow",
+				description:
+					"Copy selected tracks to the balance worker without changing live routing.",
+				icon: Activity,
+				endpoint: "/admin/balance-shadow-config",
+				deriveStatus: (data) => {
+					const config = asRecord(data);
+					if (config.enabled !== true) return { label: "Off", tone: "neutral" };
+					const run = asRecord(config.run);
+					if (
+						typeof run.expiresAt === "number" &&
+						run.expiresAt <= Date.now()
+					) {
+						return { label: "Expired", tone: "warning" };
+					}
+					const count = Array.isArray(run.customers) ? run.customers.length : 0;
+					return {
+						label: `${count} ${count === 1 ? "entry" : "entries"} configured`,
+						tone: "active",
+					};
+				},
+			},
+			{
 				id: "feature-flags",
 				title: "Feature Flags",
 				description: "Toggle maintenance modes and feature gates globally.",
@@ -409,6 +434,27 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 								label: parts.join(" | "),
 								tone: axiomResponseBodyReductionDisabled ? "warning" : "active",
 							};
+				},
+			},
+		],
+	},
+	{
+		id: "postgres",
+		title: "Postgres",
+		description: "Live knobs on how our processes drive the database.",
+		cards: [
+			{
+				id: "db-control",
+				title: "DB Control",
+				description:
+					"Balance committer concurrency per worker; more clients as they move to Postgres.",
+				icon: Database,
+				endpoint: "/admin/db-control-config",
+				deriveStatus: (data) => {
+					const committer = asRecord(asRecord(data).balanceCommitter);
+					return typeof committer.concurrency === "number"
+						? { label: `${committer.concurrency} lanes`, tone: "active" }
+						: { label: "Pool size", tone: "neutral" };
 				},
 			},
 		],
@@ -492,27 +538,6 @@ export const QUEUE_CRON_CARDS: EdgeConfigCardDef<QueueCronCardId>[] = [
 				label:
 					typeof scanBatchSize === "number"
 						? `Running, scan ${scanBatchSize}`
-						: "Running",
-				tone: "active",
-			};
-		},
-	},
-	{
-		id: "reset-job",
-		title: "Reset Job",
-		description:
-			"Continuously reset due balances in small, serialized batches.",
-		icon: Clock,
-		endpoint: "/admin/reset-job-config",
-		deriveStatus: (data) => {
-			const config = asRecord(data);
-			if (config.enabled !== true) return { label: "Stopped", tone: "warning" };
-
-			const batchSize = config.batchSize;
-			return {
-				label:
-					typeof batchSize === "number"
-						? `Running, batch ${batchSize}`
 						: "Running",
 				tone: "active",
 			};

@@ -114,6 +114,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 			customerId,
 			products: productsList,
 			results: productsList,
+			ctx,
 			db,
 			org,
 			env,

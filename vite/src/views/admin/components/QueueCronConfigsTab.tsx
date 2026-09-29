@@ -3,7 +3,6 @@ import { EdgeConfigCard } from "./EdgeConfigCard";
 import { QUEUE_CRON_CARDS, type QueueCronCardId } from "./edgeConfigCards";
 import { JobQueuesDialog } from "./JobQueuesDialog";
 import { LazyBatchResetConfigDialog } from "./LazyBatchResetConfigDialog";
-import { ResetJobConfigDialog } from "./ResetJobConfigDialog";
 import { ResetJobV2ConfigDialog } from "./ResetJobV2ConfigDialog";
 
 export const QueueCronConfigsTab = () => {
@@ -41,11 +40,6 @@ export const QueueCronConfigsTab = () => {
 
 			<ResetJobV2ConfigDialog
 				open={openConfig === "batch-reset-v2"}
-				onOpenChange={closeDialog}
-			/>
-
-			<ResetJobConfigDialog
-				open={openConfig === "reset-job"}
 				onOpenChange={closeDialog}
 			/>
 

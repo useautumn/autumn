@@ -4,6 +4,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullSubject,
+	getApiSubscriptionV2,
 	ProcessorType,
 	type Subscription,
 } from "@autumn/shared";
@@ -12,7 +13,6 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { customers } from "@tests/utils/fixtures/db/customers";
 import type { RequestContext } from "@/honoUtils/HonoEnv";
 import { getApiSubscription } from "@/internal/customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscription";
-import { getApiSubscriptionV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubscription/getApiSubscriptionV2";
 
 const ctx = {
 	...contexts.create({}),

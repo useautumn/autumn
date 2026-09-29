@@ -19,6 +19,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -40,83 +41,88 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-describe(`${chalk.yellowBright("balances.create must not lose unsynced deductions")}`, () => {
-	const customerId = testCase;
-	const autumn = new AutumnInt({
-		version: ApiVersion.V2_1,
-		secretKey: ctx.orgSecretKey,
-	});
-
-	beforeAll(async () => {
-		await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
-
-		// Re-runnable: balance_id is unique per customer, so start from a clean one.
-		await autumn.customers.delete(customerId).catch(() => {
-			/* first run — nothing to delete */
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+describe.skipIf(isBalanceWorkerRoute())(
+	`${chalk.yellowBright("balances.create must not lose unsynced deductions")}`,
+	() => {
+		const customerId = testCase;
+		const autumn = new AutumnInt({
+			version: ApiVersion.V2_1,
+			secretKey: ctx.orgSecretKey,
 		});
 
-		await autumn.customers.create({ id: customerId, name: testCase });
+		beforeAll(async () => {
+			await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
 
-		// A loose one-off grant — no plan, no attach, no Stripe.
-		await autumn.balances.create({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			included_grant: GRANT,
-			reset: { interval: ResetInterval.OneOff },
-			balance_id: "starter",
-		});
-	});
+			// Re-runnable: balance_id is unique per customer, so start from a clean one.
+			await autumn.customers.delete(customerId).catch(() => {
+				/* first run — nothing to delete */
+			});
 
-	test("keeps a deduction that balances.create invalidates before its sync lands", async () => {
-		const fullSubject = await getOrSetCachedFullSubject({
-			ctx,
-			customerId,
-			source: "test-setup",
-		});
+			await autumn.customers.create({ id: customerId, name: testCase });
 
-		const messagesFeature = ctx.features.find(
-			(feature) => feature.id === TestFeature.Messages,
-		)!;
-
-		// Deduct in Redis WITHOUT queuing sync — the un-synced window.
-		await executeRedisDeductionV2({
-			ctx,
-			deductions: [{ feature: messagesFeature, deduction: SPEND }],
-			fullSubject,
-			deductionOptions: { overageBehaviour: "cap" },
+			// A loose one-off grant — no plan, no attach, no Stripe.
+			await autumn.balances.create({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				included_grant: GRANT,
+				reset: { interval: ResetInterval.OneOff },
+				balance_id: "starter",
+			});
 		});
 
-		const cachedBeforeGrant =
-			await autumn.customers.get<ApiCustomer>(customerId);
-		expect(getMessagesRemaining(cachedBeforeGrant)).toBe(GRANT - SPEND);
+		test("keeps a deduction that balances.create invalidates before its sync lands", async () => {
+			const fullSubject = await getOrSetCachedFullSubject({
+				ctx,
+				customerId,
+				source: "test-setup",
+			});
 
-		// The invalidating call: a second grant, as a customer would issue it.
-		await autumn.balances.create({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			included_grant: GRANT,
-			reset: { interval: ResetInterval.OneOff },
-			balance_id: "second",
+			const messagesFeature = ctx.features.find(
+				(feature) => feature.id === TestFeature.Messages,
+			)!;
+
+			// Deduct in Redis WITHOUT queuing sync — the un-synced window.
+			await executeRedisDeductionV2({
+				ctx,
+				deductions: [{ feature: messagesFeature, deduction: SPEND }],
+				fullSubject,
+				deductionOptions: { overageBehaviour: "cap" },
+			});
+
+			const cachedBeforeGrant =
+				await autumn.customers.get<ApiCustomer>(customerId);
+			expect(getMessagesRemaining(cachedBeforeGrant)).toBe(GRANT - SPEND);
+
+			// The invalidating call: a second grant, as a customer would issue it.
+			await autumn.balances.create({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				included_grant: GRANT,
+				reset: { interval: ResetInterval.OneOff },
+				balance_id: "second",
+			});
+
+			// ── Contract: invalidation semantics preserved ───────────────────────
+			const balanceKey = buildSharedFullSubjectBalanceKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId,
+				featureId: TestFeature.Messages,
+			});
+			expect(await ctx.redisV2.hlen(balanceKey)).toBe(0);
+
+			// ── Contract: the deduction reached Postgres ─────────────────────────
+			// Pre-fix: the HDEL wiped it, both reads show the full 2 x GRANT.
+			const dbCustomer = await autumn.customers.get<ApiCustomer>(customerId, {
+				skip_cache: "true",
+			});
+			expect(getMessagesRemaining(dbCustomer)).toBe(GRANT * 2 - SPEND);
+
+			// ── Contract: rebuilt cache agrees ───────────────────────────────────
+			const rebuiltCustomer =
+				await autumn.customers.get<ApiCustomer>(customerId);
+			expect(getMessagesRemaining(rebuiltCustomer)).toBe(GRANT * 2 - SPEND);
 		});
-
-		// ── Contract: invalidation semantics preserved ───────────────────────
-		const balanceKey = buildSharedFullSubjectBalanceKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(await ctx.redisV2.hlen(balanceKey)).toBe(0);
-
-		// ── Contract: the deduction reached Postgres ─────────────────────────
-		// Pre-fix: the HDEL wiped it, both reads show the full 2 x GRANT.
-		const dbCustomer = await autumn.customers.get<ApiCustomer>(customerId, {
-			skip_cache: "true",
-		});
-		expect(getMessagesRemaining(dbCustomer)).toBe(GRANT * 2 - SPEND);
-
-		// ── Contract: rebuilt cache agrees ───────────────────────────────────
-		const rebuiltCustomer = await autumn.customers.get<ApiCustomer>(customerId);
-		expect(getMessagesRemaining(rebuiltCustomer)).toBe(GRANT * 2 - SPEND);
-	});
-});
+	},
+);

@@ -1,7 +1,8 @@
 import { context, trace } from "@opentelemetry/api";
 import type { MiddlewareHandler } from "hono";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+
 import {
 	type TenantAttrs,
 	withTenantContext,
@@ -29,9 +30,10 @@ export const traceEnrichMiddleware: MiddlewareHandler = async (c, next) => {
 		auth_type: ctx.authType,
 		api_version: ctx.apiVersion?.semver,
 		region: process.env.AWS_REGION,
-		full_subject_rollout_enabled: ctx.org
-			? isFullSubjectRolloutEnabled({ ctx })
-			: undefined,
+		balance_worker_rollout_enabled:
+			ctx.org && ctx.customerId
+				? isBalanceWorkerRolloutEnabled({ ctx, customerId: ctx.customerId })
+				: undefined,
 	};
 
 	const rootSpan = trace.getSpan(context.active());

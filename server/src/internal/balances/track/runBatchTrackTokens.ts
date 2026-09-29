@@ -1,7 +1,7 @@
 import type { BatchTrackTokensParams, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { runBatchTrackByRollout } from "./runBatchTrackByRollout.js";
 import { getTokenTrackParams } from "./utils/getTokenTrackParams.js";
-import { runBatchTrack } from "./runBatchTrack.js";
 
 export const runBatchTrackTokens = async ({
 	ctx,
@@ -20,5 +20,5 @@ export const runBatchTrackTokens = async ({
 		trackBodies.push(trackBody);
 	}
 
-	await runBatchTrack({ ctx, body: trackBodies });
+	await runBatchTrackByRollout({ ctx, body: trackBodies });
 };

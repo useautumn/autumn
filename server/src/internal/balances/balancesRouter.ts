@@ -51,6 +51,9 @@ balancesRpcRouter.post(
 balancesRpcRouter.post("/balances.track", ...handleTrack);
 balancesRpcRouter.post("/balances.track_tokens", ...handleTrackTokens);
 balancesRpcRouter.post("/balances.batch_track", ...handleBatchTrack);
-balancesRpcRouter.post("/balances.batch_track_tokens", ...handleBatchTrackTokens);
+balancesRpcRouter.post(
+	"/balances.batch_track_tokens",
+	...handleBatchTrackTokens,
+);
 balancesRpcRouter.post("/balances.check", ...handleCheck);
 balancesRpcRouter.post("/balances.finalize", ...handleFinalizeLock);

@@ -9,15 +9,14 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { isFullSubjectGateRejection } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { queueTrack } from "./utils/queueTrack.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
 const TRACK_V3_ENABLED = true;
 
-export const shouldUseTrackV3 = ({ ctx }: { ctx: AutumnContext }): boolean =>
-	TRACK_V3_ENABLED && isFullSubjectRolloutEnabled({ ctx });
+export const shouldUseTrackV3 = (_: { ctx: AutumnContext }): boolean =>
+	TRACK_V3_ENABLED;
 
 export const runTrackWithRollout = async ({
 	ctx,

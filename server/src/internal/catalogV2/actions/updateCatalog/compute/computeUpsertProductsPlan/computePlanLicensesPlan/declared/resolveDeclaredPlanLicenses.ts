@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import {
 	type FullPlanLicense,
 	type FullProduct,
+	fullProductsToLicenseCustomize,
 	licenseCustomizesAreSame,
 	type PlanLicenseParams,
 } from "@autumn/shared";
@@ -10,12 +11,11 @@ import type { PlanLicensePlan } from "@/internal/catalogV2/actions/updateCatalog
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { fullProductForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForSlug";
-import { licensePlanCustomize } from "@/internal/licenses/licenseLinkCustomize";
 
 /** The link's actual current overlay vs. its base version — undefined when stock. */
 const currentLinkCustomize = (currentPlanLicense: FullPlanLicense) =>
 	currentPlanLicense.customized && currentPlanLicense.base_product
-		? licensePlanCustomize({
+		? fullProductsToLicenseCustomize({
 				product: currentPlanLicense.product,
 				baseProduct: currentPlanLicense.base_product,
 			})

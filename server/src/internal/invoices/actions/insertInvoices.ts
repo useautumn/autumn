@@ -11,9 +11,10 @@ import {
 	products,
 	RecaseError,
 } from "@autumn/shared";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { generateId } from "@/utils/genUtils";
 
 const referenceError = (message: string) =>
@@ -190,27 +191,10 @@ export const insertInvoices = async ({
 		};
 	});
 
-	const upsertedRows = await ctx.db
-		.insert(invoices)
-		.values(rows)
-		.onConflictDoUpdate({
-			target: invoices.stripe_id,
-			set: {
-				created_at: sql`excluded.created_at`,
-				product_ids: sql`excluded.product_ids`,
-				internal_product_ids: sql`excluded.internal_product_ids`,
-				internal_customer_id: sql`excluded.internal_customer_id`,
-				internal_entity_id: sql`excluded.internal_entity_id`,
-				processor_type: sql`excluded.processor_type`,
-				status: sql`excluded.status`,
-				hosted_invoice_url: sql`excluded.hosted_invoice_url`,
-				total: sql`excluded.total`,
-				amount_paid: sql`excluded.amount_paid`,
-				refunded_amount: sql`excluded.refunded_amount`,
-				currency: sql`excluded.currency`,
-			},
-		})
-		.returning();
+	const upsertedRows = await InvoiceService.upsertMany({
+		db: ctx.db,
+		invoices: rows,
+	});
 	const rowByStripeId = new Map(
 		upsertedRows.map((invoice) => [invoice.stripe_id, invoice]),
 	);
@@ -225,7 +209,7 @@ export const insertInvoices = async ({
 				stripe_id: row.stripe_id,
 				processor_type: (row.processor_type ??
 					invoice.processor_type) as ProcessorType,
-				status: row.status,
+				status: row.status ?? invoice.status,
 				total: row.total,
 				amount_paid: row.amount_paid ?? null,
 				refunded_amount: row.refunded_amount,

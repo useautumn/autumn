@@ -1,19 +1,17 @@
+import { miscRedisEdgeConfig } from "@autumn/edge-config";
 import { ErrCode, ms, RecaseError } from "@autumn/shared";
-import { ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import {
 	type MiscRedisConfig,
-	MiscRedisConfigSchema,
 	type MiscRedisInstanceName,
 	otherMiscRedisInstance,
 } from "./miscRedisConfigSchemas.js";
 
-// S3 key predates the misc rename; renaming it is config-breaking, so it stays.
 const store = createEdgeConfigStore<MiscRedisConfig>({
-	s3Key: ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY,
-	schema: MiscRedisConfigSchema,
-	defaultValue: () => ({ activeInstance: "main", ramp: null, backup: null }),
+	s3Key: miscRedisEdgeConfig.key,
+	schema: miscRedisEdgeConfig.schema,
+	defaultValue: miscRedisEdgeConfig.defaultValue,
 	pollIntervalMs: ms.seconds(10),
 });
 

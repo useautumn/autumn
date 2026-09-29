@@ -15,6 +15,7 @@ import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWe
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -60,6 +61,11 @@ export const executePostgresDeductionV2 = async ({
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 }> => {
 	const { db, org, env } = ctx;
+	// A worker-routed customer's balances never live in the Redis subject cache.
+	const mirrorsSubjectCache = !isBalanceWorkerRolloutEnabled({
+		ctx,
+		customerId,
+	});
 
 	ctx.logger.info(
 		`executing postgres deduction v2, deductions: ${JSON.stringify(
@@ -189,15 +195,15 @@ export const executePostgresDeductionV2 = async ({
 				syncState.modifiedCusEntIdsByFeatureId,
 			);
 
-			// Mirror the committed balances before any invoice runs, so a webhook flush mid-invoice finds Redis at Postgres.
-			await syncDeductionBalancesToFullSubjectCache({
-				ctx,
-				customerId,
-				fullSubject: oldFullSubject,
-				cusEntUpdates: allSyncUpdates,
-				rolloverOverwrites: allRolloverOverwrites,
-				modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
-			});
+			if (mirrorsSubjectCache)
+				await syncDeductionBalancesToFullSubjectCache({
+					ctx,
+					customerId,
+					fullSubject: oldFullSubject,
+					cusEntUpdates: allSyncUpdates,
+					rolloverOverwrites: allRolloverOverwrites,
+					modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+				});
 
 			const oldFullCustomer = fullSubjectToFullCustomer({
 				fullSubject: oldFullSubject,
@@ -265,11 +271,12 @@ export const executePostgresDeductionV2 = async ({
 					updates,
 				});
 				// The cache already mirrors the rolled-back balances and Postgres is right again, so drop it unflushed.
-				await invalidateCachedFullSubject({
-					ctx,
-					customerId,
-					source: "executePostgresDeductionV2:rollback",
-				});
+				if (mirrorsSubjectCache)
+					await invalidateCachedFullSubject({
+						ctx,
+						customerId,
+						source: "executePostgresDeductionV2:rollback",
+					});
 				throw error;
 			}
 
@@ -277,8 +284,6 @@ export const executePostgresDeductionV2 = async ({
 				fullSubject,
 				mutationLogs: mutation_logs ?? [],
 			});
-
-			const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
 			fireTrackWebhooks({
 				ctx,
@@ -292,7 +297,7 @@ export const executePostgresDeductionV2 = async ({
 			if (resolvedOptions.triggerAutoTopUp) {
 				triggerAutoTopUp({
 					ctx,
-					newFullCus: newFullCustomer,
+					fullSubject,
 					feature: deduction.feature,
 				}).catch((error) => {
 					ctx.logger.error(
