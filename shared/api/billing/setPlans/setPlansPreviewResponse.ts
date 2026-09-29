@@ -81,6 +81,7 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"trial_ended",
 	"scheduled_cancel_changed",
 	"interval_change_invoices_now",
+	"usage_not_billed",
 ]);
 
 export const SetPlansPreviewWarningSchema = z.object({
