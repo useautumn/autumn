@@ -23,10 +23,16 @@ import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeS
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
+import { timeout } from "@/utils/genUtils";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
+
+const SESSION_LIST_ATTEMPTS = 10;
+const SESSION_LIST_POLL_MS = 2_000;
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans unusable: incomplete subscription from a declined card is cancelled and replaced")}`,
@@ -60,7 +66,7 @@ test.concurrent(
 		expectPreviewWarning({
 			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
 			type: "subscription_replaced",
-			messageContains: [incomplete.id, "incomplete"],
+			messageContains: [incomplete.id, "Stripe voids its first invoice"],
 		});
 		await autumnV2_4.billing.setPlans(setPlansParams);
 
@@ -110,6 +116,29 @@ test.concurrent(
 	},
 );
 
+/** Stripe's session list can lag behind an expire, so poll until it settles. */
+const expectCheckoutSessionStatuses = async ({
+	ctx,
+	stripeCustomerId,
+	statuses,
+}: {
+	ctx: TestContext;
+	stripeCustomerId: string;
+	statuses: Stripe.Checkout.Session.Status[];
+}) => {
+	const listStatuses = async () => {
+		const { data } = await ctx.stripeCli.checkout.sessions.list({
+			customer: stripeCustomerId,
+		});
+		return data.map((session) => session.status).sort();
+	};
+	for (let attempt = 0; attempt < SESSION_LIST_ATTEMPTS; attempt++) {
+		if (Bun.deepEquals(await listStatuses(), statuses)) return;
+		await timeout(SESSION_LIST_POLL_MS);
+	}
+	expect(await listStatuses()).toEqual(statuses);
+};
+
 test.concurrent(
 	`${chalk.yellowBright("set-plans unusable: an open Checkout session is expired when the plans change")}`,
 	async () => {
@@ -140,13 +169,11 @@ test.concurrent(
 		const stripeCustomerId = (
 			await CusService.getFull({ ctx, idOrInternalId: customerId })
 		).processor?.id;
-		const { data: sessions } = await ctx.stripeCli.checkout.sessions.list({
-			customer: stripeCustomerId,
+		await expectCheckoutSessionStatuses({
+			ctx,
+			stripeCustomerId: stripeCustomerId!,
+			statuses: ["expired", "open"],
 		});
-		expect(sessions.map((session) => session.status).sort()).toEqual([
-			"expired",
-			"open",
-		]);
 	},
 );
 
