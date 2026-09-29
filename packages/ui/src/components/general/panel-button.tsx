@@ -30,6 +30,7 @@ export function PanelButton({
 
 				// Design system classes (following Select pattern)
 				"input-base input-shadow-default input-state-open outline-none !bg-background",
+				"hover:!border-primary focus-visible:!border-primary data-[state=open]:!border-primary",
 				className,
 			)}
 		>

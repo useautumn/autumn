@@ -7,12 +7,12 @@
 .input-state-focus {
 	&:hover:not([data-disabled="true"]):not(:disabled):not(:focus) {
 		box-shadow: var(--input-shadow-hover);
-		border-color: var(--primary);
+		border-color: var(--input-border-hover);
 	}
 
 	&:focus {
 		box-shadow: var(--input-shadow-focus);
-		border-color: var(--primary);
+		border-color: var(--input-border-focus);
 	}
 }
 
@@ -20,19 +20,19 @@
 .input-state-open {
 	&:hover:not([data-disabled]):not(:focus-visible):not([data-state="open"]) {
 		box-shadow: var(--input-shadow-hover);
-		border-color: var(--primary);
+		border-color: var(--input-border-hover);
 		background-color: var(--color-interactive-secondary-hover);
 	}
 
 	&:focus-visible {
-		border-color: var(--primary);
+		border-color: var(--input-border-focus);
 		box-shadow: var(--input-shadow-focus);
 	}
 
 	/* Open state */
 	&[data-state="open"] {
 		box-shadow: var(--input-shadow-focus);
-		border-color: var(--primary);
+		border-color: var(--input-border-focus);
 		background-color: var(--color-interactive-secondary-hover);
 	}
 }
@@ -45,13 +45,13 @@
 	}
 
 	&:focus-visible {
-		border-color: var(--primary);
+		border-color: var(--input-border-focus);
 		box-shadow: var(--input-shadow-focus-tiny);
 	}
 
 	/* Open state */
 	&[data-state="open"] {
-		border-color: var(--primary);
+		border-color: var(--input-border-focus);
 		background-color: var(--color-interactive-secondary-hover);
 		box-shadow: var(--input-shadow-focus-tiny);
 	}
@@ -61,12 +61,12 @@
 .input-state-focus-within {
 	&:hover:not([data-disabled="true"]):not(:focus-within) {
 		box-shadow: var(--input-shadow-hover);
-		border-color: var(--primary);
+		border-color: var(--input-border-hover);
 	}
 
 	&:focus-within {
 		box-shadow: var(--input-shadow-focus);
-		border-color: var(--primary);
+		border-color: var(--input-border-focus);
 	}
 }
 
@@ -78,7 +78,7 @@
 
 	&:focus {
 		box-shadow: var(--input-shadow-focus-tiny);
-		border-color: var(--primary);
+		border-color: var(--input-border-focus);
 	}
 }
 

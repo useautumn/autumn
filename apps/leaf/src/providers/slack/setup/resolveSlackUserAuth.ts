@@ -1,5 +1,9 @@
 import type { AutumnLogger } from "@autumn/logging";
-import { type ChatInstallation, user as userTable } from "@autumn/shared";
+import {
+	type ChatInstallation,
+	type ChatTrustedBot,
+	user as userTable,
+} from "@autumn/shared";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import { sql } from "drizzle-orm";
 import { ensureChatUserCredential } from "../../../internal/installations/actions/ensureChatUserCredential.js";
@@ -37,6 +41,19 @@ const resolveAutumnUserIdByEmail = async (
 	return { kind: "single", userId: matches[0].id };
 };
 
+const slackAuthDenier =
+	({ logger }: { logger: AutumnLogger }) =>
+	(
+		reason: SlackAuthDenyReason,
+		text: string = DENY_TEXT[reason],
+	): SlackUserAuthResult => {
+		logger.warn("Slack user auth denied", {
+			event: "leaf.slack_user_auth_denied",
+			data: { reason },
+		});
+		return { ok: false, reason, text };
+	};
+
 export const resolveSlackUserAuth = async ({
 	botToken,
 	installation,
@@ -50,16 +67,7 @@ export const resolveSlackUserAuth = async ({
 	orgId: string;
 	slackUserId: string;
 }): Promise<SlackUserAuthResult> => {
-	const deny = (
-		reason: SlackAuthDenyReason,
-		text: string = DENY_TEXT[reason],
-	): SlackUserAuthResult => {
-		logger.warn("Slack user auth denied", {
-			event: "leaf.slack_user_auth_denied",
-			data: { reason },
-		});
-		return { ok: false, reason, text };
-	};
+	const deny = slackAuthDenier({ logger });
 	if (installation.org_id !== orgId) {
 		logger.error("[chat] Slack installation org mismatch", undefined, {
 			event: "leaf.slack_user_auth_org_mismatch",
@@ -89,15 +97,38 @@ export const resolveSlackUserAuth = async ({
 	if (match.kind === "none") {
 		return deny("no-autumn-user", missingOrgUserText({ email }));
 	}
-	const userId = match.userId;
+	return await authorizeAutumnUser({
+		installation,
+		logger,
+		missingMemberText: missingOrgUserText({ email }),
+		orgId,
+		userId: match.userId,
+	});
+};
 
+/** Grants an Autumn user's org role to a Slack turn: the user must be a
+ * member with scopes the agent can use, and gets a chat credential for them. */
+export const authorizeAutumnUser = async ({
+	installation,
+	logger,
+	missingMemberText,
+	orgId,
+	userId,
+}: {
+	installation: ChatInstallation;
+	logger: AutumnLogger;
+	missingMemberText?: string;
+	orgId: string;
+	userId: string;
+}): Promise<SlackUserAuthResult> => {
+	const deny = slackAuthDenier({ logger });
 	const { role, scopes } = await getScopesForUserInOrg({
 		db,
 		userId,
 		organizationId: orgId,
 	});
 	if (role === null) {
-		return deny("not-a-member", missingOrgUserText({ email }));
+		return deny("not-a-member", missingMemberText);
 	}
 	if (scopes.length === 0) {
 		return deny("invalid-role");
@@ -120,4 +151,33 @@ export const resolveSlackUserAuth = async ({
 		data: { role, scope_count: supportedScopes.length },
 	});
 	return { ok: true, userId, role, scopes: supportedScopes };
+};
+
+/** A trusted bot has no Slack email to match, so its turns take the role of
+ * the member it was configured to run as, re-checked on every turn. */
+export const resolveTrustedBotAuth = async ({
+	installation,
+	logger,
+	orgId,
+	trustedBot,
+}: {
+	installation: ChatInstallation;
+	logger: AutumnLogger;
+	orgId: string;
+	trustedBot: ChatTrustedBot;
+}): Promise<SlackUserAuthResult> => {
+	if (installation.org_id !== orgId) {
+		return slackAuthDenier({ logger })("installation-org-mismatch");
+	}
+	const auth = await authorizeAutumnUser({
+		installation,
+		logger,
+		orgId,
+		userId: trustedBot.run_as_user_id,
+	});
+	if (auth.ok) return auth;
+	return {
+		...auth,
+		text: `${trustedBot.name} acts as an Autumn member who can't use the agent in this organization anymore. Ask an admin to update it under Trusted bots in Autumn's Slack settings.`,
+	};
 };

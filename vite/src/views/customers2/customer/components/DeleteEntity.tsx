@@ -65,7 +65,7 @@ export const DeleteEntity = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="w-[400px] bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Delete Entity</DialogTitle>
 				</DialogHeader>

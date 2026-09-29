@@ -107,7 +107,7 @@ export const EditOAuthClientDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex flex-col gap-4 py-2">
+				<div className="flex flex-col gap-4">
 					{/* Redirect URIs */}
 					<div className="flex flex-col gap-1.5">
 						<span className="text-sm font-medium text-foreground">

@@ -28,7 +28,7 @@ const UpdateCustomerDialog = ({
 	});
 
 	return (
-		<DialogContent className="w-md bg-card max-h-[90vh] overflow-y-auto">
+		<DialogContent className="w-md max-h-[90vh] overflow-y-auto">
 			<DialogHeader>
 				<DialogTitle>Update Customer</DialogTitle>
 				<DialogDescription>

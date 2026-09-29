@@ -198,6 +198,7 @@ export const replaceInstallation = async ({
 				scopes,
 				auth_mode: authMode,
 				reply_mode: previousOrgInstallation?.reply_mode,
+				trusted_bots: previousOrgInstallation?.trusted_bots,
 				default_env: state.env,
 				installed_by_user_id: state.userId,
 				installed_by_provider_user_id: installedByProviderUserId,

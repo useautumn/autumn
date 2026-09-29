@@ -38,7 +38,7 @@ export function TargetVersionSlugControl({
 			</PopoverTrigger>
 			<PopoverContent
 				align="end"
-				className="flex w-64 flex-col gap-2 rounded-lg border-none bg-interactive-secondary p-3 shadow-md ring-1 ring-foreground/10"
+				className="flex w-64 flex-col gap-2"
 				side="right"
 			>
 				<div className="flex flex-col gap-0.5">

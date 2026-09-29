@@ -4,6 +4,11 @@ export type { InitializeReply } from "./contracts/initialize.js";
 export type { ReadSubjectStateReply } from "./contracts/readSubjectState.js";
 export type { TrackReply } from "./contracts/track.js";
 export { createBalanceWorkerClient } from "./createBalanceWorkerClient.js";
+export type {
+	HttpClient,
+	HttpRequest,
+	HttpResponse,
+} from "./http/types/httpClient.js";
 export { createBalanceWorkerKafka } from "./kafka/createBalanceWorkerKafka.js";
 export { createKafkaBalanceWorkerClient } from "./kafka/createKafkaBalanceWorkerClient.js";
 export { createOwnersFromKafka } from "./kafka/createOwnersFromKafka.js";
@@ -15,6 +20,19 @@ export type {
 	OwnersFromKafka,
 	OwnersFromKafkaConfig,
 } from "./kafka/types/kafkaBalanceWorkerClient.js";
+export { createProxyBalanceWorkerClient } from "./proxy/createProxyBalanceWorkerClient.js";
+export { errorToProxyError } from "./proxy/proxyErrors.js";
+export {
+	BALANCE_WORKER_PROXY_PATH,
+	BALANCE_WORKER_PROXY_SIGNATURE_HEADER,
+} from "./proxy/proxyProtocol.js";
+export { isSignedBySecret, signProxyBody } from "./proxy/proxySignature.js";
+export type {
+	BalanceWorkerProxyCall,
+	BalanceWorkerProxyRequest,
+	BalanceWorkerProxyResponse,
+	ProxyBalanceWorkerClientConfig,
+} from "./proxy/types/balanceWorkerProxy.js";
 export type {
 	CommandLog,
 	CommandQueue,

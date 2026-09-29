@@ -105,7 +105,7 @@ export const CopySandboxDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Import into {target.name}</DialogTitle>
 					<DialogDescription>

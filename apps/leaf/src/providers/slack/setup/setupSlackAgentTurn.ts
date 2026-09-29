@@ -31,6 +31,7 @@ export const setupSlackAgentTurn = async ({
 	speaker,
 	text,
 	threadId,
+	trustedBot,
 }: SlackAgentTurnParams) => {
 	const thread = {
 		channelId,
@@ -69,6 +70,7 @@ export const setupSlackAgentTurn = async ({
 				logger,
 				orgId: org.id,
 				slackUserId: providerUserId,
+				trustedBot,
 			});
 	if (callerAuth.usePerUser && !callerAuth.ok) {
 		return {

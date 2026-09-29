@@ -4,6 +4,10 @@ import type { Event } from "@autumn/shared";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@autumn/ui";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+} from "@/components/general/table";
 import { useIsSheetOpen } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import {
@@ -64,16 +68,16 @@ export function CustomerUsageAnalyticsChart({
 	return (
 		<div
 			className={cn(
-				"h-full w-full flex flex-col border rounded-lg transition-colors duration-200 overflow-hidden",
+				"flex h-full w-full flex-col transition-colors duration-200",
 				eventNames.length === 0
-					? "bg-transparent border-dashed"
-					: "bg-interactive-secondary",
+					? "overflow-hidden rounded-lg border border-dashed bg-transparent"
+					: TABLE_TRAY_CLASS,
 			)}
 		>
 			{eventNames.length > 0 && (
 				<div
 					className={cn(
-						"flex items-stretch h-7 gap-4 px-2 overflow-hidden border-b shrink-0 bg-card",
+						"flex h-7 shrink-0 items-stretch gap-4 overflow-hidden px-4",
 						isLoading && "animate-pulse",
 					)}
 				>
@@ -109,7 +113,13 @@ export function CustomerUsageAnalyticsChart({
 					})}
 				</div>
 			)}
-			<ChartContainer config={chartConfig} className="flex-1 min-h-0 w-full">
+			<ChartContainer
+				config={chartConfig}
+				className={cn(
+					"min-h-0 w-full flex-1",
+					eventNames.length > 0 && TABLE_TRAY_SURFACE_CLASS,
+				)}
+			>
 				<BarChart
 					// accessibilityLayer
 					data={chartData}

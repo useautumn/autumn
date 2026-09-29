@@ -1,3 +1,4 @@
+import type { ChatTrustedBot } from "@autumn/shared";
 import { Chat, type Message, type StateAdapter, type Thread } from "chat";
 import type { AgentMissedMessages } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
@@ -13,6 +14,7 @@ import {
 	loadMissedMessages,
 	recordSkippedMessage,
 } from "../threadContext.js";
+import { findTrustedSlackBot } from "../trustedBots.js";
 
 const logUnsubscribeFailure = (error: unknown) => {
 	rootLogger.error("Could not close Slack thread subscription", error, {
@@ -20,15 +22,40 @@ const logUnsubscribeFailure = (error: unknown) => {
 	});
 };
 
-const shouldSkipMessage = (message: Message) => {
-	if (message.author.isBot === true) {
-		rootLogger.info("Skipping bot-authored Slack message", {
-			event: "leaf.slack_message_skipped",
-			data: { reason: "bot_author" },
+/** The workspace's trusted bot that wrote this message, if any. */
+const findTrustedBotAuthor = async ({ message }: { message: Message }) => {
+	const installation = await findSlackInstallationForWorkspace({
+		workspaceId: getSlackWorkspaceId(message.raw),
+	});
+	return findTrustedSlackBot({ installation, raw: message.raw });
+};
+
+type MessageAdmission =
+	| { skip: true }
+	| { skip: false; trustedBot?: ChatTrustedBot };
+
+/** People always get through; a bot only when the workspace trusts it. */
+const admitMessage = async ({
+	findTrustedBot,
+	message,
+}: {
+	findTrustedBot: typeof findTrustedBotAuthor;
+	message: Message;
+}): Promise<MessageAdmission> => {
+	if (message.author.isBot !== true) return { skip: false };
+	const trustedBot = await findTrustedBot({ message });
+	if (trustedBot) {
+		rootLogger.info("Admitting trusted bot Slack message", {
+			event: "leaf.slack_trusted_bot_message",
+			data: { slack_id: trustedBot.slack_id },
 		});
-		return true;
+		return { skip: false, trustedBot };
 	}
-	return false;
+	rootLogger.info("Skipping bot-authored Slack message", {
+		event: "leaf.slack_message_skipped",
+		data: { reason: "bot_author" },
+	});
+	return { skip: true };
 };
 
 const unsubscribe = (thread: Thread) =>
@@ -61,6 +88,7 @@ export const editedMessageText = ({
 
 type HandlerDependencies = Readonly<{
 	dispatch: typeof dispatchSlackAgentMessage;
+	findTrustedBot: typeof findTrustedBotAuthor;
 	getRecentMessages: typeof getRecentMessages;
 	getState: () => StateAdapter;
 	mentionsAgent: typeof messageMentionsAgent;
@@ -109,6 +137,7 @@ const dispatchMessage = async ({
 	recentMessages,
 	showRunPlan,
 	thread,
+	trustedBot,
 }: {
 	message: Message;
 	dispatch: typeof dispatchSlackAgentMessage;
@@ -120,6 +149,7 @@ const dispatchMessage = async ({
 	showRunPlan: boolean;
 	text?: string;
 	thread: Thread;
+	trustedBot?: ChatTrustedBot;
 }) => {
 	thread.adapter.addReaction(thread.id, message.id, "eyes").catch(() => {});
 	const disposition = await dispatch({
@@ -148,6 +178,7 @@ const dispatchMessage = async ({
 		target: thread,
 		text,
 		threadId: thread.id,
+		trustedBot,
 	});
 	if (disposition !== "close") return;
 	await unsubscribe(thread);
@@ -155,24 +186,30 @@ const dispatchMessage = async ({
 
 export const createSlackMessageHandlers = ({
 	dispatch = dispatchSlackAgentMessage,
+	findTrustedBot = findTrustedBotAuthor,
 	getRecentMessages: getMessages = getRecentMessages,
 	getState = () => Chat.getSingleton().getState(),
 	mentionsAgent = messageMentionsAgent,
 	shouldSkipReply = shouldSkipUntaggedReply,
 }: Partial<HandlerDependencies> = {}) => {
+	const admit = (message: Message) => admitMessage({ findTrustedBot, message });
+
 	const handleSlackMessage = async (thread: Thread, message: Message) => {
-		if (shouldSkipMessage(message)) return;
+		const admission = await admit(message);
+		if (admission.skip) return;
 		await dispatchMessage({
 			dispatch,
 			message,
 			recentMessages: () => getMessages(thread, message),
 			showRunPlan: false,
 			thread,
+			trustedBot: admission.trustedBot,
 		});
 	};
 
 	const handleSlackThreadStart = async (thread: Thread, message: Message) => {
-		if (shouldSkipMessage(message)) return;
+		const admission = await admit(message);
+		if (admission.skip) return;
 		const history = threadHistoryLoader({ getMessages, message, thread });
 		await dispatchMessage({
 			dispatch,
@@ -181,6 +218,7 @@ export const createSlackMessageHandlers = ({
 			recentMessages: history.recentMessages,
 			showRunPlan: true,
 			thread,
+			trustedBot: admission.trustedBot,
 		});
 	};
 
@@ -192,10 +230,12 @@ export const createSlackMessageHandlers = ({
 		message,
 		text,
 		thread,
+		trustedBot,
 	}: {
 		message: Message;
 		text: string;
 		thread: Thread;
+		trustedBot?: ChatTrustedBot;
 	}) => {
 		if (await shouldSkipReply({ message, thread })) {
 			rootLogger.info("Skipping untagged Slack reply", {
@@ -222,6 +262,7 @@ export const createSlackMessageHandlers = ({
 			showRunPlan: false,
 			text,
 			thread,
+			trustedBot,
 		});
 	};
 
@@ -229,8 +270,14 @@ export const createSlackMessageHandlers = ({
 		thread: Thread,
 		message: Message,
 	) => {
-		if (shouldSkipMessage(message)) return;
-		await replyInSubscribedThread({ message, text: message.text, thread });
+		const admission = await admit(message);
+		if (admission.skip) return;
+		await replyInSubscribedThread({
+			message,
+			text: message.text,
+			thread,
+			trustedBot: admission.trustedBot,
+		});
 	};
 
 	// A Slack edit is routed like a new message carrying the edited text: in
@@ -243,7 +290,9 @@ export const createSlackMessageHandlers = ({
 		previousMessage?: Message,
 	) => {
 		if (thread.adapter.name !== "slack") return;
-		if (shouldSkipMessage(message)) return;
+		const admission = await admit(message);
+		if (admission.skip) return;
+		const { trustedBot } = admission;
 		if (previousMessage && previousMessage.text === message.text) return;
 		// "stop" edited in is a control command, which is only recognised as
 		// the whole message, so it goes through without the edit framing.
@@ -257,7 +306,7 @@ export const createSlackMessageHandlers = ({
 			event: "leaf.slack_message_edited",
 		});
 		if (await thread.isSubscribed()) {
-			await replyInSubscribedThread({ message, text, thread });
+			await replyInSubscribedThread({ message, text, thread, trustedBot });
 			return;
 		}
 		if (thread.isDM) {
@@ -268,6 +317,7 @@ export const createSlackMessageHandlers = ({
 				showRunPlan: false,
 				text,
 				thread,
+				trustedBot,
 			});
 			return;
 		}
@@ -282,6 +332,7 @@ export const createSlackMessageHandlers = ({
 			showRunPlan: true,
 			text,
 			thread,
+			trustedBot,
 		});
 	};
 

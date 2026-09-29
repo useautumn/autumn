@@ -47,6 +47,11 @@ function readBalanceWorkerClientEnv() {
 	return balanceWorkerEnv;
 }
 
+// The same local env picks the transport, so a CI host off ECS doesn't fall to the proxy.
+function readBalanceWorkerTransportEnv() {
+	return balanceWorkerConfig.createBalanceWorkerTransportEnv(localEnv);
+}
+
 function prepareBalanceWorkerConfig(): void {
 	balanceWorkerEnv = createClientEnv();
 	spyOn(rolloutAccess, "getBalanceWorkerRolloutOverride").mockImplementation(
@@ -54,6 +59,9 @@ function prepareBalanceWorkerConfig(): void {
 	);
 	spyOn(balanceWorkerConfig, "getBalanceWorkerClientEnv").mockImplementation(
 		readBalanceWorkerClientEnv,
+	);
+	spyOn(balanceWorkerConfig, "getBalanceWorkerTransportEnv").mockImplementation(
+		readBalanceWorkerTransportEnv,
 	);
 }
 
