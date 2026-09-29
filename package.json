@@ -38,6 +38,8 @@
 			"packages/dynamodb",
 			"packages/balance-webhooks",
 			"packages/svix",
+			"packages/alien",
+			"packages/byoc",
 			"packages/tinybird",
 			"packages/balance-worker-client",
 			"packages/kafka",

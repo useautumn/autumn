@@ -31,14 +31,16 @@ To switch accounts, first [disconnect the existing OAuth connection](/api-refere
 
 ## Error handling
 
-Use `error` for application logic and display `message` to the user. Start a fresh OAuth flow after a failed callback; OAuth state is single-use.
+Use `error` for application logic and display `message` to the user. Start a fresh OAuth flow after a failed callback: each `oauth_url` is valid for **60 minutes** and can be used **once**.
 
 | Error | Meaning |
 | --- | --- |
 | `access_denied` | The user cancelled Stripe authorization. |
 | `oauth_authorization_failed` | Stripe returned another authorization error. |
 | `missing_parameters` | The callback is missing its state or authorization code. |
-| `invalid_state` | The state expired, was already consumed, or is not valid for Stripe. |
+| `state_expired` | The `oauth_url` was opened more than 60 minutes after it was generated. |
+| `state_already_used` | The `oauth_url` was already used to complete or cancel a connection. |
+| `invalid_state` | The state was not issued by Autumn or is not valid for Stripe. |
 | `org_not_found` | The target organization could not be found or is no longer owned by this platform. |
 | `account_id_not_found` | Stripe's token response did not identify an account. |
 | `account_already_connected` | Another organization already uses the account in this environment. |
@@ -47,9 +49,9 @@ Use `error` for application logic and display `message` to the user. Start a fre
 | `oauth_callback_failed` | The token exchange, authorization check, or connection update failed. |
 
 <Note>
-  OAuth state is stored in Upstash with a 10-minute expiry. The organization must have been created via the platform API before generating an OAuth URL.
+  The organization must have been created via the platform API before generating an OAuth URL.
 </Note>
 
 <Note>
-  Autumn can use your custom return URL only after validating the OAuth state. A missing, expired, or invalid state returns to Autumn's default callback destination instead.
+  Expired and already-used links still return to your `redirect_url`. Only a state Autumn cannot verify (`invalid_state`) returns to Autumn's default callback destination, because Autumn cannot trust a return URL it did not sign.
 </Note>

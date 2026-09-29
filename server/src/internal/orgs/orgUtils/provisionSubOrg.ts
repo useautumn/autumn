@@ -1,3 +1,4 @@
+import { clearOrgWithFeaturesCache } from "@autumn/cache";
 import {
 	member,
 	type Organization,
@@ -10,7 +11,7 @@ import type { User } from "better-auth";
 import { generateId } from "better-auth";
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionOrgResources } from "@/utils/authUtils/afterOrgCreated.js";
 
@@ -83,7 +84,7 @@ export const provisionSubOrg = async ({
 		// drop the local rows so a failed provision leaves nothing behind.
 		await db.delete(member).where(eq(member.organizationId, orgId));
 		await db.delete(organizations).where(eq(organizations.id, orgId));
-		await clearOrgWithFeaturesCache({ orgId });
+		await clearOrgWithFeaturesCache({ ctx: getMiscCacheContext(), orgId });
 		throw error;
 	}
 

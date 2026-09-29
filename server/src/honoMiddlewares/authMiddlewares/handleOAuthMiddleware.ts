@@ -17,6 +17,7 @@ import {
 	oauthConsent,
 	organizations,
 	productAliases,
+	productAliasesToPlanAliasMap,
 	RecaseError,
 	sortFeatures,
 } from "@autumn/shared";
@@ -26,7 +27,6 @@ import { alias } from "drizzle-orm/pg-core";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { isServedOAuthAudience } from "@/internal/auth/oauth/oauthResourceAudiences.js";
-import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 
 const masterOrg = alias(organizations, "master_org");
 
@@ -198,7 +198,7 @@ const getOAuthRequestContext = async ({
 		...first.org,
 		master,
 		config: OrgConfigSchema.parse(first.org.config || {}),
-		planAliases: toPlanAliasMap({ rows: aliasRows }),
+		planAliases: productAliasesToPlanAliasMap({ rows: aliasRows }),
 	};
 
 	return {

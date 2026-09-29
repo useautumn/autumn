@@ -31,7 +31,9 @@
 		"decimal.js": "^10.5.0",
 		"@autumn/svix": "workspace:*",
 		"kafkajs": "^2.2.4",
-		"zod": "^3.25.23"
+		"zod": "^3.25.23",
+		"@autumn/balance-worker-client": "workspace:*",
+		"@autumn/byoc": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.2",

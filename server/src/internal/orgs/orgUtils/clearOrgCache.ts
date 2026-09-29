@@ -1,7 +1,8 @@
+import { clearOrgWithFeaturesCache } from "@autumn/cache";
 import type { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { OrgService } from "../OrgService.js";
 
 export const clearOrgCache = async ({
@@ -36,7 +37,7 @@ export const clearOrgCache = async ({
 		);
 		// Workers read org config through a short-TTL cache; drop it here so a
 		// config change lands immediately rather than after the TTL.
-		await clearOrgWithFeaturesCache({ orgId, env });
+		await clearOrgWithFeaturesCache({ ctx: getMiscCacheContext(), orgId, env });
 
 		logger.info(`Cleared cache for org ${org.slug} (${orgId})`);
 	} catch (error) {

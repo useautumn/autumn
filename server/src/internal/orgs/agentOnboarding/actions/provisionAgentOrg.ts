@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
+import { clearOrgWithFeaturesCache } from "@autumn/cache";
 import { AppEnv, organizations } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { ApiKeyPrefix, createKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionOrgResources } from "@/utils/authUtils/afterOrgCreated.js";
@@ -98,7 +99,10 @@ export const provisionAgentOrg = async ({
 		);
 		// The api_keys FK cascades, so deleting the org clears the key too.
 		await db.delete(organizations).where(eq(organizations.id, organization.id));
-		await clearOrgWithFeaturesCache({ orgId: organization.id });
+		await clearOrgWithFeaturesCache({
+			ctx: getMiscCacheContext(),
+			orgId: organization.id,
+		});
 		throw error;
 	}
 

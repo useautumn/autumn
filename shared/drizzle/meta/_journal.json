@@ -631,6 +631,13 @@
       "when": 1790675652845,
       "tag": "0089_chat_trusted_bots",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1790694602925,
+      "tag": "0090_fluffy_nekra",
+      "breakpoints": true
     }
   ]
 }

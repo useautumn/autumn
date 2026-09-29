@@ -3,7 +3,7 @@ import {
 	type ApiEntityV2,
 	applyResponseVersionChanges,
 	type FullSubject,
-	getApiEntityBaseV2,
+	fullSubjectToApiEntityV2,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiEntityExpand } from "../apiEntityUtils/getApiEntityExpand.js";
@@ -17,17 +17,8 @@ export const getApiEntityV2 = async ({
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
 }): Promise<ApiEntityV2> => {
-	const { apiEntity: baseEntity, legacyData } = await getApiEntityBaseV2({
-		ctx,
-		fullSubject,
-		withAutumnId,
-	});
-
-	const cleanedBaseEntity: ApiEntityV2 = {
-		...baseEntity,
-		feature_id: baseEntity.feature_id || undefined,
-		autumn_id: withAutumnId ? baseEntity.autumn_id : undefined,
-	};
+	const { apiEntity: cleanedBaseEntity, legacyData } =
+		await fullSubjectToApiEntityV2({ ctx, fullSubject, withAutumnId });
 
 	const apiEntityExpand = await getApiEntityExpand({
 		ctx,

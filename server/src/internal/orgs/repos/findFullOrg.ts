@@ -9,10 +9,10 @@ import {
 	organizations,
 	type PendingMigration,
 	productAliases,
+	productAliasesToPlanAliasMap,
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 
 export const findFullOrg = async ({
 	db,
@@ -62,7 +62,7 @@ export const findFullOrg = async ({
 	// Same trade-off as `OrgService.getWithFeatures` — bridged with one cast.
 	const orgFeatures = (rawFeatures ?? []) as unknown as Feature[];
 	const pendingMigrations: PendingMigration[] = rawMigrationRuns ?? [];
-	const planAliases = toPlanAliasMap({ rows: rawProductAliases });
+	const planAliases = productAliasesToPlanAliasMap({ rows: rawProductAliases });
 
 	const master: Organization | null = rawMaster
 		? {

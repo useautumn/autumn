@@ -12,6 +12,7 @@ import {
 	CalendarBlankIcon,
 	CheckCircleIcon,
 	CreditCardIcon,
+	FileArrowUpIcon,
 	HashIcon,
 	PaperPlaneTiltIcon,
 	ProhibitIcon,
@@ -147,6 +148,18 @@ export function InvoiceDetailSheet({
 		},
 		onError: (error) => {
 			toast.error(getBackendErr(error, "Failed to mark invoice as paid"));
+		},
+	});
+
+	const finalizeInvoice = useMutation({
+		mutationFn: () =>
+			axiosInstance.post("/v1/invoices.finalize", { invoice_id: invoice?.id }),
+		onSuccess: async () => {
+			toast.success("Invoice finalized");
+			await refreshCustomer();
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to finalize invoice"));
 		},
 	});
 
@@ -327,6 +340,15 @@ export function InvoiceDetailSheet({
 
 	const openUrl = (url: string) => window.open(url, "_blank", "noopener");
 
+	const canFinalize = invoiceIsStripe && invoice.status === InvoiceStatus.Draft;
+	const finalizeAction: InvoiceSheetAction | undefined = canFinalize
+		? {
+				label: "Finalize",
+				icon: <FileArrowUpIcon size={16} />,
+				onSelect: () => finalizeInvoice.mutate(),
+				isLoading: finalizeInvoice.isPending,
+			}
+		: undefined;
 	const canMarkPaid = canVoid;
 	const markPaidAction: InvoiceSheetAction | undefined = canMarkPaid
 		? {
@@ -347,7 +369,7 @@ export function InvoiceDetailSheet({
 					}),
 			}
 		: undefined;
-	const primaryAction = markPaidAction ?? reissueAction;
+	const primaryAction = finalizeAction ?? markPaidAction ?? reissueAction;
 
 	const menuActions: InvoiceSheetAction[] = [];
 	if (reissueAction && reissueAction !== primaryAction) {

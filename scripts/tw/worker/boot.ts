@@ -180,7 +180,7 @@ export const waitForBalanceWorkerHealth = async (
 };
 
 /**
- * Starts the balance worker (`apps/balance-worker`) on the µVM's Redpanda. State
+ * Starts the balance worker (`apps/balance-worker`) on the µVM's Kafka broker. State
  * is in-memory: checkpoints are off and nothing outlives the µVM. Started before
  * the server so partitions are owned by the time the first track arrives.
  */
@@ -387,7 +387,7 @@ const main = async (): Promise<void> => {
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
-		waitForTcpPort("Redpanda", KAFKA_PORT, SERVICE_HEALTH_TIMEOUT_MS),
+		waitForTcpPort("Kafka", KAFKA_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		// Non-fatal: start-services degrades without dynoxide on stale base
 		// images (the app fails open on an unreachable DynamoDB, and
 		// dynamo-gated tests skip). Short timeout keeps the degraded tail small.
