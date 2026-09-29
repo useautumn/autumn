@@ -27,7 +27,7 @@ const STATUS_GLYPHS = {
 	ban: "M5.4 10.6l5.2-5.2",
 	pause: "M6.4 5.3v5.4M9.6 5.3v5.4",
 	play: "M6.5 5.2v5.6L10.7 8z",
-	calendar: "M5 5.6h6v5H5zM5 7.6h6",
+	calendar: "M5 4.6v1.5M11 4.6v1.5M4.5 5.6h7v5.5h-7zM4.5 7.6h7",
 	hourglass: "M5.6 4.8h4.8M5.6 11.2h4.8M6.2 4.8l3.6 6.4M9.8 4.8l-3.6 6.4",
 	pencil: "M5 11l.5-2 4-4 1.5 1.5-4 4z",
 	refresh: "M5 8a3 3 0 1 0 1-2.2M5 4.6v1.8h1.8",
