@@ -2,21 +2,17 @@ import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
 	cusProductToProduct,
-	ErrCode,
 	type FullProduct,
-	RecaseError,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isFreePhasePlaceholderCustomerProduct } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isFreePhasePlaceholderCustomerProduct";
-import { isStripeConnected } from "@/internal/orgs/orgUtils";
 import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils";
 import { ProductService } from "@/internal/products/ProductService";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
 
-const productsMissingStripeProduct = ({
+export const productsMissingStripeProduct = ({
 	autumnBillingPlan,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
@@ -76,17 +72,7 @@ export const ensureFreePhaseStripeProducts = async ({
 	if (billingContext.dryRunStripe || billingContext.skipBillingChanges) return;
 
 	const products = productsMissingStripeProduct({ autumnBillingPlan });
-	if (products.length === 0) return;
-
-	if (!isStripeConnected({ org: ctx.org, env: ctx.env })) {
-		throw new RecaseError({
-			message:
-				"Connect Stripe to schedule a transition out of a free plan. Autumn uses a $0 Stripe subscription to run the schedule.",
-			code: ErrCode.StripeConfigNotFound,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
-	if (orgDisableStripeWrites({ ctx })) return;
+	if (products.length === 0 || orgDisableStripeWrites({ ctx })) return;
 
 	await applyStripeReuseFromVariantFamilies({ ctx, products });
 	for (const product of products) {

@@ -20,6 +20,7 @@ import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/i
 import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
 import { resolveUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
+import { handleFreePhaseStripeConnectionErrors } from "./handleFreePhaseStripeConnectionErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
 import { handleStripeSchedulePhaseLimitErrors } from "./handleStripeSchedulePhaseLimitErrors";
@@ -90,6 +91,7 @@ export const handleSetPlansErrors = async ({
 
 export const handleSetPlansComputeErrors = async ({
 	ctx,
+	billingContext,
 	autumnBillingPlan,
 	immediatePhaseTransition,
 }: {
@@ -98,6 +100,11 @@ export const handleSetPlansComputeErrors = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	immediatePhaseTransition: ImmediatePhaseTransition;
 }) => {
+	handleFreePhaseStripeConnectionErrors({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+	});
 	handleLicenseTransitionErrors({ autumnBillingPlan });
 
 	const customerProductPairs = pairCustomerProducts(immediatePhaseTransition);
