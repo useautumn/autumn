@@ -1,9 +1,16 @@
 import {
+	CusProductStatus,
+	clampNextResetAtToPendingBillingCycleAnchor,
 	EntInterval,
+	type FullCusProduct,
+	type FullCustomer,
+	filterCustomerProductsByStripeSubscriptionId,
+	findCustomerProductById,
 	getCycleEnd,
 	isBooleanEntitlement,
 	isCustomerProductExpired,
 	isCustomerProductOneOff,
+	isCustomerProductPaidRecurring,
 	isLifetimeEntitlement,
 	PooledBalanceResetMode,
 	pooledBalances,
@@ -12,9 +19,9 @@ import {
 import { eq } from "drizzle-orm";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { CusProductService } from "../../CusProductService";
 import { CusEntService } from "../CusEntitlementService";
 
 type SyncedAnchor = {
@@ -23,6 +30,10 @@ type SyncedAnchor = {
 	pooledBalanceId?: string;
 	resetCycleAnchor?: number;
 };
+
+type CustomerEntitlementToSync = Awaited<
+	ReturnType<typeof CusEntService.getStrict>
+>;
 
 const getStripeBillingCycleAnchor = async ({
 	ctx,
@@ -36,15 +47,57 @@ const getStripeBillingCycleAnchor = async ({
 	return secondsToMs(subscription.billing_cycle_anchor);
 };
 
+/** Stripe keeps the old anchor until a scheduled anchor lands, so the plan's pending date wins until then. */
+const getPendingAnchorResetsAt = ({
+	customerProducts,
+	now,
+}: {
+	customerProducts: FullCusProduct[];
+	now: number;
+}): number | undefined => {
+	const pendingResets = customerProducts
+		.map((customerProduct) => customerProduct.billing_cycle_anchor_resets_at)
+		.filter(
+			(resetsAt): resetsAt is number =>
+				typeof resetsAt === "number" && resetsAt > now,
+		);
+	return pendingResets.length > 0 ? Math.min(...pendingResets) : undefined;
+};
+
+/** Free plans have no subscription, so they follow the paid plan on the same customer or entity. */
+const findPaidRecurringAnchorProduct = ({
+	fullCustomer,
+	customerProduct,
+}: {
+	fullCustomer: FullCustomer;
+	customerProduct: FullCusProduct;
+}) => {
+	const paidRecurringProducts = fullCustomer.customer_products.filter(
+		(candidate) =>
+			candidate.status !== CusProductStatus.Scheduled &&
+			candidate.subscription_ids?.length &&
+			isCustomerProductPaidRecurring(candidate),
+	);
+	return (
+		paidRecurringProducts.find(
+			(candidate) =>
+				candidate.internal_entity_id === customerProduct.internal_entity_id,
+		) ??
+		paidRecurringProducts.find((candidate) => !candidate.internal_entity_id)
+	);
+};
+
 /** Pooled balances have no customer product, so anchor them to the pool's
  * Stripe subscription instead. */
 const getSyncedPooledAnchor = async ({
 	ctx,
+	fullCustomer,
 	customerEntitlement,
 	now,
 }: {
 	ctx: AutumnContext;
-	customerEntitlement: Awaited<ReturnType<typeof CusEntService.getStrict>>;
+	fullCustomer: FullCustomer;
+	customerEntitlement: CustomerEntitlementToSync;
 	now: number;
 }): Promise<SyncedAnchor | null> => {
 	const pooledBalance = await ctx.db.query.pooledBalances.findFirst({
@@ -64,11 +117,21 @@ const getSyncedPooledAnchor = async ({
 	});
 
 	return {
-		nextResetAt: getCycleEnd({
-			anchor,
-			interval: pooledBalance.interval,
-			intervalCount: pooledBalance.interval_count,
-			now,
+		nextResetAt: clampNextResetAtToPendingBillingCycleAnchor({
+			billingCycleAnchorResetsAt: getPendingAnchorResetsAt({
+				customerProducts: filterCustomerProductsByStripeSubscriptionId({
+					customerProducts: fullCustomer.customer_products,
+					stripeSubscriptionId: pooledBalance.stripe_subscription_id,
+				}),
+				now,
+			}),
+			currentEpochMs: now,
+			nextResetAt: getCycleEnd({
+				anchor,
+				interval: pooledBalance.interval,
+				intervalCount: pooledBalance.interval_count,
+				now,
+			}),
 		}),
 		pooledBalanceId: pooledBalance.id,
 		resetCycleAnchor: anchor,
@@ -77,11 +140,13 @@ const getSyncedPooledAnchor = async ({
 
 const getSyncedNextResetAt = async ({
 	ctx,
+	fullCustomer,
 	customerEntitlement,
 	now,
 }: {
 	ctx: AutumnContext;
-	customerEntitlement: Awaited<ReturnType<typeof CusEntService.getStrict>>;
+	fullCustomer: FullCustomer;
+	customerEntitlement: CustomerEntitlementToSync;
 	now: number;
 }): Promise<SyncedAnchor | null> => {
 	if (
@@ -94,15 +159,20 @@ const getSyncedNextResetAt = async ({
 	}
 
 	if (customerEntitlement.is_pooled_balance) {
-		return getSyncedPooledAnchor({ ctx, customerEntitlement, now });
+		return getSyncedPooledAnchor({
+			ctx,
+			fullCustomer,
+			customerEntitlement,
+			now,
+		});
 	}
 
 	const customerProductId = customerEntitlement.customer_product_id;
 	if (!customerProductId) return null;
 
-	const customerProduct = await CusProductService.getFull({
-		db: ctx.db,
-		id: customerProductId,
+	const customerProduct = findCustomerProductById({
+		fullCustomer,
+		customerProductId,
 	});
 	if (
 		!customerProduct ||
@@ -112,19 +182,29 @@ const getSyncedNextResetAt = async ({
 		return null;
 	}
 
-	const subscriptionId = customerProduct.subscription_ids?.[0];
-	let anchor = customerProduct.starts_at;
-	if (subscriptionId) {
-		anchor = await getStripeBillingCycleAnchor({ ctx, subscriptionId });
-	}
+	const anchorProduct = customerProduct.subscription_ids?.length
+		? customerProduct
+		: (findPaidRecurringAnchorProduct({ fullCustomer, customerProduct }) ??
+			customerProduct);
+	const subscriptionId = anchorProduct.subscription_ids?.[0];
+	const anchor = subscriptionId
+		? await getStripeBillingCycleAnchor({ ctx, subscriptionId })
+		: anchorProduct.starts_at;
 	if (anchor == null) return null;
 
 	return {
-		nextResetAt: getCycleEnd({
-			anchor,
-			interval: customerEntitlement.entitlement.interval ?? EntInterval.Month,
-			intervalCount: customerEntitlement.entitlement.interval_count,
-			now,
+		nextResetAt: clampNextResetAtToPendingBillingCycleAnchor({
+			billingCycleAnchorResetsAt: getPendingAnchorResetsAt({
+				customerProducts: [anchorProduct],
+				now,
+			}),
+			currentEpochMs: now,
+			nextResetAt: getCycleEnd({
+				anchor,
+				interval: customerEntitlement.entitlement.interval ?? EntInterval.Month,
+				intervalCount: customerEntitlement.entitlement.interval_count,
+				now,
+			}),
 		}),
 	};
 };
@@ -147,6 +227,19 @@ export const syncCustomerEntitlementAnchors = async ({
 			}),
 		),
 	);
+	const fullCustomerByInternalId = new Map<string, Promise<FullCustomer>>();
+	const getFullCustomer = (internalCustomerId: string) => {
+		const cached = fullCustomerByInternalId.get(internalCustomerId);
+		if (cached) return cached;
+		const fullCustomer = CusService.getFull({
+			ctx,
+			idOrInternalId: internalCustomerId,
+			withEntities: true,
+			skipReset: true,
+		});
+		fullCustomerByInternalId.set(internalCustomerId, fullCustomer);
+		return fullCustomer;
+	};
 	const now = Date.now();
 	const updates = (
 		await Promise.all(
@@ -154,6 +247,9 @@ export const syncCustomerEntitlementAnchors = async ({
 				customerEntitlement,
 				synced: await getSyncedNextResetAt({
 					ctx,
+					fullCustomer: await getFullCustomer(
+						customerEntitlement.customer.internal_id,
+					),
 					customerEntitlement,
 					now,
 				}),

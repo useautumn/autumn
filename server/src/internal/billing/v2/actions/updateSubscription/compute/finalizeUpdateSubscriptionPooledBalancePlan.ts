@@ -13,6 +13,7 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { mergePooledBalancePlans } from "@/internal/billing/v2/utils/billingPlan/mergePooledBalancePlans";
 import { computeUpdateQuantityPooledAnchorResetPlan } from "./updateQuantity/computeUpdateQuantityPooledAnchorResetPlan.js";
+import { computeUpdateQuantityScheduledAnchorPlan } from "./updateQuantity/computeUpdateQuantityScheduledAnchorPlan.js";
 
 export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 	ctx,
@@ -23,8 +24,11 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 }): AutumnBillingPlan => {
+	const reanchorsPoolsInPlace =
+		billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity ||
+		billingContext.intent === UpdateSubscriptionIntent.None;
 	if (
-		billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity &&
+		reanchorsPoolsInPlace &&
 		billingContext.requestedBillingCycleAnchor === "now"
 	) {
 		return computeUpdateQuantityPooledAnchorResetPlan({
@@ -32,6 +36,14 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 			billingContext,
 			plan,
 		});
+	}
+
+	// Quantity updates already schedule their pools in computeUpdateQuantityPlan.
+	if (
+		billingContext.intent === UpdateSubscriptionIntent.None &&
+		typeof billingContext.requestedBillingCycleAnchor === "number"
+	) {
+		return computeUpdateQuantityScheduledAnchorPlan({ plan, billingContext });
 	}
 
 	// Keyed on plan contents: any quantity update that moves license pool
