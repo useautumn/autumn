@@ -223,6 +223,7 @@ export const DataTable = <T,>({
 				linkComponent: Link,
 				emptyStateText: emptyText,
 				rowClassName,
+				mobileCards: true,
 			}}
 		>
 			<div
@@ -232,11 +233,10 @@ export const DataTable = <T,>({
 				}
 			>
 				<Table.Container>
-					<Table.Content>
+					<Table.Content footer={footer}>
 						<Table.Header />
 						<Table.Body />
 					</Table.Content>
-					{footer}
 				</Table.Container>
 			</div>
 		</Table.Provider>
@@ -265,30 +265,29 @@ export const PagedDataTable = <T,>({
 	);
 	const go = (next: number) => setPage({ resetKey, index: next });
 	return (
-		<>
-			<DataTable
-				{...props}
-				data={data && rows.slice(index * pageSize, (index + 1) * pageSize)}
-			/>
-			{rows.length > Math.min(pageSize, pageSizes[0] ?? pageSize) && (
-				<TablePaginationFooter
-					currentPage={index + 1}
-					totalPages={totalPages}
-					totalCount={rows.length}
-					canGoPrev={index > 0}
-					canGoNext={index < totalPages - 1}
-					onPrev={() => go(index - 1)}
-					onNext={() => go(index + 1)}
-					pageSize={pageSize}
-					pageSizeOptions={pageSizes}
-					onPageSizeChange={(size) => {
-						setPageSize(size);
-						go(0);
-					}}
-					className="pt-3"
-				/>
-			)}
-		</>
+		<DataTable
+			{...props}
+			data={data && rows.slice(index * pageSize, (index + 1) * pageSize)}
+			footer={
+				rows.length > Math.min(pageSize, pageSizes[0] ?? pageSize) && (
+					<TablePaginationFooter
+						currentPage={index + 1}
+						totalPages={totalPages}
+						totalCount={rows.length}
+						canGoPrev={index > 0}
+						canGoNext={index < totalPages - 1}
+						onPrev={() => go(index - 1)}
+						onNext={() => go(index + 1)}
+						pageSize={pageSize}
+						pageSizeOptions={pageSizes}
+						onPageSizeChange={(size) => {
+							setPageSize(size);
+							go(0);
+						}}
+					/>
+				)
+			}
+		/>
 	);
 };
 

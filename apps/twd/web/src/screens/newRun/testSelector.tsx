@@ -220,7 +220,7 @@ export const TestSelector = ({
 					value={query}
 					onChange={setQuery}
 					onKeyDown={(e) => e.key === "Escape" && setQuery("")}
-					placeholder={`Fuzzy search ${num(catalog.files.length)} files and ${catalog.groups.length} groups`}
+					placeholder={`Search ${num(catalog.files.length)} files`}
 				/>
 				{query ? (
 					<span className="absolute top-1/2 right-4 -translate-y-1/2">

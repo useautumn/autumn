@@ -202,7 +202,6 @@ const usePagedRuns = (filter: Omit<RunsFilter, "cursor" | "limit">) => {
 			pageSizeOptions={PAGE_SIZES}
 			onPageSizeChange={setPageSize}
 			disabled={query.isFetching}
-			className="pt-3"
 		/>
 	);
 	return { query, page, footer };
@@ -271,6 +270,7 @@ export const RunsScreen = () => {
 			<DataTable
 				data={live.page?.runs}
 				isLoading={live.query.isLoading}
+				footer={live.footer}
 				columns={columns}
 				getRowHref={href}
 				emptyText={
@@ -279,7 +279,6 @@ export const RunsScreen = () => {
 						: "Nothing running. Runs appear here the moment they are queued."
 				}
 			/>
-			{live.footer}
 
 			<SectionTag className="mt-6">
 				Finished{" "}
@@ -290,11 +289,11 @@ export const RunsScreen = () => {
 			<DataTable
 				data={finished.page?.runs}
 				isLoading={finished.query.isLoading}
+				footer={finished.footer}
 				columns={columns}
 				getRowHref={href}
 				emptyText="No finished runs match. Clear the branch or status filter to see more."
 			/>
-			{finished.footer}
 		</>
 	);
 };

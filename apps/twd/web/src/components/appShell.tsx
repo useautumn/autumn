@@ -9,11 +9,17 @@ import {
 	DropdownMenuTrigger,
 } from "@autumn/ui/components/ui/dropdown-menu";
 import {
+	Sheet,
+	SheetContent,
+	SheetTitle,
+} from "@autumn/ui/components/ui/sheet";
+import {
 	ChevronsUpDown,
 	CircleDollarSign,
 	KeyRound,
 	List,
 	LogOut,
+	Menu,
 	Monitor,
 	Moon,
 	Plus,
@@ -222,10 +228,13 @@ const UserMenu = () => {
 	);
 };
 
-const Sidebar = () => (
+const Sidebar = ({ className }: { className?: string }) => (
 	<div
 		data-slot="main-sidebar"
-		className="flex h-full w-[200px] shrink-0 flex-col justify-between overflow-y-auto px-2.5 py-3.5"
+		className={cn(
+			"flex h-full w-[200px] shrink-0 flex-col justify-between overflow-y-auto px-2.5 py-3.5",
+			className,
+		)}
 	>
 		<div className="flex flex-col gap-3.5">
 			<Link to="/" className="flex h-8 items-center gap-2 px-1.5">
@@ -291,6 +300,9 @@ export const AppShell = () => {
 	const location = useLocation();
 	const signedOut =
 		me.error instanceof ApiRequestError && me.error.status === 401;
+	// Keyed to the path it was opened on, so navigating closes it without an effect.
+	const [menuOpenedAt, setMenuOpenedAt] = useState<string | null>(null);
+	const menuOpen = menuOpenedAt === location.pathname;
 	useLiveTopics(!signedOut && "capacity");
 
 	if (signedOut)
@@ -299,12 +311,42 @@ export const AppShell = () => {
 		);
 
 	return (
-		<div className="flex h-screen w-screen bg-outer-background">
+		<div className="flex h-dvh w-screen bg-outer-background">
 			<div className="hidden sm:flex">
 				<Sidebar />
 			</div>
-			<main className="relative flex h-screen w-full flex-col overflow-hidden sm:py-3 sm:pr-3">
-				<div className="relative flex h-full w-full flex-col overflow-hidden sm:rounded-xl sm:border">
+			<Sheet
+				open={menuOpen}
+				onOpenChange={(open) =>
+					setMenuOpenedAt(open ? location.pathname : null)
+				}
+			>
+				<SheetContent
+					side="left"
+					hideCloseButton
+					portalContainer={document.body}
+					className="w-[260px] max-w-[80vw] bg-outer-background p-0"
+					aria-describedby={undefined}
+				>
+					<SheetTitle className="sr-only">Navigation</SheetTitle>
+					<Sidebar className="w-full" />
+				</SheetContent>
+			</Sheet>
+			<main className="relative flex h-dvh w-full min-w-0 flex-col overflow-hidden sm:py-3 sm:pr-3">
+				<div className="sticky top-0 z-50 flex h-11 shrink-0 items-center gap-2 border-b border-border/40 bg-background px-3 sm:hidden">
+					<button
+						type="button"
+						onClick={() => setMenuOpenedAt(location.pathname)}
+						className="-ml-1 flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+						aria-label="Open menu"
+					>
+						<Menu className="size-[18px]" />
+					</button>
+					<Link to="/" className="text-[13px] font-[550] text-foreground">
+						twd
+					</Link>
+				</div>
+				<div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden sm:rounded-xl sm:border">
 					<div
 						data-main-content
 						className="relative h-full w-full overflow-auto bg-background"
