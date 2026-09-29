@@ -63,7 +63,14 @@ export async function multiAttach({
 		params,
 	});
 
-	handleMultiAttachCurrencyErrors({ ctx, billingContext, params });
+	handleMultiAttachCurrencyErrors({
+		ctx,
+		billingContext,
+		params,
+		fullProducts: billingContext.productContexts.map(
+			({ fullProduct }) => fullProduct,
+		),
+	});
 
 	// 2b. Log context
 	logMultiAttachContext({ ctx, billingContext });

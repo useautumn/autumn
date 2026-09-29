@@ -2,6 +2,7 @@ import type { CreateScheduleBillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	assertNoDuplicateSubscriptionIds,
+	presentSubscriptionIds,
 	throwSubscriptionIdInUse,
 } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
@@ -40,7 +41,7 @@ export const handleSetPlansSubscriptionIdErrors = async ({
 	}
 
 	const requestedSubscriptionIds = [
-		...new Set(phaseSubscriptionIds.flat().filter((id): id is string => !!id)),
+		...new Set(presentSubscriptionIds(phaseSubscriptionIds.flat())),
 	];
 	if (requestedSubscriptionIds.length === 0) return;
 

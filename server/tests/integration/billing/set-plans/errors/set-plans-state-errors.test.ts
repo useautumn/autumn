@@ -1,9 +1,4 @@
-/**
- * set_plans rejects requests the customer's billing state can't support.
- *
- * Red (before):  currency conflicts reached Stripe, or were scheduled to fail later.
- * Green (after): each request is rejected with a 400 before any write.
- */
+// set_plans rejects, before any write, requests the customer's billing state can't support.
 
 import { expect, test } from "bun:test";
 import { ErrCode, ms } from "@autumn/shared";

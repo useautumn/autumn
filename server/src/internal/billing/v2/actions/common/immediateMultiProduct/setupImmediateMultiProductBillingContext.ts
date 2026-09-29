@@ -49,6 +49,18 @@ export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
 	no_billing_changes?: boolean;
 };
 
+const isWithinStartTolerance = ({
+	startsAt,
+	currentEpochMs,
+	toleranceMs,
+}: {
+	startsAt: number;
+	currentEpochMs: number;
+	toleranceMs?: number;
+}) =>
+	!isPastStartDate(startsAt, currentEpochMs, toleranceMs) &&
+	!isFutureStartDate(startsAt, currentEpochMs, toleranceMs);
+
 const getSubscriptionTarget = ({
 	productContext,
 }: {
@@ -334,16 +346,11 @@ export const setupImmediateMultiProductBillingContext = async ({
 		currentEpochMs,
 		startsNow:
 			billingStartsAt === undefined ||
-			(!isPastStartDate(
-				billingStartsAt,
+			isWithinStartTolerance({
+				startsAt: billingStartsAt,
 				currentEpochMs,
-				billingStartsAtToleranceMs,
-			) &&
-				!isFutureStartDate(
-					billingStartsAt,
-					currentEpochMs,
-					billingStartsAtToleranceMs,
-				)),
+				toleranceMs: billingStartsAtToleranceMs,
+			}),
 	});
 
 	let billingCycleAnchorMs = setupBillingCycleAnchor({

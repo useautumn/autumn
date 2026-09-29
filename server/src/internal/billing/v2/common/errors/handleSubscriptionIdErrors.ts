@@ -2,7 +2,7 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
-const presentSubscriptionIds = (
+export const presentSubscriptionIds = (
 	subscriptionIds: (string | undefined | null)[],
 ): string[] => subscriptionIds.filter((id): id is string => !!id);
 

@@ -107,8 +107,8 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	// A terminal sub carries no live billing state. Report it separately so each
-	// caller decides: abandon it (attach) or block Stripe writes (updateSubscription).
+	// A terminal subscription carries no live billing state; each caller decides
+	// whether to abandon it or block writes.
 	if (isTerminalStripeSubscription(sub)) {
 		return { canceledStripeSubscriptionId: subId };
 	}

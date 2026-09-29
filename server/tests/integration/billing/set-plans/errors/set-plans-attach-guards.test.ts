@@ -1,9 +1,4 @@
-/**
- * set_plans adopts attach's request guards (Q6).
- *
- * Red (before):  set_plans skipped them and executed the request.
- * Green (after): each request is rejected with attach's message.
- */
+// set_plans rejects the requests attach's guards reject, with attach's messages.
 
 import { test } from "bun:test";
 import { ErrCode, ms } from "@autumn/shared";

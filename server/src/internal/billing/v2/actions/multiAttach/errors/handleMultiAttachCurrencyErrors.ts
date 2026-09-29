@@ -20,14 +20,12 @@ export const handleMultiAttachCurrencyErrors = ({
 	ctx,
 	billingContext,
 	params,
-	fullProducts = billingContext.productContexts.map(
-		(productContext) => productContext.fullProduct,
-	),
+	fullProducts,
 }: {
 	ctx: AutumnContext;
 	billingContext: MultiAttachBillingContext;
 	params: Pick<MultiAttachParamsV0, "currency">;
-	fullProducts?: FullProduct[];
+	fullProducts: FullProduct[];
 }) => {
 	const { fullCustomer } = billingContext;
 
