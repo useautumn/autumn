@@ -9,9 +9,12 @@
  *                Stripe reports a cancelled incomplete subscription as incomplete_expired.
  * Without a card the new subscription goes through Checkout, and the old one is
  * cancelled only once checkout completes (Q15). An open session for other plans is expired.
+ * Pending plans on the old subscription expire only when it is cancelled, so
+ * no_billing_changes keeps them (red before: they were expired anyway).
  */
 
 import { expect, test } from "bun:test";
+import { CusProductStatus } from "@autumn/shared";
 import {
 	expectPreviewWarning,
 	expectSubscriptionReplaced,
@@ -28,6 +31,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { timeout } from "@/utils/genUtils";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
@@ -212,5 +216,97 @@ test.concurrent(
 			productId: pro.id,
 			replacedSubscriptionId: paused.id,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans unusable: an incomplete subscription replaced through Checkout leaves no Pending plans")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { customerId, autumnV2_4, ctx } = await initScenario({
+			customerId: "set-plans-incomplete-checkout",
+			setup: [
+				s.customer({ paymentMethod: "fail" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+		const incomplete = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "incomplete",
+		});
+		const { data: paymentMethods } = await ctx.stripeCli.paymentMethods.list({
+			customer: incomplete.customer as string,
+		});
+		for (const paymentMethod of paymentMethods) {
+			await ctx.stripeCli.paymentMethods.detach(paymentMethod.id);
+		}
+
+		const response = await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+		});
+		expect(response.payment_url).toBeDefined();
+		await completeStripeCheckoutFormV2({ url: response.payment_url! });
+
+		await expectCustomerProducts({
+			customerId,
+			active: [pro.id],
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		});
+		await expectSubscriptionReplaced({
+			ctx,
+			customerId,
+			productId: pro.id,
+			replacedSubscriptionId: incomplete.id,
+			replacedStatus: "incomplete_expired",
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans unusable: no_billing_changes keeps the incomplete subscription's Pending plans")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { customerId, autumnV2_4, ctx } = await initScenario({
+			customerId: "set-plans-incomplete-no-billing",
+			setup: [
+				s.customer({ paymentMethod: "fail" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+		const incomplete = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "incomplete",
+		});
+
+		await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+			no_billing_changes: true,
+		});
+
+		expect(
+			(await ctx.stripeCli.subscriptions.retrieve(incomplete.id)).status,
+		).toBe("incomplete");
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const pendingRows = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: fullCustomer.internal_id,
+			inStatuses: [CusProductStatus.Pending],
+		});
+		expect(pendingRows).toHaveLength(1);
 	},
 );
