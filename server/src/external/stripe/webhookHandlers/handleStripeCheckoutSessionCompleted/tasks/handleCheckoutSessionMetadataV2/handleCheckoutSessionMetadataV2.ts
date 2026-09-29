@@ -14,7 +14,7 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import {
 	isCreateScheduleBillingContext,
 	persistDeferredCreateSchedule,
-} from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
+} from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/promotePendingCustomerProducts";

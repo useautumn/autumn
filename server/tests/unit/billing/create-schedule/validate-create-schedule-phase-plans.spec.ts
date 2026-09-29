@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
-import { validateCreateSchedulePhasePlans } from "@/internal/billing/v2/actions/createSchedule/errors/validateCreateSchedulePhasePlans";
+import { validateCreateSchedulePhasePlans } from "@/internal/billing/v2/actions/setPlans/errors/validateCreateSchedulePhasePlans";
 
 const recurringProduct = ({
 	id,

@@ -10,7 +10,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
-import { resolveCreateScheduleRecurringProducts } from "@/internal/billing/v2/actions/createSchedule/utils/resolveCreateScheduleRecurringProducts";
+import { resolveCreateScheduleRecurringProducts } from "@/internal/billing/v2/actions/setPlans/utils/resolveCreateScheduleRecurringProducts";
 
 const entity = (internalId: string) =>
 	({ internal_id: internalId, id: internalId }) as unknown as Entity;

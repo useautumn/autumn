@@ -6,7 +6,7 @@ import type {
 	MultiAttachProductContext,
 } from "@autumn/shared";
 import chalk from "chalk";
-import { computeScopeForScheduledProduct } from "@/internal/billing/v2/actions/createSchedule/utils/computeScopeForScheduledProduct";
+import { computeScopeForScheduledProduct } from "@/internal/billing/v2/actions/setPlans/utils/computeScopeForScheduledProduct";
 
 // prices: [] keeps isOneOffProduct's price scan from tripping on a bare stub.
 const product = ({

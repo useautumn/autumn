@@ -8,10 +8,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
-import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
 import { buildSetPlansPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPhaseCustomers";
 import { setPlansPhasePlans } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPhasePlans";
 import { setPlansPhaseTransitions } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPhaseTransitions";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import {
 	makeAutumnBillingPlan,
 	makeUpdate,

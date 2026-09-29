@@ -19,7 +19,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	handleCreateScheduleComputeErrors,
 	handleCreateScheduleErrors,
-} from "@/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors";
+} from "@/internal/billing/v2/actions/setPlans/errors/handleCreateScheduleErrors";
 import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
 
 const buildContext = ({

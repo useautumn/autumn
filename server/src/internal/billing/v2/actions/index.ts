@@ -1,7 +1,5 @@
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
 import { attachLicense } from "@/internal/billing/v2/actions/attachLicense/attachLicense";
-import { createSchedule } from "@/internal/billing/v2/actions/createSchedule/createSchedule";
-import { previewCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/previewCreateSchedule";
 import { flash } from "@/internal/billing/v2/actions/dfu/flash";
 import { legacyAttach } from "@/internal/billing/v2/actions/legacy/legacyAttach";
 import { renew } from "@/internal/billing/v2/actions/legacy/renew";
@@ -14,6 +12,7 @@ import { previewRestore } from "@/internal/billing/v2/actions/restore/previewRes
 import { restore } from "@/internal/billing/v2/actions/restore/restore";
 import { rollback } from "@/internal/billing/v2/actions/rollback/rollback";
 import { previewSetPlans } from "@/internal/billing/v2/actions/setPlans/previewSetPlans";
+import { previewSetPlansBilling } from "@/internal/billing/v2/actions/setPlans/previewSetPlansBilling";
 import { setPlans } from "@/internal/billing/v2/actions/setPlans/setPlans";
 import { setupPayment } from "@/internal/billing/v2/actions/setupPayment/setupPayment";
 import { previewSyncV2 } from "@/internal/billing/v2/actions/sync/previewSyncV2";
@@ -27,8 +26,7 @@ import { verify } from "@/internal/billing/v2/actions/verify/verify";
 export const billingActions = {
 	attach: attach,
 	attachLicense: attachLicense,
-	createSchedule: createSchedule,
-	previewCreateSchedule: previewCreateSchedule,
+	previewSetPlansBilling: previewSetPlansBilling,
 	multiAttach: multiAttach,
 	setPlans: setPlans,
 	previewSetPlans: previewSetPlans,
