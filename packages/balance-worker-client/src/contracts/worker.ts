@@ -5,24 +5,26 @@ export type WorkerRequest = {
 	command: unknown;
 	payload?: unknown;
 };
-export type WorkerErrorCode =
-	| "INVALID_REQUEST"
-	| "NOT_OWNER"
-	| "NOT_READY"
-	| "OVERLOADED"
-	| "RECORD_TOO_LARGE"
-	| "NOT_INITIALIZED"
-	| "STALE_SUBJECT"
-	| "CUSTOMER_NOT_FOUND"
-	| "ENTITY_NOT_FOUND"
-	| "CATALOG_NOT_FOUND"
-	| "COMMAND_CONFLICT"
-	| "DUPLICATE_COMMAND"
-	| "LOCK_ALREADY_EXISTS"
-	| "LOCK_NOT_FOUND"
-	| "UNSUPPORTED_COMMAND"
-	| "RECORD_REFUSED"
-	| "INTERNAL";
+export const WORKER_ERROR_CODES = [
+	"INVALID_REQUEST",
+	"NOT_OWNER",
+	"NOT_READY",
+	"OVERLOADED",
+	"RECORD_TOO_LARGE",
+	"NOT_INITIALIZED",
+	"STALE_SUBJECT",
+	"CUSTOMER_NOT_FOUND",
+	"ENTITY_NOT_FOUND",
+	"CATALOG_NOT_FOUND",
+	"COMMAND_CONFLICT",
+	"DUPLICATE_COMMAND",
+	"LOCK_ALREADY_EXISTS",
+	"LOCK_NOT_FOUND",
+	"UNSUPPORTED_COMMAND",
+	"RECORD_REFUSED",
+	"INTERNAL",
+] as const;
+export type WorkerErrorCode = (typeof WORKER_ERROR_CODES)[number];
 export type WorkerErrorResponse = {
 	error: { code: WorkerErrorCode; message: string; reason?: string };
 };

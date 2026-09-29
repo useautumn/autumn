@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
+import {
+	createBalanceWorkerClientEnv,
+	createBalanceWorkerTransportEnv,
+} from "./balanceWorkerClient.js";
 
 const localEnv = { KAFKA_AUTH_MODE: "none" };
 
@@ -56,4 +59,31 @@ test.concurrent("the ownership topic derives from the deployment", () => {
 	expect(env.BALANCE_WORKER_OWNERSHIP_TOPIC).toBe(
 		"tf-balance-staging-v2-64-ownership",
 	);
+});
+
+test.concurrent("MSK is reached directly only from inside ECS", () => {
+	expect(
+		createBalanceWorkerTransportEnv({ NODE_ENV: "production" })
+			.BALANCE_WORKER_TRANSPORT,
+	).toBe("proxy");
+	expect(
+		createBalanceWorkerTransportEnv({
+			ECS_CONTAINER_METADATA_URI_V4: "http://169.254.170.2/v4/task",
+		}).BALANCE_WORKER_TRANSPORT,
+	).toBe("direct");
+	expect(
+		createBalanceWorkerTransportEnv(localEnv).BALANCE_WORKER_TRANSPORT,
+	).toBe("direct");
+	expect(
+		createBalanceWorkerTransportEnv({
+			...localEnv,
+			BALANCE_WORKER_TRANSPORT: "proxy",
+		}).BALANCE_WORKER_TRANSPORT,
+	).toBe("proxy");
+});
+
+test.concurrent("the proxy secret must be long enough to sign with", () => {
+	expect(() =>
+		createBalanceWorkerTransportEnv({ BALANCE_WORKER_PROXY_SECRET: "short" }),
+	).toThrow("BALANCE_WORKER_PROXY_SECRET must be at least 32 characters");
 });

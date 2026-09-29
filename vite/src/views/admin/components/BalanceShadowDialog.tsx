@@ -38,7 +38,7 @@ export function BalanceShadowDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[85dvh] max-w-2xl flex-col bg-card">
+			<DialogContent className="flex max-h-[85dvh] max-w-2xl flex-col">
 				<DialogHeader>
 					<DialogTitle>Balance Shadow</DialogTitle>
 					<DialogDescription>

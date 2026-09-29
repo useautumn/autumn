@@ -103,7 +103,7 @@ export function CustomerListCreateButton() {
 					Create Customer
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="w-[400px] bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Create Customer</DialogTitle>
 					<DialogDescription>

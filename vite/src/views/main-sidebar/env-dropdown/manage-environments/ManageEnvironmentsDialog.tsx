@@ -143,7 +143,7 @@ export const ManageEnvironmentsDialog = ({
 	<Dialog open={open} onOpenChange={onOpenChange}>
 		<DialogContent
 			showCloseButton={false}
-			className="flex h-[min(520px,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[760px] flex-col gap-0 overflow-hidden bg-card p-0 sm:flex-row"
+			className="flex h-[min(520px,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[760px] flex-col gap-0 overflow-hidden p-0 sm:flex-row"
 		>
 			<ManageEnvironmentsPanel
 				sandboxes={sandboxes}

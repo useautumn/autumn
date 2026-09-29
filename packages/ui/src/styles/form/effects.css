@@ -2,20 +2,29 @@
 
 /* Input shadow CSS variables - define once, use everywhere */
 :root {
-	--input-shadow-default: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+	--input-border-hover: color-mix(in oklch, var(--foreground) 18%, transparent);
+	--input-border-focus: color-mix(in oklch, var(--foreground) 28%, transparent);
 
-	--input-shadow-hover: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
+	--input-shadow-default: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+
+	--input-shadow-hover: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 
 	--input-shadow-focus:
-		0 0 0 0.5px var(--primary), 0 0 8px 1px rgba(136, 56, 255, 0.25), 0 4px 4px
-		0 rgba(0, 0, 0, 0.04);
+		0 0 0 3px color-mix(in oklch, var(--foreground) 7%, transparent), 0 1px 2px
+		0 rgb(0 0 0 / 0.05);
 
-	--input-shadow-focus-tiny:
-		0 0 0 0.2px var(--primary), 0 4px 4px 0 rgba(0, 0, 0, 0.04);
+	--input-shadow-focus-tiny: 0 0 0 2px
+		color-mix(in oklch, var(--foreground) 6%, transparent);
 
-	--input-shadow-destructive:
-		0 0 0 0.5px var(--color-destructive), 0 0 8px 1px rgba(228, 0, 0, 0.25), 0
-		4px 4px 0 rgba(0, 0, 0, 0.04);
+	--input-shadow-destructive: 0 0 0 3px
+		color-mix(in oklch, var(--color-destructive) 18%, transparent);
+}
+
+.dark {
+	--input-shadow-default: none;
+	--input-shadow-hover: none;
+	--input-shadow-focus: 0 0 0 3px
+		color-mix(in oklch, var(--foreground) 6%, transparent);
 }
 
 /* Standalone shadow classes - for direct use */

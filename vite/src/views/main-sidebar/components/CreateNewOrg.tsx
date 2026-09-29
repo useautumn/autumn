@@ -60,7 +60,7 @@ export const CreateNewOrg = ({
 				if (!open) setDialogType(null);
 			}}
 		>
-			<DialogContent className="w-[400px] bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Create Organization</DialogTitle>
 					<DialogDescription>

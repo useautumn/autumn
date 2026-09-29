@@ -128,7 +128,7 @@ export const SavedViews = ({
 							<PopoverContent
 								sideOffset={2}
 								align="start"
-								className="border w-64 z-200"
+								className="w-64 z-200"
 								onOpenAutoFocus={(e) => e.preventDefault()}
 								onCloseAutoFocus={(e) => e.preventDefault()}
 							>

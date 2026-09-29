@@ -35,7 +35,7 @@ export const RawEdgeConfigDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-5xl bg-card">
+			<DialogContent className="max-w-5xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">
 						Raw Config — Request Blocking

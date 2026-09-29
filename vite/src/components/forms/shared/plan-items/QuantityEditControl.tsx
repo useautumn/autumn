@@ -69,7 +69,7 @@ export function QuantityEditControl({
 				</PopoverTrigger>
 				<PopoverContent
 					align="end"
-					className="w-44 p-3"
+					className="w-44"
 					initialFocus={() => {
 						const input = contentRef.current?.querySelector("input");
 						if (!input) return true;
