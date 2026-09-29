@@ -1,17 +1,22 @@
 import type { WorkerErrorCode } from "../contracts/worker.js";
 
-export type WorkerRequestOutcome = "not_submitted" | "unknown";
+export const WORKER_REQUEST_OUTCOMES = ["not_submitted", "unknown"] as const;
+export type WorkerRequestOutcome = (typeof WORKER_REQUEST_OUTCOMES)[number];
+export const BALANCE_WORKER_CLIENT_ERROR_CODES = [
+	"NO_OWNER",
+	"ROUTE_STILL_STALE",
+	"DEADLINE",
+	"ABORTED",
+	"TRANSPORT",
+	"INVALID_RESPONSE",
+	"OWNERSHIP_UNAVAILABLE",
+	"COMMAND_LOG_UNAVAILABLE",
+	"CATALOG_INVALIDATIONS_UNAVAILABLE",
+	"WORKER_ERROR",
+	"PROXY_REJECTED",
+] as const;
 export type BalanceWorkerClientErrorCode =
-	| "NO_OWNER"
-	| "ROUTE_STILL_STALE"
-	| "DEADLINE"
-	| "ABORTED"
-	| "TRANSPORT"
-	| "INVALID_RESPONSE"
-	| "OWNERSHIP_UNAVAILABLE"
-	| "COMMAND_LOG_UNAVAILABLE"
-	| "CATALOG_INVALIDATIONS_UNAVAILABLE"
-	| "WORKER_ERROR";
+	(typeof BALANCE_WORKER_CLIENT_ERROR_CODES)[number];
 
 export class BalanceWorkerClientError extends Error {
 	readonly code: BalanceWorkerClientErrorCode;

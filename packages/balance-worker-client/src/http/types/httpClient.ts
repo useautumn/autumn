@@ -2,6 +2,7 @@ export type HttpRequest = {
 	url: string;
 	body: unknown;
 	signal: AbortSignal;
+	headers?: Record<string, string>;
 };
 export type HttpResponse = { status: number; body: unknown };
 export type HttpClient = {

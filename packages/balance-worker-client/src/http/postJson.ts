@@ -16,7 +16,11 @@ export async function postJson({
 	request.signal.throwIfAborted();
 	const response = await fetch(request.url, {
 		method: "POST",
-		headers: { "content-type": "application/json", accept: "application/json" },
+		headers: {
+			...request.headers,
+			"content-type": "application/json",
+			accept: "application/json",
+		},
 		body: JSON.stringify(request.body),
 		signal: request.signal,
 		redirect: "manual",
