@@ -3,7 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { logMultiAttachContext } from "@/internal/billing/v2/actions/multiAttach/logs/logMultiAttachContext";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
-/** Logs the immediate-phase context plus a one-line summary of every phase. */
 export const logSetPlansContext = ({
 	ctx,
 	billingContext,

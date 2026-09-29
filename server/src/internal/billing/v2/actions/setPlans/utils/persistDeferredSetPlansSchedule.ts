@@ -55,9 +55,7 @@ const buildDeferredSchedulePhases = ({
 	});
 
 	if (currentIndex !== allCustomerProductIds.length) {
-		throw new Error(
-			"Deferred create_schedule phases did not match billing plan",
-		);
+		throw new Error("Deferred set_plans phases did not match billing plan");
 	}
 
 	return phases;

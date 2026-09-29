@@ -97,14 +97,12 @@ export async function previewCheckoutAction({
 				preview: true,
 			});
 
-			billingPlan = setPlansResult.billingPlan;
-
 			return {
 				billingContext: setPlansResult.billingContext,
 				preview: await billingPlanToAttachPreview({
 					ctx,
 					billingContext: setPlansResult.billingContext,
-					billingPlan,
+					billingPlan: setPlansResult.billingPlan,
 				}),
 			};
 		}
