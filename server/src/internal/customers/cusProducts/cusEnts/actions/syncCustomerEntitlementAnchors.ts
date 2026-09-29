@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	clampNextResetAtToPendingBillingCycleAnchor,
 	EntInterval,
+	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
 	filterCustomerProductsByStripeSubscriptionId,
@@ -17,11 +18,13 @@ import {
 	secondsToMs,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
+import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import RecaseError from "@/utils/errorUtils.js";
 import { CusEntService } from "../CusEntitlementService";
 
 type SyncedAnchor = {
@@ -184,13 +187,16 @@ const getSyncedNextResetAt = async ({
 
 	const anchorProduct = customerProduct.subscription_ids?.length
 		? customerProduct
-		: (findPaidRecurringAnchorProduct({ fullCustomer, customerProduct }) ??
-			customerProduct);
-	const subscriptionId = anchorProduct.subscription_ids?.[0];
-	const anchor = subscriptionId
-		? await getStripeBillingCycleAnchor({ ctx, subscriptionId })
-		: anchorProduct.starts_at;
-	if (anchor == null) return null;
+		: findPaidRecurringAnchorProduct({ fullCustomer, customerProduct });
+	const subscriptionId = anchorProduct?.subscription_ids?.[0];
+	if (!anchorProduct || !subscriptionId) {
+		throw new RecaseError({
+			message: "No billing anchor to sync to, please start a subscription",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+	const anchor = await getStripeBillingCycleAnchor({ ctx, subscriptionId });
 
 	return {
 		nextResetAt: clampNextResetAtToPendingBillingCycleAnchor({
