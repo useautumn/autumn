@@ -85,6 +85,7 @@ export function createPartitionRuntimeFactory({
 				commit: config.commit,
 				ownerEpoch,
 				commandOffsets: ctx.commandOffsets,
+				logger: ctx.logger,
 			},
 			config: config.commands,
 		});

@@ -1,4 +1,5 @@
 import { createInvoice } from "./create/createInvoice";
+import { finalizeInvoice } from "./finalizeInvoice";
 import { insertInvoices } from "./insertInvoices";
 import { payInvoiceOutOfBand } from "./payOutOfBand";
 import { reissueInvoice } from "./reissueInvoice";
@@ -9,6 +10,7 @@ import { voidInvoice } from "./voidInvoice";
 
 export const invoiceActions = {
 	create: createInvoice,
+	finalize: finalizeInvoice,
 	insert: insertInvoices,
 	payOutOfBand: payInvoiceOutOfBand,
 	reissue: reissueInvoice,

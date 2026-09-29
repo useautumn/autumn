@@ -59,6 +59,7 @@ import {
 } from "./featuresContract.js";
 import {
 	createInvoiceContract,
+	finalizeInvoiceContract,
 	insertInvoicesContract,
 	listInvoicesContract,
 	listInvoiceTemplatesContract,
@@ -188,6 +189,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Invoices
 	invoicesCreate: createInvoiceContract,
+	invoicesFinalize: finalizeInvoiceContract,
 	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
 	invoicesListTemplates: listInvoiceTemplatesContract,

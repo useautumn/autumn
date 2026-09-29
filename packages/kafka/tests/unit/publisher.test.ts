@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { MutationRecord } from "@autumn/balance-engine";
 import {
 	CompressionTypes,
+	KafkaJSNumberOfRetriesExceeded,
 	KafkaJSProtocolError,
 	type ProducerRecord,
 	type RecordMetadata,
@@ -270,15 +271,43 @@ function transactionalBatchTests(): void {
 		);
 	}
 
-	/** Refuses the first `refusals` sends the way the coordinator does while it finishes the previous transaction. */
-	function createRefusingProducer({ refusals }: { refusals: number }) {
+	function notLeader(): KafkaJSProtocolError {
+		return new KafkaJSProtocolError(
+			Object.assign(
+				new Error("This server is not the leader for that topic-partition"),
+				{ type: "NOT_LEADER_OR_FOLLOWER", code: 6, retriable: true },
+			),
+		);
+	}
+
+	function producerFenced(): KafkaJSProtocolError {
+		return new KafkaJSProtocolError(
+			Object.assign(
+				new Error("There is a newer producer with the same transactionalId"),
+				{
+					type: "PRODUCER_FENCED",
+					code: 90,
+					retriable: false,
+				},
+			),
+		);
+	}
+
+	/** Refuses the first `refusals` sends with `refusal`, the way a coordinator or a moving leader does. */
+	function createRefusingProducer({
+		refusals,
+		refusal = concurrentTransactions,
+	}: {
+		refusals: number;
+		refusal?: () => Error;
+	}) {
 		const lifecycle: string[] = [];
 		let remaining = refusals;
 		function refuseOrPass(step: string): void {
 			lifecycle.push(step);
 			if (remaining > 0) {
 				remaining -= 1;
-				throw concurrentTransactions();
+				throw refusal();
 			}
 		}
 		async function transaction(): Promise<KafkaTransaction> {
@@ -303,7 +332,19 @@ function transactionalBatchTests(): void {
 		}
 		return { lifecycle, producer: { transaction } as KafkaProducer };
 	}
-	const fastRetry = { attempts: 3, initialBackoffMs: 1, sleep: async () => {} };
+	/** A clock that only advances while the retry sleeps: three ticks of deadline, one per wait. */
+	function createFastRetry() {
+		let tick = 0;
+		return {
+			deadlineMs: 3,
+			backoffMs: 1,
+			now: () => tick,
+			sleep: async (ms: number) => {
+				tick += ms;
+			},
+		};
+	}
+	const fastRetry = createFastRetry();
 
 	test("a coordinator still finishing the last transaction is retried: abort, wait, begin again", async () => {
 		const fake = createRefusingProducer({ refusals: 2 });
@@ -345,7 +386,7 @@ function transactionalBatchTests(): void {
 		]);
 	});
 
-	test("past the retry budget the batch is reported not committed, never unknown", async () => {
+	test("past the deadline the batch is reported not committed, never unknown", async () => {
 		const fake = createRefusingProducer({ refusals: 10 });
 		await expect(
 			sendTransactionalBatch({
@@ -353,13 +394,72 @@ function transactionalBatchTests(): void {
 				topic,
 				partition,
 				messages: [message],
-				retry: fastRetry,
+				retry: createFastRetry(),
 			}),
 		).rejects.toBeInstanceOf(KafkaBatchNotCommittedError);
+		// Attempts at ticks 0, 1, 2 and 3; the wait after the fourth would pass the deadline.
 		expect(
 			fake.lifecycle.filter((step) => step === "transaction"),
-		).toHaveLength(3);
+		).toHaveLength(4);
 		expect(fake.lifecycle.at(-1)).toBe("abort");
+	});
+
+	test("a leader that just moved is waited out the same way", async () => {
+		const fake = createRefusingProducer({ refusals: 1, refusal: notLeader });
+		const appended = await sendTransactionalBatch({
+			producer: fake.producer,
+			topic,
+			partition,
+			messages: [message],
+			retry: createFastRetry(),
+		});
+		expect(appended.baseOffset).toBe(41n);
+		expect(fake.lifecycle).toEqual([
+			"transaction",
+			"send",
+			"abort",
+			"transaction",
+			"send",
+			"commit",
+		]);
+	});
+
+	test("a refusal kafkajs already gave up on is still waited out", async () => {
+		function exhausted(): Error {
+			return new KafkaJSNumberOfRetriesExceeded(notLeader(), {
+				retryCount: 2,
+				retryTime: 300,
+			});
+		}
+		const fake = createRefusingProducer({ refusals: 1, refusal: exhausted });
+		const appended = await sendTransactionalBatch({
+			producer: fake.producer,
+			topic,
+			partition,
+			messages: [message],
+			retry: createFastRetry(),
+		});
+		expect(appended.baseOffset).toBe(41n);
+		expect(
+			fake.lifecycle.filter((step) => step === "transaction"),
+		).toHaveLength(2);
+	});
+
+	test("a fenced producer is never retried", async () => {
+		const fake = createRefusingProducer({
+			refusals: 1,
+			refusal: producerFenced,
+		});
+		await expect(
+			sendTransactionalBatch({
+				producer: fake.producer,
+				topic,
+				partition,
+				messages: [message],
+				retry: createFastRetry(),
+			}),
+		).rejects.toBeInstanceOf(KafkaBatchNotCommittedError);
+		expect(fake.lifecycle).toEqual(["transaction", "send", "abort"]);
 	});
 
 	test("any other send refusal is not retried", async () => {

@@ -11,6 +11,7 @@ import type {
 	PartitionScope,
 } from "../types/partitionState.js";
 import type { PartitionFailure } from "../types/partitions.js";
+import { isPartitionRestartableCause } from "./partitionRestartableCauses.js";
 
 export function respondToUnhealthyPartitions({
 	ctx,
@@ -84,10 +85,14 @@ export function respondToPartitionFailure({
 	} catch (callbackCause) {
 		reportPartitionError({ ctx, cause: callbackCause });
 	}
-	// A partition that cannot be brought up, or whose log cannot be read, waits alone: retired, claim released, retried.
+	// A partition that cannot be brought up, whose log cannot be read, or whose
+	// memory has simply fallen behind the log and the store waits alone:
+	// retired, claim released, retried. Only a failure that could recur on the
+	// worker's other partitions takes the whole service down with it.
 	const canBeParked =
 		isPartitionBootstrapBlockedCause({ cause }) ||
-		isPartitionLogUnreadableCause({ cause });
+		isPartitionLogUnreadableCause({ cause }) ||
+		isPartitionRestartableCause({ cause });
 	if (canBeParked && !entry?.publicationFailed) {
 		retryPartition({ ctx, state, partition, entry, allocationGeneration });
 		return "partition_parked";
