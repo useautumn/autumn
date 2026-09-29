@@ -1,14 +1,15 @@
 import type { RewardProgram } from "@autumn/shared";
-import { SmallSpinner, ToolbarButton } from "@autumn/ui";
-import { Delete } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	SmallSpinner,
+	ToolbarButton,
 } from "@autumn/ui";
+import { Delete } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -42,7 +43,7 @@ export const RewardProgramRowToolbar = ({
 			<DropdownMenuTrigger asChild>
 				<ToolbarButton />
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="text-muted-foreground" align="end">
+			<DropdownMenuContent align="end">
 				<DropdownMenuItem
 					className="flex items-center"
 					onClick={async (e) => {

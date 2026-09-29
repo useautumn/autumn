@@ -108,10 +108,7 @@ export const CopyProductDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent
-				className="bg-background"
-				onClick={(e) => e.stopPropagation()}
-			>
+			<DialogContent onClick={(e) => e.stopPropagation()}>
 				<DialogHeader>
 					<DialogTitle>
 						{targetEnv ? `Copy to ${envLabel}` : "Copy Product"}

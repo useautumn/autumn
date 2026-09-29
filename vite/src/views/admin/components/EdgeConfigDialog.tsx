@@ -224,7 +224,7 @@ export function EdgeConfigDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-4xl bg-card">
+			<DialogContent className="max-w-4xl">
 				<DialogHeader>
 					<DialogTitle>
 						Request Blocking — {orgId ? `Org: ${orgId}` : "Select Organization"}
@@ -237,7 +237,7 @@ export function EdgeConfigDialog({
 				</DialogHeader>
 
 				{step === "select-org" && (
-					<div className="flex flex-col gap-4 py-2">
+					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-2">
 							<label
 								htmlFor="edge-config-org-id"

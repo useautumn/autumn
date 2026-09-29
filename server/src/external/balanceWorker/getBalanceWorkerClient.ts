@@ -1,9 +1,15 @@
+import { hostname } from "node:os";
 import {
 	type BalanceWorkerClient,
 	createKafkaBalanceWorkerClient,
+	createProxyBalanceWorkerClient,
 	type KafkaBalanceWorkerClientConfig,
 } from "@autumn/balance-worker-client";
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import { getAutumnEnv } from "@autumn/env";
+import {
+	getBalanceWorkerClientEnv,
+	getBalanceWorkerTransportEnv,
+} from "@autumn/env/balanceWorkerClient";
 import {
 	BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
@@ -42,12 +48,35 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 	};
 }
 
-/** Routing answers "no owner" until `startBalanceWorkerClient` has read the ownership log through. */
-export function getBalanceWorkerClient(): BalanceWorkerClient {
-	balanceWorkerClient ??= createKafkaBalanceWorkerClient({
+/** Outside the VPC (Trigger, prod scripts) every call goes through the API's own client. */
+function createProxyClient(): BalanceWorkerClient {
+	const secret = getBalanceWorkerTransportEnv().BALANCE_WORKER_PROXY_SECRET;
+	if (!secret)
+		throw new Error(
+			"BALANCE_WORKER_PROXY_SECRET is required to reach the balance worker from outside the VPC",
+		);
+	return createProxyBalanceWorkerClient({
+		ctx: {},
+		config: {
+			url: getAutumnEnv().AUTUMN_PUBLIC_API_URL,
+			secret,
+			caller: hostname().slice(0, 64),
+		},
+	});
+}
+
+function createClientForTransport(): BalanceWorkerClient {
+	if (getBalanceWorkerTransportEnv().BALANCE_WORKER_TRANSPORT === "proxy")
+		return createProxyClient();
+	return createKafkaBalanceWorkerClient({
 		ctx: { logger },
 		config: balanceWorkerClientConfig(),
 	});
+}
+
+/** Routing answers "no owner" until `startBalanceWorkerClient` has read the ownership log through. */
+export function getBalanceWorkerClient(): BalanceWorkerClient {
+	balanceWorkerClient ??= createClientForTransport();
 	return balanceWorkerClient;
 }
 
