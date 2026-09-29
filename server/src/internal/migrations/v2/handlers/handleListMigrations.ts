@@ -1,5 +1,6 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { summarizeMigrations } from "@/internal/migrations/v2/actions/migrationList/summarizeMigrations.js";
 import { listMigrationStatuses } from "@/internal/migrations/v2/actions/migrationStatus/listMigrationStatuses.js";
 import {
 	migrationItemRunRepo,
@@ -17,12 +18,13 @@ export const handleListMigrations = createRoute({
 
 		if (migrations.length === 0) return c.json({ list: [] });
 
-		const [liveRunIds, statuses, products] = await Promise.all([
+		const [liveRunIds, statuses, summaries, products] = await Promise.all([
 			migrationItemRunRepo.listIdsWithLiveRuns({
 				ctx,
 				migrationInternalIds: migrations.map((m) => m.internal_id),
 			}),
 			listMigrationStatuses({ ctx, migrations }),
+			summarizeMigrations({ ctx, migrations }),
 			migrations.some((m) => m.operations)
 				? ProductService.listFull({
 						db: ctx.db,
@@ -40,6 +42,7 @@ export const handleListMigrations = createRoute({
 				status: statusInfo?.status ?? "draft",
 				blocked_by: statusInfo?.blocked_by ?? null,
 				has_live_runs: liveRunIds.has(m.internal_id),
+				summary: summaries.get(m.internal_id),
 				batch_eligible: isBatchEligibleMigrationDefinition({
 					migration: m,
 					products,
