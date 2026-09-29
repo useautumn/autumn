@@ -13,6 +13,7 @@ import { getSsoHint } from "@/lib/sso/ssoHint";
 import { resolveSso } from "@/lib/sso/ssoResolve";
 import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
 import { getBackendErr, getSafeNextPath } from "@/utils/genUtils";
+import { AgentIdMark } from "./components/AgentIdMark";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
 import { OTPSignIn } from "./components/OTPSignIn";
@@ -38,6 +39,7 @@ export const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
 	const [googleLoading, setGoogleLoading] = useState(false);
+	const [agentIdLoading, setAgentIdLoading] = useState(false);
 	const [sendOtpLoading, setSendOtpLoading] = useState(false);
 	const [otpSent, setOtpSent] = useState(false);
 	const [ssoHint, setSsoHint] = useState<SsoOrgHint | null>(() => getSsoHint());
@@ -177,6 +179,26 @@ export const SignIn = () => {
 		}
 	};
 
+	const handleAgentIdSignIn = async () => {
+		setAgentIdLoading(true);
+		try {
+			const callbackURL =
+				oauthRedirectUrl || `${window.location.origin}${defaultPath}`;
+			const { error } = await authClient.signIn.oauth2({
+				providerId: "agentid",
+				callbackURL,
+				newUserCallbackURL: callbackURL,
+			});
+			if (error) {
+				toast.error(error.message || "Failed to sign in with AgentID");
+			}
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to sign in with AgentID"));
+		} finally {
+			setTimeout(() => setAgentIdLoading(false), 1000);
+		}
+	};
+
 	return (
 		<AuthBackground>
 			<CustomToaster />
@@ -206,15 +228,27 @@ export const SignIn = () => {
 					/>
 				) : (
 					<div className="w-full space-y-5">
-						<IconButton
-							variant="primary"
-							onClick={handleGoogleSignIn}
-							isLoading={googleLoading}
-							icon={<FontAwesomeIcon icon={faGoogle} />}
-							className="w-full gap-2"
-						>
-							Continue with Google
-						</IconButton>
+						<div className="flex flex-col gap-2 w-full">
+							<IconButton
+								variant="primary"
+								onClick={handleGoogleSignIn}
+								isLoading={googleLoading}
+								icon={<FontAwesomeIcon icon={faGoogle} />}
+								className="w-full gap-2"
+							>
+								Continue with Google
+							</IconButton>
+
+							<IconButton
+								variant="secondary"
+								onClick={handleAgentIdSignIn}
+								isLoading={agentIdLoading}
+								icon={<AgentIdMark className="size-4" />}
+								className="w-full gap-2"
+							>
+								Continue with AgentID
+							</IconButton>
+						</div>
 
 						<div className="relative">
 							<div className="absolute inset-0 flex items-center">
