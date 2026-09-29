@@ -37,8 +37,15 @@ export function routineRefusalMessages(): string[] {
 /** The level an entry deserves: kafkajs's own unless it reports a routine refusal. */
 function effectiveKafkaLogLevel({ entry }: { entry: LogEntry }): logLevel {
 	const refusal = entry.log.error;
-	if (typeof refusal !== "string") return entry.level;
-	return ROUTINE_REFUSAL_LEVELS.get(refusal) ?? entry.level;
+	if (typeof refusal === "string") {
+		const level = ROUTINE_REFUSAL_LEVELS.get(refusal);
+		if (level !== undefined) return level;
+	}
+	// The producer folds the refusal into its own message ("Failed to send messages: ...").
+	for (const [message, level] of ROUTINE_REFUSAL_LEVELS) {
+		if (entry.log.message.includes(message)) return level;
+	}
+	return entry.level;
 }
 
 /** kafkajs's console format, unchanged, so the lines already read in Axiom keep their shape. */

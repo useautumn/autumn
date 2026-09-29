@@ -118,3 +118,20 @@ test("every lowered message is one kafkajs itself produces", () => {
 		expect(known.has(message)).toBe(true);
 	}
 });
+
+test("a producer that folds the refusal into its own message is lowered the same way", () => {
+	const { sink, written } = recordingSink();
+	const write = createKafkaLogCreator({ sink })(logLevel.INFO);
+	write({
+		namespace: "Producer",
+		level: logLevel.ERROR,
+		label: "ERROR",
+		log: {
+			timestamp: "t",
+			message: `Failed to send messages: ${CONCURRENT_TRANSACTIONS}`,
+			retryCount: 0,
+			retryTime: 100,
+		},
+	});
+	expect(written).toEqual([]);
+});

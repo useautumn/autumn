@@ -2,8 +2,8 @@ import { getBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { initInfisical } from "@autumn/shared/utils/infisical";
 import { createBalanceWorker } from "./init/createBalanceWorker.js";
 import type { BalanceWorker } from "./init/types/balanceWorker.js";
-import { errorCauseChain } from "./logging/errorCauseChain.js";
 import { getBalanceWorkerLogger } from "./logging/getBalanceWorkerLogger.js";
+import { reportWorkerError } from "./logging/reportWorkerError.js";
 
 async function main(): Promise<void> {
 	try {
@@ -65,20 +65,8 @@ function exitAfterServiceStopped(): void {
 	void endProcess();
 }
 
-function causeToLine({ name, message }: { name: string; message: string }) {
-	return `${name}: ${message}`;
-}
-
 function reportError({ cause }: { cause: unknown }): void {
-	const causes = errorCauseChain({ error: cause });
-	// The chain rides in the message too: `data` is hidden from the local terminal, and the root cause is what matters.
-	const rootCauses = causes.map(causeToLine).join(" <- ");
-	getBalanceWorkerLogger().error(
-		{ error: cause, data: { causes } },
-		rootCauses
-			? `Balance worker error <- ${rootCauses}`
-			: "Balance worker error",
-	);
+	reportWorkerError({ logger: getBalanceWorkerLogger(), cause });
 }
 
 void main();
