@@ -5,8 +5,9 @@
  * Green (after): each request is rejected with a 400 before any write.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { ErrCode, ms } from "@autumn/shared";
+import { getProductStripeId } from "@tests/integration/billing/create-schedule/utils/createScheduleTestHelpers";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -77,5 +78,53 @@ test.concurrent(
 					],
 				}),
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans state errors: a rejected request creates no Stripe product for its free phase")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 10 })],
+		});
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-free-phase-no-write",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro, premium], createInStripe: false }),
+			],
+			actions: [],
+		});
+
+		const phases = [
+			{ starts_at: "now" as const, plans: [{ plan_id: free.id }] },
+			{
+				starts_at: advancedTo + ms.days(30),
+				plans: [{ plan_id: pro.id }],
+			},
+		];
+
+		await expectAutumnError({
+			func: () =>
+				autumnV2_4.billing.setPlans({
+					customer_id: customerId,
+					unscheduled_plans: [{ plan_id: premium.id }],
+					phases,
+				}),
+		});
+		expect(await getProductStripeId({ ctx, productId: free.id })).toBeNull();
+
+		await autumnV2_4.billing.setPlans({ customer_id: customerId, phases });
+		expect(await getProductStripeId({ ctx, productId: free.id })).toStartWith(
+			"prod_",
+		);
 	},
 );
