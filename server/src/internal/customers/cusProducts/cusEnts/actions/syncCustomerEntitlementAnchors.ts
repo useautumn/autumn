@@ -197,13 +197,16 @@ const getSyncedNextResetAt = async ({
 		});
 	}
 	const anchor = await getStripeBillingCycleAnchor({ ctx, subscriptionId });
+	const pendingAnchorResetsAt = getPendingAnchorResetsAt({
+		customerProducts: [anchorProduct],
+		now,
+	});
+	// No invoice webhook ever re-anchors a free follower, so it stores the anchor it follows.
+	const followsPaidPlan = anchorProduct.id !== customerProduct.id;
 
 	return {
 		nextResetAt: clampNextResetAtToPendingBillingCycleAnchor({
-			billingCycleAnchorResetsAt: getPendingAnchorResetsAt({
-				customerProducts: [anchorProduct],
-				now,
-			}),
+			billingCycleAnchorResetsAt: pendingAnchorResetsAt,
 			currentEpochMs: now,
 			nextResetAt: getCycleEnd({
 				anchor,
@@ -211,6 +214,9 @@ const getSyncedNextResetAt = async ({
 				intervalCount: customerEntitlement.entitlement.interval_count,
 				now,
 			}),
+		}),
+		...(followsPaidPlan && {
+			resetCycleAnchor: pendingAnchorResetsAt ?? anchor,
 		}),
 	};
 };
