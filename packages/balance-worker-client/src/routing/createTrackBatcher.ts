@@ -123,12 +123,11 @@ export function createTrackBatcher({
 		}
 	}
 
-	/** Set by a NOT_OWNER that named the successor: the next attempt goes there without a refresh. */
-	let followingHint = false;
-
 	async function sendBatch({ items }: { items: TrackItem[] }): Promise<void> {
 		let pending = items;
-		followingHint = false;
+		// Per batch, never shared: lanes for different partitions send concurrently, and one
+		// batch's hinted successor must not stop another's refresh.
+		let followingHint = false;
 		try {
 			for (let attempt = 0; attempt < 2; attempt++) {
 				pending = pending.filter(isLive);
@@ -159,12 +158,13 @@ export function createTrackBatcher({
 					});
 					return;
 				}
-				followingHint = false;
-				pending = await postBatch({
+				const posted = await postBatch({
 					items: pending,
 					resolved,
 					batchAttempt,
 				});
+				pending = posted.reroute;
+				followingHint = posted.followingHint;
 			}
 			rejectAll({
 				items: pending,
@@ -191,6 +191,9 @@ export function createTrackBatcher({
 		}
 	}
 
+	/** What one send left to do: the items to reroute, and whether a NOT_OWNER named where. */
+	type PostedBatch = { reroute: TrackItem[]; followingHint: boolean };
+
 	/** Sends the live items and settles what the worker answered; returns the items to reroute. */
 	async function postBatch({
 		items,
@@ -200,7 +203,8 @@ export function createTrackBatcher({
 		items: TrackItem[];
 		resolved: ResolvedCommandRoute;
 		batchAttempt: BatchAttempt;
-	}): Promise<TrackItem[]> {
+	}): Promise<PostedBatch> {
+		const hint = { following: false };
 		for (const item of items) item.phase = "sending";
 		let response: HttpResponse;
 		try {
@@ -225,7 +229,7 @@ export function createTrackBatcher({
 					cause,
 				}),
 			});
-			return [];
+			return { reroute: [], followingHint: false };
 		}
 		// Answered: settling items from here on must not cancel anything.
 		batchAttempt.live.clear();
@@ -236,18 +240,19 @@ export function createTrackBatcher({
 					status: response.status,
 					body: response.body,
 					resolved,
+					hint,
 				})
 			) {
 				rejectAll({ items, error: invalidResponse({}) });
-				return [];
+				return { reroute: [], followingHint: false };
 			}
 			for (const item of items) if (isLive(item)) item.phase = "routing";
-			return items.filter(isLive);
+			return { reroute: items.filter(isLive), followingHint: hint.following };
 		}
 		const results = readResults({ body: response.body, count: items.length });
 		if (!results) {
 			rejectAll({ items, error: invalidResponse({}) });
-			return [];
+			return { reroute: [], followingHint: false };
 		}
 		const reroute: TrackItem[] = [];
 		for (const [index, item] of items.entries()) {
@@ -263,13 +268,14 @@ export function createTrackBatcher({
 					status: result.status,
 					body: { error: result.error },
 					resolved,
+					hint,
 				})
 			) {
 				item.phase = "routing";
 				reroute.push(item);
 			} else rejectAll({ items: [item], error: invalidResponse({}) });
 		}
-		return reroute;
+		return { reroute, followingHint: hint.following };
 	}
 
 	/** Same reading as a single request: NOT_OWNER reroutes, a named successor is followed, any other worker error settles the items. */
@@ -278,16 +284,20 @@ export function createTrackBatcher({
 		status,
 		body,
 		resolved,
+		hint,
 	}: {
 		items: TrackItem[];
 		status: number;
 		body: unknown;
 		resolved: ResolvedCommandRoute;
+		/** This send's own record of a followed successor; nothing outside the send reads it. */
+		hint: { following: boolean };
 	}): boolean {
 		try {
 			const answer = readNotOwnerResponse({ response: { status, body } });
 			if (!answer) return false;
-			if (followNotOwnerAnswer({ ctx, resolved, answer })) followingHint = true;
+			if (followNotOwnerAnswer({ ctx, resolved, answer }))
+				hint.following = true;
 			return true;
 		} catch (cause) {
 			rejectAll({
