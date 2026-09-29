@@ -42,7 +42,7 @@ jobs:
         run: bun ts
 
   docker:
-    name: docker r${{ matrix.round }} ${{ matrix.provider }}
+    name: docker ${{ matrix.provider }} (round ${{ matrix.round }})
     needs: typecheck
     if: always()
     runs-on: ${{ matrix.runner }}
@@ -66,9 +66,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Same cold builder on both arms; Blacksmith's sticky-disk builder would warm only its side.
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Blacksmith Docker builder
+        if: matrix.provider == 'blacksmith'
+        uses: useblacksmith/setup-docker-builder@v1
+
+      - name: Use Peak Docker builder
+        if: matrix.provider == 'peak'
+        run: docker buildx use default
 
       - name: Build Docker image
         run: |
@@ -76,6 +80,6 @@ jobs:
             --platform linux/amd64 \
             --provenance=false \
             --sbom=false \
-            --output type=cacheonly \
+            --load \
             -f docker/Dockerfile \
             .
