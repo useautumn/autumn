@@ -218,6 +218,7 @@
 							"api-reference/core/check",
 							"api-reference/core/track",
 							"api-reference/core/batchTrack",
+							"api-reference/balances/listBalances",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
 							"api-reference/balances/deleteBalance",
@@ -230,6 +231,8 @@
 							"api-reference/customers/getOrCreateCustomer",
 							"api-reference/customers/getCustomer",
 							"api-reference/customers/listCustomers",
+							"api-reference/customers/listSubscriptions",
+							"api-reference/customers/listPurchases",
 							"api-reference/customers/updateCustomer",
 							"api-reference/customers/deleteCustomer"
 						]

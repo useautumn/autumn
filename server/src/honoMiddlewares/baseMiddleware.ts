@@ -175,6 +175,10 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			mockRevenueCat:
 				process.env.NODE_ENV !== "production" &&
 				c.req.header("x-mock-revenuecat") === "true",
+			listScanCap:
+				process.env.NODE_ENV !== "production" && c.req.header("x-list-scan-cap")
+					? Number(c.req.header("x-list-scan-cap"))
+					: undefined,
 			revenueCat:
 				process.env.NODE_ENV !== "production"
 					? parseMockRevenueCatFixtures(

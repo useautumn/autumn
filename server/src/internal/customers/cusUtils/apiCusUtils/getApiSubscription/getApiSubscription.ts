@@ -64,7 +64,7 @@ export const getApiSubscription = async ({
 	cusProduct,
 }: {
 	ctx: RequestContext;
-	fullCus: FullCustomer;
+	fullCus: Pick<FullCustomer, "subscriptions">;
 	cusProduct: FullCusProduct;
 }): Promise<ApiSubscriptionResult> => {
 	const trialing =
