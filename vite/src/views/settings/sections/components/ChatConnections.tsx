@@ -2,6 +2,7 @@ import {
 	AppEnv,
 	ChatAuthMode,
 	ChatReplyMode,
+	type ChatTrustedBot,
 	type ScopeString,
 } from "@autumn/shared";
 import { Button, StatusChip, Switch } from "@autumn/ui";
@@ -21,6 +22,7 @@ import {
 } from "../../components/SettingsGroup";
 import { SettingsListRow } from "../../components/SettingsListRow";
 import { SlackScopesSheet } from "./SlackScopesSheet";
+import { TrustedBotsSettings } from "./TrustedBotsSettings";
 
 type SlackInstallation = {
 	provider: "slack";
@@ -29,6 +31,7 @@ type SlackInstallation = {
 	default_env: AppEnv;
 	auth_mode: ChatAuthMode | null;
 	reply_mode: ChatReplyMode;
+	trusted_bots: ChatTrustedBot[];
 	agent_scopes: ScopeString[];
 	needs_reconnect?: boolean;
 	updated_at: number;
@@ -202,6 +205,11 @@ export const ChatConnections = () => {
 									}
 								/>
 							</SettingsListRow>
+						)}
+						{installation && (
+							<TrustedBotsSettings
+								trustedBots={installation.trusted_bots ?? []}
+							/>
 						)}
 					</div>
 				);

@@ -624,6 +624,13 @@
       "when": 1790613101001,
       "tag": "0088_violet_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1790675652845,
+      "tag": "0089_chat_trusted_bots",
+      "breakpoints": true
     }
   ]
 }

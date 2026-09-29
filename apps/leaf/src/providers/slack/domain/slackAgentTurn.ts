@@ -1,5 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv, ChatInstallation } from "@autumn/shared";
+import type { AppEnv, ChatInstallation, ChatTrustedBot } from "@autumn/shared";
 import type { Attachment } from "chat";
 import type { AgentTurnResult } from "../../../internal/agentRuntime/domain/agentTurn.js";
 import type {
@@ -37,6 +37,7 @@ export type SlackAgentTurnParams = Readonly<{
 	speaker?: AgentTurnSpeaker;
 	text: string;
 	threadId: string;
+	trustedBot?: ChatTrustedBot;
 }>;
 
 export type SlackAgentTurnResult =
