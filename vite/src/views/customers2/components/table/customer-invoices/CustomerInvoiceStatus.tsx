@@ -61,7 +61,7 @@ const getRefundStatus = ({
 export const UPCOMING_INVOICE_STATUS: InvoiceStatusDisplay = {
 	label: "Upcoming",
 	tone: "orange",
-	glyph: "clock",
+	glyph: "calendar",
 };
 
 export function CustomerInvoiceStatus({
