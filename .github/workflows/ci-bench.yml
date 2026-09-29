@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  server-unit-tests:
-    name: unit r${{ matrix.round }} ${{ matrix.provider }}
+  typecheck:
+    name: typecheck r${{ matrix.round }} ${{ matrix.provider }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -25,31 +25,8 @@ jobs:
           - { round: 1, provider: peak, runner: peak-x64-8 }
           - { round: 2, provider: peak, runner: peak-x64-8 }
           - { round: 2, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 3, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 3, provider: peak, runner: peak-x64-8 }
-          - { round: 4, provider: peak, runner: peak-x64-8 }
-          - { round: 4, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 5, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 5, provider: peak, runner: peak-x64-8 }
-          - { round: 6, provider: peak, runner: peak-x64-8 }
-          - { round: 6, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 7, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 7, provider: peak, runner: peak-x64-8 }
-          - { round: 8, provider: peak, runner: peak-x64-8 }
-          - { round: 8, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 9, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 9, provider: peak, runner: peak-x64-8 }
-          - { round: 10, provider: peak, runner: peak-x64-8 }
-          - { round: 10, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
 
     steps:
-      - name: Hardware fingerprint
-        run: |
-          lscpu | grep -E "Model name|^CPU\(s\)"
-          free -g | head -2
-          dd if=/dev/zero of=/tmp/ddtest bs=1M count=512 oflag=direct 2>&1 | tail -1
-          rm -f /tmp/ddtest
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -61,6 +38,44 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run unit tests
-        run: bun run test:unit
-        working-directory: server
+      - name: Run TypeScript type check
+        run: bun ts
+
+  docker:
+    name: docker r${{ matrix.round }} ${{ matrix.provider }}
+    needs: typecheck
+    if: always()
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - { round: 1, provider: blacksmith, runner: blacksmith-16vcpu-ubuntu-2404 }
+          - { round: 1, provider: peak, runner: peak-x64-16 }
+          - { round: 2, provider: peak, runner: peak-x64-16 }
+          - { round: 2, provider: blacksmith, runner: blacksmith-16vcpu-ubuntu-2404 }
+
+    steps:
+      - name: Hardware fingerprint
+        run: |
+          lscpu | grep -E "Model name|^CPU\(s\)"
+          free -g | head -2
+          df -h / | tail -1
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Same cold builder on both arms; Blacksmith's sticky-disk builder would warm only its side.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            --output type=cacheonly \
+            -f docker/Dockerfile \
+            .

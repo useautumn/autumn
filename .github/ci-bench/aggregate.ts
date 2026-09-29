@@ -29,26 +29,30 @@ const jobs: Job[] = pages
 const secs = (a: string | null, b: string | null) =>
 	a && b ? (Date.parse(b) - Date.parse(a)) / 1000 : Number.NaN;
 
-const metrics = [
-	"Checkout code",
-	"Set up Bun",
-	"Install dependencies",
-	"Run unit tests",
-	"total",
-];
-const byProvider: Record<string, Record<string, number[]>> = {};
+const skipSteps = new Set([
+	"Set up job",
+	"Set up runner",
+	"Complete runner",
+	"Complete job",
+]);
+const groups: Record<string, Record<string, number[]>> = {};
 
 for (const job of jobs) {
-	const provider = job.name.split(" ").at(-1) ?? "unknown";
+	const [kind, , provider] = job.name.split(" ");
 	if (job.conclusion !== "success")
 		console.warn(`${job.name}: ${job.conclusion}`);
-	byProvider[provider] ??= Object.fromEntries(metrics.map((m) => [m, []]));
-	const bucket = byProvider[provider];
-	bucket.total.push(secs(job.started_at, job.completed_at));
+	const key = `${kind} ${provider}`;
+	groups[key] ??= {};
+	const group = groups[key];
+	const record = (metric: string, value: number) => {
+		group[metric] ??= [];
+		group[metric].push(value);
+	};
 	for (const step of job.steps) {
-		if (bucket[step.name])
-			bucket[step.name].push(secs(step.started_at, step.completed_at));
+		if (skipSteps.has(step.name) || step.name.startsWith("Post ")) continue;
+		record(step.name, secs(step.started_at, step.completed_at));
 	}
+	record("total", secs(job.started_at, job.completed_at));
 }
 
 const pct = (xs: number[], p: number) => {
@@ -58,15 +62,16 @@ const pct = (xs: number[], p: number) => {
 		: Number.NaN;
 };
 
-const rows = Object.entries(byProvider).flatMap(([provider, bucket]) =>
-	metrics.map((metric) => ({
-		provider,
-		metric,
-		n: bucket[metric].length,
-		min: pct(bucket[metric], 0),
-		median: pct(bucket[metric], 0.5),
-		p90: pct(bucket[metric], 0.9),
-		max: pct(bucket[metric], 1),
-	})),
-);
+const rows = Object.entries(groups)
+	.sort(([a], [b]) => a.localeCompare(b))
+	.flatMap(([group, metrics]) =>
+		Object.entries(metrics).map(([metric, values]) => ({
+			group,
+			metric,
+			n: values.length,
+			min: pct(values, 0),
+			median: pct(values, 0.5),
+			max: pct(values, 1),
+		})),
+	);
 console.table(rows);
