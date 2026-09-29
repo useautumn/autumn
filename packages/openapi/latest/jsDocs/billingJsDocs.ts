@@ -1,8 +1,8 @@
 import {
 	AttachParamsV1Schema,
-	CreateScheduleParamsV0Schema,
 	ExtMultiUpdateParamsV0Schema,
 	MultiAttachParamsV0Schema,
+	SetPlansParamsV0Schema,
 	UpdateSubscriptionV1ParamsSchema,
 	VerifyParamsV1Schema,
 } from "@autumn/shared";
@@ -184,34 +184,70 @@ export const billingMultiAttachJsDoc = createJSDocDescription({
 
 export const billingCreateScheduleJsDoc = createJSDocDescription({
 	description:
-		"Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.",
-	whenToUse:
-		"Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.",
-	body: CreateScheduleParamsV0Schema,
-	examples: [
-		example({
-			description: "Schedule a transition from a trial plan to a paid plan",
-			values: {
-				customerId: "cus_123",
-				phases: [
-					{
-						startsAt: "now",
-						plans: [{ planId: "trial_plan" }],
-					},
-					{
-						startingAfter: {
-							durationType: "month",
-							durationCount: 1,
-						},
-						plans: [{ planId: "pro_plan" }],
-					},
-				],
-			},
-		}),
-	],
+		"Deprecated: use `billing.setPlans`, which takes the same phases and replaces the customer's schedule declaratively.",
 	methodName: "billing.createSchedule",
 	returns:
 		"A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.",
+});
+
+const setPlansTrialToProExample = {
+	customerId: "cus_123",
+	phases: [
+		{
+			startsAt: "now",
+			plans: [{ planId: "trial_plan" }],
+		},
+		{
+			startingAfter: {
+				durationType: "month",
+				durationCount: 1,
+			},
+			plans: [{ planId: "pro_plan" }],
+		},
+	],
+};
+
+export const billingSetPlansJsDoc = createJSDocDescription({
+	description:
+		"Sets the plans a customer should have over time. The first phase bills now, later phases start on their dates, and the request replaces any existing schedule.",
+	whenToUse:
+		"Use this endpoint to move a customer onto a known end state in one call: a plan change now, future plan changes on set dates, a new billing cycle anchor, or an end date for every plan.",
+	body: SetPlansParamsV0Schema,
+	examples: [
+		example({
+			description: "Move from a trial plan to a paid plan after one month",
+			values: setPlansTrialToProExample,
+		}),
+		example({
+			description: "Switch plans now without prorating, and end them on a date",
+			values: {
+				customerId: "cus_123",
+				phases: [{ startsAt: "now", plans: [{ planId: "pro_plan" }] }],
+				prorationBehavior: "none",
+				endsAt: 1798761600000,
+			},
+		}),
+	],
+	methodName: "billing.setPlans",
+	returns:
+		"A set-plans response with the schedule ID, persisted phases, and any required payment or checkout URL.",
+});
+
+export const billingPreviewSetPlansJsDoc = createJSDocDescription({
+	description:
+		"Previews what setting a customer's plans would do, without making any changes: the charge now, each phase's plans and balances, the Stripe changes, and warnings.",
+	whenToUse:
+		"Use this endpoint to show a customer, or check yourself, what a set-plans request will charge and change before sending it.",
+	body: SetPlansParamsV0Schema,
+	examples: [
+		example({
+			description: "Preview a move from a trial plan to a paid plan",
+			values: setPlansTrialToProExample,
+		}),
+	],
+	methodName: "billing.previewSetPlans",
+	returns:
+		"A preview response with line items and totals for the immediate phase, plus per-phase plans, Stripe changes and warnings.",
 });
 
 export const billingPreviewMultiAttachJsDoc = createJSDocDescription({

@@ -14,6 +14,8 @@ import {
 	MultiAttachParamsV0Schema,
 	OpenCustomerPortalParamsV1Schema,
 	OpenCustomerPortalResponseSchema,
+	SetPlansParamsV0Schema,
+	SetPlansPreviewResponseSchema,
 	SetupPaymentParamsV1Schema,
 	SetupPaymentResponseV1Schema,
 	VerifyParamsV1Schema,
@@ -28,7 +30,9 @@ import {
 	billingPreviewAttachJsDoc,
 	billingPreviewMultiAttachJsDoc,
 	billingPreviewMultiUpdateJsDoc,
+	billingPreviewSetPlansJsDoc,
 	billingPreviewUpdateJsDoc,
+	billingSetPlansJsDoc,
 	billingUpdateJsDoc,
 	billingVerifyJsDoc,
 } from "../jsDocs/billingJsDocs";
@@ -276,34 +280,52 @@ export const billingCreateScheduleContract = oc
 		operationId: "createSchedule",
 		tags: ["billing"],
 		description: billingCreateScheduleJsDoc,
+		deprecated: true,
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "createSchedule",
 		}),
 	})
+	.input(CreateScheduleParamsV0Schema.meta({ title: "CreateScheduleParams" }))
+	.output(
+		CreateScheduleResponseSchema.meta({ title: "CreateScheduleResponse" }),
+	);
+
+const SET_PLANS_PARAMS_EXAMPLE = {
+	customer_id: "cus_123",
+	phases: [
+		{
+			starts_at: "now",
+			plans: [{ plan_id: "trial_plan" }],
+		},
+		{
+			starting_after: { duration_type: "month", duration_count: 1 },
+			plans: [{ plan_id: "pro_plan" }],
+		},
+	],
+};
+
+export const billingSetPlansContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.set_plans",
+		operationId: "setPlans",
+		tags: ["billing"],
+		description: billingSetPlansJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "setPlans",
+		}),
+	})
 	.input(
-		CreateScheduleParamsV0Schema.meta({
-			title: "CreateScheduleParams",
-			examples: [
-				{
-					customer_id: "cus_123",
-					phases: [
-						{
-							starts_at: 1735689600000,
-							plans: [{ plan_id: "trial_plan" }],
-						},
-						{
-							starts_at: 1736899200000,
-							plans: [{ plan_id: "pro_plan" }],
-						},
-					],
-				},
-			],
+		SetPlansParamsV0Schema.meta({
+			title: "SetPlansParams",
+			examples: [SET_PLANS_PARAMS_EXAMPLE],
 		}),
 	)
 	.output(
 		CreateScheduleResponseSchema.meta({
-			title: "CreateScheduleResponse",
+			title: "SetPlansResponse",
 			examples: [
 				{
 					customer_id: "cus_123",
@@ -318,7 +340,7 @@ export const billingCreateScheduleContract = oc
 						},
 						{
 							phase_id: "sphs_2222",
-							starts_at: 1736899200000,
+							starts_at: 1738368000000,
 							customer_product_ids: ["cus_prod_2222"],
 						},
 					],
@@ -327,6 +349,28 @@ export const billingCreateScheduleContract = oc
 				},
 			],
 		}),
+	);
+
+export const billingPreviewSetPlansContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.preview_set_plans",
+		operationId: "previewSetPlans",
+		tags: ["billing"],
+		description: billingPreviewSetPlansJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "previewSetPlans",
+		}),
+	})
+	.input(
+		SetPlansParamsV0Schema.meta({
+			title: "PreviewSetPlansParams",
+			examples: [SET_PLANS_PARAMS_EXAMPLE],
+		}),
+	)
+	.output(
+		SetPlansPreviewResponseSchema.meta({ title: "PreviewSetPlansResponse" }),
 	);
 
 export const billingMultiAttachContract = oc

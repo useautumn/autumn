@@ -23,6 +23,8 @@ import {
 	InsertInvoicesParamsSchema,
 	LATEST_VERSION,
 	PreviewUpdateSubscriptionResponseSchema,
+	SetPlansParamsV0Schema,
+	SetPlansPreviewResponseSchema,
 	SetupPaymentParamsV1Schema,
 	SetupPaymentResponseV1Schema,
 	TrackParamsSchema,
@@ -94,6 +96,8 @@ async function generateOpenApiDocument({
 	registerInternalSchemas(AttachParamsV1Schema);
 	registerInternalSchemas(UpdateSubscriptionV1ParamsSchema);
 	registerInternalSchemas(SetupPaymentParamsV1Schema);
+	registerInternalSchemas(SetPlansParamsV0Schema);
+	registerInternalSchemas(SetPlansPreviewResponseSchema);
 	registerInternalSchemas(CreateBalanceParamsV0Schema);
 	registerInternalSchemas(UpdateBalanceParamsV0Schema);
 	registerInternalSchemas(CheckParamsSchema);

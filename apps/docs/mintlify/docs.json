@@ -198,7 +198,8 @@
 							"api-reference/billing/multiAttach",
 							"api-reference/billing/previewMultiUpdate",
 							"api-reference/billing/multiUpdate",
-							"api-reference/billing/createSchedule",
+							"api-reference/billing/previewSetPlans",
+							"api-reference/billing/setPlans",
 							"api-reference/billing/verify",
 							"api-reference/billing/import",
 							{

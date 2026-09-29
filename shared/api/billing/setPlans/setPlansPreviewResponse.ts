@@ -1,4 +1,4 @@
-import type { AttachPreviewResponse } from "@api/billing/common/attachPreviewResponse";
+import { AttachPreviewResponseSchema } from "@api/billing/common/attachPreviewResponse";
 import { CustomerPlanChangeSchema } from "@api/billing/common/customerPlanChange";
 import { PreviewBalanceChangeSchema } from "@api/billing/components/billingChanges/previewBalanceChange";
 import { z } from "zod/v4";
@@ -93,10 +93,23 @@ export const SetPlansPreviewWarningSchema = z.object({
 });
 
 export const SetPlansPreviewChangesSchema = z.object({
-	phases: z.array(SetPlansPreviewPhaseSchema),
-	processor_changes: z.array(ProcessorChangeSchema),
-	warnings: z.array(SetPlansPreviewWarningSchema),
+	phases: z.array(SetPlansPreviewPhaseSchema).meta({
+		description:
+			"Each phase in start order, with the plans, balances and Stripe items it would hold.",
+	}),
+	processor_changes: z.array(ProcessorChangeSchema).meta({
+		description:
+			"The Stripe subscriptions and subscription schedules the request would create, update, release or cancel.",
+	}),
+	warnings: z.array(SetPlansPreviewWarningSchema).meta({
+		description:
+			"Side effects of the request worth confirming before it is sent, such as a replaced schedule or a reset balance.",
+	}),
 });
+
+export const SetPlansPreviewResponseSchema = AttachPreviewResponseSchema.extend(
+	SetPlansPreviewChangesSchema.shape,
+);
 
 export type ProcessorChange = z.infer<typeof ProcessorChangeSchema>;
 export type ProcessorItemPrice = z.infer<typeof ProcessorItemPriceSchema>;
@@ -112,5 +125,6 @@ export type SetPlansPreviewWarning = z.infer<
 export type SetPlansPreviewChanges = z.infer<
 	typeof SetPlansPreviewChangesSchema
 >;
-export type SetPlansPreviewResponse = AttachPreviewResponse &
-	SetPlansPreviewChanges;
+export type SetPlansPreviewResponse = z.infer<
+	typeof SetPlansPreviewResponseSchema
+>;
