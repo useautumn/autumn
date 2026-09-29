@@ -358,3 +358,119 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		).toEqual([]);
 	});
 });
+
+describe("setPlansPreviewToWarnings: live subscription changes", () => {
+	const liveSubscription = stripeSubscription({
+		id: "sub_live",
+		status: "active",
+		cancel_at: (NOON_UTC + 20 * DAY_MS) / 1000,
+	});
+
+	test("clearing a scheduled cancellation is announced", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				stripeSubscription: liveSubscription,
+			},
+			stripeBillingPlan: {
+				subscriptionAction: {
+					type: "update",
+					stripeSubscriptionId: "sub_live",
+					params: { cancel_at: null },
+				},
+			},
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "scheduled_cancel_changed",
+				severity: "warning",
+				message: "The scheduled cancellation on 19 Oct 2026 is removed.",
+			},
+		]);
+	});
+
+	test("a schedule that ends the subscription is announced as the plans' end", () => {
+		const [warning] = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				stripeSubscription: stripeSubscription({ id: "sub_live" }),
+			},
+			stripeBillingPlan: {
+				subscriptionScheduleAction: {
+					type: "create",
+					params: {
+						end_behavior: "cancel",
+						phases: [{ items: [], end_date: (NOON_UTC + 30 * DAY_MS) / 1000 }],
+					},
+				},
+			},
+		});
+
+		expect(warning).toEqual({
+			type: "scheduled_cancel_changed",
+			severity: "warning",
+			message: "The plans end on 29 Oct 2026.",
+		});
+	});
+
+	test("keeping the scheduled cancellation doesn't warn", () => {
+		expect(
+			stateWarnings({
+				billingContext: {
+					currentEpochMs: NOON_UTC,
+					billingCycleAnchorMs: "now",
+					stripeSubscription: liveSubscription,
+				},
+				stripeBillingPlan: {
+					subscriptionAction: {
+						type: "update",
+						stripeSubscriptionId: "sub_live",
+						params: {},
+					},
+				},
+			}),
+		).toEqual([]);
+	});
+
+	test("moving a live subscription to a new interval warns that Stripe invoices now", () => {
+		const monthly = processorItem({
+			price: {
+				currency: "usd",
+				unit_amount: 20,
+				interval: "month",
+				interval_count: 1,
+				usage_type: "licensed",
+				tiers_mode: null,
+				first_tier_amount: null,
+				units_per_quantity: null,
+			},
+		});
+		const yearly = processorItem({
+			price_id: "price_year",
+			price: { ...monthly.price!, interval: "year", unit_amount: 200 },
+		});
+
+		const warnings = stateWarnings({
+			phases: [phase({ processor_items: [yearly] })],
+			liveProcessorItems: [monthly],
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				stripeSubscription: stripeSubscription({ id: "sub_live" }),
+			},
+			stripeBillingPlan: {},
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "interval_change_invoices_now",
+				severity: "warning",
+				message:
+					"Stripe invoices the new year interval now, and the billing cycle restarts today.",
+			},
+		]);
+	});
+});
