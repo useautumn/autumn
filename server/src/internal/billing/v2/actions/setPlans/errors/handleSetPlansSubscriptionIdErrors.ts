@@ -8,7 +8,12 @@ import {
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
 
-const customerProductIdsReplacedByRequest = ({
+type RequestedPhase = {
+	startsAt: number | undefined;
+	subscriptionIds: string[];
+};
+
+const customerProductEndsByRequest = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
@@ -16,19 +21,37 @@ const customerProductIdsReplacedByRequest = ({
 	const { recurringOutgoing, recurringEndingAtPhase } =
 		resolveSetPlansRecurringProducts({ billingContext });
 
-	return new Set([
+	const endsNowIds = new Set([
 		...billingContext.replacedScheduleCustomerProductIds,
 		...billingContext.productContexts.flatMap(({ currentCustomerProduct }) =>
 			currentCustomerProduct ? [currentCustomerProduct.id] : [],
 		),
 		...recurringOutgoing.map(({ id }) => id),
-		...recurringEndingAtPhase.map(({ customerProduct }) => customerProduct.id),
 	]);
+	const endsAtById = new Map(
+		recurringEndingAtPhase.map(({ customerProduct, endsAt }) => [
+			customerProduct.id,
+			endsAt,
+		]),
+	);
+
+	return ({
+		customerProductId,
+		phase,
+	}: {
+		customerProductId: string;
+		phase: RequestedPhase;
+	}) => {
+		if (endsNowIds.has(customerProductId)) return true;
+		const endsAt = endsAtById.get(customerProductId);
+		if (endsAt === undefined || phase.startsAt === undefined) return false;
+		return endsAt <= phase.startsAt;
+	};
 };
 
 /**
  * subscription_id is unique within a phase; later phases may reuse it. An id on an
- * active row conflicts unless this request replaces that row, so a re-save works.
+ * existing row conflicts unless this request ends that row by the claiming phase's start.
  */
 export const handleSetPlansSubscriptionIdErrors = async ({
 	ctx,
@@ -37,18 +60,30 @@ export const handleSetPlansSubscriptionIdErrors = async ({
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 }) => {
-	const phaseSubscriptionIds = [
-		billingContext.productContexts.map(({ externalId }) => externalId),
-		...billingContext.scheduledPhaseContexts.map(({ productContexts }) =>
-			productContexts.map(({ externalId }) => externalId),
+	const requestedPhases: RequestedPhase[] = [
+		{
+			startsAt: undefined,
+			subscriptionIds: presentSubscriptionIds(
+				billingContext.productContexts.map(({ externalId }) => externalId),
+			),
+		},
+		...billingContext.scheduledPhaseContexts.map(
+			({ startsAt, productContexts }) => ({
+				startsAt,
+				subscriptionIds: presentSubscriptionIds(
+					productContexts.map(({ externalId }) => externalId),
+				),
+			}),
 		),
 	];
-	for (const subscriptionIds of phaseSubscriptionIds) {
+	for (const { subscriptionIds } of requestedPhases) {
 		assertNoDuplicateSubscriptionIds({ subscriptionIds });
 	}
 
 	const requestedSubscriptionIds = [
-		...new Set(presentSubscriptionIds(phaseSubscriptionIds.flat())),
+		...new Set(
+			requestedPhases.flatMap(({ subscriptionIds }) => subscriptionIds),
+		),
 	];
 	if (requestedSubscriptionIds.length === 0) return;
 
@@ -57,8 +92,15 @@ export const handleSetPlansSubscriptionIdErrors = async ({
 		internalCustomerId: billingContext.fullCustomer.internal_id,
 		externalIds: requestedSubscriptionIds,
 	});
-	const replacedIds = customerProductIdsReplacedByRequest({ billingContext });
-	const conflict = existing.find(({ id }) => !replacedIds.has(id));
+	const endsByPhase = customerProductEndsByRequest({ billingContext });
+	const conflict = existing.find(({ id, external_id }) =>
+		requestedPhases.some(
+			(phase) =>
+				external_id !== null &&
+				phase.subscriptionIds.includes(external_id) &&
+				!endsByPhase({ customerProductId: id, phase }),
+		),
+	);
 
 	if (conflict) {
 		throwSubscriptionIdInUse({ subscriptionId: conflict.external_id });
