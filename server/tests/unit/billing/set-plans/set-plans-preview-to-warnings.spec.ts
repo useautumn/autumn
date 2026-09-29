@@ -478,6 +478,46 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 		).toEqual([]);
 	});
 
+	test("a schedule phase that resets the anchor announces the cycle reset", () => {
+		const resetAtMs = NOON_UTC + 10 * DAY_MS;
+
+		const warnings = stateWarnings({
+			cycleResetAt: resetAtMs,
+			stripeBillingPlan: {
+				subscriptionScheduleAction: {
+					type: "create",
+					params: {
+						phases: [
+							{ items: [], end_date: resetAtMs / 1000 },
+							{
+								items: [],
+								start_date: resetAtMs / 1000,
+								billing_cycle_anchor: "phase_start",
+							},
+						],
+					},
+				},
+			},
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "cycle_reset",
+				severity: "warning",
+				message: "The billing cycle resets on 09 Oct 2026.",
+			},
+		]);
+	});
+
+	test("an anchor the billing plan never applies doesn't announce a cycle reset", () => {
+		expect(
+			stateWarnings({
+				cycleResetAt: NOON_UTC + 10 * DAY_MS,
+				stripeBillingPlan: {},
+			}),
+		).toEqual([]);
+	});
+
 	test("moving a live subscription to a new interval warns that Stripe invoices now", () => {
 		const monthly = processorItem({
 			price: {
