@@ -48,6 +48,7 @@ export const operationTool = ({
 	endpoint,
 	expand,
 	fixedFields,
+	transformResult,
 	destructive = false,
 	idempotent = false,
 }: OperationToolConfig) =>
@@ -56,18 +57,21 @@ export const operationTool = ({
 		description,
 		inputSchema: z.object({ request: schema }).strict(),
 		mcp: { annotations: mcpAnnotations({ destructive, idempotent }) },
-		execute: (input, context) =>
-			callAutumn({
+		execute: async (input, context) => {
+			const request = withFixedFields({
+				expand,
+				fixedFields,
+				request: schema.parse(getRequest(input)),
+			});
+			const result = await callAutumn({
 				auth: getAutumnAuth(context),
 				endpoint,
-				request: withFixedFields({
-					expand,
-					fixedFields,
-					request: schema.parse(getRequest(input)),
-				}),
+				request,
 				retryable: !destructive || idempotent,
 				signal: signalOf(context),
-			}),
+			});
+			return transformResult ? transformResult({ request, result }) : result;
+		},
 	});
 
 /** Raw variant of a local preview: just returns the computed preview. */

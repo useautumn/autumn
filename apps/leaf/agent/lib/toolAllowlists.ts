@@ -46,7 +46,6 @@ export const toolAllowlists = {
 		"getInvoice",
 		"getOrCreateCustomer",
 		"getPlan",
-		"getStripeInvoice",
 		"listInvoiceTemplates",
 		"listInvoices",
 		"listRewards",
