@@ -12,6 +12,7 @@ import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { persistDeferredSetPlansSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
+import { executeStripeReplacedSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeReplacedSubscriptionAction";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -76,6 +77,12 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		ctx,
 		checkoutContext,
 		deferredData: updatedDeferredData,
+	});
+
+	await executeStripeReplacedSubscriptionAction({
+		ctx,
+		replacedSubscriptionAction:
+			updatedDeferredData.billingPlan.stripe.replacedSubscriptionAction,
 	});
 
 	// 5. Look up the cusProduct rows linked to this checkout session so we can

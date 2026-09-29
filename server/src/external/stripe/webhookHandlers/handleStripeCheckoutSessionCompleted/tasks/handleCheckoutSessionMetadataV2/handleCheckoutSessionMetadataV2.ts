@@ -18,6 +18,7 @@ import {
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/promotePendingCustomerProducts";
+import { executeStripeReplacedSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeReplacedSubscriptionAction";
 import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { withBillingLock } from "@/internal/billing/v2/utils/billingLock/withBillingLock";
@@ -143,6 +144,12 @@ const executeCheckoutSessionMetadataV2 = async ({
 		ctx,
 		checkoutContext,
 		deferredData: updatedDeferredData,
+	});
+
+	await executeStripeReplacedSubscriptionAction({
+		ctx,
+		replacedSubscriptionAction:
+			updatedDeferredData.billingPlan.stripe.replacedSubscriptionAction,
 	});
 
 	if (stripeScheduleId) {
