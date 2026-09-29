@@ -81,6 +81,8 @@ const toContextMessage = (message: Message): AgentContextMessage => ({
 export type ThreadAttachment = Readonly<{
 	attachment: Attachment;
 	author: string;
+	/** Position in the raw message's `files`, for hydrating Slack Connect stubs. */
+	fileIndex: number;
 	raw: unknown;
 }>;
 
@@ -93,9 +95,10 @@ const threadAttachmentsOf = (
 		.reverse()
 		.filter((message) => !message.author.isMe)
 		.flatMap((message) =>
-			(message.attachments ?? []).map((attachment) => ({
+			(message.attachments ?? []).map((attachment, fileIndex) => ({
 				attachment,
 				author: authorName(message),
+				fileIndex,
 				raw: message.raw,
 			})),
 		);
@@ -264,3 +267,77 @@ export const getEarlierThreadAttachments = (
 	threadAttachmentsOf(
 		thread.recentMessages.filter((message) => message.id !== currentMessage.id),
 	);
+
+const DELIVERED_FILES_LIMIT = 200;
+
+const deliveredFilesKey = ({
+	message,
+	thread,
+}: {
+	message: Message;
+	thread: Thread;
+}) => `leaf:delivered-files:${getSlackWorkspaceId(message.raw)}:${thread.id}`;
+
+/** The Slack file id behind a thread attachment, when Slack sent one. */
+export const threadAttachmentFileId = ({
+	fileIndex,
+	raw,
+}: Pick<ThreadAttachment, "fileIndex" | "raw">): string | undefined => {
+	if (typeof raw !== "object" || raw === null || !("files" in raw)) {
+		return undefined;
+	}
+	const { files } = raw;
+	if (!Array.isArray(files)) return undefined;
+	const file: unknown = files[fileIndex];
+	return typeof file === "object" &&
+		file !== null &&
+		"id" in file &&
+		typeof file.id === "string"
+		? file.id
+		: undefined;
+};
+
+/** Earlier files a turn in this thread has not read yet, newest first, so a
+ * tag reaches a file an earlier turn could not read without resending, or
+ * being crowded out by, the ones it did. */
+export const getUndeliveredThreadAttachments = async (
+	thread: Thread,
+	currentMessage: Message,
+	state?: StateAdapter,
+): Promise<ThreadAttachment[]> => {
+	const earlier = getEarlierThreadAttachments(thread, currentMessage);
+	try {
+		const delivered = new Set(
+			await (state ?? chatState()).getList<string>(
+				deliveredFilesKey({ message: currentMessage, thread }),
+			),
+		);
+		return earlier.filter((earlierAttachment) => {
+			const fileId = threadAttachmentFileId(earlierAttachment);
+			return !(fileId && delivered.has(fileId));
+		});
+	} catch (error) {
+		logger.warn("Could not load delivered Slack files", {
+			data: { error },
+			event: "leaf.slack_delivered_files_failed",
+		});
+		return earlier;
+	}
+};
+
+/** Remembers files a turn has read, so later tags in the thread skip them. */
+export const recordDeliveredFiles = async (
+	thread: Thread,
+	message: Message,
+	fileIds: ReadonlyArray<string>,
+	state?: StateAdapter,
+) => {
+	const store = state ?? chatState();
+	const key = deliveredFilesKey({ message, thread });
+	for (const fileId of fileIds) {
+		await store.appendToList(key, fileId, {
+			maxLength: DELIVERED_FILES_LIMIT,
+			ttlMs: SKIPPED_REPLIES_TTL_MS,
+		});
+	}
+};

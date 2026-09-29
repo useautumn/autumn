@@ -23,6 +23,7 @@ export const setupSlackAgentTurn = async ({
 	logger = rootLogger,
 	missedMessages,
 	onAction,
+	onAttachmentsPrepared,
 	onReasoning,
 	onThinking,
 	providerUserId,
@@ -96,6 +97,7 @@ export const setupSlackAgentTurn = async ({
 			thread: effectiveThread,
 		}),
 	]);
+	onAttachmentsPrepared?.(prepared.delivered);
 	const turnParams: AgentTurnParams = {
 		attachments: prepared.parts.map((part) => ({
 			data: part.data,
