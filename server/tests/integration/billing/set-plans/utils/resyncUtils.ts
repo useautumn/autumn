@@ -92,3 +92,32 @@ export const expectPlanStartsAt = async ({
 	});
 	expect(customerProduct?.starts_at).toBe(startsAt);
 };
+
+/** The live subscription's schedule restarts the cycle with a phase that starts on the anchor. */
+export const expectCycleResetPhase = async ({
+	ctx,
+	customerId,
+	anchorMs,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	anchorMs: number;
+}) => {
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const scheduleId =
+		typeof subscription.schedule === "string"
+			? subscription.schedule
+			: subscription.schedule?.id;
+	if (!scheduleId) throw new Error("Live subscription has no schedule");
+
+	const schedule =
+		await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
+	const resetPhase = schedule.phases.find(
+		(phase) => phase.start_date === msToSeconds(anchorMs),
+	);
+	expect(resetPhase?.billing_cycle_anchor).toBe("phase_start");
+};
