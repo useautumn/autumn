@@ -16,6 +16,7 @@ import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleSetPlansEndDateErrors } from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansEndDateErrors";
 import {
 	handleSetPlansComputeErrors,
 	handleSetPlansErrors,
@@ -267,5 +268,34 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 				},
 			}),
 		).rejects.toThrow("2 assigned, but the incoming plan grants 1");
+	});
+});
+
+describe(chalk.yellowBright("handleSetPlansEndDateErrors"), () => {
+	const now = Date.now();
+	const backdatedContext = {
+		...buildContext({
+			immediateStartsAt: now - ms.days(1),
+			currentEpochMs: now,
+		}),
+		futurePhases: [],
+	} as CreateScheduleBillingContext;
+
+	test("rejects an ends_at that passed moments ago", () => {
+		expect(() =>
+			handleSetPlansEndDateErrors({
+				billingContext: backdatedContext,
+				endsAt: now - ms.seconds(30),
+			}),
+		).toThrow("ends_at cannot be set to a past timestamp");
+	});
+
+	test("rejects an ends_at of exactly now", () => {
+		expect(() =>
+			handleSetPlansEndDateErrors({
+				billingContext: backdatedContext,
+				endsAt: now,
+			}),
+		).toThrow("ends_at cannot be set to a past timestamp");
 	});
 });
