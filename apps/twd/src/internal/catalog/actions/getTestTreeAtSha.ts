@@ -9,11 +9,59 @@ import {
 	utimes,
 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type { TestGroupsModule, TestTree } from "../types/testTree.ts";
 import { getRepoUrl, runGit } from "./gitRemote.ts";
+
+const GROUPS_DUMP_ENTRY = resolve(
+	import.meta.dir,
+	"../groupsProcess/dumpTestGroups.ts",
+);
+const GROUPS_DUMP_TIMEOUT_MS = 30_000;
+
+type GroupsDump = {
+	unsupported?: true;
+	groups: ReturnType<TestGroupsModule["getAllGroups"]>;
+	suites: ReturnType<TestGroupsModule["getAllSuites"]>;
+	resolved: Record<string, string[] | null>;
+};
+
+/** A pushed commit's `_groups` is untrusted code: evaluate it in a child with no env (no DB, Stripe, GitHub or encryption secrets). */
+const loadGroupsIsolated = async ({
+	testsDir,
+}: {
+	testsDir: string;
+}): Promise<TestGroupsModule | null> => {
+	const child = Bun.spawn(["bun", GROUPS_DUMP_ENTRY, testsDir], {
+		cwd: testsDir,
+		env: { PATH: process.env.PATH ?? "/usr/bin:/bin" },
+		stdout: "pipe",
+		stderr: "pipe",
+		timeout: GROUPS_DUMP_TIMEOUT_MS,
+	});
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
+	if (exitCode !== 0)
+		throw new TwdError({
+			status: 422,
+			code: "test_groups_failed",
+			message: `Loading server/tests/_groups failed: ${stderr.trim().slice(-500) || `exit ${exitCode}`}`,
+			next: "Fix server/tests/_groups on the branch, push, and retry.",
+		});
+	const dump = JSON.parse(stdout) as GroupsDump;
+	if (dump.unsupported) return null;
+	return {
+		getAllGroups: () => dump.groups,
+		getAllSuites: () => dump.suites,
+		resolveTestPaths: ({ name }: { name: string }) =>
+			dump.resolved[name] ?? undefined,
+	} as TestGroupsModule;
+};
 
 const TREE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -152,11 +200,8 @@ const loadTree = async ({
 	}
 
 	const testsDir = join(treeDir, "server", "tests");
-	const groups: Partial<TestGroupsModule> = await import(
-		join(testsDir, "_groups", "index.ts")
-	);
-	const { getAllGroups, getAllSuites, resolveTestPaths } = groups;
-	if (!getAllGroups || !getAllSuites || !resolveTestPaths) {
+	const groups = await loadGroupsIsolated({ testsDir });
+	if (!groups) {
 		throw new TwdError({
 			status: 422,
 			code: "unsupported_test_groups",
@@ -167,7 +212,7 @@ const loadTree = async ({
 	return {
 		sha,
 		testsDir,
-		groups: { getAllGroups, getAllSuites, resolveTestPaths },
+		groups,
 	};
 };
 

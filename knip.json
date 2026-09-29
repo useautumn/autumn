@@ -143,6 +143,7 @@
 			"entry": [
 				"src/internal/runs/swarm/swarmProcess/swarmProcess.ts",
 				"src/internal/runs/warm/warmProcess/warmProcess.ts",
+				"src/internal/catalog/groupsProcess/dumpTestGroups.ts",
 				"web/src/main.tsx",
 				"web/vite.config.ts",
 				"web/scripts/*.ts"
