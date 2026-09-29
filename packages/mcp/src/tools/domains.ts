@@ -6,6 +6,7 @@ import { customers } from "./customers.js";
 import { entities } from "./entities.js";
 import { events } from "./events.js";
 import { features } from "./features.js";
+import { invoices } from "./invoices.js";
 import { logs } from "./logs.js";
 import { plans } from "./plans.js";
 import { rewards } from "./rewards.js";
@@ -27,6 +28,7 @@ export const domainModules = {
 	catalog,
 	billing,
 	balances,
+	invoices,
 	logs,
 } as const;
 

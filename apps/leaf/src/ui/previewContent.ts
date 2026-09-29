@@ -133,6 +133,114 @@ const balancePreviewElements = (payload: LooseRecord): CardChild[] | null => {
 		: null;
 };
 
+const amountRows = ({
+	currency,
+	lines,
+}: {
+	currency: string;
+	lines: ReadonlyArray<{ amount: number; name: string }>;
+}) => {
+	const rows = lines
+		.slice(0, MAX_LINE_ITEM_ROWS)
+		.map((line) => [line.name, formatMoney({ amount: line.amount, currency })]);
+	if (lines.length > MAX_LINE_ITEM_ROWS) {
+		rows.push([`+${lines.length - MAX_LINE_ITEM_ROWS} more items`, ""]);
+	}
+	return rows;
+};
+
+const isInvoicePreview = (payload: LooseRecord) =>
+	Array.isArray(payload.lines) &&
+	typeof payload.total === "number" &&
+	typeof payload.amount_due === "number";
+
+// invoices.create / invoices.reissue previews: the invoice that will be issued.
+const invoicePreviewElements = (payload: LooseRecord): CardChild[] => {
+	const currency =
+		typeof payload.currency === "string" ? payload.currency : "usd";
+	const lines = (payload.lines as unknown[]).flatMap((line) => {
+		const record = asRecord(line);
+		const amount = record?.amount_after_discounts ?? record?.amount;
+		return typeof record?.description === "string" && typeof amount === "number"
+			? [{ amount, name: record.description }]
+			: [];
+	});
+	const rows = amountRows({ currency, lines });
+	const discountTotal = payload.discount_total;
+	if (typeof discountTotal === "number" && discountTotal > 0) {
+		rows.push([
+			"Discounts",
+			`-${formatMoney({ amount: discountTotal, currency })}`,
+		]);
+	}
+	const taxTotal = asRecord(payload.tax)?.total;
+	if (typeof taxTotal === "number" && taxTotal !== 0) {
+		rows.push(["Tax", formatMoney({ amount: taxTotal, currency })]);
+	}
+	rows.push([
+		"Total",
+		formatMoney({ amount: payload.total as number, currency }),
+	]);
+	if (payload.amount_due !== payload.total) {
+		rows.push([
+			"Amount due after credit",
+			formatMoney({ amount: payload.amount_due as number, currency }),
+		]);
+	}
+
+	const dueNote =
+		typeof payload.due_date === "number"
+			? `Due ${formatEpochDate(payload.due_date)}`
+			: "Charged to the customer's payment method when issued";
+	return [
+		Table({ align: ["left", "right"], headers: ["Item", "Amount"], rows }),
+		CardText(dueNote, { style: "muted" }),
+	];
+};
+
+const isInvoiceRecord = (payload: LooseRecord) =>
+	typeof payload.stripe_id === "string" &&
+	typeof payload.status === "string" &&
+	typeof payload.total === "number" &&
+	!("lines" in payload);
+
+// An existing invoice (getInvoice), shown on void / pay / finalize cards.
+const invoiceRecordElements = (payload: LooseRecord): CardChild[] => {
+	const currency =
+		typeof payload.currency === "string" ? payload.currency : "usd";
+	const items = Array.isArray(payload.items) ? payload.items : [];
+	const lines = items.flatMap((item) => {
+		const record = asRecord(item);
+		return typeof record?.description === "string" &&
+			typeof record.amount === "number"
+			? [{ amount: record.amount, name: record.description }]
+			: [];
+	});
+	const rows = amountRows({ currency, lines });
+	rows.push([
+		"Total",
+		formatMoney({ amount: payload.total as number, currency }),
+	]);
+	if (typeof payload.amount_paid === "number" && payload.amount_paid > 0) {
+		rows.push(["Paid", formatMoney({ amount: payload.amount_paid, currency })]);
+	}
+
+	const notes = [
+		`Status: ${payload.status}`,
+		typeof payload.customer_id === "string"
+			? `Customer: ${payload.customer_id}`
+			: null,
+		typeof payload.created_at === "number"
+			? `Created ${formatEpochDate(payload.created_at)}`
+			: null,
+		`Stripe: ${payload.stripe_id}`,
+	].filter((note): note is string => Boolean(note));
+	return [
+		Table({ align: ["left", "right"], headers: ["Item", "Amount"], rows }),
+		CardText(notes.join("  ·  "), { style: "muted" }),
+	];
+};
+
 /** Structured card body for a preview payload, or null to fall back to text. */
 export const previewElements = (preview: unknown): CardChild[] | null => {
 	const payload = parsePreviewPayload(preview);
@@ -143,5 +251,7 @@ export const previewElements = (preview: unknown): CardChild[] | null => {
 	if (payload.action === "createBalance") {
 		return balancePreviewElements(payload);
 	}
+	if (isInvoicePreview(payload)) return invoicePreviewElements(payload);
+	if (isInvoiceRecord(payload)) return invoiceRecordElements(payload);
 	return null;
 };

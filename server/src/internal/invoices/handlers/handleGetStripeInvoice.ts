@@ -18,9 +18,10 @@ export const handleGetStripeInvoice = createRoute({
 		});
 
 		// The customer is expanded so callers can edit the live record, not the
-		// snapshot the invoice took at finalization.
+		// snapshot the invoice took at finalization. Payment intents carry the
+		// last_payment_error that explains why an open invoice is unpaid.
 		const stripeInvoice = await stripeCli.invoices.retrieve(stripe_invoice_id, {
-			expand: ["customer.tax_ids"],
+			expand: ["customer.tax_ids", "payments.data.payment.payment_intent"],
 		});
 
 		return c.json(stripeInvoice);
