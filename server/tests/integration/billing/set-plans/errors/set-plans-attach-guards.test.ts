@@ -83,3 +83,42 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans guards: subscription_id on a retained active plan is rejected")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 25 })],
+		});
+
+		const { customerId, autumnV2_4 } = await initScenario({
+			customerId: "set-plans-guard-sub-id-in-use",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addOn] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({ productId: addOn.id, subscriptionId: "addon-sub" }),
+			],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.DuplicateSubscriptionId,
+			errMessage: "subscription_id 'addon-sub' is already in use",
+			func: () =>
+				autumnV2_4.billing.setPlans({
+					customer_id: customerId,
+					phases: [
+						{
+							starts_at: "now",
+							plans: [{ plan_id: pro.id, subscription_id: "addon-sub" }],
+						},
+					],
+				}),
+		});
+	},
+);
