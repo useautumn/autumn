@@ -16,6 +16,7 @@ import { createHttpClient } from "./http/createHttpClient.js";
 import { createCommandQueue } from "./queue/createCommandQueue.js";
 import { enqueueCommands } from "./queue/enqueueCommands.js";
 import type { EnqueueParams } from "./queue/types/queue.js";
+import { createRouteHints } from "./routing/createRouteHints.js";
 import { createTrackBatcher } from "./routing/createTrackBatcher.js";
 import type {
 	ApplyBillingPlanParams,
@@ -54,6 +55,7 @@ export function createBalanceWorkerClient({
 
 	const ctx = {
 		owners: dependencies.owners,
+		hints: createRouteHints(),
 		http,
 		partitionCount: config.partitionCount,
 		timeoutMs: config.timeoutMs,

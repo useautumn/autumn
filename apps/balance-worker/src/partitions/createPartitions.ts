@@ -12,6 +12,7 @@ import {
 } from "./partitionService.js";
 import type { PartitionsState } from "./types/partitionState.js";
 import type {
+	PartitionSuccessor,
 	Partitions,
 	PartitionsConfig,
 	PartitionsDependencies,
@@ -54,6 +55,13 @@ export function createPartitions({
 		return state.handoffSettlements.get(partition) ?? Promise.resolve();
 	}
 
+	function findSuccessor({
+		partition,
+	}: PartitionTarget): PartitionSuccessor | undefined {
+		const successor = state.handoffSuccessors.get(partition);
+		return successor ? { ...successor } : undefined;
+	}
+
 	return {
 		start,
 		stop,
@@ -63,6 +71,7 @@ export function createPartitions({
 		findRuntime,
 		findOwnedRuntime,
 		awaitHandoff,
+		findSuccessor,
 	};
 }
 
@@ -103,6 +112,7 @@ function createPartitionState(): PartitionsState {
 		handingOff: new Map(),
 		retiringEntries: new Map(),
 		handoffSettlements: new Map(),
+		handoffSuccessors: new Map(),
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
 		status: "created",

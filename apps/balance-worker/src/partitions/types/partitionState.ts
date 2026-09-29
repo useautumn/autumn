@@ -3,6 +3,7 @@ import type {
 	PartitionDirectory,
 	PartitionRuntimePort,
 	PartitionRuntimeResources,
+	PartitionSuccessor,
 	PartitionsDependencies,
 	ResolvedPartitionsConfig,
 	Unsubscribe,
@@ -29,6 +30,8 @@ export type PartitionsState = {
 	retiringEntries: Map<number, PartitionEntry>;
 	/** Withdrawn routes whose successor is not yet named; a request meeting one waits here. */
 	handoffSettlements: Map<number, Promise<void>>;
+	/** Routes this worker claimed for successors, told to callers that still arrive here. */
+	handoffSuccessors: Map<number, PartitionSuccessor>;
 	terminalHealthByPartition: Map<number, OwnedPartitionHealth>;
 	partitionRetryTimers: Map<number, ReturnType<typeof setTimeout>>;
 	status: "created" | "running" | "stopping" | "stopped";

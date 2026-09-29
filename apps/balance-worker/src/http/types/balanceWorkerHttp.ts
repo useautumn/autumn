@@ -14,6 +14,7 @@ import type {
 	UpdateBalanceReply,
 	WorkerErrorCode,
 	WorkerRequest,
+	WorkerRouteSuccessor,
 } from "@autumn/balance-worker-client/protocol";
 import type { AutumnLogger } from "@autumn/logging";
 import type {
@@ -79,6 +80,10 @@ export type BalanceWorkerHttpContext = {
 			route: PartitionRoute,
 		): BalanceWorkerRequestContext["runtime"] | undefined;
 		awaitHandoff?(target: { partition: number }): Promise<void>;
+		/** The route a finished handoff claimed for the successor, to tell a caller that still arrives here. */
+		findSuccessor?(target: {
+			partition: number;
+		}): WorkerRouteSuccessor | undefined;
 	};
 	partitionResolver: MeteringPartitionResolver;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;

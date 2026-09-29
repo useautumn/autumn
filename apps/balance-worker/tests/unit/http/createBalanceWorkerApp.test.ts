@@ -95,6 +95,7 @@ const fixture = ({
 	actualPartition = 2,
 	causeFor,
 	awaitHandoff,
+	findSuccessor,
 }: {
 	cause?: Error;
 	owned?: boolean;
@@ -102,6 +103,7 @@ const fixture = ({
 	/** Fails individual tracks by command id, for batches that mix outcomes. */
 	causeFor?: Record<string, Error>;
 	awaitHandoff?: BalanceWorkerHttpContext["ownership"]["awaitHandoff"];
+	findSuccessor?: BalanceWorkerHttpContext["ownership"]["findSuccessor"];
 } = {}) => {
 	const logs: unknown[][] = [];
 	function recordLog(...args: unknown[]): void {
@@ -170,7 +172,7 @@ const fixture = ({
 			: undefined;
 	};
 	const ctx: BalanceWorkerHttpContext = {
-		ownership: { findRuntime, awaitHandoff },
+		ownership: { findRuntime, awaitHandoff, findSuccessor },
 		partitionResolver: { partitionForIdentity: () => actualPartition },
 		logger: {
 			debug: recordLog,
@@ -530,6 +532,34 @@ describe("Balance worker HTTP", () => {
 		const reply = await response;
 		expect(reply.status).toBe(409);
 		expect((await reply.json()).error.code).toBe("NOT_OWNER");
+		expect(submitted).toEqual([]);
+	});
+	test("a withdrawn route names its successor in the NOT_OWNER answer, on a single request and on a batch", async () => {
+		const successor = {
+			partition: 2,
+			routeEpoch: "77",
+			endpoint: "http://worker-b:8082",
+		};
+		const { post, postBatch, submitted } = fixture({
+			owned: false,
+			findSuccessor: () => successor,
+		});
+		const single = await post({
+			...request,
+			route: { ...route, routeEpoch: "1" },
+		});
+		expect(single.status).toBe(409);
+		expect((await single.json()).error).toEqual({
+			code: "NOT_OWNER",
+			message: "Route is not admitted by this worker",
+			successor,
+		});
+		const batch = await postBatch({
+			route: { ...route, routeEpoch: "1" },
+			commands: [command],
+		});
+		expect(batch.status).toBe(409);
+		expect((await batch.json()).error.successor).toEqual(successor);
 		expect(submitted).toEqual([]);
 	});
 	test("maps runtime readiness races centrally", async () => {

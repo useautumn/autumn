@@ -7,7 +7,13 @@ import {
 	BalanceWorkerClientError,
 	type WorkerRequestOutcome,
 } from "../types/balanceWorkerClientErrors.js";
-import type { PartitionOwners, RequestDeadline } from "./types/routing.js";
+import type {
+	PartitionOwner,
+	PartitionOwners,
+	RequestDeadline,
+	ResolvedCommandRoute,
+	RoutingContext,
+} from "./types/routing.js";
 
 /** A request's whole budget: the client timeout, cut short by the caller's signal. */
 export function createRequestDeadline({
@@ -118,11 +124,28 @@ export function isNotOwnerResponse({
 }: {
 	response: HttpResponse;
 }): boolean {
-	if (response.status === 200) return false;
+	return readNotOwnerResponse({ response }) !== null;
+}
+
+export type NotOwnerAnswer = {
+	/** Where the old owner says the partition went; absent while its handoff is unnamed or released. */
+	successor?: PartitionOwner;
+};
+
+/** Null for a success; the NOT_OWNER answer with any successor it names; throws for every other worker error. */
+export function readNotOwnerResponse({
+	response,
+}: {
+	response: HttpResponse;
+}): NotOwnerAnswer | null {
+	if (response.status === 200) return null;
 	const error = (response.body as WorkerErrorResponse | null)?.error;
 	if (!error || workerErrorStatus({ code: error.code }) !== response.status)
 		throw new Error("Worker error does not match HTTP status");
-	if (error.code === "NOT_OWNER") return true;
+	if (error.code === "NOT_OWNER") {
+		const successor = readSuccessor({ input: error.successor });
+		return successor ? { successor } : {};
+	}
 	throw new BalanceWorkerClientError({
 		code: "WORKER_ERROR",
 		outcome: error.code === "INTERNAL" ? "unknown" : "not_submitted",
@@ -130,4 +153,43 @@ export function isNotOwnerResponse({
 		workerCode: error.code,
 		workerReason: error.reason,
 	});
+}
+
+/** A hint that does not parse is no hint: the refresh path still works without it. */
+function readSuccessor({
+	input,
+}: {
+	input: unknown;
+}): PartitionOwner | undefined {
+	if (typeof input !== "object" || input === null) return undefined;
+	const { partition, routeEpoch, endpoint } = input as Record<string, unknown>;
+	if (!Number.isSafeInteger(partition) || (partition as number) < 0)
+		return undefined;
+	if (typeof routeEpoch !== "string" || !/^\d+$/.test(routeEpoch))
+		return undefined;
+	if (typeof endpoint !== "string" || endpoint.trim().length === 0)
+		return undefined;
+	return { partition: partition as number, routeEpoch, endpoint };
+}
+
+/** Keeps a named successor for the next attempt, or forgets a hint the named endpoint has now declined. */
+export function followNotOwnerAnswer({
+	ctx,
+	resolved,
+	answer,
+}: {
+	ctx: Pick<RoutingContext, "owners" | "hints">;
+	resolved: ResolvedCommandRoute;
+	answer: NotOwnerAnswer;
+}): boolean {
+	const { partition } = resolved.route;
+	const { successor } = answer;
+	if (
+		successor &&
+		successor.partition === partition &&
+		ctx.hints?.adopt({ successor, known: ctx.owners.findOwner({ partition }) })
+	)
+		return true;
+	ctx.hints?.drop({ partition, endpoint: resolved.endpoint });
+	return false;
 }

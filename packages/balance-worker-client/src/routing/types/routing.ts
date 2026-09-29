@@ -1,6 +1,7 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import type { PartitionRoute } from "../../contracts/worker.js";
 import type { HttpClient } from "../../http/types/httpClient.js";
+import type { RouteHints } from "../createRouteHints.js";
 
 export type PartitionOwner = PartitionRoute & { endpoint: string };
 export type PartitionOwners = {
@@ -9,6 +10,8 @@ export type PartitionOwners = {
 };
 export type RoutingContext = {
 	owners: PartitionOwners;
+	/** Routes a worker named in its NOT_OWNER answer, tried ahead of a refresh. */
+	hints?: RouteHints;
 	http: HttpClient;
 	partitionCount: number;
 	timeoutMs: number;

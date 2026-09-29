@@ -417,6 +417,30 @@ test("a batch-level NOT_OWNER refreshes once and resends the live items", async 
 	expect(await Promise.all(pending)).toEqual(["b", "c"].map(replyFor));
 });
 
+test("a batch told where the partition went is re-sent there without a refresh", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	fixture.requests[0].respond({
+		status: 409,
+		body: {
+			error: {
+				code: "NOT_OWNER",
+				message: "Stale route",
+				successor: replacement,
+			},
+		},
+	});
+	await fixture.sent(2);
+	expect(fixture.refreshes()).toBe(0);
+	expect(fixture.requests[1].url).toBe("http://worker-b:8080/v1/track-batch");
+	expect(fixture.requests[1].body).toEqual({
+		route: { partition: 0, routeEpoch: "2" },
+		commands: [commandFor("a")],
+	});
+	fixture.requests[1].respond(okResults(["a"]));
+	expect(await pending).toEqual(replyFor("a"));
+});
+
 test("a route still stale after one refresh rejects not_submitted", async () => {
 	const fixture = createFixture();
 	const pending = fixture.client.track({ command: commandFor("a") });

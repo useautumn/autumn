@@ -20,7 +20,8 @@ import type {
 import {
 	assertRequestDeadline,
 	createRequestDeadline,
-	isNotOwnerResponse,
+	followNotOwnerAnswer,
+	readNotOwnerResponse,
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
 
@@ -122,14 +123,18 @@ export function createTrackBatcher({
 		}
 	}
 
+	/** Set by a NOT_OWNER that named the successor: the next attempt goes there without a refresh. */
+	let followingHint = false;
+
 	async function sendBatch({ items }: { items: TrackItem[] }): Promise<void> {
 		let pending = items;
+		followingHint = false;
 		try {
 			for (let attempt = 0; attempt < 2; attempt++) {
 				pending = pending.filter(isLive);
 				if (pending.length === 0) return;
 				const batchAttempt = startAttempt({ items: pending });
-				if (attempt > 0) {
+				if (attempt > 0 && !followingHint) {
 					await refreshCommandRoute({
 						owners: ctx.owners,
 						deadline: attemptDeadline({ items: pending, batchAttempt }),
@@ -154,6 +159,7 @@ export function createTrackBatcher({
 					});
 					return;
 				}
+				followingHint = false;
 				pending = await postBatch({
 					items: pending,
 					resolved,
@@ -225,7 +231,12 @@ export function createTrackBatcher({
 		batchAttempt.live.clear();
 		if (response.status !== 200) {
 			if (
-				!isNotOwner({ items, status: response.status, body: response.body })
+				!isNotOwner({
+					items,
+					status: response.status,
+					body: response.body,
+					resolved,
+				})
 			) {
 				rejectAll({ items, error: invalidResponse({}) });
 				return [];
@@ -251,6 +262,7 @@ export function createTrackBatcher({
 					items: [item],
 					status: result.status,
 					body: { error: result.error },
+					resolved,
 				})
 			) {
 				item.phase = "routing";
@@ -260,18 +272,23 @@ export function createTrackBatcher({
 		return reroute;
 	}
 
-	/** Same reading as a single request: NOT_OWNER reroutes, any other worker error settles the items. */
+	/** Same reading as a single request: NOT_OWNER reroutes, a named successor is followed, any other worker error settles the items. */
 	function isNotOwner({
 		items,
 		status,
 		body,
+		resolved,
 	}: {
 		items: TrackItem[];
 		status: number;
 		body: unknown;
+		resolved: ResolvedCommandRoute;
 	}): boolean {
 		try {
-			return isNotOwnerResponse({ response: { status, body } });
+			const answer = readNotOwnerResponse({ response: { status, body } });
+			if (!answer) return false;
+			if (followNotOwnerAnswer({ ctx, resolved, answer })) followingHint = true;
+			return true;
 		} catch (cause) {
 			rejectAll({
 				items,
