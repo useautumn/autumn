@@ -76,6 +76,9 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"proration_disabled",
 	"subscription_replaced",
 	"new_stripe_subscription",
+	"open_invoice_not_collected",
+	"discount_not_carried",
+	"trial_ended",
 ]);
 
 export const SetPlansPreviewWarningSchema = z.object({
