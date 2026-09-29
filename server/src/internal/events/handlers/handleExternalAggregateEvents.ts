@@ -39,6 +39,7 @@ export const handleExternalAggregateEvents = createRoute({
 			custom_range,
 			filter_by,
 			max_groups,
+			group_ranking,
 			aggregate_on,
 			timezone,
 		} = c.req.valid("json");
@@ -152,6 +153,7 @@ export const handleExternalAggregateEvents = createRoute({
 					enforceGroupLimit: true,
 					filter_by,
 					max_groups: planMaxGroups ?? max_groups,
+					group_ranking,
 					timezone: safeTimezone,
 				},
 			}),

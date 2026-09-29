@@ -63,7 +63,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 		<tr
 			data-slot="table-row"
 			className={cn(
-				"data-[state=selected]:bg-zinc-100 dark:data-[state=selected]:bg-zinc-800",
+				"group/row data-[state=selected]:bg-zinc-100 dark:data-[state=selected]:bg-zinc-800",
 				className,
 			)}
 			{...props}
@@ -76,7 +76,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 		<th
 			data-slot="table-head"
 			className={cn(
-				"h-6 text-muted-foreground text-left align-middle font-normal text-xs [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] dark:text-zinc-400",
+				"h-7 bg-table-tray text-tertiary-foreground text-left align-middle font-normal text-xs [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
 				className,
 			)}
 			{...props}
@@ -89,7 +89,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
 		<td
 			data-slot="table-cell"
 			className={cn(
-				"text-ellipsis overflow-hidden font-medium whitespace-nowrap py-1 text-muted-foreground align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+				"bg-table-surface border-b border-table-row-divider first:border-l first:border-l-table-surface-border last:border-r last:border-r-table-surface-border group-first/row:border-t group-first/row:border-t-table-surface-border group-last/row:border-b-table-surface-border group-first/row:first:rounded-tl-lg group-first/row:last:rounded-tr-lg group-last/row:first:rounded-bl-lg group-last/row:last:rounded-br-lg group-hover/row:bg-table-row-hover group-data-[state=selected]/row:bg-active-primary text-ellipsis overflow-hidden font-medium whitespace-nowrap py-1 text-muted-foreground align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
 				className,
 			)}
 			{...props}

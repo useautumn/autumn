@@ -34,6 +34,14 @@ Thumbs.db
 # Logs
 logs/
 *.log
+.openlogs/
+
+# Local agent and task state
+.context/
+.trigger/
+
+# Local generated app state
+**/.eve/
 
 # Runtime data
 pids/

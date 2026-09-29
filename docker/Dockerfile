@@ -1,13 +1,18 @@
 # syntax=docker/dockerfile:1
 
-# Shared runtime image for server + workers + cron + leaf.
+# Shared runtime image for Autumn's server, workers, and scheduled services.
 # Each FlightControl service runs the same image with a different command:
-#   server  -> bun start            (cwd /app/server)
-#   workers -> bun src/workers.ts   (cwd /app/server)
-#   cron    -> bun src/cron.ts      (cwd /app/server)
-#   leaf    -> bun leaf             (cwd /app/server; serves chat + MCP routes)
-#   ducklake -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
-FROM oven/bun:1.3.14 AS deps
+#   server          -> bun start           (cwd /app/server)
+#   workers         -> bun workers         (cwd /app/server)
+#   cron            -> bun cron            (cwd /app/server)
+#   balance-workers -> bun balance-workers (cwd /app/server)
+#   herald          -> bun herald          (cwd /app/server)
+#   leaf            -> bun leaf            (cwd /app/server; serves chat + MCP routes)
+#   ducklake        -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
+ARG BUN_VERSION=1.4.2
+
+FROM oven/bun:${BUN_VERSION} AS deps
+ARG BUN_VERSION
 WORKDIR /app
 
 # Copy the committed lockfile + every workspace manifest. Installing against the
@@ -25,6 +30,7 @@ COPY shared/package.json shared/
 COPY vite/package.json vite/
 COPY scripts/package.json scripts/
 COPY apps/leaf/package.json apps/leaf/
+COPY apps/herald/package.json apps/herald/
 COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/
@@ -38,6 +44,20 @@ COPY packages/ax-evals/package.json packages/ax-evals/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
+COPY packages/balance-engine/package.json packages/balance-engine/
+COPY packages/balance-webhooks/package.json packages/balance-webhooks/
+COPY packages/balance-worker-client/package.json packages/balance-worker-client/
+COPY packages/kafka/package.json packages/kafka/
+COPY packages/edge-config/package.json packages/edge-config/
+COPY packages/blue-green/package.json packages/blue-green/
+COPY packages/postgres/package.json packages/postgres/
+COPY packages/auto-topup/package.json packages/auto-topup/
+COPY packages/sqs/package.json packages/sqs/
+COPY packages/cache/package.json packages/cache/
+COPY packages/encryption/package.json packages/encryption/
+COPY packages/dynamodb/package.json packages/dynamodb/
+COPY packages/catalog-lru/package.json packages/catalog-lru/
+COPY apps/balance-worker/package.json apps/balance-worker/
 COPY packages/env/package.json packages/env/
 COPY packages/gateway/package.json packages/gateway/
 COPY packages/ksuid/package.json packages/ksuid/
@@ -45,6 +65,8 @@ COPY packages/logging/package.json packages/logging/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
 COPY packages/render/package.json packages/render/
+COPY packages/svix/package.json packages/svix/
+COPY packages/tinybird/package.json packages/tinybird/
 COPY packages/ducklake/package.json packages/ducklake/
 COPY packages/axiom/package.json packages/axiom/
 COPY packages/billing/package.json packages/billing/
@@ -60,10 +82,11 @@ RUN mkdir -p scripts && touch scripts/preload-env.ts
 
 # Install the full workspace (runtime source imports cross package boundaries).
 # --frozen-lockfile pins bun.lock exactly; --ignore-scripts blocks postinstall hooks.
-RUN --mount=type=cache,target=/root/.bun/install/cache \
+# Cache keyed per Bun version so two runtimes never share one install cache.
+RUN --mount=type=cache,id=bun-install-${BUN_VERSION},target=/root/.bun/install/cache \
 	bun install --ignore-scripts --frozen-lockfile
 
-FROM oven/bun:1.3.14
+FROM oven/bun:${BUN_VERSION}
 WORKDIR /app
 ENV NODE_ENV=production
 

@@ -16,7 +16,11 @@ export const CustomerEntitlementFiltersSchema = z.object({
 
 export const EntityBalanceSchema = z.object({
 	id: z.string(),
-	balance: z.number(),
+	// Legacy unlimited rows stored null: the balance tracks nothing, so it reads as 0.
+	balance: z
+		.number()
+		.nullable()
+		.transform((balance) => balance ?? 0),
 	adjustment: z.number(),
 
 	additional_balance: z.number().optional(),

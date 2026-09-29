@@ -1,4 +1,4 @@
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { nullish } from "../../utils.js";
 
 export const cusEntsHaveUsageAllowed = ({
@@ -6,7 +6,7 @@ export const cusEntsHaveUsageAllowed = ({
 	internalFeatureId,
 	includeUsageLimit = true,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	internalFeatureId: string;
 	includeUsageLimit?: boolean;
 }) => {

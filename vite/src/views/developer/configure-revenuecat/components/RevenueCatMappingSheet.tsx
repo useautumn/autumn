@@ -15,6 +15,7 @@ import {
 	Sheet,
 	SheetContent,
 	ShortcutButton,
+	StatusChip,
 } from "@autumn/ui";
 import { X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -87,9 +88,9 @@ const UnsupportedMappingNotice = () => (
 );
 
 const UnsupportedBadge = () => (
-	<span className="text-tiny text-amber-600 dark:text-amber-500 bg-muted px-1.5 py-0.5 rounded-md">
+	<StatusChip tone="amber" glyph="alert">
 		unsupported
-	</span>
+	</StatusChip>
 );
 
 interface PrepaidFeature {

@@ -10,9 +10,9 @@ import {
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
-import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { AppliedDiscountRow } from "@/components/forms/shared/discount-row/AppliedDiscountRow";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
+import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
@@ -48,7 +48,6 @@ export function UpdateSubscriptionAdvancedSection() {
 				(customerProduct.subscription_ids?.length ?? 0) > 0,
 		},
 	});
-	const isProrate = billingBehavior !== "none";
 
 	return (
 		<AdvancedSection>
@@ -79,17 +78,14 @@ export function UpdateSubscriptionAdvancedSection() {
 
 			{rules.proration.visible && (
 				<>
-					<ConfigRow
-						title="Prorate Changes"
-						description="Prorate price differences when changing plans mid-cycle"
-						action={
-							<BillingOptionToggle
-								rule={rules.proration}
-								checked={isProrate}
-								onCheckedChange={(checked) =>
-									form.setFieldValue("billingBehavior", checked ? null : "none")
-								}
-							/>
+					<ProrationBehaviorConfigRow
+						rule={rules.proration}
+						value={billingBehavior ?? "prorate_immediately"}
+						onChange={(value) =>
+							form.setFieldValue(
+								"billingBehavior",
+								value === "prorate_immediately" ? null : value,
+							)
 						}
 					/>
 					<ConfigRow

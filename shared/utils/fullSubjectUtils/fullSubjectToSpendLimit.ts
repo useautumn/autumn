@@ -1,10 +1,15 @@
 import type { DbSpendLimit } from "../../models/cusModels/billingControls/customerBillingControls.js";
-import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
+import type {
+	BillingControlSubjectView,
+	CustomerEntitlementRowView,
+	CustomerProductWithPricesView,
+} from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { resolveSpendLimitOverageLimit } from "../cusEntUtils/index.js";
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 import {
 	DEFAULT_PLAN_CONTROL_STATUSES,
 	fullSubjectToPlanProducts,
+	type PlanControlCustomerProduct,
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
 
@@ -14,11 +19,14 @@ import {
  * Entity inherits from the customer per feature_id: entity's entry wins when
  * present, customer's entry fills any gaps.
  */
-export const fullSubjectToSpendLimitByFeatureId = ({
+export const fullSubjectToSpendLimitByFeatureId = <
+	CE extends CustomerEntitlementRowView,
+	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
+>({
 	fullSubject,
 	featureIds,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: BillingControlSubjectView<CE, CP>;
 	featureIds: string[];
 }): Record<string, DbSpendLimit> => {
 	const entitySpendLimits = fullSubject.entity?.spend_limits ?? [];
@@ -28,7 +36,8 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 
 	for (const featureId of uniqueFeatureIds) {
 		const isMatch = (candidate: DbSpendLimit) =>
-			candidate.feature_id === featureId && candidate.overage_limit !== undefined;
+			candidate.feature_id === featureId &&
+			candidate.overage_limit !== undefined;
 
 		const cusEnts = fullSubjectToCustomerEntitlements({
 			fullSubject,
@@ -54,7 +63,7 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 			};
 		};
 
-		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
+		const spendLimit = resolveBillingControl({
 			controlLists: [entitySpendLimits, customerSpendLimits],
 			customerProducts: fullSubjectToPlanProducts({ fullSubject }),
 			controlKey: "spend_limits",
@@ -84,11 +93,14 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 	return spendLimitByFeatureId;
 };
 
-export const fullSubjectToUsageBasedCusEntsByFeatureId = ({
+export const fullSubjectToUsageBasedCusEntsByFeatureId = <
+	CE extends CustomerEntitlementRowView,
+	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
+>({
 	fullSubject,
 	featureIds,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: BillingControlSubjectView<CE, CP>;
 	featureIds: string[];
 }): Record<string, string[]> => {
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
@@ -100,12 +112,11 @@ export const fullSubjectToUsageBasedCusEntsByFeatureId = ({
 	const overageCusEntsByFeatureId: Record<string, string[]> = {};
 
 	for (const customerEntitlement of customerEntitlements) {
-		if (!overageCusEntsByFeatureId[customerEntitlement.feature_id]) {
-			overageCusEntsByFeatureId[customerEntitlement.feature_id] = [];
+		const featureId = customerEntitlement.entitlement.feature.id;
+		if (!overageCusEntsByFeatureId[featureId]) {
+			overageCusEntsByFeatureId[featureId] = [];
 		}
-		overageCusEntsByFeatureId[customerEntitlement.feature_id].push(
-			customerEntitlement.id,
-		);
+		overageCusEntsByFeatureId[featureId].push(customerEntitlement.id);
 	}
 
 	return overageCusEntsByFeatureId;

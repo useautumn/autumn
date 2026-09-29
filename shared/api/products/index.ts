@@ -19,6 +19,7 @@ export * from "./previousVersions/apiProduct";
 export * from "./productOpModels";
 export * from "./productsOpenApi";
 export * from "./utils/compare";
+export * from "./utils/convert";
 export * from "./utils/display";
 
 // Note: V1.2_ProductChanges.js is NOT exported here to avoid circular deps

@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
+import { ExtEventsAggregateParamsSchema } from "@api/events/aggregate/eventsAggregateParams.js";
 import {
 	ApiBalanceV1Schema,
 	ApiCustomerV5Schema,
@@ -111,6 +112,7 @@ async function generateOpenApiDocument({
 	registerInternalSchemas(TrackResponseV3Schema);
 	registerInternalSchemas(CustomerDataSchema);
 	registerInternalSchemas(ApiEventsListV2_3ParamsSchema);
+	registerInternalSchemas(ExtEventsAggregateParamsSchema);
 	registerInternalSchemas(DfuFlashParamsSchema);
 	registerInternalSchemas(InsertInvoicesParamsSchema);
 	if (!stripInternal) {

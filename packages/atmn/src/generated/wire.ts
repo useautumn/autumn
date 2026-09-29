@@ -216,7 +216,6 @@ const CATALOG_HINTS = hintsOf({
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups",
-		"webhooks.url",
 	],
 	frozenPaths: [
 		"plans.licenses.metadata",

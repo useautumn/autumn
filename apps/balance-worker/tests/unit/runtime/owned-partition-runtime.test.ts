@@ -1,0 +1,1898 @@
+import { describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+	type CheckCommand,
+	type MeteringIdentity,
+	parseCheckCommand,
+	parseTrackCommand,
+	type TrackCommand,
+} from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import {
+	createProducerSession,
+	type KafkaTransaction as KafkaMutationTransactionPort,
+	type KafkaProducerClient as OwnedPartitionProducerPort,
+} from "@autumn/kafka";
+import { Glob } from "bun";
+import type { ProducerRecord, RecordMetadata } from "kafkajs";
+import ts from "typescript";
+import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
+import {
+	createWorkerProducer,
+	createWorkerProducerConfig,
+} from "../../../src/kafka/createWorkerProducer.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import {
+	MutationBatchAppendError,
+	PartitionWriterRecoveryRequiredError,
+} from "../../../src/processor/writer/writerErrors.js";
+import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
+import type {
+	PartitionBootstrapper as OwnedPartitionBootstrapPort,
+	PartitionLogRange,
+} from "../../../src/runtime/bootstrap/types/partitionBootstrap.js";
+import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
+import {
+	OwnedPartitionNotReadyError,
+	OwnedPartitionProducerFencedError,
+	OwnedPartitionRecoveryRequiredError,
+} from "../../../src/runtime/runtimeErrors.js";
+import type {
+	PartitionOutcomeFollowerPort,
+	PartitionRuntimeDependencies,
+} from "../../../src/runtime/types/partitionRuntime.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
+import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
+	createState as createSubjectState,
+	restoreSubjectStates,
+} from "../../fixtures/mutations.js";
+import * as preparationFixtures from "../kafka/kafka-test-fixtures.js";
+
+const topic = "metering-events-v1";
+
+const partition = 2;
+
+const identity = {
+	orgId: "org_1",
+	env: "sandbox",
+	customerId: "cus_1",
+	entityId: null,
+} as const;
+
+const createState = ({
+	stateIdentity = identity,
+	balance = 10,
+}: {
+	stateIdentity?: MeteringIdentity;
+	balance?: number;
+} = {}) => createSubjectState({ identity: stateIdentity, balance });
+
+const createTrackCommand = ({
+	commandId,
+	commandIdentity = identity,
+}: {
+	commandId: string;
+	commandIdentity?: MeteringIdentity;
+}): TrackCommand =>
+	parseTrackCommand({
+		input: {
+			schemaVersion: 1,
+			type: "track",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
+			commandId,
+			requestId: `req_${commandId}`,
+			identity: commandIdentity,
+			featureId: "messages",
+			internalFeatureId: "feat_messages",
+			value: 5,
+			overageBehavior: "reject",
+			properties: null,
+			usageEvent: { name: "messages", idempotencyKey: null, id: null },
+			occurredAt: 1_700_000_000_000,
+		},
+	});
+
+const createCheckCommand = ({
+	requestId,
+	commandIdentity = identity,
+}: {
+	requestId: string;
+	commandIdentity?: MeteringIdentity;
+}): CheckCommand =>
+	parseCheckCommand({
+		input: {
+			schemaVersion: 1,
+			type: "check",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
+			requestId,
+			identity: commandIdentity,
+			featureId: "messages",
+			internalFeatureId: "feat_messages",
+			requiredBalance: 1,
+			properties: null,
+			occurredAt: 1_700_000_000_000,
+		},
+	});
+
+type Deferred<T> = {
+	promise: Promise<T>;
+	resolve: (value: T) => void;
+	reject: (error: unknown) => void;
+};
+
+const createDeferred = <T>(): Deferred<T> => {
+	let resolveDeferred: Deferred<T>["resolve"] | null = null;
+	let rejectDeferred: Deferred<T>["reject"] | null = null;
+	const promise = new Promise<T>((resolve, reject) => {
+		resolveDeferred = resolve;
+		rejectDeferred = reject;
+	});
+	if (!resolveDeferred || !rejectDeferred) {
+		throw new Error("Expected deferred callbacks");
+	}
+	return { promise, resolve: resolveDeferred, reject: rejectDeferred };
+};
+
+type FakeProducerOptions = {
+	appendCommitGate?: Promise<void>;
+	appendCommitError?: Error;
+	appendSendError?: Error;
+	appendAbortError?: Error;
+	lifecycle?: string[];
+};
+
+const createFakeProducer = ({
+	appendCommitGate = Promise.resolve(),
+	appendCommitError,
+	appendSendError,
+	appendAbortError,
+	lifecycle = [],
+}: FakeProducerOptions = {}): {
+	producer: OwnedPartitionProducerPort;
+	lifecycle: string[];
+	records: ProducerRecord[];
+} => {
+	const records: ProducerRecord[] = [];
+	let transactionCount = 0;
+	let nextOffset = 0n;
+
+	const producer: OwnedPartitionProducerPort = {
+		connect: async () => {
+			lifecycle.push("producer:connect");
+		},
+		disconnect: async () => {
+			lifecycle.push("producer:disconnect");
+		},
+		transaction: async () => {
+			const currentTransaction = transactionCount;
+			transactionCount += 1;
+			lifecycle.push(
+				currentTransaction === 0
+					? "producer:fence"
+					: "producer:append-transaction",
+			);
+
+			const transaction: KafkaMutationTransactionPort = {
+				send: async (record) => {
+					if (currentTransaction === 0) {
+						throw new Error("Fence transaction cannot send records");
+					}
+					lifecycle.push("producer:send");
+					records.push(record);
+					if (appendSendError) throw appendSendError;
+					const baseOffset = nextOffset;
+					nextOffset += BigInt(record.messages.length);
+					return [
+						{
+							topicName: topic,
+							partition,
+							errorCode: 0,
+							baseOffset: baseOffset.toString(),
+						},
+					] satisfies RecordMetadata[];
+				},
+				sendOffsets: async () => {},
+				commit: async () => {
+					lifecycle.push("producer:commit");
+					await appendCommitGate;
+					if (currentTransaction > 0 && appendCommitError) {
+						throw appendCommitError;
+					}
+				},
+				abort: async () => {
+					lifecycle.push(
+						currentTransaction === 0
+							? "producer:fence-abort"
+							: "producer:abort",
+					);
+					if (currentTransaction > 0 && appendAbortError) {
+						throw appendAbortError;
+					}
+				},
+			};
+			return transaction;
+		},
+	};
+
+	return { producer, lifecycle, records };
+};
+
+const createFollower = ({
+	catchUpGate = Promise.resolve(),
+	stopError,
+	lifecycle = [],
+	logRange = { logStartOffset: 0n, logEndOffset: 0n },
+}: {
+	catchUpGate?: Promise<void>;
+	stopError?: Error;
+	lifecycle?: string[];
+	logRange?: PartitionLogRange;
+} = {}): {
+	follower: PartitionOutcomeFollowerPort;
+	lifecycle: string[];
+	emitUnavailable: ({ cause }: { cause: unknown }) => void;
+} => {
+	let unavailableListener: (({ cause }: { cause: unknown }) => void) | null =
+		null;
+	let consumedNextOffset: bigint | null = null;
+	let highWatermark: bigint | null = null;
+	const follower = {
+		readLogRange: async () => {
+			lifecycle.push("follower:range");
+			highWatermark = logRange.logEndOffset;
+			return logRange;
+		},
+		startAndCatchUp: async ({
+			onUnavailable: handleUnavailable,
+			targetNextOffset,
+		}: {
+			onUnavailable: ({ cause }: { cause: unknown }) => void;
+			targetNextOffset: bigint;
+		}) => {
+			lifecycle.push("follower:start");
+			unavailableListener = handleUnavailable;
+			await catchUpGate;
+			consumedNextOffset = targetNextOffset;
+			lifecycle.push("follower:caught-up");
+		},
+		readProgress: () => ({ consumedNextOffset, highWatermark }),
+		stop: async () => {
+			lifecycle.push("follower:stop");
+			if (stopError) throw stopError;
+		},
+	} as PartitionOutcomeFollowerPort;
+	return {
+		lifecycle,
+		follower,
+		emitUnavailable: ({ cause }) => {
+			if (!unavailableListener) {
+				throw new Error("Follower has no unavailability listener");
+			}
+			unavailableListener({ cause });
+		},
+	};
+};
+
+const createStoreFixture = (): {
+	directory: string;
+	store: SqliteStateStore;
+} => {
+	const directory = mkdtempSync(join(tmpdir(), "autumn-owned-partition-"));
+	const store = openStateStore({
+		databasePath: join(directory, "balance-state.sqlite"),
+	});
+	restoreSubjectStates({
+		store,
+		topic,
+		partition,
+		states: [createState()],
+	});
+	return { directory, store };
+};
+
+const closeStoreFixture = ({
+	directory,
+	store,
+}: {
+	directory: string;
+	store: SqliteStateStore;
+}): void => {
+	store.close();
+	rmSync(directory, { recursive: true, force: true });
+};
+
+/** Two turns: a command resolves its subject before it reaches the writer, and the writer commits on the turn after. */
+const waitForTurn = async (): Promise<void> => {
+	await new Promise<void>((resolve) => setImmediate(resolve));
+	await new Promise<void>((resolve) => setImmediate(resolve));
+};
+
+const writerLimits = {
+	maxBatchSize: 100,
+	maxPendingCommands: 1_000,
+	maxPendingCommandsPerCustomer: 100,
+};
+
+const createRuntime = ({
+	store,
+	producer,
+	follower,
+	bootstrap = async () => ({ kind: "continued", nextOffset: 0n }),
+	partitionForIdentity = () => partition,
+	recoveryDrainTimeoutMs = 1_000,
+	storeApplyGate,
+}: {
+	store: SqliteStateStore;
+	producer: OwnedPartitionProducerPort;
+	follower: PartitionOutcomeFollowerPort;
+	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];
+	partitionForIdentity?: (identity: MeteringIdentity) => number;
+	recoveryDrainTimeoutMs?: number;
+	/** Holds every store apply, the way a slow Postgres committer would. */
+	storeApplyGate?: Promise<void>;
+}) => {
+	function createProducer(): OwnedPartitionProducerPort {
+		return producer;
+	}
+	const session = createProducerSession({
+		ctx: { kafka: { producer: createProducer } },
+		config: createWorkerProducerConfig({
+			deploymentEnvironment: "test",
+			topic,
+			partition,
+			limits: {
+				transactionTimeoutMs: 15_000,
+				retryCount: 3,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 2_000,
+			},
+		}),
+	});
+	const workerProducer = createWorkerProducer({
+		ctx: { session },
+		config: { topic, partition },
+	});
+	const stateStore: PartitionRuntimeDependencies["stateStore"] = storeApplyGate
+		? {
+				...store,
+				applyDurableMutations: async (params) => {
+					await storeApplyGate;
+					return store.applyDurableMutations(params);
+				},
+			}
+		: store;
+	return createPartitionRuntime({
+		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
+		ctx: {
+			stateStore,
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
+			bootstrapper: { bootstrap },
+			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+			producer: workerProducer,
+			follower,
+			appender: createMutationPublisher({
+				ctx: { producer: workerProducer },
+			}),
+			partitionResolver: {
+				partitionForIdentity: ({ identity: commandIdentity }) =>
+					partitionForIdentity(commandIdentity),
+			},
+		},
+	});
+};
+
+describe("owned partition runtime", () => {
+	function createBareFencedRuntime({
+		fenceOwnership,
+	}: {
+		fenceOwnership: () => Promise<{ offset: bigint } | null>;
+	}) {
+		const fixture = createStoreFixture();
+		const events: string[] = [];
+		const fakeFollower = createFollower({ lifecycle: events });
+		const follower: PartitionOutcomeFollowerPort = {
+			...fakeFollower.follower,
+			awaitNextOffset: async ({ nextOffset }) => {
+				events.push(`follower:await:${nextOffset}`);
+			},
+		};
+		const runtime = createPartitionRuntime({
+			ctx: {
+				stateStore: fixture.store,
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
+				producer: {
+					connect: async () => {
+						events.push("producer:connect");
+					},
+					fence: async () => {
+						events.push("producer:fence");
+					},
+					fenceOwnership: async () => {
+						events.push("producer:fence-marker");
+						return fenceOwnership();
+					},
+					disconnect: async () => {
+						events.push("producer:disconnect");
+					},
+				},
+				appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
+				follower,
+				bootstrapper: {
+					bootstrap: async () => ({ kind: "continued", nextOffset: 0n }),
+				},
+				partitionResolver: { partitionForIdentity: () => partition },
+				receiptPolicy: { retentionMs: 1_000, now: () => 0 },
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			},
+			config: {
+				topic,
+				partition,
+				writerLimits,
+				recoveryDrainTimeoutMs: 10,
+			},
+		});
+		return { runtime, events, fixture };
+	}
+
+	test("fence after the claim writes the marker and reads up to it before anything is admitted", async () => {
+		const f = createBareFencedRuntime({
+			fenceOwnership: async () => ({ offset: 41n }),
+		});
+		try {
+			await f.runtime.start();
+			expect(f.runtime.getStatus()).toBe("ready");
+			f.events.length = 0;
+			await f.runtime.fence();
+			expect(f.events).toEqual(["producer:fence-marker", "follower:await:42"]);
+			expect(f.runtime.getStatus()).toBe("ready");
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a producer with no marker to write makes the fence a no-op, and it is refused before the runtime is ready", async () => {
+		const f = createBareFencedRuntime({ fenceOwnership: async () => null });
+		try {
+			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
+				OwnedPartitionNotReadyError,
+			);
+			await f.runtime.start();
+			f.events.length = 0;
+			await f.runtime.fence();
+			expect(f.events).toEqual(["producer:fence-marker"]);
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a marker that cannot be written sends the runtime into recovery instead of serving unfenced", async () => {
+		const f = createBareFencedRuntime({
+			fenceOwnership: async () => {
+				throw new Error("broker unreachable");
+			},
+		});
+		try {
+			await f.runtime.start();
+			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
+				OwnedPartitionRecoveryRequiredError,
+			);
+			expect(f.runtime.getStatus()).toBe("recovery_required");
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("fences the previous owner and catches up before serving", async () => {
+		const fixture = createStoreFixture();
+		const catchUp = createDeferred<void>();
+		const startup: string[] = [];
+		const fakeProducer = createFakeProducer({ lifecycle: startup });
+		const fakeFollower = createFollower({
+			catchUpGate: catchUp.promise,
+			lifecycle: startup,
+			logRange: { logStartOffset: 0n, logEndOffset: 5n },
+		});
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+			bootstrap: async ({ logRange }) => {
+				startup.push("bootstrap");
+				expect(runtime.getStatus()).toBe("bootstrapping");
+				expect(logRange).toEqual({
+					logStartOffset: 0n,
+					logEndOffset: 5n,
+				});
+				return { kind: "continued", nextOffset: 0n };
+			},
+		});
+
+		try {
+			const startPromise = runtime.start();
+			expect(runtime.getStatus()).toBe("fencing");
+			await waitForTurn();
+
+			expect(runtime.getStatus()).toBe("catching_up");
+			expect(startup).toEqual([
+				"producer:connect",
+				"producer:fence",
+				"producer:fence-abort",
+				"follower:range",
+				"bootstrap",
+				"follower:start",
+			]);
+			expect(runtime.getHealth()).toEqual({
+				topic,
+				partition,
+				status: "catching_up",
+				localNextOffset: 0n,
+				consumedNextOffset: null,
+				highWatermark: 5n,
+				lag: 5n,
+				failureReason: null,
+			});
+			await expect(
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_1" }),
+					}),
+				),
+			).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
+
+			catchUp.resolve(undefined);
+			await startPromise;
+
+			expect(runtime.getStatus()).toBe("ready");
+			expect(runtime.getHealth().lag).toBe(0n);
+			expect(startup.at(-1)).toBe("follower:caught-up");
+			await expect(
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_2" }),
+					}),
+				),
+			).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
+			});
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("disposes the partition when catch-up fails", async () => {
+		const fixture = createStoreFixture();
+		const fakeProducer = createFakeProducer();
+		const catchUpError = new Error("catch-up failed");
+		const fakeFollower = createFollower({
+			catchUpGate: Promise.reject(catchUpError),
+		});
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+
+		try {
+			await expect(runtime.start()).rejects.toBeInstanceOf(
+				OwnedPartitionRecoveryRequiredError,
+			);
+			expect(runtime.getStatus()).toBe("recovery_required");
+			expect(runtime.getHealth()).toMatchObject({
+				status: "recovery_required",
+				failureReason: "Error: catch-up failed",
+			});
+			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("cancels catch-up and disconnects when revoked during startup", async () => {
+		const fixture = createStoreFixture();
+		const fakeProducer = createFakeProducer();
+		const catchUpStopped = createDeferred<void>();
+		const followerLifecycle: string[] = [];
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: {
+				readLogRange: async () => ({
+					logStartOffset: 0n,
+					logEndOffset: 1n,
+				}),
+				startAndCatchUp: async () => {
+					followerLifecycle.push("follower:start");
+					await catchUpStopped.promise;
+				},
+				readProgress: () => ({
+					consumedNextOffset: null,
+					highWatermark: 1n,
+				}),
+				stop: async () => {
+					followerLifecycle.push("follower:stop");
+					catchUpStopped.resolve(undefined);
+				},
+			},
+		});
+
+		try {
+			const startPromise = runtime.start();
+			await waitForTurn();
+			await runtime.stop();
+			await expect(startPromise).rejects.toBeInstanceOf(
+				OwnedPartitionNotReadyError,
+			);
+
+			expect(runtime.getStatus()).toBe("stopped");
+			expect(followerLifecycle).toEqual(["follower:start", "follower:stop"]);
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("does not mutate state when revoked during checkpoint loading", async () => {
+		const fixture = createStoreFixture();
+		const fakeProducer = createFakeProducer();
+		const fakeFollower = createFollower({
+			logRange: { logStartOffset: 10n, logEndOffset: 20n },
+		});
+		const bootstrapStarted = createDeferred<void>();
+		let mutationCount = 0;
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+			bootstrap: async ({ signal }) => {
+				bootstrapStarted.resolve(undefined);
+				await new Promise<void>((_resolve, reject) => {
+					if (signal.aborted) {
+						reject(signal.reason);
+						return;
+					}
+					signal.addEventListener("abort", () => reject(signal.reason), {
+						once: true,
+					});
+				});
+				mutationCount += 1;
+				return { kind: "restored", nextOffset: 10n };
+			},
+		});
+
+		try {
+			const startPromise = runtime.start();
+			await bootstrapStarted.promise;
+			await runtime.stop();
+
+			await expect(startPromise).rejects.toBeInstanceOf(
+				OwnedPartitionNotReadyError,
+			);
+			expect(mutationCount).toBe(0);
+			expect(fakeFollower.lifecycle).toEqual(["follower:range"]);
+			expect(runtime.getStatus()).toBe("stopped");
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a later check answers from the projection while the customer's track is still committing", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+		});
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: createFollower().follower,
+		});
+
+		try {
+			await runtime.start();
+			const trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			const checkPromise = runtime.process((processor) =>
+				processor.check({
+					command: createCheckCommand({ requestId: "req_after_track" }),
+				}),
+			);
+			let checkSettled = false;
+			void checkPromise.finally(() => {
+				checkSettled = true;
+			});
+
+			await waitForTurn();
+			expect(fakeProducer.lifecycle).toContain("producer:commit");
+			// The deduction is projected; the read does not pay for the commit still in flight.
+			expect(checkSettled).toBe(true);
+			await expect(checkPromise).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+			});
+			expect(fixture.store.readState({ identity })?.revision).toBe(0);
+
+			commit.resolve(undefined);
+			await expect(trackPromise).resolves.toMatchObject({
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 5 }] },
+			});
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test.concurrent(
+		"a check racing an ambiguous track commit answers from the projection; the next one is rejected",
+		async () => {
+			const fixture = createStoreFixture();
+			const commit = createDeferred<void>();
+			const fakeProducer = createFakeProducer({
+				appendCommitGate: commit.promise,
+				appendCommitError: new Error("commit response lost"),
+			});
+			const runtime = createRuntime({
+				store: fixture.store,
+				producer: fakeProducer.producer,
+				follower: createFollower().follower,
+			});
+
+			try {
+				await runtime.start();
+				const track = runtime
+					.process((processor) =>
+						processor.track({
+							command: createTrackCommand({ commandId: "cmd_ambiguous" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				const check = runtime
+					.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_during_commit" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				await waitForTurn();
+				expect(fakeProducer.lifecycle).toContain("producer:commit");
+
+				// Answered before the commit's fate was known: the one window in which a read reports a deduction that never landed.
+				expect(await check).toMatchObject({
+					result: { allowed: true },
+					state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+				});
+				commit.resolve(undefined);
+
+				expect(await track).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(runtime.getStatus()).toBe("recovery_required");
+				expect(fixture.store.readState({ identity })?.revision).toBe(0);
+				await expect(
+					runtime.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_after_ambiguity" }),
+						}),
+					),
+				).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+			} finally {
+				commit.resolve(undefined);
+				await runtime.stop();
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test.concurrent(
+		"a check racing follower loss answers from the projection; the next one is rejected, the track still replies",
+		async () => {
+			const fixture = createStoreFixture();
+			const commit = createDeferred<void>();
+			const fakeProducer = createFakeProducer({
+				appendCommitGate: commit.promise,
+			});
+			const fakeFollower = createFollower();
+			const runtime = createRuntime({
+				store: fixture.store,
+				producer: fakeProducer.producer,
+				follower: fakeFollower.follower,
+			});
+
+			try {
+				await runtime.start();
+				const track = runtime
+					.process((processor) =>
+						processor.track({
+							command: createTrackCommand({ commandId: "cmd_follower_loss" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				const check = runtime
+					.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_before_loss" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				await waitForTurn();
+				expect(fakeProducer.lifecycle).toContain("producer:commit");
+
+				expect(await check).toMatchObject({
+					result: { allowed: true },
+					state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+				});
+				fakeFollower.emitUnavailable({
+					cause: new Error("outcome follower stopped"),
+				});
+				commit.resolve(undefined);
+
+				expect(await track).toMatchObject({
+					result: { status: "applied" },
+					state: { customerEntitlements: [{ balance: 5 }] },
+				});
+				expect(runtime.getStatus()).toBe("recovery_required");
+				expect(fixture.store.readState({ identity })?.revision).toBe(1);
+				await expect(
+					runtime.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_after_loss" }),
+						}),
+					),
+				).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+			} finally {
+				commit.resolve(undefined);
+				await runtime.stop();
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test("revokes readiness when the live follower becomes unavailable", async () => {
+		const fixture = createStoreFixture();
+		const fakeProducer = createFakeProducer();
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+
+		try {
+			await runtime.start();
+			fakeFollower.emitUnavailable({
+				cause: new Error("outcome follower stopped"),
+			});
+			await waitForTurn();
+
+			expect(runtime.getStatus()).toBe("recovery_required");
+			await expect(
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_after_failure" }),
+					}),
+				),
+			).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+			await expect(
+				runtime.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "cmd_after_failure" }),
+					}),
+				),
+			).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+			expect(fakeProducer.records).toHaveLength(0);
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("drains accepted work before disconnecting after follower loss", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+		let trackPromise: Promise<TrackReply> | null = null;
+
+		try {
+			await runtime.start();
+			trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			await waitForTurn();
+			expect(fakeProducer.lifecycle).toContain("producer:commit");
+
+			fakeFollower.emitUnavailable({
+				cause: new Error("outcome follower stopped"),
+			});
+			await waitForTurn();
+
+			expect(runtime.getStatus()).toBe("recovery_required");
+			expect(fakeProducer.lifecycle).not.toContain("producer:disconnect");
+
+			commit.resolve(undefined);
+			await expect(trackPromise).resolves.toMatchObject({
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 5 }] },
+			});
+			await runtime.stop();
+
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+			expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		} finally {
+			commit.resolve(undefined);
+			await trackPromise?.catch(() => undefined);
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("finishes follower-loss recovery when accepted work fails", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+			appendCommitError: new Error("commit response lost"),
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+		let trackPromise: Promise<TrackReply> | null = null;
+
+		try {
+			await runtime.start();
+			trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			await waitForTurn();
+
+			fakeFollower.emitUnavailable({
+				cause: new Error("outcome follower stopped"),
+			});
+			commit.resolve(undefined);
+
+			await expect(trackPromise).rejects.toBeInstanceOf(
+				OwnedPartitionRecoveryRequiredError,
+			);
+			await runtime.stop();
+
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			commit.resolve(undefined);
+			await trackPromise?.catch(() => undefined);
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("bounds the follower-loss drain before disconnecting", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+			recoveryDrainTimeoutMs: 1,
+		});
+		let trackPromise: Promise<TrackReply> | null = null;
+
+		try {
+			await runtime.start();
+			trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			await waitForTurn();
+
+			fakeFollower.emitUnavailable({
+				cause: new Error("outcome follower stopped"),
+			});
+			await runtime.stop();
+
+			expect(runtime.getStatus()).toBe("recovery_required");
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			commit.resolve(undefined);
+			await trackPromise?.catch(() => undefined);
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("drains accepted work before disconnecting on revoke", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+
+		try {
+			await runtime.start();
+			const trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			await waitForTurn();
+			const stopPromise = runtime.stop();
+
+			expect(runtime.getStatus()).toBe("draining");
+			await expect(
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_late" }),
+					}),
+				),
+			).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
+			expect(fakeProducer.lifecycle).not.toContain("producer:disconnect");
+
+			commit.resolve(undefined);
+			await trackPromise;
+			await stopPromise;
+
+			expect(runtime.getStatus()).toBe("stopped");
+			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("rejects a failed command before recovery waits for its batch", async () => {
+		const fixture = createStoreFixture();
+		const batchFinished = createDeferred<void>();
+		const stopStarted = createDeferred<void>();
+		const cleanup = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendSendError: Object.assign(new Error("producer fenced"), {
+				type: "INVALID_PRODUCER_EPOCH",
+				code: 47,
+			}),
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: {
+				...fakeFollower.follower,
+				stop: async () => {
+					stopStarted.resolve(undefined);
+					// Consumer withdrawal waits for the batch executing this command.
+					await batchFinished.promise;
+					await cleanup.promise;
+				},
+			},
+		});
+		const unavailable: unknown[] = [];
+		runtime.subscribeUnavailable(({ cause }) => unavailable.push(cause));
+		let batchSettled = false;
+		try {
+			await runtime.start();
+			const batch = runtime
+				.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "queued_failure" }),
+					}),
+				)
+				.catch((cause: unknown) => cause)
+				.finally(() => {
+					batchSettled = true;
+					batchFinished.resolve(undefined);
+				});
+			await stopStarted.promise;
+			await waitForTurn();
+			expect(batchSettled).toBe(true);
+			expect(await batch).toBeInstanceOf(OwnedPartitionProducerFencedError);
+			expect(unavailable).toHaveLength(1);
+			expect(runtime.getStatus()).toBe("recovery_required");
+			await expect(
+				runtime.process(async () => "late command"),
+			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
+
+			let stopped = false;
+			const stopping = runtime.stop().then(() => {
+				stopped = true;
+			});
+			await waitForTurn();
+			expect(stopped).toBe(false);
+			expect(fakeProducer.lifecycle).not.toContain("producer:disconnect");
+			cleanup.resolve(undefined);
+			await stopping;
+			await runtime.waitForQuiescence();
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			batchFinished.resolve(undefined);
+			cleanup.resolve(undefined);
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("parks and discards a producer fenced during append", async () => {
+		const fixture = createStoreFixture();
+		const fencedError = Object.assign(new Error("producer fenced"), {
+			type: "INVALID_PRODUCER_EPOCH",
+			code: 47,
+		});
+		const fakeProducer = createFakeProducer({
+			appendSendError: fencedError,
+		});
+		const fakeFollower = createFollower({
+			stopError: new Error("follower cleanup failed"),
+		});
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+
+		try {
+			await runtime.start();
+			await expect(
+				runtime.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "cmd_1" }),
+					}),
+				),
+			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
+
+			expect(runtime.getStatus()).toBe("recovery_required");
+			await runtime.stop();
+			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
+			expect(
+				fakeProducer.lifecycle.filter(
+					(stage) => stage === "producer:disconnect",
+				),
+			).toHaveLength(1);
+			await expect(
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_late" }),
+					}),
+				),
+			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("keeps serving after a non-fencing append is safely aborted", async () => {
+		const fixture = createStoreFixture();
+		const fakeProducer = createFakeProducer({
+			appendSendError: new Error("broker unavailable"),
+		});
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: createFollower().follower,
+		});
+
+		try {
+			await runtime.start();
+			const track = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			const check = runtime.process((processor) =>
+				processor.check({
+					command: createCheckCommand({ requestId: "req_during_abort" }),
+				}),
+			);
+			// Decided before the append failed, so this read saw a deduction the abort then rolled back; the next read does not.
+			await expect(check).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+			});
+			await expect(track).rejects.toBeInstanceOf(MutationBatchAppendError);
+
+			expect(runtime.getStatus()).toBe("ready");
+			await expect(
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_after_abort" }),
+					}),
+				),
+			).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
+			});
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("parks and discards a producer after an ambiguous commit", async () => {
+		const fixture = createStoreFixture();
+		const fakeProducer = createFakeProducer({
+			appendCommitError: new Error("commit response lost"),
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+
+		try {
+			await runtime.start();
+			const error = await runtime
+				.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "cmd_1" }),
+					}),
+				)
+				.catch((cause: unknown) => cause);
+
+			expect(error).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+			expect(error).not.toBeInstanceOf(OwnedPartitionProducerFencedError);
+			expect(runtime.getStatus()).toBe("recovery_required");
+			await runtime.stop();
+			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("preserves recovery status when revoke races an ambiguous commit", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+			appendCommitError: new Error("commit response lost"),
+		});
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: createFollower().follower,
+		});
+
+		try {
+			await runtime.start();
+			const trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			await waitForTurn();
+			const stopPromise = runtime.stop();
+			commit.resolve(undefined);
+
+			await expect(trackPromise).rejects.toBeInstanceOf(
+				OwnedPartitionRecoveryRequiredError,
+			);
+			await stopPromise;
+			expect(runtime.getStatus()).toBe("recovery_required");
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+});
+
+test("drain waits for accepted tracks but keeps the producer connected", async () => {
+	const fixture = createStoreFixture();
+	const commit = createDeferred<void>();
+	const producer = createFakeProducer({ appendCommitGate: commit.promise });
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+	});
+	try {
+		await runtime.start();
+		const track = runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_drain" }),
+			}),
+		);
+		await waitForTurn();
+		let drained = false;
+		const draining = runtime.drain().then(() => {
+			drained = true;
+		});
+		await waitForTurn();
+		expect(drained).toBe(false);
+		expect(producer.lifecycle).not.toContain("producer:disconnect");
+		await expect(
+			runtime.process((processor) =>
+				processor.check({
+					command: createCheckCommand({ requestId: "after_drain" }),
+				}),
+			),
+		).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
+		commit.resolve(undefined);
+		await track;
+		await draining;
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		expect(producer.lifecycle).not.toContain("producer:disconnect");
+		await runtime.stop();
+		expect(producer.lifecycle.at(-1)).toBe("producer:disconnect");
+	} finally {
+		commit.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+test("drain waits for the store apply behind a log-durability reply", async () => {
+	const fixture = createStoreFixture();
+	const storeApply = createDeferred<void>();
+	const producer = createFakeProducer();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+		storeApplyGate: storeApply.promise,
+	});
+	try {
+		await runtime.start();
+		await runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_store_drain" }),
+			}),
+		);
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+		let drained = false;
+		const draining = runtime.drain().then(() => {
+			drained = true;
+		});
+		await waitForTurn();
+		expect(drained).toBe(false);
+		storeApply.resolve(undefined);
+		await draining;
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+	} finally {
+		storeApply.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+test("drain rejects when the store refuses the apply behind a log-durability reply", async () => {
+	const fixture = createStoreFixture();
+	const storeApply = createDeferred<void>();
+	const producer = createFakeProducer();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+		storeApplyGate: storeApply.promise,
+	});
+	try {
+		await runtime.start();
+		await runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_store_refused" }),
+			}),
+		);
+		const draining = runtime.drain();
+		storeApply.reject(new Error("postgres refused the row"));
+		// The verdict is the store's: a successor must not be named over rows that never landed.
+		await expect(draining).rejects.toBeInstanceOf(
+			PartitionWriterRecoveryRequiredError,
+		);
+		await runtime.stop();
+		expect(producer.lifecycle.at(-1)).toBe("producer:disconnect");
+		await runtime.waitForQuiescence();
+	} finally {
+		storeApply.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+test("quiescence remains pending after recovery disposal until accepted apply settles", async () => {
+	const fixture = createStoreFixture();
+	const commit = createDeferred<void>();
+	const producer = createFakeProducer({ appendCommitGate: commit.promise });
+	const follower = createFollower();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: follower.follower,
+		recoveryDrainTimeoutMs: 1,
+	});
+	let track: Promise<unknown> | undefined;
+	try {
+		await runtime.start();
+		let unavailable = false;
+		runtime.subscribeUnavailable(() => {
+			unavailable = true;
+		});
+		track = runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "quiescence" }),
+			}),
+		);
+		await waitForTurn();
+		follower.emitUnavailable({ cause: new Error("lost follower") });
+		expect(unavailable).toBe(true);
+		await runtime.stop();
+		let settled = false;
+		const quiescence = runtime.waitForQuiescence().then(() => {
+			settled = true;
+		});
+		await waitForTurn();
+		expect(producer.lifecycle.at(-1)).toBe("producer:disconnect");
+		expect(settled).toBe(false);
+		commit.resolve(undefined);
+		await track.catch(() => undefined);
+		await quiescence;
+		expect(settled).toBe(true);
+	} finally {
+		commit.resolve(undefined);
+		await track?.catch(() => undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+function runtimeUsesNamedFunctions(): void {
+	const directory = new URL("../../../src/runtime/", import.meta.url).pathname;
+	const violations: string[] = [];
+	for (const file of new Glob("**/*.ts").scanSync({
+		cwd: directory,
+		absolute: true,
+	})) {
+		const source = ts.createSourceFile(
+			file,
+			readFileSync(file, "utf8"),
+			ts.ScriptTarget.Latest,
+			true,
+		);
+		const pending: ts.Node[] = [source];
+		while (pending.length > 0) {
+			const node = pending.pop();
+			if (!node) continue;
+			const anonymous =
+				ts.isArrowFunction(node) ||
+				ts.isFunctionExpression(node) ||
+				(ts.isFunctionDeclaration(node) && !node.name);
+			const inlineMethod =
+				ts.isMethodDeclaration(node) &&
+				ts.isObjectLiteralExpression(node.parent);
+			const callbackWiring =
+				ts.isCallExpression(node) &&
+				ts.isPropertyAccessExpression(node.expression) &&
+				["bind", "then", "catch", "finally"].includes(
+					node.expression.name.text,
+				);
+			if (anonymous || inlineMethod || callbackWiring) {
+				const { line } = source.getLineAndCharacterOfPosition(
+					node.getStart(source),
+				);
+				violations.push(
+					`${file}:${line + 1}: ${node.getText(source).slice(0, 80)}`,
+				);
+			}
+			pending.push(...node.getChildren(source));
+		}
+	}
+	expect(violations).toEqual([]);
+}
+
+test(
+	"runtime uses named functions without bind or callback promise chains",
+	runtimeUsesNamedFunctions,
+);
+
+describe("partitionPreparation", function partitionPreparationTests() {
+	const { closeStoreFixture, createStoreFixture, partition, topic } =
+		preparationFixtures;
+	const createFixture = ({
+		preparation: customizePreparation = (follower) => follower,
+		fence = async () => undefined,
+		bootstrap = async () => undefined,
+		activationWaitMs,
+	}: {
+		preparation?: (
+			follower: PartitionOutcomeFollowerPort,
+			active: PartitionOutcomeFollowerPort,
+		) => PartitionOutcomeFollowerPort;
+		fence?: () => Promise<void>;
+		bootstrap?: () => Promise<void>;
+		activationWaitMs?: number;
+	} = {}) => {
+		const storage = createStoreFixture();
+		const events: string[] = [];
+		let end = 5n;
+		let failPrepare = false;
+		const createFollower = (name: string): PartitionOutcomeFollowerPort => ({
+			readLogRange: async () => {
+				events.push(`${name}:range:${end}`);
+				return { logStartOffset: 0n, logEndOffset: end };
+			},
+			startAndCatchUp: async ({ targetNextOffset, fromBookmark }) => {
+				events.push(
+					`${name}:replay:${targetNextOffset}${fromBookmark ? ":from-bookmark" : ""}`,
+				);
+				if (failPrepare && name === "prepare") throw new Error("replay failed");
+			},
+			readProgress: () => ({ consumedNextOffset: null, highWatermark: null }),
+			stop: async () => {
+				events.push(`${name}:stop`);
+			},
+		});
+		const follower = createFollower("active");
+		const preparation = customizePreparation(
+			createFollower("prepare"),
+			follower,
+		);
+		const runtime = createPartitionRuntime({
+			ctx: {
+				stateStore: storage.store,
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
+				producer: {
+					connect: async () => {
+						events.push("connect");
+					},
+					fence: async () => {
+						events.push("fence");
+						await fence();
+					},
+					disconnect: async () => {
+						events.push("disconnect");
+					},
+				},
+				appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
+				follower,
+				preparationFollower: preparation,
+				bootstrapper: {
+					bootstrap: async () => {
+						events.push("bootstrap");
+						await bootstrap();
+						return { kind: "continued", nextOffset: 0n };
+					},
+				},
+				partitionResolver: { partitionForIdentity: () => partition },
+				receiptPolicy: { retentionMs: 1_000, now: () => 0 },
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			},
+			config: {
+				topic,
+				partition,
+				writerLimits: {
+					maxBatchSize: 10,
+					maxPendingCommands: 10,
+					maxPendingCommandsPerCustomer: 10,
+				},
+				recoveryDrainTimeoutMs: 10,
+				activationWaitMs,
+			},
+		});
+		return {
+			runtime,
+			follower,
+			events,
+			setEnd: (value: bigint) => {
+				end = value;
+			},
+			fail: () => {
+				failPrepare = true;
+			},
+			cleanup: async () => {
+				await runtime.stop();
+				closeStoreFixture(storage);
+			},
+		};
+	};
+
+	describe("runtime preparation", () => {
+		test("late preparation failure cannot poison the activated runtime", async () => {
+			let unavailable: ((failure: { cause: unknown }) => void) | undefined;
+			const fixture = createFixture({
+				preparation: (follower) => ({
+					...follower,
+					startAndCatchUp: async (
+						params: Parameters<
+							PartitionOutcomeFollowerPort["startAndCatchUp"]
+						>[0],
+					) => {
+						unavailable = params.onUnavailable;
+					},
+				}),
+			});
+			try {
+				await fixture.runtime.prepare();
+				unavailable?.({ cause: new Error("stale reader callback") });
+				await fixture.runtime.activate();
+				expect(fixture.runtime.getStatus()).toBe("ready");
+			} finally {
+				await fixture.cleanup();
+			}
+		});
+		test("stop cancels a pending preparation and waits for reader shutdown", async () => {
+			let finishReplay = () => {};
+			const replay = new Promise<void>((resolve) => {
+				finishReplay = resolve;
+			});
+			let started = false;
+			const fixture = createFixture({
+				preparation: (follower) => ({
+					...follower,
+					startAndCatchUp: async () => {
+						started = true;
+						await replay;
+					},
+					stop: async () => {
+						fixture.events.push("reader-closed");
+						finishReplay();
+					},
+				}),
+			});
+			const preparing = fixture.runtime.prepare();
+			const rejected = preparing.catch((cause: unknown) => cause);
+			try {
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(started).toBe(true);
+				await fixture.runtime.stop();
+				expect(await rejected).toBeInstanceOf(OwnedPartitionNotReadyError);
+				expect(fixture.runtime.getStatus()).toBe("stopped");
+				expect(fixture.events).toContain("reader-closed");
+				expect(fixture.events).not.toContain("connect");
+				await expect(fixture.runtime.activate()).rejects.toThrow();
+			} finally {
+				finishReplay();
+				await fixture.cleanup();
+			}
+		});
+
+		test("preparation is not complete until cleanup succeeds", async () => {
+			let finishCleanup = () => {};
+			const cleanup = new Promise<void>((resolve) => {
+				finishCleanup = resolve;
+			});
+			const fixture = createFixture({
+				preparation: (follower) => ({ ...follower, stop: () => cleanup }),
+			});
+			const preparing = fixture.runtime.prepare();
+			try {
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(fixture.runtime.getStatus()).toBe("preparing");
+				await expect(fixture.runtime.activate()).rejects.toThrow();
+				finishCleanup();
+				await preparing;
+				expect(fixture.runtime.getStatus()).toBe("prepared");
+			} finally {
+				finishCleanup();
+				await fixture.cleanup();
+			}
+		});
+
+		test("cleanup failure prevents activation", async () => {
+			const fixture = createFixture({
+				preparation: (follower) => ({
+					...follower,
+					stop: async () => {
+						throw new Error("reader cleanup failed");
+					},
+				}),
+			});
+			try {
+				await expect(fixture.runtime.prepare()).rejects.toThrow(
+					"requires recovery",
+				);
+				expect(fixture.runtime.getStatus()).toBe("recovery_required");
+				await expect(fixture.runtime.activate()).rejects.toThrow();
+				expect(fixture.events).not.toContain("connect");
+			} finally {
+				await fixture.cleanup();
+			}
+		});
+		test("prepares without producer authority and closes replay before activation", async () => {
+			const f = createFixture();
+			try {
+				await f.runtime.prepare();
+				expect(f.events).toEqual([
+					"prepare:range:5",
+					"bootstrap",
+					"prepare:replay:5",
+					"prepare:stop",
+				]);
+				expect(f.runtime.getStatus()).toBe("prepared");
+				f.setEnd(9n);
+				const activation = f.runtime.activate();
+				expect(f.runtime.getStatus()).toBe("activating");
+				await activation;
+				expect(f.events.slice(4)).toEqual([
+					"connect",
+					"fence",
+					"active:range:9",
+					"bootstrap",
+					"active:replay:9:from-bookmark",
+				]);
+				expect(f.runtime.getStatus()).toBe("ready");
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("preparation re-reads the log end when the live owner's bookmark has passed it", async () => {
+			let refusals = 0;
+			const f = createFixture({
+				bootstrap: async () => {
+					if (refusals++ > 0) return;
+					// The owner appended and advanced its bookmark while the range was being read.
+					f.setEnd(7n);
+					throw new PartitionBootstrapRefusedError({
+						topic,
+						partition,
+						reason: "local_state_ahead_of_log_end",
+					});
+				},
+			});
+			try {
+				await f.runtime.prepare();
+				expect(f.events).toEqual([
+					"prepare:range:5",
+					"bootstrap",
+					"prepare:range:7",
+					"prepare:replay:7",
+					"prepare:stop",
+				]);
+				expect(f.runtime.getStatus()).toBe("prepared");
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("a command meeting an activating runtime waits for it instead of failing", async () => {
+			let finishFence = () => {};
+			const fence = new Promise<void>((resolve) => {
+				finishFence = resolve;
+			});
+			const f = createFixture({ fence: () => fence });
+			try {
+				await f.runtime.prepare();
+				const activation = f.runtime.activate();
+				expect(f.runtime.getStatus()).toBe("activating");
+				const command = f.runtime.process(async () => "served");
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(f.runtime.getStatus()).toBe("activating");
+				finishFence();
+				await activation;
+				expect(await command).toBe("served");
+			} finally {
+				finishFence();
+				await f.cleanup();
+			}
+		});
+		test("a command stops waiting for activation after the bounded wait", async () => {
+			let finishFence = () => {};
+			const fence = new Promise<void>((resolve) => {
+				finishFence = resolve;
+			});
+			const f = createFixture({ fence: () => fence, activationWaitMs: 10 });
+			try {
+				await f.runtime.prepare();
+				const activation = f.runtime.activate();
+				await expect(
+					f.runtime.process(async () => "served"),
+				).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
+				finishFence();
+				await activation;
+				expect(await f.runtime.process(async () => "served")).toBe("served");
+			} finally {
+				finishFence();
+				await f.cleanup();
+			}
+		});
+		test("rejects activation before preparation without touching the producer", async () => {
+			const f = createFixture();
+			try {
+				await expect(f.runtime.activate()).rejects.toBeInstanceOf(
+					OwnedPartitionNotReadyError,
+				);
+				expect(f.events).toEqual([]);
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("drains without disposing the producer and refuses activation after drain", async () => {
+			const f = createFixture();
+			try {
+				await f.runtime.start();
+				await f.runtime.drain();
+				expect(f.runtime.getStatus()).toBe("draining");
+				expect(f.events).not.toContain("disconnect");
+				await expect(f.runtime.activate()).rejects.toBeInstanceOf(
+					OwnedPartitionNotReadyError,
+				);
+				await f.runtime.stop();
+				expect(f.events.at(-1)).toBe("disconnect");
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("failed preparation cannot activate and closes its replay source", async () => {
+			const f = createFixture();
+			try {
+				f.fail();
+				await expect(f.runtime.prepare()).rejects.toThrow("requires recovery");
+				expect(f.events).toContain("prepare:stop");
+				expect(f.events).not.toContain("connect");
+				await expect(f.runtime.activate()).rejects.toThrow();
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("rejects using the active follower as the preparation source", async () => {
+			const f = createFixture({ preparation: (_, active) => active });
+			try {
+				await expect(f.runtime.prepare()).rejects.toThrow("separate");
+				expect(f.events).toEqual([]);
+			} finally {
+				await f.cleanup();
+			}
+		});
+	});
+});
