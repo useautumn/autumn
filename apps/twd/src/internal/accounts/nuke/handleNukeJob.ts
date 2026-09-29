@@ -1,5 +1,5 @@
 import { nukeAccountContents } from "@tw/image/nuke-accounts.mjs";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
 import { resolveKeySecret } from "../../keys/actions/resolveKeySecret.ts";
@@ -34,10 +34,18 @@ export const handleNukeJob: JobHandler = async ({ ctx, job, signal }) => {
 		});
 		return;
 	}
-	await ctx.db
+	// Conditional so a claim that lands between the read above and here wins.
+	const [started] = await ctx.db
 		.update(stripeAccounts)
 		.set({ state: "nuking", brokenReason: null, stateChangedAt: new Date() })
-		.where(eq(stripeAccounts.id, accountId));
+		.where(
+			and(eq(stripeAccounts.id, accountId), ne(stripeAccounts.state, "in_use")),
+		)
+		.returning({ id: stripeAccounts.id });
+	if (!started) {
+		ctx.logger.warn("twd nuke skipped: account was claimed", { accountId });
+		return;
+	}
 
 	const key = await resolveKeySecret({
 		ctx,

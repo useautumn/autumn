@@ -22,15 +22,10 @@ const deliver = ({
 		connection.close({ code: 1013, reason: "slow consumer; reconnect" });
 		return;
 	}
-	const message: LiveServerMessage = {
-		type: "event",
-		topic,
-		seq: ++connection.seq,
-		event,
-	};
 	const pending = connection.pending.get(topic);
-	if (pending) pending.push(message);
-	else connection.send(message);
+	// seq is stamped when a message actually goes out, so buffered topics can't reorder it.
+	if (pending) pending.push({ type: "event", topic, seq: 0, event });
+	else connection.send({ type: "event", topic, seq: ++connection.seq, event });
 };
 
 export const hasLiveSubscribers = ({ topic }: { topic: string }) =>
@@ -122,7 +117,8 @@ export const subscribeLive = async ({
 		});
 	} finally {
 		for (const message of connection.pending.get(topic) ?? [])
-			connection.send(message);
+			if (message.type === "event")
+				connection.send({ ...message, seq: ++connection.seq });
 		connection.pending.delete(topic);
 	}
 };

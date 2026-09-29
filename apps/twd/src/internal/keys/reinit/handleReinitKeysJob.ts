@@ -194,7 +194,13 @@ export const handleReinitKeysJob: JobHandler = async ({
 			);
 		}
 	} catch (error) {
-		if (!signal.aborted) {
+		if (signal.aborted) {
+			// An operator cancel: reopen rather than leave every run blocked on a dead job.
+			await setKeyGate({
+				db: ctx.db,
+				gate: { state: "open", reason: null, jobId: null },
+			});
+		} else {
 			await setKeyGate({
 				db: ctx.db,
 				gate: {

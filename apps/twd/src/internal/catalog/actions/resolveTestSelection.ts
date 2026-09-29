@@ -81,20 +81,24 @@ export const resolveTestSelection = async ({
 		});
 	}
 
-	// bun exits 1 when --test-name-pattern matches 0 tests, so keep only files whose
-	// test/describe titles contain the (literal) grep.
+	// bun exits 1 when --test-name-pattern matches 0 tests, so drop files that can't match.
+	// Runtime names join describe + test titles, so every grep word must appear in some title.
 	const grep = selection.grep;
-	const titlePattern = grep
-		? new RegExp(
-				`\\b(?:test|it|describe)(?:\\.\\w+)*\\(\\s*[\`'"][^\\n]*${grep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
-			)
-		: undefined;
-	const selected = titlePattern
+	const grepWords = grep?.toLowerCase().split(/\s+/).filter(Boolean) ?? [];
+	const titlesOf = (source: string) =>
+		[...source.matchAll(/\b(?:test|it|describe)(?:\.\w+)*\(\s*[`'"]([^\n]*)/g)]
+			.map((m) => m[1] ?? "")
+			.join("\n")
+			.toLowerCase();
+	const selected = grepWords.length
 		? (
 				await Promise.all(
-					[...files].map(async (file) =>
-						titlePattern.test(await readFile(file, "utf8")) ? file : undefined,
-					),
+					[...files].map(async (file) => {
+						const titles = titlesOf(await readFile(file, "utf8"));
+						return grepWords.every((word) => titles.includes(word))
+							? file
+							: undefined;
+					}),
 				)
 			).filter((file): file is string => file !== undefined)
 		: [...files];

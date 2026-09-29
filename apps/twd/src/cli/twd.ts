@@ -106,15 +106,30 @@ const printRun = (run: z.infer<typeof RunSummary>) =>
 		`${run.id}  ${run.status.padEnd(12)} ${run.branch}@${run.sha.slice(0, 8)}  ${run.passed}✓ ${run.failed}✗  files=${run.fileCount ?? "?"}  workers=${run.workerCount ?? 0}/${run.workersWanted ?? "?"}${run.queuePosition === null ? "" : `  queue=#${run.queuePosition}`}  $${run.cost.usd.toFixed(2)}  by ${run.createdBy.email}`,
 	);
 
+/** Keeps colours (SGR) but drops every other escape/control sequence test output might carry. */
+const safeText = (text: string) =>
+	text
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping terminal escapes
+		.replace(
+			/\u001B\](?:[^\u0007\u001B]|\u001B(?!\\))*(?:\u0007|\u001B\\)/g,
+			"",
+		)
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping terminal escapes
+		.replace(/\u001B\[[0-9;?]*[A-Za-ln-z]/g, "")
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping terminal escapes
+		.replace(/[\u0000-\u0008\u000B-\u001A\u001C-\u001F\u007F]/g, "");
+
 const printEvent = (event: z.infer<typeof RunEvent>) => {
 	if (event.type === "status")
 		console.log(`» ${event.status}${event.phase ? ` (${event.phase})` : ""}`);
 	else if (event.type === "file")
 		console.log(
-			`  ${event.file.status.padEnd(8)} ${event.file.file}${event.file.durationMs === null ? "" : ` ${(event.file.durationMs / 1000).toFixed(1)}s`}${event.file.failureSummary ? `\n    ${event.file.failureSummary}` : ""}`,
+			`  ${event.file.status.padEnd(8)} ${event.file.file}${event.file.durationMs === null ? "" : ` ${(event.file.durationMs / 1000).toFixed(1)}s`}${event.file.failureSummary ? `\n    ${safeText(event.file.failureSummary)}` : ""}`,
 		);
 	else if (event.type === "log")
-		console.log(`  [${event.worker ?? event.file ?? "log"}] ${event.text}`);
+		console.log(
+			`  [${event.worker ?? event.file ?? "log"}] ${safeText(event.text)}`,
+		);
 };
 
 /** Streams SSE until a terminal status; returns that status. */
