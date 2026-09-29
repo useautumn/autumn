@@ -32,10 +32,14 @@ import {
 	BILLING_CONTROL_EDIT_SHEETS,
 } from "@/components/billing-controls/billingControlSheets";
 import type { BillingControlOrigin } from "@/components/billing-controls/resolveDisplayedBillingControls";
-import { Table } from "@/components/general/table";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+	Table,
+} from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { useCustomerContext } from "../customer/CustomerContext";
-import { EmptyState } from "./table/EmptyState";
 import { useDisplayedBillingControls } from "./useDisplayedBillingControls";
 
 const ADD_MENU_ITEMS: Array<{ key: BillingControlKey; label: string }> = [
@@ -74,6 +78,19 @@ const entityHasBillingControls = (entity: Entity) =>
 	hasBillingControls(billingControlsFromColumns(entity));
 
 const entityLabel = (entity: Entity) => entity.name || entity.id;
+
+const TrayPlaceholder = ({ text }: { text: string }) => (
+	<div className={TABLE_TRAY_CLASS}>
+		<div
+			className={cn(
+				TABLE_TRAY_SURFACE_CLASS,
+				"flex h-10 items-center justify-center px-4 text-subtle text-xs",
+			)}
+		>
+			<span className="truncate">{text}</span>
+		</div>
+	</div>
+);
 
 export function CustomerBillingControlsSection() {
 	const {
@@ -219,7 +236,7 @@ export function CustomerBillingControlsSection() {
 		return (
 			<Table.Container>
 				{toolbar}
-				<EmptyState
+				<TrayPlaceholder
 					text={
 						isEntityView
 							? "No billing controls apply to this entity"
@@ -257,7 +274,7 @@ export function CustomerBillingControlsSection() {
 			{toolbar}
 
 			{isLoading ? (
-				<EmptyState text="Loading billing controls" />
+				<TrayPlaceholder text="Loading billing controls" />
 			) : (
 				<BillingControlsList
 					billingControls={billingControls}
