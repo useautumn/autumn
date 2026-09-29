@@ -1,4 +1,5 @@
 import { ErrCode, ProcessorType, RecaseError } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -66,11 +67,22 @@ export const finalizeInvoice = async ({
 		invoiceId: stripeInvoice.id,
 		params: { auto_advance: true },
 	});
-	const finalizedInvoice = await finalizeStripeInvoice({
-		stripeCli,
-		invoiceId: stripeInvoice.id,
-		autoAdvance: true,
-	});
+	let finalizedInvoice: Stripe.Invoice;
+	try {
+		finalizedInvoice = await finalizeStripeInvoice({
+			stripeCli,
+			invoiceId: stripeInvoice.id,
+			autoAdvance: true,
+		});
+	} catch (error) {
+		// Left on, Stripe would finalize and collect the draft on its own.
+		await updateStripeInvoice({
+			stripeCli,
+			invoiceId: stripeInvoice.id,
+			params: { auto_advance: false },
+		}).catch(() => undefined);
+		throw error;
+	}
 
 	await schedulePendingPlanExpiryForFinalizedInvoice({
 		ctx,
