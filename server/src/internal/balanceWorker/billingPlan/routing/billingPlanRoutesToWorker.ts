@@ -16,6 +16,19 @@ const writesNoLicenseSeats = ({
 		({ customer_license_link_id }) => !customer_license_link_id,
 	);
 
+/** The worker never expires a license pool (it only expires pools that lose their last share), so that expiry keeps to Postgres. */
+const expiresNoLicensePools = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): boolean =>
+	(
+		autumnBillingPlan.pooledBalancePlan?.expirePoolBalanceCandidates ?? []
+	).every(
+		({ pooledCustomerEntitlement }) =>
+			!pooledCustomerEntitlement.pooled_balance?.customer_license_link_id,
+	);
+
 /** A claimed entity had no subject key before the plan, so the worker cannot guard it yet. */
 const claimsNoEntities = ({
 	autumnBillingPlan,
@@ -44,6 +57,7 @@ export const workerCanApplyBillingPlan = ({
 	claimsNoEntities({ autumnBillingPlan }) &&
 	// Before the entity walk: a seat update's product may carry no grants to walk.
 	writesNoLicenseSeats({ autumnBillingPlan }) &&
+	expiresNoLicensePools({ autumnBillingPlan }) &&
 	billingPlanNamesItsEntities({ autumnBillingPlan }) &&
 	topUpNamesItsPurchase({ autumnBillingPlan });
 

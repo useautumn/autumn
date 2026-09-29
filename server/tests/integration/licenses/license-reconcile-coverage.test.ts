@@ -53,8 +53,8 @@ test.concurrent(
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		const healthy = (await autumnV2_2.post("/licenses.list", {
@@ -141,8 +141,8 @@ test.concurrent(
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
@@ -206,8 +206,8 @@ test.concurrent(
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		// Second live parent, distinct group so A stays live (not an upgrade).
@@ -288,8 +288,8 @@ test.concurrent(
 		for (const licensePlanId of [licenseX.id, licenseY.id]) {
 			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
-				entity_id: entities[0].id,
 				plan_id: licensePlanId,
+				entities: [{ entity_id: entities[0].id }],
 			});
 		}
 
@@ -368,15 +368,18 @@ test.concurrent(
 		for (const entity of entities) {
 			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
-				entity_id: entity.id,
 				plan_id: license.id,
+				entities: [{ entity_id: entity.id }],
 			});
 		}
 
 		// Drop capacity to exactly the active count; both assignments survive.
-		await autumnV2_2.post("/plans.update", {
+		await autumnV2_2.billing.update({
+			customer_id: customerId,
 			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 2 }],
+			customize: {
+				upsert_licenses: [{ license_plan_id: license.id, included: 2 }],
+			},
 		});
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
@@ -403,9 +406,12 @@ test.concurrent(
 		expect(openActive).toHaveLength(2);
 
 		// Raising capacity frees the difference back into availability.
-		await autumnV2_2.post("/plans.update", {
+		await autumnV2_2.billing.update({
+			customer_id: customerId,
 			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 4 }],
+			customize: {
+				upsert_licenses: [{ license_plan_id: license.id, included: 4 }],
+			},
 		});
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 

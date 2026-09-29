@@ -11,6 +11,7 @@ import {
 	isBooleanEntitlement,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
+import { shouldCarryOverUsage } from "@/internal/billing/v2/utils/handleCarryOvers/shouldCarryOverUsage";
 import { initCustomerEntitlementFields } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementFields";
 import type {
 	AddEntitlementPriceOperation,
@@ -25,7 +26,6 @@ import type {
 import {
 	computeCustomerEntitlementInitialState,
 	computeCustomerEntitlementPatch,
-	shouldCarryOverUsage,
 } from "./computeCustomerEntitlementPatch";
 
 const findCandidateEntitlementIds = ({
@@ -159,7 +159,6 @@ const computeAddOperation = ({
 		entIdentity.interval === EntInterval.Lifetime
 			? PooledBalanceResetMode.Lifetime
 			: PooledBalanceResetMode.Lazy;
-	const isLifetimeReset = resetMode === PooledBalanceResetMode.Lifetime;
 	return {
 		type: "add",
 		entitlementPrice,
@@ -170,17 +169,9 @@ const computeAddOperation = ({
 		},
 		pooledAdd: {
 			contributionAmount: initialState.granted,
-			nextResetAt: isLifetimeReset
-				? null
-				: (customerEntitlement.next_reset_at ?? null),
-			featureId: entitlement.feature.id,
-			rollover: entitlement.rollover ?? null,
 			identity: {
 				...entIdentity,
 				internalCustomerId: customerEntitlement.internal_customer_id,
-				resetCycleAnchor: isLifetimeReset
-					? null
-					: (customerEntitlement.reset_cycle_anchor ?? null),
 				resetMode,
 				stripeSubscriptionId: null,
 				customerLicenseLinkId,

@@ -6,7 +6,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
-import { listLicensePools } from "./licenseTestUtils.js";
+import { assignLicense, listLicensePools } from "./licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
 	...products.base({
@@ -87,14 +87,12 @@ test.concurrent(
 			remaining: 1,
 		});
 
-		const { assignment: reassigned } = (await autumnV2_2.post(
-			"/licenses.attach",
-			{
-				customer_id: customerId,
-				entity_id: entities[1].id,
-				plan_id: license.id,
-			},
-		)) as { assignment: { entity_id: string; ended_at: number | null } };
+		const reassigned = await assignLicense({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[1].id,
+			licensePlanId: license.id,
+		});
 		expect(reassigned).toMatchObject({
 			entity_id: entities[1].id,
 			ended_at: null,

@@ -5,7 +5,7 @@
  * Red-failure mode (pre-fix): the item rewrite deleted the old entitlement
  * (nothing referenced it), then the license rebase pinned the old shape by
  * inserting license_entitlements pointing at the deleted row —
- * "license_entitlements_entitlement_fkey" FK violation, catalog.update 500s.
+ * "license_entitlements_entitlement_fkey" FK violation, the update 500s.
  *
  * Green-success criteria (post-fix): the old rows are pinned before the
  * rewrite, the update succeeds, and the non-propagated link keeps the old
@@ -38,34 +38,22 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/catalog.update", {
-			plans: [
-				{
-					plan_id: seatId,
-					name: "Pin Seat",
-					items: [seatItem(false)],
-					price: { amount: 70, interval: "month" },
-					licenses: [],
-				},
-				{
-					plan_id: parentId,
-					name: "Pin Parent",
-					licenses: [{ license_plan_id: seatId, included: 0 }],
-				},
-			],
+		await autumnV2_2.post("/plans.create", {
+			plan_id: seatId,
+			name: "Pin Seat",
+			items: [seatItem(false)],
+			price: { amount: 70, interval: "month" },
+		});
+		await autumnV2_2.post("/plans.create", {
+			plan_id: parentId,
+			name: "Pin Parent",
+			licenses: [{ license_plan_id: seatId, included: 0 }],
 		});
 
 		// Pre-fix: 500 "license_entitlements_entitlement_fkey" FK violation.
-		await autumnV2_2.post("/catalog.update", {
-			plans: [
-				{
-					plan_id: seatId,
-					name: "Pin Seat",
-					items: [seatItem(true)],
-					price: { amount: 70, interval: "month" },
-					licenses: [],
-				},
-			],
+		await autumnV2_2.post("/plans.update", {
+			plan_id: seatId,
+			items: [seatItem(true)],
 		});
 
 		const seat = await autumnV2_2.post("/plans.get", { plan_id: seatId });

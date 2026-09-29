@@ -46,10 +46,6 @@ const pooledAggregateCtes = (
 		patch.type === "increment"
 			? sql`COALESCE(synthetic.balance, 0) + pool_deltas.amount`
 			: sql`updated_pools.granted`;
-	const licenseSyntheticBalanceAssignment =
-		patch.type === "increment"
-			? sql`synthetic.balance`
-			: sql`updated_pools.granted`;
 	return sql`,
 		contribution_rows AS MATERIALIZED (
 			SELECT
@@ -97,9 +93,10 @@ const pooledAggregateCtes = (
 		updated_synthetic AS (
 			UPDATE customer_entitlements AS synthetic
 			SET
+				-- Billing owns license pool balances; seats never reset them.
 				balance = CASE
 					WHEN updated_pools.customer_license_link_id IS NOT NULL
-						THEN ${licenseSyntheticBalanceAssignment}
+						THEN synthetic.balance
 					ELSE ${syntheticBalanceAssignment}
 				END,
 				cache_version = COALESCE(synthetic.cache_version, 0) + 1

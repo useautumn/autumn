@@ -12,7 +12,6 @@ import { BATCH_TRANSITION_OPERATION_CONCURRENCY } from "../utils/batchTransition
 import { executeBatchedMutation } from "./executeBatchedMutation";
 import { addCustomerEntitlementsBatch } from "./sql/addCustomerEntitlementsBatch";
 import { deleteCustomerEntitlementsBatch } from "./sql/deleteCustomerEntitlementsBatch";
-import { insertPooledBalanceGraph } from "./sql/insertPooledBalanceGraph";
 import { replaceCustomerEntitlementsBatch } from "./sql/replaceCustomerEntitlementsBatch";
 
 const executeReplacement = async ({
@@ -48,21 +47,14 @@ const executeAddition = async ({
 	batchTransition: CustomerEntitlementBatchTransition;
 	operation: AddEntitlementPriceOperation;
 }) => {
+	const pooledBalanceId = operation.pooledAdd?.pooledBalanceId;
+	// The license no longer holds this pool (stale transition): no seat to add.
+	if (operation.pooledAdd && !pooledBalanceId) return 0;
+
 	return executeBatchedMutation({
 		db: ctx.db,
 		operationName: "Customer entitlement addition",
 		executeBatch: async ({ db, batchSize }) => {
-			const pooledBalanceId = operation.pooledAdd
-				? await insertPooledBalanceGraph({
-						db,
-						pooledAdd: operation.pooledAdd,
-						customerId: operation.customerEntitlement.customer_id ?? null,
-						orgId: ctx.org.id,
-						env: ctx.env,
-						now: Date.now(),
-					})
-				: undefined;
-
 			return addCustomerEntitlementsBatch({
 				db,
 				customerLicenseLinkId: batchTransition.customerLicenseLinkId,
