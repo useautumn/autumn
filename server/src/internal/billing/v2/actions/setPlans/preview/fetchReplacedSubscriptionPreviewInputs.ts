@@ -4,6 +4,7 @@ import {
 	filterCustomerProductsByStripeSubscriptionId,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { listOpenStripeSubscriptionInvoices } from "@/external/stripe/invoices/operations/listOpenStripeSubscriptionInvoices";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 
@@ -22,10 +23,9 @@ export const fetchReplacedSubscriptionPreviewInputs = async ({
 		return { replacedOpenInvoices: [], unbilledUsageLineItems: [] };
 	}
 
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const { data: replacedOpenInvoices } = await stripeCli.invoices.list({
-		subscription: replacedStripeSubscription.id,
-		status: "open",
+	const replacedOpenInvoices = await listOpenStripeSubscriptionInvoices({
+		stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
+		stripeSubscriptionId: replacedStripeSubscription.id,
 	});
 
 	const unbilledUsageLineItems = filterCustomerProductsByStripeSubscriptionId({
