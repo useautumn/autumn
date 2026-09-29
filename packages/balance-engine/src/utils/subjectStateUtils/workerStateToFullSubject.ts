@@ -1,11 +1,4 @@
 import {
-	type Catalog,
-	type SubjectState,
-	subjectStateToFullSubject,
-	type WorkerFullCustomerEntitlement,
-	type WorkerFullCustomerProduct,
-} from "@autumn/balance-engine";
-import {
 	CusProductStatus,
 	CustomerSchema,
 	EntitySchema,
@@ -19,8 +12,17 @@ import {
 	isLiveLooseCustomerEntitlement,
 	type Subscription,
 } from "@autumn/shared";
-import { catalogToFreeTrial } from "./catalogToFreeTrial.js";
-import { catalogToFullPlanLicense } from "./catalogToFullPlanLicense.js";
+import type { Catalog } from "../../models/catalog/catalog.js";
+import type { SubjectState } from "../../models/subject/subjectState.js";
+import type {
+	WorkerFullCustomerEntitlement,
+	WorkerFullCustomerProduct,
+} from "../../models/subject/workerFullSubject.js";
+import {
+	catalogToFreeTrial,
+	catalogToFullPlanLicense,
+} from "../catalogUtils/convertCatalogUtils.js";
+import { subjectStateToFullSubject } from "../subjectUtils/convertSubjectUtils.js";
 
 /** A pool's source row holds no balance; the worker keeps it for apply-plan, the Postgres read never loads it. */
 const isPooledContributionSource = ({

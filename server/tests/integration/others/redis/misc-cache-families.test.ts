@@ -18,12 +18,12 @@
 
 import { describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import {
 	buildOrgWithFeaturesCacheKey,
 	clearOrgWithFeaturesCache,
 	getCachedOrgWithFeatures,
-} from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
+} from "@autumn/cache";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import {
 	buildAllVersionsProductsCacheKey,
 	buildProductsCacheKey,
@@ -37,6 +37,7 @@ import {
 	setCachedSecretKeyVerification,
 } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
@@ -74,7 +75,11 @@ describeWithRedis("misc cache families (post actions/ move)", () => {
 		const cacheKey = buildOrgWithFeaturesCacheKey({ orgId: org.id, env });
 
 		// ── Contract: read-through returns org+features and populates ────
-		await clearOrgWithFeaturesCache({ orgId: org.id, env });
+		await clearOrgWithFeaturesCache({
+			ctx: getMiscCacheContext(),
+			orgId: org.id,
+			env,
+		});
 		const fresh = await getOrgWithFeaturesCached({ db, orgId: org.id, env });
 		expect(fresh?.org.id).toBe(org.id);
 		expect(Array.isArray(fresh?.features)).toBe(true);
@@ -82,15 +87,26 @@ describeWithRedis("misc cache families (post actions/ move)", () => {
 
 		// ── Contract: cached read returns the same org ───────────────────
 		const cached = await getCachedOrgWithFeatures<{ org: { id: string } }>({
+			ctx: getMiscCacheContext(),
 			orgId: org.id,
 			env,
 		});
 		expect(cached?.org.id).toBe(org.id);
 
 		// ── Contract: clear removes the entry ────────────────────────────
-		await clearOrgWithFeaturesCache({ orgId: org.id, env });
+		await clearOrgWithFeaturesCache({
+			ctx: getMiscCacheContext(),
+			orgId: org.id,
+			env,
+		});
 		expect(await getMiscRedis().exists(cacheKey)).toBe(0);
-		expect(await getCachedOrgWithFeatures({ orgId: org.id, env })).toBeNull();
+		expect(
+			await getCachedOrgWithFeatures({
+				ctx: getMiscCacheContext(),
+				orgId: org.id,
+				env,
+			}),
+		).toBeNull();
 	});
 
 	test("secret key: set → get round-trips, clear removes", async () => {

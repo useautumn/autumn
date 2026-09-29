@@ -37,6 +37,7 @@ export {
 	readNextOffset,
 	readPartitionProgress,
 } from "./meteringLog/repos/partitionProgress.js";
+export { getOrgWithFeatures } from "./organizations/repos/getOrgWithFeatures.js";
 export { listPooledBalancesWithoutOtherContributions } from "./pooledBalances/repos/listPooledBalancesWithoutOtherContributions.js";
 export { sumPooledContributionGrants } from "./pooledBalances/repos/sumPooledContributionGrants.js";
 export {
@@ -55,6 +56,7 @@ export type {
 	SubjectRowTable,
 	SubjectRowUpdate,
 } from "./subjects/types/subjectRowUpdate.js";
+export { getSubscriptionsByStripeIds } from "./subscriptions/repos/getSubscriptionsByStripeIds.js";
 export type {
 	PostgresClient,
 	PostgresClientConfig,

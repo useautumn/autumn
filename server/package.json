@@ -75,6 +75,7 @@
 		"@autumn/stripe-sync": "workspace:*",
 		"@autumn/catalog-lru": "workspace:*",
 		"@autumn/svix": "workspace:*",
+		"@autumn/alien": "workspace:*",
 		"@aws-sdk/client-dynamodb": "^3.1095.0",
 		"@aws-sdk/client-glue": "^3.958.0",
 		"@duckdb/node-api": "1.5.5-r.4",
@@ -184,7 +185,8 @@
 		"tldts": "^6.1.0",
 		"tsc-alias": "^1.8.16",
 		"ws": "^8.18.0",
-		"zod": "^3.25.23"
+		"zod": "^3.25.23",
+		"@autumn/byoc": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.2",

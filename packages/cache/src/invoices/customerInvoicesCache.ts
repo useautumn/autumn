@@ -1,12 +1,10 @@
 import type { Invoice } from "@autumn/shared";
 import type { ReadThroughCacheContext } from "../misc/types/readThroughCacheContext.js";
+import { REDIS_OP_TIMEOUT_MS } from "../ops/redisOpTimeouts.js";
 import { runRedisOp, tryRedisOp } from "../ops/runRedisOp.js";
 
 /** Bounds the miss-then-stale-set race and any staleness that slips past a repo's DEL. */
 export const CUSTOMER_INVOICES_CACHE_TTL_SECONDS = 3600;
-
-/** A stalled read or write-back must cost one extra miss, never a slow request. */
-const CUSTOMER_INVOICES_CACHE_OP_TIMEOUT_MS = 300;
 
 /** One list per customer, newest first, the ten a customers.get renders; keyed by the column every invoice write has in hand. */
 export const buildCustomerInvoicesCacheKey = ({
@@ -31,7 +29,7 @@ export const getCachedCustomerInvoices = async ({
 			redis.get(buildCustomerInvoicesCacheKey({ internalCustomerId })),
 		source: "customer-invoices-cache:get",
 		redisInstance: redis,
-		timeoutMs: CUSTOMER_INVOICES_CACHE_OP_TIMEOUT_MS,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.customerInvoices,
 	});
 	if (!raw) return null;
 	try {
@@ -67,7 +65,7 @@ export const setCachedCustomerInvoices = async ({
 			),
 		source: "customer-invoices-cache:set",
 		redisInstance: redis,
-		timeoutMs: CUSTOMER_INVOICES_CACHE_OP_TIMEOUT_MS,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.customerInvoices,
 	});
 };
 

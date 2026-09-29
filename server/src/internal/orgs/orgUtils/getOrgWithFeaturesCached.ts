@@ -1,9 +1,10 @@
-import type { AppEnv } from "@autumn/shared";
-import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import {
 	getCachedOrgWithFeatures,
 	setCachedOrgWithFeatures,
-} from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
+} from "@autumn/cache";
+import type { AppEnv } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { OrgService } from "../OrgService.js";
 
 type OrgWithFeatures = NonNullable<
@@ -39,6 +40,7 @@ export const getOrgWithFeaturesCached = async ({
 }): Promise<OrgWithFeatures | null> => {
 	if (!skipCache) {
 		const cached = await getCachedOrgWithFeatures<OrgWithFeatures>({
+			ctx: getMiscCacheContext(),
 			orgId,
 			env,
 			requestId,
@@ -49,6 +51,12 @@ export const getOrgWithFeaturesCached = async ({
 	const fresh = await OrgService.getWithFeatures({ db, orgId, env });
 	if (!fresh) return null;
 
-	await setCachedOrgWithFeatures({ orgId, env, data: fresh, requestId });
+	await setCachedOrgWithFeatures({
+		ctx: getMiscCacheContext(),
+		orgId,
+		env,
+		data: fresh,
+		requestId,
+	});
 	return fresh;
 };

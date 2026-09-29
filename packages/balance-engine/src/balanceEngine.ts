@@ -40,7 +40,12 @@ export type { ConfirmExpiredLockResult } from "./commands/confirmExpiredLock/typ
 export { computeDeleteBalance } from "./commands/deleteBalance/computeDeleteBalance.js";
 export type { DeleteBalanceCommand } from "./commands/deleteBalance/types/deleteBalanceCommand.js";
 export type { DeleteBalanceResult } from "./commands/deleteBalance/types/deleteBalanceResult.js";
-export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
+export { computeEvict } from "./commands/evict/computeEvict.js";
+export type {
+	EvictCommand,
+	LoggedEvictCommand,
+} from "./commands/evict/types/evictCommand.js";
+export type { EvictResult } from "./commands/evict/types/evictResult.js";
 export {
 	computeFinalize,
 	computeFinalizeDecision,
@@ -205,6 +210,8 @@ export {
 	catalogKeyToString,
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
+	catalogToFreeTrial,
+	catalogToFullPlanLicense,
 	mergeCatalogs,
 	planLicensesToItemCatalogKeys,
 	subjectStateToCatalogKeys,
@@ -227,6 +234,7 @@ export {
 	splitSubjectState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
+export { workerStateToFullSubject } from "./utils/subjectStateUtils/workerStateToFullSubject.js";
 export {
 	fullCustomerEntitlementToRow,
 	subjectStateToFullSubject,

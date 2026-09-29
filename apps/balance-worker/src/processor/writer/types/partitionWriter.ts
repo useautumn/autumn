@@ -1,9 +1,11 @@
 import type {
 	MeteringIdentity,
+	MutatingCommand,
 	MutationEffect,
 	MutationRecord,
 	RowChange,
 	SubjectState,
+	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { StateStore } from "../../../state/types/stateStore.js";
@@ -24,6 +26,11 @@ export type PartitionWriter = {
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
+	/** Appends a record that leaves no rows resident, such as an evict; resolves once Kafka holds it. */
+	log(params: {
+		command: MutatingCommand;
+		mutation: SubjectStateMutation;
+	}): Promise<void>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
 	/** Throws once a commit has failed: the projection past it never became durable, so nothing may be read from it. */
@@ -109,7 +116,12 @@ export type PartitionWriterConfig = {
 /** Callers waiting on one queued mutation; the writer is "new", joiners are "duplicate". */
 export type PendingSettlement = {
 	join(params: { kind: CommittedMutation["kind"] }): Promise<CommittedMutation>;
-	settle(params: { mutation: MutationRecord; state: SubjectState }): void;
+	settle(params: {
+		mutation: MutationRecord;
+		state: SubjectState | null;
+	}): void;
+	/** Resolves when Kafka holds the record, whether or not it projected rows. */
+	waitForLog(): Promise<void>;
 	waitForStore(): Promise<void>;
 	settleStore(): void;
 	rejectCommit(params: { error: unknown }): void;
@@ -122,8 +134,8 @@ export type PendingMutation = {
 	/** The subjects this mutation projected; pinned in the map until it commits. */
 	projectedSubjectKeys: string[];
 	mutation: MutationRecord;
-	/** The subject's rows once this mutation is applied. */
-	nextState: SubjectState;
+	/** The subject's rows once this mutation is applied; null for a log-only record. */
+	nextState: SubjectState | null;
 	/** Whether the caller is answered at the append or after the store applies. */
 	durability: MutationDurability;
 	/** Stamped on the log's copy, never the store's. */
@@ -133,8 +145,6 @@ export type PendingMutation = {
 	settlement: PendingSettlement;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
-	/** What `waitForPendingCommits()` snapshots for this customer. */
-	committed: Promise<CommittedMutation>;
 };
 
 /** Mutable writer state: the subject map (projected and committed rows) and mutations awaiting commit. */

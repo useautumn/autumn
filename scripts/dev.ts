@@ -62,6 +62,8 @@ const CHAT_PORT = process.env.CHAT_PORT
 const EVE_PORT = process.env.EVE_PORT
 	? Number.parseInt(process.env.EVE_PORT, 10)
 	: 3999 + portOffset;
+const ALIEN_MANAGER_PORT = 9090 + portOffset;
+const ALIEN_MANAGER_URL = `http://localhost:${ALIEN_MANAGER_PORT}`;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
 const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
@@ -291,6 +293,15 @@ async function startDev() {
 				cmds.push('"cd apps/herald && bun dev"');
 			}
 
+			// Stands in for the org's cloud when a BYOC cache is deployed locally.
+			if (Bun.which("alien")) {
+				names.push("alien");
+				colors.push("gray");
+				cmds.push(
+					`"cd packages/alien/stacks/byoc && alien dev --port ${ALIEN_MANAGER_PORT} -c alien.json --no-browser"`,
+				);
+			}
+
 			if (!skipWorkers) {
 				names.push("workers");
 				colors.push("yellow");
@@ -438,6 +449,7 @@ async function startDev() {
 			EVE_PORT: EVE_PORT.toString(),
 			EVE_SERVER_URL,
 			EVE_INTERNAL_AUTH_TOKEN,
+			ALIEN_MANAGER_URL: process.env.ALIEN_MANAGER_URL ?? ALIEN_MANAGER_URL,
 			MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 			// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
 			// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.

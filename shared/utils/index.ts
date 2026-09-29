@@ -60,6 +60,7 @@ export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
 export * from "./productUtils/classifyProduct/isTrialCardRequired";
 export * from "./productUtils/compareProduct/productDetailsAreSame";
 export * from "./productUtils/compareProduct/productProcessorsAreSame";
+export * from "./productUtils/convertProduct/productAliasesToPlanAliasMap";
 export * from "./productUtils/convertProduct/productKey";
 export * from "./productUtils/convertProduct/productToEffectivePrices";
 export * from "./productUtils/convertProduct/productToPlanProcessors";

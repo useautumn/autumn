@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
 	buildCustomerInvoicesCacheKey,
+	buildOrgWithFeaturesCacheKey,
 	buildSubscriptionCacheKey,
 	CUSTOMER_INVOICES_CACHE_TTL_SECONDS,
+	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
 	SUBSCRIPTION_CACHE_TTL_SECONDS,
 } from "@autumn/cache";
 import { AppEnv } from "@autumn/shared";
@@ -20,10 +22,6 @@ import {
 	buildOAuthStateKey,
 	OAUTH_STATE_TTL_SECONDS,
 } from "@/external/redis/actions/oauthStateStore/oauthStateStore.js";
-import {
-	buildOrgWithFeaturesCacheKey,
-	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
-} from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import {
 	buildAllVersionsProductsCacheKey,
 	buildProductsCacheKey,
