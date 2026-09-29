@@ -222,6 +222,52 @@ test.concurrent(
 	},
 );
 
+/** A plan replaced by a later phase still holds its subscription_id until that phase starts. */
+test.concurrent(
+	`${chalk.yellowBright("set-plans guards: an immediate plan cannot take the subscription_id of a plan replaced later")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 25 })],
+		});
+
+		const { customerId, autumnV2_4, advancedTo } = await initScenario({
+			customerId: "set-plans-guard-sub-id-replaced-later",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium, addOn] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id, subscriptionId: "sub-a" }),
+			],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.DuplicateSubscriptionId,
+			errMessage: "subscription_id 'sub-a' is already in use",
+			func: () =>
+				autumnV2_4.billing.setPlans({
+					customer_id: customerId,
+					phases: [
+						{
+							starts_at: "now",
+							plans: [{ plan_id: addOn.id, subscription_id: "sub-a" }],
+						},
+						{
+							starts_at: advancedTo + ms.days(30),
+							plans: [{ plan_id: premium.id }],
+						},
+					],
+				}),
+		});
+	},
+);
+
 test.concurrent(
 	`${chalk.yellowBright("set-plans guards: more than 10 Stripe schedule phases is rejected")}`,
 	async () => {
