@@ -8,7 +8,13 @@ import { expect, test } from "bun:test";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const deleted: string[] = [];
-const failingApps = new Set<string>();
+/** `appId/id` pairs whose delete throws. */
+const failing = new Set<string>();
+/** What each app lists; `billing` sits in both, as a concurrent create leaves it. */
+const held: Record<string, string[]> = {
+	app_main: ["billing"],
+	app_vercel: ["billing"],
+};
 const endpointOut = (id: string) => ({
 	id,
 	uid: id,
@@ -24,9 +30,12 @@ const endpointOut = (id: string) => ({
 await mockModuleWithRestore("@/external/svix/svixUtils.js", () => ({
 	createSvixCli: () => ({
 		endpoint: {
-			list: async () => ({ data: [endpointOut("billing")], done: true }),
+			list: async (appId: string) => ({
+				data: (held[appId] ?? []).map(endpointOut),
+				done: true,
+			}),
 			delete: async (appId: string, id: string) => {
-				if (failingApps.has(appId)) throw new Error("svix down");
+				if (failing.has(`${appId}/${id}`)) throw new Error("svix down");
 				deleted.push(`${appId}/${id}`);
 			},
 		},
@@ -51,10 +60,11 @@ test("an id living in both apps is deleted from both", async () => {
 	expect(deleted.sort()).toEqual(["app_main/billing", "app_vercel/billing"]);
 });
 
-test("a failed delete in one app still deletes the id from the other", async () => {
+test("a failed delete in one app still deletes the id from the other, and is reported per id", async () => {
 	deleted.length = 0;
-	failingApps.add("app_main");
-	const result = syncWebhooks({
+	held.app_vercel = ["billing", "audit"];
+	failing.add("app_main/billing");
+	const result = await syncWebhooks({
 		apps: [
 			{ kind: "main", appId: "app_main" },
 			{ kind: "vercel", appId: "app_vercel" },
@@ -63,7 +73,8 @@ test("a failed delete in one app still deletes the id from the other", async () 
 		stated: [],
 		skipDeletions: false,
 	});
-	await expect(result).rejects.toThrow("svix down");
-	expect(deleted).toEqual(["app_vercel/billing"]);
-	failingApps.clear();
+	expect(result.errors.map((error) => error.id)).toEqual(["billing"]);
+	expect(deleted.sort()).toEqual(["app_vercel/audit", "app_vercel/billing"]);
+	failing.clear();
+	held.app_vercel = ["billing"];
 });
