@@ -1,11 +1,4 @@
-/**
- * set_plans on a trialing subscription keeps the trial on both sides, as attach does (Q4).
- * `free_trial: null` ends it on both sides. The anchor-now case lives in
- * errors/set-plans-state-errors ("a trial plan cannot reset the billing cycle now").
- *
- * Red (before):  Stripe kept trialing while the new Autumn rows had no trial_ends_at (bug 6).
- * Green (after): Autumn's trial_ends_at equals Stripe's trial_end.
- */
+/** set_plans on a trialing subscription keeps the trial in Stripe and Autumn, and `free_trial: null` ends it in both. */
 
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, secondsToMs } from "@autumn/shared";

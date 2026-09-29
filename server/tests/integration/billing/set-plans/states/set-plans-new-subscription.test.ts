@@ -1,7 +1,4 @@
-/**
- * A customer with no Stripe subscription gets a new one: charged now with a card,
- * or through a Checkout URL without one. No subscription-state warning applies.
- */
+/** A customer with no Stripe subscription gets a new one, charged now with a card or through Checkout without one. */
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";

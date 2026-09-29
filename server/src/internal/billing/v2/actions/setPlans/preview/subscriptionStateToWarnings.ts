@@ -142,22 +142,21 @@ const trialEndedWarning = ({
 export const subscriptionStateToWarnings = ({
 	billingContext,
 	stripeBillingPlan,
-	replacedOpenInvoices = [],
-	liveOpenInvoices = [],
+	replacedOpenInvoices,
+	liveOpenInvoices,
 }: {
-	billingContext?: SubscriptionWarningContext;
-	stripeBillingPlan?: StripeBillingPlan;
-	replacedOpenInvoices?: Stripe.Invoice[];
-	liveOpenInvoices?: Stripe.Invoice[];
+	billingContext: SubscriptionWarningContext;
+	stripeBillingPlan: StripeBillingPlan;
+	replacedOpenInvoices: Stripe.Invoice[];
+	liveOpenInvoices: Stripe.Invoice[];
 }): Warning[] => {
-	if (!billingContext) return [];
 	const { replacedStripeSubscription } = billingContext;
 
 	const replacedWarnings = replacedStripeSubscription
 		? [
 				replacedSubscriptionWarning({
 					replacedStripeSubscription,
-					stripeBillingPlan: stripeBillingPlan ?? {},
+					stripeBillingPlan,
 					billingContext,
 				}),
 				...(stripeVoidsOpenInvoices(replacedStripeSubscription)

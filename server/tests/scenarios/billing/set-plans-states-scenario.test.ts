@@ -1,8 +1,4 @@
-/**
- * Customers left in each Stripe state set_plans must handle (PRD scenarios E–J).
- * Each setup stops once the customer is in the target state, so set_plans can be
- * run by hand from the dashboard.
- */
+/** Customers left in each Stripe state set_plans must handle; run by hand from the dashboard. */
 
 import { expect, test } from "bun:test";
 import {

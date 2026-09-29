@@ -1,4 +1,4 @@
-// set_plans treats a terminal Stripe subscription as gone and bills afresh.
+/** set_plans treats a terminal Stripe subscription as gone and bills afresh, never reusing a canceled one whether or not its webhook was processed. */
 
 import { expect, test } from "bun:test";
 import { findActiveCustomerProductById, ms } from "@autumn/shared";

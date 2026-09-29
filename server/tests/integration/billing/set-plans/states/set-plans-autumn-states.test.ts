@@ -1,8 +1,4 @@
-/**
- * set_plans replaces only what the request governs in Autumn: add-ons and one-off
- * purchases outside the request are left alone, a scheduled plan is rebuilt from the
- * request, and a canceling plan kept in phase 0 comes back as a clean row.
- */
+/** set_plans rebuilds only the Autumn plans the request governs, leaving add-ons and one-off purchases outside it alone. */
 
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";

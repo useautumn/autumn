@@ -1,17 +1,4 @@
-/**
- * set_plans never updates a subscription Stripe won't collect on (incomplete, paused).
- * It cancels that subscription and puts the plans on one new subscription (Q1, Q11).
- * Unpaid invoices on the old subscription are left open (Q8).
- *
- * Red (before):  a second subscription was created beside the incomplete one, and the
- *                paused one was updated in place.
- * Green (after): the old subscription is cancelled and exactly one new one is live.
- *                Stripe reports a cancelled incomplete subscription as incomplete_expired.
- * Without a card the new subscription goes through Checkout, and the old one is
- * cancelled only once checkout completes (Q15). An open session for other plans is expired.
- * Pending plans on the old subscription expire only when it is cancelled, so
- * no_billing_changes keeps them (red before: they were expired anyway).
- */
+/** set_plans cancels an incomplete or paused subscription and moves its plans onto one new subscription, through Checkout when there is no card. */
 
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";

@@ -1,6 +1,4 @@
-/**
- * set_plans cancels a replaced subscription only while it is still open in Stripe.
- */
+/** set_plans cancels a replaced subscription only while it is still open in Stripe. */
 
 import { describe, expect, test } from "bun:test";
 import type Stripe from "stripe";
