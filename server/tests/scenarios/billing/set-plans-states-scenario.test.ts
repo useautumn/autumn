@@ -1,14 +1,172 @@
 /** Customers left in each Stripe state set_plans must handle; run by hand from the dashboard. */
 
 import { expect, test } from "bun:test";
+import { cancelSubscriptionForResync } from "@tests/integration/billing/set-plans/utils/resyncUtils";
 import {
 	findStripeSubscriptionByStatus,
 	setupPausedPro,
 } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
+import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+
+const TRACKED_MESSAGES = 40;
+
+const resyncProducts = () => ({
+	free: products.base({
+		id: "free",
+		isDefault: true,
+		items: [items.monthlyMessages({ includedUsage: 10 })],
+	}),
+	pro: products.pro({
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	}),
+});
+
+/** Cancels in Stripe while Autumn's rows are unlinked, as if the webhook never arrived. */
+const cancelSubscriptionMissingWebhook = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}) => {
+	const { customer_products: customerProducts } = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	for (const customerProduct of customerProducts) {
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates: { subscription_ids: [] },
+		});
+	}
+	await cancelSubscriptionForResync({ ctx, customerId });
+	for (const customerProduct of customerProducts) {
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates: { subscription_ids: customerProduct.subscription_ids },
+		});
+	}
+};
+
+test.concurrent(
+	"scenario A: pro cancelled in Stripe 10 days in, webhook processed",
+	async () => {
+		const { free, pro } = resyncProducts();
+		const { customerId, ctx } = await initScenario({
+			customerId: "set-plans-scenario-resync",
+			setup: [
+				s.customer({ paymentMethod: "success", withDefault: true }),
+				s.products({ list: [free, pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: TRACKED_MESSAGES,
+					timeout: 2000,
+				}),
+				s.advanceTestClock({ days: 10 }),
+			],
+		});
+
+		await cancelSubscriptionForResync({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	"scenario B: pro cancelled in Stripe, webhook missed so pro stays active",
+	async () => {
+		const { free, pro } = resyncProducts();
+		const { customerId, ctx } = await initScenario({
+			customerId: "set-plans-scenario-resync-missed-webhook",
+			setup: [
+				s.customer({ paymentMethod: "success", withDefault: true }),
+				s.products({ list: [free, pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: TRACKED_MESSAGES,
+					timeout: 2000,
+				}),
+				s.advanceTestClock({ days: 10 }),
+			],
+		});
+
+		await cancelSubscriptionMissingWebhook({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	"scenario C: pro, add-on and prepaid cancelled in Stripe",
+	async () => {
+		const { free } = resyncProducts();
+		const pro = products.pro({
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.prepaidMessages({ billingUnits: 100, price: 10 }),
+			],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 50 })],
+		});
+		const { customerId, ctx } = await initScenario({
+			customerId: "set-plans-scenario-resync-items",
+			setup: [
+				s.customer({ paymentMethod: "success", withDefault: true }),
+				s.products({ list: [free, pro, addOn] }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				}),
+				s.billing.attach({ productId: addOn.id }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: TRACKED_MESSAGES,
+					timeout: 2000,
+				}),
+				s.advanceTestClock({ days: 10 }),
+			],
+		});
+
+		await cancelSubscriptionForResync({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	"scenario D: annual pro cancelled in Stripe 3 months in",
+	async () => {
+		const { free } = resyncProducts();
+		const proAnnual = products.proAnnual({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId, ctx } = await initScenario({
+			customerId: "set-plans-scenario-resync-annual",
+			setup: [
+				s.customer({ paymentMethod: "success", withDefault: true }),
+				s.products({ list: [free, proAnnual] }),
+			],
+			actions: [
+				s.billing.attach({ productId: proAnnual.id }),
+				s.advanceTestClock({ months: 3 }),
+			],
+		});
+
+		await cancelSubscriptionForResync({ ctx, customerId });
+	},
+);
 
 const messagesPro = () =>
 	products.pro({ items: [items.monthlyMessages({ includedUsage: 100 })] });
