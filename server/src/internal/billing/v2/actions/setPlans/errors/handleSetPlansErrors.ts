@@ -9,6 +9,7 @@ import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { validateCustomerEntitlementBatchTransitions } from "@/internal/billing/v2/actions/batchTransition/errors/validateCustomerEntitlementBatchTransitions";
 import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
+import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
 import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
 import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
@@ -107,5 +108,6 @@ export const handleSetPlansBillingPlanErrors = ({
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 }) => {
+	handleProrationBehaviorErrors({ billingContext, billingPlan });
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };
