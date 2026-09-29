@@ -214,6 +214,24 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
+	test("an incomplete subscription says its first invoice is voided", () => {
+		const [warning] = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_incomplete",
+					status: "incomplete",
+				}),
+			},
+			stripeBillingPlan: {},
+		});
+
+		expect(warning?.message).toBe(
+			"The incomplete subscription sub_incomplete will be cancelled and a new one created. Stripe voids its first invoice.",
+		);
+	});
+
 	test("a paused subscription replaced through Checkout is cancelled once checkout completes", () => {
 		const [warning] = stateWarnings({
 			billingContext: {
