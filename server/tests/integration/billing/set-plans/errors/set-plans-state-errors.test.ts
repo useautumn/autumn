@@ -128,3 +128,34 @@ test.concurrent(
 		);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans state errors: a trial plan cannot reset the billing cycle now")}`,
+	async () => {
+		const proTrial = products.proWithTrial({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+			trialDays: 14,
+		});
+
+		const { customerId, autumnV2_4 } = await initScenario({
+			customerId: "set-plans-trial-anchor-now",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage:
+				"billing_cycle_anchor cannot be used together with a free trial",
+			func: () =>
+				autumnV2_4.billing.setPlans({
+					customer_id: customerId,
+					billing_cycle_anchor: "now",
+					phases: [{ starts_at: "now", plans: [{ plan_id: proTrial.id }] }],
+				}),
+		});
+	},
+);
