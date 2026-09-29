@@ -1,6 +1,5 @@
 /**
- * License-keyed pool.granted is purchased seats × per-seat G, even with
- * 0 assignment contributions. applyLicensePooledGranted writes that onto
+ * 0 assignment contributions. applyLicensePooledBalances writes that onto
  * the existing PooledBalancePlan.
  */
 import { expect, test } from "bun:test";
@@ -10,13 +9,14 @@ import {
 	EntInterval,
 	type EntitlementWithFeature,
 	FeatureType,
+	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerLicense,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { applyLicensePooledGranted } from "@/internal/billing/v2/pooledBalances/compute/applyLicensePooledGranted/applyLicensePooledGranted";
+import { applyLicensePooledBalances } from "@/internal/billing/v2/pooledBalances/compute/applyLicensePooledBalances/applyLicensePooledBalances";
 import { setupPooledBalanceComputeContext } from "@/internal/billing/v2/pooledBalances/compute/context/setupPooledBalanceComputeContext";
 import { emptyPooledBalancePlan } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
 
@@ -24,6 +24,8 @@ const NOW = 1_700_000_000_000;
 const LINK_ID = "cus_lic_link_1";
 const FEATURE_INTERNAL_ID = "feat_messages";
 const PER_SEAT_GRANT = 100;
+const CUSTOMER_CREATED_AT = NOW - 10 * 24 * 60 * 60 * 1000;
+const PARENT_BILLING_CYCLE_ANCHOR = NOW - 5 * 24 * 60 * 60 * 1000;
 
 const pooledMessagesEntitlement = (): EntitlementWithFeature =>
 	({
@@ -165,17 +167,19 @@ const existingPool = ({
 
 test(
 	chalk.yellowBright(
-		"applyLicensePooledGranted: mints a pool at purchased × G with no contributions",
+		"applyLicensePooledBalances: mints a pool at purchased × G with no contributions",
 	),
 	() => {
 		const computeContext = setupPooledBalanceComputeContext({
 			pooledCustomerEntitlements: [],
 		});
 
-		applyLicensePooledGranted({
+		applyLicensePooledBalances({
 			ctx,
 			computeContext,
 			customerLicenses: [customerLicense({ granted: 3 })],
+			parentCustomerProducts: [],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
 			now: NOW,
 		});
 
@@ -190,17 +194,19 @@ test(
 
 test(
 	chalk.yellowBright(
-		"applyLicensePooledGranted: grows an under-granted pool without wiping usage",
+		"applyLicensePooledBalances: grows an under-granted pool without wiping usage",
 	),
 	() => {
 		const computeContext = setupPooledBalanceComputeContext({
 			pooledCustomerEntitlements: [existingPool({ granted: 100, balance: 80 })],
 		});
 
-		applyLicensePooledGranted({
+		applyLicensePooledBalances({
 			ctx,
 			computeContext,
 			customerLicenses: [customerLicense({ granted: 3 })],
+			parentCustomerProducts: [],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
 			now: NOW,
 		});
 
@@ -216,17 +222,19 @@ test(
 
 test(
 	chalk.yellowBright(
-		"applyLicensePooledGranted: shrinks granted and floors balance at 0",
+		"applyLicensePooledBalances: shrinks granted and floors balance at 0",
 	),
 	() => {
 		const computeContext = setupPooledBalanceComputeContext({
 			pooledCustomerEntitlements: [existingPool({ granted: 500, balance: 50 })],
 		});
 
-		applyLicensePooledGranted({
+		applyLicensePooledBalances({
 			ctx,
 			computeContext,
 			customerLicenses: [customerLicense({ granted: 3 })],
+			parentCustomerProducts: [],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
 			now: NOW,
 		});
 
@@ -239,7 +247,7 @@ test(
 
 test(
 	chalk.yellowBright(
-		"applyLicensePooledGranted: granted 0 does not mint a pool",
+		"applyLicensePooledBalances: granted 0 does not mint a pool",
 	),
 	() => {
 		const computeContext = setupPooledBalanceComputeContext({
@@ -247,14 +255,141 @@ test(
 		});
 		computeContext.plan = emptyPooledBalancePlan();
 
-		applyLicensePooledGranted({
+		applyLicensePooledBalances({
 			ctx,
 			computeContext,
 			customerLicenses: [customerLicense({ granted: 0 })],
+			parentCustomerProducts: [],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
 			now: NOW,
 		});
 
 		expect(computeContext.plan.insertPoolBalances).toHaveLength(0);
 		expect(computeContext.plan.updatePoolBalances).toHaveLength(0);
+	},
+);
+
+test(
+	chalk.yellowBright(
+		"applyLicensePooledBalances: new pool anchors to the parent's billing cycle",
+	),
+	() => {
+		const computeContext = setupPooledBalanceComputeContext({
+			pooledCustomerEntitlements: [],
+		});
+
+		applyLicensePooledBalances({
+			ctx,
+			computeContext,
+			customerLicenses: [customerLicense({ granted: 3 })],
+			parentCustomerProducts: [
+				{
+					id: "cp_parent",
+					billing_cycle_anchor: PARENT_BILLING_CYCLE_ANCHOR,
+				} as FullCusProduct,
+			],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
+			now: NOW,
+		});
+
+		const inserted = computeContext.plan.insertPoolBalances[0];
+		expect(inserted.pooled_balance?.reset_cycle_anchor).toBe(
+			PARENT_BILLING_CYCLE_ANCHOR,
+		);
+	},
+);
+
+test(
+	chalk.yellowBright(
+		"applyLicensePooledBalances: new pool without a parent cycle anchors to customer creation",
+	),
+	() => {
+		const computeContext = setupPooledBalanceComputeContext({
+			pooledCustomerEntitlements: [],
+		});
+
+		applyLicensePooledBalances({
+			ctx,
+			computeContext,
+			customerLicenses: [customerLicense({ granted: 3 })],
+			parentCustomerProducts: [
+				{ id: "cp_parent", billing_cycle_anchor: null } as FullCusProduct,
+			],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
+			now: NOW,
+		});
+
+		const inserted = computeContext.plan.insertPoolBalances[0];
+		expect(inserted.pooled_balance?.reset_cycle_anchor).toBe(
+			CUSTOMER_CREATED_AT,
+		);
+	},
+);
+
+test(
+	chalk.yellowBright(
+		"applyLicensePooledBalances: existing pool keeps its anchor",
+	),
+	() => {
+		const computeContext = setupPooledBalanceComputeContext({
+			pooledCustomerEntitlements: [existingPool({ granted: 100, balance: 80 })],
+		});
+
+		applyLicensePooledBalances({
+			ctx,
+			computeContext,
+			customerLicenses: [customerLicense({ granted: 3 })],
+			parentCustomerProducts: [
+				{
+					id: "cp_parent",
+					billing_cycle_anchor: PARENT_BILLING_CYCLE_ANCHOR,
+				} as FullCusProduct,
+			],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
+			now: NOW,
+		});
+
+		expect(computeContext.plan.insertPoolBalances).toHaveLength(0);
+		expect(
+			computeContext.plan.updatePoolBalances[0].pooledCustomerEntitlement
+				.pooled_balance?.reset_cycle_anchor,
+		).toBe(NOW);
+	},
+);
+
+test(
+	chalk.yellowBright(
+		"applyLicensePooledBalances: unlimited pooled item mints a cycle-less pool",
+	),
+	() => {
+		const computeContext = setupPooledBalanceComputeContext({
+			pooledCustomerEntitlements: [],
+		});
+		const license = customerLicense({ granted: 3 });
+		const planLicense = license.planLicense;
+		if (!planLicense) throw new Error("fixture missing planLicense");
+		planLicense.product.entitlements = [
+			{
+				...pooledMessagesEntitlement(),
+				allowance_type: AllowanceType.Unlimited,
+				allowance: null,
+			} as EntitlementWithFeature,
+		];
+
+		applyLicensePooledBalances({
+			ctx,
+			computeContext,
+			customerLicenses: [license],
+			parentCustomerProducts: [],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
+			now: NOW,
+		});
+
+		expect(computeContext.plan.insertPoolBalances).toHaveLength(1);
+		const inserted = computeContext.plan.insertPoolBalances[0];
+		expect(inserted.pooled_balance?.unlimited).toBe(true);
+		expect(inserted.pooled_balance?.granted).toBe(0);
+		expect(inserted.pooled_balance?.reset_cycle_anchor).toBeNull();
+		expect(inserted.next_reset_at).toBeNull();
 	},
 );

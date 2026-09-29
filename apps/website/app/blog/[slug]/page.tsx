@@ -80,6 +80,7 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 	const HeroComponent = post.heroComponent
 		? heroRegistry[post.heroComponent]
 		: null;
+	const isFullWidthHero = post.fullWidthHero && HeroComponent !== null;
 
 	return (
 		<div className="py-16 md:py-24 bg-[#0F0F0F]">
@@ -92,7 +93,13 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 					]),
 				]}
 			/>
-			<div className="max-w-[720px] mx-auto px-4 xl:px-0">
+			<div
+				className={
+					isFullWidthHero
+						? "max-w-[1200px] mx-auto px-4 xl:px-6"
+						: "max-w-[720px] mx-auto px-4 xl:px-0"
+				}
+			>
 				<div className="flex items-center justify-between gap-4 mb-10">
 					<Link
 						href="/blog"
@@ -123,26 +130,36 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 						View as .md
 					</a>
 				</div>
+			</div>
 
-				<header className="mb-12">
-					<div className="flex items-center gap-3 font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#FFFFFF66] mb-4">
-						<span>{formatDate(post.date)}</span>
-						<span className="w-1 h-1 bg-[#FFFFFF44] rounded-full" />
-						<span>{post.author}</span>
-					</div>
-					<h1 className="text-[30px] md:text-[40px] font-normal tracking-[-2%] leading-[1.1] font-sans text-white mb-4">
-						{post.title}
-					</h1>
-					{post.description && (
-						<p
-							className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans [&_a]:text-[#9564ff] [&_a:hover]:text-[#b08aff] [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors"
-							// biome-ignore lint/security/noDangerouslySetInnerHtml: blog descriptions are trusted frontmatter content
-							dangerouslySetInnerHTML={{ __html: post.description }}
-						/>
-					)}
-				</header>
+			{isFullWidthHero && HeroComponent && (
+				<div className="max-w-[1200px] mx-auto px-4 xl:px-6 mb-12">
+					<HeroComponent />
+				</div>
+			)}
 
-				{HeroComponent && (
+			<div className="max-w-[720px] mx-auto px-4 xl:px-0">
+				{!isFullWidthHero && (
+					<header className="mb-12">
+						<div className="flex items-center gap-3 font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#FFFFFF66] mb-4">
+							<span>{formatDate(post.date)}</span>
+							<span className="w-1 h-1 bg-[#FFFFFF44] rounded-full" />
+							<span>{post.author}</span>
+						</div>
+						<h1 className="text-[30px] md:text-[40px] font-normal tracking-[-2%] leading-[1.1] font-sans text-white mb-4">
+							{post.title}
+						</h1>
+						{post.description && (
+							<p
+								className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans [&_a]:text-[#9564ff] [&_a:hover]:text-[#b08aff] [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors"
+								// biome-ignore lint/security/noDangerouslySetInnerHtml: blog descriptions are trusted frontmatter content
+								dangerouslySetInnerHTML={{ __html: post.description }}
+							/>
+						)}
+					</header>
+				)}
+
+				{HeroComponent && !isFullWidthHero && (
 					<div className="mb-12">
 						<HeroComponent />
 					</div>

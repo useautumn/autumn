@@ -7,13 +7,16 @@ import {
 import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
-import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
+import {
+	createKafkaClient,
+	createKafkaTransport,
+	KafkaWithSettledTopicOffsets,
+} from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb, PostgresClient } from "@autumn/postgres";
 import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
-import { Kafka } from "kafkajs";
 import { createCatalogInvalidationConsumer } from "../catalog/createCatalogInvalidationConsumer.js";
 import { createHeraldConsumers } from "../consumers/heraldConsumers.js";
 import type { HeraldEdgeConfigs } from "../edgeConfig/createHeraldEdgeConfigs.js";
@@ -52,7 +55,7 @@ export function createHerald({
 	config: { env: HeraldEnv };
 }): Herald {
 	const { env } = config;
-	const kafka = new Kafka(
+	const kafka = new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
 			clientId: `herald-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,

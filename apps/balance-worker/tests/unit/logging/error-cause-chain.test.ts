@@ -13,3 +13,27 @@ test("lists nested causes by name and message, stopping on cycles", () => {
 	]);
 	expect(errorCauseChain({ error: "not an error" })).toEqual([]);
 });
+
+test("follows an aggregate's first member and says how many there were", () => {
+	const refused = new Error("Kafka batch was not committed", {
+		cause: new Error("CONCURRENT_TRANSACTIONS"),
+	});
+	refused.name = "KafkaBatchNotCommittedError";
+	const retirement = new AggregateError(
+		[refused, new Error("second partition")],
+		"Partition retirement did not settle safely",
+	);
+	const top = new Error("Balance worker error", { cause: retirement });
+	expect(errorCauseChain({ error: top })).toEqual([
+		{
+			name: "AggregateError",
+			message:
+				"Partition retirement did not settle safely (2 errors, first follows)",
+		},
+		{
+			name: "KafkaBatchNotCommittedError",
+			message: "Kafka batch was not committed",
+		},
+		{ name: "Error", message: "CONCURRENT_TRANSACTIONS" },
+	]);
+});

@@ -1,24 +1,6 @@
 /**
- * A batch migration must not strand seats on an OVER-ALLOCATED pool.
- *
- * `repointLicensePoolsForPage` recomputes granted = included + paid_quantity and
- * clamps remaining at 0 via GREATEST(..., 0). When a customer holds more live
- * assignments than the new grant covers, the clamp hides the deficit: remaining
- * lands at 0 rather than negative, so `expireUnusedAssignments` — which keys off
- * `remaining < 0` — never sees the pool as over-allocated.
- *
- * Scenario: 3 paid seats all assigned, then a migration lowers `included` so the
- * grant shrinks below the live assignment count.
- *
- * Contract under test:
- *   - the pool's usage still reflects every live assignment
- *   - granted stays derived from included + paid_quantity
- *   - the pool does not silently report spare capacity it does not have:
- *     remaining must never exceed granted - usage
- *
- * Expected red: remaining is clamped to 0 while usage exceeds granted, so the
- * pool reads as fully allocated with no deficit and the surplus assignments are
- * never expired.
+ * Lowering a license's `included` in a batch migration moves those seats into
+ * paid_quantity, so granted and live assignments survive and remaining stays truthful.
  */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -53,7 +35,6 @@ test.concurrent(
 		const before = await getLicenseDbState({ db: ctx.db, customerId });
 		const [poolBefore] = before.pools;
 		expect(poolBefore).toBeDefined();
-		const paidQuantity = poolBefore.paid_quantity;
 
 		await runChunkedMigration({
 			ctx,
@@ -97,7 +78,8 @@ test.concurrent(
 		);
 		expect(liveAssignments).toHaveLength(ASSIGNED_SEATS);
 
-		expect(pool.granted).toBe(paidQuantity);
+		expect(pool.paid_quantity).toBe(poolBefore.granted);
+		expect(pool.granted).toBe(pool.paid_quantity);
 		expect(pool.remaining).toBeLessThanOrEqual(
 			pool.granted - liveAssignments.length,
 		);

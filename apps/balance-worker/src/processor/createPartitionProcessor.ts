@@ -189,6 +189,24 @@ function createProcessor({
 		// finished, and a store that refused one must fail the drain, not be swallowed.
 		await scope.ctx.writer.waitForApplies();
 		await scope.ctx.writer.waitForStore();
+		await landCommandOffsets();
+	}
+
+	/** Best effort: the successor resumes from the Postgres bookmark, so an offset
+	 *  that did not land costs it a skip forward, never a second decision. */
+	async function landCommandOffsets(): Promise<void> {
+		try {
+			await scope.ctx.appender.flushCommandOffsets?.();
+		} catch (cause) {
+			scope.ctx.logger?.warn?.(
+				"Command offsets did not land before the drain; the successor resumes from Postgres",
+				{
+					topic: scope.ctx.config.topic,
+					partition: scope.ctx.config.partition,
+					error: cause,
+				},
+			);
+		}
 	}
 
 	function initialize({ request }: { request: InitializeRequest }) {

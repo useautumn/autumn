@@ -8,6 +8,9 @@ import { CreditDrawdownDiagram } from "./blogComponents/how-firecrawl-runs-prici
 import { HierarchyDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/HierarchyDiagram";
 import { PlanRecordDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/PlanRecordDiagram";
 import { TestimonialQuote } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/TestimonialQuote";
+import { AppBillingDiagram } from "./blogComponents/how-runable-prices-an-ai-agent/AppBillingDiagram";
+import { DailyCreditsDiagram } from "./blogComponents/how-runable-prices-an-ai-agent/DailyCreditsDiagram";
+import { RunableHero } from "./blogComponents/how-runable-prices-an-ai-agent/RunableHero";
 import { AgentEnvironmentDiagram } from "./blogComponents/inching-towards-a-software-factory/AgentEnvironmentDiagram";
 import { BillingPathsAnimation } from "./blogComponents/inching-towards-a-software-factory/BillingPathsAnimation";
 import { CloudAgentSession } from "./blogComponents/inching-towards-a-software-factory/CloudAgentSession";
@@ -177,6 +180,9 @@ export const mdxComponents = {
 	SetupActionVerifyTest,
 	TestimonialQuote,
 	PostgresTablesHero,
+	RunableHero,
+	DailyCreditsDiagram,
+	AppBillingDiagram,
 	RelationalDbSimulator,
 	StripeMappingDiagram,
 	StripeTransitionDiagram,

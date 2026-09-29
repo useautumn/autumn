@@ -47,6 +47,28 @@ export const activeAssignmentConditions = () => [
 export const notLicenseAssignmentSql = (alias: string) =>
 	`${alias}.customer_license_link_id IS NULL`;
 
+/** A seat has no lifecycle of its own: when no live parent holds its link,
+ * it ended with its latest parent (mirrors inheritParentCustomerProductProperties). */
+const seatEndedByParentSql = () => {
+	const liveStatuses = sql.join(
+		ACTIVE_STATUSES.map((status) => sql`${status}`),
+		sql`, `,
+	);
+	return sql<string | null>`(
+		SELECT CASE
+			WHEN parent.status IN (${liveStatuses}) THEN NULL
+			ELSE COALESCE(parent.ended_at, parent.updated_at)
+		END
+		FROM customer_licenses AS seat_license
+		INNER JOIN customer_products AS parent
+			ON parent.id = seat_license.parent_customer_product_id
+		WHERE seat_license.link_id = ${customerProducts.customer_license_link_id}
+			AND seat_license.internal_customer_id = ${customerProducts.internal_customer_id}
+		ORDER BY parent.status IN (${liveStatuses}) DESC, parent.created_at DESC
+		LIMIT 1
+	)`;
+};
+
 const listAssignmentsWithEntityAndProductByCustomer = async ({
 	db,
 	internalCustomerId,
@@ -67,6 +89,10 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 			assignment: customerProducts,
 			entity_id: entities.id,
 			license_product_id: products.id,
+			// Live rows already have a live parent; only history needs the lookup.
+			parent_ended_at: activeOnly
+				? sql<string | null>`NULL`
+				: seatEndedByParentSql(),
 		})
 		.from(customerProducts)
 		.innerJoin(

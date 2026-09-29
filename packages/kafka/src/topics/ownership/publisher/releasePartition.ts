@@ -1,5 +1,6 @@
 import { sendTransactionalBatch } from "../../../producer/sendTransactionalBatch.js";
 import { ownershipTopic } from "../ownershipTopic.js";
+import { ownershipPublishRetry } from "./ownershipPublishRetry.js";
 import type {
 	OwnershipPublication,
 	OwnershipPublisherContext,
@@ -18,6 +19,7 @@ export async function releasePartition({
 }): Promise<OwnershipPublication> {
 	const { baseOffset } = await sendTransactionalBatch({
 		producer: ctx.producer,
+		retry: ctx.retry ?? ownershipPublishRetry(),
 		topic,
 		partition,
 		messages: [

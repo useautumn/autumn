@@ -20,6 +20,7 @@ COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
 TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
 . "$SCRIPT_DIR/capy-trigger-image.sh"
 . "$SCRIPT_DIR/install-stripe-cli.sh"
+. "$SCRIPT_DIR/capy-kafka.sh"
 
 command -v bun >/dev/null 2>&1 || die "bun is required"
 docker info >/dev/null 2>&1 || die "Docker Engine is required (use a Capy v2 VM)"
@@ -87,6 +88,9 @@ install_stripe_cli "[capy-init]"
 command -v stripe >/dev/null 2>&1 || die "stripe installation did not put a binary on PATH"
 stripe version >/dev/null
 
+log "installing Kafka $CAPY_KAFKA_VERSION (native broker for the balance worker)"
+install_capy_kafka "[capy-init]"
+
 # Bun workspace deps. Frozen-lockfile so a stale node_modules from a
 # Capy snapshot is repaired without churn.
 log "bun install --frozen-lockfile (workspace deps)"
@@ -100,9 +104,8 @@ log "pulling local service images"
   COMPOSE_PROJECT_NAME=autumn-capy \
   DRAGONFLY_PORT=6379 \
   FAKECLOUD_PORT=4566 \
-  DYNAMODB_PORT=8000 \
     docker compose -f "$COMPOSE_FILE" pull \
-      dragonfly fakecloud dynamodb
+      dragonfly fakecloud
 )
 
 docker compose -f "$TRIGGER_COMPOSE_FILE" config --images \

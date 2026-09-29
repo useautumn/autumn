@@ -14,6 +14,7 @@ import type {
 	PooledBalanceComputeContext,
 	PooledBalanceLifecycle,
 } from "../types/pooledBalanceComputeTypes";
+import { resolvePooledBalanceResetCycleAnchor } from "../utils/resolvePooledBalanceResetCycleAnchor";
 import { initCustomerEntitlementPooledIdentity } from "./initCustomerEntitlementPooledIdentity";
 
 const getResetMode = ({
@@ -135,25 +136,20 @@ const resolveResetCycleAnchor = ({
 	customerCreatedAt: number;
 }) => {
 	if (resetMode === PooledBalanceResetMode.Lifetime) return null;
-	const existingResetCycleAnchor = findExistingPoolResetCycleAnchor({
-		computeContext,
-		customerEntitlement,
-		resetMode,
-		stripeSubscriptionId,
-		customerLicenseLinkId,
+	return resolvePooledBalanceResetCycleAnchor({
+		existingResetCycleAnchor: findExistingPoolResetCycleAnchor({
+			computeContext,
+			customerEntitlement,
+			resetMode,
+			stripeSubscriptionId,
+			customerLicenseLinkId,
+		}),
+		anchorsToSource:
+			resetMode === PooledBalanceResetMode.Subscription ||
+			customerLicenseLinkId !== null,
+		sourceResetCycleAnchor: customerEntitlement.reset_cycle_anchor,
+		customerCreatedAt,
 	});
-	if (existingResetCycleAnchor !== undefined) {
-		return existingResetCycleAnchor;
-	}
-
-	if (
-		resetMode === PooledBalanceResetMode.Subscription ||
-		customerLicenseLinkId
-	) {
-		return customerEntitlement.reset_cycle_anchor ?? null;
-	}
-
-	return customerCreatedAt;
 };
 
 export const computePooledBalanceLifecycle = ({

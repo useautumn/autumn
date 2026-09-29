@@ -30,6 +30,7 @@ export const setupSlackAgentTurn = async ({
 	run,
 	speaker,
 	text,
+	threadAttachments,
 	threadId,
 	trustedBot,
 }: SlackAgentTurnParams) => {
@@ -87,6 +88,7 @@ export const setupSlackAgentTurn = async ({
 			fetchFallback: attachmentFetchFallback,
 			logger,
 			text,
+			threadAttachments,
 		}),
 		findEveSessionForThread({
 			db,

@@ -1,12 +1,5 @@
-/**
- * Variants and license links are not reconciled: a variant never inherits its
- * base's links, a variant linked as a seat plan creates no pools so the seats it
- * sells can never be assigned, and a variant parent leaves the seat plan
- * un-editable. Until propagation handles them, linking either side is refused.
- *
- * Red: both links are accepted.
- * Green: both are rejected at link time.
- */
+/** A variant linked as a seat plan mints no pools, so its seats could never be
+ * assigned; the link is refused. Variant parents may link licenses. */
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -15,7 +8,7 @@ import chalk from "chalk";
 
 const INCLUDED_SEATS = 1;
 
-test(`${chalk.yellowBright("licenses: a variant cannot take part in a license link")}`, async () => {
+test(`${chalk.yellowBright("licenses: a variant cannot be used as a seat plan")}`, async () => {
 	const idPrefix = `variant-link-rejected-${Date.now().toString(36)}`;
 
 	const parent = products.base({
@@ -60,11 +53,4 @@ test(`${chalk.yellowBright("licenses: a variant cannot take part in a license li
 		],
 	});
 	await expect(linkVariantSeat).rejects.toThrow(/variant/i);
-
-	// A variant parent leaves the seat plan un-editable.
-	const linkVariantParent = autumnV2_3.post("/plans.update", {
-		plan_id: `${idPrefix}-pro-annual`,
-		licenses: [{ license_plan_id: devSeat.id, included: INCLUDED_SEATS }],
-	});
-	await expect(linkVariantParent).rejects.toThrow(/variant/i);
 });

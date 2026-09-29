@@ -136,7 +136,11 @@ test.concurrent(
 			expand: [PreviewUpdatePlanExpand.Plan],
 		});
 		expect(basePricePreview).toMatchObject({
-			customize: null,
+			customize: {
+				upsert_licenses: [
+					expect.objectContaining({ license_plan_id: license.id, included: 0 }),
+				],
+			},
 			item_changes: [],
 			versionable: true,
 		});

@@ -15,7 +15,7 @@ const requireEnv = (name: string): string => {
  * Retries re-send the same hour; idempotency keys make that safe. */
 export const pushHourlyMetersTask = schedules.task({
 	id: "push-hourly-meters",
-	cron: "10 * * * *",
+	cron: { pattern: "10 * * * *", environments: ["PRODUCTION"] },
 	maxDuration: 600,
 	retry: { maxAttempts: 3 },
 	run: async (payload) => {

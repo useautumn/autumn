@@ -1,5 +1,6 @@
 import type { KafkaConfig } from "kafkajs";
 import { assertPositiveSafeInteger } from "../lib/assert.js";
+import { createKafkaLogCreator } from "./kafkaLogCreator.js";
 import type { KafkaTransportConfig } from "./types/kafkaClient.js";
 import type { KafkaClientLimits } from "./types/kafkaLimits.js";
 
@@ -49,6 +50,8 @@ export function createKafkaClient({
 	return {
 		clientId,
 		brokers,
+		// Routine broker refusals are lowered from ERROR; a transport may bring its own creator.
+		logCreator: createKafkaLogCreator(),
 		...transport,
 		connectionTimeout: limits.connectionTimeoutMs,
 		requestTimeout: limits.requestTimeoutMs,

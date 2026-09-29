@@ -9,6 +9,7 @@ import type {
 	AgentTurnSpeaker,
 } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import type { ActiveRun } from "../../../internal/runs/runRegistry.js";
+import type { ThreadAttachment } from "../threadContext.js";
 
 export type SlackChatInstallation = ChatInstallation & {
 	org_slug?: string;
@@ -36,6 +37,8 @@ export type SlackAgentTurnParams = Readonly<{
 	run?: ActiveRun;
 	speaker?: AgentTurnSpeaker;
 	text: string;
+	/** Files shared earlier in the thread that this turn has not seen. */
+	threadAttachments?: ReadonlyArray<ThreadAttachment>;
 	threadId: string;
 	trustedBot?: ChatTrustedBot;
 }>;

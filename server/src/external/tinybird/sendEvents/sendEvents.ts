@@ -3,7 +3,6 @@ import type { EventInsert } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { tinybirdIngest } from "../initTinybird.js";
-import { tinybirdSecondaryApi } from "../initTinybirdV2.js";
 import { isTinybirdConfigured } from "../tinybirdUtils.js";
 import { mapToTinybirdEvent } from "./mapEvent.js";
 
@@ -35,7 +34,7 @@ export const sendEventsToTinybird = async ({
 
 	const tinybirdEvents = events.map(mapToTinybirdEvent);
 
-	const reportFailure = (error: unknown, region: "primary" | "secondary") => {
+	const reportFailure = (error: unknown, region: "primary") => {
 		const errorId = generateErrorId();
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -67,7 +66,7 @@ export const sendEventsToTinybird = async ({
 		});
 	};
 
-	const primaryWrite = tinybirdIngest
+	await tinybirdIngest
 		.events(tinybirdEvents)
 		.then((result) => {
 			logger?.info(`Sent ${events.length} events to Tinybird (primary)`, {
@@ -80,22 +79,4 @@ export const sendEventsToTinybird = async ({
 			});
 		})
 		.catch((error: unknown) => reportFailure(error, "primary"));
-
-	const secondaryWrite = tinybirdSecondaryApi
-		? tinybirdSecondaryApi
-				.ingestBatch("events", tinybirdEvents)
-				.then((result) => {
-					logger?.info(`Sent ${events.length} events to Tinybird (secondary)`, {
-						data: {
-							region: "secondary",
-							eventCount: events.length,
-							successfulRows: result?.successful_rows,
-							quarantinedRows: result?.quarantined_rows,
-						},
-					});
-				})
-				.catch((error: unknown) => reportFailure(error, "secondary"))
-		: Promise.resolve();
-
-	await Promise.all([primaryWrite, secondaryWrite]);
 };

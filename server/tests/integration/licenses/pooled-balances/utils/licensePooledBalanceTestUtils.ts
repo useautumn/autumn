@@ -105,9 +105,11 @@ export const seatLinkId = async ({
 	licenseProductId: string;
 }) => {
 	const { assignments, pools } = await getLicenseDbState({ db, customerId });
-	const matching = assignments.filter(
-		(candidate) => candidate.product_id === licenseProductId,
-	);
+	// Newest first: a dead parent's seats stay `active` in the DB (liveness is
+	// inherited at read time), so row order alone can return a stale link.
+	const matching = assignments
+		.filter((candidate) => candidate.product_id === licenseProductId)
+		.sort((left, right) => (right.created_at ?? 0) - (left.created_at ?? 0));
 	const assignment =
 		matching.find(
 			(candidate) => candidate.status !== CusProductStatus.Expired,

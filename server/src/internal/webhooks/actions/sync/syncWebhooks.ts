@@ -29,16 +29,17 @@ const deleteChange = async ({
 	remote: SyncRemote;
 	id: string;
 }): Promise<ItemOutcome> => {
-	try {
-		for (const appId of remote.appIdsOf.get(id) ?? [])
-			await withSvixErrors({
+	// One app failing must not leave the other app's copy live.
+	const results = await Promise.allSettled(
+		(remote.appIdsOf.get(id) ?? []).map((appId) =>
+			withSvixErrors({
 				webhookId: id,
 				run: () => createSvixCli().endpoint.delete(appId, id),
-			});
-		return { ok: true };
-	} catch (error) {
-		return { ok: false, id, error };
-	}
+			}),
+		),
+	);
+	const failed = results.find((result) => result.status === "rejected");
+	return failed ? { ok: false, id, error: failed.reason } : { ok: true };
 };
 
 const applyChange = async ({

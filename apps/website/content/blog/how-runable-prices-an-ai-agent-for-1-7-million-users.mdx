@@ -1,0 +1,247 @@
+---
+title: "How Runable prices an AI agent for 1.7 million users"
+description: "How Runable's credit-based pricing works, how it changed over a year, and how it uses pricing iteration to grow."
+date: "2026-09-29"
+author: "Ayush"
+slug: "how-runable-prices-an-ai-agent-for-1-7-million-users"
+image: "/images/blog/how-runable-prices-an-ai-agent-for-1-7-million-users.png"
+heroComponent: "RunableHero"
+fullWidthHero: true
+---
+
+Micro, small and medium-sized enterprises contribute about **50% of global GDP**, according to the [United Nations](https://www.un.org/en/observances/micro-small-medium-businesses-day). [Runable](https://runable.com/) is building an AI agent that helps those businesses build, run, and grow without hiring a team for every function.
+
+Pricing a product like that is hard. Every task costs something different, new products launch every few months, customers pay on both web and mobile, and users live in countries with very different costs of living. This case study breaks down how Runable's pricing works, how it changed over a year, and how it uses pricing iteration to grow.
+
+## Who are Runable
+
+Founded in 2025 by Umesh Kumar and Saksham Sarda, Runable started out in AI infrastructure and browser technology. When users began asking its agent to create websites and slide decks, the team saw a bigger opportunity: helping nontechnical people get work done.
+
+Today, users describe what they need in plain language and Runable creates websites, apps, presentations and other content, handling deployment and analytics for them. Its move into growth adds advertising, social media, outreach and search visibility. The goal is to go from "build me a website" to "help me find customers."
+
+In August 2026, Runable [announced a $21 million Series A](https://runable.com/blogs/runable-grow), co-led by Susquehanna Venture Capital and Nexus Venture Partners ([TechCrunch coverage](https://techcrunch.com/2026/08/26/runable-hits-21m-to-bet-ai-agents-can-go-from-building-businesses-to-growing-them/)).
+
+## A simple customer experience, a complex credit system
+
+### Credits are the unit of value
+
+Every agent chat runs on credits, and each plan comes with its own credit allowance. Credits suit Runable because a single request can run several foundation models in parallel, and different tasks cost very different amounts. A shared [credit system](https://docs.useautumn.com/documentation/modelling-pricing/credit-systems) lets all of those actions draw from one balance.
+
+The current (V3) plans:
+
+<table>
+	<thead>
+		<tr>
+			<th>Plan</th>
+			<th>Price</th>
+			<th>Credits</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Free</td>
+			<td>$0</td>
+			<td>1,500 / day</td>
+		</tr>
+		<tr>
+			<td>Basic</td>
+			<td>$5 / mo ($60 / yr)</td>
+			<td>4,000 / month</td>
+		</tr>
+		<tr>
+			<td>Pro</td>
+			<td>$20 / mo ($240 / yr)</td>
+			<td>25,000 / month</td>
+		</tr>
+		<tr>
+			<td>Max</td>
+			<td>$100 / mo ($1,200 / yr)</td>
+			<td>150,000 / month</td>
+		</tr>
+	</tbody>
+</table>
+
+New users start on the Free plan by default. Paid plans also get the same 1,500 daily credits on top of their monthly allowance, as described below.
+
+As part of its lineup, Runable also has **free tiers tailored to specific regions**, called Go plans. A $20 plan is a small expense in the US but a large one where the cost of living is much lower, so instead of one global free tier, Go lets Runable set different credit grants by region and measure how each one affects upgrade rates.
+
+> "Our starting point is the business owner, not the technology stack. Small teams have the same ambition as larger businesses, but far less capacity. We are building Runable centered on what the owner wants to achieve."
+>
+> Umesh Kumar, co-founder
+
+### Daily credits
+
+Since July, every plan except Go gets **1,500 daily credits**, on top of its existing grants. On the Free plan, daily credits are capped at 15,000 a month. Autumn handles the daily reset and enforces the cap as a usage limit.
+
+<DailyCreditsDiagram />
+
+It took Runable four attempts to land on this design, which is a good example of how pricing gets refined in practice:
+
+<table>
+	<thead>
+		<tr>
+			<th>Date</th>
+			<th>Approach</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Nov 2025</td>
+			<td>A daily credit grant set up on the free plan, but set to 0 (inactive)</td>
+		</tr>
+		<tr>
+			<td>Mar 2026 (V2)</td>
+			<td>A daily bonus of 500 or 1,000 credits on top of the monthly allowance</td>
+		</tr>
+		<tr>
+			<td>Jun 2026 (V3 launch)</td>
+			<td>A separate daily allowance just for "ask" credits (100 or 200 a day)</td>
+		</tr>
+		<tr>
+			<td>Jul 2026</td>
+			<td>1,500 daily credits on every plan except Go. Free plans are capped at 15,000 a month; paid plans get them on top of their monthly allowance</td>
+		</tr>
+	</tbody>
+</table>
+
+Daily credits give free users a reason to come back every day, and the monthly cap keeps the cost of the free tier predictable. Paid users get the same daily credits as a bonus on top of their monthly allowance, so upgrading never means losing something, and the monthly allowance is what sets the paid tiers apart.
+
+### Each feature gets its own meter
+
+New products and SKUs have been launched with their own meters, with no new billing code or state to store:
+
+<table>
+	<thead>
+		<tr>
+			<th>Product</th>
+			<th>Launched</th>
+			<th>What's metered</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Claw</td>
+			<td>Mar 2026</td>
+			<td>Agent credits</td>
+		</tr>
+		<tr>
+			<td>Flow</td>
+			<td>Jul 2026</td>
+			<td>Dictation seconds: 3,600 a day (one hour) on every plan, including Go</td>
+		</tr>
+		<tr>
+			<td>Ad spend credits</td>
+			<td>Aug 2026</td>
+			<td>Ad spend for Runable's growth features, tracked separately from agent credits</td>
+		</tr>
+	</tbody>
+</table>
+
+### One customer across web and mobile
+
+Stripe handles web payments and RevenueCat handles iOS, but both belong to one Autumn customer. That let Runable offer one-time top-ups on mobile as well as web, and see Stripe and RevenueCat revenue in one place.
+
+## Pricing that can evolve with the product
+
+Because plans and discounts live in Autumn, Runable can change them without an engineering sprint. It went through three pricing versions in about a year:
+
+1. **V1 (2025):** Pro and Max plans, monthly or yearly, with add-on credit packs. Between December 2025 and January 2026 Runable added Go, Plus and Unlimited plans, plus a free plan as the default.
+2. **V2 (March 4, 2026):** 15 price points from $25 to $20,000 a month, each with monthly and yearly options (31 products in total). Runable wanted to serve power users and agencies who were buying top-ups repeatedly.
+3. **V3 (June 30, 2026):** three paid plans at $5, $20 and $100.
+
+The V2 data explains the move to V3. Nearly all traffic went to a few plans. With users clustered at the entry price, most of the 15 tiers weren't doing anything, so V3 cut down to three tiers with a lower $5 entry point.
+
+Existing users kept their plans through each change, and Runable didn't write any Stripe migration code. When daily credits launched on July 6, 2026, Autumn's migrations moved existing customers onto the updated plan versions within minutes.
+
+Alongside the plan changes, Runable ran a steady stream of experiments. Customer counts are customers who had the offer applied at checkout, not necessarily paying customers.
+
+- **$1 first month:** the $25 plan for $1 in its first month, used more than all other discounts combined. It replaced a 64% first-month discount.
+- **Monthly vs. yearly discounts:** Runable cut the monthly first-month discount from 50% to 20% and raised the yearly discount from 30% to 50%. Yearly-offer usage went up about five times.
+- **Partner codes:** separate discount codes for learning communities like Outskill (about 330 customers) and Masteria (about 97), so each partnership's impact is measurable.
+- **Referrals:** Users who refer others can earn a referral credit pack. In July, Runable added a paid referral program: users on paid plans get a free credit pack for each referral. Referral codes are now generated through Autumn at a rate of over 100,000 a day.
+
+Together, Runable attributes a **5% relative increase in conversion** to how easily it can run these experiments with Autumn.
+
+> "Going from 15 plans to 3 was the best pricing decision we made. It reduced decision paralysis for the users, and a small business owner, who is our primary target group, always wants to see the ROI before committing to a higher tier. We could only do it because moving users between plans was painless."
+>
+> Saksham Sarda, co-founder
+
+## Every Runable app gets its own Autumn
+
+Runable doesn't just use Autumn to bill its own customers. It passes the same infrastructure on to the people building with it.
+
+When a Runable user creates an app, Runable's agent sets up billing for it. It uses the Autumn CLI and a custom skill Runable built, calling Autumn's Platform API behind the scenes.
+
+Each user gets their own Autumn organization and connects their own Stripe account through Stripe Connect. Revenue goes straight to them.
+
+<AppBillingDiagram />
+
+From there, a small business owner can charge in whatever way suits their product: subscriptions, credits, usage-based pricing, top-ups, free trials, etc.
+
+These are the same building blocks Runable used to go from V1 to V3 and run its own pricing experiments. Autumn built flexible monetization infrastructure so companies don't have to. Through Runable, that flexibility now reaches every business building on it.
+
+## What it would have taken without Autumn
+
+Autumn sits between Runable's application and its payment processors, managing billing state, credit balances and entitlements. On a typical day it handles about 1.3 million balance checks and 500,000 usage events for Runable.
+
+<table>
+	<thead>
+		<tr>
+			<th></th>
+			<th>Stripe alone</th>
+			<th>With Autumn</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Credit balances and usage tracking</td>
+			<td>Build and maintain in-house</td>
+			<td>Handled</td>
+		</tr>
+		<tr>
+			<td>Daily resets and monthly caps</td>
+			<td>Custom cron jobs and edge cases</td>
+			<td>Configured</td>
+		</tr>
+		<tr>
+			<td>Regional free tiers</td>
+			<td>Separate plan logic per region</td>
+			<td>Configured as plans</td>
+		</tr>
+		<tr>
+			<td>New product meters (Claw, Flow, ad spend)</td>
+			<td>New billing code per product</td>
+			<td>Configured</td>
+		</tr>
+		<tr>
+			<td>Plan changes and grandfathering</td>
+			<td>Stripe migration scripts</td>
+			<td>No migration code</td>
+		</tr>
+		<tr>
+			<td>Top-ups and auto-refill</td>
+			<td>Custom purchase and refill logic</td>
+			<td>Configured</td>
+		</tr>
+		<tr>
+			<td>Web and iOS billing</td>
+			<td>Two separate customer records</td>
+			<td>One customer</td>
+		</tr>
+		<tr>
+			<td>Revenue reporting</td>
+			<td>Join two dashboards manually</td>
+			<td>One view</td>
+		</tr>
+	</tbody>
+</table>
+
+**Runable estimates this work would otherwise need five engineers.** For a 15-person team, that is a third of the company.
+
+## Built around focus
+
+Runable promises small businesses they won't have to assemble every tool themselves. Its partnership with Autumn follows the same idea: Runable focuses on helping owners create, operate, and find customers, and Autumn handles the monetization infrastructure behind it.
+
+> "Autumn's infrastructure has allowed us to focus on what matters, which is making Runable better with every iteration and helping small businesses build, run and grow."
+>
+> Saksham Sarda, co-founder
