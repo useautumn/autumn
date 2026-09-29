@@ -6,7 +6,7 @@ import { scheduleFormFromRequestBody } from "./scheduleFormFromRequestBody";
 describe("scheduleFormFromRequestBody", () => {
 	test("maps phases, plans, and top-level flags", () => {
 		const form = scheduleFormFromRequestBody({
-			billing_behavior: "none",
+			proration_behavior: "none",
 			billing_cycle_anchor: "now",
 			customer_id: "cus_1",
 			enable_plan_immediately: true,

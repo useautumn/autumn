@@ -11,12 +11,14 @@ import {
 	ErrCode,
 	InternalError,
 	RecaseError,
+	type SetPlansParamsV0,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans/utils/setPlansResultToResponse";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
@@ -51,7 +53,11 @@ export const confirmCheckout = async ({
 }: {
 	ctx: AutumnContext;
 	checkout: Checkout;
-	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
+	params:
+		| AttachParamsV1
+		| CreateScheduleParamsV0
+		| SetPlansParamsV0
+		| UpdateSubscriptionV1Params;
 }): Promise<ConfirmCheckoutResponse> => {
 	if (checkout.status === CheckoutStatus.ActionRequired) {
 		throw new RecaseError({
@@ -108,15 +114,18 @@ export const confirmCheckout = async ({
 			break;
 		}
 		case CheckoutAction.CreateSchedule: {
+			const setPlansParams = createScheduleParamsToSetPlansParams({
+				params: params as CreateScheduleParamsV0 | SetPlansParamsV0,
+			});
 			const checkoutResult = setPlansResultToResponse({
 				result: await billingActions.setPlans({
 					ctx,
-					params: params as CreateScheduleParamsV0,
+					params: setPlansParams,
 					skipAutumnCheckout: true,
 				}),
 			});
 
-			const [immediatePhase] = (params as CreateScheduleParamsV0).phases;
+			const [immediatePhase] = setPlansParams.phases;
 			const [firstPlan] = immediatePhase?.plans ?? [];
 
 			if (!firstPlan) {
@@ -134,7 +143,7 @@ export const confirmCheckout = async ({
 				required_action: checkoutResult.required_action,
 			};
 			successUrl =
-				(params as CreateScheduleParamsV0).success_url ??
+				setPlansParams.success_url ??
 				toSuccessUrl({ org: ctx.org, env: ctx.env });
 			productId = firstPlan.plan_id;
 			break;

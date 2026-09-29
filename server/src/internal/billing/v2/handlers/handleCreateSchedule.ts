@@ -4,6 +4,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans/utils/setPlansResultToResponse";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
@@ -34,7 +35,9 @@ export const handleCreateSchedule = createRoute({
 		const response = setPlansResultToResponse({
 			result: await billingActions.setPlans({
 				ctx: c.get("ctx"),
-				params: c.req.valid("json"),
+				params: createScheduleParamsToSetPlansParams({
+					params: c.req.valid("json"),
+				}),
 			}),
 		}) satisfies CreateScheduleResponse;
 

@@ -1,11 +1,11 @@
 import {
 	type CheckoutMode,
 	type CreateScheduleBillingContext,
-	type CreateScheduleParamsV0,
 	isOneOffProduct,
 	isPastStartDate,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
+	type SetPlansParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
@@ -43,11 +43,11 @@ const resolveNoBillingChanges = ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: CreateScheduleParamsV0;
+	params: SetPlansParamsV0;
 }) =>
 	params.no_billing_changes === true ||
 	(!isStripeConnected({ org: ctx.org, env: ctx.env }) &&
-		params.billing_behavior === "none" &&
+		params.proration_behavior === "none" &&
 		params.redirect_mode === "never");
 
 const setupSetPlansCheckoutMode = ({
@@ -55,7 +55,7 @@ const setupSetPlansCheckoutMode = ({
 	redirectMode,
 }: {
 	billingContext: SetPlansCheckoutModeContext;
-	redirectMode: CreateScheduleParamsV0["redirect_mode"];
+	redirectMode: SetPlansParamsV0["redirect_mode"];
 }): CheckoutMode => {
 	if (redirectMode === "never") {
 		return null;
@@ -96,8 +96,8 @@ const phaseToImmediateParams = ({
 	phase,
 }: {
 	ctx: AutumnContext;
-	params: CreateScheduleParamsV0;
-	phase: CreateScheduleParamsV0["phases"][number];
+	params: SetPlansParamsV0;
+	phase: SetPlansParamsV0["phases"][number];
 }): ImmediateMultiProductParams => ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
@@ -151,7 +151,7 @@ const setupSetPlansImmediatePhase = async ({
 	normalizedPhases,
 }: {
 	ctx: AutumnContext;
-	params: CreateScheduleParamsV0;
+	params: SetPlansParamsV0;
 	preview: boolean;
 	billingContext: MultiAttachBillingContext;
 	normalizedPhases: ReturnType<typeof normalizeSetPlansPhases>;
@@ -201,7 +201,7 @@ export const setupSetPlansBillingContext = async ({
 	preview = false,
 }: {
 	ctx: AutumnContext;
-	params: CreateScheduleParamsV0;
+	params: SetPlansParamsV0;
 	preview?: boolean;
 }): Promise<CreateScheduleBillingContext> => {
 	const initialPhase = getInitialSetPlansPhase({
@@ -292,7 +292,7 @@ export const setupSetPlansBillingContext = async ({
 			billingContext.isCustom ||
 			scheduledCustomPrices.length > 0 ||
 			scheduledCustomEntitlements.length > 0,
-		requestedProrationBehavior: params.billing_behavior,
+		requestedProrationBehavior: params.proration_behavior,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 		billingStartsAt: immediatePhase.starts_at,
 		subscriptionBackdateStartMs: isPastStartDate(
@@ -338,7 +338,7 @@ export const setupSetPlansBillingContext = async ({
 	// Preserve renewal charges when resetting the cycle without proration.
 	scheduleBillingContext.anchorResetRefund = setupAnchorResetRefund({
 		billingCycleAnchor: params.billing_cycle_anchor,
-		prorationBehavior: params.billing_behavior,
+		prorationBehavior: params.proration_behavior,
 		outgoingCustomerProduct: recurringActive[0],
 	});
 

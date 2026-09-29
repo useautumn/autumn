@@ -1,0 +1,42 @@
+import { z } from "zod/v4";
+import { BillingBehaviorSchema } from "../common/billingBehavior";
+import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
+import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
+import {
+	CreateScheduleParamsV0BaseSchema,
+	createScheduleTimingIssues,
+} from "../createSchedule/createScheduleParamsV0";
+
+export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
+	billing_behavior: true,
+	billing_cycle_anchor: true,
+})
+	.extend({
+		proration_behavior: BillingBehaviorSchema.optional().meta({
+			description:
+				"How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+		}),
+		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
+			description:
+				"Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date.",
+		}),
+		ends_at: UnixMsTimestampSchema.optional().meta({
+			description:
+				"Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.",
+		}),
+		billing_behavior: z
+			.never({
+				error:
+					"billing_behavior is not supported by set_plans. Use proration_behavior instead.",
+			})
+			.optional()
+			.meta({ internal: true }),
+	})
+	.check((ctx) => {
+		for (const issue of createScheduleTimingIssues(ctx.value.phases)) {
+			ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
+		}
+	});
+
+export type SetPlansParamsV0 = z.infer<typeof SetPlansParamsV0Schema>;
+export type SetPlansParamsV0Input = z.input<typeof SetPlansParamsV0Schema>;

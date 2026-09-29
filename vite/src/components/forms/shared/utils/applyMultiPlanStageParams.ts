@@ -1,10 +1,7 @@
-import type {
-	CreateScheduleParamsV0,
-	MultiAttachParamsV0,
-} from "@autumn/shared";
+import type { MultiAttachParamsV0, SetPlansParamsV0 } from "@autumn/shared";
 import type { BillingStageParams } from "./billingStageParams";
 
-type MultiPlanParams = CreateScheduleParamsV0 | MultiAttachParamsV0;
+type MultiPlanParams = SetPlansParamsV0 | MultiAttachParamsV0;
 
 export function applyMultiPlanStageParams<T extends MultiPlanParams>({
 	requestBody,

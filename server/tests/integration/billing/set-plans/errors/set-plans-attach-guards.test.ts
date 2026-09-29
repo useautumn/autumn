@@ -9,7 +9,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans guards: billing_behavior none rejected when removing a live trial")}`,
+	`${chalk.yellowBright("set-plans guards: proration_behavior none rejected when removing a live trial")}`,
 	async () => {
 		const proTrial = products.proWithTrial({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -33,7 +33,7 @@ test.concurrent(
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,
 					free_trial: null,
-					billing_behavior: "none",
+					proration_behavior: "none",
 					phases: [{ starts_at: "now", plans: [{ plan_id: proTrial.id }] }],
 				}),
 		});

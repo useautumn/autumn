@@ -1,7 +1,7 @@
 import {
 	type BillingPlan,
 	CheckoutAction,
-	type CreateScheduleParamsV0,
+	type SetPlansParamsV0,
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -35,7 +35,7 @@ export const setPlans = async ({
 	skipAutumnCheckout = false,
 }: {
 	ctx: AutumnContext;
-	params: CreateScheduleParamsV0;
+	params: SetPlansParamsV0;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
 }): Promise<SetPlansResult> => {

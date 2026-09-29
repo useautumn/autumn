@@ -28,6 +28,7 @@ export * from "./openBillingPortal/openBillingPortalResponse";
 // Restore
 export * from "./restore/restoreParamsV1";
 // Set Plans
+export * from "./setPlans/setPlansParamsV0";
 export * from "./setPlans/setPlansPreviewResponse";
 // Setup Payment
 export * from "./setupPayment/setupPaymentParamsV0";

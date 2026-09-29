@@ -1,7 +1,4 @@
-import type {
-	CreateScheduleParamsV0,
-	CreateScheduleResponse,
-} from "@autumn/shared";
+import type { CreateScheduleResponse, SetPlansParamsV0 } from "@autumn/shared";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
@@ -15,25 +12,22 @@ export function useCreateScheduleMutation({
 }: {
 	customerId: string | undefined;
 	onApplied?: () => void;
-	buildRequestBody: (
-		params?: BillingStageParams,
-	) => CreateScheduleParamsV0 | null;
+	buildRequestBody: (params?: BillingStageParams) => SetPlansParamsV0 | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
-	const mutation = useBillingMutation<
-		CreateScheduleParamsV0,
-		CreateScheduleResponse
-	>({
-		customerId,
-		path: BILLING_OPERATIONS.setPlans.path,
-		buildRequestBody,
-		successMessage: "Plans set successfully",
-		errorMessage: "Failed to set plans",
-		onApplied,
-		onCheckoutRedirect,
-		onSuccess,
-	});
+	const mutation = useBillingMutation<SetPlansParamsV0, CreateScheduleResponse>(
+		{
+			customerId,
+			path: BILLING_OPERATIONS.setPlans.path,
+			buildRequestBody,
+			successMessage: "Plans set successfully",
+			errorMessage: "Failed to set plans",
+			onApplied,
+			onCheckoutRedirect,
+			onSuccess,
+		},
+	);
 
 	const handleSubmit = () => {
 		mutation.mutate({});

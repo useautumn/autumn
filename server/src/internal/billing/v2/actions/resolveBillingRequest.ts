@@ -8,11 +8,13 @@ import {
 	cusProductToProduct,
 	customizePlanV1ToV0,
 	type FullProduct,
+	type SetPlansParamsV0,
 	type UpdateSubscriptionV0Params,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { findTargetCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/setup/findTargetCustomerProduct";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
@@ -35,7 +37,7 @@ export type ResolveBillingRequestParams = z.infer<
 
 export type ResolvedBillingRequestV0 =
 	| AttachParamsV0
-	| CreateScheduleParamsV0
+	| SetPlansParamsV0
 	| UpdateSubscriptionV0Params;
 
 /** Resolves one plan's `customize` patch into concrete V0 items against its
@@ -98,7 +100,9 @@ export const resolveBillingRequest = async ({
 				: {}),
 		};
 		return {
-			request: request as CreateScheduleParamsV0,
+			request: createScheduleParamsToSetPlansParams({
+				params: request as CreateScheduleParamsV0,
+			}),
 			unrepresentable: [],
 		};
 	}

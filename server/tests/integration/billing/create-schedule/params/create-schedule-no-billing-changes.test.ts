@@ -3,9 +3,9 @@
 
 import { expect, test } from "bun:test";
 import {
-	type CreateScheduleParamsV0,
 	type CreateScheduleResponse,
 	customerProducts,
+	type SetPlansParamsV0,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -79,7 +79,7 @@ const setupExternalSchedule = async ({
 			},
 		],
 	};
-	const phases: CreateScheduleParamsV0["phases"] = historicalPhase
+	const phases: SetPlansParamsV0["phases"] = historicalPhase
 		? [
 				{
 					starts_at: now - 31 * 24 * 60 * 60 * 1000,
@@ -89,10 +89,10 @@ const setupExternalSchedule = async ({
 				futurePhase,
 			]
 		: [currentPhase, futurePhase];
-	const params: CreateScheduleParamsV0 = {
+	const params: SetPlansParamsV0 = {
 		customer_id: customerId,
 		...(noBillingChanges && { no_billing_changes: true }),
-		billing_behavior: "none",
+		proration_behavior: "none",
 		redirect_mode: "never",
 		phases,
 	};
@@ -105,7 +105,7 @@ const runSetPlans = async ({
 	params,
 }: {
 	ctx: TestContext;
-	params: CreateScheduleParamsV0;
+	params: SetPlansParamsV0;
 }) =>
 	setPlansResultToResponse({
 		result: await billingActions.setPlans({ ctx, params }),
@@ -116,7 +116,7 @@ const previewSetPlansCharges = async ({
 	params,
 }: {
 	ctx: TestContext;
-	params: CreateScheduleParamsV0;
+	params: SetPlansParamsV0;
 }) => {
 	const { billingContext, billingPlan } = await billingActions.setPlans({
 		ctx,
@@ -237,7 +237,7 @@ test.concurrent(
 			ctx,
 			params: {
 				customer_id: customerId,
-				billing_behavior: "none",
+				proration_behavior: "none",
 				redirect_mode: "never",
 				phases: [
 					{ starts_at: now, plans: [{ plan_id: pro.id }] },
@@ -267,7 +267,7 @@ test.concurrent(
 			params: {
 				customer_id: customerId,
 				no_billing_changes: true,
-				billing_behavior: "none",
+				proration_behavior: "none",
 				redirect_mode: "never",
 				phases: [
 					{ starts_at: now, plans: [{ plan_id: pro.id }] },

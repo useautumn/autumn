@@ -2,9 +2,9 @@ import {
 	type AutumnBillingPlan,
 	type BillingPlan,
 	type CreateScheduleBillingContext,
-	type CreateScheduleParamsV0,
 	ErrCode,
 	RecaseError,
+	type SetPlansParamsV0,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -36,7 +36,7 @@ export const handleSetPlansErrors = async ({
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
-	params: Pick<CreateScheduleParamsV0, "currency">;
+	params: Pick<SetPlansParamsV0, "currency">;
 	preview?: boolean;
 }) => {
 	validateSetPlansPhasePlans({
