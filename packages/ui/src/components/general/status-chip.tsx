@@ -20,14 +20,14 @@ const CIRCLE = "M8 4.8a3.2 3.2 0 1 1 0 6.4a3.2 3.2 0 1 1 0-6.4";
 /** 16×16 viewBox stroke paths drawn inside the rounded status square. */
 const STATUS_GLYPHS = {
 	check: "M4.8 8.2l2.1 2.1 4.3-4.4",
-	clock: "M8 4.8V8l2.1 1.4",
+	clock: "M8 4.8a3.2 3.2 0 1 1 0 6.4a3.2 3.2 0 1 1 0-6.4M8 6.7V8l1.5 1",
 	alert: "M8 4.6v4.2M8 11.2v.1",
 	minus: "M5.2 8h5.6",
 	x: "M5.7 5.7l4.6 4.6M10.3 5.7l-4.6 4.6",
 	ban: "M5.4 10.6l5.2-5.2",
 	pause: "M6.4 5.3v5.4M9.6 5.3v5.4",
 	play: "M6.5 5.2v5.6L10.7 8z",
-	calendar: "M5 4.6v1.5M11 4.6v1.5M4.5 5.6h7v5.5h-7zM4.5 7.6h7",
+	calendar: "M5 5.6h6v5H5zM5 7.6h6",
 	hourglass: "M5.6 4.8h4.8M5.6 11.2h4.8M6.2 4.8l3.6 6.4M9.8 4.8l-3.6 6.4",
 	pencil: "M5 11l.5-2 4-4 1.5 1.5-4 4z",
 	refresh: "M5 8a3 3 0 1 0 1-2.2M5 4.6v1.8h1.8",
