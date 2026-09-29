@@ -100,13 +100,14 @@ const planAdoptions = ({
 };
 
 /** What webhooks.sync would do: create missing, adopt a dashboard-made webhook
- * with the same URL, update differing, and report every remote webhook the
- * request doesn't state as unmanaged. Never deletes. */
+ * with the same URL, update differing. A remote webhook the request doesn't
+ * state is unmanaged, or a delete when `skipDeletions` is false. */
 export const computeWebhookSyncChanges = ({
 	remote,
 	uidlessIds = new Set(),
 	remoteKinds = new Map(),
 	stated,
+	skipDeletions = true,
 	now,
 }: {
 	remote: Webhook[];
@@ -114,6 +115,7 @@ export const computeWebhookSyncChanges = ({
 	/** Which app each remote webhook lives in; the main app when absent. */
 	remoteKinds?: Map<string, WebhookAppKind>;
 	stated: WebhookParams[];
+	skipDeletions?: boolean;
 	now: number;
 }): { changes: WebhookSyncChange[]; errors: WebhookSyncError[] } => {
 	const kindOf = (webhook: Webhook): WebhookAppKind =>
@@ -170,7 +172,21 @@ export const computeWebhookSyncChanges = ({
 	});
 
 	const adoptedIds = new Set([...adoptions.values()].map(({ id }) => id));
-	const unmanaged = remote
+	// A refused adoption leaves its dashboard candidates for the user to sort out.
+	const contestedIds = new Set(
+		stated
+			.filter((params) => failedIds.has(params.id) && !ownedById.has(params.id))
+			.flatMap((params) =>
+				uidless
+					.filter(
+						(webhook) =>
+							webhook.url === params.url &&
+							kindOf(webhook) === webhookAppKindOf({ events: params.events }),
+					)
+					.map(({ id }) => id),
+			),
+	);
+	const unstated = remote
 		.filter(
 			(webhook) =>
 				!(ownedById.has(webhook.id) && statedIds.has(webhook.id)) &&
@@ -178,11 +194,14 @@ export const computeWebhookSyncChanges = ({
 		)
 		.map(
 			(webhook): WebhookSyncChange => ({
-				action: "unmanaged",
+				action:
+					skipDeletions || contestedIds.has(webhook.id)
+						? "unmanaged"
+						: "delete",
 				id: webhook.id,
 				webhook,
 			}),
 		);
 
-	return { changes: [...statedChanges, ...unmanaged], errors };
+	return { changes: [...statedChanges, ...unstated], errors };
 };

@@ -11,6 +11,7 @@ import type { AppEnv } from "../genModels/genEnums.js";
 import { organizations } from "../orgModels/orgTable.js";
 import type { ChatApprovalStatus } from "./chatApprovalApi.js";
 import type { ChatAuthMode, ChatReplyMode } from "./chatEnums.js";
+import type { ChatTrustedBot } from "./chatTrustedBots.js";
 
 export type ChatProvider =
 	| "slack"
@@ -35,6 +36,10 @@ export const chatInstallations = pgTable(
 			.$type<ChatReplyMode>()
 			.notNull()
 			.default("all_messages"),
+		trusted_bots: jsonb("trusted_bots")
+			.$type<ChatTrustedBot[]>()
+			.notNull()
+			.default([]),
 		default_env: text("default_env").$type<AppEnv>().notNull(),
 		sandbox_api_key_id: text("sandbox_api_key_id"),
 		sandbox_api_key: text("sandbox_api_key"),

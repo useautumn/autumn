@@ -67,6 +67,7 @@ export * from "./models/authModels/membership";
 export * from "./models/chatModels/chatApprovalApi";
 export * from "./models/chatModels/chatEnums";
 export * from "./models/chatModels/chatTable";
+export * from "./models/chatModels/chatTrustedBots";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
 // 4. Chat Result Models

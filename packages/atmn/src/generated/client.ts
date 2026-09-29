@@ -91,7 +91,7 @@ export type ListWebhooksParams = {
 
 };
 export type SyncWebhooksParams = {
-/** The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted. */
+/** The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false. */
 webhooks: Array<{
 /** Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation. */
 id: string;
@@ -104,6 +104,8 @@ description?: string;
 /** When true, no events are sent to the webhook. */
 disabled?: boolean;
 }>;
+/** When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone. */
+skipDeletions?: boolean;
 };
 export type DiffCatalogResponse = {
 plans: Array<{
@@ -52526,7 +52528,7 @@ updatedAt: number;
 }>;
 };
 export type PreviewSyncWebhooksResponse = {
-/** What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. */
+/** What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. `delete` webhooks aren't listed and `skip_deletions` is false, so sync deletes them. */
 changes: Array<{
 action: "create";
 id: string;
@@ -52635,6 +52637,25 @@ createdAt: number;
 /** When the webhook was last changed, ms since epoch. */
 updatedAt: number;
 };
+} | {
+action: "delete";
+id: string;
+webhook: {
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event. */
+events: Array<string>;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+};
 }>;
 /** Listed webhooks `webhooks.sync` would refuse, e.g. when several dashboard webhooks share the URL. */
 errors: Array<{
@@ -52666,7 +52687,7 @@ id: string;
 /** The webhook's signing secret. Shown once, here: store it before you discard the response. */
 secret: string;
 }>;
-/** Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be. */
+/** Webhooks that couldn't be created, updated or deleted. The others were still applied; the request fails only when none could be. */
 errors: Array<{
 id: string;
 message: string;

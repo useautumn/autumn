@@ -10,6 +10,8 @@ export type SyncRemote = {
 	/** Which app each remote webhook lives in. */
 	remoteKinds: Map<string, WebhookAppKind>;
 	appIdOf: Map<string, string>;
+	/** Every app holding each id; normally one, both after a concurrent create. */
+	appIdsOf: Map<string, string[]>;
 };
 
 /** The env's webhooks across its apps, with where each one lives. */
@@ -23,6 +25,7 @@ export const listSyncRemote = async ({
 		uidlessIds: new Set(),
 		remoteKinds: new Map(),
 		appIdOf: new Map(),
+		appIdsOf: new Map(),
 	};
 	const listed = await Promise.all(
 		apps.map(async (app) => ({
@@ -37,6 +40,10 @@ export const listSyncRemote = async ({
 			if (!endpoint.uid) result.uidlessIds.add(webhook.id);
 			result.remoteKinds.set(webhook.id, app.kind);
 			result.appIdOf.set(webhook.id, app.appId);
+			result.appIdsOf.set(webhook.id, [
+				...(result.appIdsOf.get(webhook.id) ?? []),
+				app.appId,
+			]);
 		}
 	}
 	return result;

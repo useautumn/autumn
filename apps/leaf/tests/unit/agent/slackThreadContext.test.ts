@@ -45,6 +45,7 @@ const installation = ({
 		scopes: [],
 		auth_mode: null,
 		reply_mode: "all_messages",
+		trusted_bots: [],
 		default_env: AppEnv.Live,
 		sandbox_api_key_id: null,
 		sandbox_api_key: null,

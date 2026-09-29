@@ -1,6 +1,7 @@
 import type {
 	ChatAuthMode,
 	ChatReplyMode,
+	ChatTrustedBotInput,
 	UpsertVercelProcessorConfig,
 } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
@@ -58,7 +59,7 @@ export class OrgService {
 	static async updateChatSettings(
 		axiosInstance: AxiosInstance,
 		provider: "slack",
-		data: { reply_mode: ChatReplyMode },
+		data: { reply_mode?: ChatReplyMode; trusted_bots?: ChatTrustedBotInput[] },
 	) {
 		return await axiosInstance.patch(
 			`/organization/chat/${provider}/settings`,

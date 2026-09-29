@@ -1,0 +1,1 @@
+ALTER TABLE "chat_installations" ADD COLUMN "trusted_bots" jsonb DEFAULT '[]'::jsonb NOT NULL;
