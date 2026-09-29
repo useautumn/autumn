@@ -14,6 +14,7 @@ import {
 	getStripeSubscription,
 } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { getBillingPeriod } from "@tests/integration/billing/utils/proration";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
@@ -160,12 +161,19 @@ test.concurrent(
 			}),
 		]);
 
-		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+		const attached = await autumnV2_3.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: parent.id,
 			redirect_mode: "if_required",
 			license_quantities: [{ license_plan_id: seat.id, quantity: 2 }],
 			discounts: [{ reward_id: storedCoupon.id }],
+		});
+
+		if (!attached.invoice) throw new Error("Expected an attach invoice");
+		// The refund reads the discounted charge the attach stores asynchronously.
+		await waitForInvoiceLineItems({
+			stripeInvoiceId: attached.invoice.stripe_id,
+			timeoutMs: 30_000,
 		});
 
 		const params: UpdateSubscriptionV1ParamsInput = {
