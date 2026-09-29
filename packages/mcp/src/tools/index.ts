@@ -27,6 +27,7 @@ const {
 	balances,
 	invoices,
 	logs,
+	stripe,
 } = domainModules;
 
 export {
@@ -47,6 +48,7 @@ export const endpointByTool = {
 	...balances.endpoints,
 	...invoices.endpoints,
 	...logs.endpoints,
+	...stripe.endpoints,
 } as const;
 
 /** Request schema each tool validates against, keyed by tool id. */
@@ -62,6 +64,7 @@ export const schemaByTool = {
 	...balances.schemas,
 	...invoices.schemas,
 	...logs.schemas,
+	...stripe.schemas,
 } as const satisfies Record<
 	keyof typeof endpointByTool | "previewCreateBalance",
 	z.ZodType

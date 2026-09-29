@@ -235,6 +235,9 @@ describe("invoice approval cards", () => {
 			);
 
 			expect(json).toContain("Setup fee");
+			// The line shows its pre-discount amount; the discount is its own row.
+			expect(json).toContain('["Setup fee","$60.00"]');
+			expect(json).not.toContain("$50.00");
 			expect(json).toContain("Discounts");
 			expect(json).toContain("-$10.00");
 			expect(json).toContain("Tax");

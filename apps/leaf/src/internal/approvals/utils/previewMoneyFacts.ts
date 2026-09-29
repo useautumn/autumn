@@ -8,8 +8,16 @@ type LineFacts = {
 	period?: LinePeriod;
 };
 
+/** An existing invoice's settlement state: what a void / pay / finalize card
+ * showed about how much is still owed. */
+type InvoiceFacts = {
+	amountPaid?: number;
+	status?: string;
+};
+
 type MoneyFacts = {
 	currency?: string;
+	invoice?: InvoiceFacts;
 	incomingPlans: ReadonlyArray<string>;
 	lineFacts: ReadonlyArray<LineFacts>;
 	outgoingPlans: ReadonlyArray<string>;
@@ -79,6 +87,14 @@ const moneyFactsOf = (preview: unknown): MoneyFacts | undefined => {
 	const lineItems = Array.isArray(record.line_items) ? record.line_items : [];
 	return {
 		currency: typeof record.currency === "string" ? record.currency : undefined,
+		invoice:
+			typeof record.stripe_id === "string"
+				? {
+						amountPaid: asNumber(record.amount_paid),
+						status:
+							typeof record.status === "string" ? record.status : undefined,
+					}
+				: undefined,
 		incomingPlans: planIds(record.incoming_plans ?? record.incoming),
 		lineFacts: lineItems.map(lineFactsOf).sort(byLineIdentity),
 		outgoingPlans: planIds(record.outgoing_plans ?? record.outgoing),
@@ -180,6 +196,26 @@ export const previewMoneyFactsDrifted = ({
 		})
 	) {
 		return { drifted: true, reason: "plan set changed" };
+	}
+	if (storedFacts.invoice && currentFacts.invoice) {
+		const { invoice: storedInvoice } = storedFacts;
+		const { invoice: currentInvoice } = currentFacts;
+		if (storedInvoice.status !== currentInvoice.status) {
+			return {
+				drifted: true,
+				reason: `invoice status ${storedInvoice.status} → ${currentInvoice.status}`,
+			};
+		}
+		if (
+			Math.abs(
+				(currentInvoice.amountPaid ?? 0) - (storedInvoice.amountPaid ?? 0),
+			) > CENT_TOLERANCE
+		) {
+			return {
+				drifted: true,
+				reason: `amount paid ${storedInvoice.amountPaid} → ${currentInvoice.amountPaid}`,
+			};
+		}
 	}
 	const decayDelta = lineDecayDelta({
 		current: currentFacts.lineFacts,

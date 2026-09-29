@@ -47,22 +47,18 @@ export function assertRequestDeadline({
 	});
 }
 
-/** Gives an ownership refresh its own expiry so a request can stop waiting on it
- *  without giving up its remaining budget. Cancelling before the timer fires
- *  means the rejection never happens, so nothing is left unhandled. */
+/** Gives an ownership refresh its own slice so a request can stop waiting on it
+ *  without giving up its remaining budget: the slice ending is not a failure,
+ *  it hands the caller back to try the route it has while the refresh runs on.
+ *  Cancelling before the timer fires means the promise never settles, so
+ *  nothing is left dangling. */
 function startRefreshExpiry({ timeoutMs }: { timeoutMs: number }): {
-	expired: Promise<never>;
+	expired: Promise<RouteRefreshResult>;
 	cancel(): void;
 } {
-	const expiry = Promise.withResolvers<never>();
+	const expiry = Promise.withResolvers<RouteRefreshResult>();
 	function expire(): void {
-		expiry.reject(
-			new BalanceWorkerClientError({
-				code: "OWNERSHIP_UNAVAILABLE",
-				outcome: "not_submitted",
-				message: "Ownership did not settle within the route refresh budget",
-			}),
-		);
+		expiry.resolve("expired");
 	}
 	const timer = setTimeout(expire, timeoutMs);
 	function cancel(): void {
@@ -71,6 +67,16 @@ function startRefreshExpiry({ timeoutMs }: { timeoutMs: number }): {
 	return { expired: expiry.promise, cancel };
 }
 
+/** "settled" once ownership caught up; "expired" when the refresh outran its slice. */
+export type RouteRefreshResult = "settled" | "expired";
+
+/** Waits for ownership to catch up, but only for `timeoutMs` of the request's budget.
+ *  A refresh that outruns that slice is not a failure: it keeps running, and the
+ *  caller tries the route it has, then refreshes again if that route is still stale.
+ *  During a fleet swap every server refreshes at once while a hundred-odd claims
+ *  land on the ownership topic, and failing the request the moment one slice
+ *  passed turned that into fail-opens with most of the request's budget unspent.
+ *  A refresh that fails, or a deadline that passes, still throws. */
 export async function refreshCommandRoute({
 	owners,
 	deadline,
@@ -79,7 +85,7 @@ export async function refreshCommandRoute({
 	owners: PartitionOwners;
 	deadline: RequestDeadline;
 	timeoutMs?: number;
-}): Promise<void> {
+}): Promise<RouteRefreshResult> {
 	assertRequestDeadline({ deadline, outcome: "not_submitted" });
 	const interrupted = Promise.withResolvers<never>();
 	function abort(): void {
@@ -89,13 +95,18 @@ export async function refreshCommandRoute({
 	// Deliberately not awaited on its own: the refresh outlives a request that
 	// stops waiting, so whoever routes next finds ownership already settled.
 	const refreshing = owners.refresh();
-	const racing: Promise<unknown>[] = [refreshing, interrupted.promise];
+	async function settle(): Promise<RouteRefreshResult> {
+		await refreshing;
+		return "settled";
+	}
+	const racing: Promise<RouteRefreshResult>[] = [settle(), interrupted.promise];
 	const expiry =
 		timeoutMs === undefined ? undefined : startRefreshExpiry({ timeoutMs });
 	if (expiry) racing.push(expiry.expired);
 	try {
-		await Promise.race(racing);
+		const result = await Promise.race(racing);
 		assertRequestDeadline({ deadline, outcome: "not_submitted" });
+		return result;
 	} finally {
 		expiry?.cancel();
 		deadline.signal.removeEventListener("abort", abort);
