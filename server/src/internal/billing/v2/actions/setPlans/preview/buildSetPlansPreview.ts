@@ -1,5 +1,6 @@
 import type { SetPlansPreviewResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { getDeleteCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import type { SetPlansResult } from "../types/setPlansResult";
@@ -87,6 +88,12 @@ export const buildSetPlansPreview = async ({
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
 			requestedProrationBehavior: billingContext.requestedProrationBehavior,
+			cycleResetAt: billingContext.stripeSubscription
+				? getRequestedBillingCycleAnchorResetAt({
+						requestedBillingCycleAnchor:
+							billingContext.requestedBillingCycleAnchor,
+					})
+				: undefined,
 			features: ctx.features,
 			billingContext,
 			stripeBillingPlan: billingPlan.stripe,
