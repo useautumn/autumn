@@ -74,6 +74,8 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"pending_quantity_change_dropped",
 	"new_stripe_price_created",
 	"proration_disabled",
+	"subscription_replaced",
+	"new_stripe_subscription",
 ]);
 
 export const SetPlansPreviewWarningSchema = z.object({
