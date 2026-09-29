@@ -142,6 +142,7 @@ export const executeStripeBillingPlan = async ({
 
 	await executeStripeReplacedSubscriptionAction({
 		ctx,
+		fullCustomer: billingContext.fullCustomer,
 		replacedSubscriptionAction: billingPlan.stripe.replacedSubscriptionAction,
 	});
 
