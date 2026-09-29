@@ -62,6 +62,7 @@ export const listApiKeys = async ({
 }: {
 	ctx: TwdContext;
 }): Promise<ApiKey[]> => {
+	requireActor({ ctx });
 	const rows = await listApiKeysWithOwner({ ctx });
 	return rows.map(toApiKey);
 };
