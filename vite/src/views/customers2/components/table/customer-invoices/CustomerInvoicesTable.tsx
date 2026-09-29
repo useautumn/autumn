@@ -13,7 +13,6 @@ import {
 	resolveInvoiceProcessor,
 	useInvoicesMetadataQuery,
 } from "@/views/customers2/hooks/useInvoiceMetadataQuery";
-import { EmptyState } from "../EmptyState";
 import { CreateInvoiceTrigger } from "./CreateInvoiceTrigger";
 import {
 	getCustomerInvoicesColumns,
@@ -119,7 +118,7 @@ export function CustomerInvoicesTable() {
 		},
 	});
 
-	const hasInvoices = invoices.length > 0;
+	// const hasInvoices = invoices.length > 0;
 
 	return (
 		<Table.Provider
@@ -129,6 +128,7 @@ export function CustomerInvoicesTable() {
 				enableSorting,
 				isLoading,
 				onRowClick: handleRowClick,
+				emptyStateText: "Invoices will display when a customer makes a payment",
 				flexibleTableColumns: false,
 				mobileCards: true,
 				rowClassName: "h-10 py-0",
@@ -157,13 +157,18 @@ export function CustomerInvoicesTable() {
 					</>
 				)}
 
-				{hasInvoices || isLoading ? (
-					<Table.Content>
-						<Table.Body />
-					</Table.Content>
-				) : (
-					<EmptyState text="Invoices will display when a customer makes a payment" />
-				)}
+				{/* {hasInvoices ? ( */}
+
+				<Table.Content>
+					<Table.Body />
+				</Table.Content>
+				{/* <Table.Pagination /> */}
+
+				{/* ) : (
+						!isLoading && (
+							<EmptyState text="Invoices will display when a customer makes a payment" />
+						)
+					)} */}
 			</Table.Container>
 		</Table.Provider>
 	);
