@@ -17,6 +17,7 @@ export type BlogPostSummary = {
 export type BlogPost = BlogPostSummary & {
 	source: string;
 	heroComponent: string | null;
+	fullWidthHero: boolean;
 };
 
 export function getAllPosts(): BlogPostSummary[] {
@@ -71,6 +72,7 @@ export function getPostBySlug({ slug }: { slug: string }): BlogPost | null {
 				image: data.image || null,
 				imageScale: data.imageScale ?? 1,
 				heroComponent: data.heroComponent || null,
+				fullWidthHero: data.fullWidthHero === true,
 				source: content,
 			};
 		}
