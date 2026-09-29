@@ -78,17 +78,18 @@ const schedulesAnchorReset = (stripeBillingPlan: StripeBillingPlan) => {
 };
 
 const cycleResetWarning = ({
-	cycleResetAt,
+	requestedAnchorResetMs,
 	stripeBillingPlan,
 }: {
-	cycleResetAt?: number;
+	requestedAnchorResetMs?: number;
 	stripeBillingPlan: StripeBillingPlan;
 }): Warning | undefined =>
-	cycleResetAt === undefined || !schedulesAnchorReset(stripeBillingPlan)
+	requestedAnchorResetMs === undefined ||
+	!schedulesAnchorReset(stripeBillingPlan)
 		? undefined
 		: {
 				type: "cycle_reset",
-				message: `The billing cycle resets on ${formatMsToDate(cycleResetAt)}.`,
+				message: `The billing cycle resets on ${formatMsToDate(requestedAnchorResetMs)}.`,
 			};
 
 const billingIntervals = (items: ProcessorItem[]) =>
@@ -129,13 +130,13 @@ export const liveSubscriptionChangeWarnings = ({
 	stripeBillingPlan,
 	liveProcessorItems,
 	immediateItems,
-	cycleResetAt,
+	requestedAnchorResetMs,
 }: {
 	stripeSubscription?: Stripe.Subscription;
 	stripeBillingPlan: StripeBillingPlan;
 	liveProcessorItems: ProcessorItem[];
 	immediateItems: ProcessorItem[];
-	cycleResetAt?: number;
+	requestedAnchorResetMs?: number;
 }): Warning[] =>
 	[
 		scheduledCancelWarning({ stripeSubscription, stripeBillingPlan }),
@@ -144,5 +145,5 @@ export const liveSubscriptionChangeWarnings = ({
 			liveProcessorItems,
 			immediateItems,
 		}),
-		cycleResetWarning({ cycleResetAt, stripeBillingPlan }),
+		cycleResetWarning({ requestedAnchorResetMs, stripeBillingPlan }),
 	].filter(notNullish);

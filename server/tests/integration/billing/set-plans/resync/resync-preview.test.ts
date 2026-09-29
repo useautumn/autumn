@@ -1,11 +1,4 @@
-/**
- * The resync preview shows what the rebuilt subscription bills.
- *
- * Contract:
- *   - Total $0 now: proration_behavior none with a future anchor charges nothing.
- *   - The next cycle starts on the anchor and bills the full $20.
- *   - The preview states that a new Stripe subscription is created.
- */
+/** The resync preview charges nothing now and bills the full next cycle from the anchor. */
 
 import { expect, test } from "bun:test";
 import type { SetPlansParamsV0Input } from "@autumn/shared";

@@ -88,7 +88,7 @@ export const buildSetPlansPreview = async ({
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
 			requestedProrationBehavior: billingContext.requestedProrationBehavior,
-			cycleResetAt: billingContext.stripeSubscription
+			requestedAnchorResetMs: billingContext.stripeSubscription
 				? getRequestedBillingCycleAnchorResetAt({
 						requestedBillingCycleAnchor:
 							billingContext.requestedBillingCycleAnchor,

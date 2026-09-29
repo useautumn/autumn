@@ -1,11 +1,4 @@
-/**
- * Resync guards on billing_cycle_anchor.
- *
- * Contract:
- *   - An anchor in the past is rejected (the caller uses the next period end instead).
- *   - A backdated start with a free trial keeps its existing 400.
- *   - On a live subscription, an anchor after the first future phase starts is rejected.
- */
+/** Resync rejects a past anchor, a backdated trial start, and a live-subscription anchor after the next phase. */
 
 import { test } from "bun:test";
 import {

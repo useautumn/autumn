@@ -1,19 +1,10 @@
 import {
 	type CreateScheduleBillingContext,
-	ErrCode,
 	isOneOffProduct,
-	RecaseError,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import { assertFutureBillingCycleAnchor } from "@/internal/billing/v2/common/errors/assertFutureBillingCycleAnchor";
-
-const invalidAnchor = (message: string) =>
-	new RecaseError({
-		message,
-		code: ErrCode.InvalidRequest,
-		statusCode: StatusCodes.BAD_REQUEST,
-	});
+import { invalidSetPlansRequest } from "./invalidSetPlansRequest";
 
 const anchorIsAfter = ({
 	anchorMs,
@@ -44,7 +35,7 @@ export const handleSetPlansBillingCycleAnchorErrors = ({
 	if (
 		billingContext.fullProducts.every((product) => isOneOffProduct({ product }))
 	) {
-		throw invalidAnchor(
+		throw invalidSetPlansRequest(
 			"billing_cycle_anchor is not supported when every plan is one-off. One-off plans do not have a recurring billing cycle.",
 		);
 	}
@@ -54,10 +45,11 @@ export const handleSetPlansBillingCycleAnchorErrors = ({
 	if (
 		anchorIsAfter({ anchorMs: requestedBillingCycleAnchor, boundaryMs: endsAt })
 	) {
-		throw invalidAnchor("billing_cycle_anchor cannot be after ends_at.");
+		throw invalidSetPlansRequest(
+			"billing_cycle_anchor cannot be after ends_at.",
+		);
 	}
 
-	// A live subscription resets through a schedule phase, which must land before the next phase.
 	const resetsLiveSubscription =
 		billingContext.stripeSubscription !== undefined;
 	if (
@@ -67,7 +59,7 @@ export const handleSetPlansBillingCycleAnchorErrors = ({
 			boundaryMs: billingContext.futurePhases[0]?.starts_at,
 		})
 	) {
-		throw invalidAnchor(
+		throw invalidSetPlansRequest(
 			"billing_cycle_anchor cannot be after the first future phase starts.",
 		);
 	}

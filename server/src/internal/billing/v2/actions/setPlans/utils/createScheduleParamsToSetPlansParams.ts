@@ -1,6 +1,6 @@
 import type { CreateScheduleParamsV0, SetPlansParamsV0 } from "@autumn/shared";
 
-/** Maps create_schedule's legacy params, or set_plans params stored before the rename, onto set_plans. */
+/** Renames the legacy billing_behavior param to proration_behavior. */
 export const createScheduleParamsToSetPlansParams = ({
 	params,
 }: {
