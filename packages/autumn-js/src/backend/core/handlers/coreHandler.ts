@@ -1,4 +1,4 @@
-import { Autumn } from "@useautumn/sdk";
+import { AutumnCore } from "@useautumn/sdk/core.js";
 import { findRoute } from "rou3";
 import { buildRouter, routeConfigs } from "../routes";
 import type {
@@ -36,7 +36,7 @@ export const createCoreHandler = (options: CoreHandlerOptions) => {
 		}
 
 		// 2. Create SDK instance
-		const autumn = new Autumn({
+		const core = new AutumnCore({
 			secretKey: secretKey || process.env.AUTUMN_SECRET_KEY,
 			...(autumnURL && { serverURL: autumnURL }),
 		});
@@ -58,7 +58,7 @@ export const createCoreHandler = (options: CoreHandlerOptions) => {
 		// 4. Execute route
 		const { route } = match.data;
 		const result = await executeRoute({
-			autumn,
+			core,
 			route,
 			body: request.body,
 			getCustomer: () => identify(request.raw),

@@ -1,4 +1,20 @@
 // import { CustomerExpand } from "@useautumn/sdk";
+import { billingAttach } from "@useautumn/sdk/funcs/billing-attach.js";
+import { billingMultiAttach } from "@useautumn/sdk/funcs/billing-multi-attach.js";
+import { billingOpenCustomerPortal } from "@useautumn/sdk/funcs/billing-open-customer-portal.js";
+import { billingPreviewAttach } from "@useautumn/sdk/funcs/billing-preview-attach.js";
+import { billingPreviewMultiAttach } from "@useautumn/sdk/funcs/billing-preview-multi-attach.js";
+import { billingPreviewUpdate } from "@useautumn/sdk/funcs/billing-preview-update.js";
+import { billingSetupPayment } from "@useautumn/sdk/funcs/billing-setup-payment.js";
+import { billingUpdate } from "@useautumn/sdk/funcs/billing-update.js";
+import { customersGetOrCreate } from "@useautumn/sdk/funcs/customers-get-or-create.js";
+import { entitiesGet } from "@useautumn/sdk/funcs/entities-get.js";
+import { eventsAggregate } from "@useautumn/sdk/funcs/events-aggregate.js";
+import { eventsList } from "@useautumn/sdk/funcs/events-list.js";
+import { plansList } from "@useautumn/sdk/funcs/plans-list.js";
+import { referralsCreateCode } from "@useautumn/sdk/funcs/referrals-create-code.js";
+import { referralsRedeemCode } from "@useautumn/sdk/funcs/referrals-redeem-code.js";
+import { unwrapAsync } from "@useautumn/sdk/types/fp.js";
 import { z } from "zod/v4";
 import {
 	attachParamsSchema,
@@ -31,7 +47,7 @@ const getEntityBodySchema = z.object({
 export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "getOrCreateCustomer",
-		sdkMethod: (autumn, args) => autumn.customers.getOrCreate(args),
+		sdkMethod: (core, args) => unwrapAsync(customersGetOrCreate(core, args)),
 		requireCustomer: false, // customHandler handles auth logic for errorOnNotFound
 		bodySchema: z.object({
 			errorOnNotFound: z.boolean().optional().default(true),
@@ -39,7 +55,7 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 			expand: z.array(z.string()).optional(),
 		}),
 		protectedBodyFields: CUSTOMER_PROTECTED_BODY_FIELDS,
-		customHandler: async ({ autumn, identity, body }) => {
+		customHandler: async ({ core, identity, body }) => {
 			const sanitizedBody = sanitizeBody(body, CUSTOMER_PROTECTED_BODY_FIELDS);
 
 			// Special case: if no customer and errorOnNotFound is false, return 204
@@ -66,78 +82,80 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 				...sanitizedBody,
 				expand: [...existingExpand, "balances.feature"],
 			};
-			return autumn.customers.getOrCreate(args);
+			return unwrapAsync(customersGetOrCreate(core, args));
 		},
 	},
 	{
 		route: "getEntity",
-		sdkMethod: (autumn, args) => autumn.entities.get(args),
+		sdkMethod: (core, args) => unwrapAsync(entitiesGet(core, args)),
 		bodySchema: getEntityBodySchema,
 	},
 	{
 		route: "attach",
-		sdkMethod: (autumn, args) => autumn.billing.attach(args),
+		sdkMethod: (core, args) => unwrapAsync(billingAttach(core, args)),
 		bodySchema: attachParamsSchema,
 	},
 	{
 		route: "previewAttach",
-		sdkMethod: (autumn, args) => autumn.billing.previewAttach(args),
+		sdkMethod: (core, args) => unwrapAsync(billingPreviewAttach(core, args)),
 		bodySchema: previewAttachParamsSchema,
 	},
 	{
 		route: "updateSubscription",
-		sdkMethod: (autumn, args) => autumn.billing.update(args),
+		sdkMethod: (core, args) => unwrapAsync(billingUpdate(core, args)),
 		bodySchema: updateSubscriptionParamsSchema,
 	},
 	{
 		route: "previewUpdateSubscription",
-		sdkMethod: (autumn, args) => autumn.billing.previewUpdate(args),
+		sdkMethod: (core, args) => unwrapAsync(billingPreviewUpdate(core, args)),
 		bodySchema: previewUpdateParamsSchema,
 	},
 	{
 		route: "openCustomerPortal",
-		sdkMethod: (autumn, args) => autumn.billing.openCustomerPortal(args),
+		sdkMethod: (core, args) =>
+			unwrapAsync(billingOpenCustomerPortal(core, args)),
 		bodySchema: openCustomerPortalParamsSchema,
 	},
 	{
 		route: "createReferralCode",
-		sdkMethod: (autumn, args) => autumn.referrals.createCode(args),
+		sdkMethod: (core, args) => unwrapAsync(referralsCreateCode(core, args)),
 		bodySchema: createReferralCodeParamsSchema,
 	},
 	{
 		route: "redeemReferralCode",
-		sdkMethod: (autumn, args) => autumn.referrals.redeemCode(args),
+		sdkMethod: (core, args) => unwrapAsync(referralsRedeemCode(core, args)),
 		bodySchema: redeemReferralCodeParamsSchema,
 	},
 	{
 		route: "multiAttach",
-		sdkMethod: (autumn, args) => autumn.billing.multiAttach(args),
+		sdkMethod: (core, args) => unwrapAsync(billingMultiAttach(core, args)),
 		bodySchema: multiAttachParamsSchema,
 	},
 	{
 		route: "previewMultiAttach",
-		sdkMethod: (autumn, args) => autumn.billing.previewMultiAttach(args),
+		sdkMethod: (core, args) =>
+			unwrapAsync(billingPreviewMultiAttach(core, args)),
 		bodySchema: previewMultiAttachParamsSchema,
 	},
 	{
 		route: "setupPayment",
-		sdkMethod: (autumn, args) => autumn.billing.setupPayment(args),
+		sdkMethod: (core, args) => unwrapAsync(billingSetupPayment(core, args)),
 		bodySchema: setupPaymentParamsSchema,
 	},
 	{
 		route: "listPlans",
-		sdkMethod: (autumn, args) => autumn.plans.list(args),
+		sdkMethod: (core, args) => unwrapAsync(plansList(core, args)),
 		requireCustomer: false,
 		bodySchema: listPlansParamsSchema.optional(),
 	},
 	{
 		route: "listEvents",
-		sdkMethod: (autumn, args) => autumn.events.list(args),
+		sdkMethod: (core, args) => unwrapAsync(eventsList(core, args)),
 		bodySchema: eventsListParamsSchema.optional(),
 	},
 	{
 		route: "aggregateEvents",
-		sdkMethod: (autumn, args) => autumn.events.aggregate(args),
+		sdkMethod: (core, args) => unwrapAsync(eventsAggregate(core, args)),
 		bodySchema: eventsAggregateParamsSchema,
 	},
 ];

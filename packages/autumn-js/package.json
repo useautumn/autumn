@@ -4,9 +4,9 @@
 	"version": "1.2.17",
 	"repository": "github:useautumn/autumn",
 	"homepage": "https://docs.useautumn.com",
-	"main": "./dist/sdk/index.js",
-	"module": "./dist/sdk/index.mjs",
-	"types": "./dist/sdk/index.d.ts",
+	"main": "./dist/sdk/commonjs/index.js",
+	"module": "./dist/sdk/esm/index.js",
+	"types": "./dist/sdk/commonjs/index.d.ts",
 	"files": [
 		"dist",
 		"README.md",
@@ -14,14 +14,70 @@
 	],
 	"scripts": {
 		"ts": "tsgo --noEmit --skipLibCheck",
-		"build": "rm -rf dist && tsup",
-		"prepublishOnly": "bun run build"
+		"build": "rm -rf dist && bun run build:sdk && tsup",
+		"prepublishOnly": "bun run build",
+		"build:sdk": "bun -F @useautumn/sdk build && bun scripts/pack-sdk.ts"
 	},
 	"exports": {
 		".": {
-			"types": "./dist/sdk/index.d.ts",
-			"require": "./dist/sdk/index.js",
-			"import": "./dist/sdk/index.mjs"
+			"import": {
+				"types": "./dist/sdk/esm/index.d.ts",
+				"default": "./dist/sdk/esm/index.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/index.d.ts",
+				"default": "./dist/sdk/commonjs/index.js"
+			}
+		},
+		"./core": {
+			"import": {
+				"types": "./dist/sdk/esm/core.d.ts",
+				"default": "./dist/sdk/esm/core.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/core.d.ts",
+				"default": "./dist/sdk/commonjs/core.js"
+			}
+		},
+		"./funcs/*.js": {
+			"import": {
+				"types": "./dist/sdk/esm/funcs/*.d.ts",
+				"default": "./dist/sdk/esm/funcs/*.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/funcs/*.d.ts",
+				"default": "./dist/sdk/commonjs/funcs/*.js"
+			}
+		},
+		"./funcs/*": {
+			"import": {
+				"types": "./dist/sdk/esm/funcs/*.d.ts",
+				"default": "./dist/sdk/esm/funcs/*.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/funcs/*.d.ts",
+				"default": "./dist/sdk/commonjs/funcs/*.js"
+			}
+		},
+		"./models": {
+			"import": {
+				"types": "./dist/sdk/esm/models/index.d.ts",
+				"default": "./dist/sdk/esm/models/index.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/models/index.d.ts",
+				"default": "./dist/sdk/commonjs/models/index.js"
+			}
+		},
+		"./types": {
+			"import": {
+				"types": "./dist/sdk/esm/types/index.d.ts",
+				"default": "./dist/sdk/esm/types/index.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/types/index.d.ts",
+				"default": "./dist/sdk/commonjs/types/index.js"
+			}
 		},
 		"./react": {
 			"types": "./dist/react/index.d.ts",
@@ -139,6 +195,29 @@
 		},
 		"express": {
 			"optional": true
+		}
+	},
+	"sideEffects": false,
+	"imports": {
+		"#sdk": {
+			"import": {
+				"types": "./dist/sdk/esm/index.d.ts",
+				"default": "./dist/sdk/esm/index.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/index.d.ts",
+				"default": "./dist/sdk/commonjs/index.js"
+			}
+		},
+		"#sdk/*.js": {
+			"import": {
+				"types": "./dist/sdk/esm/*.d.ts",
+				"default": "./dist/sdk/esm/*.js"
+			},
+			"require": {
+				"types": "./dist/sdk/commonjs/*.d.ts",
+				"default": "./dist/sdk/commonjs/*.js"
+			}
 		}
 	}
 }

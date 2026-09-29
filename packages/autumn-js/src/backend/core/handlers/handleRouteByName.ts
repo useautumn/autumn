@@ -1,4 +1,4 @@
-import { Autumn } from "@useautumn/sdk";
+import { AutumnCore } from "@useautumn/sdk/core.js";
 import { routeConfigs } from "../routes/routeConfigs";
 import type { AuthResult } from "../types";
 import { secretKeyCheck } from "../utils/secretKeyCheck";
@@ -49,14 +49,14 @@ export const handleRouteByName = async ({
 	}
 
 	// 3. Create Autumn SDK client
-	const autumn = new Autumn({
+	const core = new AutumnCore({
 		secretKey: secretKey || process.env.AUTUMN_SECRET_KEY,
 		...(autumnURL && { serverURL: autumnURL }),
 	});
 
 	// 4. Execute route
 	const result = await executeRoute({
-		autumn,
+		core,
 		route,
 		body,
 		getCustomer: identify,
