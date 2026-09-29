@@ -122,7 +122,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule subscription_id: duplicate ids are not validated yet")}`,
+	`${chalk.yellowBright("create-schedule subscription_id: the same id may be reused in a later phase")}`,
 	async () => {
 		const customerId = "create-schedule-sub-id-dup";
 		const pro = products.pro({
