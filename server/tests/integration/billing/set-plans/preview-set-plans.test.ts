@@ -7,6 +7,8 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 const summarizePhase = (phase: SetPlansPreviewPhase) => ({
+	timing: [phase.starts_now, phase.ends_subscription],
+	previewPlans: phase.plans.map((plan) => [plan.status, plan.plan_id]),
 	plans: phase.plan_changes.map((change) => [
 		change.action,
 		change.subscription?.plan_id,
@@ -62,8 +64,17 @@ test.concurrent(
 		});
 
 		expect(preview.total).toBeGreaterThan(0);
+		const endingPro = preview.phases[0].plans.find(
+			(plan) => plan.plan_id === pro.id,
+		);
+		expect(endingPro?.credit).toBeLessThan(0);
 		expect(preview.phases.map(summarizePhase)).toEqual([
 			{
+				timing: [true, false],
+				previewPlans: [
+					["starts", premium.id],
+					["ends", pro.id],
+				],
 				plans: [
 					["activated", premium.id],
 					["expired", pro.id],
@@ -72,6 +83,11 @@ test.concurrent(
 				stripeItems: [[premium.id, true]],
 			},
 			{
+				timing: [false, false],
+				previewPlans: [
+					["starts", pro.id],
+					["ends", premium.id],
+				],
 				plans: [
 					["scheduled", pro.id],
 					["expired", premium.id],
@@ -83,16 +99,13 @@ test.concurrent(
 		expect(preview.processor_changes).toEqual([
 			{
 				type: "subscription",
-				processor: "stripe",
 				id: expect.stringMatching(/^sub_/),
 				action: "updated",
 			},
 			{
 				type: "subscription_schedule",
-				processor: "stripe",
 				id: null,
 				action: "created",
-				phase_count: 2,
 			},
 		]);
 		expect(preview.warnings).toEqual([]);

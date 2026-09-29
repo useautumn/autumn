@@ -3,7 +3,7 @@ import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { Fragment } from "react";
 import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
-import { useOpenInStripe } from "./hooks/useOpenInStripe";
+import { useStripeDashboardLink } from "@/hooks/useStripeDashboardLink";
 import { stripeItemMark } from "./previewMismatches";
 import { STRIPE_ROW_CLASS, StripeItemRow } from "./StripeItemRow";
 import { StripeStatusBadge } from "./StripeStatusBadge";
@@ -22,7 +22,11 @@ export function StripeSourceTable({
 	todayMismatches: SubscriptionMismatch[] | undefined;
 	previewMismatches: SubscriptionMismatch[] | undefined;
 }) {
-	const { hasStripeObject, openInStripe } = useOpenInStripe({ proposal });
+	const getStripeLink = useStripeDashboardLink();
+	const stripePath = proposal.stripe_subscription_id
+		? `subscriptions/${proposal.stripe_subscription_id}`
+		: proposal.stripe_schedule_id &&
+			`subscription_schedules/${proposal.stripe_schedule_id}`;
 
 	return (
 		<div className={TABLE_TRAY_SURFACE_CLASS}>
@@ -31,10 +35,10 @@ export function StripeSourceTable({
 				<code className="truncate font-mono text-xs text-foreground">
 					{proposal.stripe_subscription_id ?? proposal.stripe_schedule_id}
 				</code>
-				{hasStripeObject && (
+				{stripePath && (
 					<button
 						type="button"
-						onClick={openInStripe}
+						onClick={() => window.open(getStripeLink(stripePath), "_blank")}
 						aria-label="Open in Stripe"
 						className="shrink-0 cursor-pointer text-subtle transition-colors hover:text-foreground"
 					>

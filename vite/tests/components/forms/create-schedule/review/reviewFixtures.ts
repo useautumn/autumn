@@ -7,14 +7,13 @@ export const monthlyPrice = (unitAmount: number): ProcessorItemPrice => ({
 	interval_count: 1,
 	usage_type: "licensed",
 	tiers_mode: null,
-	tiers: null,
+	first_tier_amount: null,
 	units_per_quantity: null,
 });
 
 export const processorItem = (
 	overrides: Partial<ProcessorItem> = {},
 ): ProcessorItem => ({
-	item_id: null,
 	price_id: "price_premium",
 	plan_id: "premium",
 	feature_id: null,

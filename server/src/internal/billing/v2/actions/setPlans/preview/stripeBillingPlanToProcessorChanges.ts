@@ -12,7 +12,6 @@ const subscriptionChange = ({
 	action,
 }: Pick<ProcessorChange, "id" | "action">): ProcessorChange => ({
 	type: "subscription",
-	processor: "stripe",
 	id,
 	action,
 });
@@ -20,15 +19,10 @@ const subscriptionChange = ({
 const scheduleChange = ({
 	id,
 	action,
-	phaseCount,
-}: Pick<ProcessorChange, "id" | "action"> & {
-	phaseCount?: number;
-}): ProcessorChange => ({
+}: Pick<ProcessorChange, "id" | "action">): ProcessorChange => ({
 	type: "subscription_schedule",
-	processor: "stripe",
 	id,
 	action,
-	...(phaseCount === undefined ? {} : { phase_count: phaseCount }),
 });
 
 const checkoutCreatesSubscription = (
@@ -79,23 +73,14 @@ const scheduleActionToProcessorChanges = ({
 }): ProcessorChange[] => {
 	switch (subscriptionScheduleAction?.type) {
 		case "create":
-			return [
-				scheduleChange({
-					id: null,
-					action: "created",
-					phaseCount: subscriptionScheduleAction.params.phases?.length,
-				}),
-			];
+			return [scheduleChange({ id: null, action: "created" })];
 		case "update": {
-			const { stripeSubscriptionScheduleId, params } =
-				subscriptionScheduleAction;
-			const phaseCount = params.phases?.length;
+			const { stripeSubscriptionScheduleId } = subscriptionScheduleAction;
 			if (!stripeSubscriptionSchedule?.subscription) {
 				return [
 					scheduleChange({
 						id: stripeSubscriptionScheduleId,
 						action: "updated",
-						phaseCount,
 					}),
 				];
 			}
@@ -105,7 +90,7 @@ const scheduleActionToProcessorChanges = ({
 					id: stripeSubscriptionScheduleId,
 					action: "released",
 				}),
-				scheduleChange({ id: null, action: "created", phaseCount }),
+				scheduleChange({ id: null, action: "created" }),
 			];
 		}
 		case "release":

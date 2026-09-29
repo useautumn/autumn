@@ -1,11 +1,12 @@
 import {
 	msToSeconds,
 	type ProcessorItem,
+	type StripeSubscriptionAction,
 	type StripeSubscriptionScheduleAction,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
-import { scheduleActionToParams } from "../scheduleActionToParams";
+import { scheduleActionToParams } from "./scheduleActionToParams";
 import { itemParamsToProcessorItem } from "./toProcessorItem";
 import type { ProcessorItemContext } from "./types/processorItemContext";
 
@@ -71,6 +72,35 @@ export const scheduleActionToProcessorItems = ({
 
 		return (stripePhase?.items ?? []).map((item) =>
 			itemParamsToProcessorItem({ item, context }),
+		);
+	});
+};
+
+/** Phases that leave Stripe billing nothing: a canceled subscription now, or the phase a canceling schedule ends at. */
+export const phasesEndingSubscription = ({
+	subscriptionAction,
+	subscriptionScheduleAction,
+	phases,
+}: {
+	subscriptionAction?: StripeSubscriptionAction;
+	subscriptionScheduleAction?: StripeSubscriptionScheduleAction;
+	phases: SchedulePhasePlan[];
+}): boolean[] => {
+	const cancelsAtSeconds = scheduleCancelsAtSeconds(
+		scheduleActionToParams(subscriptionScheduleAction),
+	);
+
+	return phases.map((phase, phaseIndex) => {
+		if (phaseIndex === 0) {
+			return (
+				subscriptionAction?.type === "cancel" ||
+				subscriptionAction?.type === "cancel_immediately"
+			);
+		}
+		if (cancelsAtSeconds === undefined) return false;
+		return (
+			msToSeconds(phase.startsAt) >= cancelsAtSeconds &&
+			msToSeconds(phases[phaseIndex - 1].startsAt) < cancelsAtSeconds
 		);
 	});
 };

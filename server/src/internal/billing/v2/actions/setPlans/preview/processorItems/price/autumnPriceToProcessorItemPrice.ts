@@ -1,5 +1,4 @@
 import {
-	Infinite,
 	isConsumablePrice,
 	isFixedPrice,
 	type Price,
@@ -9,12 +8,6 @@ import {
 	type UsageTier,
 } from "@autumn/shared";
 import { billingIntervalToStripe } from "@/external/stripe/stripePriceUtils";
-
-const usageTierToProcessorItemTier = (tier: UsageTier) => ({
-	up_to: tier.to === Infinite ? null : Number(tier.to),
-	unit_amount: tier.amount ?? null,
-	flat_amount: tier.flat_amount ?? null,
-});
 
 const isSingleUnitTier = (tiers: UsageTier[]) =>
 	tiers.length === 1 && !tiers[0].flat_amount;
@@ -45,7 +38,7 @@ export const autumnPriceToProcessorItemPrice = ({
 			...recurrence,
 			usage_type: "licensed",
 			tiers_mode: null,
-			tiers: null,
+			first_tier_amount: null,
 			units_per_quantity: null,
 		};
 	}
@@ -59,7 +52,7 @@ export const autumnPriceToProcessorItemPrice = ({
 		...recurrence,
 		usage_type: isConsumablePrice(price) ? "metered" : "licensed",
 		tiers_mode: singleUnitTier ? null : priceToStripeTiersMode({ price }),
-		tiers: singleUnitTier ? null : tiers.map(usageTierToProcessorItemTier),
+		first_tier_amount: singleUnitTier ? null : (tiers[0]?.amount ?? null),
 		units_per_quantity: config.billing_units ?? null,
 	};
 };

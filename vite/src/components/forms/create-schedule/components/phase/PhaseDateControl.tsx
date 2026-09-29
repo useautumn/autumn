@@ -8,7 +8,7 @@ import { useCreateScheduleFormContext } from "../../context/CreateScheduleFormPr
 import {
 	formatPhaseDate,
 	isImmediatePhase,
-} from "../../utils/review/phaseTiming";
+} from "../../utils/schedulePhaseTiming";
 
 const CURRENT_PHASE_TIME_LOCKED_MESSAGE =
 	"You can't edit the time of the current phase.";

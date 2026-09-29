@@ -5,14 +5,29 @@ import type {
 	SetPlansPreviewPhase,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
 import { buildBalanceChanges } from "@/internal/billing/v2/actions/buildBillingChanges/buildBalanceChanges/buildBalanceChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
+import { classifySetPlansBalanceChange } from "./classifySetPlansBalanceChange";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
-import { scheduleActionToProcessorItems } from "./processorItems/scheduleActionToProcessorItems";
+import {
+	phasesEndingSubscription,
+	scheduleActionToProcessorItems,
+} from "./processorItems/scheduleActionToProcessorItems";
 import { subscriptionActionToProcessorItems } from "./processorItems/subscriptionActionToProcessorItems";
 import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
-import { setPlansPhasesToPlanChanges } from "./setPlansPhasesToPlanChanges";
+import { setPlansPhasePlans } from "./setPlansPhasePlans";
+import { setPlansPhaseTransitions } from "./setPlansPhaseTransitions";
+
+/** Credits on the immediate invoice, unless custom line items replace the computed ones. */
+const immediateCreditLineItems = (billingPlan: BillingPlan) =>
+	billingPlan.autumn.customLineItems?.length
+		? []
+		: (billingPlan.autumn.lineItems ?? []).filter(
+				(lineItem) =>
+					lineItem.chargeImmediately && lineItem.amountAfterDiscounts < 0,
+			);
 
 export const buildSetPlansPreviewPhases = async ({
 	ctx,
@@ -41,11 +56,23 @@ export const buildSetPlansPreviewPhases = async ({
 			getApiBalances({ ctx, fullCus: phaseCustomer }),
 		),
 	);
-	const planChanges = setPlansPhasesToPlanChanges({
+	const phaseTransitions = setPlansPhaseTransitions({
 		autumnBillingPlan,
 		originalFullCustomer: fullCustomer,
 		phases,
 		phaseCustomers,
+	});
+	const phasePlans = setPlansPhasePlans({
+		phaseTransitions,
+		phaseCustomers,
+		originalFullCustomer: fullCustomer,
+		creditLineItems: immediateCreditLineItems(billingPlan),
+		currency: processorItemContext.currency,
+	});
+	const endsSubscription = phasesEndingSubscription({
+		subscriptionAction: stripeBillingPlan.subscriptionAction,
+		subscriptionScheduleAction: stripeBillingPlan.subscriptionScheduleAction,
+		phases,
 	});
 
 	const processorItemsByPhase = [
@@ -69,11 +96,19 @@ export const buildSetPlansPreviewPhases = async ({
 
 	return phases.map((phase, phaseIndex) => ({
 		starts_at: phase.startsAt,
-		plan_changes: planChanges[phaseIndex],
+		starts_now:
+			phaseIndex === 0 &&
+			billingContext.subscriptionBackdateStartMs === undefined,
+		ends_subscription: endsSubscription[phaseIndex],
+		plans: phasePlans[phaseIndex],
+		plan_changes: transitionsToCustomerPlanChanges({
+			transitions: phaseTransitions[phaseIndex],
+			entities: fullCustomer.entities,
+		}),
 		balance_changes: buildBalanceChanges({
 			beforeBalances: phaseBalances[phaseIndex].balances,
 			afterBalances: phaseBalances[phaseIndex + 1].balances,
-		}),
+		}).map(classifySetPlansBalanceChange),
 		processor_items: processorItemsByPhase[phaseIndex],
 	}));
 };

@@ -1,5 +1,6 @@
 import { isPreviewStripeId, type ProcessorItem } from "@autumn/shared";
 import type Stripe from "stripe";
+import { autumnPriceId } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { isFreePhasePlaceholderItem } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type { InlinePriceData } from "./price/inlinePriceDataToProcessorItemPrice";
 import { processorItemAmount } from "./price/processorItemAmount";
@@ -18,11 +19,10 @@ const findAutumnStripePrice = ({
 	stripePriceId?: string;
 	metadata?: StripeItemMetadata;
 }) => {
-	const autumnPriceId = metadata ? metadata.autumn_price_id : undefined;
-	const byAutumnPriceId =
-		typeof autumnPriceId === "string"
-			? priceIndex.byAutumnPriceId.get(autumnPriceId)
-			: undefined;
+	const metadataPriceId = autumnPriceId({ metadata: metadata || undefined });
+	const byAutumnPriceId = metadataPriceId
+		? priceIndex.byAutumnPriceId.get(metadataPriceId)
+		: undefined;
 
 	return (
 		byAutumnPriceId ??
@@ -34,7 +34,6 @@ const FALLBACK_DISPLAY_NAME = "Stripe item";
 
 /** Names an item after the Autumn plan it bills for and describes how Stripe charges it. */
 export const toProcessorItem = ({
-	itemId = null,
 	stripePriceId,
 	inlinePriceData,
 	metadata,
@@ -42,7 +41,6 @@ export const toProcessorItem = ({
 	fallbackName,
 	context,
 }: {
-	itemId?: string | null;
 	stripePriceId?: string;
 	inlinePriceData?: InlinePriceData;
 	metadata?: StripeItemMetadata;
@@ -62,10 +60,10 @@ export const toProcessorItem = ({
 		context,
 	});
 	const itemQuantity = quantity ?? null;
+	const isPreviewPrice = isPreviewStripeId({ stripeId: stripePriceId });
 
 	return {
-		item_id: itemId,
-		price_id: stripePriceId ?? null,
+		price_id: isPreviewPrice ? null : (stripePriceId ?? null),
 		plan_id: autumnStripePrice?.planId ?? null,
 		feature_id: autumnStripePrice?.featureId ?? null,
 		display_name:
@@ -77,9 +75,7 @@ export const toProcessorItem = ({
 		quantity: itemQuantity,
 		price,
 		amount: processorItemAmount({ price, quantity: itemQuantity }),
-		creates_price:
-			inlinePriceData !== undefined ||
-			isPreviewStripeId({ stripeId: stripePriceId }),
+		creates_price: inlinePriceData !== undefined || isPreviewPrice,
 		managed_by_autumn:
 			autumnStripePrice !== undefined ||
 			isFreePhasePlaceholderItem({ metadata }),

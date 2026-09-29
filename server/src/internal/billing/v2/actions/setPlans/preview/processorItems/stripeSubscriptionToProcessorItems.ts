@@ -14,7 +14,6 @@ export const liveItemToProcessorItem = ({
 	context: ProcessorItemContext;
 }): ProcessorItem =>
 	toProcessorItem({
-		itemId: liveItem.id,
 		stripePriceId: stripeSubscriptionItemToStripePriceId(liveItem),
 		metadata: liveItem.metadata,
 		quantity,

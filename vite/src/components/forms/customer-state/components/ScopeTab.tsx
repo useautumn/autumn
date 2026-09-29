@@ -1,5 +1,8 @@
 import { cn } from "@/lib/utils";
 
+export const SCOPE_TAB_CLASS =
+	"flex h-5.5 shrink-0 cursor-pointer items-center rounded-sm border text-[11.5px] font-medium transition-colors";
+
 export function ScopeTab({
 	label,
 	isActive,
@@ -14,7 +17,8 @@ export function ScopeTab({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex h-5.5 min-w-0 shrink-0 cursor-pointer items-center rounded-sm border px-2 text-[11.5px] font-medium transition-colors",
+				SCOPE_TAB_CLASS,
+				"min-w-0 px-2",
 				isActive
 					? "border-foreground/15 bg-foreground/10 text-foreground"
 					: "border-foreground/10 bg-transparent text-tertiary-foreground hover:text-foreground",

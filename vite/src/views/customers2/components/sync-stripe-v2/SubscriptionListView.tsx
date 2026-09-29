@@ -2,7 +2,6 @@ import type { SyncProposalV2 } from "@autumn/shared";
 import { SmallSpinner } from "@autumn/ui";
 import { PlanTraySectionTitle } from "@/components/forms/customer-state/components/tray/PlanTraySectionTitle";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useVerifyStripeQuery } from "@/views/customers2/components/verify-stripe/hooks/useVerifyStripeQuery";
 import { ProposalCard } from "./ProposalCard";
 
 const proposalKey = (proposal: SyncProposalV2): string =>
@@ -24,20 +23,9 @@ export function SubscriptionListView({
 	onSelect: (proposalIndex: number) => void;
 }) {
 	const { products } = useProductsQuery();
-	const { subscriptions: verifiedSubscriptions, isLoading: isVerifying } =
-		useVerifyStripeQuery();
 	const productNamesById = Object.fromEntries(
 		(products ?? []).map((product) => [product.id, product.name]),
 	);
-	const mismatchesFor = (proposal: SyncProposalV2) =>
-		isVerifying
-			? undefined
-			: (verifiedSubscriptions.find(
-					(subscription) =>
-						subscription.stripe_subscription_id ===
-						proposal.stripe_subscription_id,
-				)?.mismatches ?? []);
-
 	return (
 		<div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-3">
 			{isLoading && (
@@ -67,7 +55,6 @@ export function SubscriptionListView({
 						key={proposalKey(proposal) || `proposal-${index}`}
 						proposal={proposal}
 						objectId={proposalKey(proposal)}
-						mismatches={mismatchesFor(proposal)}
 						productNamesById={productNamesById}
 						onSelect={() => onSelect(index)}
 					/>

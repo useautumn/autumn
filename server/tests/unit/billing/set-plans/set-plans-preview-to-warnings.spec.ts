@@ -8,7 +8,6 @@ import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlan
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
 
 const processorItem = (overrides: Partial<ProcessorItem>): ProcessorItem => ({
-	item_id: null,
 	price_id: "price_1",
 	plan_id: "pro",
 	feature_id: null,
@@ -26,6 +25,9 @@ const phase = (
 	overrides: Partial<SetPlansPreviewPhase>,
 ): SetPlansPreviewPhase => ({
 	starts_at: 0,
+	starts_now: false,
+	ends_subscription: false,
+	plans: [],
 	plan_changes: [],
 	balance_changes: [],
 	processor_items: [],
@@ -38,23 +40,23 @@ describe("setPlansPreviewToWarnings", () => {
 			setPlansPreviewToWarnings({
 				phases: [
 					phase({
-						processor_items: [processorItem({ item_id: "si_base" })],
+						processor_items: [processorItem({ price_id: "price_base" })],
 					}),
 				],
 				liveProcessorItems: [
-					processorItem({ item_id: "si_base" }),
-					processorItem({ item_id: "si_old_pro" }),
+					processorItem({ price_id: "price_base" }),
+					processorItem({ price_id: "price_old_pro" }),
 				],
 				processorChanges: [
 					{
 						type: "subscription",
-						processor: "stripe",
 						id: null,
 						action: "created",
 					},
 				],
 				deletedCustomerProducts: [],
 				outgoingCustomerProducts: [],
+				features: [],
 			}),
 		).toEqual([]);
 	});
@@ -82,6 +84,7 @@ describe("setPlansPreviewToWarnings", () => {
 								next_reset_at: null,
 							},
 							previous_attributes: { usage: 40, granted: 100 },
+							behavior: "reset",
 						},
 					],
 					processor_items: [
@@ -96,7 +99,7 @@ describe("setPlansPreviewToWarnings", () => {
 			],
 			liveProcessorItems: [
 				processorItem({
-					item_id: "si_support",
+					price_id: "price_support",
 					display_name: "Support add-on",
 					managed_by_autumn: false,
 					plan_id: null,
@@ -105,7 +108,6 @@ describe("setPlansPreviewToWarnings", () => {
 			processorChanges: [
 				{
 					type: "subscription_schedule",
-					processor: "stripe",
 					id: "sub_sched_old",
 					action: "released",
 				},
@@ -113,6 +115,7 @@ describe("setPlansPreviewToWarnings", () => {
 			deletedCustomerProducts: [scheduledEnterprise],
 			outgoingCustomerProducts: [outgoingPro],
 			requestedProrationBehavior: "none",
+			features: [],
 		});
 
 		expect(warnings.map((warning) => warning.type)).toEqual([
@@ -123,6 +126,15 @@ describe("setPlansPreviewToWarnings", () => {
 			"future_phase_removed",
 			"pending_quantity_change_dropped",
 			"proration_disabled",
+		]);
+		expect(warnings.map((warning) => warning.severity)).toEqual([
+			"warning",
+			"info",
+			"warning",
+			"warning",
+			"warning",
+			"warning",
+			"info",
 		]);
 		expect(warnings[0].message).toContain("Support add-on");
 		expect(warnings[4].message).toContain("enterprise");
@@ -136,13 +148,13 @@ describe("setPlansPreviewToWarnings", () => {
 				processorChanges: [
 					{
 						type: "subscription_schedule",
-						processor: "stripe",
 						id: "sub_sched_standalone",
 						action: "updated",
 					},
 				],
 				deletedCustomerProducts: [],
 				outgoingCustomerProducts: [],
+				features: [],
 			}),
 		).toEqual([]);
 	});

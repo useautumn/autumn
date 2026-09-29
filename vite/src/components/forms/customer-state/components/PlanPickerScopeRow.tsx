@@ -22,12 +22,10 @@ export function PlanPickerScopeRow({
 }) {
 	const [isMoreOpen, setIsMoreOpen] = useState(false);
 	const selectedEntityId = value ?? undefined;
-	const { hasEntities, entities: knownEntities } = useScopeEntitySearch({
-		selectedEntityId,
-	});
 	const entitySearch = useScopeEntitySearch({ selectedEntityId });
+	const { knownEntities } = entitySearch;
 
-	if (!hasEntities) return null;
+	if (!entitySearch.hasEntities) return null;
 
 	const isSelected = (entity: Entity) => entityKey(entity) === value;
 	const inlineEntities = knownEntities.slice(0, INLINE_ENTITY_COUNT);

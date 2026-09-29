@@ -10,7 +10,7 @@ export const processorItemAmount = ({
 	quantity: number | null;
 }) => {
 	if (!price || price.unit_amount === null) return null;
-	if (price.usage_type === "metered" || price.tiers) return null;
+	if (price.usage_type === "metered" || price.tiers_mode) return null;
 	if ((price.units_per_quantity ?? 1) !== 1) return null;
 
 	return new Decimal(price.unit_amount).mul(quantity ?? 1).toNumber();

@@ -1,6 +1,7 @@
 import type { SyncPhase, SyncProposalV2 } from "@autumn/shared";
-import { format, secondsToMilliseconds } from "date-fns";
+import { secondsToMilliseconds } from "date-fns";
 import type Stripe from "stripe";
+import { formatPhaseDate } from "@/components/forms/create-schedule/utils/schedulePhaseTiming";
 import { formatStripeItemPrice } from "./formatStripeItemPrice";
 
 export type DisplayItem = {
@@ -51,9 +52,7 @@ const stripePriceToDisplayItem = ({
 };
 
 export const formatPhaseStart = (startsAt: SyncPhase["starts_at"]): string =>
-	startsAt === "now"
-		? "Starts now"
-		: `Starts ${format(startsAt, "MMM d, yyyy")}`;
+	startsAt === "now" ? "Starts now" : `Starts ${formatPhaseDate({ startsAt })}`;
 
 export const buildPhaseSections = ({
 	proposal,
@@ -63,30 +62,18 @@ export const buildPhaseSections = ({
 	const sub = proposal.stripe_subscription;
 	const schedule = proposal.stripe_schedule;
 
-	return proposal.phases.map((phase): PhaseSection => {
-		// Match by start date, not index: the backend drops phases with no plans.
-		const matchingSchedulePhase = schedule
-			? schedule.phases.find((schedulePhase) => {
-					if (phase.starts_at === "now") {
-						const endMs = schedulePhase.end_date
-							? secondsToMilliseconds(schedulePhase.end_date)
-							: Number.POSITIVE_INFINITY;
-						return (
-							secondsToMilliseconds(schedulePhase.start_date) <= Date.now() &&
-							Date.now() < endMs
-						);
-					}
-					return (
-						secondsToMilliseconds(schedulePhase.start_date) === phase.starts_at
-					);
-				})
-			: undefined;
+	const openSchedulePhases = (schedule?.phases ?? []).filter(
+		(schedulePhase) =>
+			!schedulePhase.end_date ||
+			Date.now() < secondsToMilliseconds(schedulePhase.end_date),
+	);
 
-		if (matchingSchedulePhase && schedule) {
-			const phaseIndex = schedule.phases.indexOf(matchingSchedulePhase);
+	return proposal.phases.map((phase, phaseIndex): PhaseSection => {
+		const schedulePhase = openSchedulePhases[phaseIndex];
+		if (schedulePhase) {
 			return {
 				phase,
-				displayItems: matchingSchedulePhase.items.map((item, itemIndex) =>
+				displayItems: schedulePhase.items.map((item, itemIndex) =>
 					stripePriceToDisplayItem({
 						key: `${phaseIndex}:${itemIndex}`,
 						price: item.price as string | Stripe.Price | undefined,

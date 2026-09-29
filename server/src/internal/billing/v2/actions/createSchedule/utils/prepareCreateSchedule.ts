@@ -16,64 +16,70 @@ import {
 	handleCreateScheduleErrors,
 } from "../errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "../setup/setupCreateScheduleBillingContext";
+import { ensureFreePhaseStripeProducts } from "./ensureFreePhaseStripeProducts";
 
-type PreparedCreateSchedulePreview = {
+type PreparedCreateSchedule = {
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	phases: CreateSchedulePlanResult["phases"];
 	immediatePhaseTransition: CreateSchedulePlanResult["immediatePhaseTransition"];
 };
 
-export const prepareCreateSchedulePreview = async ({
+/** Setup, compute and evaluate a create_schedule call, checking errors between each step. */
+export const prepareCreateSchedule = async ({
 	ctx,
 	params,
+	preview,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
-}): Promise<PreparedCreateSchedulePreview> => {
+	preview: boolean;
+}): Promise<PreparedCreateSchedule> => {
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
 		params,
-		preview: true,
+		preview,
 	});
 
-	await handleCreateScheduleErrors({
-		billingContext,
-		preview: true,
-	});
+	await handleCreateScheduleErrors({ billingContext, preview });
 
 	const { autumnBillingPlan, phases, immediatePhaseTransition } =
-		computeCreateSchedulePlan({
-			ctx,
-			billingContext,
-		});
+		computeCreateSchedulePlan({ ctx, billingContext });
 	await handleCreateScheduleComputeErrors({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
 		immediatePhaseTransition,
 	});
+
+	if (!preview) {
+		await ensureFreePhaseStripeProducts({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
+	}
+
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
 		checkoutMode: billingContext.checkoutMode,
 	});
-
-	const billingPlan = { autumn: autumnBillingPlan, stripe: stripeBillingPlan };
+	const billingPlan: BillingPlan = {
+		autumn: autumnBillingPlan,
+		stripe: stripeBillingPlan,
+	};
 
 	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
 
-	const previewBillingPlan = await computeAttachPreviewBillingPlan({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-	});
+	if (preview) {
+		billingPlan.preview = await computeAttachPreviewBillingPlan({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
+	}
 
-	return {
-		billingContext,
-		billingPlan: { ...billingPlan, preview: previewBillingPlan },
-		phases,
-		immediatePhaseTransition,
-	};
+	return { billingContext, billingPlan, phases, immediatePhaseTransition };
 };

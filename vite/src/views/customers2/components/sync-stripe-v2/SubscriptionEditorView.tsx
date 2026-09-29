@@ -10,12 +10,9 @@ import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state
 import { PlanTraySectionTitle } from "@/components/forms/customer-state/components/tray/PlanTraySectionTitle";
 import type { PlanLocation } from "@/components/forms/customer-state/customerStateSchema";
 import { useCustomerStateForm } from "@/components/forms/customer-state/useCustomerStateForm";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
-import { customerStateToSyncParams } from "./customerStateToSyncParams";
-import { usePreviewSyncV2 } from "./hooks/usePreviewSyncV2";
+import { useProposalCustomerState } from "./hooks/useProposalCustomerState";
+import { useSyncPreview } from "./hooks/useSyncPreview";
 import { useTodayMismatches } from "./hooks/useTodayMismatches";
 import { findMissingPlanPrices } from "./previewMismatches";
 import { StripeSourceTable } from "./StripeSourceTable";
@@ -25,11 +22,9 @@ import {
 	SyncOptionsTable,
 } from "./SyncOptionsTable";
 import { buildPhaseSections, formatPhaseStart } from "./syncPhaseSections";
-import { syncProposalToCustomerState } from "./syncProposalToCustomerState";
 
 type SubscriptionEditorProps = {
 	proposal: SyncProposalV2;
-	customerId: string;
 	onBack: () => void;
 	onSubmit: (params: SyncParamsV1) => void;
 	isSubmitting: boolean;
@@ -50,16 +45,10 @@ export function SubscriptionEditorView(props: SubscriptionEditorProps) {
 
 function SubscriptionEditor({
 	proposal,
-	customerId,
 	onBack,
 	onSubmit,
 	isSubmitting,
 }: SubscriptionEditorProps) {
-	const { products } = useProductsQuery();
-	const { features } = useFeaturesQuery();
-	const { customer } = useCusQuery();
-	const { entityId } = useCustomerContext();
-
 	const phaseSections = useMemo(
 		() => buildPhaseSections({ proposal }),
 		[proposal],
@@ -71,32 +60,18 @@ function SubscriptionEditor({
 		!proposal.stripe_subscription_id && Boolean(proposal.stripe_schedule_id);
 
 	const [nowMs] = useState(Date.now);
-	const [initialValues] = useState(() =>
-		syncProposalToCustomerState({
-			proposal,
-			customerProducts: customer?.customer_products ?? [],
-			entities: customer?.entities ?? [],
-			contextEntityId: entityId,
-			products,
-			features,
-		}),
-	);
+	const defaultValues = useProposalCustomerState({ proposal });
+	const [initialValues] = useState(defaultValues);
 	const form = useCustomerStateForm({ initialValues });
 	const formValues = useStore(form.store, (state) => state.values);
 	const [options, setOptions] = useState<SyncOptions>(DEFAULT_SYNC_OPTIONS);
 
-	const syncParams = customerStateToSyncParams({
-		customerId,
+	const { syncParams, previewMismatches } = useSyncPreview({
 		proposal,
 		formValues,
-		products,
-		features,
-		...options,
+		options,
 	});
-	const { mismatches: previewMismatches } = usePreviewSyncV2({
-		params: syncParams,
-	});
-	const todayMismatches = useTodayMismatches({ proposal });
+	const { mismatches: todayMismatches } = useTodayMismatches({ proposal });
 
 	const handlePlanNotFoundReasons = useCallback(
 		(location: PlanLocation) => {

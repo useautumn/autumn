@@ -29,7 +29,6 @@ export const billingActions = {
 	createSchedule: createSchedule,
 	previewCreateSchedule: previewCreateSchedule,
 	multiAttach: multiAttach,
-	setPlans: createSchedule,
 	previewSetPlans: previewSetPlans,
 	multiUpdate: multiUpdate,
 	setupPayment: setupPayment,

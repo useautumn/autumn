@@ -203,7 +203,6 @@ export function useCustomerStateHandlers({
 		[form, existingPlans, isPhaseLocked],
 	);
 
-	// Quantities and customizations belong to the old plan, so they reset with it.
 	const handleSelectPlanScope = useCallback(
 		({
 			location,
@@ -221,6 +220,7 @@ export function useCustomerStateHandlers({
 		[form],
 	);
 
+	// Quantities and customizations belong to the old plan, so they reset with it.
 	const handleSelectPlanProduct = useCallback(
 		({
 			location,

@@ -1,11 +1,7 @@
 import { expect, test } from "bun:test";
-import {
-	type Feature,
-	type ProductItem,
-	ProductItemInterval,
-	type ProductV2,
-} from "@autumn/shared";
+import type { Feature, ProcessorItemPrice } from "@autumn/shared";
 import { reviewPlanPrice } from "@/components/forms/create-schedule/utils/review/reviewPlanPrice";
+import { monthlyPrice } from "./reviewFixtures";
 
 const features = [
 	{
@@ -16,22 +12,31 @@ const features = [
 	{ id: "credits", name: "Credits" },
 ] as Feature[];
 
-const plan = (items: Partial<ProductItem>[]) =>
-	({
-		id: "usage-plan",
-		name: "Usage plan",
-		is_add_on: false,
-		items,
-	}) as unknown as ProductV2;
+const tieredPrice: ProcessorItemPrice = {
+	...monthlyPrice(0),
+	unit_amount: null,
+	tiers_mode: "graduated",
+	first_tier_amount: 5,
+	units_per_quantity: 100,
+};
+
+test("a plan with a base price shows it per interval", () => {
+	expect(
+		reviewPlanPrice({
+			prices: [
+				{ feature_id: null, price: monthlyPrice(20) },
+				{ feature_id: "seats", price: monthlyPrice(10) },
+			],
+			features,
+		}),
+	).toEqual({ amount: "$20", suffix: "/mo" });
+});
 
 test("a plan with no base price shows its first feature's unit price", () => {
 	expect(
 		reviewPlanPrice({
-			product: plan([
-				{ feature_id: "seats", price: 10, interval: ProductItemInterval.Month },
-			]),
+			prices: [{ feature_id: "seats", price: monthlyPrice(10) }],
 			features,
-			currency: "usd",
 		}),
 	).toEqual({ amount: "$10", suffix: "/seat" });
 });
@@ -39,20 +44,17 @@ test("a plan with no base price shows its first feature's unit price", () => {
 test("tiered and multi-feature plans say so", () => {
 	expect(
 		reviewPlanPrice({
-			product: plan([
-				{
-					feature_id: "credits",
-					billing_units: 100,
-					tiers: [
-						{ to: 1000, amount: 5 },
-						{ to: "inf", amount: 3 },
-					],
-					interval: ProductItemInterval.Month,
-				},
-				{ feature_id: "seats", price: 10, interval: ProductItemInterval.Month },
-			] as Partial<ProductItem>[]),
+			prices: [
+				{ feature_id: "credits", price: tieredPrice },
+				{ feature_id: "seats", price: monthlyPrice(10) },
+			],
 			features,
-			currency: "usd",
 		}),
 	).toEqual({ amount: "From $5", suffix: "/100 credits +1" });
+});
+
+test("a plan without prices is free", () => {
+	expect(reviewPlanPrice({ prices: [], features })).toEqual({
+		amount: "Free",
+	});
 });

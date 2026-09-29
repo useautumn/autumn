@@ -1,13 +1,21 @@
 import {
 	type BillingBehavior,
+	type Feature,
 	type FullCusProduct,
+	findFeatureById,
 	notNullish,
-	type PreviewBalanceChange,
 	type ProcessorChange,
 	type ProcessorItem,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
 } from "@autumn/shared";
+
+type WarningType = SetPlansPreviewWarning["type"];
+
+const INFO_WARNING_TYPES: WarningType[] = [
+	"new_stripe_price_created",
+	"proration_disabled",
+];
 
 /** Unmanaged live items that the immediate phase's end state no longer holds. */
 const removedUnmanagedItems = ({
@@ -17,9 +25,9 @@ const removedUnmanagedItems = ({
 	liveProcessorItems: ProcessorItem[];
 	immediateItems: ProcessorItem[];
 }) => {
-	const keptItemIds = new Set(immediateItems.map((item) => item.item_id));
+	const keptPriceIds = new Set(immediateItems.map((item) => item.price_id));
 	return liveProcessorItems.filter(
-		(item) => !item.managed_by_autumn && !keptItemIds.has(item.item_id),
+		(item) => !item.managed_by_autumn && !keptPriceIds.has(item.price_id),
 	);
 };
 
@@ -30,19 +38,11 @@ const priceCreatingItems = (items: ProcessorItem[]) =>
 			(item, index, all) =>
 				all.findIndex(
 					(other) =>
-						(other.price_id ?? other.display_name) ===
-						(item.price_id ?? item.display_name),
+						other.plan_id === item.plan_id &&
+						other.feature_id === item.feature_id &&
+						other.display_name === item.display_name,
 				) === index,
 		);
-
-const resetsUsage = (balanceChange: PreviewBalanceChange) => {
-	const previousUsage = balanceChange.previous_attributes.usage;
-	return (
-		typeof previousUsage === "number" &&
-		previousUsage > 0 &&
-		balanceChange.balance.usage === 0
-	);
-};
 
 const SCHEDULE_REPLACING_ACTIONS: ProcessorChange["action"][] = [
 	"released",
@@ -68,6 +68,7 @@ export const setPlansPreviewToWarnings = ({
 	deletedCustomerProducts,
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
+	features,
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
@@ -75,11 +76,12 @@ export const setPlansPreviewToWarnings = ({
 	deletedCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
+	features: Feature[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
 
-	return [
+	const warnings: Omit<SetPlansPreviewWarning, "severity">[] = [
 		...removedUnmanagedItems({
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
@@ -91,10 +93,15 @@ export const setPlansPreviewToWarnings = ({
 			type: "new_stripe_price_created" as const,
 			message: `A new Stripe price will be created for ${item.display_name}.`,
 		})),
-		...balanceChanges.filter(resetsUsage).map((balanceChange) => ({
-			type: "usage_reset" as const,
-			message: `Usage for ${balanceChange.feature_id} restarts from zero.`,
-		})),
+		...balanceChanges
+			.filter((balanceChange) => balanceChange.behavior === "reset")
+			.map((balanceChange) => ({
+				type: "usage_reset" as const,
+				message: `Usage for ${
+					findFeatureById({ features, featureId: balanceChange.feature_id })
+						?.name ?? balanceChange.feature_id
+				} restarts from zero.`,
+			})),
 		...(replacesExistingSchedule(processorChanges)
 			? [
 					{
@@ -123,4 +130,9 @@ export const setPlansPreviewToWarnings = ({
 				]
 			: []),
 	];
+
+	return warnings.map((warning) => ({
+		...warning,
+		severity: INFO_WARNING_TYPES.includes(warning.type) ? "info" : "warning",
+	}));
 };

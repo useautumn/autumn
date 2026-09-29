@@ -3,10 +3,11 @@ import {
 	findFeatureById,
 	numberWithCommas,
 	type PreviewBalance,
-	type PreviewBalanceChange,
+	type SetPlansPreviewBalanceChange,
 	type SetPlansPreviewPhase,
 } from "@autumn/shared";
-import { formatPhaseDate, phaseLabel } from "./phaseTiming";
+import { formatPhaseDate } from "../schedulePhaseTiming";
+import { phaseLabel } from "./phaseTiming";
 import {
 	joinDetail,
 	summarizeCounts,
@@ -15,18 +16,15 @@ import {
 import type {
 	ReviewChangeRow,
 	ReviewChangeSection,
-	ReviewChangeStatus,
 	ReviewChangeValue,
 } from "./types/reviewChange";
 
 type BalanceTransition = { before: PreviewBalance; after: PreviewBalance };
 
-type BalanceBehavior = Extract<
-	ReviewChangeStatus,
-	"added" | "removed" | "reset" | "carried" | "updated"
->;
-
-const BEHAVIOR_SUMMARY_LABELS: [BalanceBehavior, string][] = [
+const BEHAVIOR_SUMMARY_LABELS: [
+	SetPlansPreviewBalanceChange["behavior"],
+	string,
+][] = [
 	["reset", "reset"],
 	["carried", "carried over"],
 	["added", "new"],
@@ -35,27 +33,12 @@ const BEHAVIOR_SUMMARY_LABELS: [BalanceBehavior, string][] = [
 ];
 
 /** `previous_attributes` is sparse — overlay it on the after-state for the before-state. */
-const balanceBefore = (change: PreviewBalanceChange): PreviewBalance => ({
+const balanceBefore = (
+	change: SetPlansPreviewBalanceChange,
+): PreviewBalance => ({
 	...change.balance,
 	...(change.previous_attributes as Partial<PreviewBalance>),
 });
-
-const classifyBalanceChange = ({
-	before,
-	after,
-}: BalanceTransition): BalanceBehavior => {
-	if (!before.unlimited && after.unlimited) return "added";
-	if (before.unlimited && !after.unlimited && after.granted === 0) {
-		return "removed";
-	}
-	if (before.granted === 0 && before.usage === 0 && after.granted > 0) {
-		return "added";
-	}
-	if (after.granted === 0 && before.granted > 0) return "removed";
-	if (before.usage > 0 && after.usage === 0) return "reset";
-	if (after.usage > 0 && after.usage === before.usage) return "carried";
-	return "updated";
-};
 
 const describeGranted = ({ before, after }: BalanceTransition) =>
 	before.granted === after.granted || before.granted === 0
@@ -91,20 +74,19 @@ const balanceChangeToRow = ({
 	phaseIndex,
 	features,
 }: {
-	change: PreviewBalanceChange;
+	change: SetPlansPreviewBalanceChange;
 	phaseIndex: number;
 	features: Feature[];
 }): ReviewChangeRow => {
 	const before = balanceBefore(change);
 	const after = change.balance;
-	const behavior = classifyBalanceChange({ before, after });
 	const feature = findFeatureById({ features, featureId: change.feature_id });
 
 	return {
 		key: `balance-${phaseIndex}-${change.feature_id}`,
 		title: feature?.name ?? change.feature_id,
 		description: describeBalance({ before, after }),
-		status: behavior,
+		status: change.behavior,
 		value: balanceValue(after),
 	};
 };
@@ -112,15 +94,13 @@ const balanceChangeToRow = ({
 export const balanceChangesToReviewSection = ({
 	phases,
 	features,
-	nowMs,
 }: {
 	phases: SetPlansPreviewPhase[];
 	features: Feature[];
-	nowMs: number;
 }): ReviewChangeSection => {
 	const phaseRows = phases.map((phase, phaseIndex) => ({
 		key: `balances-${phaseIndex}`,
-		label: phaseLabel({ phaseIndex, startsAt: phase.starts_at, nowMs }),
+		label: phaseLabel({ phase }),
 		rows: phase.balance_changes.map((change) =>
 			balanceChangeToRow({ change, phaseIndex, features }),
 		),

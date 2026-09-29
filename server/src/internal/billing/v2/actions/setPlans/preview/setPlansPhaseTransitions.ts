@@ -1,19 +1,13 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
-	type CustomerPlanChange,
 	cp,
-	type Entity,
 	type FullCustomer,
 	findCustomerProductById,
 } from "@autumn/shared";
 import { autumnBillingPlanToTransitions } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToTransitions";
-import {
-	buildCustomerPlanChange,
-	type CustomerProductTransition,
-} from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildCustomerPlanChange";
+import type { CustomerProductTransition } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildCustomerPlanChange";
 import { buildLifecyclePreviousAttributes } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildLifecyclePreviousAttributes";
-import { mergeUpdatedPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/mergeUpdatedPlanChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
 
 const IMMEDIATE_PHASE_INDEX = 0;
@@ -80,20 +74,8 @@ const phaseExpiryTransitions = ({
 			: [];
 	});
 
-const transitionsToPlanChanges = ({
-	transitions,
-	entities,
-}: {
-	transitions: CustomerProductTransition[];
-	entities: Entity[];
-}): CustomerPlanChange[] =>
-	mergeUpdatedPlanChanges(
-		transitions
-			.map((transition) => buildCustomerPlanChange({ ...transition, entities }))
-			.filter((change): change is CustomerPlanChange => change !== undefined),
-	);
-
-export const setPlansPhasesToPlanChanges = ({
+/** Each phase's customer product transitions: what starts in it plus what it expires. */
+export const setPlansPhaseTransitions = ({
 	autumnBillingPlan,
 	originalFullCustomer,
 	phases,
@@ -103,7 +85,7 @@ export const setPlansPhasesToPlanChanges = ({
 	originalFullCustomer: FullCustomer;
 	phases: SchedulePhasePlan[];
 	phaseCustomers: FullCustomer[];
-}): CustomerPlanChange[][] => {
+}): CustomerProductTransition[][] => {
 	const transitions = autumnBillingPlanToTransitions({
 		autumnBillingPlan,
 		originalFullCustomer,
@@ -122,9 +104,6 @@ export const setPlansPhasesToPlanChanges = ({
 						phaseCustomer: phaseCustomers[phaseIndex],
 					});
 
-		return transitionsToPlanChanges({
-			transitions: [...startingTransitions, ...expiringTransitions],
-			entities: originalFullCustomer.entities,
-		});
+		return [...startingTransitions, ...expiringTransitions];
 	});
 };

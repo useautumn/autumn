@@ -10,7 +10,7 @@ import type { ReviewChangeValue } from "./types/reviewChange";
 const ONE_OFF_SUFFIX = "one-off";
 
 /** "/mo", "/3 mo", or "one-off" for a price without a recurring interval. */
-const priceIntervalSuffix = (price: ProcessorItemPrice) => {
+export const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 	if (!price.interval) return ONE_OFF_SUFFIX;
 	return intervalSuffix({
 		interval: price.interval,
@@ -26,7 +26,7 @@ export const unitPriceDetail = ({
 	price: ProcessorItemPrice;
 	quantity: number | null;
 }) => {
-	if (price.tiers) {
+	if (price.tiers_mode) {
 		const tierLabel =
 			price.tiers_mode === "volume" ? "Volume tiers" : "Graduated tiers";
 		return quantity === null
@@ -68,6 +68,6 @@ export const processorItemValue = (
 		};
 	}
 	if (price.usage_type === "metered") return { amount: "Usage-based" };
-	if (price.tiers) return { amount: "Tiered" };
+	if (price.tiers_mode) return { amount: "Tiered" };
 	return undefined;
 };

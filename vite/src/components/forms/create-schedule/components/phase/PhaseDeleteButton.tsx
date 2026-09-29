@@ -6,7 +6,7 @@ import {
 } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
-import { isImmediatePhase } from "../../utils/review/phaseTiming";
+import { isImmediatePhase } from "../../utils/schedulePhaseTiming";
 
 export function PhaseDeleteButton({
 	phaseIndex,

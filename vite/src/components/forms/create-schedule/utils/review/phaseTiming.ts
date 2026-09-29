@@ -1,41 +1,15 @@
-import { format, subMinutes } from "date-fns";
+import type { SetPlansPreviewPhase } from "@autumn/shared";
+import { formatPhaseDate } from "../schedulePhaseTiming";
 
-const IMMEDIATE_PHASE_INDEX = 0;
-const BACKDATE_TOLERANCE_MINUTES = 1;
-const NOW_LABEL = "Now";
-
-export const isImmediatePhase = ({ phaseIndex }: { phaseIndex: number }) =>
-	phaseIndex === IMMEDIATE_PHASE_INDEX;
-
-export const formatPhaseDate = ({ startsAt }: { startsAt: number }) =>
-	format(startsAt, "MMM d, yyyy");
-
-/** The immediate phase starts now unless it was backdated before the form opened. */
-export const startsNow = ({
-	phaseIndex,
-	startsAt,
-	nowMs,
-}: {
-	phaseIndex: number;
-	startsAt: number;
-	nowMs: number;
-}) =>
-	isImmediatePhase({ phaseIndex }) &&
-	startsAt >= subMinutes(nowMs, BACKDATE_TOLERANCE_MINUTES).getTime();
-
-export const phaseLabel = ({
-	phaseIndex,
-	startsAt,
-	nowMs,
-}: {
-	phaseIndex: number;
-	startsAt: number;
-	nowMs: number;
-}) =>
-	startsNow({ phaseIndex, startsAt, nowMs })
-		? NOW_LABEL
-		: formatPhaseDate({ startsAt });
+export const phaseLabel = ({ phase }: { phase: SetPlansPreviewPhase }) =>
+	phase.starts_now ? "Now" : formatPhaseDate({ startsAt: phase.starts_at });
 
 /** "now" or "on Nov 1, 2026", for section summaries. */
-export const phaseSummaryLabel = (timing: Parameters<typeof phaseLabel>[0]) =>
-	startsNow(timing) ? "now" : `on ${formatPhaseDate(timing)}`;
+export const phaseSummaryLabel = ({
+	phase,
+}: {
+	phase: SetPlansPreviewPhase;
+}) =>
+	phase.starts_now
+		? "now"
+		: `on ${formatPhaseDate({ startsAt: phase.starts_at })}`;

@@ -8,6 +8,7 @@ import { useEntitiesQuery } from "./useEntitiesQuery";
 type UseScopeEntitySearchResult = {
 	hasEntities: boolean;
 	entities: Entity[];
+	knownEntities: Entity[];
 	selectedEntity: Entity | undefined;
 	isLoading: boolean;
 	setSearch: (search: string) => void;
@@ -62,6 +63,7 @@ export const useScopeEntitySearch = ({
 	return {
 		hasEntities,
 		entities,
+		knownEntities: allKnownEntities,
 		selectedEntity,
 		isLoading: isLoadingAll || (!!debouncedSearch && isLoadingSearch),
 		setSearch,

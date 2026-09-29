@@ -3,7 +3,7 @@ import type {
 	SyncPlanInstance,
 	SyncProposalV2,
 } from "@autumn/shared";
-import { format } from "date-fns";
+import { formatPhaseDate } from "@/components/forms/create-schedule/utils/schedulePhaseTiming";
 
 export type ProposalSyncState =
 	| "in_sync"
@@ -37,7 +37,7 @@ const scheduledChangeNote = ({
 	const nextPhase = proposal.phases[1];
 	if (!nextPhase || nextPhase.starts_at === "now") return undefined;
 	const names = planNamesOf({ plans: nextPhase.plans, productNamesById });
-	const date = format(nextPhase.starts_at, "MMM d, yyyy");
+	const date = formatPhaseDate({ startsAt: nextPhase.starts_at });
 	return names.length > 0
 		? `Moves to ${names.join(", ")} on ${date}`
 		: `Changes on ${date}`;

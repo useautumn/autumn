@@ -33,11 +33,9 @@ export function buildMoveToAction({
 /** Row-level actions behind a "…" button, sitting next to the scope picker. */
 export function PlanRowActionsMenu({
 	actions,
-	label = "Plan actions",
 	variant = "muted",
 }: {
 	actions: PlanRowAction[];
-	label?: string;
 	variant?: "muted" | "secondary";
 }) {
 	if (actions.length === 0) return null;
@@ -46,7 +44,7 @@ export function PlanRowActionsMenu({
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<IconButton
-					aria-label={label}
+					aria-label="Plan actions"
 					className="size-6 shrink-0 text-tertiary-foreground"
 					icon={<DotsThreeIcon />}
 					size="sm"

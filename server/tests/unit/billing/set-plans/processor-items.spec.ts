@@ -13,7 +13,10 @@ import {
 import type Stripe from "stripe";
 import { buildAutumnStripePriceIndex } from "@/internal/billing/v2/actions/setPlans/preview/processorItems/buildAutumnStripePriceIndex";
 import { checkoutSessionActionToProcessorItems } from "@/internal/billing/v2/actions/setPlans/preview/processorItems/checkoutSessionActionToProcessorItems";
-import { scheduleActionToProcessorItems } from "@/internal/billing/v2/actions/setPlans/preview/processorItems/scheduleActionToProcessorItems";
+import {
+	phasesEndingSubscription,
+	scheduleActionToProcessorItems,
+} from "@/internal/billing/v2/actions/setPlans/preview/processorItems/scheduleActionToProcessorItems";
 import { subscriptionActionToProcessorItems } from "@/internal/billing/v2/actions/setPlans/preview/processorItems/subscriptionActionToProcessorItems";
 import type { ProcessorItemContext } from "@/internal/billing/v2/actions/setPlans/preview/processorItems/types/processorItemContext";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
@@ -155,7 +158,7 @@ const monthlyPrice = (unitAmount: number): ProcessorItemPrice => ({
 	interval_count: 1,
 	usage_type: "licensed",
 	tiers_mode: null,
-	tiers: null,
+	first_tier_amount: null,
 	units_per_quantity: null,
 });
 
@@ -186,7 +189,6 @@ describe("subscriptionActionToProcessorItems", () => {
 
 		expect(items).toEqual([
 			{
-				item_id: "si_seats",
 				price_id: "price_pro_seats",
 				plan_id: "pro",
 				feature_id: "seats",
@@ -199,7 +201,6 @@ describe("subscriptionActionToProcessorItems", () => {
 				managed_by_autumn: true,
 			},
 			{
-				item_id: "si_addon",
 				price_id: "price_external",
 				plan_id: null,
 				feature_id: null,
@@ -212,8 +213,7 @@ describe("subscriptionActionToProcessorItems", () => {
 				managed_by_autumn: false,
 			},
 			{
-				item_id: null,
-				price_id: "price_PREVIEW_abc",
+				price_id: null,
 				plan_id: "premium",
 				feature_id: null,
 				display_name: "premium",
@@ -450,5 +450,62 @@ describe("scheduleActionToProcessorItems", () => {
 		});
 
 		expect(items.map(summarize)).toEqual([[["pro", null, null]]]);
+	});
+});
+
+describe("phasesEndingSubscription", () => {
+	test("canceling the subscription now ends it in the first phase", () => {
+		expect(
+			phasesEndingSubscription({
+				subscriptionAction: {
+					type: "cancel_immediately",
+					stripeSubscriptionId: "sub_live",
+				},
+				phases: phasesAt(NOW),
+			}),
+		).toEqual([true]);
+	});
+
+	test("a canceling schedule ends the subscription at the phase it stops at", () => {
+		const PHASE_THREE = PHASE_TWO + ms.days(30);
+		expect(
+			phasesEndingSubscription({
+				subscriptionScheduleAction: {
+					type: "create",
+					params: {
+						end_behavior: "cancel",
+						phases: [
+							{
+								start_date: msToSeconds(NOW),
+								end_date: msToSeconds(PHASE_TWO),
+								items: [{ price: "price_pro_base" }],
+							},
+						],
+					},
+				},
+				phases: phasesAt(NOW, PHASE_TWO, PHASE_THREE),
+			}),
+		).toEqual([false, true, false]);
+	});
+
+	test("a releasing schedule never ends the subscription", () => {
+		expect(
+			phasesEndingSubscription({
+				subscriptionScheduleAction: {
+					type: "create",
+					params: {
+						end_behavior: "release",
+						phases: [
+							{
+								start_date: msToSeconds(NOW),
+								end_date: msToSeconds(PHASE_TWO),
+								items: [{ price: "price_pro_base" }],
+							},
+						],
+					},
+				},
+				phases: phasesAt(NOW, PHASE_TWO),
+			}),
+		).toEqual([false, false]);
 	});
 });

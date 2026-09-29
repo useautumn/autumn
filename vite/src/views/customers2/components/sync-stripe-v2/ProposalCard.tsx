@@ -1,11 +1,15 @@
-import type { SubscriptionMismatch, SyncProposalV2 } from "@autumn/shared";
+import type { SyncProposalV2 } from "@autumn/shared";
+import { StatusChipIcon } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { cn } from "@/lib/utils";
 import { useProposalItemMarks } from "./hooks/useProposalItemMarks";
-import { ProposalSyncStateChip } from "./ProposalSyncStateChip";
-import { ProposalSyncStateIcon } from "./ProposalSyncStateIcon";
+import { useTodayMismatches } from "./hooks/useTodayMismatches";
+import {
+	PROPOSAL_SYNC_STATES,
+	ProposalSyncStateChip,
+} from "./ProposalSyncStateChip";
 import { proposalSyncSummary } from "./proposalSyncSummary";
 import { STRIPE_ROW_CLASS, StripeItemRow } from "./StripeItemRow";
 import { buildPhaseSections } from "./syncPhaseSections";
@@ -13,23 +17,26 @@ import { buildPhaseSections } from "./syncPhaseSections";
 export function ProposalCard({
 	proposal,
 	objectId,
-	mismatches,
 	productNamesById,
 	onSelect,
 }: {
 	proposal: SyncProposalV2;
 	objectId: string;
-	mismatches: SubscriptionMismatch[] | undefined;
 	productNamesById: Record<string, string>;
 	onSelect: () => void;
 }) {
+	const { mismatches, isVerifying } = useTodayMismatches({ proposal });
 	const { state, planNames, note } = proposalSyncSummary({
 		proposal,
-		mismatches,
+		mismatches: isVerifying ? undefined : (mismatches ?? []),
 		productNamesById,
 	});
 	const [section] = buildPhaseSections({ proposal });
-	const itemMark = useProposalItemMarks({ proposal, section });
+	const itemMark = useProposalItemMarks({
+		proposal,
+		section,
+		todayMismatches: mismatches,
+	});
 
 	return (
 		<button
@@ -77,7 +84,10 @@ export function ProposalCard({
 						: "text-tertiary-foreground",
 				)}
 			>
-				<ProposalSyncStateIcon state={state} />
+				<StatusChipIcon
+					tone={PROPOSAL_SYNC_STATES[state].tone}
+					glyph={PROPOSAL_SYNC_STATES[state].glyph}
+				/>
 				<span className="truncate">{note}</span>
 			</div>
 		</button>

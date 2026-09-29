@@ -24,16 +24,13 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		).toEqual([
 			{
 				type: "subscription",
-				processor: "stripe",
 				id: null,
 				action: "created",
 			},
 			{
 				type: "subscription_schedule",
-				processor: "stripe",
 				id: null,
 				action: "created",
-				phase_count: 2,
 			},
 		]);
 	});
@@ -58,22 +55,18 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		).toEqual([
 			{
 				type: "subscription",
-				processor: "stripe",
 				id: "sub_live",
 				action: "updated",
 			},
 			{
 				type: "subscription_schedule",
-				processor: "stripe",
 				id: "sub_sched_old",
 				action: "released",
 			},
 			{
 				type: "subscription_schedule",
-				processor: "stripe",
 				id: null,
 				action: "created",
-				phase_count: 2,
 			},
 		]);
 	});
@@ -93,10 +86,8 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		).toEqual([
 			{
 				type: "subscription_schedule",
-				processor: "stripe",
 				id: "sub_sched_old",
 				action: "updated",
-				phase_count: 2,
 			},
 		]);
 	});
@@ -118,13 +109,11 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		).toEqual([
 			{
 				type: "subscription",
-				processor: "stripe",
 				id: "sub_live",
 				action: "canceled",
 			},
 			{
 				type: "subscription_schedule",
-				processor: "stripe",
 				id: "sub_sched_old",
 				action: "released",
 			},
@@ -144,7 +133,6 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		).toEqual([
 			{
 				type: "subscription",
-				processor: "stripe",
 				id: null,
 				action: "created",
 			},

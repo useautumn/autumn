@@ -19,6 +19,7 @@ import {
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { entityKey } from "@/components/forms/shared/utils/entityKey";
 import { quantityRecordFrom } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import { applyCustomizeToProduct } from "./applyCustomizeToProduct";
 
@@ -44,7 +45,7 @@ const resolveEntityId = ({
 		(candidate) =>
 			candidate.id === entityId || candidate.internal_id === entityId,
 	);
-	return entity ? entity.id || entity.internal_id : null;
+	return entity ? entityKey(entity) : null;
 };
 
 const findLinkedCustomerProducts = ({

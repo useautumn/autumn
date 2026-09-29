@@ -1,3 +1,4 @@
+import { formatAmount, stripeToAtmnAmount } from "@autumn/shared";
 import type Stripe from "stripe";
 import { intervalSuffix } from "@/utils/formatUtils/intervalSuffix";
 
@@ -8,17 +9,13 @@ const formatStripeCurrency = ({
 	amount: number;
 	currency: string;
 }): string => {
-	const major = amount / 100;
-	try {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: currency.toUpperCase(),
-			minimumFractionDigits: major % 1 === 0 ? 0 : 2,
-			maximumFractionDigits: 2,
-		}).format(major);
-	} catch {
-		return `${major.toFixed(2)} ${currency.toUpperCase()}`;
-	}
+	const majorAmount = stripeToAtmnAmount({ amount, currency });
+	return formatAmount({
+		currency: currency.toUpperCase(),
+		amount: majorAmount,
+		minFractionDigits: majorAmount % 1 === 0 ? 0 : 2,
+		maxFractionDigits: 2,
+	});
 };
 
 /** "/mo", "/yr", or "/3 mo" for multi-period prices; empty for one-off. */

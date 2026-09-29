@@ -2,11 +2,6 @@ import type { SetPlansPreviewWarning } from "@autumn/shared";
 import { InfoIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
-const INFO_WARNING_TYPES: SetPlansPreviewWarning["type"][] = [
-	"new_stripe_price_created",
-	"proration_disabled",
-];
-
 export function ReviewWarnings({
 	warnings,
 }: {
@@ -17,7 +12,7 @@ export function ReviewWarnings({
 	return (
 		<div className="flex flex-col gap-2 px-4 pt-4">
 			{warnings.map((warning) => {
-				const isInfo = INFO_WARNING_TYPES.includes(warning.type);
+				const isInfo = warning.severity === "info";
 				const Icon = isInfo ? InfoIcon : WarningCircleIcon;
 
 				return (

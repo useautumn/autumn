@@ -5,12 +5,7 @@ import type {
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
 import { uniqBy } from "lodash";
-import {
-	isImmediatePhase,
-	phaseLabel,
-	phaseSummaryLabel,
-	startsNow,
-} from "./phaseTiming";
+import { phaseLabel, phaseSummaryLabel } from "./phaseTiming";
 import {
 	processorItemValue,
 	unitPriceDetail,
@@ -60,42 +55,13 @@ const processorItemToRow = ({
 const pluralizeItems = (count: number) =>
 	count === 1 ? "1 item" : `${count} items`;
 
-const phaseItemSummary = ({
-	phase,
-	phaseIndex,
-	endsSubscription,
-	nowMs,
-}: {
-	phase: SetPlansPreviewPhase;
-	phaseIndex: number;
-	endsSubscription: boolean;
-	nowMs: number;
-}) => {
-	const timing = { phaseIndex, startsAt: phase.starts_at, nowMs };
-	if (endsSubscription) {
-		return startsNow(timing)
+const phaseItemSummary = ({ phase }: { phase: SetPlansPreviewPhase }) => {
+	if (phase.ends_subscription) {
+		return phase.starts_now
 			? CANCELED_LABEL
-			: `${CANCELED_LABEL} ${phaseSummaryLabel(timing)}`;
+			: `${CANCELED_LABEL} ${phaseSummaryLabel({ phase })}`;
 	}
-	return `${pluralizeItems(phase.processor_items.length)} ${phaseSummaryLabel(timing)}`;
-};
-
-/** A phase that leaves Stripe billing nothing after a canceled subscription or items before it. */
-const phaseEndsSubscription = ({
-	preview,
-	phaseIndex,
-}: {
-	preview: SetPlansPreviewResponse;
-	phaseIndex: number;
-}) => {
-	if (preview.phases[phaseIndex]?.processor_items.length !== 0) return false;
-	if (isImmediatePhase({ phaseIndex })) {
-		return preview.processor_changes.some(
-			(processorChange: ProcessorChange) =>
-				processorChange.action === "canceled",
-		);
-	}
-	return (preview.phases[phaseIndex - 1]?.processor_items.length ?? 0) > 0;
+	return `${pluralizeItems(phase.processor_items.length)} ${phaseSummaryLabel({ phase })}`;
 };
 
 const subscriptionEndRow = ({
@@ -139,47 +105,29 @@ const priceStripeIds = (items: ProcessorItem[]): ReviewStripeId[] =>
 			: [],
 	);
 
-type ProcessorPhase = {
-	reviewPhase: ReviewChangePhase;
-	summary: string;
-};
-
 /** What Stripe will hold in each phase: the end state, not a diff. */
 export const processorItemsToReviewSection = ({
 	preview,
-	nowMs,
 }: {
 	preview: SetPlansPreviewResponse;
-	nowMs: number;
 }): ReviewChangeSection => {
-	const phases: ProcessorPhase[] = preview.phases.map(
-		(phase: SetPlansPreviewPhase, phaseIndex: number) => {
-			const endsSubscription = phaseEndsSubscription({ preview, phaseIndex });
-			const reviewPhase: ReviewChangePhase = {
-				key: `processor-${phaseIndex}`,
-				label: phaseLabel({ phaseIndex, startsAt: phase.starts_at, nowMs }),
-				rows: endsSubscription
-					? [subscriptionEndRow({ phaseIndex })]
-					: phase.processor_items.map(
-							(item: ProcessorItem, itemIndex: number) =>
-								processorItemToRow({ item, phaseIndex, itemIndex }),
-						),
-			};
-			return {
-				reviewPhase,
-				summary: phaseItemSummary({
-					phase,
-					phaseIndex,
-					endsSubscription,
-					nowMs,
-				}),
-			};
-		},
+	const phases: ReviewChangePhase[] = preview.phases.map(
+		(phase: SetPlansPreviewPhase, phaseIndex: number) => ({
+			key: `processor-${phaseIndex}`,
+			label: phaseLabel({ phase }),
+			rows: phase.ends_subscription
+				? [subscriptionEndRow({ phaseIndex })]
+				: phase.processor_items.map((item: ProcessorItem, itemIndex: number) =>
+						processorItemToRow({ item, phaseIndex, itemIndex }),
+					),
+		}),
 	);
 
 	return {
-		phases: withoutEmptyPhases(phases.map(({ reviewPhase }) => reviewPhase)),
-		summary: phases.map(({ summary }) => summary).join(" · "),
+		phases: withoutEmptyPhases(phases),
+		summary: preview.phases
+			.map((phase: SetPlansPreviewPhase) => phaseItemSummary({ phase }))
+			.join(" · "),
 		stripeIds: uniqBy(
 			[
 				...processorStripeIds(preview.processor_changes),
