@@ -5,7 +5,7 @@ import {
 	ms,
 	RecaseError,
 } from "@autumn/shared";
-import { isExistingScheduleUpdate } from "@/internal/billing/v2/actions/createSchedule/utils/isExistingScheduleUpdate";
+import { isExistingScheduleUpdate } from "@/internal/billing/v2/actions/setPlans/utils/isExistingScheduleUpdate";
 import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
 import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 

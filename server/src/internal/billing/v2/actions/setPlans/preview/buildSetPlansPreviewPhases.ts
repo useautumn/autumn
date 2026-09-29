@@ -7,7 +7,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
 import { buildBalanceChanges } from "@/internal/billing/v2/actions/buildBillingChanges/buildBalanceChanges/buildBalanceChanges";
-import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
 import { classifySetPlansBalanceChange } from "./classifySetPlansBalanceChange";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";

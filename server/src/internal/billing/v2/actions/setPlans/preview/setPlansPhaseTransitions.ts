@@ -8,7 +8,7 @@ import {
 import { autumnBillingPlanToTransitions } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToTransitions";
 import type { CustomerProductTransition } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildCustomerPlanChange";
 import { buildLifecyclePreviousAttributes } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildLifecyclePreviousAttributes";
-import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 
 const IMMEDIATE_PHASE_INDEX = 0;
 

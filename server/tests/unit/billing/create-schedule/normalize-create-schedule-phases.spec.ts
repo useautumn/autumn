@@ -9,7 +9,7 @@ import chalk from "chalk";
 import {
 	getInitialCreateSchedulePhase,
 	normalizeCreateSchedulePhases,
-} from "@/internal/billing/v2/actions/createSchedule/errors/normalizeCreateSchedulePhases";
+} from "@/internal/billing/v2/actions/setPlans/errors/normalizeCreateSchedulePhases";
 
 describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 	test("sorts phases by starts_at", () => {

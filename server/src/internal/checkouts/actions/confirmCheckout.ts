@@ -107,7 +107,7 @@ export const confirmCheckout = async ({
 			break;
 		}
 		case CheckoutAction.CreateSchedule: {
-			const checkoutResult = await billingActions.createSchedule({
+			const checkoutResult = await billingActions.setPlans({
 				ctx,
 				params: params as CreateScheduleParamsV0,
 				skipAutumnCheckout: true,

@@ -1,6 +1,6 @@
 import { CusProductStatus, type SyncParamsV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { persistCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistCreateSchedule";
+import { persistCreateSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";

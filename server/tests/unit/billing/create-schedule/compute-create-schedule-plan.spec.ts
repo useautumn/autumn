@@ -13,7 +13,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
-import { computeCreateSchedulePlan } from "@/internal/billing/v2/actions/createSchedule/compute/computeCreateSchedulePlan";
+import { computeCreateSchedulePlan } from "@/internal/billing/v2/actions/setPlans/compute/computeCreateSchedulePlan";
 
 const createBillingContext = ({
 	productContexts,

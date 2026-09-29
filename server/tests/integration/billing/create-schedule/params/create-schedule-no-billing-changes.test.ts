@@ -99,7 +99,7 @@ const expectScheduleCreated = async ({
 	response,
 }: {
 	ctx: TestContext;
-	response: Awaited<ReturnType<typeof billingActions.createSchedule>>;
+	response: Awaited<ReturnType<typeof billingActions.setPlans>>;
 }) => {
 	expect(response.status).toBe("created");
 	expect(response.phases).toHaveLength(2);
@@ -119,7 +119,7 @@ test.concurrent(
 			suffix: "explicit",
 			noBillingChanges: true,
 		});
-		const response = await billingActions.createSchedule({
+		const response = await billingActions.setPlans({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -134,7 +134,7 @@ test.concurrent(
 		const { ctx, noStripeCtx, params } = await setupExternalSchedule({
 			suffix: "inferred",
 		});
-		const response = await billingActions.createSchedule({
+		const response = await billingActions.setPlans({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -150,7 +150,7 @@ test.concurrent(
 			suffix: "preview",
 			historicalPhase: true,
 		});
-		const preview = await billingActions.previewCreateSchedule({
+		const preview = await billingActions.previewSetPlansBilling({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -170,7 +170,7 @@ test.concurrent(
 		params.enable_plan_immediately = true;
 		params.redirect_mode = "if_required";
 
-		const response = await billingActions.createSchedule({
+		const response = await billingActions.setPlans({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -201,7 +201,7 @@ test.concurrent(
 		});
 		const now = Date.now();
 
-		const response = await billingActions.createSchedule({
+		const response = await billingActions.setPlans({
 			ctx,
 			params: {
 				customer_id: customerId,
@@ -230,7 +230,7 @@ test.concurrent(
 		);
 		expect(stripeSubscription.schedule).toBeTruthy();
 
-		const replacement = await billingActions.createSchedule({
+		const replacement = await billingActions.setPlans({
 			ctx: withoutStripe(ctx),
 			params: {
 				customer_id: customerId,

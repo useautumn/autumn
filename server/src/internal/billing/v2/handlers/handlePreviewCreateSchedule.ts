@@ -1,4 +1,8 @@
-import { AffectedResource, CreateScheduleParamsV0Schema, Scopes } from "@autumn/shared";
+import {
+	AffectedResource,
+	CreateScheduleParamsV0Schema,
+	Scopes,
+} from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
@@ -10,7 +14,7 @@ export const handlePreviewCreateSchedule = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const preview = await billingActions.previewCreateSchedule({
+		const preview = await billingActions.previewSetPlansBilling({
 			ctx,
 			params: body,
 		});

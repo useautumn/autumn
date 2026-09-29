@@ -3,7 +3,7 @@ import type {
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { prepareCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/prepareCreateSchedule";
+import { prepareSetPlans } from "@/internal/billing/v2/actions/setPlans/utils/prepareSetPlans";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { getDeleteCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { buildSetPlansPreviewPhases } from "./preview/buildSetPlansPreviewPhases";
@@ -23,7 +23,7 @@ export const previewSetPlans = async ({
 	params: CreateScheduleParamsV0;
 }): Promise<SetPlansPreviewResponse> => {
 	const { billingContext, billingPlan, phases, immediatePhaseTransition } =
-		await prepareCreateSchedule({ ctx, params, preview: true });
+		await prepareSetPlans({ ctx, params, preview: true });
 
 	const [attachPreview, stripePrices] = await Promise.all([
 		billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),

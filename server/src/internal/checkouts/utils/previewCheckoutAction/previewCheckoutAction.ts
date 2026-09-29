@@ -12,7 +12,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { previewCreateScheduleWithContext } from "@/internal/billing/v2/actions/createSchedule/previewCreateSchedule";
+import { previewSetPlansBillingWithContext } from "@/internal/billing/v2/actions/setPlans/previewSetPlansBilling";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import type {
@@ -92,7 +92,7 @@ export async function previewCheckoutAction({
 			};
 		}
 		case CheckoutAction.CreateSchedule: {
-			const createScheduleResult = await previewCreateScheduleWithContext({
+			const createScheduleResult = await previewSetPlansBillingWithContext({
 				ctx,
 				params: params as CreateScheduleParamsV0,
 			});

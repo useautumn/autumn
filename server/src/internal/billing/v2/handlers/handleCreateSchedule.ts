@@ -1,7 +1,7 @@
 import {
-    CreateScheduleParamsV0Schema,
-    type CreateScheduleResponse,
-    Scopes,
+	CreateScheduleParamsV0Schema,
+	type CreateScheduleResponse,
+	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -30,7 +30,7 @@ export const handleCreateSchedule = createRoute({
 				}
 			: undefined,
 	handler: async (c) => {
-		const response = (await billingActions.createSchedule({
+		const response = (await billingActions.setPlans({
 			ctx: c.get("ctx"),
 			params: c.req.valid("json"),
 		})) satisfies CreateScheduleResponse;

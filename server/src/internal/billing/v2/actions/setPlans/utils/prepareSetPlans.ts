@@ -18,7 +18,7 @@ import {
 import { setupCreateScheduleBillingContext } from "../setup/setupCreateScheduleBillingContext";
 import { ensureFreePhaseStripeProducts } from "./ensureFreePhaseStripeProducts";
 
-type PreparedCreateSchedule = {
+type PreparedSetPlans = {
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	phases: CreateSchedulePlanResult["phases"];
@@ -26,7 +26,7 @@ type PreparedCreateSchedule = {
 };
 
 /** Setup, compute and evaluate a create_schedule call, checking errors between each step. */
-export const prepareCreateSchedule = async ({
+export const prepareSetPlans = async ({
 	ctx,
 	params,
 	preview,
@@ -34,7 +34,7 @@ export const prepareCreateSchedule = async ({
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 	preview: boolean;
-}): Promise<PreparedCreateSchedule> => {
+}): Promise<PreparedSetPlans> => {
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
 		params,

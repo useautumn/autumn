@@ -6,22 +6,22 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
-import { prepareCreateSchedule } from "./utils/prepareCreateSchedule";
+import { prepareSetPlans } from "./utils/prepareSetPlans";
 
-type PreviewCreateScheduleResult = {
+type PreviewSetPlansBillingResult = {
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	preview: AttachPreviewResponse;
 };
 
-export const previewCreateScheduleWithContext = async ({
+export const previewSetPlansBillingWithContext = async ({
 	ctx,
 	params,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
-}): Promise<PreviewCreateScheduleResult> => {
-	const { billingContext, billingPlan } = await prepareCreateSchedule({
+}): Promise<PreviewSetPlansBillingResult> => {
+	const { billingContext, billingPlan } = await prepareSetPlans({
 		ctx,
 		params,
 		preview: true,
@@ -38,15 +38,15 @@ export const previewCreateScheduleWithContext = async ({
 	};
 };
 
-/** Preview the immediate-phase billing cost for a create_schedule call. */
-export const previewCreateSchedule = async ({
+/** Preview the immediate-phase billing cost for a set_plans call. */
+export const previewSetPlansBilling = async ({
 	ctx,
 	params,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 }): Promise<AttachPreviewResponse> => {
-	const result = await previewCreateScheduleWithContext({
+	const result = await previewSetPlansBillingWithContext({
 		ctx,
 		params,
 	});
