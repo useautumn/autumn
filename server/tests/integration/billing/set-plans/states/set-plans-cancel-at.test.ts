@@ -2,11 +2,15 @@
  * set_plans is declarative about a scheduled cancellation: without an end date in the
  * request, the plans don't end, so Stripe's cancel_at is cleared however many phases there are.
  * Several phases clear it too, with a schedule carrying the later phase.
+ * The preview says the scheduled cancellation is removed.
  */
 
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
-import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
+import {
+	expectPreviewWarning,
+	findStripeSubscriptionByStatus,
+} from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -61,10 +65,16 @@ test.concurrent(
 		const { customerId, autumnV2_4, ctx, pro, canceling } =
 			await setupCancelingPro({ customerId: "set-plans-cancel-at-one-phase" });
 
-		await autumnV2_4.billing.setPlans({
+		const setPlansParams = {
 			customer_id: customerId,
-			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
+		};
+		expectPreviewWarning({
+			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			type: "scheduled_cancel_changed",
+			messageContains: ["is removed"],
 		});
+		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		await expectCancelAtCleared({ ctx, subscriptionId: canceling.id });
 	},
