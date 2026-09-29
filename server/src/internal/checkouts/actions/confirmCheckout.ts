@@ -17,6 +17,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans/utils/setPlansResultToResponse";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils";
@@ -107,10 +108,12 @@ export const confirmCheckout = async ({
 			break;
 		}
 		case CheckoutAction.CreateSchedule: {
-			const checkoutResult = await billingActions.setPlans({
-				ctx,
-				params: params as CreateScheduleParamsV0,
-				skipAutumnCheckout: true,
+			const checkoutResult = setPlansResultToResponse({
+				result: await billingActions.setPlans({
+					ctx,
+					params: params as CreateScheduleParamsV0,
+					skipAutumnCheckout: true,
+				}),
 			});
 
 			const [immediatePhase] = (params as CreateScheduleParamsV0).phases;

@@ -1,64 +1,109 @@
-import type {
-	BillingResult,
-	CreateScheduleBillingContext,
-	CreateScheduleParamsV0,
-	CreateScheduleResponse,
+import {
+	type BillingPlan,
+	CheckoutAction,
+	type CreateScheduleParamsV0,
 } from "@autumn/shared";
-import { CheckoutAction } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
-import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
+import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
+import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
+import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
+import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
+import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { hashJson } from "@/utils/hash/hashJson";
+import { computeSetPlansPlan } from "./compute/computeSetPlansPlan";
+import {
+	handleSetPlansBillingPlanErrors,
+	handleSetPlansComputeErrors,
+	handleSetPlansErrors,
+} from "./errors/handleSetPlansErrors";
+import { logSetPlansContext } from "./logs/logSetPlansContext";
+import { setupSetPlansBillingContext } from "./setup/setupSetPlansBillingContext";
+import type { SetPlansResult } from "./types/setPlansResult";
+import { ensureFreePhaseStripeProducts } from "./utils/ensureFreePhaseStripeProducts";
 import { persistSetPlansSchedule } from "./utils/persistSetPlansSchedule";
-import { prepareSetPlans } from "./utils/prepareSetPlans";
-
-const buildPendingSetPlansResponse = ({
-	billingContext,
-	billingResult,
-}: {
-	billingContext: CreateScheduleBillingContext;
-	billingResult: BillingResult;
-}): CreateScheduleResponse => {
-	const billingResponse = billingResultToResponse({
-		billingContext,
-		billingResult,
-	});
-
-	return {
-		customer_id: billingResponse.customer_id,
-		entity_id: billingResponse.entity_id ?? null,
-		status: "pending_payment",
-		schedule_id: null,
-		phases: [],
-		invoice: billingResponse.invoice,
-		payment_url: billingResponse.payment_url,
-		required_action: billingResponse.required_action,
-	};
-};
 
 /** Set a customer's plans: bill the immediate phase and schedule Autumn-managed future phases. */
 export const setPlans = async ({
 	ctx,
 	params,
+	preview = false,
 	skipAutumnCheckout = false,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
+	preview?: boolean;
 	skipAutumnCheckout?: boolean;
-}): Promise<CreateScheduleResponse> => {
-	const checkoutReservation = !skipAutumnCheckout
-		? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
-		: undefined;
+}): Promise<SetPlansResult> => {
+	const checkoutReservation =
+		!preview && !skipAutumnCheckout
+			? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
+			: undefined;
 
-	const { billingContext, billingPlan, phases } = await prepareSetPlans({
+	// 1. Setup
+	const billingContext = await setupSetPlansBillingContext({
 		ctx,
 		params,
-		preview: false,
+		preview,
+	});
+	logSetPlansContext({ ctx, billingContext });
+	await handleSetPlansErrors({ billingContext, preview });
+
+	// 2. Compute
+	const { autumnBillingPlan, phases, immediatePhaseTransition } =
+		computeSetPlansPlan({ ctx, billingContext });
+	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
+	await handleSetPlansComputeErrors({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+		immediatePhaseTransition,
 	});
 
+	if (!preview) {
+		await ensureFreePhaseStripeProducts({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
+	}
+
+	// 3. Evaluate Stripe billing plan
+	const stripeBillingPlan = await evaluateStripeBillingPlan({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+		checkoutMode: billingContext.checkoutMode,
+	});
+	logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
+
+	const billingPlan: BillingPlan = {
+		autumn: autumnBillingPlan,
+		stripe: stripeBillingPlan,
+	};
+
+	// 4. Errors (requires full billing plan)
+	handleSetPlansBillingPlanErrors({ ctx, billingContext, billingPlan });
+
+	const result: SetPlansResult = {
+		billingContext,
+		billingPlan,
+		schedulePlan: { phases, immediatePhaseTransition },
+	};
+
+	if (preview) {
+		billingPlan.preview = await computeAttachPreviewBillingPlan({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
+		return result;
+	}
+
+	// 5. Checkout session lock (skip for confirm flows)
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({
 			ctx,
@@ -69,13 +114,11 @@ export const setPlans = async ({
 		});
 
 		if (cachedResult?.billingResult) {
-			return buildPendingSetPlansResponse({
-				billingContext,
-				billingResult: cachedResult.billingResult,
-			});
+			return { ...result, billingResult: cachedResult.billingResult };
 		}
 	}
 
+	// 6. Autumn checkout
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
@@ -92,12 +135,10 @@ export const setPlans = async ({
 			throw new Error("createAutumnCheckout did not return a billing result");
 		}
 
-		return buildPendingSetPlansResponse({
-			billingContext,
-			billingResult,
-		});
+		return { ...result, billingResult };
 	}
 
+	// 7. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,
@@ -106,22 +147,20 @@ export const setPlans = async ({
 			? hashJson({ value: params })
 			: undefined,
 	});
+	logStripeBillingResult({ ctx, result: billingResult.stripe });
 
-	// Checkout completion owns schedule persistence when execution is deferred or
-	// the Stripe subscription does not exist yet.
-	const deferScheduleToWebhook =
+	// 8. Persist the schedule, unless checkout completion owns it (deferred
+	// execution, or the Stripe subscription does not exist yet).
+	const scheduleDeferredToCheckout =
 		billingResult.stripe.deferred ||
 		(billingContext.enablePlanImmediately &&
 			billingContext.checkoutMode === "stripe_checkout");
 
-	if (deferScheduleToWebhook) {
-		return buildPendingSetPlansResponse({
-			billingContext,
-			billingResult,
-		});
+	if (scheduleDeferredToCheckout) {
+		return { ...result, billingResult };
 	}
 
-	const { insertedPhases, scheduleId } = await persistSetPlansSchedule({
+	const persistedSchedule = await persistSetPlansSchedule({
 		ctx,
 		customerId: params.customer_id,
 		currentEpochMs: billingContext.currentEpochMs,
@@ -129,19 +168,5 @@ export const setPlans = async ({
 		phases,
 	});
 
-	const billingResponse = billingResultToResponse({
-		billingContext,
-		billingResult,
-	});
-
-	return {
-		customer_id: billingResponse.customer_id,
-		entity_id: billingResponse.entity_id ?? null,
-		status: "created",
-		schedule_id: scheduleId,
-		phases: insertedPhases,
-		invoice: billingResponse.invoice,
-		payment_url: billingResponse.payment_url,
-		required_action: billingResponse.required_action,
-	};
+	return { ...result, billingResult, persistedSchedule };
 };

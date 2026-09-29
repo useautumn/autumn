@@ -1,29 +1,29 @@
-import type {
-	CreateScheduleParamsV0,
-	SetPlansPreviewResponse,
-} from "@autumn/shared";
+import type { SetPlansPreviewResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { prepareSetPlans } from "@/internal/billing/v2/actions/setPlans/utils/prepareSetPlans";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { getDeleteCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
-import { buildSetPlansPreviewPhases } from "./preview/buildSetPlansPreviewPhases";
-import { buildAutumnStripePriceIndex } from "./preview/processorItems/buildAutumnStripePriceIndex";
-import { buildStripePriceLookup } from "./preview/processorItems/price/buildStripePriceLookup";
-import { stripeSubscriptionToProcessorItems } from "./preview/processorItems/stripeSubscriptionToProcessorItems";
-import type { ProcessorItemContext } from "./preview/processorItems/types/processorItemContext";
-import { setPlansPreviewToWarnings } from "./preview/setPlansPreviewToWarnings";
-import { stripeBillingPlanToProcessorChanges } from "./preview/stripeBillingPlanToProcessorChanges";
+import type { SetPlansResult } from "../types/setPlansResult";
+import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
+import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
+import { buildStripePriceLookup } from "./processorItems/price/buildStripePriceLookup";
+import { stripeSubscriptionToProcessorItems } from "./processorItems/stripeSubscriptionToProcessorItems";
+import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
+import { setPlansPreviewToWarnings } from "./setPlansPreviewToWarnings";
+import { stripeBillingPlanToProcessorChanges } from "./stripeBillingPlanToProcessorChanges";
 
-/** Preview the phase-by-phase Autumn and Stripe changes for a set_plans call. */
-export const previewSetPlans = async ({
+/** Format a set_plans preview result as the phase-by-phase Autumn and Stripe changes. */
+export const buildSetPlansPreview = async ({
 	ctx,
-	params,
+	result,
 }: {
 	ctx: AutumnContext;
-	params: CreateScheduleParamsV0;
+	result: SetPlansResult;
 }): Promise<SetPlansPreviewResponse> => {
-	const { billingContext, billingPlan, phases, immediatePhaseTransition } =
-		await prepareSetPlans({ ctx, params, preview: true });
+	const {
+		billingContext,
+		billingPlan,
+		schedulePlan: { phases, immediatePhaseTransition },
+	} = result;
 
 	const [attachPreview, stripePrices] = await Promise.all([
 		billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),
