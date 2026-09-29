@@ -1454,7 +1454,7 @@ export const customerStoriesData: CustomerStory[] = [
 		accent: "#8297FF",
 		surface: "#3E4E9B",
 		textOn: "light",
-		founderImage: "/images/customers/runable-umesh.png",
+		founderImage: "/images/customers/runable-saksham.png",
 		headline: {
 			lead: "Runable evolved pricing for 1.7M users",
 			emphasis: "without rebuilding billing.",
@@ -1465,8 +1465,8 @@ export const customerStoriesData: CustomerStory[] = [
 			{ value: "5", label: "Engineers avoided" },
 		],
 		quote:
-			"Our starting point is the business owner, not the technology stack. Small teams have the same ambition as larger businesses, but far less capacity.",
-		author: { name: "Umesh Kumar", title: "Co-Founder at Runable" },
+			"Autumn's infrastructure has allowed us to focus on what matters, which is making Runable better with every iteration and helping small businesses build, run and grow.",
+		author: { name: "Saksham Sarda", title: "Co-Founder at Runable" },
 	},
 	{
 		slug: "t3-chat",
