@@ -260,7 +260,8 @@
 	],
 	"patchedDependencies": {
 		"@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch",
-		"kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch"
+		"kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch",
+		"eve@0.47.2": "patches/eve@0.47.2.patch"
 	},
 	"atmn": {
 		"config": "packages/billing/config/autumn.config.ts"
