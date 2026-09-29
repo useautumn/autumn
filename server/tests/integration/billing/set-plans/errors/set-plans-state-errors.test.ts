@@ -1,4 +1,4 @@
-// set_plans rejects, before any write, requests the customer's billing state can't support.
+/** set_plans rejects, before any write, requests the customer's billing state can't support. */
 
 import { expect, test } from "bun:test";
 import { ErrCode, ms } from "@autumn/shared";
