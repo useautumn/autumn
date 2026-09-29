@@ -34,6 +34,7 @@ export * from "./api/entities/crud/listEntitiesParamsV2_3";
 export * from "./api/keys/keysModels";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
+export * from "./api/migrations/list/migrationListSummary";
 export * from "./api/migrations/operations/index";
 export * from "./api/migrations/webhooks/migrationWebhookEvents";
 // API MODELS
