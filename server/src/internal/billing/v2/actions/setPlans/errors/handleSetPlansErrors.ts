@@ -23,6 +23,7 @@ import { resolveUnscheduledProductContexts } from "../utils/unscheduledProductCo
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleFreePhaseStripeConnectionErrors } from "./handleFreePhaseStripeConnectionErrors";
 import { handleSetPlansBillingCycleAnchorErrors } from "./handleSetPlansBillingCycleAnchorErrors";
+import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
 import { handleStripeSchedulePhaseLimitErrors } from "./handleStripeSchedulePhaseLimitErrors";
@@ -72,6 +73,7 @@ export const handleSetPlansErrors = async ({
 		billingContext,
 		endsAt: params.ends_at,
 	});
+	handleSetPlansEndDateErrors({ billingContext, endsAt: params.ends_at });
 	handleSetPlansLicenseQuantityErrors({ billingContext });
 
 	if (isRevertTrialContext({ trialContext: billingContext.trialContext })) {

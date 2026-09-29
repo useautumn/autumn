@@ -72,7 +72,9 @@ const insertImmediateCustomerProducts = ({
 			result: { insertCustomerProduct: newCustomerProduct },
 			// An unscheduled plan outlives the schedule, so it never takes the phase
 			// boundary as its end date.
-			endedAt: productContext.unscheduled ? null : (nextPhaseStartsAt ?? null),
+			endedAt: productContext.unscheduled
+				? (billingContext.endsAt ?? null)
+				: (nextPhaseStartsAt ?? billingContext.endsAt ?? null),
 		});
 		if (billingContext.skipBillingChanges) {
 			newCustomerProduct.scheduled_ids =
