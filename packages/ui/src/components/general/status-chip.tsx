@@ -1,5 +1,5 @@
 import { cn } from "@autumn/ui/lib/utils";
-import type { ComponentProps } from "react";
+import { type ComponentProps, useId } from "react";
 
 /** Light glyphs on the fill in light mode; dark glyphs in dark mode and on light fills. */
 const STATUS_TONES = {
@@ -64,6 +64,45 @@ const GLYPH_DASHES: Partial<Record<keyof typeof STATUS_GLYPHS, string>> = {
 export type StatusTone = keyof typeof STATUS_TONES;
 export type StatusGlyph = keyof typeof STATUS_GLYPHS | keyof typeof ICON_GLYPHS;
 
+/** The glyph is masked out of the tile, so the chip background shows through it. */
+function IconGlyphTile({
+	tone,
+	glyph,
+	className,
+}: {
+	tone: StatusTone;
+	glyph: keyof typeof ICON_GLYPHS;
+	className?: string;
+}) {
+	const maskId = `glyph-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
+
+	return (
+		<svg
+			aria-hidden="true"
+			width="16"
+			height="16"
+			viewBox="0 0 16 16"
+			className={cn("shrink-0", STATUS_TONES[tone], className)}
+		>
+			<mask id={maskId}>
+				<rect width="16" height="16" fill="white" />
+				<path
+					d={ICON_GLYPHS[glyph]}
+					fill="black"
+					transform={`translate(2.5 2.5) scale(${ICON_GLYPH_SCALE})`}
+				/>
+			</mask>
+			<rect
+				width="16"
+				height="16"
+				rx="4.5"
+				fill="currentColor"
+				mask={`url(#${maskId})`}
+			/>
+		</svg>
+	);
+}
+
 export function StatusChipIcon({
 	tone,
 	glyph,
@@ -74,22 +113,7 @@ export function StatusChipIcon({
 	className?: string;
 }) {
 	if (isIconGlyph(glyph)) {
-		return (
-			<svg
-				aria-hidden="true"
-				width="16"
-				height="16"
-				viewBox="0 0 16 16"
-				className={cn("shrink-0", STATUS_TONES[tone], className)}
-			>
-				<rect width="16" height="16" rx="4.5" fill="currentColor" />
-				<path
-					d={ICON_GLYPHS[glyph]}
-					fill="var(--glyph)"
-					transform={`translate(2.5 2.5) scale(${ICON_GLYPH_SCALE})`}
-				/>
-			</svg>
-		);
+		return <IconGlyphTile tone={tone} glyph={glyph} className={className} />;
 	}
 
 	return (
