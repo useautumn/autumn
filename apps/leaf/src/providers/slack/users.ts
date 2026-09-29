@@ -1,27 +1,8 @@
-import { type ChatInstallation, ms } from "@autumn/shared";
-import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
-import { SLACK_EMAIL_SCOPE } from "@autumn/shared/utils/auth/slackScopes";
+import { ms } from "@autumn/shared";
 import { LRUCache } from "lru-cache";
 import { z } from "zod";
 
 const SLACK_USERS_INFO_URL = "https://slack.com/api/users.info";
-
-export const installationHasEmailScope = ({
-	installation,
-}: {
-	installation: Pick<ChatInstallation, "scopes">;
-}): boolean => (installation.scopes ?? []).includes(SLACK_EMAIL_SCOPE);
-
-export const resolveInstallationAuthMode = ({
-	installation,
-}: {
-	installation: Pick<ChatInstallation, "auth_mode" | "scopes">;
-}): ChatAuthMode => {
-	if (installation.auth_mode) return installation.auth_mode;
-	return installationHasEmailScope({ installation })
-		? ChatAuthMode.PerUser
-		: ChatAuthMode.Unrestricted;
-};
 
 const slackUsersInfoSchema = z.object({
 	ok: z.boolean(),

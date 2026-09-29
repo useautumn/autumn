@@ -177,6 +177,7 @@
         "autoevals": "^0.0.132",
         "better-all": "0.0.7",
         "braintrust": "^3.14.0",
+        "callscript": "0.1.6",
         "chat": "^4.31.0",
         "date-fns": "^4.1.0",
         "drizzle-orm": "catalog:",
@@ -4022,6 +4023,8 @@
     "call-bind-apply-helpers": ["call-bind-apply-helpers@1.0.2", "", { "dependencies": { "es-errors": "^1.3.0", "function-bind": "^1.1.2" } }, "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ=="],
 
     "call-bound": ["call-bound@1.0.4", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.2", "get-intrinsic": "^1.3.0" } }, "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg=="],
+
+    "callscript": ["callscript@0.1.6", "", { "dependencies": { "acorn": "^8.15.0", "zod": "^4.4.3" }, "peerDependencies": { "ai": ">=5" }, "optionalPeers": ["ai"] }, "sha512-61DOv+z2TlqX/DTUKfkg1N/igXnPIWtQmDf4afm8S20ZiYF//keGZAcv0YtzdkAzPdRaVODhrlEp7KbvwcBZsA=="],
 
     "callsites": ["callsites@4.2.0", "", {}, "sha512-kfzR4zzQtAE9PC7CzZsjl3aBNbXWuXiSeOCdLcPpBfGW8YuCqQHcRPFDbr/BPVmd3EEPVpuFzLyuT/cUhPr4OQ=="],
 

@@ -10,6 +10,7 @@ import { invoices } from "./invoices.js";
 import { logs } from "./logs.js";
 import { plans } from "./plans.js";
 import { rewards } from "./rewards.js";
+import { stripe } from "./stripe.js";
 import type { ToolDomain } from "./utils/types.js";
 
 /**
@@ -30,6 +31,7 @@ export const domainModules = {
 	balances,
 	invoices,
 	logs,
+	stripe,
 } as const;
 
 export const toolDomains: ToolDomain[] = Object.values(domainModules).map(

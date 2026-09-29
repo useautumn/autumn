@@ -60,6 +60,8 @@ export const toolAllowlists = {
 		"queryRequestLogs",
 		"reissueInvoice",
 		"searchRequestLogs",
+		"searchStripeEndpoints",
+		"stripeRead",
 		"updateAgentRules",
 		"updateCustomer",
 		"updateSubscription",

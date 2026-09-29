@@ -310,10 +310,13 @@ export const replaceInstallationOAuthCredentials = async ({
 	}
 	const effectiveAuthMode = authMode ?? installation.auth_mode ?? undefined;
 
-	const scopes =
-		effectiveAuthMode === ChatAuthMode.Unrestricted
-			? [...UNRESTRICTED_TOKEN_SCOPES]
-			: resolveAgentScopes(agentScopes);
+	// A resolved sender's role scopes always win over the install-wide grant.
+	const unrestricted =
+		effectiveAuthMode === ChatAuthMode.Unrestricted && !agentScopes?.length;
+	const credentialAuthMode = unrestricted ? effectiveAuthMode : undefined;
+	const scopes = unrestricted
+		? [...UNRESTRICTED_TOKEN_SCOPES]
+		: resolveAgentScopes(agentScopes);
 	const config = getProviderOAuthConfig({ installation });
 
 	await ensureMcpOAuthClient({ tx, config });
@@ -321,7 +324,7 @@ export const replaceInstallationOAuthCredentials = async ({
 		tx,
 		installation,
 		config,
-		authMode: effectiveAuthMode,
+		authMode: credentialAuthMode,
 		env: AppEnv.Sandbox,
 		orgId,
 		userId,
@@ -331,7 +334,7 @@ export const replaceInstallationOAuthCredentials = async ({
 		tx,
 		installation,
 		config,
-		authMode: effectiveAuthMode,
+		authMode: credentialAuthMode,
 		env: AppEnv.Live,
 		orgId,
 		userId,

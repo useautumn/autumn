@@ -6,6 +6,7 @@ import {
 	type LeafPrincipalAttributes,
 	mintCachedAutumnToken,
 } from "./autumnAuth.js";
+import { autumnCodeModeTools, type CodeModeTool } from "./autumnCodeMode.js";
 import { leafMcpBaseUrl, serverToolMetadata } from "./autumnToolMetadata.js";
 import { previewLedger } from "./previewLedger.js";
 import { type LeafAgentConnection, toolAllowlists } from "./toolAllowlists.js";
@@ -55,49 +56,61 @@ export const autumnDirectTools = ({
 					token: accessToken,
 				});
 				const entries: Record<string, ReturnType<typeof defineTool>> = {};
+				const codeModeTools: Record<string, CodeModeTool> = {};
 				for (const tool of metadata) {
 					if (!allowlist.has(tool.name)) continue;
-					const qualified = `autumn__${tool.name}`;
 					const toolName = tool.name;
 					const requiresApproval = approvalToolNames.has(toolName);
-					const inputSchema = slimToolSchema(tool.inputSchema);
-					entries[qualified] = defineTool({
+					const slimSchema = slimToolSchema(tool.inputSchema);
+					const inputSchema = requiresApproval
+						? withApprovalDescriptionSchema(slimSchema)
+						: slimSchema;
+					const execute: CodeModeTool["execute"] = async (input, toolCtx) => {
+						const args = input as Record<string, unknown>;
+						if (requiresApproval) {
+							// A write the model never previewed verbatim is refused
+							// outright: the thrown error reaches the model as a tool
+							// error, and leaf never sees a completed write to card.
+							const rejection = previewLedger.rejectionFor({
+								args,
+								toolName,
+							});
+							if (rejection) throw new Error(rejection);
+							return RECORDED_FOR_APPROVAL;
+						}
+						const minted = await mintCachedAutumnToken(
+							toolCtx.session.auth.current?.attributes,
+						);
+						const result = await callAutumnMcpTool({
+							args:
+								toolName === "getCustomer" ? withCustomerExpand(args) : args,
+							baseUrl: leafMcpBaseUrl(),
+							env: minted.appEnv,
+							token: minted.accessToken,
+							toolName,
+						});
+						previewLedger.recordPreview({ args, result, toolName });
+						return result;
+					};
+					entries[`autumn__${toolName}`] = defineTool({
 						// Gated writes record and end the turn; leaf applies on approval.
 						approval: () => "not-applicable",
 						description: tool.description,
-						execute: async (input, toolCtx) => {
-							const args = input as Record<string, unknown>;
-							if (requiresApproval) {
-								// A write the model never previewed verbatim is refused
-								// outright: the thrown error reaches the model as a tool
-								// error, and leaf never sees a completed write to card.
-								const rejection = previewLedger.rejectionFor({
-									args,
-									toolName,
-								});
-								if (rejection) throw new Error(rejection);
-								return RECORDED_FOR_APPROVAL;
-							}
-							const minted = await mintCachedAutumnToken(
-								toolCtx.session.auth.current?.attributes,
-							);
-							const result = await callAutumnMcpTool({
-								args:
-									toolName === "getCustomer" ? withCustomerExpand(args) : args,
-								baseUrl: leafMcpBaseUrl(),
-								env: minted.appEnv,
-								token: minted.accessToken,
-								toolName,
-							});
-							previewLedger.recordPreview({ args, result, toolName });
-							return result;
-						},
-						inputSchema: requiresApproval
-							? withApprovalDescriptionSchema(inputSchema)
-							: inputSchema,
+						execute,
+						inputSchema,
 					});
+					// A write inside a script would never surface as an approval card.
+					if (requiresApproval) continue;
+					codeModeTools[toolName] = {
+						description: tool.description,
+						execute,
+						inputSchema,
+					};
 				}
-				return entries;
+				return {
+					...entries,
+					...autumnCodeModeTools({ tools: codeModeTools }),
+				};
 			},
 		},
 	});
