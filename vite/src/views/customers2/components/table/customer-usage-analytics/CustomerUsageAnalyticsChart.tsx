@@ -136,7 +136,6 @@ export function CustomerUsageAnalyticsChart({
 							stroke="var(--chart-grid-stroke)"
 							strokeWidth={1}
 							strokeDasharray="2 2"
-							horizontalPoints={[5, 50, 100, 150, 200]}
 						/>
 					)}
 					<XAxis
@@ -151,8 +150,8 @@ export function CustomerUsageAnalyticsChart({
 						tick={{ fontSize: 11, fill: "#666" }}
 					/>
 					<YAxis
-						// domain={[0, Math.round(maxValue * 1.2)]}
 						dataKey={eventNames[0] ?? "default"}
+						domain={[0, "auto"]}
 						ticks={yAxisTicks}
 						tickCount={5}
 						tickLine={false}
@@ -169,7 +168,7 @@ export function CustomerUsageAnalyticsChart({
 						tickFormatter={formatYAxisTick}
 					/>
 					<ChartTooltip content={<ChartTooltipContent />} />
-					{eventNames.map((eventName: string, index: number) => (
+					{eventNames.map((eventName: string) => (
 						<Bar
 							key={eventName}
 							dataKey={eventName}
