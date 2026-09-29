@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import {
 	Button,
-	ButtonGroup,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -520,10 +519,10 @@ function ReissueInvoiceForm({
 					>
 						Back
 					</Button>
-					<ButtonGroup className="w-full">
+					<div className="flex w-full items-center">
 						<Button
 							variant="primary"
-							className="flex-1"
+							className="flex-1 rounded-r-none"
 							onClick={() => reissue.mutate("send")}
 							isLoading={reissue.isPending}
 							disabled={!previewState.ready || reissue.isPending}
@@ -537,6 +536,7 @@ function ReissueInvoiceForm({
 							<DropdownMenuTrigger asChild>
 								<Button
 									variant="primary"
+									className="rounded-l-none border-l-0 px-1.5"
 									aria-label="More reissue options"
 									disabled={!previewState.ready || reissue.isPending}
 								>
@@ -554,7 +554,7 @@ function ReissueInvoiceForm({
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
-					</ButtonGroup>
+					</div>
 				</SheetFooter>
 			</div>
 		</LayoutGroup>
