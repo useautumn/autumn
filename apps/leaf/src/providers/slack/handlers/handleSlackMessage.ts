@@ -9,10 +9,11 @@ import { findSlackInstallationForWorkspace } from "../installations.js";
 import { controlMessageFrom } from "../routing/controlMessage.js";
 import { shouldSkipUntaggedReply } from "../routing/replyMode.js";
 import {
-	getEarlierThreadAttachments,
 	getEarlierThreadMessages,
 	getRecentMessages,
+	getUndeliveredThreadAttachments,
 	loadMissedMessages,
+	recordDeliveredFiles,
 	recordSkippedMessage,
 	type ThreadAttachment,
 } from "../threadContext.js";
@@ -125,6 +126,7 @@ const threadHistoryLoader = ({
 const dispatchMessage = async ({
 	message,
 	dispatch,
+	getState,
 	text = message.text,
 	missedMessages,
 	onMissedMessagesDelivered,
@@ -136,6 +138,7 @@ const dispatchMessage = async ({
 }: {
 	message: Message;
 	dispatch: typeof dispatchSlackAgentMessage;
+	getState: () => StateAdapter;
 	missedMessages?: () => Promise<AgentMissedMessages | undefined>;
 	onMissedMessagesDelivered?: () => Promise<void>;
 	recentMessages:
@@ -159,6 +162,8 @@ const dispatchMessage = async ({
 		},
 		channelId: thread.channelId,
 		missedMessages,
+		onAttachmentsDelivered: (fileIds) =>
+			recordDeliveredFiles(thread, message, fileIds, getState()),
 		onMissedMessagesDelivered,
 		providerUserId: message.author.userId,
 		raw: message.raw,
@@ -190,12 +195,15 @@ export const createSlackMessageHandlers = ({
 	shouldSkipReply = shouldSkipUntaggedReply,
 }: Partial<HandlerDependencies> = {}) => {
 	const admit = (message: Message) => admitMessage({ findTrustedBot, message });
+	const undeliveredAttachments = (thread: Thread, message: Message) =>
+		getUndeliveredThreadAttachments(thread, message, getState());
 
 	const handleSlackMessage = async (thread: Thread, message: Message) => {
 		const admission = await admit(message);
 		if (admission.skip) return;
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
 			recentMessages: () => getMessages(thread, message),
 			showRunPlan: false,
@@ -210,9 +218,10 @@ export const createSlackMessageHandlers = ({
 		const history = threadHistoryLoader({ getMessages, message, thread });
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
 			missedMessages: history.afterRefresh(getEarlierThreadMessages),
-			threadAttachments: history.afterRefresh(getEarlierThreadAttachments),
+			threadAttachments: history.afterRefresh(undeliveredAttachments),
 			recentMessages: history.recentMessages,
 			showRunPlan: true,
 			thread,
@@ -250,11 +259,10 @@ export const createSlackMessageHandlers = ({
 			loadedMissed ??= loadMissedMessages(thread, message, getState());
 			return loadedMissed;
 		});
-		const earlierAttachments = history.afterRefresh(
-			getEarlierThreadAttachments,
-		);
+		const earlierAttachments = history.afterRefresh(undeliveredAttachments);
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
 			missedMessages: async () => (await loadMissed())?.missed,
 			onMissedMessagesDelivered: async () => {
@@ -321,6 +329,7 @@ export const createSlackMessageHandlers = ({
 		if (thread.isDM) {
 			await dispatchMessage({
 				dispatch,
+				getState,
 				message,
 				recentMessages: () => getMessages(thread, message),
 				showRunPlan: false,
@@ -335,9 +344,10 @@ export const createSlackMessageHandlers = ({
 		const history = threadHistoryLoader({ getMessages, message, thread });
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
 			missedMessages: history.afterRefresh(getEarlierThreadMessages),
-			threadAttachments: history.afterRefresh(getEarlierThreadAttachments),
+			threadAttachments: history.afterRefresh(undeliveredAttachments),
 			recentMessages: history.recentMessages,
 			showRunPlan: true,
 			text,

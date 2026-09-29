@@ -209,6 +209,7 @@ export const STAFF_OVERRIDABLE_DENIALS = new Set<SlackAuthDenyReason>([
  * their turn runs as the member who installed the app. Returns null when the
  * caller is not staff. */
 export const resolveSlackStaffAuth = async ({
+	authorize = authorizeAutumnUser,
 	botToken,
 	fetchHomeTeamId = fetchSlackUserHomeTeamId,
 	installation,
@@ -218,6 +219,7 @@ export const resolveSlackStaffAuth = async ({
 	staffTeamId = env.SLACK_ADMIN_WORKSPACE_ID,
 	staffUserIds = parseSlackStaffUserIds(env.SLACK_STAFF_USER_IDS),
 }: {
+	authorize?: typeof authorizeAutumnUser;
 	botToken: string;
 	fetchHomeTeamId?: typeof fetchSlackUserHomeTeamId;
 	installation: ChatInstallation;
@@ -248,7 +250,7 @@ export const resolveSlackStaffAuth = async ({
 		return null;
 	}
 
-	const auth = await authorizeAutumnUser({
+	const auth = await authorize({
 		installation,
 		logger,
 		orgId,

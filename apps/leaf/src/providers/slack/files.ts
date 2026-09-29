@@ -1,4 +1,5 @@
 import type { Attachment } from "chat";
+import { threadAttachmentFileId } from "./threadContext.js";
 
 const SLACK_FILES_INFO_URL = "https://slack.com/api/files.info";
 
@@ -78,7 +79,13 @@ const fetchSlackFileInfo = async ({
 	if (!response.ok)
 		throw new Error(`Slack files.info failed: ${response.status}`);
 	const data = await response.json();
-	if (!isRecord(data) || data.ok !== true) return null;
+	// A rejected lookup (e.g. no access to a shared-channel file) throws, so
+	// callers log why the file could not be read.
+	if (!isRecord(data) || data.ok !== true) {
+		const reason =
+			isRecord(data) && typeof data.error === "string" ? data.error : "unknown";
+		throw new Error(`Slack files.info failed: ${reason}`);
+	}
 	return parseSlackFile(data.file);
 };
 
@@ -97,7 +104,7 @@ export const hydrateSlackAttachment = async ({
 	raw: unknown;
 }): Promise<Attachment> => {
 	if (attachment.mimeType && attachment.name) return attachment;
-	const fileId = getSlackFilesFromRaw({ raw })[fileIndex]?.id;
+	const fileId = threadAttachmentFileId({ fileIndex, raw });
 	if (!fileId) return attachment;
 	const file = await fetchSlackFileInfo({ botToken, fileId });
 	if (!file) return attachment;

@@ -135,7 +135,8 @@ describe("resolveSlackStaffAuth", () => {
 			...staffParams,
 			fetchHomeTeamId: async () => "T_AUTUMN",
 			slackUserId: "U_STAFF",
-			staffTeamId: undefined,
+			// Empty, not undefined: undefined falls back to the ambient env.
+			staffTeamId: "",
 		});
 
 		expect(result).toBeNull();
@@ -160,5 +161,31 @@ describe("resolveSlackStaffAuth", () => {
 		});
 
 		expect(result).toBeNull();
+	});
+
+	test("staff runs as the installation's installer", async () => {
+		const authorized: unknown[] = [];
+		const result = await resolveSlackStaffAuth({
+			...staffParams,
+			authorize: async (input) => {
+				authorized.push(input.userId);
+				return {
+					ok: true,
+					role: "admin",
+					scopes: ["customers:read"],
+					userId: input.userId,
+				};
+			},
+			fetchHomeTeamId: async () => "T_AUTUMN",
+			slackUserId: "U_STAFF",
+		});
+
+		expect(authorized).toEqual(["user_installer"]);
+		expect(result).toEqual({
+			ok: true,
+			role: "admin",
+			scopes: ["customers:read"],
+			userId: "user_installer",
+		});
 	});
 });

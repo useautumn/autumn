@@ -4,7 +4,9 @@ import {
 	getEarlierThreadAttachments,
 	getEarlierThreadMessages,
 	getRecentMessages,
+	getUndeliveredThreadAttachments,
 	loadMissedMessages,
+	recordDeliveredFiles,
 	recordSkippedMessage,
 } from "../../../../src/providers/slack/threadContext.js";
 
@@ -329,5 +331,60 @@ describe("getEarlierThreadMessages", () => {
 				current,
 			),
 		).toBeUndefined();
+	});
+});
+
+describe("files a turn has already read", () => {
+	test("a later tag skips files an earlier turn read, so an unread one gets a slot", async () => {
+		const state = memoryState();
+		const unread = file("contract.pdf");
+		const read = Array.from({ length: 4 }, (_, index) =>
+			file(`read-${index}.pdf`),
+		);
+		const current = message({ id: "9", text: "@Autumn try again" });
+		const thread = threadWith([
+			message({
+				attachments: [unread],
+				id: "1",
+				raw: { files: [{ id: "F_UNREAD" }], team_id: "T1" },
+				text: "contract",
+			}),
+			...read.map((attachment, index) =>
+				message({
+					attachments: [attachment],
+					id: `${index + 2}`,
+					raw: { files: [{ id: `F_READ_${index}` }], team_id: "T1" },
+					text: "",
+				}),
+			),
+			current,
+		]);
+
+		await recordDeliveredFiles(
+			thread,
+			current,
+			read.map((_, index) => `F_READ_${index}`),
+			state,
+		);
+
+		expect(
+			(await getUndeliveredThreadAttachments(thread, current, state)).map(
+				({ attachment }) => attachment,
+			),
+		).toEqual([unread]);
+	});
+
+	test("files without a Slack id are always offered", async () => {
+		const state = memoryState();
+		const attachment = file("pasted.pdf");
+		const current = message({ id: "2", text: "@Autumn use this" });
+		const thread = threadWith([
+			message({ attachments: [attachment], id: "1", text: "" }),
+			current,
+		]);
+
+		expect(
+			await getUndeliveredThreadAttachments(thread, current, state),
+		).toEqual([expect.objectContaining({ attachment })]);
 	});
 });

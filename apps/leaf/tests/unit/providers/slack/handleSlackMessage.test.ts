@@ -241,6 +241,36 @@ describe("handleSubscribedSlackMessage", () => {
 		]);
 	});
 
+	test("a re-tag leaves out files an earlier turn already read", async () => {
+		mentionsAgentResult = true;
+		const contract = {
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} as const;
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [contract],
+			raw: { files: [{ id: "F_CONTRACT" }], team_id: "T1" },
+		} as Message;
+		const current = createMessage({ id: "M3", text: "<@U_BOT> again" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSubscribedSlackMessage(thread, current);
+		const first = dispatchSlackAgentMessage.mock.calls.at(-1)?.[0] as {
+			onAttachmentsDelivered: (fileIds: string[]) => Promise<void>;
+			threadAttachments: () => Promise<unknown[]>;
+		};
+		expect(await first.threadAttachments()).toHaveLength(1);
+		await first.onAttachmentsDelivered(["F_CONTRACT"]);
+
+		await handleSubscribedSlackMessage(thread, current);
+		const second = dispatchSlackAgentMessage.mock.calls.at(-1)?.[0] as {
+			threadAttachments: () => Promise<unknown[]>;
+		};
+		expect(await second.threadAttachments()).toEqual([]);
+	});
+
 	test("an untagged reply in a followed thread does not resend earlier files", async () => {
 		const parent = {
 			...createMessage({ id: "P", isBot: true, text: "see contract" }),

@@ -165,4 +165,21 @@ describe("Slack file helpers", () => {
 			}),
 		).toBe(attachment);
 	});
+
+	test("a rejected files.info lookup throws so the caller can log it", async () => {
+		globalThis.fetch = (async () =>
+			Response.json({
+				ok: false,
+				error: "file_not_found",
+			})) as unknown as typeof fetch;
+
+		await expect(
+			hydrateSlackAttachment({
+				attachment: { type: "file" } satisfies Attachment,
+				botToken: "xoxb-test",
+				fileIndex: 0,
+				raw: { files: [{ id: "F1" }] },
+			}),
+		).rejects.toThrow("file_not_found");
+	});
 });
