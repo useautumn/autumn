@@ -96,7 +96,6 @@ export const batchTransition = async ({
 		});
 		await resolveLicensePooledBalanceIds({
 			ctx,
-			batchTransitionContext,
 			operations: computedBatchTransition.operations.entitlementPrices,
 		});
 		basePriceResult = await executeBasePriceOperation({

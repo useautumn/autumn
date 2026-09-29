@@ -488,12 +488,12 @@ test.concurrent(
 			idOrInternalId: customerId,
 			inStatuses: ACTIVE_STATUSES,
 		});
-		expect(
-			fullCustomer.customer_products.some(
-				(customerProduct) =>
-					customerProduct.product.internal_id === parentV1.internal_id,
-			),
-		).toBe(false);
+		// Version-bump migrations skip is_custom customer products.
+		const customizedParent = fullCustomer.customer_products.find(
+			(customerProduct) =>
+				customerProduct.product.internal_id === parentV1.internal_id,
+		);
+		expect(customizedParent?.is_custom).toBe(true);
 
 		const migratedCustomer = await autumnV1.customers.get<{
 			products: { id: string; version?: number }[];

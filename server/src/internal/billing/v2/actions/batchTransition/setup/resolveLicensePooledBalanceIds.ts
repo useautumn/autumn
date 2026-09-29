@@ -1,16 +1,10 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeLicensePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeLicensePooledBalancePlan";
-import { executePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/execute/executePooledBalancePlan";
-import {
-	findLicensePooledBalanceId,
-	type LicensePooledBalanceMatch,
-} from "../execute/sql/findLicensePooledBalanceId";
+import { findLicensePooledBalanceId } from "../execute/sql/findLicensePooledBalanceId";
 import type {
 	AddEntitlementPriceOperation,
 	EntitlementPriceOperation,
 	PooledAddSpec,
 } from "../types/entitlementPriceOperationTypes";
-import type { BatchTransitionContext } from "../types/types";
 
 type PooledAddOperation = AddEntitlementPriceOperation & {
 	pooledAdd: PooledAddSpec;
@@ -21,84 +15,36 @@ const isPooledAddOperation = (
 ): operation is PooledAddOperation =>
 	operation.type === "add" && operation.pooledAdd !== undefined;
 
-const findMatches = ({
-	ctx,
-	operations,
-	now,
-}: {
-	ctx: AutumnContext;
-	operations: PooledAddOperation[];
-	now: number;
-}): Promise<(LicensePooledBalanceMatch | undefined)[]> =>
-	Promise.all(
-		operations.map((operation) =>
-			findLicensePooledBalanceId({
-				db: ctx.db,
-				identity: operation.pooledAdd.identity,
-				now,
-			}),
-		),
-	);
-
-/** Stamps each pooled add with its license pool. Billing creates pools; if one
- * is missing, re-run billing's own license pool step rather than guess. */
+/** Stamps each pooled add with its license pool. Billing creates pools before
+ * seats move, so the batch only looks them up — it never writes one. */
 export const resolveLicensePooledBalanceIds = async ({
 	ctx,
-	batchTransitionContext,
 	operations,
 }: {
 	ctx: AutumnContext;
-	batchTransitionContext: BatchTransitionContext;
 	operations: EntitlementPriceOperation[];
 }) => {
 	const pooledAddOperations = operations.filter(isPooledAddOperation);
 	if (pooledAddOperations.length === 0) return;
 
 	const now = Date.now();
-	let matches = await findMatches({
-		ctx,
-		operations: pooledAddOperations,
-		now,
-	});
-
-	if (matches.some((match) => !match?.isExactMatch)) {
-		const pooledBalancePlan = computeLicensePooledBalancePlan({
-			ctx,
-			fullCustomer: batchTransitionContext.fullCustomer,
-			parentCustomerProduct: batchTransitionContext.parentCustomerProduct,
+	for (const operation of pooledAddOperations) {
+		const { identity } = operation.pooledAdd;
+		const match = await findLicensePooledBalanceId({
+			db: ctx.db,
+			identity,
 			now,
 		});
-		ctx.logger.warn(
-			"[batchTransition] license pool missing before seat transition; re-ran billing's license pool step",
-			{
-				data: {
-					customerLicenseLinkIds: pooledAddOperations.map(
-						(operation) => operation.pooledAdd.identity.customerLicenseLinkId,
-					),
-					hasPooledBalancePlan: pooledBalancePlan !== undefined,
-				},
-			},
-		);
-		await executePooledBalancePlan({ ctx, pooledBalancePlan });
-		matches = await findMatches({
-			ctx,
-			operations: pooledAddOperations,
-			now,
-		});
-	}
 
-	pooledAddOperations.forEach((operation, index) => {
-		const match = matches[index];
-		// Billing's step just ran, so no exact pool means the license no longer
-		// grants this item (a newer plan change won): skip the stale add.
+		// No exact pool: the license no longer grants this item (a newer plan
+		// change won), so skip the stale add rather than attach to the wrong pool.
 		if (!match?.isExactMatch) {
 			ctx.logger.warn(
 				"[batchTransition] skipping stale pooled seat addition — no exact license pool",
 				{
 					data: {
-						customerLicenseLinkId:
-							operation.pooledAdd.identity.customerLicenseLinkId,
-						internalFeatureId: operation.pooledAdd.identity.internalFeatureId,
+						customerLicenseLinkId: identity.customerLicenseLinkId,
+						internalFeatureId: identity.internalFeatureId,
 						nearestPooledBalanceId: match?.pooledBalanceId ?? null,
 					},
 				},
@@ -107,5 +53,5 @@ export const resolveLicensePooledBalanceIds = async ({
 		operation.pooledAdd.pooledBalanceId = match?.isExactMatch
 			? match.pooledBalanceId
 			: undefined;
-	});
+	}
 };

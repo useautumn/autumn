@@ -474,24 +474,20 @@ test.concurrent(
 				entityCount: 2,
 			});
 
-		const customerTrack = (await autumnV2_2.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 1,
-			overage_behavior: "reject",
-		})) as TrackResponseV3;
-		expect(customerTrack.balance).toBeNull();
-		expect(customerTrack.deductions).toEqual([]);
-
-		const siblingTrack = (await autumnV2_2.track({
-			customer_id: customerId,
-			entity_id: entities[1].id,
-			feature_id: TestFeature.Messages,
-			value: 1,
-			overage_behavior: "reject",
-		})) as TrackResponseV3;
-		expect(siblingTrack.balance).toBeNull();
-		expect(siblingTrack.deductions).toEqual([]);
+		// Nothing funds messages outside the assigned entity: reject mode refuses.
+		for (const entityId of [undefined, entities[1].id]) {
+			await expectAutumnError({
+				errCode: ErrCode.InsufficientBalance,
+				func: () =>
+					autumnV2_2.track({
+						customer_id: customerId,
+						entity_id: entityId,
+						feature_id: TestFeature.Messages,
+						value: 1,
+						overage_behavior: "reject",
+					}),
+			});
+		}
 
 		const assignedEntity = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,

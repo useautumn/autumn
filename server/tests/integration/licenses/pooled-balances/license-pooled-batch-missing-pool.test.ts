@@ -1,7 +1,7 @@
 /**
- * Contract: the seat batch never creates a license pool itself. If the pool is
- * missing when seats transition, it re-runs billing's license pool step and
- * attaches seats to that pool — one live, funded pool, no 0-granted duplicate.
+ * Contract: the seat batch never writes a license pool. If the pool a seat
+ * addition needs is missing (a stale transition), the addition is skipped —
+ * no pool is created and no seat rows point at a 0-granted duplicate.
  */
 
 import { expect, test } from "bun:test";
@@ -22,7 +22,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
-	expectLicensePooledGrant,
 	LICENSE_POOLED_ADDED_GRANT,
 	LICENSE_POOLED_LOW_GRANT,
 	pooledMonthlyMessages,
@@ -68,9 +67,9 @@ const withoutFeature = ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("license pooled: seat batch re-runs billing's pool step when the pool is missing")}`,
+	`${chalk.yellowBright("license pooled: seat batch skips a pooled addition whose pool is missing")}`,
 	async () => {
-		const prefix = "lic-pool-self-heal";
+		const prefix = "lic-pool-missing";
 		const pro = products.pro({
 			id: `${prefix}-pro`,
 			items: [items.dashboard()],
@@ -92,7 +91,7 @@ test.concurrent(
 			],
 			group: `${prefix}-seats`,
 		});
-		const customerId = "lic-pool-self-heal";
+		const customerId = "lic-pool-missing-pool";
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
@@ -167,7 +166,7 @@ test.concurrent(
 		await deleteCachedFullCustomer({
 			ctx,
 			customerId,
-			source: "license-pooled-batch-self-heal-test",
+			source: "license-pooled-batch-missing-pool-test",
 		});
 
 		// ── Replay the seat batch directly: words is an add with no pool ──
@@ -205,15 +204,30 @@ test.concurrent(
 			},
 		});
 
-		// One live words pool, funded by billing's rule, all seats contributing.
-		await expectLicensePooledGrant({
-			autumn: autumnV2_3,
-			ctx,
-			customerId,
-			customerLicenseLinkId,
-			grantPerSeat: LICENSE_POOLED_ADDED_GRANT,
-			seatCount: SEAT_COUNT,
-			featureId: TestFeature.Words,
-		});
+		// Skipped: no live words pool on the link, and no seat got a words row.
+		const wordsFeature = ctx.features.find(
+			(feature) => feature.id === TestFeature.Words,
+		);
+		const livePools = await ctx.db
+			.select({ id: pooledBalances.id })
+			.from(pooledBalances)
+			.where(
+				and(
+					eq(pooledBalances.customer_license_link_id, customerLicenseLinkId),
+					eq(
+						pooledBalances.internal_feature_id,
+						wordsFeature?.internal_id ?? "",
+					),
+					isNull(pooledBalances.expires_at),
+				),
+			);
+		expect(livePools).toHaveLength(0);
+		const seatWordsRows = await ctx.db.execute(sql`
+			SELECT ce.id FROM customer_entitlements ce
+			JOIN customer_products seat ON seat.id = ce.customer_product_id
+			WHERE seat.customer_license_link_id = ${customerLicenseLinkId}
+				AND ce.internal_feature_id = ${wordsFeature?.internal_id ?? ""}
+		`);
+		expect(seatWordsRows).toHaveLength(0);
 	},
 );
