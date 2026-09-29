@@ -1292,6 +1292,117 @@ test(
 	ownershipUsesNamedFunctions,
 );
 
+test("command-topic offsets are read on their own admin, never on the events admin", async () => {
+	const fixture = createStoreFixture();
+	const consumer = createFakeGroupConsumer();
+	const reads: string[] = [];
+	function offsetsAdminOf({ name }: { name: string }) {
+		return {
+			connect: async () => {
+				reads.push(`${name}:connect`);
+			},
+			disconnect: async () => {
+				reads.push(`${name}:disconnect`);
+			},
+			fetchTopicOffsets: async (readTopic: string) => {
+				reads.push(`${name}:${readTopic}`);
+				return [{ partition: 0, offset: "10", low: "0", high: "10" }];
+			},
+		};
+	}
+	const group = createWorkerPartitions({
+		ctx: {
+			consumer,
+			partitionOffsets: offsetsAdminOf({ name: "events-admin" }),
+			commandTopicOffsets: offsetsAdminOf({ name: "commands-admin" }),
+			stateStore: { ...fixture.store, readCommandNextOffset: () => 7n },
+			idempotencyKeys: createFakeIdempotencyKeys().keys,
+			createRuntime: () =>
+				createTestRuntimeResources({
+					runtime: {
+						start: async () => {},
+						stop: async () => {},
+						getHealth: () =>
+							ownedPartitionHealthOf({
+								topic,
+								partition: 0,
+								status: "ready",
+								localNextOffset: 10n,
+								consumedNextOffset: 10n,
+								highWatermark: 10n,
+								failureReason: null,
+							}),
+					},
+				}),
+			onError: ({ cause }) => {
+				throw cause;
+			},
+			onUnhealthyPartition: () => {},
+		},
+		config: {
+			topic,
+			commandTopic: "commands",
+			partitionsConsumedConcurrently: 1,
+			healthRefreshIntervalMs: 60_000,
+			handoffReadyTimeoutMs: 1,
+			handoffClaimTimeoutMs: 1,
+		},
+	});
+	try {
+		await group.start();
+		consumer.emitGroupJoin([0]);
+		await waitFor(() => reads.includes("commands-admin:commands"));
+		expect(reads).toContain("events-admin:connect");
+		expect(reads).toContain("commands-admin:connect");
+		expect(reads).not.toContain("events-admin:commands");
+		expect(reads.filter((read) => read.startsWith("commands-admin:"))).toEqual([
+			"commands-admin:connect",
+			"commands-admin:commands",
+		]);
+	} finally {
+		await group.stop();
+		closeStoreFixture(fixture);
+	}
+	expect(reads).toContain("commands-admin:disconnect");
+});
+
+test("a command topic without its own offsets admin is refused at construction", () => {
+	const fixture = createStoreFixture();
+	try {
+		expect(() =>
+			createWorkerPartitions({
+				ctx: {
+					consumer: createFakeGroupConsumer(),
+					partitionOffsets: {
+						connect: async () => {},
+						disconnect: async () => {},
+						fetchTopicOffsets: async () => [],
+					},
+					stateStore: fixture.store,
+					idempotencyKeys: createFakeIdempotencyKeys().keys,
+					createRuntime: () => {
+						throw new Error("Not used");
+					},
+					onError: ({ cause }) => {
+						throw cause;
+					},
+					onUnhealthyPartition: () => {},
+				},
+				config: {
+					topic,
+					commandTopic: "commands",
+					partitionsConsumedConcurrently: 1,
+					healthRefreshIntervalMs: 60_000,
+					handoffReadyTimeoutMs: 1,
+					handoffClaimTimeoutMs: 1,
+				},
+			}),
+		).toThrow("commandTopicOffsets");
+	} finally {
+		closeStoreFixture(fixture);
+	}
+});
+
 test("admission seeks the command bookmark before resuming, even when no batch arrives at the group offset", async () => {
 	const fixture = createStoreFixture();
 	const consumer = createFakeGroupConsumer();
@@ -1306,6 +1417,13 @@ test("admission seeks the command bookmark before resuming, even when no batch a
 		ctx: {
 			consumer,
 			partitionOffsets: {
+				connect: async () => {},
+				disconnect: async () => {},
+				fetchTopicOffsets: async () => [
+					{ partition: 0, offset: "10", low: "0", high: "10" },
+				],
+			},
+			commandTopicOffsets: {
 				connect: async () => {},
 				disconnect: async () => {},
 				fetchTopicOffsets: async () => [

@@ -231,6 +231,7 @@ const partitions = createWorkerPartitions({
 	ctx: {
 		consumer,
 		partitionOffsets: resources.kafka.admin(),
+		commandTopicOffsets: resources.kafka.admin(),
 		stateStore: resources.stateStore,
 		idempotencyKeys: resources.idempotencyKeys,
 		logger,
