@@ -73,8 +73,13 @@ const unsubscribe = (thread: Thread) =>
 /** Whether the message tags any copy of the agent. In a Slack Connect
  * channel a message can arrive through our own workspace's installation
  * while tagging the bot the other workspace sees. */
-const messageTagsAnyAgent = async ({ message }: { message: Message }) =>
-	isAgentBotUser({ userIds: slackMentionedUserIds({ raw: message.raw }) });
+export const messageTagsAnyAgent = async ({
+	isAgentBot = isAgentBotUser,
+	message,
+}: {
+	isAgentBot?: typeof isAgentBotUser;
+	message: Message;
+}) => isAgentBot({ userIds: slackMentionedUserIds({ raw: message.raw }) });
 
 const messageMentionsAgent = async ({ message }: { message: Message }) => {
 	const installation = await findSlackInstallationForWorkspace({

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Message, StateAdapter, Thread } from "chat";
-import { createSlackMessageHandlers } from "../../../../src/providers/slack/handlers/handleSlackMessage.js";
+import {
+	createSlackMessageHandlers,
+	messageTagsAnyAgent,
+} from "../../../../src/providers/slack/handlers/handleSlackMessage.js";
 
 let disposition: "close" | "keep" = "close";
 const dispatchSlackAgentMessage = mock(async (_input: unknown) => disposition);
@@ -557,5 +560,47 @@ describe("handleEditedSlackMessage", () => {
 
 		expect(subscribe).not.toHaveBeenCalled();
 		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+	});
+});
+
+describe("messageTagsAnyAgent", () => {
+	// The bot users of every installation, e.g. ours and a customer's copy of
+	// the app in a shared Slack Connect channel.
+	const storedBotUserIds = new Set(["U0B796GJARM", "U0BAS3B3G6N"]);
+	const isAgentBot = async ({ userIds }: { userIds: ReadonlyArray<string> }) =>
+		userIds.some((userId) => storedBotUserIds.has(userId));
+	const messageWithText = (text: string) =>
+		({ ...createMessage({ text }), raw: { team_id: "T1", text } }) as Message;
+
+	test("a mention of another workspace's copy of the agent is a tag", async () => {
+		expect(
+			await messageTagsAnyAgent({
+				isAgentBot,
+				message: messageWithText("<@U0BAS3B3G6N> retry"),
+			}),
+		).toBe(true);
+	});
+
+	test("a mention of a person is not a tag", async () => {
+		expect(
+			await messageTagsAnyAgent({
+				isAgentBot,
+				message: messageWithText("<@U07NL51UXL6> can you look?"),
+			}),
+		).toBe(false);
+	});
+
+	test("a message without mentions is not a tag", async () => {
+		const lookups: unknown[] = [];
+		expect(
+			await messageTagsAnyAgent({
+				isAgentBot: async (input) => {
+					lookups.push(input);
+					return false;
+				},
+				message: messageWithText("thanks"),
+			}),
+		).toBe(false);
+		expect(lookups).toEqual([{ userIds: [] }]);
 	});
 });
