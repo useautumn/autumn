@@ -4,6 +4,7 @@ import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingP
 import { getDeleteCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import type { SetPlansResult } from "../types/setPlansResult";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
+import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
 import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
 import { buildStripePriceLookup } from "./processorItems/price/buildStripePriceLookup";
 import { stripeSubscriptionToProcessorItems } from "./processorItems/stripeSubscriptionToProcessorItems";
@@ -24,14 +25,21 @@ export const buildSetPlansPreview = async ({
 		schedulePlan: { phases, immediatePhaseTransition },
 	} = result;
 
-	const [attachPreview, stripePrices] = await Promise.all([
-		billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),
-		buildStripePriceLookup({
-			ctx,
-			stripeBillingPlan: billingPlan.stripe,
-			stripeSubscription: billingContext.stripeSubscription,
-		}),
-	]);
+	const [attachPreview, stripePrices, replacedSubscriptionInputs] =
+		await Promise.all([
+			billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),
+			buildStripePriceLookup({
+				ctx,
+				stripeBillingPlan: billingPlan.stripe,
+				stripeSubscription: billingContext.stripeSubscription,
+			}),
+			fetchReplacedSubscriptionPreviewInputs({
+				ctx,
+				billingContext,
+				outgoingCustomerProducts:
+					immediatePhaseTransition.outgoingCustomerProducts,
+			}),
+		]);
 	const processorItemContext: ProcessorItemContext = {
 		priceIndex: buildAutumnStripePriceIndex({
 			customerProducts: [
@@ -74,6 +82,9 @@ export const buildSetPlansPreview = async ({
 				immediatePhaseTransition.outgoingCustomerProducts,
 			requestedProrationBehavior: billingContext.requestedProrationBehavior,
 			features: ctx.features,
+			billingContext,
+			stripeBillingPlan: billingPlan.stripe,
+			...replacedSubscriptionInputs,
 		}),
 	};
 };
