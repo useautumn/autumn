@@ -6,6 +6,7 @@ import {
 } from "@autumn/ui/components/table/table-context";
 import { TableHeader } from "@autumn/ui/components/table/table-header";
 import { TableMobileCards } from "@autumn/ui/components/table/table-mobile-cards";
+import { TABLE_TRAY_CLASS } from "@autumn/ui/components/table/table-tray-classes";
 import { Table } from "@autumn/ui/components/ui/table";
 import { cn } from "@autumn/ui/lib/utils";
 import React, { useMemo, useState } from "react";
@@ -13,9 +14,12 @@ import React, { useMemo, useState } from "react";
 export function TableContentVirtualized({
 	children,
 	className,
+	footer,
 }: {
 	children: React.ReactNode;
 	className?: string;
+	/** Sits on the tray below the scroll area, so it never scrolls away. */
+	footer?: React.ReactNode;
 }) {
 	const context = useTableContext();
 	const isFlexFill = context.virtualization?.containerHeight === "100%";
@@ -70,22 +74,26 @@ export function TableContentVirtualized({
 	};
 
 	if (showMobileCards) {
-		return <TableMobileCards />;
+		return (
+			<>
+				<TableMobileCards />
+				{footer}
+			</>
+		);
 	}
 
 	return (
 		<TableContext.Provider value={contextWithRef}>
 			<div
 				className={cn(
-					"rounded-lg border relative z-50 min-w-0 overflow-hidden",
+					"relative z-50 min-w-0 overflow-hidden",
+					TABLE_TRAY_CLASS,
 					isFlexFill && "h-full flex flex-col",
-					!rows.length &&
-						"border-dashed bg-interactive-secondary dark:bg-transparent",
 					className,
 				)}
 			>
 				{(isLoading || isTransitioning) && (
-					<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
+					<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-xl -inset-[1px] z-70" />
 				)}
 
 				{enableColumnVisibility && !columnVisibilityInToolbar && (
@@ -127,7 +135,18 @@ export function TableContentVirtualized({
 								: child,
 						)}
 					</Table>
+					{rows.length > 0 && (
+						// Rows only round off at the true last row, so this pins that edge to the viewport.
+						<div
+							aria-hidden
+							className="pointer-events-none sticky bottom-0 z-10 -mt-2 h-2 overflow-hidden"
+							style={{ minWidth: `${totalWidth}px` }}
+						>
+							<div className="absolute inset-x-0 -top-2 bottom-0 rounded-b-lg border-x border-b border-table-surface-border shadow-[0_0_0_8px_var(--color-table-tray)]" />
+						</div>
+					)}
 				</div>
+				{footer}
 			</div>
 		</TableContext.Provider>
 	);

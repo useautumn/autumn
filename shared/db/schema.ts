@@ -2,6 +2,8 @@
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
+// Balance worker: open locks
+import { balanceLocks } from "../models/balanceLockModels/balanceLockTable.js";
 import {
 	chatApprovals,
 	chatApprovalWrites,
@@ -62,6 +64,8 @@ import {
 	licensePriceRelations,
 	planLicenseRelations,
 } from "../models/licenseModels/planLicenseRelations.js";
+// Metering log bookkeeping
+import { partitionProgress } from "../models/meteringLogModels/partitionProgressTable.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -243,6 +247,8 @@ export {
 	ssoProvider,
 	subscriptions,
 	usageWindows,
+	partitionProgress,
+	balanceLocks,
 	// Auth
 	user,
 	// Auth Relations

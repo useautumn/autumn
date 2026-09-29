@@ -112,7 +112,7 @@ export const OrgMembersList = () => {
 						<TableCell className="pr-2">
 							<div className="flex justify-end">
 								{isAdmin &&
-									memberRole !== "owner" &&
+									(memberRole !== "owner" || isOwnerUser) &&
 									!isSelf &&
 									!inNamedSandbox && (
 										<MemberRowToolbar membership={membership} />

@@ -108,12 +108,21 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	}
 
 	// 4. Handle unknown errors
+	const cause = err.cause;
 	logger.error(
 		`UNKNOWN ERROR (${ctx.org?.slug || "unknown"}): ${err.message}`,
 		{
 			error: {
 				stack: err.stack,
 				message: err.message,
+				name: err.name,
+				// A worker client error says which step failed and why; without these the log line is only its generic message.
+				...("code" in err && { code: err.code }),
+				...("outcome" in err && { outcome: err.outcome }),
+				...("workerCode" in err && { workerCode: err.workerCode }),
+				...(cause instanceof Error && {
+					cause: { name: cause.name, message: cause.message },
+				}),
 			},
 		},
 	);

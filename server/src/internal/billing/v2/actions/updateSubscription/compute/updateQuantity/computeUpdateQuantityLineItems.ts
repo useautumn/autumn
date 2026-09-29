@@ -11,12 +11,13 @@ import {
 	InternalError,
 	type LineItem,
 	type LineItemContext,
-	priceToProrationConfig,
 	sumValues,
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 import { getRefundLineItemsForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemsForPrice";
+import { billingContextToQuantityProrationConfig } from "./billingContextToQuantityProrationConfig";
 
 export const computeUpdateQuantityLineItems = ({
 	ctx,
@@ -52,7 +53,8 @@ export const computeUpdateQuantityLineItems = ({
 	// Get proration config based on price and direction (upgrade/downgrade)
 	const isUpgrade = quantityDifferenceForEntitlements > 0;
 	const { shouldApplyProration, chargeImmediately, skipLineItems } =
-		priceToProrationConfig({
+		billingContextToQuantityProrationConfig({
+			billingContext,
 			price: customerPrice.price,
 			isUpgrade,
 		});
@@ -74,7 +76,11 @@ export const computeUpdateQuantityLineItems = ({
 		feature,
 		currency: billingContextToCurrency({ org, billingContext }),
 		direction: "charge",
-		now: currentEpochMs,
+		now: billingContextToProrationNow({
+			billingContext,
+			billingPeriod,
+			now: currentEpochMs,
+		}),
 		billingTiming: "in_advance",
 		billingPeriod,
 		customerProduct,

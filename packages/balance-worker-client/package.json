@@ -1,0 +1,32 @@
+{
+	"name": "@autumn/balance-worker-client",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/balanceWorkerClient.ts",
+			"import": "./src/balanceWorkerClient.ts",
+			"default": "./src/balanceWorkerClient.ts"
+		},
+		"./protocol": {
+			"types": "./src/protocol.ts",
+			"import": "./src/protocol.ts",
+			"default": "./src/protocol.ts"
+		}
+	},
+	"scripts": {
+		"test": "bun test --config ./bunfig.toml tests",
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@autumn/balance-engine": "workspace:*",
+		"@autumn/kafka": "workspace:*",
+		"kafkajs": "^2.2.4"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.2",
+		"typescript": "~5.8.3"
+	}
+}

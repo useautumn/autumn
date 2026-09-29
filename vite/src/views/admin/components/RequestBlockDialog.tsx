@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Dialog,
 	DialogContent,
@@ -14,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 
 type RequestBlockRule = {
 	method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD";
@@ -250,18 +250,7 @@ export function RequestBlockDialog({
 
 						<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 							<div className="mb-2 flex items-center gap-2">
-								<Badge
-									variant="muted"
-									className={
-										status?.configHealthy
-											? "bg-emerald-50 text-emerald-700 border-emerald-200"
-											: "bg-amber-50 text-amber-700 border-amber-200"
-									}
-								>
-									{status?.configHealthy
-										? "Config healthy"
-										: "Config unavailable"}
-								</Badge>
+								<ConfigHealthChip healthy={status?.configHealthy} />
 								{status?.lastSuccessAt && (
 									<span>
 										Last successful refresh:{" "}

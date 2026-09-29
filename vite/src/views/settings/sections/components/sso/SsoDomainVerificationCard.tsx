@@ -1,4 +1,4 @@
-import { Badge, Button, CopyButton, StepBadge } from "@autumn/ui";
+import { Button, CopyButton, StatusChip, StepBadge } from "@autumn/ui";
 import { toast } from "sonner";
 import {
 	formatCooldown,
@@ -93,7 +93,9 @@ export const SsoDomainVerificationCard = ({
 					<span className="text-sm font-medium text-foreground">
 						Verify {connection.domain}
 					</span>
-					<Badge variant="muted">Pending domain verification</Badge>
+					<StatusChip tone="yellow" glyph="clock">
+						Pending domain verification
+					</StatusChip>
 				</div>
 				<p className="text-sm text-tertiary-foreground">
 					Add this TXT record to your DNS so we know you control the domain.

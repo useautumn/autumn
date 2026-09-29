@@ -19,6 +19,12 @@ await mockModuleWithRestore(
 	}),
 );
 
+// These cover the Postgres read; the balance worker path has its own tests.
+await mockModuleWithRestore(
+	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
+	() => ({ isBalanceWorkerRolloutEnabled: () => false }),
+);
+
 const { getApiCustomerByRollout } = await import(
 	"@/internal/customers/actions/getApiCustomerByRollout.js"
 );

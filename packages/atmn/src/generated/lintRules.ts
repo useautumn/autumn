@@ -2206,30 +2206,41 @@ export const LINT_RULES: LintRules = {
 	webhooks: {
 		label: "webhook",
 		idField: "id",
-		required: ["events", "id", "url"],
+		required: ["env", "id", "url"],
 		fields: {
 			id: {
 				minLength: 1,
 				maxLength: 256,
 				pattern: "^[a-zA-Z0-9_-]+$",
 			},
-			events: {
-				minItems: 1,
+			env: {
+				pattern: "^[a-z0-9_-]+$",
+			},
+			url: {
+				pattern: "^[Hh][Tt][Tt][Pp][Ss]:\\/\\/",
 			},
 		},
 		rules: [
 			{
-				kind: "unique",
-				field: "id",
+				kind: "notMap",
+				field: "url",
 				because:
-					"Two webhooks claiming one id race to define the same endpoint.",
+					'Each webhook() is one endpoint in one env: split into one webhook() per env, e.g. webhook({ id, env: "live", url }).',
 			},
 			{
 				kind: "unique",
 				field: "id",
+				alongside: "env",
+				because:
+					"Two webhooks claiming one id in one env race to define the same endpoint.",
+			},
+			{
+				kind: "unique",
+				field: "id",
+				alongside: "env",
 				asEnvName: true,
 				because:
-					"Each webhook's signing secret is saved as AUTUMN_WEBHOOK_<ID>_SECRET, so these two would overwrite each other's secret. Rename one.",
+					"Each webhook's signing secret is saved under its id in an env var name, so these two would overwrite each other's secret. Rename one.",
 			},
 			{
 				kind: "rejects",
@@ -2244,13 +2255,6 @@ export const LINT_RULES: LintRules = {
 				prefix: "vercel.",
 				because:
 					"vercel.* events can't be mixed with other events in one webhook: they're delivered from a separate app. Make one webhook for each.",
-			},
-			{
-				kind: "nonEmpty",
-				field: "url",
-				warning: true,
-				because:
-					"With no environment key the webhook is registered nowhere. Add `live`, `sandbox` or a sandbox's slug.",
 			},
 			{
 				kind: "knownValues",
@@ -2273,13 +2277,5 @@ export const LINT_RULES: LintRules = {
 				because: "isn't known to this atmn version; the server will check it.",
 			},
 		],
-	},
-	"webhooks.url": {
-		keys: {
-			pattern: "^[a-z0-9_-]+$",
-		},
-		values: {
-			pattern: "^[Hh][Tt][Tt][Pp][Ss]:\\/\\/",
-		},
 	},
 };

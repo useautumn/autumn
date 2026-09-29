@@ -2,14 +2,18 @@ import { AppEnv, type Customer } from "@autumn/shared";
 import {
 	CommandDialog,
 	CommandEmpty,
+	CommandFooter,
 	CommandGroup,
+	CommandHint,
 	CommandInput,
+	CommandKbd,
 	CommandList,
 	Skeleton,
 } from "@autumn/ui";
 import {
 	ArrowsClockwiseIcon,
 	AtIcon,
+	CursorClickIcon,
 	FingerprintIcon,
 	GearIcon,
 	StarIcon,
@@ -30,6 +34,7 @@ import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useImpersonationFavouritesStore } from "@/hooks/stores/useImpersonationFavouritesStore";
 import { useListOrganizations } from "@/lib/auth-client";
@@ -46,7 +51,11 @@ import {
 	usePageCommands,
 } from "@/views/command-bar/usePageCommands";
 import { useOrgSwitch } from "@/views/main-sidebar/components/OrgDropdown";
-import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
+import {
+	useEnvChange,
+	useSelectSandbox,
+} from "@/views/main-sidebar/EnvDropdown";
+import { EnvironmentIcon } from "@/views/main-sidebar/env-dropdown/EnvironmentIcon";
 
 type User = {
 	id: string;
@@ -103,7 +112,12 @@ const CommandBar = () => {
 	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
-	const { isAdmin, isCurrentlyImpersonating } = useAdmin();
+	const {
+		isAdmin,
+		isCurrentlyImpersonating,
+		adminHoverEnabled,
+		setAdminHoverEnabled,
+	} = useAdmin();
 	const { org } = useOrg();
 	const { theme, setTheme } = useTheme();
 
@@ -168,6 +182,8 @@ const CommandBar = () => {
 	const { products, isLoading: productsLoading } = useProductsQuery();
 	const pageCommands = usePageCommands();
 	const goToPage = usePageCommandNavigate();
+	const { sandboxes } = useSandboxesQuery({ enabled: !!org });
+	const selectSandbox = useSelectSandbox();
 
 	// Debounce search for backend query
 	useEffect(() => {
@@ -570,8 +586,25 @@ const CommandBar = () => {
 			: []),
 	];
 
+	const searchOnlyAdminItems = isAdmin
+		? [
+				{
+					title: "Toggle admin hover",
+					subtext: adminHoverEnabled ? "On" : "Off",
+					icon: <CursorClickIcon />,
+					onSelect: () => {
+						setAdminHoverEnabled(!adminHoverEnabled);
+						toast.success(
+							`Admin hover ${adminHoverEnabled ? "disabled" : "enabled"}`,
+						);
+						closeDialog();
+					},
+				},
+			]
+		: [];
+
 	const filteredNavigationItems = showResults
-		? navigationItems.filter((item) =>
+		? [...navigationItems, ...searchOnlyAdminItems].filter((item) =>
 				item.title.toLowerCase().includes(search.toLowerCase()),
 			)
 		: navigationItems;
@@ -593,16 +626,39 @@ const CommandBar = () => {
 			.slice(0, 6);
 	}, [pageCommands, search, currentPage]);
 
+	const matchedSandboxes = useMemo(() => {
+		if (!search || currentPage !== "main") return [];
+		return [
+			{ key: "default", name: "Sandbox", sandbox: null },
+			...sandboxes.map((sandbox) => ({
+				key: sandbox.id,
+				name: sandbox.name,
+				sandbox,
+			})),
+		]
+			.map((option) => ({
+				...option,
+				score: Math.min(
+					calculateRelevanceScore(search, option.name),
+					calculateRelevanceScore(search, `sandbox ${option.name}`),
+				),
+			}))
+			.filter(({ score }) => score < 100)
+			.sort((a, b) => a.score - b.score)
+			.slice(0, 6);
+	}, [sandboxes, search, currentPage]);
+
 	const renderMainPage = () => (
 		<>
 			{filteredNavigationItems.length > 0 && (
-				<CommandGroup className="p-1.5">
+				<CommandGroup heading="Suggestions">
 					{filteredNavigationItems.map((item) => (
 						<CommandRow
 							key={item.title}
 							icon={item.icon}
 							title={item.title}
-							shortcutKey={item.shortcutKey}
+							subtext={"subtext" in item ? item.subtext : undefined}
+							shortcutKey={"shortcutKey" in item ? item.shortcutKey : undefined}
 							onSelect={item.onSelect}
 						/>
 					))}
@@ -610,7 +666,7 @@ const CommandBar = () => {
 			)}
 
 			{showResults && matchedPages.length > 0 && (
-				<CommandGroup heading="Pages" className="p-1.5">
+				<CommandGroup heading="Pages">
 					{matchedPages.map(({ page }) => (
 						<CommandRow
 							key={page.path ?? page.href}
@@ -626,10 +682,27 @@ const CommandBar = () => {
 				</CommandGroup>
 			)}
 
+			{showResults && matchedSandboxes.length > 0 && (
+				<CommandGroup heading="Sandboxes">
+					{matchedSandboxes.map(({ key, name, sandbox }) => (
+						<CommandRow
+							key={key}
+							icon={<EnvironmentIcon sandbox={sandbox} />}
+							title={name}
+							subtext="Sandbox"
+							onSelect={() => {
+								selectSandbox(sandbox);
+								closeDialog();
+							}}
+						/>
+					))}
+				</CommandGroup>
+			)}
+
 			{showResults && (
 				<>
 					{sortedResults.length > 0 && (
-						<CommandGroup heading="Results" className="p-1.5">
+						<CommandGroup heading="Results">
 							{sortedResults.map((result) => {
 								if (result.type === "customer") {
 									const customer = result.data;
@@ -696,7 +769,8 @@ const CommandBar = () => {
 
 					{!isLoading &&
 						sortedResults.length === 0 &&
-						matchedPages.length === 0 && (
+						matchedPages.length === 0 &&
+						matchedSandboxes.length === 0 && (
 							<CommandEmpty>No results found.</CommandEmpty>
 						)}
 				</>
@@ -712,7 +786,7 @@ const CommandBar = () => {
 					? `Favourites · Page ${favouritesPage + 1} of ${totalFavouritesPages}`
 					: "Favourites";
 			return (
-				<CommandGroup heading={heading} className="p-1.5">
+				<CommandGroup heading={heading}>
 					{paginatedFavourites.map((fav) => {
 						if (fav.kind === "org") {
 							return (
@@ -840,7 +914,7 @@ const CommandBar = () => {
 						)}
 
 						{userResults.length > 0 && (
-							<CommandGroup heading="Users" className="p-1.5">
+							<CommandGroup heading="Users">
 								{userResults.map((result) => {
 									const user = result.data as User;
 									const displayName = user.name || user.email || user.id;
@@ -915,7 +989,7 @@ const CommandBar = () => {
 		}
 
 		return (
-			<CommandGroup heading="Theme" className="p-1.5">
+			<CommandGroup heading="Theme">
 				{options.map((option) => (
 					<CommandRow
 						key={option.value}
@@ -936,7 +1010,7 @@ const CommandBar = () => {
 		return (
 			<>
 				{orgs && orgs.length > 0 && (
-					<CommandGroup className="p-1.5">
+					<CommandGroup>
 						{orgs
 							.filter((org) => {
 								if (!search) return true;
@@ -1012,7 +1086,7 @@ const CommandBar = () => {
 	);
 
 	return (
-		<CommandDialog open={open} onOpenChange={handleOpenChange}>
+		<CommandDialog open={open} onOpenChange={handleOpenChange} size="compact">
 			<CommandInput
 				placeholder={PAGE_PLACEHOLDERS[currentPage]}
 				value={search}
@@ -1025,6 +1099,15 @@ const CommandBar = () => {
 					? lastRenderedContentRef.current
 					: currentContent}
 			</CommandList>
+			<CommandFooter>
+				<CommandHint>
+					Navigate <CommandKbd>↑</CommandKbd>
+					<CommandKbd>↓</CommandKbd>
+				</CommandHint>
+				<CommandHint>
+					Open <CommandKbd>↵</CommandKbd>
+				</CommandHint>
+			</CommandFooter>
 		</CommandDialog>
 	);
 };

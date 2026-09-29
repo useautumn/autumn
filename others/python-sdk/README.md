@@ -203,7 +203,7 @@ Use this after an action happens to decrement usage, or send a negative value to
 * [track_tokens](docs/sdks/autumn/README.md#track_tokens) - Records AI token usage for a customer and returns the updated AI credit balance.
 
 Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
-* [batch_track](docs/sdks/autumn/README.md#batch_track) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+* [batch_track](docs/sdks/autumn/README.md#batch_track) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
 ### [Balances](docs/sdks/balances/README.md)
 
@@ -243,6 +243,9 @@ Use this endpoint to cancel or uncancel several plans atomically in one call —
 Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
 * [open_customer_portal](docs/sdks/billing/README.md#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
 * [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a payment setup session for a customer to add or update their payment method.
+* [verify](docs/sdks/billing/README.md#verify) - Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.
+
+Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
 * [import_](docs/sdks/billing/README.md#import_) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
@@ -365,6 +368,16 @@ Use this to permanently remove a feature. Note: features that are used in produc
 * [list](docs/sdks/sandboxes/README.md#list) - Lists every sandbox belonging to your organization, newest first. Secret keys are never returned here — only `sandboxes.create` shows one.
 * [delete](docs/sdks/sandboxes/README.md#delete) - Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.
 * [reset](docs/sdks/sandboxes/README.md#reset) - Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.
+
+### [Webhooks](docs/sdks/webhooks/README.md)
+
+* [create](docs/sdks/webhooks/README.md#create) - Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.
+* [get](docs/sdks/webhooks/README.md#get) - Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.
+* [list](docs/sdks/webhooks/README.md#list) - Lists every webhook in the environment of the calling key, including ones made in the dashboard (these show their `ep_…` ID).
+* [update](docs/sdks/webhooks/README.md#update) - Updates a webhook's URL, events, description or disabled state. Only the fields you pass change. The ID can't be changed — to rename, create a new webhook.
+* [delete](docs/sdks/webhooks/README.md#delete) - Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.
+* [preview_sync](docs/sdks/webhooks/README.md#preview_sync) - Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+* [sync](docs/sdks/webhooks/README.md#sync) - Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
 
 </details>
 <!-- End Available Resources and Operations [operations] -->

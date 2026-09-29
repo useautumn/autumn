@@ -29,9 +29,16 @@ export const routeRemainderToExpiringGrant = ({
 	deltas: AutoTopupRebalanceDelta[];
 	customEntitlements: Entitlement[];
 	insertCustomerEntitlements: InsertCustomerEntitlement[];
+	/** Where the remainder lands: the purchased cusEnt, its expiring grant, or null when paydown took it all. */
+	creditedCustomerEntitlementId: string | null;
 } => {
 	if (!entitlementToExpiry({ entitlement: customerEntitlement.entitlement })) {
-		return { deltas, customEntitlements: [], insertCustomerEntitlements: [] };
+		return {
+			deltas,
+			customEntitlements: [],
+			insertCustomerEntitlements: [],
+			creditedCustomerEntitlementId: customerEntitlement.id,
+		};
 	}
 
 	const remainder = deltas
@@ -50,5 +57,6 @@ export const routeRemainderToExpiringGrant = ({
 		deltas: deltas.filter((delta) => delta.cusEntId !== customerEntitlement.id),
 		customEntitlements: grant ? [grant.entitlement] : [],
 		insertCustomerEntitlements: grant ? [grant.customerEntitlement] : [],
+		creditedCustomerEntitlementId: grant?.customerEntitlement.id ?? null,
 	};
 };

@@ -1,3 +1,4 @@
+import { invalidateCustomerInvoicesCache } from "@autumn/cache";
 import { getAutumnEnv } from "@autumn/env";
 import {
 	type ApiInvoiceV1,
@@ -19,13 +20,14 @@ import {
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { getMiscCacheContext } from "@server/external/redis/miscCache/getMiscCacheContext.js";
 import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
-import { Autumn } from "autumn-js";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolvedProductIdsForColumn } from "./repos/utils/resolvedProductIdsSql.js";
+import { stripeInvoiceToPaidAt } from "./utils/stripeInvoiceToPaidAt.js";
 
 export const processInvoice = ({
 	invoice,
@@ -108,6 +110,20 @@ const toListRow = (
 	customer_id: row.customer_id,
 	entity_id: row.entity_id,
 });
+
+/** Every write ends here: the written rows name their customer's list, so no caller has to remember. */
+const invalidateWrittenRows = async ({
+	rows,
+}: {
+	rows: Pick<Invoice, "internal_customer_id">[];
+}): Promise<void> => {
+	await invalidateCustomerInvoicesCache({
+		ctx: getMiscCacheContext(),
+		internalCustomerIds: rows.map(
+			({ internal_customer_id }) => internal_customer_id,
+		),
+	});
+};
 
 export class InvoiceService {
 	static async getListRowById({
@@ -346,7 +362,6 @@ export class InvoiceService {
 		internalProductIds,
 		status,
 		org,
-		sendRevenueEvent = true,
 		items = [],
 	}: {
 		db: DrizzleCli;
@@ -357,7 +372,6 @@ export class InvoiceService {
 		internalProductIds: string[];
 		status?: InvoiceStatus | null;
 		org: Organization;
-		sendRevenueEvent?: boolean;
 		items?: InvoiceItem[];
 	}) {
 		// Convert product ids to unique product ids
@@ -389,6 +403,7 @@ export class InvoiceService {
 			// Stripe stuff
 			total: atmnTotal,
 			amount_paid: atmnAmountPaid,
+			paid_at: stripeInvoiceToPaidAt({ stripeInvoice }),
 			refunded_amount: 0,
 			currency: stripeInvoice.currency,
 			discounts: getInvoiceDiscounts({
@@ -408,6 +423,7 @@ export class InvoiceService {
 				return null;
 			}
 			newInvoice = results[0] as Invoice;
+			await invalidateWrittenRows({ rows: [newInvoice] });
 		} catch (error: any) {
 			if (error.code === "23505") {
 				console.log("   🧐 Invoice already exists");
@@ -416,23 +432,6 @@ export class InvoiceService {
 				console.error("   ❌ Error inserting Stripe invoice: ", error);
 				throw error;
 			}
-		}
-
-		// Send monthly_revenue event
-		try {
-			if (!stripeInvoice.livemode || !sendRevenueEvent) {
-				return newInvoice;
-			}
-
-			const autumn = new Autumn();
-			await autumn.track({
-				customerId: org.id,
-				eventName: "revenue",
-				value: atmnTotal,
-			});
-			console.log("   ✅ Sent revenue event");
-		} catch (error) {
-			console.log("Failed to send revenue event", error);
 		}
 
 		return newInvoice;
@@ -461,9 +460,45 @@ export class InvoiceService {
 			)
 			.returning();
 
+		await invalidateWrittenRows({ rows: results });
 		if (results.length === 0) return null;
 
 		return results[0] as Invoice;
+	}
+
+	/** The Stripe refund already happened; the row is the ledger, so a missing row is warned, never thrown. */
+	static async addRefundedAmount({
+		db,
+		stripeId,
+		amount,
+	}: {
+		db: DrizzleCli;
+		stripeId: string;
+		amount: number;
+	}): Promise<Invoice | null> {
+		const results = await db
+			.update(invoices)
+			.set({ refunded_amount: sql`${invoices.refunded_amount} + ${amount}` })
+			.where(eq(invoices.stripe_id, stripeId))
+			.returning();
+
+		await invalidateWrittenRows({ rows: results });
+		return (results[0] as Invoice | undefined) ?? null;
+	}
+
+	static async deleteByStripeId({
+		db,
+		stripeId,
+	}: {
+		db: DrizzleCli;
+		stripeId: string;
+	}): Promise<void> {
+		const results = await db
+			.delete(invoices)
+			.where(eq(invoices.stripe_id, stripeId))
+			.returning({ internal_customer_id: invoices.internal_customer_id });
+
+		await invalidateWrittenRows({ rows: results });
 	}
 
 	static async upsert({
@@ -484,6 +519,7 @@ export class InvoiceService {
 					discounts: invoice.discounts,
 					total: invoice.total,
 					amount_paid: invoice.amount_paid,
+					paid_at: sql`COALESCE(excluded.paid_at, ${invoices.paid_at})`,
 					product_ids: invoice.product_ids?.length
 						? sql`CASE
 							WHEN ${invoices.product_ids} IS NULL OR cardinality(${invoices.product_ids}) = 0
@@ -502,10 +538,54 @@ export class InvoiceService {
 			})
 			.returning();
 
+		await invalidateWrittenRows({ rows: result });
 		if (result.length === 0) {
 			return undefined;
 		}
 
 		return result[0] as Invoice;
+	}
+
+	/** A conflicting row may move to another customer, so both the old and the new owner's lists are dropped. */
+	static async upsertMany({
+		db,
+		invoices: rows,
+	}: {
+		db: DrizzleCli;
+		invoices: InsertInvoice[];
+	}): Promise<Invoice[]> {
+		if (rows.length === 0) return [];
+		const stripeIds = rows.flatMap(({ stripe_id }) =>
+			stripe_id ? [stripe_id] : [],
+		);
+		const previousOwners = await db
+			.select({ internal_customer_id: invoices.internal_customer_id })
+			.from(invoices)
+			.where(inArray(invoices.stripe_id, stripeIds));
+
+		const upserted = await db
+			.insert(invoices)
+			.values(rows)
+			.onConflictDoUpdate({
+				target: invoices.stripe_id,
+				set: {
+					created_at: sql`excluded.created_at`,
+					product_ids: sql`excluded.product_ids`,
+					internal_product_ids: sql`excluded.internal_product_ids`,
+					internal_customer_id: sql`excluded.internal_customer_id`,
+					internal_entity_id: sql`excluded.internal_entity_id`,
+					processor_type: sql`excluded.processor_type`,
+					status: sql`excluded.status`,
+					hosted_invoice_url: sql`excluded.hosted_invoice_url`,
+					total: sql`excluded.total`,
+					amount_paid: sql`excluded.amount_paid`,
+					refunded_amount: sql`excluded.refunded_amount`,
+					currency: sql`excluded.currency`,
+				},
+			})
+			.returning();
+
+		await invalidateWrittenRows({ rows: [...previousOwners, ...upserted] });
+		return upserted as Invoice[];
 	}
 }

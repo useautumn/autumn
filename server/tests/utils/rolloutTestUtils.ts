@@ -1,27 +1,34 @@
 import { timeout } from "@tests/utils/genUtils.js";
-import { FULL_SUBJECT_ROLLOUT_ID } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { getBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import {
 	removeRolloutOrg,
 	updateRolloutPercent,
 } from "@/internal/misc/rollouts/rolloutConfigStore.js";
+import {
+	ACTIVE_ROLLOUT_ID,
+	ROLLOUT_SETTLE_MS,
+} from "@/internal/misc/rollouts/rolloutUtils.js";
 
-const POLL_SETTLE_MS = 3000;
+/** The local server polls the config every second; the flip lands one settle window after the write. */
+const LOCAL_POLL_MS = 1_000;
+const SETTLE_MARGIN_MS = 1_000;
 
 /**
- * Isolated test envs (`bun tw` µVMs) serve the v2-cache rollout from the base64
+ * Isolated test envs (`bun tw` µVMs) serve the balance-worker rollout from the base64
  * edge-config override (AUTUMN_EDGE_CONFIG_OVERRIDE_B64) instead of S3, since
  * there are no AWS creds. When that's set, the per-org rollout writes here are
  * served in-memory and don't propagate across processes, so they no-op (the
- * override already enables v2-cache globally).
+ * override already enables the rollout globally).
  */
 const EDGE_CONFIG_OVERRIDDEN = Boolean(
 	process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64,
 );
 
-/**
- * Sets the v2-cache rollout percentage for a specific org and waits
- * for the server's edge config poll to pick up the change.
- */
+/** The server routes by the config only when nothing forces the answer; the test process shares the env file. */
+export const serverRoutesByRolloutConfig = (): boolean =>
+	!EDGE_CONFIG_OVERRIDDEN && getBalanceWorkerRolloutOverride() === undefined;
+
+/** Sets the org's balance-worker percent and waits until the server has flipped to it; a no-op when the override decides. */
 export const setOrgRolloutPercent = async ({
 	orgId,
 	percent,
@@ -29,26 +36,13 @@ export const setOrgRolloutPercent = async ({
 	orgId: string;
 	percent: number;
 }) => {
-	if (EDGE_CONFIG_OVERRIDDEN) {
-		return;
-	}
-	await updateRolloutPercent({
-		rolloutId: FULL_SUBJECT_ROLLOUT_ID,
-		orgId,
-		percent,
-	});
-	await timeout(POLL_SETTLE_MS);
+	if (!serverRoutesByRolloutConfig()) return;
+	await updateRolloutPercent({ rolloutId: ACTIVE_ROLLOUT_ID, orgId, percent });
+	await timeout(ROLLOUT_SETTLE_MS + LOCAL_POLL_MS + SETTLE_MARGIN_MS);
 };
 
-/**
- * Removes the org-level rollout override (cleanup after test).
- */
+/** Removes the org-level rollout override (cleanup after test). */
 export const cleanupOrgRollout = async ({ orgId }: { orgId: string }) => {
-	if (EDGE_CONFIG_OVERRIDDEN) {
-		return;
-	}
-	await removeRolloutOrg({
-		rolloutId: FULL_SUBJECT_ROLLOUT_ID,
-		orgId,
-	});
+	if (!serverRoutesByRolloutConfig()) return;
+	await removeRolloutOrg({ rolloutId: ACTIVE_ROLLOUT_ID, orgId });
 };

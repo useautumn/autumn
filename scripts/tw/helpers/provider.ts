@@ -28,6 +28,8 @@ export type ProviderSandbox = {
 	id?: string;
 	/** How a cached warm parent was served: exact sha image or stale `:latest`. */
 	warmHit?: "exact" | "stale";
+	/** Time a forked worker spent fast-forwarding its source (stale warm hit). */
+	checkoutMs?: number;
 };
 
 /** Git source cloned into a freshly-created sandbox (warm parent / ingress). */

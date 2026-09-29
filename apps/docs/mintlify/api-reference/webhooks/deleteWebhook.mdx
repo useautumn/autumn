@@ -1,0 +1,30 @@
+---
+title: "Delete Webhook"
+openapi: "openapi POST /v1/webhooks.delete"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="id" type="string" required>
+  The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="success" type="true">
+  Always true when the webhook was deleted.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "success": true
+}
+```
+</ResponseExample>

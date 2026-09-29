@@ -8,16 +8,18 @@ import {
 	type FullCusProduct,
 	fullCustomerToSkipOverageBilling,
 	getCycleEnd,
+	getEffectivePeriod,
+	getResetBalancesUpdate,
 	invoiceCreditCustomerEntitlementToLineItems,
 	isAllocatedV2CustomerEntitlement,
 	isConsumablePrice,
 	isV4Usage,
 	type LineItem,
 	type LineItemContext,
+	secondsToMs,
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
@@ -62,6 +64,10 @@ export const customerProductToArrearLineItems = ({
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 } => {
 	const lineItems: LineItem[] = [];
+	// Usage can't predate the subscription, so the charged period is clipped there.
+	const subscriptionCreatedMs = billingContext.stripeSubscription?.created
+		? secondsToMs(billingContext.stripeSubscription.created)
+		: undefined;
 	const invoiceCreditLineItems: LineItem[] = [];
 	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
 	const entity = customerProductToEntity({
@@ -108,11 +114,20 @@ export const customerProductToArrearLineItems = ({
 		}
 
 		const billingPeriod = getLineItemBillingPeriod({ billingContext, price });
+		const effectivePeriod =
+			billingPeriod &&
+			getEffectivePeriod({
+				now: billingContext.currentEpochMs,
+				billingPeriod,
+				billingTiming: "in_arrear",
+				startFloor: subscriptionCreatedMs,
+			});
 		const context: LineItemContext = {
 			price,
 			product: customerProduct.product,
 			feature: customerEntitlement.entitlement.feature,
 			billingPeriod,
+			effectivePeriod,
 			direction: "charge",
 			billingTiming: "in_arrear",
 			now: billingContext.currentEpochMs,

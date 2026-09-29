@@ -6,12 +6,12 @@ import {
 	buildEventInfo,
 	initEvent,
 } from "@/internal/balances/events/initEvent.js";
-import { resolveInternalProductIdForEvent } from "../../events/resolveInternalProductIdForEvent.js";
 import {
 	deductionToTrackResponseV2,
 	executePostgresDeductionV2,
 	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
+import { resolveInternalProductIdForEvent } from "../../events/resolveInternalProductIdForEvent.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handlePostgresTrackError } from "../utils/handlePostgresTrackError.js";
 

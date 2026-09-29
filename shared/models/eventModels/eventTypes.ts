@@ -35,6 +35,7 @@ export type TimeseriesEventsParams = TotalEventsParams & {
 	timezone?: string;
 	enforceGroupLimit?: boolean;
 	max_groups?: number;
+	group_ranking?: "bin" | "window";
 };
 
 export type CalculateDateRangeParams = Omit<

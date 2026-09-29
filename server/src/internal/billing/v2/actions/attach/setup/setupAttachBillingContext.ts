@@ -27,6 +27,7 @@ import { setupFinalizeFirstInvoice } from "@/internal/billing/v2/setup/setupFina
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPaymentBehaviorIntent";
+import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
@@ -37,6 +38,7 @@ import { getAttachAccessStartsAt } from "./getAttachAccessStartsAt";
 import { overlayAttachRuntimeBalances } from "./overlayAttachRuntimeBalances.js";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
+import { setupAttachLicenseTransitionSource } from "./setupAttachLicenseTransitionSource";
 import { setupAttachProductContext } from "./setupAttachProductContext";
 import { setupAttachTransitionContext } from "./setupAttachTransitionContext";
 import { setupAttachTrialContext } from "./setupAttachTrialContext";
@@ -113,6 +115,13 @@ export const setupAttachBillingContext = async ({
 	const carryOverSourceCustomerProduct =
 		currentCustomerProduct ?? removedCarrySource ?? undefined;
 
+	const licenseTransitionSourceCustomerProduct =
+		setupAttachLicenseTransitionSource({
+			fullCustomer,
+			params,
+			currentCustomerProduct,
+		});
+
 	const isAttachPaidRecurring = isProductPaidAndRecurring(attachProduct);
 
 	const hasPaidRecurringSubscription = hasActivePaidSubscription({
@@ -181,7 +190,7 @@ export const setupAttachBillingContext = async ({
 	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
 		params,
 		fullProduct: attachProduct,
-		customerProduct: currentCustomerProduct,
+		customerProduct: licenseTransitionSourceCustomerProduct,
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({
@@ -219,13 +228,22 @@ export const setupAttachBillingContext = async ({
 	const skipBillingChanges =
 		skipBillingChangesBase || isRevertTrialContext({ trialContext });
 
+	const requestedBillingCycleAnchor = setupRequestedBillingCycleAnchor({
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		fullProducts: [attachProduct],
+		stripeSubscription,
+		trialContext,
+		currentEpochMs,
+		startsNow: params.starts_at === undefined && planTiming !== "end_of_cycle",
+	});
+
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,
 		customerProduct: currentCustomerProduct,
 		newFullProduct: attachProduct,
 		trialContext,
 		currentEpochMs,
-		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedBillingCycleAnchor,
 		billingStartsAt: params.starts_at,
 	});
 
@@ -317,6 +335,7 @@ export const setupAttachBillingContext = async ({
 		currentCustomerProduct,
 		scheduledCustomerProduct,
 		carryOverSourceCustomerProduct,
+		licenseTransitionSourceCustomerProduct,
 		canceledStripeSubscriptionId,
 
 		planTiming,
@@ -335,7 +354,7 @@ export const setupAttachBillingContext = async ({
 		resetCycleAnchorMs,
 		billingStartsAt,
 		subscriptionBackdateStartMs,
-		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedBillingCycleAnchor,
 		requestedProrationBehavior: setupIgnoreProrationBehavior({
 			isOneOffAttach: isOneOffProduct({ product: attachProduct }),
 		})

@@ -1,87 +1,44 @@
 import { Scopes } from "@autumn/shared";
-import { BetaBadge, Button } from "@autumn/ui";
+import { Button } from "@autumn/ui";
 import {
-	ArrowsClockwiseIcon,
-	BalloonIcon,
-	BasketIcon,
+	ArrowsSplitIcon,
 	ChartBarIcon,
-	CubeIcon,
-	GearIcon,
+	GiftIcon,
 	KeyIcon,
-	LegoIcon,
-	TerminalWindowIcon,
-	TriangleIcon,
-	UserCircleIcon,
+	PackageIcon,
+	StackIcon,
 	UsersIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
-import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
 import { NavButton } from "./NavButton";
+import { NavSection } from "./NavSection";
 import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 import { SidebarRail } from "./SidebarRail";
+import { SidebarSearchButton } from "./SidebarSearchButton";
+import { SIDEBAR_ICON_STROKE as ICON_STROKE } from "./sidebarRowClass";
 
 /** Exported so the command bar can offer the same tabs without a second list. */
-export const buildDevSubTabs = ({
-	flags,
-}: {
-	flags: {
-		webhooks: boolean;
-		vercel: boolean;
-		revenuecat: boolean;
-	};
-}) => {
-	return [
-		{
-			title: "API Keys",
-			value: "api_keys",
-			icon: <KeyIcon size={16} weight="fill" />,
-		},
-		{
-			title: "Stripe",
-			value: "stripe",
-			icon: <StripeIcon size={16} />,
-		},
-		...(flags.vercel
-			? [
-					{
-						title: "Vercel",
-						value: "vercel",
-						icon: <TriangleIcon size={16} weight="fill" />,
-					},
-				]
-			: []),
-		...(flags.revenuecat
-			? [
-					{
-						title: "RevenueCat",
-						value: "revenuecat",
-						// icon: <PawPrintIcon size={16} weight="fill" />,
-						icon: <RevenueCatIcon size={64} />,
-					},
-				]
-			: []),
-		...(flags.webhooks
-			? [
-					{
-						title: "Webhooks",
-						value: "webhooks",
-						icon: <WebhooksLogoIcon size={16} weight="fill" />,
-					},
-				]
-			: []),
-	];
-};
+export const DEV_SUB_TABS = [
+	{
+		title: "API keys",
+		value: "api_keys",
+		icon: <KeyIcon weight="bold" />,
+	},
+	{
+		title: "Webhooks",
+		value: "webhooks",
+		icon: <WebhooksLogoIcon weight="bold" />,
+	},
+];
 
 export const MainSidebar = ({
 	onNavigate,
@@ -90,7 +47,6 @@ export const MainSidebar = ({
 } = {}) => {
 	const env = useEnv();
 
-	const flags = useAutumnFlags();
 	const { has } = useScopes();
 	const canSeeDev = has(Scopes.ApiKeys.Read);
 	const canSeeMigrations = has(Scopes.Migrations.Read);
@@ -104,26 +60,9 @@ export const MainSidebar = ({
 	const isMobileSheet = !!onNavigate;
 	const expanded = isMobileSheet ? true : storedExpanded;
 
-	const [productGroupOpen, setProductGroupOpen] = useLocalStorage<boolean>(
-		"sidebar.productGroupOpen",
-		true,
-	);
-	const [customerGroupOpen, setCustomerGroupOpen] = useLocalStorage<boolean>(
-		"sidebar.customerGroupOpen",
-		true,
-	);
-	const [devGroupOpen, setDevGroupOpen] = useLocalStorage<boolean>(
-		"sidebar.devGroupOpen",
-		true,
-	);
-
 	useHotkeys(["meta+b", "ctrl+b"], () => {
 		setExpanded((prev) => !prev);
 	});
-
-	const onProductTabClick = () => {
-		setProductGroupOpen((prev) => !prev);
-	};
 
 	return (
 		<SidebarContext.Provider value={{ expanded, setExpanded, onNavigate }}>
@@ -132,15 +71,15 @@ export const MainSidebar = ({
 				className={cn(
 					// Scrolls internally so a zoomed-in or crowded sidebar can't push
 					// its own content out of view.
-					`h-full py-4 flex flex-col justify-between overflow-y-auto overflow-x-hidden transition-all duration-150 relative`,
+					`relative flex h-full flex-col justify-between overflow-x-hidden overflow-y-auto px-2.5 py-3.5 transition-all duration-150`,
 					isMobileSheet
 						? "min-w-[200px]"
 						: expanded
 							? "min-w-[200px] max-w-[200px]"
-							: "min-w-[50px] max-w-[50px]",
+							: "min-w-[52px] max-w-[52px]",
 				)}
 			>
-				<div className="flex flex-col gap-6 relative">
+				<div className="relative flex flex-col gap-3.5">
 					{!isMobileSheet && (
 						<Button
 							variant="secondary"
@@ -149,98 +88,86 @@ export const MainSidebar = ({
 								setExpanded((prev) => !prev);
 							}}
 							className={cn(
-								"absolute top-1 right-4 text-tertiary-foreground hover:bg-stone-200 w-5 h-5 p-0 border-none border-0 shadow-none !bg-transparent",
+								"absolute top-2 right-1.5 z-10 size-4 border-0 border-none p-0 text-[#8A8A8A] shadow-none !bg-transparent hover:text-foreground dark:text-[#6B6B6B] dark:hover:text-[#A1A1A1]",
 								expanded
 									? "opacity-100 transition-opacity duration-100"
 									: "opacity-0 transition-opacity duration-100",
 							)}
 						>
-							<PanelLeft size={14} />
+							<PanelLeft className="size-4" strokeWidth={ICON_STROKE} />
 						</Button>
 					)}
 					<OrgDropdown />
 					<EnvDropdown env={env} />
-					<div className="flex flex-col px-2 gap-1">
-						<CollapsibleNavGroup
-							value="products"
-							icon={<BasketIcon size={16} weight="fill" />}
-							title="Products"
-							env={env}
-							isOpen={productGroupOpen}
-							onToggle={onProductTabClick}
-							subTabs={[
-								{
-									title: "Plans",
-									value: "products",
-									icon: <CubeIcon size={16} weight="fill" />,
-								},
-								{
-									title: "Features",
-									value: "features",
-									icon: <LegoIcon size={16} weight="fill" />,
-								},
-								{
-									title: "Rewards",
-									value: "rewards",
-									icon: <BalloonIcon size={16} weight="fill" />,
-								},
-							]}
-						/>
-						{canSeeMigrations ? (
-							<CollapsibleNavGroup
-								value="customers"
-								icon={<UserCircleIcon size={16} weight="fill" />}
-								title="Customers"
+					<nav className="flex flex-col gap-[18px]">
+						<SidebarSearchButton />
+						<NavSection title="Catalog">
+							<NavButton
+								value="products"
+								subValue="products"
+								isDefaultSubValue
+								icon={<PackageIcon weight="bold" />}
+								title="Plans"
 								env={env}
-								isOpen={customerGroupOpen}
-								onToggle={() => setCustomerGroupOpen((prev) => !prev)}
-								subTabs={[
-									{
-										title: "All Customers",
-										value: "customers",
-										icon: <UsersIcon size={16} weight="fill" />,
-									},
-									{
-										title: "Migrations",
-										value: "migrations",
-										path: "/migrations",
-										icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
-										badge: <BetaBadge className="ml-auto" />,
-									},
-								]}
 							/>
-						) : (
+							<NavButton
+								value="products"
+								subValue="features"
+								icon={<StackIcon weight="bold" />}
+								title="Features"
+								env={env}
+							/>
+							<NavButton
+								value="products"
+								subValue="rewards"
+								icon={<GiftIcon weight="bold" />}
+								title="Rewards"
+								env={env}
+							/>
+						</NavSection>
+						<NavSection title="Customers">
 							<NavButton
 								value="customers"
-								icon={<UserCircleIcon size={16} weight="fill" />}
+								icon={<UsersIcon weight="bold" />}
 								title="Customers"
 								env={env}
 							/>
-						)}
-						<NavButton
-							value="analytics"
-							icon={<ChartBarIcon size={16} weight="fill" />}
-							title="Analytics"
-							env={env}
-						/>
-						{canSeeDev && (
-							<CollapsibleNavGroup
-								value="dev"
-								icon={<TerminalWindowIcon size={16} weight="fill" />}
-								title="Developer"
+							<NavButton
+								value="analytics"
+								icon={<ChartBarIcon weight="bold" />}
+								title="Usage"
 								env={env}
-								isOpen={devGroupOpen}
-								onToggle={() => setDevGroupOpen((prev) => !prev)}
-								subTabs={buildDevSubTabs({ flags })}
 							/>
+							{canSeeMigrations && (
+								<NavButton
+									value="migrations"
+									icon={<ArrowsSplitIcon weight="bold" />}
+									title="Migrations"
+									badge={
+										<span className="ml-auto rounded border border-black/10 px-[5px] text-[10px] font-medium leading-[15px] tracking-[0.04em] text-[#8A8A8A] dark:border-[#262626] dark:text-[#6A6A6A]">
+											BETA
+										</span>
+									}
+									env={env}
+								/>
+							)}
+						</NavSection>
+						{canSeeDev && (
+							<NavSection title="Developer">
+								{DEV_SUB_TABS.map((devTab) => (
+									<NavButton
+										key={devTab.value}
+										value="dev"
+										subValue={devTab.value}
+										isDefaultSubValue={devTab.value === "api_keys"}
+										icon={devTab.icon}
+										title={devTab.title}
+										env={env}
+									/>
+								))}
+							</NavSection>
 						)}
-						<NavButton
-							value="settings"
-							icon={<GearIcon size={16} weight="fill" />}
-							title="Settings"
-							env={env}
-						/>
-					</div>
+					</nav>
 				</div>
 
 				<SidebarBottom />

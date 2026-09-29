@@ -34,7 +34,7 @@ export function CreditEditableTable<T>({
 				{action}
 			</div>
 			{hasRows && (
-				<div className="rounded-lg border shadow-card overflow-hidden">
+				<div>
 					<Table.Provider
 						config={{
 							table,
@@ -46,7 +46,7 @@ export function CreditEditableTable<T>({
 						}}
 					>
 						<Table.Container>
-							<Table.Content className="!rounded-none !border-0 !shadow-none [&_[data-slot=table-container]]:rounded-none">
+							<Table.Content>
 								<Table.Header />
 								<Table.Body />
 							</Table.Content>

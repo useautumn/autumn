@@ -21,11 +21,27 @@ supabase.sh
 **/.env*
 tests/
 !server/tests
+!packages/balance-worker-client/tests
+!packages/auto-topup/tests
+!packages/cache/tests
+!packages/encryption/tests
+!packages/sqs/tests
+!packages/catalog-lru/tests
+apps/balance-worker/.data/
+!packages/kafka/tests
+!apps/balance-worker/tests
+!packages/balance-engine/tests
+!packages/balance-webhooks/tests
+!packages/postgres/tests
 !packages/ax-evals/tests
 !packages/mcp/tests
 !packages/gateway/tests
 !apps/leaf/tests
 !packages/render/tests
+!packages/ducklake/tests
+!packages/axiom/tests
+!packages/billing/tests
+!packages/fx/tests
 !vite/tests
 .secrets
 

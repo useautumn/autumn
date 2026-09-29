@@ -27,6 +27,7 @@ const applyCustomerProductUpdate = ({
 	...(updates.trial_ends_at !== undefined
 		? { trial_ends_at: updates.trial_ends_at }
 		: {}),
+	...(updates.processor !== undefined ? { processor: updates.processor } : {}),
 });
 
 /** Patch snapshots may not include the rows being deleted; `before` restores

@@ -2,6 +2,11 @@ import { Decimal } from "decimal.js";
 import type { ApiBalanceBreakdown } from "../../api/customers/cusFeatures/apiBalance.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type {
+	CustomerEntitlementWithPricesView,
+	FullCusEntWithFullCusProductView,
+	FullCustomerEntitlementView,
+} from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { entToOptions } from "../productUtils/convertProductUtils.js";
 import { resetIntvToEntIntv } from "../productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { getCusEntBalance } from "./balanceUtils.js";
@@ -12,7 +17,7 @@ import { getStartingBalance } from "./getStartingBalance.js";
 export const cusEntsToPlanId = ({
 	cusEnts,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: FullCusEntWithFullCusProductView[];
 }) => {
 	// Get number of keys
 	const uniquePlanIds = new Set<string>();
@@ -34,7 +39,7 @@ export const cusEntToBalance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: FullCustomerEntitlementView;
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {
@@ -60,7 +65,7 @@ export const cusEntToIncludedUsage = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithPricesView;
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {

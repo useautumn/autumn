@@ -1,9 +1,10 @@
 /**
- * Pull writes one env's webhooks back into the config. It touches only
- * `url[envKey]` on a url map, and every other key, comment, trailing comma and
- * order stays. The five rules: append an unknown webhook; set a string url;
- * leave code alone (warning when it differs); remove the env's key when the
- * server has none, deleting a webhook whose map empties; skip dashboard ones.
+ * Pull writes one env's webhooks back into the config, one entry per remote
+ * endpoint. An entry is found by `(env, id)`; every other env's entries,
+ * comments, trailing commas and order stay. Append an unknown endpoint; set a
+ * string url and the other fields; leave code alone (warning when it differs);
+ * delete an entry the server no longer has in this env. A dashboard endpoint
+ * is written under its own `ep_` id.
  */
 
 import { expect, test } from "bun:test";
@@ -53,7 +54,7 @@ const pullInto = ({
 	return { ...result, source: map.get(CONFIG), files: map };
 };
 
-test("rule 1: a remote webhook the config never names is appended with this env's url only", () => {
+test("an endpoint the config never names is appended as one entry for this env", () => {
 	const { source, lines } = pullInto({
 		source: `import { atmn } from "atmn";
 
@@ -74,9 +75,8 @@ export default atmn({
 	webhooks: [
 		webhook({
 			id: "billing",
-			url: {
-				sandbox: "https://staging.example.com/autumn",
-			},
+			env: "sandbox",
+			url: "https://staging.example.com/autumn",
 			events: [
 				"billing.updated",
 			],
@@ -85,26 +85,23 @@ export default atmn({
 	],
 });
 `);
-	expect(lines).toEqual(["+ webhook billing"]);
+	expect(lines).toEqual(["+ webhook billing (sandbox)"]);
 });
 
-test("rule 2: a string url is set or replaced for this env only; other keys, comments and fields follow the server", () => {
+test("a stated entry follows the server in its env only; the same id in another env and comments stay", () => {
 	const before = `export default atmn({
 	webhooks: [
 		webhook({
 			id: "billing",
+			env: "live",
 			events: ["billing.updated"],
-			url: {
-				live: "https://example.com/autumn", // prod
-			},
+			url: "https://example.com/autumn", // prod
 		}),
 		webhook({
-			id: "invoices",
-			events: ["invoice.finalized"],
-			url: {
-				sandbox: "https://old.example.com/invoices", // staging box
-				live: "https://example.com/invoices",
-			},
+			id: "billing",
+			env: "sandbox",
+			events: ["billing.updated"],
+			url: "https://old.example.com/autumn", // staging box
 		}),
 	],
 });
@@ -112,79 +109,69 @@ test("rule 2: a string url is set or replaced for this env only; other keys, com
 	const { source, lines } = pullInto({
 		source: before,
 		remoteList: [
-			remote("billing", "https://staging.example.com/autumn", {
+			remote("billing", "https://new.example.com/autumn", {
 				events: ["billing.updated", "balances.limit_reached"],
-			}),
-			remote("invoices", "https://new.example.com/invoices", {
-				events: ["invoice.finalized"],
 			}),
 		],
 		stated: [
 			{
 				id: "billing",
+				env: "live",
 				events: ["billing.updated"],
-				url: { live: "https://example.com/autumn" },
+				url: "https://example.com/autumn",
 			},
 			{
-				id: "invoices",
-				events: ["invoice.finalized"],
-				url: {
-					sandbox: "https://old.example.com/invoices",
-					live: "https://example.com/invoices",
-				},
+				id: "billing",
+				env: "sandbox",
+				events: ["billing.updated"],
+				url: "https://old.example.com/autumn",
 			},
 		],
 	});
-	expect(source).toBe(`export default atmn({
+	expect(source?.trimStart()).toBe(`export default atmn({
 	webhooks: [
 		webhook({
 			id: "billing",
-			events: ["billing.updated", "balances.limit_reached"],
-			url: {
-				live: "https://example.com/autumn", // prod
-				sandbox: "https://staging.example.com/autumn",
-			},
+			env: "live",
+			events: ["billing.updated"],
+			url: "https://example.com/autumn", // prod
 		}),
 		webhook({
-			id: "invoices",
-			events: ["invoice.finalized"],
-			url: {
-				sandbox: "https://new.example.com/invoices", // staging box
-				live: "https://example.com/invoices",
-			},
+			id: "billing",
+			env: "sandbox",
+			events: ["billing.updated", "balances.limit_reached"],
+			url: "https://new.example.com/autumn", // staging box
 		}),
 	],
 });
 `);
-	expect(lines).toEqual(["~ webhook billing", "~ webhook invoices"]);
+	expect(lines).toEqual(["~ webhook billing (sandbox)"]);
 });
 
-test("rule 3: a url that is code is never rewritten, and differs only earn a warning", () => {
+test("a url that is code is never rewritten, and a difference only earns a warning", () => {
 	const before = `export default atmn({
 	webhooks: [
 		webhook({
 			id: "billing",
+			env: "sandbox",
 			events: ["billing.updated"],
-			url: { sandbox: process.env.STAGING_URL },
+			url: process.env.STAGING_URL,
 		}),
 	],
 });
 `;
+	const stated = (url: string): StatedWebhook[] => [
+		{ id: "billing", env: "sandbox", events: ["billing.updated"], url },
+	];
 	const differs = pullInto({
 		source: before,
 		remoteList: [remote("billing", "https://staging.myapp.com/api/autumn")],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { sandbox: "https://sandbox.myapp.com/api/autumn" },
-			},
-		],
+		stated: stated("https://sandbox.myapp.com/api/autumn"),
 	});
 	expect(differs.source).toBe(before);
 	expect(differs.warnings).toEqual([
 		[
-			"⚠ billing  url.sandbox isn't a plain string, so pull left it untouched",
+			"⚠ billing (sandbox)  url isn't a plain string, so pull left it untouched",
 			"           server:      https://staging.myapp.com/api/autumn",
 			"           your config: https://sandbox.myapp.com/api/autumn",
 			"           Update it by hand, or make it a string and pull will manage it.",
@@ -193,18 +180,12 @@ test("rule 3: a url that is code is never rewritten, and differs only earn a war
 	const same = pullInto({
 		source: before,
 		remoteList: [remote("billing", "https://staging.myapp.com/api/autumn")],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { sandbox: "https://staging.myapp.com/api/autumn" },
-			},
-		],
+		stated: stated("https://staging.myapp.com/api/autumn"),
 	});
 	expect(same.warnings).toEqual([]);
 });
 
-test("rule 4: no server webhook in this env removes the env's key, and an emptied map removes the webhook and its export", () => {
+test("an entry the server no longer has in this env is deleted with its export; other envs' entries stay", () => {
 	const hooks = "/project/webhooks.ts";
 	const { source, files, lines } = pullInto({
 		source: `import { audit } from "./webhooks";
@@ -214,11 +195,8 @@ export default atmn({
 		audit,
 		webhook({
 			id: "billing",
-			events: ["billing.updated"],
-			url: {
-				live: "https://example.com/autumn", // prod
-				sandbox: "https://staging.example.com/autumn",
-			},
+			env: "live",
+			url: "https://example.com/autumn", // prod
 		}),
 	],
 });
@@ -226,8 +204,8 @@ export default atmn({
 		files: {
 			[hooks]: `export const audit = webhook({
 	id: "audit",
-	events: ["billing.updated"],
-	url: { sandbox: "https://staging.example.com/audit" },
+	env: "sandbox",
+	url: "https://staging.example.com/audit",
 });
 `,
 		},
@@ -235,120 +213,47 @@ export default atmn({
 		stated: [
 			{
 				id: "audit",
-				events: ["billing.updated"],
-				url: { sandbox: "https://staging.example.com/audit" },
+				env: "sandbox",
+				url: "https://staging.example.com/audit",
 			},
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: {
-					live: "https://example.com/autumn",
-					sandbox: "https://staging.example.com/autumn",
-				},
-			},
+			{ id: "billing", env: "live", url: "https://example.com/autumn" },
 		],
 	});
-	expect(source).toBe(`export default atmn({
+	expect(source?.trimStart()).toBe(`export default atmn({
 	webhooks: [
 		webhook({
 			id: "billing",
-			events: ["billing.updated"],
-			url: {
-				live: "https://example.com/autumn", // prod
-			},
+			env: "live",
+			url: "https://example.com/autumn", // prod
 		}),
 	],
 });
 `);
 	expect(files.get(hooks)).toBe("");
-	expect(lines).toEqual(["- webhook audit", "- webhook billing url.sandbox"]);
+	expect(lines).toEqual(["- webhook audit (sandbox)"]);
 });
 
 const DASHBOARD_ID = "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5";
-const WH_ID = /^wh_[0-9A-Za-z]{27}$/;
 
-test("rule 5: a dashboard webhook is appended under a fresh wh_ id, and a second pull adds nothing", () => {
-	const before = `export default atmn({
-	webhooks: [
-		webhook({ id: "billing", events: ["billing.updated"], url: { live: "https://example.com/a" } }),
-	],
-});
-`;
-	const dashboard = remote(DASHBOARD_ID, "https://x.dev/h");
+test("a dashboard endpoint is written under its own ep_ id, and a second pull adds nothing", () => {
 	const first = pullInto({
-		source: before,
-		remoteList: [dashboard],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { live: "https://example.com/a" },
-			},
-		],
+		source: `export default atmn({
+	webhooks: [],
+});
+`,
+		remoteList: [remote(DASHBOARD_ID, "https://x.dev/h", { events: [] })],
 	});
-	const id = /webhook (wh_\S+)/.exec(first.lines[0] ?? "")?.[1] ?? "";
-	expect(id).toMatch(WH_ID);
-	expect(first.lines).toEqual([
-		`+ webhook ${id} (made in the dashboard; push adopts it by URL)`,
-	]);
-	expect(first.source).toContain(`id: "${id}",`);
-	expect(first.source).toContain('sandbox: "https://x.dev/h",');
-	expect(first.source).not.toContain(DASHBOARD_ID);
+	expect(first.source).toContain(`id: "${DASHBOARD_ID}"`);
+	expect(first.source).not.toContain("events");
+	expect(first.lines).toEqual([`+ webhook ${DASHBOARD_ID} (sandbox)`]);
 
-	// Nothing was pushed: the server still holds the uid-less endpoint.
 	const second = pullInto({
 		source: first.source ?? "",
-		remoteList: [dashboard],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { live: "https://example.com/a" },
-			},
-			{ id, events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } },
-		],
+		remoteList: [remote(DASHBOARD_ID, "https://x.dev/h", { events: [] })],
+		stated: [{ id: DASHBOARD_ID, env: "sandbox", url: "https://x.dev/h" }],
 	});
 	expect(second.source).toBe(first.source);
 	expect(second.lines).toEqual([]);
-});
-
-test("rule 5: a dashboard webhook whose URL the config already states updates that webhook, and keeps its url", () => {
-	const before = `export default atmn({
-	webhooks: [
-		webhook({
-			id: "billing",
-			events: ["billing.updated"],
-			url: { sandbox: "https://x.dev/h" },
-		}),
-	],
-});
-`;
-	const { source, lines } = pullInto({
-		source: before,
-		remoteList: [
-			remote(DASHBOARD_ID, "https://x.dev/h", {
-				events: ["billing.updated", "invoice.finalized"],
-			}),
-		],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { sandbox: "https://x.dev/h" },
-			},
-		],
-	});
-	expect(source).toBe(`export default atmn({
-	webhooks: [
-		webhook({
-			id: "billing",
-			events: ["billing.updated", "invoice.finalized"],
-			url: { sandbox: "https://x.dev/h" },
-		}),
-	],
-});
-`);
-	expect(lines).toEqual(["~ webhook billing"]);
 });
 
 test("runPull lists webhooks in the same parallel batch and prints the code-url warning", async () => {
@@ -369,8 +274,9 @@ export default atmn({
 	webhooks: [
 		webhook({
 			id: "billing",
+			env: "sandbox",
 			events: ["billing.updated"],
-			url: { sandbox: process.env.ATMN_TEST_STAGING_URL },
+			url: process.env.ATMN_TEST_STAGING_URL as string,
 		}),
 	],
 });
@@ -410,11 +316,15 @@ export default atmn({
 		write: (text) => {
 			output += text;
 		},
-		webhookEnv: async () => ({
-			key: "sandbox",
-			live: false,
-			orgId: async () => "org_ab12",
-		}),
+		webhookEnvs: () => [
+			{
+				keyName: "AUTUMN_SECRET_KEY",
+				label: "sandbox",
+				secretKey: "sk_sandbox",
+				envKey: async () => "sandbox",
+				listWebhooks: client.listWebhooks,
+			},
+		],
 	});
 	expect(started.sort()).toEqual([
 		"diff",
@@ -423,25 +333,6 @@ export default atmn({
 		"previewUpdateOrganization",
 	]);
 	expect(output).toContain("your config: https://sandbox.myapp.com/api/autumn");
-});
-
-test("a config id shaped like a Svix endpoint id is still the config's", () => {
-	const id = "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5";
-	const before = `export default atmn({
-	webhooks: [
-		webhook({ id: "${id}", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),
-	],
-});
-`;
-	const { source, lines } = pullInto({
-		source: before,
-		remoteList: [remote(id, "https://x.dev/h")],
-		stated: [
-			{ id, events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } },
-		],
-	});
-	expect(source).toBe(before);
-	expect(lines).toEqual([]);
 });
 
 test("pull never appends webhooks after a root spread, and never deletes a computed webhook half-way", () => {
@@ -456,60 +347,67 @@ test("pull never appends webhooks after a root spread, and never deletes a compu
 
 	const computed = `export default atmn({
 	webhooks: [
-		webhook({ id: "billing", events: EVENTS, url: { sandbox: "https://x.dev/h" } }),
+		webhook({ id: "billing", env: ENV, url: "https://x.dev/h" }),
 	],
 });
 `;
 	const removed = pullInto({
 		source: computed,
 		remoteList: [],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { sandbox: "https://x.dev/h" },
-			},
-		],
+		stated: [{ id: "billing", env: "sandbox", url: "https://x.dev/h" }],
 	});
+	expect(removed.source).toBe(computed);
 	expect(removed.unlocated).toEqual([
-		{
-			id: "billing",
-			action: "delete the webhook by hand: its url map is now empty",
-		},
+		{ id: "billing", action: "delete the sandbox webhook by hand" },
 	]);
 });
 
-test("a dashboard webhook receiving every event is never written as events: []", () => {
-	const before = `export default atmn({
+test("a webhook receiving every event is written with no events key, and pull drops a stated list for it", () => {
+	const { source, warnings } = pullInto({
+		source: `import { atmn, webhook } from "atmn";
+
+export default atmn({
 	webhooks: [
-		webhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),
+		webhook({
+			id: "billing",
+			env: "sandbox",
+			events: ["billing.updated"],
+			url: "https://x.dev/h",
+		}),
 	],
 });
-`;
-	const { source, lines, warnings } = pullInto({
-		source: before,
+`,
 		remoteList: [
-			remote(DASHBOARD_ID, "https://x.dev/h", { events: [] }),
-			remote("ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5", "https://x.dev/all", {
-				events: [],
-			}),
+			remote("billing", "https://x.dev/h", { events: [] }),
+			remote("everything", "https://x.dev/all", { events: [] }),
 		],
 		stated: [
 			{
 				id: "billing",
+				env: "sandbox",
 				events: ["billing.updated"],
-				url: { sandbox: "https://x.dev/h" },
+				url: "https://x.dev/h",
 			},
 		],
 	});
-	expect(source).toBe(before);
-	expect(lines).toEqual([
-		"· webhook ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5 receives every event; give it an event list in the dashboard, or add it to your config, to manage it here",
-	]);
-	// The config's narrower list is kept, but never silently: push would narrow the endpoint.
-	expect(warnings).toEqual([
-		"⚠ billing  the dashboard webhook at this url receives every event; your next push narrows it to billing.updated",
-	]);
+	expect(source).toBe(`import { atmn, webhook } from "atmn";
+
+export default atmn({
+	webhooks: [
+		webhook({
+			id: "billing",
+			env: "sandbox",
+			url: "https://x.dev/h",
+		}),
+		webhook({
+			id: "everything",
+			env: "sandbox",
+			url: "https://x.dev/all",
+		}),
+	],
+});
+`);
+	expect(warnings).toEqual([]);
 });
 
 test("pull keeps event names this atmn doesn't know, verbatim", () => {

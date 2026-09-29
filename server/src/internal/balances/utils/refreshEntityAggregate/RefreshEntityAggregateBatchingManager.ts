@@ -135,8 +135,7 @@ export class RefreshEntityAggregateBatchingManager {
 		entry: RefreshEntry;
 	}): void {
 		const nowMs = this._now();
-		const bucketEndMs =
-			(Math.floor(nowMs / this.bucketMs) + 1) * this.bucketMs;
+		const bucketEndMs = (Math.floor(nowMs / this.bucketMs) + 1) * this.bucketMs;
 		const delayMs = bucketEndMs - nowMs + this.settleBufferMs;
 
 		entry.timer = setTimeout(() => {

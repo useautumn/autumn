@@ -1,4 +1,4 @@
-import { AppEnv, type FullCustomer } from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
 import { IconButton, useColumnVisibility } from "@autumn/ui";
 import { ArrowSquareOutIcon, UsersIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import {
 	balanceFilterQueryKey,
@@ -24,10 +23,7 @@ import type { CustomerWithProducts } from "./CustomerListColumns";
 import { CustomerListCreateButton } from "./CustomerListCreateButton";
 import { CustomerListExportMenu } from "./CustomerListExportMenu";
 import { CustomerListFilterButton } from "./CustomerListFilterButton";
-import {
-	CustomerListPageSizeSelector,
-	CustomerListPagination,
-} from "./CustomerListPagination";
+import { CustomerListPaginationFooter } from "./CustomerListPagination";
 import { CustomerListSearchBar } from "./CustomerListSearchBar";
 import { CustomerListSortButton } from "./CustomerListSortButton";
 
@@ -39,13 +35,10 @@ export function CustomerListTable({
 	isFetchingUncached: boolean;
 }) {
 	const { org } = useOrg();
-	const env = useEnv();
-
-	const tableContainerHeight =
-		env === AppEnv.Sandbox ? "calc(100vh - 230px)" : "calc(100vh - 190px)";
 
 	const { features } = useFeaturesQuery();
-	const { queryStates, setFilters, currentCursor } = useCustomerFilters();
+	const { queryStates, setFilters, currentCursor, currentPage } =
+		useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
 	const {
@@ -229,12 +222,12 @@ export function CustomerListTable({
 				onColumnVisibilitySave: saveColumnVisibility,
 				columnVisibilityInToolbar: true,
 				flexibleTableColumns: true,
-				virtualization: {
-					containerHeight: tableContainerHeight,
-				},
+				// No fixed height: the table fills the space left below the toolbar
+				// (see the flex chain below) so only the table body scrolls.
+				virtualization: {},
 			}}
 		>
-			<div>
+			<div className="flex flex-col flex-1 min-h-0">
 				<Table.Toolbar>
 					<Table.Heading>
 						<UsersIcon size={16} weight="fill" className="text-subtle" />
@@ -258,19 +251,24 @@ export function CustomerListTable({
 					<div className="order-1 w-full md:order-4 md:w-auto md:flex-1 md:min-w-0">
 						<CustomerListSearchBar />
 					</div>
-					<div className="order-5 ml-auto flex items-center gap-2 shrink-0">
-						<CustomerListPagination />
-						<CustomerListPageSizeSelector />
-					</div>
 				</div>
 				{!hasRows && hasActiveFiltersOrSearch && !isFetchingUncached ? (
-					<EmptyState
-						type="no-customers-found"
-						actionButton={<CustomerListCreateButton />}
-					/>
+					<>
+						<EmptyState
+							type="no-customers-found"
+							actionButton={<CustomerListCreateButton />}
+						/>
+						{/* Keeps back-navigation reachable when a later page comes back empty. */}
+						{currentPage > 1 && <CustomerListPaginationFooter />}
+					</>
 				) : (
-					<Table.Container>
-						<Table.VirtualizedContent>
+					// min-h floor (table + pinned footer): on very short viewports the page
+					// scrolls instead of squeezing the table.
+					<Table.Container className="flex-1 min-h-[460px]">
+						<Table.VirtualizedContent
+							className="flex flex-col min-h-0"
+							footer={<CustomerListPaginationFooter />}
+						>
 							<Table.VirtualizedBody />
 						</Table.VirtualizedContent>
 					</Table.Container>

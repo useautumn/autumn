@@ -94,6 +94,13 @@ html {
 	--overlay-dialog-shadow:
 		0 8px 24px rgb(0 0 0 / 0.07), 0 1px 3px rgb(0 0 0 / 0.04);
 
+	--table-tray: #f3f3f2;
+	--table-tray-border: #e7e7e5;
+	--table-surface: #ffffff;
+	--table-surface-border: #e5e5e5;
+	--table-row-divider: #efefee;
+	--table-row-hover: #fafaf9;
+
 	--input: #dddddd;
 
 	--icon1: #888;
@@ -146,6 +153,17 @@ html {
 
 	--chart-grid-stroke: #d1d1d190;
 
+	/* Categorical series slots; order is colorblind-validated, never reorder or skip. */
+	--chart-series-1: #8838ff;
+	--chart-series-2: #eb6834;
+	--chart-series-3: #1baf7a;
+	--chart-series-4: #eda100;
+	--chart-series-5: #e87ba4;
+	--chart-series-6: #008300;
+	--chart-series-7: #2a78d6;
+	--chart-series-8: #e34948;
+	--chart-series-other: #b5b5b5;
+
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
 	--sidebar-primary: oklch(0.21 0.006 285.885);
@@ -189,7 +207,24 @@ html {
 	--overlay-dialog-shadow:
 		0 8px 24px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.2);
 
+	--table-tray: #111111;
+	--table-tray-border: #1f1f1f;
+	--table-surface: #191919;
+	--table-surface-border: #262626;
+	--table-row-divider: #232323;
+	--table-row-hover: #1e1e1e;
+
 	--chart-grid-stroke: #262626;
+
+	--chart-series-1: #9c5aff;
+	--chart-series-2: #d95926;
+	--chart-series-3: #199e70;
+	--chart-series-4: #c98500;
+	--chart-series-5: #d55181;
+	--chart-series-6: #008300;
+	--chart-series-7: #3987e5;
+	--chart-series-8: #e66767;
+	--chart-series-other: #525252;
 
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.141 0.005 285.823);
@@ -472,6 +507,18 @@ html {
 	border-bottom-style: dashed;
 }
 
+/* Presets keep their own palette; tables derive from their surface tokens. */
+.preset-modern,
+.preset-cursed,
+.preset-scraps {
+	--table-tray: var(--card);
+	--table-tray-border: var(--border);
+	--table-surface: var(--interactive-secondary);
+	--table-surface-border: var(--border);
+	--table-row-divider: var(--border);
+	--table-row-hover: var(--interactive-secondary-hover);
+}
+
 @theme inline {
 	/* CUSTOM STUFF */
 	--color-tertiary-foreground: var(--tertiary-foreground);
@@ -600,6 +647,12 @@ html {
 	--color-focus: rgba(139, 92, 246, 0.95);
 
 	--color-table-hover: #f3f3f3;
+	--color-table-tray: var(--table-tray);
+	--color-table-tray-border: var(--table-tray-border);
+	--color-table-surface: var(--table-surface);
+	--color-table-surface-border: var(--table-surface-border);
+	--color-table-row-divider: var(--table-row-divider);
+	--color-table-row-hover: var(--table-row-hover);
 
 	/* Inline color consolidation */
 	--color-light-purple: #f9f5ff;

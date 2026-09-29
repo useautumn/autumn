@@ -1,5 +1,10 @@
 import { isProductCurrentlyAttached } from "@autumn/shared";
-import { IconButton, InlineAction, SearchableSelect } from "@autumn/ui";
+import {
+	IconButton,
+	InlineAction,
+	SearchableSelect,
+	StatusChip,
+} from "@autumn/ui";
 import { MinusIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
@@ -123,9 +128,9 @@ export function AttachProductSelection({
 					hideFieldInfo
 					selectValueAfter={
 						hasCustomizations && productId ? (
-							<span className="rounded-md bg-green-500/10 px-1 py-0 text-xs text-green-500">
+							<StatusChip tone="fuchsia" glyph="pencil">
 								Custom
-							</span>
+							</StatusChip>
 						) : undefined
 					}
 				/>

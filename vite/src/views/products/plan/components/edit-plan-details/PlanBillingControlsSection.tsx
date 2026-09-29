@@ -771,6 +771,8 @@ export function PlanBillingControlsSection({
 							: undefined
 					}
 					renderEditingRow={renderForm}
+					slim
+					defaultExpanded
 				/>
 			) : (
 				!hideHeader && (

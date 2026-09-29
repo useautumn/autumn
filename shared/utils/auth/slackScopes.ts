@@ -18,3 +18,14 @@ export const DEFAULT_SLACK_BOT_SCOPES: readonly string[] = [
 	SLACK_USERS_READ_SCOPE,
 	SLACK_EMAIL_SCOPE,
 ];
+
+/**
+ * Extra bot scopes for the internal admin install only (Autumn's own
+ * workspace), used to create per-org support channels and send Slack Connect
+ * invites. Customer installs never request these.
+ */
+export const SLACK_CONNECT_ADMIN_SCOPES: readonly string[] = [
+	"channels:manage",
+	"channels:write.invites",
+	"conversations.connect:write",
+];

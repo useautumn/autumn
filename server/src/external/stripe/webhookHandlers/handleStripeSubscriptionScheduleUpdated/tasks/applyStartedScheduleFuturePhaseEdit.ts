@@ -1,9 +1,12 @@
 import type Stripe from "stripe";
 import { logAutoSyncSkip } from "@/internal/billing/v2/actions/sync/utils/logAutoSyncSkip";
 import { isQuantityOnlySchedule } from "@/internal/billing/v2/actions/verify/evaluate/isQuantityOnlySchedule";
+import { isAutumnManagedStripeSchedule } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { computeDetachSchedulePhases } from "@/internal/customers/cusProducts/actions/detachSchedulePhases/computeDetachSchedulePhases";
 import { executeDetachSchedulePhases } from "@/internal/customers/cusProducts/actions/detachSchedulePhases/executeDetachSchedulePhases";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext.js";
+import { futurePhaseItemsChanged } from "../futurePhaseItemsChanged.js";
+import type { StripeScheduleUpdatedContext } from "../setupScheduleUpdatedContext.js";
 
 const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
 	typeof schedule.subscription === "string"
@@ -18,13 +21,21 @@ const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
  */
 export const applyStartedScheduleFuturePhaseEdit = async ({
 	ctx,
-	schedule,
+	eventContext,
 }: {
 	ctx: StripeWebhookContext;
-	schedule: Stripe.SubscriptionSchedule;
+	eventContext: StripeScheduleUpdatedContext;
 }) => {
 	const { logger, fullCustomer } = ctx;
-	if (!fullCustomer) return;
+	const { schedule, previousPhases, nowSeconds } = eventContext;
+	if (schedule.status !== "active" || !previousPhases || !fullCustomer) return;
+	if (isAutumnManagedStripeSchedule({ schedule })) return;
+	const changed = futurePhaseItemsChanged({
+		previousPhases,
+		currentPhases: schedule.phases,
+		nowSeconds,
+	});
+	if (!changed) return;
 
 	const rows = computeDetachSchedulePhases({ fullCustomer, schedule });
 	if (rows.scheduledRows.length === 0) return;
@@ -45,6 +56,7 @@ export const applyStartedScheduleFuturePhaseEdit = async ({
 		ctx,
 		rows,
 	});
+	eventContext.results.detachedFuturePhases = { detachedCount, clearedCount };
 	logger.info(
 		`[handleStripeSubscriptionScheduleUpdated] ${schedule.id}: future phase edited on a quantity-only schedule, detached ${detachedCount} scheduled plan(s), cleared ${clearedCount} phase end(s)`,
 	);

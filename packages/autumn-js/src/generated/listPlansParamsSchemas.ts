@@ -170,6 +170,7 @@ export const listPlansProcessorsSchema = z.object({
 
 export const listPlansConfigSchema = z.object({
 	ignorePastDue: z.boolean(),
+	anchorToMonthStart: z.boolean(),
 });
 
 export const listPlansUsageLimitFilterSchema = z.object({

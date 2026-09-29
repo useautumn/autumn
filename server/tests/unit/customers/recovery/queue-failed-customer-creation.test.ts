@@ -131,7 +131,7 @@ describe("queueFailedCustomerCreation", () => {
 	});
 
 	test("returns false without masking the request when the queue is not configured", async () => {
-		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL = undefined;
+		delete process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL;
 		const ctx = buildContext();
 
 		const queued = await queueFailedCustomerCreation({

@@ -51,4 +51,36 @@ describe("mergeAutumnBillingPlans", () => {
 			),
 		).toEqual(["cl_1"]);
 	});
+
+	test("one top-up keeps its purchase; two keep only their deltas", () => {
+		const topUp = ({ id, delta }: { id: string; delta: number }) => ({
+			...emptyPlan(),
+			autoTopupRebalance: {
+				deltas: [{ cusEntId: id, featureId: "messages", delta }],
+				customerEntitlementId: id,
+				featureId: "messages",
+				quantity: delta,
+				creditedCustomerEntitlementId: id,
+			},
+		});
+
+		const single = mergeAutumnBillingPlans({
+			base: emptyPlan(),
+			incoming: topUp({ id: "ce_1", delta: 100 }),
+		});
+		expect(single.autoTopupRebalance).toEqual(
+			topUp({ id: "ce_1", delta: 100 }).autoTopupRebalance,
+		);
+
+		const both = mergeAutumnBillingPlans({
+			base: topUp({ id: "ce_1", delta: 100 }),
+			incoming: topUp({ id: "ce_2", delta: 50 }),
+		});
+		expect(both.autoTopupRebalance).toEqual({
+			deltas: [
+				{ cusEntId: "ce_1", featureId: "messages", delta: 100 },
+				{ cusEntId: "ce_2", featureId: "messages", delta: 50 },
+			],
+		});
+	});
 });

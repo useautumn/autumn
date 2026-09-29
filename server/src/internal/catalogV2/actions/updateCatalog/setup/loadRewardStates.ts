@@ -24,6 +24,7 @@ const STATABLE_TYPES = new Set<RewardType>([
 export type LoadedRewards = {
 	rewards: CatalogRewardState[];
 	unstatableIds: Set<string>;
+	unstatableInternalIds: Set<string>;
 	/** Stable ids of the rewards a config can state — the programs that may be stated too. */
 	statableInternalIds: Set<string>;
 	idByInternalId: Map<string, string>;
@@ -41,6 +42,7 @@ export const loadRewardStates = async ({
 	});
 
 	const statable = rows.filter((reward) => STATABLE_TYPES.has(reward.type));
+	const unstatable = rows.filter((reward) => !STATABLE_TYPES.has(reward.type));
 	const coupons = statable.filter(
 		(reward) => reward.type !== RewardType.FeatureGrant,
 	);
@@ -72,10 +74,9 @@ export const loadRewardStates = async ({
 
 	return {
 		rewards: statable.map(toState),
-		unstatableIds: new Set(
-			rows
-				.filter((reward) => !STATABLE_TYPES.has(reward.type))
-				.map((reward) => reward.id),
+		unstatableIds: new Set(unstatable.map((reward) => reward.id)),
+		unstatableInternalIds: new Set(
+			unstatable.map((reward) => reward.internal_id),
 		),
 		statableInternalIds: new Set(statable.map((reward) => reward.internal_id)),
 		idByInternalId: new Map(rows.map((row) => [row.internal_id, row.id])),
@@ -100,6 +101,7 @@ export const loadReferralProgramStates = async ({
 	/** Public ids of the programs hidden here: absent from the catalog, but
 	 * still taken, so a config claiming one is refused rather than colliding. */
 	hiddenProgramIds: Set<string>;
+	hiddenProgramInternalIds: Set<string>;
 }> => {
 	const rows = await rewardProgramRepo.list({
 		db: ctx.db,
@@ -109,12 +111,14 @@ export const loadReferralProgramStates = async ({
 
 	const programs: ReferralProgramState[] = [];
 	const hiddenProgramIds = new Set<string>();
+	const hiddenProgramInternalIds = new Set<string>();
 	for (const program of rows) {
 		const rewardId = statableInternalIds.has(program.internal_reward_id)
 			? idByInternalId.get(program.internal_reward_id)
 			: undefined;
 		if (!rewardId) {
 			if (program.id) hiddenProgramIds.add(program.id);
+			hiddenProgramInternalIds.add(program.internal_id);
 			continue;
 		}
 		programs.push({
@@ -124,5 +128,5 @@ export const loadReferralProgramStates = async ({
 		});
 	}
 
-	return { programs, hiddenProgramIds };
+	return { programs, hiddenProgramIds, hiddenProgramInternalIds };
 };

@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Dialog,
 	DialogContent,
@@ -17,6 +16,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 
 type FeatureFlagConfig = {
 	maintenanceModes: {
@@ -344,11 +344,7 @@ export function FeatureFlagsDialog({
 							<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 								<Separator />
 								<div className="flex flex-wrap items-center gap-2">
-									<Badge variant="muted">
-										{config.configHealthy
-											? "Config healthy"
-											: "Config unavailable"}
-									</Badge>
+									<ConfigHealthChip healthy={config.configHealthy} />
 									{config.lastSuccessAt && (
 										<span className="tabular-nums">
 											Last refresh:{" "}

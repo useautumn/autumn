@@ -126,6 +126,7 @@ export class RevenueCatWebhookClient {
 		price,
 		currency,
 		purchasedAtMs,
+		expirationAtMs,
 		mock,
 		subscriberAttributes,
 	}: {
@@ -137,6 +138,7 @@ export class RevenueCatWebhookClient {
 		price?: number | null;
 		currency?: string;
 		purchasedAtMs?: number;
+		expirationAtMs?: number;
 		mock?: RevenueCatMockFixtures;
 		subscriberAttributes?: Record<string, string>;
 	}) {
@@ -153,6 +155,7 @@ export class RevenueCatWebhookClient {
 				price,
 				currency,
 				purchased_at_ms: purchasedAtMs,
+				expiration_at_ms: expirationAtMs,
 			},
 			mock,
 			subscriberAttributes,
@@ -171,6 +174,7 @@ export class RevenueCatWebhookClient {
 		price,
 		currency,
 		purchasedAtMs,
+		expirationAtMs,
 		subscriberAttributes,
 	}: {
 		productId: string;
@@ -181,6 +185,7 @@ export class RevenueCatWebhookClient {
 		price?: number | null;
 		currency?: string;
 		purchasedAtMs?: number;
+		expirationAtMs?: number;
 		subscriberAttributes?: Record<string, string>;
 	}) {
 		return this.sendEvent({
@@ -196,6 +201,7 @@ export class RevenueCatWebhookClient {
 				price,
 				currency,
 				purchased_at_ms: purchasedAtMs,
+				expiration_at_ms: expirationAtMs,
 			},
 			subscriberAttributes,
 		});

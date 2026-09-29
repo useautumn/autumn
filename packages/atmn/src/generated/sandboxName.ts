@@ -11,6 +11,7 @@ export const RESERVED_SANDBOX_SLUGS = new Set([
 	"migrations",
 	"dev",
 	"analytics",
+	"logs",
 	"settings",
 	"admin",
 	"chat",

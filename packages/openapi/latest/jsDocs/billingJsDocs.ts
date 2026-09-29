@@ -4,6 +4,7 @@ import {
 	ExtMultiUpdateParamsV0Schema,
 	MultiAttachParamsV0Schema,
 	UpdateSubscriptionV1ParamsSchema,
+	VerifyParamsV1Schema,
 } from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
 
@@ -293,4 +294,31 @@ export const billingPreviewMultiUpdateJsDoc = createJSDocDescription({
 	methodName: "billing.previewMultiUpdate",
 	returns:
 		"A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.",
+});
+
+export const billingVerifyJsDoc = createJSDocDescription({
+	description:
+		"Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.",
+	whenToUse:
+		"Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.",
+	body: VerifyParamsV1Schema,
+	examples: [
+		example({
+			description: "Verify every subscription for a customer",
+			values: {
+				customerId: "cus_123",
+			},
+		}),
+		example({
+			description: "Verify specific subscriptions in strict mode",
+			values: {
+				customerId: "cus_123",
+				subscriptionIds: ["sub_1234"],
+				strict: true,
+			},
+		}),
+	],
+	methodName: "billing.verify",
+	returns:
+		"A verify response with account-level mismatches and a per-subscription status (correct or mismatched) with the mismatches found.",
 });

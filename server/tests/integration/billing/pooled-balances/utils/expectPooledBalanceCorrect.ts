@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import type { EntInterval, PooledBalanceResetMode } from "@autumn/shared";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getPooledBalanceDbState } from "./getPooledBalanceDbState.js";
 
@@ -113,7 +114,8 @@ export const expectPooledBalanceCorrect = async ({
 			customer_product_id: null,
 			balance: pool.balance,
 			adjustment: pool.adjustment,
-			...(pool.cacheVersion === undefined
+			// cache_version guards the legacy Redis sync; the balance worker never writes it.
+			...(pool.cacheVersion === undefined || isBalanceWorkerRoute()
 				? {}
 				: { cache_version: pool.cacheVersion }),
 		});
@@ -212,9 +214,7 @@ export const expectPooledBalanceCorrect = async ({
 			customerProduct.customer_entitlements.filter((customerEntitlement) => {
 				if (!customerEntitlement.entitlement.pooled) return false;
 				if (!filter) return true;
-				return filteredSourceCustomerEntitlementIds.has(
-					customerEntitlement.id,
-				);
+				return filteredSourceCustomerEntitlementIds.has(customerEntitlement.id);
 			}),
 	);
 	expect(pooledSourceCustomerEntitlements).toHaveLength(sources.count);

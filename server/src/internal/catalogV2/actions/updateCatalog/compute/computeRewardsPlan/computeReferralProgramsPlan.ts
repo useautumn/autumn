@@ -18,13 +18,12 @@ export const computeUpsertReferralProgramsPlan = ({
 }): UpsertReferralProgramPlan[] =>
 	(params.referral_programs ?? []).map((entry) => {
 		const current =
-			entry.internal_id === undefined
-				? rewardStatesContext.programs.find(
-						(state) => state.program.id === entry.id,
-					)
-				: rewardStatesContext.programs.find(
-						(state) => state.internalId === entry.internal_id,
-					);
+			rewardStatesContext.programs.find(
+				(state) => state.internalId === entry.internal_id,
+			) ??
+			rewardStatesContext.programs.find(
+				(state) => state.program.id === entry.id,
+			);
 
 		const desired = {
 			id: entry.id,

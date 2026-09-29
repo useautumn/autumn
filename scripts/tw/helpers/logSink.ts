@@ -39,7 +39,8 @@ let lineBuffer = "";
 // layout — strip it before handing lines to the TUI subscriber.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching ANSI escapes is the point
 const ANSI_PATTERN = /\u001b\[[0-9;]*[A-Za-z]/g;
-const stripAnsi = (text: string): string => text.replace(ANSI_PATTERN, "");
+export const stripAnsi = (text: string): string =>
+	text.replace(ANSI_PATTERN, "");
 
 const feedSubscriber = (text: string): void => {
 	if (!logSubscriber) {
@@ -95,34 +96,32 @@ export const disableQuietMode = (): void => {
 /** The active log file path (so the orchestrator can print it in the final summary). */
 export const getLogFile = (): string | undefined => logFilePath;
 
-/**
- * Route raw text to the sink. In quiet mode it is appended to the run log file
- * (Ink owns the terminal); otherwise it is written to stdout. The text is written
- * VERBATIM (no implicit newline), so streamed sandbox chunks aren't fragmented;
- * line-oriented callers (`sinkLine`) add their own newline. Never throws — a
- * logging failure must not break the run.
- */
-export const sink = (text: string): void => {
-	// Live TUI logs pane (line-buffered). Independent of file/stdout routing.
-	feedSubscriber(text);
-
-	// The run log file keeps the full firehose whenever quiet mode is on.
-	if (quietMode && logFilePath) {
-		try {
-			appendFileSync(logFilePath, text);
-		} catch (error) {
-			if (!warnedFileFailure) {
-				warnedFileFailure = true;
-				process.stdout.write(
-					`[tw] log sink: failed to write run log file (${(error as Error).message})\n`,
-				);
-			}
-		}
+const appendToLogFile = (text: string): void => {
+	if (!logFilePath) {
 		return;
 	}
+	try {
+		appendFileSync(logFilePath, text);
+	} catch (error) {
+		if (!warnedFileFailure) {
+			warnedFileFailure = true;
+			process.stdout.write(
+				`[tw] log sink: failed to write run log file (${(error as Error).message})\n`,
+			);
+		}
+	}
+};
 
-	// Only touch the terminal when nothing else owns it (no TUI subscriber).
-	if (logSubscriber) {
+/**
+ * Route raw text to the sink. The run log file always keeps the full firehose;
+ * stdout only gets it outside quiet mode and when no TUI owns the terminal. The
+ * text is written VERBATIM (no implicit newline), so streamed sandbox chunks
+ * aren't fragmented. Never throws — a logging failure must not break the run.
+ */
+export const sink = (text: string): void => {
+	feedSubscriber(text);
+	appendToLogFile(text);
+	if (quietMode || logSubscriber) {
 		return;
 	}
 	process.stdout.write(text);
@@ -147,13 +146,7 @@ export const sinkLine = (line: string): void => {
 export const narrate = (line: string): void => {
 	const text = `${line}\n`;
 	feedSubscriber(text);
-	if (logFilePath) {
-		try {
-			appendFileSync(logFilePath, text);
-		} catch {
-			// best-effort tee; stdout below is the source of truth for narration.
-		}
-	}
+	appendToLogFile(text);
 	// A TUI subscriber owns the terminal — never write stdout underneath it.
 	if (logSubscriber) {
 		return;

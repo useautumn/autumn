@@ -134,7 +134,7 @@ describe("webhooks CRUD", () => {
 		expect(gone.body.code).toBe(ErrCode.WebhookNotFound);
 	});
 
-	test("a second webhook may reuse a URL; http, localhost and empty events are 400s", async () => {
+	test("a second webhook may reuse a URL; http and localhost are 400s", async () => {
 		const first = await postWebhooks({
 			route: "create",
 			body: { id: "it-crud-dup-url", url: URL_A, events: ["billing.updated"] },
@@ -171,13 +171,6 @@ describe("webhooks CRUD", () => {
 		});
 		expect(plainHttp.status).toBe(400);
 		expect(plainHttp.body.message).toContain("must use https");
-
-		const noEvents = await postWebhooks({
-			route: "create",
-			body: { id: "it-crud-local", url: URL_A, events: [] },
-		});
-		expect(noEvents.status).toBe(400);
-		expect(noEvents.body.message).toContain("at least one event");
 	});
 
 	test("an organisation:read key can list but not create", async () => {

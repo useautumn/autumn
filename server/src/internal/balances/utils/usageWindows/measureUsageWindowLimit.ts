@@ -3,8 +3,8 @@ import {
 	type UsageLimitWebhookBlock,
 	type UsageWindow,
 	type UsageWindowLimit,
+	usageWindowLimitToWebhookBlock,
 } from "@autumn/shared";
-import { usageWindowLimitToWebhookBlock } from "./usageWindowLimitToWebhookBlock.js";
 
 export type UsageWindowLimitMeasurement = {
 	usage: number;

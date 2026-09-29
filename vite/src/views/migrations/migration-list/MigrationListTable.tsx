@@ -1,6 +1,6 @@
 import { BetaBadge } from "@autumn/ui";
-import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { getPaginationRowModel } from "@tanstack/react-table";
+import { Workflow } from "lucide-react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -93,11 +93,7 @@ export function MigrationListTable() {
 			<Table.Toolbar>
 				<div className="flex w-full justify-between items-center">
 					<Table.Heading>
-						<ArrowsClockwiseIcon
-							size={16}
-							weight="fill"
-							className="text-subtle"
-						/>
+						<Workflow size={16} strokeWidth={2} className="text-subtle" />
 						Migrations
 						<BetaBadge />
 					</Table.Heading>
@@ -114,25 +110,28 @@ export function MigrationListTable() {
 				at support@useautumn.com
 			</InfoBox>
 			<Table.Container>
-				<Table.Content>
+				<Table.Content
+					footer={
+						showPagination && (
+							<Table.PaginationFooter
+								currentPage={currentPage}
+								totalPages={totalPages}
+								totalCount={filteredMigrations.length}
+								canGoPrev={canGoPrev}
+								canGoNext={canGoNext}
+								onPrev={goToPrevPage}
+								onNext={goToNextPage}
+								pageSize={pageSize}
+								pageSizeOptions={MIGRATION_LIST_PAGE_SIZE_OPTIONS}
+								onPageSizeChange={changePageSize}
+								enableHotkeys
+							/>
+						)
+					}
+				>
 					<Table.Header />
 					<Table.Body />
 				</Table.Content>
-				{showPagination && (
-					<Table.PaginationFooter
-						currentPage={currentPage}
-						totalPages={totalPages}
-						totalCount={filteredMigrations.length}
-						canGoPrev={canGoPrev}
-						canGoNext={canGoNext}
-						onPrev={goToPrevPage}
-						onNext={goToNextPage}
-						pageSize={pageSize}
-						pageSizeOptions={MIGRATION_LIST_PAGE_SIZE_OPTIONS}
-						onPageSizeChange={changePageSize}
-						enableHotkeys
-					/>
-				)}
 			</Table.Container>
 		</Table.Provider>
 	);

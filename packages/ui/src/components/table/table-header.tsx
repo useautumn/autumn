@@ -1,4 +1,5 @@
 import { useTableContext } from "@autumn/ui/components/table/table-context";
+import { getColumnWidthStyle } from "@autumn/ui/components/table/table-row-cells";
 import { Checkbox } from "@autumn/ui/components/ui/checkbox";
 import {
 	TableHeader as ShadcnTableHeader,
@@ -104,16 +105,15 @@ export function TableHeader({ className }: { className?: string }) {
 					)}
 					{headerGroup.headers.map((header, index, arr) => {
 						const isLast = index === arr.length - 1;
-						const headerStyle = flexibleTableColumns
-							? {
-									width: `${header.getSize()}px`,
-									maxWidth: `${header.getSize()}px`,
-								}
-							: { width: `${header.getSize()}px` };
+						const headerStyle = getColumnWidthStyle({
+							size: header.getSize(),
+							flexible: flexibleTableColumns,
+							grow: header.column.columnDef.meta?.grow,
+						});
 						return (
 							<TableHead
 								className={cn(
-									"h-7 px-2 text-subtle text-tiny font-medium!",
+									"px-2",
 									index === 0 && "pl-4",
 									isLast && enableColumnVisibility && "pr-8",
 								)}

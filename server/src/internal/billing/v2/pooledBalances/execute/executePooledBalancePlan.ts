@@ -2,7 +2,6 @@ import {
 	customerEntitlements,
 	entitlements,
 	type InsertCustomerEntitlement,
-	type InsertDbEntitlement,
 	InternalError,
 	type PooledBalancePlan,
 	pooledBalanceContributions,
@@ -32,7 +31,7 @@ export const executePooledBalancePlan = async ({
 	await ctx.db.transaction(async (tx) => {
 		for (const fullCustomerEntitlement of pooledBalancePlan.insertPoolBalances) {
 			const {
-				entitlement: fullEntitlement,
+				entitlement: _entitlement,
 				replaceables: _replaceables,
 				rollovers: _rollovers,
 				pooled_balance: pooledBalance,
@@ -46,15 +45,12 @@ export const executePooledBalancePlan = async ({
 				});
 			}
 
-			const { feature: _feature, ...fullEntitlementFields } = fullEntitlement;
-			const entitlement: InsertDbEntitlement = fullEntitlementFields;
 			const syntheticCustomerEntitlement: InsertCustomerEntitlement = {
 				...customerEntitlement,
 				balance: customerEntitlement.balance ?? 0,
 				pooled_balance_id: pooledBalance.id,
 				pooled_contribution_id: null,
 			};
-			await tx.insert(entitlements).values(entitlement);
 			await tx
 				.insert(customerEntitlements)
 				.values(syntheticCustomerEntitlement);
@@ -209,24 +205,25 @@ export const executePooledBalancePlan = async ({
 		// this transaction is the authoritative answer.
 		for (const {
 			pooledCustomerEntitlement,
-			expiresAt,
+			expiresAt: plannedExpiresAt,
 		} of pooledBalancePlan.expirePoolBalanceCandidates) {
 			const poolId = pooledCustomerEntitlement.pooled_balance_id;
 			if (!poolId) continue;
 
-			if (
+			const isLicenseKeyed =
 				pooledCustomerEntitlement.pooled_balance?.customer_license_link_id !=
-				null
-			) {
-				continue;
-			}
-
-			const hasNoContributions = notExists(
-				tx
-					.select({ exists: sql`1` })
-					.from(pooledBalanceContributions)
-					.where(eq(pooledBalanceContributions.pooled_balance_id, poolId)),
-			);
+				null;
+			const expiresAt = isLicenseKeyed
+				? Math.min(plannedExpiresAt, Date.now())
+				: plannedExpiresAt;
+			const canExpire = isLicenseKeyed
+				? undefined
+				: notExists(
+						tx
+							.select({ exists: sql`1` })
+							.from(pooledBalanceContributions)
+							.where(eq(pooledBalanceContributions.pooled_balance_id, poolId)),
+					);
 
 			await tx
 				.update(customerEntitlements)
@@ -237,7 +234,7 @@ export const executePooledBalancePlan = async ({
 				.where(
 					and(
 						eq(customerEntitlements.id, pooledCustomerEntitlement.id),
-						hasNoContributions,
+						canExpire,
 					),
 				);
 
@@ -245,7 +242,7 @@ export const executePooledBalancePlan = async ({
 			await tx
 				.update(pooledBalances)
 				.set({ expires_at: expiresAt, updated_at: expiresAt })
-				.where(and(eq(pooledBalances.id, poolId), hasNoContributions));
+				.where(and(eq(pooledBalances.id, poolId), canExpire));
 		}
 
 		for (const fullCustomerEntitlement of pooledBalancePlan.deletePoolBalances ??

@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { CustomerEntitlementWithPricesView } from "../../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import { cusEntsToAdjustment } from "./cusEntsToAdjustment";
 import { cusEntsToAllowance } from "./cusEntsToAllowance";
 
@@ -8,7 +8,7 @@ export const cusEntsToGrantedBalance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {

@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Card,
 	CardContent,
@@ -7,6 +6,9 @@ import {
 	CardHeader,
 	CardTitle,
 	Skeleton,
+	StatusChip,
+	type StatusGlyph,
+	type StatusTone,
 } from "@autumn/ui";
 import { useState } from "react";
 import {
@@ -17,20 +19,18 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import { useRCWebhook } from "@/hooks/queries/revcat/useRCWebhook";
-import { cn } from "@/lib/utils";
-import { ActiveDot } from "@/views/migrations/migration/live/ActiveDot";
+import {
+	type RCWebhookStatus,
+	useRCWebhook,
+} from "@/hooks/queries/revcat/useRCWebhook";
 
-const StatusDot = ({ tone }: { tone: "green" | "red" | "muted" }) => {
-	if (tone === "green") return <ActiveDot color="green" />;
-	return (
-		<span
-			className={cn(
-				"inline-flex size-2 rounded-full",
-				tone === "red" ? "bg-red-500" : "bg-muted-foreground/40",
-			)}
-		/>
-	);
+const WEBHOOK_STATUS_INDICATORS: Record<
+	RCWebhookStatus,
+	{ label: string; tone: StatusTone; glyph: StatusGlyph }
+> = {
+	registered: { label: "Active", tone: "green", glyph: "check" },
+	not_registered: { label: "Not set up", tone: "red", glyph: "x" },
+	unknown: { label: "Can't verify", tone: "neutral", glyph: "alert" },
 };
 
 const WebhookCodeBlock = ({
@@ -76,7 +76,7 @@ const WebhookCodeBlock = ({
 					copyText={tab.text}
 					className="p-2 border-t-0 overflow-x-auto"
 				>
-					<CodeGroupCodeSolidColour className="text-primary break-all">
+					<CodeGroupCodeSolidColour className="text-primary text-sm whitespace-pre-wrap break-all">
 						{tab.text}
 					</CodeGroupCodeSolidColour>
 				</CodeGroupContent>
@@ -89,35 +89,16 @@ export function RevenueCatWebhookCard() {
 	const { status, url, secret, isLoading, register, isRegistering } =
 		useRCWebhook();
 
-	const indicator = {
-		registered: {
-			dot: "green" as const,
-			label: "Active",
-			variant: "green" as const,
-		},
-		not_registered: {
-			dot: "red" as const,
-			label: "Not set up",
-			variant: "muted" as const,
-		},
-		unknown: {
-			dot: "muted" as const,
-			label: "Can't verify",
-			variant: "muted" as const,
-		},
-	}[status];
+	const { label, tone, glyph } = WEBHOOK_STATUS_INDICATORS[status];
 
 	return (
 		<Card className="shadow-none bg-interactive-secondary">
 			<CardHeader>
 				<div className="flex items-center justify-between gap-2">
 					<CardTitle>Webhook</CardTitle>
-					<div className="flex items-center gap-1.5">
-						<StatusDot tone={indicator.dot} />
-						<Badge variant={indicator.variant} size="sm">
-							{indicator.label}
-						</Badge>
-					</div>
+					<StatusChip tone={tone} glyph={glyph}>
+						{label}
+					</StatusChip>
 				</div>
 				<CardDescription>
 					RevenueCat sends purchase events here so Autumn can grant

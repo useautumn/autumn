@@ -1,4 +1,10 @@
 import {
+	type AlertScope,
+	buildUsageAlertIdempotencyKey,
+	buildUsageAlertPayload,
+	type UsageAlertMeasurement,
+} from "@autumn/balance-webhooks";
+import {
 	type DbUsageAlert,
 	DEFAULT_USAGE_ALERT_BASIS,
 	type Feature,
@@ -8,10 +14,6 @@ import {
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { AlertScope } from "../types/alertScope.js";
-import type { UsageAlertMeasurement } from "../types/usageAlertMeasurement.js";
-import { buildUsageAlertIdempotencyKey } from "./buildUsageAlertIdempotencyKey.js";
-import { buildUsageAlertPayload } from "./buildUsageAlertPayload.js";
 
 export const sendUsageAlertWebhook = async ({
 	ctx,
@@ -36,7 +38,9 @@ export const sendUsageAlertWebhook = async ({
 		ctx,
 		eventType: WebhookEventType.BalancesUsageAlertTriggered,
 		idempotencyKey: buildUsageAlertIdempotencyKey({
-			ctx,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			now: ctx.timestamp,
 			customerId,
 			entityId,
 			scope,

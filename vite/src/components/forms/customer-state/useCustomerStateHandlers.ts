@@ -5,6 +5,7 @@ import {
 	EMPTY_CUSTOMER_STATE_PLAN,
 	isCreateSchedulePhaseLocked,
 	type PlanLocation,
+	planLocationToFieldPath,
 } from "@/components/forms/customer-state/customerStateSchema";
 import {
 	resolveCopySourceScope,
@@ -16,6 +17,7 @@ const clonePlans = (plans: CustomerStatePlan[]): CustomerStatePlan[] =>
 	plans.map((plan) => ({
 		...plan,
 		prepaidOptions: { ...plan.prepaidOptions },
+		licenseQuantities: { ...plan.licenseQuantities },
 		items: plan.items ? [...plan.items] : null,
 	}));
 
@@ -217,6 +219,25 @@ export function useCustomerStateHandlers({
 		[form, existingPlans, isPhaseLocked],
 	);
 
+	// Quantities and customizations belong to the old plan, so they reset with it.
+	const handleSelectPlanProduct = useCallback(
+		({
+			location,
+			productId,
+		}: {
+			location: PlanLocation;
+			productId: string;
+		}) => {
+			const path = planLocationToFieldPath(location);
+			form.setFieldValue(`${path}.productId`, productId);
+			form.setFieldValue(`${path}.prepaidOptions`, {});
+			form.setFieldValue(`${path}.licenseQuantities`, {});
+			form.setFieldValue(`${path}.items`, null);
+			form.setFieldValue(`${path}.version`, undefined);
+		},
+		[form],
+	);
+
 	const handlePlanEditSave = useCallback(
 		({ plan }: { plan: CustomerStatePlan }) => {
 			if (!editingPlan) return;
@@ -249,6 +270,7 @@ export function useCustomerStateHandlers({
 			handleCopyFromPreviousPhase,
 			handleMakeUnscheduled,
 			handleCopyExistingPlans,
+			handleSelectPlanProduct,
 			handlePlanEditSave,
 		}),
 		[
@@ -263,6 +285,7 @@ export function useCustomerStateHandlers({
 			handleCopyFromPreviousPhase,
 			handleMakeUnscheduled,
 			handleCopyExistingPlans,
+			handleSelectPlanProduct,
 			handlePlanEditSave,
 		],
 	);

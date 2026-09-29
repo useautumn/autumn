@@ -27,6 +27,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
+	type ApiEntityV2,
 	EntInterval,
 	PooledBalanceResetMode,
 	RolloverExpiryDurationType,
@@ -35,6 +36,7 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -226,7 +228,15 @@ test(
 		const { customer } = await expectPoolUntouched({ scenario });
 
 		// The edit itself landed — otherwise the invariant holds vacuously.
-		expect(customer.balances?.[TestFeature.Credits]?.granted).toBe(
+		// The balance worker doesn't aggregate entity data onto the customer, so it is read off the entity.
+		const editedSubject = isBalanceWorkerRoute()
+			? await scenario.autumnV2_2.entities.get<ApiEntityV2>(
+					scenario.customerId,
+					scenario.entities[0].id,
+					{ skip_cache: "true" },
+				)
+			: customer;
+		expect(editedSubject.balances?.[TestFeature.Credits]?.granted).toBe(
 			ADDED_CREDITS,
 		);
 	},

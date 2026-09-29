@@ -1,0 +1,193 @@
+import type { AutumnLogger } from "@autumn/logging";
+import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
+import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
+import type { PartitionRuntimeDependencies } from "../runtime/types/partitionRuntime.js";
+import type { DurableMutationApplyResult } from "../state/types/durableMutation.js";
+import type { StateStore } from "../state/types/stateStore.js";
+
+type CommitLog = {
+	topic: string;
+	partition: number;
+	batchSize: number;
+	baseOffset: bigint | null;
+	startedAt: number;
+	errorName?: string;
+} & (
+	| { phase: "kafka_commit"; result: "committed" | "not_committed" | "unknown" }
+	| { phase: "store_apply"; result: "applied" | "failed" }
+);
+
+export function createPartitionCommitLogging({
+	ctx,
+	config,
+}: {
+	ctx: {
+		appender: CommittedOutcomeAppender;
+		stateStore: PartitionRuntimeDependencies["stateStore"];
+		logger?: Pick<AutumnLogger, "debug"> & Partial<Pick<AutumnLogger, "error">>;
+		monotonicNow?: () => number;
+	};
+	config: { deployment: string; endpoint: string };
+}): {
+	appender: CommittedOutcomeAppender;
+	stateStore: PartitionRuntimeDependencies["stateStore"];
+} {
+	const { logger } = ctx;
+	if (!logger) return { appender: ctx.appender, stateStore: ctx.stateStore };
+	const now = ctx.monotonicNow ?? (() => performance.now());
+
+	function report({
+		startedAt,
+		baseOffset,
+		batchSize,
+		errorName,
+		...fields
+	}: CommitLog): void {
+		try {
+			const event = {
+				event: "balance_worker.commit",
+				durationMs: Math.round((now() - startedAt) * 100) / 100,
+				data: {
+					...fields,
+					workerEndpoint: config.endpoint,
+					batchSize,
+					baseOffset: baseOffset?.toString() ?? null,
+					errorName,
+				},
+			};
+			// Per-batch telemetry stays at debug; a failure surfaces through the request log.
+			logger?.debug(
+				event,
+				fields.result === "committed" || fields.result === "applied"
+					? "Balance worker commit phase completed"
+					: "Balance worker commit phase failed",
+			);
+		} catch {
+			// Telemetry cannot turn a durable commit into a failed request.
+		}
+	}
+
+	async function appendCommitted(
+		params: Parameters<CommittedOutcomeAppender["appendCommitted"]>[0],
+	): Promise<{ baseOffset: bigint }> {
+		const metadata = {
+			topic: params.topic,
+			partition: params.partition,
+			batchSize: params.outcomes.length,
+			startedAt: now(),
+			phase: "kafka_commit" as const,
+		};
+		let result: { baseOffset: bigint };
+		try {
+			result = await ctx.appender.appendCommitted(params);
+		} catch (cause) {
+			report({
+				...metadata,
+				result:
+					cause instanceof MutationBatchNotCommittedError
+						? "not_committed"
+						: "unknown",
+				baseOffset: null,
+				errorName: cause instanceof Error ? cause.name : "unknown_failure",
+			});
+			throw cause;
+		}
+		report({
+			...metadata,
+			result: "committed",
+			baseOffset: result.baseOffset,
+		});
+		return result;
+	}
+
+	async function applyDurableMutations(
+		params: Parameters<StateStore["applyDurableMutations"]>[0],
+	): Promise<DurableMutationApplyResult[]> {
+		const position = params.records[0]?.position;
+		if (!position) return await ctx.stateStore.applyDurableMutations(params);
+		const metadata = {
+			topic: position.topic,
+			partition: position.partition,
+			batchSize: params.records.length,
+			baseOffset: position.offset,
+			startedAt: now(),
+			phase: "store_apply" as const,
+		};
+		let result: DurableMutationApplyResult[];
+		try {
+			result = await ctx.stateStore.applyDurableMutations(params);
+		} catch (cause) {
+			report({
+				...metadata,
+				result: "failed",
+				errorName: cause instanceof Error ? cause.name : "unknown_failure",
+			});
+			throw cause;
+		}
+		report({ ...metadata, result: "applied" });
+		reportUnreachableVerdicts({ metadata, results: result });
+		return result;
+	}
+
+	/** The caller was answered when Kafka took the batch, so a store verdict arriving
+	 *  afterwards has nobody to tell. A refused row used to reach an operator as that
+	 *  caller's failed request; now this is the only place it is visible, so it is
+	 *  logged at error rather than with the per-batch telemetry. */
+	function reportUnreachableVerdicts({
+		metadata,
+		results,
+	}: {
+		metadata: { topic: string; partition: number; baseOffset: bigint };
+		results: DurableMutationApplyResult[];
+	}): void {
+		try {
+			const unreachable = results.filter(function isUnreachable(entry) {
+				return entry.kind === "rejected" || entry.kind === "failed";
+			});
+			if (unreachable.length === 0) return;
+			logger?.error?.(
+				{
+					event: "balance_worker.commit_verdict_unreachable",
+					data: {
+						topic: metadata.topic,
+						partition: metadata.partition,
+						baseOffset: metadata.baseOffset.toString(),
+						workerEndpoint: config.endpoint,
+						count: unreachable.length,
+						verdicts: unreachable.map(function describe(entry) {
+							return {
+								kind: entry.kind,
+								mutationId: "mutation" in entry ? entry.mutation.id : null,
+								reason:
+									"cause" in entry && entry.cause instanceof Error
+										? entry.cause.message
+										: null,
+							};
+						}),
+					},
+				},
+				"Balance worker store refused a record its caller was already told had landed",
+			);
+		} catch {
+			// Telemetry cannot turn a durable commit into a failed request.
+		}
+	}
+
+	return {
+		appender: { ...ctx.appender, appendCommitted },
+		stateStore: {
+			baseline: ctx.stateStore.baseline,
+			readCommandNextOffset: ctx.stateStore.readCommandNextOffset.bind(
+				ctx.stateStore,
+			),
+			advanceCommandNextOffset: ctx.stateStore.advanceCommandNextOffset.bind(
+				ctx.stateStore,
+			),
+			readState: ctx.stateStore.readState.bind(ctx.stateStore),
+			readOwnState: ctx.stateStore.readOwnState.bind(ctx.stateStore),
+			readReceipt: ctx.stateStore.readReceipt.bind(ctx.stateStore),
+			readNextOffset: ctx.stateStore.readNextOffset.bind(ctx.stateStore),
+			applyDurableMutations,
+		},
+	};
+}

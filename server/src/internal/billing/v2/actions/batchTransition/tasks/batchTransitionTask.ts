@@ -2,7 +2,7 @@ import { AppEnv, CustomerLicenseTransitionSchema } from "@autumn/shared";
 import { task } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { runWithTriggerContext } from "@/trigger/utils/runWithTriggerContext.js";
-import { batchTransition } from "../batchTransition.js";
+import { batchTransitionInBackground } from "../batchTransitionInBackground.js";
 import { batchTransitionQueue } from "./batchTransitionQueue.js";
 
 const BatchTransitionTaskPayloadSchema = z.object({
@@ -33,7 +33,7 @@ export const batchTransitionTask = task({
 			triggerCtx,
 			customerId,
 			args: { transition, executionScope },
-			action: batchTransition,
+			action: batchTransitionInBackground,
 		});
 	},
 });

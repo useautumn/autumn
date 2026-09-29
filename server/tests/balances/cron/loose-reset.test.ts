@@ -3,22 +3,23 @@ import {
 	type ApiCustomer,
 	ApiVersion,
 	customerEntitlements,
-	type ResetCusEnt,
 	ResetInterval,
 	sleepUntil,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import {
+	findResetEligibleRow,
+	runResetOnCustomerEntitlement,
+} from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
-import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { findCustomerEntitlement } from "../utils/findCustomerEntitlement";
 
-describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose entitlements")}`, () => {
+describe(`${chalk.yellowBright("loose-reset: the V2 reset scan and reset for loose entitlements")}`, () => {
 	const customerId = "loose-reset-test";
 	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
@@ -41,7 +42,7 @@ describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose
 		});
 	});
 
-	test("getActiveResetPassed should fetch loose entitlement with past next_reset_at", async () => {
+	test("the reset scan selects a loose entitlement with past next_reset_at", async () => {
 		const looseCusEnt = await findCustomerEntitlement({
 			ctx,
 			customerId,
@@ -56,18 +57,16 @@ describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose
 			.set({ next_reset_at: pastTime })
 			.where(eq(customerEntitlements.id, looseCusEnt!.id));
 
-		// 3. Call getActiveResetPassed and verify it returns the row
-		const resetCusEnts = await CusEntService.getActiveResetPassed({
-			db: ctx.db,
+		// 3. The V2 scan selects it, as a loose row (no plan)
+		const eligible = await findResetEligibleRow({
+			ctx,
+			customerEntitlementId: looseCusEnt!.id,
 		});
-
-		const foundCusEnt = resetCusEnts.find((ce) => ce.id === looseCusEnt!.id);
-		expect(foundCusEnt).toBeDefined();
-		expect(foundCusEnt?.customer_product).toBeNull();
-		expect(foundCusEnt?.customer.id).toBe(customerId);
+		expect(eligible).not.toBeNull();
+		expect(eligible?.customerProductId).toBeNull();
 	});
 
-	test("resetCustomerEntitlement should reset loose entitlement balance", async () => {
+	test("the V2 reset refills a loose entitlement", async () => {
 		// 1. Track 50 usage (leaving balance at 50)
 		const trackRes = await autumnV2.track({
 			customer_id: customerId,
@@ -96,25 +95,12 @@ describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose
 			fullCustomer,
 		});
 
-		const resetCusEnt: ResetCusEnt = {
-			...cusEnt!,
-			customer_product: null,
-			customer: fullCustomer,
-		};
-
-		// 3. Call resetCustomerEntitlement
-		const updatedCusEnt = await resetCustomerEntitlement({
+		// 3. One reset cycle through the V2 cron's lane
+		await runResetOnCustomerEntitlement({
 			ctx,
-			cusEnt: resetCusEnt,
-			updatedCusEnts: [],
+			customerId,
+			customerEntitlementId: cusEnt!.id,
 		});
-
-		if (updatedCusEnt) {
-			await CusEntService.upsert({
-				db: ctx.db,
-				data: [updatedCusEnt],
-			});
-		}
 
 		// 4. Verify balance has reset to granted_balance (100)
 		const customer = (await autumnV2.customers.get(customerId, {
@@ -138,7 +124,7 @@ describe(`${chalk.yellowBright("loose-reset: expired entitlements should not be 
 		});
 	});
 
-	test("getActiveResetPassed should NOT fetch expired loose entitlements", async () => {
+	test("the reset scan skips an expired loose entitlement", async () => {
 		// 1. Create a balance with expires_at 3 seconds from now
 		const expiresAt = Date.now() + 3000;
 		await autumnV1.balances.create({
@@ -168,12 +154,9 @@ describe(`${chalk.yellowBright("loose-reset: expired entitlements should not be 
 		// 2. Wait until past expiry
 		await sleepUntil(expiresAt + 1000);
 
-		// 3. Call getActiveResetPassed - should NOT include the expired entitlement
-		const resetCusEnts = await CusEntService.getActiveResetPassed({
-			db: ctx.db,
-		});
-
-		const foundCusEnt = resetCusEnts.find((ce) => ce.id === cusEnt!.id);
-		expect(foundCusEnt).toBeUndefined();
+		// 3. The V2 scan leaves the expired row out
+		expect(
+			await findResetEligibleRow({ ctx, customerEntitlementId: cusEnt!.id }),
+		).toBeNull();
 	});
 });

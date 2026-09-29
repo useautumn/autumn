@@ -1,6 +1,7 @@
 export * from "./convertBillingContext/billingContextToCurrency.js";
 export * from "./cycleUtils/getCycleEnd";
 export * from "./cycleUtils/getCycleStart";
+export * from "./cycleUtils/getNextMonthStart";
 // Interval utils
 export * from "./intervalUtils/addDuration";
 export * from "./intervalUtils/intervalArithmetic";

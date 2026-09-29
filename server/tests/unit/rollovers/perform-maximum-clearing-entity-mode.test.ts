@@ -1,3 +1,4 @@
+import { performMaximumClearing } from "@autumn/shared";
 /**
  * Unit test for performMaximumClearing entity-mode cap enforcement.
  *
@@ -13,7 +14,6 @@
 
 import { expect, test } from "bun:test";
 import type { FullCusEntWithProduct, Rollover } from "@autumn/shared";
-import { performMaximumClearing } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 
 const ENTITY_ID = "e1";
 const MAX = 1080;

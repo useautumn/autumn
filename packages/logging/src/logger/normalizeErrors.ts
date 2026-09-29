@@ -5,11 +5,27 @@ const UNCHANGED = Symbol("unchanged");
 const rewriteAppPath = (value: string): string =>
 	value.replace("file:///app/", "./").replace(/\/app\//g, "./");
 
-export const errorToObject = (error: Error) => ({
+/** `cause` is where the useful half of a wrapped error lives, and it is not
+ *  enumerable either, so dropping it leaves a log line naming the wrapper
+ *  ("Partition writer requires recovery") with no sign of what actually went
+ *  wrong. Depth is bounded the same way the value walk is. */
+export const errorToObject = (
+	error: Error,
+	depth = 0,
+): Record<string, unknown> => ({
 	name: error.name,
 	message: error.message,
 	stack: error.stack ? rewriteAppPath(error.stack) : undefined,
+	...(error.cause === undefined || depth >= MAX_DEPTH
+		? {}
+		: { cause: normalizeCause(error.cause, depth + 1) }),
 });
+
+const normalizeCause = (cause: unknown, depth: number): unknown => {
+	if (cause instanceof Error) return errorToObject(cause, depth);
+	const result = normalize(cause, depth);
+	return result === UNCHANGED ? cause : result;
+};
 
 const isPlainObject = (value: object) => {
 	const proto = Object.getPrototypeOf(value);
@@ -27,7 +43,7 @@ const normalize = (
 	value: unknown,
 	depth: number,
 ): unknown | typeof UNCHANGED => {
-	if (value instanceof Error) return errorToObject(value);
+	if (value instanceof Error) return errorToObject(value, depth);
 	if (!value || typeof value !== "object" || depth >= MAX_DEPTH) {
 		return UNCHANGED;
 	}

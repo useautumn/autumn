@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Dialog,
 	DialogContent,
@@ -9,6 +8,7 @@ import {
 	DialogTitle,
 	FormLabel,
 	Input,
+	StatusChip,
 	TableCell,
 	TableRow,
 } from "@autumn/ui";
@@ -211,9 +211,7 @@ export const PasskeysManager = () => {
 								{pk.name || "Unnamed passkey"}
 							</TableCell>
 							<TableCell>
-								<Badge variant="muted">
-									{friendlyDeviceType(pk.deviceType)}
-								</Badge>
+								<StatusChip>{friendlyDeviceType(pk.deviceType)}</StatusChip>
 							</TableCell>
 							<TableCell className="text-tertiary-foreground text-xs">
 								{pk.createdAt ? formatDateStr(pk.createdAt) : "—"}

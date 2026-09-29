@@ -66,7 +66,7 @@ export const mergeControlsByFeature = <
 	].filter((id): id is string => !!id && !inheritedIdentities.has(id));
 
 	const planControls = planIdentities.flatMap((planIdentity) => {
-		const control = resolveBillingControl<TControl, TKey>({
+		const control = resolveBillingControl<TKey, TControl>({
 			controlLists: [],
 			customerProducts: planCustomerProducts,
 			controlKey,

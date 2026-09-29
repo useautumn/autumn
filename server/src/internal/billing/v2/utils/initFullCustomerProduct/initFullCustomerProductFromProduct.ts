@@ -12,6 +12,7 @@ import {
 	isPrepaidPrice,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getMonthStartAnchorMs } from "@/internal/billing/v2/utils/cycleAnchor/getMonthStartAnchorMs";
 import { initFullCustomerProduct } from "./initFullCustomerProduct";
 
 export const initFullCustomerProductFromProduct = ({
@@ -73,7 +74,12 @@ export const initFullCustomerProductFromProduct = ({
 		fullCustomer,
 		fullProduct,
 		featureQuantities,
-		resetCycleAnchor: "now",
+		resetCycleAnchor:
+			getMonthStartAnchorMs({
+				fullProducts: [fullProduct],
+				startsAt: currentEpochMs,
+				trialEndsAt,
+			}) ?? "now",
 		freeTrial,
 		trialEndsAt,
 		now: currentEpochMs,

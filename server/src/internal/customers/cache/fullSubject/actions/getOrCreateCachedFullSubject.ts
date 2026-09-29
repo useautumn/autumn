@@ -12,6 +12,7 @@ import { updateCustomerData } from "@/internal/customers/actions/updateCustomerD
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { isReplicaSourced } from "../subjectProvenance.js";
+import { usesSubjectCache } from "../usesSubjectCache.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
@@ -30,8 +31,8 @@ export const getOrCreateCachedFullSubject = async ({
 	readFrom?: SubjectReadFrom;
 	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject> => {
-	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache;
+	const { logger } = ctx;
+	const useRedis = usesSubjectCache({ ctx, customerId: params.customer_id });
 	const {
 		customer_id: customerId,
 		customer_data: customerData,
@@ -99,7 +100,7 @@ export const getOrCreateCachedFullSubject = async ({
 
 	const customerDataUpdated = await updateCustomerData({
 		ctx,
-		fullSubject,
+		customer: fullSubject.customer,
 		customerData,
 	});
 
@@ -116,6 +117,7 @@ export const getOrCreateCachedFullSubject = async ({
 			entityData: {
 				name: entityData?.name,
 				feature_id: entityData?.feature_id || "",
+				billing_controls: entityData?.billing_controls,
 			},
 		});
 
@@ -125,6 +127,18 @@ export const getOrCreateCachedFullSubject = async ({
 			fullSubject.internalEntityId = newEntity.internal_id;
 			fullSubject.subjectType = SubjectType.Entity;
 			setCache = true;
+			// The first read predates the seat and per-entity grants autoCreateEntity just wrote.
+			normalizedResult = await getFullSubjectNormalized({
+				ctx,
+				customerId: fullSubject.customer.id || fullSubject.customer.internal_id,
+				entityId: newEntity.id ?? entityId,
+				useDelayedPostgresBackupRead,
+				routeSource: source,
+			});
+			if (normalizedResult) {
+				fullSubject = normalizedResult.fullSubject;
+				fullSubject.subjectViewEpoch = fetchedSubjectViewEpoch;
+			}
 		}
 	}
 

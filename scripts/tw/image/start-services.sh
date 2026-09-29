@@ -26,16 +26,31 @@ GOAWS_DIR="${GOAWS_DIR:-$TW_PREFIX/goaws}"
 GOAWS_CONF="${GOAWS_CONF:-$GOAWS_DIR/goaws.yaml}"
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
 GOAWS_BIN="${GOAWS_BIN:-$BIN_DIR/goaws}"
+FAKECLOUD_BIN="${FAKECLOUD_BIN:-$BIN_DIR/fakecloud}"
+# The account + region the queue URLs and derived scheduler ARNs assume (DEFAULT_AWS_REGION).
+SQS_ACCOUNT_ID="000000000000"
+SQS_REGION="us-east-2"
 LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
+# Redpanda's own wrapper scripts hardcode /opt/redpanda, so it lives there, not under $BIN_DIR.
+REDPANDA_HOME="${REDPANDA_HOME:-/opt/redpanda}"
+REDPANDA_DIR="${REDPANDA_DIR:-$TW_PREFIX/redpanda}"
+REDPANDA_IMAGE="${REDPANDA_IMAGE:-docker.redpanda.com/redpandadata/redpanda:v26.2.3}"
+# Apache kafka-native (Modal images): Redpanda's Seastar aborts under gVisor, which has no /proc/sys/fs/aio-max-nr.
+KAFKA_HOME="${KAFKA_HOME:-/opt/kafka}"
+KAFKA_DIR="${KAFKA_DIR:-$TW_PREFIX/kafka}"
+KAFKA_CONTROLLER_PORT="${KAFKA_CONTROLLER_PORT:-19093}"
 
 PG_PORT="${PG_PORT:-5432}"
 DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
 ELASTICMQ_PORT="${ELASTICMQ_PORT:-9324}"
 DYNAMODB_PORT="${DYNAMODB_PORT:-8000}"
 CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-8123}"
+KAFKA_PORT="${KAFKA_PORT:-19092}"
+REDPANDA_ADMIN_PORT="${REDPANDA_ADMIN_PORT:-9644}"
+REDPANDA_RPC_PORT="${REDPANDA_RPC_PORT:-33145}"
 START_CLICKHOUSE="${TW_START_CLICKHOUSE:-0}"
 
-mkdir -p "$LOG_DIR" "$DRAGONFLY_DIR"
+mkdir -p "$LOG_DIR" "$DRAGONFLY_DIR" "$REDPANDA_DIR"
 
 # Find PG binaries (same probe as build-base.sh).
 PG_BINDIR=""
@@ -114,7 +129,22 @@ fi
 #    `GET /` returns HTTP 400 (no Action), but a successful connection means it's
 #    bound and serving — sufficient readiness probe (no `-f`).
 goaws_ready_probe="curl -s -o /dev/null http://localhost:$ELASTICMQ_PORT/"
-if eval "$goaws_ready_probe" >/dev/null 2>&1; then
+sqs_label="goaws"
+sqs_log="$LOG_DIR/goaws.log"
+if [ -x "$FAKECLOUD_BIN" ]; then
+  # fakecloud serves SQS on the same port + account, and its Scheduler can deliver into those queues.
+  sqs_label="fakecloud"
+  sqs_log="$LOG_DIR/fakecloud.log"
+  goaws_ready_probe="curl -fsS -o /dev/null http://127.0.0.1:$ELASTICMQ_PORT/_fakecloud/health"
+  if eval "$goaws_ready_probe" >/dev/null 2>&1; then
+    log "fakecloud already running"
+  else
+    log "Starting fakecloud (SQS + Scheduler) on :$ELASTICMQ_PORT"
+    nohup "$FAKECLOUD_BIN" --addr "127.0.0.1:$ELASTICMQ_PORT" --region "$SQS_REGION" \
+      --account-id "$SQS_ACCOUNT_ID" --log-level warn >"$sqs_log" 2>&1 &
+    disown || true
+  fi
+elif eval "$goaws_ready_probe" >/dev/null 2>&1; then
   log "goaws already running"
 else
   [ -x "$GOAWS_BIN" ] || die "goaws binary missing at $GOAWS_BIN (run build-base.sh)"
@@ -172,12 +202,134 @@ else
   DYNOXIDE_DISABLED=1
 fi
 
-# Wait for all four (started above) concurrently — readiness overlaps.
+# 3c. Redpanda (native Kafka, :$KAFKA_PORT) — the balance worker's log. One node in
+#     dev-container mode; data under $REDPANDA_DIR so the warm snapshot bakes the
+#     topics warmup.sh creates. Ready means every partition has a leader, which is
+#     what the worker's first offset reads need (a fresh leader answers
+#     OFFSET_NOT_AVAILABLE for a moment after election).
+#
+# Self-heal: base images built before Redpanda shipped lack it; extract it from
+# the OCI image via crane (no daemon), the way goaws is installed.
+ensure_redpanda() {
+  [ -x "$REDPANDA_HOME/bin/rpk" ] && return 0
+  CRANE_VERSION="${CRANE_VERSION:-v0.20.2}"
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) CR_ARCH="x86_64" ;;
+    aarch64 | arm64) CR_ARCH="arm64" ;;
+    *) log "WARN: unsupported arch for Redpanda: $ARCH"; return 1 ;;
+  esac
+  log "Redpanda missing from base image — extracting $REDPANDA_IMAGE via crane"
+  TMP_RP="$(mktemp -d)"
+  if ! curl -fsSL -o "$TMP_RP/crane.tgz" \
+    "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_${CR_ARCH}.tar.gz"; then
+    rm -rf "$TMP_RP"; log "WARN: crane download failed"; return 1
+  fi
+  tar -xzf "$TMP_RP/crane.tgz" -C "$TMP_RP" crane
+  if ! "$TMP_RP/crane" export "$REDPANDA_IMAGE" "$TMP_RP/rp.tar"; then
+    rm -rf "$TMP_RP"; log "WARN: crane export of $REDPANDA_IMAGE failed"; return 1
+  fi
+  tar -xf "$TMP_RP/rp.tar" -C "$TMP_RP" opt/redpanda
+  if [ "$(id -u)" = "0" ]; then
+    mv "$TMP_RP/opt/redpanda" "$REDPANDA_HOME"
+  else
+    sudo mv "$TMP_RP/opt/redpanda" "$REDPANDA_HOME" && sudo chown -R "$(id -u):$(id -g)" "$REDPANDA_HOME"
+  fi
+  rm -rf "$TMP_RP"
+}
+
+# Single-node KRaft; data under $KAFKA_DIR so the warm snapshot bakes warmup.sh's topics.
+# env -i: the native wrapper reads KAFKA_* env as broker config, and workers export KAFKA_BROKERS.
+start_kafka_native() {
+  local kafka_env=(env -i PATH="$PATH" HOME="${HOME:-/root}")
+  mkdir -p "$KAFKA_DIR/defaults" "$KAFKA_DIR/mounted" "$KAFKA_DIR/config" "$LOG_DIR/kafka"
+  cp "$KAFKA_HOME"/docker/*log4j2.yaml "$KAFKA_DIR/defaults/"
+  cat >"$KAFKA_DIR/defaults/server.properties" <<PROPS
+process.roles=broker,controller
+node.id=1
+controller.quorum.voters=1@127.0.0.1:$KAFKA_CONTROLLER_PORT
+listeners=PLAINTEXT://127.0.0.1:$KAFKA_PORT,CONTROLLER://127.0.0.1:$KAFKA_CONTROLLER_PORT
+advertised.listeners=PLAINTEXT://127.0.0.1:$KAFKA_PORT
+controller.listener.names=CONTROLLER
+inter.broker.listener.name=PLAINTEXT
+listener.security.protocol.map=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+log.dirs=$KAFKA_DIR/data
+offsets.topic.replication.factor=1
+transaction.state.log.replication.factor=1
+transaction.state.log.min.isr=1
+group.initial.rebalance.delay.ms=0
+auto.create.topics.enable=false
+PROPS
+  if [ ! -f "$KAFKA_DIR/data/meta.properties" ]; then
+    "${kafka_env[@]}" CLUSTER_ID="${KAFKA_CLUSTER_ID:-MkU3OEVBNTcwNTJENDM2Qk}" "$KAFKA_HOME/kafka.Kafka" setup \
+      --default-configs-dir "$KAFKA_DIR/defaults" --mounted-configs-dir "$KAFKA_DIR/mounted" \
+      --final-configs-dir "$KAFKA_DIR/config" >"$LOG_DIR/kafka-setup.log" 2>&1 \
+      || { tail -20 "$LOG_DIR/kafka-setup.log" >&2; die "Kafka storage format failed"; }
+  else
+    cp "$KAFKA_DIR/defaults/"* "$KAFKA_DIR/config/"
+  fi
+  log "Starting Kafka (kafka-native) on :$KAFKA_PORT (data $KAFKA_DIR/data)"
+  nohup "${kafka_env[@]}" "$KAFKA_HOME/kafka.Kafka" start --config "$KAFKA_DIR/config/server.properties" \
+    -Xmx512m -Dkafka.logs.dir="$LOG_DIR/kafka" \
+    -Dlog4j2.configurationFile="file:$KAFKA_DIR/config/log4j2.yaml" \
+    >"$LOG_DIR/kafka.log" 2>&1 &
+  disown || true
+}
+
+redpanda_ready_probe="\"$REDPANDA_HOME/bin/rpk\" cluster health -X brokers=127.0.0.1:$KAFKA_PORT -X admin.hosts=127.0.0.1:$REDPANDA_ADMIN_PORT 2>/dev/null | grep -q 'Leaderless partitions (0)'"
+kafka_label="Redpanda"
+kafka_ready_probe="$redpanda_ready_probe"
+kafka_log="$LOG_DIR/redpanda.log"
+if [ -x "$KAFKA_HOME/kafka.Kafka" ]; then
+  kafka_label="Kafka"
+  kafka_ready_probe="(echo > /dev/tcp/127.0.0.1/$KAFKA_PORT)"
+  kafka_log="$LOG_DIR/kafka.log"
+  if eval "$kafka_ready_probe" >/dev/null 2>&1; then
+    log "Kafka already running"
+  else
+    start_kafka_native
+  fi
+elif eval "$redpanda_ready_probe" >/dev/null 2>&1; then
+  log "Redpanda already running"
+elif ensure_redpanda; then
+  log "Starting Redpanda on :$KAFKA_PORT (data $REDPANDA_DIR/data)"
+  nohup "$REDPANDA_HOME/bin/rpk" redpanda start \
+    --install-dir "$REDPANDA_HOME" --config "$REDPANDA_DIR/redpanda.yaml" \
+    --mode dev-container --smp 1 --memory 512M --reserve-memory 0M --overprovisioned \
+    --node-id 0 --check=false \
+    --kafka-addr "PLAINTEXT://127.0.0.1:$KAFKA_PORT" \
+    --advertise-kafka-addr "PLAINTEXT://127.0.0.1:$KAFKA_PORT" \
+    --rpc-addr "127.0.0.1:$REDPANDA_RPC_PORT" --advertise-rpc-addr "127.0.0.1:$REDPANDA_RPC_PORT" \
+    --set "redpanda.data_directory=$REDPANDA_DIR/data" \
+    --set "redpanda.admin=[{address: 127.0.0.1, port: $REDPANDA_ADMIN_PORT}]" \
+    --set redpanda.auto_create_topics_enabled=false \
+    >"$LOG_DIR/redpanda.log" 2>&1 &
+  disown || true
+else
+  die "Redpanda unavailable — the balance worker has no log to run on"
+fi
+
+# Wait for all five (started above) concurrently — readiness overlaps.
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
-wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
+wait_for "$sqs_label" "$goaws_ready_probe" 120 "$sqs_log"
+# fakecloud has no queue config, and keeps state in memory: create every queue on each start.
+create_fakecloud_queue() {
+  local queue_name="$1" attributes=""
+  [[ "$queue_name" == *.fifo ]] && attributes=',"Attributes":{"FifoQueue":"true","ContentBasedDeduplication":"true"}'
+  curl -fsS -o /dev/null -X POST "http://localhost:${ELASTICMQ_PORT}/" \
+    -H "Content-Type: application/x-amz-json-1.0" -H "X-Amz-Target: AmazonSQS.CreateQueue" \
+    -d "{\"QueueName\":\"${queue_name}\"${attributes}}" \
+    || die "fakecloud CreateQueue ${queue_name} failed"
+}
+if [ "$sqs_label" = "fakecloud" ]; then
+  for queue_name in autumn.fifo autumn-track.fifo autumn-stripe-webhook.fifo autumn-track-async; do
+    create_fakecloud_queue "$queue_name"
+  done
+fi
 # Cached base images may predate queues added to the worker environment.
 for queue_name in autumn-track-async autumn-stripe-webhook.fifo; do
+  [ "$sqs_label" = "fakecloud" ] && break
   queue_attributes=""
   if [[ "$queue_name" == *.fifo ]]; then
     queue_attributes="&Attribute.1.Name=FifoQueue&Attribute.1.Value=true"
@@ -192,6 +344,7 @@ done
 if [ "${DYNOXIDE_DISABLED:-0}" != "1" ]; then
   wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
 fi
+wait_for "$kafka_label" "$kafka_ready_probe" 240 "$kafka_log"
 
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).
@@ -214,4 +367,4 @@ else
   log "Skipping ClickHouse (set TW_START_CLICKHOUSE=1 to start it)"
 fi
 
-log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT goaws:$ELASTICMQ_PORT dynoxide:$DYNAMODB_PORT)"
+log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT $sqs_label:$ELASTICMQ_PORT dynoxide:$DYNAMODB_PORT)"

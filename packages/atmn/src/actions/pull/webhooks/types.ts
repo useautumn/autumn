@@ -2,10 +2,11 @@ import type { ListWebhooksResponse } from "../../../generated/client";
 
 export type RemoteWebhook = ListWebhooksResponse["list"][number];
 
-/** A config webhook as evaluated: `url` still holds every env's value. */
+/** A config webhook as evaluated: one endpoint in one env. */
 export type StatedWebhook = Record<string, unknown> & {
 	id: string;
-	url?: Record<string, unknown>;
+	env?: unknown;
+	url?: unknown;
 };
 
 /** The in-memory sources a pull edits, plus where the config lives. */

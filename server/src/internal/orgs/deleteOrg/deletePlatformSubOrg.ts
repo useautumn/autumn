@@ -1,5 +1,6 @@
 import {
 	AppEnv,
+	apiKeys,
 	customers,
 	ErrCode,
 	member,
@@ -11,6 +12,7 @@ import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { and, eq } from "drizzle-orm";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
+import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import {
 	deleteStripeAccounts,
 	deleteStripeWebhooks,
@@ -67,7 +69,18 @@ export const deletePlatformSubOrg = async ({
 	logger.info("5. Deleting org memberships");
 	await db.delete(member).where(eq(member.organizationId, org.id));
 
+	// Keys cascade with the org row; cached ones would authenticate until their TTL.
+	const keys = await db
+		.select({ hashedKey: apiKeys.hashed_key })
+		.from(apiKeys)
+		.where(eq(apiKeys.org_id, org.id));
+
 	logger.info("6. Deleting organization");
 	await db.delete(organizations).where(eq(organizations.id, org.id));
-	await clearOrgWithFeaturesCache({ orgId: org.id });
+	await Promise.all([
+		clearOrgWithFeaturesCache({ orgId: org.id }),
+		...keys.flatMap(({ hashedKey }) =>
+			hashedKey ? [clearSecretKeyCache({ hashedKey })] : [],
+		),
+	]);
 };

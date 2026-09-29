@@ -113,6 +113,7 @@ export const computeUpdateQuantityDetails = ({
 
 	updatedOptions = computeFeatureOptionsChange({
 		applyImmediately,
+		billingContext: updateSubscriptionContext,
 		previousOptions,
 		updatedOptions,
 		quantityDifferenceForEntitlements:

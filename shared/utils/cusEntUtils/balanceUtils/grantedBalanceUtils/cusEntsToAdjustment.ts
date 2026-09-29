@@ -1,4 +1,4 @@
-import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { CustomerEntitlementWithPricesView } from "../../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import { sumValues } from "../../../utils";
 import { getCusEntBalance } from "../../balanceUtils";
 
@@ -6,7 +6,7 @@ export const cusEntsToAdjustment = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }) => {
 	return sumValues(

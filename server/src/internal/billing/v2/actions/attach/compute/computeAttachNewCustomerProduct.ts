@@ -162,10 +162,13 @@ const computeAttachNewCustomerProductResult = ({
 			collectionMethod,
 			externalId,
 			processorType: processorTypeOverride,
-			billingCycleAnchorResetsAt: getRequestedBillingCycleAnchorResetAt({
-				requestedBillingCycleAnchor:
-					attachBillingContext.requestedBillingCycleAnchor,
-			}),
+			// A new subscription is created on the anchor; an existing one resets to it later.
+			billingCycleAnchorResetsAt: stripeSubscription
+				? getRequestedBillingCycleAnchorResetAt({
+						requestedBillingCycleAnchor:
+							attachBillingContext.requestedBillingCycleAnchor,
+					})
+				: undefined,
 			...(isRevertTrial && {
 				previousCustomerProductId: currentCustomerProduct?.id,
 				onTrialEnd: "revert" as const,

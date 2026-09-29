@@ -1,4 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import {
+	buildCustomerInvoicesCacheKey,
+	buildSubscriptionCacheKey,
+	CUSTOMER_INVOICES_CACHE_TTL_SECONDS,
+	SUBSCRIPTION_CACHE_TTL_SECONDS,
+} from "@autumn/cache";
 import { AppEnv } from "@autumn/shared";
 import { buildCheckoutCacheKey } from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import { buildCustomerJwtAuthCacheKey } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
@@ -128,6 +134,20 @@ describe("misc redis key formats", () => {
 	test("oauth state", () => {
 		expect(buildOAuthStateKey("state_1")).toBe("oauth_state:state_1");
 		expect(OAUTH_STATE_TTL_SECONDS).toBe(600);
+	});
+
+	test("subscription rows (@autumn/cache)", () => {
+		expect(buildSubscriptionCacheKey({ stripeId: "sub_123" })).toBe(
+			"subscription:sub_123",
+		);
+		expect(SUBSCRIPTION_CACHE_TTL_SECONDS).toBe(3600);
+	});
+
+	test("customer invoices (@autumn/cache)", () => {
+		expect(
+			buildCustomerInvoicesCacheKey({ internalCustomerId: "cus_internal_1" }),
+		).toBe("invoices:cus_internal_1");
+		expect(CUSTOMER_INVOICES_CACHE_TTL_SECONDS).toBe(3600);
 	});
 
 	// Inline key builders — pinned here as literals until their family unit

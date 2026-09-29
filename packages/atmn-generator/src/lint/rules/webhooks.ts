@@ -1,19 +1,27 @@
 import type { LintRule } from "../runtime/lintDocument";
-import { nonEmpty, rejects, uniformPrefix, unique } from "./define";
+import { notMap, rejects, uniformPrefix, unique } from "./define";
 
 /** The name `lintDocument` receives the shared URL guard under. */
 export const LOCAL_URL_CHECK = "isLocalWebhookUrl";
 
 export const webhookRules: LintRule[] = [
-	unique({
-		field: "id",
-		because: "Two webhooks claiming one id race to define the same endpoint.",
+	notMap({
+		field: "url",
+		because:
+			'Each webhook() is one endpoint in one env: split into one webhook() per env, e.g. webhook({ id, env: "live", url }).',
 	}),
 	unique({
 		field: "id",
+		alongside: "env",
+		because:
+			"Two webhooks claiming one id in one env race to define the same endpoint.",
+	}),
+	unique({
+		field: "id",
+		alongside: "env",
 		asEnvName: true,
 		because:
-			"Each webhook's signing secret is saved as AUTUMN_WEBHOOK_<ID>_SECRET, so these two would overwrite each other's secret. Rename one.",
+			"Each webhook's signing secret is saved under its id in an env var name, so these two would overwrite each other's secret. Rename one.",
 	}),
 	rejects({
 		field: "url",
@@ -26,11 +34,5 @@ export const webhookRules: LintRule[] = [
 		prefix: "vercel.",
 		because:
 			"vercel.* events can't be mixed with other events in one webhook: they're delivered from a separate app. Make one webhook for each.",
-	}),
-	nonEmpty({
-		field: "url",
-		warning: true,
-		because:
-			"With no environment key the webhook is registered nowhere. Add `live`, `sandbox` or a sandbox's slug.",
 	}),
 ];

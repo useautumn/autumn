@@ -11,8 +11,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui/components/ui/select";
+import { cn } from "@autumn/ui/lib/utils";
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { useHotkeys } from "react-hotkeys-hook";
+
+const numberFormat = new Intl.NumberFormat("en-US");
 
 export function CursorPagination({
 	currentPage,
@@ -57,43 +60,51 @@ export function CursorPagination({
 	const nextDisabled = disabled || !canGoNext;
 
 	return (
-		<div className="flex justify-center items-center gap-2 text-xs text-tertiary-foreground shrink-0 select-none">
-			<Pagination className="w-fit h-7 text-xs">
-				<PaginationContent className="w-full flex justify-between items-center gap-2">
-					<PaginationItem>
-						<IconButton
-							variant="secondary"
-							size="default"
-							icon={<CaretLeftIcon size={12} weight="bold" />}
-							onClick={(e) => {
-								e.preventDefault();
-								if (prevDisabled) return;
-								onPrev();
-							}}
-							disabled={prevDisabled}
-							className={prevDisabled ? "pointer-events-none opacity-50" : ""}
-						/>
-					</PaginationItem>
-					<PaginationItem className="text-muted-foreground font-medium text-center tabular-nums">
-						{totalPages === null ? "..." : `${currentPage} / ${totalPages}`}
-					</PaginationItem>
-					<PaginationItem>
-						<IconButton
-							variant="secondary"
-							size="default"
-							icon={<CaretRightIcon size={12} weight="bold" />}
-							onClick={(e) => {
-								e.preventDefault();
-								if (nextDisabled) return;
-								onNext();
-							}}
-							disabled={nextDisabled}
-							className={nextDisabled ? "pointer-events-none opacity-50" : ""}
-						/>
-					</PaginationItem>
-				</PaginationContent>
-			</Pagination>
-		</div>
+		<Pagination className="w-fit shrink-0 select-none">
+			<PaginationContent className="flex items-center gap-1 rounded-lg bg-foreground/4 p-px">
+				<PaginationItem>
+					<IconButton
+						variant="muted"
+						size="default"
+						aria-label="Previous page"
+						icon={<CaretLeftIcon size={12} weight="bold" />}
+						onClick={(e) => {
+							e.preventDefault();
+							if (prevDisabled) return;
+							onPrev();
+						}}
+						disabled={prevDisabled}
+						className={cn(
+							"size-7 rounded-md bg-transparent",
+							prevDisabled && "pointer-events-none opacity-50",
+						)}
+					/>
+				</PaginationItem>
+				<PaginationItem className="min-w-[9ch] px-1.5 text-center text-xs text-tertiary-foreground tabular-nums whitespace-nowrap">
+					{totalPages === null
+						? "..."
+						: `${numberFormat.format(currentPage)} / ${numberFormat.format(totalPages)}`}
+				</PaginationItem>
+				<PaginationItem>
+					<IconButton
+						variant="muted"
+						size="default"
+						aria-label="Next page"
+						icon={<CaretRightIcon size={12} weight="bold" />}
+						onClick={(e) => {
+							e.preventDefault();
+							if (nextDisabled) return;
+							onNext();
+						}}
+						disabled={nextDisabled}
+						className={cn(
+							"size-7 rounded-md bg-foreground/4",
+							nextDisabled && "pointer-events-none bg-transparent opacity-50",
+						)}
+					/>
+				</PaginationItem>
+			</PaginationContent>
+		</Pagination>
 	);
 }
 
@@ -108,22 +119,29 @@ export function PageSizeSelector({
 	onChange: (size: number) => void;
 	disabled?: boolean;
 }) {
+	const widestOptionLength = Math.max(
+		...options.map((size) => numberFormat.format(size).length),
+	);
+
 	return (
 		<Select
 			value={pageSize.toString()}
 			onValueChange={(value) => onChange(Number(value))}
 			disabled={disabled}
 			items={Object.fromEntries(
-				options.map((size) => [size.toString(), size.toString()]),
+				options.map((size) => [size.toString(), numberFormat.format(size)]),
 			)}
 		>
-			<SelectTrigger className="h-7 w-fit px-2 text-xs">
+			<SelectTrigger
+				className="h-7 w-fit justify-between rounded-lg border-transparent bg-foreground/4 px-2 text-xs tabular-nums shadow-none"
+				style={{ minWidth: `calc(${widestOptionLength}ch + 1.75rem)` }}
+			>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>
 				{options.map((size) => (
 					<SelectItem key={size} value={size.toString()}>
-						{size}
+						{numberFormat.format(size)}
 					</SelectItem>
 				))}
 			</SelectContent>

@@ -15,7 +15,7 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
@@ -47,6 +47,9 @@ const dimensionedAction1: FeatureConfigOverride = {
 	],
 };
 
+/** Long enough for the Postgres sync under load; a sync that never lands still fails well inside a minute. */
+const PERSISTED_BALANCE_TIMEOUT_MS = 15_000;
+
 const withFeatureOverride = (
 	item: ReturnType<typeof items.consumable>,
 	featureOverride: FeatureConfigOverride,
@@ -69,14 +72,18 @@ const expectCreditsBalance = async ({
 		balance,
 		8,
 	);
-	await timeout(2_000);
-	const persisted = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
-		skip_cache: "true",
+	// The deduction reaches Postgres asynchronously; poll rather than guess how long the sync takes.
+	await pollUntilAsserted({
+		fetch: () =>
+			autumnV1.customers.get<ApiCustomerV3>(customerId, {
+				skip_cache: "true",
+			}),
+		assert: (persisted) =>
+			expect(
+				persisted.features[TestFeature.InvoiceCredits]?.balance,
+			).toBeCloseTo(balance, 8),
+		timeoutMs: PERSISTED_BALANCE_TIMEOUT_MS,
 	});
-	expect(persisted.features[TestFeature.InvoiceCredits]?.balance).toBeCloseTo(
-		balance,
-		8,
-	);
 };
 
 const setupDimensionedCredits = async ({

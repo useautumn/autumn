@@ -1,0 +1,72 @@
+import { describe, expect, test } from "bun:test";
+import { createBalanceWorkerEnv } from "./balanceWorker/balanceWorkerEnv.js";
+import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
+
+const brokers = {
+	KAFKA_BROKERS: "localhost:19092",
+	DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+};
+
+for (const [name, createEnv] of [
+	["worker", createBalanceWorkerEnv],
+	["ownership reader", createBalanceWorkerClientEnv],
+] as const) {
+	describe(`${name} Kafka authentication`, () => {
+		test("defaults to MSK IAM without a deployment auth setting", () => {
+			expect(createEnv({ ...brokers, AWS_REGION: "us-east-1" })).toHaveProperty(
+				"KAFKA_AUTH_MODE",
+				"msk_iam",
+			);
+		});
+
+		test("does not fall back to plaintext when the default IAM region is missing", () => {
+			expect(() => createEnv(brokers)).toThrow("requires AWS_REGION");
+		});
+
+		test("accepts explicit unauthenticated mode without AWS configuration", () => {
+			expect(createEnv({ ...brokers, KAFKA_AUTH_MODE: "none" })).toHaveProperty(
+				"KAFKA_AUTH_MODE",
+				"none",
+			);
+		});
+
+		test("preserves IAM mode and its normalized signing region", () => {
+			expect(
+				createEnv({
+					...brokers,
+					KAFKA_AUTH_MODE: "msk_iam",
+					AWS_REGION: " us-east-1 ",
+				}),
+			).toMatchObject({
+				KAFKA_AUTH_MODE: "msk_iam",
+				AWS_REGION: "us-east-1",
+			});
+		});
+
+		test.each([undefined, "", " "])(
+			"rejects IAM mode without a signing region: %j",
+			(region) => {
+				expect(() =>
+					createEnv({
+						...brokers,
+						KAFKA_AUTH_MODE: "msk_iam",
+						AWS_REGION: region,
+					}),
+				).toThrow("requires AWS_REGION");
+			},
+		);
+
+		test.each(["iam", "msk", "MSK_IAM", "", " "])(
+			"rejects an unknown auth mode instead of falling back to plaintext: %j",
+			(mode) => {
+				expect(() =>
+					createEnv({
+						...brokers,
+						KAFKA_AUTH_MODE: mode,
+						AWS_REGION: "us-east-1",
+					}),
+				).toThrow("KAFKA_AUTH_MODE");
+			},
+		);
+	});
+}

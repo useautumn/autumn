@@ -6,6 +6,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxFavicon } from "@/components/general/SandboxFavicon";
+import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
@@ -13,7 +14,11 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import { setActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
+import { sandboxColorValue } from "@/hooks/sandbox/sandboxDisplay";
+import {
+	setActiveSandbox,
+	useActiveSandbox,
+} from "@/hooks/sandbox/useActiveSandbox";
 import { useSyncSandboxFromUrl } from "@/hooks/sandbox/useSyncSandboxFromUrl";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { cn } from "@/lib/utils";
@@ -113,6 +118,7 @@ const MainContent = ({
 	onOpenMobileSidebar: () => void;
 }) => {
 	const env = useEnv();
+	const activeSandbox = useActiveSandbox();
 	const { org, isLoading: orgLoading } = useOrg();
 	const [showDeployDialog, setShowDeployDialog] = useState(false);
 	const handleEnvChange = useEnvChange();
@@ -146,7 +152,22 @@ const MainContent = ({
 					className="w-full h-full flex flex-col overflow-hidden sm:rounded-xl sm:border relative"
 				>
 					{env === AppEnv.Sandbox && (
-						<SandboxBanner>
+						<SandboxBanner
+							label={activeSandbox?.name}
+							icon={
+								activeSandbox?.icon ? (
+									<PhosphorIcon name={activeSandbox.icon} className="size-3" />
+								) : undefined
+							}
+							color={
+								activeSandbox
+									? sandboxColorValue(activeSandbox.color)
+									: undefined
+							}
+							className={
+								activeSandbox?.color === "amber" ? "text-black" : undefined
+							}
+						>
 							{org?.deployed ? (
 								<SandboxBannerAction onClick={switchToProduction}>
 									Production

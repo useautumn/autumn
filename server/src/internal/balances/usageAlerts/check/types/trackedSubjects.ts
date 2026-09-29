@@ -1,5 +1,5 @@
+import type { BeforeAfter } from "@autumn/balance-webhooks";
 import type { FullCustomer, FullSubject } from "@autumn/shared";
-import type { BeforeAfter } from "./beforeAfter.js";
 
 export type TrackedSubject = {
 	fullCustomer: FullCustomer;

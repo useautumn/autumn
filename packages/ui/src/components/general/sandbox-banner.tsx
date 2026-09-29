@@ -1,13 +1,33 @@
 import { cn } from "@autumn/ui/lib/utils";
 import { ArrowUpRightIcon, FlaskIcon } from "@phosphor-icons/react";
 
-export function SandboxBanner({ children }: { children?: React.ReactNode }) {
+export function SandboxBanner({
+	children,
+	label = "Sandbox",
+	icon,
+	color,
+	className,
+}: {
+	children?: React.ReactNode;
+	label?: string;
+	icon?: React.ReactNode;
+	color?: string;
+	className?: string;
+}) {
 	return (
 		<div className="pointer-events-none z-50 flex justify-center sm:absolute sm:inset-x-0 sm:top-0">
-			<div className="pointer-events-auto flex h-[26px] items-center gap-2.5 rounded-b-lg bg-sandbox pr-1 pb-0.5 pl-2.5 text-white">
+			<div
+				className={cn(
+					"pointer-events-auto flex h-[26px] items-center gap-2.5 rounded-b-lg bg-sandbox pr-1 pb-0.5 pl-2.5 text-white",
+					className,
+				)}
+				style={color ? { backgroundColor: color } : undefined}
+			>
 				<div className="flex items-center gap-1.5">
-					<FlaskIcon className="size-3" weight="fill" />
-					<span className="font-semibold text-xs">Sandbox</span>
+					{icon ?? <FlaskIcon className="size-3" weight="fill" />}
+					<span className="max-w-48 truncate font-semibold text-xs">
+						{label}
+					</span>
 				</div>
 				{children}
 			</div>
