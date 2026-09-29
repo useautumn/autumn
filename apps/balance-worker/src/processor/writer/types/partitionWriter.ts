@@ -44,6 +44,15 @@ export type CommittedOutcomeAppender = {
 		partition: number;
 		nextOffset: bigint;
 	}): Promise<void>;
+	/** Records that the command before `nextOffset` is decided: the offset rides with the next
+	 *  batch or lands on its own after a short gap. Throws a landing failure that already happened. */
+	settleCommandOffset?(params: {
+		topic: string;
+		partition: number;
+		nextOffset: bigint;
+	}): void;
+	/** Lands whatever `settleCommandOffset` still holds; rejects with a landing failure. */
+	flushCommandOffsets?(): Promise<void>;
 	/** Bytes `appendCommitted` would put on the wire for this record; absent, the writer estimates from JSON. Measuring here lets the appender keep the encoding it later sends. */
 	encodedBytesOf?(params: { record: MeteringRecord }): number;
 	/** Atomically commits all mutations contiguously and returns the first record's offset. */

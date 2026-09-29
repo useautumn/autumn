@@ -34,6 +34,7 @@ describe("Kafka balance worker config", () => {
 			clientId: "balance-worker-staging",
 			brokers: ["broker-1:9098", "broker-2:9098"],
 			ssl: true,
+			logCreator: expect.any(Function),
 			connectionTimeout: 3_000,
 			requestTimeout: 10_000,
 			enforceRequestTimeout: true,

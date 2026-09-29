@@ -7,12 +7,19 @@ export { createKafkaTransport } from "./client/createKafkaTransport.js";
 export {
 	InvalidKafkaOffsetError,
 	KafkaBatchNotCommittedError,
+	KafkaTopicPartitionsUnavailableError,
 	KafkaTransactionStateUnknownError,
 } from "./client/kafkaErrors.js";
 export {
 	metadataToBaseOffset,
 	parseKafkaOffset,
 } from "./client/kafkaOffsetUtils.js";
+export {
+	createSettledAdmin,
+	isEmptyTopicMetadataFailure,
+	KafkaWithSettledTopicOffsets,
+	type TopicOffsetsRetry,
+} from "./client/settledTopicOffsets.js";
 export type {
 	KafkaCommitMode,
 	KafkaOffsetCommit,

@@ -5,6 +5,7 @@ import type {
 	PartitionsContext,
 	PartitionsState,
 } from "../types/partitionState.js";
+import { PartitionHandoffCancelledError } from "./partitionLifecycleErrors.js";
 import { startPartitions } from "./startPartitions.js";
 import { closePartitionAdmission } from "./stopPartitions.js";
 
@@ -123,7 +124,7 @@ export function cancelPartitionHandoff({
 	entry: PartitionEntry;
 }): boolean {
 	if (entry.withdrawn) return false;
-	entry.handoffAbort.abort(new Error("Partition handoff cancelled"));
+	entry.handoffAbort.abort(new PartitionHandoffCancelledError());
 	entry.handoffAbort = new AbortController();
 	entry.retirement = null;
 	state.handingOff.delete(entry.partition);

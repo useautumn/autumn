@@ -7,10 +7,10 @@ import type { EdgeConfigS3Client } from "@autumn/edge-config";
 import {
 	createKafkaClient,
 	createKafkaTransport,
+	KafkaWithSettledTopicOffsets,
 	meteringIdentityToPartition,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import { Kafka } from "kafkajs";
 import type { PartitionCheckpointSource } from "../checkpoint/partitionCheckpointSource.js";
 import {
 	createCommitter,
@@ -68,7 +68,7 @@ export async function openWorkerResources({
 	bootstrap: WorkerBootstrapConfig;
 }): Promise<WorkerResources> {
 	const { env } = config;
-	const kafka = new Kafka(
+	const kafka = new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
 			clientId: `balance-worker-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,
