@@ -12,7 +12,10 @@ import { serializeCommandRecord } from "@autumn/kafka";
 import { CommandPartitionUnavailableError } from "../../../src/kafka/commandConsumer/commandConsumerErrors.js";
 import { createCommandRecordHandler } from "../../../src/kafka/commandConsumer/createCommandRecordHandler.js";
 import type { PartitionRuntimePort } from "../../../src/partitions/types/partitions.js";
-import { PartitionWriterDuplicateCommandError } from "../../../src/processor/writer/writerErrors.js";
+import {
+	MutationBatchNotCommittedError,
+	PartitionWriterDuplicateCommandError,
+} from "../../../src/processor/writer/writerErrors.js";
 import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 import {
 	createTrackCommand,
@@ -27,16 +30,20 @@ function createFixture({
 	outcome,
 	owned = true,
 	commandNextOffset = null,
+	canPark = false,
 }: {
 	outcome?: "applied" | "rejected" | Error;
 	owned?: boolean;
 	commandNextOffset?: bigint | null;
+	/** Gives the handler somewhere to park a partition, as the worker wiring does. */
+	canPark?: boolean;
 } = {}) {
 	const tracked: TrackCommand[] = [];
 	const evicted: EvictCommand[] = [];
 	const sources: unknown[] = [];
 	const completed: unknown[] = [];
 	const logs: string[] = [];
+	const parked: { partition: number; cause: unknown }[] = [];
 	const runtime = {
 		process: async (run: (processor: never) => Promise<unknown>) => {
 			const processor = {
@@ -80,9 +87,14 @@ function createFixture({
 				info: (message: string) => logs.push(`info:${message}`),
 				warn: (message: string) => logs.push(`warn:${message}`),
 			} as never,
+			...(canPark && {
+				markUnavailable: (failure: { partition: number; cause: unknown }) => {
+					parked.push(failure);
+				},
+			}),
 		},
 	});
-	return { handler, tracked, evicted, sources, logs, completed };
+	return { handler, tracked, evicted, sources, logs, completed, parked };
 }
 
 const command = parseTrackCommand({
@@ -224,6 +236,40 @@ describe("command record handler", () => {
 		expect(unowned.tracked).toEqual([]);
 		expect(failing.completed).toEqual([]);
 		expect(unowned.completed).toEqual([]);
+	});
+
+	test("a batch the broker refused parks the partition instead of reaching kafkajs, and the record is not consumed", async () => {
+		const cause = new MutationBatchNotCommittedError({
+			cause: new Error("CONCURRENT_TRANSACTIONS"),
+		});
+		const fixture = createFixture({ outcome: cause, canPark: true });
+		await expect(
+			fixture.handler.applyRecord(recordOf({ command })),
+		).resolves.toBeUndefined();
+		expect(fixture.parked).toEqual([{ partition, cause }]);
+		expect(fixture.completed).toEqual([]);
+		expect(fixture.logs).toEqual([
+			"warn:Queued command could not be committed; parking the partition",
+		]);
+	});
+
+	test("without somewhere to park, and for failures that are not the partition's own, the throw still reaches Kafka for redelivery", async () => {
+		const refused = new MutationBatchNotCommittedError({
+			cause: new Error("CONCURRENT_TRANSACTIONS"),
+		});
+		const unwired = createFixture({ outcome: refused });
+		await expect(
+			unwired.handler.applyRecord(recordOf({ command })),
+		).rejects.toBe(refused);
+
+		const blip = createFixture({
+			outcome: new Error("postgres connection reset"),
+			canPark: true,
+		});
+		await expect(
+			blip.handler.applyRecord(recordOf({ command })),
+		).rejects.toThrow("postgres connection reset");
+		expect(blip.parked).toEqual([]);
 	});
 
 	test("an unreadable record is skipped with a warning instead of failing the partition", async () => {

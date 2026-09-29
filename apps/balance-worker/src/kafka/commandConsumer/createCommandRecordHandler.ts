@@ -11,6 +11,7 @@ import { consumeReset } from "../../consume/consumeReset.js";
 import { consumeTrack } from "../../consume/consumeTrack.js";
 import { consumeUpdateBalance } from "../../consume/consumeUpdateBalance.js";
 import { settleQueuedFailure } from "../../consume/settleQueuedFailure.js";
+import { isPartitionRestartableCause } from "../../partitions/health/partitionRestartableCauses.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import { CommandPartitionUnavailableError } from "./commandConsumerErrors.js";
 import type { CommandConsumerContext } from "./types/commandConsumer.js";
@@ -100,7 +101,39 @@ export function createCommandRecordHandler({
 				settleQueuedFailure({ ctx: { logger: ctx.logger }, command, cause });
 			}
 		}
-		return runtime.process((processor) => processor.execute({ source, run }));
+		try {
+			return await runtime.process((processor) =>
+				processor.execute({ source, run }),
+			);
+		} catch (cause) {
+			parkOrRethrow({ topic, partition, offset, cause });
+		}
+	}
+
+	/** A batch the broker refused says the partition fell behind, not that the worker is broken:
+	 *  the partition is parked and restarted alone, and the record stays unconsumed for the restart
+	 *  to read again from the bookmark. Thrown into kafkajs instead, the same failure retries the
+	 *  batch a few times and then crashes the consumer every partition on this task shares, which
+	 *  takes the whole task down. Any other failure still goes to Kafka for redelivery. */
+	function parkOrRethrow({
+		topic,
+		partition,
+		offset,
+		cause,
+	}: {
+		topic: string;
+		partition: number;
+		offset: bigint;
+		cause: unknown;
+	}): never | undefined {
+		if (!ctx.markUnavailable || !isPartitionRestartableCause({ cause }))
+			throw cause;
+		ctx.logger?.warn(
+			"Queued command could not be committed; parking the partition",
+			{ topic, partition, offset: offset.toString(), error: cause },
+		);
+		ctx.markUnavailable({ partition, cause });
+		return undefined;
 	}
 
 	return { readResumeOffset, applyRecord };
