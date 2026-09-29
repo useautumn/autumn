@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type CheckResponseV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -67,14 +68,18 @@ describe(`${chalk.yellowBright(`${testCase}: unlimited entity loose entitlement`
 		expect(res.balance?.unlimited).toBe(true);
 	});
 
-	test("v2: customer-level should see merged entity's unlimited balance", async () => {
-		const res = (await autumnV2.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			// No entity_id
-		})) as unknown as CheckResponseV2;
+	// The balance worker doesn't aggregate entity data onto the customer.
+	test.skipIf(isBalanceWorkerRoute())(
+		"v2: customer-level should see merged entity's unlimited balance",
+		async () => {
+			const res = (await autumnV2.check({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				// No entity_id
+			})) as unknown as CheckResponseV2;
 
-		// Customer should see merged unlimited from entity
-		expect(res.balance?.unlimited).toBe(true);
-	});
+			// Customer should see merged unlimited from entity
+			expect(res.balance?.unlimited).toBe(true);
+		},
+	);
 });

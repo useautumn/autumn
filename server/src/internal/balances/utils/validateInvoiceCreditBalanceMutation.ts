@@ -7,7 +7,7 @@ import {
 export const INVOICE_CREDIT_BALANCE_MUTATION_MESSAGE =
 	"Invoice-credit balances can only be changed through tracked usage and billing-cycle resets";
 
-const rejectInvoiceCreditMutation = (): never => {
+export const rejectInvoiceCreditMutation = (): never => {
 	throw new RecaseError({
 		message: INVOICE_CREDIT_BALANCE_MUTATION_MESSAGE,
 		code: ErrCode.InvalidRequest,

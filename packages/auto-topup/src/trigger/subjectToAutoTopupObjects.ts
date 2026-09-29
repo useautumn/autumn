@@ -82,8 +82,8 @@ export const subjectToAutoTopupObjects = <
 	balanceBelowThreshold: boolean;
 } | null => {
 	const resolved = resolveBillingControlWithProduct<
-		AutoTopup,
 		"auto_topups",
+		AutoTopup,
 		CP
 	>({
 		controlLists: [fullSubject.customer.auto_topups],

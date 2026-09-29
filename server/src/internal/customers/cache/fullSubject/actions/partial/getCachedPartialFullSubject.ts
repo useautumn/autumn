@@ -7,8 +7,11 @@ import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "@/internal/customers/actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
-import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { resolveRolloutOrgId } from "@/internal/misc/rollouts/resolveRolloutOrgId.js";
+import {
+	ACTIVE_ROLLOUT_ID,
+	isRolloutCacheStale,
+} from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedBalances.js";
 import { applyLiveUsageWindows } from "../../balances/applyLiveUsageWindows.js";
 import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
@@ -168,16 +171,15 @@ export const getCachedPartialFullSubject = async ({
 		};
 	}
 
-	const rolloutSnapshot = getFullSubjectRolloutSnapshot({ ctx });
 	const rolloutOk = await tryOrInvalidate({
 		ctx,
 		operation: () => {
-			const stale =
-				rolloutSnapshot &&
-				isSnapshotCacheStale({
-					snapshot: rolloutSnapshot,
-					cachedAt: cached._cachedAt,
-				});
+			const stale = isRolloutCacheStale({
+				rolloutId: ACTIVE_ROLLOUT_ID,
+				orgId: resolveRolloutOrgId({ org: ctx.org }),
+				customerId,
+				cachedAt: cached._cachedAt,
+			});
 			return stale ? undefined : true;
 		},
 		invalidate: () =>

@@ -50,8 +50,15 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 
 describe("handleTrack", () => {
 	let restoreQueueEnv: (() => void) | undefined;
+	let originalKafkaAuthMode: string | undefined;
+	let originalRollout: string | undefined;
 
 	beforeEach(() => {
+		originalKafkaAuthMode = process.env.KAFKA_AUTH_MODE;
+		process.env.KAFKA_AUTH_MODE = "none";
+		// These cover the legacy SQS lane; a local stack routes to the worker by default.
+		originalRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 		mockState.queueCommands = [];
 		_setAsyncTrackConfigForTesting({ config: { enabledOrgIds: [] } });
 		restoreQueueEnv = pinTrackProducerQueueToFifo({
@@ -77,6 +84,16 @@ describe("handleTrack", () => {
 		}
 		restoreQueueEnv?.();
 		restoreQueueEnv = undefined;
+		if (originalKafkaAuthMode === undefined) {
+			delete process.env.KAFKA_AUTH_MODE;
+		} else {
+			process.env.KAFKA_AUTH_MODE = originalKafkaAuthMode;
+		}
+		if (originalRollout === undefined) {
+			delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+		} else {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = originalRollout;
+		}
 	});
 
 	test("returns 202 success for async track", async () => {

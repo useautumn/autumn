@@ -4,6 +4,7 @@ import {
 	EntityNotFoundError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer";
 import { CusService } from "@/internal/customers/CusService";
 
 const BILLING_CONTEXT_STATUSES = [
@@ -21,6 +22,9 @@ export const setupFullCustomerContext = async ({
 	withEntities?: boolean;
 }) => {
 	const { customer_id: customerId } = params;
+
+	// The plan is computed from Postgres; a track the worker just accepted must be there first.
+	await flushBalanceWorkerCustomer({ ctx, customerId });
 
 	const fullCustomer = await CusService.getFull({
 		ctx,

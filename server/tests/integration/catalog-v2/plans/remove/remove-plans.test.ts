@@ -8,26 +8,32 @@
  */
 
 import { expect, test } from "bun:test";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import {
 	CouponDurationType,
 	CusProductStatus,
+	RewardReceivedBy,
 	RewardTriggerEvent,
 	RewardType,
 	rewardPrograms,
 	rewards,
 } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
-import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
 	expectCatalogPreviewCorrect,
 	expectCatalogResultsCorrect,
 } from "../../utils/expectCatalogUpdate.js";
+import { uniqueTestId } from "../../utils/uniqueTestId.js";
+import {
+	messagesItem,
+	withCatalogPlans,
+} from "../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import {
 	deleteDbPlans,
@@ -37,11 +43,6 @@ import {
 	expectPlanVersionsCorrect,
 } from "../utils/expectCatalogPlans.js";
 import { expectTombstoneCorrect } from "../utils/expectTombstoneCorrect.js";
-import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
-import {
-	messagesItem,
-	withCatalogPlans,
-} from "../licenses/utils/seedLicensePlans.js";
 
 const seedRewardProgramRef = async ({
 	ctx,
@@ -78,6 +79,7 @@ const seedRewardProgramRef = async ({
 		internal_reward_id: internalRewardId,
 		product_ids: [planId],
 		when: RewardTriggerEvent.Checkout,
+		received_by: RewardReceivedBy.Referrer,
 		max_redemptions: 1,
 		unlimited_redemptions: false,
 		exclude_trial: false,
@@ -180,10 +182,7 @@ test.concurrent(
 
 				expectCatalogPreviewCorrect({
 					preview: await autumnV2_3.catalogV2.previewUpdate({
-						remove_plans: [
-							{ plan_id: withCustomerId },
-							{ plan_id: expiredId },
-						],
+						remove_plans: [{ plan_id: withCustomerId }, { plan_id: expiredId }],
 					}),
 					plans: [
 						{
@@ -202,10 +201,7 @@ test.concurrent(
 				});
 
 				await autumnV2_3.catalogV2.update({
-					remove_plans: [
-						{ plan_id: withCustomerId },
-						{ plan_id: expiredId },
-					],
+					remove_plans: [{ plan_id: withCustomerId }, { plan_id: expiredId }],
 				});
 				await expectAutumnError({
 					errMessage: `Cannot archive or remove ${childId} version 1 while ${parentId} still links to it`,

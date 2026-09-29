@@ -169,7 +169,6 @@ test.concurrent(
 			customer: customer!,
 			productGroup: customerId,
 			featureId: TestFeature.Messages,
-			persistFreeOverage: true,
 		});
 
 		expect(cusEntAfter!.balance).toBe(25);

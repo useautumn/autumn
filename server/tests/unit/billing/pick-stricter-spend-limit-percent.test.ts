@@ -64,8 +64,8 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 		});
 
 		const resolved = resolveBillingControlWithProduct<
-			DbSpendLimit,
-			"spend_limits"
+			"spend_limits",
+			DbSpendLimit
 		>({
 			controlLists: [],
 			customerProducts: [cheap, percentPlan],
@@ -108,8 +108,8 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 		};
 
 		const resolved = resolveBillingControlWithProduct<
-			DbSpendLimit,
-			"spend_limits"
+			"spend_limits",
+			DbSpendLimit
 		>({
 			controlLists: [],
 			customerProducts: [cheap, percentPlan],
@@ -156,8 +156,8 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 		};
 
 		const resolved = resolveBillingControlWithProduct<
-			DbSpendLimit,
-			"spend_limits"
+			"spend_limits",
+			DbSpendLimit
 		>({
 			controlLists: [],
 			customerProducts: [loose, strictPercent],
@@ -192,8 +192,8 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 		};
 
 		const resolved = resolveBillingControlWithProduct<
-			DbSpendLimit,
-			"spend_limits"
+			"spend_limits",
+			DbSpendLimit
 		>({
 			controlLists: [],
 			customerProducts: [cheap, percentPlan],

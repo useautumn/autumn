@@ -41,6 +41,7 @@ export const computeCreateCustomerPlan = ({
 
 	return {
 		customerId: fullCustomer?.id ?? "",
+		insertCustomer: fullCustomer,
 		insertCustomerProducts,
 		pooledBalancePlan,
 	};

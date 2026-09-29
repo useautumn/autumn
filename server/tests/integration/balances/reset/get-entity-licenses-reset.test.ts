@@ -18,6 +18,7 @@ import {
 	customerEntitlements,
 	customerProducts,
 	EntInterval,
+	getNextResetAt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -26,9 +27,9 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq, isNotNull } from "drizzle-orm";
+import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getNextResetAt } from "@/utils/timeUtils.js";
 
 const INCLUDED_MESSAGES = 100;
 
@@ -168,6 +169,8 @@ test.concurrent(
 			.update(customerEntitlements)
 			.set({ next_reset_at: planted })
 			.where(eq(customerEntitlements.id, seatCusEnt.id));
+		// Written behind the worker's back: it re-hydrates on the next command.
+		await evictBalanceWorkerCustomer({ ctx, customerId });
 
 		const after = await autumnV2_3.entities.get<ApiEntityV2>(
 			customerId,
@@ -187,9 +190,10 @@ test.concurrent(
 			.from(customerEntitlements)
 			.where(eq(customerEntitlements.id, seatCusEnt.id));
 		const expectedNextResetAt = getNextResetAt({
-			curReset: new UTCDate(planted),
+			curReset: planted,
 			interval: EntInterval.Month,
 			intervalCount: 1,
+			now: Date.now(),
 		});
 		expect(seatCusEntAfter.next_reset_at).toBe(expectedNextResetAt);
 		expect(seatCusEntAfter.next_reset_at ?? 0).toBeGreaterThan(Date.now());

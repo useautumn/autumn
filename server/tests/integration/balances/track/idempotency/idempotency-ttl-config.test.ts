@@ -3,9 +3,8 @@
  *
  * Contract under test:
  *   - A balances claim for an org with idempotency_config uses the configured
- *     TTL: the Redis key's PTTL and the Dynamo item's expiresAt both land at
- *     ~now + configured hours.
- *   - An org without config falls back to the 24h default in both stores.
+ *     TTL: the Dynamo item's expiresAt lands at ~now + configured hours.
+ *   - An org without config falls back to the 24h default.
  *
  * Claims run in-process through withIdempotencyKey (the same wrapper the
  * middleware and track use), with the config injected on a ctx clone — the
@@ -23,11 +22,9 @@ import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getIdempotencyTableName } from "@/external/aws/dynamodb/idempotencyKeys/idempotencyKeyTable.js";
 import { getDynamoDocumentClient } from "@/external/aws/dynamodb/initDynamoDb.js";
-import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { buildIdempotencyStorageKey } from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 
-const hasLocalDynamo = Boolean(process.env.DYNAMODB_ENDPOINT);
 const TOLERANCE_MS = ms.minutes(2);
 
 const claimWithConfig = async ({
@@ -65,41 +62,25 @@ const expectStoredTtls = async ({
 }) => {
 	const expectedTtlMs = ms.hours(ttlHours);
 
-	const redisPttl = await getMiscRedis().pttl(storageKey);
-	expect(redisPttl).toBeGreaterThan(expectedTtlMs - TOLERANCE_MS);
-	expect(redisPttl).toBeLessThanOrEqual(expectedTtlMs);
+	// DynamoDB is the only idempotency store; the claim is awaited, so the item is already there.
+	const { Item: item } = await getDynamoDocumentClient().send(
+		new GetCommand({
+			TableName: getIdempotencyTableName(),
+			Key: { pk: storageKey },
+		}),
+	);
 
-	if (hasLocalDynamo) {
-		// The Dynamo mirror write is fire-and-forget (and first use lazily
-		// creates the emulator table), so poll for the item before asserting.
-		const readItem = async () =>
-			(
-				await getDynamoDocumentClient().send(
-					new GetCommand({
-						TableName: getIdempotencyTableName(),
-						Key: { pk: storageKey },
-					}),
-				)
-			).Item;
-
-		const deadline = Date.now() + 10_000;
-		let item = await readItem();
-		while (!item && Date.now() < deadline) {
-			await new Promise((resolve) => setTimeout(resolve, 250));
-			item = await readItem();
-		}
-
-		const expiresAtMs = Number(item?.expiresAt) * 1000;
-		expect(expiresAtMs).toBeGreaterThan(
-			Date.now() + expectedTtlMs - TOLERANCE_MS,
-		);
-		expect(expiresAtMs).toBeLessThanOrEqual(Date.now() + expectedTtlMs);
-	}
+	expect(item).toBeDefined();
+	const expiresAtMs = Number(item?.expiresAt) * 1000;
+	expect(expiresAtMs).toBeGreaterThan(
+		Date.now() + expectedTtlMs - TOLERANCE_MS,
+	);
+	expect(expiresAtMs).toBeLessThanOrEqual(Date.now() + expectedTtlMs);
 };
 
 describe("idempotency TTL config", () => {
 	test.concurrent(
-		"a configured balances TTL lands in Redis PTTL and Dynamo expiresAt",
+		"a configured balances TTL lands in Dynamo expiresAt",
 		async () => {
 			const storageKey = await claimWithConfig({
 				idempotencyKey: `ttl-config-72h-${Date.now().toString(36)}`,

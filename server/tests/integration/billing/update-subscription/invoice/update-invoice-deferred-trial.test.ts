@@ -31,7 +31,7 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (finalized
 		trialDays: 7,
 	});
 
-	const { customerId, autumnV1 } = await initScenario({
+	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "inv-def-trial-fin",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -94,6 +94,8 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (finalized
 
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
+		ctx,
+		customerId,
 	});
 
 	const customerAfterPayment =
@@ -125,7 +127,7 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (draft, de
 		trialDays: 7,
 	});
 
-	const { customerId, autumnV1 } = await initScenario({
+	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "inv-def-trial-draft",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -204,6 +206,8 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (draft, de
 	// Complete payment
 	await completeInvoiceCheckout({
 		url: finalizedInvoice.hosted_invoice_url!,
+		ctx,
+		customerId,
 	});
 
 	const customerAfterPayment =

@@ -1,5 +1,6 @@
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { sql } from "drizzle-orm";
+import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 
 const THIRTY_FIVE_DAYS_MS = 35 * 24 * 60 * 60 * 1000;
@@ -7,7 +8,8 @@ const THIRTY_FIVE_DAYS_MS = 35 * 24 * 60 * 60 * 1000;
 /**
  * Backdates a feature's usage-window counters in BOTH stores so the window is
  * wall-clock closed -- the windows analog of expireCusEntForReset. The next
- * subject read should lazily prune the rows.
+ * subject read should lazily prune the rows. The owning balance worker holds a
+ * third copy, so it is told to forget the customer too.
  */
 export const expireUsageWindowForReset = async ({
 	ctx,
@@ -39,7 +41,10 @@ export const expireUsageWindowForReset = async ({
 		featureId,
 	});
 	const rawWindows = await ctx.redisV2.hget(balanceKey, "_usage_windows");
-	if (!rawWindows) return;
+	if (!rawWindows) {
+		await evictBalanceWorkerCustomer({ ctx, customerId });
+		return;
+	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: raw cached rows are untyped
 	const backdated = (JSON.parse(rawWindows) as any[]).map((usageWindow) =>
@@ -56,4 +61,5 @@ export const expireUsageWindowForReset = async ({
 		"_usage_windows",
 		JSON.stringify(backdated),
 	);
+	await evictBalanceWorkerCustomer({ ctx, customerId });
 };

@@ -105,9 +105,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 		const cus = await autumn.customers.get(customerId);
 		const msgesFeature = cus.features[TestFeature.Messages];
 		expect(msgesFeature.next_reset_at).toBeDefined();
+		// The schedule is anchored at attach; the reset itself takes a few seconds.
 		expect(msgesFeature.next_reset_at).toBeCloseTo(
 			addDays(new Date(), 3).getTime(),
-			-4, // tolerance of ~30 seconds (30000ms = 10^4.48)
+			-5, // tolerance of ~50 seconds (50000ms = 10^4.7)
 		);
 	});
 

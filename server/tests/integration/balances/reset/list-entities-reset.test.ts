@@ -14,6 +14,7 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.j
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
+import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 
 const PREFIX = "reset-list-entities-cohort";
@@ -80,125 +81,132 @@ const expireEntityCusEntForReset = async ({
 		field: "next_reset_at",
 		value: pastTime,
 	});
+	// Written behind the worker's back: it re-hydrates on the next command.
+	await evictBalanceWorkerCustomer({ ctx, customerId });
 
 	return cusEnt;
 };
 
-test.concurrent(`${chalk.yellowBright("list entities reset: queues stale entity entitlement resets through workflow")}`, async () => {
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const entityPlan = products.base({
-		id: "entity-reset-free",
-		items: [messagesItem],
-	});
-
-	const { autumnV1, autumnV2_1, ctx } = await initScenario({
-		customerId: CUSTOMER_ID,
-		setup: [
-			s.customer({ testClock: false }),
-			s.products({ list: [entityPlan] }),
-		],
-		actions: [],
-	});
-
-	// One batched call: entity creation takes a per-customer lock that fails
-	// fast, so parallel single creates race each other.
-	await autumnV1.entities.create(
-		CUSTOMER_ID,
-		ENTITY_IDS.map((entityId) => ({
-			id: entityId,
-			name: entityId,
-			feature_id: TestFeature.Users,
-		})),
-	);
-
-	await Promise.all(
-		ENTITY_IDS.map((entityId) =>
-			autumnV1.billing.attach({
-				customer_id: CUSTOMER_ID,
-				product_id: entityPlan.id,
-				entity_id: entityId,
-			}),
-		),
-	);
-
-	await Promise.all(
-		ENTITY_IDS.map((entityId) =>
-			autumnV1.track({
-				customer_id: CUSTOMER_ID,
-				feature_id: TestFeature.Messages,
-				entity_id: entityId,
-				value: USAGE[entityId],
-			}),
-		),
-	);
-	// The tracks must land in Postgres before the resets are queued, otherwise
-	// a late deduction would be applied on top of the freshly reset balance.
-	for (const entityId of ENTITY_IDS) {
-		await expectBalanceCorrect({
-			autumn: autumnV2_1,
-			customerId: CUSTOMER_ID,
-			entityId,
-			featureId: TestFeature.Messages,
-			usage: USAGE[entityId],
-			skipCache: true,
+test.concurrent(
+	`${chalk.yellowBright("list entities reset: queues stale entity entitlement resets through workflow")}`,
+	async () => {
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const entityPlan = products.base({
+			id: "entity-reset-free",
+			items: [messagesItem],
 		});
-	}
 
-	const expiredCusEnts = await Promise.all(
-		STALE_IDS.map((entityId) =>
-			expireEntityCusEntForReset({
-				ctx,
+		const { autumnV1, autumnV2_1, ctx } = await initScenario({
+			customerId: CUSTOMER_ID,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [entityPlan] }),
+			],
+			actions: [],
+		});
+
+		// One batched call: entity creation takes a per-customer lock that fails
+		// fast, so parallel single creates race each other.
+		await autumnV1.entities.create(
+			CUSTOMER_ID,
+			ENTITY_IDS.map((entityId) => ({
+				id: entityId,
+				name: entityId,
+				feature_id: TestFeature.Users,
+			})),
+		);
+
+		await Promise.all(
+			ENTITY_IDS.map((entityId) =>
+				autumnV1.billing.attach({
+					customer_id: CUSTOMER_ID,
+					product_id: entityPlan.id,
+					entity_id: entityId,
+				}),
+			),
+		);
+
+		await Promise.all(
+			ENTITY_IDS.map((entityId) =>
+				autumnV1.track({
+					customer_id: CUSTOMER_ID,
+					feature_id: TestFeature.Messages,
+					entity_id: entityId,
+					value: USAGE[entityId],
+				}),
+			),
+		);
+		// The tracks must land in Postgres before the resets are queued, otherwise
+		// a late deduction would be applied on top of the freshly reset balance.
+		for (const entityId of ENTITY_IDS) {
+			await expectBalanceCorrect({
+				autumn: autumnV2_1,
 				customerId: CUSTOMER_ID,
 				entityId,
 				featureId: TestFeature.Messages,
-			}),
-		),
-	);
+				usage: USAGE[entityId],
+				skipCache: true,
+			});
+		}
 
-	const listRes = await autumnV2_1.entitiesV2.list<{
-		list: ApiEntityV2[];
-		total: number;
-	}>({
-		search: PREFIX,
-		limit: ENTITY_IDS.length,
-	});
+		const expiredCusEnts = await Promise.all(
+			STALE_IDS.map((entityId) =>
+				expireEntityCusEntForReset({
+					ctx,
+					customerId: CUSTOMER_ID,
+					entityId,
+					featureId: TestFeature.Messages,
+				}),
+			),
+		);
 
-	expect(listRes.total).toBe(ENTITY_IDS.length);
-	for (const entityId of ENTITY_IDS) {
-		expect(listRes.list.find((entity) => entity.id === entityId)).toBeDefined();
-	}
-
-	// The list queues the stale resets through the workflow queue; on a
-	// contended runner the workers drain well after the response returns.
-	for (const entityId of STALE_IDS) {
-		await expectBalanceCorrect({
-			autumn: autumnV2_1,
-			customerId: CUSTOMER_ID,
-			entityId,
-			featureId: TestFeature.Messages,
-			remaining: 100,
-			usage: 0,
-			skipCache: true,
+		const listRes = await autumnV2_1.entitiesV2.list<{
+			list: ApiEntityV2[];
+			total: number;
+		}>({
+			search: PREFIX,
+			limit: ENTITY_IDS.length,
 		});
-	}
 
-	for (const cusEnt of expiredCusEnts) {
-		const [dbCusEnt] = await ctx.db
-			.select()
-			.from(customerEntitlements)
-			.where(eq(customerEntitlements.id, cusEnt.id));
-		expect(dbCusEnt.next_reset_at).toBeGreaterThan(Date.now());
-	}
+		expect(listRes.total).toBe(ENTITY_IDS.length);
+		for (const entityId of ENTITY_IDS) {
+			expect(
+				listRes.list.find((entity) => entity.id === entityId),
+			).toBeDefined();
+		}
 
-	for (const entityId of FRESH_IDS) {
-		await expectBalanceCorrect({
-			autumn: autumnV2_1,
-			customerId: CUSTOMER_ID,
-			entityId,
-			featureId: TestFeature.Messages,
-			remaining: 100 - USAGE[entityId],
-			usage: USAGE[entityId],
-			skipCache: true,
-		});
-	}
-});
+		// The list queues the stale resets through the workflow queue; on a
+		// contended runner the workers drain well after the response returns.
+		for (const entityId of STALE_IDS) {
+			await expectBalanceCorrect({
+				autumn: autumnV2_1,
+				customerId: CUSTOMER_ID,
+				entityId,
+				featureId: TestFeature.Messages,
+				remaining: 100,
+				usage: 0,
+				skipCache: true,
+			});
+		}
+
+		for (const cusEnt of expiredCusEnts) {
+			const [dbCusEnt] = await ctx.db
+				.select()
+				.from(customerEntitlements)
+				.where(eq(customerEntitlements.id, cusEnt.id));
+			expect(dbCusEnt.next_reset_at).toBeGreaterThan(Date.now());
+		}
+
+		for (const entityId of FRESH_IDS) {
+			await expectBalanceCorrect({
+				autumn: autumnV2_1,
+				customerId: CUSTOMER_ID,
+				entityId,
+				featureId: TestFeature.Messages,
+				remaining: 100 - USAGE[entityId],
+				usage: USAGE[entityId],
+				skipCache: true,
+			});
+		}
+	},
+);

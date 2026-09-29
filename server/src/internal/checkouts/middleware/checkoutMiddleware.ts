@@ -16,7 +16,6 @@ import { deleteCheckoutCache } from "@/external/redis/actions/autumnCheckoutCach
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { checkoutActions } from "@/internal/checkouts/actions";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { checkoutRepo } from "../repos/checkoutRepo";
 
@@ -125,10 +124,6 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		features: orgWithFeatures.features,
 		isPublic: true,
 		customerId: validCheckout.customer_id,
-		rolloutSnapshot: computeRolloutSnapshot({
-			orgId: orgWithFeatures.org.id,
-			customerId: validCheckout.customer_id,
-		}),
 	};
 	const { ctx: routedCtx } = getCtxWithCustomerRedis({ ctx: nextCtx });
 
