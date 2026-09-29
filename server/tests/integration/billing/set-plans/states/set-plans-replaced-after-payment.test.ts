@@ -1,11 +1,4 @@
-/**
- * When the new subscription's first payment needs authentication, set_plans defers
- * and finishes once the invoice is paid. The resume must also retire the Pending
- * rows left on the replaced incomplete subscription.
- *
- * Red (before):  the old subscription was cancelled on resume but its Pending row stayed.
- * Green (after): the old subscription is cancelled and no Pending rows remain.
- */
+/** When the new subscription's first payment needs authentication, set_plans finishes once it is paid and retires the replaced subscription's Pending rows. */
 
 import { expect, test } from "bun:test";
 import {

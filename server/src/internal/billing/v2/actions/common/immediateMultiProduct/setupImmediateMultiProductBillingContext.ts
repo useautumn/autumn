@@ -26,8 +26,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import { isAttachUpgrade } from "@/internal/billing/v2/actions/attach/utils/isAttachUpgrade";
-import { fetchPendingStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/fetchPendingStripeSubscription";
-import { splitReplacedStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/splitReplacedStripeSubscription";
+import { resolveReplacedStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/resolveReplacedStripeSubscription";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
@@ -120,6 +119,25 @@ const setupImmediateMultiProductCheckoutMode = ({
 	return "stripe_checkout";
 };
 
+const canInheritSubscriptionTrial = ({
+	productContexts,
+	targetProduct,
+}: {
+	productContexts: MultiAttachProductContext[];
+	targetProduct: FullProduct;
+}) => {
+	if (!isProductPaidAndRecurring(targetProduct)) return false;
+
+	const currentCustomerProduct = productContexts.find(
+		(productContext) => productContext.fullProduct === targetProduct,
+	)?.currentCustomerProduct;
+	const keepsPlan = currentCustomerProduct?.product.id === targetProduct.id;
+	return (
+		keepsPlan ||
+		!isAttachUpgrade({ currentCustomerProduct, attachProduct: targetProduct })
+	);
+};
+
 /** Resolve trial behavior for immediate multi-product billing. */
 const setupImmediateMultiProductTrialContext = async ({
 	ctx,
@@ -163,19 +181,10 @@ const setupImmediateMultiProductTrialContext = async ({
 		});
 	}
 
-	// Attach's precedence; keeping the same plan is never an upgrade, though equal prices count as one.
-	const currentCustomerProduct = productContexts.find(
-		(productContext) => productContext.fullProduct === targetProduct,
-	)?.currentCustomerProduct;
-	const keepsPlan = currentCustomerProduct?.product.id === targetProduct.id;
-	const isUpgrade =
-		!keepsPlan &&
-		isAttachUpgrade({ currentCustomerProduct, attachProduct: targetProduct });
 	if (
 		inheritSubscriptionTrial &&
 		stripeSubscription &&
-		isProductPaidAndRecurring(targetProduct) &&
-		!isUpgrade
+		canInheritSubscriptionTrial({ productContexts, targetProduct })
 	) {
 		return inheritTrialFromSubscription({ stripeSubscription });
 	}
@@ -354,19 +363,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		replacedStripeSubscription,
-	} = replaceUnusableSubscription
-		? splitReplacedStripeSubscription({
-				...stripeBillingContext,
-				pendingStripeSubscription:
-					stripeBillingContext.stripeSubscription ||
-					stripeBillingContext.canceledStripeSubscription
-						? undefined
-						: await fetchPendingStripeSubscription({ ctx, fullCustomer }),
-			})
-		: {
-				...stripeBillingContext,
-				replacedStripeSubscription: undefined,
-			};
+	} = await resolveReplacedStripeSubscription({
+		ctx,
+		fullCustomer,
+		stripeBillingContext,
+		replaceUnusableSubscription,
+	});
 
 	const invoiceMode = await setupInvoiceModeContext({
 		ctx,

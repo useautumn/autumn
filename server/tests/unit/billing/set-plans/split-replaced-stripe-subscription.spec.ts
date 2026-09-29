@@ -1,8 +1,4 @@
-/**
- * set_plans only builds on a subscription it can update. A terminal or unusable
- * subscription moves to `replacedStripeSubscription`, with the schedule attached to it,
- * so the create path runs and the old one can be cancelled.
- */
+/** set_plans moves a terminal or unusable subscription and its schedule to `replacedStripeSubscription`, so a new one is created in its place. */
 
 import { describe, expect, test } from "bun:test";
 import type Stripe from "stripe";

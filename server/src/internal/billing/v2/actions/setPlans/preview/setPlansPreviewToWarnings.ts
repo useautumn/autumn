@@ -12,10 +12,7 @@ import {
 	type StripeBillingPlan,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import {
-	intervalChangeWarning,
-	scheduledCancelWarning,
-} from "./liveSubscriptionChangeWarnings";
+import { liveSubscriptionChangeWarnings } from "./liveSubscriptionChangeWarnings";
 import {
 	type SubscriptionWarningContext,
 	subscriptionStateToWarnings,
@@ -96,10 +93,10 @@ export const setPlansPreviewToWarnings = ({
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
 	features: Feature[];
-	billingContext?: SubscriptionWarningContext;
-	stripeBillingPlan?: StripeBillingPlan;
-	replacedOpenInvoices?: Stripe.Invoice[];
-	liveOpenInvoices?: Stripe.Invoice[];
+	billingContext: SubscriptionWarningContext;
+	stripeBillingPlan: StripeBillingPlan;
+	replacedOpenInvoices: Stripe.Invoice[];
+	liveOpenInvoices: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
@@ -112,17 +109,12 @@ export const setPlansPreviewToWarnings = ({
 			replacedOpenInvoices,
 			liveOpenInvoices,
 		}),
-		...[
-			scheduledCancelWarning({
-				stripeSubscription: billingContext?.stripeSubscription,
-				stripeBillingPlan: stripeBillingPlan ?? {},
-			}),
-			intervalChangeWarning({
-				stripeSubscription: billingContext?.stripeSubscription,
-				liveProcessorItems,
-				immediateItems: phases[0]?.processor_items ?? [],
-			}),
-		].filter(notNullish),
+		...liveSubscriptionChangeWarnings({
+			stripeSubscription: billingContext.stripeSubscription,
+			stripeBillingPlan,
+			liveProcessorItems,
+			immediateItems: phases[0]?.processor_items ?? [],
+		}),
 		...unbilledUsageWarnings(unbilledUsageLineItems),
 		...removedUnmanagedItems({
 			liveProcessorItems,

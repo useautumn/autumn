@@ -1,5 +1,6 @@
 import {
 	formatMsToDate,
+	notNullish,
 	type ProcessorItem,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
@@ -33,7 +34,7 @@ const scheduleEndSeconds = (stripeBillingPlan: StripeBillingPlan) => {
 	return typeof endDate === "number" ? endDate : undefined;
 };
 
-export const scheduledCancelWarning = ({
+const scheduledCancelWarning = ({
 	stripeSubscription,
 	stripeBillingPlan,
 }: {
@@ -72,7 +73,7 @@ const billingIntervals = (items: ProcessorItem[]) =>
 			.map((price) => `${price?.interval_count} ${price?.interval}`),
 	);
 
-export const intervalChangeWarning = ({
+const intervalChangeWarning = ({
 	stripeSubscription,
 	liveProcessorItems,
 	immediateItems,
@@ -96,3 +97,23 @@ export const intervalChangeWarning = ({
 		message: `Stripe invoices the new ${newItem.price.interval} interval now, and the billing cycle restarts today.`,
 	};
 };
+
+export const liveSubscriptionChangeWarnings = ({
+	stripeSubscription,
+	stripeBillingPlan,
+	liveProcessorItems,
+	immediateItems,
+}: {
+	stripeSubscription?: Stripe.Subscription;
+	stripeBillingPlan: StripeBillingPlan;
+	liveProcessorItems: ProcessorItem[];
+	immediateItems: ProcessorItem[];
+}): Warning[] =>
+	[
+		scheduledCancelWarning({ stripeSubscription, stripeBillingPlan }),
+		intervalChangeWarning({
+			stripeSubscription,
+			liveProcessorItems,
+			immediateItems,
+		}),
+	].filter(notNullish);

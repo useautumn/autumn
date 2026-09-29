@@ -52,7 +52,6 @@ export const StripeBillingPlanSchema = z.object({
 	invoiceItemsAction: StripeInvoiceItemsActionSchema.optional(),
 	checkoutSessionAction: StripeCheckoutSessionActionSchema.optional(),
 	refundAction: StripeRefundActionSchema.optional(),
-	/** set_plans only: runs once the new subscription exists. */
 	replacedSubscriptionAction: StripeReplacedSubscriptionActionSchema.optional(),
 });
 

@@ -1,9 +1,4 @@
-/**
- * set_plans is declarative about a scheduled cancellation: without an end date in the
- * request, the plans don't end, so Stripe's cancel_at is cleared however many phases there are.
- * Several phases clear it too, with a schedule carrying the later phase.
- * The preview says the scheduled cancellation is removed.
- */
+/** Without an end date, set_plans clears Stripe's scheduled cancel_at across any number of phases and says so in the preview. */
 
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";

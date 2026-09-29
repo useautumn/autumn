@@ -1,8 +1,4 @@
-/**
- * set_plans decides what to do with the customer's Stripe subscription from its state alone.
- * Terminal subscriptions are replaced by a new one; unusable ones (incomplete, unpaid,
- * paused, an open Checkout session) are cancelled and replaced; the rest are updated.
- */
+/** set_plans updates, replaces, or cancels and replaces the customer's Stripe subscription from its state alone. */
 
 import { describe, expect, test } from "bun:test";
 import {

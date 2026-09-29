@@ -1,4 +1,4 @@
-// set_plans keeps the billing cycle anchor that setup works out for its plans.
+/** set_plans updates collectable live subscriptions (active, past_due, pause_collection) in place and keeps the billing cycle anchor setup works out for its plans. */
 
 import { expect, test } from "bun:test";
 import {

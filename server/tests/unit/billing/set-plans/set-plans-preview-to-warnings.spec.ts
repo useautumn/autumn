@@ -37,6 +37,13 @@ const phase = (
 	...overrides,
 });
 
+const noSubscriptionState = {
+	billingContext: { currentEpochMs: 0, billingCycleAnchorMs: "now" as const },
+	stripeBillingPlan: {},
+	replacedOpenInvoices: [],
+	liveOpenInvoices: [],
+};
+
 describe("setPlansPreviewToWarnings", () => {
 	test("returns no warnings for a clean preview", () => {
 		expect(
@@ -60,6 +67,7 @@ describe("setPlansPreviewToWarnings", () => {
 				deletedCustomerProducts: [],
 				outgoingCustomerProducts: [],
 				features: [],
+				...noSubscriptionState,
 			}),
 		).toEqual([]);
 	});
@@ -119,6 +127,7 @@ describe("setPlansPreviewToWarnings", () => {
 			outgoingCustomerProducts: [outgoingPro],
 			requestedProrationBehavior: "none",
 			features: [],
+			...noSubscriptionState,
 		});
 
 		expect(warnings.map((warning) => warning.type)).toEqual([
@@ -158,6 +167,7 @@ describe("setPlansPreviewToWarnings", () => {
 				deletedCustomerProducts: [],
 				outgoingCustomerProducts: [],
 				features: [],
+				...noSubscriptionState,
 			}),
 		).toEqual([]);
 	});
@@ -187,6 +197,7 @@ const stateWarnings = (
 		deletedCustomerProducts: [],
 		outgoingCustomerProducts: [],
 		features: [],
+		...noSubscriptionState,
 		...overrides,
 	});
 
