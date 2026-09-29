@@ -565,7 +565,7 @@ async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
 	await expect(
 		fixture.client.check({ command: checkCommand }),
 	).rejects.toMatchObject({
-		code: "OWNERSHIP_UNAVAILABLE",
+		code: "NO_OWNER",
 		outcome: "not_submitted",
 	});
 	// The point of the bound: the caller is released in its own slice, not the
@@ -577,4 +577,31 @@ async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
 test(
 	"a stalled ownership refresh gives up on its own budget, not the request's",
 	boundsTheRouteRefreshBelowTheDeadline,
+);
+
+async function retriesARefreshThatOutrunsItsBudget(): Promise<void> {
+	// A fleet swap: the old owner answers NOT_OWNER, and ownership takes longer
+	// to settle than one refresh slice. The refresh keeps running past its
+	// slice, and the route is tried again as soon as it has settled, so the
+	// request lands on the successor instead of failing open with budget left.
+	const settles = Promise.withResolvers<void>();
+	const fixture = createFixture({
+		responses: [stale, stale, success],
+		timeoutMs: 1000,
+		routeRefreshTimeoutMs: 25,
+		refreshGate: settles.promise,
+	});
+	setTimeout(settles.resolve, 40);
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().requests).toHaveLength(3);
+	expect(fixture.stats().requests[2]).toEqual({
+		url: "http://worker-b:8080/v1/track",
+		body: { route: { partition: 0, routeEpoch: "2" }, command },
+	});
+	expect(fixture.stats().refreshes).toBe(2);
+}
+
+test(
+	"a refresh that outruns its slice is retried within the request budget, so a slow handoff costs latency, not a fail-open",
+	retriesARefreshThatOutrunsItsBudget,
 );
