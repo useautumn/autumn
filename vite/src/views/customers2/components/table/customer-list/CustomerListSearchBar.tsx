@@ -55,6 +55,15 @@ export function CustomerListSearchBar() {
 					))}
 				</div>
 			)}
+			{hasActiveCustomerFilters(queryStates) && (
+				<button
+					type="button"
+					onClick={() => setFilters(CLEARED_CUSTOMER_FILTERS)}
+					className="flex h-5 shrink-0 cursor-pointer items-center rounded px-1.5 text-xs whitespace-nowrap text-tertiary-foreground hover:bg-active-primary hover:text-foreground"
+				>
+					Reset filters
+				</button>
+			)}
 			<Input
 				variant="headless"
 				value={localQuery}
@@ -66,15 +75,6 @@ export function CustomerListSearchBar() {
 				className="h-full min-w-40 flex-1 text-sm"
 				placeholder="Search customers"
 			/>
-			{hasActiveCustomerFilters(queryStates) && (
-				<button
-					type="button"
-					onClick={() => setFilters(CLEARED_CUSTOMER_FILTERS)}
-					className="shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-primary hover:bg-active-primary"
-				>
-					Reset filters
-				</button>
-			)}
 		</div>
 	);
 }
