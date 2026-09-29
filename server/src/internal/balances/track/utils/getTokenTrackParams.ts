@@ -1,19 +1,19 @@
 import {
-	CustomerNotFoundError,
-	EntityNotFoundError,
 	ErrCode,
 	entitlementToCreditSystem,
 	type Feature,
 	fullCustomerToCustomerEntitlements,
-	fullSubjectToFullCustomer,
 	isAiCreditSystem,
 	RecaseError,
 	type TrackParams,
 	type TrackTokensParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getModelCreditCostBreakdown } from "@/internal/features/aiCreditSystemUtils.js";
+import {
+	getSubjectFullCustomer,
+	isSubjectNotFound,
+} from "../../utils/getSubjectFullCustomer.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
 const resolveAiCreditFeatureById = ({
@@ -41,10 +41,6 @@ const resolveAiCreditFeatureById = ({
 	return candidate;
 };
 
-const isMissingSubject = (error: unknown) =>
-	error instanceof CustomerNotFoundError ||
-	error instanceof EntityNotFoundError;
-
 const resolveHeldAiCreditFeatures = async ({
 	ctx,
 	input,
@@ -53,13 +49,11 @@ const resolveHeldAiCreditFeatures = async ({
 	input: TrackTokensParams;
 }): Promise<Feature[]> => {
 	try {
-		const fullCustomer = fullSubjectToFullCustomer({
-			fullSubject: await getOrSetCachedFullSubject({
-				ctx,
-				customerId: input.customer_id,
-				entityId: input.entity_id,
-				source: "resolveAiCreditFeature",
-			}),
+		const fullCustomer = await getSubjectFullCustomer({
+			ctx,
+			customerId: input.customer_id,
+			entityId: input.entity_id,
+			source: "resolveAiCreditFeature",
 		});
 		const entity = input.entity_id
 			? fullCustomer.entities?.find((e) => e.id === input.entity_id)
@@ -83,7 +77,7 @@ const resolveHeldAiCreditFeatures = async ({
 		return [...byFeatureId.values()];
 	} catch (error) {
 		// A named feature must not block the create-customer-on-track path.
-		if (input.feature_id && isMissingSubject(error)) return [];
+		if (input.feature_id && isSubjectNotFound(error)) return [];
 		throw error;
 	}
 };

@@ -108,7 +108,6 @@ export const runCheckWithTrackV2 = async ({
 		properties: body.properties,
 		skip_event: body.skip_event,
 		overage_behavior: body.lock?.overage_behavior ?? "reject",
-		lock: body.lock,
 	};
 
 	let allowed = true;

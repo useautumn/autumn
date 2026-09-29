@@ -19,6 +19,7 @@ import {
 	expectProductActive,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -125,13 +126,16 @@ test.concurrent(
 		});
 
 		// Verify features at customer level: customer (10000) + entity pro (500) + entity addon (1000) = 11500
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			includedUsage: 11500,
-			balance: 11500,
-			usage: 0,
-		});
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expectCustomerFeatureCorrect({
+				customer,
+				featureId: TestFeature.Messages,
+				includedUsage: 11500,
+				balance: 11500,
+				usage: 0,
+			});
+		}
 
 		// Verify invoices:
 		// 1. Entity pro monthly ($20)

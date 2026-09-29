@@ -1,3 +1,4 @@
+import { openStripeInvoiceId } from "@tests/utils/stripeUtils/openStripeInvoiceId";
 import { stripeCustomerId } from "@tests/utils/stripeUtils/stripeCustomerId";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 
@@ -18,26 +19,16 @@ export const payOpenInvoice = async ({
 	customerId: string;
 }): Promise<string> => {
 	const stripeCusId = await stripeCustomerId({ ctx, customerId });
-
-	const invoices = await ctx.stripeCli.invoices.list({
-		customer: stripeCusId,
-		status: "open",
-		limit: 1,
-	});
-
-	const invoice = invoices.data[0];
-	if (!invoice?.id) {
-		throw new Error(`No open Stripe invoice for ${customerId} to pay`);
-	}
+	const invoiceId = await openStripeInvoiceId({ ctx, customerId });
 
 	const paymentMethod = await ctx.stripeCli.paymentMethods
 		.attach(TEST_PAYMENT_METHOD, { customer: stripeCusId })
 		.catch(() => null);
 
 	await ctx.stripeCli.invoices.pay(
-		invoice.id,
+		invoiceId,
 		paymentMethod ? { payment_method: paymentMethod.id } : {},
 	);
 
-	return invoice.id;
+	return invoiceId;
 };

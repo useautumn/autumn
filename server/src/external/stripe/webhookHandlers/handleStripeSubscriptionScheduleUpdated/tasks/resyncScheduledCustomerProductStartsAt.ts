@@ -1,12 +1,12 @@
 import { CusProductStatus, schedulePhases } from "@autumn/shared";
 import { and, arrayOverlaps, gte, lt } from "drizzle-orm";
-import type Stripe from "stripe";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext.js";
 import {
+	getSchedulePhaseMoves,
 	STRIPE_SECOND_PRECISION_MS,
-	type SchedulePhaseMove,
 } from "../getSchedulePhaseMoves.js";
+import type { StripeScheduleUpdatedContext } from "../setupScheduleUpdatedContext.js";
 
 /**
  * Applies phase-start moves to Autumn: for each moved phase, only the scheduled
@@ -15,14 +15,20 @@ import {
  */
 export const resyncScheduledCustomerProductStartsAt = async ({
 	ctx,
-	schedule,
-	moves,
+	eventContext,
 }: {
 	ctx: StripeWebhookContext;
-	schedule: Stripe.SubscriptionSchedule;
-	moves: SchedulePhaseMove[];
+	eventContext: StripeScheduleUpdatedContext;
 }) => {
 	const { db, org, env, logger } = ctx;
+	const { schedule, previousPhases } = eventContext;
+	if (schedule.status !== "not_started" || !previousPhases) return;
+	const moves = getSchedulePhaseMoves({
+		previousPhases,
+		currentPhases: schedule.phases,
+	});
+	if (moves.length === 0) return;
+	eventContext.results.movedPhaseStarts = moves;
 
 	const customerProductsOnSchedule = await CusProductService.getByScheduleId({
 		db,

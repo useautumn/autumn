@@ -43,6 +43,10 @@ await mockModuleWithRestore(
 	}),
 );
 
+// A legacy-path test: a routed customer's sync is dropped before the cache is read.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 const { syncItemV4 } = await import(
 	"@/internal/balances/utils/sync/syncItemV4.js"
 );
@@ -94,4 +98,7 @@ describe("syncItemV4 cache misses", () => {
 
 afterAll(() => {
 	mock.restore();
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });

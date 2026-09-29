@@ -16,6 +16,7 @@
 import { expect, test } from "bun:test";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { expireCusEntForReset } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -76,7 +77,8 @@ const initWarmedCacheScenario = async ({
 	};
 };
 
-test.concurrent(
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("batch-reset-v2 cache: worker reset invalidates the subject balance hash")}`,
 	async () => {
 		const { ctx, customerEntitlement, balanceKey, routedRedis } =
@@ -119,7 +121,8 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("batch-reset-v2 cache: skip verdicts do not clear the subject balance hash")}`,
 	async () => {
 		const { ctx, customerEntitlement, balanceKey, routedRedis } =

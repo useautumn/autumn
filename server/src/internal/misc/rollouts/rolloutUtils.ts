@@ -1,6 +1,45 @@
-import type { RolloutSnapshot } from "@/honoUtils/HonoEnv.js";
 import { getRolloutConfig } from "./rolloutConfigStore.js";
-import type { RolloutPercent } from "./rolloutSchemas.js";
+import type { RolloutConfig, RolloutPercent } from "./rolloutSchemas.js";
+
+/** The one rollout a request snapshot freezes; the store may hold others, nothing reads them. */
+export const ACTIVE_ROLLOUT_ID = "balance-worker";
+
+/**
+ * A percent change takes effect this long after it was saved, so every pod flips at the same instant:
+ * past the 10s config poll in production, past the 1s poll locally.
+ */
+export const ROLLOUT_SETTLE_MS =
+	process.env.NODE_ENV === "production" ? 15_000 : 5_000;
+
+export const rolloutEffectiveAt = ({
+	changedAt,
+}: {
+	changedAt: number;
+}): number => changedAt + ROLLOUT_SETTLE_MS;
+
+/** The percent that routes at `now`: the previous one until the change has settled. */
+export const routingPercentAt = ({
+	rollout,
+	now,
+}: {
+	rollout: RolloutPercent;
+	now: number;
+}): number =>
+	now >= rolloutEffectiveAt({ changedAt: rollout.changedAt })
+		? rollout.percent
+		: rollout.previousPercent;
+
+const isEnabledAtPercent = ({
+	percent,
+	customerBucket,
+}: {
+	percent: number;
+	customerBucket: number | null;
+}): boolean => {
+	if (percent >= 100) return true;
+	if (percent <= 0) return false;
+	return customerBucket !== null && customerBucket < percent;
+};
 
 /** Deterministic bucket (0-99) for a customer ID. */
 export const getCustomerBucket = ({
@@ -13,11 +52,12 @@ export const getCustomerBucket = ({
 export const resolveRolloutPercent = ({
 	rolloutId,
 	orgId,
+	config = getRolloutConfig(),
 }: {
 	rolloutId: string;
 	orgId: string;
+	config?: RolloutConfig;
 }): RolloutPercent | undefined => {
-	const config = getRolloutConfig();
 	const entry = config.rollouts[rolloutId];
 	if (!entry) return undefined;
 	return entry.orgs[orgId] ?? entry;
@@ -28,85 +68,51 @@ export const isRolloutEnabled = ({
 	rolloutId,
 	orgId,
 	customerId,
+	now = Date.now(),
+	config = getRolloutConfig(),
 }: {
 	rolloutId: string;
 	orgId: string;
 	customerId?: string;
+	now?: number;
+	config?: RolloutConfig;
 }): boolean => {
-	const resolved = resolveRolloutPercent({ rolloutId, orgId });
-	if (!resolved) return false;
-	if (resolved.percent >= 100) return true;
-	if (resolved.percent <= 0) return false;
-	if (!customerId) return false;
-
-	const bucket = getCustomerBucket({ customerId });
-	return bucket < resolved.percent;
+	const rollout = resolveRolloutPercent({ rolloutId, orgId, config });
+	if (!rollout) return false;
+	return isEnabledAtPercent({
+		percent: routingPercentAt({ rollout, now }),
+		customerBucket: customerId ? getCustomerBucket({ customerId }) : null,
+	});
 };
 
 /**
- * Computes a flat rollout snapshot for the first active rollout.
- * Used by middleware and worker context factories to freeze the rollout
- * decision for the lifetime of a request/job.
+ * A legacy customer's Redis view is stale when a settled decrease sent their bucket back to legacy after
+ * the view was built. A view with no timestamp counts as older than any decrease.
  */
-export const computeRolloutSnapshot = ({
+export const isRolloutCacheStale = ({
+	rolloutId,
 	orgId,
 	customerId,
-}: {
-	orgId?: string;
-	customerId?: string;
-}): RolloutSnapshot => {
-	const customerBucket = customerId ? getCustomerBucket({ customerId }) : null;
-	const config = getRolloutConfig();
-	const entries = Object.entries(config.rollouts);
-
-	if (entries.length === 0) {
-		return {
-			rolloutId: null,
-			enabled: false,
-			percent: 0,
-			previousPercent: 0,
-			changedAt: 0,
-			customerBucket,
-		};
-	}
-
-	const [rolloutId, entry] = entries[0];
-	const resolved = orgId && entry.orgs[orgId] ? entry.orgs[orgId] : entry;
-
-	return {
-		rolloutId,
-		enabled:
-			resolved.percent >= 100 ||
-			(customerBucket !== null && customerBucket < resolved.percent),
-		percent: resolved.percent,
-		previousPercent: resolved.previousPercent,
-		changedAt: resolved.changedAt,
-		customerBucket,
-	};
-};
-
-/**
- * Checks if a cache entry is stale due to a rollout percentage change.
- * Works with the per-request rollout snapshot to avoid race conditions.
- *
- * Returns true only when:
- * 1. The customer's routing actually changed between previousPercent and percent
- * 2. The cache entry was written before changedAt (or has no _cachedAt -- legacy conservative mode)
- */
-export const isSnapshotCacheStale = ({
-	snapshot,
 	cachedAt,
+	now = Date.now(),
+	config = getRolloutConfig(),
 }: {
-	snapshot: RolloutSnapshot;
+	rolloutId: string;
+	orgId: string;
+	customerId: string;
 	cachedAt?: number;
+	now?: number;
+	config?: RolloutConfig;
 }): boolean => {
-	if (!snapshot.changedAt || snapshot.customerBucket === null) return false;
+	const rollout = resolveRolloutPercent({ rolloutId, orgId, config });
+	if (!rollout) return false;
 
-	const wasEnabled = snapshot.customerBucket < snapshot.previousPercent;
-	const isEnabled = snapshot.customerBucket < snapshot.percent;
-
-	if (wasEnabled === isEnabled) return false;
-
-	if (!cachedAt) return true;
-	return cachedAt < snapshot.changedAt;
+	const customerBucket = getCustomerBucket({ customerId });
+	return rollout.decreases.some(({ from, to, at }) => {
+		const sentThisBucketBack = customerBucket >= to && customerBucket < from;
+		const cameBackAt = rolloutEffectiveAt({ changedAt: at });
+		return (
+			sentThisBucketBack && now >= cameBackAt && (cachedAt ?? 0) < cameBackAt
+		);
+	});
 };

@@ -1,11 +1,11 @@
 import {
+	cusEntToEffectiveRolloverMax,
 	customerEntitlementAllowsRollovers,
 	type ExistingRollover,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 } from "@autumn/shared";
 import { customerEntitlementToBillingType } from "@shared/utils/cusEntUtils/convertCusEntUtils/customerEntitlementToBillingType";
-import { cusEntToEffectiveRolloverMax } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { generateId } from "@/utils/genUtils";
 
 const KIND_MATCH_SCORE = 4;

@@ -1,14 +1,13 @@
 import {
 	atmnToStripeAmount,
 	ErrCode,
-	invoices,
 	RecaseError,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
-import { eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
 /** Resolve the Stripe charge from an invoice's payments list */
 export const resolveChargeFromInvoice = async ({
@@ -161,15 +160,13 @@ export const createRefundAndUpdateInvoice = async ({
 		currency: stripeRefund.currency,
 	});
 
-	const updatedRows = await db
-		.update(invoices)
-		.set({
-			refunded_amount: sql`${invoices.refunded_amount} + ${refundedAmount}`,
-		})
-		.where(eq(invoices.stripe_id, stripeInvoiceId))
-		.returning({ id: invoices.id });
+	const updated = await InvoiceService.addRefundedAmount({
+		db,
+		stripeId: stripeInvoiceId,
+		amount: refundedAmount,
+	});
 
-	if (updatedRows.length === 0) {
+	if (!updated) {
 		console.warn(
 			`[createRefundAndUpdateInvoice] No Autumn invoice found for stripe_id ${stripeInvoiceId} — refunded_amount not tracked`,
 		);

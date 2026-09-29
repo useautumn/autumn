@@ -1,6 +1,6 @@
 import type { DfuFlashParams, DfuFlashResult } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { getApiCustomerByRollout } from "@/internal/customers/actions/getApiCustomerByRollout";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { computeFlashPlan } from "./compute/computeFlashPlan";

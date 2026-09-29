@@ -17,6 +17,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { calculateCrossIntervalUpgrade } from "@tests/integration/billing/utils/proration";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -131,13 +132,16 @@ test.concurrent(
 		});
 
 		// Verify features at customer level: customer (10000) + entity (500) = 10500
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			includedUsage: 10500,
-			balance: 10500,
-			usage: 0,
-		});
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expectCustomerFeatureCorrect({
+				customer,
+				featureId: TestFeature.Messages,
+				includedUsage: 10500,
+				balance: 10500,
+				usage: 0,
+			});
+		}
 
 		// Verify invoices:
 		// 1. Entity monthly ($20)

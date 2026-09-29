@@ -450,7 +450,7 @@ test("overdue access: rejected lock deductions release the claim; unknown failur
 	] as const) {
 		releaseClaim.mockClear();
 		deductionError = error;
-		await expect(
+		const finalized = expect(
 			runFinalizeLockV2({
 				ctx,
 				params: { lock_id: "lock_test", action: "confirm", override_value: 15 },
@@ -464,7 +464,10 @@ test("overdue access: rejected lock deductions release the claim; unknown failur
 				claimed: true,
 				lockRedisInstance: new Redis({ lazyConnect: true }),
 			}),
-		).rejects.toBe(error);
+		).rejects;
+		// A balance rejection answers as a 4xx InsufficientBalanceError; anything else propagates as is.
+		if (releases) await finalized.toBeInstanceOf(InsufficientBalanceError);
+		else await finalized.toBe(error);
 		expect(releaseClaim).toHaveBeenCalledTimes(releases ? 1 : 0);
 	}
 });

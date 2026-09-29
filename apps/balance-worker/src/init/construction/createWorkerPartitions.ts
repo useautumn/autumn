@@ -45,6 +45,9 @@ export function createWorkerPartitions({
 			"partitionsConsumedConcurrently must be a positive safe integer",
 		);
 	}
+	if (config.commandTopic && !ctx.commandTopicOffsets)
+		throw new Error("A command topic needs its own commandTopicOffsets admin");
+	const { commandTopicOffsets } = ctx;
 	const positionTracker = createProgressTracker();
 	// Resolved per record: the partitions are built further down, once the consumer exists.
 	function findOwnedRuntime({ partition }: { partition: number }) {
@@ -165,7 +168,15 @@ export function createWorkerPartitions({
 		if (topic === config.commandTopic) {
 			for (const partition of partitions) {
 				const generation = commandResumeGeneration.get(partition);
-				const range = await readPartitionLogRange({ ctx, topic, partition });
+				if (!commandTopicOffsets)
+					throw new Error(
+						"A command topic needs its own commandTopicOffsets admin",
+					);
+				const range = await readPartitionLogRange({
+					ctx: { partitionOffsets: commandTopicOffsets },
+					topic,
+					partition,
+				});
 				if (generation !== commandResumeGeneration.get(partition)) continue;
 				const nextOffset =
 					readCommandNextOffset({ partition }) ?? range.logStartOffset;
@@ -184,12 +195,18 @@ export function createWorkerPartitions({
 		ctx.consumer.resume([{ topic, partitions }]);
 	}
 
-	function connect(): Promise<void> {
-		return ctx.partitionOffsets.connect();
+	async function connect(): Promise<void> {
+		await Promise.all([
+			ctx.partitionOffsets.connect(),
+			commandTopicOffsets?.connect(),
+		]);
 	}
 
-	function disconnect(): Promise<void> {
-		return ctx.partitionOffsets.disconnect();
+	async function disconnect(): Promise<void> {
+		await Promise.all([
+			ctx.partitionOffsets.disconnect(),
+			commandTopicOffsets?.disconnect(),
+		]);
 	}
 
 	async function fetchHighWatermarks({

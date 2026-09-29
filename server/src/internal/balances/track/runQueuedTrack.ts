@@ -1,13 +1,15 @@
 import {
 	type ApiVersion,
 	ErrCode,
-	RouteGroup,
 	RecaseError,
+	RouteGroup,
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { runBalanceWorkerTrack } from "./balanceWorker/runBalanceWorkerTrack.js";
 import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
@@ -20,8 +22,8 @@ export const runQueuedTrack = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
-	/** Sync-originated replays already claimed the body key at accept time
-	 *  (queueTrack marks them false); async/batch messages have no accept-time
+	/** Sync and async replays already claimed the body key at accept time
+	 *  (queueTrack marks them false); batch messages have no accept-time
 	 *  claim, so the worker's claim is their only body-key dedup. */
 	validateTrackBodyIdempotencyKey?: boolean;
 }) => {
@@ -34,13 +36,15 @@ export const runQueuedTrack = async ({
 				? getTrackBodyIdempotencyKey({ body })
 				: null,
 			routeGroup: RouteGroup.Balances,
+			// Claimed here, so the worker path must not claim it again.
 			run: () =>
-				runTrackV3({
-					ctx,
-					body,
-					featureDeductions,
-					apiVersion,
-				}),
+				isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })
+					? runBalanceWorkerTrack({
+							ctx,
+							body,
+							validateTrackBodyIdempotencyKey: false,
+						})
+					: runTrackV3({ ctx, body, featureDeductions, apiVersion }),
 		});
 	} catch (error) {
 		if (

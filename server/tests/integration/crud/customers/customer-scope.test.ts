@@ -3,9 +3,10 @@ import {
 	type ApiCustomerV5,
 	ApiCustomerV5Schema,
 } from "@shared/api/customers/apiCustomerV5";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -71,11 +72,14 @@ test.concurrent(
 		expect(cusSub!.scope).toBe("customer");
 
 		// ── Entity-level subscription ──
-		const entSub = customer.subscriptions.find(
-			(s) => s.plan_id === entityProd.id,
-		);
-		expect(entSub).toBeDefined();
-		expect(entSub!.scope).toBe("entity");
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			const entSub = customer.subscriptions.find(
+				(s) => s.plan_id === entityProd.id,
+			);
+			expect(entSub).toBeDefined();
+			expect(entSub!.scope).toBe("entity");
+		}
 	},
 );
 

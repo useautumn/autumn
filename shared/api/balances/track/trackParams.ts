@@ -4,7 +4,6 @@ import { EntityDataSchema } from "../../common/entityData";
 import { queryStringArray } from "../../common/queryHelpers";
 import { CheckExpand } from "../check/enums/CheckExpand";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
-import { LockParamsSchema } from "../common/lockParams";
 import { OverageBehaviorSchema } from "./overageBehavior";
 import { TrackTimestampSchema } from "./trackTimestamp";
 
@@ -60,8 +59,6 @@ const TrackParamsBaseSchema = BalanceParamsBaseSchema.extend({
 		description:
 			"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
 	}),
-
-	lock: LockParamsSchema.optional(),
 });
 
 export const TrackParamsSchema = TrackParamsBaseSchema.refine(

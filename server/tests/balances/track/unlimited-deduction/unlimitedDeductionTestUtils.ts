@@ -1,7 +1,9 @@
 import { customerEntitlements } from "@autumn/shared";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
+import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 
 export interface RawCusEntRow {
@@ -90,6 +92,12 @@ export const seedLegacyNullEntityBalance = async ({
 		WHERE id = ${customerEntitlementId}
 	`);
 
+	// The worker reads Postgres when it next loads the customer; there is no Redis copy to seed.
+	if (isBalanceWorkerRoute()) {
+		await evictBalanceWorkerCustomer({ ctx, customerId });
+		return;
+	}
+
 	const balanceKey = buildSharedFullSubjectBalanceKey({
 		orgId: ctx.org.id,
 		env: ctx.env,
@@ -111,7 +119,10 @@ export const seedLegacyNullEntityBalance = async ({
 	}
 
 	const subjectBalance = JSON.parse(raw) as {
-		entities?: Record<string, { id?: string; balance?: number | null; adjustment?: number }>;
+		entities?: Record<
+			string,
+			{ id?: string; balance?: number | null; adjustment?: number }
+		>;
 	};
 	subjectBalance.entities = {
 		...(subjectBalance.entities ?? {}),
@@ -128,8 +139,6 @@ export const seedLegacyNullEntityBalance = async ({
 		(await ctx.redisV2.hget(balanceKey, customerEntitlementId)) ?? "{}",
 	) as { entities?: Record<string, { balance?: number | null }> };
 	if (seeded.entities?.[entityId]?.balance !== null) {
-		throw new Error(
-			`failed to seed Redis entities[${entityId}].balance=null`,
-		);
+		throw new Error(`failed to seed Redis entities[${entityId}].balance=null`);
 	}
 };

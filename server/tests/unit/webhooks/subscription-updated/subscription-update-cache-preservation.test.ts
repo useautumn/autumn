@@ -130,9 +130,9 @@ describe("subscription update cache preservation", () => {
 		expect(shouldRefreshAfterWebhookHandler({ ctx })).toBe(true);
 	});
 
-	test("keeps the existing external-event lifecycle and refresh behavior", async () => {
+	test("skips the pooled lifecycle for external events with no pools or transitions, but still refreshes", async () => {
 		const ctx = await runHandler({ autumnOriginated: false });
-		expect(pooledRuns).toBe(1);
+		expect(pooledRuns).toBe(0);
 		expect(shouldRefreshAfterWebhookHandler({ ctx })).toBe(true);
 	});
 

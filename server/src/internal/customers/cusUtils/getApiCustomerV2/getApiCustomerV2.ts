@@ -4,15 +4,14 @@ import {
 	applyResponseVersionChanges,
 	CustomerExpand,
 	type FullSubject,
+	getApiCustomerBaseV2,
 	mergePlanBillingControlsForResponse,
-} from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
-import {
 	shouldAggregateEntityData,
 	subjectWithoutEntityData,
-} from "../customerEntityData.js";
-import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
+} from "@autumn/shared";
+import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
+import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
 
 /**
  * Transform FullSubject to ApiCustomer with expand fields and version changes applied.
@@ -32,10 +31,18 @@ export const getApiCustomerV2 = async ({
 			? subjectWithoutEntityData({ fullSubject })
 			: fullSubject;
 
+	// An invoice's hosted URL is built from this server's address, so invoices are rendered here and handed in.
+	const shouldExpandInvoices = ctx.expand.includes(CustomerExpand.Invoices);
+	const invoices =
+		subjectToUse.invoices && shouldExpandInvoices
+			? invoicesToResponse({ invoices: subjectToUse.invoices })
+			: undefined;
+
 	const { apiCustomer: baseCustomer, legacyData } = await getApiCustomerBaseV2({
 		ctx,
 		fullSubject: subjectToUse,
 		withAutumnId,
+		invoices,
 	});
 
 	const billingControls = mergePlanBillingControlsForResponse({
@@ -50,9 +57,7 @@ export const getApiCustomerV2 = async ({
 		billing_controls: billingControls,
 		entities: undefined,
 		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
-		invoices: ctx.expand.includes(CustomerExpand.Invoices)
-			? (baseCustomer.invoices ?? [])
-			: undefined,
+		invoices: shouldExpandInvoices ? (baseCustomer.invoices ?? []) : undefined,
 	};
 
 	const apiCustomerExpand = await getApiCustomerExpandV2({

@@ -1,3 +1,4 @@
+import { wasThresholdCrossed } from "@autumn/balance-webhooks";
 import type { Feature, FullCustomer, FullSubject } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { measureUsageAlert } from "./measure/measureUsageAlert.js";
@@ -5,7 +6,6 @@ import { resolveScopeApiBalances } from "./measure/resolveScopeApiBalances.js";
 import { resolveAlertScopes } from "./resolve/resolveAlertScopes.js";
 import { sendUsageAlertWebhook } from "./send/sendUsageAlertWebhook.js";
 import type { TrackedSubjects } from "./types/trackedSubjects.js";
-import { wasThresholdCrossed } from "./wasThresholdCrossed.js";
 
 export const checkUsageAlerts = async ({
 	ctx,
