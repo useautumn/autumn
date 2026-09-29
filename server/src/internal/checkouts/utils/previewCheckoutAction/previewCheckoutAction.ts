@@ -12,7 +12,6 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { previewSetPlansBillingWithContext } from "@/internal/billing/v2/actions/setPlans/previewSetPlansBilling";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import type {
@@ -92,20 +91,21 @@ export async function previewCheckoutAction({
 			};
 		}
 		case CheckoutAction.CreateSchedule: {
-			const createScheduleResult = await previewSetPlansBillingWithContext({
+			const setPlansResult = await billingActions.setPlans({
 				ctx,
 				params: params as CreateScheduleParamsV0,
+				preview: true,
 			});
 
-			billingPlan = createScheduleResult.billingPlan;
-
-			if (!billingPlan) {
-				break;
-			}
+			billingPlan = setPlansResult.billingPlan;
 
 			return {
-				billingContext: createScheduleResult.billingContext,
-				preview: createScheduleResult.preview,
+				billingContext: setPlansResult.billingContext,
+				preview: await billingPlanToAttachPreview({
+					ctx,
+					billingContext: setPlansResult.billingContext,
+					billingPlan,
+				}),
 			};
 		}
 		case CheckoutAction.UpdateSubscription: {

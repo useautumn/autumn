@@ -2,7 +2,11 @@
 // database-only create/preview flows work while connected schedules use Stripe.
 
 import { expect, test } from "bun:test";
-import { type CreateScheduleParamsV0, customerProducts } from "@autumn/shared";
+import {
+	type CreateScheduleParamsV0,
+	type CreateScheduleResponse,
+	customerProducts,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -12,6 +16,8 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans/utils/setPlansResultToResponse";
+import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { getCustomerProductEntitlementBalances } from "../utils/createScheduleTestHelpers";
 
 const withoutStripe = (ctx: TestContext): TestContext => ({
@@ -94,12 +100,38 @@ const setupExternalSchedule = async ({
 	return { ctx, noStripeCtx, params };
 };
 
+const runSetPlans = async ({
+	ctx,
+	params,
+}: {
+	ctx: TestContext;
+	params: CreateScheduleParamsV0;
+}) =>
+	setPlansResultToResponse({
+		result: await billingActions.setPlans({ ctx, params }),
+	});
+
+const previewSetPlansCharges = async ({
+	ctx,
+	params,
+}: {
+	ctx: TestContext;
+	params: CreateScheduleParamsV0;
+}) => {
+	const { billingContext, billingPlan } = await billingActions.setPlans({
+		ctx,
+		params,
+		preview: true,
+	});
+	return billingPlanToAttachPreview({ ctx, billingContext, billingPlan });
+};
+
 const expectScheduleCreated = async ({
 	ctx,
 	response,
 }: {
 	ctx: TestContext;
-	response: Awaited<ReturnType<typeof billingActions.setPlans>>;
+	response: CreateScheduleResponse;
 }) => {
 	expect(response.status).toBe("created");
 	expect(response.phases).toHaveLength(2);
@@ -119,7 +151,7 @@ test.concurrent(
 			suffix: "explicit",
 			noBillingChanges: true,
 		});
-		const response = await billingActions.setPlans({
+		const response = await runSetPlans({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -134,7 +166,7 @@ test.concurrent(
 		const { ctx, noStripeCtx, params } = await setupExternalSchedule({
 			suffix: "inferred",
 		});
-		const response = await billingActions.setPlans({
+		const response = await runSetPlans({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -150,7 +182,7 @@ test.concurrent(
 			suffix: "preview",
 			historicalPhase: true,
 		});
-		const preview = await billingActions.previewSetPlansBilling({
+		const preview = await previewSetPlansCharges({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -170,7 +202,7 @@ test.concurrent(
 		params.enable_plan_immediately = true;
 		params.redirect_mode = "if_required";
 
-		const response = await billingActions.setPlans({
+		const response = await runSetPlans({
 			ctx: noStripeCtx,
 			params,
 		});
@@ -201,7 +233,7 @@ test.concurrent(
 		});
 		const now = Date.now();
 
-		const response = await billingActions.setPlans({
+		const response = await runSetPlans({
 			ctx,
 			params: {
 				customer_id: customerId,
@@ -230,7 +262,7 @@ test.concurrent(
 		);
 		expect(stripeSubscription.schedule).toBeTruthy();
 
-		const replacement = await billingActions.setPlans({
+		const replacement = await runSetPlans({
 			ctx: withoutStripe(ctx),
 			params: {
 				customer_id: customerId,

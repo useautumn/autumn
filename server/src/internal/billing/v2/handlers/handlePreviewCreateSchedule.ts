@@ -4,6 +4,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewCreateSchedule = createRoute({
@@ -12,11 +13,17 @@ export const handlePreviewCreateSchedule = createRoute({
 	resource: AffectedResource.MultiAttach,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const body = c.req.valid("json");
 
-		const preview = await billingActions.previewSetPlansBilling({
+		const { billingContext, billingPlan } = await billingActions.setPlans({
 			ctx,
-			params: body,
+			params: c.req.valid("json"),
+			preview: true,
+		});
+
+		const preview = await billingPlanToAttachPreview({
+			ctx,
+			billingContext,
+			billingPlan,
 		});
 
 		return c.json(preview, 200);
