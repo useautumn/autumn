@@ -12,6 +12,7 @@
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
 import {
+	expectPreviewWarning,
 	expectSubscriptionReplaced,
 	findStripeSubscriptionByStatus,
 } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
@@ -47,10 +48,16 @@ test.concurrent(
 			status: "incomplete",
 		});
 
-		await autumnV2_4.billing.setPlans({
+		const setPlansParams = {
 			customer_id: customerId,
-			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
+		};
+		expectPreviewWarning({
+			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			type: "subscription_replaced",
+			messageContains: [incomplete.id, "incomplete"],
 		});
+		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		await expectSubscriptionReplaced({
 			ctx,
@@ -106,10 +113,16 @@ test.concurrent(
 			stripeCusId: paused.customer as string,
 			type: "success",
 		});
-		await autumnV2_4.billing.setPlans({
+		const setPlansParams = {
 			customer_id: customerId,
-			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
+		};
+		expectPreviewWarning({
+			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			type: "subscription_replaced",
+			messageContains: [paused.id, "paused"],
 		});
+		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		await expectSubscriptionReplaced({
 			ctx,
