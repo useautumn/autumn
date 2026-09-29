@@ -1,6 +1,7 @@
 import { type MigrationRunStatus, migrationRuns } from "@autumn/shared";
-import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
+import { isRunAllSql } from "../../utils/migrationRunKind.js";
 
 export const listLatestRunAllStatuses = async ({
 	ctx,
@@ -21,9 +22,7 @@ export const listLatestRunAllStatuses = async ({
 			and(
 				eq(migrationRuns.org_id, ctx.org.id),
 				eq(migrationRuns.env, ctx.env),
-				eq(migrationRuns.dry_run, false),
-				isNull(migrationRuns.only_ids),
-				isNull(migrationRuns.target_limit),
+				isRunAllSql,
 				isNotNull(migrationRuns.started_at),
 				inArray(migrationRuns.migration_internal_id, migrationInternalIds),
 			),
