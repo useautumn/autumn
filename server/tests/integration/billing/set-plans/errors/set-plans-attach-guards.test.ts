@@ -1,7 +1,7 @@
 /** set_plans rejects the requests attach's guards reject, with attach's messages. */
 
-import { test } from "bun:test";
-import { ErrCode, ms } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import { type ApiCustomerV5, ErrCode, ms } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -115,6 +115,58 @@ test.concurrent(
 					],
 				}),
 		});
+	},
+);
+
+/** A later phase replacing an active plan may take over that plan's subscription_id. */
+test.concurrent(
+	`${chalk.yellowBright("set-plans guards: a future phase may reuse the subscription_id of the plan it replaces")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV2_1, autumnV2_4, advancedTo } =
+			await initScenario({
+				customerId: "set-plans-guard-sub-id-future-replace",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium] }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id, subscriptionId: "sub-a" }),
+				],
+			});
+
+		const response = await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [{ plan_id: pro.id, subscription_id: "sub-a" }],
+				},
+				{
+					starts_at: advancedTo + ms.days(30),
+					plans: [{ plan_id: premium.id, subscription_id: "sub-a" }],
+				},
+			],
+		});
+		expect(response.status).toBe("created");
+
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		const subscriptionsWithId = customer.subscriptions
+			.filter((subscription) => subscription.id === "sub-a")
+			.map(({ plan_id, status }) => ({ plan_id, status }));
+		expect(subscriptionsWithId).toEqual(
+			expect.arrayContaining([
+				{ plan_id: pro.id, status: "active" },
+				{ plan_id: premium.id, status: "scheduled" },
+			]),
+		);
+		expect(subscriptionsWithId).toHaveLength(2);
 	},
 );
 
