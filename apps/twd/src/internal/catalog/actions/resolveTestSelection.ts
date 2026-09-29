@@ -4,6 +4,7 @@ import { createTestFileResolver } from "@tw/testDiscovery/createTestFileResolver
 import type { RunSelection } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { isArchivedTestId } from "../repoPaths.ts";
 import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
 
 const CATALOG_HINT =
@@ -33,7 +34,15 @@ export const resolveTestSelection = async ({
 		});
 	}
 	const { testsDir, groups: testGroups } = await getTestTreeAtSha({ ctx, sha });
-	const resolver = await createTestFileResolver({ rootDir: testsDir });
+	const allFiles = await createTestFileResolver({ rootDir: testsDir });
+	const resolver = {
+		resolvePath: ({ path }: { path: string }) =>
+			allFiles
+				.resolvePath({ path })
+				.filter(
+					(file) => !isArchivedTestId({ testId: relative(testsDir, file) }),
+				),
+	};
 	const files = new Set<string>();
 
 	for (const group of groups.length === 0 && paths.length === 0
@@ -67,7 +76,7 @@ export const resolveTestSelection = async ({
 			status: 400,
 			code: "no_files_matched",
 			message: `No test files matched: ${unmatched.join(", ")}`,
-			next: `Use server/tests-relative paths or directory suffixes. ${CATALOG_HINT}`,
+			next: `Use server/tests-relative paths or directory suffixes; archives/ is never runnable. ${CATALOG_HINT}`,
 			details: { unmatched },
 		});
 	}

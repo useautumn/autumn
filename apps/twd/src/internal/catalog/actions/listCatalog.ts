@@ -4,6 +4,7 @@ import { readTestFileIndex } from "@tw/testDiscovery/readTestFileIndex.ts";
 import type { Catalog } from "../../../api/contract.ts";
 import { fileBaselines } from "../../../db/schema/results.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { isArchivedTestId } from "../repoPaths.ts";
 import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
 import { resolveBranchSha } from "./gitRemote.ts";
 
@@ -35,7 +36,8 @@ export const listCatalog = async ({
 			paths.flatMap((path) =>
 				resolver
 					.resolvePath({ path })
-					.map((absolutePath) => toTestId({ absolutePath })),
+					.map((absolutePath) => toTestId({ absolutePath }))
+					.filter((testId) => !isArchivedTestId({ testId })),
 			),
 		);
 	const groupFiles = new Map(
@@ -79,6 +81,7 @@ export const listCatalog = async ({
 		],
 		files: allFiles
 			.map((absolutePath) => toTestId({ absolutePath }))
+			.filter((testId) => !isArchivedTestId({ testId }))
 			.sort()
 			.map((path) => ({
 				path,
