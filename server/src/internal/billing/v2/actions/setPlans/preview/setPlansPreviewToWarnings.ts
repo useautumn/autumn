@@ -93,7 +93,7 @@ export const setPlansPreviewToWarnings = ({
 	deletedCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
-	requestedAnchorResetMs?: number;
+	requestedAnchorResetMs: number | undefined;
 	features: Feature[];
 	billingContext: SubscriptionWarningContext;
 	stripeBillingPlan: StripeBillingPlan;

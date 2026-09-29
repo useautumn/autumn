@@ -42,6 +42,7 @@ const noSubscriptionState = {
 	stripeBillingPlan: {},
 	replacedOpenInvoices: [],
 	liveOpenInvoices: [],
+	requestedAnchorResetMs: undefined,
 };
 
 describe("setPlansPreviewToWarnings", () => {
