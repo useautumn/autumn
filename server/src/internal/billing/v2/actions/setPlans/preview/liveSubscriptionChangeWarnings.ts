@@ -81,7 +81,7 @@ const cycleResetWarning = ({
 	requestedAnchorResetMs,
 	stripeBillingPlan,
 }: {
-	requestedAnchorResetMs?: number;
+	requestedAnchorResetMs: number | undefined;
 	stripeBillingPlan: StripeBillingPlan;
 }): Warning | undefined =>
 	requestedAnchorResetMs === undefined ||
@@ -136,7 +136,7 @@ export const liveSubscriptionChangeWarnings = ({
 	stripeBillingPlan: StripeBillingPlan;
 	liveProcessorItems: ProcessorItem[];
 	immediateItems: ProcessorItem[];
-	requestedAnchorResetMs?: number;
+	requestedAnchorResetMs: number | undefined;
 }): Warning[] =>
 	[
 		scheduledCancelWarning({ stripeSubscription, stripeBillingPlan }),
