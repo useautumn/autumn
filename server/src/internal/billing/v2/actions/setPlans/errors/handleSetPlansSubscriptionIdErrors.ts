@@ -6,18 +6,25 @@ import {
 	throwSubscriptionIdInUse,
 } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
+import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
 
 const customerProductIdsReplacedByRequest = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
-}) =>
-	new Set([
+}) => {
+	const { recurringOutgoing, recurringEndingAtPhase } =
+		resolveSetPlansRecurringProducts({ billingContext });
+
+	return new Set([
 		...billingContext.replacedScheduleCustomerProductIds,
 		...billingContext.productContexts.flatMap(({ currentCustomerProduct }) =>
 			currentCustomerProduct ? [currentCustomerProduct.id] : [],
 		),
+		...recurringOutgoing.map(({ id }) => id),
+		...recurringEndingAtPhase.map(({ customerProduct }) => customerProduct.id),
 	]);
+};
 
 /**
  * subscription_id is unique within a phase; later phases may reuse it. An id on an
