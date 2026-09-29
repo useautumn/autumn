@@ -14,11 +14,11 @@ import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/cu
 import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
-import type { ImmediatePhaseTransition } from "../compute/computeCreateSchedulePlan";
-import { handleCreateScheduleLicenseQuantityErrors } from "./handleCreateScheduleLicenseQuantityErrors";
+import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
+import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 
-export const handleCreateScheduleErrors = async ({
+export const handleSetPlansErrors = async ({
 	billingContext,
 	preview = false,
 }: {
@@ -39,7 +39,7 @@ export const handleCreateScheduleErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, preview });
-	handleCreateScheduleLicenseQuantityErrors({ billingContext });
+	handleSetPlansLicenseQuantityErrors({ billingContext });
 
 	if (isRevertTrialContext({ trialContext: billingContext.trialContext })) {
 		throw new RecaseError({
@@ -50,7 +50,7 @@ export const handleCreateScheduleErrors = async ({
 	}
 };
 
-export const handleCreateScheduleComputeErrors = async ({
+export const handleSetPlansComputeErrors = async ({
 	ctx,
 	autumnBillingPlan,
 	immediatePhaseTransition,
@@ -82,7 +82,7 @@ export const handleCreateScheduleComputeErrors = async ({
 	});
 };
 
-export const handleCreateScheduleBillingPlanErrors = ({
+export const handleSetPlansBillingPlanErrors = ({
 	ctx,
 	billingContext,
 	billingPlan,

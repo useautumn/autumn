@@ -11,7 +11,7 @@ import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finali
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
-import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
+import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
 
@@ -22,26 +22,26 @@ export type ImmediatePhaseTransition = {
 	incomingCustomerProducts: FullCusProduct[];
 };
 
-export type CreateSchedulePlanResult = {
+export type SetPlansPlanResult = {
 	autumnBillingPlan: AutumnBillingPlan;
 	phases: SchedulePhasePlan[];
 	immediatePhaseTransition: ImmediatePhaseTransition;
 };
 
 /** Compute the full create_schedule billing plan (immediate + scheduled phases). */
-export const computeCreateSchedulePlan = ({
+export const computeSetPlansPlan = ({
 	ctx,
 	billingContext,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
-}): CreateSchedulePlanResult => {
+}): SetPlansPlanResult => {
 	const nextPhaseStartsAt = billingContext.futurePhases[0]?.starts_at;
 	const {
 		recurringOutgoing: outgoingCustomerProducts,
 		recurringEndingAtPhase,
 		recurringScheduled: existingScheduledCustomerProducts,
-	} = resolveCreateScheduleRecurringProducts({ billingContext });
+	} = resolveSetPlansRecurringProducts({ billingContext });
 
 	const immediate = computeImmediatePhaseCustomerProducts({
 		ctx,
@@ -116,7 +116,7 @@ export const computeCreateSchedulePlan = ({
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
-		// persistCreateSchedule replaces the schedule wholesale and reads the old
+		// persistSetPlansSchedule replaces the schedule wholesale and reads the old
 		// phases to find it, so nothing may rewrite them mid-flight.
 		ownsSchedulePersistence: true,
 		insertCustomerProducts: allInsertCustomerProducts,

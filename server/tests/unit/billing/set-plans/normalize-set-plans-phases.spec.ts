@@ -7,11 +7,11 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import {
-	getInitialCreateSchedulePhase,
-	normalizeCreateSchedulePhases,
-} from "@/internal/billing/v2/actions/setPlans/errors/normalizeCreateSchedulePhases";
+	getInitialSetPlansPhase,
+	normalizeSetPlansPhases,
+} from "@/internal/billing/v2/actions/setPlans/errors/normalizeSetPlansPhases";
 
-describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
+describe(chalk.yellowBright("normalizeSetPlansPhases"), () => {
 	test("sorts phases by starts_at", () => {
 		const phases: CreateScheduleParamsV0["phases"] = [
 			{
@@ -24,7 +24,7 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 			},
 		];
 
-		const result = normalizeCreateSchedulePhases({
+		const result = normalizeSetPlansPhases({
 			phases,
 			currentEpochMs: 1_000,
 		});
@@ -67,7 +67,7 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 			},
 		];
 
-		const result = normalizeCreateSchedulePhases({
+		const result = normalizeSetPlansPhases({
 			phases,
 			currentEpochMs,
 		});
@@ -99,7 +99,7 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 			},
 		];
 
-		const result = normalizeCreateSchedulePhases({
+		const result = normalizeSetPlansPhases({
 			phases,
 			currentEpochMs,
 			cycleBoundaryMs,
@@ -120,7 +120,7 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 			{ starts_at: midCycleStartsAt, plans: [{ plan_id: "premium" }] },
 		];
 
-		const result = normalizeCreateSchedulePhases({
+		const result = normalizeSetPlansPhases({
 			phases,
 			currentEpochMs,
 			cycleBoundaryMs,
@@ -141,7 +141,7 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 			{ starts_at: deliberateStartsAt, plans: [{ plan_id: "premium" }] },
 		];
 
-		const result = normalizeCreateSchedulePhases({
+		const result = normalizeSetPlansPhases({
 			phases,
 			currentEpochMs,
 			cycleBoundaryMs,
@@ -165,7 +165,7 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 			},
 		];
 
-		const result = normalizeCreateSchedulePhases({
+		const result = normalizeSetPlansPhases({
 			phases,
 			currentEpochMs,
 			cycleBoundaryMs,
@@ -193,7 +193,7 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 			},
 		];
 
-		const initialPhase = getInitialCreateSchedulePhase({ phases });
+		const initialPhase = getInitialSetPlansPhase({ phases });
 
 		expect(initialPhase.plans[0]?.plan_id).toBe("base");
 	});

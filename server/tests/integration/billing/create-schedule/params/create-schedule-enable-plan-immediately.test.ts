@@ -9,7 +9,7 @@
  *   checkout session via `stripe_checkout_session_id`.
  * - Autumn `schedules` + `schedule_phases` rows are NOT created at request time
  *   — they're persisted in the webhook handler on `checkout.session.completed`
- *   (via `persistDeferredCreateSchedule`).
+ *   (via `persistDeferredSetPlansSchedule`).
  * - Response is `pending_payment` with `schedule_id: null` and a `payment_url`.
  * - On `checkout.session.expired`, all linked cusProducts are cleaned up.
  */

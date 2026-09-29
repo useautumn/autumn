@@ -8,7 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupAttachProductContext } from "../../attach/setup/setupAttachProductContext";
-import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
+import { validateSetPlansPhasePlans } from "../errors/validateSetPlansPhasePlans";
 import { computeScopeForScheduledProduct } from "../utils/computeScopeForScheduledProduct";
 
 /** Resolve product + feature quantity context for each plan in each scheduled phase. */
@@ -73,7 +73,7 @@ export const setupScheduledProductsContext = async ({
 				}),
 			);
 
-			validateCreateSchedulePhasePlans({
+			validateSetPlansPhasePlans({
 				plans: productContexts.map((productContext) => ({
 					fullProduct: productContext.fullProduct,
 					scopeId: productContext.entity?.internal_id,

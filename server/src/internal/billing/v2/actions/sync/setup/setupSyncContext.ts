@@ -19,7 +19,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
-import { getExistingScheduleState } from "@/internal/billing/v2/actions/setPlans/utils/persistCreateSchedule";
+import { getExistingScheduleState } from "@/internal/billing/v2/actions/setPlans/utils/persistSetPlansSchedule";
 import {
 	fetchStripeSyncSchedule,
 	fetchStripeSyncSubscription,
