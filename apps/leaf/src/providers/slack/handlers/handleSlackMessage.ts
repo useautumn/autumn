@@ -4,8 +4,11 @@ import type { AgentMissedMessages } from "../../../internal/agentRuntime/domain/
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.js";
 import { getSlackWorkspaceId } from "../context.js";
-import { slackMessageMentionsUser } from "../events.js";
-import { findSlackInstallationForWorkspace } from "../installations.js";
+import { slackMentionedUserIds, slackMessageMentionsUser } from "../events.js";
+import {
+	findSlackInstallationForWorkspace,
+	isAgentBotUser,
+} from "../installations.js";
 import { controlMessageFrom } from "../routing/controlMessage.js";
 import { shouldSkipUntaggedReply } from "../routing/replyMode.js";
 import {
@@ -67,6 +70,12 @@ const unsubscribe = (thread: Thread) =>
 /** Whether the raw Slack message @-mentions this workspace's agent. Without
  * a known bot user id nothing counts as a mention, so an ordinary edit never
  * pulls the agent into a thread it does not follow. */
+/** Whether the message tags any copy of the agent. In a Slack Connect
+ * channel a message can arrive through our own workspace's installation
+ * while tagging the bot the other workspace sees. */
+const messageTagsAnyAgent = async ({ message }: { message: Message }) =>
+	isAgentBotUser({ userIds: slackMentionedUserIds({ raw: message.raw }) });
+
 const messageMentionsAgent = async ({ message }: { message: Message }) => {
 	const installation = await findSlackInstallationForWorkspace({
 		workspaceId: getSlackWorkspaceId(message.raw),
@@ -95,6 +104,7 @@ type HandlerDependencies = Readonly<{
 	getRecentMessages: typeof getRecentMessages;
 	getState: () => StateAdapter;
 	mentionsAgent: typeof messageMentionsAgent;
+	tagsAnyAgent: typeof messageTagsAnyAgent;
 	shouldSkipReply: typeof shouldSkipUntaggedReply;
 }>;
 
@@ -193,6 +203,7 @@ export const createSlackMessageHandlers = ({
 	getState = () => Chat.getSingleton().getState(),
 	mentionsAgent = messageMentionsAgent,
 	shouldSkipReply = shouldSkipUntaggedReply,
+	tagsAnyAgent = messageTagsAnyAgent,
 }: Partial<HandlerDependencies> = {}) => {
 	const admit = (message: Message) => admitMessage({ findTrustedBot, message });
 	const undeliveredAttachments = (thread: Thread, message: Message) =>
@@ -276,7 +287,7 @@ export const createSlackMessageHandlers = ({
 			// re-tag can pick up a file an earlier turn could not read; skipped
 			// replies are part of that history.
 			threadAttachments: async () =>
-				(await mentionsAgent({ message }))
+				(await tagsAnyAgent({ message }))
 					? await earlierAttachments()
 					: ((await loadMissed())?.attachments ?? []),
 			trustedBot,
