@@ -10,11 +10,11 @@ import {
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { StripeSubscriptionWithDiscounts } from "@server/external/stripe/subscriptions";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import type Stripe from "stripe";
 
 export interface StripeSubscriptionForBilling {
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
-	/** Set when the linked subscription exists in Stripe but is already canceled. */
+	/** Set when the linked subscription exists in Stripe but is terminal (canceled or incomplete_expired). */
 	canceledStripeSubscriptionId?: string;
 	/** Set when the linked subscription belongs to a different Stripe customer.
 	 *  Only surfaced for flows allowed to proceed past that fault. */
@@ -35,6 +35,10 @@ const neverWritesToStripeSubscription = (
 
 	return isImmediateCancel || isNoBillingChanges;
 };
+
+const isTerminalStripeSubscription = (subscription: Stripe.Subscription) =>
+	subscription.status === "canceled" ||
+	subscription.status === "incomplete_expired";
 
 /**
  * Fetches a Stripe subscription with expanded discounts for billing operations.
@@ -103,9 +107,9 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	// A canceled sub carries no live billing state. Report it separately so each
+	// A terminal sub carries no live billing state. Report it separately so each
 	// caller decides: abandon it (attach) or block Stripe writes (updateSubscription).
-	if (isStripeSubscriptionCanceled(sub)) {
+	if (isTerminalStripeSubscription(sub)) {
 		return { canceledStripeSubscriptionId: subId };
 	}
 
