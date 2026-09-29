@@ -1,17 +1,18 @@
 /**
- * invoices.reissue on a draft original. Stripe cannot void a draft, and refuses to
- * delete a subscription one, so the original is finalized silently and then voided.
+ * invoices.reissue on a draft original. Stripe can't void a draft, so it is parked:
+ * left as a draft with auto_advance off and stamped as reissued.
  *
  * Contract:
- *   draft original             -> original ends void, finalized with auto_advance off,
- *                                 flagged autumn_skip_finalized_webhook so no org webhook fires
- *                              -> the pending plan's pointer moves to the replacement
- *   customer credit balance    -> the throwaway finalize consumes it, the void returns it
- *   issue_method honored       -> replacement is sent (default) or left as a draft
+ *   draft original      -> stays draft, auto_advance off (even if it was on), stamped
+ *                          autumn_reissued_to; voided_invoice_id is null
+ *                       -> the pending plan's pointer moves to the replacement
+ *   stamped original    -> invoices.finalize and invoices.pay reject it
+ *   issue_method        -> replacement is sent (default) or left as a draft
  */
 
 import { expect, test } from "bun:test";
-import { ALL_STATUSES, CusProductStatus } from "@autumn/shared";
+import { ALL_STATUSES, CusProductStatus, ErrCode } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -25,7 +26,7 @@ import {
 	type ReissueResponse,
 } from "./utils/issueMethodTestUtils";
 
-const expectOriginalDiscarded = async ({
+const expectOriginalParked = async ({
 	stripeInvoiceId,
 	replacementStripeId,
 }: {
@@ -33,15 +34,13 @@ const expectOriginalDiscarded = async ({
 	replacementStripeId: string;
 }) => {
 	const original = await ctx.stripeCli.invoices.retrieve(stripeInvoiceId);
-	expect(original.status).toBe("void");
+	expect(original.status).toBe("draft");
 	expect(original.auto_advance).toBe(false);
-	expect(original.metadata?.autumn_skip_finalized_webhook).toBe("true");
 	expect(original.metadata?.autumn_reissued_to).toBe(replacementStripeId);
-	return original;
 };
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.reissue: draft original → silently finalized then voided, pending plan moves to the sent replacement")}`,
+	`${chalk.yellowBright("invoices.reissue: draft original → parked with auto_advance off, pending plan moves to the sent replacement")}`,
 	async () => {
 		const customerId = `inv-issue-draft-original-${Date.now()}`;
 		const pro = products.pro({
@@ -61,6 +60,10 @@ test.concurrent(
 			finalize: false,
 		});
 		expect(original.status).toBe("draft");
+		// Renewal drafts advance on their own; the reissue must stop that.
+		await ctx.stripeCli.invoices.update(original.stripe_id, {
+			auto_advance: true,
+		});
 
 		const pending = (
 			await CusProductService.list({
@@ -76,8 +79,8 @@ test.concurrent(
 			{ invoice_id: original.id },
 		)) as ReissueResponse;
 
-		expect(voided_invoice_id).toBe(original.id);
-		await expectOriginalDiscarded({
+		expect(voided_invoice_id).toBeNull();
+		await expectOriginalParked({
 			stripeInvoiceId: original.stripe_id,
 			replacementStripeId: invoice.stripe_id,
 		});
@@ -92,11 +95,11 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.reissue: draft original + draft → credit balance survives the throwaway finalize")}`,
+	`${chalk.yellowBright("invoices.reissue: draft original + draft → replacement draft, original can't be finalized or paid")}`,
 	async () => {
-		const customerId = "inv-issue-draft-original-credit";
+		const customerId = "inv-issue-draft-original-guard";
 		const pro = products.base({
-			id: "pro-issue-draft-original-credit",
+			id: "pro-issue-draft-original-guard",
 			items: [items.monthlyPrice({ price: 20 })],
 		});
 		const { autumnV2_3, autumnV2_4 } = await initScenario({
@@ -111,29 +114,29 @@ test.concurrent(
 			planId: pro.id,
 			finalize: false,
 		});
-		const draft = await ctx.stripeCli.invoices.retrieve(original.stripe_id);
-		const stripeCustomerId = draft.customer as string;
-		await ctx.stripeCli.customers.createBalanceTransaction(stripeCustomerId, {
-			amount: -3000,
-			currency: draft.currency,
-		});
 
 		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
 			invoice_id: original.id,
 			issue_method: "draft",
 		})) as ReissueResponse;
 
-		const discarded = await expectOriginalDiscarded({
+		await expectOriginalParked({
 			stripeInvoiceId: original.stripe_id,
 			replacementStripeId: invoice.stripe_id,
 		});
-		// Proves the finalize really applied the credit before the void returned it.
-		expect(discarded.starting_balance).toBe(-3000);
 		await expectIssuedAs({ invoice, issueMethod: "draft" });
 
-		const stripeCustomer =
-			await ctx.stripeCli.customers.retrieve(stripeCustomerId);
-		if (stripeCustomer.deleted) throw new Error("customer deleted");
-		expect(stripeCustomer.balance).toBe(-3000);
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_3.post("/invoices.finalize", { invoice_id: original.id }),
+		});
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () => autumnV2_3.post("/invoices.pay", { invoice_id: original.id }),
+		});
+		expect(
+			(await ctx.stripeCli.invoices.retrieve(original.stripe_id)).status,
+		).toBe("draft");
 	},
 );

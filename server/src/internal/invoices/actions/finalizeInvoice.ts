@@ -9,6 +9,7 @@ import {
 	updateStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
+import { assertInvoiceNotReissued } from "../invoiceUtils/assertInvoiceNotReissued";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 
 const ALREADY_FINALIZED_STRIPE_STATUSES = new Set(["open", "paid"]);
@@ -45,6 +46,8 @@ export const finalizeInvoice = async ({
 		invoiceId: row.invoice.stripe_id,
 		expand: [],
 	});
+
+	assertInvoiceNotReissued({ invoiceId, stripeInvoice });
 
 	const customerId = row.customer_id ?? row.invoice.internal_customer_id;
 

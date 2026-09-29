@@ -1,7 +1,6 @@
 /**
  * `invoice.finalized` only reaches org webhooks for regular invoices: Vercel
- * marketplace invoices settle out of band, and invoices flagged
- * autumn_skip_finalized_webhook (a reissued draft's throwaway finalize) must never emit it.
+ * marketplace invoices settle out of band and must never emit it.
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
@@ -10,18 +9,15 @@ import type Stripe from "stripe";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const storeCalls: Array<{ emitFinalizedWebhook?: boolean }> = [];
-let nextContext: {
-	isVercelInvoice: boolean;
-	metadata?: Record<string, string>;
-} | null = null;
+let nextContext: { isVercelInvoice: boolean } | null = null;
 
 await mockModuleWithRestore(
 	"@/external/stripe/webhookHandlers/handleStripeInvoiceFinalized/setupInvoiceFinalizedContext",
 	() => ({
 		setupInvoiceFinalizedContext: async () =>
 			nextContext && {
-				isVercelInvoice: nextContext.isVercelInvoice,
-				stripeInvoice: { id: "in_test", metadata: nextContext.metadata ?? {} },
+				...nextContext,
+				stripeInvoice: { id: "in_test" },
 			},
 	}),
 );
@@ -61,15 +57,6 @@ describe(chalk.yellowBright("invoice.finalized webhook guard"), () => {
 
 	test("Vercel invoice never requests the webhook", async () => {
 		nextContext = { isVercelInvoice: true };
-		await handleStripeInvoiceFinalized({ ctx, event });
-		expect(storeCalls).toEqual([{ emitFinalizedWebhook: false }]);
-	});
-
-	test("invoice flagged autumn_skip_finalized_webhook never requests the webhook", async () => {
-		nextContext = {
-			isVercelInvoice: false,
-			metadata: { autumn_skip_finalized_webhook: "true" },
-		};
 		await handleStripeInvoiceFinalized({ ctx, event });
 		expect(storeCalls).toEqual([{ emitFinalizedWebhook: false }]);
 	});

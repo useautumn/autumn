@@ -45,10 +45,7 @@ export const handleStripeInvoiceFinalized = async ({
 			stripeInvoiceId: eventContext.stripeInvoice.id,
 			arrearLineItems: [],
 			reconcileOnly: true,
-			emitFinalizedWebhook:
-				!eventContext.isVercelInvoice &&
-				eventContext.stripeInvoice.metadata?.autumn_skip_finalized_webhook !==
-					"true",
+			emitFinalizedWebhook: !eventContext.isVercelInvoice,
 		});
 	}
 };

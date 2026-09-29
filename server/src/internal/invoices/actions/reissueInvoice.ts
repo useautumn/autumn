@@ -28,7 +28,6 @@ import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/st
 import {
 	addStripeInvoiceLines,
 	createStripeInvoice,
-	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { stripeCustomerToInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/stripeCustomerToInvoiceCredits";
 import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
@@ -380,19 +379,10 @@ const issueReplacement = async ({
 		});
 	}
 
-	// Stripe can only void a finalized invoice, and won't delete a subscription draft.
-	if (stripeInvoice.status === "draft") {
-		await finalizeDraftOriginalSilently({
-			ctx,
-			stripeCli,
-			stripeInvoiceId: stripeInvoice.id,
-			replacementDraftId: draft.id,
-		});
-	}
-
 	// Automatic collection is what makes Stripe treat the replacement as the
 	// subscription's receivable (overdue → past_due, paid → active).
 	const issued = await issueStripeInvoice({ stripeCli, draft, issueMethod });
+	const originalIsDraft = stripeInvoice.status === "draft";
 
 	try {
 		await repointDeferredReferences({
@@ -400,7 +390,16 @@ const issueReplacement = async ({
 			fromStripeInvoiceId: stripeInvoice.id,
 			toStripeInvoiceId: issued.id,
 		});
-		await voidInvoice({ ctx, invoiceId });
+		// Stripe can't void a draft, so it is parked instead: nothing finalizes it on its own.
+		if (originalIsDraft) {
+			await setAutoAdvance({
+				stripeCli,
+				stripeInvoiceId: stripeInvoice.id,
+				autoAdvance: false,
+			});
+		} else {
+			await voidInvoice({ ctx, invoiceId });
+		}
 	} catch (error) {
 		// The original keeps standing; retire the replacement instead.
 		await repointDeferredReferences({
@@ -408,6 +407,13 @@ const issueReplacement = async ({
 			fromStripeInvoiceId: issued.id,
 			toStripeInvoiceId: stripeInvoice.id,
 		}).catch(() => undefined);
+		if (originalIsDraft) {
+			await setAutoAdvance({
+				stripeCli,
+				stripeInvoiceId: stripeInvoice.id,
+				autoAdvance: stripeInvoice.auto_advance ?? false,
+			}).catch(() => undefined);
+		}
 		await retireReplacement({ ctx, stripeCli, invoiceId, issued });
 		// Stripe may have collected the original between our read and the void.
 		if (await isNowPaid({ stripeCli, stripeInvoiceId: stripeInvoice.id })) {
@@ -427,35 +433,15 @@ const issueReplacement = async ({
 	};
 };
 
-/**
- * Opens a draft original with nothing automatic so it can be voided. The flag
- * keeps Autumn's invoice.finalized webhook quiet; a failure takes the replacement with it.
- */
-const finalizeDraftOriginalSilently = async ({
-	ctx,
+const setAutoAdvance = ({
 	stripeCli,
 	stripeInvoiceId,
-	replacementDraftId,
+	autoAdvance,
 }: {
-	ctx: AutumnContext;
 	stripeCli: Stripe;
 	stripeInvoiceId: string;
-	replacementDraftId: string;
-}) => {
-	try {
-		await stripeCli.invoices.update(stripeInvoiceId, {
-			metadata: { autumn_skip_finalized_webhook: "true" },
-		});
-		await finalizeStripeInvoice({
-			stripeCli,
-			invoiceId: stripeInvoiceId,
-			autoAdvance: false,
-		});
-	} catch (error) {
-		await deleteDraft({ ctx, stripeCli, draftId: replacementDraftId });
-		throw error;
-	}
-};
+	autoAdvance: boolean;
+}) => stripeCli.invoices.update(stripeInvoiceId, { auto_advance: autoAdvance });
 
 const retireReplacement = async ({
 	ctx,
@@ -654,7 +640,6 @@ const inheritedMetadata = ({
 }) => {
 	const metadata = { ...(stripeInvoice.metadata ?? {}) };
 	if (dropDeferredPointer) delete metadata.autumn_metadata_id;
-	delete metadata.autumn_skip_finalized_webhook;
 	return metadata;
 };
 
@@ -813,7 +798,7 @@ const storeReplacementInAutumn = async ({
 };
 
 /**
- * Retires the original (void, or a credit note when paid) and replaces it with a
+ * Retires the original (void, a credit note when paid, or parked when a draft) and replaces it with a
  * copy issued per issue_method. The replacement stays linked to the same subscription
  * and inherits the original's deferred-plan pointers, so paying it has the same
  * effect the original payment would have had.
@@ -1022,7 +1007,8 @@ export const reissueInvoice = async ({
 
 	return {
 		replacement,
-		voidedInvoiceId: creditOriginal ? null : invoiceId,
+		voidedInvoiceId:
+			creditOriginal || stripeInvoice.status === "draft" ? null : invoiceId,
 		creditNoteId,
 		preview: issuedPreview,
 	};
