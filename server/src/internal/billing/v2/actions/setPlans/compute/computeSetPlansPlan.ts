@@ -16,6 +16,7 @@ import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedRep
 import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
+import { endRetainedSubscriptionCustomerProducts } from "./endRetainedSubscriptionCustomerProducts";
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -131,6 +132,17 @@ export const computeSetPlansPlan = ({
 				customerProduct,
 				updates: { ended_at: endsAt },
 			})),
+			...endRetainedSubscriptionCustomerProducts({
+				billingContext,
+				handledCustomerProductIds: new Set(
+					[
+						...outgoingCustomerProducts,
+						...recurringEndingAtPhase.map(
+							({ customerProduct }) => customerProduct,
+						),
+					].map((customerProduct) => customerProduct.id),
+				),
+			}),
 		],
 		deleteCustomerProducts: scheduled.deleteCustomerProducts,
 		customPrices: billingContext.customPrices,
