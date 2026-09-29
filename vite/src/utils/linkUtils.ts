@@ -132,14 +132,16 @@ export const getStripeProductLink = ({
 export const getStripeDashboardLink = ({
 	env,
 	accountId,
+	path = "dashboard",
 }: {
 	env: AppEnv;
 	accountId?: string;
+	path?: string;
 }) => {
 	const baseUrl = `https://dashboard.stripe.com`;
 	const accountPath = accountId ? `/${accountId}` : "";
 	const withTest = env === AppEnv.Live ? "" : "/test";
-	return `${baseUrl}${accountPath}${withTest}/dashboard`;
+	return `${baseUrl}${accountPath}${withTest}/${path}`;
 };
 
 export const getStripeConnectViewAsLink = ({

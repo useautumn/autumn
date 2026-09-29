@@ -97,7 +97,7 @@ describe("scheduleFormFromRequestBody", () => {
 			features: [],
 			nowMs: now,
 			phases: form?.phases ?? [],
-			products: [{ id: "generation", items: [] } as ProductV2],
+			products: [{ id: "generation", items: [] } as unknown as ProductV2],
 		});
 
 		expect(request?.phases[1]?.plans[0]).toMatchObject({
@@ -136,7 +136,7 @@ describe("scheduleFormFromRequestBody", () => {
 			features: [],
 			nowMs: now,
 			phases: form?.phases ?? [],
-			products: [{ id: "gateway", items: [] } as ProductV2],
+			products: [{ id: "gateway", items: [] } as unknown as ProductV2],
 		});
 
 		expect(
@@ -209,7 +209,7 @@ describe("scheduleFormFromRequestBody", () => {
 			features: [],
 			nowMs: now,
 			phases: form?.phases ?? [],
-			products: [{ id: "generation", items: [] } as ProductV2],
+			products: [{ id: "generation", items: [] } as unknown as ProductV2],
 		});
 
 		expect(form?.phases?.[0]).toMatchObject({

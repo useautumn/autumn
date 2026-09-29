@@ -10,7 +10,6 @@ import {
 	CaretDownIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
-import { useHasSchedule } from "@/components/forms/create-schedule/hooks/useHasSchedule";
 import {
 	useIsAttachingProduct,
 	useSheetStore,
@@ -20,7 +19,6 @@ import { cn } from "@/lib/utils";
 export function AttachProductSheetTrigger() {
 	const { setSheet } = useSheetStore();
 	const isAttachingProduct = useIsAttachingProduct();
-	const hasSchedule = useHasSchedule();
 
 	const handleAttachClick = () => {
 		setSheet({ type: "attach-product" });
@@ -59,7 +57,7 @@ export function AttachProductSheetTrigger() {
 				<DropdownMenuContent align="end" sideOffset={4}>
 					<DropdownMenuItem onClick={handleCreateSchedule}>
 						<CalendarBlankIcon className="size-4" />
-						{hasSchedule ? "Update Schedule" : "Create Schedule"}
+						Set Plans
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

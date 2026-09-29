@@ -1,11 +1,28 @@
 import type {
 	AutumnBillingPlan,
 	CustomerPlanChange,
+	Entity,
 	FullCustomer,
 } from "@autumn/shared";
-import { buildCustomerPlanChange } from "../buildCustomerPlanChanges/buildCustomerPlanChange";
+import {
+	buildCustomerPlanChange,
+	type CustomerProductTransition,
+} from "../buildCustomerPlanChanges/buildCustomerPlanChange";
 import { mergeUpdatedPlanChanges } from "../buildCustomerPlanChanges/mergeUpdatedPlanChanges";
 import { autumnBillingPlanToTransitions } from "./autumnBillingPlanToTransitions";
+
+export const transitionsToCustomerPlanChanges = ({
+	transitions,
+	entities,
+}: {
+	transitions: CustomerProductTransition[];
+	entities?: Entity[];
+}): CustomerPlanChange[] =>
+	mergeUpdatedPlanChanges(
+		transitions
+			.map((transition) => buildCustomerPlanChange({ ...transition, entities }))
+			.filter((change): change is CustomerPlanChange => change !== undefined),
+	);
 
 /** Billing plan → per-product before/after transitions → kernel → dedupe. */
 export const autumnBillingPlanToCustomerPlanChanges = ({
@@ -15,19 +32,11 @@ export const autumnBillingPlanToCustomerPlanChanges = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	originalFullCustomer?: FullCustomer;
 }): CustomerPlanChange[] => {
-	const transitions = autumnBillingPlanToTransitions({
-		autumnBillingPlan,
-		originalFullCustomer,
+	return transitionsToCustomerPlanChanges({
+		transitions: autumnBillingPlanToTransitions({
+			autumnBillingPlan,
+			originalFullCustomer,
+		}),
+		entities: originalFullCustomer?.entities,
 	});
-
-	const changes = transitions
-		.map((transition) =>
-			buildCustomerPlanChange({
-				...transition,
-				entities: originalFullCustomer?.entities,
-			}),
-		)
-		.filter((change): change is CustomerPlanChange => change !== undefined);
-
-	return mergeUpdatedPlanChanges(changes);
 };

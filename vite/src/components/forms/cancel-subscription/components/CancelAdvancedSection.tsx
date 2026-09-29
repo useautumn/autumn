@@ -14,16 +14,7 @@ export function CancelAdvancedSection() {
 	const showRefundAmount = refundBehavior === "refund";
 
 	return (
-		<AdvancedSection
-			hasCustomSettings={noBillingChanges || showRefundAmount}
-			customSettingsTooltip={
-				noBillingChanges
-					? "No Billing Changes"
-					: showRefundAmount
-						? `Refund: ${refundAmount === "full" ? "Full" : "Prorated"}`
-						: ""
-			}
-		>
+		<AdvancedSection>
 			<AdvancedToggleRow label="No Billing Changes">
 				<IconCheckbox
 					icon={<ProhibitIcon />}

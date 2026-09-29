@@ -6,13 +6,13 @@ import { IconTooltipButton, Skeleton } from "@autumn/ui";
 import { CaretRightIcon, TrashIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
+import { useStripeDashboardLink } from "@/hooks/useStripeDashboardLink";
 import { cn } from "@/lib/utils";
 import { MappingStatusBadge } from "./MappingStatusBadge";
 import {
 	CREATE_STRIPE_PRODUCT,
 	StripeProductSelect,
 } from "./StripeProductSelect";
-import { useStripeProductLink } from "./useStripeProductLink";
 
 export const MappingField = ({
 	label,
@@ -53,7 +53,7 @@ export const MappingField = ({
 	createLabel?: string;
 	isResolving?: boolean;
 }) => {
-	const getStripeProductHref = useStripeProductLink();
+	const getStripeLink = useStripeDashboardLink();
 
 	return (
 		<div className="flex flex-col gap-1.5">
@@ -108,7 +108,7 @@ export const MappingField = ({
 						icon={<StripeIcon size={14} />}
 						onClick={() =>
 							window.open(
-								getStripeProductHref(stripeProductId),
+								getStripeLink(`products/${stripeProductId}`),
 								"_blank",
 								"noopener,noreferrer",
 							)

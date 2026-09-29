@@ -10,6 +10,7 @@ import {
 import { PreviewTotalsBlock } from "@/components/v2/preview-totals/PreviewTotalsBlock";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
+import { SHEET_EASE } from "@/views/customers2/customer/customerAnimations";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { PreviewErrorDisplay } from "./PreviewErrorDisplay";
 import { getPreviewCreditAmount } from "./previewCreditUtils";
@@ -21,7 +22,7 @@ const LOADING_LABEL = "Calculating pricing";
 
 export const PREVIEW_REVEAL_TRANSITION: Transition = {
 	duration: 0.25,
-	ease: [0.32, 0.72, 0, 1],
+	ease: SHEET_EASE,
 };
 
 /** The only thing on screen until a preview has fully resolved. */
