@@ -93,6 +93,11 @@ const MigrationsView = React.lazy(() =>
 		default: MigrationsView,
 	})),
 );
+const MigrationListPreview = React.lazy(() =>
+	import("./views/migrations/migration-list/preview/MigrationListPreview").then(
+		({ MigrationListPreview }) => ({ default: MigrationListPreview }),
+	),
+);
 const MigrationView = React.lazy(() =>
 	import("./views/migrations/migration/MigrationView").then(
 		({ MigrationView }) => ({ default: MigrationView }),
@@ -209,6 +214,8 @@ export default function App() {
 							)}
 							{envRoutes("migrations", <MigrationsView />)}
 							{envRoutes("migrations/:migration_id", <MigrationView />)}
+							{import.meta.env.DEV &&
+								envRoutes("dev/migrations", <MigrationListPreview />)}
 							{envRoutes(
 								"products/:product_id",
 								<SquircleProvider>
