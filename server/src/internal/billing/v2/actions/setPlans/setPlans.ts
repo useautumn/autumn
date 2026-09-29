@@ -49,7 +49,7 @@ export const setPlans = async ({
 		preview,
 	});
 	logSetPlansContext({ ctx, billingContext });
-	await handleSetPlansErrors({ billingContext, preview });
+	await handleSetPlansErrors({ ctx, billingContext, preview });
 
 	const { autumnBillingPlan, phases, immediatePhaseTransition } =
 		computeSetPlansPlan({ ctx, billingContext });

@@ -19,13 +19,16 @@ import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
 import { resolveUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
+import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
 import { validateSetPlansPhasePlans } from "./validateSetPlansPhasePlans";
 import { validateUnscheduledPlanScopes } from "./validateUnscheduledPlanScopes";
 
 export const handleSetPlansErrors = async ({
+	ctx,
 	billingContext,
 	preview = false,
 }: {
+	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	preview?: boolean;
 }) => {
@@ -65,6 +68,8 @@ export const handleSetPlansErrors = async ({
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
+
+	await handleSetPlansSubscriptionIdErrors({ ctx, billingContext });
 };
 
 export const handleSetPlansComputeErrors = async ({

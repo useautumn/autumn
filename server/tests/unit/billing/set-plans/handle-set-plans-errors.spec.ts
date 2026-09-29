@@ -52,12 +52,15 @@ const buildContext = ({
 		},
 	}) as unknown as CreateScheduleBillingContext;
 
+const ctx = {} as unknown as AutumnContext;
+
 describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 	test("allows an immediate phase within the tolerance window", async () => {
 		const now = Date.now();
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				billingContext: buildContext({
 					immediateStartsAt: now,
 					currentEpochMs: now,
@@ -71,6 +74,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -90,6 +94,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -113,6 +118,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				billingContext: buildContext({
 					immediateStartsAt: startsAt,
 					currentEpochMs: now,
@@ -131,6 +137,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -152,6 +159,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				preview: true,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
@@ -168,6 +176,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				billingContext: buildContext({
 					immediateStartsAt: now + ms.hours(1),
 					currentEpochMs: now,
@@ -185,6 +194,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 
 		await expect(
 			handleSetPlansErrors({
+				ctx,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.days(30),
 					currentEpochMs: now,
