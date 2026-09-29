@@ -1,7 +1,16 @@
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
+import { SubjectCatalogEvictedError } from "../subject/subjectErrors.js";
 
 // One extra hydration: a second evict inside the same request is not worth a third Postgres read of a state that may be very large.
 const MAX_ATTEMPTS = 2;
+
+/** The rows, or catalog rows they join to, left the cache after `ensure`; ensuring again loads them back. */
+function isGoneSinceEnsure(cause: unknown): boolean {
+	return (
+		cause instanceof PartitionProcessorStateNotFoundError ||
+		cause instanceof SubjectCatalogEvictedError
+	);
+}
 
 /**
  * Runs `attempt` against a resident subject, hydrating again when the rows
@@ -35,7 +44,8 @@ export async function withResidentSubject<Result>({
 		try {
 			result = await attempt();
 		} catch (cause) {
-			if (!(cause instanceof PartitionProcessorStateNotFoundError)) throw cause;
+			if (!isGoneSinceEnsure(cause)) throw cause;
+			if (attemptNumber === MAX_ATTEMPTS) throw cause;
 			result = null;
 		}
 		if (result !== null) return result;
