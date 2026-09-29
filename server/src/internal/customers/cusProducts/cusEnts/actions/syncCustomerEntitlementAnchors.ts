@@ -10,8 +10,42 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { CusProductService } from "../../CusProductService";
+import { ACTIVE_STATUSES, CusProductService } from "../../CusProductService";
 import { CusEntService } from "../CusEntitlementService";
+
+/** Soonest upcoming reset across the customer's other active products, used as
+ * the anchor when the product has no Stripe subscription to align to. */
+const getSoonestFutureResetAt = async ({
+	ctx,
+	internalCustomerId,
+	excludeCustomerProductId,
+	now,
+}: {
+	ctx: AutumnContext;
+	internalCustomerId: string;
+	excludeCustomerProductId: string;
+	now: number;
+}): Promise<number | null> => {
+	const customerProducts = await CusProductService.list({
+		db: ctx.db,
+		internalCustomerId,
+		inStatuses: ACTIVE_STATUSES,
+	});
+
+	let soonestResetAt: number | null = null;
+	for (const customerProduct of customerProducts) {
+		if (customerProduct.id === excludeCustomerProductId) continue;
+		for (const customerEntitlement of customerProduct.customer_entitlements) {
+			const nextResetAt = customerEntitlement.next_reset_at;
+			if (nextResetAt == null || nextResetAt <= now) continue;
+			if (soonestResetAt == null || nextResetAt < soonestResetAt) {
+				soonestResetAt = nextResetAt;
+			}
+		}
+	}
+
+	return soonestResetAt;
+};
 
 const getSyncedNextResetAt = async ({
 	ctx,
@@ -52,6 +86,14 @@ const getSyncedNextResetAt = async ({
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 		const subscription = await stripeCli.subscriptions.retrieve(subscriptionId);
 		anchor = secondsToMs(subscription.billing_cycle_anchor);
+	} else {
+		const soonestFutureResetAt = await getSoonestFutureResetAt({
+			ctx,
+			internalCustomerId: customerProduct.internal_customer_id,
+			excludeCustomerProductId: customerProduct.id,
+			now,
+		});
+		anchor = soonestFutureResetAt ?? anchor;
 	}
 	if (anchor == null) return null;
 
