@@ -6,6 +6,7 @@ from autumn_sdk._hooks import HookContext
 from autumn_sdk.types import OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
 from typing import Any, Dict, List, Mapping, Optional, Union
+from typing_extensions import deprecated
 
 
 class Billing(BaseSDK):
@@ -503,12 +504,16 @@ class Billing(BaseSDK):
 
         raise errors.AutumnDefaultError("Unexpected response received", http_res)
 
+    @deprecated(
+        "warning: ** DEPRECATED ** - This will be removed in a future release, please migrate away from it as soon as possible."
+    )
     def create_schedule(
         self,
         *,
         customer_id: str,
         phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
+            List[models.CreateSchedulePhaseStartUnion],
+            List[models.CreateSchedulePhaseStartUnionTypedDict],
         ],
         entity_id: Optional[str] = None,
         free_trial: OptionalNullable[
@@ -538,16 +543,17 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
         unscheduled_plans: Optional[
-            Union[List[models.UnscheduledPlan], List[models.UnscheduledPlanTypedDict]]
+            Union[
+                List[models.CreateScheduleUnscheduledPlan],
+                List[models.CreateScheduleUnscheduledPlanTypedDict],
+            ]
         ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.CreateScheduleResponse:
-        r"""Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
-
-        Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+        r"""Deprecated: use `billing.setPlans`, which takes the same phases and replaces the customer's schedule declaratively.
 
         :param customer_id: The ID of the customer to create the schedule for.
         :param phases: Ordered phase definitions for the schedule.
@@ -600,9 +606,11 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
             unscheduled_plans=utils.get_pydantic_model(
-                unscheduled_plans, Optional[List[models.UnscheduledPlan]]
+                unscheduled_plans, Optional[List[models.CreateScheduleUnscheduledPlan]]
             ),
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(
+                phases, List[models.CreateSchedulePhaseStartUnion]
+            ),
         )
 
         req = self._build_request(
@@ -664,12 +672,16 @@ class Billing(BaseSDK):
 
         raise errors.AutumnDefaultError("Unexpected response received", http_res)
 
+    @deprecated(
+        "warning: ** DEPRECATED ** - This will be removed in a future release, please migrate away from it as soon as possible."
+    )
     async def create_schedule_async(
         self,
         *,
         customer_id: str,
         phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
+            List[models.CreateSchedulePhaseStartUnion],
+            List[models.CreateSchedulePhaseStartUnionTypedDict],
         ],
         entity_id: Optional[str] = None,
         free_trial: OptionalNullable[
@@ -699,16 +711,17 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
         unscheduled_plans: Optional[
-            Union[List[models.UnscheduledPlan], List[models.UnscheduledPlanTypedDict]]
+            Union[
+                List[models.CreateScheduleUnscheduledPlan],
+                List[models.CreateScheduleUnscheduledPlanTypedDict],
+            ]
         ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.CreateScheduleResponse:
-        r"""Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
-
-        Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+        r"""Deprecated: use `billing.setPlans`, which takes the same phases and replaces the customer's schedule declaratively.
 
         :param customer_id: The ID of the customer to create the schedule for.
         :param phases: Ordered phase definitions for the schedule.
@@ -761,9 +774,11 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
             unscheduled_plans=utils.get_pydantic_model(
-                unscheduled_plans, Optional[List[models.UnscheduledPlan]]
+                unscheduled_plans, Optional[List[models.CreateScheduleUnscheduledPlan]]
             ),
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(
+                phases, List[models.CreateSchedulePhaseStartUnion]
+            ),
         )
 
         req = self._build_request_async(
@@ -2002,6 +2017,712 @@ class Billing(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(models.PreviewMultiAttachResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def set_plans(
+        self,
+        *,
+        customer_id: str,
+        phases: Union[
+            List[models.SetPlansPhaseStartUnion],
+            List[models.SetPlansPhaseStartUnionTypedDict],
+        ],
+        entity_id: Optional[str] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.SetPlansFreeTrialParams, models.SetPlansFreeTrialParamsTypedDict
+            ]
+        ] = UNSET,
+        currency: Optional[str] = None,
+        invoice_mode: Optional[
+            Union[models.SetPlansInvoiceMode, models.SetPlansInvoiceModeTypedDict]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.SetPlansAttachDiscount],
+                List[models.SetPlansAttachDiscountTypedDict],
+            ]
+        ] = None,
+        success_url: Optional[str] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        redirect_mode: Optional[models.SetPlansRedirectMode] = "if_required",
+        no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
+        preserve_add_ons: Optional[bool] = None,
+        unscheduled_plans: Optional[
+            Union[
+                List[models.SetPlansUnscheduledPlan],
+                List[models.SetPlansUnscheduledPlanTypedDict],
+            ]
+        ] = None,
+        proration_behavior: Optional[models.SetPlansProrationBehavior] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.SetPlansBillingCycleAnchorUnion,
+                models.SetPlansBillingCycleAnchorUnionTypedDict,
+            ]
+        ] = None,
+        ends_at: Optional[int] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.SetPlansResponse:
+        r"""Sets the plans a customer should have over time. The first phase bills now, later phases start on their dates, and the request replaces any existing schedule.
+
+        Use this endpoint to move a customer onto a known end state in one call: a plan change now, future plan changes on set dates, a new billing cycle anchor, or an end date for every plan.
+
+        :param customer_id: The ID of the customer to create the schedule for.
+        :param phases: Ordered phase definitions for the schedule.
+        :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param free_trial: Free trial configuration applied to every plan in the immediate phase.
+        :param currency: Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
+        :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param success_url: URL to redirect to after successful checkout.
+        :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
+        :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
+        :param proration_behavior: How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+        :param billing_cycle_anchor: Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date.
+        :param ends_at: Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.SetPlansParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.SetPlansFreeTrialParams]
+            ),
+            currency=currency,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.SetPlansInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.SetPlansAttachDiscount]]
+            ),
+            success_url=success_url,
+            checkout_session_params=checkout_session_params,
+            redirect_mode=redirect_mode,
+            no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
+            preserve_add_ons=preserve_add_ons,
+            unscheduled_plans=utils.get_pydantic_model(
+                unscheduled_plans, Optional[List[models.SetPlansUnscheduledPlan]]
+            ),
+            phases=utils.get_pydantic_model(
+                phases, List[models.SetPlansPhaseStartUnion]
+            ),
+            proration_behavior=proration_behavior,
+            billing_cycle_anchor=billing_cycle_anchor,
+            ends_at=ends_at,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.set_plans",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.SetPlansGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.SetPlansParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="setPlans",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.SetPlansResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def set_plans_async(
+        self,
+        *,
+        customer_id: str,
+        phases: Union[
+            List[models.SetPlansPhaseStartUnion],
+            List[models.SetPlansPhaseStartUnionTypedDict],
+        ],
+        entity_id: Optional[str] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.SetPlansFreeTrialParams, models.SetPlansFreeTrialParamsTypedDict
+            ]
+        ] = UNSET,
+        currency: Optional[str] = None,
+        invoice_mode: Optional[
+            Union[models.SetPlansInvoiceMode, models.SetPlansInvoiceModeTypedDict]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.SetPlansAttachDiscount],
+                List[models.SetPlansAttachDiscountTypedDict],
+            ]
+        ] = None,
+        success_url: Optional[str] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        redirect_mode: Optional[models.SetPlansRedirectMode] = "if_required",
+        no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
+        preserve_add_ons: Optional[bool] = None,
+        unscheduled_plans: Optional[
+            Union[
+                List[models.SetPlansUnscheduledPlan],
+                List[models.SetPlansUnscheduledPlanTypedDict],
+            ]
+        ] = None,
+        proration_behavior: Optional[models.SetPlansProrationBehavior] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.SetPlansBillingCycleAnchorUnion,
+                models.SetPlansBillingCycleAnchorUnionTypedDict,
+            ]
+        ] = None,
+        ends_at: Optional[int] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.SetPlansResponse:
+        r"""Sets the plans a customer should have over time. The first phase bills now, later phases start on their dates, and the request replaces any existing schedule.
+
+        Use this endpoint to move a customer onto a known end state in one call: a plan change now, future plan changes on set dates, a new billing cycle anchor, or an end date for every plan.
+
+        :param customer_id: The ID of the customer to create the schedule for.
+        :param phases: Ordered phase definitions for the schedule.
+        :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param free_trial: Free trial configuration applied to every plan in the immediate phase.
+        :param currency: Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
+        :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param success_url: URL to redirect to after successful checkout.
+        :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
+        :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
+        :param proration_behavior: How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+        :param billing_cycle_anchor: Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date.
+        :param ends_at: Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.SetPlansParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.SetPlansFreeTrialParams]
+            ),
+            currency=currency,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.SetPlansInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.SetPlansAttachDiscount]]
+            ),
+            success_url=success_url,
+            checkout_session_params=checkout_session_params,
+            redirect_mode=redirect_mode,
+            no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
+            preserve_add_ons=preserve_add_ons,
+            unscheduled_plans=utils.get_pydantic_model(
+                unscheduled_plans, Optional[List[models.SetPlansUnscheduledPlan]]
+            ),
+            phases=utils.get_pydantic_model(
+                phases, List[models.SetPlansPhaseStartUnion]
+            ),
+            proration_behavior=proration_behavior,
+            billing_cycle_anchor=billing_cycle_anchor,
+            ends_at=ends_at,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.set_plans",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.SetPlansGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.SetPlansParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="setPlans",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.SetPlansResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def preview_set_plans(
+        self,
+        *,
+        customer_id: str,
+        phases: Union[
+            List[models.PreviewSetPlansPhaseStartUnion],
+            List[models.PreviewSetPlansPhaseStartUnionTypedDict],
+        ],
+        entity_id: Optional[str] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.PreviewSetPlansFreeTrialParamsRequestBody,
+                models.PreviewSetPlansFreeTrialParamsRequestBodyTypedDict,
+            ]
+        ] = UNSET,
+        currency: Optional[str] = None,
+        invoice_mode: Optional[
+            Union[
+                models.PreviewSetPlansInvoiceMode,
+                models.PreviewSetPlansInvoiceModeTypedDict,
+            ]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.PreviewSetPlansAttachDiscount],
+                List[models.PreviewSetPlansAttachDiscountTypedDict],
+            ]
+        ] = None,
+        success_url: Optional[str] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        redirect_mode: Optional[models.PreviewSetPlansRedirectMode] = "if_required",
+        no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
+        preserve_add_ons: Optional[bool] = None,
+        unscheduled_plans: Optional[
+            Union[
+                List[models.PreviewSetPlansUnscheduledPlan],
+                List[models.PreviewSetPlansUnscheduledPlanTypedDict],
+            ]
+        ] = None,
+        proration_behavior: Optional[models.PreviewSetPlansProrationBehavior] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.PreviewSetPlansBillingCycleAnchorUnion,
+                models.PreviewSetPlansBillingCycleAnchorUnionTypedDict,
+            ]
+        ] = None,
+        ends_at: Optional[int] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.PreviewSetPlansResponse:
+        r"""Previews what setting a customer's plans would do, without making any changes: the charge now, each phase's plans and balances, the Stripe changes, and warnings.
+
+        Use this endpoint to show a customer, or check yourself, what a set-plans request will charge and change before sending it.
+
+        :param customer_id: The ID of the customer to create the schedule for.
+        :param phases: Ordered phase definitions for the schedule.
+        :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param free_trial: Free trial configuration applied to every plan in the immediate phase.
+        :param currency: Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
+        :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param success_url: URL to redirect to after successful checkout.
+        :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
+        :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
+        :param proration_behavior: How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+        :param billing_cycle_anchor: Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date.
+        :param ends_at: Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.PreviewSetPlansParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            free_trial=utils.get_pydantic_model(
+                free_trial,
+                OptionalNullable[models.PreviewSetPlansFreeTrialParamsRequestBody],
+            ),
+            currency=currency,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.PreviewSetPlansInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.PreviewSetPlansAttachDiscount]]
+            ),
+            success_url=success_url,
+            checkout_session_params=checkout_session_params,
+            redirect_mode=redirect_mode,
+            no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
+            preserve_add_ons=preserve_add_ons,
+            unscheduled_plans=utils.get_pydantic_model(
+                unscheduled_plans, Optional[List[models.PreviewSetPlansUnscheduledPlan]]
+            ),
+            phases=utils.get_pydantic_model(
+                phases, List[models.PreviewSetPlansPhaseStartUnion]
+            ),
+            proration_behavior=proration_behavior,
+            billing_cycle_anchor=billing_cycle_anchor,
+            ends_at=ends_at,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.preview_set_plans",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.PreviewSetPlansGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.PreviewSetPlansParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="previewSetPlans",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.PreviewSetPlansResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def preview_set_plans_async(
+        self,
+        *,
+        customer_id: str,
+        phases: Union[
+            List[models.PreviewSetPlansPhaseStartUnion],
+            List[models.PreviewSetPlansPhaseStartUnionTypedDict],
+        ],
+        entity_id: Optional[str] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.PreviewSetPlansFreeTrialParamsRequestBody,
+                models.PreviewSetPlansFreeTrialParamsRequestBodyTypedDict,
+            ]
+        ] = UNSET,
+        currency: Optional[str] = None,
+        invoice_mode: Optional[
+            Union[
+                models.PreviewSetPlansInvoiceMode,
+                models.PreviewSetPlansInvoiceModeTypedDict,
+            ]
+        ] = None,
+        discounts: Optional[
+            Union[
+                List[models.PreviewSetPlansAttachDiscount],
+                List[models.PreviewSetPlansAttachDiscountTypedDict],
+            ]
+        ] = None,
+        success_url: Optional[str] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        redirect_mode: Optional[models.PreviewSetPlansRedirectMode] = "if_required",
+        no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
+        preserve_add_ons: Optional[bool] = None,
+        unscheduled_plans: Optional[
+            Union[
+                List[models.PreviewSetPlansUnscheduledPlan],
+                List[models.PreviewSetPlansUnscheduledPlanTypedDict],
+            ]
+        ] = None,
+        proration_behavior: Optional[models.PreviewSetPlansProrationBehavior] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.PreviewSetPlansBillingCycleAnchorUnion,
+                models.PreviewSetPlansBillingCycleAnchorUnionTypedDict,
+            ]
+        ] = None,
+        ends_at: Optional[int] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.PreviewSetPlansResponse:
+        r"""Previews what setting a customer's plans would do, without making any changes: the charge now, each phase's plans and balances, the Stripe changes, and warnings.
+
+        Use this endpoint to show a customer, or check yourself, what a set-plans request will charge and change before sending it.
+
+        :param customer_id: The ID of the customer to create the schedule for.
+        :param phases: Ordered phase definitions for the schedule.
+        :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param free_trial: Free trial configuration applied to every plan in the immediate phase.
+        :param currency: Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
+        :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param success_url: URL to redirect to after successful checkout.
+        :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
+        :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
+        :param proration_behavior: How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+        :param billing_cycle_anchor: Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date.
+        :param ends_at: Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.PreviewSetPlansParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            free_trial=utils.get_pydantic_model(
+                free_trial,
+                OptionalNullable[models.PreviewSetPlansFreeTrialParamsRequestBody],
+            ),
+            currency=currency,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.PreviewSetPlansInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.PreviewSetPlansAttachDiscount]]
+            ),
+            success_url=success_url,
+            checkout_session_params=checkout_session_params,
+            redirect_mode=redirect_mode,
+            no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
+            preserve_add_ons=preserve_add_ons,
+            unscheduled_plans=utils.get_pydantic_model(
+                unscheduled_plans, Optional[List[models.PreviewSetPlansUnscheduledPlan]]
+            ),
+            phases=utils.get_pydantic_model(
+                phases, List[models.PreviewSetPlansPhaseStartUnion]
+            ),
+            proration_behavior=proration_behavior,
+            billing_cycle_anchor=billing_cycle_anchor,
+            ends_at=ends_at,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.preview_set_plans",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.PreviewSetPlansGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.PreviewSetPlansParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="previewSetPlans",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.PreviewSetPlansResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

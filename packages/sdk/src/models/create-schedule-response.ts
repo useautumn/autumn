@@ -11,50 +11,49 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import {
-  PhaseStartAddItemExpiry,
-  PhaseStartAddItemExpiry$Outbound,
-  PhaseStartAddItemExpiry$outboundSchema,
-  PhaseStartAddItemFeatureOverride,
-  PhaseStartAddItemFeatureOverride$Outbound,
-  PhaseStartAddItemFeatureOverride$outboundSchema,
-  PhaseStartAddItemPrice,
-  PhaseStartAddItemPrice$Outbound,
-  PhaseStartAddItemPrice$outboundSchema,
-  PhaseStartAddItemProration,
-  PhaseStartAddItemProration$Outbound,
-  PhaseStartAddItemProration$outboundSchema,
-  PhaseStartAddItemReset,
-  PhaseStartAddItemReset$Outbound,
-  PhaseStartAddItemReset$outboundSchema,
-  PhaseStartAddItemRollover,
-  PhaseStartAddItemRollover$Outbound,
-  PhaseStartAddItemRollover$outboundSchema,
-  PhaseStartAddItemThresholdBilling,
-  PhaseStartAddItemThresholdBilling$Outbound,
-  PhaseStartAddItemThresholdBilling$outboundSchema,
-  PhaseStartBasePrice,
-  PhaseStartBasePrice$Outbound,
-  PhaseStartBasePrice$outboundSchema,
-  PhaseStartFeatureQuantity,
-  PhaseStartFeatureQuantity$Outbound,
-  PhaseStartFeatureQuantity$outboundSchema,
-  PhaseStartItemPlanItem,
-  PhaseStartItemPlanItem$Outbound,
-  PhaseStartItemPlanItem$outboundSchema,
-  PhaseStartLicenseQuantity,
-  PhaseStartLicenseQuantity$Outbound,
-  PhaseStartLicenseQuantity$outboundSchema,
-  StartingAfter2,
-  StartingAfter2$Outbound,
-  StartingAfter2$outboundSchema,
-  StartsAt2,
-  StartsAt2$Outbound,
-  StartsAt2$outboundSchema,
-  UnscheduledPlan,
-  UnscheduledPlan$Outbound,
-  UnscheduledPlan$outboundSchema,
-} from "./phase-start-add-item-feature-override.js";
-import { SDKValidationError } from "./sdk-validation-error.js";
+  CreateSchedulePhaseStartAddItemExpiry,
+  CreateSchedulePhaseStartAddItemExpiry$Outbound,
+  CreateSchedulePhaseStartAddItemExpiry$outboundSchema,
+  CreateSchedulePhaseStartAddItemFeatureOverride,
+  CreateSchedulePhaseStartAddItemFeatureOverride$Outbound,
+  CreateSchedulePhaseStartAddItemFeatureOverride$outboundSchema,
+  CreateSchedulePhaseStartAddItemPrice,
+  CreateSchedulePhaseStartAddItemPrice$Outbound,
+  CreateSchedulePhaseStartAddItemPrice$outboundSchema,
+  CreateSchedulePhaseStartAddItemProration,
+  CreateSchedulePhaseStartAddItemProration$Outbound,
+  CreateSchedulePhaseStartAddItemProration$outboundSchema,
+  CreateSchedulePhaseStartAddItemReset,
+  CreateSchedulePhaseStartAddItemReset$Outbound,
+  CreateSchedulePhaseStartAddItemReset$outboundSchema,
+  CreateSchedulePhaseStartAddItemRollover,
+  CreateSchedulePhaseStartAddItemRollover$Outbound,
+  CreateSchedulePhaseStartAddItemRollover$outboundSchema,
+  CreateSchedulePhaseStartAddItemThresholdBilling,
+  CreateSchedulePhaseStartAddItemThresholdBilling$Outbound,
+  CreateSchedulePhaseStartAddItemThresholdBilling$outboundSchema,
+  CreateSchedulePhaseStartBasePrice,
+  CreateSchedulePhaseStartBasePrice$Outbound,
+  CreateSchedulePhaseStartBasePrice$outboundSchema,
+  CreateSchedulePhaseStartFeatureQuantity,
+  CreateSchedulePhaseStartFeatureQuantity$Outbound,
+  CreateSchedulePhaseStartFeatureQuantity$outboundSchema,
+  CreateSchedulePhaseStartItemPlanItem,
+  CreateSchedulePhaseStartItemPlanItem$Outbound,
+  CreateSchedulePhaseStartItemPlanItem$outboundSchema,
+  CreateSchedulePhaseStartLicenseQuantity,
+  CreateSchedulePhaseStartLicenseQuantity$Outbound,
+  CreateSchedulePhaseStartLicenseQuantity$outboundSchema,
+  CreateScheduleStartingAfter2,
+  CreateScheduleStartingAfter2$Outbound,
+  CreateScheduleStartingAfter2$outboundSchema,
+  CreateScheduleStartsAt2,
+  CreateScheduleStartsAt2$Outbound,
+  CreateScheduleStartsAt2$outboundSchema,
+  CreateScheduleUnscheduledPlan,
+  CreateScheduleUnscheduledPlan$Outbound,
+  CreateScheduleUnscheduledPlan$outboundSchema,
+} from "./create-schedule-phase-start-add-item-feature-override.js";
 import {
   CreateScheduleAttachDiscount,
   CreateScheduleAttachDiscount$Outbound,
@@ -69,16 +68,20 @@ import {
   CreateScheduleInvoiceMode$outboundSchema,
   CreateScheduleRedirectMode,
   CreateScheduleRedirectMode$outboundSchema,
-} from "./unscheduled-plan-upsert-license-proration.js";
+} from "./create-schedule-unscheduled-plan-upsert-license-proration.js";
+import { SDKValidationError } from "./sdk-validation-error.js";
 
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type PhaseStartAddItemPlanItem = {
+export type CreateSchedulePhaseStartAddItemPlanItem = {
   /**
    * Bills this many feature units when outstanding overage reaches it.
    */
-  thresholdBilling?: PhaseStartAddItemThresholdBilling | null | undefined;
+  thresholdBilling?:
+    | CreateSchedulePhaseStartAddItemThresholdBilling
+    | null
+    | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -98,44 +101,44 @@ export type PhaseStartAddItemPlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: PhaseStartAddItemReset | undefined;
+  reset?: CreateSchedulePhaseStartAddItemReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: PhaseStartAddItemPrice | undefined;
+  price?: CreateSchedulePhaseStartAddItemPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: PhaseStartAddItemProration | undefined;
+  proration?: CreateSchedulePhaseStartAddItemProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: PhaseStartAddItemRollover | undefined;
+  rollover?: CreateSchedulePhaseStartAddItemRollover | undefined;
   /**
    * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
    */
-  expiry?: PhaseStartAddItemExpiry | undefined;
+  expiry?: CreateSchedulePhaseStartAddItemExpiry | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
-  featureOverride?: PhaseStartAddItemFeatureOverride | undefined;
+  featureOverride?: CreateSchedulePhaseStartAddItemFeatureOverride | undefined;
 };
 
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export const PhaseStartRemoveItemBillingMethod = {
+export const CreateSchedulePhaseStartRemoveItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export type PhaseStartRemoveItemBillingMethod = ClosedEnum<
-  typeof PhaseStartRemoveItemBillingMethod
+export type CreateSchedulePhaseStartRemoveItemBillingMethod = ClosedEnum<
+  typeof CreateSchedulePhaseStartRemoveItemBillingMethod
 >;
 
-export const PhaseStartIntervalRemoveItemEnum2 = {
+export const CreateSchedulePhaseStartIntervalRemoveItemEnum2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -146,11 +149,11 @@ export const PhaseStartIntervalRemoveItemEnum2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type PhaseStartIntervalRemoveItemEnum2 = ClosedEnum<
-  typeof PhaseStartIntervalRemoveItemEnum2
+export type CreateSchedulePhaseStartIntervalRemoveItemEnum2 = ClosedEnum<
+  typeof CreateSchedulePhaseStartIntervalRemoveItemEnum2
 >;
 
-export const PhaseStartIntervalRemoveItemEnum1 = {
+export const CreateSchedulePhaseStartIntervalRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -158,21 +161,21 @@ export const PhaseStartIntervalRemoveItemEnum1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type PhaseStartIntervalRemoveItemEnum1 = ClosedEnum<
-  typeof PhaseStartIntervalRemoveItemEnum1
+export type CreateSchedulePhaseStartIntervalRemoveItemEnum1 = ClosedEnum<
+  typeof CreateSchedulePhaseStartIntervalRemoveItemEnum1
 >;
 
 /**
  * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
  */
-export type PhaseStartIntervalUnion =
-  | PhaseStartIntervalRemoveItemEnum1
-  | PhaseStartIntervalRemoveItemEnum2;
+export type CreateSchedulePhaseStartIntervalUnion =
+  | CreateSchedulePhaseStartIntervalRemoveItemEnum1
+  | CreateSchedulePhaseStartIntervalRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
  */
-export type PhaseStartPlanItemFilter = {
+export type CreateSchedulePhaseStartPlanItemFilter = {
   /**
    * Match items linked to this feature.
    */
@@ -180,13 +183,13 @@ export type PhaseStartPlanItemFilter = {
   /**
    * Match items with this billing method (prepaid or usage_based).
    */
-  billingMethod?: PhaseStartRemoveItemBillingMethod | undefined;
+  billingMethod?: CreateSchedulePhaseStartRemoveItemBillingMethod | undefined;
   /**
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
   interval?:
-    | PhaseStartIntervalRemoveItemEnum1
-    | PhaseStartIntervalRemoveItemEnum2
+    | CreateSchedulePhaseStartIntervalRemoveItemEnum1
+    | CreateSchedulePhaseStartIntervalRemoveItemEnum2
     | undefined;
   /**
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
@@ -201,7 +204,7 @@ export type PhaseStartPlanItemFilter = {
 /**
  * The time interval for the purchase limit window.
  */
-export const PhaseStartAutoTopupInterval = {
+export const CreateSchedulePhaseStartAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -210,18 +213,18 @@ export const PhaseStartAutoTopupInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type PhaseStartAutoTopupInterval = ClosedEnum<
-  typeof PhaseStartAutoTopupInterval
+export type CreateSchedulePhaseStartAutoTopupInterval = ClosedEnum<
+  typeof CreateSchedulePhaseStartAutoTopupInterval
 >;
 
 /**
  * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
-export type PhaseStartPurchaseLimit = {
+export type CreateSchedulePhaseStartPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: PhaseStartAutoTopupInterval;
+  interval: CreateSchedulePhaseStartAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -236,7 +239,7 @@ export type PhaseStartPurchaseLimit = {
   count?: number | undefined;
 };
 
-export type PhaseStartAutoTopup = {
+export type CreateSchedulePhaseStartAutoTopup = {
   /**
    * The ID of the feature (credit balance) to auto top-up.
    */
@@ -256,7 +259,7 @@ export type PhaseStartAutoTopup = {
   /**
    * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
-  purchaseLimit?: PhaseStartPurchaseLimit | undefined;
+  purchaseLimit?: CreateSchedulePhaseStartPurchaseLimit | undefined;
   /**
    * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
    */
@@ -266,16 +269,18 @@ export type PhaseStartAutoTopup = {
 /**
  * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
  */
-export const PhaseStartLimitType = {
+export const CreateSchedulePhaseStartLimitType = {
   Absolute: "absolute",
   UsagePercentage: "usage_percentage",
 } as const;
 /**
  * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
  */
-export type PhaseStartLimitType = ClosedEnum<typeof PhaseStartLimitType>;
+export type CreateSchedulePhaseStartLimitType = ClosedEnum<
+  typeof CreateSchedulePhaseStartLimitType
+>;
 
-export type PhaseStartSpendLimit = {
+export type CreateSchedulePhaseStartSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -287,7 +292,7 @@ export type PhaseStartSpendLimit = {
   /**
    * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
    */
-  limitType?: PhaseStartLimitType | undefined;
+  limitType?: CreateSchedulePhaseStartLimitType | undefined;
   /**
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
@@ -301,7 +306,7 @@ export type PhaseStartSpendLimit = {
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
-export const PhaseStartUsageLimitInterval = {
+export const CreateSchedulePhaseStartUsageLimitInterval = {
   Day: "day",
   Week: "week",
   Month: "month",
@@ -310,32 +315,37 @@ export const PhaseStartUsageLimitInterval = {
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
-export type PhaseStartUsageLimitInterval = ClosedEnum<
-  typeof PhaseStartUsageLimitInterval
+export type CreateSchedulePhaseStartUsageLimitInterval = ClosedEnum<
+  typeof CreateSchedulePhaseStartUsageLimitInterval
 >;
 
 /**
  * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
  */
-export const PhaseStartAnchor = {
+export const CreateSchedulePhaseStartAnchor = {
   BillingCycle: "billing_cycle",
   Utc: "utc",
 } as const;
 /**
  * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
  */
-export type PhaseStartAnchor = ClosedEnum<typeof PhaseStartAnchor>;
+export type CreateSchedulePhaseStartAnchor = ClosedEnum<
+  typeof CreateSchedulePhaseStartAnchor
+>;
 
-export type PhaseStartUsageLimitProperties = string | number | boolean;
+export type CreateSchedulePhaseStartUsageLimitProperties =
+  | string
+  | number
+  | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type PhaseStartUsageLimitFilter = {
+export type CreateSchedulePhaseStartUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type PhaseStartUsageLimit = {
+export type CreateSchedulePhaseStartUsageLimit = {
   /**
    * The feature this usage limit applies to.
    */
@@ -351,21 +361,21 @@ export type PhaseStartUsageLimit = {
   /**
    * Interval for the cap, aligned to the customer's billing cycle.
    */
-  interval: PhaseStartUsageLimitInterval;
+  interval: CreateSchedulePhaseStartUsageLimitInterval;
   /**
    * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
    */
-  anchor?: PhaseStartAnchor | undefined;
+  anchor?: CreateSchedulePhaseStartAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: PhaseStartUsageLimitFilter | undefined;
+  filter?: CreateSchedulePhaseStartUsageLimitFilter | undefined;
 };
 
 /**
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
-export const PhaseStartThresholdType = {
+export const CreateSchedulePhaseStartThresholdType = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
   Remaining: "remaining",
@@ -374,14 +384,14 @@ export const PhaseStartThresholdType = {
 /**
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
-export type PhaseStartThresholdType = ClosedEnum<
-  typeof PhaseStartThresholdType
+export type CreateSchedulePhaseStartThresholdType = ClosedEnum<
+  typeof CreateSchedulePhaseStartThresholdType
 >;
 
 /**
  * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
  */
-export const PhaseStartBasis = {
+export const CreateSchedulePhaseStartBasis = {
   Balance: "balance",
   Included: "included",
   Recurring: "recurring",
@@ -390,18 +400,23 @@ export const PhaseStartBasis = {
 /**
  * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
  */
-export type PhaseStartBasis = ClosedEnum<typeof PhaseStartBasis>;
+export type CreateSchedulePhaseStartBasis = ClosedEnum<
+  typeof CreateSchedulePhaseStartBasis
+>;
 
-export type PhaseStartUsageAlertProperties = string | number | boolean;
+export type CreateSchedulePhaseStartUsageAlertProperties =
+  | string
+  | number
+  | boolean;
 
 /**
  * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
  */
-export type PhaseStartUsageAlertFilter = {
+export type CreateSchedulePhaseStartUsageAlertFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type PhaseStartUsageAlert = {
+export type CreateSchedulePhaseStartUsageAlert = {
   /**
    * The feature ID this alert applies to.
    */
@@ -417,22 +432,22 @@ export type PhaseStartUsageAlert = {
   /**
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
-  thresholdType: PhaseStartThresholdType;
+  thresholdType: CreateSchedulePhaseStartThresholdType;
   /**
    * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
    */
-  basis?: PhaseStartBasis | undefined;
+  basis?: CreateSchedulePhaseStartBasis | undefined;
   /**
    * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
    */
-  filter?: PhaseStartUsageAlertFilter | undefined;
+  filter?: CreateSchedulePhaseStartUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
   name?: string | undefined;
 };
 
-export type PhaseStartOverageAllowed = {
+export type CreateSchedulePhaseStartOverageAllowed = {
   /**
    * The feature ID this overage allowed control applies to.
    */
@@ -446,33 +461,33 @@ export type PhaseStartOverageAllowed = {
 /**
  * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
  */
-export type PhaseStartBillingControls = {
+export type CreateSchedulePhaseStartBillingControls = {
   /**
    * List of auto top-up configurations per feature.
    */
-  autoTopups?: Array<PhaseStartAutoTopup> | undefined;
+  autoTopups?: Array<CreateSchedulePhaseStartAutoTopup> | undefined;
   /**
    * List of overage spend limits per feature (caps overage spend).
    */
-  spendLimits?: Array<PhaseStartSpendLimit> | undefined;
+  spendLimits?: Array<CreateSchedulePhaseStartSpendLimit> | undefined;
   /**
    * List of hard usage caps per feature (max units per interval).
    */
-  usageLimits?: Array<PhaseStartUsageLimit> | undefined;
+  usageLimits?: Array<CreateSchedulePhaseStartUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
-  usageAlerts?: Array<PhaseStartUsageAlert> | undefined;
+  usageAlerts?: Array<CreateSchedulePhaseStartUsageAlert> | undefined;
   /**
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
-  overageAllowed?: Array<PhaseStartOverageAllowed> | undefined;
+  overageAllowed?: Array<CreateSchedulePhaseStartOverageAllowed> | undefined;
 };
 
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const PhaseStartPriceUpsertLicenseInterval = {
+export const CreateSchedulePhaseStartPriceUpsertLicenseInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -483,11 +498,11 @@ export const PhaseStartPriceUpsertLicenseInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type PhaseStartPriceUpsertLicenseInterval = ClosedEnum<
-  typeof PhaseStartPriceUpsertLicenseInterval
+export type CreateSchedulePhaseStartPriceUpsertLicenseInterval = ClosedEnum<
+  typeof CreateSchedulePhaseStartPriceUpsertLicenseInterval
 >;
 
-export type PhaseStartUpsertLicenseAdditionalCurrency = {
+export type CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -501,7 +516,7 @@ export type PhaseStartUpsertLicenseAdditionalCurrency = {
 /**
  * Base price configuration for a plan.
  */
-export type PhaseStartUpsertLicenseBasePrice = {
+export type CreateSchedulePhaseStartUpsertLicenseBasePrice = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
    */
@@ -509,7 +524,7 @@ export type PhaseStartUpsertLicenseBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: PhaseStartPriceUpsertLicenseInterval;
+  interval: CreateSchedulePhaseStartPriceUpsertLicenseInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -518,18 +533,18 @@ export type PhaseStartUpsertLicenseBasePrice = {
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
   additionalCurrencies?:
-    | Array<PhaseStartUpsertLicenseAdditionalCurrency>
+    | Array<CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency>
     | undefined;
 };
 
-export type PhaseStartUpsertLicenseThresholdBilling = {
+export type CreateSchedulePhaseStartUpsertLicenseThresholdBilling = {
   threshold: number;
 };
 
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const PhaseStartUpsertLicenseResetInterval = {
+export const CreateSchedulePhaseStartUpsertLicenseResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -543,25 +558,25 @@ export const PhaseStartUpsertLicenseResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type PhaseStartUpsertLicenseResetInterval = ClosedEnum<
-  typeof PhaseStartUpsertLicenseResetInterval
+export type CreateSchedulePhaseStartUpsertLicenseResetInterval = ClosedEnum<
+  typeof CreateSchedulePhaseStartUpsertLicenseResetInterval
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type PhaseStartUpsertLicenseReset = {
+export type CreateSchedulePhaseStartUpsertLicenseReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: PhaseStartUpsertLicenseResetInterval;
+  interval: CreateSchedulePhaseStartUpsertLicenseResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type PhaseStartUpsertLicenseAddItemAdditionalCurrency = {
+export type CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -572,9 +587,9 @@ export type PhaseStartUpsertLicenseAddItemAdditionalCurrency = {
   amount: number;
 };
 
-export type PhaseStartUpsertLicensePriceTo = number | string;
+export type CreateSchedulePhaseStartUpsertLicensePriceTo = number | string;
 
-export type PhaseStartUpsertLicenseTierAdditionalCurrency = {
+export type CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -589,7 +604,7 @@ export type PhaseStartUpsertLicenseTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type PhaseStartUpsertLicensePriceTier = {
+export type CreateSchedulePhaseStartUpsertLicensePriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -597,22 +612,22 @@ export type PhaseStartUpsertLicensePriceTier = {
    * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
    */
   additionalCurrencies?:
-    | Array<PhaseStartUpsertLicenseTierAdditionalCurrency>
+    | Array<CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency>
     | undefined;
 };
 
-export const PhaseStartUpsertLicenseTierBehavior = {
+export const CreateSchedulePhaseStartUpsertLicenseTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type PhaseStartUpsertLicenseTierBehavior = ClosedEnum<
-  typeof PhaseStartUpsertLicenseTierBehavior
+export type CreateSchedulePhaseStartUpsertLicenseTierBehavior = ClosedEnum<
+  typeof CreateSchedulePhaseStartUpsertLicenseTierBehavior
 >;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const PhaseStartUpsertLicenseAddItemPriceInterval = {
+export const CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -623,28 +638,26 @@ export const PhaseStartUpsertLicenseAddItemPriceInterval = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type PhaseStartUpsertLicenseAddItemPriceInterval = ClosedEnum<
-  typeof PhaseStartUpsertLicenseAddItemPriceInterval
->;
+export type CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval =
+  ClosedEnum<typeof CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval>;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const PhaseStartUpsertLicenseAddItemBillingMethod = {
+export const CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type PhaseStartUpsertLicenseAddItemBillingMethod = ClosedEnum<
-  typeof PhaseStartUpsertLicenseAddItemBillingMethod
->;
+export type CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod =
+  ClosedEnum<typeof CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod>;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type PhaseStartUpsertLicensePrice = {
+export type CreateSchedulePhaseStartUpsertLicensePrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -653,17 +666,17 @@ export type PhaseStartUpsertLicensePrice = {
    * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
    */
   additionalCurrencies?:
-    | Array<PhaseStartUpsertLicenseAddItemAdditionalCurrency>
+    | Array<CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency>
     | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<PhaseStartUpsertLicensePriceTier> | undefined;
-  tierBehavior?: PhaseStartUpsertLicenseTierBehavior | undefined;
+  tiers?: Array<CreateSchedulePhaseStartUpsertLicensePriceTier> | undefined;
+  tierBehavior?: CreateSchedulePhaseStartUpsertLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: PhaseStartUpsertLicenseAddItemPriceInterval;
+  interval: CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -675,7 +688,7 @@ export type PhaseStartUpsertLicensePrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: PhaseStartUpsertLicenseAddItemBillingMethod;
+  billingMethod: CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -685,7 +698,7 @@ export type PhaseStartUpsertLicensePrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const PhaseStartUpsertLicenseOnIncrease = {
+export const CreateSchedulePhaseStartUpsertLicenseOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -694,14 +707,14 @@ export const PhaseStartUpsertLicenseOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type PhaseStartUpsertLicenseOnIncrease = ClosedEnum<
-  typeof PhaseStartUpsertLicenseOnIncrease
+export type CreateSchedulePhaseStartUpsertLicenseOnIncrease = ClosedEnum<
+  typeof CreateSchedulePhaseStartUpsertLicenseOnIncrease
 >;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const PhaseStartUpsertLicenseOnDecrease = {
+export const CreateSchedulePhaseStartUpsertLicenseOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -711,42 +724,41 @@ export const PhaseStartUpsertLicenseOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type PhaseStartUpsertLicenseOnDecrease = ClosedEnum<
-  typeof PhaseStartUpsertLicenseOnDecrease
+export type CreateSchedulePhaseStartUpsertLicenseOnDecrease = ClosedEnum<
+  typeof CreateSchedulePhaseStartUpsertLicenseOnDecrease
 >;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type PhaseStartUpsertLicenseProration = {
+export type CreateSchedulePhaseStartUpsertLicenseProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: PhaseStartUpsertLicenseOnIncrease;
+  onIncrease: CreateSchedulePhaseStartUpsertLicenseOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: PhaseStartUpsertLicenseOnDecrease;
+  onDecrease: CreateSchedulePhaseStartUpsertLicenseOnDecrease;
 };
 
 /**
  * When rolled over units expire.
  */
-export const PhaseStartUpsertLicenseExpiryDurationType = {
+export const CreateSchedulePhaseStartUpsertLicenseExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type PhaseStartUpsertLicenseExpiryDurationType = ClosedEnum<
-  typeof PhaseStartUpsertLicenseExpiryDurationType
->;
+export type CreateSchedulePhaseStartUpsertLicenseExpiryDurationType =
+  ClosedEnum<typeof CreateSchedulePhaseStartUpsertLicenseExpiryDurationType>;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type PhaseStartUpsertLicenseRollover = {
+export type CreateSchedulePhaseStartUpsertLicenseRollover = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -758,34 +770,37 @@ export type PhaseStartUpsertLicenseRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: PhaseStartUpsertLicenseExpiryDurationType;
+  expiryDurationType: CreateSchedulePhaseStartUpsertLicenseExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
   expiryDurationLength?: number | undefined;
 };
 
-export const PhaseStartUpsertLicenseDuration = {
+export const CreateSchedulePhaseStartUpsertLicenseDuration = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
-export type PhaseStartUpsertLicenseDuration = ClosedEnum<
-  typeof PhaseStartUpsertLicenseDuration
+export type CreateSchedulePhaseStartUpsertLicenseDuration = ClosedEnum<
+  typeof CreateSchedulePhaseStartUpsertLicenseDuration
 >;
 
 /**
  * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
  */
-export type PhaseStartUpsertLicenseExpiry = {
-  duration: PhaseStartUpsertLicenseDuration;
+export type CreateSchedulePhaseStartUpsertLicenseExpiry = {
+  duration: CreateSchedulePhaseStartUpsertLicenseDuration;
   length: number;
 };
 
-export type PhaseStartDimensionsUpsertLicenseMatch4 = string | number | boolean;
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch4 =
+  | string
+  | number
+  | boolean;
 
-export type PhaseStartDimensionsUpsertLicense4 = {
+export type CreateSchedulePhaseStartDimensionsUpsertLicense4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -800,9 +815,12 @@ export type PhaseStartDimensionsUpsertLicense4 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsUpsertLicenseMatch3 = string | number | boolean;
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch3 =
+  | string
+  | number
+  | boolean;
 
-export type PhaseStartDimensionsUpsertLicenseTier2 = {
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseTier2 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
@@ -813,7 +831,7 @@ export type PhaseStartDimensionsUpsertLicenseTier2 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsUpsertLicense3 = {
+export type CreateSchedulePhaseStartDimensionsUpsertLicense3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -823,19 +841,19 @@ export type PhaseStartDimensionsUpsertLicense3 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartDimensionsUpsertLicenseTier2>;
+  tiers: Array<CreateSchedulePhaseStartDimensionsUpsertLicenseTier2>;
 };
 
-export type PhaseStartUpsertLicenseDimensionsUnion2 =
-  | PhaseStartDimensionsUpsertLicense3
-  | PhaseStartDimensionsUpsertLicense4;
+export type CreateSchedulePhaseStartUpsertLicenseDimensionsUnion2 =
+  | CreateSchedulePhaseStartDimensionsUpsertLicense3
+  | CreateSchedulePhaseStartDimensionsUpsertLicense4;
 
-export type PhaseStartUpsertLicenseMultipliersMatch2 =
+export type CreateSchedulePhaseStartUpsertLicenseMultipliersMatch2 =
   | string
   | number
   | boolean;
 
-export type PhaseStartUpsertLicenseMultipliers2 = {
+export type CreateSchedulePhaseStartUpsertLicenseMultipliers2 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -850,7 +868,7 @@ export type PhaseStartUpsertLicenseMultipliers2 = {
   add?: number | undefined;
 };
 
-export type PhaseStartCreditSchemaUpsertLicense2 = {
+export type CreateSchedulePhaseStartCreditSchemaUpsertLicense2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -864,24 +882,27 @@ export type PhaseStartCreditSchemaUpsertLicense2 = {
    */
   dimensions?: {
     [k: string]:
-      | PhaseStartDimensionsUpsertLicense3
-      | PhaseStartDimensionsUpsertLicense4;
+      | CreateSchedulePhaseStartDimensionsUpsertLicense3
+      | CreateSchedulePhaseStartDimensionsUpsertLicense4;
   } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?:
-    | { [k: string]: PhaseStartUpsertLicenseMultipliers2 }
-    | undefined;
+  multipliers?: {
+    [k: string]: CreateSchedulePhaseStartUpsertLicenseMultipliers2;
+  } | undefined;
   /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
 
-export type PhaseStartDimensionsUpsertLicenseMatch2 = string | number | boolean;
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch2 =
+  | string
+  | number
+  | boolean;
 
-export type PhaseStartDimensionsUpsertLicense2 = {
+export type CreateSchedulePhaseStartDimensionsUpsertLicense2 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -896,9 +917,12 @@ export type PhaseStartDimensionsUpsertLicense2 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsUpsertLicenseMatch1 = string | number | boolean;
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch1 =
+  | string
+  | number
+  | boolean;
 
-export type PhaseStartDimensionsUpsertLicenseTier1 = {
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseTier1 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
@@ -909,7 +933,7 @@ export type PhaseStartDimensionsUpsertLicenseTier1 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsUpsertLicense1 = {
+export type CreateSchedulePhaseStartDimensionsUpsertLicense1 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -919,19 +943,19 @@ export type PhaseStartDimensionsUpsertLicense1 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartDimensionsUpsertLicenseTier1>;
+  tiers: Array<CreateSchedulePhaseStartDimensionsUpsertLicenseTier1>;
 };
 
-export type PhaseStartUpsertLicenseDimensionsUnion1 =
-  | PhaseStartDimensionsUpsertLicense1
-  | PhaseStartDimensionsUpsertLicense2;
+export type CreateSchedulePhaseStartUpsertLicenseDimensionsUnion1 =
+  | CreateSchedulePhaseStartDimensionsUpsertLicense1
+  | CreateSchedulePhaseStartDimensionsUpsertLicense2;
 
-export type PhaseStartUpsertLicenseMultipliersMatch1 =
+export type CreateSchedulePhaseStartUpsertLicenseMultipliersMatch1 =
   | string
   | number
   | boolean;
 
-export type PhaseStartUpsertLicenseMultipliers1 = {
+export type CreateSchedulePhaseStartUpsertLicenseMultipliers1 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -946,32 +970,32 @@ export type PhaseStartUpsertLicenseMultipliers1 = {
   add?: number | undefined;
 };
 
-export const PhaseStartToUpsertLicenseEnum = {
+export const CreateSchedulePhaseStartToUpsertLicenseEnum = {
   Inf: "inf",
 } as const;
-export type PhaseStartToUpsertLicenseEnum = ClosedEnum<
-  typeof PhaseStartToUpsertLicenseEnum
+export type CreateSchedulePhaseStartToUpsertLicenseEnum = ClosedEnum<
+  typeof CreateSchedulePhaseStartToUpsertLicenseEnum
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PhaseStartUpsertLicenseFeatureOverrideToUnion =
+export type CreateSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion =
   | number
-  | PhaseStartToUpsertLicenseEnum;
+  | CreateSchedulePhaseStartToUpsertLicenseEnum;
 
-export type PhaseStartUpsertLicenseFeatureOverrideTier = {
+export type CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PhaseStartToUpsertLicenseEnum;
+  to: number | CreateSchedulePhaseStartToUpsertLicenseEnum;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type PhaseStartCreditSchemaUpsertLicense1 = {
+export type CreateSchedulePhaseStartCreditSchemaUpsertLicense1 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -985,28 +1009,28 @@ export type PhaseStartCreditSchemaUpsertLicense1 = {
    */
   dimensions?: {
     [k: string]:
-      | PhaseStartDimensionsUpsertLicense1
-      | PhaseStartDimensionsUpsertLicense2;
+      | CreateSchedulePhaseStartDimensionsUpsertLicense1
+      | CreateSchedulePhaseStartDimensionsUpsertLicense2;
   } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?:
-    | { [k: string]: PhaseStartUpsertLicenseMultipliers1 }
-    | undefined;
+  multipliers?: {
+    [k: string]: CreateSchedulePhaseStartUpsertLicenseMultipliers1;
+  } | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartUpsertLicenseFeatureOverrideTier>;
+  tiers: Array<CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier>;
 };
 
-export type PhaseStartUpsertLicenseCreditSchemaUnion =
-  | PhaseStartCreditSchemaUpsertLicense1
-  | PhaseStartCreditSchemaUpsertLicense2;
+export type CreateSchedulePhaseStartUpsertLicenseCreditSchemaUnion =
+  | CreateSchedulePhaseStartCreditSchemaUpsertLicense1
+  | CreateSchedulePhaseStartCreditSchemaUpsertLicense2;
 
-export type PhaseStartUpsertLicenseProviderMarkups = {
+export type CreateSchedulePhaseStartUpsertLicenseProviderMarkups = {
   markup: number;
 };
 
-export type PhaseStartUpsertLicenseModelMarkups = {
+export type CreateSchedulePhaseStartUpsertLicenseModelMarkups = {
   markup?: number | undefined;
   inputCost?: number | undefined;
   outputCost?: number | undefined;
@@ -1015,7 +1039,7 @@ export type PhaseStartUpsertLicenseModelMarkups = {
 /**
  * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
  */
-export type PhaseStartUpsertLicenseMarkups = {
+export type CreateSchedulePhaseStartUpsertLicenseMarkups = {
   /**
    * Default percentage markup for customers on this plan. Use -100 to make usage free.
    */
@@ -1024,14 +1048,14 @@ export type PhaseStartUpsertLicenseMarkups = {
    * Per-provider markup percentages for customers on this plan.
    */
   providerMarkups?:
-    | { [k: string]: PhaseStartUpsertLicenseProviderMarkups }
+    | { [k: string]: CreateSchedulePhaseStartUpsertLicenseProviderMarkups }
     | null
     | undefined;
   /**
    * Per-model markup overrides for customers on this plan.
    */
   modelMarkups?:
-    | { [k: string]: PhaseStartUpsertLicenseModelMarkups }
+    | { [k: string]: CreateSchedulePhaseStartUpsertLicenseModelMarkups }
     | null
     | undefined;
 };
@@ -1039,30 +1063,33 @@ export type PhaseStartUpsertLicenseMarkups = {
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
-export type PhaseStartUpsertLicenseFeatureOverride = {
+export type CreateSchedulePhaseStartUpsertLicenseFeatureOverride = {
   /**
    * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
    */
   creditSchema?:
     | Array<
-      | PhaseStartCreditSchemaUpsertLicense1
-      | PhaseStartCreditSchemaUpsertLicense2
+      | CreateSchedulePhaseStartCreditSchemaUpsertLicense1
+      | CreateSchedulePhaseStartCreditSchemaUpsertLicense2
     >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
    */
-  markups?: PhaseStartUpsertLicenseMarkups | undefined;
+  markups?: CreateSchedulePhaseStartUpsertLicenseMarkups | undefined;
 };
 
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type PhaseStartUpsertLicensePlanItem = {
+export type CreateSchedulePhaseStartUpsertLicensePlanItem = {
   /**
    * Bills this many feature units when outstanding overage reaches it.
    */
-  thresholdBilling?: PhaseStartUpsertLicenseThresholdBilling | null | undefined;
+  thresholdBilling?:
+    | CreateSchedulePhaseStartUpsertLicenseThresholdBilling
+    | null
+    | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -1082,44 +1109,47 @@ export type PhaseStartUpsertLicensePlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: PhaseStartUpsertLicenseReset | undefined;
+  reset?: CreateSchedulePhaseStartUpsertLicenseReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: PhaseStartUpsertLicensePrice | undefined;
+  price?: CreateSchedulePhaseStartUpsertLicensePrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: PhaseStartUpsertLicenseProration | undefined;
+  proration?: CreateSchedulePhaseStartUpsertLicenseProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: PhaseStartUpsertLicenseRollover | undefined;
+  rollover?: CreateSchedulePhaseStartUpsertLicenseRollover | undefined;
   /**
    * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
    */
-  expiry?: PhaseStartUpsertLicenseExpiry | undefined;
+  expiry?: CreateSchedulePhaseStartUpsertLicenseExpiry | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
-  featureOverride?: PhaseStartUpsertLicenseFeatureOverride | undefined;
+  featureOverride?:
+    | CreateSchedulePhaseStartUpsertLicenseFeatureOverride
+    | undefined;
 };
 
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export const PhaseStartUpsertLicenseRemoveItemBillingMethod = {
+export const CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export type PhaseStartUpsertLicenseRemoveItemBillingMethod = ClosedEnum<
-  typeof PhaseStartUpsertLicenseRemoveItemBillingMethod
->;
+export type CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod =
+  ClosedEnum<
+    typeof CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod
+  >;
 
-export const PhaseStartIntervalUpsertLicenseRemoveItemEnum2 = {
+export const CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1130,11 +1160,12 @@ export const PhaseStartIntervalUpsertLicenseRemoveItemEnum2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type PhaseStartIntervalUpsertLicenseRemoveItemEnum2 = ClosedEnum<
-  typeof PhaseStartIntervalUpsertLicenseRemoveItemEnum2
->;
+export type CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2 =
+  ClosedEnum<
+    typeof CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2
+  >;
 
-export const PhaseStartIntervalUpsertLicenseRemoveItemEnum1 = {
+export const CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1142,21 +1173,22 @@ export const PhaseStartIntervalUpsertLicenseRemoveItemEnum1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type PhaseStartIntervalUpsertLicenseRemoveItemEnum1 = ClosedEnum<
-  typeof PhaseStartIntervalUpsertLicenseRemoveItemEnum1
->;
+export type CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1 =
+  ClosedEnum<
+    typeof CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1
+  >;
 
 /**
  * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
  */
-export type PhaseStartUpsertLicenseIntervalUnion =
-  | PhaseStartIntervalUpsertLicenseRemoveItemEnum1
-  | PhaseStartIntervalUpsertLicenseRemoveItemEnum2;
+export type CreateSchedulePhaseStartUpsertLicenseIntervalUnion =
+  | CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1
+  | CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
  */
-export type PhaseStartUpsertLicensePlanItemFilter = {
+export type CreateSchedulePhaseStartUpsertLicensePlanItemFilter = {
   /**
    * Match items linked to this feature.
    */
@@ -1164,13 +1196,15 @@ export type PhaseStartUpsertLicensePlanItemFilter = {
   /**
    * Match items with this billing method (prepaid or usage_based).
    */
-  billingMethod?: PhaseStartUpsertLicenseRemoveItemBillingMethod | undefined;
+  billingMethod?:
+    | CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod
+    | undefined;
   /**
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
   interval?:
-    | PhaseStartIntervalUpsertLicenseRemoveItemEnum1
-    | PhaseStartIntervalUpsertLicenseRemoveItemEnum2
+    | CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1
+    | CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2
     | undefined;
   /**
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
@@ -1182,57 +1216,59 @@ export type PhaseStartUpsertLicensePlanItemFilter = {
   included?: number | undefined;
 };
 
-export type PhaseStartUpsertLicenseCustomize = {
-  price?: PhaseStartUpsertLicenseBasePrice | null | undefined;
-  addItems?: Array<PhaseStartUpsertLicensePlanItem> | undefined;
-  removeItems?: Array<PhaseStartUpsertLicensePlanItemFilter> | undefined;
+export type CreateSchedulePhaseStartUpsertLicenseCustomize = {
+  price?: CreateSchedulePhaseStartUpsertLicenseBasePrice | null | undefined;
+  addItems?: Array<CreateSchedulePhaseStartUpsertLicensePlanItem> | undefined;
+  removeItems?:
+    | Array<CreateSchedulePhaseStartUpsertLicensePlanItemFilter>
+    | undefined;
 };
 
-export type PhaseStartUpsertLicense = {
+export type CreateSchedulePhaseStartUpsertLicense = {
   licensePlanId: string;
   versionSlug?: string | undefined;
   included?: number | undefined;
   prepaidOnly?: boolean | undefined;
-  customize?: PhaseStartUpsertLicenseCustomize | null | undefined;
+  customize?: CreateSchedulePhaseStartUpsertLicenseCustomize | null | undefined;
   metadata?: { [k: string]: any } | undefined;
 };
 
-export type PhaseStartRemoveLicense = {
+export type CreateSchedulePhaseStartRemoveLicense = {
   licensePlanId: string;
 };
 
 /**
  * Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
  */
-export type PhaseStartCustomize = {
+export type CreateSchedulePhaseStartCustomize = {
   /**
    * Override the base price of the plan. Pass null to remove the base price.
    */
-  price?: PhaseStartBasePrice | null | undefined;
+  price?: CreateSchedulePhaseStartBasePrice | null | undefined;
   /**
    * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
    */
-  items?: Array<PhaseStartItemPlanItem> | undefined;
+  items?: Array<CreateSchedulePhaseStartItemPlanItem> | undefined;
   /**
    * Items to add to the plan.
    */
-  addItems?: Array<PhaseStartAddItemPlanItem> | undefined;
+  addItems?: Array<CreateSchedulePhaseStartAddItemPlanItem> | undefined;
   /**
    * Filters selecting items to remove from the plan.
    */
-  removeItems?: Array<PhaseStartPlanItemFilter> | undefined;
+  removeItems?: Array<CreateSchedulePhaseStartPlanItemFilter> | undefined;
   /**
    * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
    */
-  billingControls?: PhaseStartBillingControls | undefined;
+  billingControls?: CreateSchedulePhaseStartBillingControls | undefined;
   /**
    * License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
    */
-  upsertLicenses?: Array<PhaseStartUpsertLicense> | undefined;
+  upsertLicenses?: Array<CreateSchedulePhaseStartUpsertLicense> | undefined;
   /**
    * License links to drop, keyed by license_plan_id. Parallel to remove_items.
    */
-  removeLicenses?: Array<PhaseStartRemoveLicense> | undefined;
+  removeLicenses?: Array<CreateSchedulePhaseStartRemoveLicense> | undefined;
 };
 
 export type CreateSchedulePlan2 = {
@@ -1247,11 +1283,15 @@ export type CreateSchedulePlan2 = {
   /**
    * Optional prepaid feature quantities for this phase's plan.
    */
-  featureQuantities?: Array<PhaseStartFeatureQuantity> | undefined;
+  featureQuantities?:
+    | Array<CreateSchedulePhaseStartFeatureQuantity>
+    | undefined;
   /**
    * Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.
    */
-  licenseQuantities?: Array<PhaseStartLicenseQuantity> | undefined;
+  licenseQuantities?:
+    | Array<CreateSchedulePhaseStartLicenseQuantity>
+    | undefined;
   /**
    * Optional explicit plan version to schedule.
    */
@@ -1259,7 +1299,7 @@ export type CreateSchedulePlan2 = {
   /**
    * Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
    */
-  customize?: PhaseStartCustomize | undefined;
+  customize?: CreateSchedulePhaseStartCustomize | undefined;
   /**
    * A unique ID to identify this subscription. Useful when scheduling the same plan multiple times.
    */
@@ -1279,15 +1319,15 @@ export type CreateScheduleBillingCycleAnchor2 = ClosedEnum<
   typeof CreateScheduleBillingCycleAnchor2
 >;
 
-export type PhaseStart = {
+export type CreateSchedulePhaseStart = {
   /**
    * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
    */
-  startsAt?: StartsAt2 | undefined;
+  startsAt?: CreateScheduleStartsAt2 | undefined;
   /**
    * Relative start offset from the previous resolved schedule phase.
    */
-  startingAfter?: StartingAfter2 | undefined;
+  startingAfter?: CreateScheduleStartingAfter2 | undefined;
   /**
    * Plans to materialize for this phase.
    */
@@ -1298,7 +1338,7 @@ export type PhaseStart = {
   billingCycleAnchor?: CreateScheduleBillingCycleAnchor2 | undefined;
 };
 
-export type PhaseStartUnion = PhaseStart;
+export type CreateSchedulePhaseStartUnion = CreateSchedulePhaseStart;
 
 export type CreateScheduleParams = {
   /**
@@ -1360,11 +1400,11 @@ export type CreateScheduleParams = {
   /**
    * Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
    */
-  unscheduledPlans?: Array<UnscheduledPlan> | undefined;
+  unscheduledPlans?: Array<CreateScheduleUnscheduledPlan> | undefined;
   /**
    * Ordered phase definitions for the schedule.
    */
-  phases: Array<PhaseStart>;
+  phases: Array<CreateSchedulePhaseStart>;
 };
 
 /**
@@ -1379,7 +1419,7 @@ export const CreateScheduleStatus = {
  */
 export type CreateScheduleStatus = OpenEnum<typeof CreateScheduleStatus>;
 
-export type PhaseResponse = {
+export type CreateSchedulePhaseResponse = {
   /**
    * The ID of the persisted phase row.
    */
@@ -1468,7 +1508,7 @@ export type CreateScheduleResponse = {
   /**
    * Persisted phases in ascending starts_at order. Empty when waiting on Autumn checkout confirmation.
    */
-  phases: Array<PhaseResponse>;
+  phases: Array<CreateSchedulePhaseResponse>;
   /**
    * Invoice details if an invoice was created. Only present when a charge was made.
    */
@@ -1481,1934 +1521,114 @@ export type CreateScheduleResponse = {
 };
 
 /** @internal */
-export type PhaseStartAddItemPlanItem$Outbound = {
+export type CreateSchedulePhaseStartAddItemPlanItem$Outbound = {
   threshold_billing?:
-    | PhaseStartAddItemThresholdBilling$Outbound
+    | CreateSchedulePhaseStartAddItemThresholdBilling$Outbound
     | null
     | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   pooled: boolean;
-  reset?: PhaseStartAddItemReset$Outbound | undefined;
-  price?: PhaseStartAddItemPrice$Outbound | undefined;
-  proration?: PhaseStartAddItemProration$Outbound | undefined;
-  rollover?: PhaseStartAddItemRollover$Outbound | undefined;
-  expiry?: PhaseStartAddItemExpiry$Outbound | undefined;
-  feature_override?: PhaseStartAddItemFeatureOverride$Outbound | undefined;
-};
-
-/** @internal */
-export const PhaseStartAddItemPlanItem$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemPlanItem$Outbound,
-  PhaseStartAddItemPlanItem
-> = z.pipe(
-  z.object({
-    thresholdBilling: z.optional(
-      z.nullable(PhaseStartAddItemThresholdBilling$outboundSchema),
-    ),
-    featureId: z.string(),
-    included: z.optional(z.number()),
-    unlimited: z.optional(z.boolean()),
-    pooled: z._default(z.boolean(), false),
-    reset: z.optional(PhaseStartAddItemReset$outboundSchema),
-    price: z.optional(PhaseStartAddItemPrice$outboundSchema),
-    proration: z.optional(PhaseStartAddItemProration$outboundSchema),
-    rollover: z.optional(PhaseStartAddItemRollover$outboundSchema),
-    expiry: z.optional(PhaseStartAddItemExpiry$outboundSchema),
-    featureOverride: z.optional(
-      PhaseStartAddItemFeatureOverride$outboundSchema,
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      thresholdBilling: "threshold_billing",
-      featureId: "feature_id",
-      featureOverride: "feature_override",
-    });
-  }),
-);
-
-export function phaseStartAddItemPlanItemToJSON(
-  phaseStartAddItemPlanItem: PhaseStartAddItemPlanItem,
-): string {
-  return JSON.stringify(
-    PhaseStartAddItemPlanItem$outboundSchema.parse(phaseStartAddItemPlanItem),
-  );
-}
-
-/** @internal */
-export const PhaseStartRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartRemoveItemBillingMethod
-> = z.enum(PhaseStartRemoveItemBillingMethod);
-
-/** @internal */
-export const PhaseStartIntervalRemoveItemEnum2$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartIntervalRemoveItemEnum2
-> = z.enum(PhaseStartIntervalRemoveItemEnum2);
-
-/** @internal */
-export const PhaseStartIntervalRemoveItemEnum1$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartIntervalRemoveItemEnum1
-> = z.enum(PhaseStartIntervalRemoveItemEnum1);
-
-/** @internal */
-export type PhaseStartIntervalUnion$Outbound = string | string;
-
-/** @internal */
-export const PhaseStartIntervalUnion$outboundSchema: z.ZodMiniType<
-  PhaseStartIntervalUnion$Outbound,
-  PhaseStartIntervalUnion
-> = smartUnion([
-  PhaseStartIntervalRemoveItemEnum1$outboundSchema,
-  PhaseStartIntervalRemoveItemEnum2$outboundSchema,
-]);
-
-export function phaseStartIntervalUnionToJSON(
-  phaseStartIntervalUnion: PhaseStartIntervalUnion,
-): string {
-  return JSON.stringify(
-    PhaseStartIntervalUnion$outboundSchema.parse(phaseStartIntervalUnion),
-  );
-}
-
-/** @internal */
-export type PhaseStartPlanItemFilter$Outbound = {
-  feature_id?: string | undefined;
-  billing_method?: string | undefined;
-  interval?: string | string | undefined;
-  interval_count?: number | undefined;
-  included?: number | undefined;
-};
-
-/** @internal */
-export const PhaseStartPlanItemFilter$outboundSchema: z.ZodMiniType<
-  PhaseStartPlanItemFilter$Outbound,
-  PhaseStartPlanItemFilter
-> = z.pipe(
-  z.object({
-    featureId: z.optional(z.string()),
-    billingMethod: z.optional(PhaseStartRemoveItemBillingMethod$outboundSchema),
-    interval: z.optional(
-      smartUnion([
-        PhaseStartIntervalRemoveItemEnum1$outboundSchema,
-        PhaseStartIntervalRemoveItemEnum2$outboundSchema,
-      ]),
-    ),
-    intervalCount: z.optional(z.int()),
-    included: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-      billingMethod: "billing_method",
-      intervalCount: "interval_count",
-    });
-  }),
-);
-
-export function phaseStartPlanItemFilterToJSON(
-  phaseStartPlanItemFilter: PhaseStartPlanItemFilter,
-): string {
-  return JSON.stringify(
-    PhaseStartPlanItemFilter$outboundSchema.parse(phaseStartPlanItemFilter),
-  );
-}
-
-/** @internal */
-export const PhaseStartAutoTopupInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAutoTopupInterval
-> = z.enum(PhaseStartAutoTopupInterval);
-
-/** @internal */
-export type PhaseStartPurchaseLimit$Outbound = {
-  interval: string;
-  interval_count: number;
-  limit: number;
-  count?: number | undefined;
-};
-
-/** @internal */
-export const PhaseStartPurchaseLimit$outboundSchema: z.ZodMiniType<
-  PhaseStartPurchaseLimit$Outbound,
-  PhaseStartPurchaseLimit
-> = z.pipe(
-  z.object({
-    interval: PhaseStartAutoTopupInterval$outboundSchema,
-    intervalCount: z._default(z.number(), 1),
-    limit: z.number(),
-    count: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      intervalCount: "interval_count",
-    });
-  }),
-);
-
-export function phaseStartPurchaseLimitToJSON(
-  phaseStartPurchaseLimit: PhaseStartPurchaseLimit,
-): string {
-  return JSON.stringify(
-    PhaseStartPurchaseLimit$outboundSchema.parse(phaseStartPurchaseLimit),
-  );
-}
-
-/** @internal */
-export type PhaseStartAutoTopup$Outbound = {
-  feature_id: string;
-  enabled: boolean;
-  threshold: number;
-  quantity: number;
-  purchase_limit?: PhaseStartPurchaseLimit$Outbound | undefined;
-  invoice_mode?: boolean | undefined;
-};
-
-/** @internal */
-export const PhaseStartAutoTopup$outboundSchema: z.ZodMiniType<
-  PhaseStartAutoTopup$Outbound,
-  PhaseStartAutoTopup
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    enabled: z._default(z.boolean(), false),
-    threshold: z.number(),
-    quantity: z.number(),
-    purchaseLimit: z.optional(
-      z.lazy(() => PhaseStartPurchaseLimit$outboundSchema),
-    ),
-    invoiceMode: z.optional(z.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-      purchaseLimit: "purchase_limit",
-      invoiceMode: "invoice_mode",
-    });
-  }),
-);
-
-export function phaseStartAutoTopupToJSON(
-  phaseStartAutoTopup: PhaseStartAutoTopup,
-): string {
-  return JSON.stringify(
-    PhaseStartAutoTopup$outboundSchema.parse(phaseStartAutoTopup),
-  );
-}
-
-/** @internal */
-export const PhaseStartLimitType$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartLimitType
-> = z.enum(PhaseStartLimitType);
-
-/** @internal */
-export type PhaseStartSpendLimit$Outbound = {
-  feature_id?: string | undefined;
-  enabled: boolean;
-  limit_type?: string | undefined;
-  overage_limit?: number | undefined;
-  skip_overage_billing?: boolean | undefined;
-};
-
-/** @internal */
-export const PhaseStartSpendLimit$outboundSchema: z.ZodMiniType<
-  PhaseStartSpendLimit$Outbound,
-  PhaseStartSpendLimit
-> = z.pipe(
-  z.object({
-    featureId: z.optional(z.string()),
-    enabled: z._default(z.boolean(), false),
-    limitType: z.optional(PhaseStartLimitType$outboundSchema),
-    overageLimit: z.optional(z.number()),
-    skipOverageBilling: z.optional(z.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-      limitType: "limit_type",
-      overageLimit: "overage_limit",
-      skipOverageBilling: "skip_overage_billing",
-    });
-  }),
-);
-
-export function phaseStartSpendLimitToJSON(
-  phaseStartSpendLimit: PhaseStartSpendLimit,
-): string {
-  return JSON.stringify(
-    PhaseStartSpendLimit$outboundSchema.parse(phaseStartSpendLimit),
-  );
-}
-
-/** @internal */
-export const PhaseStartUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartUsageLimitInterval
-> = z.enum(PhaseStartUsageLimitInterval);
-
-/** @internal */
-export const PhaseStartAnchor$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAnchor
-> = z.enum(PhaseStartAnchor);
-
-/** @internal */
-export type PhaseStartUsageLimitProperties$Outbound = string | number | boolean;
-
-/** @internal */
-export const PhaseStartUsageLimitProperties$outboundSchema: z.ZodMiniType<
-  PhaseStartUsageLimitProperties$Outbound,
-  PhaseStartUsageLimitProperties
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartUsageLimitPropertiesToJSON(
-  phaseStartUsageLimitProperties: PhaseStartUsageLimitProperties,
-): string {
-  return JSON.stringify(
-    PhaseStartUsageLimitProperties$outboundSchema.parse(
-      phaseStartUsageLimitProperties,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUsageLimitFilter$Outbound = {
-  properties: { [k: string]: string | number | boolean };
-};
-
-/** @internal */
-export const PhaseStartUsageLimitFilter$outboundSchema: z.ZodMiniType<
-  PhaseStartUsageLimitFilter$Outbound,
-  PhaseStartUsageLimitFilter
-> = z.object({
-  properties: z.record(
-    z.string(),
-    smartUnion([z.string(), z.number(), z.boolean()]),
-  ),
-});
-
-export function phaseStartUsageLimitFilterToJSON(
-  phaseStartUsageLimitFilter: PhaseStartUsageLimitFilter,
-): string {
-  return JSON.stringify(
-    PhaseStartUsageLimitFilter$outboundSchema.parse(phaseStartUsageLimitFilter),
-  );
-}
-
-/** @internal */
-export type PhaseStartUsageLimit$Outbound = {
-  feature_id: string;
-  enabled: boolean;
-  limit: number;
-  interval: string;
-  anchor?: string | undefined;
-  filter?: PhaseStartUsageLimitFilter$Outbound | undefined;
-};
-
-/** @internal */
-export const PhaseStartUsageLimit$outboundSchema: z.ZodMiniType<
-  PhaseStartUsageLimit$Outbound,
-  PhaseStartUsageLimit
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    enabled: z._default(z.boolean(), true),
-    limit: z.number(),
-    interval: PhaseStartUsageLimitInterval$outboundSchema,
-    anchor: z.optional(PhaseStartAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => PhaseStartUsageLimitFilter$outboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
-
-export function phaseStartUsageLimitToJSON(
-  phaseStartUsageLimit: PhaseStartUsageLimit,
-): string {
-  return JSON.stringify(
-    PhaseStartUsageLimit$outboundSchema.parse(phaseStartUsageLimit),
-  );
-}
-
-/** @internal */
-export const PhaseStartThresholdType$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartThresholdType
-> = z.enum(PhaseStartThresholdType);
-
-/** @internal */
-export const PhaseStartBasis$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartBasis
-> = z.enum(PhaseStartBasis);
-
-/** @internal */
-export type PhaseStartUsageAlertProperties$Outbound = string | number | boolean;
-
-/** @internal */
-export const PhaseStartUsageAlertProperties$outboundSchema: z.ZodMiniType<
-  PhaseStartUsageAlertProperties$Outbound,
-  PhaseStartUsageAlertProperties
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartUsageAlertPropertiesToJSON(
-  phaseStartUsageAlertProperties: PhaseStartUsageAlertProperties,
-): string {
-  return JSON.stringify(
-    PhaseStartUsageAlertProperties$outboundSchema.parse(
-      phaseStartUsageAlertProperties,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUsageAlertFilter$Outbound = {
-  properties: { [k: string]: string | number | boolean };
-};
-
-/** @internal */
-export const PhaseStartUsageAlertFilter$outboundSchema: z.ZodMiniType<
-  PhaseStartUsageAlertFilter$Outbound,
-  PhaseStartUsageAlertFilter
-> = z.object({
-  properties: z.record(
-    z.string(),
-    smartUnion([z.string(), z.number(), z.boolean()]),
-  ),
-});
-
-export function phaseStartUsageAlertFilterToJSON(
-  phaseStartUsageAlertFilter: PhaseStartUsageAlertFilter,
-): string {
-  return JSON.stringify(
-    PhaseStartUsageAlertFilter$outboundSchema.parse(phaseStartUsageAlertFilter),
-  );
-}
-
-/** @internal */
-export type PhaseStartUsageAlert$Outbound = {
-  feature_id?: string | undefined;
-  enabled: boolean;
-  threshold: number;
-  threshold_type: string;
-  basis: string;
-  filter?: PhaseStartUsageAlertFilter$Outbound | undefined;
-  name?: string | undefined;
-};
-
-/** @internal */
-export const PhaseStartUsageAlert$outboundSchema: z.ZodMiniType<
-  PhaseStartUsageAlert$Outbound,
-  PhaseStartUsageAlert
-> = z.pipe(
-  z.object({
-    featureId: z.optional(z.string()),
-    enabled: z._default(z.boolean(), true),
-    threshold: z.number(),
-    thresholdType: PhaseStartThresholdType$outboundSchema,
-    basis: z._default(PhaseStartBasis$outboundSchema, "balance"),
-    filter: z.optional(z.lazy(() => PhaseStartUsageAlertFilter$outboundSchema)),
-    name: z.optional(z.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-      thresholdType: "threshold_type",
-    });
-  }),
-);
-
-export function phaseStartUsageAlertToJSON(
-  phaseStartUsageAlert: PhaseStartUsageAlert,
-): string {
-  return JSON.stringify(
-    PhaseStartUsageAlert$outboundSchema.parse(phaseStartUsageAlert),
-  );
-}
-
-/** @internal */
-export type PhaseStartOverageAllowed$Outbound = {
-  feature_id: string;
-  enabled: boolean;
-};
-
-/** @internal */
-export const PhaseStartOverageAllowed$outboundSchema: z.ZodMiniType<
-  PhaseStartOverageAllowed$Outbound,
-  PhaseStartOverageAllowed
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    enabled: z._default(z.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
-
-export function phaseStartOverageAllowedToJSON(
-  phaseStartOverageAllowed: PhaseStartOverageAllowed,
-): string {
-  return JSON.stringify(
-    PhaseStartOverageAllowed$outboundSchema.parse(phaseStartOverageAllowed),
-  );
-}
-
-/** @internal */
-export type PhaseStartBillingControls$Outbound = {
-  auto_topups?: Array<PhaseStartAutoTopup$Outbound> | undefined;
-  spend_limits?: Array<PhaseStartSpendLimit$Outbound> | undefined;
-  usage_limits?: Array<PhaseStartUsageLimit$Outbound> | undefined;
-  usage_alerts?: Array<PhaseStartUsageAlert$Outbound> | undefined;
-  overage_allowed?: Array<PhaseStartOverageAllowed$Outbound> | undefined;
-};
-
-/** @internal */
-export const PhaseStartBillingControls$outboundSchema: z.ZodMiniType<
-  PhaseStartBillingControls$Outbound,
-  PhaseStartBillingControls
-> = z.pipe(
-  z.object({
-    autoTopups: z.optional(
-      z.array(z.lazy(() => PhaseStartAutoTopup$outboundSchema)),
-    ),
-    spendLimits: z.optional(
-      z.array(z.lazy(() => PhaseStartSpendLimit$outboundSchema)),
-    ),
-    usageLimits: z.optional(
-      z.array(z.lazy(() => PhaseStartUsageLimit$outboundSchema)),
-    ),
-    usageAlerts: z.optional(
-      z.array(z.lazy(() => PhaseStartUsageAlert$outboundSchema)),
-    ),
-    overageAllowed: z.optional(
-      z.array(z.lazy(() => PhaseStartOverageAllowed$outboundSchema)),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      autoTopups: "auto_topups",
-      spendLimits: "spend_limits",
-      usageLimits: "usage_limits",
-      usageAlerts: "usage_alerts",
-      overageAllowed: "overage_allowed",
-    });
-  }),
-);
-
-export function phaseStartBillingControlsToJSON(
-  phaseStartBillingControls: PhaseStartBillingControls,
-): string {
-  return JSON.stringify(
-    PhaseStartBillingControls$outboundSchema.parse(phaseStartBillingControls),
-  );
-}
-
-/** @internal */
-export const PhaseStartPriceUpsertLicenseInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartPriceUpsertLicenseInterval
-> = z.enum(PhaseStartPriceUpsertLicenseInterval);
-
-/** @internal */
-export type PhaseStartUpsertLicenseAdditionalCurrency$Outbound = {
-  currency: string;
-  amount: number;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseAdditionalCurrency$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseAdditionalCurrency$Outbound,
-    PhaseStartUpsertLicenseAdditionalCurrency
-  > = z.object({
-    currency: z.string(),
-    amount: z.number(),
-  });
-
-export function phaseStartUpsertLicenseAdditionalCurrencyToJSON(
-  phaseStartUpsertLicenseAdditionalCurrency:
-    PhaseStartUpsertLicenseAdditionalCurrency,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseAdditionalCurrency$outboundSchema.parse(
-      phaseStartUpsertLicenseAdditionalCurrency,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseBasePrice$Outbound = {
-  amount: number;
-  interval: string;
-  interval_count: number;
-  additional_currencies?:
-    | Array<PhaseStartUpsertLicenseAdditionalCurrency$Outbound>
-    | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseBasePrice$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseBasePrice$Outbound,
-  PhaseStartUpsertLicenseBasePrice
-> = z.pipe(
-  z.object({
-    amount: z.number(),
-    interval: PhaseStartPriceUpsertLicenseInterval$outboundSchema,
-    intervalCount: z._default(z.number(), 1),
-    additionalCurrencies: z.optional(z.array(z.lazy(() =>
-      PhaseStartUpsertLicenseAdditionalCurrency$outboundSchema
-    ))),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      intervalCount: "interval_count",
-      additionalCurrencies: "additional_currencies",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicenseBasePriceToJSON(
-  phaseStartUpsertLicenseBasePrice: PhaseStartUpsertLicenseBasePrice,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseBasePrice$outboundSchema.parse(
-      phaseStartUpsertLicenseBasePrice,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseThresholdBilling$Outbound = {
-  threshold: number;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseThresholdBilling$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseThresholdBilling$Outbound,
-    PhaseStartUpsertLicenseThresholdBilling
-  > = z.object({
-    threshold: z.number(),
-  });
-
-export function phaseStartUpsertLicenseThresholdBillingToJSON(
-  phaseStartUpsertLicenseThresholdBilling:
-    PhaseStartUpsertLicenseThresholdBilling,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseThresholdBilling$outboundSchema.parse(
-      phaseStartUpsertLicenseThresholdBilling,
-    ),
-  );
-}
-
-/** @internal */
-export const PhaseStartUpsertLicenseResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartUpsertLicenseResetInterval
-> = z.enum(PhaseStartUpsertLicenseResetInterval);
-
-/** @internal */
-export type PhaseStartUpsertLicenseReset$Outbound = {
-  interval: string;
-  interval_count: number;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseReset$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseReset$Outbound,
-  PhaseStartUpsertLicenseReset
-> = z.pipe(
-  z.object({
-    interval: PhaseStartUpsertLicenseResetInterval$outboundSchema,
-    intervalCount: z._default(z.number(), 1),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      intervalCount: "interval_count",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicenseResetToJSON(
-  phaseStartUpsertLicenseReset: PhaseStartUpsertLicenseReset,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseReset$outboundSchema.parse(
-      phaseStartUpsertLicenseReset,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseAddItemAdditionalCurrency$Outbound = {
-  currency: string;
-  amount: number;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseAddItemAdditionalCurrency$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseAddItemAdditionalCurrency$Outbound,
-    PhaseStartUpsertLicenseAddItemAdditionalCurrency
-  > = z.object({
-    currency: z.string(),
-    amount: z.number(),
-  });
-
-export function phaseStartUpsertLicenseAddItemAdditionalCurrencyToJSON(
-  phaseStartUpsertLicenseAddItemAdditionalCurrency:
-    PhaseStartUpsertLicenseAddItemAdditionalCurrency,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseAddItemAdditionalCurrency$outboundSchema.parse(
-      phaseStartUpsertLicenseAddItemAdditionalCurrency,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicensePriceTo$Outbound = number | string;
-
-/** @internal */
-export const PhaseStartUpsertLicensePriceTo$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicensePriceTo$Outbound,
-  PhaseStartUpsertLicensePriceTo
-> = smartUnion([z.number(), z.string()]);
-
-export function phaseStartUpsertLicensePriceToToJSON(
-  phaseStartUpsertLicensePriceTo: PhaseStartUpsertLicensePriceTo,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicensePriceTo$outboundSchema.parse(
-      phaseStartUpsertLicensePriceTo,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseTierAdditionalCurrency$Outbound = {
-  currency: string;
-  amount?: number | undefined;
-  flat_amount?: number | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseTierAdditionalCurrency$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseTierAdditionalCurrency$Outbound,
-    PhaseStartUpsertLicenseTierAdditionalCurrency
-  > = z.pipe(
-    z.object({
-      currency: z.string(),
-      amount: z.optional(z.number()),
-      flatAmount: z.optional(z.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        flatAmount: "flat_amount",
-      });
-    }),
-  );
-
-export function phaseStartUpsertLicenseTierAdditionalCurrencyToJSON(
-  phaseStartUpsertLicenseTierAdditionalCurrency:
-    PhaseStartUpsertLicenseTierAdditionalCurrency,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseTierAdditionalCurrency$outboundSchema.parse(
-      phaseStartUpsertLicenseTierAdditionalCurrency,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicensePriceTier$Outbound = {
-  to: number | string;
-  amount?: number | undefined;
-  flat_amount?: number | undefined;
-  additional_currencies?:
-    | Array<PhaseStartUpsertLicenseTierAdditionalCurrency$Outbound>
-    | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicensePriceTier$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicensePriceTier$Outbound,
-  PhaseStartUpsertLicensePriceTier
-> = z.pipe(
-  z.object({
-    to: smartUnion([z.number(), z.string()]),
-    amount: z.optional(z.number()),
-    flatAmount: z.optional(z.number()),
-    additionalCurrencies: z.optional(z.array(z.lazy(() =>
-      PhaseStartUpsertLicenseTierAdditionalCurrency$outboundSchema
-    ))),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      flatAmount: "flat_amount",
-      additionalCurrencies: "additional_currencies",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicensePriceTierToJSON(
-  phaseStartUpsertLicensePriceTier: PhaseStartUpsertLicensePriceTier,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicensePriceTier$outboundSchema.parse(
-      phaseStartUpsertLicensePriceTier,
-    ),
-  );
-}
-
-/** @internal */
-export const PhaseStartUpsertLicenseTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartUpsertLicenseTierBehavior
-> = z.enum(PhaseStartUpsertLicenseTierBehavior);
-
-/** @internal */
-export const PhaseStartUpsertLicenseAddItemPriceInterval$outboundSchema:
-  z.ZodMiniEnum<typeof PhaseStartUpsertLicenseAddItemPriceInterval> = z.enum(
-    PhaseStartUpsertLicenseAddItemPriceInterval,
-  );
-
-/** @internal */
-export const PhaseStartUpsertLicenseAddItemBillingMethod$outboundSchema:
-  z.ZodMiniEnum<typeof PhaseStartUpsertLicenseAddItemBillingMethod> = z.enum(
-    PhaseStartUpsertLicenseAddItemBillingMethod,
-  );
-
-/** @internal */
-export type PhaseStartUpsertLicensePrice$Outbound = {
-  amount?: number | undefined;
-  additional_currencies?:
-    | Array<PhaseStartUpsertLicenseAddItemAdditionalCurrency$Outbound>
-    | undefined;
-  tiers?: Array<PhaseStartUpsertLicensePriceTier$Outbound> | undefined;
-  tier_behavior?: string | undefined;
-  interval: string;
-  interval_count: number;
-  billing_units: number;
-  billing_method: string;
-  max_purchase?: number | null | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicensePrice$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicensePrice$Outbound,
-  PhaseStartUpsertLicensePrice
-> = z.pipe(
-  z.object({
-    amount: z.optional(z.number()),
-    additionalCurrencies: z.optional(z.array(z.lazy(() =>
-      PhaseStartUpsertLicenseAddItemAdditionalCurrency$outboundSchema
-    ))),
-    tiers: z.optional(z.array(z.lazy(() =>
-      PhaseStartUpsertLicensePriceTier$outboundSchema
-    ))),
-    tierBehavior: z.optional(
-      PhaseStartUpsertLicenseTierBehavior$outboundSchema,
-    ),
-    interval: PhaseStartUpsertLicenseAddItemPriceInterval$outboundSchema,
-    intervalCount: z._default(z.number(), 1),
-    billingUnits: z._default(z.number(), 1),
-    billingMethod: PhaseStartUpsertLicenseAddItemBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.nullable(z.number())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      additionalCurrencies: "additional_currencies",
-      tierBehavior: "tier_behavior",
-      intervalCount: "interval_count",
-      billingUnits: "billing_units",
-      billingMethod: "billing_method",
-      maxPurchase: "max_purchase",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicensePriceToJSON(
-  phaseStartUpsertLicensePrice: PhaseStartUpsertLicensePrice,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicensePrice$outboundSchema.parse(
-      phaseStartUpsertLicensePrice,
-    ),
-  );
-}
-
-/** @internal */
-export const PhaseStartUpsertLicenseOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartUpsertLicenseOnIncrease
-> = z.enum(PhaseStartUpsertLicenseOnIncrease);
-
-/** @internal */
-export const PhaseStartUpsertLicenseOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartUpsertLicenseOnDecrease
-> = z.enum(PhaseStartUpsertLicenseOnDecrease);
-
-/** @internal */
-export type PhaseStartUpsertLicenseProration$Outbound = {
-  on_increase: string;
-  on_decrease: string;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseProration$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseProration$Outbound,
-  PhaseStartUpsertLicenseProration
-> = z.pipe(
-  z.object({
-    onIncrease: PhaseStartUpsertLicenseOnIncrease$outboundSchema,
-    onDecrease: PhaseStartUpsertLicenseOnDecrease$outboundSchema,
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      onIncrease: "on_increase",
-      onDecrease: "on_decrease",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicenseProrationToJSON(
-  phaseStartUpsertLicenseProration: PhaseStartUpsertLicenseProration,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseProration$outboundSchema.parse(
-      phaseStartUpsertLicenseProration,
-    ),
-  );
-}
-
-/** @internal */
-export const PhaseStartUpsertLicenseExpiryDurationType$outboundSchema:
-  z.ZodMiniEnum<typeof PhaseStartUpsertLicenseExpiryDurationType> = z.enum(
-    PhaseStartUpsertLicenseExpiryDurationType,
-  );
-
-/** @internal */
-export type PhaseStartUpsertLicenseRollover$Outbound = {
-  max?: number | undefined;
-  max_percentage?: number | undefined;
-  expiry_duration_type: string;
-  expiry_duration_length?: number | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseRollover$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseRollover$Outbound,
-  PhaseStartUpsertLicenseRollover
-> = z.pipe(
-  z.object({
-    max: z.optional(z.number()),
-    maxPercentage: z.optional(z.number()),
-    expiryDurationType:
-      PhaseStartUpsertLicenseExpiryDurationType$outboundSchema,
-    expiryDurationLength: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      maxPercentage: "max_percentage",
-      expiryDurationType: "expiry_duration_type",
-      expiryDurationLength: "expiry_duration_length",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicenseRolloverToJSON(
-  phaseStartUpsertLicenseRollover: PhaseStartUpsertLicenseRollover,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseRollover$outboundSchema.parse(
-      phaseStartUpsertLicenseRollover,
-    ),
-  );
-}
-
-/** @internal */
-export const PhaseStartUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartUpsertLicenseDuration
-> = z.enum(PhaseStartUpsertLicenseDuration);
-
-/** @internal */
-export type PhaseStartUpsertLicenseExpiry$Outbound = {
-  duration: string;
-  length: number;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseExpiry$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseExpiry$Outbound,
-  PhaseStartUpsertLicenseExpiry
-> = z.object({
-  duration: PhaseStartUpsertLicenseDuration$outboundSchema,
-  length: z.number(),
-});
-
-export function phaseStartUpsertLicenseExpiryToJSON(
-  phaseStartUpsertLicenseExpiry: PhaseStartUpsertLicenseExpiry,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseExpiry$outboundSchema.parse(
-      phaseStartUpsertLicenseExpiry,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicenseMatch4$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicenseMatch4$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartDimensionsUpsertLicenseMatch4$Outbound,
-    PhaseStartDimensionsUpsertLicenseMatch4
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartDimensionsUpsertLicenseMatch4ToJSON(
-  phaseStartDimensionsUpsertLicenseMatch4:
-    PhaseStartDimensionsUpsertLicenseMatch4,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicenseMatch4$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicenseMatch4,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicense4$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicense4$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsUpsertLicense4$Outbound,
-  PhaseStartDimensionsUpsertLicense4
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function phaseStartDimensionsUpsertLicense4ToJSON(
-  phaseStartDimensionsUpsertLicense4: PhaseStartDimensionsUpsertLicense4,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicense4$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicense4,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicenseMatch3$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicenseMatch3$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartDimensionsUpsertLicenseMatch3$Outbound,
-    PhaseStartDimensionsUpsertLicenseMatch3
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartDimensionsUpsertLicenseMatch3ToJSON(
-  phaseStartDimensionsUpsertLicenseMatch3:
-    PhaseStartDimensionsUpsertLicenseMatch3,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicenseMatch3$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicenseMatch3,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicenseTier2$Outbound = {
-  to?: any | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicenseTier2$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartDimensionsUpsertLicenseTier2$Outbound,
-    PhaseStartDimensionsUpsertLicenseTier2
-  > = z.pipe(
-    z.object({
-      to: z.optional(z.any()),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function phaseStartDimensionsUpsertLicenseTier2ToJSON(
-  phaseStartDimensionsUpsertLicenseTier2:
-    PhaseStartDimensionsUpsertLicenseTier2,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicenseTier2$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicenseTier2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicense3$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<PhaseStartDimensionsUpsertLicenseTier2$Outbound>;
-};
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicense3$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsUpsertLicense3$Outbound,
-  PhaseStartDimensionsUpsertLicense3
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => PhaseStartDimensionsUpsertLicenseTier2$outboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      tierBehavior: "tier_behavior",
-    });
-  }),
-);
-
-export function phaseStartDimensionsUpsertLicense3ToJSON(
-  phaseStartDimensionsUpsertLicense3: PhaseStartDimensionsUpsertLicense3,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicense3$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicense3,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseDimensionsUnion2$Outbound =
-  | PhaseStartDimensionsUpsertLicense3$Outbound
-  | PhaseStartDimensionsUpsertLicense4$Outbound;
-
-/** @internal */
-export const PhaseStartUpsertLicenseDimensionsUnion2$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseDimensionsUnion2$Outbound,
-    PhaseStartUpsertLicenseDimensionsUnion2
-  > = smartUnion([
-    z.lazy(() => PhaseStartDimensionsUpsertLicense3$outboundSchema),
-    z.lazy(() => PhaseStartDimensionsUpsertLicense4$outboundSchema),
-  ]);
-
-export function phaseStartUpsertLicenseDimensionsUnion2ToJSON(
-  phaseStartUpsertLicenseDimensionsUnion2:
-    PhaseStartUpsertLicenseDimensionsUnion2,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseDimensionsUnion2$outboundSchema.parse(
-      phaseStartUpsertLicenseDimensionsUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseMultipliersMatch2$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const PhaseStartUpsertLicenseMultipliersMatch2$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseMultipliersMatch2$Outbound,
-    PhaseStartUpsertLicenseMultipliersMatch2
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartUpsertLicenseMultipliersMatch2ToJSON(
-  phaseStartUpsertLicenseMultipliersMatch2:
-    PhaseStartUpsertLicenseMultipliersMatch2,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseMultipliersMatch2$outboundSchema.parse(
-      phaseStartUpsertLicenseMultipliersMatch2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseMultipliers2$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  factor?: number | undefined;
-  add?: number | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseMultipliers2$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseMultipliers2$Outbound,
-  PhaseStartUpsertLicenseMultipliers2
-> = z.object({
-  match: z.record(
-    z.string(),
-    smartUnion([z.string(), z.number(), z.boolean()]),
-  ),
-  factor: z.optional(z.number()),
-  add: z.optional(z.number()),
-});
-
-export function phaseStartUpsertLicenseMultipliers2ToJSON(
-  phaseStartUpsertLicenseMultipliers2: PhaseStartUpsertLicenseMultipliers2,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseMultipliers2$outboundSchema.parse(
-      phaseStartUpsertLicenseMultipliers2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartCreditSchemaUpsertLicense2$Outbound = {
-  metered_feature_id: string;
-  billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | PhaseStartDimensionsUpsertLicense3$Outbound
-      | PhaseStartDimensionsUpsertLicense4$Outbound;
-  } | undefined;
-  multipliers?:
-    | { [k: string]: PhaseStartUpsertLicenseMultipliers2$Outbound }
-    | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const PhaseStartCreditSchemaUpsertLicense2$outboundSchema: z.ZodMiniType<
-  PhaseStartCreditSchemaUpsertLicense2$Outbound,
-  PhaseStartCreditSchemaUpsertLicense2
-> = z.pipe(
-  z.object({
-    meteredFeatureId: z.string(),
-    billingUnits: z.optional(z.number()),
-    dimensions: z.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => PhaseStartDimensionsUpsertLicense3$outboundSchema),
-        z.lazy(() => PhaseStartDimensionsUpsertLicense4$outboundSchema),
-      ]),
-    )),
-    multipliers: z.optional(z.record(
-      z.string(),
-      z.lazy(() => PhaseStartUpsertLicenseMultipliers2$outboundSchema),
-    )),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      meteredFeatureId: "metered_feature_id",
-      billingUnits: "billing_units",
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function phaseStartCreditSchemaUpsertLicense2ToJSON(
-  phaseStartCreditSchemaUpsertLicense2: PhaseStartCreditSchemaUpsertLicense2,
-): string {
-  return JSON.stringify(
-    PhaseStartCreditSchemaUpsertLicense2$outboundSchema.parse(
-      phaseStartCreditSchemaUpsertLicense2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicenseMatch2$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicenseMatch2$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartDimensionsUpsertLicenseMatch2$Outbound,
-    PhaseStartDimensionsUpsertLicenseMatch2
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartDimensionsUpsertLicenseMatch2ToJSON(
-  phaseStartDimensionsUpsertLicenseMatch2:
-    PhaseStartDimensionsUpsertLicenseMatch2,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicenseMatch2$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicenseMatch2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicense2$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicense2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsUpsertLicense2$Outbound,
-  PhaseStartDimensionsUpsertLicense2
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function phaseStartDimensionsUpsertLicense2ToJSON(
-  phaseStartDimensionsUpsertLicense2: PhaseStartDimensionsUpsertLicense2,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicense2$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicense2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicenseMatch1$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicenseMatch1$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartDimensionsUpsertLicenseMatch1$Outbound,
-    PhaseStartDimensionsUpsertLicenseMatch1
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartDimensionsUpsertLicenseMatch1ToJSON(
-  phaseStartDimensionsUpsertLicenseMatch1:
-    PhaseStartDimensionsUpsertLicenseMatch1,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicenseMatch1$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicenseMatch1,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicenseTier1$Outbound = {
-  to?: any | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicenseTier1$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartDimensionsUpsertLicenseTier1$Outbound,
-    PhaseStartDimensionsUpsertLicenseTier1
-  > = z.pipe(
-    z.object({
-      to: z.optional(z.any()),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function phaseStartDimensionsUpsertLicenseTier1ToJSON(
-  phaseStartDimensionsUpsertLicenseTier1:
-    PhaseStartDimensionsUpsertLicenseTier1,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicenseTier1$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicenseTier1,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsUpsertLicense1$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<PhaseStartDimensionsUpsertLicenseTier1$Outbound>;
-};
-
-/** @internal */
-export const PhaseStartDimensionsUpsertLicense1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsUpsertLicense1$Outbound,
-  PhaseStartDimensionsUpsertLicense1
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => PhaseStartDimensionsUpsertLicenseTier1$outboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      tierBehavior: "tier_behavior",
-    });
-  }),
-);
-
-export function phaseStartDimensionsUpsertLicense1ToJSON(
-  phaseStartDimensionsUpsertLicense1: PhaseStartDimensionsUpsertLicense1,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsUpsertLicense1$outboundSchema.parse(
-      phaseStartDimensionsUpsertLicense1,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseDimensionsUnion1$Outbound =
-  | PhaseStartDimensionsUpsertLicense1$Outbound
-  | PhaseStartDimensionsUpsertLicense2$Outbound;
-
-/** @internal */
-export const PhaseStartUpsertLicenseDimensionsUnion1$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseDimensionsUnion1$Outbound,
-    PhaseStartUpsertLicenseDimensionsUnion1
-  > = smartUnion([
-    z.lazy(() => PhaseStartDimensionsUpsertLicense1$outboundSchema),
-    z.lazy(() => PhaseStartDimensionsUpsertLicense2$outboundSchema),
-  ]);
-
-export function phaseStartUpsertLicenseDimensionsUnion1ToJSON(
-  phaseStartUpsertLicenseDimensionsUnion1:
-    PhaseStartUpsertLicenseDimensionsUnion1,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseDimensionsUnion1$outboundSchema.parse(
-      phaseStartUpsertLicenseDimensionsUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseMultipliersMatch1$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const PhaseStartUpsertLicenseMultipliersMatch1$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseMultipliersMatch1$Outbound,
-    PhaseStartUpsertLicenseMultipliersMatch1
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function phaseStartUpsertLicenseMultipliersMatch1ToJSON(
-  phaseStartUpsertLicenseMultipliersMatch1:
-    PhaseStartUpsertLicenseMultipliersMatch1,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseMultipliersMatch1$outboundSchema.parse(
-      phaseStartUpsertLicenseMultipliersMatch1,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseMultipliers1$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  factor?: number | undefined;
-  add?: number | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseMultipliers1$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseMultipliers1$Outbound,
-  PhaseStartUpsertLicenseMultipliers1
-> = z.object({
-  match: z.record(
-    z.string(),
-    smartUnion([z.string(), z.number(), z.boolean()]),
-  ),
-  factor: z.optional(z.number()),
-  add: z.optional(z.number()),
-});
-
-export function phaseStartUpsertLicenseMultipliers1ToJSON(
-  phaseStartUpsertLicenseMultipliers1: PhaseStartUpsertLicenseMultipliers1,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseMultipliers1$outboundSchema.parse(
-      phaseStartUpsertLicenseMultipliers1,
-    ),
-  );
-}
-
-/** @internal */
-export const PhaseStartToUpsertLicenseEnum$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartToUpsertLicenseEnum
-> = z.enum(PhaseStartToUpsertLicenseEnum);
-
-/** @internal */
-export type PhaseStartUpsertLicenseFeatureOverrideToUnion$Outbound =
-  | number
-  | string;
-
-/** @internal */
-export const PhaseStartUpsertLicenseFeatureOverrideToUnion$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseFeatureOverrideToUnion$Outbound,
-    PhaseStartUpsertLicenseFeatureOverrideToUnion
-  > = smartUnion([z.number(), PhaseStartToUpsertLicenseEnum$outboundSchema]);
-
-export function phaseStartUpsertLicenseFeatureOverrideToUnionToJSON(
-  phaseStartUpsertLicenseFeatureOverrideToUnion:
-    PhaseStartUpsertLicenseFeatureOverrideToUnion,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseFeatureOverrideToUnion$outboundSchema.parse(
-      phaseStartUpsertLicenseFeatureOverrideToUnion,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseFeatureOverrideTier$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseFeatureOverrideTier$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseFeatureOverrideTier$Outbound,
-    PhaseStartUpsertLicenseFeatureOverrideTier
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        PhaseStartToUpsertLicenseEnum$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function phaseStartUpsertLicenseFeatureOverrideTierToJSON(
-  phaseStartUpsertLicenseFeatureOverrideTier:
-    PhaseStartUpsertLicenseFeatureOverrideTier,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseFeatureOverrideTier$outboundSchema.parse(
-      phaseStartUpsertLicenseFeatureOverrideTier,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartCreditSchemaUpsertLicense1$Outbound = {
-  metered_feature_id: string;
-  billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | PhaseStartDimensionsUpsertLicense1$Outbound
-      | PhaseStartDimensionsUpsertLicense2$Outbound;
-  } | undefined;
-  multipliers?:
-    | { [k: string]: PhaseStartUpsertLicenseMultipliers1$Outbound }
-    | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<PhaseStartUpsertLicenseFeatureOverrideTier$Outbound>;
-};
-
-/** @internal */
-export const PhaseStartCreditSchemaUpsertLicense1$outboundSchema: z.ZodMiniType<
-  PhaseStartCreditSchemaUpsertLicense1$Outbound,
-  PhaseStartCreditSchemaUpsertLicense1
-> = z.pipe(
-  z.object({
-    meteredFeatureId: z.string(),
-    billingUnits: z.optional(z.number()),
-    dimensions: z.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => PhaseStartDimensionsUpsertLicense1$outboundSchema),
-        z.lazy(() => PhaseStartDimensionsUpsertLicense2$outboundSchema),
-      ]),
-    )),
-    multipliers: z.optional(z.record(
-      z.string(),
-      z.lazy(() => PhaseStartUpsertLicenseMultipliers1$outboundSchema),
-    )),
-    tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.lazy(() =>
-      PhaseStartUpsertLicenseFeatureOverrideTier$outboundSchema
-    )),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      meteredFeatureId: "metered_feature_id",
-      billingUnits: "billing_units",
-      tierBehavior: "tier_behavior",
-    });
-  }),
-);
-
-export function phaseStartCreditSchemaUpsertLicense1ToJSON(
-  phaseStartCreditSchemaUpsertLicense1: PhaseStartCreditSchemaUpsertLicense1,
-): string {
-  return JSON.stringify(
-    PhaseStartCreditSchemaUpsertLicense1$outboundSchema.parse(
-      phaseStartCreditSchemaUpsertLicense1,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseCreditSchemaUnion$Outbound =
-  | PhaseStartCreditSchemaUpsertLicense1$Outbound
-  | PhaseStartCreditSchemaUpsertLicense2$Outbound;
-
-/** @internal */
-export const PhaseStartUpsertLicenseCreditSchemaUnion$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseCreditSchemaUnion$Outbound,
-    PhaseStartUpsertLicenseCreditSchemaUnion
-  > = smartUnion([
-    z.lazy(() => PhaseStartCreditSchemaUpsertLicense1$outboundSchema),
-    z.lazy(() => PhaseStartCreditSchemaUpsertLicense2$outboundSchema),
-  ]);
-
-export function phaseStartUpsertLicenseCreditSchemaUnionToJSON(
-  phaseStartUpsertLicenseCreditSchemaUnion:
-    PhaseStartUpsertLicenseCreditSchemaUnion,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseCreditSchemaUnion$outboundSchema.parse(
-      phaseStartUpsertLicenseCreditSchemaUnion,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseProviderMarkups$Outbound = {
-  markup: number;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseProviderMarkups$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseProviderMarkups$Outbound,
-    PhaseStartUpsertLicenseProviderMarkups
-  > = z.object({
-    markup: z.number(),
-  });
-
-export function phaseStartUpsertLicenseProviderMarkupsToJSON(
-  phaseStartUpsertLicenseProviderMarkups:
-    PhaseStartUpsertLicenseProviderMarkups,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseProviderMarkups$outboundSchema.parse(
-      phaseStartUpsertLicenseProviderMarkups,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseModelMarkups$Outbound = {
-  markup?: number | undefined;
-  input_cost?: number | undefined;
-  output_cost?: number | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseModelMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseModelMarkups$Outbound,
-  PhaseStartUpsertLicenseModelMarkups
-> = z.pipe(
-  z.object({
-    markup: z.optional(z.number()),
-    inputCost: z.optional(z.number()),
-    outputCost: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      inputCost: "input_cost",
-      outputCost: "output_cost",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicenseModelMarkupsToJSON(
-  phaseStartUpsertLicenseModelMarkups: PhaseStartUpsertLicenseModelMarkups,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseModelMarkups$outboundSchema.parse(
-      phaseStartUpsertLicenseModelMarkups,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseMarkups$Outbound = {
-  default_markup?: number | undefined;
-  provider_markups?:
-    | { [k: string]: PhaseStartUpsertLicenseProviderMarkups$Outbound }
-    | null
-    | undefined;
-  model_markups?:
-    | { [k: string]: PhaseStartUpsertLicenseModelMarkups$Outbound }
-    | null
-    | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseMarkups$Outbound,
-  PhaseStartUpsertLicenseMarkups
-> = z.pipe(
-  z.object({
-    defaultMarkup: z.optional(z.number()),
-    providerMarkups: z.optional(z.nullable(z.record(
-      z.string(),
-      z.lazy(() => PhaseStartUpsertLicenseProviderMarkups$outboundSchema),
-    ))),
-    modelMarkups: z.optional(z.nullable(z.record(
-      z.string(),
-      z.lazy(() => PhaseStartUpsertLicenseModelMarkups$outboundSchema),
-    ))),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      defaultMarkup: "default_markup",
-      providerMarkups: "provider_markups",
-      modelMarkups: "model_markups",
-    });
-  }),
-);
-
-export function phaseStartUpsertLicenseMarkupsToJSON(
-  phaseStartUpsertLicenseMarkups: PhaseStartUpsertLicenseMarkups,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseMarkups$outboundSchema.parse(
-      phaseStartUpsertLicenseMarkups,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicenseFeatureOverride$Outbound = {
-  credit_schema?:
-    | Array<
-      | PhaseStartCreditSchemaUpsertLicense1$Outbound
-      | PhaseStartCreditSchemaUpsertLicense2$Outbound
-    >
-    | undefined;
-  markups?: PhaseStartUpsertLicenseMarkups$Outbound | undefined;
-};
-
-/** @internal */
-export const PhaseStartUpsertLicenseFeatureOverride$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartUpsertLicenseFeatureOverride$Outbound,
-    PhaseStartUpsertLicenseFeatureOverride
-  > = z.pipe(
-    z.object({
-      creditSchema: z.optional(z.array(smartUnion([
-        z.lazy(() => PhaseStartCreditSchemaUpsertLicense1$outboundSchema),
-        z.lazy(() =>
-          PhaseStartCreditSchemaUpsertLicense2$outboundSchema
-        ),
-      ]))),
-      markups: z.optional(z.lazy(() =>
-        PhaseStartUpsertLicenseMarkups$outboundSchema
-      )),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditSchema: "credit_schema",
-      });
-    }),
-  );
-
-export function phaseStartUpsertLicenseFeatureOverrideToJSON(
-  phaseStartUpsertLicenseFeatureOverride:
-    PhaseStartUpsertLicenseFeatureOverride,
-): string {
-  return JSON.stringify(
-    PhaseStartUpsertLicenseFeatureOverride$outboundSchema.parse(
-      phaseStartUpsertLicenseFeatureOverride,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartUpsertLicensePlanItem$Outbound = {
-  threshold_billing?:
-    | PhaseStartUpsertLicenseThresholdBilling$Outbound
-    | null
-    | undefined;
-  feature_id: string;
-  included?: number | undefined;
-  unlimited?: boolean | undefined;
-  pooled: boolean;
-  reset?: PhaseStartUpsertLicenseReset$Outbound | undefined;
-  price?: PhaseStartUpsertLicensePrice$Outbound | undefined;
-  proration?: PhaseStartUpsertLicenseProration$Outbound | undefined;
-  rollover?: PhaseStartUpsertLicenseRollover$Outbound | undefined;
-  expiry?: PhaseStartUpsertLicenseExpiry$Outbound | undefined;
+  reset?: CreateSchedulePhaseStartAddItemReset$Outbound | undefined;
+  price?: CreateSchedulePhaseStartAddItemPrice$Outbound | undefined;
+  proration?: CreateSchedulePhaseStartAddItemProration$Outbound | undefined;
+  rollover?: CreateSchedulePhaseStartAddItemRollover$Outbound | undefined;
+  expiry?: CreateSchedulePhaseStartAddItemExpiry$Outbound | undefined;
   feature_override?:
-    | PhaseStartUpsertLicenseFeatureOverride$Outbound
+    | CreateSchedulePhaseStartAddItemFeatureOverride$Outbound
     | undefined;
 };
 
 /** @internal */
-export const PhaseStartUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicensePlanItem$Outbound,
-  PhaseStartUpsertLicensePlanItem
-> = z.pipe(
-  z.object({
-    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
-      PhaseStartUpsertLicenseThresholdBilling$outboundSchema
-    ))),
-    featureId: z.string(),
-    included: z.optional(z.number()),
-    unlimited: z.optional(z.boolean()),
-    pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() =>
-      PhaseStartUpsertLicenseReset$outboundSchema
-    )),
-    price: z.optional(
-      z.lazy(() => PhaseStartUpsertLicensePrice$outboundSchema),
-    ),
-    proration: z.optional(
-      z.lazy(() => PhaseStartUpsertLicenseProration$outboundSchema),
-    ),
-    rollover: z.optional(
-      z.lazy(() => PhaseStartUpsertLicenseRollover$outboundSchema),
-    ),
-    expiry: z.optional(
-      z.lazy(() => PhaseStartUpsertLicenseExpiry$outboundSchema),
-    ),
-    featureOverride: z.optional(
-      z.lazy(() => PhaseStartUpsertLicenseFeatureOverride$outboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      thresholdBilling: "threshold_billing",
-      featureId: "feature_id",
-      featureOverride: "feature_override",
-    });
-  }),
-);
+export const CreateSchedulePhaseStartAddItemPlanItem$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartAddItemPlanItem$Outbound,
+    CreateSchedulePhaseStartAddItemPlanItem
+  > = z.pipe(
+    z.object({
+      thresholdBilling: z.optional(
+        z.nullable(
+          CreateSchedulePhaseStartAddItemThresholdBilling$outboundSchema,
+        ),
+      ),
+      featureId: z.string(),
+      included: z.optional(z.number()),
+      unlimited: z.optional(z.boolean()),
+      pooled: z._default(z.boolean(), false),
+      reset: z.optional(CreateSchedulePhaseStartAddItemReset$outboundSchema),
+      price: z.optional(CreateSchedulePhaseStartAddItemPrice$outboundSchema),
+      proration: z.optional(
+        CreateSchedulePhaseStartAddItemProration$outboundSchema,
+      ),
+      rollover: z.optional(
+        CreateSchedulePhaseStartAddItemRollover$outboundSchema,
+      ),
+      expiry: z.optional(CreateSchedulePhaseStartAddItemExpiry$outboundSchema),
+      featureOverride: z.optional(
+        CreateSchedulePhaseStartAddItemFeatureOverride$outboundSchema,
+      ),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        thresholdBilling: "threshold_billing",
+        featureId: "feature_id",
+        featureOverride: "feature_override",
+      });
+    }),
+  );
 
-export function phaseStartUpsertLicensePlanItemToJSON(
-  phaseStartUpsertLicensePlanItem: PhaseStartUpsertLicensePlanItem,
+export function createSchedulePhaseStartAddItemPlanItemToJSON(
+  createSchedulePhaseStartAddItemPlanItem:
+    CreateSchedulePhaseStartAddItemPlanItem,
 ): string {
   return JSON.stringify(
-    PhaseStartUpsertLicensePlanItem$outboundSchema.parse(
-      phaseStartUpsertLicensePlanItem,
+    CreateSchedulePhaseStartAddItemPlanItem$outboundSchema.parse(
+      createSchedulePhaseStartAddItemPlanItem,
     ),
   );
 }
 
 /** @internal */
-export const PhaseStartUpsertLicenseRemoveItemBillingMethod$outboundSchema:
-  z.ZodMiniEnum<typeof PhaseStartUpsertLicenseRemoveItemBillingMethod> = z.enum(
-    PhaseStartUpsertLicenseRemoveItemBillingMethod,
-  );
+export const CreateSchedulePhaseStartRemoveItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartRemoveItemBillingMethod> = z
+    .enum(CreateSchedulePhaseStartRemoveItemBillingMethod);
 
 /** @internal */
-export const PhaseStartIntervalUpsertLicenseRemoveItemEnum2$outboundSchema:
-  z.ZodMiniEnum<typeof PhaseStartIntervalUpsertLicenseRemoveItemEnum2> = z.enum(
-    PhaseStartIntervalUpsertLicenseRemoveItemEnum2,
-  );
+export const CreateSchedulePhaseStartIntervalRemoveItemEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartIntervalRemoveItemEnum2> = z
+    .enum(CreateSchedulePhaseStartIntervalRemoveItemEnum2);
 
 /** @internal */
-export const PhaseStartIntervalUpsertLicenseRemoveItemEnum1$outboundSchema:
-  z.ZodMiniEnum<typeof PhaseStartIntervalUpsertLicenseRemoveItemEnum1> = z.enum(
-    PhaseStartIntervalUpsertLicenseRemoveItemEnum1,
-  );
+export const CreateSchedulePhaseStartIntervalRemoveItemEnum1$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartIntervalRemoveItemEnum1> = z
+    .enum(CreateSchedulePhaseStartIntervalRemoveItemEnum1);
 
 /** @internal */
-export type PhaseStartUpsertLicenseIntervalUnion$Outbound = string | string;
+export type CreateSchedulePhaseStartIntervalUnion$Outbound = string | string;
 
 /** @internal */
-export const PhaseStartUpsertLicenseIntervalUnion$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseIntervalUnion$Outbound,
-  PhaseStartUpsertLicenseIntervalUnion
-> = smartUnion([
-  PhaseStartIntervalUpsertLicenseRemoveItemEnum1$outboundSchema,
-  PhaseStartIntervalUpsertLicenseRemoveItemEnum2$outboundSchema,
-]);
+export const CreateSchedulePhaseStartIntervalUnion$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartIntervalUnion$Outbound,
+    CreateSchedulePhaseStartIntervalUnion
+  > = smartUnion([
+    CreateSchedulePhaseStartIntervalRemoveItemEnum1$outboundSchema,
+    CreateSchedulePhaseStartIntervalRemoveItemEnum2$outboundSchema,
+  ]);
 
-export function phaseStartUpsertLicenseIntervalUnionToJSON(
-  phaseStartUpsertLicenseIntervalUnion: PhaseStartUpsertLicenseIntervalUnion,
+export function createSchedulePhaseStartIntervalUnionToJSON(
+  createSchedulePhaseStartIntervalUnion: CreateSchedulePhaseStartIntervalUnion,
 ): string {
   return JSON.stringify(
-    PhaseStartUpsertLicenseIntervalUnion$outboundSchema.parse(
-      phaseStartUpsertLicenseIntervalUnion,
+    CreateSchedulePhaseStartIntervalUnion$outboundSchema.parse(
+      createSchedulePhaseStartIntervalUnion,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartUpsertLicensePlanItemFilter$Outbound = {
+export type CreateSchedulePhaseStartPlanItemFilter$Outbound = {
   feature_id?: string | undefined;
   billing_method?: string | undefined;
   interval?: string | string | undefined;
@@ -3417,20 +1637,20 @@ export type PhaseStartUpsertLicensePlanItemFilter$Outbound = {
 };
 
 /** @internal */
-export const PhaseStartUpsertLicensePlanItemFilter$outboundSchema:
+export const CreateSchedulePhaseStartPlanItemFilter$outboundSchema:
   z.ZodMiniType<
-    PhaseStartUpsertLicensePlanItemFilter$Outbound,
-    PhaseStartUpsertLicensePlanItemFilter
+    CreateSchedulePhaseStartPlanItemFilter$Outbound,
+    CreateSchedulePhaseStartPlanItemFilter
   > = z.pipe(
     z.object({
       featureId: z.optional(z.string()),
       billingMethod: z.optional(
-        PhaseStartUpsertLicenseRemoveItemBillingMethod$outboundSchema,
+        CreateSchedulePhaseStartRemoveItemBillingMethod$outboundSchema,
       ),
       interval: z.optional(
         smartUnion([
-          PhaseStartIntervalUpsertLicenseRemoveItemEnum1$outboundSchema,
-          PhaseStartIntervalUpsertLicenseRemoveItemEnum2$outboundSchema,
+          CreateSchedulePhaseStartIntervalRemoveItemEnum1$outboundSchema,
+          CreateSchedulePhaseStartIntervalRemoveItemEnum2$outboundSchema,
         ]),
       ),
       intervalCount: z.optional(z.int()),
@@ -3445,165 +1665,2189 @@ export const PhaseStartUpsertLicensePlanItemFilter$outboundSchema:
     }),
   );
 
-export function phaseStartUpsertLicensePlanItemFilterToJSON(
-  phaseStartUpsertLicensePlanItemFilter: PhaseStartUpsertLicensePlanItemFilter,
+export function createSchedulePhaseStartPlanItemFilterToJSON(
+  createSchedulePhaseStartPlanItemFilter:
+    CreateSchedulePhaseStartPlanItemFilter,
 ): string {
   return JSON.stringify(
-    PhaseStartUpsertLicensePlanItemFilter$outboundSchema.parse(
-      phaseStartUpsertLicensePlanItemFilter,
+    CreateSchedulePhaseStartPlanItemFilter$outboundSchema.parse(
+      createSchedulePhaseStartPlanItemFilter,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartUpsertLicenseCustomize$Outbound = {
-  price?: PhaseStartUpsertLicenseBasePrice$Outbound | null | undefined;
-  add_items?: Array<PhaseStartUpsertLicensePlanItem$Outbound> | undefined;
-  remove_items?:
-    | Array<PhaseStartUpsertLicensePlanItemFilter$Outbound>
+export const CreateSchedulePhaseStartAutoTopupInterval$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartAutoTopupInterval> = z.enum(
+    CreateSchedulePhaseStartAutoTopupInterval,
+  );
+
+/** @internal */
+export type CreateSchedulePhaseStartPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+  count?: number | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartPurchaseLimit$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartPurchaseLimit$Outbound,
+    CreateSchedulePhaseStartPurchaseLimit
+  > = z.pipe(
+    z.object({
+      interval: CreateSchedulePhaseStartAutoTopupInterval$outboundSchema,
+      intervalCount: z._default(z.number(), 1),
+      limit: z.number(),
+      count: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        intervalCount: "interval_count",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartPurchaseLimitToJSON(
+  createSchedulePhaseStartPurchaseLimit: CreateSchedulePhaseStartPurchaseLimit,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartPurchaseLimit$outboundSchema.parse(
+      createSchedulePhaseStartPurchaseLimit,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: CreateSchedulePhaseStartPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartAutoTopup$outboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseStartAutoTopup$Outbound,
+  CreateSchedulePhaseStartAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => CreateSchedulePhaseStartPurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function createSchedulePhaseStartAutoTopupToJSON(
+  createSchedulePhaseStartAutoTopup: CreateSchedulePhaseStartAutoTopup,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartAutoTopup$outboundSchema.parse(
+      createSchedulePhaseStartAutoTopup,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof CreateSchedulePhaseStartLimitType
+> = z.enum(CreateSchedulePhaseStartLimitType);
+
+/** @internal */
+export type CreateSchedulePhaseStartSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartSpendLimit$outboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseStartSpendLimit$Outbound,
+  CreateSchedulePhaseStartSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(CreateSchedulePhaseStartLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
+    });
+  }),
+);
+
+export function createSchedulePhaseStartSpendLimitToJSON(
+  createSchedulePhaseStartSpendLimit: CreateSchedulePhaseStartSpendLimit,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartSpendLimit$outboundSchema.parse(
+      createSchedulePhaseStartSpendLimit,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartUsageLimitInterval$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartUsageLimitInterval> = z.enum(
+    CreateSchedulePhaseStartUsageLimitInterval,
+  );
+
+/** @internal */
+export const CreateSchedulePhaseStartAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof CreateSchedulePhaseStartAnchor
+> = z.enum(CreateSchedulePhaseStartAnchor);
+
+/** @internal */
+export type CreateSchedulePhaseStartUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartUsageLimitProperties$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUsageLimitProperties$Outbound,
+    CreateSchedulePhaseStartUsageLimitProperties
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartUsageLimitPropertiesToJSON(
+  createSchedulePhaseStartUsageLimitProperties:
+    CreateSchedulePhaseStartUsageLimitProperties,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUsageLimitProperties$outboundSchema.parse(
+      createSchedulePhaseStartUsageLimitProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUsageLimitFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUsageLimitFilter$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUsageLimitFilter$Outbound,
+    CreateSchedulePhaseStartUsageLimitFilter
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
+
+export function createSchedulePhaseStartUsageLimitFilterToJSON(
+  createSchedulePhaseStartUsageLimitFilter:
+    CreateSchedulePhaseStartUsageLimitFilter,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUsageLimitFilter$outboundSchema.parse(
+      createSchedulePhaseStartUsageLimitFilter,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+  anchor?: string | undefined;
+  filter?: CreateSchedulePhaseStartUsageLimitFilter$Outbound | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUsageLimit$outboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseStartUsageLimit$Outbound,
+  CreateSchedulePhaseStartUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: CreateSchedulePhaseStartUsageLimitInterval$outboundSchema,
+    anchor: z.optional(CreateSchedulePhaseStartAnchor$outboundSchema),
+    filter: z.optional(
+      z.lazy(() => CreateSchedulePhaseStartUsageLimitFilter$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function createSchedulePhaseStartUsageLimitToJSON(
+  createSchedulePhaseStartUsageLimit: CreateSchedulePhaseStartUsageLimit,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUsageLimit$outboundSchema.parse(
+      createSchedulePhaseStartUsageLimit,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartThresholdType$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartThresholdType> = z.enum(
+    CreateSchedulePhaseStartThresholdType,
+  );
+
+/** @internal */
+export const CreateSchedulePhaseStartBasis$outboundSchema: z.ZodMiniEnum<
+  typeof CreateSchedulePhaseStartBasis
+> = z.enum(CreateSchedulePhaseStartBasis);
+
+/** @internal */
+export type CreateSchedulePhaseStartUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartUsageAlertProperties$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUsageAlertProperties$Outbound,
+    CreateSchedulePhaseStartUsageAlertProperties
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartUsageAlertPropertiesToJSON(
+  createSchedulePhaseStartUsageAlertProperties:
+    CreateSchedulePhaseStartUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUsageAlertProperties$outboundSchema.parse(
+      createSchedulePhaseStartUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUsageAlertFilter$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUsageAlertFilter$Outbound,
+    CreateSchedulePhaseStartUsageAlertFilter
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
+
+export function createSchedulePhaseStartUsageAlertFilterToJSON(
+  createSchedulePhaseStartUsageAlertFilter:
+    CreateSchedulePhaseStartUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUsageAlertFilter$outboundSchema.parse(
+      createSchedulePhaseStartUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  basis: string;
+  filter?: CreateSchedulePhaseStartUsageAlertFilter$Outbound | undefined;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUsageAlert$outboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseStartUsageAlert$Outbound,
+  CreateSchedulePhaseStartUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: CreateSchedulePhaseStartThresholdType$outboundSchema,
+    basis: z._default(CreateSchedulePhaseStartBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => CreateSchedulePhaseStartUsageAlertFilter$outboundSchema),
+    ),
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function createSchedulePhaseStartUsageAlertToJSON(
+  createSchedulePhaseStartUsageAlert: CreateSchedulePhaseStartUsageAlert,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUsageAlert$outboundSchema.parse(
+      createSchedulePhaseStartUsageAlert,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartOverageAllowed$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartOverageAllowed$Outbound,
+    CreateSchedulePhaseStartOverageAllowed
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      enabled: z._default(z.boolean(), false),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartOverageAllowedToJSON(
+  createSchedulePhaseStartOverageAllowed:
+    CreateSchedulePhaseStartOverageAllowed,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartOverageAllowed$outboundSchema.parse(
+      createSchedulePhaseStartOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartBillingControls$Outbound = {
+  auto_topups?: Array<CreateSchedulePhaseStartAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<CreateSchedulePhaseStartSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<CreateSchedulePhaseStartUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<CreateSchedulePhaseStartUsageAlert$Outbound> | undefined;
+  overage_allowed?:
+    | Array<CreateSchedulePhaseStartOverageAllowed$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const PhaseStartUpsertLicenseCustomize$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicenseCustomize$Outbound,
-  PhaseStartUpsertLicenseCustomize
-> = z.pipe(
-  z.object({
-    price: z.optional(
-      z.nullable(z.lazy(() => PhaseStartUpsertLicenseBasePrice$outboundSchema)),
-    ),
-    addItems: z.optional(
-      z.array(z.lazy(() => PhaseStartUpsertLicensePlanItem$outboundSchema)),
-    ),
-    removeItems: z.optional(
-      z.array(
-        z.lazy(() => PhaseStartUpsertLicensePlanItemFilter$outboundSchema),
+export const CreateSchedulePhaseStartBillingControls$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartBillingControls$Outbound,
+    CreateSchedulePhaseStartBillingControls
+  > = z.pipe(
+    z.object({
+      autoTopups: z.optional(
+        z.array(z.lazy(() => CreateSchedulePhaseStartAutoTopup$outboundSchema)),
       ),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      addItems: "add_items",
-      removeItems: "remove_items",
-    });
-  }),
-);
+      spendLimits: z.optional(
+        z.array(
+          z.lazy(() => CreateSchedulePhaseStartSpendLimit$outboundSchema),
+        ),
+      ),
+      usageLimits: z.optional(
+        z.array(
+          z.lazy(() => CreateSchedulePhaseStartUsageLimit$outboundSchema),
+        ),
+      ),
+      usageAlerts: z.optional(
+        z.array(
+          z.lazy(() => CreateSchedulePhaseStartUsageAlert$outboundSchema),
+        ),
+      ),
+      overageAllowed: z.optional(
+        z.array(z.lazy(() =>
+          CreateSchedulePhaseStartOverageAllowed$outboundSchema
+        )),
+      ),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        autoTopups: "auto_topups",
+        spendLimits: "spend_limits",
+        usageLimits: "usage_limits",
+        usageAlerts: "usage_alerts",
+        overageAllowed: "overage_allowed",
+      });
+    }),
+  );
 
-export function phaseStartUpsertLicenseCustomizeToJSON(
-  phaseStartUpsertLicenseCustomize: PhaseStartUpsertLicenseCustomize,
+export function createSchedulePhaseStartBillingControlsToJSON(
+  createSchedulePhaseStartBillingControls:
+    CreateSchedulePhaseStartBillingControls,
 ): string {
   return JSON.stringify(
-    PhaseStartUpsertLicenseCustomize$outboundSchema.parse(
-      phaseStartUpsertLicenseCustomize,
+    CreateSchedulePhaseStartBillingControls$outboundSchema.parse(
+      createSchedulePhaseStartBillingControls,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartUpsertLicense$Outbound = {
+export const CreateSchedulePhaseStartPriceUpsertLicenseInterval$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartPriceUpsertLicenseInterval> = z
+    .enum(CreateSchedulePhaseStartPriceUpsertLicenseInterval);
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function createSchedulePhaseStartUpsertLicenseAdditionalCurrencyToJSON(
+  createSchedulePhaseStartUpsertLicenseAdditionalCurrency:
+    CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency$outboundSchema
+      .parse(createSchedulePhaseStartUpsertLicenseAdditionalCurrency),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseBasePrice$Outbound = {
+  amount: number;
+  interval: string;
+  interval_count: number;
+  additional_currencies?:
+    | Array<CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseBasePrice$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseBasePrice$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseBasePrice
+  > = z.pipe(
+    z.object({
+      amount: z.number(),
+      interval:
+        CreateSchedulePhaseStartPriceUpsertLicenseInterval$outboundSchema,
+      intervalCount: z._default(z.number(), 1),
+      additionalCurrencies: z.optional(
+        z.array(z.lazy(() =>
+          CreateSchedulePhaseStartUpsertLicenseAdditionalCurrency$outboundSchema
+        )),
+      ),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        intervalCount: "interval_count",
+        additionalCurrencies: "additional_currencies",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseBasePriceToJSON(
+  createSchedulePhaseStartUpsertLicenseBasePrice:
+    CreateSchedulePhaseStartUpsertLicenseBasePrice,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseBasePrice$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseBasePrice,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseThresholdBilling$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseThresholdBilling$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseThresholdBilling
+  > = z.object({
+    threshold: z.number(),
+  });
+
+export function createSchedulePhaseStartUpsertLicenseThresholdBillingToJSON(
+  createSchedulePhaseStartUpsertLicenseThresholdBilling:
+    CreateSchedulePhaseStartUpsertLicenseThresholdBilling,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseThresholdBilling$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseResetInterval$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartUpsertLicenseResetInterval> = z
+    .enum(CreateSchedulePhaseStartUpsertLicenseResetInterval);
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseReset$Outbound = {
+  interval: string;
+  interval_count: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseReset$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseReset$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseReset
+  > = z.pipe(
+    z.object({
+      interval:
+        CreateSchedulePhaseStartUpsertLicenseResetInterval$outboundSchema,
+      intervalCount: z._default(z.number(), 1),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        intervalCount: "interval_count",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseResetToJSON(
+  createSchedulePhaseStartUpsertLicenseReset:
+    CreateSchedulePhaseStartUpsertLicenseReset,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseReset$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseReset,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency$Outbound =
+  {
+    currency: string;
+    amount: number;
+  };
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function createSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrencyToJSON(
+  createSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency:
+    CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency$outboundSchema
+      .parse(createSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicensePriceTo$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicensePriceTo$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicensePriceTo$Outbound,
+    CreateSchedulePhaseStartUpsertLicensePriceTo
+  > = smartUnion([z.number(), z.string()]);
+
+export function createSchedulePhaseStartUpsertLicensePriceToToJSON(
+  createSchedulePhaseStartUpsertLicensePriceTo:
+    CreateSchedulePhaseStartUpsertLicensePriceTo,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicensePriceTo$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicensePriceTo,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency$Outbound =
+  {
+    currency: string;
+    amount?: number | undefined;
+    flat_amount?: number | undefined;
+  };
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseTierAdditionalCurrencyToJSON(
+  createSchedulePhaseStartUpsertLicenseTierAdditionalCurrency:
+    CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency$outboundSchema
+      .parse(createSchedulePhaseStartUpsertLicenseTierAdditionalCurrency),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicensePriceTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<
+      CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicensePriceTier$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicensePriceTier$Outbound,
+    CreateSchedulePhaseStartUpsertLicensePriceTier
+  > = z.pipe(
+    z.object({
+      to: smartUnion([z.number(), z.string()]),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+      additionalCurrencies: z.optional(z.array(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseTierAdditionalCurrency$outboundSchema
+      ))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+        additionalCurrencies: "additional_currencies",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicensePriceTierToJSON(
+  createSchedulePhaseStartUpsertLicensePriceTier:
+    CreateSchedulePhaseStartUpsertLicensePriceTier,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicensePriceTier$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicensePriceTier,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseTierBehavior$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartUpsertLicenseTierBehavior> = z
+    .enum(CreateSchedulePhaseStartUpsertLicenseTierBehavior);
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval$outboundSchema:
+  z.ZodMiniEnum<
+    typeof CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval
+  > = z.enum(CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval);
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<
+    typeof CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod
+  > = z.enum(CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod);
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicensePrice$Outbound = {
+  amount?: number | undefined;
+  additional_currencies?:
+    | Array<
+      CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency$Outbound
+    >
+    | undefined;
+  tiers?:
+    | Array<CreateSchedulePhaseStartUpsertLicensePriceTier$Outbound>
+    | undefined;
+  tier_behavior?: string | undefined;
+  interval: string;
+  interval_count: number;
+  billing_units: number;
+  billing_method: string;
+  max_purchase?: number | null | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicensePrice$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicensePrice$Outbound,
+    CreateSchedulePhaseStartUpsertLicensePrice
+  > = z.pipe(
+    z.object({
+      amount: z.optional(z.number()),
+      additionalCurrencies: z.optional(z.array(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseAddItemAdditionalCurrency$outboundSchema
+      ))),
+      tiers: z.optional(z.array(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicensePriceTier$outboundSchema
+      ))),
+      tierBehavior: z.optional(
+        CreateSchedulePhaseStartUpsertLicenseTierBehavior$outboundSchema,
+      ),
+      interval:
+        CreateSchedulePhaseStartUpsertLicenseAddItemPriceInterval$outboundSchema,
+      intervalCount: z._default(z.number(), 1),
+      billingUnits: z._default(z.number(), 1),
+      billingMethod:
+        CreateSchedulePhaseStartUpsertLicenseAddItemBillingMethod$outboundSchema,
+      maxPurchase: z.optional(z.nullable(z.number())),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        additionalCurrencies: "additional_currencies",
+        tierBehavior: "tier_behavior",
+        intervalCount: "interval_count",
+        billingUnits: "billing_units",
+        billingMethod: "billing_method",
+        maxPurchase: "max_purchase",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicensePriceToJSON(
+  createSchedulePhaseStartUpsertLicensePrice:
+    CreateSchedulePhaseStartUpsertLicensePrice,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicensePrice$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicensePrice,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseOnIncrease$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartUpsertLicenseOnIncrease> = z
+    .enum(CreateSchedulePhaseStartUpsertLicenseOnIncrease);
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseOnDecrease$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartUpsertLicenseOnDecrease> = z
+    .enum(CreateSchedulePhaseStartUpsertLicenseOnDecrease);
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseProration$Outbound = {
+  on_increase: string;
+  on_decrease: string;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseProration$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseProration$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseProration
+  > = z.pipe(
+    z.object({
+      onIncrease:
+        CreateSchedulePhaseStartUpsertLicenseOnIncrease$outboundSchema,
+      onDecrease:
+        CreateSchedulePhaseStartUpsertLicenseOnDecrease$outboundSchema,
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        onIncrease: "on_increase",
+        onDecrease: "on_decrease",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseProrationToJSON(
+  createSchedulePhaseStartUpsertLicenseProration:
+    CreateSchedulePhaseStartUpsertLicenseProration,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseProration$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseProration,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<
+    typeof CreateSchedulePhaseStartUpsertLicenseExpiryDurationType
+  > = z.enum(CreateSchedulePhaseStartUpsertLicenseExpiryDurationType);
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseRollover$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseRollover$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseRollover
+  > = z.pipe(
+    z.object({
+      max: z.optional(z.number()),
+      maxPercentage: z.optional(z.number()),
+      expiryDurationType:
+        CreateSchedulePhaseStartUpsertLicenseExpiryDurationType$outboundSchema,
+      expiryDurationLength: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        maxPercentage: "max_percentage",
+        expiryDurationType: "expiry_duration_type",
+        expiryDurationLength: "expiry_duration_length",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseRolloverToJSON(
+  createSchedulePhaseStartUpsertLicenseRollover:
+    CreateSchedulePhaseStartUpsertLicenseRollover,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseRollover$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseRollover,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseDuration$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartUpsertLicenseDuration> = z.enum(
+    CreateSchedulePhaseStartUpsertLicenseDuration,
+  );
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseExpiry$Outbound = {
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseExpiry$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseExpiry$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseExpiry
+  > = z.object({
+    duration: CreateSchedulePhaseStartUpsertLicenseDuration$outboundSchema,
+    length: z.number(),
+  });
+
+export function createSchedulePhaseStartUpsertLicenseExpiryToJSON(
+  createSchedulePhaseStartUpsertLicenseExpiry:
+    CreateSchedulePhaseStartUpsertLicenseExpiry,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseExpiry$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseExpiry,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicenseMatch4$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch4$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch4
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartDimensionsUpsertLicenseMatch4ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicenseMatch4:
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch4,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch4$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicenseMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicense4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicense4$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicense4$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicense4
+  > = z.pipe(
+    z.object({
+      match: z.record(
+        z.string(),
+        smartUnion([z.string(), z.number(), z.boolean()]),
+      ),
+      priority: z.optional(z.int()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartDimensionsUpsertLicense4ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicense4:
+    CreateSchedulePhaseStartDimensionsUpsertLicense4,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicense4$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicense4,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicenseMatch3$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch3$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch3
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartDimensionsUpsertLicenseMatch3ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicenseMatch3:
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch3,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch3$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicenseMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseTier2$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicenseTier2$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier2$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier2
+  > = z.pipe(
+    z.object({
+      to: z.optional(z.any()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartDimensionsUpsertLicenseTier2ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicenseTier2:
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier2$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicenseTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicense3$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<CreateSchedulePhaseStartDimensionsUpsertLicenseTier2$Outbound>;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicense3$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicense3$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicense3
+  > = z.pipe(
+    z.object({
+      match: z.record(
+        z.string(),
+        smartUnion([z.string(), z.number(), z.boolean()]),
+      ),
+      priority: z.optional(z.int()),
+      tierBehavior: z.literal("graduated"),
+      tiers: z.array(z.lazy(() =>
+        CreateSchedulePhaseStartDimensionsUpsertLicenseTier2$outboundSchema
+      )),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartDimensionsUpsertLicense3ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicense3:
+    CreateSchedulePhaseStartDimensionsUpsertLicense3,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicense3$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicense3,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseDimensionsUnion2$Outbound =
+  | CreateSchedulePhaseStartDimensionsUpsertLicense3$Outbound
+  | CreateSchedulePhaseStartDimensionsUpsertLicense4$Outbound;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseDimensionsUnion2$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion2$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion2
+  > = smartUnion([
+    z.lazy(() =>
+      CreateSchedulePhaseStartDimensionsUpsertLicense3$outboundSchema
+    ),
+    z.lazy(() =>
+      CreateSchedulePhaseStartDimensionsUpsertLicense4$outboundSchema
+    ),
+  ]);
+
+export function createSchedulePhaseStartUpsertLicenseDimensionsUnion2ToJSON(
+  createSchedulePhaseStartUpsertLicenseDimensionsUnion2:
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion2$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseDimensionsUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseMultipliersMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseMultipliersMatch2$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch2$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch2
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartUpsertLicenseMultipliersMatch2ToJSON(
+  createSchedulePhaseStartUpsertLicenseMultipliersMatch2:
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch2$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseMultipliersMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseMultipliers2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseMultipliers2$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseMultipliers2$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseMultipliers2
+  > = z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    factor: z.optional(z.number()),
+    add: z.optional(z.number()),
+  });
+
+export function createSchedulePhaseStartUpsertLicenseMultipliers2ToJSON(
+  createSchedulePhaseStartUpsertLicenseMultipliers2:
+    CreateSchedulePhaseStartUpsertLicenseMultipliers2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseMultipliers2$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseMultipliers2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartCreditSchemaUpsertLicense2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | CreateSchedulePhaseStartDimensionsUpsertLicense3$Outbound
+      | CreateSchedulePhaseStartDimensionsUpsertLicense4$Outbound;
+  } | undefined;
+  multipliers?: {
+    [k: string]: CreateSchedulePhaseStartUpsertLicenseMultipliers2$Outbound;
+  } | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartCreditSchemaUpsertLicense2$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense2$Outbound,
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense2
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      dimensions: z.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() =>
+            CreateSchedulePhaseStartDimensionsUpsertLicense3$outboundSchema
+          ),
+          z.lazy(() =>
+            CreateSchedulePhaseStartDimensionsUpsertLicense4$outboundSchema
+          ),
+        ]),
+      )),
+      multipliers: z.optional(z.record(
+        z.string(),
+        z.lazy(() =>
+          CreateSchedulePhaseStartUpsertLicenseMultipliers2$outboundSchema
+        ),
+      )),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartCreditSchemaUpsertLicense2ToJSON(
+  createSchedulePhaseStartCreditSchemaUpsertLicense2:
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense2$outboundSchema.parse(
+      createSchedulePhaseStartCreditSchemaUpsertLicense2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicenseMatch2$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch2$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch2
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartDimensionsUpsertLicenseMatch2ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicenseMatch2:
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch2$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicenseMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicense2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicense2$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicense2$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicense2
+  > = z.pipe(
+    z.object({
+      match: z.record(
+        z.string(),
+        smartUnion([z.string(), z.number(), z.boolean()]),
+      ),
+      priority: z.optional(z.int()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartDimensionsUpsertLicense2ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicense2:
+    CreateSchedulePhaseStartDimensionsUpsertLicense2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicense2$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicense2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicenseMatch1$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch1$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch1
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartDimensionsUpsertLicenseMatch1ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicenseMatch1:
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch1,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicenseMatch1$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicenseMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicenseTier1$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicenseTier1$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier1$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier1
+  > = z.pipe(
+    z.object({
+      to: z.optional(z.any()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartDimensionsUpsertLicenseTier1ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicenseTier1:
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier1,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicenseTier1$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicenseTier1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartDimensionsUpsertLicense1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<CreateSchedulePhaseStartDimensionsUpsertLicenseTier1$Outbound>;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartDimensionsUpsertLicense1$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartDimensionsUpsertLicense1$Outbound,
+    CreateSchedulePhaseStartDimensionsUpsertLicense1
+  > = z.pipe(
+    z.object({
+      match: z.record(
+        z.string(),
+        smartUnion([z.string(), z.number(), z.boolean()]),
+      ),
+      priority: z.optional(z.int()),
+      tierBehavior: z.literal("graduated"),
+      tiers: z.array(z.lazy(() =>
+        CreateSchedulePhaseStartDimensionsUpsertLicenseTier1$outboundSchema
+      )),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartDimensionsUpsertLicense1ToJSON(
+  createSchedulePhaseStartDimensionsUpsertLicense1:
+    CreateSchedulePhaseStartDimensionsUpsertLicense1,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartDimensionsUpsertLicense1$outboundSchema.parse(
+      createSchedulePhaseStartDimensionsUpsertLicense1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseDimensionsUnion1$Outbound =
+  | CreateSchedulePhaseStartDimensionsUpsertLicense1$Outbound
+  | CreateSchedulePhaseStartDimensionsUpsertLicense2$Outbound;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseDimensionsUnion1$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion1$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion1
+  > = smartUnion([
+    z.lazy(() =>
+      CreateSchedulePhaseStartDimensionsUpsertLicense1$outboundSchema
+    ),
+    z.lazy(() =>
+      CreateSchedulePhaseStartDimensionsUpsertLicense2$outboundSchema
+    ),
+  ]);
+
+export function createSchedulePhaseStartUpsertLicenseDimensionsUnion1ToJSON(
+  createSchedulePhaseStartUpsertLicenseDimensionsUnion1:
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion1,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseDimensionsUnion1$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseDimensionsUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseMultipliersMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseMultipliersMatch1$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch1$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch1
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createSchedulePhaseStartUpsertLicenseMultipliersMatch1ToJSON(
+  createSchedulePhaseStartUpsertLicenseMultipliersMatch1:
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch1,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseMultipliersMatch1$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseMultipliersMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseMultipliers1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseMultipliers1$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseMultipliers1$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseMultipliers1
+  > = z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    factor: z.optional(z.number()),
+    add: z.optional(z.number()),
+  });
+
+export function createSchedulePhaseStartUpsertLicenseMultipliers1ToJSON(
+  createSchedulePhaseStartUpsertLicenseMultipliers1:
+    CreateSchedulePhaseStartUpsertLicenseMultipliers1,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseMultipliers1$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseMultipliers1,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartToUpsertLicenseEnum$outboundSchema:
+  z.ZodMiniEnum<typeof CreateSchedulePhaseStartToUpsertLicenseEnum> = z.enum(
+    CreateSchedulePhaseStartToUpsertLicenseEnum,
+  );
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion
+  > = smartUnion([
+    z.number(),
+    CreateSchedulePhaseStartToUpsertLicenseEnum$outboundSchema,
+  ]);
+
+export function createSchedulePhaseStartUpsertLicenseFeatureOverrideToUnionToJSON(
+  createSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion:
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion$outboundSchema
+      .parse(createSchedulePhaseStartUpsertLicenseFeatureOverrideToUnion),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier$Outbound =
+  {
+    to: number | string;
+    credit_cost: number;
+  };
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier
+  > = z.pipe(
+    z.object({
+      to: smartUnion([
+        z.number(),
+        CreateSchedulePhaseStartToUpsertLicenseEnum$outboundSchema,
+      ]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseFeatureOverrideTierToJSON(
+  createSchedulePhaseStartUpsertLicenseFeatureOverrideTier:
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier$outboundSchema
+      .parse(createSchedulePhaseStartUpsertLicenseFeatureOverrideTier),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartCreditSchemaUpsertLicense1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | CreateSchedulePhaseStartDimensionsUpsertLicense1$Outbound
+      | CreateSchedulePhaseStartDimensionsUpsertLicense2$Outbound;
+  } | undefined;
+  multipliers?: {
+    [k: string]: CreateSchedulePhaseStartUpsertLicenseMultipliers1$Outbound;
+  } | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier$Outbound
+  >;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartCreditSchemaUpsertLicense1$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense1$Outbound,
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense1
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      dimensions: z.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() =>
+            CreateSchedulePhaseStartDimensionsUpsertLicense1$outboundSchema
+          ),
+          z.lazy(() =>
+            CreateSchedulePhaseStartDimensionsUpsertLicense2$outboundSchema
+          ),
+        ]),
+      )),
+      multipliers: z.optional(z.record(
+        z.string(),
+        z.lazy(() =>
+          CreateSchedulePhaseStartUpsertLicenseMultipliers1$outboundSchema
+        ),
+      )),
+      tierBehavior: z.literal("graduated"),
+      tiers: z.array(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseFeatureOverrideTier$outboundSchema
+      )),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartCreditSchemaUpsertLicense1ToJSON(
+  createSchedulePhaseStartCreditSchemaUpsertLicense1:
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense1,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartCreditSchemaUpsertLicense1$outboundSchema.parse(
+      createSchedulePhaseStartCreditSchemaUpsertLicense1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseCreditSchemaUnion$Outbound =
+  | CreateSchedulePhaseStartCreditSchemaUpsertLicense1$Outbound
+  | CreateSchedulePhaseStartCreditSchemaUpsertLicense2$Outbound;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseCreditSchemaUnion$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseCreditSchemaUnion$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseCreditSchemaUnion
+  > = smartUnion([
+    z.lazy(() =>
+      CreateSchedulePhaseStartCreditSchemaUpsertLicense1$outboundSchema
+    ),
+    z.lazy(() =>
+      CreateSchedulePhaseStartCreditSchemaUpsertLicense2$outboundSchema
+    ),
+  ]);
+
+export function createSchedulePhaseStartUpsertLicenseCreditSchemaUnionToJSON(
+  createSchedulePhaseStartUpsertLicenseCreditSchemaUnion:
+    CreateSchedulePhaseStartUpsertLicenseCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseCreditSchemaUnion$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseProviderMarkups$Outbound = {
+  markup: number;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseProviderMarkups$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseProviderMarkups$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseProviderMarkups
+  > = z.object({
+    markup: z.number(),
+  });
+
+export function createSchedulePhaseStartUpsertLicenseProviderMarkupsToJSON(
+  createSchedulePhaseStartUpsertLicenseProviderMarkups:
+    CreateSchedulePhaseStartUpsertLicenseProviderMarkups,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseProviderMarkups$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseProviderMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseModelMarkups$Outbound = {
+  markup?: number | undefined;
+  input_cost?: number | undefined;
+  output_cost?: number | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseModelMarkups$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseModelMarkups$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseModelMarkups
+  > = z.pipe(
+    z.object({
+      markup: z.optional(z.number()),
+      inputCost: z.optional(z.number()),
+      outputCost: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        inputCost: "input_cost",
+        outputCost: "output_cost",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseModelMarkupsToJSON(
+  createSchedulePhaseStartUpsertLicenseModelMarkups:
+    CreateSchedulePhaseStartUpsertLicenseModelMarkups,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseModelMarkups$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseModelMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseMarkups$Outbound = {
+  default_markup?: number | undefined;
+  provider_markups?:
+    | {
+      [k: string]:
+        CreateSchedulePhaseStartUpsertLicenseProviderMarkups$Outbound;
+    }
+    | null
+    | undefined;
+  model_markups?:
+    | {
+      [k: string]: CreateSchedulePhaseStartUpsertLicenseModelMarkups$Outbound;
+    }
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseMarkups$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseMarkups$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseMarkups
+  > = z.pipe(
+    z.object({
+      defaultMarkup: z.optional(z.number()),
+      providerMarkups: z.optional(z.nullable(z.record(
+        z.string(),
+        z.lazy(() =>
+          CreateSchedulePhaseStartUpsertLicenseProviderMarkups$outboundSchema
+        ),
+      ))),
+      modelMarkups: z.optional(z.nullable(z.record(
+        z.string(),
+        z.lazy(() =>
+          CreateSchedulePhaseStartUpsertLicenseModelMarkups$outboundSchema
+        ),
+      ))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        defaultMarkup: "default_markup",
+        providerMarkups: "provider_markups",
+        modelMarkups: "model_markups",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseMarkupsToJSON(
+  createSchedulePhaseStartUpsertLicenseMarkups:
+    CreateSchedulePhaseStartUpsertLicenseMarkups,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseMarkups$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | CreateSchedulePhaseStartCreditSchemaUpsertLicense1$Outbound
+      | CreateSchedulePhaseStartCreditSchemaUpsertLicense2$Outbound
+    >
+    | undefined;
+  markups?: CreateSchedulePhaseStartUpsertLicenseMarkups$Outbound | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseFeatureOverride$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverride$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverride
+  > = z.pipe(
+    z.object({
+      creditSchema: z.optional(z.array(smartUnion([
+        z.lazy(() =>
+          CreateSchedulePhaseStartCreditSchemaUpsertLicense1$outboundSchema
+        ),
+        z.lazy(() =>
+          CreateSchedulePhaseStartCreditSchemaUpsertLicense2$outboundSchema
+        ),
+      ]))),
+      markups: z.optional(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseMarkups$outboundSchema
+      )),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditSchema: "credit_schema",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseFeatureOverrideToJSON(
+  createSchedulePhaseStartUpsertLicenseFeatureOverride:
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverride,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseFeatureOverride$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicensePlanItem$Outbound = {
+  threshold_billing?:
+    | CreateSchedulePhaseStartUpsertLicenseThresholdBilling$Outbound
+    | null
+    | undefined;
+  feature_id: string;
+  included?: number | undefined;
+  unlimited?: boolean | undefined;
+  pooled: boolean;
+  reset?: CreateSchedulePhaseStartUpsertLicenseReset$Outbound | undefined;
+  price?: CreateSchedulePhaseStartUpsertLicensePrice$Outbound | undefined;
+  proration?:
+    | CreateSchedulePhaseStartUpsertLicenseProration$Outbound
+    | undefined;
+  rollover?: CreateSchedulePhaseStartUpsertLicenseRollover$Outbound | undefined;
+  expiry?: CreateSchedulePhaseStartUpsertLicenseExpiry$Outbound | undefined;
+  feature_override?:
+    | CreateSchedulePhaseStartUpsertLicenseFeatureOverride$Outbound
+    | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicensePlanItem$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicensePlanItem$Outbound,
+    CreateSchedulePhaseStartUpsertLicensePlanItem
+  > = z.pipe(
+    z.object({
+      thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseThresholdBilling$outboundSchema
+      ))),
+      featureId: z.string(),
+      included: z.optional(z.number()),
+      unlimited: z.optional(z.boolean()),
+      pooled: z._default(z.boolean(), false),
+      reset: z.optional(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseReset$outboundSchema
+      )),
+      price: z.optional(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicensePrice$outboundSchema
+      )),
+      proration: z.optional(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseProration$outboundSchema
+      )),
+      rollover: z.optional(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseRollover$outboundSchema
+      )),
+      expiry: z.optional(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseExpiry$outboundSchema
+      )),
+      featureOverride: z.optional(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseFeatureOverride$outboundSchema
+      )),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        thresholdBilling: "threshold_billing",
+        featureId: "feature_id",
+        featureOverride: "feature_override",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicensePlanItemToJSON(
+  createSchedulePhaseStartUpsertLicensePlanItem:
+    CreateSchedulePhaseStartUpsertLicensePlanItem,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicensePlanItem$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicensePlanItem,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<
+    typeof CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod
+  > = z.enum(CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod);
+
+/** @internal */
+export const CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2$outboundSchema:
+  z.ZodMiniEnum<
+    typeof CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2
+  > = z.enum(CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2);
+
+/** @internal */
+export const CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1$outboundSchema:
+  z.ZodMiniEnum<
+    typeof CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1
+  > = z.enum(CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1);
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseIntervalUnion$Outbound =
+  | string
+  | string;
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseIntervalUnion$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseIntervalUnion$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseIntervalUnion
+  > = smartUnion([
+    CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1$outboundSchema,
+    CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2$outboundSchema,
+  ]);
+
+export function createSchedulePhaseStartUpsertLicenseIntervalUnionToJSON(
+  createSchedulePhaseStartUpsertLicenseIntervalUnion:
+    CreateSchedulePhaseStartUpsertLicenseIntervalUnion,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseIntervalUnion$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseIntervalUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicensePlanItemFilter$Outbound = {
+  feature_id?: string | undefined;
+  billing_method?: string | undefined;
+  interval?: string | string | undefined;
+  interval_count?: number | undefined;
+  included?: number | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicensePlanItemFilter$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicensePlanItemFilter$Outbound,
+    CreateSchedulePhaseStartUpsertLicensePlanItemFilter
+  > = z.pipe(
+    z.object({
+      featureId: z.optional(z.string()),
+      billingMethod: z.optional(
+        CreateSchedulePhaseStartUpsertLicenseRemoveItemBillingMethod$outboundSchema,
+      ),
+      interval: z.optional(
+        smartUnion([
+          CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum1$outboundSchema,
+          CreateSchedulePhaseStartIntervalUpsertLicenseRemoveItemEnum2$outboundSchema,
+        ]),
+      ),
+      intervalCount: z.optional(z.int()),
+      included: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+        billingMethod: "billing_method",
+        intervalCount: "interval_count",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicensePlanItemFilterToJSON(
+  createSchedulePhaseStartUpsertLicensePlanItemFilter:
+    CreateSchedulePhaseStartUpsertLicensePlanItemFilter,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicensePlanItemFilter$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicensePlanItemFilter,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicenseCustomize$Outbound = {
+  price?:
+    | CreateSchedulePhaseStartUpsertLicenseBasePrice$Outbound
+    | null
+    | undefined;
+  add_items?:
+    | Array<CreateSchedulePhaseStartUpsertLicensePlanItem$Outbound>
+    | undefined;
+  remove_items?:
+    | Array<CreateSchedulePhaseStartUpsertLicensePlanItemFilter$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePhaseStartUpsertLicenseCustomize$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicenseCustomize$Outbound,
+    CreateSchedulePhaseStartUpsertLicenseCustomize
+  > = z.pipe(
+    z.object({
+      price: z.optional(z.nullable(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseBasePrice$outboundSchema
+      ))),
+      addItems: z.optional(z.array(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicensePlanItem$outboundSchema
+      ))),
+      removeItems: z.optional(z.array(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicensePlanItemFilter$outboundSchema
+      ))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        addItems: "add_items",
+        removeItems: "remove_items",
+      });
+    }),
+  );
+
+export function createSchedulePhaseStartUpsertLicenseCustomizeToJSON(
+  createSchedulePhaseStartUpsertLicenseCustomize:
+    CreateSchedulePhaseStartUpsertLicenseCustomize,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStartUpsertLicenseCustomize$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicenseCustomize,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateSchedulePhaseStartUpsertLicense$Outbound = {
   license_plan_id: string;
   version_slug?: string | undefined;
   included?: number | undefined;
   prepaid_only?: boolean | undefined;
-  customize?: PhaseStartUpsertLicenseCustomize$Outbound | null | undefined;
+  customize?:
+    | CreateSchedulePhaseStartUpsertLicenseCustomize$Outbound
+    | null
+    | undefined;
   metadata?: { [k: string]: any } | undefined;
 };
 
 /** @internal */
-export const PhaseStartUpsertLicense$outboundSchema: z.ZodMiniType<
-  PhaseStartUpsertLicense$Outbound,
-  PhaseStartUpsertLicense
-> = z.pipe(
-  z.object({
-    licensePlanId: z.string(),
-    versionSlug: z.optional(z.string()),
-    included: z.optional(z.int()),
-    prepaidOnly: z.optional(z.boolean()),
-    customize: z.optional(
-      z.nullable(z.lazy(() => PhaseStartUpsertLicenseCustomize$outboundSchema)),
-    ),
-    metadata: z.optional(z.record(z.string(), z.any())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      licensePlanId: "license_plan_id",
-      versionSlug: "version_slug",
-      prepaidOnly: "prepaid_only",
-    });
-  }),
-);
+export const CreateSchedulePhaseStartUpsertLicense$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartUpsertLicense$Outbound,
+    CreateSchedulePhaseStartUpsertLicense
+  > = z.pipe(
+    z.object({
+      licensePlanId: z.string(),
+      versionSlug: z.optional(z.string()),
+      included: z.optional(z.int()),
+      prepaidOnly: z.optional(z.boolean()),
+      customize: z.optional(z.nullable(z.lazy(() =>
+        CreateSchedulePhaseStartUpsertLicenseCustomize$outboundSchema
+      ))),
+      metadata: z.optional(z.record(z.string(), z.any())),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        licensePlanId: "license_plan_id",
+        versionSlug: "version_slug",
+        prepaidOnly: "prepaid_only",
+      });
+    }),
+  );
 
-export function phaseStartUpsertLicenseToJSON(
-  phaseStartUpsertLicense: PhaseStartUpsertLicense,
+export function createSchedulePhaseStartUpsertLicenseToJSON(
+  createSchedulePhaseStartUpsertLicense: CreateSchedulePhaseStartUpsertLicense,
 ): string {
   return JSON.stringify(
-    PhaseStartUpsertLicense$outboundSchema.parse(phaseStartUpsertLicense),
+    CreateSchedulePhaseStartUpsertLicense$outboundSchema.parse(
+      createSchedulePhaseStartUpsertLicense,
+    ),
   );
 }
 
 /** @internal */
-export type PhaseStartRemoveLicense$Outbound = {
+export type CreateSchedulePhaseStartRemoveLicense$Outbound = {
   license_plan_id: string;
 };
 
 /** @internal */
-export const PhaseStartRemoveLicense$outboundSchema: z.ZodMiniType<
-  PhaseStartRemoveLicense$Outbound,
-  PhaseStartRemoveLicense
-> = z.pipe(
-  z.object({
-    licensePlanId: z.string(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      licensePlanId: "license_plan_id",
-    });
-  }),
-);
+export const CreateSchedulePhaseStartRemoveLicense$outboundSchema:
+  z.ZodMiniType<
+    CreateSchedulePhaseStartRemoveLicense$Outbound,
+    CreateSchedulePhaseStartRemoveLicense
+  > = z.pipe(
+    z.object({
+      licensePlanId: z.string(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        licensePlanId: "license_plan_id",
+      });
+    }),
+  );
 
-export function phaseStartRemoveLicenseToJSON(
-  phaseStartRemoveLicense: PhaseStartRemoveLicense,
+export function createSchedulePhaseStartRemoveLicenseToJSON(
+  createSchedulePhaseStartRemoveLicense: CreateSchedulePhaseStartRemoveLicense,
 ): string {
   return JSON.stringify(
-    PhaseStartRemoveLicense$outboundSchema.parse(phaseStartRemoveLicense),
+    CreateSchedulePhaseStartRemoveLicense$outboundSchema.parse(
+      createSchedulePhaseStartRemoveLicense,
+    ),
   );
 }
 
 /** @internal */
-export type PhaseStartCustomize$Outbound = {
-  price?: PhaseStartBasePrice$Outbound | null | undefined;
-  items?: Array<PhaseStartItemPlanItem$Outbound> | undefined;
-  add_items?: Array<PhaseStartAddItemPlanItem$Outbound> | undefined;
-  remove_items?: Array<PhaseStartPlanItemFilter$Outbound> | undefined;
-  billing_controls?: PhaseStartBillingControls$Outbound | undefined;
-  upsert_licenses?: Array<PhaseStartUpsertLicense$Outbound> | undefined;
-  remove_licenses?: Array<PhaseStartRemoveLicense$Outbound> | undefined;
+export type CreateSchedulePhaseStartCustomize$Outbound = {
+  price?: CreateSchedulePhaseStartBasePrice$Outbound | null | undefined;
+  items?: Array<CreateSchedulePhaseStartItemPlanItem$Outbound> | undefined;
+  add_items?:
+    | Array<CreateSchedulePhaseStartAddItemPlanItem$Outbound>
+    | undefined;
+  remove_items?:
+    | Array<CreateSchedulePhaseStartPlanItemFilter$Outbound>
+    | undefined;
+  billing_controls?:
+    | CreateSchedulePhaseStartBillingControls$Outbound
+    | undefined;
+  upsert_licenses?:
+    | Array<CreateSchedulePhaseStartUpsertLicense$Outbound>
+    | undefined;
+  remove_licenses?:
+    | Array<CreateSchedulePhaseStartRemoveLicense$Outbound>
+    | undefined;
 };
 
 /** @internal */
-export const PhaseStartCustomize$outboundSchema: z.ZodMiniType<
-  PhaseStartCustomize$Outbound,
-  PhaseStartCustomize
+export const CreateSchedulePhaseStartCustomize$outboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseStartCustomize$Outbound,
+  CreateSchedulePhaseStartCustomize
 > = z.pipe(
   z.object({
-    price: z.optional(z.nullable(PhaseStartBasePrice$outboundSchema)),
-    items: z.optional(z.array(PhaseStartItemPlanItem$outboundSchema)),
-    addItems: z.optional(
-      z.array(z.lazy(() => PhaseStartAddItemPlanItem$outboundSchema)),
+    price: z.optional(
+      z.nullable(CreateSchedulePhaseStartBasePrice$outboundSchema),
     ),
-    removeItems: z.optional(
-      z.array(z.lazy(() => PhaseStartPlanItemFilter$outboundSchema)),
+    items: z.optional(
+      z.array(CreateSchedulePhaseStartItemPlanItem$outboundSchema),
     ),
-    billingControls: z.optional(
-      z.lazy(() => PhaseStartBillingControls$outboundSchema),
-    ),
-    upsertLicenses: z.optional(
-      z.array(z.lazy(() => PhaseStartUpsertLicense$outboundSchema)),
-    ),
-    removeLicenses: z.optional(
-      z.array(z.lazy(() => PhaseStartRemoveLicense$outboundSchema)),
-    ),
+    addItems: z.optional(z.array(z.lazy(() =>
+      CreateSchedulePhaseStartAddItemPlanItem$outboundSchema
+    ))),
+    removeItems: z.optional(z.array(z.lazy(() =>
+      CreateSchedulePhaseStartPlanItemFilter$outboundSchema
+    ))),
+    billingControls: z.optional(z.lazy(() =>
+      CreateSchedulePhaseStartBillingControls$outboundSchema
+    )),
+    upsertLicenses: z.optional(z.array(z.lazy(() =>
+      CreateSchedulePhaseStartUpsertLicense$outboundSchema
+    ))),
+    removeLicenses: z.optional(z.array(z.lazy(() =>
+      CreateSchedulePhaseStartRemoveLicense$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3616,11 +3860,13 @@ export const PhaseStartCustomize$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartCustomizeToJSON(
-  phaseStartCustomize: PhaseStartCustomize,
+export function createSchedulePhaseStartCustomizeToJSON(
+  createSchedulePhaseStartCustomize: CreateSchedulePhaseStartCustomize,
 ): string {
   return JSON.stringify(
-    PhaseStartCustomize$outboundSchema.parse(phaseStartCustomize),
+    CreateSchedulePhaseStartCustomize$outboundSchema.parse(
+      createSchedulePhaseStartCustomize,
+    ),
   );
 }
 
@@ -3628,10 +3874,14 @@ export function phaseStartCustomizeToJSON(
 export type CreateSchedulePlan2$Outbound = {
   plan_id: string;
   entity_id?: string | null | undefined;
-  feature_quantities?: Array<PhaseStartFeatureQuantity$Outbound> | undefined;
-  license_quantities?: Array<PhaseStartLicenseQuantity$Outbound> | undefined;
+  feature_quantities?:
+    | Array<CreateSchedulePhaseStartFeatureQuantity$Outbound>
+    | undefined;
+  license_quantities?:
+    | Array<CreateSchedulePhaseStartLicenseQuantity$Outbound>
+    | undefined;
   version?: number | undefined;
-  customize?: PhaseStartCustomize$Outbound | undefined;
+  customize?: CreateSchedulePhaseStartCustomize$Outbound | undefined;
   subscription_id?: string | undefined;
 };
 
@@ -3644,13 +3894,15 @@ export const CreateSchedulePlan2$outboundSchema: z.ZodMiniType<
     planId: z.string(),
     entityId: z.optional(z.nullable(z.string())),
     featureQuantities: z.optional(
-      z.array(PhaseStartFeatureQuantity$outboundSchema),
+      z.array(CreateSchedulePhaseStartFeatureQuantity$outboundSchema),
     ),
     licenseQuantities: z.optional(
-      z.array(PhaseStartLicenseQuantity$outboundSchema),
+      z.array(CreateSchedulePhaseStartLicenseQuantity$outboundSchema),
     ),
     version: z.optional(z.number()),
-    customize: z.optional(z.lazy(() => PhaseStartCustomize$outboundSchema)),
+    customize: z.optional(
+      z.lazy(() => CreateSchedulePhaseStartCustomize$outboundSchema),
+    ),
     subscriptionId: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -3678,21 +3930,21 @@ export const CreateScheduleBillingCycleAnchor2$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateScheduleBillingCycleAnchor2);
 
 /** @internal */
-export type PhaseStart$Outbound = {
-  starts_at?: StartsAt2$Outbound | undefined;
-  starting_after?: StartingAfter2$Outbound | undefined;
+export type CreateSchedulePhaseStart$Outbound = {
+  starts_at?: CreateScheduleStartsAt2$Outbound | undefined;
+  starting_after?: CreateScheduleStartingAfter2$Outbound | undefined;
   plans: Array<CreateSchedulePlan2$Outbound>;
   billing_cycle_anchor?: string | undefined;
 };
 
 /** @internal */
-export const PhaseStart$outboundSchema: z.ZodMiniType<
-  PhaseStart$Outbound,
-  PhaseStart
+export const CreateSchedulePhaseStart$outboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseStart$Outbound,
+  CreateSchedulePhaseStart
 > = z.pipe(
   z.object({
-    startsAt: z.optional(StartsAt2$outboundSchema),
-    startingAfter: z.optional(StartingAfter2$outboundSchema),
+    startsAt: z.optional(CreateScheduleStartsAt2$outboundSchema),
+    startingAfter: z.optional(CreateScheduleStartingAfter2$outboundSchema),
     plans: z.array(z.lazy(() => CreateSchedulePlan2$outboundSchema)),
     billingCycleAnchor: z.optional(
       CreateScheduleBillingCycleAnchor2$outboundSchema,
@@ -3707,23 +3959,32 @@ export const PhaseStart$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartToJSON(phaseStart: PhaseStart): string {
-  return JSON.stringify(PhaseStart$outboundSchema.parse(phaseStart));
+export function createSchedulePhaseStartToJSON(
+  createSchedulePhaseStart: CreateSchedulePhaseStart,
+): string {
+  return JSON.stringify(
+    CreateSchedulePhaseStart$outboundSchema.parse(createSchedulePhaseStart),
+  );
 }
 
 /** @internal */
-export type PhaseStartUnion$Outbound = PhaseStart$Outbound;
+export type CreateSchedulePhaseStartUnion$Outbound =
+  CreateSchedulePhaseStart$Outbound;
 
 /** @internal */
-export const PhaseStartUnion$outboundSchema: z.ZodMiniType<
-  PhaseStartUnion$Outbound,
-  PhaseStartUnion
-> = z.lazy(() => PhaseStart$outboundSchema);
+export const CreateSchedulePhaseStartUnion$outboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseStartUnion$Outbound,
+  CreateSchedulePhaseStartUnion
+> = z.lazy(() => CreateSchedulePhaseStart$outboundSchema);
 
-export function phaseStartUnionToJSON(
-  phaseStartUnion: PhaseStartUnion,
+export function createSchedulePhaseStartUnionToJSON(
+  createSchedulePhaseStartUnion: CreateSchedulePhaseStartUnion,
 ): string {
-  return JSON.stringify(PhaseStartUnion$outboundSchema.parse(phaseStartUnion));
+  return JSON.stringify(
+    CreateSchedulePhaseStartUnion$outboundSchema.parse(
+      createSchedulePhaseStartUnion,
+    ),
+  );
 }
 
 /** @internal */
@@ -3742,8 +4003,8 @@ export type CreateScheduleParams$Outbound = {
   billing_cycle_anchor?: "now" | undefined;
   enable_plan_immediately?: boolean | undefined;
   preserve_add_ons?: boolean | undefined;
-  unscheduled_plans?: Array<UnscheduledPlan$Outbound> | undefined;
-  phases: Array<PhaseStart$Outbound>;
+  unscheduled_plans?: Array<CreateScheduleUnscheduledPlan$Outbound> | undefined;
+  phases: Array<CreateSchedulePhaseStart$Outbound>;
 };
 
 /** @internal */
@@ -3771,8 +4032,10 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
     billingCycleAnchor: z.optional(z.literal("now")),
     enablePlanImmediately: z.optional(z.boolean()),
     preserveAddOns: z.optional(z.boolean()),
-    unscheduledPlans: z.optional(z.array(UnscheduledPlan$outboundSchema)),
-    phases: z.array(z.lazy(() => PhaseStart$outboundSchema)),
+    unscheduledPlans: z.optional(
+      z.array(CreateScheduleUnscheduledPlan$outboundSchema),
+    ),
+    phases: z.array(z.lazy(() => CreateSchedulePhaseStart$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3808,8 +4071,8 @@ export const CreateScheduleStatus$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateScheduleStatus);
 
 /** @internal */
-export const PhaseResponse$inboundSchema: z.ZodMiniType<
-  PhaseResponse,
+export const CreateSchedulePhaseResponse$inboundSchema: z.ZodMiniType<
+  CreateSchedulePhaseResponse,
   unknown
 > = z.pipe(
   z.object({
@@ -3826,13 +4089,13 @@ export const PhaseResponse$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseResponseFromJSON(
+export function createSchedulePhaseResponseFromJSON(
   jsonString: string,
-): SafeParseResult<PhaseResponse, SDKValidationError> {
+): SafeParseResult<CreateSchedulePhaseResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PhaseResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PhaseResponse' from JSON`,
+    (x) => CreateSchedulePhaseResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateSchedulePhaseResponse' from JSON`,
   );
 }
 
@@ -3901,7 +4164,7 @@ export const CreateScheduleResponse$inboundSchema: z.ZodMiniType<
     entity_id: types.nullable(types.string()),
     status: CreateScheduleStatus$inboundSchema,
     schedule_id: types.nullable(types.string()),
-    phases: z.array(z.lazy(() => PhaseResponse$inboundSchema)),
+    phases: z.array(z.lazy(() => CreateSchedulePhaseResponse$inboundSchema)),
     invoice: types.optional(z.lazy(() => CreateScheduleInvoice$inboundSchema)),
     payment_url: types.nullable(types.string()),
     required_action: types.optional(

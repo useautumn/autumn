@@ -928,7 +928,7 @@ export type UpdatePlanVariantDetailsAdditionalCurrency = {
 /**
  * Base price configuration for a plan.
  */
-export type UpdatePlanVariantDetailsBasePrice = {
+export type UpdatePlanBasePriceResponse = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
    */
@@ -1109,7 +1109,7 @@ export type UpdatePlanVariantDetailsPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const UpdatePlanVariantDetailsOnIncrease = {
+export const UpdatePlanOnIncreaseResponse = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1118,14 +1118,14 @@ export const UpdatePlanVariantDetailsOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type UpdatePlanVariantDetailsOnIncrease = OpenEnum<
-  typeof UpdatePlanVariantDetailsOnIncrease
+export type UpdatePlanOnIncreaseResponse = OpenEnum<
+  typeof UpdatePlanOnIncreaseResponse
 >;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const UpdatePlanVariantDetailsOnDecrease = {
+export const UpdatePlanOnDecreaseResponse = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1135,22 +1135,22 @@ export const UpdatePlanVariantDetailsOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type UpdatePlanVariantDetailsOnDecrease = OpenEnum<
-  typeof UpdatePlanVariantDetailsOnDecrease
+export type UpdatePlanOnDecreaseResponse = OpenEnum<
+  typeof UpdatePlanOnDecreaseResponse
 >;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type UpdatePlanVariantDetailsProration = {
+export type UpdatePlanProrationResponse = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: UpdatePlanVariantDetailsOnIncrease;
+  onIncrease: UpdatePlanOnIncreaseResponse;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: UpdatePlanVariantDetailsOnDecrease;
+  onDecrease: UpdatePlanOnDecreaseResponse;
 };
 
 /**
@@ -1492,7 +1492,7 @@ export type UpdatePlanVariantDetailsFeatureOverride = {
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type UpdatePlanVariantDetailsPlanItem = {
+export type UpdatePlanPlanItemResponse = {
   /**
    * Bills this many feature units when outstanding overage reaches it.
    */
@@ -1527,7 +1527,7 @@ export type UpdatePlanVariantDetailsPlanItem = {
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: UpdatePlanVariantDetailsProration | undefined;
+  proration?: UpdatePlanProrationResponse | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
@@ -1593,7 +1593,7 @@ export type UpdatePlanVariantDetailsIntervalUnion =
 /**
  * Filter for matching plan items. All provided fields must match (AND).
  */
-export type UpdatePlanVariantDetailsPlanItemFilter = {
+export type UpdatePlanPlanItemFilterResponse = {
   /**
    * Match items linked to this feature.
    */
@@ -3627,8 +3627,8 @@ export function updatePlanVariantDetailsAdditionalCurrencyFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanVariantDetailsBasePrice$inboundSchema: z.ZodMiniType<
-  UpdatePlanVariantDetailsBasePrice,
+export const UpdatePlanBasePriceResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanBasePriceResponse,
   unknown
 > = z.pipe(
   z.object({
@@ -3647,13 +3647,13 @@ export const UpdatePlanVariantDetailsBasePrice$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanVariantDetailsBasePriceFromJSON(
+export function updatePlanBasePriceResponseFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanVariantDetailsBasePrice, SDKValidationError> {
+): SafeParseResult<UpdatePlanBasePriceResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdatePlanVariantDetailsBasePrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanVariantDetailsBasePrice' from JSON`,
+    (x) => UpdatePlanBasePriceResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanBasePriceResponse' from JSON`,
   );
 }
 
@@ -3875,25 +3875,25 @@ export function updatePlanVariantDetailsPriceFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanVariantDetailsOnIncrease$inboundSchema: z.ZodMiniType<
-  UpdatePlanVariantDetailsOnIncrease,
+export const UpdatePlanOnIncreaseResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanOnIncreaseResponse,
   unknown
-> = openEnums.inboundSchema(UpdatePlanVariantDetailsOnIncrease);
+> = openEnums.inboundSchema(UpdatePlanOnIncreaseResponse);
 
 /** @internal */
-export const UpdatePlanVariantDetailsOnDecrease$inboundSchema: z.ZodMiniType<
-  UpdatePlanVariantDetailsOnDecrease,
+export const UpdatePlanOnDecreaseResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanOnDecreaseResponse,
   unknown
-> = openEnums.inboundSchema(UpdatePlanVariantDetailsOnDecrease);
+> = openEnums.inboundSchema(UpdatePlanOnDecreaseResponse);
 
 /** @internal */
-export const UpdatePlanVariantDetailsProration$inboundSchema: z.ZodMiniType<
-  UpdatePlanVariantDetailsProration,
+export const UpdatePlanProrationResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanProrationResponse,
   unknown
 > = z.pipe(
   z.object({
-    on_increase: UpdatePlanVariantDetailsOnIncrease$inboundSchema,
-    on_decrease: UpdatePlanVariantDetailsOnDecrease$inboundSchema,
+    on_increase: UpdatePlanOnIncreaseResponse$inboundSchema,
+    on_decrease: UpdatePlanOnDecreaseResponse$inboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3903,13 +3903,13 @@ export const UpdatePlanVariantDetailsProration$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanVariantDetailsProrationFromJSON(
+export function updatePlanProrationResponseFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanVariantDetailsProration, SDKValidationError> {
+): SafeParseResult<UpdatePlanProrationResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdatePlanVariantDetailsProration$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanVariantDetailsProration' from JSON`,
+    (x) => UpdatePlanProrationResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanProrationResponse' from JSON`,
   );
 }
 
@@ -4602,8 +4602,8 @@ export function updatePlanVariantDetailsFeatureOverrideFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanVariantDetailsPlanItem$inboundSchema: z.ZodMiniType<
-  UpdatePlanVariantDetailsPlanItem,
+export const UpdatePlanPlanItemResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanPlanItemResponse,
   unknown
 > = z.pipe(
   z.object({
@@ -4621,7 +4621,7 @@ export const UpdatePlanVariantDetailsPlanItem$inboundSchema: z.ZodMiniType<
       UpdatePlanVariantDetailsPrice$inboundSchema
     )),
     proration: types.optional(z.lazy(() =>
-      UpdatePlanVariantDetailsProration$inboundSchema
+      UpdatePlanProrationResponse$inboundSchema
     )),
     rollover: types.optional(z.lazy(() =>
       UpdatePlanVariantDetailsRollover$inboundSchema
@@ -4642,13 +4642,13 @@ export const UpdatePlanVariantDetailsPlanItem$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanVariantDetailsPlanItemFromJSON(
+export function updatePlanPlanItemResponseFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanVariantDetailsPlanItem, SDKValidationError> {
+): SafeParseResult<UpdatePlanPlanItemResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdatePlanVariantDetailsPlanItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanVariantDetailsPlanItem' from JSON`,
+    (x) => UpdatePlanPlanItemResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanPlanItemResponse' from JSON`,
   );
 }
 
@@ -4688,39 +4688,40 @@ export function updatePlanVariantDetailsIntervalUnionFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanVariantDetailsPlanItemFilter$inboundSchema:
-  z.ZodMiniType<UpdatePlanVariantDetailsPlanItemFilter, unknown> = z.pipe(
-    z.object({
-      feature_id: types.optional(types.string()),
-      billing_method: types.optional(
-        UpdatePlanVariantDetailsRemoveItemBillingMethod$inboundSchema,
-      ),
-      interval: types.optional(
-        smartUnion([
-          UpdatePlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema,
-          UpdatePlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema,
-        ]),
-      ),
-      interval_count: types.optional(types.number()),
-      included: types.optional(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "feature_id": "featureId",
-        "billing_method": "billingMethod",
-        "interval_count": "intervalCount",
-      });
-    }),
-  );
+export const UpdatePlanPlanItemFilterResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanPlanItemFilterResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    billing_method: types.optional(
+      UpdatePlanVariantDetailsRemoveItemBillingMethod$inboundSchema,
+    ),
+    interval: types.optional(
+      smartUnion([
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema,
+      ]),
+    ),
+    interval_count: types.optional(types.number()),
+    included: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "billing_method": "billingMethod",
+      "interval_count": "intervalCount",
+    });
+  }),
+);
 
-export function updatePlanVariantDetailsPlanItemFilterFromJSON(
+export function updatePlanPlanItemFilterResponseFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanVariantDetailsPlanItemFilter, SDKValidationError> {
+): SafeParseResult<UpdatePlanPlanItemFilterResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) =>
-      UpdatePlanVariantDetailsPlanItemFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanVariantDetailsPlanItemFilter' from JSON`,
+    (x) => UpdatePlanPlanItemFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanPlanItemFilterResponse' from JSON`,
   );
 }
 

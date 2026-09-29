@@ -1,0 +1,2688 @@
+---
+title: "Set Plans"
+openapi: "openapi POST /v1/billing.set_plans"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer to create the schedule for.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  Optional entity ID for an entity-scoped schedule.
+</DynamicParamField>
+
+<DynamicParamField body="free_trial" type="object | null">
+  Free trial configuration for a plan.
+  <Expandable title="properties">
+    <DynamicParamField body="duration_length" type="number" required>
+      Number of duration_type periods the trial lasts.
+    </DynamicParamField>
+
+    <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'">
+      Unit of time for the trial ('day', 'month', 'year').
+    </DynamicParamField>
+
+    <DynamicParamField body="card_required" type="boolean">
+      If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
+    </DynamicParamField>
+
+    <DynamicParamField body="on_end" type="'bill' | 'revert'">
+      Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="currency" type="string">
+  Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
+</DynamicParamField>
+
+<DynamicParamField body="invoice_mode" type="object">
+  Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      When true, creates an invoice and sends it to the customer instead of charging their card immediately. Uses Stripe's send_invoice collection method.
+    </DynamicParamField>
+
+    <DynamicParamField body="enable_plan_immediately" type="boolean">
+      If true, enables the plan immediately even though the invoice is not paid yet.
+    </DynamicParamField>
+
+    <DynamicParamField body="finalize" type="boolean">
+      If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+    </DynamicParamField>
+
+    <DynamicParamField body="invoice_template_id" type="string">
+      ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
+    </DynamicParamField>
+
+    <DynamicParamField body="net_terms_days" type="integer">
+      Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="discounts" type="object[]">
+  List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string">
+      The ID of the reward to apply as a discount.
+    </DynamicParamField>
+
+    <DynamicParamField body="promotion_code" type="string">
+      The promotion code to apply as a discount.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="success_url" type="string">
+  URL to redirect to after successful checkout.
+</DynamicParamField>
+
+<DynamicParamField body="checkout_session_params" type="object">
+  Additional parameters to pass into the creation of the Stripe checkout session.
+</DynamicParamField>
+
+<DynamicParamField body="redirect_mode" type="'always' | 'if_required' | 'never'">
+  Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+</DynamicParamField>
+
+<DynamicParamField body="no_billing_changes" type="boolean">
+  If true, skips any billing changes for the schedule.
+</DynamicParamField>
+
+<DynamicParamField body="enable_plan_immediately" type="boolean">
+  If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+</DynamicParamField>
+
+<DynamicParamField body="preserve_add_ons" type="boolean">
+  Deprecated and ignored. Active plans the schedule does not declare are always retained.
+</DynamicParamField>
+
+<DynamicParamField body="unscheduled_plans" type="object[]">
+  Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
+  <Expandable title="properties">
+    <DynamicParamField body="plan_id" type="string" required>
+      The ID of the plan to schedule in this phase.
+    </DynamicParamField>
+
+    <DynamicParamField body="entity_id" type="string | null">
+      The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_quantities" type="object[]">
+      Optional prepaid feature quantities for this phase's plan.
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string" required>
+          The ID of the feature to set quantity for.
+        </DynamicParamField>
+
+        <DynamicParamField body="quantity" type="number">
+          The quantity of the feature.
+        </DynamicParamField>
+
+        <DynamicParamField body="adjustable" type="boolean">
+          Whether the customer can adjust the quantity.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="license_quantities" type="object[]">
+      Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.
+      <Expandable title="properties">
+        <DynamicParamField body="license_plan_id" type="string" required>
+          The license plan to set seat quantity for.
+        </DynamicParamField>
+
+        <DynamicParamField body="quantity" type="integer" required>
+          Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="version" type="number">
+      Optional explicit plan version to schedule.
+    </DynamicParamField>
+
+    <DynamicParamField body="customize" type="object">
+      Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
+      <Expandable title="properties">
+        <DynamicParamField body="price" type="object | null">
+          Base price configuration for a plan.
+          <Expandable title="properties">
+            <DynamicParamField body="amount" type="number" required>
+              Base price amount for the plan, in major currency units (e.g. dollars).
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+              Billing interval (e.g. 'month', 'year').
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="number">
+              Number of intervals per billing cycle. Defaults to 1.
+            </DynamicParamField>
+
+            <DynamicParamField body="additional_currencies" type="object[]">
+              Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+              <Expandable title="properties">
+                <DynamicParamField body="currency" type="string" required>
+                  Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                </DynamicParamField>
+
+                <DynamicParamField body="amount" type="number" required>
+                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="items" type="object[]">
+          Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
+          <Expandable title="properties">
+            <DynamicParamField body="threshold_billing" type="object | null">
+              Bills this many feature units when outstanding overage reaches it.
+              <Expandable title="properties">
+                <DynamicParamField body="threshold" type="number" required />
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="feature_id" type="string" required>
+              The ID of the feature to configure.
+            </DynamicParamField>
+
+            <DynamicParamField body="included" type="number">
+              Number of free units included. Balance resets to this each interval for consumable features.
+            </DynamicParamField>
+
+            <DynamicParamField body="unlimited" type="boolean">
+              If true, customer has unlimited access to this feature.
+            </DynamicParamField>
+
+            <DynamicParamField body="pooled" type="boolean">
+              Whether entity-level grants contribute to a shared customer balance.
+            </DynamicParamField>
+
+            <DynamicParamField body="reset" type="object">
+              Reset configuration for consumable features. Omit for non-consumable features like seats.
+              <Expandable title="properties">
+                <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals between resets. Defaults to 1.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="price" type="object">
+              Pricing for usage beyond included units. Omit for free features.
+              <Expandable title="properties">
+                <DynamicParamField body="amount" type="number">
+                  Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                </DynamicParamField>
+
+                <DynamicParamField body="additional_currencies" type="object[]">
+                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                  <Expandable title="properties">
+                    <DynamicParamField body="currency" type="string" required>
+                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                    </DynamicParamField>
+
+                    <DynamicParamField body="amount" type="number" required>
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="tiers" type="object[]">
+                  Tiered pricing. Either 'amount' or 'tiers' is required.
+                  <Expandable title="properties">
+                    <DynamicParamField body="to" type="number" required />
+
+                    <DynamicParamField body="amount" type="number" />
+
+                    <DynamicParamField body="flat_amount" type="number" />
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="string" required>
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicParamField>
+
+                        <DynamicParamField body="amount" type="number">
+                          Per-unit amount for this tier in this currency.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="flat_amount" type="number">
+                          Flat amount for this tier in this currency, if the tier uses one.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval. For consumable features, should match reset.interval.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_units" type="number">
+                  Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                  'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                </DynamicParamField>
+
+                <DynamicParamField body="max_purchase" type="number | null">
+                  Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="proration" type="object">
+              Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+              <Expandable title="properties">
+                <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                  Billing behavior when quantity increases mid-cycle.
+                </DynamicParamField>
+
+                <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                  Credit behavior when quantity decreases mid-cycle.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="rollover" type="object">
+              Rollover config for unused units. If set, unused included units carry over.
+              <Expandable title="properties">
+                <DynamicParamField body="max" type="number">
+                  Max rollover units. Omit for unlimited rollover.
+                </DynamicParamField>
+
+                <DynamicParamField body="max_percentage" type="number">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                  When rolled over units expire.
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry_duration_length" type="number">
+                  Number of periods before expiry.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="expiry" type="object">
+              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+              <Expandable title="properties">
+                <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                <DynamicParamField body="length" type="number" required />
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="feature_override" type="object">
+              Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+              <Expandable title="properties">
+                <DynamicParamField body="credit_schema" type="object | object[]">
+                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="metered_feature_id" type="string">
+                      ID of the metered feature that draws from this credit system.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_units" type="number">
+                      Number of metered-feature units priced together. Defaults to one when omitted.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="dimensions.{key}" type="object">
+                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="priority" type="integer">
+                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tier_behavior" type="any" required />
+
+                        <DynamicParamField body="tiers" type="object[]" required>
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="multipliers.{key}" type="object">
+                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="factor" type="number">
+                          Multiplies the matched rate. All matching multipliers stack.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="add" type="number">
+                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="any" />
+
+                    <DynamicParamField body="tiers" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required>
+                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number" required>
+                          Credits consumed per billing-unit group within this tier.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="credit_cost" type="number">
+                      Credits consumed per billing-unit group.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="markups" type="object">
+                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                  <Expandable title="properties">
+                    <DynamicParamField body="default_markup" type="number">
+                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="provider_markups.{key}" type="object | null">
+                      Per-provider markup percentages for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="markup" type="number" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="model_markups.{key}" type="object | null">
+                      Per-model markup overrides for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="markup" type="number" />
+
+                        <DynamicParamField body="input_cost" type="number" />
+
+                        <DynamicParamField body="output_cost" type="number" />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="add_items" type="object[]">
+          Items to add to the plan.
+          <Expandable title="properties">
+            <DynamicParamField body="threshold_billing" type="object | null">
+              Bills this many feature units when outstanding overage reaches it.
+              <Expandable title="properties">
+                <DynamicParamField body="threshold" type="number" required />
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="feature_id" type="string" required>
+              The ID of the feature to configure.
+            </DynamicParamField>
+
+            <DynamicParamField body="included" type="number">
+              Number of free units included. Balance resets to this each interval for consumable features.
+            </DynamicParamField>
+
+            <DynamicParamField body="unlimited" type="boolean">
+              If true, customer has unlimited access to this feature.
+            </DynamicParamField>
+
+            <DynamicParamField body="pooled" type="boolean">
+              Whether entity-level grants contribute to a shared customer balance.
+            </DynamicParamField>
+
+            <DynamicParamField body="reset" type="object">
+              Reset configuration for consumable features. Omit for non-consumable features like seats.
+              <Expandable title="properties">
+                <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals between resets. Defaults to 1.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="price" type="object">
+              Pricing for usage beyond included units. Omit for free features.
+              <Expandable title="properties">
+                <DynamicParamField body="amount" type="number">
+                  Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                </DynamicParamField>
+
+                <DynamicParamField body="additional_currencies" type="object[]">
+                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                  <Expandable title="properties">
+                    <DynamicParamField body="currency" type="string" required>
+                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                    </DynamicParamField>
+
+                    <DynamicParamField body="amount" type="number" required>
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="tiers" type="object[]">
+                  Tiered pricing. Either 'amount' or 'tiers' is required.
+                  <Expandable title="properties">
+                    <DynamicParamField body="to" type="number" required />
+
+                    <DynamicParamField body="amount" type="number" />
+
+                    <DynamicParamField body="flat_amount" type="number" />
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="string" required>
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicParamField>
+
+                        <DynamicParamField body="amount" type="number">
+                          Per-unit amount for this tier in this currency.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="flat_amount" type="number">
+                          Flat amount for this tier in this currency, if the tier uses one.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval. For consumable features, should match reset.interval.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_units" type="number">
+                  Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                  'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                </DynamicParamField>
+
+                <DynamicParamField body="max_purchase" type="number | null">
+                  Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="proration" type="object">
+              Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+              <Expandable title="properties">
+                <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                  Billing behavior when quantity increases mid-cycle.
+                </DynamicParamField>
+
+                <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                  Credit behavior when quantity decreases mid-cycle.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="rollover" type="object">
+              Rollover config for unused units. If set, unused included units carry over.
+              <Expandable title="properties">
+                <DynamicParamField body="max" type="number">
+                  Max rollover units. Omit for unlimited rollover.
+                </DynamicParamField>
+
+                <DynamicParamField body="max_percentage" type="number">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                  When rolled over units expire.
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry_duration_length" type="number">
+                  Number of periods before expiry.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="expiry" type="object">
+              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+              <Expandable title="properties">
+                <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                <DynamicParamField body="length" type="number" required />
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="feature_override" type="object">
+              Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+              <Expandable title="properties">
+                <DynamicParamField body="credit_schema" type="object | object[]">
+                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="metered_feature_id" type="string">
+                      ID of the metered feature that draws from this credit system.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_units" type="number">
+                      Number of metered-feature units priced together. Defaults to one when omitted.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="dimensions.{key}" type="object">
+                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="priority" type="integer">
+                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tier_behavior" type="any" required />
+
+                        <DynamicParamField body="tiers" type="object[]" required>
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="multipliers.{key}" type="object">
+                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="factor" type="number">
+                          Multiplies the matched rate. All matching multipliers stack.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="add" type="number">
+                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="any" />
+
+                    <DynamicParamField body="tiers" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required>
+                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number" required>
+                          Credits consumed per billing-unit group within this tier.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="credit_cost" type="number">
+                      Credits consumed per billing-unit group.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="markups" type="object">
+                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                  <Expandable title="properties">
+                    <DynamicParamField body="default_markup" type="number">
+                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="provider_markups.{key}" type="object | null">
+                      Per-provider markup percentages for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="markup" type="number" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="model_markups.{key}" type="object | null">
+                      Per-model markup overrides for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="markup" type="number" />
+
+                        <DynamicParamField body="input_cost" type="number" />
+
+                        <DynamicParamField body="output_cost" type="number" />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="remove_items" type="object[]">
+          Filters selecting items to remove from the plan.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string">
+              Match items linked to this feature.
+            </DynamicParamField>
+
+            <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'">
+              Match items with this billing method (prepaid or usage_based).
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="integer">
+              Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+            </DynamicParamField>
+
+            <DynamicParamField body="included" type="number">
+              Match items whose grant equals this included usage. Omitted is a wildcard.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="billing_controls" type="object">
+          Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+          <Expandable title="properties">
+            <DynamicParamField body="auto_topups" type="object[]">
+              List of auto top-up configurations per feature.
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string" required>
+                  The ID of the feature (credit balance) to auto top-up.
+                </DynamicParamField>
+
+                <DynamicParamField body="enabled" type="boolean">
+                  Whether auto top-up is enabled.
+                </DynamicParamField>
+
+                <DynamicParamField body="threshold" type="number" required>
+                  When the balance drops below this threshold, an auto top-up will be purchased.
+                </DynamicParamField>
+
+                <DynamicParamField body="quantity" type="number" required>
+                  Amount of credits to add per auto top-up.
+                </DynamicParamField>
+
+                <DynamicParamField body="purchase_limit" type="object">
+                  Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
+                  <Expandable title="properties">
+                    <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
+                      The time interval for the purchase limit window.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals in the purchase limit window.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="limit" type="number" required>
+                      Maximum number of auto top-ups allowed within the interval.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="count" type="number">
+                      Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="invoice_mode" type="boolean">
+                  When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="spend_limits" type="object[]">
+              List of overage spend limits per feature (caps overage spend).
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string">
+                  Optional feature ID this spend limit applies to.
+                </DynamicParamField>
+
+                <DynamicParamField body="enabled" type="boolean">
+                  Whether the overage spend limit is enabled.
+                </DynamicParamField>
+
+                <DynamicParamField body="limit_type" type="'absolute' | 'usage_percentage'">
+                  How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+                </DynamicParamField>
+
+                <DynamicParamField body="overage_limit" type="number">
+                  Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+                </DynamicParamField>
+
+                <DynamicParamField body="skip_overage_billing" type="boolean">
+                  When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="usage_limits" type="object[]">
+              List of hard usage caps per feature (max units per interval).
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string" required>
+                  The feature this usage limit applies to.
+                </DynamicParamField>
+
+                <DynamicParamField body="enabled" type="boolean">
+                  Whether this usage limit is enabled.
+                </DynamicParamField>
+
+                <DynamicParamField body="limit" type="number" required>
+                  Maximum units allowed per interval.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
+                  Interval for the cap, aligned to the customer's billing cycle.
+                </DynamicParamField>
+
+                <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                </DynamicParamField>
+
+                <DynamicParamField body="filter" type="object">
+                  When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                  <Expandable title="properties">
+                    <DynamicParamField body="properties.{key}" type="string" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="usage_alerts" type="object[]">
+              List of usage alert configurations per feature.
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string">
+                  The feature ID this alert applies to.
+                </DynamicParamField>
+
+                <DynamicParamField body="enabled" type="boolean">
+                  Whether this usage alert is enabled.
+                </DynamicParamField>
+
+                <DynamicParamField body="threshold" type="number" required>
+                  The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+                </DynamicParamField>
+
+                <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
+                  Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                </DynamicParamField>
+
+                <DynamicParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+                  What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                </DynamicParamField>
+
+                <DynamicParamField body="filter" type="object">
+                  Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                  <Expandable title="properties">
+                    <DynamicParamField body="properties.{key}" type="string" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="name" type="string">
+                  Optional user-defined label to distinguish multiple alerts on the same feature.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="overage_allowed" type="object[]">
+              List of overage allowed controls per feature. When enabled, usage can exceed balance.
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string" required>
+                  The feature ID this overage allowed control applies to.
+                </DynamicParamField>
+
+                <DynamicParamField body="enabled" type="boolean">
+                  Whether overage is allowed for this feature.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="upsert_licenses" type="object[]">
+          License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
+          <Expandable title="properties">
+            <DynamicParamField body="license_plan_id" type="string" required />
+
+            <DynamicParamField body="version_slug" type="string" />
+
+            <DynamicParamField body="included" type="integer" />
+
+            <DynamicParamField body="prepaid_only" type="boolean" />
+
+            <DynamicParamField body="customize" type="object | null">
+              <Expandable title="properties">
+                <DynamicParamField body="price" type="object | null">
+                  Base price configuration for a plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="amount" type="number" required>
+                      Base price amount for the plan, in major currency units (e.g. dollars).
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                      Billing interval (e.g. 'month', 'year').
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals per billing cycle. Defaults to 1.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="string" required>
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicParamField>
+
+                        <DynamicParamField body="amount" type="number" required>
+                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="add_items" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicParamField body="threshold_billing" type="object | null">
+                      Bills this many feature units when outstanding overage reaches it.
+                      <Expandable title="properties">
+                        <DynamicParamField body="threshold" type="number" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="feature_id" type="string" required>
+                      The ID of the feature to configure.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="included" type="number">
+                      Number of free units included. Balance resets to this each interval for consumable features.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="unlimited" type="boolean">
+                      If true, customer has unlimited access to this feature.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="pooled" type="boolean">
+                      Whether entity-level grants contribute to a shared customer balance.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="reset" type="object">
+                      Reset configuration for consumable features. Omit for non-consumable features like seats.
+                      <Expandable title="properties">
+                        <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                          Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="interval_count" type="number">
+                          Number of intervals between resets. Defaults to 1.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="price" type="object">
+                      Pricing for usage beyond included units. Omit for free features.
+                      <Expandable title="properties">
+                        <DynamicParamField body="amount" type="number">
+                          Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="additional_currencies" type="object[]">
+                          Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                          <Expandable title="properties">
+                            <DynamicParamField body="currency" type="string" required>
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicParamField>
+
+                            <DynamicParamField body="amount" type="number" required>
+                              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tiers" type="object[]">
+                          Tiered pricing. Either 'amount' or 'tiers' is required.
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required />
+
+                            <DynamicParamField body="amount" type="number" />
+
+                            <DynamicParamField body="flat_amount" type="number" />
+
+                            <DynamicParamField body="additional_currencies" type="object[]">
+                              Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                              <Expandable title="properties">
+                                <DynamicParamField body="currency" type="string" required>
+                                  Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                </DynamicParamField>
+
+                                <DynamicParamField body="amount" type="number">
+                                  Per-unit amount for this tier in this currency.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="flat_amount" type="number">
+                                  Flat amount for this tier in this currency, if the tier uses one.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                        <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                          Billing interval. For consumable features, should match reset.interval.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="interval_count" type="number">
+                          Number of intervals per billing cycle. Defaults to 1.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="billing_units" type="number">
+                          Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                        </DynamicParamField>
+
+                        <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                          'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="max_purchase" type="number | null">
+                          Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="proration" type="object">
+                      Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                      <Expandable title="properties">
+                        <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                          Billing behavior when quantity increases mid-cycle.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                          Credit behavior when quantity decreases mid-cycle.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="rollover" type="object">
+                      Rollover config for unused units. If set, unused included units carry over.
+                      <Expandable title="properties">
+                        <DynamicParamField body="max" type="number">
+                          Max rollover units. Omit for unlimited rollover.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="max_percentage" type="number">
+                          Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                          When rolled over units expire.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="expiry_duration_length" type="number">
+                          Number of periods before expiry.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="expiry" type="object">
+                      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                      <Expandable title="properties">
+                        <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                        <DynamicParamField body="length" type="number" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="feature_override" type="object">
+                      Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                      <Expandable title="properties">
+                        <DynamicParamField body="credit_schema" type="object | object[]">
+                          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                          <Expandable title="properties">
+                            <DynamicParamField body="metered_feature_id" type="string">
+                              ID of the metered feature that draws from this credit system.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="billing_units" type="number">
+                              Number of metered-feature units priced together. Defaults to one when omitted.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="dimensions.{key}" type="object">
+                              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                              <Expandable title="properties">
+                                <DynamicParamField body="match.{key}" type="string" required>
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="priority" type="integer">
+                                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="tier_behavior" type="any" required />
+
+                                <DynamicParamField body="tiers" type="object[]" required>
+                                  <Expandable title="properties">
+                                    <DynamicParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </DynamicParamField>
+
+                                  </Expandable>
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                            <DynamicParamField body="multipliers.{key}" type="object">
+                              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                              <Expandable title="properties">
+                                <DynamicParamField body="match.{key}" type="string" required>
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="factor" type="number">
+                                  Multiplies the matched rate. All matching multipliers stack.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="add" type="number">
+                                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                            <DynamicParamField body="tier_behavior" type="any" />
+
+                            <DynamicParamField body="tiers" type="object[]">
+                              <Expandable title="properties">
+                                <DynamicParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                            <DynamicParamField body="credit_cost" type="number">
+                              Credits consumed per billing-unit group.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="markups" type="object">
+                          For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                          <Expandable title="properties">
+                            <DynamicParamField body="default_markup" type="number">
+                              Default percentage markup for customers on this plan. Use -100 to make usage free.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="provider_markups.{key}" type="object | null">
+                              Per-provider markup percentages for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicParamField body="markup" type="number" required />
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                            <DynamicParamField body="model_markups.{key}" type="object | null">
+                              Per-model markup overrides for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicParamField body="markup" type="number" />
+
+                                <DynamicParamField body="input_cost" type="number" />
+
+                                <DynamicParamField body="output_cost" type="number" />
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="remove_items" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicParamField body="feature_id" type="string">
+                      Match items linked to this feature.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'">
+                      Match items with this billing method (prepaid or usage_based).
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                      Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="integer">
+                      Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="included" type="number">
+                      Match items whose grant equals this included usage. Omitted is a wildcard.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="metadata" type="object" />
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="remove_licenses" type="object[]">
+          License links to drop, keyed by license_plan_id. Parallel to remove_items.
+          <Expandable title="properties">
+            <DynamicParamField body="license_plan_id" type="string" required />
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="subscription_id" type="string">
+      A unique ID to identify this subscription. Useful when scheduling the same plan multiple times.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="phases" type="object[]" required>
+  Ordered phase definitions for the schedule.
+  <Expandable title="properties">
+    <DynamicParamField body="starts_at" type="number">
+      When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
+    </DynamicParamField>
+
+    <DynamicParamField body="starting_after" type="object">
+      Relative start offset from the previous resolved schedule phase.
+      <Expandable title="properties">
+        <DynamicParamField body="duration_type" type="'month' | 'year'" required>
+          The duration unit to offset this phase from the prior phase.
+        </DynamicParamField>
+
+        <DynamicParamField body="duration_count" type="integer" required>
+          How many duration_type periods after the prior phase to start.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="plans" type="object[]" required>
+      Plans to materialize for this phase.
+      <Expandable title="properties">
+        <DynamicParamField body="plan_id" type="string" required>
+          The ID of the plan to schedule in this phase.
+        </DynamicParamField>
+
+        <DynamicParamField body="entity_id" type="string | null">
+          The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.
+        </DynamicParamField>
+
+        <DynamicParamField body="feature_quantities" type="object[]">
+          Optional prepaid feature quantities for this phase's plan.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The ID of the feature to set quantity for.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="number">
+              The quantity of the feature.
+            </DynamicParamField>
+
+            <DynamicParamField body="adjustable" type="boolean">
+              Whether the customer can adjust the quantity.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="license_quantities" type="object[]">
+          Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.
+          <Expandable title="properties">
+            <DynamicParamField body="license_plan_id" type="string" required>
+              The license plan to set seat quantity for.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="integer" required>
+              Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="version" type="number">
+          Optional explicit plan version to schedule.
+        </DynamicParamField>
+
+        <DynamicParamField body="customize" type="object">
+          Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
+          <Expandable title="properties">
+            <DynamicParamField body="price" type="object | null">
+              Base price configuration for a plan.
+              <Expandable title="properties">
+                <DynamicParamField body="amount" type="number" required>
+                  Base price amount for the plan, in major currency units (e.g. dollars).
+                </DynamicParamField>
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval (e.g. 'month', 'year').
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </DynamicParamField>
+
+                <DynamicParamField body="additional_currencies" type="object[]">
+                  Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                  <Expandable title="properties">
+                    <DynamicParamField body="currency" type="string" required>
+                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                    </DynamicParamField>
+
+                    <DynamicParamField body="amount" type="number" required>
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="items" type="object[]">
+              Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
+              <Expandable title="properties">
+                <DynamicParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <DynamicParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="feature_id" type="string" required>
+                  The ID of the feature to configure.
+                </DynamicParamField>
+
+                <DynamicParamField body="included" type="number">
+                  Number of free units included. Balance resets to this each interval for consumable features.
+                </DynamicParamField>
+
+                <DynamicParamField body="unlimited" type="boolean">
+                  If true, customer has unlimited access to this feature.
+                </DynamicParamField>
+
+                <DynamicParamField body="pooled" type="boolean">
+                  Whether entity-level grants contribute to a shared customer balance.
+                </DynamicParamField>
+
+                <DynamicParamField body="reset" type="object">
+                  Reset configuration for consumable features. Omit for non-consumable features like seats.
+                  <Expandable title="properties">
+                    <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                      Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals between resets. Defaults to 1.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="price" type="object">
+                  Pricing for usage beyond included units. Omit for free features.
+                  <Expandable title="properties">
+                    <DynamicParamField body="amount" type="number">
+                      Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="string" required>
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicParamField>
+
+                        <DynamicParamField body="amount" type="number" required>
+                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tiers" type="object[]">
+                      Tiered pricing. Either 'amount' or 'tiers' is required.
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required />
+
+                        <DynamicParamField body="amount" type="number" />
+
+                        <DynamicParamField body="flat_amount" type="number" />
+
+                        <DynamicParamField body="additional_currencies" type="object[]">
+                          Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                          <Expandable title="properties">
+                            <DynamicParamField body="currency" type="string" required>
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicParamField>
+
+                            <DynamicParamField body="amount" type="number">
+                              Per-unit amount for this tier in this currency.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="flat_amount" type="number">
+                              Flat amount for this tier in this currency, if the tier uses one.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                    <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                      Billing interval. For consumable features, should match reset.interval.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals per billing cycle. Defaults to 1.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_units" type="number">
+                      Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                      'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="max_purchase" type="number | null">
+                      Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="proration" type="object">
+                  Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                  <Expandable title="properties">
+                    <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                      Billing behavior when quantity increases mid-cycle.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                      Credit behavior when quantity decreases mid-cycle.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="rollover" type="object">
+                  Rollover config for unused units. If set, unused included units carry over.
+                  <Expandable title="properties">
+                    <DynamicParamField body="max" type="number">
+                      Max rollover units. Omit for unlimited rollover.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="max_percentage" type="number">
+                      Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                      When rolled over units expire.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="expiry_duration_length" type="number">
+                      Number of periods before expiry.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry" type="object">
+                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                  <Expandable title="properties">
+                    <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                    <DynamicParamField body="length" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="feature_override" type="object">
+                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                  <Expandable title="properties">
+                    <DynamicParamField body="credit_schema" type="object | object[]">
+                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="dimensions.{key}" type="object">
+                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                          <Expandable title="properties">
+                            <DynamicParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="priority" type="integer">
+                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="tier_behavior" type="any" required />
+
+                            <DynamicParamField body="tiers" type="object[]" required>
+                              <Expandable title="properties">
+                                <DynamicParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="multipliers.{key}" type="object">
+                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                          <Expandable title="properties">
+                            <DynamicParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="factor" type="number">
+                              Multiplies the matched rate. All matching multipliers stack.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="add" type="number">
+                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tier_behavior" type="any" />
+
+                        <DynamicParamField body="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="markups" type="object">
+                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                      <Expandable title="properties">
+                        <DynamicParamField body="default_markup" type="number">
+                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="provider_markups.{key}" type="object | null">
+                          Per-provider markup percentages for customers on this plan.
+                          <Expandable title="properties">
+                            <DynamicParamField body="markup" type="number" required />
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="model_markups.{key}" type="object | null">
+                          Per-model markup overrides for customers on this plan.
+                          <Expandable title="properties">
+                            <DynamicParamField body="markup" type="number" />
+
+                            <DynamicParamField body="input_cost" type="number" />
+
+                            <DynamicParamField body="output_cost" type="number" />
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="add_items" type="object[]">
+              Items to add to the plan.
+              <Expandable title="properties">
+                <DynamicParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <DynamicParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="feature_id" type="string" required>
+                  The ID of the feature to configure.
+                </DynamicParamField>
+
+                <DynamicParamField body="included" type="number">
+                  Number of free units included. Balance resets to this each interval for consumable features.
+                </DynamicParamField>
+
+                <DynamicParamField body="unlimited" type="boolean">
+                  If true, customer has unlimited access to this feature.
+                </DynamicParamField>
+
+                <DynamicParamField body="pooled" type="boolean">
+                  Whether entity-level grants contribute to a shared customer balance.
+                </DynamicParamField>
+
+                <DynamicParamField body="reset" type="object">
+                  Reset configuration for consumable features. Omit for non-consumable features like seats.
+                  <Expandable title="properties">
+                    <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                      Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals between resets. Defaults to 1.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="price" type="object">
+                  Pricing for usage beyond included units. Omit for free features.
+                  <Expandable title="properties">
+                    <DynamicParamField body="amount" type="number">
+                      Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="string" required>
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicParamField>
+
+                        <DynamicParamField body="amount" type="number" required>
+                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tiers" type="object[]">
+                      Tiered pricing. Either 'amount' or 'tiers' is required.
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required />
+
+                        <DynamicParamField body="amount" type="number" />
+
+                        <DynamicParamField body="flat_amount" type="number" />
+
+                        <DynamicParamField body="additional_currencies" type="object[]">
+                          Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                          <Expandable title="properties">
+                            <DynamicParamField body="currency" type="string" required>
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicParamField>
+
+                            <DynamicParamField body="amount" type="number">
+                              Per-unit amount for this tier in this currency.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="flat_amount" type="number">
+                              Flat amount for this tier in this currency, if the tier uses one.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                    <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                      Billing interval. For consumable features, should match reset.interval.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals per billing cycle. Defaults to 1.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_units" type="number">
+                      Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                      'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="max_purchase" type="number | null">
+                      Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="proration" type="object">
+                  Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                  <Expandable title="properties">
+                    <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                      Billing behavior when quantity increases mid-cycle.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                      Credit behavior when quantity decreases mid-cycle.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="rollover" type="object">
+                  Rollover config for unused units. If set, unused included units carry over.
+                  <Expandable title="properties">
+                    <DynamicParamField body="max" type="number">
+                      Max rollover units. Omit for unlimited rollover.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="max_percentage" type="number">
+                      Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                      When rolled over units expire.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="expiry_duration_length" type="number">
+                      Number of periods before expiry.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry" type="object">
+                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                  <Expandable title="properties">
+                    <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                    <DynamicParamField body="length" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="feature_override" type="object">
+                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                  <Expandable title="properties">
+                    <DynamicParamField body="credit_schema" type="object | object[]">
+                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="dimensions.{key}" type="object">
+                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                          <Expandable title="properties">
+                            <DynamicParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="priority" type="integer">
+                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="tier_behavior" type="any" required />
+
+                            <DynamicParamField body="tiers" type="object[]" required>
+                              <Expandable title="properties">
+                                <DynamicParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="multipliers.{key}" type="object">
+                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                          <Expandable title="properties">
+                            <DynamicParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="factor" type="number">
+                              Multiplies the matched rate. All matching multipliers stack.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="add" type="number">
+                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tier_behavior" type="any" />
+
+                        <DynamicParamField body="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="markups" type="object">
+                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                      <Expandable title="properties">
+                        <DynamicParamField body="default_markup" type="number">
+                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="provider_markups.{key}" type="object | null">
+                          Per-provider markup percentages for customers on this plan.
+                          <Expandable title="properties">
+                            <DynamicParamField body="markup" type="number" required />
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="model_markups.{key}" type="object | null">
+                          Per-model markup overrides for customers on this plan.
+                          <Expandable title="properties">
+                            <DynamicParamField body="markup" type="number" />
+
+                            <DynamicParamField body="input_cost" type="number" />
+
+                            <DynamicParamField body="output_cost" type="number" />
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="remove_items" type="object[]">
+              Filters selecting items to remove from the plan.
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string">
+                  Match items linked to this feature.
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'">
+                  Match items with this billing method (prepaid or usage_based).
+                </DynamicParamField>
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                  Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="integer">
+                  Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+                </DynamicParamField>
+
+                <DynamicParamField body="included" type="number">
+                  Match items whose grant equals this included usage. Omitted is a wildcard.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="billing_controls" type="object">
+              Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+              <Expandable title="properties">
+                <DynamicParamField body="auto_topups" type="object[]">
+                  List of auto top-up configurations per feature.
+                  <Expandable title="properties">
+                    <DynamicParamField body="feature_id" type="string" required>
+                      The ID of the feature (credit balance) to auto top-up.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="enabled" type="boolean">
+                      Whether auto top-up is enabled.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="threshold" type="number" required>
+                      When the balance drops below this threshold, an auto top-up will be purchased.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="quantity" type="number" required>
+                      Amount of credits to add per auto top-up.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="purchase_limit" type="object">
+                      Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
+                      <Expandable title="properties">
+                        <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
+                          The time interval for the purchase limit window.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="interval_count" type="number">
+                          Number of intervals in the purchase limit window.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="limit" type="number" required>
+                          Maximum number of auto top-ups allowed within the interval.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="count" type="number">
+                          Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="invoice_mode" type="boolean">
+                      When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="spend_limits" type="object[]">
+                  List of overage spend limits per feature (caps overage spend).
+                  <Expandable title="properties">
+                    <DynamicParamField body="feature_id" type="string">
+                      Optional feature ID this spend limit applies to.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="enabled" type="boolean">
+                      Whether the overage spend limit is enabled.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="limit_type" type="'absolute' | 'usage_percentage'">
+                      How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="overage_limit" type="number">
+                      Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="skip_overage_billing" type="boolean">
+                      When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="usage_limits" type="object[]">
+                  List of hard usage caps per feature (max units per interval).
+                  <Expandable title="properties">
+                    <DynamicParamField body="feature_id" type="string" required>
+                      The feature this usage limit applies to.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="enabled" type="boolean">
+                      Whether this usage limit is enabled.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="limit" type="number" required>
+                      Maximum units allowed per interval.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
+                      Interval for the cap, aligned to the customer's billing cycle.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+                      Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="filter" type="object">
+                      When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                      <Expandable title="properties">
+                        <DynamicParamField body="properties.{key}" type="string" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="usage_alerts" type="object[]">
+                  List of usage alert configurations per feature.
+                  <Expandable title="properties">
+                    <DynamicParamField body="feature_id" type="string">
+                      The feature ID this alert applies to.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="enabled" type="boolean">
+                      Whether this usage alert is enabled.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="threshold" type="number" required>
+                      The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+                    </DynamicParamField>
+
+                    <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
+                      Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+                      What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="filter" type="object">
+                      Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                      <Expandable title="properties">
+                        <DynamicParamField body="properties.{key}" type="string" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="name" type="string">
+                      Optional user-defined label to distinguish multiple alerts on the same feature.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="overage_allowed" type="object[]">
+                  List of overage allowed controls per feature. When enabled, usage can exceed balance.
+                  <Expandable title="properties">
+                    <DynamicParamField body="feature_id" type="string" required>
+                      The feature ID this overage allowed control applies to.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="enabled" type="boolean">
+                      Whether overage is allowed for this feature.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="upsert_licenses" type="object[]">
+              License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
+              <Expandable title="properties">
+                <DynamicParamField body="license_plan_id" type="string" required />
+
+                <DynamicParamField body="version_slug" type="string" />
+
+                <DynamicParamField body="included" type="integer" />
+
+                <DynamicParamField body="prepaid_only" type="boolean" />
+
+                <DynamicParamField body="customize" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicParamField body="price" type="object | null">
+                      Base price configuration for a plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="amount" type="number" required>
+                          Base price amount for the plan, in major currency units (e.g. dollars).
+                        </DynamicParamField>
+
+                        <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                          Billing interval (e.g. 'month', 'year').
+                        </DynamicParamField>
+
+                        <DynamicParamField body="interval_count" type="number">
+                          Number of intervals per billing cycle. Defaults to 1.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="additional_currencies" type="object[]">
+                          Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                          <Expandable title="properties">
+                            <DynamicParamField body="currency" type="string" required>
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicParamField>
+
+                            <DynamicParamField body="amount" type="number" required>
+                              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="add_items" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicParamField body="threshold_billing" type="object | null">
+                          Bills this many feature units when outstanding overage reaches it.
+                          <Expandable title="properties">
+                            <DynamicParamField body="threshold" type="number" required />
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="feature_id" type="string" required>
+                          The ID of the feature to configure.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="included" type="number">
+                          Number of free units included. Balance resets to this each interval for consumable features.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="unlimited" type="boolean">
+                          If true, customer has unlimited access to this feature.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="pooled" type="boolean">
+                          Whether entity-level grants contribute to a shared customer balance.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="reset" type="object">
+                          Reset configuration for consumable features. Omit for non-consumable features like seats.
+                          <Expandable title="properties">
+                            <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                              Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="interval_count" type="number">
+                              Number of intervals between resets. Defaults to 1.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="price" type="object">
+                          Pricing for usage beyond included units. Omit for free features.
+                          <Expandable title="properties">
+                            <DynamicParamField body="amount" type="number">
+                              Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="additional_currencies" type="object[]">
+                              Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                              <Expandable title="properties">
+                                <DynamicParamField body="currency" type="string" required>
+                                  Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                </DynamicParamField>
+
+                                <DynamicParamField body="amount" type="number" required>
+                                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                            <DynamicParamField body="tiers" type="object[]">
+                              Tiered pricing. Either 'amount' or 'tiers' is required.
+                              <Expandable title="properties">
+                                <DynamicParamField body="to" type="number" required />
+
+                                <DynamicParamField body="amount" type="number" />
+
+                                <DynamicParamField body="flat_amount" type="number" />
+
+                                <DynamicParamField body="additional_currencies" type="object[]">
+                                  Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                                  <Expandable title="properties">
+                                    <DynamicParamField body="currency" type="string" required>
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="amount" type="number">
+                                      Per-unit amount for this tier in this currency.
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="flat_amount" type="number">
+                                      Flat amount for this tier in this currency, if the tier uses one.
+                                    </DynamicParamField>
+
+                                  </Expandable>
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                              Billing interval. For consumable features, should match reset.interval.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="interval_count" type="number">
+                              Number of intervals per billing cycle. Defaults to 1.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="billing_units" type="number">
+                              Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                            </DynamicParamField>
+
+                            <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                              'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="max_purchase" type="number | null">
+                              Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="proration" type="object">
+                          Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                          <Expandable title="properties">
+                            <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                              Billing behavior when quantity increases mid-cycle.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                              Credit behavior when quantity decreases mid-cycle.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="rollover" type="object">
+                          Rollover config for unused units. If set, unused included units carry over.
+                          <Expandable title="properties">
+                            <DynamicParamField body="max" type="number">
+                              Max rollover units. Omit for unlimited rollover.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="max_percentage" type="number">
+                              Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                              When rolled over units expire.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="expiry_duration_length" type="number">
+                              Number of periods before expiry.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="expiry" type="object">
+                          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                          <Expandable title="properties">
+                            <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                            <DynamicParamField body="length" type="number" required />
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <DynamicParamField body="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicParamField body="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="dimensions.{key}" type="object">
+                                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                  <Expandable title="properties">
+                                    <DynamicParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="priority" type="integer">
+                                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="tier_behavior" type="any" required />
+
+                                    <DynamicParamField body="tiers" type="object[]" required>
+                                      <Expandable title="properties">
+                                        <DynamicParamField body="to" type="any">
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </DynamicParamField>
+
+                                        <DynamicParamField body="credit_cost" type="number" required>
+                                          Credits consumed per billing-unit group within this tier.
+                                        </DynamicParamField>
+
+                                      </Expandable>
+                                    </DynamicParamField>
+
+                                  </Expandable>
+                                </DynamicParamField>
+
+                                <DynamicParamField body="multipliers.{key}" type="object">
+                                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                  <Expandable title="properties">
+                                    <DynamicParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="factor" type="number">
+                                      Multiplies the matched rate. All matching multipliers stack.
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="add" type="number">
+                                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                                    </DynamicParamField>
+
+                                  </Expandable>
+                                </DynamicParamField>
+
+                                <DynamicParamField body="tier_behavior" type="any" />
+
+                                <DynamicParamField body="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <DynamicParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </DynamicParamField>
+
+                                    <DynamicParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </DynamicParamField>
+
+                                  </Expandable>
+                                </DynamicParamField>
+
+                                <DynamicParamField body="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                            <DynamicParamField body="markups" type="object">
+                              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                              <Expandable title="properties">
+                                <DynamicParamField body="default_markup" type="number">
+                                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="provider_markups.{key}" type="object | null">
+                                  Per-provider markup percentages for customers on this plan.
+                                  <Expandable title="properties">
+                                    <DynamicParamField body="markup" type="number" required />
+
+                                  </Expandable>
+                                </DynamicParamField>
+
+                                <DynamicParamField body="model_markups.{key}" type="object | null">
+                                  Per-model markup overrides for customers on this plan.
+                                  <Expandable title="properties">
+                                    <DynamicParamField body="markup" type="number" />
+
+                                    <DynamicParamField body="input_cost" type="number" />
+
+                                    <DynamicParamField body="output_cost" type="number" />
+
+                                  </Expandable>
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="remove_items" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicParamField body="feature_id" type="string">
+                          Match items linked to this feature.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'">
+                          Match items with this billing method (prepaid or usage_based).
+                        </DynamicParamField>
+
+                        <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                          Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="interval_count" type="integer">
+                          Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="included" type="number">
+                          Match items whose grant equals this included usage. Omitted is a wildcard.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="metadata" type="object" />
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="remove_licenses" type="object[]">
+              License links to drop, keyed by license_plan_id. Parallel to remove_items.
+              <Expandable title="properties">
+                <DynamicParamField body="license_plan_id" type="string" required />
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="subscription_id" type="string">
+          A unique ID to identify this subscription. Useful when scheduling the same plan multiple times.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="billing_cycle_anchor" type="'phase_start'">
+      Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
+  How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+</DynamicParamField>
+
+<DynamicParamField body="billing_cycle_anchor" type="any">
+  Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date.
+</DynamicParamField>
+
+<DynamicParamField body="ends_at" type="integer">
+  Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the customer.
+</DynamicResponseField>
+
+<DynamicResponseField name="entity_id" type="string | null">
+  The entity ID for the schedule, or null when customer-level.
+</DynamicResponseField>
+
+<DynamicResponseField name="status" type="'created' | 'pending_payment'">
+  Whether the schedule is fully created or waiting for payment or confirmation to complete.
+</DynamicResponseField>
+
+<DynamicResponseField name="schedule_id" type="string | null">
+  The ID of the created schedule. Null when the schedule is waiting on Autumn checkout confirmation.
+</DynamicResponseField>
+
+<DynamicResponseField name="phases" type="object[]">
+  Persisted phases in ascending starts_at order. Empty when waiting on Autumn checkout confirmation.
+  <Expandable title="properties">
+    <DynamicResponseField name="phase_id" type="string">
+      The ID of the persisted phase row.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="starts_at" type="number">
+      When this phase starts, in epoch milliseconds.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_product_ids" type="string[]">
+      Customer products materialized for this phase.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="invoice" type="object">
+  Invoice details if an invoice was created. Only present when a charge was made.
+  <Expandable title="properties">
+    <DynamicResponseField name="status" type="string | null">
+      The status of the invoice (e.g., 'paid', 'open', 'draft').
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string">
+      The Stripe invoice ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number">
+      The total amount of the invoice in cents.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      The three-letter ISO currency code (e.g., 'usd').
+    </DynamicResponseField>
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null">
+      URL to the hosted invoice page where the customer can view and pay the invoice.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="payment_url" type="string | null">
+  URL to redirect the customer to complete payment. Null if no payment action is required.
+</DynamicResponseField>
+
+<DynamicResponseField name="required_action" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="code" type="'3ds_required' | 'payment_method_required' | 'payment_failed' | 'payment_processing'">
+      The type of action required to complete the payment.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="reason" type="string">
+      A human-readable explanation of why this action is required.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "entity_id": null,
+  "status": "created",
+  "schedule_id": "sch_1234",
+  "phases": [
+    {
+      "phase_id": "sphs_1111",
+      "starts_at": 1735689600000,
+      "customer_product_ids": [
+        "cus_prod_1111"
+      ]
+    },
+    {
+      "phase_id": "sphs_2222",
+      "starts_at": 1738368000000,
+      "customer_product_ids": [
+        "cus_prod_2222"
+      ]
+    }
+  ],
+  "invoice": null,
+  "payment_url": null
+}
+```
+</ResponseExample>

@@ -35,9 +35,9 @@ import {
   PlanPrice$inboundSchema,
   PlanProcessors,
   PlanProcessors$inboundSchema,
-  PlanVariantDetailsBillingControls1,
-  PlanVariantDetailsBillingControls1$inboundSchema,
-} from "./plan-variant-details-billing-controls-1.js";
+  PlanVariantDetailsBillingControls,
+  PlanVariantDetailsBillingControls$inboundSchema,
+} from "./plan-variant-details-billing-controls.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 /**
@@ -781,7 +781,7 @@ export type Customize1 = {
   /**
    * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
    */
-  billingControls?: PlanVariantDetailsBillingControls1 | undefined;
+  billingControls?: PlanVariantDetailsBillingControls | undefined;
   /**
    * License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
    */
@@ -2046,7 +2046,7 @@ export const Customize1$inboundSchema: z.ZodMiniType<Customize1, unknown> = z
       remove_items: types.optional(z.array(PlanItemFilter$inboundSchema)),
       free_trial: z.optional(z.nullable(FreeTrialParams$inboundSchema)),
       billing_controls: types.optional(
-        PlanVariantDetailsBillingControls1$inboundSchema,
+        PlanVariantDetailsBillingControls$inboundSchema,
       ),
       upsert_licenses: types.optional(
         z.array(z.lazy(() => UpsertLicense$inboundSchema)),

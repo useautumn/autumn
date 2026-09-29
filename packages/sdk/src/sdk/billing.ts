@@ -11,7 +11,9 @@ import { billingOpenCustomerPortal } from "../funcs/billing-open-customer-portal
 import { billingPreviewAttach } from "../funcs/billing-preview-attach.js";
 import { billingPreviewMultiAttach } from "../funcs/billing-preview-multi-attach.js";
 import { billingPreviewMultiUpdate } from "../funcs/billing-preview-multi-update.js";
+import { billingPreviewSetPlans } from "../funcs/billing-preview-set-plans.js";
 import { billingPreviewUpdate } from "../funcs/billing-preview-update.js";
+import { billingSetPlans } from "../funcs/billing-set-plans.js";
 import { billingSetupPayment } from "../funcs/billing-setup-payment.js";
 import { billingUpdate } from "../funcs/billing-update.js";
 import { billingVerify } from "../funcs/billing-verify.js";
@@ -90,34 +92,11 @@ export class Billing extends ClientSDK {
   }
 
   /**
-   * Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
-   *
-   * Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
-   *
-   * @example
-   * ```typescript
-   * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":"now","plans":[{"planId":"trial_plan"}]},{"startingAfter":{"durationType":"month","durationCount":1},"plans":[{"planId":"pro_plan"}]}] });
-   * ```
-   *
-   * @param customerId - The ID of the customer to create the schedule for.
-   * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
-   * @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
-   * @param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
-   * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
-   * @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
-   * @param successUrl - URL to redirect to after successful checkout. (optional)
-   * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
-   * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
-   * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference. (optional)
-   * @param noBillingChanges - If true, skips any billing changes for the schedule. (optional)
-   * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
-   * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
-   * @param preserveAddOns - Deprecated and ignored. Active plans the schedule does not declare are always retained. (optional)
-   * @param unscheduledPlans - Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope. (optional)
-   * @param phases - Ordered phase definitions for the schedule.
+   * Deprecated: use `billing.setPlans`, which takes the same phases and replaces the customer's schedule declaratively.
    *
    * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+   *
+   * @deprecated method: This will be removed in a future release, please migrate away from it as soon as possible.
    */
   async createSchedule(
     request: models.CreateScheduleParams,
@@ -273,6 +252,101 @@ export class Billing extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.PreviewMultiAttachResponse> {
     return unwrapAsync(billingPreviewMultiAttach(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Sets the plans a customer should have over time. The first phase bills now, later phases start on their dates, and the request replaces any existing schedule.
+   *
+   * Use this endpoint to move a customer onto a known end state in one call: a plan change now, future plan changes on set dates, a new billing cycle anchor, or an end date for every plan.
+   *
+   * @example
+   * ```typescript
+   * // Move from a trial plan to a paid plan after one month
+   * const response = await client.billing.setPlans({ customerId: "cus_123", phases: [{"startsAt":"now","plans":[{"planId":"trial_plan"}]},{"startingAfter":{"durationType":"month","durationCount":1},"plans":[{"planId":"pro_plan"}]}] });
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Switch plans now without prorating, and end them on a date
+   * const response = await client.billing.setPlans({
+   *   customerId: "cus_123",
+   *   phases: [{"startsAt":"now","plans":[{"planId":"pro_plan"}]}],
+   *   prorationBehavior: "none",
+   *   endsAt: 1798761600000,
+   * });
+   * ```
+   *
+   * @param customerId - The ID of the customer to create the schedule for.
+   * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
+   * @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
+   * @param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
+   * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
+   * @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+   * @param successUrl - URL to redirect to after successful checkout. (optional)
+   * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+   * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
+   * @param noBillingChanges - If true, skips any billing changes for the schedule. (optional)
+   * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
+   * @param preserveAddOns - Deprecated and ignored. Active plans the schedule does not declare are always retained. (optional)
+   * @param unscheduledPlans - Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope. (optional)
+   * @param phases - Ordered phase definitions for the schedule.
+   * @param prorationBehavior - How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle. (optional)
+   * @param billingCycleAnchor - Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date. (optional)
+   * @param endsAt - Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date. (optional)
+   *
+   * @returns A set-plans response with the schedule ID, persisted phases, and any required payment or checkout URL.
+   */
+  async setPlans(
+    request: models.SetPlansParams,
+    options?: RequestOptions,
+  ): Promise<models.SetPlansResponse> {
+    return unwrapAsync(billingSetPlans(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Previews what setting a customer's plans would do, without making any changes: the charge now, each phase's plans and balances, the Stripe changes, and warnings.
+   *
+   * Use this endpoint to show a customer, or check yourself, what a set-plans request will charge and change before sending it.
+   *
+   * @example
+   * ```typescript
+   * // Preview a move from a trial plan to a paid plan
+   * const response = await client.billing.previewSetPlans({ customerId: "cus_123", phases: [{"startsAt":"now","plans":[{"planId":"trial_plan"}]},{"startingAfter":{"durationType":"month","durationCount":1},"plans":[{"planId":"pro_plan"}]}] });
+   * ```
+   *
+   * @param customerId - The ID of the customer to create the schedule for.
+   * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
+   * @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
+   * @param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
+   * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
+   * @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+   * @param successUrl - URL to redirect to after successful checkout. (optional)
+   * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+   * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
+   * @param noBillingChanges - If true, skips any billing changes for the schedule. (optional)
+   * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
+   * @param preserveAddOns - Deprecated and ignored. Active plans the schedule does not declare are always retained. (optional)
+   * @param unscheduledPlans - Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope. (optional)
+   * @param phases - Ordered phase definitions for the schedule.
+   * @param prorationBehavior - How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle. (optional)
+   * @param billingCycleAnchor - Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date. (optional)
+   * @param endsAt - Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date. (optional)
+   *
+   * @returns A preview response with line items and totals for the immediate phase, plus per-phase plans, Stripe changes and warnings.
+   */
+  async previewSetPlans(
+    request: models.PreviewSetPlansParams,
+    options?: RequestOptions,
+  ): Promise<models.PreviewSetPlansResponse> {
+    return unwrapAsync(billingPreviewSetPlans(
       this,
       request,
       options,

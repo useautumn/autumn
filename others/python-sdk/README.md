@@ -218,9 +218,7 @@ Use this after an LLM request when you have input and output token counts. Autum
 * [attach](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
 Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
-* [create_schedule](docs/sdks/billing/README.md#create_schedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
-
-Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+* [~~create_schedule~~](docs/sdks/billing/README.md#create_schedule) - Deprecated: use `billing.setPlans`, which takes the same phases and replaces the customer's schedule declaratively. :warning: **Deprecated**
 * [multi_attach](docs/sdks/billing/README.md#multi_attach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
 
 Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.
@@ -230,6 +228,12 @@ Use this endpoint to show customers what they will be charged before confirming 
 * [preview_multi_attach](docs/sdks/billing/README.md#preview_multi_attach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
 
 Use this endpoint to show customers what they will be charged before confirming a multi-plan subscription.
+* [set_plans](docs/sdks/billing/README.md#set_plans) - Sets the plans a customer should have over time. The first phase bills now, later phases start on their dates, and the request replaces any existing schedule.
+
+Use this endpoint to move a customer onto a known end state in one call: a plan change now, future plan changes on set dates, a new billing cycle anchor, or an end date for every plan.
+* [preview_set_plans](docs/sdks/billing/README.md#preview_set_plans) - Previews what setting a customer's plans would do, without making any changes: the charge now, each phase's plans and balances, the Stripe changes, and warnings.
+
+Use this endpoint to show a customer, or check yourself, what a set-plans request will charge and change before sending it.
 * [update](docs/sdks/billing/README.md#update) - Updates an existing subscription. Use to modify feature quantities, cancel, or change plan configuration.
 
 Use this endpoint to update prepaid quantities, cancel a subscription (immediately or at end of cycle), or modify subscription settings.
