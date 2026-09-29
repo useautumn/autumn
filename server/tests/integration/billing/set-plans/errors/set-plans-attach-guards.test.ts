@@ -170,6 +170,58 @@ test.concurrent(
 	},
 );
 
+/** An active plan left out of the opening phase survives until a later phase replaces it, taking its subscription_id. */
+test.concurrent(
+	`${chalk.yellowBright("set-plans guards: a future phase may reuse the subscription_id of a surviving plan it replaces")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 25 })],
+		});
+
+		const { customerId, autumnV2_1, autumnV2_4, advancedTo } =
+			await initScenario({
+				customerId: "set-plans-guard-sub-id-survivor-replace",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium, addOn] }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id, subscriptionId: "sub-a" }),
+				],
+			});
+
+		const response = await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: "now", plans: [{ plan_id: addOn.id }] },
+				{
+					starts_at: advancedTo + ms.days(30),
+					plans: [{ plan_id: premium.id, subscription_id: "sub-a" }],
+				},
+			],
+		});
+		expect(response.status).toBe("created");
+
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		const subscriptionsWithId = customer.subscriptions
+			.filter((subscription) => subscription.id === "sub-a")
+			.map(({ plan_id, status }) => ({ plan_id, status }));
+		expect(subscriptionsWithId).toEqual(
+			expect.arrayContaining([
+				{ plan_id: pro.id, status: "active" },
+				{ plan_id: premium.id, status: "scheduled" },
+			]),
+		);
+		expect(subscriptionsWithId).toHaveLength(2);
+	},
+);
+
 test.concurrent(
 	`${chalk.yellowBright("set-plans guards: more than 10 Stripe schedule phases is rejected")}`,
 	async () => {
