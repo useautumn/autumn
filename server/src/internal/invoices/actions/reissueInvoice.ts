@@ -381,8 +381,13 @@ const issueReplacement = async ({
 
 	// Automatic collection is what makes Stripe treat the replacement as the
 	// subscription's receivable (overdue → past_due, paid → active).
+	// Parked before the replacement is issued so Stripe's scheduled finalization can't race it;
+	// a draft Stripe finalized meanwhile comes back open and is voided like any other.
+	const originalIsDraft =
+		stripeInvoice.status === "draft" &&
+		(await parkDraftOriginal({ ctx, stripeCli, stripeInvoice, draft }))
+			.status === "draft";
 	const issued = await issueStripeInvoice({ stripeCli, draft, issueMethod });
-	const originalIsDraft = stripeInvoice.status === "draft";
 
 	try {
 		await repointDeferredReferences({
@@ -390,16 +395,7 @@ const issueReplacement = async ({
 			fromStripeInvoiceId: stripeInvoice.id,
 			toStripeInvoiceId: issued.id,
 		});
-		// Stripe can't void a draft, so it is parked instead: nothing finalizes it on its own.
-		if (originalIsDraft) {
-			await setAutoAdvance({
-				stripeCli,
-				stripeInvoiceId: stripeInvoice.id,
-				autoAdvance: false,
-			});
-		} else {
-			await voidInvoice({ ctx, invoiceId });
-		}
+		if (!originalIsDraft) await voidInvoice({ ctx, invoiceId });
 	} catch (error) {
 		// The original keeps standing; retire the replacement instead.
 		await repointDeferredReferences({
@@ -431,6 +427,30 @@ const issueReplacement = async ({
 		issued: await collectRemainderNow({ ctx, stripeCli, finalized: issued }),
 		creditNoteId: null,
 	};
+};
+
+/** Stripe can't void a draft, so it is parked instead: nothing finalizes it on its own. */
+const parkDraftOriginal = async ({
+	ctx,
+	stripeCli,
+	stripeInvoice,
+	draft,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	stripeInvoice: Stripe.Invoice;
+	draft: Stripe.Invoice;
+}) => {
+	try {
+		return await setAutoAdvance({
+			stripeCli,
+			stripeInvoiceId: stripeInvoice.id,
+			autoAdvance: false,
+		});
+	} catch (error) {
+		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
+		throw error;
+	}
 };
 
 const setAutoAdvance = ({
