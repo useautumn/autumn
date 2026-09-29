@@ -15,8 +15,11 @@ import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomer
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
+import { resolveUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
+import { validateSetPlansPhasePlans } from "./validateSetPlansPhasePlans";
+import { validateUnscheduledPlanScopes } from "./validateUnscheduledPlanScopes";
 
 export const handleSetPlansErrors = async ({
 	billingContext,
@@ -25,6 +28,19 @@ export const handleSetPlansErrors = async ({
 	billingContext: CreateScheduleBillingContext;
 	preview?: boolean;
 }) => {
+	validateSetPlansPhasePlans({
+		plans: billingContext.productContexts.map((productContext) => ({
+			fullProduct: productContext.fullProduct,
+			scopeId: productContext.fullCustomer.entity?.internal_id,
+		})),
+	});
+	validateUnscheduledPlanScopes({
+		unscheduledProductContexts: resolveUnscheduledProductContexts({
+			productContexts: billingContext.productContexts,
+		}),
+		scheduledPhaseContexts: billingContext.scheduledPhaseContexts,
+	});
+
 	if (
 		billingContext.checkoutMode === "stripe_checkout" &&
 		billingContext.enablePlanImmediately &&
