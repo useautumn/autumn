@@ -88,7 +88,7 @@ where customer_id == 'cus_123' and (request_path contains 'billing' or stripe_ev
    - a `payment_intent.last_payment_error` → a charge was attempted and failed; report its `decline_code` / `message`, `attempt_count`, and `next_payment_attempt` (null means Stripe will not retry).
    - `collection_method: send_invoice` → nothing is charged automatically; it waits for the customer to pay the hosted invoice.
    - no payments and `attempted: false` → no charge has been tried yet.
-3. An open invoice can be paid, voided, or marked uncollectible in Stripe; it cannot be deleted.
+3. An open invoice cannot be deleted. It can be voided (`voidInvoice`), marked paid out of band (`payInvoice`), or corrected and reissued (`reissueInvoice`); each needs the user's approval.
 
 ### "Why did their payment change this month?"
 

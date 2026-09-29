@@ -31,6 +31,16 @@
 - Each phase must still be valid: do not put two non-add-on main plans from the same group in one phase.
 - Watch contracts for dates, year-by-year fees, ramps, delayed downgrades, or different packages over time.
 
+### Invoices
+
+- Act on an existing invoice with its Autumn `id` from `listInvoices` (`inv_...`), not its Stripe `in_...` ID.
+- `voidInvoice`: the customer no longer owes an open or uncollectible invoice. Paid invoices cannot be voided.
+- `payInvoice`: mark an open invoice paid out of band (bank transfer, cheque). Nothing is charged.
+- `finalizeInvoice`: issue a draft invoice (emailed if send-invoice, charged if charge-automatically).
+- `reissueInvoice`: correct an invoice — void an open original (or credit a paid one) and issue a replacement with changed lines, tax, custom fields, customer details or payment terms. Preview with `previewReissueInvoice` first.
+- `createInvoice`: a one-off invoice for plans and/or custom line items, outside the customer's subscription. Preview with `previewCreateInvoice` first.
+- `listInvoiceTemplates` lists templates whose id can be passed as `invoice_template_id`.
+
 ### Notes
 
 - Existing subscriptions decide `attach` vs `updateSubscription`; one-off plans are the main exception and are always attached.

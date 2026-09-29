@@ -7,15 +7,20 @@ const labels: Record<string, string> = {
 	attach: "Attach plan",
 	createBalance: "Create balance",
 	createEntity: "Create entity",
+	createInvoice: "Create invoice",
 	createPlan: "Create plan",
 	createReward: "Create reward",
 	createSchedule: "Create schedule",
+	finalizeInvoice: "Finalize invoice",
 	getOrCreateCustomer: "Create customer",
+	payInvoice: "Mark invoice paid",
+	reissueInvoice: "Reissue invoice",
 	updateAgentRules: "Update agent rules",
 	updateCatalog: "Update catalog",
 	updateCustomer: "Update customer",
 	updatePlan: "Update plan",
 	updateSubscription: "Update subscription",
+	voidInvoice: "Void invoice",
 };
 
 // Plumbing the user should never see in a status line.
@@ -79,6 +84,14 @@ const gerunds: Record<string, string> = {
 	listRewards: "Looking through your rewards",
 	listInvoices: "Looking through invoices",
 	getStripeInvoice: "Checking the invoice in Stripe",
+	listInvoiceTemplates: "Checking invoice templates",
+	previewCreateInvoice: "Previewing the invoice",
+	previewReissueInvoice: "Previewing the reissued invoice",
+	createInvoice: "Creating the invoice",
+	reissueInvoice: "Reissuing the invoice",
+	finalizeInvoice: "Finalizing the invoice",
+	payInvoice: "Marking the invoice paid",
+	voidInvoice: "Voiding the invoice",
 	load_skill: "Reading a playbook",
 };
 

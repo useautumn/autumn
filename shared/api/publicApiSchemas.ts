@@ -34,7 +34,13 @@ export {
 } from "./entities/apiEntityV2.js";
 export { CreateEntityParamsV1Schema } from "./entities/crud/createEntityParams.js";
 export { PreviewUpdateFeatureResponseSchema } from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
+export { CreateInvoiceParamsSchema } from "./others/apiInvoice/createInvoiceParams.js";
+export { FinalizeInvoiceParamsSchema } from "./others/apiInvoice/finalizeInvoiceParams.js";
 export { ListInvoicesParamsSchema } from "./others/apiInvoice/listInvoicesParams.js";
+export { ListInvoiceTemplatesParamsSchema } from "./others/apiInvoice/listInvoiceTemplatesParams.js";
+export { PayInvoiceParamsSchema } from "./others/apiInvoice/payInvoiceParams.js";
+export { ReissueInvoiceParamsSchema } from "./others/apiInvoice/reissueInvoiceParams.js";
+export { VoidInvoiceParamsSchema } from "./others/apiInvoice/voidInvoiceParams.js";
 export { CreatePlanParamsV2Schema } from "./products/crud/createPlanParamsV1.js";
 export { GetPlanParamsV0Schema } from "./products/crud/getPlanParamsV0.js";
 export { ListPlanParamsSchema } from "./products/crud/listPlanParams.js";
