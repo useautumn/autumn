@@ -32,10 +32,8 @@ export const resultsRoutes = new Hono<TwdHono>()
 				status: 400,
 				code: "missing_file",
 				message: "Query parameter `file` is required.",
-				next: "Pass ?file=<path> using a path exactly as GET /catalog lists it.",
+				next: "Pass ?file=<path> exactly as GET /catalog lists it; optional &branch=<name>&limit=1..500.",
 			});
 		}
-		return c.json(
-			await getFileHistory({ ctx: c.get("ctx"), file: query.data.file }),
-		);
+		return c.json(await getFileHistory({ ctx: c.get("ctx"), ...query.data }));
 	});

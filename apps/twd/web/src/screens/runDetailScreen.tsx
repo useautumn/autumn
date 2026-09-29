@@ -58,6 +58,7 @@ import {
 import { cn, elapsed, formatDate, formatMs, num, sha7 } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
 import { BootBreakdown } from "./runDetail/bootBreakdown.tsx";
+import { FileHistoryChart } from "./runDetail/fileHistoryChart.tsx";
 import { RunTimingPanel } from "./runDetail/runTiming.tsx";
 
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
@@ -753,6 +754,7 @@ export const RunDetailScreen = () => {
 					)
 				}
 			>
+				{openFile && <FileHistoryChart file={openFile} runId={id} />}
 				<div className="p-4">
 					{fileLog.error ? (
 						<ErrorCallout error={fileLog.error} />

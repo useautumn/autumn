@@ -4,6 +4,7 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { listCatalog } from "../../catalog/actions/listCatalog.ts";
 import { warmBranch } from "../../catalog/actions/warmBranch.ts";
+import { getFileHistory } from "../../results/actions/queryResults.ts";
 import { cancelRun } from "../../runs/actions/cancelRun.ts";
 import { createRun } from "../../runs/actions/createRun.ts";
 import { getRun } from "../../runs/actions/getRun.ts";
@@ -247,6 +248,23 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 				return toolOk({
 					summary: `${text.length} chars of ${failed_only ? "failed-file" : file ? "file" : worker ? "worker" : "run"} logs for ${run_id}.`,
 					data: { text: clipped },
+				});
+			},
+		}),
+		defineTool({
+			name: "get_file_history",
+			description:
+				"How one test file's speed and stability changed over time, keyed by file path with commit metadata. Returns byCommit (oldest first: sha, branch, runs, p50Ms, maxMs, passRate), the dev baseline (p50/p90), and raw recent results (newest first). Use it to spot a commit that made a file slower or flaky. file is server/tests-relative, as list_catalog shows it.",
+			input: z.object({
+				file: z.string().min(1),
+				branch: z.string().optional(),
+				limit: z.number().int().min(1).max(500).optional(),
+			}),
+			run: async ({ file, branch, limit }) => {
+				const history = await getFileHistory({ ctx, file, branch, limit });
+				return toolOk({
+					summary: `${history.results.length} result(s) across ${history.byCommit.length} commit(s) for ${file}${branch ? ` on ${branch}` : ""}.`,
+					data: history,
 				});
 			},
 		}),

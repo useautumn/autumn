@@ -1,9 +1,7 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { fileBaselines, testResults } from "../../../db/schema/results.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type { FileBaseline, FileHistory } from "../types/resultsSchemas.ts";
-
-const HISTORY_LIMIT = 50;
 
 const toFileBaseline = (
 	row: typeof fileBaselines.$inferSelect,
@@ -31,13 +29,22 @@ export const listBaselines = async ({
 	return rows.map(toFileBaseline);
 };
 
-/** Last 50 results for a file across every branch, plus its dev baseline. */
+const median = (values: number[]) => {
+	const sorted = [...values].sort((a, b) => a - b);
+	return sorted[Math.floor((sorted.length - 1) / 2)] ?? 0;
+};
+
+/** A file's recent results (optionally one branch), its dev baseline, and a per-commit rollup. */
 export const getFileHistory = async ({
 	ctx,
 	file,
+	branch,
+	limit = 100,
 }: {
 	ctx: TwdContext;
 	file: string;
+	branch?: string;
+	limit?: number;
 }): Promise<FileHistory> => {
 	const [baseline] = await ctx.db
 		.select()
@@ -46,9 +53,28 @@ export const getFileHistory = async ({
 	const results = await ctx.db
 		.select()
 		.from(testResults)
-		.where(eq(testResults.file, file))
+		.where(
+			and(
+				eq(testResults.file, file),
+				branch ? eq(testResults.branch, branch) : undefined,
+			),
+		)
 		.orderBy(desc(testResults.createdAt))
-		.limit(HISTORY_LIMIT);
+		.limit(limit);
+
+	const bySha = new Map<string, typeof results>();
+	for (const r of [...results].reverse())
+		bySha.set(r.sha, [...(bySha.get(r.sha) ?? []), r]);
+	const byCommit = [...bySha].map(([sha, rows]) => ({
+		sha,
+		branch: rows.at(-1)?.branch ?? "",
+		runs: rows.length,
+		p50Ms: median(rows.map((r) => r.durationMs)),
+		maxMs: Math.max(...rows.map((r) => r.durationMs)),
+		passRate: rows.filter((r) => r.status === "passed").length / rows.length,
+		firstAt: rows[0]?.createdAt.toISOString() ?? "",
+		lastAt: rows.at(-1)?.createdAt.toISOString() ?? "",
+	}));
 
 	return {
 		file,
@@ -57,5 +83,6 @@ export const getFileHistory = async ({
 			...r,
 			createdAt: r.createdAt.toISOString(),
 		})),
+		byCommit,
 	};
 };

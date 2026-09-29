@@ -18,7 +18,11 @@ export const ListBaselinesQuery = z.object({
 	limit: z.coerce.number().int().min(1).max(5000).default(2000),
 });
 
-export const FileHistoryQuery = z.object({ file: z.string().min(1) });
+export const FileHistoryQuery = z.object({
+	file: z.string().min(1),
+	branch: z.string().optional(),
+	limit: z.coerce.number().int().min(1).max(500).default(100),
+});
 
 export const FileHistoryEntry = z.object({
 	runId: z.string(),
@@ -34,10 +38,25 @@ export const FileHistoryEntry = z.object({
 	createdAt: z.string(),
 });
 
+/** One commit's runs of the file: how its speed and stability looked at that sha. */
+export const FileCommitSummary = z.object({
+	sha: z.string(),
+	branch: z.string(),
+	runs: z.number(),
+	p50Ms: z.number(),
+	maxMs: z.number(),
+	passRate: z.number(),
+	firstAt: z.string(),
+	lastAt: z.string(),
+});
+
 export const FileHistory = z.object({
 	file: z.string(),
 	baseline: FileBaseline.nullable(),
+	/** Newest first. */
 	results: z.array(FileHistoryEntry),
+	/** Oldest commit first, so it reads as speed over time. */
+	byCommit: z.array(FileCommitSummary),
 });
 
 export type FileBaseline = z.infer<typeof FileBaseline>;

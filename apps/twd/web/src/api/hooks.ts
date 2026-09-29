@@ -24,6 +24,7 @@ import {
 	RunsPage,
 	StripeAccount,
 } from "../../../src/api/contract.ts";
+import { FileHistory } from "../../../src/internal/results/types/resultsSchemas.ts";
 import { api, apiText } from "./client.ts";
 import { whileDisconnected } from "./live.ts";
 import type { LogLine } from "./liveCache.ts";
@@ -135,6 +136,17 @@ export const useWorkerLog = ({
 				path: `/runs/${runId}/logs${qs({ worker: worker ?? undefined })}`,
 			}),
 		enabled: worker !== null,
+	});
+
+export const useFileHistory = ({ file }: { file: string }) =>
+	useQuery({
+		queryKey: ["fileHistory", file],
+		queryFn: () =>
+			api({
+				path: `/files/history${qs({ file, limit: 200 })}`,
+				schema: FileHistory,
+			}),
+		staleTime: 30_000,
 	});
 
 export const useFileLog = ({

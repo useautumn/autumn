@@ -1209,6 +1209,59 @@ export const handle = ({
 		return ok(res);
 	}
 
+	if (route === "GET /files/history") {
+		const file = url.searchParams.get("file") ?? "";
+		const r = rng(file.length * 7919);
+		const base = 20_000 + r() * 90_000;
+		const shas = Array.from({ length: 8 }, () => hex(40, r));
+		const results = Array.from({ length: 40 }, (_, i) => {
+			const sha = shas[Math.floor(i / 5)] ?? shas[0];
+			const slow = i >= 25 ? 1.6 : 1;
+			const failed = r() < 0.06;
+			return {
+				runId: `run_${hex(10, r)}`,
+				branch: i % 3 ? "dev" : "feat/usage-alerts",
+				sha,
+				status: failed ? ("failed" as const) : ("passed" as const),
+				durationMs: Math.round(base * slow * (0.8 + r() * 0.4)),
+				attempt: 1,
+				passedTests: 5,
+				failedTests: failed ? 1 : 0,
+				worker: null,
+				failureSummary: null,
+				createdAt: iso(Date.now() - (40 - i) * 3 * 3_600_000),
+			};
+		}).reverse();
+		const byCommit = shas.map((sha) => {
+			const rows = results.filter((x) => x.sha === sha);
+			const ds = rows.map((x) => x.durationMs).sort((a, b) => a - b);
+			return {
+				sha,
+				branch: rows[0]?.branch ?? "dev",
+				runs: rows.length,
+				p50Ms: ds[Math.floor((ds.length - 1) / 2)] ?? 0,
+				maxMs: ds.at(-1) ?? 0,
+				passRate:
+					rows.filter((x) => x.status === "passed").length / (rows.length || 1),
+				firstAt: rows.at(-1)?.createdAt ?? iso(Date.now()),
+				lastAt: rows[0]?.createdAt ?? iso(Date.now()),
+			};
+		});
+		return ok({
+			file,
+			baseline: {
+				file,
+				p50Ms: base,
+				p90Ms: base * 1.2,
+				passRate: 0.97,
+				samples: 20,
+				updatedAt: iso(Date.now()),
+			},
+			results,
+			byCommit,
+		});
+	}
+
 	if (route === "GET /runs") {
 		const status = url.searchParams.get("status") ?? "live";
 		const branch = url.searchParams.get("branch");
