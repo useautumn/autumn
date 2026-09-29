@@ -6,7 +6,7 @@
  */
 
 import { test } from "bun:test";
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, ms } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -117,6 +117,45 @@ test.concurrent(
 							starts_at: "now",
 							plans: [{ plan_id: pro.id, subscription_id: "addon-sub" }],
 						},
+					],
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans guards: more than 10 Stripe schedule phases is rejected")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV2_4, advancedTo } = await initScenario({
+			customerId: "set-plans-guard-phase-limit",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [],
+		});
+
+		const futurePhases = Array.from({ length: 11 }, (_, index) => ({
+			starts_at: advancedTo + ms.days(30 * (index + 1)),
+			plans: [{ plan_id: index % 2 === 0 ? premium.id : pro.id }],
+		}));
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Stripe subscription schedules support at most 10 phases",
+			func: () =>
+				autumnV2_4.billing.setPlans({
+					customer_id: customerId,
+					phases: [
+						{ starts_at: "now", plans: [{ plan_id: pro.id }] },
+						...futurePhases,
 					],
 				}),
 		});
