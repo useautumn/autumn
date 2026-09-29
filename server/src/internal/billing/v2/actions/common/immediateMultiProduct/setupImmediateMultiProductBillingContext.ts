@@ -7,6 +7,7 @@ import {
 	getTargetSubscriptionCusProduct,
 	type InvoiceMode,
 	isFreeProduct,
+	isFutureStartDate,
 	isOneOffProduct,
 	isPastStartDate,
 	isProductPaidAndRecurring,
@@ -331,7 +332,18 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeSubscription,
 		trialContext,
 		currentEpochMs,
-		startsNow: billingStartsAt === undefined,
+		startsNow:
+			billingStartsAt === undefined ||
+			(!isPastStartDate(
+				billingStartsAt,
+				currentEpochMs,
+				billingStartsAtToleranceMs,
+			) &&
+				!isFutureStartDate(
+					billingStartsAt,
+					currentEpochMs,
+					billingStartsAtToleranceMs,
+				)),
 	});
 
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
