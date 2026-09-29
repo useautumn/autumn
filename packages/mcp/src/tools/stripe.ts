@@ -16,7 +16,7 @@ const stripeReadSchema = z
 			.describe(
 				"Query params (filters, limit, expand), sent as the GET query string.",
 			),
-		maxPages: z
+		max_pages: z
 			.number()
 			.int()
 			.min(1)
@@ -26,11 +26,7 @@ const stripeReadSchema = z
 				"Pages to auto-paginate for list endpoints (default 1, max 10).",
 			),
 	})
-	.strict()
-	.transform(({ maxPages, ...request }) => ({
-		...request,
-		...(maxPages === undefined ? {} : { max_pages: maxPages }),
-	}));
+	.strict();
 
 const searchStripeEndpointsSchema = z
 	.object({
@@ -60,7 +56,7 @@ const domain = {
 		operation({
 			id: "stripeRead",
 			description:
-				"GET-only Stripe read for the caller's org's connected Stripe account (Autumn issues the request; no Stripe key is exposed). Discover endpoints and their query params with searchStripeEndpoints first. List endpoints auto-paginate up to maxPages. Some endpoints (connected accounts, transfers, application fees, app secrets, file contents, quote PDFs) are blocked and secrets are redacted. Previews and any writes must go through Autumn tools, never Stripe.",
+				"GET-only Stripe read for the caller's org's connected Stripe account (Autumn issues the request; no Stripe key is exposed). Discover endpoints and their query params with searchStripeEndpoints first. List endpoints auto-paginate up to max_pages. Some endpoints (connected accounts, transfers, application fees, app secrets, file contents, quote PDFs) are blocked and secrets are redacted. Previews and any writes must go through Autumn tools, never Stripe.",
 		}),
 		operation({
 			id: "searchStripeEndpoints",

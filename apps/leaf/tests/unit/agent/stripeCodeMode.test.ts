@@ -12,7 +12,20 @@ const serverTool = (name: string) => ({
 const mcpCalls: { args: Record<string, unknown>; toolName: string }[] = [];
 const mcpResults: Record<string, unknown> = {
 	getCustomer: { id: "cus_1", stripe_id: "cus_stripe_1" },
-	stripeRead: { data: [{ id: "sub_1" }, { id: "sub_2" }], object: "list" },
+	searchStripeEndpoints: {
+		content: [{ text: JSON.stringify({ endpoints: [] }), type: "text" }],
+	},
+	stripeRead: {
+		content: [
+			{
+				text: JSON.stringify({
+					data: [{ id: "sub_1" }, { id: "sub_2" }],
+					object: "list",
+				}),
+				type: "text",
+			},
+		],
+	},
 };
 
 await mockModuleWithRestore({
@@ -91,6 +104,19 @@ beforeEach(() => {
 });
 
 describe("Stripe code mode", () => {
+	test("Stripe JSON reaches the script as JSON, not wrapped text", async () => {
+		const result = await runScript(`
+			const subs = await stripe.get({ path: "/v1/subscriptions", max_pages: 2 });
+			return subs.data.map(s => s.id);
+		`);
+
+		expect(result).toEqual({ output: ["sub_1", "sub_2"], status: "ok" });
+		expect(mcpCalls[0]?.args).toEqual({
+			max_pages: 2,
+			path: "/v1/subscriptions",
+		});
+	});
+
 	test("a script chains Stripe reads in one stripe_execute call", async () => {
 		const result = await runScript(`
 			const found = await stripe.searchEndpoints({ query: "subscriptions" });

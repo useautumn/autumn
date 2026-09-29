@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import * as z from "zod/v4";
 import { APPROVAL_GATED_TOOL_NAMES } from "../../../src/tools/approvalGated.js";
 import { endpointByTool, schemaByTool } from "../../../src/tools/index.js";
 import { stripe } from "../../../src/tools/stripe.js";
@@ -10,21 +11,22 @@ test("stripe tools route to the stripe RPC endpoints", () => {
 	);
 });
 
-test("stripeRead maps camelCase input to the snake_case request body", () => {
-	expect(
-		schemaByTool.stripeRead.parse({
-			path: "/v1/subscriptions",
-			params: { customer: "cus_1" },
-			maxPages: 3,
-		}),
-	).toEqual({
+test("stripeRead takes max_pages as-is with no transform", () => {
+	const input = {
 		path: "/v1/subscriptions",
 		params: { customer: "cus_1" },
 		max_pages: 3,
-	});
+	};
+	expect(schemaByTool.stripeRead.parse(input)).toEqual(input);
 	expect(() =>
-		schemaByTool.stripeRead.parse({ path: "/v1/customers", maxPages: 11 }),
+		schemaByTool.stripeRead.parse({ path: "/v1/customers", max_pages: 11 }),
 	).toThrow();
+});
+
+test("stripeRead schema is representable as output JSON Schema", () => {
+	expect(() =>
+		z.toJSONSchema(schemaByTool.stripeRead, { io: "output" }),
+	).not.toThrow();
 });
 
 test("stripe tools are read-only and never approval gated", () => {

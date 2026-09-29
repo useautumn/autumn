@@ -28,6 +28,30 @@ type StripeToolSpec = {
 	name: string;
 };
 
+type McpToolResult = {
+	content?: { text?: string; type: string }[];
+	isError?: boolean;
+	structuredContent?: unknown;
+};
+
+/** Hands scripts the Stripe JSON itself instead of MCP's text envelope. */
+const unwrapMcpResult = (result: unknown) => {
+	const { content, isError, structuredContent } = (result ??
+		{}) as McpToolResult;
+	const text = content
+		?.filter((part) => part.type === "text")
+		.map((part) => part.text ?? "")
+		.join("");
+	if (isError) throw new Error(text || "Stripe read failed");
+	if (structuredContent !== undefined) return structuredContent;
+	if (text === undefined) return result;
+	try {
+		return JSON.parse(text);
+	} catch {
+		return text;
+	}
+};
+
 const callStripeTool = async ({
 	input,
 	toolCtx,
@@ -40,13 +64,14 @@ const callStripeTool = async ({
 	const minted = await mintCachedAutumnToken(
 		toolCtx.session.auth.current?.attributes,
 	);
-	return callAutumnMcpTool({
+	const result = await callAutumnMcpTool({
 		args: input,
 		baseUrl: leafMcpBaseUrl(),
 		env: minted.appEnv,
 		token: minted.accessToken,
 		toolName,
 	});
+	return unwrapMcpResult(result);
 };
 
 const stripeScriptEngine = ({
