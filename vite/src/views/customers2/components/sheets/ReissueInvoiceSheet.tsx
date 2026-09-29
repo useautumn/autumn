@@ -2,11 +2,17 @@ import {
 	type CreateInvoicePreview,
 	formatAmount,
 	type Invoice,
+	type InvoiceIssueMethod,
 	type InvoiceLineItem,
 	InvoiceStatus,
 } from "@autumn/shared";
 import {
 	Button,
+	ButtonGroup,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	FormLabel,
 	IconButton,
 	Input,
@@ -18,7 +24,12 @@ import {
 	SheetAccordion,
 	SheetAccordionItem,
 } from "@autumn/ui";
-import { PaperPlaneTiltIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import {
+	CaretDownIcon,
+	PaperPlaneTiltIcon,
+	PlusIcon,
+	XIcon,
+} from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type Stripe from "stripe";
@@ -49,6 +60,12 @@ import {
 } from "./reissue/useReissueForm";
 
 const NO_TEMPLATE = "none";
+
+const ISSUED_TOAST: Record<InvoiceIssueMethod, string> = {
+	send: "Invoice reissued",
+	finalize: "Invoice reissued without sending",
+	draft: "Invoice reissued as a draft",
+};
 
 const RemoveButton = ({ onClick }: { onClick: () => void }) => (
 	<IconButton
@@ -187,18 +204,18 @@ function ReissueInvoiceForm({
 	});
 
 	const reissue = useMutation({
-		mutationFn: async () => {
+		mutationFn: async (issueMethod: InvoiceIssueMethod) => {
 			if (!previewState.ready) {
 				throw new Error("Wait for a successful preview before reissuing.");
 			}
-			const { data } = await axiosInstance.post(
-				"/v1/invoices.reissue",
-				payload,
-			);
+			const { data } = await axiosInstance.post("/v1/invoices.reissue", {
+				...payload,
+				issue_method: issueMethod,
+			});
 			return data;
 		},
-		onSuccess: async () => {
-			toast.success("Invoice reissued");
+		onSuccess: async (_data, issueMethod) => {
+			toast.success(ISSUED_TOAST[issueMethod]);
 			closeSheet();
 			await Promise.all([
 				refetch(),
@@ -223,6 +240,7 @@ function ReissueInvoiceForm({
 			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 		});
 	const isPaid = invoice.status === InvoiceStatus.Paid;
+	const sendsInvoice = sendsReplacementInvoice({ form, prefill });
 	const total =
 		previewState.ready && previewResult
 			? money(previewResult.preview.total)
@@ -356,7 +374,7 @@ function ReissueInvoiceForm({
 								/>
 							</div>
 
-							{sendsReplacementInvoice({ form, prefill }) && (
+							{sendsInvoice && (
 								<ReissuePaymentMethodTypesSelect
 									value={form.paymentMethodTypes}
 									onValueChange={(paymentMethodTypes) =>
@@ -502,18 +520,41 @@ function ReissueInvoiceForm({
 					>
 						Back
 					</Button>
-					<Button
-						variant="primary"
-						className="w-full"
-						onClick={() => reissue.mutate()}
-						isLoading={reissue.isPending}
-						disabled={!previewState.ready || reissue.isPending}
-					>
-						<PaperPlaneTiltIcon size={16} />
-						{previewState.recalculating
-							? "Recalculating…"
-							: `Reissue${total ? ` ${total}` : ""}`}
-					</Button>
+					<ButtonGroup className="w-full">
+						<Button
+							variant="primary"
+							className="flex-1"
+							onClick={() => reissue.mutate("send")}
+							isLoading={reissue.isPending}
+							disabled={!previewState.ready || reissue.isPending}
+						>
+							<PaperPlaneTiltIcon size={16} />
+							{previewState.recalculating
+								? "Recalculating…"
+								: `Reissue & ${sendsInvoice ? "send" : "charge"}${total ? ` ${total}` : ""}`}
+						</Button>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="primary"
+									aria-label="More reissue options"
+									disabled={!previewState.ready || reissue.isPending}
+								>
+									<CaretDownIcon size={14} />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem onClick={() => reissue.mutate("finalize")}>
+									{sendsInvoice
+										? "Finalize without sending"
+										: "Finalize without charging"}
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => reissue.mutate("draft")}>
+									Save as draft
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</ButtonGroup>
 				</SheetFooter>
 			</div>
 		</LayoutGroup>

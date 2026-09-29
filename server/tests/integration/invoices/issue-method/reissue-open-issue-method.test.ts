@@ -63,9 +63,7 @@ test.concurrent(
 			).find((customerProduct) => customerProduct.product.id === pro.id);
 		expect((await findPlan())?.status).toBe(CusProductStatus.Pending);
 
-		await ctx.stripeCli.invoices.finalizeInvoice(invoice.stripe_id, {
-			auto_advance: false,
-		});
+		await autumnV2_3.post("/invoices.finalize", { invoice_id: invoice.id });
 		await autumnV2_3.post("/invoices.pay", { invoice_id: invoice.id });
 		await new Promise((resolve) => setTimeout(resolve, 12_000));
 
