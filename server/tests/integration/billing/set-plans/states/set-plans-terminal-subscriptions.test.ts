@@ -7,9 +7,10 @@
  */
 
 import { expect, test } from "bun:test";
-import { findActiveCustomerProductById } from "@autumn/shared";
+import { findActiveCustomerProductById, ms } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -120,5 +121,94 @@ test.concurrent(
 			expiredSubscriptionId,
 		);
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+/** Cancels the subscription while Autumn's rows are unlinked, so they keep stale ids. */
+const cancelSubscriptionMissingWebhook = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}) => {
+	const { customer_products: customerProducts } = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const subscriptionId = customerProducts[0]?.subscription_ids?.[0];
+	if (!subscriptionId) throw new Error("No linked subscription");
+
+	for (const customerProduct of customerProducts) {
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates: { subscription_ids: [], scheduled_ids: [] },
+		});
+	}
+	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
+	await timeout(WEBHOOK_SETTLE_MS);
+
+	for (const customerProduct of customerProducts) {
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates: {
+				subscription_ids: customerProduct.subscription_ids,
+				scheduled_ids: customerProduct.scheduled_ids,
+			},
+		});
+	}
+};
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans terminal: stale schedule ids on a canceled subscription don't count as a live schedule")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 10 })],
+		});
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-stale-schedule-ids",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro, premium] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: "now", plans: [{ plan_id: pro.id }] },
+				{
+					starts_at: advancedTo + ms.days(30),
+					plans: [{ plan_id: premium.id }],
+				},
+			],
+		});
+		await cancelSubscriptionMissingWebhook({ ctx, customerId });
+
+		await expectAutumnError({
+			errMessage:
+				"Past first phase starts_at is only supported for paid recurring plans.",
+			func: () =>
+				autumnV2_4.billing.setPlans({
+					customer_id: customerId,
+					phases: [
+						{
+							starts_at: advancedTo - ms.days(5),
+							plans: [{ plan_id: free.id }],
+						},
+					],
+				}),
+		});
 	},
 );
