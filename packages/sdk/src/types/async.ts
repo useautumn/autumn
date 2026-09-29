@@ -31,6 +31,17 @@ export class APIPromise<T> implements Promise<T> {
       p instanceof Promise
         ? this.#promise.then(([value]) => value)
         : Promise.resolve(p[0]);
+    if (p instanceof Promise) {
+      // #unwrapped is an eagerly derived second view of the operation
+      // promise, and it only gains a rejection handler when .catch() or
+      // .finally() is called on this wrapper. Callers that await or .then()
+      // consume #promise instead, so without this noop handler an operation
+      // rejection also rejects #unwrapped unobserved, and Node's default
+      // unhandled-rejection mode terminates the consumer's process even
+      // though the caller handled the error. Extra handlers do not detach
+      // or preempt user handlers attached later via .catch()/.finally().
+      this.#unwrapped.catch(() => {});
+    }
   }
 
   then<TResult1 = T, TResult2 = never>(
