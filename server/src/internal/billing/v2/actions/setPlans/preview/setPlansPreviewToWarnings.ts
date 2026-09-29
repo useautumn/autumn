@@ -28,6 +28,7 @@ const INFO_WARNING_TYPES: WarningType[] = [
 	"new_stripe_price_created",
 	"proration_disabled",
 	"new_stripe_subscription",
+	"past_due_invoice_open",
 ];
 
 /** Unmanaged live items that the immediate phase's end state no longer holds. */
@@ -85,6 +86,7 @@ export const setPlansPreviewToWarnings = ({
 	billingContext,
 	stripeBillingPlan,
 	replacedOpenInvoices,
+	liveOpenInvoices,
 	unbilledUsageLineItems = [],
 }: {
 	phases: SetPlansPreviewPhase[];
@@ -97,6 +99,7 @@ export const setPlansPreviewToWarnings = ({
 	billingContext?: SubscriptionWarningContext;
 	stripeBillingPlan?: StripeBillingPlan;
 	replacedOpenInvoices?: Stripe.Invoice[];
+	liveOpenInvoices?: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
@@ -107,6 +110,7 @@ export const setPlansPreviewToWarnings = ({
 			billingContext,
 			stripeBillingPlan,
 			replacedOpenInvoices,
+			liveOpenInvoices,
 		}),
 		...[
 			scheduledCancelWarning({

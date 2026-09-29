@@ -4,6 +4,7 @@ import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingP
 import { getDeleteCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import type { SetPlansResult } from "../types/setPlansResult";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
+import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
 import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
 import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
 import { buildStripePriceLookup } from "./processorItems/price/buildStripePriceLookup";
@@ -25,21 +26,26 @@ export const buildSetPlansPreview = async ({
 		schedulePlan: { phases, immediatePhaseTransition },
 	} = result;
 
-	const [attachPreview, stripePrices, replacedSubscriptionInputs] =
-		await Promise.all([
-			billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),
-			buildStripePriceLookup({
-				ctx,
-				stripeBillingPlan: billingPlan.stripe,
-				stripeSubscription: billingContext.stripeSubscription,
-			}),
-			fetchReplacedSubscriptionPreviewInputs({
-				ctx,
-				billingContext,
-				outgoingCustomerProducts:
-					immediatePhaseTransition.outgoingCustomerProducts,
-			}),
-		]);
+	const [
+		attachPreview,
+		stripePrices,
+		replacedSubscriptionInputs,
+		liveOpenInvoices,
+	] = await Promise.all([
+		billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),
+		buildStripePriceLookup({
+			ctx,
+			stripeBillingPlan: billingPlan.stripe,
+			stripeSubscription: billingContext.stripeSubscription,
+		}),
+		fetchReplacedSubscriptionPreviewInputs({
+			ctx,
+			billingContext,
+			outgoingCustomerProducts:
+				immediatePhaseTransition.outgoingCustomerProducts,
+		}),
+		fetchPastDueOpenInvoices({ ctx, billingContext }),
+	]);
 	const processorItemContext: ProcessorItemContext = {
 		priceIndex: buildAutumnStripePriceIndex({
 			customerProducts: [
@@ -85,6 +91,7 @@ export const buildSetPlansPreview = async ({
 			billingContext,
 			stripeBillingPlan: billingPlan.stripe,
 			...replacedSubscriptionInputs,
+			liveOpenInvoices,
 		}),
 	};
 };
