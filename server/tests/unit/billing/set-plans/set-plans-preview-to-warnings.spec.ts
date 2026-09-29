@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type {
 	FullCusProduct,
+	LineItem,
 	ProcessorItem,
 	SetPlansPreviewPhase,
 	StripeBillingPlan,
@@ -472,5 +473,41 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 					"Stripe invoices the new year interval now, and the billing cycle restarts today.",
 			},
 		]);
+	});
+});
+
+describe("setPlansPreviewToWarnings: unbilled usage", () => {
+	const usageLineItem = ({ amount }: { amount: number }) =>
+		({
+			amount,
+			context: {
+				currency: "usd",
+				effectivePeriod: { start: NOON_UTC - 10 * DAY_MS, end: NOON_UTC },
+			},
+		}) as LineItem;
+
+	test("usage on the cancelled subscription that is never invoiced is shown", () => {
+		expect(
+			stateWarnings({
+				unbilledUsageLineItems: [
+					usageLineItem({ amount: 12.5 }),
+					usageLineItem({ amount: 7.5 }),
+				],
+			}),
+		).toEqual([
+			{
+				type: "usage_not_billed",
+				severity: "warning",
+				message: "$20 of usage since 19 Sep 2026 is not billed.",
+			},
+		]);
+	});
+
+	test("zero usage doesn't warn", () => {
+		expect(
+			stateWarnings({
+				unbilledUsageLineItems: [usageLineItem({ amount: 0 })],
+			}),
+		).toEqual([]);
 	});
 });
