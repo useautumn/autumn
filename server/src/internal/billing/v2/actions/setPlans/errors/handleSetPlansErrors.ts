@@ -22,6 +22,7 @@ import { resolveUnscheduledProductContexts } from "../utils/unscheduledProductCo
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
+import { handleStripeSchedulePhaseLimitErrors } from "./handleStripeSchedulePhaseLimitErrors";
 import { validateSetPlansPhasePlans } from "./validateSetPlansPhasePlans";
 import { validateUnscheduledPlanScopes } from "./validateUnscheduledPlanScopes";
 
@@ -129,5 +130,6 @@ export const handleSetPlansBillingPlanErrors = ({
 	billingPlan: BillingPlan;
 }) => {
 	handleProrationBehaviorErrors({ billingContext, billingPlan });
+	handleStripeSchedulePhaseLimitErrors({ billingPlan });
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };
