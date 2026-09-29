@@ -1,4 +1,3 @@
-import { expect } from "bun:test";
 import { InvoiceStatus } from "@autumn/shared";
 import { pollUntilAsserted } from "@tests/utils/genUtils";
 import { openStripeInvoiceId } from "@tests/utils/stripeUtils/openStripeInvoiceId";
@@ -11,7 +10,9 @@ import { kernelExecute } from "./kernelExecute.js";
 import { invoiceCheckout } from "./playwright/invoiceCheckout.js";
 import { playwrightPool } from "./playwrightPool.js";
 
-/** Stripe's webhook reaches Autumn seconds after the page confirms; a real failure still ends well inside this. */
+/** Stripe marks a submitted payment paid within seconds; still open past this, the page never charged the card. */
+const STRIPE_INVOICE_PAID_TIMEOUT_MS = 20_000;
+/** Once Stripe says paid, Autumn records it as soon as our `invoice.paid` webhook runs. */
 const AUTUMN_INVOICE_PAID_TIMEOUT_MS = 15_000;
 
 /**
@@ -41,11 +42,26 @@ export const completeInvoiceCheckoutV2 = async ({
 		);
 		await payOpenInvoice({ ctx, customerId });
 	}
+	// Stripe is the truth on whether the page's payment went through, however slow the page is to say so.
+	await pollUntilAsserted({
+		fetch: () => ctx.stripeCli.invoices.retrieve(stripeInvoiceId),
+		assert: (invoice) => {
+			if (invoice.status !== "paid")
+				throw new Error(
+					`Stripe invoice is still ${invoice.status}: the hosted-page payment never went through`,
+				);
+		},
+		timeoutMs: STRIPE_INVOICE_PAID_TIMEOUT_MS,
+		intervalMs: 500,
+	});
 	await pollUntilAsserted({
 		fetch: () =>
 			InvoiceService.getByStripeId({ db: ctx.db, stripeId: stripeInvoiceId }),
 		assert: (invoice) => {
-			expect(invoice?.status).toBe(InvoiceStatus.Paid);
+			if (invoice?.status !== InvoiceStatus.Paid)
+				throw new Error(
+					`Stripe invoice is paid but Autumn's is ${invoice?.status}: the invoice.paid webhook was not handled`,
+				);
 		},
 		timeoutMs: AUTUMN_INVOICE_PAID_TIMEOUT_MS,
 		intervalMs: 500,
