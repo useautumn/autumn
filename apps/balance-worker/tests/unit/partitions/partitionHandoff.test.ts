@@ -917,7 +917,9 @@ describe("partition handoff", () => {
 			// Green in turn is prepared again for the next flip.
 			await waitFor(() => green.status(2) === "prepared");
 			// The revoke above interrupted a held startup, which is reported the way any revoke mid-startup is.
-			expect(blue.errors.map(String)).toEqual(["Error: Partition retired"]);
+			expect(blue.errors.map(String)).toEqual([
+				"PartitionRetiredError: Partition retired",
+			]);
 			expect(green.errors).toEqual([]);
 		} finally {
 			gates.blue.resolve();

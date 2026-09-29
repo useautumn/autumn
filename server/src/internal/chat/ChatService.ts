@@ -6,11 +6,18 @@ import {
 	chatOAuthCredentials,
 	chatThreadContexts,
 	createChatInstallState,
+	ErrCode,
+	member,
+	RecaseError,
 } from "@autumn/shared";
 import type {
 	ChatAuthMode,
 	ChatReplyMode,
 } from "@autumn/shared/models/chatModels/chatEnums";
+import type {
+	ChatTrustedBot,
+	ChatTrustedBotInput,
+} from "@autumn/shared/models/chatModels/chatTrustedBots";
 import { addMinutes } from "date-fns";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -56,6 +63,7 @@ export class ChatService {
 				default_env: installation.default_env,
 				auth_mode: installation.auth_mode,
 				reply_mode: installation.reply_mode,
+				trusted_bots: installation.trusted_bots,
 				scopes: installation.scopes,
 				agent_scopes:
 					scopesByInstallationEnv.get(
@@ -103,19 +111,86 @@ export class ChatService {
 
 	static async updateSettings(
 		ctx: AutumnContext,
-		{ replyMode }: { replyMode: ChatReplyMode },
+		{
+			replyMode,
+			trustedBots,
+		}: { replyMode?: ChatReplyMode; trustedBots?: ChatTrustedBotInput[] },
 	) {
-		const updated = await ctx.db
+		const installationFilter = and(
+			eq(chatInstallations.org_id, ctx.org.id),
+			eq(chatInstallations.provider, slackProvider),
+		);
+		const installation = await ctx.db.query.chatInstallations.findFirst({
+			where: installationFilter,
+			columns: { id: true, trusted_bots: true },
+		});
+		if (!installation) return false;
+
+		const nextTrustedBots = trustedBots
+			? await ChatService.stampTrustedBots(ctx, {
+					existing: installation.trusted_bots,
+					trustedBots,
+				})
+			: undefined;
+
+		await ctx.db
 			.update(chatInstallations)
-			.set({ reply_mode: replyMode, updated_at: Date.now() })
-			.where(
-				and(
-					eq(chatInstallations.org_id, ctx.org.id),
-					eq(chatInstallations.provider, slackProvider),
-				),
-			)
-			.returning({ id: chatInstallations.id });
-		return updated.length > 0;
+			.set({
+				...(replyMode ? { reply_mode: replyMode } : {}),
+				...(nextTrustedBots ? { trusted_bots: nextTrustedBots } : {}),
+				updated_at: Date.now(),
+			})
+			.where(installationFilter);
+		return true;
+	}
+
+	/** A bot runs as an org member, so every run-as user must belong to this
+	 * org. Bots already on the list keep who added them and when. */
+	private static async stampTrustedBots(
+		ctx: AutumnContext,
+		{
+			existing,
+			trustedBots,
+		}: { existing: ChatTrustedBot[]; trustedBots: ChatTrustedBotInput[] },
+	): Promise<ChatTrustedBot[]> {
+		const runAsUserIds = [
+			...new Set(trustedBots.map((bot) => bot.run_as_user_id)),
+		];
+		const members = runAsUserIds.length
+			? await ctx.db.query.member.findMany({
+					where: and(
+						eq(member.organizationId, ctx.org.id),
+						inArray(member.userId, runAsUserIds),
+					),
+					columns: { userId: true },
+				})
+			: [];
+		const memberUserIds = new Set(members.map((row) => row.userId));
+		const nonMember = trustedBots.find(
+			(bot) => !memberUserIds.has(bot.run_as_user_id),
+		);
+		if (nonMember) {
+			throw new RecaseError({
+				message: `${nonMember.name} must run as a member of this organization.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		const existingBySlackId = new Map(
+			existing.map((bot) => [bot.slack_id, bot]),
+		);
+		const now = Date.now();
+		return trustedBots.map((bot) => {
+			const previous = existingBySlackId.get(bot.slack_id);
+			return {
+				slack_id: bot.slack_id,
+				name: bot.name,
+				run_as_user_id: bot.run_as_user_id,
+				added_by_user_id: previous?.added_by_user_id ?? ctx.userId ?? null,
+				added_at: previous?.added_at ?? now,
+			};
+		});
 	}
 
 	static async disconnect(ctx: AutumnContext) {

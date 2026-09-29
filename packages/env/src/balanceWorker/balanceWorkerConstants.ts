@@ -98,6 +98,10 @@ export const BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE = 0.05;
  *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;
 
+/** On, an evict appends an empty record so the log's readers (herald's cache) learn Postgres changed.
+ *  Stays off until every reader parses it: see plans/customer-cache/evictions.md. */
+export const BALANCE_WORKER_EVICTS_LOGGED = false;
+
 /** How long a revoked partition keeps serving while it waits for a successor's
  *  `ready`. A successor prepares in under a second; past this the old owner
  *  assumes nobody is coming and releases the way it always did. Must stay well
@@ -118,3 +122,11 @@ export const BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS = 30_000;
  *  still fencing and catching up. The activation is a fence plus a bookmark
  *  read; holding the request for it turns a NOT_READY into a 200. */
 export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
+/** How long a command-offset landing holds the next one back. A skipped command
+ *  (an evict, a queued track already applied) leaves no record to carry its
+ *  offset, so the offset rides with the next batch or lands through the consumer
+ *  group's own commit once this gap has passed. That commit is one request that
+ *  contends with nothing, so the gap only bounds how many the group coordinator
+ *  sees and how far the commands topic's reported lag trails. The Postgres
+ *  bookmark, not this commit, decides where a restart resumes. */
+export const BALANCE_WORKER_COMMAND_OFFSET_SETTLE_GAP_MS = 1_000;

@@ -1,0 +1,18 @@
+{
+	"id": "autumn-byoc",
+	"resources": {
+		"cache": {
+			"config": {
+				"id": "cache",
+				"type": "kv"
+			},
+			"lifecycle": "frozen",
+			"dependencies": [],
+			"remoteAccess": true
+		}
+	},
+	"permissions": {
+		"profiles": {},
+		"management": "auto"
+	}
+}

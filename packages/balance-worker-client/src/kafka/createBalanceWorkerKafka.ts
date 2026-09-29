@@ -1,5 +1,8 @@
-import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
-import { Kafka } from "kafkajs";
+import {
+	createKafkaClient,
+	createKafkaTransport,
+	KafkaWithSettledTopicOffsets,
+} from "@autumn/kafka";
 import type {
 	BalanceWorkerKafka,
 	BalanceWorkerKafkaConfig,
@@ -12,7 +15,7 @@ export function createBalanceWorkerKafka({
 	authMode,
 	region,
 }: BalanceWorkerKafkaConfig): BalanceWorkerKafka {
-	return new Kafka(
+	return new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
 			clientId,
 			brokers,

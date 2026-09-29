@@ -122,7 +122,9 @@
         "@autumn/auto-topup": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
         "@autumn/balance-webhooks": "workspace:*",
+        "@autumn/balance-worker-client": "workspace:*",
         "@autumn/blue-green": "workspace:*",
+        "@autumn/byoc": "workspace:*",
         "@autumn/cache": "workspace:*",
         "@autumn/catalog-lru": "workspace:*",
         "@autumn/edge-config": "workspace:*",
@@ -175,6 +177,7 @@
         "autoevals": "^0.0.132",
         "better-all": "0.0.7",
         "braintrust": "^3.14.0",
+        "callscript": "0.1.6",
         "chat": "^4.31.0",
         "date-fns": "^4.1.0",
         "drizzle-orm": "catalog:",
@@ -350,6 +353,18 @@
       "devDependencies": {
         "@types/bun": "1.4.2",
         "@types/node": "^18.19.3",
+        "typescript": "~5.8.3",
+      },
+    },
+    "packages/alien": {
+      "name": "@autumn/alien",
+      "version": "0.0.1",
+      "dependencies": {
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/node": "^24.9.1",
         "typescript": "~5.8.3",
       },
     },
@@ -625,6 +640,19 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/byoc": {
+      "name": "@autumn/byoc",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/cache": {
       "name": "@autumn/cache",
       "version": "0.0.1",
@@ -633,6 +661,7 @@
         "@autumn/logging": "workspace:*",
         "@autumn/shared": "workspace:*",
         "ioredis": "^5.5.0",
+        "lru-cache": "^11.2.7",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -1013,16 +1042,29 @@
         "@ai-sdk/anthropic": "^3.0.9",
         "@anthropic-ai/sdk": "^0.32.1",
         "@autumn/agent-docs": "workspace:*",
+        "@autumn/alien": "workspace:*",
         "@autumn/auth": "workspace:*",
+        "@autumn/auto-topup": "workspace:*",
         "@autumn/axiom": "workspace:*",
+        "@autumn/balance-engine": "workspace:*",
+        "@autumn/balance-webhooks": "workspace:*",
+        "@autumn/balance-worker-client": "workspace:*",
         "@autumn/billing": "workspace:*",
+        "@autumn/byoc": "workspace:*",
+        "@autumn/cache": "workspace:*",
+        "@autumn/catalog-lru": "workspace:*",
         "@autumn/ducklake": "workspace:*",
+        "@autumn/dynamodb": "workspace:*",
+        "@autumn/edge-config": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/fx": "workspace:*",
+        "@autumn/kafka": "workspace:*",
         "@autumn/ksuid": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/shared": "workspace:*",
+        "@autumn/sqs": "workspace:*",
         "@autumn/stripe-sync": "workspace:*",
+        "@autumn/svix": "workspace:*",
         "@aws-sdk/client-dynamodb": "^3.1095.0",
         "@aws-sdk/client-glue": "^3.958.0",
         "@aws-sdk/client-s3": "^3.1017.0",
@@ -1135,7 +1177,7 @@
         "zod": "^3.25.23",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/chai": "^5.0.1",
         "@types/chai-http": "^3.0.5",
         "@types/cors": "^2.8.19",
@@ -1262,7 +1304,7 @@
       },
       "devDependencies": {
         "@eslint/js": "^9.21.0",
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/lodash": "^4.17.16",
         "@types/node": "^22.13.10",
         "@types/react": "^19.0.0",
@@ -1286,6 +1328,7 @@
     "unrs-resolver",
   ],
   "patchedDependencies": {
+    "eve@0.47.2": "patches/eve@0.47.2.patch",
     "@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch",
     "kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch",
   },
@@ -1426,6 +1469,8 @@
 
     "@autumn/agent-docs": ["@autumn/agent-docs@workspace:packages/agent-docs"],
 
+    "@autumn/alien": ["@autumn/alien@workspace:packages/alien"],
+
     "@autumn/atmn-generator": ["@autumn/atmn-generator@workspace:packages/atmn-generator"],
 
     "@autumn/atmn-old": ["@autumn/atmn-old@workspace:packages/atmn-old"],
@@ -1449,6 +1494,8 @@
     "@autumn/billing": ["@autumn/billing@workspace:packages/billing"],
 
     "@autumn/blue-green": ["@autumn/blue-green@workspace:packages/blue-green"],
+
+    "@autumn/byoc": ["@autumn/byoc@workspace:packages/byoc"],
 
     "@autumn/cache": ["@autumn/cache@workspace:packages/cache"],
 
@@ -4015,6 +4062,8 @@
     "call-bind-apply-helpers": ["call-bind-apply-helpers@1.0.2", "", { "dependencies": { "es-errors": "^1.3.0", "function-bind": "^1.1.2" } }, "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ=="],
 
     "call-bound": ["call-bound@1.0.4", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.2", "get-intrinsic": "^1.3.0" } }, "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg=="],
+
+    "callscript": ["callscript@0.1.6", "", { "dependencies": { "acorn": "^8.15.0", "zod": "^4.4.3" }, "peerDependencies": { "ai": ">=5" }, "optionalPeers": ["ai"] }, "sha512-61DOv+z2TlqX/DTUKfkg1N/igXnPIWtQmDf4afm8S20ZiYF//keGZAcv0YtzdkAzPdRaVODhrlEp7KbvwcBZsA=="],
 
     "callsites": ["callsites@4.2.0", "", {}, "sha512-kfzR4zzQtAE9PC7CzZsjl3aBNbXWuXiSeOCdLcPpBfGW8YuCqQHcRPFDbr/BPVmd3EEPVpuFzLyuT/cUhPr4OQ=="],
 
@@ -7197,6 +7246,8 @@
     "@autumn/billing/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/blue-green/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
+    "@autumn/byoc/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/ducklake/@types/node": ["@types/node@18.19.130", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg=="],
 

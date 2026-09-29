@@ -3,7 +3,9 @@ import type { MessageListInput } from "@mastra/core/agent/message-list";
 import type { Attachment } from "chat";
 import { logger as rootLogger } from "../../../lib/logger.js";
 
-const MAX_ATTACHMENTS = 4;
+export const MAX_ATTACHMENTS = 4;
+// Files from earlier in the thread ride along on top of the message's own.
+export const MAX_THREAD_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const SUPPORTED_MIME_TYPES = new Set([
 	"application/pdf",
@@ -69,16 +71,21 @@ const fetchAttachmentData = async ({
 	return fetchFallback?.({ attachment }) ?? null;
 };
 
+type EarlierAttachment = Readonly<{ attachment: Attachment; author: string }>;
+
 export const prepareAttachmentMessage = async ({
 	attachments = [],
 	fetchFallback,
 	logger = rootLogger,
 	text,
+	threadAttachments = [],
 }: {
 	attachments?: ReadonlyArray<Attachment>;
 	fetchFallback?: AttachmentFetchFallback;
 	logger?: AutumnLogger;
 	text: string;
+	/** Files shared earlier in the thread, newest first. */
+	threadAttachments?: ReadonlyArray<EarlierAttachment>;
 }) => {
 	const notes: string[] = [];
 	const parts: Array<{
@@ -89,29 +96,85 @@ export const prepareAttachmentMessage = async ({
 	}> = [];
 
 	const inlineBlocks: string[] = [];
-	for (const attachment of attachments.slice(0, MAX_ATTACHMENTS)) {
-		const label = getAttachmentLabel(attachment);
+	const earlierLabels: string[] = [];
+	/** The attachments the turn will read, as passed in. */
+	const delivered: Attachment[] = [];
+	const skip = ({
+		attachment,
+		label,
+		note,
+		reason,
+	}: {
+		attachment: Attachment;
+		label: string;
+		note: string;
+		reason: string;
+	}) => {
+		notes.push(`Skipped ${label}: ${note}.`);
+		logger.warn("Skipped Slack attachment", {
+			event: "leaf.slack_attachment_skipped",
+			data: {
+				has_name: Boolean(attachment.name),
+				has_url: Boolean(attachment.url),
+				mime_type: attachment.mimeType ?? null,
+				reason,
+				size: attachment.size,
+			},
+		});
+	};
+	const selected = [
+		...attachments
+			.slice(0, MAX_ATTACHMENTS)
+			.map((attachment) => ({ attachment, author: undefined })),
+		...threadAttachments.slice(0, MAX_THREAD_ATTACHMENTS),
+	];
+	for (const { attachment, author } of selected) {
+		const label = author
+			? `${getAttachmentLabel(attachment)} (shared earlier in the thread by ${author})`
+			: getAttachmentLabel(attachment);
 		if (
 			!(isSupportedAttachment(attachment) || isInlineTextAttachment(attachment))
 		) {
-			notes.push(`Skipped ${label}: unsupported file type.`);
+			skip({
+				attachment,
+				label,
+				note: "unsupported file type",
+				reason: "unsupported_type",
+			});
 			continue;
 		}
 		if (attachment.size && attachment.size > MAX_ATTACHMENT_BYTES) {
-			notes.push(`Skipped ${label}: file is too large.`);
+			skip({
+				attachment,
+				label,
+				note: "file is too large",
+				reason: "too_large",
+			});
 			continue;
 		}
 
 		try {
 			const data = await fetchAttachmentData({ attachment, fetchFallback });
 			if (!data) {
-				notes.push(`Skipped ${label}: file could not be downloaded.`);
+				skip({
+					attachment,
+					label,
+					note: "file could not be downloaded",
+					reason: "not_downloaded",
+				});
 				continue;
 			}
 			if (data.byteLength > MAX_ATTACHMENT_BYTES) {
-				notes.push(`Skipped ${label}: downloaded file is too large.`);
+				skip({
+					attachment,
+					label,
+					note: "downloaded file is too large",
+					reason: "downloaded_too_large",
+				});
 				continue;
 			}
+			delivered.push(attachment);
+			if (author) earlierLabels.push(label);
 			if (isInlineTextAttachment(attachment)) {
 				inlineBlocks.push(inlineTextBlock({ data, label }));
 				continue;
@@ -141,9 +204,17 @@ export const prepareAttachmentMessage = async ({
 			`Skipped ${attachments.length - MAX_ATTACHMENTS} extra attachment(s).`,
 		);
 	}
+	if (threadAttachments.length > MAX_THREAD_ATTACHMENTS) {
+		notes.push(
+			`Skipped ${threadAttachments.length - MAX_THREAD_ATTACHMENTS} older file(s) from earlier in the thread.`,
+		);
+	}
 
 	const userText = [
 		text.trim() || "Please answer using the attached Slack file(s).",
+		earlierLabels.length
+			? `Also attached, from earlier in this thread:\n${earlierLabels.map((label) => `- ${label}`).join("\n")}`
+			: null,
 		...inlineBlocks,
 		notes.length ? `Attachment processing notes:\n${notes.join("\n")}` : null,
 	]
@@ -158,11 +229,12 @@ export const prepareAttachmentMessage = async ({
 
 	return {
 		attachmentCount: parts.length,
+		delivered,
 		envSelectionText: [
 			text,
-			attachments.length
-				? `Slack attachments: ${attachments
-						.map((attachment) => getAttachmentLabel(attachment))
+			selected.length
+				? `Slack attachments: ${selected
+						.map(({ attachment }) => getAttachmentLabel(attachment))
 						.join(", ")}`
 				: null,
 			notes.length ? `Attachment notes: ${notes.join(" ")}` : null,

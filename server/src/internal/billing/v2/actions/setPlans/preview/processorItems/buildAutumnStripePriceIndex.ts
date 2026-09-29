@@ -1,0 +1,49 @@
+import {
+	cusProductToPrices,
+	type Feature,
+	type FullCusProduct,
+	findFeatureById,
+	getAllPriceStripeIds,
+} from "@autumn/shared";
+import type {
+	AutumnStripePrice,
+	AutumnStripePriceIndex,
+} from "./types/autumnStripePriceIndex";
+
+export const buildAutumnStripePriceIndex = ({
+	customerProducts,
+	features,
+}: {
+	customerProducts: FullCusProduct[];
+	features: Feature[];
+}): AutumnStripePriceIndex => {
+	const priceIndex: AutumnStripePriceIndex = {
+		byAutumnPriceId: new Map(),
+		byStripePriceId: new Map(),
+	};
+
+	for (const customerProduct of customerProducts) {
+		for (const price of cusProductToPrices({ cusProduct: customerProduct })) {
+			const featureId = price.config.feature_id ?? null;
+			const feature = featureId
+				? findFeatureById({ features, featureId })
+				: undefined;
+			const autumnStripePrice: AutumnStripePrice = {
+				planId: customerProduct.product_id,
+				planName: customerProduct.product.name,
+				featureId,
+				featureName: feature?.name ?? null,
+				price,
+			};
+
+			priceIndex.byAutumnPriceId.set(price.id, autumnStripePrice);
+			for (const stripePriceId of getAllPriceStripeIds({
+				config: price.config,
+			})) {
+				priceIndex.byStripePriceId.set(stripePriceId, autumnStripePrice);
+			}
+		}
+	}
+
+	return priceIndex;
+};

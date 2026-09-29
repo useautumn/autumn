@@ -13,6 +13,7 @@ import {
 	fullProductToApiPlan,
 	isCustomerProductOneOff,
 	isCustomerProductTrialing,
+	ProcessorType,
 	type SharedContext,
 	type Subscription,
 	scopeExpandForCtx,
@@ -95,6 +96,19 @@ export const getApiSubscriptionV2 = ({
 		subscriptionPeriod = {
 			current_period_start: customerProduct.starts_at,
 			current_period_end: customerProduct.trial_ends_at ?? null,
+		};
+	}
+
+	// A RevenueCat subscription reports the store's period, stored on the processor by the webhook.
+	const processor = customerProduct.processor;
+	if (
+		processor?.type === ProcessorType.RevenueCat &&
+		processor.current_period_start &&
+		processor.current_period_end
+	) {
+		subscriptionPeriod = {
+			current_period_start: processor.current_period_start,
+			current_period_end: processor.current_period_end,
 		};
 	}
 

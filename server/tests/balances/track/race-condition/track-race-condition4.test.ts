@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -37,153 +38,159 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out newly created entity credits")}`, () => {
-	const customerId = testCase;
-	const autumnV2 = new AutumnInt({
-		version: ApiVersion.V2_1,
-	});
-
-	const autumnV2WithoutCacheDeletion = new AutumnInt({
-		version: ApiVersion.V2_1,
-		skipCacheDeletion: true,
-	});
-
-	beforeAll(async () => {
-		await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
-
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+describe.skipIf(isBalanceWorkerRoute())(
+	`${chalk.yellowBright("track-race-condition4: sync should not wipe out newly created entity credits")}`,
+	() => {
+		const customerId = testCase;
+		const autumnV2 = new AutumnInt({
+			version: ApiVersion.V2_1,
 		});
 
-		await initProductsV0({
-			ctx,
-			products: [pro],
-			prefix: testCase,
+		const autumnV2WithoutCacheDeletion = new AutumnInt({
+			version: ApiVersion.V2_1,
+			skipCacheDeletion: true,
 		});
 
-		await autumnV2.entities.create(customerId, [
-			{
-				id: "user-1",
-				name: "User 1",
-				feature_id: TestFeature.Users,
-			},
-		]);
+		beforeAll(async () => {
+			await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
 
-		await autumnV2.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-		});
-
-		await timeout(2500);
-	});
-
-	test("should manually reproduce race condition where sync wipes out newly created entity credits", async () => {
-		console.log(
-			chalk.cyan("\n=== Manually orchestrating race condition steps ===\n"),
-		);
-
-		console.log(chalk.yellow("Step 1: Setting up subject in Redis cache..."));
-
-		const fullSubject = await getOrSetCachedFullSubject({
-			ctx,
-			customerId,
-			source: "test-setup",
-		});
-		console.log(chalk.green("✓ Subject cached in Redis"));
-
-		console.log(
-			chalk.yellow(
-				"\nStep 2: Tracking 5 messages directly via executeRedisDeductionV2() (no auto sync)...",
-			),
-		);
-
-		const messagesFeature = ctx.features.find(
-			(f) => f.id === TestFeature.Messages,
-		)!;
-
-		const deductionResult = await executeRedisDeductionV2({
-			ctx,
-			deductions: [
-				{
-					feature: messagesFeature,
-					deduction: 5,
-				},
-			],
-			fullSubject,
-			deductionOptions: {
-				overageBehaviour: "cap",
-			},
-		});
-
-		console.log(chalk.green("✓ Tracked 5 messages in Redis (no sync queued)"));
-		console.log(
-			"  Modified breakdown IDs:",
-			Object.keys(deductionResult.updates),
-		);
-
-		// Get the customer from Redis to see current balance
-		const customerAfterTrack =
-			await autumnV2.customers.get<ApiCustomer>(customerId);
-
-		console.log(
-			chalk.blue(
-				`  Current balance in Redis: ${getMessagesRemaining(customerAfterTrack)}`,
-			),
-		);
-
-		// STEP 3: Create a new entity
-		console.log(chalk.yellow("\nStep 3: Creating a new entity..."));
-		await autumnV2WithoutCacheDeletion.entities.create(customerId, [
-			{
-				id: "user-2",
-				name: "User 2",
-				feature_id: TestFeature.Users,
-			},
-		]);
-		console.log(chalk.green("✓ New entity created"));
-
-		console.log(
-			chalk.yellow(
-				"\nStep 4: Manually syncing OLD Redis balance to DB (testing race condition)...",
-			),
-		);
-
-		await syncItemV4({
-			ctx,
-			payload: {
+			await initCustomerV3({
+				ctx,
 				customerId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				timestamp: Date.now(),
-				rolloverIds: Object.keys(deductionResult.rolloverUpdates),
-				modifiedCusEntIdsByFeatureId:
-					deductionResult.modifiedCusEntIdsByFeatureId,
-				usageWindowUpdates: deductionResult.usageWindowUpdates,
-			},
+				withTestClock: true,
+				attachPm: "success",
+			});
+
+			await initProductsV0({
+				ctx,
+				products: [pro],
+				prefix: testCase,
+			});
+
+			await autumnV2.entities.create(customerId, [
+				{
+					id: "user-1",
+					name: "User 1",
+					feature_id: TestFeature.Users,
+				},
+			]);
+
+			await autumnV2.attach({
+				customer_id: customerId,
+				product_id: pro.id,
+			});
+
+			await timeout(2500);
 		});
-		console.log(chalk.red("✓ Sync completed"));
 
-		await invalidateCachedFullSubject({
-			ctx,
-			customerId,
-			source: "test-setup",
+		test("should manually reproduce race condition where sync wipes out newly created entity credits", async () => {
+			console.log(
+				chalk.cyan("\n=== Manually orchestrating race condition steps ===\n"),
+			);
+
+			console.log(chalk.yellow("Step 1: Setting up subject in Redis cache..."));
+
+			const fullSubject = await getOrSetCachedFullSubject({
+				ctx,
+				customerId,
+				source: "test-setup",
+			});
+			console.log(chalk.green("✓ Subject cached in Redis"));
+
+			console.log(
+				chalk.yellow(
+					"\nStep 2: Tracking 5 messages directly via executeRedisDeductionV2() (no auto sync)...",
+				),
+			);
+
+			const messagesFeature = ctx.features.find(
+				(f) => f.id === TestFeature.Messages,
+			)!;
+
+			const deductionResult = await executeRedisDeductionV2({
+				ctx,
+				deductions: [
+					{
+						feature: messagesFeature,
+						deduction: 5,
+					},
+				],
+				fullSubject,
+				deductionOptions: {
+					overageBehaviour: "cap",
+				},
+			});
+
+			console.log(
+				chalk.green("✓ Tracked 5 messages in Redis (no sync queued)"),
+			);
+			console.log(
+				"  Modified breakdown IDs:",
+				Object.keys(deductionResult.updates),
+			);
+
+			// Get the customer from Redis to see current balance
+			const customerAfterTrack =
+				await autumnV2.customers.get<ApiCustomer>(customerId);
+
+			console.log(
+				chalk.blue(
+					`  Current balance in Redis: ${getMessagesRemaining(customerAfterTrack)}`,
+				),
+			);
+
+			// STEP 3: Create a new entity
+			console.log(chalk.yellow("\nStep 3: Creating a new entity..."));
+			await autumnV2WithoutCacheDeletion.entities.create(customerId, [
+				{
+					id: "user-2",
+					name: "User 2",
+					feature_id: TestFeature.Users,
+				},
+			]);
+			console.log(chalk.green("✓ New entity created"));
+
+			console.log(
+				chalk.yellow(
+					"\nStep 4: Manually syncing OLD Redis balance to DB (testing race condition)...",
+				),
+			);
+
+			await syncItemV4({
+				ctx,
+				payload: {
+					customerId,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					timestamp: Date.now(),
+					rolloverIds: Object.keys(deductionResult.rolloverUpdates),
+					modifiedCusEntIdsByFeatureId:
+						deductionResult.modifiedCusEntIdsByFeatureId,
+					usageWindowUpdates: deductionResult.usageWindowUpdates,
+				},
+			});
+			console.log(chalk.red("✓ Sync completed"));
+
+			await invalidateCachedFullSubject({
+				ctx,
+				customerId,
+				source: "test-setup",
+			});
+
+			// Check that credits weren't wiped out (should be reset to 100)
+			const cachedCustomer =
+				await autumnV2.customers.get<ApiCustomer>(customerId);
+
+			expect(getMessagesRemaining(cachedCustomer)).toBe(200);
+
+			const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
+				customerId,
+				{
+					skip_cache: "true",
+				},
+			);
+			expect(getMessagesRemaining(customerAfterSync)).toBe(200);
 		});
-
-		// Check that credits weren't wiped out (should be reset to 100)
-		const cachedCustomer =
-			await autumnV2.customers.get<ApiCustomer>(customerId);
-
-		expect(getMessagesRemaining(cachedCustomer)).toBe(200);
-
-		const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
-			customerId,
-			{
-				skip_cache: "true",
-			},
-		);
-		expect(getMessagesRemaining(customerAfterSync)).toBe(200);
-	});
-});
+	},
+);

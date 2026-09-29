@@ -1,3 +1,7 @@
+import {
+	ListBalancesParamsSchema,
+	ListBalancesResponseSchema,
+} from "@api/balances/list/listBalances.js";
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	API_BALANCE_V1_EXAMPLE,
@@ -350,3 +354,56 @@ export const balancesDeleteContract = oc
 		}),
 	)
 	.output(SuccessResponseSchema);
+
+export const balancesListContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/balances.list",
+		operationId: "listBalances",
+		tags: ["balances"],
+		description:
+			"Lists individual balances (one row per grant) across customers, live or expired: plan balances, standalone balances, top-ups, and pooled balances. Pages may hold fewer than `limit` rows while `has_more` is true.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "list",
+		}),
+	})
+	.input(
+		ListBalancesParamsSchema.meta({
+			title: "ListBalancesParams",
+			examples: [
+				{ customer_id: "cus_123", statuses: ["expired"] },
+				{ customer_id: "cus_123", feature_id: "messages", plan_id: null },
+			],
+		}),
+	)
+	.output(
+		ListBalancesResponseSchema.meta({
+			examples: [
+				{
+					list: [
+						{
+							id: "bonus_credits",
+							plan_id: null,
+							included_grant: 50,
+							prepaid_grant: 0,
+							remaining: 0,
+							usage: 50,
+							unlimited: false,
+							reset: { interval: "one_off", resets_at: null },
+							price: null,
+							expires_at: 1771999921437,
+							feature_id: "messages",
+							status: "expired",
+							rollovers: [],
+							customer_id: "cus_123",
+							entity_id: null,
+							created_at: 1769904000000,
+						},
+					],
+					has_more: false,
+					next_cursor: null,
+				},
+			],
+		}),
+	);

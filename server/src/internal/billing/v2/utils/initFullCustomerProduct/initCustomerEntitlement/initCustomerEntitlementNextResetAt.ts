@@ -1,4 +1,5 @@
 import {
+	clampNextResetAtToPendingBillingCycleAnchor,
 	EntInterval,
 	type EntitlementWithFeature,
 	getCycleEnd,
@@ -6,7 +7,6 @@ import {
 	type InitFullCustomerProductOptions,
 	isResettingEntitlement,
 } from "@autumn/shared";
-import { clampNextResetAtToPendingBillingCycleAnchor } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 
 export const initCustomerEntitlementNextResetAt = ({
 	initContext,

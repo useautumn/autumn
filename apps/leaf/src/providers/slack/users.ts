@@ -1,27 +1,8 @@
-import { type ChatInstallation, ms } from "@autumn/shared";
-import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
-import { SLACK_EMAIL_SCOPE } from "@autumn/shared/utils/auth/slackScopes";
+import { ms } from "@autumn/shared";
 import { LRUCache } from "lru-cache";
 import { z } from "zod";
 
 const SLACK_USERS_INFO_URL = "https://slack.com/api/users.info";
-
-export const installationHasEmailScope = ({
-	installation,
-}: {
-	installation: Pick<ChatInstallation, "scopes">;
-}): boolean => (installation.scopes ?? []).includes(SLACK_EMAIL_SCOPE);
-
-export const resolveInstallationAuthMode = ({
-	installation,
-}: {
-	installation: Pick<ChatInstallation, "auth_mode" | "scopes">;
-}): ChatAuthMode => {
-	if (installation.auth_mode) return installation.auth_mode;
-	return installationHasEmailScope({ installation })
-		? ChatAuthMode.PerUser
-		: ChatAuthMode.Unrestricted;
-};
 
 const slackUsersInfoSchema = z.object({
 	ok: z.boolean(),
@@ -29,6 +10,7 @@ const slackUsersInfoSchema = z.object({
 	user: z
 		.object({
 			id: z.string(),
+			team_id: z.string().optional(),
 			deleted: z.boolean().optional(),
 			is_bot: z.boolean().optional(),
 			profile: z
@@ -121,4 +103,26 @@ export const fetchSlackUserEmailCached = async ({
 		);
 	}
 	return lookup.email;
+};
+
+/** The Slack team a user belongs to. For an external (Slack Connect) user
+ * this is their own workspace, which the installing workspace cannot set. */
+export const fetchSlackUserHomeTeamId = async ({
+	botToken,
+	slackUserId,
+}: {
+	botToken: string;
+	slackUserId: string;
+}): Promise<string | null> => {
+	const url = new URL(SLACK_USERS_INFO_URL);
+	url.searchParams.set("user", slackUserId);
+	const response = await fetch(url, {
+		headers: { Authorization: `Bearer ${botToken}` },
+	});
+	if (!response.ok) return null;
+	const parsed = slackUsersInfoSchema.safeParse(await response.json());
+	if (!(parsed.success && parsed.data.ok) || !parsed.data.user) return null;
+	const { user } = parsed.data;
+	if (user.deleted || user.is_bot) return null;
+	return user.team_id ?? null;
 };

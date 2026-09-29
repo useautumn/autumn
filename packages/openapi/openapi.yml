@@ -68627,6 +68627,14 @@ paths:
                   description: Filter invoices to a single entity by ID. Must be provided together
                     with customer_id, since entity IDs are only unique per
                     customer.
+                invoice_id:
+                  type: string
+                  description: Filter to the invoice with this Autumn invoice ID (e.g.
+                    inv_2b3c4d5e6f7g8h).
+                stripe_id:
+                  type: string
+                  description: Filter to the invoice with this Stripe invoice ID (e.g.
+                    in_1A2B3C4D5E6F7G8H).
                 status:
                   type: array
                   items:
@@ -79201,8 +79209,9 @@ paths:
     post:
       operationId: previewSyncWebhooks
       description: "Shows what `webhooks.sync` would do with the same body, without
-        changing anything: which webhooks it would create or update, and which
-        existing ones it would leave alone because the body doesn't list them."
+        changing anything: which webhooks it would create, update or delete, and
+        which existing ones it would leave alone because the body doesn't list
+        them."
       tags:
         - webhooks
       requestBody:
@@ -79260,7 +79269,14 @@ paths:
                       - id
                       - url
                   description: The webhooks to create or update. Webhooks not listed are left
-                    alone; nothing is deleted.
+                    alone unless `skip_deletions` is false.
+                skip_deletions:
+                  type: boolean
+                  default: true
+                  description: "When false, `webhooks` is the environment's complete set: every
+                    webhook not listed is deleted, including ones made in the
+                    dashboard. Defaults true, which leaves unlisted webhooks
+                    alone."
               required:
                 - webhooks
               title: SyncWebhooksParams
@@ -79566,10 +79582,61 @@ paths:
                             - action
                             - id
                             - webhook
+                        - type: object
+                          properties:
+                            action:
+                              const: delete
+                            id:
+                              type: string
+                            webhook:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    type: string
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty means the webhook receives
+                                    every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - webhook
                     description: What `webhooks.sync` would do. `adopt` takes over a webhook made in
                       the dashboard with the same URL, keeping its signing
                       secret. `unmanaged` webhooks exist but aren't listed, so
-                      sync leaves them alone.
+                      sync leaves them alone. `delete` webhooks aren't listed
+                      and `skip_deletions` is false, so sync deletes them.
                   errors:
                     type: array
                     items:
@@ -79610,11 +79677,12 @@ paths:
     post:
       operationId: syncWebhooks
       description: "Makes the listed webhooks exist as described: creates missing ones
-        and updates ones that differ. Webhooks not listed are left alone — sync
-        never deletes. Returns the signing secret of each webhook it created,
-        once. Each webhook is applied on its own: failures are listed in
-        `errors` while the rest still apply, and the request fails only when
-        none could be applied."
+        and updates ones that differ. Webhooks not listed are left alone, unless
+        `skip_deletions` is false: then every webhook not listed is deleted,
+        including ones made in the dashboard. Returns the signing secret of each
+        webhook it created, once. Each webhook is applied on its own: failures
+        are listed in `errors` while the rest still apply, and the request fails
+        only when none could be applied."
       tags:
         - webhooks
       requestBody:
@@ -79672,7 +79740,14 @@ paths:
                       - id
                       - url
                   description: The webhooks to create or update. Webhooks not listed are left
-                    alone; nothing is deleted.
+                    alone unless `skip_deletions` is false.
+                skip_deletions:
+                  type: boolean
+                  default: true
+                  description: "When false, `webhooks` is the environment's complete set: every
+                    webhook not listed is deleted, including ones made in the
+                    dashboard. Defaults true, which leaves unlisted webhooks
+                    alone."
               required:
                 - webhooks
               title: SyncWebhooksParams
@@ -79764,8 +79839,9 @@ paths:
                       required:
                         - id
                         - message
-                    description: Webhooks that couldn't be created or updated. The others were still
-                      applied; the request fails only when none could be.
+                    description: Webhooks that couldn't be created, updated or deleted. The others
+                      were still applied; the request fails only when none could
+                      be.
                 required:
                   - webhooks
                   - secrets

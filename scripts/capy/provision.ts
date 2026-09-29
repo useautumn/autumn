@@ -30,11 +30,7 @@ import {
 import { connect } from "node:net";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import {
-	ensureFakecloudQueues,
-	FAKECLOUD_ACCOUNT_ID,
-	FAKECLOUD_SCHEDULER_ROLE_ARN,
-} from "../dw/helpers/fakecloud.ts";
+import { ensureFakecloudQueues } from "../dw/helpers/fakecloud.ts";
 import {
 	applyCommittedMigrations,
 	loadDbFunctions,
@@ -48,6 +44,12 @@ import {
 	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
 import { sh } from "../dw/helpers/shell.ts";
+import {
+	capyEnvFiles,
+	DRAGONFLY_PORT,
+	FAKECLOUD_PORT,
+	TRIGGER_PORT,
+} from "./serverEnv.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -60,14 +62,6 @@ const CAPY_STATE = join(CAPY_PREFIX, "state.json");
 
 const NEON_TEMPLATE_BRANCH = "dw-template";
 
-// Capy v2 discovers listening HTTP services automatically. Its desktop
-// service moved off :8080, so Autumn can use its standard local ports again.
-const SERVER_PORT = 8080;
-const VITE_PORT = 3000;
-const DRAGONFLY_PORT = 6379;
-const FAKECLOUD_PORT = 4566;
-const DYNAMODB_PORT = 8000;
-const TRIGGER_PORT = 8030;
 const TRIGGER_PROJECT_REF = "proj_cwiutfmpdzfcshxevkok";
 const TRIGGER_IMAGE_TAG = `v${
 	(
@@ -272,16 +266,6 @@ async function waitForHttpService(
 // automatically. preload-env.ts loads these into every bun invocation.
 // ---------------------------------------------------------------------------
 
-function forceSslVerifyFull(url: string): string {
-	try {
-		const u = new URL(url);
-		u.searchParams.set("sslmode", "verify-full");
-		return u.toString();
-	} catch {
-		return url;
-	}
-}
-
 function parseEnvFile(contents: string): { raw: string[] } {
 	return { raw: contents.split(/\r?\n/) };
 }
@@ -334,76 +318,18 @@ function writeEnvFiles(
 	triggerSecretKey: string,
 	triggerAccessToken: string,
 ): void {
-	const serverUrl = `http://localhost:${SERVER_PORT}`;
-	const viteUrl = `http://localhost:${VITE_PORT}`;
-
-	const dbUrl = forceSslVerifyFull(databaseUrl);
-	const redisUrl = `redis://localhost:${DRAGONFLY_PORT}`;
-	const sqsBase = `http://localhost:${FAKECLOUD_PORT}/${FAKECLOUD_ACCOUNT_ID}`;
-
-	const serverEnv: Record<string, string> = {
-		SERVER_PORT: String(SERVER_PORT),
-		// server/src/utils/initUtils.ts::checkEnvVars exits if any of these are
-		// missing; legacy writeAgentEnv.ts handled the same set. Re-minted only
-		// on first run — the values live in $CAPY_PREFIX/state.json.
-		BETTER_AUTH_SECRET: secrets.betterAuthSecret,
-		ENCRYPTION_IV: secrets.encryptionIv,
-		ENCRYPTION_PASSWORD: secrets.encryptionPassword,
-		DATABASE_URL: dbUrl,
-		DATABASE_CRITICAL_URL: dbUrl,
-		// Dragonfly serves the redis-protocol clients for every cache slot
-		// (misc + v2). Matches dw env-files.ts.
-		REDIS_URL: redisUrl,
-		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,
-		CACHE_V2_DRAGONFLY_URL: redisUrl,
-		DYNAMODB_ENDPOINT: `http://localhost:${DYNAMODB_PORT}`,
-		SQS_QUEUE_URL: `${sqsBase}/autumn.fifo`,
-		SQS_QUEUE_URL_V2: `${sqsBase}/autumn.fifo`,
-		TRACK_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
-		TRACK_ASYNC_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
-		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: `${sqsBase}/autumn-track-async`,
-		STRIPE_WEBHOOK_SQS_QUEUE_URL: `${sqsBase}/autumn-stripe-webhook.fifo`,
-		AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN: FAKECLOUD_SCHEDULER_ROLE_ARN,
-		TRIGGER_API_URL: `http://localhost:${TRIGGER_PORT}`,
-		TRIGGER_ACCESS_TOKEN: triggerAccessToken,
-		TRIGGER_SERVER_SECRET_KEY: triggerSecretKey,
-		AWS_REGION: "us-east-1",
-		AWS_ACCESS_KEY_ID: "x",
-		AWS_SECRET_ACCESS_KEY: "x",
-		AUTUMN_API_URL: serverUrl,
-		AUTUMN_PUBLIC_API_URL: serverUrl,
-		CLIENT_URL: viteUrl,
-		EMULATE_GOOGLE_URL: "http://localhost:4000",
-		EMULATE_GOOGLE_FETCH_URL: "http://127.0.0.1:4000",
-		GOOGLE_CLIENT_ID: "capy-emulate",
-		GOOGLE_CLIENT_SECRET: "capy-emulate",
-		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
-		// Login flow that works without external services: dev `sendOTPEmail`
-		// prints the OTP to the server log. The README documents this path.
-		NODE_ENV: "development",
-		TESTS_ORG: "unit-test-org",
-		TESTS_ORG_ID: "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt",
-		AUTUMN_TEST_BASE_URL: serverUrl,
-		AUTUMN_TEST_VITE_URL: viteUrl,
-		CACHE_V2_DRAGONFLY_PUBLIC_URL: redisUrl,
-	};
-
-	const viteEnv: Record<string, string> = {
-		VITE_BACKEND_URL: serverUrl,
-		VITE_FRONTEND_URL: viteUrl,
-	};
-
-	const checkoutEnv: Record<string, string> = {
-		VITE_BACKEND_URL: serverUrl,
-		VITE_API_URL: serverUrl,
-	};
-
-	writeEnvFile("server/.env.local", serverEnv);
-	writeEnvFile("vite/.env.local", viteEnv);
-	writeEnvFile("apps/checkout/.env.local", checkoutEnv);
+	const { server, vite, checkout } = capyEnvFiles({
+		databaseUrl,
+		secrets,
+		triggerSecretKey,
+		triggerAccessToken,
+	});
+	writeEnvFile("server/.env.local", server);
+	writeEnvFile("vite/.env.local", vite);
+	writeEnvFile("apps/checkout/.env.local", checkout);
 	log(`wrote .env.local for server/, vite/, apps/checkout/`);
-	log(`  server: ${serverUrl}`);
-	log(`  vite:   ${viteUrl}`);
+	log(`  server: ${server.AUTUMN_API_URL}`);
+	log(`  vite:   ${server.CLIENT_URL}`);
 }
 
 function runSetupTest(args: string[], databaseUrl: string): void {
@@ -690,7 +616,6 @@ async function main(): Promise<void> {
 	await waitForDragonfly();
 	await Promise.all([
 		waitForHttpService("fakecloud", FAKECLOUD_PORT),
-		waitForHttpService("dynamodb", DYNAMODB_PORT),
 		waitForHttpService("trigger.dev", TRIGGER_PORT, 120),
 	]);
 	// fakecloud has no startup config for seeding queues; create them like bun dw does.

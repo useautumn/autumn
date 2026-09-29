@@ -5,7 +5,7 @@ import {
 	FeatureNotFoundError,
 	FeatureType,
 	fullSubjectToCreditSystems,
-	fullSubjectToFullCustomer,
+	getApiSubject,
 	getFeatureToUseForCheck,
 	withTimeout,
 } from "@autumn/shared";
@@ -14,7 +14,6 @@ import {
 	getOrCreateCachedPartialFullSubject,
 	getOrSetCachedPartialFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
-import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
@@ -138,13 +137,13 @@ export const getCheckDataV2 = async ({
 		: evaluationFeature;
 
 	// Trigger auto top-up
-	triggerAutoTopUp({
-		ctx,
-		newFullCus: fullSubjectToFullCustomer({ fullSubject }),
-		feature: featureToUse,
-	}).catch((error) => {
-		ctx.logger.error(`[getCheckData] Failed to trigger auto top-up: ${error}`);
-	});
+	triggerAutoTopUp({ ctx, fullSubject, feature: featureToUse }).catch(
+		(error) => {
+			ctx.logger.error(
+				`[getCheckData] Failed to trigger auto top-up: ${error}`,
+			);
+		},
+	);
 
 	return {
 		customerId: customer_id,

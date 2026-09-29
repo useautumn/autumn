@@ -23,6 +23,7 @@ export const setupSlackAgentTurn = async ({
 	logger = rootLogger,
 	missedMessages,
 	onAction,
+	onAttachmentsPrepared,
 	onReasoning,
 	onThinking,
 	providerUserId,
@@ -30,7 +31,9 @@ export const setupSlackAgentTurn = async ({
 	run,
 	speaker,
 	text,
+	threadAttachments,
 	threadId,
+	trustedBot,
 }: SlackAgentTurnParams) => {
 	const thread = {
 		channelId,
@@ -69,6 +72,7 @@ export const setupSlackAgentTurn = async ({
 				logger,
 				orgId: org.id,
 				slackUserId: providerUserId,
+				trustedBot,
 			});
 	if (callerAuth.usePerUser && !callerAuth.ok) {
 		return {
@@ -85,6 +89,7 @@ export const setupSlackAgentTurn = async ({
 			fetchFallback: attachmentFetchFallback,
 			logger,
 			text,
+			threadAttachments,
 		}),
 		findEveSessionForThread({
 			db,
@@ -92,6 +97,7 @@ export const setupSlackAgentTurn = async ({
 			thread: effectiveThread,
 		}),
 	]);
+	onAttachmentsPrepared?.(prepared.delivered);
 	const turnParams: AgentTurnParams = {
 		attachments: prepared.parts.map((part) => ({
 			data: part.data,

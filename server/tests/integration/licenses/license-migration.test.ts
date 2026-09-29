@@ -1,12 +1,19 @@
 import { expect, test } from "bun:test";
-import type { AttachParamsV1Input, CheckResponseV3 } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	type AttachParamsV1Input,
+	type CheckResponseV3,
+	type FullProduct,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { getMigrationCustomers } from "@/internal/migrations/migrationSteps/getMigrationCustomers.js";
-import { migrateCustomer } from "@/internal/migrations/migrationSteps/migrateCustomer.js";
+import { billingActions } from "@/internal/billing/v2/actions/index.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	assignLicense,
@@ -14,13 +21,50 @@ import {
 	listLicenseAssignments,
 	listLicensePools,
 } from "./licenseTestUtils.js";
+import { expectLiveLicensePools } from "./utils/expectLiveLicensePools.js";
+
+/** Every active plan on `fromProduct` migrated through the billing action, as the v1 migration task did; false when the action rejects. */
+const migrateCustomer = async ({
+	ctx,
+	customerId,
+	fromProduct,
+	toProduct,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	fromProduct: FullProduct;
+	toProduct: FullProduct;
+}): Promise<boolean> => {
+	try {
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			withEntities: true,
+			inStatuses: ACTIVE_STATUSES,
+		});
+		const customerProducts = fullCustomer.customer_products.filter(
+			(customerProduct) =>
+				customerProduct.product.internal_id === fromProduct.internal_id,
+		);
+		for (const customerProduct of customerProducts) {
+			await billingActions.migrate({
+				ctx,
+				fullCustomer,
+				currentCustomerProduct: customerProduct,
+				newProduct: toProduct,
+			});
+			await deleteCachedFullCustomer({ ctx, customerId });
+		}
+		return true;
+	} catch {
+		return false;
+	}
+};
 
 const expectUnsafeMigrationRejected = async ({
 	customerId,
-	targetIncluded,
 }: {
 	customerId: string;
-	targetIncluded?: number;
 }) => {
 	const source = products.base({
 		id: `${customerId}-source`,
@@ -34,33 +78,21 @@ const expectUnsafeMigrationRejected = async ({
 		id: `${customerId}-license`,
 		items: [items.monthlyMessages({ includedUsage: 25 })],
 	});
-	const entityCount = targetIncluded === undefined ? 1 : targetIncluded + 1;
 	const { ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: false }),
-			s.entities({ count: entityCount, featureId: TestFeature.Users }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
 			s.products({ list: [source, target, license] }),
 		],
 		actions: [
 			s.licenses.link({
 				parentProductId: source.id,
 				licenseProductId: license.id,
-				included: entityCount,
+				included: 1,
 			}),
-			...(targetIncluded === undefined
-				? []
-				: [
-						s.licenses.link({
-							parentProductId: target.id,
-							licenseProductId: license.id,
-							included: targetIncluded,
-						}),
-					]),
 			s.billing.attach({ productId: source.id }),
-			...Array.from({ length: entityCount }, (_, entityIndex) =>
-				s.licenses.assign({ licenseProductId: license.id, entityIndex }),
-			),
+			s.licenses.assign({ licenseProductId: license.id, entityIndex: 0 }),
 		],
 	});
 	const [sourceProduct, targetProduct] = await Promise.all(
@@ -128,12 +160,90 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses migration: target capacity below assignments rejects atomically")}`,
-	() =>
-		expectUnsafeMigrationRejected({
-			customerId: "lic-mig-low-capacity",
-			targetIncluded: 1,
-		}),
+	`${chalk.yellowBright("licenses migration: target capacity below assignments adds paid seats")}`,
+	async () => {
+		const customerId = "lic-mig-low-capacity";
+		const source = products.base({
+			id: `${customerId}-source`,
+			items: [items.dashboard()],
+		});
+		const target = products.base({
+			id: `${customerId}-target`,
+			items: [items.dashboard()],
+		});
+		const license = products.base({
+			id: `${customerId}-license`,
+			items: [items.monthlyMessages({ includedUsage: 25 })],
+		});
+		const { ctx, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [source, target, license] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: source.id,
+					licenseProductId: license.id,
+					included: 2,
+				}),
+				s.licenses.link({
+					parentProductId: target.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: source.id }),
+				s.licenses.assign({ licenseProductId: license.id, entityIndex: 0 }),
+				s.licenses.assign({ licenseProductId: license.id, entityIndex: 1 }),
+			],
+		});
+		const [sourceProduct, targetProduct] = await Promise.all(
+			[source, target].map((product) =>
+				ProductService.getFull({
+					db: ctx.db,
+					idOrInternalId: product.id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				}),
+			),
+		);
+		const before = await getLicenseDbState({ db: ctx.db, customerId });
+
+		expect(
+			await migrateCustomer({
+				ctx,
+				customerId,
+				fromProduct: sourceProduct,
+				toProduct: targetProduct,
+			}),
+		).toBe(true);
+
+		// Seats never repoint: the target pool adopts the source link.
+		const after = await getLicenseDbState({ db: ctx.db, customerId });
+		const toSeatAnchors = (assignments: typeof before.assignments) =>
+			assignments.map(({ id, customer_license_link_id }) => ({
+				id,
+				linkId: customer_license_link_id,
+			}));
+		expect(toSeatAnchors(after.assignments)).toEqual(
+			toSeatAnchors(before.assignments),
+		);
+		await expectLiveLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			pools: [
+				{
+					license_plan_id: license.id,
+					parent_plan_id: target.id,
+					granted: 2,
+					usage: 2,
+					remaining: 0,
+					paid_quantity: 1,
+				},
+			],
+		});
+	},
 );
 
 test.concurrent(
@@ -251,30 +361,18 @@ test.concurrent(
 					.map((id) => ({ id, anchoredToActiveParent: true }))
 					.sort((a, b) => a.id.localeCompare(b.id)),
 			);
-			expect(dbState.pools).toHaveLength(2);
-			for (const pool of dbState.pools) {
-				expect(pool).toMatchObject({
-					parent_customer_product_id: activeParent[0].id,
-					granted: 2,
-					remaining: 1,
-				});
-			}
-
-			const pools = await listLicensePools({
+			await expectLiveLicensePools({
 				autumn: autumnV2_2,
 				customerId,
-			});
-			expect(pools).toHaveLength(2);
-			for (const [index, license] of [messageLicense, wordLicense].entries()) {
-				const pool = pools.find(
-					(candidate) => candidate.license_plan_id === license.id,
-				);
-				expect(pool).toMatchObject({
+				pools: [messageLicense, wordLicense].map((license) => ({
+					license_plan_id: license.id,
 					parent_plan_id: parent.id,
 					granted: 2,
 					usage: 1,
 					remaining: 1,
-				});
+				})),
+			});
+			for (const [index, license] of [messageLicense, wordLicense].entries()) {
 				const licenseAssignments = await listLicenseAssignments({
 					autumn: autumnV2_2,
 					customerId,
@@ -385,13 +483,17 @@ test.concurrent(
 		await autumnV1.products.update(parent.id, {
 			items: [items.dashboard(), items.monthlyWords({ includedUsage: 100 })],
 		});
-		const migrationCustomers = await getMigrationCustomers({
-			db: ctx.db,
-			fromProduct: parentV1,
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ACTIVE_STATUSES,
 		});
-		expect(migrationCustomers.map((customer) => customer.id)).not.toContain(
-			customerId,
+		// Version-bump migrations skip is_custom customer products.
+		const customizedParent = fullCustomer.customer_products.find(
+			(customerProduct) =>
+				customerProduct.product.internal_id === parentV1.internal_id,
 		);
+		expect(customizedParent?.is_custom).toBe(true);
 
 		const migratedCustomer = await autumnV1.customers.get<{
 			products: { id: string; version?: number }[];

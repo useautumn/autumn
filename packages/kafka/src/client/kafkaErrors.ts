@@ -35,3 +35,15 @@ export class InvalidKafkaOffsetError extends Error {
 		this.offset = offset;
 	}
 }
+
+export class KafkaTopicPartitionsUnavailableError extends Error {
+	readonly topic: string;
+
+	constructor({ topic, cause }: { topic: string; cause: unknown }) {
+		super(`Kafka reported no partitions for ${topic} before the deadline`, {
+			cause,
+		});
+		this.name = "KafkaTopicPartitionsUnavailableError";
+		this.topic = topic;
+	}
+}

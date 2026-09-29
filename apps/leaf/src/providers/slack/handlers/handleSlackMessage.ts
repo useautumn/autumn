@@ -1,18 +1,26 @@
+import type { ChatTrustedBot } from "@autumn/shared";
 import { Chat, type Message, type StateAdapter, type Thread } from "chat";
 import type { AgentMissedMessages } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.js";
 import { getSlackWorkspaceId } from "../context.js";
-import { slackMessageMentionsUser } from "../events.js";
-import { findSlackInstallationForWorkspace } from "../installations.js";
+import { slackMentionedUserIds, slackMessageMentionsUser } from "../events.js";
+import {
+	findSlackInstallationForWorkspace,
+	isAgentBotUser,
+} from "../installations.js";
 import { controlMessageFrom } from "../routing/controlMessage.js";
 import { shouldSkipUntaggedReply } from "../routing/replyMode.js";
 import {
 	getEarlierThreadMessages,
 	getRecentMessages,
+	getUndeliveredThreadAttachments,
 	loadMissedMessages,
+	recordDeliveredFiles,
 	recordSkippedMessage,
+	type ThreadAttachment,
 } from "../threadContext.js";
+import { findTrustedSlackBot } from "../trustedBots.js";
 
 const logUnsubscribeFailure = (error: unknown) => {
 	rootLogger.error("Could not close Slack thread subscription", error, {
@@ -20,15 +28,40 @@ const logUnsubscribeFailure = (error: unknown) => {
 	});
 };
 
-const shouldSkipMessage = (message: Message) => {
-	if (message.author.isBot === true) {
-		rootLogger.info("Skipping bot-authored Slack message", {
-			event: "leaf.slack_message_skipped",
-			data: { reason: "bot_author" },
+/** The workspace's trusted bot that wrote this message, if any. */
+const findTrustedBotAuthor = async ({ message }: { message: Message }) => {
+	const installation = await findSlackInstallationForWorkspace({
+		workspaceId: getSlackWorkspaceId(message.raw),
+	});
+	return findTrustedSlackBot({ installation, raw: message.raw });
+};
+
+type MessageAdmission =
+	| { skip: true }
+	| { skip: false; trustedBot?: ChatTrustedBot };
+
+/** People always get through; a bot only when the workspace trusts it. */
+const admitMessage = async ({
+	findTrustedBot,
+	message,
+}: {
+	findTrustedBot: typeof findTrustedBotAuthor;
+	message: Message;
+}): Promise<MessageAdmission> => {
+	if (message.author.isBot !== true) return { skip: false };
+	const trustedBot = await findTrustedBot({ message });
+	if (trustedBot) {
+		rootLogger.info("Admitting trusted bot Slack message", {
+			event: "leaf.slack_trusted_bot_message",
+			data: { slack_id: trustedBot.slack_id },
 		});
-		return true;
+		return { skip: false, trustedBot };
 	}
-	return false;
+	rootLogger.info("Skipping bot-authored Slack message", {
+		event: "leaf.slack_message_skipped",
+		data: { reason: "bot_author" },
+	});
+	return { skip: true };
 };
 
 const unsubscribe = (thread: Thread) =>
@@ -37,6 +70,17 @@ const unsubscribe = (thread: Thread) =>
 /** Whether the raw Slack message @-mentions this workspace's agent. Without
  * a known bot user id nothing counts as a mention, so an ordinary edit never
  * pulls the agent into a thread it does not follow. */
+/** Whether the message tags any copy of the agent. In a Slack Connect
+ * channel a message can arrive through our own workspace's installation
+ * while tagging the bot the other workspace sees. */
+export const messageTagsAnyAgent = async ({
+	isAgentBot = isAgentBotUser,
+	message,
+}: {
+	isAgentBot?: typeof isAgentBotUser;
+	message: Message;
+}) => isAgentBot({ userIds: slackMentionedUserIds({ raw: message.raw }) });
+
 const messageMentionsAgent = async ({ message }: { message: Message }) => {
 	const installation = await findSlackInstallationForWorkspace({
 		workspaceId: getSlackWorkspaceId(message.raw),
@@ -61,9 +105,11 @@ export const editedMessageText = ({
 
 type HandlerDependencies = Readonly<{
 	dispatch: typeof dispatchSlackAgentMessage;
+	findTrustedBot: typeof findTrustedBotAuthor;
 	getRecentMessages: typeof getRecentMessages;
 	getState: () => StateAdapter;
 	mentionsAgent: typeof messageMentionsAgent;
+	tagsAnyAgent: typeof messageTagsAnyAgent;
 	shouldSkipReply: typeof shouldSkipUntaggedReply;
 }>;
 
@@ -84,15 +130,7 @@ const threadHistoryLoader = ({
 		return recent;
 	};
 	const afterRefresh =
-		(
-			load: (
-				thread: Thread,
-				message: Message,
-			) =>
-				| AgentMissedMessages
-				| undefined
-				| Promise<AgentMissedMessages | undefined>,
-		) =>
+		<T>(load: (thread: Thread, message: Message) => T | Promise<T>) =>
 		async () => {
 			await recentMessages();
 			return await load(thread, message);
@@ -103,15 +141,19 @@ const threadHistoryLoader = ({
 const dispatchMessage = async ({
 	message,
 	dispatch,
+	getState,
 	text = message.text,
 	missedMessages,
 	onMissedMessagesDelivered,
 	recentMessages,
 	showRunPlan,
 	thread,
+	threadAttachments,
+	trustedBot,
 }: {
 	message: Message;
 	dispatch: typeof dispatchSlackAgentMessage;
+	getState: () => StateAdapter;
 	missedMessages?: () => Promise<AgentMissedMessages | undefined>;
 	onMissedMessagesDelivered?: () => Promise<void>;
 	recentMessages:
@@ -120,6 +162,8 @@ const dispatchMessage = async ({
 	showRunPlan: boolean;
 	text?: string;
 	thread: Thread;
+	threadAttachments?: () => Promise<ReadonlyArray<ThreadAttachment>>;
+	trustedBot?: ChatTrustedBot;
 }) => {
 	thread.adapter.addReaction(thread.id, message.id, "eyes").catch(() => {});
 	const disposition = await dispatch({
@@ -133,6 +177,8 @@ const dispatchMessage = async ({
 		},
 		channelId: thread.channelId,
 		missedMessages,
+		onAttachmentsDelivered: (fileIds) =>
+			recordDeliveredFiles(thread, message, fileIds, getState()),
 		onMissedMessagesDelivered,
 		providerUserId: message.author.userId,
 		raw: message.raw,
@@ -147,7 +193,9 @@ const dispatchMessage = async ({
 		showRunPlan,
 		target: thread,
 		text,
+		threadAttachments,
 		threadId: thread.id,
+		trustedBot,
 	});
 	if (disposition !== "close") return;
 	await unsubscribe(thread);
@@ -155,32 +203,45 @@ const dispatchMessage = async ({
 
 export const createSlackMessageHandlers = ({
 	dispatch = dispatchSlackAgentMessage,
+	findTrustedBot = findTrustedBotAuthor,
 	getRecentMessages: getMessages = getRecentMessages,
 	getState = () => Chat.getSingleton().getState(),
 	mentionsAgent = messageMentionsAgent,
 	shouldSkipReply = shouldSkipUntaggedReply,
+	tagsAnyAgent = messageTagsAnyAgent,
 }: Partial<HandlerDependencies> = {}) => {
+	const admit = (message: Message) => admitMessage({ findTrustedBot, message });
+	const undeliveredAttachments = (thread: Thread, message: Message) =>
+		getUndeliveredThreadAttachments(thread, message, getState());
+
 	const handleSlackMessage = async (thread: Thread, message: Message) => {
-		if (shouldSkipMessage(message)) return;
+		const admission = await admit(message);
+		if (admission.skip) return;
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
 			recentMessages: () => getMessages(thread, message),
 			showRunPlan: false,
 			thread,
+			trustedBot: admission.trustedBot,
 		});
 	};
 
 	const handleSlackThreadStart = async (thread: Thread, message: Message) => {
-		if (shouldSkipMessage(message)) return;
+		const admission = await admit(message);
+		if (admission.skip) return;
 		const history = threadHistoryLoader({ getMessages, message, thread });
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
 			missedMessages: history.afterRefresh(getEarlierThreadMessages),
+			threadAttachments: history.afterRefresh(undeliveredAttachments),
 			recentMessages: history.recentMessages,
 			showRunPlan: true,
 			thread,
+			trustedBot: admission.trustedBot,
 		});
 	};
 
@@ -192,10 +253,12 @@ export const createSlackMessageHandlers = ({
 		message,
 		text,
 		thread,
+		trustedBot,
 	}: {
 		message: Message;
 		text: string;
 		thread: Thread;
+		trustedBot?: ChatTrustedBot;
 	}) => {
 		if (await shouldSkipReply({ message, thread })) {
 			rootLogger.info("Skipping untagged Slack reply", {
@@ -206,22 +269,33 @@ export const createSlackMessageHandlers = ({
 			return;
 		}
 		const history = threadHistoryLoader({ getMessages, message, thread });
-		let markDelivered: (() => Promise<void>) | undefined;
+		// Missed replies and their files come from one lookup.
+		let loadedMissed: ReturnType<typeof loadMissedMessages> | undefined;
+		const loadMissed = history.afterRefresh(() => {
+			loadedMissed ??= loadMissedMessages(thread, message, getState());
+			return loadedMissed;
+		});
+		const earlierAttachments = history.afterRefresh(undeliveredAttachments);
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
-			missedMessages: history.afterRefresh(async () => {
-				const loaded = await loadMissedMessages(thread, message, getState());
-				markDelivered = loaded?.markDelivered;
-				return loaded?.missed;
-			}),
+			missedMessages: async () => (await loadMissed())?.missed,
 			onMissedMessagesDelivered: async () => {
-				await markDelivered?.();
+				await (await loadedMissed)?.markDelivered();
 			},
 			recentMessages: history.recentMessages,
 			showRunPlan: false,
 			text,
 			thread,
+			// A tag reaches back for files anywhere earlier in the thread, so a
+			// re-tag can pick up a file an earlier turn could not read; skipped
+			// replies are part of that history.
+			threadAttachments: async () =>
+				(await tagsAnyAgent({ message }))
+					? await earlierAttachments()
+					: ((await loadMissed())?.attachments ?? []),
+			trustedBot,
 		});
 	};
 
@@ -229,8 +303,14 @@ export const createSlackMessageHandlers = ({
 		thread: Thread,
 		message: Message,
 	) => {
-		if (shouldSkipMessage(message)) return;
-		await replyInSubscribedThread({ message, text: message.text, thread });
+		const admission = await admit(message);
+		if (admission.skip) return;
+		await replyInSubscribedThread({
+			message,
+			text: message.text,
+			thread,
+			trustedBot: admission.trustedBot,
+		});
 	};
 
 	// A Slack edit is routed like a new message carrying the edited text: in
@@ -243,7 +323,9 @@ export const createSlackMessageHandlers = ({
 		previousMessage?: Message,
 	) => {
 		if (thread.adapter.name !== "slack") return;
-		if (shouldSkipMessage(message)) return;
+		const admission = await admit(message);
+		if (admission.skip) return;
+		const { trustedBot } = admission;
 		if (previousMessage && previousMessage.text === message.text) return;
 		// "stop" edited in is a control command, which is only recognised as
 		// the whole message, so it goes through without the edit framing.
@@ -257,17 +339,19 @@ export const createSlackMessageHandlers = ({
 			event: "leaf.slack_message_edited",
 		});
 		if (await thread.isSubscribed()) {
-			await replyInSubscribedThread({ message, text, thread });
+			await replyInSubscribedThread({ message, text, thread, trustedBot });
 			return;
 		}
 		if (thread.isDM) {
 			await dispatchMessage({
 				dispatch,
+				getState,
 				message,
 				recentMessages: () => getMessages(thread, message),
 				showRunPlan: false,
 				text,
 				thread,
+				trustedBot,
 			});
 			return;
 		}
@@ -276,12 +360,15 @@ export const createSlackMessageHandlers = ({
 		const history = threadHistoryLoader({ getMessages, message, thread });
 		await dispatchMessage({
 			dispatch,
+			getState,
 			message,
 			missedMessages: history.afterRefresh(getEarlierThreadMessages),
+			threadAttachments: history.afterRefresh(undeliveredAttachments),
 			recentMessages: history.recentMessages,
 			showRunPlan: true,
 			text,
 			thread,
+			trustedBot,
 		});
 	};
 

@@ -1,8 +1,6 @@
 import type Stripe from "stripe";
-import { isAutumnManagedStripeSchedule } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import { futurePhaseItemsChanged } from "./futurePhaseItemsChanged.js";
-import { getSchedulePhaseMoves } from "./getSchedulePhaseMoves.js";
+import { setupScheduleUpdatedContext } from "./setupScheduleUpdatedContext.js";
 import { applyStartedScheduleFuturePhaseEdit } from "./tasks/applyStartedScheduleFuturePhaseEdit.js";
 import { resyncScheduledCustomerProductStartsAt } from "./tasks/resyncScheduledCustomerProductStartsAt.js";
 
@@ -18,33 +16,10 @@ export const handleStripeSubscriptionScheduleUpdated = async ({
 	ctx: StripeWebhookContext;
 	event: Stripe.SubscriptionScheduleUpdatedEvent;
 }) => {
-	const schedule = event.data.object;
-	const previousPhases = event.data.previous_attributes?.phases;
+	const eventContext = setupScheduleUpdatedContext({ ctx, event });
 
-	if (!previousPhases) return;
-	if (previousPhases.length !== schedule.phases.length) {
-		ctx.logger.warn(
-			`[handleStripeSubscriptionScheduleUpdated] skipping structural phase change (${previousPhases.length} -> ${schedule.phases.length} phases) on schedule ${schedule.id}`,
-		);
-		return;
-	}
-	if (schedule.status === "active") {
-		if (isAutumnManagedStripeSchedule({ schedule })) return;
-		const changed = futurePhaseItemsChanged({
-			previousPhases,
-			currentPhases: schedule.phases,
-			nowSeconds: event.created,
-		});
-		if (changed) await applyStartedScheduleFuturePhaseEdit({ ctx, schedule });
-		return;
-	}
-	if (schedule.status !== "not_started") return;
+	await applyStartedScheduleFuturePhaseEdit({ ctx, eventContext });
+	await resyncScheduledCustomerProductStartsAt({ ctx, eventContext });
 
-	const moves = getSchedulePhaseMoves({
-		previousPhases,
-		currentPhases: schedule.phases,
-	});
-	if (moves.length === 0) return;
-
-	await resyncScheduledCustomerProductStartsAt({ ctx, schedule, moves });
+	ctx.handlerResult = { type: event.type, context: eventContext };
 };

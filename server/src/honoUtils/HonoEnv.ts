@@ -13,15 +13,6 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
-export type RolloutSnapshot = {
-	rolloutId: string | null;
-	enabled: boolean;
-	percent: number;
-	previousPercent: number;
-	changedAt: number;
-	customerBucket: number | null;
-};
-
 export type RequestContext = {
 	// Variables
 	org: Organization;
@@ -87,7 +78,6 @@ export type RequestContext = {
 	extraLogs: Record<string, unknown>;
 
 	fullCustomer?: FullCustomer;
-	rolloutSnapshot?: RolloutSnapshot;
 
 	/** Non-prod debug box (x-debug-subject-source); shared by reference across
 	 *  ctx spread-copies so chokepoints can record where the subject came from. */
@@ -113,6 +103,8 @@ export type RequestContext = {
 		mockVercelApi?: boolean;
 		allowVercelTestOidc?: boolean;
 		mockRevenueCat?: boolean;
+		/** Caps customers walked per list page (non-prod only). */
+		listScanCap?: number;
 		revenueCat?: {
 			subscriptions?: unknown[];
 			purchases?: unknown[];

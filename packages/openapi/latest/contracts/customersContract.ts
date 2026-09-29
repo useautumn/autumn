@@ -16,6 +16,11 @@ import {
 import { GetCustomerParamsV1Schema } from "@api/customers/crud/getCustomerParams.js";
 import { ListCustomersV2_3ParamsSchema } from "@api/customers/crud/listCustomersParamsV2_3.js";
 import { UpdateCustomerParamsV1Schema } from "@api/customers/crud/updateCustomerParams.js";
+import {
+	ListPurchasesResponseSchema,
+	ListSubscriptionsParamsSchema,
+	ListSubscriptionsResponseSchema,
+} from "@api/customers/cusPlans/list/listSubscriptions.js";
 import { oc } from "@orpc/contract";
 import {
 	getCustomerJsDoc,
@@ -184,4 +189,102 @@ export const advanceTestClockContract = oc
 	.input(AdvanceTestClockParamsSchema.meta({ title: "AdvanceTestClockParams" }))
 	.output(
 		AdvanceTestClockResponseSchema.meta({ title: "AdvanceTestClockResponse" }),
+	);
+
+const SUBSCRIPTION_LIST_ROW_EXAMPLE = {
+	id: "sub_123",
+	plan_id: "pro",
+	auto_enable: false,
+	add_on: false,
+	status: "expired",
+	past_due: false,
+	canceled_at: 1771409161016,
+	expires_at: 1771409161016,
+	trial_ends_at: null,
+	started_at: 1768817161016,
+	current_period_start: null,
+	current_period_end: null,
+	quantity: 1,
+	scope: "customer",
+	customer_id: "cus_123",
+	entity_id: null,
+	created_at: 1768817161016,
+};
+
+export const listSubscriptionsContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/subscriptions.list",
+		operationId: "listSubscriptions",
+		tags: ["customers"],
+		description:
+			"Lists recurring plans (including add-ons) across customers, live or expired. Filter by customer, entity, plan, or status. Pages may hold fewer than `limit` rows while `has_more` is true.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "listSubscriptions",
+		}),
+	})
+	.input(
+		ListSubscriptionsParamsSchema.meta({
+			title: "ListSubscriptionsParams",
+			examples: [
+				{ customer_id: "cus_123", statuses: ["expired"] },
+				{ plan_id: "pro", statuses: ["past_due"] },
+			],
+		}),
+	)
+	.output(
+		ListSubscriptionsResponseSchema.meta({
+			examples: [
+				{
+					list: [SUBSCRIPTION_LIST_ROW_EXAMPLE],
+					has_more: false,
+					next_cursor: null,
+				},
+			],
+		}),
+	);
+
+export const listPurchasesContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/purchases.list",
+		operationId: "listPurchases",
+		tags: ["customers"],
+		description:
+			"Lists one-off plan purchases across customers, live or expired. Filter by customer, entity, plan, or status. Pages may hold fewer than `limit` rows while `has_more` is true.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "listPurchases",
+		}),
+	})
+	.input(
+		ListSubscriptionsParamsSchema.meta({
+			title: "ListPurchasesParams",
+			examples: [{ customer_id: "cus_123", statuses: ["active", "expired"] }],
+		}),
+	)
+	.output(
+		ListPurchasesResponseSchema.meta({
+			examples: [
+				{
+					list: [
+						{
+							id: "cus_prod_123",
+							plan_id: "credit_pack",
+							status: "expired",
+							expires_at: null,
+							started_at: 1768817161016,
+							quantity: 1,
+							scope: "customer",
+							customer_id: "cus_123",
+							entity_id: null,
+							created_at: 1768817161016,
+						},
+					],
+					has_more: false,
+					next_cursor: null,
+				},
+			],
+		}),
 	);

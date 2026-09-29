@@ -19,6 +19,8 @@ export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
 export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
 export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./api/billingControls/index";
+// BYOC (infra in the org's own cloud)
+export * from "./api/byoc/byocCacheModels";
 export * from "./api/catalogV2/planUpdate/params/catalogPlanItemIdentity";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
@@ -67,6 +69,7 @@ export * from "./models/authModels/membership";
 export * from "./models/chatModels/chatApprovalApi";
 export * from "./models/chatModels/chatEnums";
 export * from "./models/chatModels/chatTable";
+export * from "./models/chatModels/chatTrustedBots";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
 // 4. Chat Result Models
@@ -179,6 +182,7 @@ export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/agent/agentRules";
 export * from "./models/orgModels/agent/agentRulesTable";
+export * from "./models/orgModels/byocConfig";
 // 1. Org Models
 export * from "./models/orgModels/customButton";
 export * from "./models/orgModels/frontendOrg";

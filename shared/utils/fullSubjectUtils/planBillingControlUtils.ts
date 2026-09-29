@@ -91,8 +91,8 @@ export const getPlanBillingControlProducts = <
 		);
 
 export const findPlanBillingControlWithProduct = <
-	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
+	TControl extends { feature_id?: string } = BillingControlByKey[TKey],
 	CP extends PlanControlCustomerProduct = FullCusProduct,
 >({
 	customerProducts,
@@ -147,8 +147,8 @@ export const findPlanBillingControlWithProduct = <
 };
 
 export const findPlanBillingControl = <
-	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
+	TControl extends { feature_id?: string } = BillingControlByKey[TKey],
 	CP extends PlanControlCustomerProduct = FullCusProduct,
 >(args: {
 	customerProducts: CP[];
@@ -158,7 +158,7 @@ export const findPlanBillingControl = <
 	inStatuses?: CusProductStatus[];
 	normalizeForCompare?: (control: TControl) => TControl;
 }): TControl | undefined =>
-	findPlanBillingControlWithProduct<TControl, TKey, CP>(args)?.control;
+	findPlanBillingControlWithProduct<TKey, TControl, CP>(args)?.control;
 
 /**
  * Resolve a billing control and report which plan it came from.
@@ -166,8 +166,8 @@ export const findPlanBillingControl = <
  * (entity/customer scope), set when it resolved from a plan's product columns.
  */
 export const resolveBillingControlWithProduct = <
-	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
+	TControl extends { feature_id?: string } = BillingControlByKey[TKey],
 	CP extends PlanControlCustomerProduct = FullCusProduct,
 >({
 	controlLists,
@@ -193,7 +193,7 @@ export const resolveBillingControlWithProduct = <
 
 	if (!customerProducts || !controlKey) return undefined;
 
-	return findPlanBillingControlWithProduct<TControl, TKey, CP>({
+	return findPlanBillingControlWithProduct<TKey, TControl, CP>({
 		customerProducts,
 		controlKey,
 		matches,
@@ -204,8 +204,8 @@ export const resolveBillingControlWithProduct = <
 };
 
 export const resolveBillingControl = <
-	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
+	TControl extends { feature_id?: string } = BillingControlByKey[TKey],
 	CP extends PlanControlCustomerProduct = FullCusProduct,
 >(args: {
 	controlLists: Array<TControl[] | null | undefined>;
@@ -215,7 +215,7 @@ export const resolveBillingControl = <
 	now?: number;
 	inStatuses?: CusProductStatus[];
 	normalizeForCompare?: (control: TControl) => TControl;
-}) => resolveBillingControlWithProduct<TControl, TKey, CP>(args)?.control;
+}) => resolveBillingControlWithProduct<TKey, TControl, CP>(args)?.control;
 
 export const fullSubjectToPlanProducts = <
 	CP extends PlanControlCustomerProduct,

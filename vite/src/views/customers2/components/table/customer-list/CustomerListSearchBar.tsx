@@ -70,7 +70,7 @@ export function CustomerListSearchBar() {
 				<button
 					type="button"
 					onClick={() => setFilters(CLEARED_CUSTOMER_FILTERS)}
-					className="shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-primary hover:bg-active-primary"
+					className="flex h-5 shrink-0 cursor-pointer items-center rounded px-1.5 text-xs whitespace-nowrap text-tertiary-foreground hover:bg-active-primary hover:text-foreground"
 				>
 					Reset filters
 				</button>

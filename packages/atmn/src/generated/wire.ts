@@ -241,8 +241,8 @@ export type AtmnConfig = {
 	/** The settings this config manages. Only the fields stated are written;
 	 * an omitted field keeps its value, and an omitted block manages nothing. */
 	settings?: Settings;
-	/** The webhooks this config manages, by id. Push creates or updates them in
-	 * the target environment and never deletes one; unlisted webhooks are left alone. */
+	/** The webhooks this config manages, by id. In each environment push syncs, it creates
+	 * or updates the listed webhooks and deletes the unlisted ones; omit the key to manage none. */
 	webhooks?: Webhook[];
 };
 

@@ -11,4 +11,7 @@ export type CommandConsumerContext = {
 	readCommandNextOffset(position: { partition: number }): bigint | null;
 	idempotencyKeys: IdempotencyKeyStore;
 	logger?: Pick<AutumnLogger, "info" | "warn">;
+	/** Parks the partition behind a command whose batch the broker refused: withdrawn from the
+	 *  consumer at once, restarted from the store and log later. Absent, the failure is thrown. */
+	markUnavailable?(failure: { partition: number; cause: unknown }): void;
 };

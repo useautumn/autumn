@@ -6,6 +6,7 @@ import {
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
 import { evict as evictCustomer } from "./actions/evict.js";
+import { log as logMutation } from "./actions/log.js";
 import { createPartitionWriterState } from "./pendingMutations.js";
 import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
 import type {
@@ -37,6 +38,10 @@ export function createPartitionWriter({
 		return timeSync({ label: "writer.decide" }, () =>
 			decideMutation({ scope, submission }),
 		);
+	}
+
+	function log(params: Parameters<PartitionWriter["log"]>[0]): Promise<void> {
+		return logMutation({ scope, ...params });
 	}
 
 	function waitForPendingCommits({
@@ -78,6 +83,7 @@ export function createPartitionWriter({
 		waitForStore,
 		waitForApplies,
 		decide,
+		log,
 		waitForPendingCommits,
 		assertCommitsHealthy,
 		readFreshestState,

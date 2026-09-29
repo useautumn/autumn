@@ -9,6 +9,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	StatusChip,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -31,10 +32,14 @@ import {
 	BILLING_CONTROL_EDIT_SHEETS,
 } from "@/components/billing-controls/billingControlSheets";
 import type { BillingControlOrigin } from "@/components/billing-controls/resolveDisplayedBillingControls";
-import { Table } from "@/components/general/table";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+	Table,
+} from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { useCustomerContext } from "../customer/CustomerContext";
-import { EmptyState } from "./table/EmptyState";
 import { useDisplayedBillingControls } from "./useDisplayedBillingControls";
 
 const ADD_MENU_ITEMS: Array<{ key: BillingControlKey; label: string }> = [
@@ -56,10 +61,10 @@ const SourceBadge = ({
 }) => (
 	<Tooltip>
 		<TooltipTrigger asChild>
-			<span className="flex max-w-[10rem] shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground">
+			<StatusChip className="max-w-40 shrink-0 pl-1.5">
 				{icon}
-				<span className="truncate">{label}</span>
-			</span>
+				<span className="min-w-0 truncate">{label}</span>
+			</StatusChip>
 		</TooltipTrigger>
 		<TooltipContent>{tooltip}</TooltipContent>
 	</Tooltip>
@@ -73,6 +78,19 @@ const entityHasBillingControls = (entity: Entity) =>
 	hasBillingControls(billingControlsFromColumns(entity));
 
 const entityLabel = (entity: Entity) => entity.name || entity.id;
+
+const TrayPlaceholder = ({ text }: { text: string }) => (
+	<div className={TABLE_TRAY_CLASS}>
+		<div
+			className={cn(
+				TABLE_TRAY_SURFACE_CLASS,
+				"flex h-10 items-center justify-center px-4 text-subtle text-xs",
+			)}
+		>
+			<span className="truncate">{text}</span>
+		</div>
+	</div>
+);
 
 export function CustomerBillingControlsSection() {
 	const {
@@ -218,7 +236,7 @@ export function CustomerBillingControlsSection() {
 		return (
 			<Table.Container>
 				{toolbar}
-				<EmptyState
+				<TrayPlaceholder
 					text={
 						isEntityView
 							? "No billing controls apply to this entity"
@@ -256,7 +274,7 @@ export function CustomerBillingControlsSection() {
 			{toolbar}
 
 			{isLoading ? (
-				<EmptyState text="Loading billing controls" />
+				<TrayPlaceholder text="Loading billing controls" />
 			) : (
 				<BillingControlsList
 					billingControls={billingControls}

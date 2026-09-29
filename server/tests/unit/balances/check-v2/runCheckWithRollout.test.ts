@@ -59,14 +59,6 @@ const rolloutCtx = {
 	logger: {
 		warn: (...args: unknown[]) => mockState.warnCalls.push(args),
 	},
-	rolloutSnapshot: {
-		rolloutId: "v2-cache",
-		enabled: true,
-		percent: 100,
-		previousPercent: 0,
-		changedAt: 1,
-		customerBucket: 10,
-	},
 } as never;
 
 describe("runCheckWithRollout", () => {
@@ -90,16 +82,7 @@ describe("runCheckWithRollout", () => {
 
 	test("uses the v2 flow", async () => {
 		const result = await runCheckWithRollout({
-			ctx: {
-				rolloutSnapshot: {
-					rolloutId: "v2-cache",
-					enabled: true,
-					percent: 100,
-					previousPercent: 0,
-					changedAt: 1,
-					customerBucket: 10,
-				},
-			} as never,
+			ctx: {} as never,
 			body: {} as never,
 			requiredBalance: 1,
 		});

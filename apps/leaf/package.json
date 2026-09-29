@@ -39,6 +39,7 @@
 		"autoevals": "^0.0.132",
 		"better-all": "0.0.7",
 		"braintrust": "^3.14.0",
+		"callscript": "0.1.6",
 		"chat": "^4.31.0",
 		"date-fns": "^4.1.0",
 		"drizzle-orm": "catalog:",

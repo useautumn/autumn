@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-	BillWhen,
 	BillingInterval,
+	BillWhen,
 	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
 	PriceType,
@@ -289,11 +289,11 @@ describe("deductFromCusEntsTypescript", () => {
 		});
 
 		expect(remaining).toBe(0);
-		expect(updates[entityCustomerEntitlement.id]?.entities?.["entity-1"]?.balance).toBe(
-			50,
-		);
-		expect(updates[entityCustomerEntitlement.id]?.entities?.["entity-2"]?.balance).toBe(
-			100,
-		);
+		expect(
+			updates[entityCustomerEntitlement.id]?.entities?.["entity-1"]?.balance,
+		).toBe(50);
+		expect(
+			updates[entityCustomerEntitlement.id]?.entities?.["entity-2"]?.balance,
+		).toBe(100);
 	});
 });

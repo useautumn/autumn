@@ -69,10 +69,7 @@ export const DeletePlanDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent
-				className="bg-background"
-				onClick={(e) => e.stopPropagation()}
-			>
+			<DialogContent onClick={(e) => e.stopPropagation()}>
 				<DialogHeader className="max-w-full">
 					<DialogTitle className="truncate max-w-[400px]">
 						{titleAction} {product.name}

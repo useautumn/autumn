@@ -1,0 +1,14 @@
+---
+title: "List Purchases"
+openapi: "openapi POST /v1/purchases.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+Lists one-off plan purchases. By default only live purchases are returned; pass `statuses: ["expired"]` to see purchases that have ended.
+
+<Note>
+  A page can hold fewer than `limit` rows (even zero) while `has_more` is `true`. Keep paginating until `has_more` is `false`.
+</Note>

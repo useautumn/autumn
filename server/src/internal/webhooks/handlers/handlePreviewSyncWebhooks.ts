@@ -10,7 +10,7 @@ export const handlePreviewSyncWebhooks = createRoute({
 	body: SyncWebhooksParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { webhooks } = c.req.valid("json");
+		const { webhooks, skip_deletions } = c.req.valid("json");
 		const synced = await listSyncRemote({
 			apps: await listWebhookApps({ ctx }),
 		});
@@ -18,6 +18,7 @@ export const handlePreviewSyncWebhooks = createRoute({
 			computeWebhookSyncChanges({
 				...synced,
 				stated: webhooks,
+				skipDeletions: skip_deletions,
 				now: Date.now(),
 			}),
 		);

@@ -96,6 +96,7 @@ export const computeSyncPlan = ({
 		fullCustomer: syncContext.fullCustomer,
 		outgoingCustomerProducts,
 		incomingCustomerProducts: immediate.insertCustomerProducts,
+		customerLicenseTransitions,
 		now: syncContext.currentEpochMs,
 	});
 	const preparedImmediateCustomerProducts = immediate.insertCustomerProducts;

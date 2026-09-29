@@ -6,6 +6,7 @@ import type {
 	PartitionsState,
 } from "../types/partitionState.js";
 import type { PartitionRevocation } from "../types/partitions.js";
+import { PartitionRetiredError } from "./partitionLifecycleErrors.js";
 
 export function detachPartitions({
 	state,
@@ -105,7 +106,7 @@ export function retirePartition({
 }): Promise<void> {
 	if (entry.retirement) return entry.retirement;
 	// A pending claim wait must let go: the entry is leaving, whoever the log names.
-	entry.handoffAbort.abort(new Error("Partition retired"));
+	entry.handoffAbort.abort(new PartitionRetiredError());
 	closePartitionAdmission({ entry });
 	entry.retirement = completePartitionRetirement({ ctx, entry });
 	return entry.retirement;

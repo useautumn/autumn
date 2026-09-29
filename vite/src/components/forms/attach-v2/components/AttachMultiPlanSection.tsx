@@ -2,6 +2,7 @@ import {
 	resolvePlanEntityId,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
+import { scopeLabel } from "@/components/forms/shared/utils/scopeLabel";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useAttachFormContext } from "../context/AttachFormProvider";
@@ -34,7 +35,7 @@ export function AttachMultiPlanSection() {
 						product={product}
 						customItems={primaryItems}
 						isCustom={hasCustomizations || formValues.grantFree}
-						scope={selectedEntity?.name || entityId || "Customer-level"}
+						scope={scopeLabel({ entityId, entity: selectedEntity })}
 					/>
 					<AttachPlanPrepaidQuantityFields
 						items={primaryItems ?? product?.items}
@@ -66,7 +67,10 @@ export function AttachMultiPlanSection() {
 								product={selectedProduct}
 								customItems={planItems}
 								isCustom={plan.isCustom || formValues.grantFree}
-								scope={planEntity?.name || planEntityId || "Customer-level"}
+								scope={scopeLabel({
+									entityId: planEntityId,
+									entity: planEntity,
+								})}
 							/>
 							<AttachPlanPrepaidQuantityFields
 								items={planItems ?? selectedProduct?.items}

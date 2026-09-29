@@ -1,4 +1,10 @@
-import { Chat, type Message, type StateAdapter, type Thread } from "chat";
+import {
+	type Attachment,
+	Chat,
+	type Message,
+	type StateAdapter,
+	type Thread,
+} from "chat";
 import type {
 	AgentContextMessage,
 	AgentMissedMessages,
@@ -61,12 +67,41 @@ const isPlanMessage = ({ raw }: Message) =>
 const isContextMessage = (message: Message) =>
 	Boolean(message.text.trim()) && !isPlanMessage(message);
 
+const authorName = (message: Message) =>
+	message.author.fullName || message.author.userName || message.author.userId;
+
 const toContextMessage = (message: Message): AgentContextMessage => ({
-	author:
-		message.author.fullName || message.author.userName || message.author.userId,
+	author: authorName(message),
 	isBot: message.author.isBot,
 	text: message.text,
 });
+
+/** A file shared earlier in the thread, with the raw Slack message it came
+ * from so it can still be downloaded when the SDK dropped its fetcher. */
+export type ThreadAttachment = Readonly<{
+	attachment: Attachment;
+	author: string;
+	/** Position in the raw message's `files`, for hydrating Slack Connect stubs. */
+	fileIndex: number;
+	raw: unknown;
+}>;
+
+/** Files in these messages, newest first; the agent's own uploads are left
+ * out because it already knows what it posted. */
+const threadAttachmentsOf = (
+	messages: ReadonlyArray<Message>,
+): ThreadAttachment[] =>
+	[...messages]
+		.reverse()
+		.filter((message) => !message.author.isMe)
+		.flatMap((message) =>
+			(message.attachments ?? []).map((attachment, fileIndex) => ({
+				attachment,
+				author: authorName(message),
+				fileIndex,
+				raw: message.raw,
+			})),
+		);
 
 const truncateText = (text: string) =>
 	text.length > MISSED_MESSAGE_CHAR_LIMIT
@@ -148,6 +183,8 @@ export const recordSkippedMessage = async (
 
 export type LoadedMissedMessages = Readonly<{
 	missed?: AgentMissedMessages;
+	/** Files in the skipped replies, so a tag after them can use the files. */
+	attachments: ThreadAttachment[];
 	/** Marks these replies as seen; call once a turn has actually run with
 	 * them, so a blocked or failed turn leaves them for the next mention. */
 	markDelivered: () => Promise<void>;
@@ -174,18 +211,17 @@ export const loadMissedMessages = async (
 		if (!pendingIds.length) return undefined;
 
 		const pending = new Set(pendingIds);
-		const available = thread.recentMessages.filter(
-			(message) =>
-				pending.has(message.id) &&
-				message.id !== currentMessage.id &&
-				isContextMessage(message),
+		const pendingMessages = thread.recentMessages.filter(
+			(message) => pending.has(message.id) && message.id !== currentMessage.id,
 		);
+		const available = pendingMessages.filter(isContextMessage);
 		// Skipped ids that fell out of the fetched window can't be replayed.
 		const windowIds = new Set(thread.recentMessages.map(({ id }) => id));
 		const outOfWindow = pendingIds.filter((id) => !windowIds.has(id)).length;
 		const missed = fitMissedMessages(available);
 
 		return {
+			attachments: threadAttachmentsOf(pendingMessages),
 			markDelivered: async () => {
 				for (const id of pendingIds) {
 					await appendReplyEvent(store, key, { id, kind: "delivered" });
@@ -219,4 +255,89 @@ export const getEarlierThreadMessages = (
 	const earlier = history.slice(0, -(RECENT_MESSAGES_LIMIT - 1));
 	if (!earlier.length) return undefined;
 	return fitMissedMessages(earlier);
+};
+
+/** On the first mention in a thread, the files shared anywhere earlier in it
+ * (within the fetched window), so "use the contract above" can see it.
+ * Call after `getRecentMessages` has refreshed the thread. */
+export const getEarlierThreadAttachments = (
+	thread: Thread,
+	currentMessage: Message,
+): ThreadAttachment[] =>
+	threadAttachmentsOf(
+		thread.recentMessages.filter((message) => message.id !== currentMessage.id),
+	);
+
+const DELIVERED_FILES_LIMIT = 200;
+
+const deliveredFilesKey = ({
+	message,
+	thread,
+}: {
+	message: Message;
+	thread: Thread;
+}) => `leaf:delivered-files:${getSlackWorkspaceId(message.raw)}:${thread.id}`;
+
+/** The Slack file id behind a thread attachment, when Slack sent one. */
+export const threadAttachmentFileId = ({
+	fileIndex,
+	raw,
+}: Pick<ThreadAttachment, "fileIndex" | "raw">): string | undefined => {
+	if (typeof raw !== "object" || raw === null || !("files" in raw)) {
+		return undefined;
+	}
+	const { files } = raw;
+	if (!Array.isArray(files)) return undefined;
+	const file: unknown = files[fileIndex];
+	return typeof file === "object" &&
+		file !== null &&
+		"id" in file &&
+		typeof file.id === "string"
+		? file.id
+		: undefined;
+};
+
+/** Earlier files a turn in this thread has not read yet, newest first, so a
+ * tag reaches a file an earlier turn could not read without resending, or
+ * being crowded out by, the ones it did. */
+export const getUndeliveredThreadAttachments = async (
+	thread: Thread,
+	currentMessage: Message,
+	state?: StateAdapter,
+): Promise<ThreadAttachment[]> => {
+	const earlier = getEarlierThreadAttachments(thread, currentMessage);
+	try {
+		const delivered = new Set(
+			await (state ?? chatState()).getList<string>(
+				deliveredFilesKey({ message: currentMessage, thread }),
+			),
+		);
+		return earlier.filter((earlierAttachment) => {
+			const fileId = threadAttachmentFileId(earlierAttachment);
+			return !(fileId && delivered.has(fileId));
+		});
+	} catch (error) {
+		logger.warn("Could not load delivered Slack files", {
+			data: { error },
+			event: "leaf.slack_delivered_files_failed",
+		});
+		return earlier;
+	}
+};
+
+/** Remembers files a turn has read, so later tags in the thread skip them. */
+export const recordDeliveredFiles = async (
+	thread: Thread,
+	message: Message,
+	fileIds: ReadonlyArray<string>,
+	state?: StateAdapter,
+) => {
+	const store = state ?? chatState();
+	const key = deliveredFilesKey({ message, thread });
+	for (const fileId of fileIds) {
+		await store.appendToList(key, fileId, {
+			maxLength: DELIVERED_FILES_LIMIT,
+			ttlMs: SKIPPED_REPLIES_TTL_MS,
+		});
+	}
 };

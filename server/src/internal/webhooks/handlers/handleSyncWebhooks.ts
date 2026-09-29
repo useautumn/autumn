@@ -11,12 +11,13 @@ export const handleSyncWebhooks = createRoute({
 	body: SyncWebhooksParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { webhooks } = c.req.valid("json");
+		const { webhooks, skip_deletions } = c.req.valid("json");
 		return c.json(
 			await syncWebhooks({
 				apps: await listWebhookApps({ ctx }),
 				appIdForKind: (kind) => ensureWebhookAppId({ ctx, kind }),
 				stated: webhooks,
+				skipDeletions: skip_deletions,
 			}),
 		);
 	},

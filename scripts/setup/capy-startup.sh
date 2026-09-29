@@ -8,7 +8,7 @@
 # script instead of bash. This wrapper handles shell-only lifecycle work:
 #
 #   - Surface bun's global bin so neonctl is reachable.
-#   - Start Autumn's local services and the Trigger.dev control plane.
+#   - Start Autumn's local services, native Kafka, and the Trigger.dev control plane.
 #   - Run the bounded provisioning script and exit; Startup must not remain
 #     attached to a long-running process.
 set -euo pipefail
@@ -31,6 +31,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
 TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
 . "$SCRIPT_DIR/capy-trigger-image.sh"
+. "$SCRIPT_DIR/capy-kafka.sh"
 
 export PATH="$HOME/.bun/bin:$PATH"
 
@@ -79,11 +80,14 @@ log "starting local infrastructure with Docker Compose"
 COMPOSE_PROJECT_NAME=autumn-capy \
 DRAGONFLY_PORT=6379 \
 FAKECLOUD_PORT=4566 \
-DYNAMODB_PORT=8000 \
   docker compose -f "$COMPOSE_FILE" -p autumn-capy up -d \
-    dragonfly fakecloud dynamodb
+    dragonfly fakecloud
+# DynamoDB Local was replaced by fakecloud; drop the container on VMs that still run it.
+docker rm -f autumn-capy-dynamodb >/dev/null 2>&1 || true
 
 docker compose --env-file "$TRIGGER_ENV" \
   -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger up -d
+
+start_capy_kafka "[capy-startup]"
 
 exec bun scripts/capy/provision.ts "$@"

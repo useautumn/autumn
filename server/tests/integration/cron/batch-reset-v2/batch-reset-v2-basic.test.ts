@@ -23,7 +23,12 @@
  */
 
 import { expect, test } from "bun:test";
-import { customerEntitlements, EntInterval, ms } from "@autumn/shared";
+import {
+	customerEntitlements,
+	EntInterval,
+	getNextResetAt,
+	ms,
+} from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -33,7 +38,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq, sql } from "drizzle-orm";
-import { getNextResetAt } from "@/utils/timeUtils.js";
 import {
 	fetchCustomerEntitlementRow,
 	runBatchResetV2,
@@ -127,9 +131,10 @@ test.concurrent(
 
 		// ── Contract: next_reset_at parity with getNextResetAt ──────────
 		const expectedNextResetAt = getNextResetAt({
-			curReset: new UTCDate(pastTime),
+			curReset: pastTime,
 			interval: EntInterval.Month,
 			intervalCount: 1,
+			now: Date.now(),
 		});
 		expect(row.next_reset_at).toBe(expectedNextResetAt);
 		expect(row.next_reset_at!).toBeGreaterThan(Date.now());
@@ -169,9 +174,10 @@ test.concurrent(
 		expect(row.next_reset_at!).toBeLessThanOrEqual(Date.now() + ms.days(32));
 		expect(row.next_reset_at).toBe(
 			getNextResetAt({
-				curReset: new UTCDate(pastTime),
+				curReset: pastTime,
 				interval: EntInterval.Month,
 				intervalCount: 1,
+				now: Date.now(),
 			}),
 		);
 	},
@@ -207,9 +213,10 @@ test.concurrent(
 		});
 		expect(row.next_reset_at).toBe(
 			getNextResetAt({
-				curReset: new UTCDate(pastTime),
+				curReset: pastTime,
 				interval: EntInterval.Month,
 				intervalCount: 1,
+				now: Date.now(),
 			}),
 		);
 		expect(row.next_reset_at!).toBeGreaterThan(Date.now());

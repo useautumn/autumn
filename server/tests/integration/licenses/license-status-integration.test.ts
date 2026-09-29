@@ -71,7 +71,7 @@ const setParentStatus = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("licenses status: past-due retains grants but blocks new assignments until recovery")}`,
+	`${chalk.yellowBright("licenses status: past-due retains grants and still accepts new assignments")}`,
 	async () => {
 		const { customerId, entities, autumnV2_2, ctx, license } =
 			await setupStatusScenario("license-parent-past-due");
@@ -88,21 +88,11 @@ test.concurrent(
 			skip_cache: true,
 		});
 		expect(existing.allowed).toBe(true);
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_2.post("/licenses.attach", {
-					customer_id: customerId,
-					entity_id: entities[1].id,
-					plan_id: license.id,
-				}),
-		});
-
-		await setParentStatus({ ctx, customerId, status: CusProductStatus.Active });
+		// Past-due parents stay assignable (ACTIVE_STATUSES includes PastDue).
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[1].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[1].id }],
 		});
 		const state = await getLicenseDbState({ db: ctx.db, customerId });
 		expect(
@@ -113,7 +103,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses status: true trialing parent retains grants but is not assignable")}`,
+	`${chalk.yellowBright("licenses status: status=trialing parent hides seat grants and is not assignable")}`,
 	async () => {
 		const { customerId, entities, autumnV2_2, ctx, license } =
 			await setupStatusScenario("license-parent-true-trialing");
@@ -132,14 +122,14 @@ test.concurrent(
 					skip_cache: true,
 				})
 			).allowed,
-		).toBe(true);
+		).toBe(false);
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>
 				autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
-					entity_id: entities[1].id,
 					plan_id: license.id,
+					entities: [{ entity_id: entities[1].id }],
 				}),
 		});
 	},

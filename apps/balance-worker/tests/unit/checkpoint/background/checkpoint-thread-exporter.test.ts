@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { Worker } from "node:worker_threads";
 import { PartitionCheckpointThreadError } from "../../../../src/checkpoint/background/checkpointThreadFailure.js";
 import { createCheckpointThreadExporter } from "../../../../src/checkpoint/background/createCheckpointThreadExporter.js";
@@ -8,9 +8,12 @@ import {
 	identity,
 	limits,
 	releaseGate,
+	THREAD_TEST_TIMEOUT_MS,
 	topic,
 	waitForGate,
 } from "./thread-fixtures.js";
+
+setDefaultTimeout(THREAD_TEST_TIMEOUT_MS);
 
 describe("background checkpoint exporter", () => {
 	test.concurrent(

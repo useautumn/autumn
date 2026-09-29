@@ -18,11 +18,13 @@
 @import "./custom.css";
 
 @source "../components";
+@source "../lib";
 @source "../../../../vite/src";
 
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant preset (&:is(.preset-modern *, .preset-cursed *, .preset-scraps *));
 
 html {
 	overscroll-behavior: none;
@@ -83,6 +85,15 @@ html {
 	--border-sheet: #eaeae9;
 	--border-table: #e5e5e5;
 	--card-border: #d1d1d1;
+
+	--overlay: #ffffff;
+	--overlay-dialog: #ffffff;
+	--overlay-border: #e5e5e5;
+	--overlay-separator: #efefef;
+	--overlay-hover: rgb(0 0 0 / 0.045);
+	--overlay-shadow: 0 4px 12px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.04);
+	--overlay-dialog-shadow:
+		0 8px 24px rgb(0 0 0 / 0.07), 0 1px 3px rgb(0 0 0 / 0.04);
 
 	--table-tray: #f3f3f2;
 	--table-tray-border: #e7e7e5;
@@ -185,6 +196,18 @@ html {
 	--card: #121212;
 	--border: #222222;
 
+	--placeholder: #6b6b6b;
+	--input: #2a2a2a;
+
+	--overlay: #1a1a1a;
+	--overlay-dialog: #171717;
+	--overlay-border: #2a2a2a;
+	--overlay-separator: #262626;
+	--overlay-hover: rgb(255 255 255 / 0.06);
+	--overlay-shadow: 0 4px 12px rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.2);
+	--overlay-dialog-shadow:
+		0 8px 24px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.2);
+
 	--table-tray: #111111;
 	--table-tray-border: #1f1f1f;
 	--table-surface: #191919;
@@ -214,7 +237,6 @@ html {
 	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.396 0.141 25.723);
 	--destructive-foreground: oklch(0.637 0.237 25.331);
-	--input: oklch(0.274 0.006 286.033);
 	--ring: oklch(0.442 0.017 285.786);
 	--sidebar: oklch(0.21 0.006 285.885);
 	--sidebar-foreground: oklch(0.985 0 0);
@@ -566,6 +588,11 @@ html {
 
 	--color-border: var(--border);
 	--color-border-table: var(--border-table);
+	--color-overlay: var(--overlay);
+	--color-overlay-dialog: var(--overlay-dialog);
+	--color-overlay-border: var(--overlay-border);
+	--color-overlay-separator: var(--overlay-separator);
+	--color-overlay-hover: var(--overlay-hover);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
 	--color-chart-1: var(--chart-1);
@@ -598,6 +625,8 @@ html {
 	--shadow-lg:
 		0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 	--shadow-card: 0 0 8px rgba(0, 0, 0, 0.04);
+	--shadow-overlay: var(--overlay-shadow);
+	--shadow-overlay-dialog: var(--overlay-dialog-shadow);
 
 	--color-yellow-50: #fefce8;
 	--color-yellow-100: #fdedd3;

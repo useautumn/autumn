@@ -1,19 +1,24 @@
+import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import {
 	createSlotGate,
 	fleetIdOf,
 	resolveTaskIdentity,
 	type TaskIdentity,
 } from "@autumn/blue-green";
+import type { ByocCacheWriter } from "@autumn/byoc";
 import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
-import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
+import {
+	createKafkaClient,
+	createKafkaTransport,
+	KafkaWithSettledTopicOffsets,
+} from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb, PostgresClient } from "@autumn/postgres";
 import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
-import { Kafka } from "kafkajs";
 import { createCatalogInvalidationConsumer } from "../catalog/createCatalogInvalidationConsumer.js";
 import { createHeraldConsumers } from "../consumers/heraldConsumers.js";
 import type { HeraldEdgeConfigs } from "../edgeConfig/createHeraldEdgeConfigs.js";
@@ -40,10 +45,18 @@ export function createHerald({
 		eventsTinybird: EventsTinybird | null;
 		svix: SvixClient | null;
 		catalogCache: CatalogCache;
-		postgres: Pick<PostgresClient, "close">;
-		miscCache: Pick<MiscCache, "getActive" | "close">;
+		postgres: Pick<PostgresClient, "db" | "close">;
+		miscCache: Pick<
+			MiscCache,
+			"getActive" | "resolve" | "forEachTarget" | "close"
+		>;
 		sqsJobs: Pick<SqsJobs, "autoTopup" | "shutdown">;
 		edgeConfigs: HeraldEdgeConfigs;
+		balanceWorkerClient: Pick<
+			BalanceWorkerClient,
+			"start" | "stop" | "readSubjectState"
+		>;
+		cacheWriter: ByocCacheWriter | null;
 		/** A job's consumer died for good; the caller ends the process so the task is replaced. */
 		onConsumerCrashed: (params: { job: string; cause: unknown }) => void;
 		/** Tests only: the identity ECS would have given this task. */
@@ -52,7 +65,7 @@ export function createHerald({
 	config: { env: HeraldEnv };
 }): Herald {
 	const { env } = config;
-	const kafka = new Kafka(
+	const kafka = new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
 			clientId: `herald-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,
@@ -70,7 +83,10 @@ export function createHerald({
 		}),
 	);
 	const admin = kafka.admin();
-	const jobNames = createHeraldConsumers({ ctx }).map((job) => job.name);
+	const consumersCtx = { ...ctx, db: ctx.postgres.db };
+	const jobNames = createHeraldConsumers({ ctx: consumersCtx }).map(
+		(job) => job.name,
+	);
 	const catalogInvalidations = createCatalogInvalidationConsumer({
 		ctx: { kafka, catalogCache: ctx.catalogCache, logger: ctx.logger },
 		config: {
@@ -85,7 +101,7 @@ export function createHerald({
 	const started: Array<() => Promise<void>> = [];
 
 	function buildJobs(): RunningStreamConsumer[] {
-		return createHeraldConsumers({ ctx }).map((streamConsumer) =>
+		return createHeraldConsumers({ ctx: consumersCtx }).map((streamConsumer) =>
 			createStreamConsumer({
 				ctx: { kafka, logger: ctx.logger, onCrashed: ctx.onConsumerCrashed },
 				config: {
@@ -152,6 +168,18 @@ export function createHerald({
 		}
 	}
 
+	/** In the background: only cache-push reads subjects, so its catch-up never holds the other jobs back. */
+	function startBalanceWorkerClient(): void {
+		ctx.balanceWorkerClient
+			.start()
+			.catch((cause) =>
+				ctx.logger.error(
+					{ error: cause, type: "herald_balance_worker_client_failed" },
+					"Balance worker client did not start; cache-push reads will fail until it does",
+				),
+			);
+	}
+
 	/** On ECS the default record names no service and would open the gate; the first real read decides instead. */
 	async function awaitFirstRecord({
 		identity,
@@ -188,6 +216,8 @@ export function createHerald({
 			started.push(() => admin.disconnect());
 			await catalogInvalidations.start();
 			started.push(() => catalogInvalidations.stop());
+			startBalanceWorkerClient();
+			started.push(() => ctx.balanceWorkerClient.stop());
 
 			const gate = createSlotGate({
 				ctx: {

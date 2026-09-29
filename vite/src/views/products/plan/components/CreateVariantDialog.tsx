@@ -79,7 +79,7 @@ export function CreateVariantDialog({
 						price after creation.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="grid grid-cols-2 gap-2 py-4">
+				<div className="grid grid-cols-2 gap-2">
 					<div>
 						<FormLabel>Variant name</FormLabel>
 						<Input

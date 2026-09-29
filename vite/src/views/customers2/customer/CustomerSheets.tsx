@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import { Sheet, SheetContent } from "@autumn/ui";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
@@ -38,9 +38,23 @@ import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SyncStripeSheetV2 } from "../components/sync-stripe-v2/SyncStripeSheetV2";
 import { VerifyStripeSheet } from "../components/verify-stripe/VerifyStripeSheet";
 
+const WIDE_SHEET_TYPES = new Set<SheetType>([
+	"create-schedule",
+	"create-schedule-review",
+	"create-schedule-send-invoice",
+	"create-schedule-checkout",
+]);
+
+const sheetWidthClass = (sheetType: SheetType) => {
+	if (sheetType === "create-invoice") {
+		return "md:w-[76rem] md:max-w-[calc(100vw-5rem)]";
+	}
+	if (WIDE_SHEET_TYPES.has(sheetType)) return "md:max-w-[40rem]";
+	return "md:max-w-[32rem]";
+};
+
 export function CustomerSheets() {
 	const sheetType = useSheetStore((s) => s.type);
-	const hasSidePreview = sheetType === "create-invoice";
 	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
@@ -156,9 +170,7 @@ export function CustomerSheets() {
 			    The list must keep `translate` — that's what drives the slide. */}
 			<SheetContent
 				className={cn(
-					hasSidePreview
-						? "md:w-[76rem] md:max-w-[calc(100vw-5rem)]"
-						: "md:max-w-[32rem]",
+					sheetWidthClass(sheetType),
 					isInlineEditorOpen &&
 						"transition-[opacity,transform,translate,scale,rotate] opacity-0 pointer-events-none",
 				)}

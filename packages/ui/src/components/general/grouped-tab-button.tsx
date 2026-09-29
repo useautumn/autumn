@@ -21,11 +21,14 @@ export const GroupedTabButton = ({
 	disabled,
 }: GroupedTabButtonProps) => {
 	return (
-		<div className={cn("flex items-center", className)}>
-			{options.map((option, index) => {
+		<div
+			className={cn(
+				"flex items-center gap-0.5 rounded-lg border border-table-tray-border bg-table-tray p-0.5",
+				className,
+			)}
+		>
+			{options.map((option) => {
 				const isActive = value === option.value;
-				const isFirst = index === 0;
-				const isLast = index === options.length - 1;
 
 				return (
 					<button
@@ -34,24 +37,19 @@ export const GroupedTabButton = ({
 						disabled={disabled}
 						onClick={() => onValueChange(option.value)}
 						className={cn(
-							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border transition-none outline-none whitespace-nowrap !bg-interactive-secondary cursor-pointer",
-							"hover:text-primary focus-visible:text-primary",
-							"disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
+							"flex h-6 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2 text-tertiary-foreground outline-none transition-colors duration-150",
+							"hover:text-foreground focus-visible:text-foreground",
+							"disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 							isActive &&
-								" text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
-							!isActive &&
-								"bg-interative-secondary shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
-							isFirst && "rounded-l-lg border-l",
-							!isFirst && "border-l-0",
-							isLast && "rounded-r-lg",
+								"border-table-surface-border bg-table-surface text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.06)] dark:shadow-[0_1px_2px_rgb(0_0_0/0.3)]",
 						)}
 					>
 						{option.icon && (
-							<span className="size-[14px] flex items-center justify-center">
+							<span className="flex size-[14px] items-center justify-center">
 								{option.icon}
 							</span>
 						)}
-						<span className="text-sm">{option.label}</span>
+						<span className="text-sm font-medium">{option.label}</span>
 					</button>
 				);
 			})}

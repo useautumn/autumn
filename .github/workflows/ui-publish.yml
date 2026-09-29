@@ -1,0 +1,24 @@
+name: Publish @autumn/ui preview
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/ui/**"
+
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - run: bunx pkg-pr-new publish --no-compact ./packages/ui

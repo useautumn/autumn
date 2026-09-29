@@ -44,10 +44,10 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	type ApiCustomerV5,
-	type UpdateSubscriptionV1ParamsInput,
+import type {
+	ApiCustomerV3,
+	ApiCustomerV5,
+	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { setCustomerOverageAllowed } from "@tests/integration/balances/utils/overage-allowed-utils/customerOverageAllowedUtils.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -106,9 +106,7 @@ test.concurrent(
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: plan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 100 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 		});
 
 		// ── balance += 100 (delta semantics, not absolute)
@@ -140,9 +138,8 @@ test.concurrent(
 		// ── recurring Stripe subscription should be untouched (no item changes,
 		// no out-of-cycle proration). Confirm there's still exactly 1 active sub
 		// and its item set is unchanged.
-		const fullCustomerV3 = await autumnV1.customers.get<ApiCustomerV3>(
-			customerId,
-		);
+		const fullCustomerV3 =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(fullCustomerV3).toBeDefined();
 	},
 );
@@ -185,17 +182,13 @@ test.concurrent(
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: plan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 100 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 		});
 
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: plan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 100 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 		});
 
 		// 100 (initial) + 100 + 100 = 300 credits
@@ -292,9 +285,7 @@ test.concurrent(
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: plan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 600 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 600 }],
 		});
 
 		// Combined balance: lifetime 0 + prepaid 100 = 100.
@@ -304,6 +295,13 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			remaining: 100,
 		});
+		// Per cusEnt: lifetime paid down to 0 (its full 1000 used), prepaid holds the 100.
+		expect(after.balances[TestFeature.Messages].breakdown).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ remaining: 0, usage: 1000 }),
+				expect.objectContaining({ remaining: 100 }),
+			]),
+		);
 
 		// options.quantity reflects FULL purchase (6 packs), not just remainder.
 		await expectCustomerProductOptions({
@@ -427,7 +425,9 @@ test.concurrent(
 					{ feature_id: TestFeature.Words, quantity: 100 },
 				],
 			}),
-		).rejects.toThrow(/one-off prepaid quantity alongside other subscription changes/i);
+		).rejects.toThrow(
+			/one-off prepaid quantity alongside other subscription changes/i,
+		);
 	},
 );
 
@@ -435,55 +435,50 @@ test.concurrent(
 // 6. Regression: one-off-only target plan still gets the existing one-off error.
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.skip(
-	`${chalk.yellowBright("manual top-up 6: one-off-only plan target falls back to existing one-off error (not ManualTopUp)")}`,
-	async () => {
-		const oneOffItem = items.oneOffMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 10,
-		});
+test.skip(`${chalk.yellowBright("manual top-up 6: one-off-only plan target falls back to existing one-off error (not ManualTopUp)")}`, async () => {
+	const oneOffItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
 
-		// One-off-only product (no recurring base price) — target cusProduct is itself
-		// one-off, so the intent must NOT be promoted to ManualTopUp.
-		const plan = products.oneOff({
-			id: "manual-topup-oneoff-only",
-			items: [oneOffItem],
-		});
+	// One-off-only product (no recurring base price) — target cusProduct is itself
+	// one-off, so the intent must NOT be promoted to ManualTopUp.
+	const plan = products.oneOff({
+		id: "manual-topup-oneoff-only",
+		items: [oneOffItem],
+	});
 
-		const customerId = "manual-topup-oneoff-only-cus";
+	const customerId = "manual-topup-oneoff-only-cus";
 
-		const { autumnV2_2 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [plan] }),
-			],
-			actions: [
-				s.attach({
-					productId: plan.id,
-					options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
-				}),
-			],
-		});
-
-		// Targeting a one-off plan with feature_quantities should not be promoted
-		// to ManualTopUp — the target cusProduct itself is one-off, so the existing
-		// "one-off plan price/billing changes not allowed" error must surface
-		// instead of the new "Update too complex" error.
-		await expect(
-			autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-				customer_id: customerId,
-				plan_id: plan.id,
-				feature_quantities: [
-					{ feature_id: TestFeature.Messages, quantity: 100 },
-				],
+	const { autumnV2_2 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [plan] }),
+		],
+		actions: [
+			s.attach({
+				productId: plan.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 			}),
-		).rejects.toThrow(
-			/(?:one[- ]off|Not allowed to update feature quantity for one off items)/i,
-		);
-	},
-);
+		],
+	});
+
+	// Targeting a one-off plan with feature_quantities should not be promoted
+	// to ManualTopUp — the target cusProduct itself is one-off, so the existing
+	// "one-off plan price/billing changes not allowed" error must surface
+	// instead of the new "Update too complex" error.
+	await expect(
+		autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: plan.id,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		}),
+	).rejects.toThrow(
+		/(?:one[- ]off|Not allowed to update feature quantity for one off items)/i,
+	);
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 5b. UpdatePlan call that *changes* a one-off prepaid quantity is allowed.
@@ -577,9 +572,7 @@ test.concurrent(
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: plan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 100 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 			proration_behavior: "none",
 		});
 
@@ -637,9 +630,7 @@ test.concurrent(
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: plan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 100 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 			no_billing_changes: true,
 		});
 

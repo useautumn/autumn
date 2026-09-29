@@ -9,7 +9,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
+import { computeLicensePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeLicensePooledBalancePlan";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
@@ -74,6 +75,18 @@ export const activateScheduledCustomerProduct = async ({
 				}),
 			})
 		: [];
+	// License pools only: seats move below and need them now. The caller swaps the parent's own
+	// pools once after resetting due pools; swapping here too double-counts (stale outgoing snapshot).
+	// TODO: dispatch seats after the caller's pool transition so pools transition exactly once.
+	const pooledBalancePlan = customerLicenseTransitions.length
+		? computeLicensePooledBalancePlan({
+				ctx,
+				fullCustomer,
+				parentCustomerProduct: customerProduct,
+				customerLicenseTransitions,
+				now: activatedAt,
+			})
+		: undefined;
 
 	await executeAutumnBillingPlan({
 		ctx,
@@ -86,6 +99,7 @@ export const activateScheduledCustomerProduct = async ({
 					updates: updates as CustomerProductUpdate["updates"],
 				},
 			],
+			pooledBalancePlan,
 			customerLicenseTransitions,
 		},
 	});

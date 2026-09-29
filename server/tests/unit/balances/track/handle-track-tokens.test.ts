@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 import {
 	ApiVersionClass,
 	AppEnv,
@@ -9,12 +17,19 @@ import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
+import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
+
+// The legacy lane is what most cases here cover; the worker case turns the rollout on itself.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
 const mockState = {
+	runBalanceWorkerTrackCalls: [] as Record<string, unknown>[],
 	runTrackWithRolloutCalls: [] as Record<string, unknown>[],
 	queueCommands: [] as Record<string, unknown>[],
 	originalSend: null as null | SQSClient["send"],
 	queuedForReplay: false,
+	workerUnreachable: false,
 };
 
 const trackAsyncQueueUrl =
@@ -71,11 +86,11 @@ const fakeMiscRedis = {
 	set: async () => "OK",
 	del: async () => 1,
 } as never;
+const fakeMiscCache = createFakeMiscCache({ main: fakeMiscRedis });
 await mockModuleWithRestore(
-	"@/external/redis/miscCache/miscRedisInstances.js",
+	"@/external/redis/miscCache/getMiscCache.js",
 	() => ({
-		getMiscMainRedis: () => fakeMiscRedis,
-		getMiscBackupRedis: () => null,
+		getMiscCache: () => fakeMiscCache,
 	}),
 );
 
@@ -110,15 +125,40 @@ await mockModuleWithRestore(
 );
 
 await mockModuleWithRestore(
-	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
+	"@/internal/balances/utils/getSubjectFullCustomer.js",
 	() => ({
-		getOrSetCachedFullSubject: async () => ({
-			customer: { id: "cus_123" },
+		getSubjectFullCustomer: async () => ({
+			id: "cus_123",
 			customer_products: [],
+			extra_customer_entitlements: [],
+			entities: [],
 		}),
 	}),
 );
 
+await mockModuleWithRestore(
+	"@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js",
+	() => ({
+		runBalanceWorkerTrack: async (args: {
+			body: typeof trackBody;
+			isAsync?: boolean;
+		}) => {
+			mockState.runBalanceWorkerTrackCalls.push(args);
+			if (mockState.workerUnreachable && !args.isAsync)
+				rethrowBalanceWorkerError({
+					cause: new BalanceWorkerClientError({
+						code: "NO_OWNER",
+						outcome: "not_submitted",
+						message: "no owner for the partition",
+					}),
+				});
+			return { customer_id: args.body.customer_id, value: args.body.value };
+		},
+	}),
+);
+
+import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
+import { rethrowBalanceWorkerError } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { handleTrackTokens } from "@/internal/balances/handlers/handleTrackTokens.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
@@ -165,6 +205,12 @@ const createCtx = (): AutumnContext =>
 describe("handleTrackTokens", () => {
 	let restoreQueueEnv: (() => void) | undefined;
 
+	afterAll(() => {
+		if (previousRollout === undefined)
+			delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+		else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
+	});
+
 	afterEach(() => {
 		if (mockState.originalSend) {
 			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
@@ -176,9 +222,77 @@ describe("handleTrackTokens", () => {
 	});
 
 	beforeEach(() => {
+		mockState.runBalanceWorkerTrackCalls = [];
 		mockState.runTrackWithRolloutCalls = [];
 		mockState.queueCommands = [];
 		mockState.queuedForReplay = false;
+		mockState.workerUnreachable = false;
+	});
+
+	test("with the balance worker on, tracks the converted body on the worker", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		try {
+			const response = await createApp({ ctx: createCtx() }).request(
+				"/track_tokens",
+				{
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify(requestBody),
+				},
+			);
+
+			expect(response.status).toBe(200);
+			expect(mockState.runBalanceWorkerTrackCalls).toHaveLength(1);
+			expect(mockState.runBalanceWorkerTrackCalls[0]).toMatchObject({
+				body: trackBody,
+			});
+			expect(mockState.runBalanceWorkerTrackCalls[0]?.isAsync).toBeFalsy();
+			expect(mockState.runTrackWithRolloutCalls).toHaveLength(0);
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
+	});
+
+	test("with the worker unreachable, queues the track for it and answers 202, as /track does", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		mockState.workerUnreachable = true;
+		try {
+			const response = await createApp({ ctx: createCtx() }).request(
+				"/track_tokens",
+				{
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify(requestBody),
+				},
+			);
+
+			expect(response.status).toBe(202);
+			expect(
+				mockState.runBalanceWorkerTrackCalls.map((call) => call.isAsync),
+			).toEqual([undefined, true]);
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
+	});
+
+	test("with the org over its rate cap, queues the track on the worker and answers 202, as legacy does", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		try {
+			const ctx = createCtx();
+			ctx.orgRateLimitDegraded = true;
+			const response = await createApp({ ctx }).request("/track_tokens", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(requestBody),
+			});
+
+			expect(response.status).toBe(202);
+			expect(
+				mockState.runBalanceWorkerTrackCalls.map((call) => call.isAsync),
+			).toEqual([true]);
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
 	});
 
 	test("tracks converted token usage through the rollout path", async () => {

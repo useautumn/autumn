@@ -53,6 +53,9 @@ export const ErrCode = {
 	AmbiguousWebhookUrl: "ambiguous_webhook_url",
 	WebhooksUnavailable: "webhooks_unavailable",
 
+	// BYOC
+	ByocUnavailable: "byoc_unavailable",
+
 	// Internal
 	InternalError: "internal_error",
 	DuplicateCustomerId: "duplicate_customer_id",

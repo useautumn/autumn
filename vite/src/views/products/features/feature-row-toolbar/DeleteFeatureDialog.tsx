@@ -107,10 +107,7 @@ export const DeleteFeatureDialog = ({
 				if (nextOpen) void refetchPreview();
 			}}
 		>
-			<DialogContent
-				className="bg-background"
-				onClick={(e) => e.stopPropagation()}
-			>
+			<DialogContent onClick={(e) => e.stopPropagation()}>
 				<DialogHeader className="max-w-full">
 					<DialogTitle className="truncate max-w-[400px]">
 						{titleAction} {feature.name}

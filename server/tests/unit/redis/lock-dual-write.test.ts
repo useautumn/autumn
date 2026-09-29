@@ -1,5 +1,7 @@
 import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
+import type { MiscRedisConfig } from "@autumn/edge-config";
 import type { Redis } from "ioredis";
+import { createFakeMiscCache } from "../utils/fakeMiscCache.js";
 
 type FakeRedis = {
 	status: string;
@@ -16,6 +18,8 @@ type FakeRedis = {
 		token: string,
 		ttl: string,
 	) => Promise<number>;
+	on: () => void;
+	disconnect: () => void;
 };
 
 const fakeRedis = (): FakeRedis => ({
@@ -45,20 +49,32 @@ const fakeRedis = (): FakeRedis => ({
 		this.calls.push(`refreshOwnedLock:${key}:${token}:${ttl}`);
 		return 1;
 	},
+	on() {},
+	disconnect() {},
 });
 
 let main = fakeRedis();
 let backup = fakeRedis();
 
+let config: Omit<MiscRedisConfig, "backup"> = {
+	activeInstance: "main",
+	ramp: null,
+};
+const buildCache = () =>
+	createFakeMiscCache({
+		main: main as unknown as Redis,
+		backup: backup as unknown as Redis,
+		config: () => config,
+	});
+let cache = buildCache();
+
 // Capture the real module before mocking so afterAll can restore it —
 // bun's mock.module leaks across test files otherwise.
-const realInstances = {
-	...(await import("@/external/redis/miscCache/miscRedisInstances.js")),
+const realGetMiscCache = {
+	...(await import("@/external/redis/miscCache/getMiscCache.js")),
 };
-
-mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
-	getMiscMainRedis: () => main as unknown as Redis,
-	getMiscBackupRedis: () => backup as unknown as Redis,
+mock.module("@/external/redis/miscCache/getMiscCache.js", () => ({
+	getMiscCache: () => cache,
 }));
 
 import { getFromMiscRedisTargets } from "@/external/redis/miscCache/getFromMiscRedisTargets.js";
@@ -66,25 +82,25 @@ import { setOnMiscRedisTargets } from "@/external/redis/miscCache/setOnMiscRedis
 import { acquireLock } from "@/external/redis/utils/lockUtils/acquireLock.js";
 import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
 import { refreshLockLease } from "@/external/redis/utils/lockUtils/refreshLockLease.js";
-import { _setMiscRedisConfigForTesting } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 
 const withRamp = () => {
-	_setMiscRedisConfigForTesting({
+	config = {
 		activeInstance: "main",
 		ramp: { percent: 0, previousPercent: 0, changedAt: 0 },
-	});
+	};
 };
 
 afterEach(() => {
 	main = fakeRedis();
 	backup = fakeRedis();
-	_setMiscRedisConfigForTesting({});
+	config = { activeInstance: "main", ramp: null };
+	cache = buildCache();
 });
 
 afterAll(() => {
 	mock.module(
-		"@/external/redis/miscCache/miscRedisInstances.js",
-		() => realInstances,
+		"@/external/redis/miscCache/getMiscCache.js",
+		() => realGetMiscCache,
 	);
 });
 

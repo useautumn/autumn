@@ -34,11 +34,13 @@ export const listLicenseAssignments = async ({
 			activeOnly: active,
 		});
 
-	return rows.map(({ assignment, entity_id, license_product_id }) =>
-		serializeLicenseAssignment({
-			assignment,
-			entityId: entity_id ?? "",
-			licenseProductId: license_product_id,
-		}),
+	return rows.map(
+		({ assignment, entity_id, license_product_id, parent_ended_at }) =>
+			serializeLicenseAssignment({
+				assignment,
+				entityId: entity_id ?? "",
+				licenseProductId: license_product_id,
+				parentEndedAt: parent_ended_at,
+			}),
 	);
 };

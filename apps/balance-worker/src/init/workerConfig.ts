@@ -145,7 +145,14 @@ export function balanceWorkerEnvToRuntimeConfig({
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {
-			transactionTimeoutMs: 10000,
+			// How long the coordinator lets a transaction stay open before it aborts
+			// it and fences the producer. Callers fail open in a couple of seconds
+			// regardless; this decides what a stalled thread costs afterwards. At
+			// 10 s a partition thread pinned by a hot customer came back fenced and
+			// took its task down; at 30 s the same stall commits late and nothing
+			// dies. A live owner's open transaction only holds its followers back,
+			// and a dead owner's is aborted the moment its successor initialises.
+			transactionTimeoutMs: 30_000,
 			// Back-to-back transactions routinely hit CONCURRENT_TRANSACTIONS while the
 			// coordinator is still writing the previous commit's markers, which clears in
 			// a few ms. Start the backoff there instead of at 100ms; eight doublings still

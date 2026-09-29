@@ -96,7 +96,7 @@ export async function createBalanceWorker({
 				partitionLoad,
 			}),
 		);
-		// With idempotent commits no transaction carries a command's offset, so the group commits it itself.
+		// A command that leaves no record has no transaction to carry its offset, so the group commits it itself.
 		async function commitCommandOffsets(
 			offsets: KafkaOffsetCommit,
 		): Promise<void> {
@@ -151,6 +151,7 @@ export async function createBalanceWorker({
 			ctx: {
 				consumer,
 				partitionOffsets: resources.kafka.admin(),
+				commandTopicOffsets: resources.kafka.admin(),
 				stateStore: resources.stateStore,
 				idempotencyKeys: resources.idempotencyKeys,
 				logger: dependencies.logger,

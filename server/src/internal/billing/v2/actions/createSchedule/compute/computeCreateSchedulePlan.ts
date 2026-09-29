@@ -10,14 +10,10 @@ import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
+import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
-
-export type SchedulePhasePlan = {
-	startsAt: number;
-	customerProductIds: string[];
-};
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -59,15 +55,26 @@ export const computeCreateSchedulePlan = ({
 		billingContext,
 		existingScheduledCustomerProducts,
 	});
+	const immediateCustomerProducts = immediate.insertCustomerProducts;
+
+	// The immediate phase expires the outgoing rows and inserts fresh ones, so
+	// pools must re-parent now; future phases carry theirs at activation.
+	const customerLicenseTransitions = computeCustomerLicenseTransitions({
+		outgoingCustomerProducts,
+		incomingCustomerProducts: immediateCustomerProducts,
+		customerLicenseBillingContext: billingContext.customerLicenseBillingContext,
+		carryCustomerLicenseState: true,
+	});
+	// After transitions: pools must key on the carried link, not a fresh one.
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
 		outgoingCustomerProducts,
-		incomingCustomerProducts: immediate.insertCustomerProducts,
+		incomingCustomerProducts: immediateCustomerProducts,
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
+		customerLicenseTransitions,
 		now: billingContext.currentEpochMs,
 	});
-	const immediateCustomerProducts = immediate.insertCustomerProducts;
 
 	const allInsertCustomerProducts = [
 		...immediateCustomerProducts,
@@ -80,15 +87,6 @@ export const computeCreateSchedulePlan = ({
 			(phase) => phase.productContexts,
 		),
 	].flatMap((productContext) => productContext.insertPlanLicenses ?? []);
-
-	// The immediate phase expires the outgoing rows and inserts fresh ones, so
-	// pools must re-parent now; future phases carry theirs at activation.
-	const customerLicenseTransitions = computeCustomerLicenseTransitions({
-		outgoingCustomerProducts,
-		incomingCustomerProducts: immediateCustomerProducts,
-		customerLicenseBillingContext: billingContext.customerLicenseBillingContext,
-		carryCustomerLicenseState: true,
-	});
 
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,

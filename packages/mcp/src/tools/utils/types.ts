@@ -8,6 +8,11 @@ export type OperationToolConfig = {
 	endpoint: string;
 	/** Expansion the endpoint always needs, merged in after the request parses. */
 	expand?: string[];
+	/** Fields the tool always sends, merged in after the request parses, e.g.
+	 * the `preview` flag that splits one endpoint into a preview and a write. */
+	fixedFields?: Record<string, unknown>;
+	/** Post-processes the endpoint's response before the caller sees it. */
+	transformResult?: (args: { request: unknown; result: unknown }) => unknown;
 	destructive?: boolean;
 	idempotent?: boolean;
 };

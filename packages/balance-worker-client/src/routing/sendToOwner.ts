@@ -41,7 +41,9 @@ export async function sendToOwner<Response>({
 	try {
 		// A partition mid-handoff answers NOT_OWNER until its successor is named; the
 		// route is refreshed and tried again while the request's budget allows, so a
-		// move of a second or two costs the caller latency, not an error.
+		// move of a second or two costs the caller latency, not an error. A refresh
+		// that outruns its slice hands back too: the route is tried as it stands,
+		// and the next stale answer waits on the same refresh again.
 		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
 			failureCode = "OWNERSHIP_UNAVAILABLE";
 			assertRequestDeadline({ deadline, outcome });

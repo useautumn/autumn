@@ -226,8 +226,8 @@ export const emitWireModule = ({
 	].join("\n");
 	const listMembers = listEntries
 		.flatMap(([name, meta]) => [
-			`\t/** The ${name} this config manages, by ${meta.idField}. Push creates or updates them in`,
-			`\t * the target environment and never deletes one; unlisted ${name} are left alone. */`,
+			`\t/** The ${name} this config manages, by ${meta.idField}. In each environment push syncs, it creates`,
+			`\t * or updates the listed ${name} and deletes the unlisted ones; omit the key to manage none. */`,
 			`\t${name}?: ${meta.typeName}[];`,
 		])
 		.join("\n");

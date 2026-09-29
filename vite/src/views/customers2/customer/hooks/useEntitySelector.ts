@@ -1,6 +1,7 @@
 import type { Entity, Feature, FullCustomer } from "@autumn/shared";
 import { FeatureUsageType, getFeatureName } from "@autumn/shared";
 import { useState } from "react";
+import { entityKey } from "@/components/forms/shared/utils/entityKey";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -8,9 +9,6 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useEntitiesQuery } from "./useEntitiesQuery";
 
 const PLACEHOLDER = "PENDING";
-
-const getEntityValue = (entity: Entity): string =>
-	entity.id || entity.internal_id;
 
 const getEntityLabel = (entity: Entity): string =>
 	entity.name || entity.id || PLACEHOLDER;
@@ -84,7 +82,7 @@ export const useEntitySelector = () => {
 		setEntityId,
 		setSearch,
 		refetch,
-		getEntityValue,
+		getEntityValue: entityKey,
 		getEntityLabel,
 	};
 };

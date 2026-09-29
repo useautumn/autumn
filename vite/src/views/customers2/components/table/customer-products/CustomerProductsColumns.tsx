@@ -169,7 +169,8 @@ export const CustomerProductsColumns = [
 									<RotateCcw size={16} /> Manage Cancellation
 								</DropdownMenuItem>
 								<DropdownMenuItem
-									className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+									variant="destructive"
+									className="flex items-center gap-2 text-xs"
 									onClick={(e) => {
 										e.stopPropagation();
 										meta.onCancelImmediatelyClick?.(row.original);
@@ -180,7 +181,8 @@ export const CustomerProductsColumns = [
 							</>
 						) : (
 							<DropdownMenuItem
-								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+								variant="destructive"
+								className="flex items-center gap-2 text-xs"
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onCancelClick?.(row.original);

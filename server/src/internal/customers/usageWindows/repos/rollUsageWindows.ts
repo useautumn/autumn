@@ -1,7 +1,10 @@
-import { type AppEnv, usageWindows } from "@autumn/shared";
+import {
+	type AppEnv,
+	type UsageWindowRoll,
+	usageWindows,
+} from "@autumn/shared";
 import { eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
-import type { UsageWindowRoll } from "@/internal/customers/actions/resetUsageWindows/computeUsageWindowRolls.js";
 
 /**
  * Rolls counter rows in place: advances bounds/anchor to the current

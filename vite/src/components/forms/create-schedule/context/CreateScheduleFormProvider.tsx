@@ -1,9 +1,9 @@
 import type {
-	AttachPreviewResponse,
 	Feature,
 	FullCusProduct,
 	FullCustomer,
 	ProductV2,
+	SetPlansPreviewResponse,
 } from "@autumn/shared";
 import {
 	ACTIVE_STATUSES,
@@ -68,8 +68,8 @@ interface CreateScheduleFormContextValue {
 	handleCheckoutSubmit: () => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
-	preview: AttachPreviewResponse | null | undefined;
-	previewQuery: { data: AttachPreviewResponse | null | undefined };
+	preview: SetPlansPreviewResponse | null | undefined;
+	previewQuery: { data: SetPlansPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
 	error: Error | null;
 }

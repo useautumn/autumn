@@ -11,7 +11,6 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 
 export const createWorkerAutumnContext = async ({
@@ -50,8 +49,6 @@ export const createWorkerAutumnContext = async ({
 		createdAt: org.created_at || Date.now(),
 	});
 
-	const rolloutSnapshot = computeRolloutSnapshot({ orgId: org.id });
-
 	const ctx = {
 		org,
 		env,
@@ -71,7 +68,6 @@ export const createWorkerAutumnContext = async ({
 		scopes: [],
 		skipCache: false,
 		extraLogs: {},
-		rolloutSnapshot,
 	} satisfies AutumnContext;
 	return getCtxWithCustomerRedis({ ctx }).ctx;
 };

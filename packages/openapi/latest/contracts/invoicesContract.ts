@@ -4,6 +4,10 @@ import {
 	CreateInvoiceParamsSchema,
 	CreateInvoiceResponseSchema,
 } from "@api/others/apiInvoice/createInvoiceParams.js";
+import {
+	FinalizeInvoiceParamsSchema,
+	FinalizeInvoiceResponseSchema,
+} from "@api/others/apiInvoice/finalizeInvoiceParams.js";
 import { InsertInvoicesParamsSchema } from "@api/others/apiInvoice/insertInvoicesParams.js";
 import { InsertInvoicesResponseSchema } from "@api/others/apiInvoice/insertInvoicesResponse.js";
 import { ListInvoicesParamsSchema } from "@api/others/apiInvoice/listInvoicesParams.js";
@@ -190,6 +194,31 @@ export const payInvoiceContract = oc
 	.output(
 		PayInvoiceResponseSchema.meta({
 			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "paid" } }],
+		}),
+	);
+
+export const finalizeInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.finalize",
+		operationId: "finalizeInvoice",
+		tags: ["invoices"],
+		description:
+			"Finalizes a draft Stripe invoice, such as one left in draft by invoice mode with finalize set to false. Stripe then collects it: a send-invoice invoice is emailed and an automatically-charged one is charged. Any plan still waiting on the invoice to be paid expires at its due date. Already open or paid invoices are returned unchanged.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "finalize",
+		}),
+	})
+	.input(
+		FinalizeInvoiceParamsSchema.meta({
+			title: "FinalizeInvoiceParams",
+			examples: [{ invoice_id: "inv_2b3c4d5e6f7g8h" }],
+		}),
+	)
+	.output(
+		FinalizeInvoiceResponseSchema.meta({
+			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "open" } }],
 		}),
 	);
 

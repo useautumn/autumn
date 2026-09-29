@@ -81,7 +81,7 @@ export const CreateSandboxDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="w-[400px] bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>New sandbox</DialogTitle>
 					<DialogDescription>

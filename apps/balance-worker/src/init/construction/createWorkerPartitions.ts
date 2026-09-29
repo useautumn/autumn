@@ -4,6 +4,7 @@ import {
 } from "@autumn/env/balanceWorkerConstants";
 import {
 	createProgressTracker,
+	isConsumerGroupGoneError,
 	KafkaPartitionOffsetsNotFoundError,
 	readPartitionLogRange,
 	readTopicHighWatermarks,
@@ -45,6 +46,9 @@ export function createWorkerPartitions({
 			"partitionsConsumedConcurrently must be a positive safe integer",
 		);
 	}
+	if (config.commandTopic && !ctx.commandTopicOffsets)
+		throw new Error("A command topic needs its own commandTopicOffsets admin");
+	const { commandTopicOffsets } = ctx;
 	const positionTracker = createProgressTracker();
 	// Resolved per record: the partitions are built further down, once the consumer exists.
 	function findOwnedRuntime({ partition }: { partition: number }) {
@@ -57,12 +61,27 @@ export function createWorkerPartitions({
 			partition,
 		});
 	}
+	// The current runtime's park hook per partition, set when the runtime is built below.
+	const unavailableByPartition = new Map<
+		number,
+		(failure: PartitionFailure) => void
+	>();
+	function markPartitionUnavailable({
+		partition,
+		cause,
+	}: {
+		partition: number;
+		cause: unknown;
+	}): void {
+		unavailableByPartition.get(partition)?.({ cause });
+	}
 	const commandHandler = createCommandRecordHandler({
 		ctx: {
 			findOwnedRuntime,
 			readCommandNextOffset,
 			idempotencyKeys: ctx.idempotencyKeys,
 			logger: ctx.logger,
+			markUnavailable: markPartitionUnavailable,
 		},
 	});
 	const meteringConsumer = createMeteringConsumer({
@@ -127,6 +146,7 @@ export function createWorkerPartitions({
 			preparation.markUnavailable(failure);
 			follower.markUnavailable(failure);
 		}
+		unavailableByPartition.set(partition, markUnavailable);
 		return { ...resources, markUnavailable };
 	}
 
@@ -152,7 +172,19 @@ export function createWorkerPartitions({
 					(commandResumeGeneration.get(partition) ?? 0) + 1,
 				);
 		}
-		ctx.consumer.pause([{ topic, partitions }]);
+		function pauseTopic(): void {
+			ctx.consumer.pause([{ topic, partitions }]);
+		}
+		steer(pauseTopic);
+	}
+
+	/** A group that is gone, because kafkajs crashed its runner and is rejoining, leaves nothing to steer. */
+	function steer(run: () => void): void {
+		try {
+			run();
+		} catch (cause) {
+			if (!isConsumerGroupGoneError({ cause })) throw cause;
+		}
 	}
 
 	async function resume({
@@ -165,7 +197,15 @@ export function createWorkerPartitions({
 		if (topic === config.commandTopic) {
 			for (const partition of partitions) {
 				const generation = commandResumeGeneration.get(partition);
-				const range = await readPartitionLogRange({ ctx, topic, partition });
+				if (!commandTopicOffsets)
+					throw new Error(
+						"A command topic needs its own commandTopicOffsets admin",
+					);
+				const range = await readPartitionLogRange({
+					ctx: { partitionOffsets: commandTopicOffsets },
+					topic,
+					partition,
+				});
 				if (generation !== commandResumeGeneration.get(partition)) continue;
 				const nextOffset =
 					readCommandNextOffset({ partition }) ?? range.logStartOffset;
@@ -176,20 +216,36 @@ export function createWorkerPartitions({
 					throw new Error(
 						`Command bookmark outside retained log: ${topic}[${partition}] at ${nextOffset}`,
 					);
-				ctx.consumer.seek({ topic, partition, offset: nextOffset.toString() });
-				ctx.consumer.resume([{ topic, partitions: [partition] }]);
+				function seekAndResume(): void {
+					ctx.consumer.seek({
+						topic,
+						partition,
+						offset: nextOffset.toString(),
+					});
+					ctx.consumer.resume([{ topic, partitions: [partition] }]);
+				}
+				steer(seekAndResume);
 			}
 			return;
 		}
-		ctx.consumer.resume([{ topic, partitions }]);
+		function resumeTopic(): void {
+			ctx.consumer.resume([{ topic, partitions }]);
+		}
+		steer(resumeTopic);
 	}
 
-	function connect(): Promise<void> {
-		return ctx.partitionOffsets.connect();
+	async function connect(): Promise<void> {
+		await Promise.all([
+			ctx.partitionOffsets.connect(),
+			commandTopicOffsets?.connect(),
+		]);
 	}
 
-	function disconnect(): Promise<void> {
-		return ctx.partitionOffsets.disconnect();
+	async function disconnect(): Promise<void> {
+		await Promise.all([
+			ctx.partitionOffsets.disconnect(),
+			commandTopicOffsets?.disconnect(),
+		]);
 	}
 
 	async function fetchHighWatermarks({

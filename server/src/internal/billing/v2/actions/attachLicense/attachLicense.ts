@@ -1,6 +1,6 @@
 import type { AttachLicenseParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { computeAttachLicensePlan } from "./compute/computeAttachLicensePlan.js";
 import { handleAttachLicenseErrors } from "./errors/handleAttachLicenseErrors.js";
 import { logLicenseAssignmentPlan } from "./logs/logLicenseAssignmentPlan.js";

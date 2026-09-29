@@ -23,12 +23,13 @@ describe("Slack attachment message preparation", () => {
 			type: "file",
 		} satisfies Attachment;
 
-		const { attachmentCount, content } = await getUserContent({
+		const { attachmentCount, content, delivered } = await getUserContent({
 			attachments: [attachment],
 			text: "please provision this",
 		});
 
 		expect(attachmentCount).toBe(1);
+		expect(delivered).toEqual([attachment]);
 		expect(content[0]).toMatchObject({
 			filename: "contract.pdf",
 			mediaType: "application/pdf",
@@ -102,15 +103,70 @@ describe("Slack attachment message preparation", () => {
 			},
 		] satisfies Attachment[];
 
-		const { attachmentCount, notes } = await prepareAttachmentMessage({
-			attachments,
-			text: "read these",
-		});
+		const { attachmentCount, delivered, notes } =
+			await prepareAttachmentMessage({
+				attachments,
+				text: "read these",
+			});
 
 		expect(attachmentCount).toBe(0);
 		expect(notes).toEqual([
 			"Skipped archive.zip: unsupported file type.",
 			"Skipped huge.pdf: file is too large.",
 		]);
+		expect(delivered).toEqual([]);
+	});
+
+	test("adds files from earlier in the thread after the message's own, naming who shared them", async () => {
+		const own = {
+			data: Buffer.from("png"),
+			mimeType: "image/png",
+			name: "own.png",
+			type: "image",
+		} satisfies Attachment;
+		const contract = {
+			fetchData: async () => Buffer.from("pdf"),
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} satisfies Attachment;
+
+		const { attachmentCount, content } = await getUserContent({
+			attachments: [own],
+			text: "@Autumn do the above",
+			threadAttachments: [{ attachment: contract, author: "Bill" }],
+		});
+
+		expect(attachmentCount).toBe(2);
+		expect(content.map((part) => part.filename)).toEqual([
+			"own.png",
+			"contract.pdf",
+			undefined,
+		]);
+		expect(content[2]?.text).toContain(
+			"contract.pdf (shared earlier in the thread by Bill)",
+		);
+	});
+
+	test("caps files from earlier in the thread and says how many were left out", async () => {
+		const earlier = Array.from({ length: 6 }, (_, index) => ({
+			attachment: {
+				data: Buffer.from("pdf"),
+				mimeType: "application/pdf",
+				name: `file-${index}.pdf`,
+				type: "file",
+			} satisfies Attachment,
+			author: "Bill",
+		}));
+
+		const { attachmentCount, notes } = await getUserContent({
+			text: "@Autumn go",
+			threadAttachments: earlier,
+		});
+
+		expect(attachmentCount).toBe(4);
+		expect(notes).toContain(
+			"Skipped 2 older file(s) from earlier in the thread.",
+		);
 	});
 });

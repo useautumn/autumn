@@ -1,3 +1,6 @@
+import type { ChatTrustedBot } from "@autumn/shared";
+import { findTrustedSlackBot } from "./trustedBots.js";
+
 type SlackEventEnvelope = {
 	event?: SlackEvent;
 	team_id?: unknown;
@@ -5,6 +8,7 @@ type SlackEventEnvelope = {
 };
 
 type SlackEvent = {
+	bot_id?: unknown;
 	subtype?: unknown;
 	text?: unknown;
 	type?: unknown;
@@ -61,12 +65,32 @@ export const getSlackEventWorkspaceId = (body: string) => {
 	return typeof parsed.team_id === "string" ? parsed.team_id : null;
 };
 
+/** Legacy bot posts carry the `bot_message` subtype; they only count as
+ * ordinary messages when a trusted bot sent them. */
+const isPlainMessage = ({
+	event,
+	trustedBots,
+}: {
+	event: SlackEvent;
+	trustedBots?: ChatTrustedBot[];
+}) =>
+	!event.subtype ||
+	(event.subtype === "bot_message" &&
+		Boolean(
+			findTrustedSlackBot({
+				installation: { trusted_bots: trustedBots ?? [] },
+				raw: event,
+			}),
+		));
+
 export const normalizeSlackEventsBody = ({
 	body,
 	botUserId,
+	trustedBots,
 }: {
 	body: string;
 	botUserId?: string | null;
+	trustedBots?: ChatTrustedBot[];
 }) => {
 	let parsed: unknown;
 	try {
@@ -82,7 +106,7 @@ export const normalizeSlackEventsBody = ({
 	if (
 		parsed.type !== "event_callback" ||
 		event.type !== "message" ||
-		event.subtype ||
+		!isPlainMessage({ event, trustedBots }) ||
 		typeof event.text !== "string" ||
 		!botUserId ||
 		!mentionsSlackUser({ text: event.text, userId: botUserId })

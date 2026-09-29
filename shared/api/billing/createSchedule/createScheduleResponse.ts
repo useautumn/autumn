@@ -1,8 +1,8 @@
+import { z } from "zod/v4";
 import {
 	BillingResponseRequiredActionSchema,
 	BillingResponseSchema,
-} from "@api/billing/common/billingResponse";
-import { z } from "zod/v4";
+} from "../common/billingResponse";
 
 export const CreateScheduleResponsePhaseSchema = z.object({
 	phase_id: z.string().meta({

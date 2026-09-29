@@ -13,7 +13,7 @@ afterAll(() => browser.close());
 const createInvoicePage = async ({
 	outcome,
 }: {
-	outcome: "paid" | "challenge" | "invalid";
+	outcome: "paid" | "challenge" | "invalid" | "silent";
 }) => {
 	const context = await browser.newContext();
 	const page = await context.newPage();
@@ -60,7 +60,7 @@ const createInvoicePage = async ({
 			window.addEventListener('message', async ({data}) => {
 				if (data !== 'submitted') return;
 				await fetch('/submitted');
-				${outcome === "challenge" ? "document.body.insertAdjacentHTML('beforeend', '<iframe src=https://newassets.hcaptcha.com/challenge></iframe>');" : "document.body.insertAdjacentHTML('beforeend', '<h1>Invoice paid</h1>');"}
+				${outcome === "challenge" ? "document.body.insertAdjacentHTML('beforeend', '<iframe src=https://newassets.hcaptcha.com/challenge></iframe>');" : outcome === "silent" ? "" : "document.body.insertAdjacentHTML('beforeend', '<h1>Invoice paid</h1>');"}
 			});
 			</script>`,
 			});
@@ -124,3 +124,13 @@ test("an already paid invoice needs no payment frame or second submission", asyn
 		await context.close();
 	}
 }, 10000);
+
+test("a submitted payment the page never confirms is left to the caller's Stripe check, not failed", async () => {
+	const fixture = await createInvoicePage({ outcome: "silent" });
+	try {
+		await invoiceCheckout({ page: fixture.page, url: "https://invoice.fixture/" });
+		expect(fixture.getSubmissions()).toBe(1);
+	} finally {
+		await fixture.context.close();
+	}
+}, 20_000);

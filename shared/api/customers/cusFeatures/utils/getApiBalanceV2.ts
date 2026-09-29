@@ -40,7 +40,7 @@ import {
 } from "./apiBalanceV2Utils.js";
 import { roundApiBalance } from "./roundApiBalance.js";
 
-const getApiBalanceBreakdownItemV2 = ({
+export const getApiBalanceBreakdownItemV2 = ({
 	fullSubject,
 	customerEntitlement,
 }: {

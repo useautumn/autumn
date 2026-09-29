@@ -1,9 +1,12 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { ChatInstallation } from "@autumn/shared";
-import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
+import type { ChatInstallation, ChatTrustedBot } from "@autumn/shared";
 import { decrypt } from "../../../lib/crypto.js";
-import { resolveInstallationAuthMode } from "../users.js";
-import { resolveSlackUserAuth } from "./resolveSlackUserAuth.js";
+import {
+	resolveSlackStaffAuth,
+	resolveSlackUserAuth,
+	resolveTrustedBotAuth,
+	STAFF_OVERRIDABLE_DENIALS,
+} from "./resolveSlackUserAuth.js";
 import type { SlackUserAuthResult } from "./slackUserAuthTypes.js";
 
 type SlackCallerAuthResult =
@@ -40,28 +43,47 @@ export const resolveSlackCallerAuth = async ({
 	logger,
 	orgId,
 	slackUserId,
+	trustedBot,
 }: {
 	installation: ChatInstallation;
 	logger: AutumnLogger;
 	orgId: string;
 	slackUserId: string;
+	/** Set when the caller is a trusted bot; it runs as its configured member. */
+	trustedBot?: ChatTrustedBot;
 }): Promise<SlackCallerAuthResult> => {
-	const usePerUser =
-		resolveInstallationAuthMode({ installation }) === ChatAuthMode.PerUser;
-	if (!usePerUser) {
-		return { usePerUser: false };
-	}
-
+	// Every install, unrestricted included, acts with the sender's own org role;
+	// a sender we cannot resolve is denied, never granted the installer's access.
 	try {
-		return toCallerAuthResult(
-			await resolveSlackUserAuth({
-				botToken: decrypt(installation.bot_access_token),
-				installation,
-				logger,
-				orgId,
-				slackUserId,
-			}),
-		);
+		if (trustedBot) {
+			return toCallerAuthResult(
+				await resolveTrustedBotAuth({
+					installation,
+					logger,
+					orgId,
+					trustedBot,
+				}),
+			);
+		}
+		const botToken = decrypt(installation.bot_access_token);
+		const auth = await resolveSlackUserAuth({
+			botToken,
+			installation,
+			logger,
+			orgId,
+			slackUserId,
+		});
+		if (auth.ok || !STAFF_OVERRIDABLE_DENIALS.has(auth.reason)) {
+			return toCallerAuthResult(auth);
+		}
+		const staffAuth = await resolveSlackStaffAuth({
+			botToken,
+			installation,
+			logger,
+			orgId,
+			slackUserId,
+		});
+		return toCallerAuthResult(staffAuth ?? auth);
 	} catch (error) {
 		logger.error("[chat] Slack caller authorization failed", error, {
 			event: "leaf.slack_caller_auth_failed",

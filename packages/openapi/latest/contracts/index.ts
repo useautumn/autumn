@@ -5,6 +5,7 @@ import {
 	balancesCreateContract,
 	balancesDeleteContract,
 	balancesFinalizeContract,
+	balancesListContract,
 	balancesTrackContract,
 	balancesTrackTokensContract,
 	balancesUpdateContract,
@@ -36,6 +37,8 @@ import {
 	getCustomerContract,
 	getOrCreateCustomerContract,
 	listCustomersContract,
+	listPurchasesContract,
+	listSubscriptionsContract,
 	updateCustomerContract,
 } from "./customersContract.js";
 import { dfuFlashContract } from "./dfuContract.js";
@@ -59,6 +62,7 @@ import {
 } from "./featuresContract.js";
 import {
 	createInvoiceContract,
+	finalizeInvoiceContract,
 	insertInvoicesContract,
 	listInvoicesContract,
 	listInvoiceTemplatesContract,
@@ -136,6 +140,8 @@ export const v2_3ContractRouter = oc.router({
 	updateCustomer: updateCustomerContract,
 	deleteCustomer: deleteCustomerContract,
 	advanceTestClock: advanceTestClockContract,
+	listSubscriptions: listSubscriptionsContract,
+	listPurchases: listPurchasesContract,
 
 	// Plans
 	plansCreate: createPlanContract,
@@ -171,6 +177,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Balances
 	balancesCreate: balancesCreateContract,
+	balancesList: balancesListContract,
 	balancesUpdate: balancesUpdateContract,
 	balancesDelete: balancesDeleteContract,
 	balancesFinalize: balancesFinalizeContract,
@@ -188,6 +195,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Invoices
 	invoicesCreate: createInvoiceContract,
+	invoicesFinalize: finalizeInvoiceContract,
 	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
 	invoicesListTemplates: listInvoiceTemplatesContract,

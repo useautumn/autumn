@@ -2,6 +2,27 @@ import type { AutumnBillingPlan } from "@autumn/shared";
 import { mergeById, mergeByKey } from "./mergeByKey";
 import { mergePooledBalancePlans } from "./mergePooledBalancePlans";
 
+type AutoTopupRebalance = AutumnBillingPlan["autoTopupRebalance"];
+
+/** One side's top-up keeps its purchase; two can't be sized as one, so only their deltas merge and the plan keeps to Postgres. */
+const mergeAutoTopupRebalances = ({
+	base,
+	incoming,
+}: {
+	base: AutoTopupRebalance;
+	incoming: AutoTopupRebalance;
+}): AutoTopupRebalance => {
+	if (!base || !incoming) return base ?? incoming;
+	return {
+		deltas:
+			mergeByKey({
+				base: base.deltas,
+				incoming: incoming.deltas,
+				getKey: (delta) => delta.cusEntId,
+			}) ?? [],
+	};
+};
+
 export const mergeAutumnBillingPlans = ({
 	base,
 	incoming,
@@ -80,6 +101,11 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.customLineItems,
 		getKey: (lineItem) => `${lineItem.description}:${lineItem.amount}`,
 	}),
+	existingEntities: mergeByKey({
+		base: base.existingEntities,
+		incoming: incoming.existingEntities,
+		getKey: (entity) => entity.internal_id,
+	}),
 	insertCustomerEntitlements: mergeById({
 		base: base.insertCustomerEntitlements,
 		incoming: incoming.insertCustomerEntitlements,
@@ -97,17 +123,10 @@ export const mergeAutumnBillingPlans = ({
 		base: base.pooledBalancePlan,
 		incoming: incoming.pooledBalancePlan,
 	}),
-	autoTopupRebalance:
-		base.autoTopupRebalance || incoming.autoTopupRebalance
-			? {
-					deltas:
-						mergeByKey({
-							base: base.autoTopupRebalance?.deltas,
-							incoming: incoming.autoTopupRebalance?.deltas,
-							getKey: (delta) => delta.cusEntId,
-						}) ?? [],
-				}
-			: undefined,
+	autoTopupRebalance: mergeAutoTopupRebalances({
+		base: base.autoTopupRebalance,
+		incoming: incoming.autoTopupRebalance,
+	}),
 	oneOffPurchaseRebalance:
 		base.oneOffPurchaseRebalance || incoming.oneOffPurchaseRebalance
 			? {

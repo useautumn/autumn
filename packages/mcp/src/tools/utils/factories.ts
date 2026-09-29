@@ -14,18 +14,25 @@ const getRequest = (input: unknown): unknown =>
 const signalOf = (context: { mcp?: { extra?: { signal?: AbortSignal } } }) =>
 	context?.mcp?.extra?.signal;
 
-/** The request schemas do not declare `expand`, so a tool's fixed expansion is
- * merged after parsing rather than offered to the caller as an input. */
-const withExpand = ({
+/** The request schemas do not declare `expand` (or a tool's fixed fields), so
+ * they are merged after parsing rather than offered to the caller as inputs. */
+const withFixedFields = ({
 	expand,
+	fixedFields,
 	request,
 }: {
 	expand?: string[];
+	fixedFields?: Record<string, unknown>;
 	request: unknown;
-}): unknown =>
-	expand?.length && request && typeof request === "object"
-		? { ...request, expand }
-		: request;
+}): unknown => {
+	if (!request || typeof request !== "object") return request;
+	if (!expand?.length && !fixedFields) return request;
+	return {
+		...request,
+		...fixedFields,
+		...(expand?.length ? { expand } : {}),
+	};
+};
 
 /** Builds a `{ id: tool }` record from a list of configs. */
 export const toTools = <Config extends { id: string }>(
@@ -40,6 +47,8 @@ export const operationTool = ({
 	schema,
 	endpoint,
 	expand,
+	fixedFields,
+	transformResult,
 	destructive = false,
 	idempotent = false,
 }: OperationToolConfig) =>
@@ -48,17 +57,21 @@ export const operationTool = ({
 		description,
 		inputSchema: z.object({ request: schema }).strict(),
 		mcp: { annotations: mcpAnnotations({ destructive, idempotent }) },
-		execute: (input, context) =>
-			callAutumn({
+		execute: async (input, context) => {
+			const request = withFixedFields({
+				expand,
+				fixedFields,
+				request: schema.parse(getRequest(input)),
+			});
+			const result = await callAutumn({
 				auth: getAutumnAuth(context),
 				endpoint,
-				request: withExpand({
-					expand,
-					request: schema.parse(getRequest(input)),
-				}),
+				request,
 				retryable: !destructive || idempotent,
 				signal: signalOf(context),
-			}),
+			});
+			return transformResult ? transformResult({ request, result }) : result;
+		},
 	});
 
 /** Raw variant of a local preview: just returns the computed preview. */

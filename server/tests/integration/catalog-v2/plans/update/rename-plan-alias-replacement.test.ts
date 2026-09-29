@@ -15,6 +15,7 @@ import {
 	type AttachParamsV1Input,
 	customerProducts,
 	ErrCode,
+	productAliasesToPlanAliasMap,
 	products,
 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
@@ -26,7 +27,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { catalogV2Actions } from "@/internal/catalogV2/actions/index.js";
 import { buildUpdateCatalogPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/buildUpdateCatalogPreview.js";
-import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
 	expectPlanPreviewRowCorrect,
@@ -77,7 +77,7 @@ const syncPlanAliasesOnCtx = async ({
 	planIds: string[];
 }) => {
 	const rows = await listAliases({ ctx, planIds });
-	ctx.org.planAliases = toPlanAliasMap({ rows });
+	ctx.org.planAliases = productAliasesToPlanAliasMap({ rows });
 };
 
 const previewCreateClaim = async ({

@@ -20,6 +20,14 @@
 
 local USAGE_WINDOWS_FIELD = '_usage_windows'
 
+-- isSameUsageWindow (shared): bounds match but for the cycle recomputation drift.
+local function is_same_usage_window(window, limit)
+  return math.abs(safe_number(window.window_start_at) - safe_number(limit.window_start_at))
+      <= USAGE_WINDOW_BOUND_TOLERANCE_MS
+    and math.abs(safe_number(window.window_end_at) - safe_number(limit.window_end_at))
+      <= USAGE_WINDOW_BOUND_TOLERANCE_MS
+end
+
 -- ONE mutable counter row per scope + filter: a row matches its limit on
 -- internal_entity_id and filter_key (absent/null = the unfiltered counter,
 -- which also matches pre-filter rows). Bounds are payload, not identity.
@@ -95,7 +103,7 @@ local function read_usage_windows(params)
       local current_usage = 0
       if not is_nil(existing)
           and safe_number(existing.window_end_at) > safe_number(params.now)
-          and safe_number(existing.window_start_at) == limit.window_start_at
+          and is_same_usage_window(existing, limit)
       then
         current_usage = safe_number(existing.usage)
       end

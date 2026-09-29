@@ -2,11 +2,14 @@ import type {
 	KafkaProducer,
 	KafkaSender,
 } from "../../../../client/types/kafkaClient.js";
+import type { TransactionRetry } from "../../../../producer/sendTransactionalBatch.js";
 
 export type OwnershipPublisherContext = {
 	producer: KafkaProducer;
 	/** A plain producer for `ready` and `draining`; without one the publisher can only claim and release. */
 	sender?: KafkaSender;
+	/** How long a claim or release waits out broker refusals; defaults to less than a successor's claim wait. */
+	retry?: TransactionRetry;
 };
 
 export type OwnershipReadinessContext = {

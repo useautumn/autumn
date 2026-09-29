@@ -102,12 +102,12 @@ export function RoleSelect({
 			*/}
 			<SelectContent className="max-w-[340px]">
 				{allowed.map((role) => (
-					<SelectItem key={role} value={role} className="items-start">
-						<div className="flex flex-col items-start py-0.5 gap-0.5 w-full">
-							<span className="text-sm font-medium">
+					<SelectItem key={role} value={role} className="items-start py-1.5">
+						<div className="flex w-full flex-col items-start gap-0.5">
+							<span className="text-sm font-medium text-foreground">
 								{ROLE_META[role].label}
 							</span>
-							<span className="text-xs text-muted-foreground whitespace-normal break-words leading-snug">
+							<span className="text-xs leading-4 text-tertiary-foreground whitespace-normal break-words">
 								{ROLE_META[role].description}
 							</span>
 						</div>

@@ -1,29 +1,49 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Message, StateAdapter, Thread } from "chat";
+import type { Attachment, Message, StateAdapter, Thread } from "chat";
 import {
+	getEarlierThreadAttachments,
 	getEarlierThreadMessages,
 	getRecentMessages,
+	getUndeliveredThreadAttachments,
 	loadMissedMessages,
+	recordDeliveredFiles,
 	recordSkippedMessage,
 } from "../../../../src/providers/slack/threadContext.js";
 
 const message = ({
+	attachments = [],
+	author,
 	id,
 	isBot = false,
+	isMe = false,
 	raw = { team_id: "T1" },
 	text,
 }: {
+	attachments?: Attachment[];
+	author?: string;
 	id: string;
 	isBot?: boolean;
+	isMe?: boolean;
 	raw?: unknown;
 	text: string;
 }) =>
 	({
-		author: { fullName: isBot ? "Autumn" : "Charlie", isBot },
+		attachments,
+		author: {
+			fullName: author ?? (isBot ? "Autumn" : "Charlie"),
+			isBot,
+			isMe,
+		},
 		id,
 		raw,
 		text,
 	}) as Message;
+
+const file = (name: string): Attachment => ({
+	mimeType: "application/pdf",
+	name,
+	type: "file",
+});
 
 describe("getRecentMessages", () => {
 	test("excludes native plan cards from agent context", async () => {
@@ -217,6 +237,72 @@ describe("skipped replies", () => {
 	});
 });
 
+describe("files from earlier in the thread", () => {
+	test("the first mention gets every earlier file, newest first, but not the agent's own", () => {
+		const contract = file("contract.pdf");
+		const screenshot = file("screenshot.png");
+		const current = message({ id: "4", text: "@Autumn do the above" });
+		const thread = threadWith([
+			message({
+				attachments: [contract],
+				author: "Bill",
+				id: "1",
+				isBot: true,
+				text: "@Autumn update billing from the contract",
+			}),
+			message({
+				attachments: [file("summary.pdf")],
+				id: "2",
+				isBot: true,
+				isMe: true,
+				text: "Here's a summary",
+			}),
+			message({ attachments: [screenshot], id: "3", text: "" }),
+			current,
+		]);
+
+		expect(getEarlierThreadAttachments(thread, current)).toEqual([
+			{
+				attachment: screenshot,
+				author: "Charlie",
+				fileIndex: 0,
+				raw: { team_id: "T1" },
+			},
+			{
+				attachment: contract,
+				author: "Bill",
+				fileIndex: 0,
+				raw: { team_id: "T1" },
+			},
+		]);
+	});
+
+	test("a tag after skipped replies gets their files, even with no text", async () => {
+		const state = memoryState();
+		const invoice = file("invoice.pdf");
+		const skipped = message({ attachments: [invoice], id: "2", text: "" });
+		const current = message({ id: "3", text: "@Autumn use this" });
+		const thread = threadWith([
+			message({ attachments: [file("old.pdf")], id: "1", text: "seen" }),
+			skipped,
+			current,
+		]);
+
+		await recordSkippedMessage(thread, skipped, state);
+
+		expect(
+			(await loadMissedMessages(thread, current, state))?.attachments,
+		).toEqual([
+			{
+				attachment: invoice,
+				author: "Charlie",
+				fileIndex: 0,
+				raw: { team_id: "T1" },
+			},
+		]);
+	});
+});
+
 describe("getEarlierThreadMessages", () => {
 	test("returns the discussion older than the recent window", () => {
 		const history = Array.from({ length: 10 }, (_, index) =>
@@ -245,5 +331,60 @@ describe("getEarlierThreadMessages", () => {
 				current,
 			),
 		).toBeUndefined();
+	});
+});
+
+describe("files a turn has already read", () => {
+	test("a later tag skips files an earlier turn read, so an unread one gets a slot", async () => {
+		const state = memoryState();
+		const unread = file("contract.pdf");
+		const read = Array.from({ length: 4 }, (_, index) =>
+			file(`read-${index}.pdf`),
+		);
+		const current = message({ id: "9", text: "@Autumn try again" });
+		const thread = threadWith([
+			message({
+				attachments: [unread],
+				id: "1",
+				raw: { files: [{ id: "F_UNREAD" }], team_id: "T1" },
+				text: "contract",
+			}),
+			...read.map((attachment, index) =>
+				message({
+					attachments: [attachment],
+					id: `${index + 2}`,
+					raw: { files: [{ id: `F_READ_${index}` }], team_id: "T1" },
+					text: "",
+				}),
+			),
+			current,
+		]);
+
+		await recordDeliveredFiles(
+			thread,
+			current,
+			read.map((_, index) => `F_READ_${index}`),
+			state,
+		);
+
+		expect(
+			(await getUndeliveredThreadAttachments(thread, current, state)).map(
+				({ attachment }) => attachment,
+			),
+		).toEqual([unread]);
+	});
+
+	test("files without a Slack id are always offered", async () => {
+		const state = memoryState();
+		const attachment = file("pasted.pdf");
+		const current = message({ id: "2", text: "@Autumn use this" });
+		const thread = threadWith([
+			message({ attachments: [attachment], id: "1", text: "" }),
+			current,
+		]);
+
+		expect(
+			await getUndeliveredThreadAttachments(thread, current, state),
+		).toEqual([expect.objectContaining({ attachment })]);
 	});
 });
