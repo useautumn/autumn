@@ -7,6 +7,8 @@
  *                paused one was updated in place.
  * Green (after): the old subscription is cancelled and exactly one new one is live.
  *                Stripe reports a cancelled incomplete subscription as incomplete_expired.
+ * Without a card the new subscription goes through Checkout, and the old one is
+ * cancelled only once checkout completes (Q15). An open session for other plans is expired.
  */
 
 import { expect, test } from "bun:test";
@@ -16,11 +18,15 @@ import {
 	expectSubscriptionReplaced,
 	findStripeSubscriptionByStatus,
 } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
 test.concurrent(
@@ -73,46 +79,54 @@ test.concurrent(
 	},
 );
 
+/** A card-not-required trial that Stripe pauses at trial end, since no card was added. */
+const setupPausedPro = async ({ customerId }: { customerId: string }) => {
+	const trialDays = 3;
+	const pro = products.baseWithTrial({
+		id: "pro",
+		items: [items.monthlyPrice({ price: 20 })],
+		trialDays,
+		cardRequired: false,
+	});
+	const scenario = await initScenario({
+		customerId,
+		setup: [s.customer({}), s.products({ list: [pro] })],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+	const { ctx, testClockId, advancedTo } = scenario;
+
+	const trialing = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "trialing",
+	});
+	await ctx.stripeCli.subscriptions.update(trialing.id, {
+		trial_settings: { end_behavior: { missing_payment_method: "pause" } },
+	});
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		advanceTo: advancedTo + ms.days(trialDays + 1),
+		waitForSeconds: 30,
+	});
+	const paused = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
+	expect(paused.status).toBe("paused");
+
+	return { ...scenario, pro, paused };
+};
+
 test.concurrent(
 	`${chalk.yellowBright("set-plans unusable: paused subscription is cancelled and replaced")}`,
 	async () => {
-		const trialDays = 3;
-		const pro = products.baseWithTrial({
-			id: "pro",
-			items: [items.monthlyPrice({ price: 20 })],
-			trialDays,
-			cardRequired: false,
+		const { customerId, autumnV2_4, ctx, pro, paused } = await setupPausedPro({
+			customerId: "set-plans-paused",
 		});
-
-		const { customerId, autumnV2_4, ctx, testClockId, advancedTo } =
-			await initScenario({
-				customerId: "set-plans-paused",
-				setup: [s.customer({}), s.products({ list: [pro] })],
-				actions: [s.billing.attach({ productId: pro.id })],
-			});
-
-		const trialing = await findStripeSubscriptionByStatus({
-			ctx,
-			customerId,
-			status: "trialing",
-		});
-		await ctx.stripeCli.subscriptions.update(trialing.id, {
-			trial_settings: { end_behavior: { missing_payment_method: "pause" } },
-		});
-		await advanceTestClock({
-			stripeCli: ctx.stripeCli,
-			testClockId: testClockId!,
-			advanceTo: advancedTo + ms.days(trialDays + 1),
-			waitForSeconds: 30,
-		});
-		const paused = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
-		expect(paused.status).toBe("paused");
-
 		await attachPaymentMethod({
 			stripeCli: ctx.stripeCli,
 			stripeCusId: paused.customer as string,
 			type: "success",
 		});
+
 		const setPlansParams = {
 			customer_id: customerId,
 			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
@@ -124,6 +138,84 @@ test.concurrent(
 		});
 		await autumnV2_4.billing.setPlans(setPlansParams);
 
+		await expectSubscriptionReplaced({
+			ctx,
+			customerId,
+			productId: pro.id,
+			replacedSubscriptionId: paused.id,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans unusable: an open Checkout session is expired when the plans change")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV2_4, ctx } = await initScenario({
+			customerId: "set-plans-checkout-replaced",
+			setup: [s.customer({}), s.products({ list: [pro, premium] })],
+			actions: [],
+		});
+
+		const first = await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+		});
+		const second = await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: "now", plans: [{ plan_id: premium.id }] }],
+		});
+		expect(second.payment_url).toBeDefined();
+		expect(second.payment_url).not.toBe(first.payment_url);
+
+		const stripeCustomerId = (
+			await CusService.getFull({ ctx, idOrInternalId: customerId })
+		).processor?.id;
+		const { data: sessions } = await ctx.stripeCli.checkout.sessions.list({
+			customer: stripeCustomerId,
+		});
+		expect(sessions.map((session) => session.status).sort()).toEqual([
+			"expired",
+			"open",
+		]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans unusable: a paused subscription replaced through Checkout is cancelled once checkout completes")}`,
+	async () => {
+		const { customerId, autumnV2_4, ctx, pro, paused } = await setupPausedPro({
+			customerId: "set-plans-paused-checkout",
+		});
+
+		const setPlansParams = {
+			customer_id: customerId,
+			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
+		};
+		expectPreviewWarning({
+			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			type: "subscription_replaced",
+			messageContains: [paused.id, "once checkout completes"],
+		});
+		const response = await autumnV2_4.billing.setPlans(setPlansParams);
+		expect(response.payment_url).toBeDefined();
+		expect((await ctx.stripeCli.subscriptions.retrieve(paused.id)).status).toBe(
+			"paused",
+		);
+
+		await completeStripeCheckoutFormV2({ url: response.payment_url! });
+
+		await expectCustomerProducts({
+			customerId,
+			active: [pro.id],
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		});
 		await expectSubscriptionReplaced({
 			ctx,
 			customerId,
