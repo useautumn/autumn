@@ -3,7 +3,9 @@ import type {
 	FullCusProduct,
 	ProcessorItem,
 	SetPlansPreviewPhase,
+	StripeBillingPlan,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPreviewToWarnings";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
 
@@ -155,6 +157,203 @@ describe("setPlansPreviewToWarnings", () => {
 				deletedCustomerProducts: [],
 				outgoingCustomerProducts: [],
 				features: [],
+			}),
+		).toEqual([]);
+	});
+});
+
+const NOON_UTC = Date.UTC(2026, 8, 29, 12);
+const DAY_MS = 86_400_000;
+
+const stripeSubscription = (
+	overrides: Partial<Stripe.Subscription>,
+): Stripe.Subscription =>
+	({
+		id: "sub_old",
+		status: "active",
+		discounts: [],
+		trial_end: null,
+		...overrides,
+	}) as Stripe.Subscription;
+
+const stateWarnings = (
+	overrides: Partial<Parameters<typeof setPlansPreviewToWarnings>[0]>,
+) =>
+	setPlansPreviewToWarnings({
+		phases: [phase({})],
+		liveProcessorItems: [],
+		processorChanges: [],
+		deletedCustomerProducts: [],
+		outgoingCustomerProducts: [],
+		features: [],
+		...overrides,
+	});
+
+describe("setPlansPreviewToWarnings: subscription state", () => {
+	test("an unpaid subscription is announced as cancelled and replaced", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_unpaid",
+					status: "unpaid",
+				}),
+			},
+			stripeBillingPlan: {},
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "subscription_replaced",
+				severity: "warning",
+				message:
+					"The unpaid subscription sub_unpaid will be cancelled and a new one created. Its unpaid invoices stay open.",
+			},
+		]);
+	});
+
+	test("a paused subscription replaced through Checkout is cancelled once checkout completes", () => {
+		const [warning] = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_paused",
+					status: "paused",
+				}),
+			},
+			stripeBillingPlan: {
+				checkoutSessionAction: {} as StripeBillingPlan["checkoutSessionAction"],
+			},
+		});
+
+		expect(warning?.message).toBe(
+			"The paused subscription sub_paused will be cancelled once checkout completes and a new one created. Its unpaid invoices stay open.",
+		);
+	});
+
+	test("a canceled subscription lists the new subscription, its open invoice and dropped discount", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				subscriptionBackdateStartMs: NOON_UTC - 10 * DAY_MS,
+				billingCycleAnchorMs: NOON_UTC + 20 * DAY_MS,
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_canceled",
+					status: "canceled",
+					discounts: [
+						{
+							source: { coupon: { id: "co_launch", name: "Launch 20%" } },
+						} as Stripe.Discount,
+					],
+				}),
+				stripeDiscounts: [],
+			},
+			stripeBillingPlan: {},
+			replacedOpenInvoices: [
+				{
+					id: "in_open",
+					number: "INV-0001",
+					amount_remaining: 2000,
+					currency: "usd",
+				} as Stripe.Invoice,
+			],
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "new_stripe_subscription",
+				severity: "info",
+				message:
+					"A new Stripe subscription will be created, starting 19 Sep 2026 and first invoiced on 19 Oct 2026.",
+			},
+			{
+				type: "open_invoice_not_collected",
+				severity: "warning",
+				message:
+					"Invoice INV-0001 for $20 is still open on the cancelled subscription and is not collected by this change.",
+			},
+			{
+				type: "discount_not_carried",
+				severity: "warning",
+				message:
+					"Discount Launch 20% from the cancelled subscription is not carried over.",
+			},
+		]);
+	});
+
+	test("a discount the request carries over is not flagged", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				replacedStripeSubscription: stripeSubscription({
+					status: "incomplete_expired",
+					discounts: [
+						{ source: { coupon: { id: "co_launch" } } } as Stripe.Discount,
+					],
+				}),
+				stripeDiscounts: [
+					{ source: { coupon: { id: "co_launch" } as Stripe.Coupon } },
+				],
+			},
+			stripeBillingPlan: {},
+		});
+
+		expect(warnings.map((warning) => warning.type)).toEqual([
+			"new_stripe_subscription",
+		]);
+	});
+
+	test("free_trial null on a trialing subscription warns that it bills now", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				stripeSubscription: stripeSubscription({
+					status: "trialing",
+					trial_end: (NOON_UTC + 7 * DAY_MS) / 1000,
+				}),
+				trialContext: {
+					freeTrial: null,
+					trialEndsAt: null,
+					appliesToBilling: true,
+					cardRequired: true,
+				},
+			},
+			stripeBillingPlan: {},
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "trial_ended",
+				severity: "warning",
+				message:
+					"The trial ending 06 Oct 2026 ends now and the subscription is billed immediately.",
+			},
+		]);
+	});
+
+	test("a carried trial on a trialing subscription doesn't warn", () => {
+		const trialEndMs = NOON_UTC + 7 * DAY_MS;
+		expect(
+			stateWarnings({
+				billingContext: {
+					currentEpochMs: NOON_UTC,
+					billingCycleAnchorMs: trialEndMs,
+					stripeSubscription: stripeSubscription({
+						status: "trialing",
+						trial_end: trialEndMs / 1000,
+					}),
+					trialContext: {
+						freeTrial: null,
+						trialEndsAt: trialEndMs,
+						appliesToBilling: true,
+						cardRequired: true,
+					},
+				},
+				stripeBillingPlan: {},
 			}),
 		).toEqual([]);
 	});
