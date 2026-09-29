@@ -65,6 +65,18 @@ const scheduledCancelWarning = ({
 	return undefined;
 };
 
+const cycleResetWarning = ({
+	cycleResetAt,
+}: {
+	cycleResetAt?: number;
+}): Warning | undefined =>
+	cycleResetAt === undefined
+		? undefined
+		: {
+				type: "cycle_reset",
+				message: `The billing cycle resets on ${formatMsToDate(cycleResetAt)}.`,
+			};
+
 const billingIntervals = (items: ProcessorItem[]) =>
 	new Set(
 		items
@@ -103,11 +115,13 @@ export const liveSubscriptionChangeWarnings = ({
 	stripeBillingPlan,
 	liveProcessorItems,
 	immediateItems,
+	cycleResetAt,
 }: {
 	stripeSubscription?: Stripe.Subscription;
 	stripeBillingPlan: StripeBillingPlan;
 	liveProcessorItems: ProcessorItem[];
 	immediateItems: ProcessorItem[];
+	cycleResetAt?: number;
 }): Warning[] =>
 	[
 		scheduledCancelWarning({ stripeSubscription, stripeBillingPlan }),
@@ -116,4 +130,5 @@ export const liveSubscriptionChangeWarnings = ({
 			liveProcessorItems,
 			immediateItems,
 		}),
+		cycleResetWarning({ cycleResetAt }),
 	].filter(notNullish);

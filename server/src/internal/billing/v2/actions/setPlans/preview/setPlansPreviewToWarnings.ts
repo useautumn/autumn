@@ -79,6 +79,7 @@ export const setPlansPreviewToWarnings = ({
 	deletedCustomerProducts,
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
+	cycleResetAt,
 	features,
 	billingContext,
 	stripeBillingPlan,
@@ -92,6 +93,7 @@ export const setPlansPreviewToWarnings = ({
 	deletedCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
+	cycleResetAt?: number;
 	features: Feature[];
 	billingContext: SubscriptionWarningContext;
 	stripeBillingPlan: StripeBillingPlan;
@@ -114,6 +116,7 @@ export const setPlansPreviewToWarnings = ({
 			stripeBillingPlan,
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
+			cycleResetAt,
 		}),
 		...unbilledUsageWarnings(unbilledUsageLineItems),
 		...removedUnmanagedItems({

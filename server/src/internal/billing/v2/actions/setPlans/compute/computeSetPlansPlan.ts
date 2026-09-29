@@ -5,6 +5,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
@@ -118,7 +119,7 @@ export const computeSetPlansPlan = ({
 				}
 			: undefined;
 
-	const autumnBillingPlan: AutumnBillingPlan = {
+	const baseAutumnBillingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
 		// Schedule persistence replaces phases wholesale, so nothing may rewrite them mid-flight.
@@ -148,6 +149,14 @@ export const computeSetPlansPlan = ({
 		pooledBalancePlan,
 		lockCustomerCurrency,
 	};
+	// A timestamp anchor on a live subscription resets every row on it through a schedule phase.
+	const autumnBillingPlan =
+		typeof billingContext.requestedBillingCycleAnchor === "number"
+			? applyBillingCycleAnchorToSharedSubscription({
+					plan: baseAutumnBillingPlan,
+					billingContext,
+				})
+			: baseAutumnBillingPlan;
 
 	autumnBillingPlan.lineItems = finalizeLineItems({
 		ctx,
