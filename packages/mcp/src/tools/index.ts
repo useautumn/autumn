@@ -2,6 +2,7 @@ import type { createTool } from "@mastra/core/tools";
 import type * as z from "zod/v4";
 import { instrumentToolsWithAnalytics } from "../analytics/index.js";
 import { domainModules, toolDomains } from "./domains.js";
+import { createInvoiceTools } from "./invoices.js";
 import { createOrgTools } from "./org.js";
 import {
 	dateToEpochMillisecondsTool,
@@ -24,6 +25,7 @@ const {
 	catalog,
 	billing,
 	balances,
+	invoices,
 	logs,
 } = domainModules;
 
@@ -43,6 +45,7 @@ export const endpointByTool = {
 	...catalog.endpoints,
 	...billing.endpoints,
 	...balances.endpoints,
+	...invoices.endpoints,
 	...logs.endpoints,
 } as const;
 
@@ -57,6 +60,7 @@ export const schemaByTool = {
 	...catalog.schemas,
 	...billing.schemas,
 	...balances.schemas,
+	...invoices.schemas,
 	...logs.schemas,
 } as const satisfies Record<
 	keyof typeof endpointByTool | "previewCreateBalance",
@@ -101,6 +105,7 @@ const createRawAutumnOperationToolset = ({
 		...toTools(localPreviews, rawLocalPreviewTool),
 		...toTools(confirmedWrites, operationTool),
 		...createOrgTools(),
+		...createInvoiceTools(),
 	};
 	return {
 		...attachIntentToTools({ required: requireIntent, tools: operationTools }),

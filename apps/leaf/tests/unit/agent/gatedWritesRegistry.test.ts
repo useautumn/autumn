@@ -15,11 +15,16 @@ describe("gated-write registry derivations", () => {
 			"attach",
 			"createBalance",
 			"createEntity",
+			"createInvoice",
 			"createReward",
 			"createSchedule",
+			"finalizeInvoice",
+			"payInvoice",
+			"reissueInvoice",
 			"updateAgentRules",
 			"updateCustomer",
 			"updateSubscription",
+			"voidInvoice",
 		]);
 		expect([...approvalSets.catalog].sort()).toEqual([
 			"createPlan",
@@ -32,7 +37,8 @@ describe("gated-write registry derivations", () => {
 	test("every write the live agent can call is approval-gated", () => {
 		const ungated = toolAllowlists.leaf.filter(
 			(tool) =>
-				/^(attach|create|update)/.test(tool) && !approvalSets.leaf.has(tool),
+				/^(attach|create|update|finalize|pay|reissue|void)/.test(tool) &&
+				!approvalSets.leaf.has(tool),
 		);
 		expect(ungated).toEqual([]);
 	});
@@ -41,13 +47,18 @@ describe("gated-write registry derivations", () => {
 		expect(approvalScopeRequirements).toEqual({
 			attach: ["billing:write"],
 			createBalance: ["balances:write"],
+			createInvoice: ["billing:write"],
 			createPlan: ["plans:write"],
 			createReward: ["rewards:write"],
 			createSchedule: ["billing:write"],
+			finalizeInvoice: ["billing:write"],
+			payInvoice: ["billing:write"],
+			reissueInvoice: ["billing:write"],
 			updateCatalog: { ALL: ["plans:write", "features:write"] },
 			updateCustomer: ["customers:write"],
 			updatePlan: ["plans:write"],
 			updateSubscription: ["billing:write"],
+			voidInvoice: ["billing:write"],
 		});
 	});
 
@@ -62,14 +73,19 @@ describe("gated-write registry derivations", () => {
 			attach: "previewAttach",
 			createBalance: "previewCreateBalance",
 			createEntity: undefined,
+			createInvoice: "previewCreateInvoice",
 			createPlan: "previewUpdateCatalog",
 			createReward: undefined,
 			createSchedule: "previewCreateSchedule",
+			finalizeInvoice: "getInvoice",
+			payInvoice: "getInvoice",
+			reissueInvoice: "previewReissueInvoice",
 			updateAgentRules: undefined,
 			updateCatalog: "previewUpdateCatalog",
 			updateCustomer: undefined,
 			updatePlan: "previewUpdateCatalog",
 			updateSubscription: "previewUpdateSubscription",
+			voidInvoice: "getInvoice",
 		});
 	});
 

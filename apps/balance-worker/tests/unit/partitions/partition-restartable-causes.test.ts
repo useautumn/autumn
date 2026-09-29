@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { KafkaBatchNotCommittedError } from "@autumn/kafka";
+import {
+	KafkaBatchNotCommittedError,
+	KafkaTransactionStateUnknownError,
+} from "@autumn/kafka";
 import { FlushBookmarkConflictError } from "@autumn/postgres";
 import { KafkaJSProtocolError } from "kafkajs";
 import { FlushRecordFailedError } from "../../../src/committer/committerErrors.js";
@@ -8,7 +11,10 @@ import {
 	MutationBatchNotCommittedError,
 	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
-import { OwnedPartitionRecoveryRequiredError } from "../../../src/runtime/runtimeErrors.js";
+import {
+	OwnedPartitionProducerFencedError,
+	OwnedPartitionRecoveryRequiredError,
+} from "../../../src/runtime/runtimeErrors.js";
 
 const topic = "events";
 const partition = 44;
@@ -52,6 +58,28 @@ test("a bookmark the store would not advance restarts the partition alone", () =
 			cause: new FlushRecordFailedError({
 				mutationId: "mut_1",
 				cause: new FlushBookmarkConflictError({ expected: 1, advanced: 0 }),
+			}),
+		}),
+	});
+	expect(isPartitionRestartableCause({ cause })).toBe(true);
+});
+
+test("a producer the broker fenced restarts the partition alone: the log and the store decide what landed", () => {
+	const expired = new KafkaJSProtocolError(
+		Object.assign(
+			new Error(
+				"Producer attempted an operation with an old epoch. Either there is a newer producer with the same transactionalId, or the producer's transaction has been expired by the broker",
+			),
+			{ type: "INVALID_PRODUCER_EPOCH", code: 47, retriable: false },
+		),
+	);
+	const cause = new OwnedPartitionProducerFencedError({
+		topic,
+		partition,
+		cause: new PartitionWriterRecoveryRequiredError({
+			cause: new KafkaTransactionStateUnknownError({
+				failureStage: "commit",
+				cause: expired,
 			}),
 		}),
 	});

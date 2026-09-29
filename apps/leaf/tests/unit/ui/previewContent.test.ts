@@ -157,3 +157,89 @@ describe("approvalCard with structured previews", () => {
 		expect(JSON.stringify(card)).toContain("Starts");
 	});
 });
+
+describe("invoice approval cards", () => {
+	const existingInvoice = {
+		id: "inv_123",
+		customer_id: "cus_1",
+		entity_id: null,
+		plan_ids: [],
+		stripe_id: "in_123",
+		processor_type: "stripe",
+		status: "open",
+		total: 50,
+		amount_paid: 0,
+		refunded_amount: 0,
+		currency: "usd",
+		created_at: 1790700465000,
+		hosted_invoice_url: null,
+		items: [
+			{ id: "li_1", description: "Setup fee", amount: 30 },
+			{ id: "li_2", description: "Onboarding", amount: 20 },
+		],
+	};
+
+	const createInvoicePreview = {
+		invoice: null,
+		preview: {
+			currency: "usd",
+			lines: [
+				{ description: "Setup fee", amount: 60, amount_after_discounts: 50 },
+			],
+			subtotal: 60,
+			discount_total: 10,
+			tax: {
+				total: 5,
+				amount_inclusive: 0,
+				amount_exclusive: 5,
+				status: "complete",
+			},
+			total: 55,
+			amount_due: 55,
+			issue_date: 1790700465000,
+			due_date: 1793292465000,
+		},
+	};
+
+	test("void, pay and finalize cards show the invoice's lines, total and status", () => {
+		for (const toolName of ["voidInvoice", "payInvoice", "finalizeInvoice"]) {
+			const json = JSON.stringify(
+				approvalCard({
+					id: "approval_1",
+					toolName,
+					toolArgs: { request: { invoice_id: "inv_123" } },
+					preview: [{ type: "text", text: JSON.stringify(existingInvoice) }],
+				}),
+			);
+
+			expect(json).toContain("inv_123");
+			expect(json).toContain("Setup fee");
+			expect(json).toContain("Onboarding");
+			expect(json).toContain("$50.00");
+			expect(json).toContain("Status: open");
+			expect(json).toContain("Customer: cus_1");
+		}
+	});
+
+	test("create and reissue cards show lines, discounts, tax, total and due date", () => {
+		for (const toolName of ["createInvoice", "reissueInvoice"]) {
+			const json = JSON.stringify(
+				approvalCard({
+					id: "approval_1",
+					toolName,
+					toolArgs: {
+						request: { customer_id: "cus_1", invoice_id: "inv_123" },
+					},
+					preview: createInvoicePreview,
+				}),
+			);
+
+			expect(json).toContain("Setup fee");
+			expect(json).toContain("Discounts");
+			expect(json).toContain("-$10.00");
+			expect(json).toContain("Tax");
+			expect(json).toContain("$55.00");
+			expect(json).toContain("Due Oct 29, 2026");
+		}
+	});
+});

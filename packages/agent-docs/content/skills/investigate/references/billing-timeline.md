@@ -8,7 +8,7 @@ Read this when investigating: unexpected or duplicate charges, plan changes (att
 - Payload fields that matter
 - The plan-change timeline recipe
 - Classifying billing events
-- Scenario recipes: duplicate charge, payment changed, cancel didn't happen, state drift
+- Scenario recipes: duplicate charge, unpaid invoice, payment changed, cancel didn't happen, state drift
 
 ## Billing request paths
 
@@ -80,6 +80,15 @@ where customer_id == 'cus_123' and (request_path contains 'billing' or stripe_ev
 
 2. Repeated `billing.attach` calls with near-identical `request_body` close together suggest client-side retries; compare their `response_body` invoice ids to see which created charges.
 3. Multiple `invoice.paid` webhooks for different invoice ids on the same day are separate charges — trace each `stripe_object_id` to what created it.
+
+### "Why is this invoice unpaid?"
+
+1. Find the invoice: `listInvoices` with `stripe_id` when you have the `in_...` ID, otherwise with `customer_id` and `status: ["open"]`. Stripe invoice numbers (e.g. `ABCD1234-0003`) are not stored — ask for the `in_...` ID or the customer.
+2. Call `getStripeInvoice` with its `stripe_id`. A failed payment leaves the invoice `open`, so read the payment state rather than the status:
+   - a `payment_intent.last_payment_error` → a charge was attempted and failed; report its `decline_code` / `message`, `attempt_count`, and `next_payment_attempt` (null means Stripe will not retry).
+   - `collection_method: send_invoice` → nothing is charged automatically; it waits for the customer to pay the hosted invoice.
+   - no payments and `attempted: false` → no charge has been tried yet.
+3. An open invoice cannot be deleted. It can be voided (`voidInvoice`), marked paid out of band (`payInvoice`), or corrected and reissued (`reissueInvoice`); each needs the user's approval.
 
 ### "Why did their payment change this month?"
 
