@@ -5,6 +5,7 @@ import {
 	CusProductStatus,
 	type FullCustomer,
 	type FullCustomerSchedule,
+	ProductItemInterval,
 	type ProductV2,
 } from "@autumn/shared";
 import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
@@ -234,7 +235,7 @@ describe("customerProductToCustomerStatePlan", () => {
 		);
 		expect(priceItem).toBeDefined();
 		expect(priceItem!.price).toBe(5000);
-		expect(priceItem!.interval).toBe("month");
+		expect(priceItem!.interval).toBe(ProductItemInterval.Month);
 	});
 
 	test("reconstructs feature items from custom customer product", () => {

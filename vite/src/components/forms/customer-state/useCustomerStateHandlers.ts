@@ -1,5 +1,5 @@
 import type { ProductV2 } from "@autumn/shared";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
@@ -8,6 +8,8 @@ import {
 	planLocationToFieldPath,
 } from "@/components/forms/customer-state/customerStateSchema";
 import {
+	findPreviousPhasePlan,
+	isSameScope,
 	resolveCopySourceScope,
 	resolveNextPhaseStartsAt,
 } from "@/components/forms/customer-state/customerStateUtils";
@@ -20,28 +22,6 @@ const clonePlans = (plans: CustomerStatePlan[]): CustomerStatePlan[] =>
 		licenseQuantities: { ...plan.licenseQuantities },
 		items: plan.items ? [...plan.items] : null,
 	}));
-
-/** The same plan in the phase before, preferring one at the same scope. Its
- * scope is copied along with the rest of the row. */
-export const findPreviousPhasePlan = ({
-	phases,
-	phaseIndex,
-	plan,
-}: {
-	phases: { plans: CustomerStatePlan[] }[];
-	phaseIndex: number;
-	plan: CustomerStatePlan;
-}) => {
-	const candidates =
-		phases[phaseIndex - 1]?.plans.filter(
-			(previous) => previous.productId === plan.productId,
-		) ?? [];
-	return (
-		candidates.find(
-			(previous) => (previous.entityId ?? null) === (plan.entityId ?? null),
-		) ?? candidates[0]
-	);
-};
 
 export function useCustomerStateHandlers({
 	form,
@@ -79,23 +59,28 @@ export function useCustomerStateHandlers({
 		[form.store, products, nowMs],
 	);
 
+	const lastSelectedEntityId = useRef<string | null>(null);
+	// Pickers present at mount wait for the sheet to settle; user-added ones open at once.
+	const hasAddedEmptyPlan = useRef(false);
+	const newEmptyPlan = useCallback((): CustomerStatePlan => {
+		hasAddedEmptyPlan.current = true;
+		return {
+			...EMPTY_CUSTOMER_STATE_PLAN,
+			entityId: lastSelectedEntityId.current,
+		};
+	}, []);
+	const shouldOpenPickerImmediately = useCallback(
+		() => hasAddedEmptyPlan.current,
+		[],
+	);
+
 	const handleAddPhase = useCallback(() => {
 		const phases = form.store.state.values.phases;
 		form.pushFieldValue("phases", {
 			startsAt: defaultStartsAt({ afterIndex: phases.length - 1 }),
-			plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
+			plans: [newEmptyPlan()],
 		});
-	}, [form, defaultStartsAt]);
-
-	const handleInsertPhase = useCallback(
-		({ afterIndex }: { afterIndex: number }) => {
-			form.insertFieldValue("phases", afterIndex + 1, {
-				startsAt: defaultStartsAt({ afterIndex }),
-				plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
-			});
-		},
-		[form, defaultStartsAt],
-	);
+	}, [form, defaultStartsAt, newEmptyPlan]);
 
 	const handleRemovePhase = useCallback(
 		({ phaseIndex }: { phaseIndex: number }) => {
@@ -108,11 +93,9 @@ export function useCustomerStateHandlers({
 	const handleAddPlan = useCallback(
 		({ phaseIndex }: { phaseIndex: number }) => {
 			if (isPhaseLocked({ phaseIndex })) return;
-			form.pushFieldValue(`phases[${phaseIndex}].plans`, {
-				...EMPTY_CUSTOMER_STATE_PLAN,
-			});
+			form.pushFieldValue(`phases[${phaseIndex}].plans`, newEmptyPlan());
 		},
-		[form, isPhaseLocked],
+		[form, isPhaseLocked, newEmptyPlan],
 	);
 
 	const handleRemovePlan = useCallback(
@@ -120,19 +103,20 @@ export function useCustomerStateHandlers({
 			if (isPhaseLocked({ phaseIndex })) return;
 			const plans = form.store.state.values.phases[phaseIndex]?.plans;
 			if (plans && plans.length === 1) {
-				form.setFieldValue(`phases[${phaseIndex}].plans[${planIndex}]`, {
-					...EMPTY_CUSTOMER_STATE_PLAN,
-				});
+				form.setFieldValue(
+					`phases[${phaseIndex}].plans[${planIndex}]`,
+					newEmptyPlan(),
+				);
 			} else {
 				form.removeFieldValue(`phases[${phaseIndex}].plans`, planIndex);
 			}
 		},
-		[form, isPhaseLocked],
+		[form, isPhaseLocked, newEmptyPlan],
 	);
 
 	const handleAddUnscheduledPlan = useCallback(() => {
-		form.pushFieldValue("unscheduledPlans", { ...EMPTY_CUSTOMER_STATE_PLAN });
-	}, [form]);
+		form.pushFieldValue("unscheduledPlans", newEmptyPlan());
+	}, [form, newEmptyPlan]);
 
 	const handleRemoveUnscheduledPlan = useCallback(
 		({ planIndex }: { planIndex: number }) => {
@@ -170,7 +154,7 @@ export function useCustomerStateHandlers({
 
 			const isSamePlan = (other: CustomerStatePlan) =>
 				other.productId === plan.productId &&
-				(other.entityId ?? null) === (plan.entityId ?? null);
+				isSameScope({ entityId: other.entityId, otherEntityId: plan.entityId });
 
 			form.setFieldValue(
 				"phases",
@@ -219,6 +203,23 @@ export function useCustomerStateHandlers({
 		[form, existingPlans, isPhaseLocked],
 	);
 
+	const handleSelectPlanScope = useCallback(
+		({
+			location,
+			entityId,
+		}: {
+			location: PlanLocation;
+			entityId: string | null;
+		}) => {
+			lastSelectedEntityId.current = entityId;
+			form.setFieldValue(
+				`${planLocationToFieldPath(location)}.entityId`,
+				entityId,
+			);
+		},
+		[form],
+	);
+
 	// Quantities and customizations belong to the old plan, so they reset with it.
 	const handleSelectPlanProduct = useCallback(
 		({
@@ -260,8 +261,8 @@ export function useCustomerStateHandlers({
 	return useMemo(
 		() => ({
 			isPhaseLocked,
+			shouldOpenPickerImmediately,
 			handleAddPhase,
-			handleInsertPhase,
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,
@@ -270,13 +271,14 @@ export function useCustomerStateHandlers({
 			handleCopyFromPreviousPhase,
 			handleMakeUnscheduled,
 			handleCopyExistingPlans,
+			handleSelectPlanScope,
 			handleSelectPlanProduct,
 			handlePlanEditSave,
 		}),
 		[
 			isPhaseLocked,
+			shouldOpenPickerImmediately,
 			handleAddPhase,
-			handleInsertPhase,
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,
@@ -285,6 +287,7 @@ export function useCustomerStateHandlers({
 			handleCopyFromPreviousPhase,
 			handleMakeUnscheduled,
 			handleCopyExistingPlans,
+			handleSelectPlanScope,
 			handleSelectPlanProduct,
 			handlePlanEditSave,
 		],

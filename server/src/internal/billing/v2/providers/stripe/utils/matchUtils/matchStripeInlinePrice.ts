@@ -22,7 +22,7 @@ const autumnCustomerPriceId = ({
 	return typeof id === "string" ? id : undefined;
 };
 
-const autumnPriceId = ({
+export const autumnPriceId = ({
 	metadata,
 }: {
 	metadata?: Stripe.MetadataParam | Stripe.Metadata;
