@@ -1,5 +1,5 @@
 export const ORG_MENU_ITEM_CLASS =
-	"h-7 cursor-pointer gap-2 px-2 text-[13px] font-[450] text-muted-foreground";
+	"h-7 min-h-7 cursor-pointer gap-2 rounded-[4px] px-2 text-[13px] font-[450] text-muted-foreground";
 
 export const ORG_MENU_ICON_CLASS = "size-3.5 shrink-0 text-tertiary-foreground";
 

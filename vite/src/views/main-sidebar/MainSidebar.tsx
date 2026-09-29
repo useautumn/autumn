@@ -1,5 +1,4 @@
 import { Scopes } from "@autumn/shared";
-import { Button } from "@autumn/ui";
 import {
 	ArrowsSplitIcon,
 	ChartBarIcon,
@@ -24,7 +23,10 @@ import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 import { SidebarRail } from "./SidebarRail";
 import { SidebarSearchButton } from "./SidebarSearchButton";
-import { SIDEBAR_ICON_STROKE as ICON_STROKE } from "./sidebarRowClass";
+import {
+	SIDEBAR_ICON_STROKE as ICON_STROKE,
+	SIDEBAR_HEADER_ICON_BUTTON_CLASS,
+} from "./sidebarRowClass";
 
 /** Exported so the command bar can offer the same tabs without a second list. */
 export const DEV_SUB_TABS = [
@@ -79,28 +81,37 @@ export const MainSidebar = ({
 							: "min-w-[52px] max-w-[52px]",
 				)}
 			>
-				<div className="relative flex flex-col gap-3.5">
-					{!isMobileSheet && (
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => {
-								setExpanded((prev) => !prev);
-							}}
-							className={cn(
-								"absolute top-2 right-1.5 z-10 size-4 border-0 border-none p-0 text-[#8A8A8A] shadow-none !bg-transparent hover:text-foreground dark:text-[#6B6B6B] dark:hover:text-[#A1A1A1]",
-								expanded
-									? "opacity-100 transition-opacity duration-100"
-									: "opacity-0 transition-opacity duration-100",
-							)}
-						>
-							<PanelLeft className="size-4" strokeWidth={ICON_STROKE} />
-						</Button>
-					)}
-					<OrgDropdown />
+				<div className="relative flex flex-col gap-3">
+					<div
+						className={cn(
+							"flex items-center gap-1",
+							expanded ? "justify-between" : "justify-center",
+						)}
+					>
+						<OrgDropdown />
+						{expanded && (
+							<div className="flex shrink-0 items-center">
+								<SidebarSearchButton />
+								{!isMobileSheet && (
+									<button
+										type="button"
+										aria-label="Collapse sidebar"
+										title="Collapse sidebar (⌘B)"
+										onClick={() => setExpanded((prev) => !prev)}
+										className={SIDEBAR_HEADER_ICON_BUTTON_CLASS}
+									>
+										<PanelLeft
+											className="size-[15px]"
+											strokeWidth={ICON_STROKE}
+										/>
+									</button>
+								)}
+							</div>
+						)}
+					</div>
 					<EnvDropdown env={env} />
-					<nav className="flex flex-col gap-[18px]">
-						<SidebarSearchButton />
+					<nav className="flex flex-col gap-[18px] pt-2.5">
+						{!expanded && <SidebarSearchButton />}
 						<NavSection title="Catalog">
 							<NavButton
 								value="products"

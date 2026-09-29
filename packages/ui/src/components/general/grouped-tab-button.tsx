@@ -6,10 +6,12 @@ interface GroupedTabButtonProps {
 	onValueChange: (value: string) => void;
 	options: Array<{
 		value: string;
-		label: React.ReactNode;
+		label?: React.ReactNode;
 		icon?: React.ReactNode;
+		ariaLabel?: string;
 	}>;
 	className?: string;
+	buttonClassName?: string;
 	disabled?: boolean;
 }
 
@@ -18,6 +20,7 @@ export const GroupedTabButton = ({
 	onValueChange,
 	options,
 	className,
+	buttonClassName,
 	disabled,
 }: GroupedTabButtonProps) => {
 	return (
@@ -34,6 +37,8 @@ export const GroupedTabButton = ({
 					<button
 						key={option.value}
 						type="button"
+						aria-label={option.ariaLabel}
+						aria-pressed={isActive}
 						disabled={disabled}
 						onClick={() => onValueChange(option.value)}
 						className={cn(
@@ -42,6 +47,7 @@ export const GroupedTabButton = ({
 							"disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 							isActive &&
 								"border-table-surface-border bg-table-surface text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.06)] dark:shadow-[0_1px_2px_rgb(0_0_0/0.3)]",
+							buttonClassName,
 						)}
 					>
 						{option.icon && (
@@ -49,7 +55,9 @@ export const GroupedTabButton = ({
 								{option.icon}
 							</span>
 						)}
-						<span className="text-sm font-medium">{option.label}</span>
+						{option.label != null && (
+							<span className="text-sm font-medium">{option.label}</span>
+						)}
 					</button>
 				);
 			})}

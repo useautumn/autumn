@@ -30,6 +30,9 @@ export const sidebarIconClass = ({
 
 export const SIDEBAR_ICON_STROKE = 1.5;
 
+export const SIDEBAR_HEADER_ICON_BUTTON_CLASS =
+	"flex size-[26px] shrink-0 cursor-pointer items-center justify-center rounded-md text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:text-[#7A7A7A] dark:hover:text-[#EDEDED]";
+
 /** Label sits after the icon when expanded and takes no space when the rail is collapsed. */
 export const sidebarRowContentClass = ({
 	isCollapsed = false,
