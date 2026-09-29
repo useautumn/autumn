@@ -121,7 +121,7 @@ export function decide<Reply>({
 	scheduleCommit({ scope });
 	return decidedWith<Reply>({
 		kind: "write",
-		committed: pending.committed,
+		committed: pending.settlement.join({ kind: "new" }),
 		stored: pending.settlement.waitForStore(),
 	});
 }

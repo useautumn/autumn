@@ -1,0 +1,28 @@
+{
+	"name": "@autumn/byoc",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/byoc.ts",
+			"import": "./src/byoc.ts",
+			"default": "./src/byoc.ts"
+		}
+	},
+	"scripts": {
+		"test": "bun test --config ./bunfig.toml tests/unit",
+		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@autumn/shared": "workspace:*",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.2",
+		"@types/node": "^24.9.1",
+		"typescript": "~5.8.3"
+	}
+}

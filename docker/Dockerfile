@@ -66,6 +66,8 @@ COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
 COPY packages/render/package.json packages/render/
 COPY packages/svix/package.json packages/svix/
+COPY packages/alien/package.json packages/alien/
+COPY packages/byoc/package.json packages/byoc/
 COPY packages/tinybird/package.json packages/tinybird/
 COPY packages/ducklake/package.json packages/ducklake/
 COPY packages/axiom/package.json packages/axiom/

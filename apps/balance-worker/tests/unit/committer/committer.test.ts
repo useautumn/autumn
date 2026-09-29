@@ -5,6 +5,7 @@ import {
 	type SubjectRowChange,
 	subjectRowIdOf,
 } from "@autumn/postgres";
+import { createEvictRecord } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { SubjectStaleError } from "../../../src/processor/subject/subjectErrors.js";
@@ -144,6 +145,30 @@ describe("committer", () => {
 				change.op === "update" ? change.guard : null,
 			),
 		).toEqual([{}, {}]);
+		await committer.drain();
+	});
+
+	test("an evict lands its bookmark alone: Postgres already holds what the other writer changed", async () => {
+		const fake = createGatedDb();
+		fake.openGate();
+		const committer = createCommitter({
+			ctx: { db: fake.db },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+
+		await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 10n,
+			records: [
+				{
+					position: { topic, partition: 0, offset: 10n },
+					mutation: createEvictRecord(),
+				},
+			],
+		});
+
+		expect(fake.transactions).toEqual([{ updates: [], partitions: [0] }]);
 		await committer.drain();
 	});
 

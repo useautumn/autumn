@@ -1,7 +1,9 @@
+import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
+import type { ByocCacheWriter } from "@autumn/byoc";
 import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
-import type { EventsDb } from "@autumn/postgres";
+import type { EventsDb, PostgresDb } from "@autumn/postgres";
 import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
@@ -20,7 +22,10 @@ export function createHeraldConsumers({
 		eventsTinybird: EventsTinybird | null;
 		svix: SvixClient | null;
 		catalogCache: Pick<CatalogCache, "read" | "load">;
-		miscCache: Pick<MiscCache, "getActive">;
+		miscCache: Pick<MiscCache, "getActive" | "resolve" | "forEachTarget">;
+		db: PostgresDb;
+		balanceWorkerClient: Pick<BalanceWorkerClient, "readSubjectState">;
+		cacheWriter: ByocCacheWriter | null;
 		sqsJobs: Pick<SqsJobs, "autoTopup">;
 		logger: AutumnLogger;
 	};

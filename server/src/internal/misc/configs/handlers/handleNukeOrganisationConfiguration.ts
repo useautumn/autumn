@@ -1,7 +1,8 @@
+import { clearOrgWithFeaturesCache } from "@autumn/cache";
 import { Scopes } from "@autumn/shared";
 import { AppEnv } from "@shared/index";
-import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { FeatureService } from "@/internal/features/FeatureService";
@@ -45,6 +46,7 @@ export const handleNukeOrganisationConfiguration = createRoute({
 		// Workers read features through the org cache; without this they keep
 		// seeing the deleted features for up to the TTL.
 		await clearOrgWithFeaturesCache({
+			ctx: getMiscCacheContext(),
 			orgId: org.id,
 			env: AppEnv.Sandbox,
 		});
