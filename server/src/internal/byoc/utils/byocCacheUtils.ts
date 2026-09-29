@@ -16,6 +16,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { getAlienClient } from "@/external/alien/getAlienClient.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 /** alien's customer key for one env's cache: one deployment group each, so lookups never match two. */
 export const cacheExternalId = ({
@@ -34,6 +35,13 @@ export const cacheGroupLabel = ({
 	org: Organization;
 	env: AppEnv;
 }) => `autumn-byoc-${org.slug}-${env}`;
+
+/** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
+export const CACHE_LOCK_TTL_MS = 30_000;
+
+/** One cache change per env at a time. */
+export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
+	`lock:byoc-cache:${ctx.org.id}:${ctx.env}`;
 
 export const alienDeploymentToCacheStatus = ({
 	deployment,

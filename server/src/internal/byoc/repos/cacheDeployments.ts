@@ -71,9 +71,16 @@ export const updateCacheDeployment = ({
 		condition: sql`${envCache({ ctx })}->>'deployment_group_id' = ${cacheDeployment.deployment_group_id}`,
 	});
 
-export const deleteCacheDeployment = ({ ctx }: { ctx: AutumnContext }) =>
+/** Only forgets the cache this delete began with: a replacement reuses its group, so `created_at` tells them apart. */
+export const deleteCacheDeployment = ({
+	ctx,
+	cacheDeployment,
+}: {
+	ctx: AutumnContext;
+	cacheDeployment: ByocCacheDeployment;
+}) =>
 	writeByocConfig({
 		ctx,
 		value: sql`${envByocConfig({ ctx })} - 'cache'`,
-		condition: sql`${envCache({ ctx })} IS NOT NULL`,
+		condition: sql`(${envCache({ ctx })}->>'created_at')::bigint = ${cacheDeployment.created_at}`,
 	});

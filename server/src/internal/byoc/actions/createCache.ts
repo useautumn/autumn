@@ -4,13 +4,16 @@ import {
 	ByocCacheStatus,
 	type CreateByocCacheResponse,
 } from "@autumn/shared";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { insertCacheDeployment } from "../repos/cacheDeployments.js";
 import {
+	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToApiCache,
 	cacheExternalId,
 	cacheGroupLabel,
+	cacheLockKey,
 	getAlienClientOrThrow,
 } from "../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
@@ -39,7 +42,21 @@ const claimCacheDeployment = async ({
 };
 
 /** Starts the env's cache setup, or hands back a fresh setup link while it still waits on the org. */
-export const createCache = async ({
+export const createCache = ({
+	ctx,
+}: {
+	ctx: AutumnContext;
+}): Promise<CreateByocCacheResponse> =>
+	// Each setup revokes the env's earlier links, so a concurrent one would kill this caller's link.
+	withLock({
+		lockKey: cacheLockKey({ ctx }),
+		ttlMs: CACHE_LOCK_TTL_MS,
+		errorMessage:
+			"Cache setup is already in progress, try again in a few seconds",
+		fn: () => startCacheSetup({ ctx }),
+	});
+
+const startCacheSetup = async ({
 	ctx,
 }: {
 	ctx: AutumnContext;
