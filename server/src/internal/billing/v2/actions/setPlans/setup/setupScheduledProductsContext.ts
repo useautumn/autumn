@@ -18,12 +18,14 @@ export const setupScheduledProductsContext = async ({
 	fullCustomer,
 	currentEpochMs,
 	immediatePhaseProductContexts,
+	endsAt,
 }: {
 	ctx: AutumnContext;
 	phases: ResolvedCreateSchedulePhaseV0[];
 	fullCustomer: FullCustomer;
 	currentEpochMs: number;
 	immediatePhaseProductContexts: MultiAttachProductContext[];
+	endsAt?: number;
 }): Promise<ScheduledPhaseContext[]> =>
 	Promise.all(
 		phases.map(async (phase, index) => {
@@ -82,7 +84,7 @@ export const setupScheduledProductsContext = async ({
 
 			return {
 				startsAt: phase.starts_at,
-				endsAt: nextPhaseStartsAt,
+				endsAt: nextPhaseStartsAt ?? endsAt,
 				billingCycleAnchor: phase.billing_cycle_anchor,
 				productContexts,
 			};

@@ -47,4 +47,6 @@ export interface CreateScheduleBillingContext
 	immediatePhase: ResolvedCreateSchedulePhaseV0;
 	futurePhases: ResolvedCreateSchedulePhaseV0[];
 	scheduledPhaseContexts: ScheduledPhaseContext[];
+	/** When every plan ends, unscheduled plans included; Stripe cancels the subscription then. */
+	endsAt?: number;
 }
