@@ -23,6 +23,10 @@ export type SubscriptionWarningContext = Pick<
 
 type Warning = Omit<SetPlansPreviewWarning, "severity">;
 
+/** Cancelling an incomplete subscription makes Stripe void its first invoice. */
+const stripeVoidsOpenInvoices = (subscription: Stripe.Subscription) =>
+	subscription.status === "incomplete";
+
 const replacedSubscriptionWarning = ({
 	replacedStripeSubscription,
 	stripeBillingPlan,
@@ -40,11 +44,9 @@ const replacedSubscriptionWarning = ({
 		const whenCancelled = stripeBillingPlan.checkoutSessionAction
 			? " once checkout completes"
 			: "";
-		// Cancelling an incomplete subscription makes Stripe void its first invoice.
-		const invoiceOutcome =
-			replacedStripeSubscription.status === "incomplete"
-				? "Stripe voids its first invoice."
-				: "Its unpaid invoices stay open.";
+		const invoiceOutcome = stripeVoidsOpenInvoices(replacedStripeSubscription)
+			? "Stripe voids its first invoice."
+			: "Its unpaid invoices stay open.";
 		return {
 			type: warning,
 			message: `The ${replacedStripeSubscription.status} subscription ${replacedStripeSubscription.id} will be cancelled${whenCancelled} and a new one created. ${invoiceOutcome}`,
@@ -158,7 +160,9 @@ export const subscriptionStateToWarnings = ({
 					stripeBillingPlan: stripeBillingPlan ?? {},
 					billingContext,
 				}),
-				...openInvoiceWarnings(replacedOpenInvoices),
+				...(stripeVoidsOpenInvoices(replacedStripeSubscription)
+					? []
+					: openInvoiceWarnings(replacedOpenInvoices)),
 				...droppedDiscountWarnings({
 					replacedStripeSubscription,
 					stripeDiscounts: billingContext.stripeDiscounts,
