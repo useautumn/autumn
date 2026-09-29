@@ -37,7 +37,7 @@ export function RedisV2CacheDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-xl bg-card">
+			<DialogContent className="max-w-xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">V2 Redis Instance</DialogTitle>
 					<DialogDescription className="text-pretty">

@@ -40,11 +40,7 @@ export const CustomerListRowToolbar = ({
 						<ToolbarButton />
 					</DropdownMenuTrigger>
 				</div>
-				<DropdownMenuContent
-					className="text-muted-foreground"
-					align="end"
-					onClick={(e) => e.stopPropagation()}
-				>
+				<DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
 					<DropdownMenuItem
 						className="flex items-center cursor-pointer"
 						onClick={(e) => {

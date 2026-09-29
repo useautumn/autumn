@@ -127,7 +127,7 @@ export const AddCouponDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={handleDialogOpenChange}>
-			<DialogContent className="w-[400px] bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Add Reward</DialogTitle>
 					<DialogDescription>

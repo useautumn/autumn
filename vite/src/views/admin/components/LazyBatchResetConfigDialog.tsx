@@ -33,7 +33,7 @@ export const LazyBatchResetConfigDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-2xl bg-card">
+			<DialogContent className="max-w-2xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">Lazy Batch Resets</DialogTitle>
 					<DialogDescription className="text-pretty">

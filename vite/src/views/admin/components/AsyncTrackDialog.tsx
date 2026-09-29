@@ -37,7 +37,7 @@ export function AsyncTrackDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-5xl bg-card">
+			<DialogContent className="max-w-5xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">Async Track</DialogTitle>
 					<DialogDescription className="text-pretty">

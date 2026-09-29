@@ -142,7 +142,7 @@ export const CreateOAuthClientDialog = ({
 							</DialogDescription>
 						</DialogHeader>
 
-						<div className="flex flex-col gap-4 py-2">
+						<div className="flex flex-col gap-4">
 							{/* Client Name */}
 							<div className="flex flex-col gap-1.5">
 								<span className="text-sm font-medium text-foreground">
@@ -279,7 +279,7 @@ export const CreateOAuthClientDialog = ({
 							</DialogDescription>
 						</DialogHeader>
 
-						<div className="flex flex-col gap-4 py-2">
+						<div className="flex flex-col gap-4">
 							{/* Client ID */}
 							<div className="flex flex-col gap-1.5">
 								<span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
