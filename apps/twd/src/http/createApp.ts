@@ -3,7 +3,7 @@ import { renderTwdError, TwdError } from "./apiError.ts";
 import { authMiddleware } from "./middleware/authMiddleware.ts";
 import { corsMiddleware } from "./middleware/corsMiddleware.ts";
 import { accountsRoutes } from "./routes/accounts.ts";
-import { authRoutes } from "./routes/auth.ts";
+import { accountRoutes, authRoutes } from "./routes/auth.ts";
 import { capacityRoutes } from "./routes/capacity.ts";
 import { catalogRoutes } from "./routes/catalog.ts";
 import { costsRoutes } from "./routes/costs.ts";
@@ -23,6 +23,7 @@ const createApi = () =>
 	new Hono<TwdHono>()
 		.get("/health", (c) => c.json({ ok: true }))
 		.route("/", authRoutes)
+		.route("/", accountRoutes)
 		.route("/", webhooksRoutes)
 		.route("/", ingressRoutes)
 		.route("/", catalogRoutes)

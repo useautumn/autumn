@@ -309,6 +309,9 @@ export const AppShell = () => {
 		return (
 			<Navigate to="/sign-in" replace state={{ from: location.pathname }} />
 		);
+	// Render nothing until /me answers, so a signed-out visitor never sees the shell flash.
+	if (me.isPending)
+		return <div className="h-dvh w-screen bg-outer-background" />;
 
 	return (
 		<div className="flex h-dvh w-screen bg-outer-background">

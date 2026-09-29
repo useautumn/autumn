@@ -111,7 +111,10 @@ export const authRoutes = new Hono<TwdHono>()
 		if (sessionId) await deleteSession({ ctx, sessionId });
 		deleteCookie(c, SESSION_COOKIE, { path: "/" });
 		return c.json({ ok: true });
-	})
+	});
+
+/** Signed-in account routes; API-only (never mounted at the root). */
+export const accountRoutes = new Hono<TwdHono>()
 	.get("/me", async (c) => c.json(await getMe({ ctx: c.get("ctx") })))
 	.get("/api-keys", async (c) =>
 		c.json(await listApiKeys({ ctx: c.get("ctx") })),

@@ -5,9 +5,8 @@ import { TwdError } from "../apiError.ts";
 import type { TwdHono } from "../types/twdHono.ts";
 
 const PUBLIC_PREFIXES = ["/auth/", "/webhooks/", "/ingress/"];
-/** Root paths outside /api that still need an actor; the rest of the root is the SPA. */
-const AUTHED_ROOT_PATHS = new Set(["/ws", "/mcp", "/me"]);
-const AUTHED_ROOT_PREFIXES = ["/api-keys"];
+/** Root paths outside /api that still need an actor; the rest of the root is OAuth, webhooks, ingress and the SPA. */
+const AUTHED_ROOT_PATHS = new Set(["/ws", "/mcp"]);
 
 const stripApiPrefix = ({ path }: { path: string }) =>
 	path === "/api"
@@ -18,13 +17,7 @@ const stripApiPrefix = ({ path }: { path: string }) =>
 
 export const isPublicPath = ({ path }: { path: string }) => {
 	const apiPath = stripApiPrefix({ path });
-	if (apiPath === null)
-		return !(
-			AUTHED_ROOT_PATHS.has(path) ||
-			AUTHED_ROOT_PREFIXES.some(
-				(prefix) => path === prefix || path.startsWith(`${prefix}/`),
-			)
-		);
+	if (apiPath === null) return !AUTHED_ROOT_PATHS.has(path);
 	return (
 		apiPath === "/health" ||
 		PUBLIC_PREFIXES.some((prefix) => apiPath.startsWith(prefix))
