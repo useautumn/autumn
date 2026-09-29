@@ -1,9 +1,12 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { ChatInstallation } from "@autumn/shared";
+import type { ChatInstallation, ChatTrustedBot } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { decrypt } from "../../../lib/crypto.js";
 import { resolveInstallationAuthMode } from "../users.js";
-import { resolveSlackUserAuth } from "./resolveSlackUserAuth.js";
+import {
+	resolveSlackUserAuth,
+	resolveTrustedBotAuth,
+} from "./resolveSlackUserAuth.js";
 import type { SlackUserAuthResult } from "./slackUserAuthTypes.js";
 
 type SlackCallerAuthResult =
@@ -40,11 +43,14 @@ export const resolveSlackCallerAuth = async ({
 	logger,
 	orgId,
 	slackUserId,
+	trustedBot,
 }: {
 	installation: ChatInstallation;
 	logger: AutumnLogger;
 	orgId: string;
 	slackUserId: string;
+	/** Set when the caller is a trusted bot; it runs as its configured member. */
+	trustedBot?: ChatTrustedBot;
 }): Promise<SlackCallerAuthResult> => {
 	const usePerUser =
 		resolveInstallationAuthMode({ installation }) === ChatAuthMode.PerUser;
@@ -53,6 +59,16 @@ export const resolveSlackCallerAuth = async ({
 	}
 
 	try {
+		if (trustedBot) {
+			return toCallerAuthResult(
+				await resolveTrustedBotAuth({
+					installation,
+					logger,
+					orgId,
+					trustedBot,
+				}),
+			);
+		}
 		return toCallerAuthResult(
 			await resolveSlackUserAuth({
 				botToken: decrypt(installation.bot_access_token),

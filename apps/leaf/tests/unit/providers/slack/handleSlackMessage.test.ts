@@ -12,6 +12,15 @@ let skipReply = false;
 const shouldSkipReply = mock(async (_input: unknown) => skipReply);
 let mentionsAgentResult = false;
 const mentionsAgent = mock(async (_input: unknown) => mentionsAgentResult);
+const billBot = {
+	slack_id: "U_BILL",
+	name: "Bill",
+	run_as_user_id: "user_1",
+	added_by_user_id: "user_1",
+	added_at: 1,
+};
+let trustedBotResult: typeof billBot | undefined;
+const findTrustedBot = mock(async (_input: unknown) => trustedBotResult);
 
 let lists = new Map<string, unknown[]>();
 const state = {
@@ -23,6 +32,7 @@ const state = {
 
 const dependencies = {
 	dispatch: dispatchSlackAgentMessage,
+	findTrustedBot,
 	getRecentMessages,
 	getState: () => state,
 	mentionsAgent,
@@ -98,6 +108,8 @@ beforeEach(() => {
 	disposition = "close";
 	mentionsAgentResult = false;
 	mentionsAgent.mockClear();
+	trustedBotResult = undefined;
+	findTrustedBot.mockClear();
 	skipReply = false;
 	shouldSkipReply.mockClear();
 	lists = new Map();
@@ -213,6 +225,17 @@ describe("handleSubscribedSlackMessage", () => {
 		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
 		expect(getRecentMessages).not.toHaveBeenCalled();
 	});
+
+	test("a trusted bot's reply still follows mentions-only mode", async () => {
+		trustedBotResult = billBot;
+		skipReply = true;
+		const { thread } = createThread();
+
+		await handleSubscribedSlackMessage(thread, createMessage({ isBot: true }));
+
+		expect(shouldSkipReply).toHaveBeenCalledTimes(1);
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+	});
 });
 
 describe("handleSlackMessage", () => {
@@ -282,6 +305,28 @@ describe("handleSlackMessage", () => {
 
 		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
 		expect(unsubscribe).not.toHaveBeenCalled();
+	});
+
+	test("a trusted bot's mention starts a thread that runs as that bot", async () => {
+		trustedBotResult = billBot;
+		const { thread } = createThread();
+
+		await handleSlackThreadStart(thread, createMessage({ isBot: true }));
+
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ showRunPlan: true, trustedBot: billBot }),
+		);
+	});
+
+	test("a person's message is never checked against trusted bots", async () => {
+		const { thread } = createThread();
+
+		await handleSlackThreadStart(thread, createMessage());
+
+		expect(findTrustedBot).not.toHaveBeenCalled();
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ trustedBot: undefined }),
+		);
 	});
 });
 

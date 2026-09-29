@@ -70,6 +70,7 @@ export const bot = new Chat({
 				return normalizeSlackEventsBody({
 					body,
 					botUserId: installation?.bot_user_id,
+					trustedBots: installation?.trusted_bots,
 				});
 			},
 			userName: env.CHAT_NAME,

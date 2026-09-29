@@ -74,6 +74,36 @@ describe("Slack event normalization", () => {
 		expect(normalizeSlackEventsBody({ body, botUserId: "U123" })).toBe(body);
 	});
 
+	test("normalizes a legacy bot post only when the bot is trusted", () => {
+		const body = JSON.stringify({
+			event: {
+				bot_id: "B_BILL",
+				subtype: "bot_message",
+				text: "<@U123> update billing",
+				type: "message",
+			},
+			type: "event_callback",
+		});
+		const bill = {
+			slack_id: "B_BILL",
+			name: "Bill",
+			run_as_user_id: "user_1",
+			added_by_user_id: "user_1",
+			added_at: 1,
+		};
+
+		expect(normalizeSlackEventsBody({ body, botUserId: "U123" })).toBe(body);
+		expect(
+			JSON.parse(
+				normalizeSlackEventsBody({
+					body,
+					botUserId: "U123",
+					trustedBots: [bill],
+				}),
+			).event.type,
+		).toBe("app_mention");
+	});
+
 	test("does not normalize normal channel messages", () => {
 		const body = JSON.stringify({
 			event: { text: "hello", type: "message" },

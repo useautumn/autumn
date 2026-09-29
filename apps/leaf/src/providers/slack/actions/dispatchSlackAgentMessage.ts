@@ -1,3 +1,4 @@
+import type { ChatTrustedBot } from "@autumn/shared";
 import type { Attachment } from "chat";
 import type {
 	AgentContextMessage,
@@ -57,7 +58,23 @@ type DispatchSlackAgentMessageInput = {
 	target: ReplyTarget;
 	text: string;
 	threadId: string;
+	/** Set when a trusted bot wrote the message; its turn runs as the member
+	 * the bot is configured to act as. */
+	trustedBot?: ChatTrustedBot;
 };
+
+/** A trusted bot is named as one, so the model and the thread know a bot
+ * made the request. */
+const speakerAuthor = ({
+	author,
+	trustedBot,
+}: {
+	author?: { email?: string; name: string };
+	trustedBot?: ChatTrustedBot;
+}) =>
+	author && trustedBot
+		? { ...author, name: `${trustedBot.name} (trusted bot)` }
+		: author;
 
 /** A subscribed thread delivers every reply; the model is told who spoke and
  * whom they addressed, and declines replies meant for someone else. */
@@ -120,6 +137,7 @@ const runAndReply = async ({
 	target,
 	text,
 	threadId,
+	trustedBot,
 }: DispatchSlackAgentMessageInput & {
 	runKey: string;
 }): Promise<"close" | "keep"> => {
@@ -164,7 +182,11 @@ const runAndReply = async ({
 			});
 			return "close";
 		}
-		const speaker = slackSpeakerFor({ author, installation, raw });
+		const speaker = slackSpeakerFor({
+			author: speakerAuthor({ author, trustedBot }),
+			installation,
+			raw,
+		});
 
 		const session = createLeafSessionContext({
 			channelId,
@@ -254,6 +276,7 @@ const runAndReply = async ({
 			speaker,
 			text,
 			threadId,
+			trustedBot,
 		});
 
 		// A blocked turn never reached the agent; anything else put the missed
@@ -352,7 +375,7 @@ export const dispatchSlackAgentMessage = async (
 			runKey,
 			runNewMessage: () => runAndReply({ ...input, runKey }),
 			speaker: await injectionSpeakerFor({
-				author: input.author,
+				author: speakerAuthor(input),
 				raw: input.raw,
 				runKey,
 				workspaceId: getSlackWorkspaceId(input.raw),
