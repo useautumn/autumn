@@ -6,7 +6,10 @@ import {
 	type KafkaBalanceWorkerClientConfig,
 } from "@autumn/balance-worker-client";
 import { getAutumnEnv } from "@autumn/env";
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import {
+	getBalanceWorkerClientEnv,
+	getBalanceWorkerTransportEnv,
+} from "@autumn/env/balanceWorkerClient";
 import {
 	BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
@@ -47,7 +50,7 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 
 /** Outside the VPC (Trigger, prod scripts) every call goes through the API's own client. */
 function createProxyClient(): BalanceWorkerClient {
-	const secret = getBalanceWorkerClientEnv().BALANCE_WORKER_PROXY_SECRET;
+	const secret = getBalanceWorkerTransportEnv().BALANCE_WORKER_PROXY_SECRET;
 	if (!secret)
 		throw new Error(
 			"BALANCE_WORKER_PROXY_SECRET is required to reach the balance worker from outside the VPC",
@@ -63,7 +66,7 @@ function createProxyClient(): BalanceWorkerClient {
 }
 
 function createClientForTransport(): BalanceWorkerClient {
-	if (getBalanceWorkerClientEnv().BALANCE_WORKER_TRANSPORT === "proxy")
+	if (getBalanceWorkerTransportEnv().BALANCE_WORKER_TRANSPORT === "proxy")
 		return createProxyClient();
 	return createKafkaBalanceWorkerClient({
 		ctx: { logger },

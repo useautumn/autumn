@@ -1,5 +1,5 @@
 import { BALANCE_WORKER_PROXY_SIGNATURE_HEADER } from "@autumn/balance-worker-client";
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import { getBalanceWorkerTransportEnv } from "@autumn/env/balanceWorkerClient";
 import { type Context, Hono } from "hono";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -7,7 +7,7 @@ import { receiveProxyRequest } from "./receiveProxyRequest/receiveProxyRequest.j
 
 /** Null unless this API reaches the workers itself; a proxied API would forward the call back to itself. */
 function readServingSecret(): string | null {
-	const env = getBalanceWorkerClientEnv();
+	const env = getBalanceWorkerTransportEnv();
 	if (env.BALANCE_WORKER_TRANSPORT !== "direct") return null;
 	return env.BALANCE_WORKER_PROXY_SECRET;
 }
