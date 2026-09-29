@@ -5,6 +5,7 @@ import {
 	ErrCode,
 	type FullCustomer,
 	type InsertDbInvoiceLineItem,
+	type InvoiceIssueMethod,
 	type InvoiceTemplate,
 	MetadataType,
 	ProcessorType,
@@ -36,6 +37,7 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
+import { issueStripeInvoice } from "../invoiceUtils/issueStripeInvoice";
 import { invoiceLineItemRepo } from "../lineItems/repos";
 import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOverrides";
 import { buildReissueLines } from "./reissue/buildReissueLines";
@@ -80,6 +82,8 @@ const stripeInvoiceToStripeCustomerId = ({
 	return stripeCusId;
 };
 
+const REISSUABLE_STATUSES = new Set(["draft", "open", "paid"]);
+
 const invalidRequest = (message: string) =>
 	new RecaseError({ message, code: ErrCode.InvalidRequest, statusCode: 400 });
 
@@ -113,9 +117,9 @@ const loadReissuableStripeInvoice = async ({
 			`Invoice ${row.invoice.id} is void and cannot be reissued`,
 		);
 	}
-	if (stripeInvoice.status !== "open" && stripeInvoice.status !== "paid") {
+	if (!REISSUABLE_STATUSES.has(stripeInvoice.status ?? "")) {
 		throw invalidRequest(
-			`Invoice ${row.invoice.id} is ${stripeInvoice.status}; only open and paid invoices can be reissued`,
+			`Invoice ${row.invoice.id} is ${stripeInvoice.status}; only draft, open and paid invoices can be reissued`,
 		);
 	}
 	return { stripeCli, stripeInvoice };
@@ -320,6 +324,7 @@ const issueReplacement = async ({
 	lines,
 	creditOriginal,
 	customerAdjusted,
+	issueMethod,
 }: {
 	ctx: AutumnContext;
 	stripeCli: Stripe;
@@ -335,7 +340,8 @@ const issueReplacement = async ({
 	creditOriginal: boolean;
 	/** A corrected address or tax id legitimately moves the tax. */
 	customerAdjusted: boolean;
-}): Promise<{ finalized: Stripe.Invoice; creditNoteId: string | null }> => {
+	issueMethod?: InvoiceIssueMethod;
+}): Promise<{ issued: Stripe.Invoice; creditNoteId: string | null }> => {
 	const draft = await createReplacementDraft({
 		ctx,
 		stripeCli,
@@ -365,40 +371,44 @@ const issueReplacement = async ({
 	}
 
 	if (creditOriginal) {
-		return creditAndFinalize({ ctx, stripeCli, stripeInvoice, draft });
+		return creditAndIssue({
+			ctx,
+			stripeCli,
+			stripeInvoice,
+			draft,
+			issueMethod,
+		});
+	}
+
+	// Stripe can only void a finalized invoice, and won't delete a subscription draft.
+	if (stripeInvoice.status === "draft") {
+		await finalizeDraftOriginalSilently({
+			ctx,
+			stripeCli,
+			stripeInvoiceId: stripeInvoice.id,
+			replacementDraftId: draft.id,
+		});
 	}
 
 	// Automatic collection is what makes Stripe treat the replacement as the
 	// subscription's receivable (overdue → past_due, paid → active).
-	const finalized = await finalizeStripeInvoice({
-		stripeCli,
-		invoiceId: draft.id,
-		autoAdvance: true,
-	});
+	const issued = await issueStripeInvoice({ stripeCli, draft, issueMethod });
 
 	try {
 		await repointDeferredReferences({
 			ctx,
 			fromStripeInvoiceId: stripeInvoice.id,
-			toStripeInvoiceId: finalized.id,
+			toStripeInvoiceId: issued.id,
 		});
 		await voidInvoice({ ctx, invoiceId });
 	} catch (error) {
 		// The original keeps standing; retire the replacement instead.
 		await repointDeferredReferences({
 			ctx,
-			fromStripeInvoiceId: finalized.id,
+			fromStripeInvoiceId: issued.id,
 			toStripeInvoiceId: stripeInvoice.id,
 		}).catch(() => undefined);
-		try {
-			await stripeCli.invoices.voidInvoice(finalized.id);
-		} catch {
-			throw new RecaseError({
-				message: `Invoice ${invoiceId} could not be retired while being reissued; its replacement ${finalized.id} is still open and must be voided manually`,
-				code: ErrCode.InternalError,
-				statusCode: 409,
-			});
-		}
+		await retireReplacement({ ctx, stripeCli, invoiceId, issued });
 		// Stripe may have collected the original between our read and the void.
 		if (await isNowPaid({ stripeCli, stripeInvoiceId: stripeInvoice.id })) {
 			throw new RecaseError({
@@ -412,9 +422,65 @@ const issueReplacement = async ({
 
 	// The original is retired, so a card replacement can be charged now.
 	return {
-		finalized: await collectRemainderNow({ ctx, stripeCli, finalized }),
+		issued: await collectRemainderNow({ ctx, stripeCli, finalized: issued }),
 		creditNoteId: null,
 	};
+};
+
+/**
+ * Opens a draft original with nothing automatic so it can be voided. The flag
+ * keeps Autumn's invoice.finalized webhook quiet; a failure takes the replacement with it.
+ */
+const finalizeDraftOriginalSilently = async ({
+	ctx,
+	stripeCli,
+	stripeInvoiceId,
+	replacementDraftId,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	stripeInvoiceId: string;
+	replacementDraftId: string;
+}) => {
+	try {
+		await stripeCli.invoices.update(stripeInvoiceId, {
+			metadata: { autumn_skip_finalized_webhook: "true" },
+		});
+		await finalizeStripeInvoice({
+			stripeCli,
+			invoiceId: stripeInvoiceId,
+			autoAdvance: false,
+		});
+	} catch (error) {
+		await deleteDraft({ ctx, stripeCli, draftId: replacementDraftId });
+		throw error;
+	}
+};
+
+const retireReplacement = async ({
+	ctx,
+	stripeCli,
+	invoiceId,
+	issued,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	invoiceId: string;
+	issued: Stripe.Invoice;
+}) => {
+	if (issued.status === "draft") {
+		await deleteDraft({ ctx, stripeCli, draftId: issued.id });
+		return;
+	}
+	try {
+		await stripeCli.invoices.voidInvoice(issued.id);
+	} catch {
+		throw new RecaseError({
+			message: `Invoice ${invoiceId} could not be retired while being reissued; its replacement ${issued.id} is still open and must be voided manually`,
+			code: ErrCode.InternalError,
+			statusCode: 409,
+		});
+	}
 };
 
 const isNowPaid = async ({
@@ -431,25 +497,27 @@ const isNowPaid = async ({
 };
 
 /**
- * Returns a paid invoice's money to the customer's Stripe balance and finalizes
- * the replacement, which that balance then settles. No refund is issued: the
+ * Returns a paid invoice's money to the customer's Stripe balance and issues
+ * the replacement, which that balance settles once finalized. No refund is issued: the
  * cash never moves.
  *
  * The credit must exist before finalization or Stripe bills the replacement in
  * full, so a finalization failure has to hand the credit back — a credit note
  * on a paid invoice cannot be voided, which leaves a reversing balance entry.
  */
-const creditAndFinalize = async ({
+const creditAndIssue = async ({
 	ctx,
 	stripeCli,
 	stripeInvoice,
 	draft,
+	issueMethod,
 }: {
 	ctx: AutumnContext;
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	draft: Stripe.Invoice;
-}): Promise<{ finalized: Stripe.Invoice; creditNoteId: string | null }> => {
+	issueMethod?: InvoiceIssueMethod;
+}): Promise<{ issued: Stripe.Invoice; creditNoteId: string | null }> => {
 	const amount = stripeInvoice.amount_paid;
 	const creditNote = await stripeCli.creditNotes.create({
 		invoice: stripeInvoice.id,
@@ -459,13 +527,9 @@ const creditAndFinalize = async ({
 		memo: "Reissued as a corrected invoice",
 	});
 
-	let finalized: Stripe.Invoice;
+	let issued: Stripe.Invoice;
 	try {
-		finalized = await finalizeStripeInvoice({
-			stripeCli,
-			invoiceId: draft.id,
-			autoAdvance: true,
-		});
+		issued = await issueStripeInvoice({ stripeCli, draft, issueMethod });
 	} catch (error) {
 		try {
 			await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
@@ -476,7 +540,7 @@ const creditAndFinalize = async ({
 	}
 
 	return {
-		finalized: await collectRemainderNow({ ctx, stripeCli, finalized }),
+		issued: await collectRemainderNow({ ctx, stripeCli, finalized: issued }),
 		creditNoteId: creditNote.id,
 	};
 };
@@ -497,7 +561,8 @@ const collectRemainderNow = async ({
 }): Promise<Stripe.Invoice> => {
 	if (
 		finalized.collection_method !== "charge_automatically" ||
-		finalized.status !== "open"
+		finalized.status !== "open" ||
+		!finalized.auto_advance
 	) {
 		return finalized;
 	}
@@ -589,6 +654,7 @@ const inheritedMetadata = ({
 }) => {
 	const metadata = { ...(stripeInvoice.metadata ?? {}) };
 	if (dropDeferredPointer) delete metadata.autumn_metadata_id;
+	delete metadata.autumn_skip_finalized_webhook;
 	return metadata;
 };
 
@@ -747,13 +813,13 @@ const storeReplacementInAutumn = async ({
 };
 
 /**
- * Voids an open send-invoice invoice and replaces it with a copy carrying the
- * template's footer/memo. The replacement stays linked to the same subscription
+ * Retires the original (void, or a credit note when paid) and replaces it with a
+ * copy issued per issue_method. The replacement stays linked to the same subscription
  * and inherits the original's deferred-plan pointers, so paying it has the same
  * effect the original payment would have had.
  *
- * The replacement is finalized before the original is voided, so a failure never
- * leaves the customer without a payable invoice.
+ * A sent or finalized replacement is issued before the original is voided, so a
+ * failure never leaves the customer without a payable invoice.
  */
 export const reissueInvoice = async ({
 	ctx,
@@ -765,6 +831,7 @@ export const reissueInvoice = async ({
 	invoiceOverrides,
 	customerOverrides,
 	lineEdits,
+	issueMethod,
 }: {
 	ctx: AutumnContext;
 	invoiceId: string;
@@ -775,6 +842,7 @@ export const reissueInvoice = async ({
 	invoiceOverrides?: ReissueInvoiceOverrides;
 	customerOverrides?: ReissueCustomerOverrides;
 	lineEdits?: ReissueLineEdits;
+	issueMethod?: InvoiceIssueMethod;
 }): Promise<ReissueInvoiceResult> => {
 	if (
 		updateCustomerEmail &&
@@ -885,9 +953,10 @@ export const reissueInvoice = async ({
 		});
 	}
 
-	const { finalized, creditNoteId } = await issueReplacement({
+	const { issued, creditNoteId } = await issueReplacement({
 		ctx,
 		creditOriginal,
+		issueMethod,
 		// Only a location or tax registration can move what Stripe charges.
 		customerAdjusted: Boolean(
 			customerOverrides?.address || customerOverrides?.tax_ids,
@@ -905,7 +974,7 @@ export const reissueInvoice = async ({
 	});
 
 	await stripeCli.invoices.update(stripeInvoice.id, {
-		metadata: { autumn_reissued_to: finalized.id },
+		metadata: { autumn_reissued_to: issued.id },
 	});
 
 	const customerId = row.customer_id ?? row.invoice.internal_customer_id;
@@ -916,7 +985,7 @@ export const reissueInvoice = async ({
 	const autumnInvoice = await storeReplacementInAutumn({
 		ctx,
 		fullCustomer,
-		replacement: finalized,
+		replacement: issued,
 		original: row,
 	});
 	await deleteCachedFullCustomer({
@@ -927,15 +996,15 @@ export const reissueInvoice = async ({
 
 	// The response describes what was issued, adjustments included.
 	const issuedPreview = previewReissuedInvoice({
-		stripeInvoice: finalized,
+		stripeInvoice: issued,
 		lines: await getStripeInvoiceLineItems({
 			stripeClient: stripeCli,
-			invoiceId: finalized.id,
+			invoiceId: issued.id,
 		}),
 		storedLines,
 		credits,
 		dueDateMs,
-		settled: true,
+		settled: issued.status !== "draft",
 	});
 
 	const replacement = autumnInvoice
@@ -943,13 +1012,13 @@ export const reissueInvoice = async ({
 		: null;
 	if (!replacement) {
 		throw new RecaseError({
-			message: `Reissued invoice ${finalized.id} could not be stored`,
+			message: `Reissued invoice ${issued.id} could not be stored`,
 			code: ErrCode.InternalError,
 			statusCode: 500,
 		});
 	}
 
-	await updateInvoiceFromStripe({ ctx, customerId, stripeInvoice: finalized });
+	await updateInvoiceFromStripe({ ctx, customerId, stripeInvoice: issued });
 
 	return {
 		replacement,
