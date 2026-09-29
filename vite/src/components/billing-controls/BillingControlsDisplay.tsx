@@ -10,10 +10,19 @@ import type {
 	UsageAlertBasis,
 } from "@autumn/shared";
 import { DEFAULT_USAGE_ALERT_BASIS } from "@autumn/shared";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
+import {
+	StatusChip,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { CaretRightIcon, FunnelSimpleIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { Fragment, type ReactNode, useState } from "react";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+} from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
 
@@ -78,9 +87,7 @@ export function BillingControlsCountPill({
 	if (!count) return <span className="text-tertiary-foreground">—</span>;
 
 	return (
-		<span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground whitespace-nowrap">
-			{count} {count === 1 ? "control" : "controls"}
-		</span>
+		<StatusChip>{`${count} ${count === 1 ? "control" : "controls"}`}</StatusChip>
 	);
 }
 
@@ -163,11 +170,7 @@ const buildFeatureCards = ({
 	});
 };
 
-const OffPill = () => (
-	<span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground">
-		Off
-	</span>
-);
+const OffPill = () => <StatusChip className="shrink-0">Off</StatusChip>;
 
 const Muted = ({ children }: { children: ReactNode }) => (
 	<span className="text-tertiary-foreground">{children}</span>
@@ -312,7 +315,7 @@ const SubRow = ({
 }) => {
 	const className = cn(
 		"flex min-h-9 w-full min-w-0 items-center text-left text-sm",
-		onClick && "cursor-pointer hover:bg-interactive-secondary-hover",
+		onClick && "cursor-pointer hover:bg-table-row-hover",
 	);
 	const content = (
 		<>
@@ -366,33 +369,34 @@ const AlertTag = ({
 	]
 		.filter(Boolean)
 		.join(" · ");
-	const className = cn(
-		"inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-foreground",
-		!alert.enabled && "opacity-50",
-		onClick && "cursor-pointer hover:bg-muted/70",
-	);
-	const content = (
-		<>
+	const chip = (
+		<StatusChip
+			className={cn(
+				"gap-1",
+				!alert.enabled && "opacity-50",
+				onClick && "hover:bg-black/8 dark:hover:bg-white/8",
+			)}
+		>
 			{icon}
 			{alertThresholdLabel(alert)}
 			{filter && (
 				<FunnelSimpleIcon className="size-3 text-tertiary-foreground" />
 			)}
-		</>
+		</StatusChip>
 	);
 	const tag = onClick ? (
 		<button
 			type="button"
-			className={className}
+			className="cursor-pointer rounded-md"
 			onClick={(event) => {
 				event.stopPropagation();
 				onClick();
 			}}
 		>
-			{content}
+			{chip}
 		</button>
 	) : (
-		<span className={className}>{content}</span>
+		chip
 	);
 
 	if (!tooltip) return tag;
@@ -546,7 +550,7 @@ const FeatureRow = ({
 		<div
 			role="button"
 			tabIndex={0}
-			className="flex h-10 w-full min-w-0 cursor-pointer items-center text-left text-sm hover:bg-interactive-secondary-hover"
+			className="flex h-10 w-full min-w-0 cursor-pointer items-center text-left text-sm hover:bg-table-row-hover"
 			onClick={onToggle}
 			onKeyDown={(event) => {
 				if (event.key === "Enter" || event.key === " ") onToggle();
@@ -633,85 +637,100 @@ export function BillingControlsList({
 		});
 
 	return (
-		<div className="flex flex-col divide-y overflow-hidden rounded-lg border bg-interactive-secondary">
-			{cards.map((card) => {
-				const key = cardKey(card);
-				const hasEditingLine =
-					!!renderEditingRow &&
-					card.lines.some((line) => isEditingLine({ line, editingRow }));
-				const isExpanded =
-					hasEditingLine || defaultExpanded !== toggled.has(key);
+		<div className={TABLE_TRAY_CLASS}>
+			<div className="flex h-7 items-center text-xs text-tertiary-foreground">
+				<span className={cn("shrink-0 pr-2 pl-4", slim ? "w-36" : "w-80")}>
+					Feature
+				</span>
+				<span className="px-2">Controls</span>
+			</div>
+			<div
+				className={cn(
+					TABLE_TRAY_SURFACE_CLASS,
+					"flex flex-col divide-y divide-table-row-divider",
+				)}
+			>
+				{cards.map((card) => {
+					const key = cardKey(card);
+					const hasEditingLine =
+						!!renderEditingRow &&
+						card.lines.some((line) => isEditingLine({ line, editingRow }));
+					const isExpanded =
+						hasEditingLine || defaultExpanded !== toggled.has(key);
 
-				return (
-					<div key={key} className="flex flex-col">
-						<FeatureRow
-							card={card}
-							featureNameById={featureNameById}
-							isExpanded={isExpanded}
-							slim={slim}
-							onToggle={() => toggle(key)}
-							actions={renderFeatureActions?.({ featureId: card.featureId })}
-						/>
-						{isExpanded && (
-							<div className="flex flex-col border-t bg-card py-1">
-								{card.lines.map((line) => {
-									const lineKey =
-										line.kind === "alerts"
-											? "alerts"
-											: `${line.control.key}-${line.control.index}`;
-									const editing =
-										renderEditingRow && isEditingLine({ line, editingRow });
-									const badge =
-										line.kind === "single" ? getRowBadge?.(line.control) : null;
-									const isOff =
-										line.kind === "single" &&
-										!isControlEnabled(line.control.item);
+					return (
+						<div key={key} className="flex flex-col">
+							<FeatureRow
+								card={card}
+								featureNameById={featureNameById}
+								isExpanded={isExpanded}
+								slim={slim}
+								onToggle={() => toggle(key)}
+								actions={renderFeatureActions?.({ featureId: card.featureId })}
+							/>
+							{isExpanded && (
+								<div className="flex flex-col border-t border-table-row-divider bg-card py-1">
+									{card.lines.map((line) => {
+										const lineKey =
+											line.kind === "alerts"
+												? "alerts"
+												: `${line.control.key}-${line.control.index}`;
+										const editing =
+											renderEditingRow && isEditingLine({ line, editingRow });
+										const badge =
+											line.kind === "single"
+												? getRowBadge?.(line.control)
+												: null;
+										const isOff =
+											line.kind === "single" &&
+											!isControlEnabled(line.control.item);
 
-									return (
-										<Fragment key={lineKey}>
-											{line.kind === "alerts" ? (
-												<AlertsLine
-													featureId={card.featureId}
-													alerts={line.alerts}
-													slim={slim}
-													badge={getSharedSourceBadge?.({
-														controls: line.alerts,
-													})}
-													onEdit={onEdit}
-													onOpenAlerts={onOpenAlerts}
-													getAlertIcon={getAlertIcon}
-												/>
-											) : (
-												<SubRow
-													label={LINE_LABELS[line.control.key]}
-													slim={slim}
-													dimmed={isOff}
-													trailing={
-														badge || isOff ? (
-															<>
-																{badge}
-																{isOff && <OffPill />}
-															</>
-														) : undefined
-													}
-													onClick={
-														onEdit ? () => onEdit(line.control) : undefined
-													}
-												>
-													<ControlSummary control={line.control} />
-												</SubRow>
-											)}
-											{editing && (
-												<div className="px-2 py-1">{renderEditingRow()}</div>
-											)}
-										</Fragment>
-									);
-								})}
-							</div>
-						)}
-					</div>
-				);
-			})}
+										return (
+											<Fragment key={lineKey}>
+												{line.kind === "alerts" ? (
+													<AlertsLine
+														featureId={card.featureId}
+														alerts={line.alerts}
+														slim={slim}
+														badge={getSharedSourceBadge?.({
+															controls: line.alerts,
+														})}
+														onEdit={onEdit}
+														onOpenAlerts={onOpenAlerts}
+														getAlertIcon={getAlertIcon}
+													/>
+												) : (
+													<SubRow
+														label={LINE_LABELS[line.control.key]}
+														slim={slim}
+														dimmed={isOff}
+														trailing={
+															badge || isOff ? (
+																<>
+																	{badge}
+																	{isOff && <OffPill />}
+																</>
+															) : undefined
+														}
+														onClick={
+															onEdit ? () => onEdit(line.control) : undefined
+														}
+													>
+														<ControlSummary control={line.control} />
+													</SubRow>
+												)}
+												{editing && (
+													<div className="px-2 py-1">{renderEditingRow()}</div>
+												)}
+											</Fragment>
+										);
+									})}
+								</div>
+							)}
+						</div>
+					);
+				})}
+			</div>
 		</div>
 	);
 }
