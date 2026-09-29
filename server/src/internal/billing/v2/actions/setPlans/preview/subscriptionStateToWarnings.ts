@@ -68,17 +68,34 @@ const replacedSubscriptionWarning = ({
 	return undefined;
 };
 
+const describeInvoice = (invoice: Stripe.Invoice) =>
+	`Invoice ${invoice.number ?? invoice.id} for ${formatAmount({
+		currency: invoice.currency,
+		amount: stripeToAtmnAmount({
+			amount: invoice.amount_remaining,
+			currency: invoice.currency,
+		}),
+	})}`;
+
 const openInvoiceWarnings = (openInvoices: Stripe.Invoice[]): Warning[] =>
 	openInvoices.map((invoice) => ({
 		type: "open_invoice_not_collected",
-		message: `Invoice ${invoice.number ?? invoice.id} for ${formatAmount({
-			currency: invoice.currency,
-			amount: stripeToAtmnAmount({
-				amount: invoice.amount_remaining,
-				currency: invoice.currency,
-			}),
-		})} is still open on the cancelled subscription and is not collected by this change.`,
+		message: `${describeInvoice(invoice)} is still open on the cancelled subscription and is not collected by this change.`,
 	}));
+
+const pastDueInvoiceWarnings = ({
+	stripeSubscription,
+	liveOpenInvoices,
+}: {
+	stripeSubscription?: Stripe.Subscription;
+	liveOpenInvoices: Stripe.Invoice[];
+}): Warning[] =>
+	stripeSubscription?.status === "past_due"
+		? liveOpenInvoices.map((invoice) => ({
+				type: "past_due_invoice_open",
+				message: `${describeInvoice(invoice)} is open; Stripe keeps retrying it.`,
+			}))
+		: [];
 
 const discountCoupon = (discount: string | Stripe.Discount) => {
 	if (typeof discount === "string") return undefined;
@@ -124,10 +141,12 @@ export const subscriptionStateToWarnings = ({
 	billingContext,
 	stripeBillingPlan,
 	replacedOpenInvoices = [],
+	liveOpenInvoices = [],
 }: {
 	billingContext?: SubscriptionWarningContext;
 	stripeBillingPlan?: StripeBillingPlan;
 	replacedOpenInvoices?: Stripe.Invoice[];
+	liveOpenInvoices?: Stripe.Invoice[];
 }): Warning[] => {
 	if (!billingContext) return [];
 	const { replacedStripeSubscription } = billingContext;
@@ -147,7 +166,12 @@ export const subscriptionStateToWarnings = ({
 			]
 		: [];
 
-	return [...replacedWarnings, trialEndedWarning(billingContext)].filter(
-		(warning): warning is Warning => warning !== undefined,
-	);
+	return [
+		...replacedWarnings,
+		...pastDueInvoiceWarnings({
+			stripeSubscription: billingContext.stripeSubscription,
+			liveOpenInvoices,
+		}),
+		trialEndedWarning(billingContext),
+	].filter((warning): warning is Warning => warning !== undefined);
 };
