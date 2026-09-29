@@ -65,12 +65,26 @@ const scheduledCancelWarning = ({
 	return undefined;
 };
 
+const schedulesAnchorReset = (stripeBillingPlan: StripeBillingPlan) => {
+	const scheduleAction = stripeBillingPlan.subscriptionScheduleAction;
+	if (scheduleAction?.type !== "create" && scheduleAction?.type !== "update") {
+		return false;
+	}
+	return (
+		scheduleAction.params.phases?.some(
+			(phase) => phase.billing_cycle_anchor === "phase_start",
+		) ?? false
+	);
+};
+
 const cycleResetWarning = ({
 	cycleResetAt,
+	stripeBillingPlan,
 }: {
 	cycleResetAt?: number;
+	stripeBillingPlan: StripeBillingPlan;
 }): Warning | undefined =>
-	cycleResetAt === undefined
+	cycleResetAt === undefined || !schedulesAnchorReset(stripeBillingPlan)
 		? undefined
 		: {
 				type: "cycle_reset",
@@ -130,5 +144,5 @@ export const liveSubscriptionChangeWarnings = ({
 			liveProcessorItems,
 			immediateItems,
 		}),
-		cycleResetWarning({ cycleResetAt }),
+		cycleResetWarning({ cycleResetAt, stripeBillingPlan }),
 	].filter(notNullish);
