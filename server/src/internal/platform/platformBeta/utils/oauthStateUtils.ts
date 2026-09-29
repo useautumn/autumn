@@ -25,9 +25,6 @@ const signOAuthStatePayload = (payload: string) =>
 		.update(`oauth-state:${payload}`)
 		.digest("base64url");
 
-/** The Redis key is the only part the store knows; older states are the bare key. */
-const toStoreKey = (state: string) => state.split(".")[0];
-
 /**
  * Appends a signed copy of the return URL, so the callback can still send the
  * user back to it after the stored state has expired or been used.
@@ -91,8 +88,11 @@ export const generateOAuthState = async ({
 	const maxAttempts = 3;
 
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		// Generate random state key
-		const stateKey = randomBytes(32).toString("hex");
+		// Stored under the full signed state so instances that predate signing can still read it
+		const stateKey = signOAuthState({
+			stateKey: randomBytes(32).toString("hex"),
+			redirectUri,
+		});
 
 		// Try to set the key
 		const stateData: OAuthState = {
@@ -113,7 +113,7 @@ export const generateOAuthState = async ({
 		if (!existing) {
 			// Key doesn't exist, set it with expiry
 			await setOAuthStateData({ stateKey, data: stateData });
-			return signOAuthState({ stateKey, redirectUri });
+			return stateKey;
 		}
 
 		// Key already exists, retry
@@ -138,17 +138,14 @@ export const consumeOAuthState = async ({
 }: {
 	stateKey: string;
 }): Promise<OAuthState | null> => {
-	const storeKey = toStoreKey(stateKey);
-	const stateData = await getOAuthStateData<OAuthState>({
-		stateKey: storeKey,
-	});
+	const stateData = await getOAuthStateData<OAuthState>({ stateKey });
 
 	if (!stateData) {
 		return null;
 	}
 
 	// Delete the key
-	await deleteOAuthStateData({ stateKey: storeKey });
+	await deleteOAuthStateData({ stateKey });
 
 	return stateData;
 };
