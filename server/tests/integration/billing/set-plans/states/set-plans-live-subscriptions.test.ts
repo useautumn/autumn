@@ -1,9 +1,4 @@
-/**
- * set_plans keeps the billing cycle anchor that setup works out for its plans.
- *
- * Red (before):  a month-start plan's anchor was replaced by the request's empty anchor.
- * Green (after): the Stripe subscription is anchored to the next 1st.
- */
+// set_plans keeps the billing cycle anchor that setup works out for its plans.
 
 import { test } from "bun:test";
 import {

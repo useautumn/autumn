@@ -1,10 +1,4 @@
-/**
- * set_plans treats a terminal Stripe subscription as gone and bills afresh.
- *
- * Red (before):  an incomplete_expired subscription counted as live, so set_plans
- *                tried to update it and Stripe rejected the request.
- * Green (after): a new subscription is created and the plan stays active.
- */
+// set_plans treats a terminal Stripe subscription as gone and bills afresh.
 
 import { expect, test } from "bun:test";
 import { findActiveCustomerProductById, ms } from "@autumn/shared";
