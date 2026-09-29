@@ -3,6 +3,7 @@ import {
 	type Feature,
 	type FullCusProduct,
 	findFeatureById,
+	type LineItem,
 	notNullish,
 	type ProcessorChange,
 	type ProcessorItem,
@@ -19,6 +20,7 @@ import {
 	type SubscriptionWarningContext,
 	subscriptionStateToWarnings,
 } from "./subscriptionStateToWarnings";
+import { unbilledUsageWarnings } from "./unbilledUsageWarnings";
 
 type WarningType = SetPlansPreviewWarning["type"];
 
@@ -83,6 +85,7 @@ export const setPlansPreviewToWarnings = ({
 	billingContext,
 	stripeBillingPlan,
 	replacedOpenInvoices,
+	unbilledUsageLineItems = [],
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
@@ -94,6 +97,7 @@ export const setPlansPreviewToWarnings = ({
 	billingContext?: SubscriptionWarningContext;
 	stripeBillingPlan?: StripeBillingPlan;
 	replacedOpenInvoices?: Stripe.Invoice[];
+	unbilledUsageLineItems?: LineItem[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
@@ -115,6 +119,7 @@ export const setPlansPreviewToWarnings = ({
 				immediateItems: phases[0]?.processor_items ?? [],
 			}),
 		].filter(notNullish),
+		...unbilledUsageWarnings(unbilledUsageLineItems),
 		...removedUnmanagedItems({
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
