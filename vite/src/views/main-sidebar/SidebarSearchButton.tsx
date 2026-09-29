@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { cn } from "@/lib/utils";
 import { useSidebarContext } from "./SidebarContext";
+import { SIDEBAR_HEADER_ICON_BUTTON_CLASS } from "./sidebarRowClass";
 
 export const SidebarSearchButton = () => {
 	const { expanded } = useSidebarContext();
@@ -10,22 +11,16 @@ export const SidebarSearchButton = () => {
 	return (
 		<button
 			aria-label="Search"
+			title="Search (⌘K)"
 			className={cn(
-				"flex shrink-0 items-center gap-2 rounded-lg bg-interactive-secondary text-[13px] font-[450] leading-4 text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:bg-[#1A1A1A] dark:text-[#7A7A7A] dark:hover:text-[#A1A1A1]",
-				expanded ? "h-[30px] w-full px-2.5" : "size-8 justify-center px-0",
+				expanded
+					? SIDEBAR_HEADER_ICON_BUTTON_CLASS
+					: "flex size-8 shrink-0 items-center justify-center rounded-lg bg-interactive-secondary text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:bg-[#1A1A1A] dark:text-[#7A7A7A] dark:hover:text-[#A1A1A1]",
 			)}
 			onClick={openCommandBar}
 			type="button"
 		>
 			<Search className="size-3.5 shrink-0" strokeWidth={1.75} />
-			{expanded && (
-				<>
-					<span className="flex-1 text-left">Search</span>
-					<kbd className="rounded bg-muted px-[5px] py-px font-sans text-[11px] font-medium leading-[14px] dark:bg-[#262626]">
-						⌘K
-					</kbd>
-				</>
-			)}
 		</button>
 	);
 };
