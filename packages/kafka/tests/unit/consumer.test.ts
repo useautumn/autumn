@@ -7,6 +7,7 @@ import type {
 	KafkaMessage,
 	OffsetsByTopicPartition,
 } from "kafkajs";
+import { KafkaJSNonRetriableError } from "kafkajs";
 import { createProgressTracker } from "../../src/consumer/createProgressTracker.js";
 import { createTopicConsumer } from "../../src/consumer/createTopicConsumer.js";
 import type {
@@ -39,6 +40,8 @@ type ConsumerFixtureOptions = {
 	startupFailure?: Error;
 	stopFailure?: Error;
 	disconnectFailure?: Error;
+	/** Thrown by pause, resume and seek, as kafkajs does once its consumer group is gone. */
+	steeringFailure?: Error;
 };
 
 function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
@@ -93,13 +96,16 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		offset: string;
 	}): void {
 		events.push("seek");
+		if (options.steeringFailure) throw options.steeringFailure;
 		seeks.push(position);
 	}
 	function pause(): void {
 		events.push("pause");
+		if (options.steeringFailure) throw options.steeringFailure;
 	}
 	function resume(): void {
 		events.push("resume");
+		if (options.steeringFailure) throw options.steeringFailure;
 	}
 	function on(event: string, listener: unknown): () => void {
 		listeners.set(event, listener);
@@ -1145,4 +1151,41 @@ test("a handler that declines a position gets the record passed without decoding
 	expect(applied).toEqual([0n, 2n]);
 	expect(fixture.commits).toEqual([[{ topic, partition, offset: "3" }]]);
 	await consumer.stop();
+});
+
+test("steering a partition after the consumer group is gone is nothing to do, not a failure", async () => {
+	const gone = createConsumerFixture({
+		steeringFailure: new KafkaJSNonRetriableError(
+			"Consumer group was not initialized, consumer#run must be called first",
+		),
+	});
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: gone.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	expect(() => consumer.pausePartition({ partition })).not.toThrow();
+	expect(() => consumer.resumeFetching({ partition })).not.toThrow();
+	expect(() =>
+		consumer.seekPartition({ partition, nextOffset: 3n }),
+	).not.toThrow();
+	expect(gone.events.slice(-3)).toEqual(["pause", "resume", "seek"]);
+
+	const broken = createConsumerFixture({
+		steeringFailure: new Error("connection reset"),
+	});
+	const other = createTopicConsumer({
+		ctx: {
+			consumer: broken.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await other.start();
+	expect(() => other.pausePartition({ partition })).toThrow("connection reset");
 });
