@@ -42,6 +42,8 @@ export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
 	];
 };
 
+export const IMPERSONATE_ORG_HEADER = "x-impersonate-org-id";
+
 export const impersonateUser = async ({
 	userId,
 	organizationId,
@@ -58,18 +60,23 @@ export const impersonateUser = async ({
 			return;
 		}
 	}
-	const res = await authClient.admin.impersonateUser({ userId });
+	const res = await authClient.admin.impersonateUser({
+		userId,
+		fetchOptions: organizationId
+			? { headers: { [IMPERSONATE_ORG_HEADER]: organizationId } }
+			: undefined,
+	});
 	if (res.error) {
 		toast.error(res.error.message || "Failed to impersonate user");
 		return;
 	}
 
 	if (organizationId) {
+		// The session is created in the target org via IMPERSONATE_ORG_HEADER;
+		// setActiveOrg is a no-op server-side but records it for DashboardGate.
 		await setActiveOrg(organizationId);
 
-		// Confirm the session reflects the target before reloading. The
-		// impersonation session is born with no active org, so a premature reload
-		// lets handleNoActiveOrg pick the wrong org.
+		// Confirm the session reflects the target before reloading.
 		const { data } = await authClient.getSession({
 			query: { disableCookieCache: true },
 		});

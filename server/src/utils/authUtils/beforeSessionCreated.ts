@@ -5,7 +5,7 @@ import type {
 	Session,
 } from "better-auth";
 import { APIError } from "better-auth/api";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import {
 	ensureInvitedSsoMembership,
@@ -20,6 +20,24 @@ import {
 } from "@/internal/orgs/agentOnboarding/agentAuthUtils.js";
 import { findAgentClaimAttempt } from "@/internal/orgs/agentOnboarding/repos/agentChallengeRepo.js";
 import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
+
+/** Sent with /admin/impersonate-user so the session is born in the target org. */
+const IMPERSONATE_ORG_HEADER = "x-impersonate-org-id";
+
+const getImpersonationActiveOrgId = async ({
+	headers,
+	userId,
+}: {
+	headers: HeadersInit | undefined;
+	userId: string;
+}) => {
+	const orgId = new Headers(headers).get(IMPERSONATE_ORG_HEADER);
+	if (!orgId) return null;
+	const membership = await db.query.member.findFirst({
+		where: and(eq(member.userId, userId), eq(member.organizationId, orgId)),
+	});
+	return membership ? orgId : null;
+};
 
 const hasPendingAgentClaimIntent = async ({
 	headers,
@@ -49,10 +67,16 @@ export const beforeSessionCreated = async (
 			return;
 		}
 
-		// Impersonation sets its own active org; don't override with the
-		// target user's most-recent membership.
+		// Start impersonation sessions in the requested org. Leaving the active
+		// org null until a follow-up setActive races other open dashboard tabs,
+		// whose no-active-org fallback would switch the session to a random org.
 		if ((session as { impersonatedBy?: string | null }).impersonatedBy) {
-			return;
+			const activeOrganizationId = await getImpersonationActiveOrgId({
+				headers: context?.headers,
+				userId: session.userId,
+			});
+			if (!activeOrganizationId) return;
+			return { data: { ...session, activeOrganizationId } };
 		}
 
 		if (providerId) {

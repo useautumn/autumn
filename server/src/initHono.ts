@@ -34,6 +34,7 @@ import { isAllowedOrigin } from "./utils/corsOrigins.js";
 const ALLOWED_HEADERS = [
 	"app_env",
 	"x-sandbox-org-id",
+	"x-impersonate-org-id",
 	"x-api-version",
 	"x-client-type",
 	"x-request-id",

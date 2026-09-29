@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
 import { getDefaultOrgPath, isSafeLocalPath } from "@/utils/genUtils";
+import { IMPERSONATE_ORG_HEADER } from "@/views/admin/adminUtils";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
 import { useAdmin } from "./hooks/useAdmin";
 
@@ -68,6 +69,7 @@ export function ImpersonateRedirect() {
 				setStatus("Impersonating user...");
 				const impersonateResult = await authClient.admin.impersonateUser({
 					userId: data.userId,
+					fetchOptions: { headers: { [IMPERSONATE_ORG_HEADER]: orgId } },
 				});
 
 				if (impersonateResult.error) {
@@ -75,9 +77,8 @@ export function ImpersonateRedirect() {
 					return;
 				}
 
-				// Step 4: Set the active org. The impersonation session is created
-				// with no active org (see beforeSessionCreated), so this is the sole
-				// authority; setActiveOrg also persists it for DashboardGate.
+				// Step 4: The session is created in orgId (see beforeSessionCreated);
+				// setActiveOrg keeps it authoritative and persists it for DashboardGate.
 				setStatus("Setting active organization...");
 				await setActiveOrg(orgId);
 
