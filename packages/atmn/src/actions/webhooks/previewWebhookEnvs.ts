@@ -38,8 +38,7 @@ export type WebhookLanes = {
 
 type EnvPreview =
 	| { lane: WebhooksLane; errors: { id: string; message: string }[] }
-	| { skipped: string }
-	| undefined;
+	| { skipped: string };
 
 const isLive = (env: WebhookPullEnv): boolean =>
 	env.keyName === "AUTUMN_PROD_SECRET_KEY";
@@ -80,7 +79,7 @@ const assertDistinctSecretNames = ({
 	if (clashes.size > 0) throw new Error([...clashes.values()].join("\n"));
 };
 
-/** Undefined when the config registers nothing in this env: there is nothing to preview. */
+/** Every env push reaches is previewed, even with no entries: its unstated endpoints are deletes. */
 const previewEnv = async ({
 	env,
 	rows,
@@ -93,9 +92,8 @@ const previewEnv = async ({
 	try {
 		const key = await env.envKey();
 		const webhooks = resolveWebhooksForEnv({ rows, envKey: key });
-		if (webhooks.length === 0) return undefined;
 		const client = clientFor({ secretKey: env.secretKey });
-		const body = { webhooks };
+		const body = { webhooks, skipDeletions: false };
 		const { changes, errors } = await client.previewSyncWebhooks(body);
 		return {
 			lane: {
@@ -116,7 +114,7 @@ const previewEnv = async ({
 /**
  * A plain push syncs every sandbox env with a key, and previews live read-only
  * so a production diff is named rather than hidden; `-p` syncs live alone.
- * Absent when the config states no `webhooks`.
+ * Absent when the config states no `webhooks`, so no env is ever deleted from.
  */
 export const previewWebhookEnvs = async ({
 	rows,
@@ -155,9 +153,7 @@ export const previewWebhookEnvs = async ({
 	});
 	// A skipped live key (rejected, deleted, another org's) leaves production unchecked too.
 	const productionUnchecked = probedResults.some(
-		(result) =>
-			result.status === "rejected" ||
-			(result.value !== undefined && "skipped" in result.value),
+		(result) => result.status === "rejected" || "skipped" in result.value,
 	);
 	// Refused items (several dashboard webhooks on one URL, say) fail the lane
 	// here, beside every other lane's errors, rather than at apply.
@@ -169,7 +165,6 @@ export const previewWebhookEnvs = async ({
 			return;
 		}
 		const preview = result.value;
-		if (preview === undefined) return;
 		if ("skipped" in preview) {
 			skipped.push(preview.skipped);
 			return;
@@ -194,7 +189,6 @@ export const previewWebhookEnvs = async ({
 	for (const result of probedResults) {
 		if (result.status === "rejected") continue;
 		const preview = result.value;
-		if (preview === undefined) continue;
 		if ("skipped" in preview) {
 			skipped.push(preview.skipped);
 			continue;
