@@ -1,11 +1,14 @@
 import { Database } from "bun:sqlite";
-import { expect, test } from "bun:test";
+import { expect, setDefaultTimeout, test } from "bun:test";
 import {
 	createThreadFixture,
 	identity,
+	THREAD_TEST_TIMEOUT_MS,
 	topic,
 	waitForGate,
 } from "./thread-fixtures.js";
+
+setDefaultTimeout(THREAD_TEST_TIMEOUT_MS);
 
 test.concurrent(
 	"repeated termination inside a read transaction releases the WAL and leaves serving writes usable",
