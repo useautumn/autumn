@@ -52,7 +52,9 @@ const buildContext = ({
 		},
 	}) as unknown as CreateScheduleBillingContext;
 
-const ctx = {} as unknown as AutumnContext;
+const ctx = {
+	org: { default_currency: "usd", config: {} },
+} as unknown as AutumnContext;
 
 describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 	test("allows an immediate phase within the tolerance window", async () => {
@@ -61,6 +63,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				billingContext: buildContext({
 					immediateStartsAt: now,
 					currentEpochMs: now,
@@ -75,6 +78,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -95,6 +99,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -119,6 +124,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				billingContext: buildContext({
 					immediateStartsAt: startsAt,
 					currentEpochMs: now,
@@ -138,6 +144,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -160,6 +167,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				preview: true,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
@@ -177,6 +185,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				billingContext: buildContext({
 					immediateStartsAt: now + ms.hours(1),
 					currentEpochMs: now,
@@ -195,6 +204,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		await expect(
 			handleSetPlansErrors({
 				ctx,
+				params: {},
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.days(30),
 					currentEpochMs: now,
