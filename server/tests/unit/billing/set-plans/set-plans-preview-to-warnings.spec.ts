@@ -529,3 +529,46 @@ describe("setPlansPreviewToWarnings: unbilled usage", () => {
 		).toEqual([]);
 	});
 });
+
+describe("setPlansPreviewToWarnings: past_due subscription", () => {
+	const openInvoice = {
+		id: "in_retry",
+		number: "INV-0002",
+		amount_remaining: 2000,
+		currency: "usd",
+	} as Stripe.Invoice;
+
+	test("an open invoice on a past_due subscription is noted as still retried", () => {
+		expect(
+			stateWarnings({
+				billingContext: {
+					currentEpochMs: NOON_UTC,
+					billingCycleAnchorMs: "now",
+					stripeSubscription: stripeSubscription({ status: "past_due" }),
+				},
+				stripeBillingPlan: {},
+				liveOpenInvoices: [openInvoice],
+			}),
+		).toEqual([
+			{
+				type: "past_due_invoice_open",
+				severity: "info",
+				message: "Invoice INV-0002 for $20 is open; Stripe keeps retrying it.",
+			},
+		]);
+	});
+
+	test("an active subscription's open invoice isn't flagged", () => {
+		expect(
+			stateWarnings({
+				billingContext: {
+					currentEpochMs: NOON_UTC,
+					billingCycleAnchorMs: "now",
+					stripeSubscription: stripeSubscription({ status: "active" }),
+				},
+				stripeBillingPlan: {},
+				liveOpenInvoices: [openInvoice],
+			}),
+		).toEqual([]);
+	});
+});

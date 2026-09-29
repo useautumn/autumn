@@ -6,7 +6,10 @@ import {
 	expectStripeSubscriptionAnchorCorrect,
 	nextMonthStartMs,
 } from "@tests/integration/billing/attach/params/anchor-to-month-start/utils/anchorToMonthStartUtils";
-import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
+import {
+	expectPreviewWarning,
+	findStripeSubscriptionByStatus,
+} from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items";
@@ -152,6 +155,11 @@ test.concurrent(
 		expect(preview.warnings.map((warning) => warning.type)).not.toContain(
 			"subscription_replaced",
 		);
+		expectPreviewWarning({
+			preview,
+			type: "past_due_invoice_open",
+			messageContains: ["Stripe keeps retrying it"],
+		});
 		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		const subscription = await expectUpdatedInPlace({
