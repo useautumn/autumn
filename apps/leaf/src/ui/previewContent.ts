@@ -158,11 +158,13 @@ const isInvoicePreview = (payload: LooseRecord) =>
 const invoicePreviewElements = (payload: LooseRecord): CardChild[] => {
 	const currency =
 		typeof payload.currency === "string" ? payload.currency : "usd";
+	// Lines at their pre-discount amount: discounts get their own row, so the
+	// rows add up to the total.
 	const lines = (payload.lines as unknown[]).flatMap((line) => {
 		const record = asRecord(line);
-		const amount = record?.amount_after_discounts ?? record?.amount;
-		return typeof record?.description === "string" && typeof amount === "number"
-			? [{ amount, name: record.description }]
+		return typeof record?.description === "string" &&
+			typeof record.amount === "number"
+			? [{ amount: record.amount, name: record.description }]
 			: [];
 	});
 	const rows = amountRows({ currency, lines });
