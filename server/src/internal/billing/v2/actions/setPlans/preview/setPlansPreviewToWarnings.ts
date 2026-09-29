@@ -12,6 +12,10 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import {
+	intervalChangeWarning,
+	scheduledCancelWarning,
+} from "./liveSubscriptionChangeWarnings";
+import {
 	type SubscriptionWarningContext,
 	subscriptionStateToWarnings,
 } from "./subscriptionStateToWarnings";
@@ -100,6 +104,17 @@ export const setPlansPreviewToWarnings = ({
 			stripeBillingPlan,
 			replacedOpenInvoices,
 		}),
+		...[
+			scheduledCancelWarning({
+				stripeSubscription: billingContext?.stripeSubscription,
+				stripeBillingPlan: stripeBillingPlan ?? {},
+			}),
+			intervalChangeWarning({
+				stripeSubscription: billingContext?.stripeSubscription,
+				liveProcessorItems,
+				immediateItems: phases[0]?.processor_items ?? [],
+			}),
+		].filter(notNullish),
 		...removedUnmanagedItems({
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
