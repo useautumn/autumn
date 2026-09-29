@@ -135,6 +135,16 @@ export function TableContentVirtualized({
 								: child,
 						)}
 					</Table>
+					{rows.length > 0 && (
+						// Rows only round off at the true last row, so this pins that edge to the viewport.
+						<div
+							aria-hidden
+							className="pointer-events-none sticky bottom-0 z-10 -mt-2 h-2 overflow-hidden"
+							style={{ minWidth: `${totalWidth}px` }}
+						>
+							<div className="absolute inset-x-0 -top-2 bottom-0 rounded-b-lg border-x border-b border-table-surface-border shadow-[0_0_0_8px_var(--color-table-tray)]" />
+						</div>
+					)}
 				</div>
 				{footer}
 			</div>
