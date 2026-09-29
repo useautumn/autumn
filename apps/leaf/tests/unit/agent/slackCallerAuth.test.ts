@@ -3,7 +3,10 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatInstallation } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { resolveSlackCallerAuth } from "../../../src/providers/slack/setup/resolveSlackCallerAuth.js";
-import { resolveSlackUserAuth } from "../../../src/providers/slack/setup/resolveSlackUserAuth.js";
+import {
+	resolveSlackStaffAuth,
+	resolveSlackUserAuth,
+} from "../../../src/providers/slack/setup/resolveSlackUserAuth.js";
 
 const installation = ({ botAccessToken }: { botAccessToken: string }) =>
 	({
@@ -99,5 +102,90 @@ describe("resolveSlackCallerAuth", () => {
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
+	});
+});
+
+describe("resolveSlackStaffAuth", () => {
+	const staffParams = {
+		botToken: "xoxb-test",
+		installation: installation({ botAccessToken: "unused" }),
+		logger: noopLogger,
+		orgId: "org_1",
+		staffTeamId: "T_AUTUMN",
+		staffUserIds: new Set(["U_STAFF"]),
+	};
+
+	test("is not staff when the Slack user id is not allowlisted", async () => {
+		let lookups = 0;
+		const result = await resolveSlackStaffAuth({
+			...staffParams,
+			fetchHomeTeamId: async () => {
+				lookups += 1;
+				return "T_AUTUMN";
+			},
+			slackUserId: "U_CUSTOMER",
+		});
+
+		expect(result).toBeNull();
+		expect(lookups).toBe(0);
+	});
+
+	test("is not staff without a configured Autumn workspace", async () => {
+		const result = await resolveSlackStaffAuth({
+			...staffParams,
+			fetchHomeTeamId: async () => "T_AUTUMN",
+			slackUserId: "U_STAFF",
+			// Empty, not undefined: undefined falls back to the ambient env.
+			staffTeamId: "",
+		});
+
+		expect(result).toBeNull();
+	});
+
+	test("an allowlisted id from another home workspace is not staff", async () => {
+		const result = await resolveSlackStaffAuth({
+			...staffParams,
+			fetchHomeTeamId: async () => "T_CUSTOMER",
+			slackUserId: "U_STAFF",
+		});
+
+		expect(result).toBeNull();
+	});
+
+	test("never overrides for another org's installation", async () => {
+		const result = await resolveSlackStaffAuth({
+			...staffParams,
+			fetchHomeTeamId: async () => "T_AUTUMN",
+			orgId: "org_2",
+			slackUserId: "U_STAFF",
+		});
+
+		expect(result).toBeNull();
+	});
+
+	test("staff runs as the installation's installer", async () => {
+		const authorized: unknown[] = [];
+		const result = await resolveSlackStaffAuth({
+			...staffParams,
+			authorize: async (input) => {
+				authorized.push(input.userId);
+				return {
+					ok: true,
+					role: "admin",
+					scopes: ["customers:read"],
+					userId: input.userId,
+				};
+			},
+			fetchHomeTeamId: async () => "T_AUTUMN",
+			slackUserId: "U_STAFF",
+		});
+
+		expect(authorized).toEqual(["user_installer"]);
+		expect(result).toEqual({
+			ok: true,
+			role: "admin",
+			scopes: ["customers:read"],
+			userId: "user_installer",
+		});
 	});
 });

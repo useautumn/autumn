@@ -122,10 +122,11 @@ export const BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS = 30_000;
  *  still fencing and catching up. The activation is a fence plus a bookmark
  *  read; holding the request for it turns a NOT_READY into a 200. */
 export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
-/** How long a landed command-offset commit holds the next one back. A skipped
- *  command (an evict, a queued track already applied) leaves no record to carry
- *  its offset, so the offset commits on its own; committed back to back, the
- *  coordinator refuses every second one while it is still closing the first.
- *  The Postgres bookmark, not this commit, decides where a restart resumes, so
- *  the wait costs nothing but lets a burst land as one commit. */
-export const BALANCE_WORKER_COMMAND_OFFSET_SETTLE_GAP_MS = 50;
+/** How long a command-offset landing holds the next one back. A skipped command
+ *  (an evict, a queued track already applied) leaves no record to carry its
+ *  offset, so the offset rides with the next batch or lands through the consumer
+ *  group's own commit once this gap has passed. That commit is one request that
+ *  contends with nothing, so the gap only bounds how many the group coordinator
+ *  sees and how far the commands topic's reported lag trails. The Postgres
+ *  bookmark, not this commit, decides where a restart resumes. */
+export const BALANCE_WORKER_COMMAND_OFFSET_SETTLE_GAP_MS = 1_000;

@@ -29,6 +29,7 @@ const slackUsersInfoSchema = z.object({
 	user: z
 		.object({
 			id: z.string(),
+			team_id: z.string().optional(),
 			deleted: z.boolean().optional(),
 			is_bot: z.boolean().optional(),
 			profile: z
@@ -121,4 +122,26 @@ export const fetchSlackUserEmailCached = async ({
 		);
 	}
 	return lookup.email;
+};
+
+/** The Slack team a user belongs to. For an external (Slack Connect) user
+ * this is their own workspace, which the installing workspace cannot set. */
+export const fetchSlackUserHomeTeamId = async ({
+	botToken,
+	slackUserId,
+}: {
+	botToken: string;
+	slackUserId: string;
+}): Promise<string | null> => {
+	const url = new URL(SLACK_USERS_INFO_URL);
+	url.searchParams.set("user", slackUserId);
+	const response = await fetch(url, {
+		headers: { Authorization: `Bearer ${botToken}` },
+	});
+	if (!response.ok) return null;
+	const parsed = slackUsersInfoSchema.safeParse(await response.json());
+	if (!(parsed.success && parsed.data.ok) || !parsed.data.user) return null;
+	const { user } = parsed.data;
+	if (user.deleted || user.is_bot) return null;
+	return user.team_id ?? null;
 };

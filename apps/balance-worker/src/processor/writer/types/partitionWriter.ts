@@ -52,13 +52,14 @@ export type CommittedOutcomeAppender = {
 		nextOffset: bigint;
 	}): Promise<void>;
 	/** Records that the command before `nextOffset` is decided: the offset rides with the next
-	 *  batch or lands on its own after a short gap. Throws a landing failure that already happened. */
+	 *  batch or lands through the consumer group's commit after a short gap. Never throws: a
+	 *  refused landing is retried, and the Postgres bookmark decides where a restart resumes. */
 	settleCommandOffset?(params: {
 		topic: string;
 		partition: number;
 		nextOffset: bigint;
 	}): void;
-	/** Lands whatever `settleCommandOffset` still holds; rejects with a landing failure. */
+	/** Lands whatever `settleCommandOffset` still holds and schedules nothing after; rejects when that landing is refused. */
 	flushCommandOffsets?(): Promise<void>;
 	/** Bytes `appendCommitted` would put on the wire for this record; absent, the writer estimates from JSON. Measuring here lets the appender keep the encoding it later sends. */
 	encodedBytesOf?(params: { record: MeteringRecord }): number;

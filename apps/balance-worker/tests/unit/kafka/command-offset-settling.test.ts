@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import {
-	KafkaBatchNotCommittedError,
-	type KafkaProducer,
-	type KafkaTransaction,
+import type {
+	KafkaOffsetCommit,
+	KafkaProducer,
+	KafkaTransaction,
 } from "@autumn/kafka";
 import {
 	type CommandOffsetSettleTiming,
@@ -15,31 +15,25 @@ import {
 	topic,
 } from "./kafka-test-fixtures.js";
 
-function createFakeProducer({
-	refuseOffset,
-	holdFirstCommit,
+/** A producer for batches and a consumer-group committer for offsets, sharing one lifecycle so their order is visible. */
+function createFakes({
+	refuseGroupCommit,
+	holdFirstGroupCommit,
 }: {
-	refuseOffset?: string;
-	holdFirstCommit?: Promise<void>;
+	/** Decides per attempt whether the group commit of `offset` is refused. */
+	refuseGroupCommit?(params: { offset: string; attempt: number }): boolean;
+	holdFirstGroupCommit?: Promise<void>;
 } = {}) {
 	const lifecycle: string[] = [];
-	let firstCommit = true;
 	const transaction: KafkaTransaction = {
 		send: async () => {
 			lifecycle.push("send");
 			return [{ topicName: topic, partition, errorCode: 0, baseOffset: "41" }];
 		},
 		sendOffsets: async (offsets) => {
-			const offset = offsets.topics[0]?.partitions[0]?.offset;
-			lifecycle.push(`offset:${offset}`);
-			if (refuseOffset !== undefined && offset === refuseOffset)
-				throw new Error(`refused ${offset}`);
+			lifecycle.push(`offset:${offsets.topics[0]?.partitions[0]?.offset}`);
 		},
 		commit: async () => {
-			if (firstCommit && holdFirstCommit) {
-				firstCommit = false;
-				await holdFirstCommit;
-			}
 			lifecycle.push("commit");
 		},
 		abort: async () => {
@@ -52,7 +46,22 @@ function createFakeProducer({
 			return transaction;
 		},
 	};
-	return { producer, lifecycle };
+	let attempts = 0;
+	let held = false;
+	const commandOffsets = {
+		commit: async (offsets: KafkaOffsetCommit) => {
+			const offset = offsets.topics[0]?.partitions[0]?.offset ?? "?";
+			attempts += 1;
+			lifecycle.push(`group:${offset}`);
+			if (holdFirstGroupCommit && !held) {
+				held = true;
+				await holdFirstGroupCommit;
+			}
+			if (refuseGroupCommit?.({ offset, attempt: attempts }))
+				throw new Error(`refused ${offset}`);
+		},
+	};
+	return { producer, commandOffsets, lifecycle };
 }
 
 /** A clock the tests move by hand: nothing scheduled runs until it is due. */
@@ -91,17 +100,18 @@ async function settled(): Promise<void> {
 }
 
 function createAppender({
-	producer,
+	fakes,
 	timing,
 	warnings,
 }: {
-	producer: KafkaProducer;
+	fakes: ReturnType<typeof createFakes>;
 	timing: CommandOffsetSettleTiming;
 	warnings?: string[];
 }) {
 	return createMutationPublisher({
 		ctx: {
-			producer,
+			producer: fakes.producer,
+			commandOffsets: fakes.commandOffsets,
 			settle: timing,
 			logger: {
 				warn: (...args: unknown[]) => {
@@ -113,140 +123,149 @@ function createAppender({
 	});
 }
 
-test("a burst of skipped commands lands as one commit, and the next one waits out the gap", async () => {
-	const fake = createFakeProducer();
+test("a burst of skipped commands lands as one group commit, never a transaction, and the next waits out the gap", async () => {
+	const fakes = createFakes();
 	const clock = createClock();
-	const appender = createAppender({
-		producer: fake.producer,
-		timing: clock.timing,
-	});
+	const appender = createAppender({ fakes, timing: clock.timing });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 12n });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 13n });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 14n });
-	expect(fake.lifecycle).toEqual([]);
+	expect(fakes.lifecycle).toEqual([]);
 	await clock.advance(0);
-	expect(fake.lifecycle).toEqual(["transaction", "offset:14", "commit"]);
-	fake.lifecycle.length = 0;
+	expect(fakes.lifecycle).toEqual(["group:14"]);
+	fakes.lifecycle.length = 0;
 	appender.settleCommandOffset({ topic, partition, nextOffset: 15n });
 	await clock.advance(49);
-	expect(fake.lifecycle).toEqual([]);
+	expect(fakes.lifecycle).toEqual([]);
 	await clock.advance(1);
-	expect(fake.lifecycle).toEqual(["transaction", "offset:15", "commit"]);
+	expect(fakes.lifecycle).toEqual(["group:15"]);
 });
 
 test("a batch that commits carries the offsets still waiting, so nothing lands twice", async () => {
-	const fake = createFakeProducer();
+	const fakes = createFakes();
 	const clock = createClock();
-	const appender = createAppender({
-		producer: fake.producer,
-		timing: clock.timing,
-	});
+	const appender = createAppender({ fakes, timing: clock.timing });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 20n });
 	const mutation = {
 		...createMutation({ state: createState(), commandId: "queued" }),
 		source: { commandOffset: "17" },
 	};
 	await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
-	expect(fake.lifecycle).toEqual([
+	expect(fakes.lifecycle).toEqual([
 		"transaction",
 		"send",
 		"offset:20",
 		"commit",
 	]);
-	fake.lifecycle.length = 0;
+	fakes.lifecycle.length = 0;
 	await clock.advance(100);
-	expect(fake.lifecycle).toEqual([]);
+	expect(fakes.lifecycle).toEqual([]);
 	expect(clock.scheduled()).toBe(0);
 });
 
 test("a batch past the waiting offsets commits its own, and the waiting ones are covered", async () => {
-	const fake = createFakeProducer();
+	const fakes = createFakes();
 	const clock = createClock();
-	const appender = createAppender({
-		producer: fake.producer,
-		timing: clock.timing,
-	});
+	const appender = createAppender({ fakes, timing: clock.timing });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 20n });
 	const mutation = {
 		...createMutation({ state: createState(), commandId: "queued" }),
 		source: { commandOffset: "25" },
 	};
 	await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
-	expect(fake.lifecycle).toEqual([
+	expect(fakes.lifecycle).toEqual([
 		"transaction",
 		"send",
 		"offset:26",
 		"commit",
 	]);
-	fake.lifecycle.length = 0;
+	fakes.lifecycle.length = 0;
 	await clock.advance(100);
-	expect(fake.lifecycle).toEqual([]);
+	expect(fakes.lifecycle).toEqual([]);
 });
 
 test("an offset already landed is never committed again", async () => {
-	const fake = createFakeProducer();
+	const fakes = createFakes();
 	const clock = createClock();
-	const appender = createAppender({
-		producer: fake.producer,
-		timing: clock.timing,
-	});
+	const appender = createAppender({ fakes, timing: clock.timing });
 	await appender.commitCommandOffset({ topic, partition, nextOffset: 40n });
-	expect(fake.lifecycle).toEqual(["transaction", "offset:40", "commit"]);
-	fake.lifecycle.length = 0;
+	expect(fakes.lifecycle).toEqual(["group:40"]);
+	fakes.lifecycle.length = 0;
 	appender.settleCommandOffset({ topic, partition, nextOffset: 40n });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 39n });
 	await clock.advance(100);
-	expect(fake.lifecycle).toEqual([]);
+	expect(fakes.lifecycle).toEqual([]);
 	expect(clock.scheduled()).toBe(0);
 });
 
-test("a landing that fails is reported by the next command and by the drain", async () => {
-	const fake = createFakeProducer({ refuseOffset: "30" });
+test("a refused landing is retried after the gap and never blocks the next command", async () => {
+	const fakes = createFakes({
+		refuseGroupCommit: ({ offset, attempt }) =>
+			offset === "30" && attempt === 1,
+	});
 	const clock = createClock();
 	const warnings: string[] = [];
-	const appender = createAppender({
-		producer: fake.producer,
-		timing: clock.timing,
-		warnings,
-	});
+	const appender = createAppender({ fakes, timing: clock.timing, warnings });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 30n });
 	await clock.advance(0);
-	expect(fake.lifecycle).toEqual(["transaction", "offset:30", "abort"]);
+	expect(fakes.lifecycle).toEqual(["group:30"]);
 	expect(warnings).toEqual([
-		"Command offsets could not be landed; the next command reports it",
+		"Command offsets could not be landed; retrying after the gap",
 	]);
 	expect(() =>
 		appender.settleCommandOffset({ topic, partition, nextOffset: 31n }),
-	).toThrow(KafkaBatchNotCommittedError);
-	await expect(appender.flushCommandOffsets()).rejects.toBeInstanceOf(
-		KafkaBatchNotCommittedError,
-	);
+	).not.toThrow();
+	await clock.advance(49);
+	expect(fakes.lifecycle).toEqual(["group:30"]);
+	await clock.advance(1);
+	expect(fakes.lifecycle).toEqual(["group:30", "group:31"]);
+	expect(warnings).toHaveLength(1);
+	expect(clock.scheduled()).toBe(0);
+});
+
+test("a landing that keeps failing warns once, and the drain reports it and stops retrying", async () => {
+	const fakes = createFakes({ refuseGroupCommit: () => true });
+	const clock = createClock();
+	const warnings: string[] = [];
+	const appender = createAppender({ fakes, timing: clock.timing, warnings });
+	appender.settleCommandOffset({ topic, partition, nextOffset: 30n });
+	await clock.advance(0);
+	await clock.advance(50);
+	expect(fakes.lifecycle).toEqual(["group:30", "group:30"]);
+	expect(warnings).toHaveLength(1);
+	await expect(appender.flushCommandOffsets()).rejects.toThrow("refused 30");
+	expect(fakes.lifecycle).toEqual(["group:30", "group:30", "group:30"]);
+	await clock.advance(100);
+	expect(fakes.lifecycle).toHaveLength(3);
 	expect(clock.scheduled()).toBe(0);
 });
 
 test("a flush lands what is waiting at once, including what settled during a landing", async () => {
 	const gate = Promise.withResolvers<void>();
-	const fake = createFakeProducer({ holdFirstCommit: gate.promise });
+	const fakes = createFakes({ holdFirstGroupCommit: gate.promise });
 	const clock = createClock();
-	const appender = createAppender({
-		producer: fake.producer,
-		timing: clock.timing,
-	});
+	const appender = createAppender({ fakes, timing: clock.timing });
 	appender.settleCommandOffset({ topic, partition, nextOffset: 50n });
 	await clock.advance(0);
-	expect(fake.lifecycle).toEqual(["transaction", "offset:50"]);
+	expect(fakes.lifecycle).toEqual(["group:50"]);
 	appender.settleCommandOffset({ topic, partition, nextOffset: 51n });
 	expect(clock.scheduled()).toBe(0);
 	const flushed = appender.flushCommandOffsets();
 	gate.resolve();
 	await flushed;
-	expect(fake.lifecycle).toEqual([
-		"transaction",
-		"offset:50",
-		"commit",
-		"transaction",
-		"offset:51",
-		"commit",
-	]);
+	expect(fakes.lifecycle).toEqual(["group:50", "group:51"]);
 	expect(clock.scheduled()).toBe(0);
+});
+
+test("landing outside a batch needs the consumer group's committer", async () => {
+	const fakes = createFakes();
+	const clock = createClock();
+	const appender = createMutationPublisher({
+		ctx: { producer: fakes.producer, settle: clock.timing },
+		config: { commandTopic: "commands", groupId: "workers" },
+	});
+	await expect(
+		appender.commitCommandOffset({ topic, partition, nextOffset: 7n }),
+	).rejects.toThrow("committer");
+	expect(fakes.lifecycle).toEqual([]);
 });

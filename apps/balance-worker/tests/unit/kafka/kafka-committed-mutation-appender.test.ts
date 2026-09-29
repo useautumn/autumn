@@ -84,10 +84,18 @@ const waitForTurn = async (): Promise<void> => {
 };
 
 describe("Kafka committed track outcome appender", () => {
-	test("source offsets commit with the mutation, while offset-only completions use the same transaction fence", async () => {
+	test("source offsets commit with the mutation, while offset-only completions use the consumer group's commit", async () => {
 		const fake = createFakeProducer();
+		const groupCommits: string[] = [];
 		const appender = createMutationPublisher({
-			ctx: { producer: fake.producer },
+			ctx: {
+				producer: fake.producer,
+				commandOffsets: {
+					commit: async (offsets) => {
+						groupCommits.push(`${offsets.topics[0]?.partitions[0]?.offset}`);
+					},
+				},
+			},
 			config: { commandTopic: "commands", groupId: "workers" },
 		});
 		const mutation = {
@@ -103,7 +111,8 @@ describe("Kafka committed track outcome appender", () => {
 		]);
 		fake.lifecycle.length = 0;
 		await appender.commitCommandOffset({ topic, partition, nextOffset: 43n });
-		expect(fake.lifecycle).toEqual(["transaction", "offset:43", "commit"]);
+		expect(fake.lifecycle).toEqual([]);
+		expect(groupCommits).toEqual(["43"]);
 	});
 
 	test("an offset send failure aborts the mutation transaction", async () => {
