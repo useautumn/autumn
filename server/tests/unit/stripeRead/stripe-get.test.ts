@@ -238,3 +238,70 @@ describe("resolveStripeReadClient", () => {
 		).toThrow();
 	});
 });
+
+describe("stripeGet hardening", () => {
+	test("rejects card PAN/CVC expands hidden inside nested params", async () => {
+		for (const expand of [
+			{ "0": "number" },
+			{ nested: ["card.cvc"] },
+			[["data.number"]],
+		]) {
+			const { client, calls } = fakeClient({ responses: [{}] });
+			await expect(
+				stripeGet({
+					client,
+					path: "/v1/issuing/cards/ic_1",
+					params: { expand },
+				}),
+			).rejects.toThrow("not allowed");
+			expect(calls()).toHaveLength(0);
+		}
+	});
+
+	test("strips card number and cvc from issuing cards in any response", () => {
+		expect(
+			redactStripeResponse({
+				body: {
+					object: "list",
+					data: [
+						{
+							object: "issuing.card",
+							id: "ic_1",
+							number: "4242",
+							cvc: "123",
+							last4: "4242",
+						},
+					],
+				},
+			}),
+		).toEqual({
+			object: "list",
+			data: [{ object: "issuing.card", id: "ic_1", last4: "4242" }],
+		});
+	});
+
+	test("a truncated search keeps its next_page cursor", async () => {
+		const { client } = fakeClient({
+			responses: [
+				{
+					object: "search_result",
+					data: [{ id: "cus_1" }],
+					has_more: true,
+					next_page: "cursor_2",
+				},
+			],
+		});
+		expect(
+			await stripeGet({
+				client,
+				path: "/v1/customers/search",
+				params: { query: "email:'a'" },
+			}),
+		).toEqual({
+			object: "search_result",
+			data: [{ id: "cus_1" }],
+			has_more: true,
+			next_page: "cursor_2",
+		});
+	});
+});
