@@ -3,6 +3,7 @@ import { AppEnv, type Organization } from "@autumn/shared";
 import { Hono } from "hono";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
+import { OAUTH_STATE_TTL_SECONDS } from "@/external/redis/actions/oauthStateStore/oauthStateStore.js";
 import { handleOAuthCallback } from "@/internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
@@ -101,11 +102,6 @@ test("OAuth callback failures use trusted state return URL and stable error cont
 	});
 	expect(await consumeOAuthState({ stateKey: state })).toBeNull();
 	expect(token).not.toHaveBeenCalled();
-	expectFailure({
-		url: await callback({ state }),
-		error: "invalid_state",
-		custom: false,
-	});
 	expectFailure({
 		url: await callback({}),
 		error: "missing_parameters",
@@ -280,4 +276,48 @@ test("OAuth callback does not persist an account whose exchanged authorization w
 	});
 	const saved = await OrgService.get({ db, orgId: org.id });
 	expect(saved.test_stripe_connect?.account_id).toBeUndefined();
+}, 120_000);
+
+test("OAuth callback returns expired and reused links to the platform's return URL", async () => {
+	const org = await createOrg();
+
+	const usedState = await stateFor({ org });
+	await callback({ state: usedState, error: "access_denied", code: "" });
+	expectFailure({
+		url: await callback({ state: usedState }),
+		error: "state_already_used",
+	});
+
+	// Redis drops the stored state at its TTL; the signed copy is all that is left.
+	const expiredState = await stateFor({ org });
+	await consumeOAuthState({ stateKey: expiredState });
+	const clock = spyOn(Date, "now").mockReturnValue(
+		Date.now() + (OAUTH_STATE_TTL_SECONDS + 1) * 1000,
+	);
+	try {
+		expectFailure({
+			url: await callback({ state: expiredState }),
+			error: "state_expired",
+		});
+	} finally {
+		clock.mockRestore();
+	}
+	expect(token).not.toHaveBeenCalled();
+}, 120_000);
+
+test("OAuth callback never trusts a return URL it cannot verify", async () => {
+	const org = await createOrg();
+	const [, , signature] = (await stateFor({ org })).split(".");
+	const forgedPayload = Buffer.from(
+		JSON.stringify({ r: "https://attacker.example", t: Date.now() }),
+	).toString("base64url");
+
+	for (const state of [
+		`expired_key.${forgedPayload}.${signature}`,
+		"unknown_unsigned_state",
+	]) {
+		const url = await callback({ state });
+		expectFailure({ url, error: "invalid_state", custom: false });
+		expect(url.origin).not.toBe("https://attacker.example");
+	}
 }, 120_000);

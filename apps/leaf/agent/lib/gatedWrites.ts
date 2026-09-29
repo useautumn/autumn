@@ -35,6 +35,13 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "createEntity",
 	},
 	{
+		agents: ["leaf"],
+		previewTool: "previewCreateInvoice",
+		scopes: ["billing:write"],
+		previewedRequestRequired: true,
+		toolName: "createInvoice",
+	},
+	{
 		agents: ["catalog"],
 		previewTool: "previewUpdateCatalog",
 		scopes: ["plans:write"],
@@ -51,6 +58,25 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		scopes: ["billing:write"],
 		previewedRequestRequired: true,
 		toolName: "createSchedule",
+	},
+	{
+		agents: ["leaf"],
+		previewTool: "getInvoice",
+		scopes: ["billing:write"],
+		toolName: "finalizeInvoice",
+	},
+	{
+		agents: ["leaf"],
+		previewTool: "getInvoice",
+		scopes: ["billing:write"],
+		toolName: "payInvoice",
+	},
+	{
+		agents: ["leaf"],
+		previewTool: "previewReissueInvoice",
+		scopes: ["billing:write"],
+		previewedRequestRequired: true,
+		toolName: "reissueInvoice",
 	},
 	{
 		agents: ["leaf"],
@@ -79,5 +105,11 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		scopes: ["billing:write"],
 		previewedRequestRequired: true,
 		toolName: "updateSubscription",
+	},
+	{
+		agents: ["leaf"],
+		previewTool: "getInvoice",
+		scopes: ["billing:write"],
+		toolName: "voidInvoice",
 	},
 ];

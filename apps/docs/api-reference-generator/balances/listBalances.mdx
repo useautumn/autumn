@@ -1,0 +1,16 @@
+---
+title: "List Balances"
+openapi: "openapi POST /v1/balances.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+Lists individual balances, one row per grant: plan balances, standalone balances from `balances.create`, top-ups, and pooled balances. By default only active balances are returned; pass `statuses: ["expired"]` for balances whose plan expired or whose `expires_at` has passed.
+
+Pass `plan_id: null` to list only balances that don't come from a plan. Rollovers are returned on the balance they belong to.
+
+<Note>
+  A page can hold fewer than `limit` rows (even zero) while `has_more` is `true`. Keep paginating until `has_more` is `false`.
+</Note>

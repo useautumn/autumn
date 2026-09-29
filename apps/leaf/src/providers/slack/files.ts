@@ -1,4 +1,5 @@
 import type { Attachment } from "chat";
+import { threadAttachmentFileId } from "./threadContext.js";
 
 const SLACK_FILES_INFO_URL = "https://slack.com/api/files.info";
 
@@ -63,7 +64,7 @@ const fetchSlackPrivateUrl = async ({
 	return Buffer.from(await response.arrayBuffer());
 };
 
-const fetchSlackFileInfoUrl = async ({
+const fetchSlackFileInfo = async ({
 	botToken,
 	fileId,
 }: {
@@ -78,10 +79,46 @@ const fetchSlackFileInfoUrl = async ({
 	if (!response.ok)
 		throw new Error(`Slack files.info failed: ${response.status}`);
 	const data = await response.json();
-	if (!isRecord(data) || data.ok !== true || !isRecord(data.file)) return null;
-	return typeof data.file.url_private === "string"
-		? data.file.url_private
-		: null;
+	// A rejected lookup (e.g. no access to a shared-channel file) throws, so
+	// callers log why the file could not be read.
+	if (!isRecord(data) || data.ok !== true) {
+		const reason =
+			isRecord(data) && typeof data.error === "string" ? data.error : "unknown";
+		throw new Error(`Slack files.info failed: ${reason}`);
+	}
+	return parseSlackFile(data.file);
+};
+
+/** Slack Connect (shared channel) events carry file stubs with only an id, so
+ * the adapter builds attachments with no name, type or URL. Fill those in from
+ * files.info; the adapter maps `files` to attachments in order. */
+export const hydrateSlackAttachment = async ({
+	attachment,
+	botToken,
+	fileIndex,
+	raw,
+}: {
+	attachment: Attachment;
+	botToken: string;
+	fileIndex: number;
+	raw: unknown;
+}): Promise<Attachment> => {
+	if (attachment.mimeType && attachment.name) return attachment;
+	const fileId = threadAttachmentFileId({ fileIndex, raw });
+	if (!fileId) return attachment;
+	const file = await fetchSlackFileInfo({ botToken, fileId });
+	if (!file) return attachment;
+	const url = attachment.url ?? file.url_private;
+	return {
+		...attachment,
+		mimeType: attachment.mimeType ?? file.mimetype,
+		name: attachment.name ?? file.name,
+		size: attachment.size ?? file.size,
+		url,
+		fetchData:
+			attachment.fetchData ??
+			(url ? () => fetchSlackPrivateUrl({ botToken, url }) : undefined),
+	};
 };
 
 export const fetchSlackAttachmentFallback = async ({
@@ -98,7 +135,8 @@ export const fetchSlackAttachmentFallback = async ({
 	const url =
 		rawFile.url_private ??
 		(rawFile.id
-			? await fetchSlackFileInfoUrl({ botToken, fileId: rawFile.id })
+			? (await fetchSlackFileInfo({ botToken, fileId: rawFile.id }))
+					?.url_private
 			: null);
 	if (!url) return null;
 	return fetchSlackPrivateUrl({ botToken, url });

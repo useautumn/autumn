@@ -3,6 +3,7 @@ import {
 	AuthType,
 	type Organization,
 	productAliases,
+	productAliasesToPlanAliasMap,
 } from "@autumn/shared";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
@@ -10,7 +11,6 @@ import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
@@ -57,7 +57,10 @@ export const vercelSeederMiddleware = async (
 	const nextCtx = {
 		...ctx,
 		org: org
-			? { ...org, planAliases: toPlanAliasMap({ rows: aliasRows }) }
+			? {
+					...org,
+					planAliases: productAliasesToPlanAliasMap({ rows: aliasRows }),
+				}
 			: org,
 		env,
 		features,

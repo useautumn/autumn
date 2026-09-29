@@ -82,6 +82,9 @@ export const commandToFingerprint = ({
 				command.featureId,
 				canonicalizeJsonValue(command.customerEntitlementFilters ?? null),
 			]);
+		// Nothing but the customer is the request; each evict mints its own id, so none is ever retried.
+		case "evict":
+			return JSON.stringify([...identityKey, command.type]);
 		// The baseline rows are the request; a retry with different rows is a conflict.
 		case "initialize":
 			return JSON.stringify(

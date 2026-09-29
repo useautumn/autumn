@@ -5,6 +5,8 @@ import { confirmExpiredLockCommandSchema } from "../../commands/confirmExpiredLo
 import { confirmExpiredLockResultSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockResult.js";
 import { deleteBalanceCommandSchema } from "../../commands/deleteBalance/types/deleteBalanceCommand.js";
 import { deleteBalanceResultSchema } from "../../commands/deleteBalance/types/deleteBalanceResult.js";
+import { loggedEvictCommandSchema } from "../../commands/evict/types/evictCommand.js";
+import { evictResultSchema } from "../../commands/evict/types/evictResult.js";
 import { finalizeCommandSchema } from "../../commands/finalize/types/finalizeCommand.js";
 import { finalizeResultSchema } from "../../commands/finalize/types/finalizeResult.js";
 import { initializeCommandSchema } from "../../commands/initialize/types/initializeCommand.js";
@@ -32,6 +34,7 @@ export const mutationCommandSchema = z.discriminatedUnion("type", [
 	updateBalanceCommandSchema.loose(),
 	deleteBalanceCommandSchema.loose(),
 	recalculateBalanceCommandSchema.loose(),
+	loggedEvictCommandSchema.loose(),
 ]);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [
@@ -44,6 +47,7 @@ export const mutationResultSchema = z.discriminatedUnion("type", [
 	updateBalanceResultSchema,
 	deleteBalanceResultSchema,
 	recalculateBalanceResultSchema,
+	evictResultSchema,
 ]);
 
 export const mutationSubjectSchema = z
@@ -116,6 +120,14 @@ export const refineSubjectStateMutation = (
 			code: "custom",
 			message: "A plan that creates the customer must start at revision zero",
 			path: ["revision", "before"],
+		});
+	}
+	// Nothing moves on an evict: the store lands its bookmark alone and replay has nothing to apply.
+	if (mutation.command.type === "evict" && mutation.changes.length > 0) {
+		context.addIssue({
+			code: "custom",
+			message: "An evict carries no row changes",
+			path: ["changes"],
 		});
 	}
 	if (mutation.command.type === "initialize") {

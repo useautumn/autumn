@@ -97,6 +97,8 @@ export type PartitionProcessorConfig = {
 	topic: string;
 	partition: number;
 	writerLimits: PartitionWriterLimits;
+	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
+	logsEvicts?: boolean;
 };
 
 export interface PartitionProcessorContext

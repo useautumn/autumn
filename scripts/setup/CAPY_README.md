@@ -10,7 +10,7 @@ Configure this repository under **Settings → Project → Dev environment**:
 
 | Lifecycle | Command | Responsibility |
 | --- | --- | --- |
-| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs `neonctl` and the pinned Stripe CLI, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
+| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs `neonctl`, the pinned Stripe CLI and native Kafka, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
 | Update after checkout | `bash scripts/setup/capy-init.sh` | re-runs the same deterministic refresh so reused or snapshotted VMs pick up pinned skills and tooling after checkout |
 | Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files |
 | App | `bun capy` | runs Startup if needed and starts the app in a detached tmux session |
@@ -43,15 +43,22 @@ authenticates the Stripe CLI without interactive login.
 
 ## Runtime services
 
-Startup launches Autumn's `scripts/setup/dw.compose.yml` services and the
-Trigger.dev control plane in `scripts/setup/trigger.compose.yml`:
+Startup launches Dragonfly and fakecloud from `scripts/setup/dw.compose.yml`,
+the Trigger.dev control plane in `scripts/setup/trigger.compose.yml`, and a
+native Apache Kafka broker from `scripts/setup/capy-kafka.sh`:
 
 | Port | Service |
 | --- | --- |
+| 4566 | fakecloud (SQS, EventBridge Scheduler, DynamoDB) |
 | 6379 | Dragonfly |
-| 8000 | DynamoDB Local |
 | 8030 | Trigger.dev webapp and API |
-| 9324 | ElasticMQ |
+| 19092 | Kafka (plaintext, loopback only) |
+
+Kafka runs as a JVM process, not a container. Initialize installs Kafka 3.9.1
+into `~/.cache/autumn-capy/`, and Startup formats it once and keeps its data,
+pid and log in `~/.autumn-capy/kafka/`. `server/.env.local` gets
+`KAFKA_BROKERS=127.0.0.1:19092` and `KAFKA_AUTH_MODE=none`, so the dev server,
+balance worker and `bun t` all reach it without MSK auth.
 
 Trigger.dev runs a control plane matching the exact `trigger.dev` version in
 the root `package.json`. Startup creates its datastore credentials in
@@ -121,6 +128,7 @@ docker compose --env-file ~/.autumn-capy/trigger.env \
   -f scripts/setup/trigger.compose.yml -p autumn-capy-trigger ps
 docker compose --env-file ~/.autumn-capy/trigger.env \
   -f scripts/setup/trigger.compose.yml -p autumn-capy-trigger logs
+tail -f ~/.autumn-capy/kafka/kafka.log
 ```
 
 Re-run Startup to repair stopped containers and refresh env files:

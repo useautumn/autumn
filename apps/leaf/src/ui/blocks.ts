@@ -336,6 +336,8 @@ const actionPhrases = ({
 			})
 		: "the plan";
 	const entitySuffix = entity ? ` (entity ${bold(entity)})` : "";
+	const invoice = getString(request.invoice_id);
+	const invoiceLabel = invoice ? `invoice ${bold(invoice)}` : "the invoice";
 	const labels = {
 		customer: customerLabel,
 		plan: planLabel,
@@ -432,6 +434,48 @@ const actionPhrases = ({
 					failed: `Couldn't create ${target}`,
 					pending: `Create ${target}`,
 					running: `Creating ${target}`,
+				};
+			}
+			case "createInvoice": {
+				const target = `an invoice for ${customerLabel}${entitySuffix}`;
+				return {
+					done: `Created ${target}`,
+					failed: `Couldn't create ${target}`,
+					pending: `Create ${target}`,
+					running: `Creating ${target}`,
+				};
+			}
+			case "reissueInvoice": {
+				const target = invoiceLabel;
+				return {
+					done: `Reissued ${target}`,
+					failed: `Couldn't reissue ${target}`,
+					pending: `Reissue ${target}`,
+					running: `Reissuing ${target}`,
+				};
+			}
+			case "finalizeInvoice": {
+				return {
+					done: `Finalized ${invoiceLabel}`,
+					failed: `Couldn't finalize ${invoiceLabel}`,
+					pending: `Finalize ${invoiceLabel}`,
+					running: `Finalizing ${invoiceLabel}`,
+				};
+			}
+			case "payInvoice": {
+				return {
+					done: `Marked ${invoiceLabel} as paid`,
+					failed: `Couldn't mark ${invoiceLabel} as paid`,
+					pending: `Mark ${invoiceLabel} as paid`,
+					running: `Marking ${invoiceLabel} as paid`,
+				};
+			}
+			case "voidInvoice": {
+				return {
+					done: `Voided ${invoiceLabel}`,
+					failed: `Couldn't void ${invoiceLabel}`,
+					pending: `Void ${invoiceLabel}`,
+					running: `Voiding ${invoiceLabel}`,
 				};
 			}
 			default: {

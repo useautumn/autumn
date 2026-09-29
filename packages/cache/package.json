@@ -20,7 +20,8 @@
 		"@autumn/edge-config": "workspace:*",
 		"@autumn/logging": "workspace:*",
 		"@autumn/shared": "workspace:*",
-		"ioredis": "^5.5.0"
+		"ioredis": "^5.5.0",
+		"lru-cache": "^11.2.7"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.2",

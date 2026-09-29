@@ -1,6 +1,7 @@
 import {
 	orgToCommandOrg,
 	parseReadSubjectStateCommand,
+	workerStateToFullSubject,
 } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import { CustomerExpand, type FullSubject, type Invoice } from "@autumn/shared";
@@ -15,7 +16,6 @@ import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubjec
 import { readCachedCustomerInvoices } from "@/internal/invoices/actions/readCachedCustomerInvoices.js";
 import { readCachedSubscriptions } from "@/internal/subscriptions/actions/readCachedSubscriptions.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
-import { workerStateToFullSubject } from "./workerStateToFullSubject.js";
 
 type SubjectClient = Pick<BalanceWorkerClient, "readSubjectState">;
 

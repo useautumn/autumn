@@ -103,6 +103,8 @@ export type RequestContext = {
 		mockVercelApi?: boolean;
 		allowVercelTestOidc?: boolean;
 		mockRevenueCat?: boolean;
+		/** Caps customers walked per list page (non-prod only). */
+		listScanCap?: number;
 		revenueCat?: {
 			subscriptions?: unknown[];
 			purchases?: unknown[];

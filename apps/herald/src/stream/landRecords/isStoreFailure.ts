@@ -1,4 +1,5 @@
 import { isTinybirdError, TinybirdIngestError } from "@autumn/tinybird";
+import { isBalanceWorkerUnavailable } from "./isBalanceWorkerUnavailable.js";
 
 const SOCKET_CODES = new Set([
 	"ECONNRESET",
@@ -11,6 +12,7 @@ const SOCKET_CODES = new Set([
 export const isStoreFailure = (cause: unknown): boolean => {
 	if (cause instanceof TinybirdIngestError) return isStoreFailure(cause.cause);
 	if (isTinybirdError(cause)) return true;
+	if (isBalanceWorkerUnavailable(cause)) return true;
 	if (!(cause instanceof Error)) return false;
 	const { errno, code } = cause as Error & { errno?: unknown; code?: unknown };
 	if (typeof errno === "string") return true;

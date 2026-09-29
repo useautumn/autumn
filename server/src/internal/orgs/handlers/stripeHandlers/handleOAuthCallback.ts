@@ -3,11 +3,15 @@ import type { Context } from "hono";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
+import { OAUTH_STATE_TTL_SECONDS } from "@/external/redis/actions/oauthStateStore/oauthStateStore.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { toPlatformOrg } from "@/internal/platform/platformBeta/handlers/platformOrgUtils.js";
-import { consumeOAuthState } from "@/internal/platform/platformBeta/utils/oauthStateUtils.js";
+import {
+	consumeOAuthState,
+	readOAuthStateReturn,
+} from "@/internal/platform/platformBeta/utils/oauthStateUtils.js";
 
 const failureMessages = {
 	access_denied:
@@ -17,7 +21,11 @@ const failureMessages = {
 	missing_parameters:
 		"The Stripe callback is missing required parameters. Please restart the connection.",
 	invalid_state:
-		"This connection request has expired or was already used. Please restart the connection.",
+		"This connection request is not valid. Please restart the connection.",
+	state_expired:
+		"This connection link has expired. Please restart the connection.",
+	state_already_used:
+		"This connection link was already used. Please restart the connection.",
 	org_not_found:
 		"The organization could not be found. Please restart the connection.",
 	account_id_not_found:
@@ -66,9 +74,20 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 		// Consume OAuth state from Redis
 		const redisState = await consumeOAuthState({ stateKey: state });
 
-		if (!redisState || redisState.provider === "revenuecat") {
-			return fail("invalid_state");
+		if (!redisState) {
+			// A signed return URL outlives the stored state, so send the user back there
+			const stateReturn = readOAuthStateReturn({ state });
+			if (!stateReturn) return fail("invalid_state");
+
+			redirectUrl = new URL(stateReturn.redirectUri);
+			const ageMs = Date.now() - stateReturn.issuedAt;
+			return fail(
+				ageMs > OAUTH_STATE_TTL_SECONDS * 1000
+					? "state_expired"
+					: "state_already_used",
+			);
 		}
+		if (redisState.provider === "revenuecat") return fail("invalid_state");
 
 		// Extract state data
 		const {

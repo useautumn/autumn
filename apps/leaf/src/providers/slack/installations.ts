@@ -87,6 +87,23 @@ export const findSlackInstallationForWorkspace = async ({
 	return await findInstallationWithOrg("slack", workspaceId);
 };
 
+/** Whether any of these Slack user ids is the bot user of one of our
+ * installations. In a Slack Connect channel each workspace sees its own copy
+ * of the app, so a tag can name another installation's bot. */
+export const isAgentBotUser = async ({
+	userIds,
+}: {
+	userIds: ReadonlyArray<string>;
+}): Promise<boolean> => {
+	if (userIds.length === 0) return false;
+	const [row] = await db
+		.select({ id: chatInstallations.id })
+		.from(chatInstallations)
+		.where(inArray(chatInstallations.bot_user_id, [...userIds]))
+		.limit(1);
+	return Boolean(row);
+};
+
 export const getInstallationKey = (
 	installation: ChatInstallation,
 	env: AppEnv,

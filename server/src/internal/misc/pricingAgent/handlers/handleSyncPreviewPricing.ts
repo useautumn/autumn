@@ -1,3 +1,4 @@
+import { clearOrgWithFeaturesCache } from "@autumn/cache";
 import {
 	AppEnv,
 	agentFeatureToFeature,
@@ -7,8 +8,8 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -75,6 +76,7 @@ export const handleSyncPreviewPricing = createRoute({
 		// Workers read features through the org cache; drop it so they don't
 		// serve the nuked feature list for the rest of the TTL.
 		await clearOrgWithFeaturesCache({
+			ctx: getMiscCacheContext(),
 			orgId: previewOrg.id,
 			env: AppEnv.Sandbox,
 		});

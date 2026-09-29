@@ -49,6 +49,17 @@ export {
 export { runRedisOp, tryRedisOp } from "./ops/runRedisOp.js";
 export { tryRedisNx } from "./ops/tryRedisNx.js";
 export {
+	_orgWithFeaturesL1SizeForTesting,
+	_resetOrgWithFeaturesL1ForTesting,
+	buildOrgWithFeaturesCacheKey,
+	clearOrgWithFeaturesCache,
+	getCachedOrgWithFeatures,
+	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
+	ORG_WITH_FEATURES_L1_MAX_ENTRIES,
+	ORG_WITH_FEATURES_L1_TTL_MS,
+	setCachedOrgWithFeatures,
+} from "./orgWithFeatures/orgWithFeaturesCache.js";
+export {
 	buildSubscriptionCacheKey,
 	getCachedSubscriptions,
 	invalidateSubscriptionCache,

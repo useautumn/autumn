@@ -16,6 +16,7 @@ import {
 	CursorClickIcon,
 	FingerprintIcon,
 	GearIcon,
+	ShieldIcon,
 	StarIcon,
 } from "@phosphor-icons/react";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -588,6 +589,14 @@ const CommandBar = () => {
 
 	const searchOnlyAdminItems = isAdmin
 		? [
+				{
+					title: "Go to Admin",
+					icon: <ShieldIcon />,
+					onSelect: () => {
+						navigateTo("/admin", navigate, env);
+						closeDialog();
+					},
+				},
 				{
 					title: "Toggle admin hover",
 					subtext: adminHoverEnabled ? "On" : "Off",
