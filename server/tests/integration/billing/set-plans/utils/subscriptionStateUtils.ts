@@ -2,6 +2,8 @@ import { expect } from "bun:test";
 import {
 	CusProductStatus,
 	findActiveCustomerProductById,
+	type SetPlansPreviewResponse,
+	type SetPlansPreviewWarning,
 } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
@@ -86,4 +88,24 @@ export const expectSubscriptionReplaced = async ({
 		inStatuses: [CusProductStatus.Pending],
 	});
 	expect(pendingRows).toHaveLength(0);
+};
+
+/** The preview names the warning, and its message mentions each given fragment. */
+export const expectPreviewWarning = ({
+	preview,
+	type,
+	messageContains = [],
+}: {
+	preview: SetPlansPreviewResponse;
+	type: SetPlansPreviewWarning["type"];
+	messageContains?: string[];
+}) => {
+	const warning = preview.warnings.find((candidate) => candidate.type === type);
+	expect(
+		warning,
+		`preview warnings ${JSON.stringify(preview.warnings.map((w) => w.type))} miss ${type}`,
+	).toBeDefined();
+	for (const fragment of messageContains) {
+		expect(warning?.message).toContain(fragment);
+	}
 };

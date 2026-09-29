@@ -9,7 +9,10 @@
 
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, secondsToMs } from "@autumn/shared";
-import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
+import {
+	expectPreviewWarning,
+	findStripeSubscriptionByStatus,
+} from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import {
 	expectSubscriptionNotTrialing,
 	expectSubscriptionTrialing,
@@ -69,11 +72,18 @@ test.concurrent(
 		const { customerId, autumnV2_4, ctx, proTrial, trialing, advancedTo } =
 			await setupTrialingPro({ customerId: "set-plans-trial-ended" });
 
-		await autumnV2_4.billing.setPlans({
+		const setPlansParams = {
 			customer_id: customerId,
 			free_trial: null,
-			phases: [{ starts_at: "now", plans: [{ plan_id: proTrial.id }] }],
+			phases: [
+				{ starts_at: "now" as const, plans: [{ plan_id: proTrial.id }] },
+			],
+		};
+		expectPreviewWarning({
+			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			type: "trial_ended",
 		});
+		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		const ended = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
 		expect(ended.status).toBe("active");
