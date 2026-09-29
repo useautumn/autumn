@@ -5,6 +5,7 @@
  *   - The preview charges nothing now and warns that the cycle resets on the anchor.
  *   - Stripe gets a schedule phase that starts on the anchor with phase_start.
  *   - Balances reset on the anchor; Stripe bills the stretch past the old period end there, as attach does.
+ *   - An add-on the request leaves alone on the same subscription resets on the anchor too.
  */
 
 import { expect, test } from "bun:test";
@@ -80,6 +81,45 @@ test.concurrent(
 			customerId,
 			count: 2,
 			latestTotal: expectedResetInvoice.total,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: an add-on left on the subscription resets on the anchor too")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 50 })],
+		});
+
+		const { customerId, autumnV2_4, advancedTo } = await initScenario({
+			customerId: "set-plans-resync-live-anchor-addon",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addOn] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({ productId: addOn.id }),
+			],
+		});
+
+		const anchorMs = advancedTo + ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			billing_cycle_anchor: anchorMs,
+			proration_behavior: "none",
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+		});
+
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Words,
+			remaining: 50,
+			nextResetAt: anchorMs,
 		});
 	},
 );
