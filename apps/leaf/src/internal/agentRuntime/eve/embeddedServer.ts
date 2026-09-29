@@ -93,7 +93,10 @@ export const startEmbeddedEveServer = async () => {
 		.env({ ...eveEnv, CHAT_PORT, NITRO_PRESET: EVE_SERVER_PRESET });
 	await logBuiltServerPreset(leafRoot);
 	if (worldUrl) {
-		await $`bunx workflow-postgres-setup`.cwd(leafRoot).env(eveEnv);
+		// `workflow-postgres-setup` is now a stub that always exits 1.
+		await $`bunx --package @workflow/world-postgres bootstrap`
+			.cwd(leafRoot)
+			.env(eveEnv);
 	}
 	const eve = Bun.spawn({
 		cmd: ["bun", ".output/server/index.mjs"],
