@@ -2,13 +2,13 @@ import type { MultiAttachBillingContext } from "@autumn/shared";
 
 type ExistingScheduleContext = Pick<
 	MultiAttachBillingContext,
-	"fullCustomer" | "stripeSubscriptionSchedule"
+	"fullCustomer" | "stripeSubscription" | "stripeSubscriptionSchedule"
 >;
 
 /**
  * The request replaces a schedule already in place rather than creating one.
- * Autumn-managed phases have no Stripe schedule, so scheduled customer products
- * count too.
+ * Schedule ids on rows only count while their subscription is live; after a
+ * cancel they are stale.
  */
 export const isExistingScheduleUpdate = ({
 	billingContext,
@@ -16,6 +16,7 @@ export const isExistingScheduleUpdate = ({
 	billingContext: ExistingScheduleContext;
 }) =>
 	!!billingContext.stripeSubscriptionSchedule ||
-	billingContext.fullCustomer.customer_products.some(
-		(customerProduct) => (customerProduct.scheduled_ids?.length ?? 0) > 0,
-	);
+	(!!billingContext.stripeSubscription &&
+		billingContext.fullCustomer.customer_products.some(
+			(customerProduct) => (customerProduct.scheduled_ids?.length ?? 0) > 0,
+		));
