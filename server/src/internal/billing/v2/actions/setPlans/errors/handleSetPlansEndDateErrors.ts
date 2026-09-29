@@ -1,7 +1,6 @@
 import {
 	type CreateScheduleBillingContext,
 	ErrCode,
-	isPastStartDate,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -15,7 +14,7 @@ export const handleSetPlansEndDateErrors = ({
 }) => {
 	if (endsAt === undefined) return;
 
-	if (isPastStartDate(endsAt, billingContext.currentEpochMs)) {
+	if (endsAt <= billingContext.currentEpochMs) {
 		throw new RecaseError({
 			message:
 				"ends_at cannot be set to a past timestamp. Use a future Unix timestamp in milliseconds.",
