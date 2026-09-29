@@ -8,13 +8,20 @@ import {
 	type ProcessorItem,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
+	type StripeBillingPlan,
 } from "@autumn/shared";
+import type Stripe from "stripe";
+import {
+	type SubscriptionWarningContext,
+	subscriptionStateToWarnings,
+} from "./subscriptionStateToWarnings";
 
 type WarningType = SetPlansPreviewWarning["type"];
 
 const INFO_WARNING_TYPES: WarningType[] = [
 	"new_stripe_price_created",
 	"proration_disabled",
+	"new_stripe_subscription",
 ];
 
 /** Unmanaged live items that the immediate phase's end state no longer holds. */
@@ -69,6 +76,9 @@ export const setPlansPreviewToWarnings = ({
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
 	features,
+	billingContext,
+	stripeBillingPlan,
+	replacedOpenInvoices,
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
@@ -77,11 +87,19 @@ export const setPlansPreviewToWarnings = ({
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
 	features: Feature[];
+	billingContext?: SubscriptionWarningContext;
+	stripeBillingPlan?: StripeBillingPlan;
+	replacedOpenInvoices?: Stripe.Invoice[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
 
 	const warnings: Omit<SetPlansPreviewWarning, "severity">[] = [
+		...subscriptionStateToWarnings({
+			billingContext,
+			stripeBillingPlan,
+			replacedOpenInvoices,
+		}),
 		...removedUnmanagedItems({
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
