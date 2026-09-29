@@ -7,11 +7,13 @@ import {
 	type CreateScheduleParamsV0,
 	ErrCode,
 	RecaseError,
+	type SetPlansParamsV0,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import type {
@@ -58,7 +60,11 @@ export async function previewCheckoutAction({
 }: {
 	ctx: AutumnContext;
 	checkout: Checkout;
-	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
+	params:
+		| AttachParamsV1
+		| CreateScheduleParamsV0
+		| SetPlansParamsV0
+		| UpdateSubscriptionV1Params;
 }): Promise<PreviewCheckoutAnyActionResult> {
 	let billingPlan: BillingPlan | undefined;
 
@@ -93,7 +99,9 @@ export async function previewCheckoutAction({
 		case CheckoutAction.CreateSchedule: {
 			const setPlansResult = await billingActions.setPlans({
 				ctx,
-				params: params as CreateScheduleParamsV0,
+				params: createScheduleParamsToSetPlansParams({
+					params: params as CreateScheduleParamsV0 | SetPlansParamsV0,
+				}),
 				preview: true,
 			});
 

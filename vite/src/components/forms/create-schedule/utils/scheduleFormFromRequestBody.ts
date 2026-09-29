@@ -81,7 +81,7 @@ const startsAtFrom = ({
 		: addMonths(base, offset.duration_count).getTime();
 };
 
-/** Inverse of the schedule request builder: maps a resolved create_schedule
+/** Inverse of the schedule request builder: maps a resolved set_plans
  * request (per-plan customize already flattened to items) into form values. */
 export const scheduleFormFromRequestBody = (
 	request: RequestBody,
@@ -124,8 +124,8 @@ export const scheduleFormFromRequestBody = (
 	if (!phases.length) return undefined;
 	return {
 		billingBehavior:
-			typeof request.billing_behavior === "string"
-				? (request.billing_behavior as BillingBehavior)
+			typeof request.proration_behavior === "string"
+				? (request.proration_behavior as BillingBehavior)
 				: null,
 		enablePlanImmediately: request.enable_plan_immediately === true,
 		phases,

@@ -1,8 +1,8 @@
 import type {
 	BillingBehavior,
-	CreateScheduleParamsV0,
 	Feature,
 	ProductV2,
+	SetPlansParamsV0,
 } from "@autumn/shared";
 import { useMemo } from "react";
 import { customerStatePlanToApiPlan } from "@/components/forms/customer-state/customerStatePlanToApiPlan";
@@ -35,7 +35,7 @@ export function buildCreateScheduleRequestBody({
 	billingBehavior?: BillingBehavior | null;
 	resetBillingCycle?: boolean;
 	allowFirstPhaseBackdate?: boolean;
-}): CreateScheduleParamsV0 | null {
+}): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
@@ -96,7 +96,7 @@ export function buildCreateScheduleRequestBody({
 			: {}),
 	};
 
-	if (billingBehavior) body.billing_behavior = billingBehavior;
+	if (billingBehavior) body.proration_behavior = billingBehavior;
 
 	// Anchor resets aren't supported when the immediate phase is a multi-attach;
 	// future phase anchor resets are allowed for persisted schedules.
@@ -107,7 +107,7 @@ export function buildCreateScheduleRequestBody({
 	) {
 		body.billing_cycle_anchor = "now";
 	}
-	return body as CreateScheduleParamsV0;
+	return body as SetPlansParamsV0;
 }
 
 export function useCreateScheduleRequestBody({
@@ -183,7 +183,7 @@ export function useBuildCreateScheduleRequestBody({
 }) {
 	return useMemo(
 		() =>
-			(stageParams: BillingStageParams = {}): CreateScheduleParamsV0 | null => {
+			(stageParams: BillingStageParams = {}): SetPlansParamsV0 | null => {
 				const requestBody = buildCreateScheduleRequestBody({
 					customerId,
 					phases: getPhases(),

@@ -4,6 +4,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
@@ -16,7 +17,9 @@ export const handlePreviewCreateSchedule = createRoute({
 
 		const { billingContext, billingPlan } = await billingActions.setPlans({
 			ctx,
-			params: c.req.valid("json"),
+			params: createScheduleParamsToSetPlansParams({
+				params: c.req.valid("json"),
+			}),
 			preview: true,
 		});
 

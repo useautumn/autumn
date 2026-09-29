@@ -842,7 +842,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
 	});
 
-	test("sends billing behavior without an anchor reset for multi-plan immediate phases", () => {
+	test("sends proration behavior without an anchor reset for multi-plan immediate phases", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
@@ -862,11 +862,11 @@ describe("buildCreateScheduleRequestBody", () => {
 		});
 
 		expect(result).not.toBeNull();
-		expect(result!.billing_behavior).toBe("none");
+		expect(result!.proration_behavior).toBe("none");
 		expect(result).not.toHaveProperty("billing_cycle_anchor");
 	});
 
-	test("sends billing behavior when the first valid phase is multi-plan", () => {
+	test("sends proration behavior when the first valid phase is multi-plan", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const later = now + 1000 * 60 * 60 * 24 * 60;
@@ -888,7 +888,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		});
 
 		expect(result).not.toBeNull();
-		expect(result!.billing_behavior).toBe("none");
+		expect(result!.proration_behavior).toBe("none");
 		expect(result).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.phases).toHaveLength(2);
 		expect(result!.phases[0].plans).toHaveLength(2);

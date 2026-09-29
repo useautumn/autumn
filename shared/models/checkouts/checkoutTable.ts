@@ -1,6 +1,7 @@
 import type { AttachParamsV1 } from "@api/billing/attachV2/attachParamsV1";
 import type { BillingResponse } from "@api/billing/common/billingResponse";
 import type { CreateScheduleParamsV0 } from "@api/billing/createSchedule/createScheduleParamsV0";
+import type { SetPlansParamsV0 } from "@api/billing/setPlans/setPlansParamsV0";
 import type { UpdateSubscriptionV1Params } from "@api/billing/updateSubscription/updateSubscriptionV1Params";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
@@ -29,6 +30,7 @@ export enum CheckoutAction {
 export type CheckoutParams =
 	| AttachParamsV1
 	| CreateScheduleParamsV0
+	| SetPlansParamsV0
 	| UpdateSubscriptionV1Params;
 
 export const checkouts = pgTable(

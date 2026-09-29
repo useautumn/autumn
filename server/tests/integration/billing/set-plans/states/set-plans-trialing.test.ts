@@ -44,7 +44,7 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans({
 			customer_id: customerId,
-			billing_behavior: "none",
+			proration_behavior: "none",
 			phases: [{ starts_at: "now", plans: [{ plan_id: proTrial.id }] }],
 		});
 
