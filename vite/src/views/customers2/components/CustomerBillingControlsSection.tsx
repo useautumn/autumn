@@ -9,6 +9,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	StatusChip,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -56,10 +57,10 @@ const SourceBadge = ({
 }) => (
 	<Tooltip>
 		<TooltipTrigger asChild>
-			<span className="flex max-w-[10rem] shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground">
+			<StatusChip className="max-w-40 shrink-0 pl-1.5">
 				{icon}
-				<span className="truncate">{label}</span>
-			</span>
+				<span className="min-w-0 truncate">{label}</span>
+			</StatusChip>
 		</TooltipTrigger>
 		<TooltipContent>{tooltip}</TooltipContent>
 	</Tooltip>
