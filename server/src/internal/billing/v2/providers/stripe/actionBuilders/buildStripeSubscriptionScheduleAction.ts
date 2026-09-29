@@ -11,7 +11,10 @@ import {
 	stripePhaseStartsInFuture,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
+import {
+	buildStripePhasesUpdate,
+	isFreePhasePlaceholderItem,
+} from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -53,10 +56,7 @@ const phaseHasItems = (
 const isFreePhasePlaceholderOnly = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
 ): boolean =>
-	phaseHasItems(phase) &&
-	(phase.items ?? []).every(
-		(item) => item.metadata?.autumn_free_phase_placeholder === "true",
-	);
+	phaseHasItems(phase) && (phase.items ?? []).every(isFreePhasePlaceholderItem);
 
 /**
  * Filters out empty phases from both ends.

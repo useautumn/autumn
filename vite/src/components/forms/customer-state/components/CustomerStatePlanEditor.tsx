@@ -20,10 +20,7 @@ export function CustomerStatePlanEditor() {
 	} = useCustomerStateContext();
 	const { setIsInlineEditorOpen } = useCustomerContext();
 
-	useEffect(() => {
-		setIsInlineEditorOpen(!!editingPlan);
-		return () => setIsInlineEditorOpen(false);
-	}, [editingPlan, setIsInlineEditorOpen]);
+	useEffect(() => () => setIsInlineEditorOpen(false), [setIsInlineEditorOpen]);
 
 	const planEditorProduct = useMemo(() => {
 		const product = products.find((p) => p.id === editingPlanValue?.productId);

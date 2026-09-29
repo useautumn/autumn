@@ -17,7 +17,7 @@ const AGENTS: Record<LeafAgentConnection, AgentModel> = {
 	// Medium: on "low" the model reasoned out loud in its reply instead of
 	// resolving it in thought.
 	leaf: {
-		model: "openrouter/anthropic/claude-opus-5",
+		model: "openrouter/anthropic/claude-opus-5.5",
 		reasoning: "medium",
 	},
 };

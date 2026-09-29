@@ -1,0 +1,161 @@
+import { describe, expect, test } from "bun:test";
+import type {
+	FullCusProduct,
+	ProcessorItem,
+	SetPlansPreviewPhase,
+} from "@autumn/shared";
+import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPreviewToWarnings";
+import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
+
+const processorItem = (overrides: Partial<ProcessorItem>): ProcessorItem => ({
+	price_id: "price_1",
+	plan_id: "pro",
+	feature_id: null,
+	display_name: "pro",
+	feature_name: null,
+	quantity: 1,
+	price: null,
+	amount: null,
+	creates_price: false,
+	managed_by_autumn: true,
+	...overrides,
+});
+
+const phase = (
+	overrides: Partial<SetPlansPreviewPhase>,
+): SetPlansPreviewPhase => ({
+	starts_at: 0,
+	starts_now: false,
+	ends_subscription: false,
+	plans: [],
+	plan_changes: [],
+	balance_changes: [],
+	processor_items: [],
+	...overrides,
+});
+
+describe("setPlansPreviewToWarnings", () => {
+	test("returns no warnings for a clean preview", () => {
+		expect(
+			setPlansPreviewToWarnings({
+				phases: [
+					phase({
+						processor_items: [processorItem({ price_id: "price_base" })],
+					}),
+				],
+				liveProcessorItems: [
+					processorItem({ price_id: "price_base" }),
+					processorItem({ price_id: "price_old_pro" }),
+				],
+				processorChanges: [
+					{
+						type: "subscription",
+						id: null,
+						action: "created",
+					},
+				],
+				deletedCustomerProducts: [],
+				outgoingCustomerProducts: [],
+				features: [],
+			}),
+		).toEqual([]);
+	});
+
+	test("derives every warning type from the preview", () => {
+		const scheduledEnterprise = makeFullCusProduct({ planId: "enterprise" });
+		const outgoingPro: FullCusProduct = {
+			...makeFullCusProduct({ planId: "pro" }),
+			options: [
+				{ feature_id: "seats", quantity: 5, upcoming_quantity: 3 },
+			] as FullCusProduct["options"],
+		};
+
+		const warnings = setPlansPreviewToWarnings({
+			phases: [
+				phase({
+					balance_changes: [
+						{
+							feature_id: "messages",
+							balance: {
+								granted: 500,
+								remaining: 500,
+								usage: 0,
+								unlimited: false,
+								next_reset_at: null,
+							},
+							previous_attributes: { usage: 40, granted: 100 },
+							behavior: "reset",
+						},
+					],
+					processor_items: [
+						processorItem({ display_name: "premium", creates_price: true }),
+					],
+				}),
+				phase({
+					processor_items: [
+						processorItem({ display_name: "premium", creates_price: true }),
+					],
+				}),
+			],
+			liveProcessorItems: [
+				processorItem({
+					price_id: "price_support",
+					display_name: "Support add-on",
+					managed_by_autumn: false,
+					plan_id: null,
+				}),
+			],
+			processorChanges: [
+				{
+					type: "subscription_schedule",
+					id: "sub_sched_old",
+					action: "released",
+				},
+			],
+			deletedCustomerProducts: [scheduledEnterprise],
+			outgoingCustomerProducts: [outgoingPro],
+			requestedProrationBehavior: "none",
+			features: [],
+		});
+
+		expect(warnings.map((warning) => warning.type)).toEqual([
+			"unmanaged_stripe_item_removed",
+			"new_stripe_price_created",
+			"usage_reset",
+			"existing_schedule_replaced",
+			"future_phase_removed",
+			"pending_quantity_change_dropped",
+			"proration_disabled",
+		]);
+		expect(warnings.map((warning) => warning.severity)).toEqual([
+			"warning",
+			"info",
+			"warning",
+			"warning",
+			"warning",
+			"warning",
+			"info",
+		]);
+		expect(warnings[0].message).toContain("Support add-on");
+		expect(warnings[4].message).toContain("enterprise");
+	});
+
+	test("updating a standalone schedule in place doesn't warn about replacing it", () => {
+		expect(
+			setPlansPreviewToWarnings({
+				phases: [phase({})],
+				liveProcessorItems: [],
+				processorChanges: [
+					{
+						type: "subscription_schedule",
+						id: "sub_sched_standalone",
+						action: "updated",
+					},
+				],
+				deletedCustomerProducts: [],
+				outgoingCustomerProducts: [],
+				features: [],
+			}),
+		).toEqual([]);
+	});
+});

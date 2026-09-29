@@ -10,18 +10,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
-import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { hashJson } from "@/utils/hash/hashJson";
-import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import {
-	handleCreateScheduleBillingPlanErrors,
-	handleCreateScheduleComputeErrors,
-	handleCreateScheduleErrors,
-} from "./errors/handleCreateScheduleErrors";
-import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
-import { ensureFreePhaseStripeProducts } from "./utils/ensureFreePhaseStripeProducts";
 import { persistCreateSchedule } from "./utils/persistCreateSchedule";
+import { prepareCreateSchedule } from "./utils/prepareCreateSchedule";
 
 const buildPendingCreateScheduleResponse = ({
 	billingContext,
@@ -61,47 +53,11 @@ export const createSchedule = async ({
 		? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
 		: undefined;
 
-	const billingContext = await setupCreateScheduleBillingContext({
+	const { billingContext, billingPlan, phases } = await prepareCreateSchedule({
 		ctx,
 		params,
-	});
-
-	await handleCreateScheduleErrors({
-		billingContext,
 		preview: false,
 	});
-
-	const { autumnBillingPlan, phases, immediatePhaseTransition } =
-		computeCreateSchedulePlan({
-			ctx,
-			billingContext,
-		});
-	await handleCreateScheduleComputeErrors({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		immediatePhaseTransition,
-	});
-
-	await ensureFreePhaseStripeProducts({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-	});
-
-	const stripeBillingPlan = await evaluateStripeBillingPlan({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		checkoutMode: billingContext.checkoutMode,
-	});
-
-	const billingPlan = {
-		autumn: autumnBillingPlan,
-		stripe: stripeBillingPlan,
-	};
-
-	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
 
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({

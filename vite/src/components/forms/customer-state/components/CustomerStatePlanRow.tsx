@@ -1,19 +1,18 @@
-import { CalendarSlashIcon, CopySimpleIcon } from "@phosphor-icons/react";
+import { CopySimpleIcon, InfinityIcon } from "@phosphor-icons/react";
 import { CopyExistingPlansButton } from "@/components/forms/customer-state/components/CopyExistingPlansButton";
-import { CustomerStatePlanPicker } from "@/components/forms/customer-state/components/CustomerStatePlanPicker";
-import { getUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
-import { findPreviousPhasePlan } from "@/components/forms/customer-state/useCustomerStateHandlers";
 import {
-	ScopedPlanRow,
-	SelectedPlanRow,
-	usePlanScopeField,
-} from "@/components/forms/shared";
-import type { PlanRowAction } from "@/components/forms/shared/PlanRowActionsMenu";
-import { cn } from "@/lib/utils";
+	findPreviousPhasePlan,
+	getUsedGroupKeys,
+} from "@/components/forms/customer-state/customerStateUtils";
+import { usePlanScopeField } from "@/components/forms/shared";
+import {
+	buildMoveToAction,
+	type PlanRowAction,
+	ROW_ACTION_ICON_SIZE,
+} from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
-import { CustomerStatePlanQuantities } from "./CustomerStatePlanQuantities";
-import { NotFoundBadge } from "./NotFoundBadge";
-import { PlanPriceLabel } from "./PlanPriceLabel";
+import { PlanPickerTrayRow } from "./tray/PlanPickerTrayRow";
+import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function CustomerStatePlanRow({
 	phaseIndex,
@@ -23,7 +22,6 @@ export function CustomerStatePlanRow({
 	planIndex: number;
 }) {
 	const {
-		form,
 		formValues,
 		products,
 		handleRemovePlan,
@@ -32,76 +30,51 @@ export function CustomerStatePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 		canMakeUnscheduled,
-		planNotFoundReasons,
-		handleSelectPlanProduct,
+		handleSelectPlanScope,
 	} = useCustomerStateContext();
 	const location = { location: "phase", phaseIndex, planIndex } as const;
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	const isOpeningPhase = phaseIndex === 0;
 	const isLocked = isPhaseLocked({ phaseIndex });
-	const { scope, hasEntities, selectedLabel } = usePlanScopeField({
+	const { hasEntities, selectedLabel, scopeMenu } = usePlanScopeField({
 		planEntityId: plan?.entityId,
 		disabled: isLocked,
 		disabledReason: "this phase has started",
 		onChange: (nextEntityId) =>
-			form.setFieldValue(
-				`phases[${phaseIndex}].plans[${planIndex}].entityId`,
-				nextEntityId ?? null,
-			),
+			handleSelectPlanScope({ location, entityId: nextEntityId ?? null }),
 	});
 
 	if (!plan) return null;
 
-	const availableProducts = products.filter((p) => !p.archived);
-	const selectedProduct = products.find((p) => p.id === plan.productId);
-	const usedKeys = getUsedGroupKeys({
-		plans: formValues.phases[phaseIndex]?.plans ?? [],
-		products,
-		excludePlanIndex: planIndex,
-		entityId: plan.entityId ?? null,
-	});
-
-	const selectedProductIdsInPhase = new Set(
-		formValues.phases[phaseIndex]?.plans
-			.filter((_, i) => i !== planIndex)
-			.map((p) => p.productId)
-			.filter(Boolean),
-	);
-
-	const handleProductChange = (productId: string) =>
-		handleSelectPlanProduct({ location, productId });
-
 	if (!plan.productId) {
-		// Group conflicts are per scope, so the scope has to be pickable before a
-		// plan is chosen — otherwise every group reads as taken at customer level.
+		const phasePlans = formValues.phases[phaseIndex]?.plans ?? [];
+		const usedKeys = getUsedGroupKeys({
+			plans: phasePlans,
+			products,
+			excludePlanIndex: planIndex,
+			entityId: plan.entityId ?? null,
+		});
+
 		return (
-			<ScopedPlanRow scope={scope}>
-				<div
-					className={cn(
-						"group relative min-w-0 flex-1",
-						isLocked && "opacity-60",
-					)}
-				>
-					<CustomerStatePlanPicker
-						products={availableProducts}
-						usedKeys={usedKeys}
-						siblingProductIds={selectedProductIdsInPhase}
-						header={
-							isOpeningPhase ? (
-								<CopyExistingPlansButton
-									phaseIndex={phaseIndex}
-									planIndex={planIndex}
-									entityId={plan.entityId ?? null}
-									scopeLabel={hasEntities ? selectedLabel : undefined}
-								/>
-							) : undefined
-						}
-						disabled={isLocked}
-						onSelect={handleProductChange}
-					/>
-				</div>
-			</ScopedPlanRow>
+			<PlanPickerTrayRow
+				location={location}
+				plan={plan}
+				plans={phasePlans}
+				usedKeys={usedKeys}
+				header={
+					isOpeningPhase ? (
+						<CopyExistingPlansButton
+							phaseIndex={phaseIndex}
+							planIndex={planIndex}
+							entityId={plan.entityId ?? null}
+							scopeLabel={hasEntities ? selectedLabel : undefined}
+						/>
+					) : undefined
+				}
+				disabled={isLocked}
+				onDismiss={() => handleRemovePlan({ phaseIndex, planIndex })}
+			/>
 		);
 	}
 
@@ -115,17 +88,18 @@ export function CustomerStatePlanRow({
 			? [
 					{
 						label: "Copy from previous phase",
-						icon: <CopySimpleIcon size={14} />,
+						icon: <CopySimpleIcon size={ROW_ACTION_ICON_SIZE} />,
 						onSelect: () =>
 							handleCopyFromPreviousPhase({ phaseIndex, planIndex }),
 					},
 				]
 			: []),
+		...(!isLocked && hasEntities ? [buildMoveToAction({ scopeMenu })] : []),
 		...(!isLocked && canMakeUnscheduled
 			? [
 					{
-						label: "Make unscheduled",
-						icon: <CalendarSlashIcon size={14} />,
+						label: "Make ongoing",
+						icon: <InfinityIcon size={ROW_ACTION_ICON_SIZE} />,
 						onSelect: () => handleMakeUnscheduled({ phaseIndex, planIndex }),
 					},
 				]
@@ -133,45 +107,15 @@ export function CustomerStatePlanRow({
 	];
 
 	return (
-		<div className="space-y-1.5">
-			<ScopedPlanRow
-				scope={scope}
-				actions={rowActions}
-				onCustomize={
-					isLocked
-						? undefined
-						: () => setEditingPlan({ location: "phase", phaseIndex, planIndex })
-				}
-			>
-				<SelectedPlanRow
-					productId={plan.productId}
-					product={selectedProduct}
-					customItems={plan.items}
-					isCustom={plan.isCustom}
-					price={
-						selectedProduct && (
-							<PlanPriceLabel product={selectedProduct} items={plan.items} />
-						)
-					}
-					badge={
-						<NotFoundBadge
-							reasons={planNotFoundReasons({
-								location: "phase",
-								phaseIndex,
-								planIndex,
-							})}
-						/>
-					}
-					disabled={isLocked}
-					onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
-				/>
-			</ScopedPlanRow>
-			<CustomerStatePlanQuantities
-				location={location}
-				plan={plan}
-				product={selectedProduct}
-				readOnly={isLocked}
-			/>
-		</div>
+		<SelectedPlanTrayRow
+			location={location}
+			plan={plan}
+			readOnly={isLocked}
+			actions={rowActions}
+			onCustomize={isLocked ? undefined : () => setEditingPlan(location)}
+			onRemove={
+				isLocked ? undefined : () => handleRemovePlan({ phaseIndex, planIndex })
+			}
+		/>
 	);
 }

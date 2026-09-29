@@ -4,13 +4,12 @@ import {
 	type CustomerExportResponse,
 } from "@autumn/shared";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { SHEET_EASE } from "@/views/customers2/customer/customerAnimations";
 
-const EASE_OUT = [0.32, 0.72, 0, 1] as const;
-
-const ENTER_TRANSITION = { duration: 0.3, ease: EASE_OUT };
+const ENTER_TRANSITION = { duration: 0.3, ease: SHEET_EASE };
 /** Held back so the bar visibly completes to 100% before it collapses. */
-const EXIT_TRANSITION = { duration: 0.25, ease: EASE_OUT, delay: 0.55 };
-const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
+const EXIT_TRANSITION = { duration: 0.25, ease: SHEET_EASE, delay: 0.55 };
+const FILL_TRANSITION = { duration: 0.45, ease: SHEET_EASE };
 /** The scan has no total, so the bar sweeps instead of filling; reduced
  * motion parks the segment mid-track instead. */
 const SCAN_TRANSITION = {

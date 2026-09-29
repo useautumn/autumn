@@ -1,48 +1,54 @@
-import { InlineAction } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
-import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
-import { getUsedGroupKeys } from "../customerStateUtils";
+import { areAllPlansAdded } from "../customerStateUtils";
 import { CustomerStatePlanRow } from "./CustomerStatePlanRow";
+import { PlanScopeGroups } from "./tray/PlanScopeGroups";
+import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
 
-/** A phase's plan rows and its "Add plan" action. */
 export function CustomerStatePhasePlans({
 	phaseIndex,
+	header,
+	insetForRail = false,
 }: {
 	phaseIndex: number;
+	header?: ReactNode;
+	insetForRail?: boolean;
 }) {
 	const { formValues, products, isPhaseLocked, handleAddPlan } =
 		useCustomerStateContext();
+	const isLocked = isPhaseLocked({ phaseIndex });
+	const { hasEntities } = useScopeEntitySearch({ selectedEntityId: undefined });
 
 	const phase = formValues.phases[phaseIndex];
 	if (!phase) return null;
 
-	// A new row starts customer-level, so that's the scope that can run out of plans.
-	const customerLevelKeys = getUsedGroupKeys({ plans: phase.plans, products });
-	const allPlansAdded = products
-		.filter((product) => !product.archived)
-		.every((product) =>
-			customerLevelKeys.has(
-				getProductGroupKey({ productId: product.id, products }),
-			),
-		);
+	const allPlansAdded = areAllPlansAdded({ plans: phase.plans, products });
 
 	return (
-		<div className="space-y-1.5">
-			{phase.plans.map((plan, planIndex) => (
-				<CustomerStatePlanRow
-					key={`plan-${phaseIndex}-${planIndex}-${plan.productId || "empty"}`}
-					phaseIndex={phaseIndex}
-					planIndex={planIndex}
+		<div className="flex flex-col gap-1.5">
+			{header}
+			<div className={cn(insetForRail && "pl-8.5")}>
+				<PlanScopeGroups
+					plans={phase.plans}
+					showHeaders={hasEntities}
+					renderPlan={(planIndex) => (
+						<CustomerStatePlanRow
+							key={`plan-${phaseIndex}-${planIndex}-${phase.plans[planIndex]?.productId}-${phase.plans[planIndex]?.entityId}`}
+							phaseIndex={phaseIndex}
+							planIndex={planIndex}
+						/>
+					)}
+					addRow={
+						<PlanTrayAddRow
+							label="Add plan"
+							onClick={() => handleAddPlan({ phaseIndex })}
+							disabled={isLocked || (!hasEntities && allPlansAdded)}
+						/>
+					}
 				/>
-			))}
-			<InlineAction
-				icon={<PlusIcon size={11} />}
-				onClick={() => handleAddPlan({ phaseIndex })}
-				disabled={allPlansAdded || isPhaseLocked({ phaseIndex })}
-			>
-				Add plan
-			</InlineAction>
+			</div>
 		</div>
 	);
 }

@@ -1,14 +1,14 @@
 import type { Entity, FullCustomer } from "@autumn/shared";
 import { useRef, useState } from "react";
+import { entityKey } from "@/components/forms/shared/utils/entityKey";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useEntitiesQuery } from "./useEntitiesQuery";
 
-const entityKey = (entity: Entity): string => entity.id || entity.internal_id;
-
 type UseScopeEntitySearchResult = {
 	hasEntities: boolean;
 	entities: Entity[];
+	knownEntities: Entity[];
 	selectedEntity: Entity | undefined;
 	isLoading: boolean;
 	setSearch: (search: string) => void;
@@ -63,6 +63,7 @@ export const useScopeEntitySearch = ({
 	return {
 		hasEntities,
 		entities,
+		knownEntities: allKnownEntities,
 		selectedEntity,
 		isLoading: isLoadingAll || (!!debouncedSearch && isLoadingSearch),
 		setSearch,

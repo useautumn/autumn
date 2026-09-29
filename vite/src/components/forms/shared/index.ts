@@ -4,7 +4,7 @@ export * from "./DisabledTooltipButton";
 export * from "./PlanEntityScopeSelector";
 export * from "./PlanItemsSection";
 export * from "./PlanPrepaidQuantityFields";
-export * from "./PlanScopeToggleButton";
+export * from "./PlanScopeChip";
 export * from "./PlanSectionTitle";
 export * from "./plan-items/LicenseQuantityControl";
 export * from "./plan-items/PlanLicensesSummary";

@@ -109,7 +109,7 @@ export const scheduleFormFromRequestBody = (
 				? firstPersistedStartsAt
 				: generatedStartsAt;
 		let persistedStartsAt: number | undefined;
-		if (index === 0) persistedStartsAt = firstPersistedStartsAt;
+		if (index === 0) persistedStartsAt = firstPersistedStartsAt ?? undefined;
 		else if (startsAt != null && persistedStarts.has(startsAt))
 			persistedStartsAt = startsAt;
 		previousStartsAt = startsAt ?? previousStartsAt ?? Date.now();
