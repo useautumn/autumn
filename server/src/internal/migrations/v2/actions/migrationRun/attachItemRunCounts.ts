@@ -1,6 +1,7 @@
 import type { MigrationRun } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationItemRunRepo } from "../../repos/index.js";
+import { isRunAll } from "../../utils/migrationRunKind.js";
 
 export type MigrationRunWithCounts = MigrationRun & {
 	item_run_counts: {
@@ -13,12 +14,6 @@ export type MigrationRunWithCounts = MigrationRun & {
 	};
 };
 
-/** Scoped runs (single customer / sample) are counted on their own rows.
- * Unscoped runs keep the migration-wide count, because a re-run reuses item
- * rows and moves `migration_run_id`. */
-const isScoped = (run: MigrationRun) =>
-	run.only_ids !== null || run.target_limit !== null;
-
 export const attachItemRunCounts = async ({
 	ctx,
 	migrationInternalId,
@@ -29,9 +24,9 @@ export const attachItemRunCounts = async ({
 	runs: MigrationRun[];
 }): Promise<MigrationRunWithCounts[]> => {
 	const perRunIds = runs
-		.filter((run) => run.dry_run || isScoped(run))
+		.filter((run) => !isRunAll(run))
 		.map((run) => run.internal_id);
-	const hasUnscopedLiveRun = runs.some((run) => !run.dry_run && !isScoped(run));
+	const hasRunAll = runs.some(isRunAll);
 
 	const [countRows, liveCounts] = await Promise.all([
 		migrationItemRunRepo.listCountsByRun({
@@ -39,7 +34,7 @@ export const attachItemRunCounts = async ({
 			migrationInternalId,
 			migrationRunIds: perRunIds,
 		}),
-		hasUnscopedLiveRun
+		hasRunAll
 			? migrationItemRunRepo.getCounts({
 					ctx,
 					migrationInternalId,
@@ -52,10 +47,9 @@ export const attachItemRunCounts = async ({
 	);
 
 	return runs.map((run) => {
-		const counts =
-			run.dry_run || isScoped(run)
-				? countsByRunId.get(run.internal_id)
-				: liveCounts;
+		const counts = isRunAll(run)
+			? liveCounts
+			: countsByRunId.get(run.internal_id);
 		const succeeded = counts?.succeeded ?? 0;
 		const skipped = counts?.skipped ?? 0;
 		const failed = counts?.failed ?? 0;

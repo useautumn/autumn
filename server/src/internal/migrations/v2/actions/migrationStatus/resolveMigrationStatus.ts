@@ -3,11 +3,7 @@ import {
 	MigrationRunStatus,
 	MigrationStatus,
 } from "@autumn/shared";
-
-/** A Run All is a live run over the whole filter; `only_ids` and
- * `target_limit` runs never change status. */
-const isRunAll = (run: MigrationRun): boolean =>
-	!run.dry_run && run.only_ids === null && run.target_limit === null;
+import { isRunAll } from "../../utils/migrationRunKind.js";
 
 const outcomeStatus = (status: MigrationRunStatus): MigrationStatus => {
 	if (status === MigrationRunStatus.Succeeded) return MigrationStatus.Run;
