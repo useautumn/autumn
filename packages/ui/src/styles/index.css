@@ -248,6 +248,14 @@ html {
 	color-scheme: dark;
 }
 
+/* Presets repaint the base surfaces, so overlays follow them instead of the default theme. */
+:is(.preset-modern, .preset-cursed, .preset-scraps) {
+	--overlay: var(--background);
+	--overlay-dialog: var(--background);
+	--overlay-border: var(--border);
+	--overlay-separator: var(--border);
+}
+
 /* Midnight preset — deeper contrast */
 .preset-modern {
 	background-color: #ffffff;
