@@ -40,6 +40,7 @@ const masterOnWorker: RolloutConfig = {
 					decreases: [],
 				},
 			},
+			customers: {},
 		},
 	},
 };

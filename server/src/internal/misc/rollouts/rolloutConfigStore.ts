@@ -8,10 +8,11 @@ import RecaseError from "@/utils/errorUtils.js";
 import {
 	type RolloutConfig,
 	RolloutConfigSchema,
+	type RolloutCustomer,
 	type RolloutEntry,
 	type RolloutPercent,
 } from "./rolloutSchemas.js";
-import { routingPercentAt } from "./rolloutUtils.js";
+import { rolloutEffectiveAt, routingPercentAt } from "./rolloutUtils.js";
 
 // An S3 read error must not send every routed customer back to the old path with no handoff.
 const store = createEdgeConfigStore<RolloutConfig>({
@@ -34,8 +35,17 @@ export const _setRolloutConfigForTesting = ({
 	config: z.input<typeof RolloutConfigSchema>;
 }) => store._setRuntimeConfigForTesting(RolloutConfigSchema.parse(config));
 
-// No Redis view outlives its TTL, so a decrease older than that cannot mark one stale.
-const DECREASE_RETENTION_MS = FULL_SUBJECT_CACHE_TTL_SECONDS * 1000;
+// No Redis view outlives its TTL, so a decrease or removal older than that cannot mark one stale.
+const STALENESS_RETENTION_MS = FULL_SUBJECT_CACHE_TTL_SECONDS * 1000;
+
+const emptyRolloutEntry = (): RolloutEntry => ({
+	percent: 0,
+	previousPercent: 0,
+	changedAt: 0,
+	decreases: [],
+	orgs: {},
+	customers: {},
+});
 
 /** A scheduled change starts from what routes right now; a new org override inherits that from the global entry. */
 export const scheduleRolloutPercent = ({
@@ -49,7 +59,7 @@ export const scheduleRolloutPercent = ({
 }): RolloutPercent => {
 	const routing = routingPercentAt({ rollout: current, now });
 	const decreases = current.decreases.filter(
-		({ at }) => at > now - DECREASE_RETENTION_MS,
+		({ at }) => at > now - STALENESS_RETENTION_MS,
 	);
 	if (percent < routing)
 		decreases.push({ from: routing, to: percent, at: now });
@@ -70,13 +80,7 @@ export const updateRolloutPercent = async ({
 }) => {
 	const config = await store.readFromSource();
 
-	const entry: RolloutEntry = config.rollouts[rolloutId] ?? {
-		percent: 0,
-		previousPercent: 0,
-		changedAt: 0,
-		decreases: [],
-		orgs: {},
-	};
+	const entry = config.rollouts[rolloutId] ?? emptyRolloutEntry();
 
 	if (orgId) {
 		// An org with no override has been following the global entry.
@@ -116,6 +120,136 @@ export const removeRolloutOrg = async ({
 	return config;
 };
 
+/** Re-adding a customer before its removal lands cancels the removal, so it never dips back to the fallback. */
+export const scheduleCustomerAdd = ({
+	current,
+	now,
+}: {
+	current: RolloutCustomer | undefined;
+	now: number;
+}): RolloutCustomer => {
+	if (!current) return { addedAt: now };
+	if (current.removedAt === undefined) return current;
+	const removalLanded =
+		now >= rolloutEffectiveAt({ changedAt: current.removedAt });
+	return removalLanded ? { addedAt: now } : { addedAt: current.addedAt };
+};
+
+/** A second removal keeps the first one's time, which is when the customer actually leaves the worker. */
+export const scheduleCustomerRemoval = ({
+	current,
+	now,
+}: {
+	current: RolloutCustomer;
+	now: number;
+}): RolloutCustomer =>
+	current.removedAt === undefined ? { ...current, removedAt: now } : current;
+
+const removalExpired = ({
+	customer,
+	now,
+}: {
+	customer: RolloutCustomer;
+	now: number;
+}): boolean =>
+	customer.removedAt !== undefined &&
+	now >=
+		rolloutEffectiveAt({ changedAt: customer.removedAt }) +
+			STALENESS_RETENTION_MS;
+
+/** Drops removed customers once no pre-removal Redis view can remain, and orgs left with none. */
+export const pruneExpiredCustomerRemovals = ({
+	customers,
+	now,
+}: {
+	customers: RolloutEntry["customers"];
+	now: number;
+}): RolloutEntry["customers"] => {
+	const pruned: RolloutEntry["customers"] = {};
+	for (const [orgId, orgCustomers] of Object.entries(customers)) {
+		const kept = Object.entries(orgCustomers).filter(
+			([, customer]) => !removalExpired({ customer, now }),
+		);
+		if (kept.length > 0) pruned[orgId] = Object.fromEntries(kept);
+	}
+	return pruned;
+};
+
+const writeRolloutCustomers = async ({
+	rolloutId,
+	orgId,
+	customerIds,
+	now,
+	schedule,
+}: {
+	rolloutId: string;
+	orgId: string;
+	customerIds: string[];
+	now: number;
+	schedule: (
+		current: RolloutCustomer | undefined,
+	) => RolloutCustomer | undefined;
+}) => {
+	const config = await store.readFromSource();
+	const entry = config.rollouts[rolloutId] ?? emptyRolloutEntry();
+
+	const orgCustomers = { ...entry.customers[orgId] };
+	for (const customerId of customerIds) {
+		const scheduled = schedule(orgCustomers[customerId]);
+		if (scheduled) orgCustomers[customerId] = scheduled;
+	}
+	entry.customers = pruneExpiredCustomerRemovals({
+		customers: { ...entry.customers, [orgId]: orgCustomers },
+		now,
+	});
+
+	config.rollouts[rolloutId] = entry;
+	await store.writeToSource({ config });
+
+	return config;
+};
+
+/** Pin customers of one org to the worker, one settle window from now. */
+export const addRolloutCustomers = async ({
+	rolloutId,
+	orgId,
+	customerIds,
+	now = Date.now(),
+}: {
+	rolloutId: string;
+	orgId: string;
+	customerIds: string[];
+	now?: number;
+}) =>
+	writeRolloutCustomers({
+		rolloutId,
+		orgId,
+		customerIds,
+		now,
+		schedule: (current) => scheduleCustomerAdd({ current, now }),
+	});
+
+/** Unpin customers of one org: they follow the org or global percent again one settle window from now. */
+export const removeRolloutCustomers = async ({
+	rolloutId,
+	orgId,
+	customerIds,
+	now = Date.now(),
+}: {
+	rolloutId: string;
+	orgId: string;
+	customerIds: string[];
+	now?: number;
+}) =>
+	writeRolloutCustomers({
+		rolloutId,
+		orgId,
+		customerIds,
+		now,
+		schedule: (current) =>
+			current ? scheduleCustomerRemoval({ current, now }) : undefined,
+	});
+
 /** Deleting an entry skips the handoff, so a live rollout is rolled back to 0 first, then deleted. */
 export const assertRolloutInactive = ({
 	rolloutId,
@@ -125,12 +259,17 @@ export const assertRolloutInactive = ({
 	entry: RolloutEntry | undefined;
 }): void => {
 	if (!entry) return;
-	const active = [entry, ...Object.values(entry.orgs)].some(
+	const percentActive = [entry, ...Object.values(entry.orgs)].some(
 		({ percent }) => percent > 0,
 	);
-	if (!active) return;
+	const customerPinned = Object.values(entry.customers).some((orgCustomers) =>
+		Object.values(orgCustomers).some(
+			({ removedAt }) => removedAt === undefined,
+		),
+	);
+	if (!percentActive && !customerPinned) return;
 	throw new RecaseError({
-		message: `Rollout ${rolloutId} is still active; set every percent to 0 before deleting it`,
+		message: `Rollout ${rolloutId} is still active; set every percent to 0 and remove every customer before deleting it`,
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});

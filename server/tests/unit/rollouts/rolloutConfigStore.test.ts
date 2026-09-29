@@ -33,6 +33,7 @@ const entryWith = ({
 			},
 		]),
 	),
+	customers: {},
 });
 
 describe("assertRolloutInactive", () => {
