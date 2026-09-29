@@ -4,6 +4,7 @@ import {
 	formatAmount,
 	formatInterval,
 	productV2ToBasePrice,
+	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils";
 
@@ -28,7 +29,7 @@ export type BasePriceDisplayResult = {
  * Get base price display information for a product
  */
 export const getBasePriceDisplay = ({
-	product,
+	product: inputProduct,
 	currency = "USD",
 	showPlaceholder = false,
 }: {
@@ -36,6 +37,15 @@ export const getBasePriceDisplay = ({
 	currency?: string;
 	showPlaceholder?: boolean;
 }): BasePriceDisplayResult => {
+	// Raw ProductV2s (e.g. a customer's product) lack the editor-derived plan
+	// fields, which would otherwise make every priced plan read as "Free".
+	const hasDerivedPlanFields =
+		inputProduct.planType !== undefined &&
+		inputProduct.basePriceType !== undefined;
+	const product = hasDerivedPlanFields
+		? inputProduct
+		: productV2ToFrontendProduct({ product: inputProduct });
+
 	const basePrice = productV2ToBasePrice({ product });
 
 	// Check if it's a free plan
@@ -78,7 +88,7 @@ export const getBasePriceDisplay = ({
 	if (product.basePriceType === "usage") {
 		return {
 			type: "variable",
-			displayText: "Variable",
+			displayText: PRICE_VARIES_LABEL,
 		};
 	}
 

@@ -10,10 +10,7 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import {
-	getBasePriceDisplay,
-	PRICE_VARIES_LABEL,
-} from "@/utils/product/basePriceDisplayUtils";
+import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { AdditionalCurrenciesHint } from "./AdditionalCurrenciesHint";
 
@@ -95,7 +92,7 @@ export const BasePriceDisplay = ({
 			case "variable":
 				return (
 					<span className={cn("text-tertiary-foreground!", slim && "text-xs!")}>
-						{readOnly ? priceDisplay.displayText : PRICE_VARIES_LABEL}
+						{priceDisplay.displayText}
 					</span>
 				);
 
