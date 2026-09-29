@@ -2,6 +2,7 @@
 
 import { expect, test } from "bun:test";
 import { findActiveCustomerProductById, ms } from "@autumn/shared";
+import { expectPreviewWarning } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -203,6 +204,110 @@ test.concurrent(
 						},
 					],
 				}),
+		});
+	},
+);
+
+const expectPlanOnNewSubscription = async ({
+	ctx,
+	customerId,
+	productId,
+	oldSubscriptionId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productId: string;
+	oldSubscriptionId: string;
+}) => {
+	await expectCustomerProducts({ customerId, active: [productId] });
+	const { customerProduct } = await getActiveProduct({
+		ctx,
+		customerId,
+		productId,
+	});
+	expect(customerProduct.subscription_ids).toHaveLength(1);
+	expect(customerProduct.subscription_ids).not.toContain(oldSubscriptionId);
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+};
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans terminal: canceled subscription with its webhook processed gets a new one")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId, autumnV2_4, ctx } = await initScenario({
+			customerId: "set-plans-canceled-processed",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+		const { customerProduct } = await getActiveProduct({
+			ctx,
+			customerId,
+			productId: pro.id,
+		});
+		const oldSubscriptionId = customerProduct.subscription_ids![0]!;
+		await ctx.stripeCli.subscriptions.cancel(oldSubscriptionId);
+		await expectCustomerProducts({
+			customerId,
+			notPresent: [pro.id],
+			settleTimeoutMs: WEBHOOK_SETTLE_MS,
+		});
+
+		await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+		});
+
+		await expectPlanOnNewSubscription({
+			ctx,
+			customerId,
+			productId: pro.id,
+			oldSubscriptionId,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans terminal: canceled subscription with a missed webhook is announced and replaced")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId, autumnV2_4, ctx } = await initScenario({
+			customerId: "set-plans-canceled-missed",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+		const { customerProduct } = await getActiveProduct({
+			ctx,
+			customerId,
+			productId: pro.id,
+		});
+		const oldSubscriptionId = customerProduct.subscription_ids![0]!;
+		await cancelSubscriptionMissingWebhook({ ctx, customerId });
+
+		const setPlansParams = {
+			customer_id: customerId,
+			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
+		};
+		expectPreviewWarning({
+			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			type: "new_stripe_subscription",
+		});
+		await autumnV2_4.billing.setPlans(setPlansParams);
+
+		await expectPlanOnNewSubscription({
+			ctx,
+			customerId,
+			productId: pro.id,
+			oldSubscriptionId,
 		});
 	},
 );
