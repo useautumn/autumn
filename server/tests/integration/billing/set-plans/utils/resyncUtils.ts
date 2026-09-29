@@ -148,3 +148,33 @@ export const expectPlansEndAt = async ({
 		Object.fromEntries(productIds.map((productId) => [productId, endsAt])),
 	);
 };
+
+/** The live subscription stops billing on endsAt, through cancel_at or a schedule that cancels. */
+export const expectLiveSubscriptionEndsAt = async ({
+	ctx,
+	customerId,
+	endsAt,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	endsAt: number;
+}) => {
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const scheduleId =
+		typeof subscription.schedule === "string"
+			? subscription.schedule
+			: subscription.schedule?.id;
+	const schedule = scheduleId
+		? await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId)
+		: undefined;
+	const scheduleEndsAt =
+		schedule?.end_behavior === "cancel"
+			? schedule.phases.at(-1)?.end_date
+			: undefined;
+
+	expect(subscription.cancel_at ?? scheduleEndsAt).toBe(msToSeconds(endsAt));
+};

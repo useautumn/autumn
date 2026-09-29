@@ -5,6 +5,7 @@
  *   - ends_at equal to the anchor is allowed; the new subscription's cancel_at is ends_at.
  *   - Every plan ends on ends_at in Autumn, unscheduled plans included, and the preview lists them.
  *   - Stripe raises no invoice at the anchor, because the plans end there.
+ *   - A plan the request leaves on the live subscription ends on ends_at too, and so does the subscription.
  *   - ends_at at or before the last phase start, or an anchor after ends_at, is rejected.
  */
 
@@ -24,6 +25,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import {
 	cancelSubscriptionForResync,
+	expectLiveSubscriptionEndsAt,
 	expectPlansEndAt,
 	expectResyncedSubscriptionCorrect,
 } from "../utils/resyncUtils";
@@ -106,6 +108,45 @@ test.concurrent(
 			anchorMs: oldPeriodEndMs,
 		});
 		await expectCustomerInvoiceCorrect({ customerId, count: 2 });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync ends_at: an add-on left on the live subscription ends on ends_at too")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 50 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-ends-at-live-addon",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addOn] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({ productId: addOn.id }),
+			],
+		});
+
+		const endsAt = advancedTo + ms.days(20);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			ends_at: endsAt,
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+		});
+
+		await expectPlansEndAt({
+			ctx,
+			customerId,
+			productIds: [pro.id, addOn.id],
+			endsAt,
+		});
+		await expectLiveSubscriptionEndsAt({ ctx, customerId, endsAt });
 	},
 );
 
