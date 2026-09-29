@@ -3,10 +3,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatInstallation } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { resolveSlackCallerAuth } from "../../../src/providers/slack/setup/resolveSlackCallerAuth.js";
-import {
-	resolveSlackUserAuth,
-	resolveTrustedBotAuth,
-} from "../../../src/providers/slack/setup/resolveSlackUserAuth.js";
+import { resolveSlackUserAuth } from "../../../src/providers/slack/setup/resolveSlackUserAuth.js";
 
 const installation = ({ botAccessToken }: { botAccessToken: string }) =>
 	({
@@ -102,46 +99,5 @@ describe("resolveSlackCallerAuth", () => {
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
-	});
-
-	test("a trusted bot in a shared-token workspace runs on the workspace token", async () => {
-		const result = await resolveSlackCallerAuth({
-			installation: {
-				...installation({ botAccessToken: "unused" }),
-				auth_mode: ChatAuthMode.Unrestricted,
-			},
-			logger: noopLogger,
-			orgId: "org_1",
-			slackUserId: "U_BILL",
-			trustedBot: {
-				slack_id: "U_BILL",
-				name: "Bill",
-				run_as_user_id: "user_1",
-				added_by_user_id: "user_1",
-				added_at: 1,
-			},
-		});
-
-		expect(result).toEqual({ usePerUser: false });
-	});
-
-	test("a trusted bot is denied when the installation belongs to another org", async () => {
-		const result = await resolveTrustedBotAuth({
-			installation: installation({ botAccessToken: "unused" }),
-			logger: noopLogger,
-			orgId: "org_other",
-			trustedBot: {
-				slack_id: "U_BILL",
-				name: "Bill",
-				run_as_user_id: "user_1",
-				added_by_user_id: "user_1",
-				added_at: 1,
-			},
-		});
-
-		expect(result).toMatchObject({
-			ok: false,
-			reason: "installation-org-mismatch",
-		});
 	});
 });

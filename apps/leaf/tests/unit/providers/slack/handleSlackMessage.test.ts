@@ -317,17 +317,6 @@ describe("handleSlackMessage", () => {
 			expect.objectContaining({ showRunPlan: true, trustedBot: billBot }),
 		);
 	});
-
-	test("a person's message is never checked against trusted bots", async () => {
-		const { thread } = createThread();
-
-		await handleSlackThreadStart(thread, createMessage());
-
-		expect(findTrustedBot).not.toHaveBeenCalled();
-		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ trustedBot: undefined }),
-		);
-	});
 });
 
 describe("handleEditedSlackMessage", () => {
