@@ -1,4 +1,4 @@
-// set_plans rejects the requests attach's guards reject, with attach's messages.
+/** set_plans rejects the requests attach's guards reject, with attach's messages. */
 
 import { test } from "bun:test";
 import { ErrCode, ms } from "@autumn/shared";
