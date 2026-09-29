@@ -43,6 +43,8 @@ export const toolAllowlists = {
 		"getCurrentOrganization",
 		"getOrCreateCustomer",
 		"getPlan",
+		"getStripeInvoice",
+		"listInvoices",
 		"listRewards",
 		"previewAttach",
 		"previewCreateBalance",

@@ -77,6 +77,8 @@ const gerunds: Record<string, string> = {
 	updatePlan: "Updating the plan",
 	listBalances: "Checking balances",
 	listRewards: "Looking through your rewards",
+	listInvoices: "Looking through invoices",
+	getStripeInvoice: "Checking the invoice in Stripe",
 	load_skill: "Reading a playbook",
 };
 

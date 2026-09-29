@@ -23,6 +23,11 @@ export const ListInvoicesParamsSchema = z
 				"Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.",
 		}),
 
+		stripe_id: z.string().optional().meta({
+			description:
+				"Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H).",
+		}),
+
 		status: z.array(z.enum(InvoiceStatus)).optional().meta({
 			description:
 				"Filter by invoice status (draft, open, paid, void, uncollectible).",
