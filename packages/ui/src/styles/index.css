@@ -24,6 +24,7 @@
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant preset (&:is(.preset-modern *, .preset-cursed *, .preset-scraps *));
 
 html {
 	overscroll-behavior: none;
@@ -246,14 +247,6 @@ html {
 	--sidebar-border: oklch(0.274 0.006 286.033);
 	--sidebar-ring: oklch(0.442 0.017 285.786);
 	color-scheme: dark;
-}
-
-/* Presets repaint the base surfaces, so overlays follow them instead of the default theme. */
-:is(.preset-modern, .preset-cursed, .preset-scraps) {
-	--overlay: var(--background);
-	--overlay-dialog: var(--background);
-	--overlay-border: var(--border);
-	--overlay-separator: var(--border);
 }
 
 /* Midnight preset — deeper contrast */
