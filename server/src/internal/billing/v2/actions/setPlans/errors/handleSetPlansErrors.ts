@@ -2,12 +2,14 @@ import {
 	type AutumnBillingPlan,
 	type BillingPlan,
 	type CreateScheduleBillingContext,
+	type CreateScheduleParamsV0,
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { validateCustomerEntitlementBatchTransitions } from "@/internal/billing/v2/actions/batchTransition/errors/validateCustomerEntitlementBatchTransitions";
+import { handleMultiAttachCurrencyErrors } from "@/internal/billing/v2/actions/multiAttach/errors/handleMultiAttachCurrencyErrors";
 import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
@@ -26,10 +28,12 @@ import { validateUnscheduledPlanScopes } from "./validateUnscheduledPlanScopes";
 export const handleSetPlansErrors = async ({
 	ctx,
 	billingContext,
+	params,
 	preview = false,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
+	params: Pick<CreateScheduleParamsV0, "currency">;
 	preview?: boolean;
 }) => {
 	validateSetPlansPhasePlans({
@@ -69,6 +73,17 @@ export const handleSetPlansErrors = async ({
 		});
 	}
 
+	handleMultiAttachCurrencyErrors({
+		ctx,
+		billingContext,
+		params,
+		fullProducts: [
+			...billingContext.fullProducts,
+			...billingContext.scheduledPhaseContexts.flatMap(({ productContexts }) =>
+				productContexts.map(({ fullProduct }) => fullProduct),
+			),
+		],
+	});
 	await handleSetPlansSubscriptionIdErrors({ ctx, billingContext });
 };
 
