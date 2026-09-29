@@ -16,7 +16,6 @@ type SetPlansCheckoutModeContext = Pick<
 	| "skipBillingChanges"
 >;
 
-/** Which checkout, if any, the customer must pass through before billing runs. */
 export const setupSetPlansCheckoutMode = ({
 	billingContext,
 	redirectMode,
@@ -24,13 +23,11 @@ export const setupSetPlansCheckoutMode = ({
 	billingContext: SetPlansCheckoutModeContext;
 	redirectMode: SetPlansParamsV0["redirect_mode"];
 }): CheckoutMode => {
-	if (billingContext.skipBillingChanges) {
-		return null;
-	}
-	if (redirectMode === "never") {
-		return null;
-	}
-	if (billingContext.invoiceMode) {
+	const bypassesCheckout =
+		billingContext.skipBillingChanges ||
+		redirectMode === "never" ||
+		billingContext.invoiceMode;
+	if (bypassesCheckout) {
 		return null;
 	}
 

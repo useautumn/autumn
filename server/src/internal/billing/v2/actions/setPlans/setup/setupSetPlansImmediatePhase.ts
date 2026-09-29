@@ -11,7 +11,13 @@ import { markUnscheduledProductContexts } from "../utils/unscheduledProductConte
 import { getCurrentSetPlansPhaseIndex } from "./getCurrentSetPlansPhaseIndex";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 
-/** The phase that bills now, its billing context, and the phases after it. */
+export const SET_PLANS_IMMEDIATE_SETUP_OPTIONS = {
+	billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+	includeScheduledProductsForScheduleLookup: true,
+	replaceUnusableSubscription: true,
+	inheritSubscriptionTrial: true,
+} as const;
+
 export const setupSetPlansImmediatePhase = async ({
 	ctx,
 	params,
@@ -31,10 +37,11 @@ export const setupSetPlansImmediatePhase = async ({
 				currentEpochMs: billingContext.currentEpochMs,
 			})
 		: 0;
-	const immediatePhase = normalizedPhases[immediatePhaseIndex]!;
+	const immediatePhase = normalizedPhases[immediatePhaseIndex];
+	if (!immediatePhase) {
+		throw new Error(`set_plans has no phase at index ${immediatePhaseIndex}`);
+	}
 
-	// The opening phase already built the context passed in; a later phase has to
-	// rebuild it against its own plans.
 	const immediateBillingContext =
 		immediatePhaseIndex === 0
 			? billingContext
@@ -47,10 +54,7 @@ export const setupSetPlansImmediatePhase = async ({
 					}),
 					preview,
 					billingStartsAt: immediatePhase.starts_at,
-					billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
-					includeScheduledProductsForScheduleLookup: true,
-					replaceUnusableSubscription: true,
-					inheritSubscriptionTrial: true,
+					...SET_PLANS_IMMEDIATE_SETUP_OPTIONS,
 				});
 
 	return {
