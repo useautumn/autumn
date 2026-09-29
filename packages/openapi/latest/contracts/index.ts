@@ -5,6 +5,7 @@ import {
 	balancesCreateContract,
 	balancesDeleteContract,
 	balancesFinalizeContract,
+	balancesListContract,
 	balancesTrackContract,
 	balancesTrackTokensContract,
 	balancesUpdateContract,
@@ -36,6 +37,8 @@ import {
 	getCustomerContract,
 	getOrCreateCustomerContract,
 	listCustomersContract,
+	listPurchasesContract,
+	listSubscriptionsContract,
 	updateCustomerContract,
 } from "./customersContract.js";
 import { dfuFlashContract } from "./dfuContract.js";
@@ -136,6 +139,8 @@ export const v2_3ContractRouter = oc.router({
 	updateCustomer: updateCustomerContract,
 	deleteCustomer: deleteCustomerContract,
 	advanceTestClock: advanceTestClockContract,
+	listSubscriptions: listSubscriptionsContract,
+	listPurchases: listPurchasesContract,
 
 	// Plans
 	plansCreate: createPlanContract,
@@ -171,6 +176,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Balances
 	balancesCreate: balancesCreateContract,
+	balancesList: balancesListContract,
 	balancesUpdate: balancesUpdateContract,
 	balancesDelete: balancesDeleteContract,
 	balancesFinalize: balancesFinalizeContract,

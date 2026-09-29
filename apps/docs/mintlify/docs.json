@@ -12,11 +12,7 @@
 		"strict": false
 	},
 	"contextual": {
-		"options": [
-			"copy",
-			"cursor",
-			"view"
-		]
+		"options": ["copy", "cursor", "view"]
 	},
 	"favicon": "/favicon.svg",
 	"interaction": {
@@ -175,11 +171,7 @@
 			{
 				"tab": "CLI",
 				"icon": "square-terminal",
-				"pages": [
-					"cli/getting-started",
-					"cli/config",
-					"cli/commands"
-				]
+				"pages": ["cli/getting-started", "cli/config", "cli/commands"]
 			},
 			{
 				"tab": "API Reference",
@@ -218,6 +210,7 @@
 							"api-reference/core/check",
 							"api-reference/core/track",
 							"api-reference/core/batchTrack",
+							"api-reference/balances/listBalances",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
 							"api-reference/balances/deleteBalance",
@@ -230,6 +223,8 @@
 							"api-reference/customers/getOrCreateCustomer",
 							"api-reference/customers/getCustomer",
 							"api-reference/customers/listCustomers",
+							"api-reference/customers/listSubscriptions",
+							"api-reference/customers/listPurchases",
 							"api-reference/customers/updateCustomer",
 							"api-reference/customers/deleteCustomer"
 						]
@@ -263,9 +258,7 @@
 					},
 					{
 						"group": "Logs",
-						"pages": [
-							"api-reference/logs/searchRequestLogs"
-						]
+						"pages": ["api-reference/logs/searchRequestLogs"]
 					},
 					{
 						"group": "Entities",
@@ -347,9 +340,7 @@
 							},
 							{
 								"group": "Invoice",
-								"pages": [
-									"api-reference/webhooks/invoiceFinalized"
-								]
+								"pages": ["api-reference/webhooks/invoiceFinalized"]
 							},
 							{
 								"group": "Vercel",
@@ -380,9 +371,7 @@
 			{
 				"tab": "Changelog",
 				"icon": "list-ol",
-				"pages": [
-					"changelog/changelog"
-				]
+				"pages": ["changelog/changelog"]
 			}
 		]
 	},
@@ -395,11 +384,7 @@
 			"display": "interactive"
 		},
 		"examples": {
-			"languages": [
-				"typescript",
-				"python",
-				"bash"
-			]
+			"languages": ["typescript", "python", "bash"]
 		}
 	},
 	"background": {

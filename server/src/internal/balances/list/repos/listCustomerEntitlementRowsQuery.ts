@@ -14,6 +14,7 @@ import {
 } from "@/internal/customers/customerWalk/customerWalkSql.js";
 import type { ListScope } from "@/internal/customers/customerWalk/types/listScope.js";
 import { customerPricesLateral } from "@/internal/customers/getCustomerProductsPageQuery.js";
+import { licensePooledBalanceIsLiveSql } from "@/internal/customers/licensePooledBalanceIsLiveSql.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 
 const walkColumns = {
@@ -22,10 +23,16 @@ const walkColumns = {
 	idColumn: sql`ce.id`,
 };
 
-/** Plan-backed rows follow their customer_product's status; loose grants follow expires_at. */
+/** A loose grant ends at expires_at; a license pool also ends when its parent plan does. */
+const looseExpiredSql = ({ now }: { now: number }) => sql`(
+	(ce.expires_at IS NOT NULL AND ce.expires_at <= ${now})
+	OR (ce.pooled_balance_id IS NOT NULL AND NOT ${licensePooledBalanceIsLiveSql()})
+)`;
+
+/** Plan-backed rows follow their customer_product's status; loose grants and pools follow looseExpiredSql. */
 const expiredSql = ({ now }: { now: number }) => sql`(
 	(cp.id IS NOT NULL AND cp.status = ${CusProductStatus.Expired})
-	OR (ce.customer_product_id IS NULL AND ce.expires_at IS NOT NULL AND ce.expires_at <= ${now})
+	OR (ce.customer_product_id IS NULL AND ${looseExpiredSql({ now })})
 )`;
 
 const activeSql = ({ now }: { now: number }) => sql`(
@@ -33,8 +40,19 @@ const activeSql = ({ now }: { now: number }) => sql`(
 		ACTIVE_STATUSES.map((status) => sql`${status}`),
 		sql`, `,
 	)}]))
-	OR (ce.customer_product_id IS NULL AND (ce.expires_at IS NULL OR ce.expires_at > ${now}))
+	OR (ce.customer_product_id IS NULL AND NOT ${looseExpiredSql({ now })})
 )`;
+
+/** A pool's contributing rows are folded into its synthetic row, so they are never balances themselves. */
+const notPooledSourceSql = sql`
+	ce.pooled_contribution_id IS NULL
+	AND (
+		ce.is_pooled_balance IS TRUE
+		OR NOT EXISTS (
+			SELECT 1 FROM entitlements pooled_ent
+			WHERE pooled_ent.id = ce.entitlement_id AND pooled_ent.pooled IS TRUE
+		)
+	)`;
 
 const statusSql = ({
 	statuses,
@@ -83,6 +101,7 @@ const rowFiltersSql = ({
 	now: number;
 }): SQL => sql`
 	AND ${statusSql({ statuses, now })}
+	AND ${notPooledSourceSql}
 	AND (cp.id IS NULL OR ${sql.raw(notLicenseAssignmentSql("cp"))})
 	${planSql({ ctx, planId })}
 	${
@@ -117,6 +136,7 @@ const selectPageSql = ({
 			SELECT ce.id, ce.internal_customer_id, ce.created_at
 			FROM customer_entitlements ce
 			LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
+			LEFT JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
 			WHERE ce.internal_customer_id = ${scope.internalCustomerId}
 			${filters}
 			${customerWalkOrderSql(walkColumns)}
@@ -130,6 +150,7 @@ const selectPageSql = ({
 			SELECT ce.id, ce.internal_customer_id, ce.created_at
 			FROM customer_entitlements ce
 			LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
+			LEFT JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
 			WHERE ce.internal_customer_id = c.internal_id
 			${filters}
 			ORDER BY ce.created_at DESC, ce.id DESC
@@ -217,6 +238,7 @@ export const listCustomerEntitlementRowsQuery = ({
 					FROM rollovers ro
 					WHERE ro.cus_ent_id = ce.id
 				),
+				'pooled_balance', row_to_json(pb),
 				'customer_product', CASE WHEN cp.id IS NULL THEN NULL ELSE
 					to_jsonb(cp.*) || jsonb_build_object(
 						'product', to_jsonb(prod.*),
@@ -228,6 +250,7 @@ export const listCustomerEntitlementRowsQuery = ({
 		JOIN customer_entitlements ce ON ce.id = page.id
 		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
 		LEFT JOIN products prod ON prod.internal_id = cp.internal_product_id
+		LEFT JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
 		JOIN customers cus ON cus.internal_id = ce.internal_customer_id
 		LEFT JOIN entities ent ON ent.internal_id = COALESCE(cp.internal_entity_id, ce.internal_entity_id)
 		${customerPricesLateral}

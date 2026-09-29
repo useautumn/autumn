@@ -1,0 +1,18 @@
+---
+title: "List Subscriptions"
+openapi: "openapi POST /v1/subscriptions.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+Lists recurring plans, including add-ons. By default only `active` and `scheduled` plans are returned; pass `statuses: ["expired"]` to see plans a customer no longer has.
+
+<Note>
+  `past_due` is a filter, not a status. A past-due plan is returned with `status: "active"` and `past_due: true`.
+</Note>
+
+<Note>
+  A page can hold fewer than `limit` rows (even zero) while `has_more` is `true`. Keep paginating until `has_more` is `false`.
+</Note>
