@@ -40,9 +40,14 @@ const replacedSubscriptionWarning = ({
 		const whenCancelled = stripeBillingPlan.checkoutSessionAction
 			? " once checkout completes"
 			: "";
+		// Cancelling an incomplete subscription makes Stripe void its first invoice.
+		const invoiceOutcome =
+			replacedStripeSubscription.status === "incomplete"
+				? "Stripe voids its first invoice."
+				: "Its unpaid invoices stay open.";
 		return {
 			type: warning,
-			message: `The ${replacedStripeSubscription.status} subscription ${replacedStripeSubscription.id} will be cancelled${whenCancelled} and a new one created. Its unpaid invoices stay open.`,
+			message: `The ${replacedStripeSubscription.status} subscription ${replacedStripeSubscription.id} will be cancelled${whenCancelled} and a new one created. ${invoiceOutcome}`,
 		};
 	}
 
