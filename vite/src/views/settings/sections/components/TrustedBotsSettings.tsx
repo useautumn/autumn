@@ -137,7 +137,14 @@ const AddTrustedBotDialog = ({
 					</div>
 					<div>
 						<FormLabel>Acts as</FormLabel>
-						<Select value={runAsUserId} onValueChange={setRunAsUserId}>
+						<Select
+							value={runAsUserId}
+							onValueChange={setRunAsUserId}
+							items={memberships.map((membership) => ({
+								label: memberLabel(membership),
+								value: membership.user.id,
+							}))}
+						>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select a member" />
 							</SelectTrigger>

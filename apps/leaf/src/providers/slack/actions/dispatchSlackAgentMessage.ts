@@ -36,6 +36,7 @@ import {
 import { findSlackInstallationForWorkspace } from "../installations.js";
 import { presentSlackAgentTurn } from "../presenters/presentSlackAgentTurn.js";
 import { controlMessageFrom } from "../routing/controlMessage.js";
+import type { ThreadAttachment } from "../threadContext.js";
 import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
 
 type DispatchSlackAgentMessageInput = {
@@ -57,6 +58,9 @@ type DispatchSlackAgentMessageInput = {
 	showRunPlan?: boolean;
 	target: ReplyTarget;
 	text: string;
+	/** Files shared earlier in the thread that the agent has not seen; loaded
+	 * only when a new run starts, like missed messages. */
+	threadAttachments?: () => Promise<ReadonlyArray<ThreadAttachment>>;
 	threadId: string;
 	/** Set when a trusted bot wrote the message; its turn runs as the member
 	 * the bot is configured to act as. */
@@ -136,6 +140,7 @@ const runAndReply = async ({
 	showRunPlan = false,
 	target,
 	text,
+	threadAttachments: threadAttachmentsInput,
 	threadId,
 	trustedBot,
 }: DispatchSlackAgentMessageInput & {
@@ -153,15 +158,17 @@ const runAndReply = async ({
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		const historyStartedAt = Date.now();
-		const [installation, recentMessages, missedMessages] = await Promise.all([
-			findSlackInstallationForWorkspace({ workspaceId }),
-			Promise.resolve(
-				typeof recentMessagesInput === "function"
-					? recentMessagesInput()
-					: recentMessagesInput,
-			),
-			missedMessagesInput?.(),
-		]);
+		const [installation, recentMessages, missedMessages, threadAttachments] =
+			await Promise.all([
+				findSlackInstallationForWorkspace({ workspaceId }),
+				Promise.resolve(
+					typeof recentMessagesInput === "function"
+						? recentMessagesInput()
+						: recentMessagesInput,
+				),
+				missedMessagesInput?.(),
+				threadAttachmentsInput?.(),
+			]);
 		historyMs = Date.now() - historyStartedAt;
 		if (!installation) {
 			logger.warn("Slack installation not found", {
@@ -236,7 +243,12 @@ const runAndReply = async ({
 		const logAction = progress.activity;
 		run.logAction = logAction;
 		run.onStop = progress.stop;
-		const rawFiles = getSlackFilesFromRaw({ raw });
+		const rawFiles = [
+			...getSlackFilesFromRaw({ raw }),
+			...(threadAttachments ?? []).flatMap((earlier) =>
+				getSlackFilesFromRaw({ raw: earlier.raw }),
+			),
+		];
 		const botToken = decrypt(installation.bot_access_token);
 
 		const output = await runSlackAgentTurn({
@@ -275,6 +287,7 @@ const runAndReply = async ({
 			run,
 			speaker,
 			text,
+			threadAttachments,
 			threadId,
 			trustedBot,
 		});

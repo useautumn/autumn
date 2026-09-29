@@ -267,6 +267,29 @@ describe("handleSlackMessage", () => {
 		});
 	});
 
+	test("a new thread hands over files shared earlier in it", async () => {
+		const contract = {
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} as const;
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [contract],
+		} as Message;
+		const current = createMessage({ id: "M2", text: "<@U_BOT> do the above" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSlackThreadStart(thread, current);
+
+		const { threadAttachments } = dispatchSlackAgentMessage.mock.calls.at(
+			-1,
+		)?.[0] as { threadAttachments: () => Promise<unknown> };
+		expect(await threadAttachments()).toEqual([
+			expect.objectContaining({ attachment: contract }),
+		]);
+	});
+
 	test("shows a run plan when a new Slack thread starts", async () => {
 		disposition = "keep";
 		const { thread } = createThread();

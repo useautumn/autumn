@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Message, StateAdapter, Thread } from "chat";
+import type { Attachment, Message, StateAdapter, Thread } from "chat";
 import {
+	getEarlierThreadAttachments,
 	getEarlierThreadMessages,
 	getRecentMessages,
 	loadMissedMessages,
@@ -8,22 +9,39 @@ import {
 } from "../../../../src/providers/slack/threadContext.js";
 
 const message = ({
+	attachments = [],
+	author,
 	id,
 	isBot = false,
+	isMe = false,
 	raw = { team_id: "T1" },
 	text,
 }: {
+	attachments?: Attachment[];
+	author?: string;
 	id: string;
 	isBot?: boolean;
+	isMe?: boolean;
 	raw?: unknown;
 	text: string;
 }) =>
 	({
-		author: { fullName: isBot ? "Autumn" : "Charlie", isBot },
+		attachments,
+		author: {
+			fullName: author ?? (isBot ? "Autumn" : "Charlie"),
+			isBot,
+			isMe,
+		},
 		id,
 		raw,
 		text,
 	}) as Message;
+
+const file = (name: string): Attachment => ({
+	mimeType: "application/pdf",
+	name,
+	type: "file",
+});
 
 describe("getRecentMessages", () => {
 	test("excludes native plan cards from agent context", async () => {
@@ -214,6 +232,57 @@ describe("skipped replies", () => {
 		await recordSkippedMessage(thread, inOther, state);
 
 		expect(await loadMissedMessages(thread, current, state)).toBeUndefined();
+	});
+});
+
+describe("files from earlier in the thread", () => {
+	test("the first mention gets every earlier file, newest first, but not the agent's own", () => {
+		const contract = file("contract.pdf");
+		const screenshot = file("screenshot.png");
+		const current = message({ id: "4", text: "@Autumn do the above" });
+		const thread = threadWith([
+			message({
+				attachments: [contract],
+				author: "Bill",
+				id: "1",
+				isBot: true,
+				text: "@Autumn update billing from the contract",
+			}),
+			message({
+				attachments: [file("summary.pdf")],
+				id: "2",
+				isBot: true,
+				isMe: true,
+				text: "Here's a summary",
+			}),
+			message({ attachments: [screenshot], id: "3", text: "" }),
+			current,
+		]);
+
+		expect(getEarlierThreadAttachments(thread, current)).toEqual([
+			{ attachment: screenshot, author: "Charlie", raw: { team_id: "T1" } },
+			{ attachment: contract, author: "Bill", raw: { team_id: "T1" } },
+		]);
+	});
+
+	test("a tag after skipped replies gets their files, even with no text", async () => {
+		const state = memoryState();
+		const invoice = file("invoice.pdf");
+		const skipped = message({ attachments: [invoice], id: "2", text: "" });
+		const current = message({ id: "3", text: "@Autumn use this" });
+		const thread = threadWith([
+			message({ attachments: [file("old.pdf")], id: "1", text: "seen" }),
+			skipped,
+			current,
+		]);
+
+		await recordSkippedMessage(thread, skipped, state);
+
+		expect(
+			(await loadMissedMessages(thread, current, state))?.attachments,
+		).toEqual([
+			{ attachment: invoice, author: "Charlie", raw: { team_id: "T1" } },
+		]);
 	});
 });
 

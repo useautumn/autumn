@@ -113,4 +113,57 @@ describe("Slack attachment message preparation", () => {
 			"Skipped huge.pdf: file is too large.",
 		]);
 	});
+
+	test("adds files from earlier in the thread after the message's own, naming who shared them", async () => {
+		const own = {
+			data: Buffer.from("png"),
+			mimeType: "image/png",
+			name: "own.png",
+			type: "image",
+		} satisfies Attachment;
+		const contract = {
+			fetchData: async () => Buffer.from("pdf"),
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} satisfies Attachment;
+
+		const { attachmentCount, content } = await getUserContent({
+			attachments: [own],
+			text: "@Autumn do the above",
+			threadAttachments: [{ attachment: contract, author: "Bill" }],
+		});
+
+		expect(attachmentCount).toBe(2);
+		expect(content.map((part) => part.filename)).toEqual([
+			"own.png",
+			"contract.pdf",
+			undefined,
+		]);
+		expect(content[2]?.text).toContain(
+			"contract.pdf (shared earlier in the thread by Bill)",
+		);
+	});
+
+	test("caps files from earlier in the thread and says how many were left out", async () => {
+		const earlier = Array.from({ length: 6 }, (_, index) => ({
+			attachment: {
+				data: Buffer.from("pdf"),
+				mimeType: "application/pdf",
+				name: `file-${index}.pdf`,
+				type: "file",
+			} satisfies Attachment,
+			author: "Bill",
+		}));
+
+		const { attachmentCount, notes } = await getUserContent({
+			text: "@Autumn go",
+			threadAttachments: earlier,
+		});
+
+		expect(attachmentCount).toBe(4);
+		expect(notes).toContain(
+			"Skipped 2 older file(s) from earlier in the thread.",
+		);
+	});
 });
