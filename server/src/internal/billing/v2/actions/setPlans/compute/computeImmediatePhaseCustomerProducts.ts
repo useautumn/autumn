@@ -31,6 +31,19 @@ const expireCurrentRecurringCustomerProducts = ({
 		},
 	}));
 
+const resolveImmediateEndedAt = ({
+	unscheduled,
+	nextPhaseStartsAt,
+	endsAt,
+}: {
+	unscheduled: boolean;
+	nextPhaseStartsAt: number | undefined;
+	endsAt: number | undefined;
+}): number | null => {
+	if (unscheduled) return endsAt ?? null;
+	return nextPhaseStartsAt ?? endsAt ?? null;
+};
+
 const insertImmediateCustomerProducts = ({
 	ctx,
 	billingContext,
@@ -70,11 +83,11 @@ const insertImmediateCustomerProducts = ({
 
 		applyScheduleTimingToCustomerProductPlan({
 			result: { insertCustomerProduct: newCustomerProduct },
-			// An unscheduled plan outlives the schedule, so it never takes the phase
-			// boundary as its end date.
-			endedAt: productContext.unscheduled
-				? (billingContext.endsAt ?? null)
-				: (nextPhaseStartsAt ?? billingContext.endsAt ?? null),
+			endedAt: resolveImmediateEndedAt({
+				unscheduled: productContext.unscheduled === true,
+				nextPhaseStartsAt,
+				endsAt: billingContext.endsAt,
+			}),
 		});
 		if (billingContext.skipBillingChanges) {
 			newCustomerProduct.scheduled_ids =

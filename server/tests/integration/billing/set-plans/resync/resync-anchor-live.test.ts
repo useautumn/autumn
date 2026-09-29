@@ -1,12 +1,4 @@
-/**
- * A timestamp billing_cycle_anchor on a live subscription (Q2).
- *
- * Contract:
- *   - The preview charges nothing now and warns that the cycle resets on the anchor.
- *   - Stripe gets a schedule phase that starts on the anchor with phase_start.
- *   - Balances reset on the anchor; Stripe bills the stretch past the old period end there, as attach does.
- *   - An add-on the request leaves alone on the same subscription resets on the anchor too.
- */
+/** A timestamp billing_cycle_anchor on a live subscription resets its cycle, and every plan on it, on the anchor. */
 
 import { expect, test } from "bun:test";
 import { formatMsToDate, ms, type SetPlansParamsV0Input } from "@autumn/shared";

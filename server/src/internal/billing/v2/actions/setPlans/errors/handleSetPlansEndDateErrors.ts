@@ -1,9 +1,5 @@
-import {
-	type CreateScheduleBillingContext,
-	ErrCode,
-	RecaseError,
-} from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import type { CreateScheduleBillingContext } from "@autumn/shared";
+import { invalidSetPlansRequest } from "./invalidSetPlansRequest";
 
 export const handleSetPlansEndDateErrors = ({
 	billingContext,
@@ -15,21 +11,16 @@ export const handleSetPlansEndDateErrors = ({
 	if (endsAt === undefined) return;
 
 	if (endsAt <= billingContext.currentEpochMs) {
-		throw new RecaseError({
-			message:
-				"ends_at cannot be set to a past timestamp. Use a future Unix timestamp in milliseconds.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
+		throw invalidSetPlansRequest(
+			"ends_at cannot be set to a past timestamp. Use a future Unix timestamp in milliseconds.",
+		);
 	}
 
 	const lastPhase =
 		billingContext.futurePhases.at(-1) ?? billingContext.immediatePhase;
 	if (endsAt <= lastPhase.starts_at) {
-		throw new RecaseError({
-			message: "ends_at must be after the last phase starts.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
+		throw invalidSetPlansRequest(
+			"ends_at must be after the last phase starts.",
+		);
 	}
 };

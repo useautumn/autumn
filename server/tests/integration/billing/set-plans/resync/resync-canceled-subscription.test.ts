@@ -1,13 +1,4 @@
-/**
- * Resync: a subscription cancelled in Stripe is rebuilt by set_plans with the old
- * start, the old period end as billing_cycle_anchor and proration_behavior none.
- *
- * Contract:
- *   - No charge now; the new subscription starts on the old start and anchors on the old period end.
- *   - The plans are active in Autumn from the old start and reset on the anchor.
- *   - Stripe invoices normally from the anchor; quantities match Autumn.
- *   - An annual anchor months ahead is not blocked by the backdate invoice limit.
- */
+/** A subscription cancelled in Stripe is rebuilt on its old start, anchored on its old period end, with no charge now. */
 
 import { test } from "bun:test";
 import type { SetPlansParamsV0Input } from "@autumn/shared";

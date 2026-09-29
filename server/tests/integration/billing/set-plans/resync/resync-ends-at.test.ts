@@ -1,13 +1,4 @@
-/**
- * Resync with ends_at: a subscription that was set to cancel keeps that end date (Q5, Q17, Q18).
- *
- * Contract:
- *   - ends_at equal to the anchor is allowed; the new subscription's cancel_at is ends_at.
- *   - Every plan ends on ends_at in Autumn, unscheduled plans included, and the preview lists them.
- *   - Stripe raises no invoice at the anchor, because the plans end there.
- *   - A plan the request leaves on the live subscription ends on ends_at too, and so does the subscription.
- *   - ends_at at or before the last phase start, or an anchor after ends_at, is rejected.
- */
+/** Resync with ends_at ends every plan, and the subscription, on ends_at without an invoice at the anchor. */
 
 import { expect, test } from "bun:test";
 import {

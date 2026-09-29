@@ -1,12 +1,4 @@
-/**
- * Resync with a later phase: the rebuilt subscription keeps the old start and
- * anchor, and the next phase starts when requested.
- *
- * Contract:
- *   - No charge now; the subscription anchors on the old period end.
- *   - A Stripe schedule starts the later phase on its requested date.
- *   - Autumn holds the later plan as scheduled.
- */
+/** Resync with a later phase keeps the old start and anchor and starts the next phase on its requested date. */
 
 import { expect, test } from "bun:test";
 import { msToSeconds, type SetPlansParamsV0Input } from "@autumn/shared";

@@ -1,7 +1,4 @@
-/**
- * set_plans params: proration_behavior, a timestamp billing_cycle_anchor and
- * ends_at; legacy billing_behavior is rejected, and create_schedule maps onto it.
- */
+/** set_plans params accept proration_behavior, a timestamp anchor and ends_at but reject billing_behavior, which create_schedule maps onto proration_behavior. */
 
 import { describe, expect, test } from "bun:test";
 import {

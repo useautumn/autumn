@@ -482,7 +482,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 		const resetAtMs = NOON_UTC + 10 * DAY_MS;
 
 		const warnings = stateWarnings({
-			cycleResetAt: resetAtMs,
+			requestedAnchorResetMs: resetAtMs,
 			stripeBillingPlan: {
 				subscriptionScheduleAction: {
 					type: "create",
@@ -512,7 +512,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 	test("an anchor the billing plan never applies doesn't announce a cycle reset", () => {
 		expect(
 			stateWarnings({
-				cycleResetAt: NOON_UTC + 10 * DAY_MS,
+				requestedAnchorResetMs: NOON_UTC + 10 * DAY_MS,
 				stripeBillingPlan: {},
 			}),
 		).toEqual([]);

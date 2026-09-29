@@ -161,7 +161,6 @@ export const computeSetPlansPlan = ({
 		pooledBalancePlan,
 		lockCustomerCurrency,
 	};
-	// A timestamp anchor on a live subscription resets every row on it through a schedule phase.
 	const autumnBillingPlan =
 		typeof billingContext.requestedBillingCycleAnchor === "number"
 			? applyBillingCycleAnchorToSharedSubscription({
