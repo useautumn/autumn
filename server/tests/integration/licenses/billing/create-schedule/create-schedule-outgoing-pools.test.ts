@@ -1,4 +1,4 @@
-// Scheduling a customer who already holds license pools transitions those pools like an immediate attach.
+/** Scheduling a customer who already holds license pools transitions those pools like an immediate attach. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

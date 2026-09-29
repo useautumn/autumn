@@ -1,4 +1,4 @@
-// set_plans with enable_plan_immediately through Stripe Checkout, from pending payment to checkout completion or expiry.
+/** set_plans with enable_plan_immediately through Stripe Checkout, from pending payment to checkout completion or expiry. */
 
 import { expect, test } from "bun:test";
 import {
