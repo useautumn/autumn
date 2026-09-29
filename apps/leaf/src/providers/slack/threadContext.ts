@@ -81,6 +81,8 @@ const toContextMessage = (message: Message): AgentContextMessage => ({
 export type ThreadAttachment = Readonly<{
 	attachment: Attachment;
 	author: string;
+	/** Position in the raw message's `files`, for hydrating Slack Connect stubs. */
+	fileIndex: number;
 	raw: unknown;
 }>;
 
@@ -93,9 +95,10 @@ const threadAttachmentsOf = (
 		.reverse()
 		.filter((message) => !message.author.isMe)
 		.flatMap((message) =>
-			(message.attachments ?? []).map((attachment) => ({
+			(message.attachments ?? []).map((attachment, fileIndex) => ({
 				attachment,
 				author: authorName(message),
+				fileIndex,
 				raw: message.raw,
 			})),
 		);

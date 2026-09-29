@@ -217,6 +217,46 @@ describe("handleSubscribedSlackMessage", () => {
 		expect(await lastDispatchInput().missedMessages()).toBeUndefined();
 	});
 
+	test("a re-tag in a followed thread hands over files shared earlier in it", async () => {
+		mentionsAgentResult = true;
+		const contract = {
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} as const;
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [contract],
+		} as Message;
+		const current = createMessage({ id: "M3", text: "<@U_BOT> try again" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSubscribedSlackMessage(thread, current);
+
+		const { threadAttachments } = dispatchSlackAgentMessage.mock.calls.at(
+			-1,
+		)?.[0] as { threadAttachments: () => Promise<unknown> };
+		expect(await threadAttachments()).toEqual([
+			expect.objectContaining({ attachment: contract, fileIndex: 0 }),
+		]);
+	});
+
+	test("an untagged reply in a followed thread does not resend earlier files", async () => {
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [{ mimeType: "application/pdf", type: "file" }],
+		} as Message;
+		const current = createMessage({ id: "M3", text: "thanks" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSubscribedSlackMessage(thread, current);
+
+		const { threadAttachments } = dispatchSlackAgentMessage.mock.calls.at(
+			-1,
+		)?.[0] as { threadAttachments: () => Promise<unknown> };
+		expect(await threadAttachments()).toEqual([]);
+	});
+
 	test("ignores bot-authored messages", async () => {
 		const { thread } = createThread();
 

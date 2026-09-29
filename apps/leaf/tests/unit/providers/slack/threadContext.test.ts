@@ -260,8 +260,18 @@ describe("files from earlier in the thread", () => {
 		]);
 
 		expect(getEarlierThreadAttachments(thread, current)).toEqual([
-			{ attachment: screenshot, author: "Charlie", raw: { team_id: "T1" } },
-			{ attachment: contract, author: "Bill", raw: { team_id: "T1" } },
+			{
+				attachment: screenshot,
+				author: "Charlie",
+				fileIndex: 0,
+				raw: { team_id: "T1" },
+			},
+			{
+				attachment: contract,
+				author: "Bill",
+				fileIndex: 0,
+				raw: { team_id: "T1" },
+			},
 		]);
 	});
 
@@ -281,7 +291,12 @@ describe("files from earlier in the thread", () => {
 		expect(
 			(await loadMissedMessages(thread, current, state))?.attachments,
 		).toEqual([
-			{ attachment: invoice, author: "Charlie", raw: { team_id: "T1" } },
+			{
+				attachment: invoice,
+				author: "Charlie",
+				fileIndex: 0,
+				raw: { team_id: "T1" },
+			},
 		]);
 	});
 });

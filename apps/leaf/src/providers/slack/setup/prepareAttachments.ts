@@ -111,6 +111,16 @@ export const prepareAttachmentMessage = async ({
 			!(isSupportedAttachment(attachment) || isInlineTextAttachment(attachment))
 		) {
 			notes.push(`Skipped ${label}: unsupported file type.`);
+			logger.warn("Skipped unsupported Slack attachment", {
+				event: "leaf.slack_attachment_skipped",
+				data: {
+					has_name: Boolean(attachment.name),
+					has_url: Boolean(attachment.url),
+					mime_type: attachment.mimeType ?? null,
+					reason: "unsupported_type",
+					size: attachment.size,
+				},
+			});
 			continue;
 		}
 		if (attachment.size && attachment.size > MAX_ATTACHMENT_BYTES) {
@@ -122,6 +132,14 @@ export const prepareAttachmentMessage = async ({
 			const data = await fetchAttachmentData({ attachment, fetchFallback });
 			if (!data) {
 				notes.push(`Skipped ${label}: file could not be downloaded.`);
+				logger.warn("Could not download Slack attachment", {
+					event: "leaf.slack_attachment_skipped",
+					data: {
+						mime_type: attachment.mimeType,
+						reason: "not_downloaded",
+						size: attachment.size,
+					},
+				});
 				continue;
 			}
 			if (data.byteLength > MAX_ATTACHMENT_BYTES) {

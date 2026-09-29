@@ -250,6 +250,9 @@ export const createSlackMessageHandlers = ({
 			loadedMissed ??= loadMissedMessages(thread, message, getState());
 			return loadedMissed;
 		});
+		const earlierAttachments = history.afterRefresh(
+			getEarlierThreadAttachments,
+		);
 		await dispatchMessage({
 			dispatch,
 			message,
@@ -261,7 +264,13 @@ export const createSlackMessageHandlers = ({
 			showRunPlan: false,
 			text,
 			thread,
-			threadAttachments: async () => (await loadMissed())?.attachments ?? [],
+			// A tag reaches back for files anywhere earlier in the thread, so a
+			// re-tag can pick up a file an earlier turn could not read; skipped
+			// replies are part of that history.
+			threadAttachments: async () =>
+				(await mentionsAgent({ message }))
+					? await earlierAttachments()
+					: ((await loadMissed())?.attachments ?? []),
 			trustedBot,
 		});
 	};

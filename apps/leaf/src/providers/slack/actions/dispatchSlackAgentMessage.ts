@@ -32,6 +32,7 @@ import { createEveSlackPresenter } from "../evePresenter.js";
 import {
 	fetchSlackAttachmentFallback,
 	getSlackFilesFromRaw,
+	hydrateSlackAttachment,
 } from "../files.js";
 import { findSlackInstallationForWorkspace } from "../installations.js";
 import { presentSlackAgentTurn } from "../presenters/presentSlackAgentTurn.js";
@@ -250,12 +251,50 @@ const runAndReply = async ({
 			),
 		];
 		const botToken = decrypt(installation.bot_access_token);
+		const hydrate = async ({
+			attachment,
+			fileIndex,
+			raw: fileRaw,
+		}: {
+			attachment: Attachment;
+			fileIndex: number;
+			raw: unknown;
+		}) => {
+			try {
+				return await hydrateSlackAttachment({
+					attachment,
+					botToken,
+					fileIndex,
+					raw: fileRaw,
+				});
+			} catch (error) {
+				logger.warn("Could not look up Slack file info", {
+					event: "leaf.slack_attachment_hydrate_failed",
+					data: { file_index: fileIndex },
+					error,
+				});
+				return attachment;
+			}
+		};
+		const [hydratedAttachments, hydratedThreadAttachments] = await Promise.all([
+			Promise.all(
+				(attachments ?? []).map((attachment, fileIndex) =>
+					hydrate({ attachment, fileIndex, raw }),
+				),
+			),
+			Promise.all(
+				(threadAttachments ?? []).map(async (earlier) => ({
+					...earlier,
+					attachment: await hydrate(earlier),
+				})),
+			),
+		]);
 
 		const output = await runSlackAgentTurn({
 			agentRunId: session.agentRunId,
 			attachmentFetchFallback: ({ attachment }) =>
 				fetchSlackAttachmentFallback({ attachment, botToken, rawFiles }),
-			attachments,
+			attachments: hydratedAttachments,
 			channelId,
 			clientContext,
 			installation,
@@ -287,7 +326,7 @@ const runAndReply = async ({
 			run,
 			speaker,
 			text,
-			threadAttachments,
+			threadAttachments: hydratedThreadAttachments,
 			threadId,
 			trustedBot,
 		});
