@@ -24,14 +24,9 @@ import {
 	normalizeSetPlansPhases,
 	phaseHasNumericStart,
 } from "../errors/normalizeSetPlansPhases";
-import { validateSetPlansPhasePlans } from "../errors/validateSetPlansPhasePlans";
-import { validateUnscheduledPlanScopes } from "../errors/validateUnscheduledPlanScopes";
 import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
 import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
-import {
-	markUnscheduledProductContexts,
-	resolveUnscheduledProductContexts,
-} from "../utils/unscheduledProductContexts";
+import { markUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
 type SetPlansCheckoutModeContext = Pick<
@@ -247,26 +242,12 @@ export const setupSetPlansBillingContext = async ({
 	billingContext = immediatePhaseContext.billingContext;
 	const { immediatePhase, futurePhases } = immediatePhaseContext;
 
-	validateSetPlansPhasePlans({
-		plans: billingContext.productContexts.map((productContext) => ({
-			fullProduct: productContext.fullProduct,
-			scopeId: productContext.fullCustomer.entity?.internal_id,
-		})),
-	});
-
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
 		phases: futurePhases,
 		fullCustomer: billingContext.fullCustomer,
 		currentEpochMs: billingContext.currentEpochMs,
 		immediatePhaseProductContexts: billingContext.productContexts,
-	});
-
-	validateUnscheduledPlanScopes({
-		unscheduledProductContexts: resolveUnscheduledProductContexts({
-			productContexts: billingContext.productContexts,
-		}),
-		scheduledPhaseContexts,
 	});
 
 	const scheduledCustomPrices = scheduledPhaseContexts.flatMap((phase) =>
