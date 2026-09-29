@@ -133,7 +133,7 @@ describe("misc redis key formats", () => {
 
 	test("oauth state", () => {
 		expect(buildOAuthStateKey("state_1")).toBe("oauth_state:state_1");
-		expect(OAUTH_STATE_TTL_SECONDS).toBe(600);
+		expect(OAUTH_STATE_TTL_SECONDS).toBe(3600);
 	});
 
 	test("subscription rows (@autumn/cache)", () => {

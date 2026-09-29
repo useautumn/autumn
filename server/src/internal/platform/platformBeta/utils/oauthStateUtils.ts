@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { type AppEnv, InternalError } from "@autumn/shared";
 import {
 	deleteOAuthStateData,
@@ -16,6 +16,50 @@ type OAuthState = {
 	revenuecat_project_name?: string;
 	// true for the API-key → OAuth migration flow
 	migration?: boolean;
+};
+
+type OAuthStateReturn = { redirectUri: string; issuedAt: number };
+
+const signOAuthStatePayload = (payload: string) =>
+	createHmac("sha256", process.env.ENCRYPTION_PASSWORD!)
+		.update(`oauth-state:${payload}`)
+		.digest("base64url");
+
+/**
+ * Appends a signed copy of the return URL, so the callback can still send the
+ * user back to it after the stored state has expired or been used.
+ */
+const signOAuthState = ({
+	stateKey,
+	redirectUri,
+}: {
+	stateKey: string;
+	redirectUri: string;
+}) => {
+	const payload = Buffer.from(
+		JSON.stringify({ r: redirectUri, t: Date.now() }),
+	).toString("base64url");
+	return `${stateKey}.${payload}.${signOAuthStatePayload(payload)}`;
+};
+
+/** Returns the signed return URL, or null when the state was not issued by us. */
+export const readOAuthStateReturn = ({
+	state,
+}: {
+	state: string;
+}): OAuthStateReturn | null => {
+	const [, payload, signature] = state.split(".");
+	if (!payload || !signature) return null;
+
+	const expected = Buffer.from(signOAuthStatePayload(payload));
+	const received = Buffer.from(signature);
+	const isSigned =
+		expected.length === received.length && timingSafeEqual(expected, received);
+	if (!isSigned) return null;
+
+	const { r, t } = JSON.parse(Buffer.from(payload, "base64url").toString());
+	if (typeof r !== "string" || !r || typeof t !== "number") return null;
+	return { redirectUri: r, issuedAt: t };
 };
 
 /**
@@ -44,8 +88,11 @@ export const generateOAuthState = async ({
 	const maxAttempts = 3;
 
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		// Generate random state key
-		const stateKey = randomBytes(32).toString("hex");
+		// Stored under the full signed state so instances that predate signing can still read it
+		const stateKey = signOAuthState({
+			stateKey: randomBytes(32).toString("hex"),
+			redirectUri,
+		});
 
 		// Try to set the key
 		const stateData: OAuthState = {
