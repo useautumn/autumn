@@ -5,6 +5,7 @@ import { balancesRpcRouter } from "@/internal/balances/balancesRouter";
 import { billingRpcRouter } from "@/internal/billing/billingRouter";
 import { catalogRpcRouter } from "@/internal/catalog/catalogRouter";
 import { catalogV2RpcRouter } from "@/internal/catalogV2/catalogV2Router";
+import { listPlansRpcRouter } from "@/internal/customers/listPlans/listPlansRouter";
 import { pooledBalanceRpcRouter } from "@/internal/customers/pooledBalances/pooledBalanceRouter";
 import { dfuRpcRouter } from "@/internal/dfu/dfuRouter";
 import { entityRpcRouter } from "@/internal/entities/entityRouter";
@@ -37,6 +38,7 @@ export const rpcRouter = new Hono<HonoEnv>();
 // rpcRouter.use("*", idempotencyMiddleware);
 
 rpcRouter.route("", customerRpcRouter);
+rpcRouter.route("", listPlansRpcRouter);
 rpcRouter.route("", agentRulesRpcRouter);
 rpcRouter.route("", keysRpcRouter);
 rpcRouter.route("", plansRpcRouter);

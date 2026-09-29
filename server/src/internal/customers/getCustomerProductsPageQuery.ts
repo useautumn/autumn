@@ -25,7 +25,7 @@ export const cpStatusInClause = (inStatuses?: CusProductStatus[]) =>
 			)}])`
 		: sql``;
 
-const oneOffPredicate = sql`(
+export const oneOffPredicate = sql`(
 	EXISTS (
 		SELECT 1 FROM prices pr_one
 		WHERE pr_one.internal_product_id = prod.internal_id
@@ -84,7 +84,7 @@ const customerProductsOrderBy = sql`ORDER BY ${customerProductsOrderExpr}`;
 
 // Per-product JSON aggregates, joined laterally so each customer_products row
 // carries its fully-hydrated prices / entitlements / free trial.
-const customerPricesLateral = sql`
+export const customerPricesLateral = sql`
 	LEFT JOIN LATERAL (
 		SELECT COALESCE(
 			json_agg(
@@ -97,7 +97,7 @@ const customerPricesLateral = sql`
 		WHERE cpr.customer_product_id = cp.id
 	) cpr_data ON true`;
 
-const customerEntitlementsLateral = sql`
+export const customerEntitlementsLateral = sql`
 	LEFT JOIN LATERAL (
 		SELECT COALESCE(
 			json_agg(
@@ -135,7 +135,7 @@ const customerEntitlementsLateral = sql`
 		WHERE ce.customer_product_id = cp.id
 	) ce_data ON true`;
 
-const freeTrialLateral = sql`
+export const freeTrialLateral = sql`
 	LEFT JOIN LATERAL (
 		SELECT row_to_json(ft) AS free_trial
 		FROM free_trials ft
