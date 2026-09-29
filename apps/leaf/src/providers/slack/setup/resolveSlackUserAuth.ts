@@ -8,7 +8,11 @@ import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUse
 import { sql } from "drizzle-orm";
 import { ensureChatUserCredential } from "../../../internal/installations/actions/ensureChatUserCredential.js";
 import { db } from "../../../lib/db.js";
-import { fetchSlackUserEmailCached } from "../users.js";
+import { env } from "../../../lib/env.js";
+import {
+	fetchSlackUserEmailCached,
+	fetchSlackUserHomeTeamId,
+} from "../users.js";
 import {
 	DENY_TEXT,
 	OAUTH_CEILING,
@@ -180,4 +184,83 @@ export const resolveTrustedBotAuth = async ({
 		...auth,
 		text: `${trustedBot.name} acts as an Autumn member who can't use the agent in this organization anymore. Ask an admin to update it under Trusted bots in Autumn's Slack settings.`,
 	};
+};
+
+const parseSlackStaffUserIds = (value?: string) =>
+	new Set(
+		(value ?? "")
+			.split(",")
+			.map((id) => id.trim())
+			.filter(Boolean),
+	);
+
+/** Denials that mean "we don't know you in this org", which a staff override
+ * may answer; a member whose own role is too narrow stays denied. */
+export const STAFF_OVERRIDABLE_DENIALS = new Set<SlackAuthDenyReason>([
+	"ambiguous-autumn-user",
+	"no-autumn-user",
+	"not-a-member",
+	"slack-email-unavailable",
+]);
+
+/** Autumn staff may use the agent in any customer's installation. A staff
+ * caller is an allowlisted Slack user id whose home team is Autumn's own
+ * workspace (never their email, which the customer's workspace reports), and
+ * their turn runs as the member who installed the app. Returns null when the
+ * caller is not staff. */
+export const resolveSlackStaffAuth = async ({
+	botToken,
+	fetchHomeTeamId = fetchSlackUserHomeTeamId,
+	installation,
+	logger,
+	orgId,
+	slackUserId,
+	staffTeamId = env.SLACK_ADMIN_WORKSPACE_ID,
+	staffUserIds = parseSlackStaffUserIds(env.SLACK_STAFF_USER_IDS),
+}: {
+	botToken: string;
+	fetchHomeTeamId?: typeof fetchSlackUserHomeTeamId;
+	installation: ChatInstallation;
+	logger: AutumnLogger;
+	orgId: string;
+	slackUserId: string;
+	staffTeamId?: string;
+	staffUserIds?: ReadonlySet<string>;
+}): Promise<SlackUserAuthResult | null> => {
+	if (!(staffTeamId && staffUserIds.has(slackUserId))) return null;
+	if (installation.org_id !== orgId) return null;
+
+	const homeTeamId = await fetchHomeTeamId({ botToken, slackUserId });
+	if (homeTeamId !== staffTeamId) {
+		logger.warn("Slack staff override denied", {
+			event: "leaf.slack_staff_override_denied",
+			data: { reason: "home_team_mismatch", slack_user_id: slackUserId },
+		});
+		return null;
+	}
+
+	const installerUserId = installation.installed_by_user_id;
+	if (!installerUserId) {
+		logger.warn("Slack staff override denied", {
+			event: "leaf.slack_staff_override_denied",
+			data: { reason: "installer_missing", slack_user_id: slackUserId },
+		});
+		return null;
+	}
+
+	const auth = await authorizeAutumnUser({
+		installation,
+		logger,
+		orgId,
+		userId: installerUserId,
+	});
+	logger.info("Slack staff override", {
+		event: "leaf.slack_staff_override_used",
+		data: {
+			ok: auth.ok,
+			run_as_user_id: installerUserId,
+			slack_user_id: slackUserId,
+		},
+	});
+	return auth;
 };
