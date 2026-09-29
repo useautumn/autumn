@@ -29,7 +29,6 @@ export const setupSetPlansBillingCycleAnchor = ({
 	const [outgoingCustomerProduct] = recurringActive;
 	const [firstProduct] = billingContext.fullProducts;
 
-	// Preserve renewal charges when resetting the cycle without proration.
 	const anchorResetRefund = setupAnchorResetRefund({
 		billingCycleAnchor: params.billing_cycle_anchor,
 		prorationBehavior: params.proration_behavior,
@@ -45,16 +44,16 @@ export const setupSetPlansBillingCycleAnchor = ({
 	}
 
 	const trialEndsAt = billingContext.trialContext?.trialEndsAt;
-	const billingCycleAnchorMs = trialEndsAt
-		? trialEndsAt
-		: setupBillingCycleAnchor({
-				stripeSubscription: billingContext.stripeSubscription,
-				customerProduct: outgoingCustomerProduct,
-				newFullProduct: firstProduct,
-				trialContext: billingContext.trialContext,
-				currentEpochMs: billingContext.currentEpochMs,
-				requestedBillingCycleAnchor: params.billing_cycle_anchor,
-			});
+	const billingCycleAnchorMs =
+		trialEndsAt ??
+		setupBillingCycleAnchor({
+			stripeSubscription: billingContext.stripeSubscription,
+			customerProduct: outgoingCustomerProduct,
+			newFullProduct: firstProduct,
+			trialContext: billingContext.trialContext,
+			currentEpochMs: billingContext.currentEpochMs,
+			requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		});
 
 	return {
 		billingCycleAnchorMs,

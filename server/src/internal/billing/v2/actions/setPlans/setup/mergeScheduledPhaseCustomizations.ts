@@ -1,7 +1,6 @@
 import type { MultiAttachBillingContext } from "@autumn/shared";
 import type { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
-/** Custom prices and entitlements of every phase, so later phases bill what was customised. */
 export const mergeScheduledPhaseCustomizations = ({
 	billingContext,
 	scheduledPhaseContexts,

@@ -19,9 +19,11 @@ import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 import { setupSetPlansBillingCycleAnchor } from "./setupSetPlansBillingCycleAnchor";
 import { setupSetPlansCheckoutMode } from "./setupSetPlansCheckoutMode";
 import { setupSetPlansCycleBoundaryMs } from "./setupSetPlansCycleBoundaryMs";
-import { setupSetPlansImmediatePhase } from "./setupSetPlansImmediatePhase";
+import {
+	SET_PLANS_IMMEDIATE_SETUP_OPTIONS,
+	setupSetPlansImmediatePhase,
+} from "./setupSetPlansImmediatePhase";
 
-/** Build billing context for the immediate phase. */
 export const setupSetPlansBillingContext = async ({
 	ctx,
 	params,
@@ -40,10 +42,7 @@ export const setupSetPlansBillingContext = async ({
 		billingStartsAt: phaseHasNumericStart(initialPhase)
 			? initialPhase.starts_at
 			: undefined,
-		billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
-		includeScheduledProductsForScheduleLookup: true,
-		replaceUnusableSubscription: true,
-		inheritSubscriptionTrial: true,
+		...SET_PLANS_IMMEDIATE_SETUP_OPTIONS,
 	});
 
 	const normalizedPhases = normalizeSetPlansPhases({

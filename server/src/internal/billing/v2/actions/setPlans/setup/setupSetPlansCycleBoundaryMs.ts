@@ -4,7 +4,7 @@ import type {
 } from "@autumn/shared";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 
-/** Where an end-of-cycle phase starts; a requested anchor leaves it unresolved. */
+/** A requested anchor leaves the end-of-cycle boundary unresolved. */
 export const setupSetPlansCycleBoundaryMs = ({
 	billingContext,
 	params,
