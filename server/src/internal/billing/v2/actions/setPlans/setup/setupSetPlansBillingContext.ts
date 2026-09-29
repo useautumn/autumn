@@ -1,199 +1,25 @@
 import {
-	type CheckoutMode,
 	type CreateScheduleBillingContext,
-	isOneOffProduct,
 	isPastStartDate,
-	isProductPaidAndRecurring,
-	type MultiAttachBillingContext,
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
-import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
-import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
-import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupReplacedScheduleCustomerProductIds } from "@/internal/customers/schedules/setup/setupReplacedScheduleCustomerProductIds";
-import { isStripeConnected } from "@/internal/orgs/orgUtils";
-import {
-	type ImmediateMultiProductParams,
-	setupImmediateMultiProductBillingContext,
-} from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
+import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
 	getInitialSetPlansPhase,
 	normalizeSetPlansPhases,
 	phaseHasNumericStart,
 } from "../errors/normalizeSetPlansPhases";
-import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
-import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
-import { markUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
+import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
+import { phaseToImmediateParams } from "./phaseToImmediateParams";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
-
-type SetPlansCheckoutModeContext = Pick<
-	CreateScheduleBillingContext,
-	| "fullProducts"
-	| "paymentMethod"
-	| "stripeSubscription"
-	| "trialContext"
-	| "invoiceMode"
->;
-
-const resolveNoBillingChanges = ({
-	ctx,
-	params,
-}: {
-	ctx: AutumnContext;
-	params: SetPlansParamsV0;
-}) =>
-	params.no_billing_changes === true ||
-	(!isStripeConnected({ org: ctx.org, env: ctx.env }) &&
-		params.proration_behavior === "none" &&
-		params.redirect_mode === "never");
-
-const setupSetPlansCheckoutMode = ({
-	billingContext,
-	redirectMode,
-}: {
-	billingContext: SetPlansCheckoutModeContext;
-	redirectMode: SetPlansParamsV0["redirect_mode"];
-}): CheckoutMode => {
-	if (redirectMode === "never") {
-		return null;
-	}
-	if (billingContext.invoiceMode) {
-		return null;
-	}
-
-	const hasPaymentMethod = !!billingContext.paymentMethod;
-	const hasExistingSubscription = !!billingContext.stripeSubscription;
-	const hasOneOffProduct = billingContext.fullProducts.some((product) =>
-		isOneOffProduct({ product }),
-	);
-	const hasPaidRecurringProduct = billingContext.fullProducts.some(
-		isProductPaidAndRecurring,
-	);
-	const shouldUseStripeCheckout =
-		hasOneOffProduct || (!hasExistingSubscription && hasPaidRecurringProduct);
-
-	if (!hasPaymentMethod && shouldUseStripeCheckout) {
-		const noCardRequiredTrial =
-			billingContext.trialContext?.trialEndsAt &&
-			billingContext.trialContext.cardRequired === false;
-
-		return noCardRequiredTrial ? null : "stripe_checkout";
-	}
-
-	if (redirectMode === "always") {
-		return shouldUseStripeCheckout ? "stripe_checkout" : "autumn_checkout";
-	}
-
-	return null;
-};
-
-const phaseToImmediateParams = ({
-	ctx,
-	params,
-	phase,
-}: {
-	ctx: AutumnContext;
-	params: SetPlansParamsV0;
-	phase: SetPlansParamsV0["phases"][number];
-}): ImmediateMultiProductParams => ({
-	customer_id: params.customer_id,
-	entity_id: params.entity_id,
-	no_billing_changes: resolveNoBillingChanges({ ctx, params }),
-	// Unscheduled plans bill with the immediate phase, so they attach alongside
-	// it — always last, which is how the contexts are told apart afterwards.
-	plans: [...phase.plans, ...(params.unscheduled_plans ?? [])].map((plan) => ({
-		plan_id: plan.plan_id,
-		entity_id: plan.entity_id,
-		customize: plan.customize,
-		feature_quantities: plan.feature_quantities,
-		license_quantities: plan.license_quantities,
-		version: plan.version,
-		subscription_id: plan.subscription_id,
-	})),
-	invoice_mode: params.invoice_mode,
-	free_trial: params.free_trial,
-	currency: params.currency,
-	discounts: params.discounts,
-	success_url: params.success_url,
-	checkout_session_params: params.checkout_session_params,
-	redirect_mode: params.redirect_mode ?? "if_required",
-	enable_plan_immediately: params.enable_plan_immediately,
-});
-
-const getCurrentPhaseIndex = ({
-	phases,
-	currentEpochMs,
-}: {
-	phases: ReturnType<typeof normalizeSetPlansPhases>;
-	currentEpochMs: number;
-}) => {
-	let currentPhaseIndex = 0;
-
-	for (let index = 0; index < phases.length; index++) {
-		const phase = phases[index];
-		if (!phase || phase.starts_at > currentEpochMs + FIRST_PHASE_TOLERANCE_MS) {
-			break;
-		}
-		currentPhaseIndex = index;
-	}
-
-	return currentPhaseIndex;
-};
-
-const setupSetPlansImmediatePhase = async ({
-	ctx,
-	params,
-	preview,
-	billingContext,
-	normalizedPhases,
-}: {
-	ctx: AutumnContext;
-	params: SetPlansParamsV0;
-	preview: boolean;
-	billingContext: MultiAttachBillingContext;
-	normalizedPhases: ReturnType<typeof normalizeSetPlansPhases>;
-}) => {
-	const immediatePhaseIndex = isExistingScheduleUpdate({ billingContext })
-		? getCurrentPhaseIndex({
-				phases: normalizedPhases,
-				currentEpochMs: billingContext.currentEpochMs,
-			})
-		: 0;
-	const immediatePhase = normalizedPhases[immediatePhaseIndex]!;
-
-	// The opening phase already built the context passed in; a later phase has to
-	// rebuild it against its own plans.
-	const immediateBillingContext =
-		immediatePhaseIndex === 0
-			? billingContext
-			: await setupImmediateMultiProductBillingContext({
-					ctx,
-					params: phaseToImmediateParams({
-						ctx,
-						params,
-						phase: immediatePhase,
-					}),
-					preview,
-					billingStartsAt: immediatePhase.starts_at,
-					billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
-					includeScheduledProductsForScheduleLookup: true,
-					replaceUnusableSubscription: true,
-					inheritSubscriptionTrial: true,
-				});
-
-	return {
-		billingContext: markUnscheduledProductContexts({
-			billingContext: immediateBillingContext,
-			unscheduledPlanCount: params.unscheduled_plans?.length ?? 0,
-		}),
-		immediatePhase,
-		futurePhases: normalizedPhases.slice(immediatePhaseIndex + 1),
-	};
-};
+import { setupSetPlansBillingCycleAnchor } from "./setupSetPlansBillingCycleAnchor";
+import { setupSetPlansCheckoutMode } from "./setupSetPlansCheckoutMode";
+import { setupSetPlansCycleBoundaryMs } from "./setupSetPlansCycleBoundaryMs";
+import { setupSetPlansImmediatePhase } from "./setupSetPlansImmediatePhase";
 
 /** Build billing context for the immediate phase. */
 export const setupSetPlansBillingContext = async ({
@@ -205,11 +31,9 @@ export const setupSetPlansBillingContext = async ({
 	params: SetPlansParamsV0;
 	preview?: boolean;
 }): Promise<CreateScheduleBillingContext> => {
-	const initialPhase = getInitialSetPlansPhase({
-		phases: params.phases,
-	});
+	const initialPhase = getInitialSetPlansPhase({ phases: params.phases });
 
-	let billingContext = await setupImmediateMultiProductBillingContext({
+	const initialBillingContext = await setupImmediateMultiProductBillingContext({
 		ctx,
 		params: phaseToImmediateParams({ ctx, params, phase: initialPhase }),
 		preview,
@@ -222,30 +46,23 @@ export const setupSetPlansBillingContext = async ({
 		inheritSubscriptionTrial: true,
 	});
 
-	const cycleBoundaryMs =
-		params.billing_cycle_anchor === undefined
-			? setupAttachEndOfCycleMs({
-					planTiming: "end_of_cycle",
-					stripeSubscription: billingContext.stripeSubscription,
-					billingCycleAnchorMs: billingContext.billingCycleAnchorMs,
-					currentEpochMs: billingContext.currentEpochMs,
-				})
-			: undefined;
-
 	const normalizedPhases = normalizeSetPlansPhases({
 		phases: params.phases,
-		currentEpochMs: billingContext.currentEpochMs,
-		cycleBoundaryMs,
+		currentEpochMs: initialBillingContext.currentEpochMs,
+		cycleBoundaryMs: setupSetPlansCycleBoundaryMs({
+			billingContext: initialBillingContext,
+			params,
+		}),
 	});
-	const immediatePhaseContext = await setupSetPlansImmediatePhase({
-		ctx,
-		params,
-		preview,
-		billingContext,
-		normalizedPhases,
-	});
-	billingContext = immediatePhaseContext.billingContext;
-	const { immediatePhase, futurePhases } = immediatePhaseContext;
+
+	const { billingContext, immediatePhase, futurePhases } =
+		await setupSetPlansImmediatePhase({
+			ctx,
+			params,
+			preview,
+			billingContext: initialBillingContext,
+			normalizedPhases,
+		});
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
@@ -256,17 +73,6 @@ export const setupSetPlansBillingContext = async ({
 		endsAt: params.ends_at,
 	});
 
-	const scheduledCustomPrices = scheduledPhaseContexts.flatMap((phase) =>
-		phase.productContexts.flatMap(
-			(productContext) => productContext.customPrices,
-		),
-	);
-	const scheduledCustomEntitlements = scheduledPhaseContexts.flatMap((phase) =>
-		phase.productContexts.flatMap(
-			(productContext) => productContext.customEntitlements,
-		),
-	);
-
 	const replacedScheduleCustomerProductIds =
 		await setupReplacedScheduleCustomerProductIds({
 			ctx,
@@ -275,25 +81,15 @@ export const setupSetPlansBillingContext = async ({
 
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
+		...mergeScheduledPhaseCustomizations({
+			billingContext,
+			scheduledPhaseContexts,
+		}),
 		replacedScheduleCustomerProductIds,
-		checkoutMode: billingContext.skipBillingChanges
-			? null
-			: setupSetPlansCheckoutMode({
-					billingContext,
-					redirectMode: params.redirect_mode,
-				}),
-		customPrices: [
-			...(billingContext.customPrices ?? []),
-			...scheduledCustomPrices,
-		],
-		customEnts: [
-			...(billingContext.customEnts ?? []),
-			...scheduledCustomEntitlements,
-		],
-		isCustom:
-			billingContext.isCustom ||
-			scheduledCustomPrices.length > 0 ||
-			scheduledCustomEntitlements.length > 0,
+		checkoutMode: setupSetPlansCheckoutMode({
+			billingContext,
+			redirectMode: params.redirect_mode,
+		}),
 		requestedProrationBehavior: params.proration_behavior,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 		billingStartsAt: immediatePhase.starts_at,
@@ -310,49 +106,20 @@ export const setupSetPlansBillingContext = async ({
 		endsAt: params.ends_at,
 	};
 
-	Object.assign(
-		scheduleBillingContext,
-		setupKeptSubscriptionCycle({
+	const keptCycleBillingContext: CreateScheduleBillingContext = {
+		...scheduleBillingContext,
+		...setupKeptSubscriptionCycle({
 			ctx,
 			billingContext: scheduleBillingContext,
 			requestedProrationBehavior: params.proration_behavior,
 		}),
-	);
+	};
 
-	const { recurringActive } = resolveSetPlansRecurringProducts({
-		billingContext: scheduleBillingContext,
-	});
-
-	// Immediate setup omits the requested anchor, so recompute it before proration.
-	if (params.billing_cycle_anchor !== undefined) {
-		const firstProduct = billingContext.fullProducts[0];
-		if (firstProduct) {
-			let recomputedAnchor = setupBillingCycleAnchor({
-				stripeSubscription: billingContext.stripeSubscription,
-				customerProduct: recurringActive[0],
-				newFullProduct: firstProduct,
-				trialContext: billingContext.trialContext,
-				currentEpochMs: billingContext.currentEpochMs,
-				requestedBillingCycleAnchor: params.billing_cycle_anchor,
-			});
-			if (billingContext.trialContext?.trialEndsAt) {
-				recomputedAnchor = billingContext.trialContext.trialEndsAt;
-			}
-			scheduleBillingContext.billingCycleAnchorMs = recomputedAnchor;
-			scheduleBillingContext.resetCycleAnchorMs = setupResetCycleAnchor({
-				billingCycleAnchorMs: recomputedAnchor,
-				customerProduct: undefined,
-				newFullProduct: firstProduct,
-			});
-		}
-	}
-
-	// Preserve renewal charges when resetting the cycle without proration.
-	scheduleBillingContext.anchorResetRefund = setupAnchorResetRefund({
-		billingCycleAnchor: params.billing_cycle_anchor,
-		prorationBehavior: params.proration_behavior,
-		outgoingCustomerProduct: recurringActive[0],
-	});
-
-	return scheduleBillingContext;
+	return {
+		...keptCycleBillingContext,
+		...setupSetPlansBillingCycleAnchor({
+			billingContext: keptCycleBillingContext,
+			params,
+		}),
+	};
 };
