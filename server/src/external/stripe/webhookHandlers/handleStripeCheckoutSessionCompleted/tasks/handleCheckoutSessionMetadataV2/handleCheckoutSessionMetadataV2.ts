@@ -148,6 +148,7 @@ const executeCheckoutSessionMetadataV2 = async ({
 
 	await executeStripeReplacedSubscriptionAction({
 		ctx,
+		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
 		replacedSubscriptionAction:
 			updatedDeferredData.billingPlan.stripe.replacedSubscriptionAction,
 	});

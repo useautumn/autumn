@@ -219,26 +219,29 @@ test.concurrent(
 	},
 );
 
+/** A declined first payment leaves pro Pending on an incomplete subscription. */
+const setupIncompletePro = async ({ customerId }: { customerId: string }) => {
+	const pro = products.pro({
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const scenario = await initScenario({
+		customerId,
+		setup: [s.customer({ paymentMethod: "fail" }), s.products({ list: [pro] })],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+	const incomplete = await findStripeSubscriptionByStatus({
+		ctx: scenario.ctx,
+		customerId,
+		status: "incomplete",
+	});
+	return { ...scenario, pro, incomplete };
+};
+
 test.concurrent(
 	`${chalk.yellowBright("set-plans unusable: an incomplete subscription replaced through Checkout leaves no Pending plans")}`,
 	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-
-		const { customerId, autumnV2_4, ctx } = await initScenario({
-			customerId: "set-plans-incomplete-checkout",
-			setup: [
-				s.customer({ paymentMethod: "fail" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [s.billing.attach({ productId: pro.id })],
-		});
-		const incomplete = await findStripeSubscriptionByStatus({
-			ctx,
-			customerId,
-			status: "incomplete",
-		});
+		const { customerId, autumnV2_4, ctx, pro, incomplete } =
+			await setupIncompletePro({ customerId: "set-plans-incomplete-checkout" });
 		const { data: paymentMethods } = await ctx.stripeCli.paymentMethods.list({
 			customer: incomplete.customer as string,
 		});
@@ -271,23 +274,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans unusable: no_billing_changes keeps the incomplete subscription's Pending plans")}`,
 	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-
-		const { customerId, autumnV2_4, ctx } = await initScenario({
-			customerId: "set-plans-incomplete-no-billing",
-			setup: [
-				s.customer({ paymentMethod: "fail" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [s.billing.attach({ productId: pro.id })],
-		});
-		const incomplete = await findStripeSubscriptionByStatus({
-			ctx,
-			customerId,
-			status: "incomplete",
-		});
+		const { customerId, autumnV2_4, ctx, pro, incomplete } =
+			await setupIncompletePro({
+				customerId: "set-plans-incomplete-no-billing",
+			});
 
 		await autumnV2_4.billing.setPlans({
 			customer_id: customerId,

@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import type { FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
@@ -41,6 +42,7 @@ const ctx = {
 const cancelReplaced = () =>
 	executeStripeReplacedSubscriptionAction({
 		ctx,
+		fullCustomer: { customer_products: [] } as unknown as FullCustomer,
 		replacedSubscriptionAction: {
 			type: "cancel",
 			stripeSubscriptionId: "sub_old",

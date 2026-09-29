@@ -81,6 +81,7 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 
 	await executeStripeReplacedSubscriptionAction({
 		ctx,
+		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
 		replacedSubscriptionAction:
 			updatedDeferredData.billingPlan.stripe.replacedSubscriptionAction,
 	});
