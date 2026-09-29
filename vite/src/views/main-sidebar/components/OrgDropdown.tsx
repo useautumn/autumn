@@ -126,7 +126,7 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"bg-transparent! border-0! h-8! min-w-0 max-w-full shrink! cursor-pointer items-center rounded-[5px]",
+								"bg-transparent! border-0! h-8! min-w-0 max-w-full shrink! cursor-pointer items-center rounded-[5px] [&>span]:min-w-0 [&>span]:max-w-full",
 								expanded
 									? "shimmer-hover justify-start gap-2 pl-1.5! pr-[7px]! data-[popup-open]:bg-black/[0.05]! dark:data-[popup-open]:bg-white/[0.06]!"
 									: "justify-center gap-0 px-0! hover:bg-transparent",
