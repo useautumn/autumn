@@ -2,10 +2,15 @@ import { expect } from "bun:test";
 import {
 	CusProductStatus,
 	findActiveCustomerProductById,
+	ms,
 	type SetPlansPreviewResponse,
 	type SetPlansPreviewWarning,
 } from "@autumn/shared";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -108,4 +113,44 @@ export const expectPreviewWarning = ({
 	for (const fragment of messageContains) {
 		expect(warning?.message).toContain(fragment);
 	}
+};
+
+/** A card-not-required trial that Stripe pauses at trial end, since no card was added. */
+export const setupPausedPro = async ({
+	customerId,
+}: {
+	customerId: string;
+}) => {
+	const trialDays = 3;
+	const pro = products.baseWithTrial({
+		id: "pro",
+		items: [items.monthlyPrice({ price: 20 })],
+		trialDays,
+		cardRequired: false,
+	});
+	const scenario = await initScenario({
+		customerId,
+		setup: [s.customer({}), s.products({ list: [pro] })],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+	const { ctx, testClockId, advancedTo } = scenario;
+
+	const trialing = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "trialing",
+	});
+	await ctx.stripeCli.subscriptions.update(trialing.id, {
+		trial_settings: { end_behavior: { missing_payment_method: "pause" } },
+	});
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		advanceTo: advancedTo + ms.days(trialDays + 1),
+		waitForSeconds: 30,
+	});
+	const paused = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
+	expect(paused.status).toBe("paused");
+
+	return { ...scenario, pro, paused };
 };

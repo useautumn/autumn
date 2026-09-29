@@ -12,18 +12,17 @@
  */
 
 import { expect, test } from "bun:test";
-import { ms } from "@autumn/shared";
 import {
 	expectPreviewWarning,
 	expectSubscriptionReplaced,
 	findStripeSubscriptionByStatus,
+	setupPausedPro,
 } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
-import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
@@ -78,42 +77,6 @@ test.concurrent(
 		expect(invoices.map((invoice) => invoice.status)).toEqual(["void"]);
 	},
 );
-
-/** A card-not-required trial that Stripe pauses at trial end, since no card was added. */
-const setupPausedPro = async ({ customerId }: { customerId: string }) => {
-	const trialDays = 3;
-	const pro = products.baseWithTrial({
-		id: "pro",
-		items: [items.monthlyPrice({ price: 20 })],
-		trialDays,
-		cardRequired: false,
-	});
-	const scenario = await initScenario({
-		customerId,
-		setup: [s.customer({}), s.products({ list: [pro] })],
-		actions: [s.billing.attach({ productId: pro.id })],
-	});
-	const { ctx, testClockId, advancedTo } = scenario;
-
-	const trialing = await findStripeSubscriptionByStatus({
-		ctx,
-		customerId,
-		status: "trialing",
-	});
-	await ctx.stripeCli.subscriptions.update(trialing.id, {
-		trial_settings: { end_behavior: { missing_payment_method: "pause" } },
-	});
-	await advanceTestClock({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		advanceTo: advancedTo + ms.days(trialDays + 1),
-		waitForSeconds: 30,
-	});
-	const paused = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
-	expect(paused.status).toBe("paused");
-
-	return { ...scenario, pro, paused };
-};
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans unusable: paused subscription is cancelled and replaced")}`,
