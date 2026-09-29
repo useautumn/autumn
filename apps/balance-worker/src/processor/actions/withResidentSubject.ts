@@ -4,8 +4,8 @@ import { SubjectCatalogEvictedError } from "../subject/subjectErrors.js";
 // One extra hydration: a second evict inside the same request is not worth a third Postgres read of a state that may be very large.
 const MAX_ATTEMPTS = 2;
 
-/** The rows, or catalog rows they join to, left the cache after `ensure`; ensuring again loads them back. */
-function isGoneSinceEnsure(cause: unknown): boolean {
+/** The rows, or catalog rows they join to, left the cache during this request; ensuring again loads them back. */
+function isGoneMidRequest(cause: unknown): boolean {
 	return (
 		cause instanceof PartitionProcessorStateNotFoundError ||
 		cause instanceof SubjectCatalogEvictedError
@@ -39,12 +39,12 @@ export async function withResidentSubject<Result>({
 	onRetry?(params: { attempt: number }): void;
 }): Promise<Result> {
 	for (let attemptNumber = 1; attemptNumber <= MAX_ATTEMPTS; attemptNumber++) {
-		await ensure();
 		let result: Result | null;
 		try {
+			await ensure();
 			result = await attempt();
 		} catch (cause) {
-			if (!isGoneSinceEnsure(cause)) throw cause;
+			if (!isGoneMidRequest(cause)) throw cause;
 			if (attemptNumber === MAX_ATTEMPTS) throw cause;
 			result = null;
 		}

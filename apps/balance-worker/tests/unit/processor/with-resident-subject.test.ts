@@ -98,3 +98,20 @@ test("a catalog row evicted after ensure is loaded again and the read answers", 
 	expect(result).toBe("read");
 	expect(ensures).toBe(2);
 });
+
+test("a catalog row evicted while ensure waits on Postgres is loaded again on the retry", async () => {
+	let ensures = 0;
+	const result = await withResidentSubject({
+		customerKey,
+		ensure: async () => {
+			ensures += 1;
+			if (ensures === 1)
+				throw new SubjectCatalogEvictedError({
+					keys: [{ table: "features", id: "fe_1" }],
+				});
+		},
+		attempt: () => "read",
+	});
+	expect(result).toBe("read");
+	expect(ensures).toBe(2);
+});
