@@ -1,0 +1,78 @@
+/**
+ * A timestamp billing_cycle_anchor on a live subscription (Q2).
+ *
+ * Contract:
+ *   - The preview charges nothing now and warns that the cycle resets on the anchor.
+ *   - Stripe gets a schedule phase that starts on the anchor with phase_start.
+ *   - Balances reset on the anchor, and Stripe bills the new cycle there.
+ */
+
+import { expect, test } from "bun:test";
+import { formatMsToDate, ms, type SetPlansParamsV0Input } from "@autumn/shared";
+import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
+import { expectCycleResetPhase } from "../utils/resyncUtils";
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: a timestamp anchor resets the cycle through a schedule phase")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-resync-live-anchor",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [s.billing.attach({ productId: pro.id })],
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			billing_cycle_anchor: anchorMs,
+			proration_behavior: "none",
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(0);
+		expect(preview.warnings).toContainEqual({
+			type: "cycle_reset",
+			severity: "warning",
+			message: `The billing cycle resets on ${formatMsToDate(anchorMs)}.`,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+		await expectCycleResetPhase({ ctx, customerId, anchorMs });
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 100,
+			nextResetAt: anchorMs,
+		});
+
+		await advanceToAnchor({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advancedTo,
+			anchorMs,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: 20,
+		});
+	},
+);
