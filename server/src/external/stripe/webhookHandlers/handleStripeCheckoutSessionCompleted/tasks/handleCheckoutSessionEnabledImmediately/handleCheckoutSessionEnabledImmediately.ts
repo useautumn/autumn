@@ -134,7 +134,6 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		stripeInvoice,
 	});
 
-	// 7. Persist the Autumn schedule rows (createSchedule only — no-op for attach).
 	await persistDeferredSetPlansSchedule({
 		ctx,
 		billingContext: updatedDeferredData.billingContext,

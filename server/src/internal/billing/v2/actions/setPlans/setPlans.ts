@@ -43,7 +43,6 @@ export const setPlans = async ({
 			? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
 			: undefined;
 
-	// 1. Setup
 	const billingContext = await setupSetPlansBillingContext({
 		ctx,
 		params,
@@ -52,7 +51,6 @@ export const setPlans = async ({
 	logSetPlansContext({ ctx, billingContext });
 	await handleSetPlansErrors({ billingContext, preview });
 
-	// 2. Compute
 	const { autumnBillingPlan, phases, immediatePhaseTransition } =
 		computeSetPlansPlan({ ctx, billingContext });
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
@@ -71,7 +69,6 @@ export const setPlans = async ({
 		});
 	}
 
-	// 3. Evaluate Stripe billing plan
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -85,7 +82,6 @@ export const setPlans = async ({
 		stripe: stripeBillingPlan,
 	};
 
-	// 4. Errors (requires full billing plan)
 	handleSetPlansBillingPlanErrors({ ctx, billingContext, billingPlan });
 
 	const result: SetPlansResult = {
@@ -103,7 +99,6 @@ export const setPlans = async ({
 		return result;
 	}
 
-	// 5. Checkout session lock (skip for confirm flows)
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({
 			ctx,
@@ -118,7 +113,6 @@ export const setPlans = async ({
 		}
 	}
 
-	// 6. Autumn checkout
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
@@ -138,7 +132,6 @@ export const setPlans = async ({
 		return { ...result, billingResult };
 	}
 
-	// 7. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,
@@ -149,8 +142,8 @@ export const setPlans = async ({
 	});
 	logStripeBillingResult({ ctx, result: billingResult.stripe });
 
-	// 8. Persist the schedule, unless checkout completion owns it (deferred
-	// execution, or the Stripe subscription does not exist yet).
+	// Checkout completion owns the schedule when execution is deferred or no
+	// Stripe subscription exists yet.
 	const scheduleDeferredToCheckout =
 		billingResult.stripe.deferred ||
 		(billingContext.enablePlanImmediately &&

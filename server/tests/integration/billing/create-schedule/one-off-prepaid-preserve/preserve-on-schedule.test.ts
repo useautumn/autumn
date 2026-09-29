@@ -1,19 +1,4 @@
-/**
- * TDD test for auto-preservation of one-off prepaid balances when
- * createSchedule activates a new plan that replaces an existing customer
- * product holding a one-off prepaid customer_entitlement.
- *
- * Contract under test:
- *   When createSchedule's immediate phase replaces an existing main customer
- *   product holding a one-off prepaid customer_entitlement with balance > 0,
- *   the remaining units are preserved as a lifetime cusEnt on the new product.
- *
- * Pre-impl red: balance after the schedule activates reflects only the new
- *   plan (preserved units lost when the outgoing cusProduct is expired).
- * Post-impl green: the createSchedule transition path invokes
- *   cusProductToOneOffPrepaidCarryOvers (or the shared compute helper) and
- *   emits the lifetime cusEnt rows.
- */
+// set_plans preserves one-off prepaid balances when a scheduled plan replaces the product holding them.
 
 import { test } from "bun:test";
 import {

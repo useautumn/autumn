@@ -11,7 +11,6 @@ import type { ProcessorItemContext } from "./processorItems/types/processorItemC
 import { setPlansPreviewToWarnings } from "./setPlansPreviewToWarnings";
 import { stripeBillingPlanToProcessorChanges } from "./stripeBillingPlanToProcessorChanges";
 
-/** Format a set_plans preview result as the phase-by-phase Autumn and Stripe changes. */
 export const buildSetPlansPreview = async ({
 	ctx,
 	result,
