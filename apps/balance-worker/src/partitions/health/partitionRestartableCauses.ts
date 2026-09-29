@@ -24,14 +24,21 @@ export function isPartitionRestartableCause({
 	) {
 		if (isRestartableError(current)) return true;
 		seen.add(current);
+		// Several failures reported together are only as safe as the least safe of
+		// them: a refused batch alongside a cleanup that failed is not a partition
+		// that merely fell behind, and stops the worker as it always did.
 		if (current instanceof AggregateError) {
-			for (const member of current.errors)
-				if (isPartitionRestartableCause({ cause: member })) return true;
+			if (current.errors.length === 0) return false;
+			return current.errors.every(isRestartableMember);
 		}
 		if (!("cause" in current)) return false;
 		current = current.cause;
 	}
 	return false;
+}
+
+function isRestartableMember(member: unknown): boolean {
+	return isPartitionRestartableCause({ cause: member });
 }
 
 function isRestartableError(error: object): boolean {

@@ -74,6 +74,15 @@ const DEFAULT_TRANSACTION_RETRY: TransactionRetry = {
 	now: monotonicNow,
 };
 
+/** The default retry with a shorter deadline, for a publish whose reader would not wait the full one. */
+export function transactionRetryWithin({
+	deadlineMs,
+}: {
+	deadlineMs: number;
+}): TransactionRetry {
+	return { ...DEFAULT_TRANSACTION_RETRY, deadlineMs };
+}
+
 export function isConcurrentTransactionsError(cause: unknown): boolean {
 	return (
 		cause instanceof KafkaJSProtocolError &&

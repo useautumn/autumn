@@ -72,3 +72,17 @@ test("anything else keeps stopping the service", () => {
 	loop.cause = loop;
 	expect(isPartitionRestartableCause({ cause: loop })).toBe(false);
 });
+
+test("a refused batch reported alongside a failed cleanup still stops the service", () => {
+	const cause = new AggregateError(
+		[
+			new KafkaBatchNotCommittedError({ cause: refusedByCoordinator() }),
+			new Error("Producer session did not disconnect"),
+		],
+		"Owned partition recovery cleanup failed",
+	);
+	expect(isPartitionRestartableCause({ cause })).toBe(false);
+	expect(
+		isPartitionRestartableCause({ cause: new AggregateError([], "empty") }),
+	).toBe(false);
+});
