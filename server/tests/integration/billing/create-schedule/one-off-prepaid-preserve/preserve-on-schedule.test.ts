@@ -1,4 +1,4 @@
-// set_plans preserves one-off prepaid balances when a scheduled plan replaces the product holding them.
+/** set_plans preserves one-off prepaid balances when a scheduled plan replaces the product holding them. */
 
 import { test } from "bun:test";
 import {
