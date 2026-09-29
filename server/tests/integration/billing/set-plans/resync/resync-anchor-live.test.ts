@@ -4,13 +4,14 @@
  * Contract:
  *   - The preview charges nothing now and warns that the cycle resets on the anchor.
  *   - Stripe gets a schedule phase that starts on the anchor with phase_start.
- *   - Balances reset on the anchor, and Stripe bills the new cycle there.
+ *   - Balances reset on the anchor; Stripe bills the stretch past the old period end there, as attach does.
  */
 
 import { expect, test } from "bun:test";
 import { formatMsToDate, ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { calculateBillingCycleAnchorResetNextCycle } from "@tests/integration/billing/utils/proration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -37,6 +38,12 @@ test.concurrent(
 			});
 
 		const anchorMs = advancedTo + ms.days(10);
+		const expectedResetInvoice =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 20,
+			});
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
 			billing_cycle_anchor: anchorMs,
@@ -72,7 +79,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
-			latestTotal: 20,
+			latestTotal: expectedResetInvoice.total,
 		});
 	},
 );
