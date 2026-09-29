@@ -30,11 +30,10 @@ const secs = (a: string | null, b: string | null) =>
 	a && b ? (Date.parse(b) - Date.parse(a)) / 1000 : Number.NaN;
 
 const metrics = [
-	"queue",
 	"Checkout code",
 	"Set up Bun",
 	"Install dependencies",
-	"Run Knip",
+	"Run unit tests",
 	"total",
 ];
 const byProvider: Record<string, Record<string, number[]>> = {};
@@ -45,7 +44,6 @@ for (const job of jobs) {
 		console.warn(`${job.name}: ${job.conclusion}`);
 	byProvider[provider] ??= Object.fromEntries(metrics.map((m) => [m, []]));
 	const bucket = byProvider[provider];
-	bucket.queue.push(secs(job.created_at, job.started_at));
 	bucket.total.push(secs(job.started_at, job.completed_at));
 	for (const step of job.steps) {
 		if (bucket[step.name])
