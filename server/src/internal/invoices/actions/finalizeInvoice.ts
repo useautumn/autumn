@@ -49,6 +49,7 @@ export const finalizeInvoice = async ({
 	const customerId = row.customer_id ?? row.invoice.internal_customer_id;
 
 	if (ALREADY_FINALIZED_STRIPE_STATUSES.has(stripeInvoice.status ?? "")) {
+		await schedulePendingPlanExpiryForFinalizedInvoice({ ctx, stripeInvoice });
 		await updateInvoiceFromStripe({ ctx, customerId, stripeInvoice });
 		return (await InvoiceService.getListRowById({ ctx, id: invoiceId })) ?? row;
 	}

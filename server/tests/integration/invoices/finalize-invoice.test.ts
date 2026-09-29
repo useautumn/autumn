@@ -5,7 +5,7 @@
  *   POST /invoices.finalize { invoice_id } -> { invoice: ApiListInvoiceV1 }
  *   draft invoice          → Stripe status open, auto_advance on, our row updated inline
  *   deferred (pending)     → pending plan now expires at the invoice's due date
- *   already open or paid   → 200, unchanged
+ *   already open or paid   → 200, unchanged; a missing pending-plan expiry is saved
  *   void invoice           → 400
  *   non-Stripe             → 400
  */
@@ -97,6 +97,59 @@ test.concurrent(
 			invoice_id: invoiceId,
 		})) as FinalizeResponse;
 		expect(again.invoice.status).toBe("open");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.finalize: finalized in Stripe but expiry never saved → retry saves it")}`,
+	async () => {
+		const customerId = "inv-finalize-retry";
+		const pro = products.pro({
+			id: "pro-finalize-retry",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: false,
+				}),
+			],
+		});
+
+		const [invoiceId] = await listInvoiceIds({ autumnV2_3, customerId });
+		const { list } = (await autumnV2_3.post("/invoices.list", {
+			customer_id: customerId,
+		})) as { list: ApiListInvoiceV1[] };
+		const stripeInvoiceId = list[0].stripe_id;
+
+		// Simulates a crash after Stripe finalized but before the expiry was saved.
+		const stripeInvoice = await ctx.stripeCli.invoices.finalizeInvoice(
+			stripeInvoiceId,
+			{ auto_advance: false },
+		);
+
+		const { invoice } = (await autumnV2_3.post("/invoices.finalize", {
+			invoice_id: invoiceId,
+		})) as FinalizeResponse;
+		expect(invoice.status).toBe("open");
+
+		const pending = (
+			await CusProductService.list({
+				db: ctx.db,
+				internalCustomerId: customer?.internal_id ?? "",
+				inStatuses: ALL_STATUSES,
+			})
+		).find((customerProduct) => customerProduct.product.id === pro.id);
+		const metadata = await MetadataService.get({
+			db: ctx.db,
+			id: pending?.metadata_id ?? "",
+		});
+		expect(metadata?.expires_at).toBe((stripeInvoice.due_date ?? 0) * 1000);
 	},
 );
 
