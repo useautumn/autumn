@@ -214,8 +214,8 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
-	test("an incomplete subscription says its first invoice is voided", () => {
-		const [warning] = stateWarnings({
+	test("an incomplete subscription says its first invoice is voided, not left open", () => {
+		const warnings = stateWarnings({
 			billingContext: {
 				currentEpochMs: NOON_UTC,
 				billingCycleAnchorMs: "now",
@@ -225,11 +225,24 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				}),
 			},
 			stripeBillingPlan: {},
+			replacedOpenInvoices: [
+				{
+					id: "in_first",
+					number: "INV-0001",
+					amount_remaining: 2000,
+					currency: "usd",
+				} as Stripe.Invoice,
+			],
 		});
 
-		expect(warning?.message).toBe(
-			"The incomplete subscription sub_incomplete will be cancelled and a new one created. Stripe voids its first invoice.",
-		);
+		expect(warnings).toEqual([
+			{
+				type: "subscription_replaced",
+				severity: "warning",
+				message:
+					"The incomplete subscription sub_incomplete will be cancelled and a new one created. Stripe voids its first invoice.",
+			},
+		]);
 	});
 
 	test("a paused subscription replaced through Checkout is cancelled once checkout completes", () => {
