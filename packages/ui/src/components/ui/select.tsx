@@ -5,6 +5,7 @@ import {
 	overlayItemHighlightClassName,
 	overlayItemIndicatorClassName,
 	overlayLabelClassName,
+	overlayMotionClassName,
 	overlaySeparatorClassName,
 	overlaySurfaceClassName,
 } from "@autumn/ui/lib/overlay-classes";
@@ -116,6 +117,7 @@ function SelectContent({
 					className={cn(
 						"relative max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-x-hidden overflow-y-auto p-1",
 						overlaySurfaceClassName,
+						overlayMotionClassName,
 						className,
 					)}
 					{...props}
