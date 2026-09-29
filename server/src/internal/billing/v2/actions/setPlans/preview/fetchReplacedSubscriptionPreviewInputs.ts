@@ -1,4 +1,8 @@
-import type { BillingContext, FullCusProduct } from "@autumn/shared";
+import {
+	type BillingContext,
+	type FullCusProduct,
+	filterCustomerProductsByStripeSubscriptionId,
+} from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
@@ -24,26 +28,25 @@ export const fetchReplacedSubscriptionPreviewInputs = async ({
 		status: "open",
 	});
 
-	const unbilledUsageLineItems = outgoingCustomerProducts
-		.filter((customerProduct) =>
-			customerProduct.subscription_ids?.includes(replacedStripeSubscription.id),
-		)
-		.flatMap(
-			(customerProduct) =>
-				customerProductToArrearLineItems({
-					ctx,
-					customerProduct,
-					billingContext: {
-						...billingContext,
-						stripeSubscription: replacedStripeSubscription,
-					},
-					options: {
-						includePeriodDescription: false,
-						updateNextResetAt: false,
-						discountable: false,
-					},
-				}).lineItems,
-		);
+	const unbilledUsageLineItems = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: outgoingCustomerProducts,
+		stripeSubscriptionId: replacedStripeSubscription.id,
+	}).flatMap(
+		(customerProduct) =>
+			customerProductToArrearLineItems({
+				ctx,
+				customerProduct,
+				billingContext: {
+					...billingContext,
+					stripeSubscription: replacedStripeSubscription,
+				},
+				options: {
+					includePeriodDescription: false,
+					updateNextResetAt: false,
+					discountable: false,
+				},
+			}).lineItems,
+	);
 
 	return { replacedOpenInvoices, unbilledUsageLineItems };
 };

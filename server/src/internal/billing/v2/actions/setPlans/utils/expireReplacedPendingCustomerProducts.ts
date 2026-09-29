@@ -1,4 +1,8 @@
-import { CusProductStatus, type FullCustomer } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCustomer,
+	filterCustomerProductsByStripeSubscriptionId,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
@@ -13,10 +17,11 @@ export const expireReplacedPendingCustomerProducts = async ({
 	fullCustomer: FullCustomer;
 	replacedStripeSubscriptionId: string;
 }) => {
-	const pendingCustomerProducts = fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			customerProduct.status === CusProductStatus.Pending &&
-			customerProduct.subscription_ids?.includes(replacedStripeSubscriptionId),
+	const pendingCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: fullCustomer.customer_products,
+		stripeSubscriptionId: replacedStripeSubscriptionId,
+	}).filter(
+		(customerProduct) => customerProduct.status === CusProductStatus.Pending,
 	);
 
 	for (const customerProduct of pendingCustomerProducts) {
