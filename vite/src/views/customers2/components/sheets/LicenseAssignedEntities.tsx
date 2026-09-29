@@ -138,8 +138,8 @@ export function LicenseAssignedEntities({
 							rangeStart={pageStart + 1}
 							rangeEnd={pageStart + pagedAssignments.length}
 							total={filteredAssignments.length}
-							canPrev={safePage > 0}
-							canNext={safePage < pageCount - 1}
+							pageIndex={safePage}
+							pageCount={pageCount}
 							onPrev={() => setPage(safePage - 1)}
 							onNext={() => setPage(safePage + 1)}
 						/>

@@ -31,10 +31,7 @@ export const fullCustomerToOverageAllowedByFeatureId = ({
 	const uniqueFeatureIds = [...new Set(featureIds)];
 
 	for (const featureId of uniqueFeatureIds) {
-		const overageAllowed = resolveBillingControl<
-			DbOverageAllowed,
-			"overage_allowed"
-		>({
+		const overageAllowed = resolveBillingControl({
 			controlLists: [entityOverageAllowed, customerOverageAllowed],
 			customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
 			controlKey: "overage_allowed",

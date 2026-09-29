@@ -1,3 +1,4 @@
+import type { CustomerProductWithPricesView } from "@models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums.js";
 import type {
 	CusProduct,
@@ -20,9 +21,9 @@ import { customerProductToEffectivePrices } from "../convertCusProduct/customerP
 // PRODUCT TYPE CHECKS
 // ============================================================================
 
-export const isCustomerProductMain = (
-	customerProduct?: CusProduct & { product: Product },
-) => {
+export const isCustomerProductMain = (customerProduct?: {
+	product: Pick<Product, "is_add_on">;
+}) => {
 	if (!customerProduct) return false;
 	return !customerProduct.product.is_add_on;
 };
@@ -32,7 +33,9 @@ export const isCustomerProductAddOn = (customerProduct?: FullCusProduct) => {
 	return customerProduct.product.is_add_on;
 };
 
-export const isCustomerProductOneOff = (customerProduct?: FullCusProduct) => {
+export const isCustomerProductOneOff = (
+	customerProduct?: CustomerProductWithPricesView,
+) => {
 	if (!customerProduct) return false;
 	const prices = customerProductToEffectivePrices({ customerProduct });
 	return isOneOffProduct({ prices });
@@ -40,7 +43,7 @@ export const isCustomerProductOneOff = (customerProduct?: FullCusProduct) => {
 
 /** Returns true if the product is recurring (not a one-off). Includes free products. */
 export const isCustomerProductRecurring = (
-	customerProduct?: FullCusProduct,
+	customerProduct?: CustomerProductWithPricesView,
 ) => {
 	if (!customerProduct) return false;
 	const prices = customerProductToEffectivePrices({ customerProduct });

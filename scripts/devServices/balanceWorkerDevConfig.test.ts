@@ -1,0 +1,65 @@
+import { describe, expect, test } from "bun:test";
+import { balanceWorkerDevConfig } from "./balanceWorkerDevConfig.ts";
+
+test("dev Kafka logs only errors unless explicitly overridden", kafkaLogLevel);
+
+function kafkaLogLevel(): void {
+	expect(
+		balanceWorkerDevConfig({ worktreeNum: 50, runtimeEnv: {} })
+			.KAFKAJS_LOG_LEVEL,
+	).toBe("error");
+	for (const level of ["warn", "info", "debug"]) {
+		expect(
+			balanceWorkerDevConfig({
+				worktreeNum: 50,
+				runtimeEnv: { KAFKAJS_LOG_LEVEL: level },
+			}).KAFKAJS_LOG_LEVEL,
+		).toBe(level);
+	}
+}
+
+describe("local balance worker launch settings", () => {
+	test("explicitly selects plaintext authentication for local Kafka", () => {
+		expect(
+			balanceWorkerDevConfig({ worktreeNum: 50, runtimeEnv: {} })
+				.KAFKA_AUTH_MODE,
+		).toBe("none");
+		expect(
+			balanceWorkerDevConfig({
+				worktreeNum: 50,
+				runtimeEnv: { KAFKA_AUTH_MODE: "msk_iam" },
+			}).KAFKA_AUTH_MODE,
+		).toBe("msk_iam");
+	});
+	test("assigns collision-free per-worktree listener ports", () => {
+		const ports = new Set<number>();
+		for (let worktreeNum = 1; worktreeNum <= 50; worktreeNum++) {
+			const env = balanceWorkerDevConfig({ worktreeNum, runtimeEnv: {} });
+			const port = Number(env.BALANCE_WORKER_PORT);
+			expect(ports.has(port)).toBe(false);
+			ports.add(port);
+			expect(env.BALANCE_WORKER_ENDPOINT).toBe(`http://127.0.0.1:${port}`);
+		}
+		expect(
+			balanceWorkerDevConfig({ worktreeNum: 50, runtimeEnv: {} })
+				.BALANCE_WORKER_PORT,
+		).toBe("12982");
+	});
+	test("keeps the configured worktree broker and sets no topic names", () => {
+		const env = balanceWorkerDevConfig({
+			worktreeNum: 50,
+			runtimeEnv: { KAFKA_BROKERS: "127.0.0.1:23992" },
+		});
+		expect(env.KAFKA_BROKERS).toBe("127.0.0.1:23992");
+		expect(env.BALANCE_WORKER_METERING_TOPIC).toBeUndefined();
+	});
+	test("uses the same database as the server", () => {
+		const databaseUrl = "postgresql://postgres:postgres@localhost:5432/autumn";
+		expect(
+			balanceWorkerDevConfig({
+				worktreeNum: 50,
+				runtimeEnv: { DATABASE_URL: databaseUrl },
+			}).DATABASE_URL,
+		).toBe(databaseUrl);
+	});
+});

@@ -1,0 +1,152 @@
+import {
+	createMeteringPublisher,
+	KafkaBatchNotCommittedError,
+	type KafkaCommitMode,
+	type KafkaOffsetCommit,
+	type KafkaProducer,
+	type MeteringRecord,
+	sendTransactionalOffsets,
+	serializeMeteringRecord,
+} from "@autumn/kafka";
+import { timeSync } from "../logging/eventLoopStalls/syncSections.js";
+import type { PartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
+import type { ProducedOffsets } from "../processor/writer/producedOffsets/createProducedOffsets.js";
+import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
+import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
+import { translateKafkaProducerError } from "./workerKafkaErrors.js";
+
+export function createMutationPublisher({
+	ctx,
+	config,
+}: {
+	ctx: {
+		producer: KafkaProducer;
+		producedOffsets?: ProducedOffsets;
+		partitionLoad?: PartitionLoad;
+		/** Defaults to transactional. */
+		commit?: { mode: KafkaCommitMode };
+		ownerEpoch?(): string | undefined;
+		commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
+	};
+	config?: { commandTopic: string; groupId: string };
+}): Required<CommittedOutcomeAppender> {
+	const publisher = createMeteringPublisher({
+		ctx: {
+			producer: ctx.producer,
+			commit: ctx.commit,
+			ownerEpoch: ctx.ownerEpoch,
+			commandOffsets: ctx.commandOffsets,
+		},
+	});
+
+	async function appendCommitted({
+		topic,
+		partition,
+		outcomes,
+	}: {
+		topic: string;
+		partition: number;
+		outcomes: readonly MeteringRecord[];
+	}): Promise<{ baseOffset: bigint }> {
+		try {
+			let commandNextOffset: bigint | undefined;
+			for (const record of outcomes) {
+				if (!record.source) continue;
+				const next = BigInt(record.source.commandOffset) + 1n;
+				if (commandNextOffset === undefined || next > commandNextOffset)
+					commandNextOffset = next;
+			}
+			const offsets =
+				commandNextOffset !== undefined
+					? offsetsOf({ partition, nextOffset: commandNextOffset })
+					: undefined;
+			const appended = await publisher.append({
+				topic,
+				partition,
+				records: outcomes,
+				offsets,
+			});
+			ctx.producedOffsets?.remember({
+				from: appended.baseOffset,
+				to: appended.baseOffset + BigInt(outcomes.length) - 1n,
+			});
+			ctx.partitionLoad?.record({ partition, bytes: bytesOf({ outcomes }) });
+			return appended;
+		} catch (cause) {
+			const translated = translateKafkaProducerError({
+				topic,
+				partition,
+				cause,
+			});
+			if (translated !== cause) throw translated;
+			if (cause instanceof KafkaBatchNotCommittedError) {
+				throw new MutationBatchNotCommittedError({ cause: cause.cause });
+			}
+			throw cause;
+		}
+	}
+
+	/** Serialising here is not wasted: the encoding is kept on the record and reused when it is sent. */
+	function encodedBytesOf({ record }: { record: MeteringRecord }): number {
+		const { key, value } = timeSync({ label: "record.encode" }, () =>
+			serializeMeteringRecord({ record }),
+		);
+		return key.length + value.length;
+	}
+
+	/** The encodings were kept when the batch was measured, so this is a sum, not a second serialisation. */
+	function bytesOf({
+		outcomes,
+	}: {
+		outcomes: readonly MeteringRecord[];
+	}): number {
+		let bytes = 0;
+		for (const record of outcomes) bytes += encodedBytesOf({ record });
+		return bytes;
+	}
+
+	function offsetsOf({
+		partition,
+		nextOffset,
+	}: {
+		partition: number;
+		nextOffset: bigint;
+	}) {
+		if (!config)
+			throw new Error("Command topic and consumer group are required");
+		return {
+			consumerGroupId: config.groupId,
+			topics: [
+				{
+					topic: config.commandTopic,
+					partitions: [{ partition, offset: nextOffset.toString() }],
+				},
+			],
+		};
+	}
+
+	async function commitCommandOffset({
+		topic,
+		partition,
+		nextOffset,
+	}: {
+		topic: string;
+		partition: number;
+		nextOffset: bigint;
+	}): Promise<void> {
+		try {
+			const offsets = offsetsOf({ partition, nextOffset });
+			if (ctx.commit?.mode === "idempotent") {
+				if (!ctx.commandOffsets)
+					throw new Error("Idempotent commits need a command offset committer");
+				await ctx.commandOffsets.commit(offsets);
+				return;
+			}
+			await sendTransactionalOffsets({ producer: ctx.producer, offsets });
+		} catch (cause) {
+			throw translateKafkaProducerError({ topic, partition, cause });
+		}
+	}
+
+	return { appendCommitted, commitCommandOffset, encodedBytesOf };
+}

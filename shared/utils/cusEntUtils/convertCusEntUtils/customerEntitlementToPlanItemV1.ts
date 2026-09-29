@@ -8,7 +8,9 @@ import { cusEntToCusPrice } from "./cusEntToCusPrice";
 
 export const customerEntitlementToFeatureId = (
 	customerEntitlement: FullCustomerEntitlement,
-) => customerEntitlement.entitlement?.feature?.id ?? customerEntitlement.feature_id;
+) =>
+	customerEntitlement.entitlement?.feature?.id ??
+	customerEntitlement.feature_id;
 
 export const customerEntitlementToPlanItemV1 = ({
 	customerEntitlement,

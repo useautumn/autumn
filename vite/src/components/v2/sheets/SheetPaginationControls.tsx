@@ -1,21 +1,20 @@
-import { IconButton } from "@autumn/ui";
-import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { CursorPagination } from "@/components/general/table";
 
-/** Compact "start–end of total" pager for sheet lists. */
+/** Compact "start–end of total" pager for sheet lists; pageIndex is zero-based. */
 export function SheetPaginationControls({
 	rangeStart,
 	rangeEnd,
 	total,
-	canPrev,
-	canNext,
+	pageIndex,
+	pageCount,
 	onPrev,
 	onNext,
 }: {
 	rangeStart: number;
 	rangeEnd: number;
 	total: number;
-	canPrev: boolean;
-	canNext: boolean;
+	pageIndex: number;
+	pageCount: number;
 	onPrev: () => void;
 	onNext: () => void;
 }) {
@@ -24,26 +23,14 @@ export function SheetPaginationControls({
 			<span className="text-xs text-tertiary-foreground tabular-nums">
 				{rangeStart}–{rangeEnd} of {total}
 			</span>
-			<div className="flex items-center gap-1">
-				<IconButton
-					aria-label="Previous page"
-					icon={<CaretLeftIcon size={14} />}
-					iconOrientation="center"
-					variant="secondary"
-					size="sm"
-					disabled={!canPrev}
-					onClick={onPrev}
-				/>
-				<IconButton
-					aria-label="Next page"
-					icon={<CaretRightIcon size={14} />}
-					iconOrientation="center"
-					variant="secondary"
-					size="sm"
-					disabled={!canNext}
-					onClick={onNext}
-				/>
-			</div>
+			<CursorPagination
+				currentPage={pageIndex + 1}
+				totalPages={pageCount}
+				canGoPrev={pageIndex > 0}
+				canGoNext={pageIndex < pageCount - 1}
+				onPrev={onPrev}
+				onNext={onNext}
+			/>
 		</div>
 	);
 }

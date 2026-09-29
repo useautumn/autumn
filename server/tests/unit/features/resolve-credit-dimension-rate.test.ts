@@ -13,10 +13,10 @@ import {
 	type FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 import { computeCreditCosts } from "@/internal/balances/utils/deduction/computeCreditCosts.js";
-import { resolveCreditDimensionRate } from "@/internal/features/creditDimensions/resolveCreditDimensionRate.js";
 import {
 	getCreditCost,
 	getCreditRateCard,
+	resolveCreditDimensionRate,
 } from "@/internal/features/creditSystemUtils.js";
 
 const row: CreditSchemaItem = {

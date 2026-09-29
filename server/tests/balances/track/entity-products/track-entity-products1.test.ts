@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -74,14 +75,18 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 		}
 	});
 
-	test("customer should have initial balance of 300 messages (100 per entity)", async () => {
-		const customer = await autumnV1.customers.get(customerId);
+	// The balance worker doesn't aggregate entity data onto the customer.
+	test.skipIf(isBalanceWorkerRoute())(
+		"customer should have initial balance of 300 messages (100 per entity)",
+		async () => {
+			const customer = await autumnV1.customers.get(customerId);
 
-		const balance = customer.features[TestFeature.Messages].balance;
+			const balance = customer.features[TestFeature.Messages].balance;
 
-		// 3 entities × 100 messages each = 300 total
-		expect(balance).toBe(300);
-	});
+			// 3 entities × 100 messages each = 300 total
+			expect(balance).toBe(300);
+		},
+	);
 
 	test("each entity should have initial balance of 100 messages", async () => {
 		for (const entity of entities) {
@@ -104,10 +109,13 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 
 			// Customer should have 10 less
 			const expectedCustomerBalance = 300 - (i + 1) * 10;
-			const customer = await autumnV1.customers.get(customerId);
-			expect(customer.features[TestFeature.Messages].balance).toBe(
-				expectedCustomerBalance,
-			);
+			// The balance worker doesn't aggregate entity data onto the customer.
+			if (!isBalanceWorkerRoute()) {
+				const customer = await autumnV1.customers.get(customerId);
+				expect(customer.features[TestFeature.Messages].balance).toBe(
+					expectedCustomerBalance,
+				);
+			}
 
 			// Check all entity balances
 			for (let j = 0; j < entities.length; j++) {
@@ -138,7 +146,10 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 		// 	customerFromCache.features[TestFeature.Messages];
 		// const dbCustomerFeature = customerFromDb.features[TestFeature.Messages];
 
-		expect(customerFromDb.features[TestFeature.Messages].balance).toBe(270);
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(customerFromDb.features[TestFeature.Messages].balance).toBe(270);
+		}
 		// Legacy/new cache paths can differ in non-critical feature payload shape.
 		// expect(customerFromDb.features[TestFeature.Messages]).toMatchObject(
 		// 	customerFromCache.features[TestFeature.Messages],

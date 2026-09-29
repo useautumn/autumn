@@ -45,7 +45,6 @@ export function SyncStripeSheetV2() {
 			{selectedProposal && (
 				<SubscriptionEditorView
 					proposal={selectedProposal}
-					customerId={customerId}
 					onBack={() => setSelectedProposalIndex(null)}
 					onSubmit={(params) =>
 						syncMutation.mutate(params, {

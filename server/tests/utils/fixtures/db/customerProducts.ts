@@ -50,6 +50,8 @@ const create = ({
 	customer_id: "cus_test",
 	internal_entity_id: internalEntityId ?? null,
 	entity_id: entityId ?? null,
+	// Null like a stored row: the engine reads undefined as a seat with no parent and drops it.
+	customer_license_link_id: null,
 	created_at: Date.now(),
 	updated_at: Date.now(),
 	status,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
-import { AppEnv, UsageModel } from "@autumn/shared";
+import { AppEnv, ProductItemInterval, UsageModel } from "@autumn/shared";
 import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import {
 	type CustomerStatePhase,
@@ -80,13 +80,13 @@ const features: Feature[] = [
 		name: "API Calls",
 		internal_id: "int_api",
 		type: "usage",
-	} as Feature,
+	} as unknown as Feature,
 	{
 		id: "storage",
 		name: "Storage",
 		internal_id: "int_storage",
 		type: "usage",
-	} as Feature,
+	} as unknown as Feature,
 	{
 		id: "support",
 		name: "Support",
@@ -126,7 +126,7 @@ describe("buildCustomizeBasePrice", () => {
 
 		expect(result).toBeDefined();
 		expect(result!.amount).toBe(2000);
-		expect(result!.interval).toBe("month");
+		expect(result!.interval).toBe(ProductItemInterval.Month);
 	});
 
 	test("returns null when base price item was removed", () => {
@@ -598,14 +598,7 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: now,
 					persistedStartsAt: now,
-					plans: [
-						{
-							productId: "prod_1",
-							prepaidOptions: {},
-							items: null,
-							isCustom: false,
-						},
-					],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,

@@ -8,6 +8,7 @@ import {
 	getVersioningUsage,
 	getVersioningUsageForProduct,
 } from "./getVersioningUsage";
+import { mergeCustomerProductProcessor } from "./mergeCustomerProductProcessor";
 
 export const customerProductRepo = {
 	batchUpdate: batchUpdateCustomerProducts,
@@ -17,5 +18,6 @@ export const customerProductRepo = {
 	getByStripeSubId,
 	getVersioningUsage,
 	getVersioningUsageForProduct,
+	mergeProcessor: mergeCustomerProductProcessor,
 	fetchFreeTrials: fetchCustomerProductFreeTrials,
 };

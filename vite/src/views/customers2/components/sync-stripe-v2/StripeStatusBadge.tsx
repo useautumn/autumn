@@ -1,12 +1,15 @@
 import type { SyncProposalV2 } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
 import { type StripeStatusTone, stripeObjectToStatus } from "./stripeStatus";
 
-const TONE_CLASSES: Record<StripeStatusTone, string> = {
-	good: "text-green-500",
-	warning: "text-amber-500",
-	bad: "text-red-500",
-	neutral: "text-tertiary-foreground",
+const TONE_INDICATORS: Record<
+	StripeStatusTone,
+	{ tone: StatusTone; glyph: StatusGlyph }
+> = {
+	good: { tone: "green", glyph: "check" },
+	warning: { tone: "amber", glyph: "alert" },
+	bad: { tone: "red", glyph: "x" },
+	neutral: { tone: "neutral", glyph: "minus" },
 };
 
 /** The Stripe subscription's (or not-yet-started schedule's) live status. */
@@ -18,8 +21,6 @@ export function StripeStatusBadge({ proposal }: { proposal: SyncProposalV2 }) {
 	if (!status) return null;
 
 	return (
-		<Badge variant="muted" size="sm" className={TONE_CLASSES[status.tone]}>
-			{status.label}
-		</Badge>
+		<StatusChip {...TONE_INDICATORS[status.tone]}>{status.label}</StatusChip>
 	);
 }

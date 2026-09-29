@@ -1,9 +1,9 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
+import { getSelectedPlanPriceProduct } from "@/components/forms/shared/selectedPlanRowUtils";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
-import { cn } from "@/lib/utils";
 import { getBasePriceLabel } from "../customerStatePlanPrice";
 
-/** A plan row's base price, green when customizing moved it off the catalog. */
+/** A plan row's base price, including any customized items. */
 export function PlanPriceLabel({
 	product,
 	items,
@@ -12,26 +12,15 @@ export function PlanPriceLabel({
 	items: ProductItem[] | null;
 }) {
 	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
-	const catalogLabel = getBasePriceLabel({
-		product: productForDisplay(product),
+	const label = getBasePriceLabel({
+		product: productForDisplay(
+			getSelectedPlanPriceProduct({ product, customItems: items }),
+		),
 		currency: displayCurrency,
 	});
-	const label = items
-		? getBasePriceLabel({
-				product: productForDisplay({ ...product, items }),
-				currency: displayCurrency,
-			})
-		: catalogLabel;
 
 	return (
-		<span
-			className={cn(
-				"text-xs tabular-nums",
-				label !== catalogLabel
-					? "text-emerald-500 font-medium"
-					: "text-tertiary-foreground",
-			)}
-		>
+		<span className="text-xs tabular-nums text-tertiary-foreground">
 			{label}
 		</span>
 	);

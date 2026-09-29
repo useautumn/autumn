@@ -3,12 +3,9 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ENV_LOCAL_TARGETS } from "../dw/constants.ts";
+import { localQueueUrl } from "../dw/helpers/fakecloud.ts";
 import { getCurrentWorktree } from "../dw/helpers/git.ts";
-import {
-	aliasesFor,
-	elasticMqPortFor,
-	killOwnPorts,
-} from "../dw/helpers/ports.ts";
+import { aliasesFor, killOwnPorts } from "../dw/helpers/ports.ts";
 import { loadRegistry } from "../dw/helpers/registry.ts";
 import { fatal, log } from "../dw/helpers/shell.ts";
 import { killTmuxSession, tmuxSessionName } from "../dw/helpers/tmux.ts";
@@ -54,9 +51,14 @@ async function cmdRun(): Promise<void> {
 		env.CLIENT_URL = aliases.viteUrl;
 		env.VITE_BACKEND_URL = aliases.apiUrl;
 		env.VITE_FRONTEND_URL = aliases.viteUrl;
-		const mqPort = elasticMqPortFor(worktreeNum);
-		env.SQS_QUEUE_URL_V2 = `http://localhost:${mqPort}/000000000000/autumn.fifo`;
-		env.TRACK_SQS_QUEUE_URL = `http://localhost:${mqPort}/000000000000/autumn-track.fifo`;
+		env.SQS_QUEUE_URL_V2 = localQueueUrl({
+			worktreeNum,
+			queueName: "autumn.fifo",
+		});
+		env.TRACK_SQS_QUEUE_URL = localQueueUrl({
+			worktreeNum,
+			queueName: "autumn-track.fifo",
+		});
 	}
 
 	const portlessCa = join(homedir(), ".portless", "ca.pem");

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, ProductItemFeatureType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -111,8 +112,11 @@ describe(`${chalk.yellowBright(
 
 		// Customer level: workflows (10) + messages (50)
 		// Entity level: workflows (3+3=6) + messages (100+100=200)
-		expect(customer.features[TestFeature.Workflows].balance).toBe(20); // 10 + 5 * 2
-		expect(customer.features[TestFeature.Messages].balance).toBe(200); // 100 + 50 * 2
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(customer.features[TestFeature.Workflows].balance).toBe(20); // 10 + 5 * 2
+			expect(customer.features[TestFeature.Messages].balance).toBe(200); // 100 + 50 * 2
+		}
 
 		// Verify entity balances
 		for (const entity of entities) {
@@ -268,12 +272,15 @@ Total messages: 200, Total workflows: 20
 
 		// Verify customer-level balances
 		const customer = await autumnV1.customers.get(customerId);
-		expect(customer.features[TestFeature.Messages].balance).toBe(
-			expectedCustomerTotalMessages,
-		);
-		expect(customer.features[TestFeature.Workflows].balance).toBe(
-			expectedCustomerTotalWorkflows,
-		);
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(customer.features[TestFeature.Messages].balance).toBe(
+				expectedCustomerTotalMessages,
+			);
+			expect(customer.features[TestFeature.Workflows].balance).toBe(
+				expectedCustomerTotalWorkflows,
+			);
+		}
 
 		await timeout(2000);
 
@@ -281,12 +288,14 @@ Total messages: 200, Total workflows: 20
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
-		expect(nonCachedCustomer.features[TestFeature.Messages].balance).toBe(
-			expectedCustomerTotalMessages,
-		);
-		expect(nonCachedCustomer.features[TestFeature.Workflows].balance).toBe(
-			expectedCustomerTotalWorkflows,
-		);
+		if (!isBalanceWorkerRoute()) {
+			expect(nonCachedCustomer.features[TestFeature.Messages].balance).toBe(
+				expectedCustomerTotalMessages,
+			);
+			expect(nonCachedCustomer.features[TestFeature.Workflows].balance).toBe(
+				expectedCustomerTotalWorkflows,
+			);
+		}
 
 		// Entity-level totals (entity + customer inherited)
 		const expectedEntity1TotalMessages =

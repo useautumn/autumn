@@ -5,7 +5,10 @@ import { buildCheckFallbackResponse } from "./buildCheckFallbackResponse.js";
 export type CheckFailOpenReason =
 	| "route_timeout"
 	| "org_rate_limit"
-	| "dependency_error";
+	| "dependency_error"
+	| "balance_worker_unavailable"
+	| "balance_worker_overloaded"
+	| "balance_worker_result_unknown";
 
 export const getCheckFailOpenFallback = ({
 	ctx,

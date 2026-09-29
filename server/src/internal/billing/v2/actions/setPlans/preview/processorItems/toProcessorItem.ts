@@ -1,0 +1,104 @@
+import { isPreviewStripeId, type ProcessorItem } from "@autumn/shared";
+import type Stripe from "stripe";
+import { autumnPriceId } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
+import { isFreePhasePlaceholderItem } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
+import type { InlinePriceData } from "./price/inlinePriceDataToProcessorItemPrice";
+import { processorItemAmount } from "./price/processorItemAmount";
+import { resolveProcessorItemPrice } from "./price/resolveProcessorItemPrice";
+import type { AutumnStripePriceIndex } from "./types/autumnStripePriceIndex";
+import type { ProcessorItemContext } from "./types/processorItemContext";
+
+type StripeItemMetadata = Stripe.Emptyable<Stripe.MetadataParam> | undefined;
+
+const findAutumnStripePrice = ({
+	priceIndex,
+	stripePriceId,
+	metadata,
+}: {
+	priceIndex: AutumnStripePriceIndex;
+	stripePriceId?: string;
+	metadata?: StripeItemMetadata;
+}) => {
+	const metadataPriceId = autumnPriceId({ metadata: metadata || undefined });
+	const byAutumnPriceId = metadataPriceId
+		? priceIndex.byAutumnPriceId.get(metadataPriceId)
+		: undefined;
+
+	return (
+		byAutumnPriceId ??
+		(stripePriceId ? priceIndex.byStripePriceId.get(stripePriceId) : undefined)
+	);
+};
+
+const FALLBACK_DISPLAY_NAME = "Stripe item";
+
+/** Names an item after the Autumn plan it bills for and describes how Stripe charges it. */
+export const toProcessorItem = ({
+	stripePriceId,
+	inlinePriceData,
+	metadata,
+	quantity,
+	fallbackName,
+	context,
+}: {
+	stripePriceId?: string;
+	inlinePriceData?: InlinePriceData;
+	metadata?: StripeItemMetadata;
+	quantity?: number | null;
+	fallbackName?: string | null;
+	context: ProcessorItemContext;
+}): ProcessorItem => {
+	const autumnStripePrice = findAutumnStripePrice({
+		priceIndex: context.priceIndex,
+		stripePriceId,
+		metadata,
+	});
+	const price = resolveProcessorItemPrice({
+		stripePriceId,
+		inlinePriceData,
+		autumnStripePrice,
+		context,
+	});
+	const itemQuantity = quantity ?? null;
+	const isPreviewPrice = isPreviewStripeId({ stripeId: stripePriceId });
+
+	return {
+		price_id: isPreviewPrice ? null : (stripePriceId ?? null),
+		plan_id: autumnStripePrice?.planId ?? null,
+		feature_id: autumnStripePrice?.featureId ?? null,
+		display_name:
+			autumnStripePrice?.planName ??
+			fallbackName ??
+			stripePriceId ??
+			FALLBACK_DISPLAY_NAME,
+		feature_name: autumnStripePrice?.featureName ?? null,
+		quantity: itemQuantity,
+		price,
+		amount: processorItemAmount({ price, quantity: itemQuantity }),
+		creates_price: inlinePriceData !== undefined || isPreviewPrice,
+		managed_by_autumn:
+			autumnStripePrice !== undefined ||
+			isFreePhasePlaceholderItem({ metadata }),
+	};
+};
+
+/** Subscription, schedule and checkout item params share these price fields. */
+export const itemParamsToProcessorItem = ({
+	item,
+	context,
+}: {
+	item: {
+		price?: string;
+		price_data?: InlinePriceData;
+		metadata?: StripeItemMetadata;
+		quantity?: number;
+	};
+	context: ProcessorItemContext;
+}): ProcessorItem =>
+	toProcessorItem({
+		stripePriceId: item.price,
+		inlinePriceData: item.price_data,
+		metadata: item.metadata,
+		quantity: item.quantity,
+		context,
+	});

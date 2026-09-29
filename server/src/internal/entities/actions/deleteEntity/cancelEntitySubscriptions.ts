@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { releaseLicenseAssignmentsForEntity } from "@/internal/licenses/actions/assignments/utils/releaseLicenseAssignmentsForEntity.js";
 
 export const cancelSubsForEntity = async ({

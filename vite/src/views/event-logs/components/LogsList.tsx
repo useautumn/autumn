@@ -3,6 +3,11 @@ import { Skeleton } from "@autumn/ui";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { format } from "date-fns";
 import { type CSSProperties, useEffect, useRef } from "react";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+	TABLE_TRAY_SURFACE_ROW_CLASS,
+} from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import { useLogFeatures } from "../hooks/useLogFeatures";
 import { LogsIcon } from "../LogsIcon";
@@ -31,7 +36,7 @@ export const formatLogTime = ({ timestamp }: { timestamp: number }) =>
 const ColumnHeaders = () => (
 	<div
 		style={ROW_GRID}
-		className="h-8 px-4 shrink-0 border-b bg-interactive-secondary text-xs font-medium text-subtle"
+		className="h-7 px-4 shrink-0 text-xs text-tertiary-foreground"
 	>
 		<span className={CELL}>Time</span>
 		<span className={CELL}>Event</span>
@@ -60,7 +65,8 @@ const LogRow = ({
 			onClick={onSelect}
 			style={{ ...ROW_GRID, top, height: ROW_HEIGHT }}
 			className={cn(
-				"absolute inset-x-0 px-4 text-left border-b border-border/60 hover:bg-muted/60",
+				"absolute inset-x-0 px-4 text-left",
+				TABLE_TRAY_SURFACE_ROW_CLASS,
 				isSelected &&
 					"bg-primary/10 hover:bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]",
 			)}
@@ -141,10 +147,20 @@ export const LogsList = ({
 	const isEmpty = !isLoading && events.length === 0;
 
 	return (
-		<div className="flex flex-col flex-1 min-w-0 min-h-0">
+		<div
+			className={cn(
+				TABLE_TRAY_CLASS,
+				"m-3 flex flex-col flex-1 min-w-0 min-h-0",
+			)}
+		>
 			<ColumnHeaders />
 			{isEmpty ? (
-				<div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
+				<div
+					className={cn(
+						TABLE_TRAY_SURFACE_CLASS,
+						"flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground",
+					)}
+				>
 					<LogsIcon size={28} strokeWidth={1.5} className="opacity-50" />
 					<p className="text-sm">No events match these filters.</p>
 				</div>
@@ -152,6 +168,7 @@ export const LogsList = ({
 				<div
 					ref={scrollRef}
 					className={cn(
+						TABLE_TRAY_SURFACE_CLASS,
 						"flex-1 min-h-0",
 						isLoading ? "overflow-hidden" : "overflow-y-auto",
 					)}
@@ -160,7 +177,10 @@ export const LogsList = ({
 						Array.from({ length: LOADING_ROWS }, (_, i) => (
 							<div
 								key={i}
-								className="flex items-center gap-6 px-4 border-b border-border/60"
+								className={cn(
+									"flex items-center gap-6 px-4",
+									TABLE_TRAY_SURFACE_ROW_CLASS,
+								)}
 								style={{ height: ROW_HEIGHT }}
 							>
 								<Skeleton className="h-2.5 w-28" />

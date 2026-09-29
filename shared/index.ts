@@ -89,6 +89,7 @@ export * from "./models/licenseModels/fullPlanLicenseModel";
 export * from "./models/licenseModels/licenseModels";
 export * from "./models/licenseModels/licenseTable";
 export * from "./models/pooledBalanceModels/pooledBalanceIdentity";
+export * from "./models/pooledBalanceModels/pooledBalanceModels";
 export * from "./models/pooledBalanceModels/pooledBalanceTable";
 // Processor Models
 export * from "./models/processorModels/processorModels";
@@ -97,6 +98,7 @@ export { schemas };
 
 // Cus response
 
+export * from "./models/balanceLockModels/balanceLockTable";
 export * from "./models/cusModels/cusTable";
 export * from "./models/cusModels/customerLsnsTable";
 export * from "./models/cusModels/entityModels/entityExpand";
@@ -112,6 +114,7 @@ export * from "./models/cusProductModels/cusEntModels/aggregatedCusEnt";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable";
 export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct";
+export * from "./models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 export * from "./models/cusProductModels/cusEntModels/replaceableSchema";
 export * from "./models/cusProductModels/cusEntModels/replaceableTable";
 export * from "./models/cusProductModels/cusEntModels/resetCusEnt";
@@ -121,14 +124,12 @@ export * from "./models/cusProductModels/cusEntModels/usageWindowTable";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceModels";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceTable";
 export * from "./models/cusProductModels/cusProductEnums";
-
 // 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels";
 export * from "./models/cusProductModels/cusProductTable";
 export * from "./models/devModels/apiKeyModels";
 export * from "./models/devModels/apiKeyTable";
 export * from "./models/devModels/customerJwtFamilyTable";
-
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels";
 export * from "./models/eventModels/eventTable";
@@ -138,6 +139,7 @@ export * from "./models/featureModels/featureConfig/creditConfig";
 export * from "./models/featureModels/featureConfig/meteredConfig";
 export * from "./models/featureModels/featureEnums";
 export * from "./models/featureModels/featureModels";
+export * from "./models/meteringLogModels/partitionProgressTable";
 
 // export * from "./models/featureModels/featureResModels";
 
@@ -307,9 +309,12 @@ export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";
 // Utils
 export * from "./utils/usageWindowUtils/buildUsageWindowKey";
+export * from "./utils/usageWindowUtils/classifyUsageWindow/isSameUsageWindow";
 export * from "./utils/usageWindowUtils/classifyUsageWindow/usageWindowMatchesLimit";
 export * from "./utils/usageWindowUtils/convertUsageWindow/getUsageWindowDimension";
 export * from "./utils/usageWindowUtils/convertUsageWindow/usageLimitToUsageWindowLimit";
+export * from "./utils/usageWindowUtils/convertUsageWindow/usageWindowLimitToWebhookBlock";
+export * from "./utils/usageWindowUtils/convertUsageWindow/usageWindowsToRolls";
 export * from "./utils/usageWindowUtils/findUsageWindow/findUsageWindowByLimit";
 export * from "./utils/usageWindowUtils/findUsageWindow/findUsageWindowLimitByWindow";
 export * from "./utils/usageWindowUtils/findUsageWindowAnchor/findUsageWindowAnchor";

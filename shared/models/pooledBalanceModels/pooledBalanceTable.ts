@@ -160,6 +160,11 @@ export const pooledBalanceContributions = pgTable(
 		index("idx_pooled_balance_contributions_source_customer_entitlement")
 			.on(table.source_customer_entitlement_id)
 			.concurrently(),
+		// Shares with a change pending are few; the promote at reset updates only those.
+		index("idx_pooled_balance_contributions_pending")
+			.on(table.pooled_balance_id)
+			.where(sql`${table.effective_at} IS NOT NULL`)
+			.concurrently(),
 	],
 );
 

@@ -1,7 +1,5 @@
-import { Button, InlineAction } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
+import { Button } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
-import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
 import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
@@ -14,17 +12,17 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import { useHasSchedule } from "../hooks/useHasSchedule";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
-import { SchedulePhaseCard } from "./SchedulePhaseCard";
+import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
+import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePreview } from "./SchedulePreview";
 
+const IS_PER_PHASE_REVIEW_READY = false;
+
 export function CreateScheduleSheetContent() {
-	const { form, formValues } = useCreateScheduleFormContext();
-	const { handleAddPhase } = useCustomerStateContext();
+	const { form } = useCreateScheduleFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
-	const hasSchedule = useHasSchedule();
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
 	const isDisabled = !canSubmit;
@@ -35,33 +33,17 @@ export function CreateScheduleSheetContent() {
 	return (
 		<div className="flex flex-col h-full">
 			<SheetHeader
-				title={hasSchedule ? "Update Schedule" : "Create Schedule"}
-				description="Set up billing phases that activate at specific times"
+				title="Set Plans"
+				description="Declare the customer's plans now and in future phases"
 				action={<BillingPromptToggle />}
 			/>
 
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
 				<SheetSection withSeparator={false} className="pb-0">
 					<CreateScheduleGenerationBar />
 				</SheetSection>
 				<SheetSection title="Phases" withSeparator>
-					<div className="space-y-4">
-						{formValues.phases.map((_phase, phaseIndex) => (
-							<SchedulePhaseCard
-								key={`phase-${phaseIndex}`}
-								phaseIndex={phaseIndex}
-								hasConnector={phaseIndex < formValues.phases.length - 1}
-							/>
-						))}
-					</div>
-
-					<InlineAction
-						icon={<PlusIcon size={11} />}
-						onClick={handleAddPhase}
-						className="mt-3"
-					>
-						Add phase
-					</InlineAction>
+					<PhaseTimeline />
 				</SheetSection>
 
 				<SheetSection withSeparator={false}>
@@ -69,7 +51,7 @@ export function CreateScheduleSheetContent() {
 				</SheetSection>
 			</div>
 
-			<SheetFooter>
+			<SheetFooter className="border-t border-border pt-4">
 				<Button variant="secondary" onClick={closeSheet} className="w-full">
 					Cancel
 				</Button>
@@ -98,9 +80,9 @@ function getConfirmLabel({
 		| null
 		| undefined;
 }): string {
-	if (!preview) return "Create Schedule";
+	if (!preview) return "Set Plans";
 	if (preview.redirect_to_checkout) return "Generate Checkout URL";
-	if (preview.total <= 0) return "Create Schedule";
+	if (preview.total <= 0) return "Set Plans";
 	return "Charge Customer";
 }
 
@@ -115,7 +97,6 @@ export function CreateScheduleReviewContent() {
 		createsRecurringSubscription,
 	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
-	const hasSchedule = useHasSchedule();
 
 	const confirmLabel = getConfirmLabel({ preview });
 
@@ -142,20 +123,17 @@ export function CreateScheduleReviewContent() {
 		<div className="flex flex-col h-full">
 			<SheetHeader
 				title="Review Changes"
-				description={
-					hasSchedule
-						? "Review schedule changes before confirming"
-						: "Review schedule before confirming"
-				}
+				description="Review plan changes before confirming"
 				breadcrumbs={[
 					{
-						name: hasSchedule ? "Update Schedule" : "Create Schedule",
+						name: "Set Plans",
 						sheet: "create-schedule",
 					},
 				]}
 			/>
 
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+				{IS_PER_PHASE_REVIEW_READY && <SetPlansReviewChanges />}
 				<CreateScheduleAdvancedSection />
 				<SchedulePreview />
 			</div>

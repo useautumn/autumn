@@ -78,10 +78,10 @@ fi
 log "starting local infrastructure with Docker Compose"
 COMPOSE_PROJECT_NAME=autumn-capy \
 DRAGONFLY_PORT=6379 \
-ELASTICMQ_PORT=9324 \
+FAKECLOUD_PORT=4566 \
 DYNAMODB_PORT=8000 \
   docker compose -f "$COMPOSE_FILE" -p autumn-capy up -d \
-    dragonfly elasticmq dynamodb
+    dragonfly fakecloud dynamodb
 
 docker compose --env-file "$TRIGGER_ENV" \
   -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger up -d

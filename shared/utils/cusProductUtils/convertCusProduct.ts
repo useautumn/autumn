@@ -130,7 +130,7 @@ export const cusProductToPrices = ({
 	cusProduct,
 	billingType,
 }: {
-	cusProduct: FullCusProduct;
+	cusProduct: Pick<FullCusProduct, "customer_prices">;
 	billingType?: BillingType;
 }) => {
 	let prices = cusProduct.customer_prices.map((cp) => cp.price);

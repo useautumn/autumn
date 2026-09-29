@@ -17,7 +17,6 @@ export function CustomerListPaginationFooter() {
 
 	return (
 		<Table.PaginationFooter
-			className="border-t bg-card px-3 py-2"
 			currentPage={currentPage}
 			totalPages={totalPages}
 			totalCount={totalCount > 0 ? totalCount : undefined}

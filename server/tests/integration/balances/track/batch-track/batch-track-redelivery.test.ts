@@ -26,10 +26,17 @@ import {
 } from "../../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../../../db/full-subject/utils/withInsertedScenario.js";
 
+// Every call is in-process and asserts the legacy Redis lane's replay keys.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 const originalApiVersion = ctx.apiVersion;
 ctx.apiVersion = new ApiVersionClass(ApiVersion.V2_1);
 afterAll(() => {
 	ctx.apiVersion = originalApiVersion;
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });
 
 /** Deducts 1 with a fresh request id and returns the remaining balance —

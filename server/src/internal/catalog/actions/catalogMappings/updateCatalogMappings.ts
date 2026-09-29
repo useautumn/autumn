@@ -3,9 +3,9 @@ import type {
 	CatalogUpdateMappingsResponse,
 } from "@autumn/shared";
 import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { invalidateOrgCatalog } from "../invalidateOrgCatalog.js";
 import { getCatalogMappings } from "./getCatalogMappings.js";
 import {
 	applyFeatureMappings,
@@ -99,7 +99,7 @@ export const updateCatalogMappings = async ({
 			});
 		}
 	} finally {
-		await invalidateProductsCache({ orgId: org.id, env });
+		await invalidateOrgCatalog({ ctx, orgId: org.id, env });
 		if (params.feature_mappings.length > 0) {
 			await clearOrgWithFeaturesCache({ orgId: org.id, env });
 		}

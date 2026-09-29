@@ -12,8 +12,10 @@ test("hydrates the customer product's exact plan version", () => {
 			options: [],
 			product: { version: 2 },
 			product_id: "generation",
-		} as FullCustomer["customer_products"][number],
-		products: [{ id: "generation", items: [], version: 3 } as ProductV2],
+		} as unknown as FullCustomer["customer_products"][number],
+		products: [
+			{ id: "generation", items: [], version: 3 } as unknown as ProductV2,
+		],
 	});
 
 	expect(plan.version).toBe(2);

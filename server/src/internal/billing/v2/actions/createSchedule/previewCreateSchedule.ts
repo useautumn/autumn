@@ -5,16 +5,8 @@ import type {
 	CreateScheduleParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
-import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
-import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import {
-	handleCreateScheduleBillingPlanErrors,
-	handleCreateScheduleComputeErrors,
-	handleCreateScheduleErrors,
-} from "./errors/handleCreateScheduleErrors";
-import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
+import { prepareCreateSchedule } from "./utils/prepareCreateSchedule";
 
 type PreviewCreateScheduleResult = {
 	billingContext: CreateScheduleBillingContext;
@@ -29,56 +21,19 @@ export const previewCreateScheduleWithContext = async ({
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 }): Promise<PreviewCreateScheduleResult> => {
-	const billingContext = await setupCreateScheduleBillingContext({
+	const { billingContext, billingPlan } = await prepareCreateSchedule({
 		ctx,
 		params,
 		preview: true,
 	});
 
-	await handleCreateScheduleErrors({
-		billingContext,
-		preview: true,
-	});
-
-	const { autumnBillingPlan, immediatePhaseTransition } =
-		computeCreateSchedulePlan({
-			ctx,
-			billingContext,
-		});
-	await handleCreateScheduleComputeErrors({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		immediatePhaseTransition,
-	});
-	const stripeBillingPlan = await evaluateStripeBillingPlan({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		checkoutMode: billingContext.checkoutMode,
-	});
-
-	const billingPlan = { autumn: autumnBillingPlan, stripe: stripeBillingPlan };
-
-	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
-
-	const previewBillingPlan = await computeAttachPreviewBillingPlan({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-	});
-	const billingPlanWithPreview = {
-		...billingPlan,
-		preview: previewBillingPlan,
-	};
-
 	return {
 		billingContext,
-		billingPlan: billingPlanWithPreview,
+		billingPlan,
 		preview: await billingPlanToAttachPreview({
 			ctx,
 			billingContext,
-			billingPlan: billingPlanWithPreview,
+			billingPlan,
 		}),
 	};
 };

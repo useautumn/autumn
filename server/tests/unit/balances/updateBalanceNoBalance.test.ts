@@ -44,14 +44,14 @@ await mockModuleWithRestore(
 	}),
 );
 
-const { runUpdateBalanceV2 } = await import(
-	"@/internal/balances/updateBalance/v2/updateBalanceV2.js"
+const { updateBalanceOnCacheV2 } = await import(
+	"@/internal/balances/updateBalance/v2/updateBalanceOnCacheV2.js"
 );
 
 const ctx = { features: [] } as unknown as AutumnContext;
 
 const runUpdate = (params: Partial<UpdateBalanceParamsV0>) =>
-	runUpdateBalanceV2({
+	updateBalanceOnCacheV2({
 		ctx,
 		params: {
 			customer_id: "cus_remy",

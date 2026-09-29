@@ -213,6 +213,7 @@ test("the three previews run together and render as one preview", async () => {
 				events: ["billing.updated"],
 			},
 		],
+		skipDeletions: false,
 	});
 	expect(output).toContain("Settings (1)");
 	expect(output).toContain("Features (1)");
@@ -699,7 +700,7 @@ test("plain push: a staging-only url change previews and syncs staging, with its
 	);
 	expect(output).not.toContain("No changes");
 	expect(calls).toContain(
-		`staging:preview ${JSON.stringify({ webhooks: [{ id: "billing", url: "https://stg-2.example.com/autumn", events: ["billing.updated"] }] })}`,
+		`staging:preview ${JSON.stringify({ webhooks: [{ id: "billing", url: "https://stg-2.example.com/autumn", events: ["billing.updated"] }], skipDeletions: false })}`,
 	);
 	expect(calls).toContain("staging:sync");
 	expect(calls).not.toContain("sandbox:sync");
@@ -962,6 +963,7 @@ const pushOrdersIntoQaTeam = ({
 				sk_qa2: orgInfo({ id: "org_qa222222", name: "qa_team" }),
 			},
 			clients: {
+				sk_sandbox: envClient({ name: "sandbox", calls }),
 				sk_qa1: envClient({ name: "qa1", calls, ...qaTeam }),
 				sk_qa2: envClient({
 					name: "qa2",
@@ -1216,6 +1218,7 @@ test("two sandboxes whose slugs name the same secret variable refuse the push be
 				sk_qa2: orgInfo({ id: "org_qa222222", name: "qa_team" }),
 			},
 			clients: {
+				sk_sandbox: envClient({ name: "sandbox", calls }),
 				sk_qa1: envClient({
 					name: "qa1",
 					calls,
@@ -1368,6 +1371,7 @@ test("pull then push is a no-op: every env's entries match what the server holds
 					events: ["billing.updated"],
 				},
 			],
+			skipDeletions: false,
 		},
 	]);
 });
@@ -1414,10 +1418,197 @@ test("editing a staging url pushes an update of that endpoint, never a second on
 					url: "https://stg-2.example.com/autumn",
 				},
 			],
+			skipDeletions: false,
 		},
 	]);
 	expect(output).toContain(
 		"ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5 url: https://stg.example.com/autumn → https://stg-2.example.com/autumn",
 	);
 	expect(output).not.toContain("+ ep_");
+});
+
+/** A fake env holding `held`; under skipDeletions: false every unstated one previews as a delete. */
+const deletingEnv = ({
+	name,
+	held,
+	calls,
+}: {
+	name: string;
+	held: ReturnType<typeof state>[];
+	calls: string[];
+}) => {
+	const changesFor = (body: {
+		webhooks: { id: string }[];
+		skipDeletions?: boolean;
+	}) =>
+		held
+			.filter((webhook) => !body.webhooks.some(({ id }) => id === webhook.id))
+			.map((webhook) => ({
+				action: body.skipDeletions === false ? "delete" : "unmanaged",
+				id: webhook.id,
+				webhook,
+			}));
+	return {
+		previewSyncWebhooks: async (body: never) => {
+			calls.push(`${name}:preview ${JSON.stringify(body)}`);
+			return { errors: [], changes: changesFor(body) };
+		},
+		syncWebhooks: async (body: never) => {
+			calls.push(`${name}:sync ${JSON.stringify(body)}`);
+			return { webhooks: [], secrets: [], errors: [] };
+		},
+	};
+};
+
+const QADEMO_KEYS = {
+	AUTUMN_SECRET_KEY: "sk_sandbox",
+	AUTUMN_SANDBOX_QADEMO_SECRET_KEY: "sk_qademo",
+};
+
+const QADEMO_ORGS = {
+	sk_sandbox: orgInfo({ id: "org_ab12cd34" }),
+	sk_qademo: orgInfo({ id: "org_qa123456", name: "qademo" }),
+};
+
+const SANDBOX_ENTRY_ONLY = `	webhooks: [
+		webhook({ id: "billing", env: "sandbox", url: "https://sbx.example.com/autumn" }),
+	],`;
+
+const sandboxHeld = [state("https://sbx.example.com/autumn")];
+const qademoHeld = [state("https://qa.example.com/autumn")];
+
+test("removing an env's only entry previews its endpoint as a delete, and --yes deletes it", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${SANDBOX_ENTRY_ONLY}` });
+	const run = async ({ dryRun }: { dryRun: boolean }) => {
+		const calls: string[] = [];
+		let output = "";
+		await runPush({
+			// biome-ignore lint/suspicious/noExplicitAny: a fake client
+			client: catalogClean as any,
+			cwd: dir,
+			dryRun,
+			write: (text) => {
+				output += text;
+			},
+			...envsWith({
+				env: QADEMO_KEYS,
+				orgs: QADEMO_ORGS,
+				clients: {
+					sk_sandbox: deletingEnv({
+						name: "sandbox",
+						held: sandboxHeld,
+						calls,
+					}),
+					sk_qademo: deletingEnv({ name: "qademo", held: qademoHeld, calls }),
+				},
+			}),
+		});
+		return { calls, output };
+	};
+
+	const preview = await run({ dryRun: true });
+	expect(preview.calls).toContain(
+		`qademo:preview ${JSON.stringify({ webhooks: [], skipDeletions: false })}`,
+	);
+	expect(preview.output).toContain("Webhooks · qademo (1)");
+	expect(preview.output).toContain(
+		"- billing  delete  https://qa.example.com/autumn",
+	);
+	expect(preview.output).not.toContain("No changes");
+	expect(preview.output).not.toContain("unmanaged");
+	expect(preview.calls.filter((call) => call.includes(":sync"))).toEqual([]);
+
+	const applied = await run({ dryRun: false });
+	expect(applied.calls).toContain(
+		`qademo:sync ${JSON.stringify({ webhooks: [], skipDeletions: false })}`,
+	);
+	expect(applied.calls.some((call) => call.startsWith("sandbox:sync"))).toBe(
+		false,
+	);
+});
+
+test("a skipped env is never deleted from: its key is never used", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${SANDBOX_ENTRY_ONLY}` });
+	const calls: string[] = [];
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: QADEMO_KEYS,
+			orgs: {
+				...QADEMO_ORGS,
+				sk_qademo: new AutumnApiError({
+					status: 401,
+					body: { message: "Invalid secret key" },
+					path: "/organization/me",
+				}),
+			},
+			clients: {
+				sk_sandbox: deletingEnv({ name: "sandbox", held: sandboxHeld, calls }),
+				sk_qademo: deletingEnv({ name: "qademo", held: qademoHeld, calls }),
+			},
+		}),
+	});
+	expect(output).toContain("⚠ webhooks: skipped sandbox qademo");
+	expect(calls.filter((call) => call.startsWith("qademo:"))).toEqual([]);
+});
+
+test("plain push: a pending live delete prints the -p hint and never deletes live", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${SANDBOX_ENTRY_ONLY}` });
+	const calls: string[] = [];
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_PROD_SECRET_KEY: "sk_live",
+			},
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: deletingEnv({ name: "sandbox", held: sandboxHeld, calls }),
+				sk_live: deletingEnv({
+					name: "live",
+					held: [{ ...state("https://example.com/autumn"), id: "audit" }],
+					calls,
+				}),
+			},
+		}),
+	});
+	expect(output).toContain(
+		"Production webhooks differ from your config (audit). Run atmn push -p to update production.",
+	);
+	expect(output).not.toContain("No changes");
+	expect(calls.some((call) => call.startsWith("live:sync"))).toBe(false);
+});
+
+test("no webhooks key: the lane never runs, so nothing is deleted", async () => {
+	const dir = projectWith({ body: "\tfeatures: []," });
+	const calls: string[] = [];
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: () => {},
+		...envsWith({
+			env: { ...QADEMO_KEYS, AUTUMN_PROD_SECRET_KEY: "sk_live" },
+			orgs: { ...QADEMO_ORGS, sk_live: orgInfo({ id: "org_ab12cd34" }) },
+			clients: {
+				sk_sandbox: deletingEnv({ name: "sandbox", held: sandboxHeld, calls }),
+				sk_qademo: deletingEnv({ name: "qademo", held: qademoHeld, calls }),
+				sk_live: deletingEnv({ name: "live", held: qademoHeld, calls }),
+			},
+		}),
+	});
+	expect(calls).toEqual([]);
 });

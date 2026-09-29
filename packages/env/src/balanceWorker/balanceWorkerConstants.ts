@@ -1,0 +1,120 @@
+/** Fixed worker settings: the same in every environment, so none of them is an environment variable. */
+// The partition count is not one of them: it differs per deployment (getBalanceWorkerPartitionCount).
+
+export const BALANCE_WORKER_MAX_REQUEST_BYTES = 1_048_576;
+/** Whole-operation budget for a routed command, not a per-call HTTP timeout: it
+ *  spans route resolution, the first send, an ownership refresh and the retry.
+ *  Check and track sit in front of customer requests, so this stays inside a
+ *  second: a healthy round trip is single-digit milliseconds, and anything that
+ *  needs longer is a system in trouble, which the caller should learn about
+ *  quickly rather than wait out. The refresh below is what kept the retry from
+ *  fitting, so that is bounded separately instead of widening this. */
+export const BALANCE_WORKER_REQUEST_TIMEOUT_MS = 1_000;
+
+/** A partition moving is routine, and the refresh lets a request that arrived
+ *  mid-move still land instead of failing outright. But it must not spend the
+ *  caller's whole budget waiting for ownership to settle: past this slice the
+ *  request gives up and answers 503, and the refresh it started carries on in
+ *  the background for whoever comes next. */
+export const BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS = 200;
+/** A flush only waits for the committer's next batch, normally milliseconds. Past this the
+ *  caller reads Postgres as it is rather than holding a billing request on a slow worker. */
+export const BALANCE_WORKER_FLUSH_TIMEOUT_MS = 300;
+export const BALANCE_WORKER_RECEIPT_RETENTION_MS = 86_400_000;
+/** How long a partition remembers an applied command id: long enough for a caller's
+ *  retry after a 503, not the 24h the idempotency key claim already covers. */
+export const BALANCE_WORKER_DEDUP_WINDOW_MS = 600_000;
+/** The boot scan's offset lookup is best effort: past this it is skipped, never waited on. */
+export const BALANCE_WORKER_REPLAY_FLOOR_LOOKUP_TIMEOUT_MS = 5_000;
+export const BALANCE_WORKER_CHECKPOINT_PREFIX = "balance-checkpoints";
+export const BALANCE_WORKER_CHECKPOINT_INTERVAL_MS = 60_000;
+/** Also the committer's flush concurrency, since a flush holds one connection
+ *  for its single statement. At 4 a worker could only drain 4 of its ~85
+ *  partitions at a time, so queues hit their pending cap and partitions dropped
+ *  into recovery while the database itself sat near 50% CPU.
+ *  Budget: 6 workers x 32 = 192 client slots against the primary PgBouncer's
+ *  12,000 (see the pool budget guards beside the server's Drizzle setup), so
+ *  this stays far inside the fleet allowance. */
+export const BALANCE_WORKER_DATABASE_POOL_SIZE = 32;
+/** How many partitions a worker may bring up at once. Startup connects and fences
+ *  a transactional producer per partition, so an unbounded fan-out means one
+ *  init per owned partition all at the same instant. At 512 that saturates the
+ *  worker's own Kafka client: connections time out, startup outlives the window
+ *  in which the partition stays eligible, and it aborts as "not ready: draining"
+ *  and never restarts. Six workers only survived it by splitting the fan-out
+ *  about 85 ways, so this sits below that and holds however few workers own the
+ *  topic. It costs a slower start, roughly one wave per this many partitions. */
+export const BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY = 16;
+
+/** How long routing may spend reading the ownership log before it gives up and
+ *  starts over. The default of ten seconds was written when that log was short.
+ *  It accumulates a record per claim and per release, so it grows with every
+ *  deploy, and a staging read of it took roughly twenty seconds with four of
+ *  those spent joining the group before the first record arrived. Every server
+ *  reads the whole log independently, so a large fleet multiplies that
+ *  contention: at thirty servers almost none finished inside sixty seconds and
+ *  the fleet served "no owner" for everything. Overrunning leaves a server with
+ *  no owner table at all, so this is deliberately generous: a slow start costs
+ *  nothing, and the listener does not wait for it. The real remedy is letting
+ *  the topic compact, which collapses it to about one record per partition. */
+export const BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS = 180_000;
+
+export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
+/** A customer's joined catalog is handed from one state to the next across its tracks; this is how long
+ * before `ensure` re-reads its rows, bounding staleness the same way the ttl does for the cache. */
+export const BALANCE_WORKER_CATALOG_RECHECK_MS = BALANCE_WORKER_CATALOG_TTL_MS;
+/** Shared per worker rather than per partition. Staging evicted rows out from
+ *  under in-flight decisions at 256 MiB, which surfaces as NOT_READY responses
+ *  the caller cannot do anything useful with. */
+export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
+
+/** Resident customer state per partition. 32 MiB thrashes on a partition whose
+ *  hot working set is larger (run 36: hydrations 10 -> 180 per ten seconds after
+ *  each billing plan on a multi-entity customer), but raising it to 256 MiB kept
+ *  a single oversized customer resident and each track on it re-measured the
+ *  whole state: seconds of stall, an expired transaction, a fenced worker and an
+ *  OOM (run 37). Held at 32 MiB until a state that large is refused or trimmed
+ *  at hydration; the budget then belongs per worker, split across its partitions. */
+export const BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES = 33_554_432;
+
+/** How a partition's writer commits a batch to the log. Transactional is three
+ *  broker round trips per commit (register the partition, produce, end the
+ *  transaction) and the broker fences a stale owner. Idempotent is one round
+ *  trip: the batch goes out with acks=all and the acknowledgement is the
+ *  commit, while the owner's epoch travels in a record header for readers to
+ *  judge by. Tracks wait on a commit twice over (the one in flight, then their
+ *  own), so the mode sets the track tail directly. The default is the
+ *  broker-fenced mode; a deployment opts into the one-trip commit with
+ *  BALANCE_WORKER_COMMIT_MODE=idempotent once its fence has been exercised. */
+export const BALANCE_WORKER_COMMIT_MODE = "transactional" as const;
+
+/** Share of successful requests the worker logs a line for. Every failure is
+ *  logged whatever this says; the API keeps a line per request either way.
+ *  Building and serialising a line costs the event loop about as much as a
+ *  small decision, and a worker does thousands a second. */
+export const BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE = 0.05;
+
+/** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
+ *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
+export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;
+
+/** How long a revoked partition keeps serving while it waits for a successor's
+ *  `ready`. A successor prepares in under a second; past this the old owner
+ *  assumes nobody is coming and releases the way it always did. Must stay well
+ *  inside the deploy's stop timeout (90s in prod), since a graceful stop waits
+ *  this long per partition wave. */
+export const BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS = 5_000;
+/** How long a prepared successor waits to be named owner after announcing
+ *  `ready`. The predecessor only has to drain accepted work, normally one
+ *  track latency; past this it is dead or stuck and the successor claims for
+ *  itself, which fences whatever pen the predecessor still holds. */
+export const BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS = 3_000;
+/** How long a successor keeps waiting once the predecessor has said it is
+ *  `draining`: the claim timeout only covers silence, and a live owner mid-drain
+ *  must not be fenced with tracks still committing. Bounded so a predecessor
+ *  that dies after announcing cannot hold the partition dark forever. */
+export const BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS = 30_000;
+/** How long a request may wait at a successor that has been named owner but is
+ *  still fencing and catching up. The activation is a fence plus a bookmark
+ *  read; holding the request for it turns a NOT_READY into a 200. */
+export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;

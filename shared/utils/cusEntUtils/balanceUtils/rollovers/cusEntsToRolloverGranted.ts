@@ -1,4 +1,4 @@
-import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { CustomerEntitlementWithPricesView } from "@models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { getRolloverFields } from "@utils/cusEntUtils/getRolloverFields.js";
 import { Decimal } from "decimal.js";
 import { sumValues } from "../../../utils.js";
@@ -7,7 +7,7 @@ const cusEntToRolloverGranted = ({
 	cusEnt,
 	entityId,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithPricesView;
 	entityId?: string;
 }) => {
 	const rollover = getRolloverFields({ cusEnt, entityId });
@@ -21,7 +21,7 @@ export const cusEntsToRolloverGranted = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }) => {
 	return sumValues(

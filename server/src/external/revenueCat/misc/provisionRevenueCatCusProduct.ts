@@ -17,9 +17,13 @@ import type {
 	RevenueCatPurchase,
 	RevenueCatSubscription,
 } from "@/external/revenueCat/revenuecatTypes";
+import {
+	type RevenueCatPeriodEvent,
+	storeRevenueCatPeriod,
+} from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
 type MatchedRcItem = { id: string; active: boolean; timestamp: number };
@@ -35,7 +39,7 @@ const subscriptionGivesAccess = (sub: RevenueCatSubscription): boolean =>
  * slows the insert — on any error/no-match the product stays inserted without
  * the id. Logs the outcome under `rc_id_fetch`.
  */
-const storeRevenueCatProcessorId = async ({
+export const storeRevenueCatProcessorId = async ({
 	ctx,
 	cusProduct,
 	product,
@@ -135,12 +139,17 @@ const storeRevenueCatProcessorId = async ({
 			return;
 		}
 
-		await CusProductService.update({
-			ctx,
+		// Merge, not replace: the period stamped at provisioning must survive this async write.
+		await customerProductRepo.mergeProcessor({
+			db,
 			cusProductId: cusProduct.id,
-			updates: {
-				processor: { type: ProcessorType.RevenueCat, id: matchedId },
-			},
+			processor: { type: ProcessorType.RevenueCat, id: matchedId },
+		});
+		// Invalidate rather than patch: this lands after the webhook, and a whole-processor patch could regress the cache.
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId: cusProduct.customer_id ?? "",
+			source: "storeRevenueCatProcessorId",
 		});
 
 		logExtras({
@@ -180,6 +189,7 @@ export const provisionRevenueCatCusProduct = async ({
 	revenuecatMetadata,
 	featureQuantities,
 	appUserId,
+	periodEvent,
 }: {
 	ctx: AutumnContext;
 	customer: FullCustomer;
@@ -187,6 +197,7 @@ export const provisionRevenueCatCusProduct = async ({
 	revenuecatMetadata?: Record<string, string>;
 	featureQuantities?: Array<{ feature_id: string; quantity?: number }>;
 	appUserId?: string;
+	periodEvent?: RevenueCatPeriodEvent;
 }): Promise<{ cusProduct: FullCusProduct; product: FullProduct }> => {
 	const { db, org, env } = ctx;
 
@@ -243,23 +254,34 @@ export const provisionRevenueCatCusProduct = async ({
 		});
 	}
 
+	if (periodEvent) {
+		await storeRevenueCatPeriod({
+			ctx,
+			customerProduct: cusProduct,
+			event: periodEvent,
+		});
+	}
+
 	// Fire-and-forget: must not block or slow the webhook response. The function
 	// self-logs every outcome; the outer catch guards the pre-try client await.
-	void storeRevenueCatProcessorId({ ctx, cusProduct, product, appUserId }).catch(
-		(error) => {
-			ctx.logger
-				.child({
-					context: {
-						extras: {
-							rc_id_fetch: true,
-							stored: false,
-							error: error instanceof Error ? error.message : String(error),
-						},
+	void storeRevenueCatProcessorId({
+		ctx,
+		cusProduct,
+		product,
+		appUserId,
+	}).catch((error) => {
+		ctx.logger
+			.child({
+				context: {
+					extras: {
+						rc_id_fetch: true,
+						stored: false,
+						error: error instanceof Error ? error.message : String(error),
 					},
-				})
-				.error("RevenueCat processor id store rejected (best-effort)");
-		},
-	);
+				},
+			})
+			.error("RevenueCat processor id store rejected (best-effort)");
+	});
 
 	return { cusProduct, product };
 };

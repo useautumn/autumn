@@ -102,6 +102,7 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
 			customerId,
 			products: productsList,
 			results: productsList,
+			ctx,
 			db,
 			org,
 			env,

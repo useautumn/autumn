@@ -1,5 +1,5 @@
 import type { Invite, Role } from "@autumn/shared";
-import { Badge, TableCell, TableRow } from "@autumn/ui";
+import { StatusChip, TableCell, TableRow } from "@autumn/ui";
 import { isFuture } from "date-fns";
 import { ROLE_META } from "@/components/v2/selects/RoleSelect";
 import { useInNamedSandbox } from "@/hooks/sandbox/useInNamedSandbox";
@@ -55,7 +55,7 @@ export const OrgInvitesList = () => {
 							{invite.status}
 						</TableCell>
 						<TableCell>
-							<Badge variant="muted">{roleLabel}</Badge>
+							<StatusChip>{roleLabel}</StatusChip>
 						</TableCell>
 						<TableCell className="text-tertiary-foreground text-xs">
 							{formatDateStr(invite.expiresAt)}

@@ -4,26 +4,14 @@ import {
 	ResourceNotFoundException,
 } from "@aws-sdk/client-scheduler";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { extractLocalEndpoint } from "@/queue/initSqs.js";
+import { deriveSqsQueueArn } from "@/queue/utils/deriveSqsQueueArn.js";
 import { schedulerClient } from "./initEventBridge.js";
-
-const isLocalQueue = (): boolean =>
-	!!extractLocalEndpoint({ queueUrl: process.env.SQS_QUEUE_URL_V2 });
 
 const SCHEDULE_GROUP = "default";
 const SCHEDULER_ROLE_ARN = process.env.AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN || "";
 
-/** Derives SQS ARN from URL: https://sqs.<region>.amazonaws.com/<account>/<name> -> arn:aws:sqs:<region>:<account>:<name> */
-const getSqsQueueArn = (): string => {
-	const url = process.env.SQS_QUEUE_URL_V2 || "";
-	const match = url.match(
-		/^https:\/\/sqs\.([a-z0-9-]+)\.amazonaws\.com\/(\d+)\/(.+)$/,
-	);
-	if (!match)
-		throw new Error(`Cannot derive SQS ARN from SQS_QUEUE_URL_V2: ${url}`);
-	const [, region, accountId, queueName] = match;
-	return `arn:aws:sqs:${region}:${accountId}:${queueName}`;
-};
+const getSqsQueueArn = (): string =>
+	deriveSqsQueueArn({ queueUrl: process.env.SQS_QUEUE_URL_V2 || "" });
 
 /** Creates a one-shot EventBridge schedule that delivers an SQS message at scheduleAt */
 export const createSchedule = async ({
@@ -37,12 +25,6 @@ export const createSchedule = async ({
 	sqsMessageBody: string;
 	messageGroupId: string;
 }) => {
-	if (isLocalQueue()) {
-		logger.debug(
-			"[EventBridge] createSchedule skipped (local SQS queue — no EventBridge in dev)",
-		);
-		return;
-	}
 	// EventBridge at-expression: at(yyyy-mm-ddThh:mm:ss)
 	const pad = (n: number) => String(n).padStart(2, "0");
 	const d = scheduleAt;
@@ -80,12 +62,6 @@ export const deleteSchedule = async ({
 }: {
 	scheduleName: string;
 }) => {
-	if (isLocalQueue()) {
-		logger.debug(
-			"[EventBridge] deleteSchedule skipped (local SQS queue — no EventBridge in dev)",
-		);
-		return;
-	}
 	try {
 		await schedulerClient.send(
 			new DeleteScheduleCommand({
