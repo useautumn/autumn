@@ -25,6 +25,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
+import { isAttachUpgrade } from "@/internal/billing/v2/actions/attach/utils/isAttachUpgrade";
 import { fetchPendingStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/fetchPendingStripeSubscription";
 import { splitReplacedStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/splitReplacedStripeSubscription";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
@@ -41,6 +42,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import {
 	applyProductTrialConfig,
 	handleFreeTrialParam,
+	inheritTrialFromSubscription,
 } from "@/internal/billing/v2/setup/trialContext";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 
@@ -124,16 +126,21 @@ const setupImmediateMultiProductTrialContext = async ({
 	freeTrialParam,
 	fullCustomer,
 	stripeSubscription,
-	fullProducts,
+	productContexts,
 	currentEpochMs,
+	inheritSubscriptionTrial,
 }: {
 	ctx: AutumnContext;
 	freeTrialParam?: FreeTrialParamsV1 | null;
 	fullCustomer: MultiAttachBillingContext["fullCustomer"];
 	stripeSubscription?: Stripe.Subscription;
-	fullProducts: MultiAttachBillingContext["fullProducts"];
+	productContexts: MultiAttachProductContext[];
 	currentEpochMs: number;
+	inheritSubscriptionTrial: boolean;
 }) => {
+	const fullProducts = productContexts.map(
+		(productContext) => productContext.fullProduct,
+	);
 	const paidRecurringProduct = fullProducts.find((product) =>
 		isProductPaidAndRecurring(product),
 	);
@@ -154,6 +161,23 @@ const setupImmediateMultiProductTrialContext = async ({
 			fullProduct: targetProduct,
 			currentEpochMs,
 		});
+	}
+
+	// Attach's precedence; keeping the same plan is never an upgrade, though equal prices count as one.
+	const currentCustomerProduct = productContexts.find(
+		(productContext) => productContext.fullProduct === targetProduct,
+	)?.currentCustomerProduct;
+	const keepsPlan = currentCustomerProduct?.product.id === targetProduct.id;
+	const isUpgrade =
+		!keepsPlan &&
+		isAttachUpgrade({ currentCustomerProduct, attachProduct: targetProduct });
+	if (
+		inheritSubscriptionTrial &&
+		stripeSubscription &&
+		isProductPaidAndRecurring(targetProduct) &&
+		!isUpgrade
+	) {
+		return inheritTrialFromSubscription({ stripeSubscription });
 	}
 
 	const productWithTrial = fullProducts.find((product) => product.free_trial);
@@ -180,6 +204,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	billingStartsAtToleranceMs,
 	includeScheduledProductsForScheduleLookup,
 	replaceUnusableSubscription = false,
+	inheritSubscriptionTrial = false,
 }: {
 	ctx: AutumnContext;
 	params: ImmediateMultiProductParams;
@@ -188,6 +213,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	billingStartsAtToleranceMs?: number;
 	includeScheduledProductsForScheduleLookup?: boolean;
 	replaceUnusableSubscription?: boolean;
+	inheritSubscriptionTrial?: boolean;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -354,8 +380,9 @@ export const setupImmediateMultiProductBillingContext = async ({
 		freeTrialParam: params.free_trial,
 		fullCustomer,
 		stripeSubscription,
-		fullProducts,
+		productContexts,
 		currentEpochMs,
+		inheritSubscriptionTrial,
 	});
 
 	const requestedBillingCycleAnchor = setupRequestedBillingCycleAnchor({
