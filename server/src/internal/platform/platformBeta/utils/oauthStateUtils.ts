@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { type AppEnv, InternalError } from "@autumn/shared";
 import {
 	deleteOAuthStateData,
@@ -16,6 +16,53 @@ type OAuthState = {
 	revenuecat_project_name?: string;
 	// true for the API-key → OAuth migration flow
 	migration?: boolean;
+};
+
+type OAuthStateReturn = { redirectUri: string; issuedAt: number };
+
+const signOAuthStatePayload = (payload: string) =>
+	createHmac("sha256", process.env.ENCRYPTION_PASSWORD!)
+		.update(`oauth-state:${payload}`)
+		.digest("base64url");
+
+/** The Redis key is the only part the store knows; older states are the bare key. */
+const toStoreKey = (state: string) => state.split(".")[0];
+
+/**
+ * Appends a signed copy of the return URL, so the callback can still send the
+ * user back to it after the stored state has expired or been used.
+ */
+const signOAuthState = ({
+	stateKey,
+	redirectUri,
+}: {
+	stateKey: string;
+	redirectUri: string;
+}) => {
+	const payload = Buffer.from(
+		JSON.stringify({ r: redirectUri, t: Date.now() }),
+	).toString("base64url");
+	return `${stateKey}.${payload}.${signOAuthStatePayload(payload)}`;
+};
+
+/** Returns the signed return URL, or null when the state was not issued by us. */
+export const readOAuthStateReturn = ({
+	state,
+}: {
+	state: string;
+}): OAuthStateReturn | null => {
+	const [, payload, signature] = state.split(".");
+	if (!payload || !signature) return null;
+
+	const expected = Buffer.from(signOAuthStatePayload(payload));
+	const received = Buffer.from(signature);
+	const isSigned =
+		expected.length === received.length && timingSafeEqual(expected, received);
+	if (!isSigned) return null;
+
+	const { r, t } = JSON.parse(Buffer.from(payload, "base64url").toString());
+	if (typeof r !== "string" || !r || typeof t !== "number") return null;
+	return { redirectUri: r, issuedAt: t };
 };
 
 /**
@@ -66,7 +113,7 @@ export const generateOAuthState = async ({
 		if (!existing) {
 			// Key doesn't exist, set it with expiry
 			await setOAuthStateData({ stateKey, data: stateData });
-			return stateKey;
+			return signOAuthState({ stateKey, redirectUri });
 		}
 
 		// Key already exists, retry
@@ -91,14 +138,17 @@ export const consumeOAuthState = async ({
 }: {
 	stateKey: string;
 }): Promise<OAuthState | null> => {
-	const stateData = await getOAuthStateData<OAuthState>({ stateKey });
+	const storeKey = toStoreKey(stateKey);
+	const stateData = await getOAuthStateData<OAuthState>({
+		stateKey: storeKey,
+	});
 
 	if (!stateData) {
 		return null;
 	}
 
 	// Delete the key
-	await deleteOAuthStateData({ stateKey });
+	await deleteOAuthStateData({ stateKey: storeKey });
 
 	return stateData;
 };

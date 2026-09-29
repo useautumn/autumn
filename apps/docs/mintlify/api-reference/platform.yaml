@@ -307,7 +307,7 @@ components:
         redirect_url:
           type: string
           format: uri
-          description: URL to redirect to after OAuth completion.
+          description: URL to redirect to after OAuth completion, including failures such as an expired (60-minute) or already-used link.
 
     GenerateOAuthURLResponse:
       type: object
