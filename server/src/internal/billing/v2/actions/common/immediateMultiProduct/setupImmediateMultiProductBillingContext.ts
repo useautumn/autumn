@@ -25,6 +25,8 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
+import { fetchPendingStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/fetchPendingStripeSubscription";
+import { splitReplacedStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/splitReplacedStripeSubscription";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
@@ -177,6 +179,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	billingStartsAt,
 	billingStartsAtToleranceMs,
 	includeScheduledProductsForScheduleLookup,
+	replaceUnusableSubscription = false,
 }: {
 	ctx: AutumnContext;
 	params: ImmediateMultiProductParams;
@@ -184,6 +187,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
 	includeScheduledProductsForScheduleLookup?: boolean;
+	replaceUnusableSubscription?: boolean;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -300,15 +304,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeSubscriptionId: subscriptionId,
 	});
 
-	const {
-		stripeSubscription,
-		stripeSubscriptionSchedule,
-		stripeCustomer,
-		stripeDiscounts,
-		stripeTaxRate,
-		paymentMethod,
-		testClockFrozenTime,
-	} = await setupStripeBillingContext({
+	const stripeBillingContext = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
 		targetCustomerProduct,
@@ -321,6 +317,30 @@ export const setupImmediateMultiProductBillingContext = async ({
 		createStripeCustomerIfMissing:
 			!preview && params.no_billing_changes !== true,
 	});
+	const {
+		stripeCustomer,
+		stripeDiscounts,
+		stripeTaxRate,
+		paymentMethod,
+		testClockFrozenTime,
+	} = stripeBillingContext;
+	const {
+		stripeSubscription,
+		stripeSubscriptionSchedule,
+		replacedStripeSubscription,
+	} = replaceUnusableSubscription
+		? splitReplacedStripeSubscription({
+				...stripeBillingContext,
+				pendingStripeSubscription:
+					stripeBillingContext.stripeSubscription ||
+					stripeBillingContext.canceledStripeSubscription
+						? undefined
+						: await fetchPendingStripeSubscription({ ctx, fullCustomer }),
+			})
+		: {
+				...stripeBillingContext,
+				replacedStripeSubscription: undefined,
+			};
 
 	const invoiceMode = await setupInvoiceModeContext({
 		ctx,
@@ -440,6 +460,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
+		replacedStripeSubscription,
 		stripeDiscounts,
 		stripeTaxRate,
 		paymentMethod,

@@ -24,6 +24,7 @@ export interface StripeBillingContextOverride {
 	stripeTaxRate?: Stripe.TaxRate;
 	/** See `BillingContext.canceledStripeSubscriptionId`. */
 	canceledStripeSubscriptionId?: string;
+	canceledStripeSubscription?: Stripe.Subscription;
 	/** See `BillingContext.mismatchedStripeSubscriptionId`. */
 	mismatchedStripeSubscriptionId?: string;
 }

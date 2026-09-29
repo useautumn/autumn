@@ -180,6 +180,7 @@ const setupSetPlansImmediatePhase = async ({
 					billingStartsAt: immediatePhase.starts_at,
 					billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
 					includeScheduledProductsForScheduleLookup: true,
+					replaceUnusableSubscription: true,
 				});
 
 	return {
@@ -215,6 +216,7 @@ export const setupSetPlansBillingContext = async ({
 			: undefined,
 		billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
 		includeScheduledProductsForScheduleLookup: true,
+		replaceUnusableSubscription: true,
 	});
 
 	const cycleBoundaryMs =
