@@ -1,14 +1,13 @@
 import { expect, test } from "bun:test";
-import type { AttachParamsV1Input } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { assignLicense } from "./licenseTestUtils.js";
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-priced: priced license requires customer-level attach first")}`,
+	`${chalk.yellowBright("licenses-priced: priced license assigns without a customer-level attach")}`,
 	async () => {
 		const customerId = "license-priced-gate";
 		const parent = products.base({
@@ -38,26 +37,12 @@ test.concurrent(
 			],
 		});
 
-		await expectAutumnError({
-			errMessage: "Attach it to the customer",
-			func: async () =>
-				await autumnV2_2.post("/licenses.attach", {
-					customer_id: customerId,
-					entity_id: entities[0].id,
-					plan_id: license.id,
-				}),
+		const assignment = await assignLicense({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
 		});
-
-		await autumnV2_2.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: license.id,
-		});
-
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		})) as { assignment: { id: string; ended_at: number | null } };
 		expect(assignment.id).toBeTruthy();
 		expect(assignment.ended_at).toBeNull();
 	},
@@ -92,11 +77,12 @@ test.concurrent(
 				s.billing.attach({ productId: parent.id }),
 			],
 		});
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		})) as { assignment: { id: string } };
+		const assignment = await assignLicense({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+		});
 		expect(assignment.id).toBeTruthy();
 	},
 );

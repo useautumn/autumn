@@ -3,7 +3,7 @@
  * changes (200 → 400 or 400 → 200) patches contributions by Δ and updates
  * the pool aggregate. Source balances stay 0. link_id is stable.
  *
- *   immediate upgrade → granted = N × 400, usage preserved
+ *   immediate upgrade → granted = N × 400; usage resets unless carried over
  *   spare seats are in scope (release does not drop a contribution)
  *   scheduled downgrade → pool unchanged until activation
  */
@@ -63,73 +63,108 @@ const amountChangePlans = ({ prefix }: { prefix: string }) => {
 	};
 };
 
-test.concurrent(
-	`${chalk.yellowBright("license pooled: immediate parent upgrade applies the 200→400 delta")}`,
-	async () => {
-		const { pro, premium, seatLow, seatHigh } = amountChangePlans({
-			prefix: "lic-pool-amt-up",
-		});
-		const customerId = "lic-pool-amt-upgrade";
-		const { entities, autumnV2_3, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", testClock: false }),
-				s.entities({ count: SEAT_COUNT, featureId: TestFeature.Users }),
-				s.products({ list: [pro, premium, seatLow, seatHigh] }),
-			],
-			actions: [
-				s.licenses.link({
-					parentProductId: pro.id,
-					licenseProductId: seatLow.id,
-					included: SEAT_COUNT,
-				}),
-				s.licenses.link({
-					parentProductId: premium.id,
-					licenseProductId: seatHigh.id,
-					included: SEAT_COUNT,
-				}),
-				s.billing.attach({ productId: pro.id }),
-				s.licenses.assign({
-					licenseProductId: seatLow.id,
-					entityIndexes: [0, 1, 2],
-				}),
-			],
-		});
+const upgradeWithUsage = async ({
+	prefix,
+	customerId,
+	carryOverUsages,
+}: {
+	prefix: string;
+	customerId: string;
+	carryOverUsages?: AttachParamsV1Input["carry_over_usages"];
+}) => {
+	const { pro, premium, seatLow, seatHigh } = amountChangePlans({ prefix });
+	const { entities, autumnV2_3, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.entities({ count: SEAT_COUNT, featureId: TestFeature.Users }),
+			s.products({ list: [pro, premium, seatLow, seatHigh] }),
+		],
+		actions: [
+			s.licenses.link({
+				parentProductId: pro.id,
+				licenseProductId: seatLow.id,
+				included: SEAT_COUNT,
+			}),
+			s.licenses.link({
+				parentProductId: premium.id,
+				licenseProductId: seatHigh.id,
+				included: SEAT_COUNT,
+			}),
+			s.billing.attach({ productId: pro.id }),
+			s.licenses.assign({
+				licenseProductId: seatLow.id,
+				entityIndexes: [0, 1, 2],
+			}),
+		],
+	});
 
-		const customerLicenseLinkId = await seatLinkId({
-			db: ctx.db,
+	const customerLicenseLinkId = await seatLinkId({
+		db: ctx.db,
+		customerId,
+		licenseProductId: seatLow.id,
+	});
+	await expectLicensePooledGrant({
+		autumn: autumnV2_3,
+		ctx,
+		customerId,
+		customerLicenseLinkId,
+		grantPerSeat: LICENSE_POOLED_LOW_GRANT,
+		seatCount: SEAT_COUNT,
+	});
+
+	await autumnV2_3.track(
+		{
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			feature_id: TestFeature.Messages,
+			value: USAGE,
+		},
+		{ timeout: 2000 },
+	);
+
+	await autumnV2_3.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: premium.id,
+		redirect_mode: "if_required",
+		carry_over_usages: carryOverUsages,
+	});
+
+	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	await expectCustomerProducts({ customer, active: [premium.id] });
+	return { autumnV2_3, ctx, customerLicenseLinkId };
+};
+
+test.concurrent(
+	`${chalk.yellowBright("license pooled: immediate parent upgrade applies 200→400 and resets usage")}`,
+	async () => {
+		const customerId = "lic-pool-amt-upgrade";
+		const { autumnV2_3, ctx, customerLicenseLinkId } = await upgradeWithUsage({
+			prefix: "lic-pool-amt-up",
 			customerId,
-			licenseProductId: seatLow.id,
 		});
 		await expectLicensePooledGrant({
 			autumn: autumnV2_3,
 			ctx,
 			customerId,
 			customerLicenseLinkId,
-			grantPerSeat: LICENSE_POOLED_LOW_GRANT,
+			grantPerSeat: LICENSE_POOLED_HIGH_GRANT,
 			seatCount: SEAT_COUNT,
 		});
+	},
+);
 
-		await autumnV2_3.track(
-			{
-				customer_id: customerId,
-				entity_id: entities[0].id,
-				feature_id: TestFeature.Messages,
-				value: USAGE,
-			},
-			{ timeout: 2000 },
-		);
-
-		await autumnV2_3.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: premium.id,
-			redirect_mode: "if_required",
+test.concurrent(
+	`${chalk.yellowBright("license pooled: immediate parent upgrade with carry-over keeps usage")}`,
+	async () => {
+		const customerId = "lic-pool-amt-upgrade-carry";
+		const { autumnV2_3, ctx, customerLicenseLinkId } = await upgradeWithUsage({
+			prefix: "lic-pool-amt-up-carry",
+			customerId,
+			carryOverUsages: { enabled: true },
 		});
-
-		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
-			skip_cache: "true",
-		});
-		await expectCustomerProducts({ customer, active: [premium.id] });
 		await expectLicensePooledGrant({
 			autumn: autumnV2_3,
 			ctx,

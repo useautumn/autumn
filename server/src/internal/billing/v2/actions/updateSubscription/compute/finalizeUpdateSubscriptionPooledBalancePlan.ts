@@ -73,6 +73,7 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 			: [billingContext.customerProduct],
 		incomingCustomerProducts: incomingCustomerProductSnapshots,
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
+		customerLicenseTransitions: plan.customerLicenseTransitions,
 		now: billingContext.currentEpochMs,
 	});
 

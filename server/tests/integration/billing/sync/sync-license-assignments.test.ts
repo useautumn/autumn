@@ -53,8 +53,8 @@ test.concurrent(
 		for (const entity of entities) {
 			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
-				entity_id: entity.id,
 				plan_id: seat.id,
+				entities: [{ entity_id: entity.id }],
 			});
 		}
 

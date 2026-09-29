@@ -1,18 +1,6 @@
 /**
- * Replacing an ENTITY-SCOPED license item with an unscoped one must not run on
- * the batch lane.
- *
- * The compute guard only rejects a replace whose NEW entitlement is scoped
- * (`enriched.entity_feature_id`); nothing inspects the entitlement being
- * replaced. DELETING a scoped item is rejected by `removes_entity_scoped_item`,
- * but a replace takes the ADD artifact branch, which never sets that flag.
- * replaceLicenseEntitlementRows then UPDATEs entitlement_id/balance/unlimited
- * and leaves the `entities` JSONB untouched, so a per-entity sub-balance map
- * survives onto an entitlement that has no entity scope to interpret it.
- *
- * Red: the op runs on the batch lane, repointing scoped rows at an unscoped
- * entitlement while their stale `entities` map persists.
- * Green: the op is rejected to the per-customer lane.
+ * Replacing an entity-scoped license item with an unscoped one must skip the batch
+ * lane; the per-customer billing lane then repoints the seat rows itself.
  */
 import { expect, test } from "bun:test";
 import { BillingInterval, customerEntitlements } from "@autumn/shared";
@@ -110,7 +98,9 @@ test(`${chalk.yellowBright("batch-license-customize: replacing an entity-scoped 
 	expect(result?.lane).toBe("per_customer");
 
 	const rowsAfter = await readMessageRows();
-	expect(rowsAfter.map((row) => row.entitlementId).sort()).toEqual(
-		rowsBefore.map((row) => row.entitlementId).sort(),
-	);
+	expect(rowsAfter).toHaveLength(ASSIGNED_SEATS);
+	for (const row of rowsAfter) {
+		expect(row.entitlementId).not.toBe(rowsBefore[0].entitlementId);
+		expect(row.entities ?? {}).toEqual({});
+	}
 });

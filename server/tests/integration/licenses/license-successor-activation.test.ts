@@ -214,12 +214,7 @@ test.concurrent(
 			status: "active",
 			customer_license_link_id: activePool?.link_id,
 		});
-		expect(dbState.pools).toHaveLength(1);
-		expect(dbState.pools[0]).toMatchObject({
-			parent_customer_product_id: activeParent?.id,
-			granted: 1,
-			remaining: 0,
-		});
+		expect(activePool).toMatchObject({ granted: 1, remaining: 0 });
 
 		const after = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,

@@ -14,9 +14,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
+	assignLicense,
+	getLicenseDbState,
 	listLicenseAssignments,
 	listLicensePools,
-	type TestLicenseAssignment,
 } from "./licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
@@ -93,11 +94,12 @@ test.concurrent(
 		});
 		expect(customerBefore.allowed).toBe(false);
 
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		})) as { assignment: TestLicenseAssignment };
+		const assignment = await assignLicense({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+		});
 		expect(assignment).toMatchObject({
 			entity_id: entities[0].id,
 			license_plan_id: license.id,
@@ -166,8 +168,8 @@ test.concurrent(
 			func: () =>
 				autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
-					entity_id: entities[1].id,
 					plan_id: license.id,
+					entities: [{ entity_id: entities[1].id }],
 				}),
 		});
 
@@ -200,25 +202,11 @@ test.concurrent(
 			false,
 		);
 
-		const { assignment: endedAssignment } = (await autumnV2_2.post(
-			"/licenses.update",
-			{
-				customer_id: customerId,
-				cancel_action: "cancel_immediately",
-				assignment_id: assignmentId,
-			},
-		)) as {
-			assignment: {
-				id: string;
-				entity_id: string;
-				license_plan_id: string;
-				ended_at: number | null;
-			};
-		};
-		expect(endedAssignment.id).toBe(assignmentId);
-		expect(endedAssignment.entity_id).toBe(entities[0].id);
-		expect(endedAssignment.license_plan_id).toBe(license.id);
-		expect(endedAssignment.ended_at).toBeGreaterThan(0);
+		await autumnV2_2.post("/licenses.release", {
+			customer_id: customerId,
+			entity_ids: [entities[0].id],
+			license_plan_id: license.id,
+		});
 
 		const activeAssignmentsAfterUnassign = await listLicenseAssignments({
 			autumn: autumnV2_2,
@@ -228,15 +216,17 @@ test.concurrent(
 		});
 		expect(activeAssignmentsAfterUnassign).toHaveLength(0);
 
-		const allAssignmentsAfterUnassign = await listLicenseAssignments({
-			autumn: autumnV2_2,
+		// Release unlinks the seat for reuse rather than ending it.
+		const { assignments: seatRows } = await getLicenseDbState({
+			db: ctx.db,
 			customerId,
-			entityId: entities[0].id,
-			licensePlanId: license.id,
-			active: false,
 		});
-		expect(allAssignmentsAfterUnassign[0].id).toBe(assignmentId);
-		expect(allAssignmentsAfterUnassign[0].ended_at).toBeGreaterThan(0);
+		expect(seatRows).toHaveLength(1);
+		expect(seatRows[0]).toMatchObject({
+			id: assignmentId,
+			internal_entity_id: null,
+		});
+		expect(Number(seatRows[0].released_at)).toBeGreaterThan(0);
 
 		const poolsAfterUnassign = await listLicensePools({
 			autumn: autumnV2_2,

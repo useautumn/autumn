@@ -1,7 +1,9 @@
 import {
+	type CustomerLicenseTransition,
 	EntInterval,
 	type EntitlementWithFeature,
 	entToPooledBalanceIdentity,
+	type FullCusProduct,
 	type FullCustomerLicense,
 	getCycleEnd,
 	getStartingBalance,
@@ -15,8 +17,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addInsertedPooledBalanceToComputeContext } from "../context/pooledBalanceComputeContextUtils";
 import type { PooledBalanceComputeContext } from "../types/pooledBalanceComputeTypes";
 import { addToUpdatePoolBalances } from "../utils/pooledBalancePlanUtils";
+import { resolvePooledBalanceResetCycleAnchor } from "../utils/resolvePooledBalanceResetCycleAnchor";
 import { expireRemovedLicensePools } from "./expireRemovedLicensePools";
 import { initLicensePooledBalanceGraph } from "./initLicensePooledBalanceGraph";
+import { shouldResetLicensePooledUsage } from "./shouldResetLicensePooledUsage";
 
 const licensePooledEntitlements = ({
 	customerLicense,
@@ -81,11 +85,15 @@ const licensePooledIdentity = ({
 	customerLicense,
 	entitlement,
 	existingResetCycleAnchor,
+	parentBillingCycleAnchor,
+	customerCreatedAt,
 	now,
 }: {
 	customerLicense: FullCustomerLicense;
 	entitlement: EntitlementWithFeature;
 	existingResetCycleAnchor?: number | null;
+	parentBillingCycleAnchor: number | null;
+	customerCreatedAt: number;
 	now: number;
 }) => {
 	const entIdentity = entToPooledBalanceIdentity({ entitlement });
@@ -93,15 +101,23 @@ const licensePooledIdentity = ({
 		entIdentity.interval === EntInterval.Lifetime
 			? PooledBalanceResetMode.Lifetime
 			: PooledBalanceResetMode.Lazy;
-	const resetCycleAnchor =
-		resetMode === PooledBalanceResetMode.Lifetime
-			? null
-			: (existingResetCycleAnchor ?? now);
+	const hasNoCycle =
+		resetMode === PooledBalanceResetMode.Lifetime ||
+		isBooleanEntitlement({ entitlement }) ||
+		isUnlimitedEntitlement({ entitlement });
+	const resetCycleAnchor = hasNoCycle
+		? null
+		: resolvePooledBalanceResetCycleAnchor({
+				existingResetCycleAnchor,
+				anchorsToSource: parentBillingCycleAnchor !== null,
+				sourceResetCycleAnchor: parentBillingCycleAnchor,
+				customerCreatedAt,
+			});
 	const nextResetAt =
-		resetMode === PooledBalanceResetMode.Lifetime
+		resetCycleAnchor === null
 			? null
 			: getCycleEnd({
-					anchor: existingResetCycleAnchor ?? now,
+					anchor: resetCycleAnchor,
 					interval: entIdentity.interval,
 					intervalCount: entIdentity.intervalCount,
 					now,
@@ -119,20 +135,33 @@ const licensePooledIdentity = ({
 	};
 };
 
-/** Sets license-keyed pool.granted to purchased seats × per-seat G. */
-export const applyLicensePooledGranted = ({
+/** Creates, resizes (purchased seats × per-seat grant) and expires each
+ * license link's pools. */
+export const applyLicensePooledBalances = ({
 	ctx,
 	computeContext,
 	customerLicenses,
+	parentCustomerProducts,
+	customerLicenseTransitions = [],
+	customerCreatedAt,
 	now,
 }: {
 	ctx: AutumnContext;
 	computeContext: PooledBalanceComputeContext;
 	customerLicenses: FullCustomerLicense[];
+	parentCustomerProducts: FullCusProduct[];
+	customerLicenseTransitions?: CustomerLicenseTransition[];
+	customerCreatedAt: number;
 	now: number;
 }) => {
 	const customerLicenseLinkIds = new Set<string>();
 	const retainedPoolIds = new Set<string>();
+	const transitionByLinkId = new Map(
+		customerLicenseTransitions.map((transition) => [
+			transition.updates.linkId,
+			transition,
+		]),
+	);
 
 	for (const customerLicense of customerLicenses) {
 		if (!customerLicense.planLicense) continue;
@@ -158,6 +187,12 @@ export const applyLicensePooledGranted = ({
 				entitlement,
 				existingResetCycleAnchor:
 					existingByLink?.pooled_balance.reset_cycle_anchor,
+				parentBillingCycleAnchor:
+					parentCustomerProducts.find(
+						(customerProduct) =>
+							customerProduct.id === customerLicense.parent_customer_product_id,
+					)?.billing_cycle_anchor ?? null,
+				customerCreatedAt,
 				now,
 			});
 			const existing =
@@ -167,7 +202,11 @@ export const applyLicensePooledGranted = ({
 				);
 
 			if (!existing) {
-				if (targetGranted <= 0) continue;
+				// Seats (bought or still assigned) need a pool, even at 0 grant.
+				const hasSeats =
+					customerLicense.granted > 0 ||
+					customerLicense.remaining < customerLicense.granted;
+				if (!hasSeats) continue;
 				const inserted = initLicensePooledBalanceGraph({
 					ctx,
 					customerLicense,
@@ -186,15 +225,22 @@ export const applyLicensePooledGranted = ({
 			}
 
 			retainedPoolIds.add(existing.pooled_balance.id);
-			if (existing.pooled_balance.granted === targetGranted) continue;
-
+			const resetsUsage = shouldResetLicensePooledUsage({
+				transition: transitionByLinkId.get(customerLicense.link_id),
+				entitlement,
+			});
 			const grantedDelta = new Decimal(targetGranted)
 				.sub(existing.pooled_balance.granted)
 				.toNumber();
-			const nextBalance = Math.max(
-				0,
-				new Decimal(existing.balance ?? 0).plus(grantedDelta).toNumber(),
-			);
+			const nextBalance = resetsUsage
+				? targetGranted
+				: Math.max(
+						0,
+						new Decimal(existing.balance ?? 0).plus(grantedDelta).toNumber(),
+					);
+			const isUnchanged =
+				grantedDelta === 0 && nextBalance === (existing.balance ?? 0);
+			if (isUnchanged) continue;
 
 			addToUpdatePoolBalances({
 				pooledBalancePlan: computeContext.plan,

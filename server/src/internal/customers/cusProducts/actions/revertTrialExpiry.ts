@@ -16,6 +16,7 @@ import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendB
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 
 /**
  * Handles revert trial expiry inside a transaction: expire the trial
@@ -106,6 +107,15 @@ export const tryProcessRevertExpiry = async ({
 						]
 					: [],
 			now,
+		});
+	}
+
+	// Seats move back onto the restored parent's license outside any billing
+	// action — recount its remaining now, or capacity checks read a stale value.
+	if (restoredPreviousCustomerProduct) {
+		await reconcileLicenseStateForCustomer({
+			ctx,
+			idOrInternalId: fullCustomer.internal_id,
 		});
 	}
 

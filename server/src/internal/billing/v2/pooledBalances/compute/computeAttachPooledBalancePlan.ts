@@ -1,5 +1,6 @@
 import type {
 	AttachBillingContext,
+	CustomerLicenseTransition,
 	FullCusProduct,
 	PooledBalancePlan,
 } from "@autumn/shared";
@@ -10,10 +11,12 @@ export const computeAttachPooledBalancePlan = ({
 	ctx,
 	attachBillingContext,
 	newCustomerProduct,
+	customerLicenseTransitions,
 }: {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
 	newCustomerProduct: FullCusProduct;
+	customerLicenseTransitions: CustomerLicenseTransition[];
 }): {
 	customerProduct: FullCusProduct;
 	pooledBalancePlan?: PooledBalancePlan;
@@ -30,6 +33,7 @@ export const computeAttachPooledBalancePlan = ({
 			: [],
 		incomingCustomerProducts: [newCustomerProduct],
 		stripeSubscriptionId: attachBillingContext.stripeSubscription?.id,
+		customerLicenseTransitions,
 		now: attachBillingContext.currentEpochMs,
 	});
 
