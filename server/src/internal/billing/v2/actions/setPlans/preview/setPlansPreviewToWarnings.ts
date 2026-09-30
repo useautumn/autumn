@@ -144,7 +144,7 @@ export const setPlansPreviewToWarnings = ({
 					{
 						type: "existing_schedule_replaced" as const,
 						message:
-							"The existing Stripe subscription schedule will be replaced.",
+							"Edits made directly to the Stripe schedule will be overwritten.",
 					},
 				]
 			: []),
