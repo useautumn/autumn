@@ -107,7 +107,6 @@ export function CreateScheduleFormProvider({
 	const { products } = useProductsQuery();
 
 	const formValues = useStore(form.store, (state) => state.values);
-	const isDirty = useStore(form.store, (state) => state.isDirty);
 	const isExistingSchedule = useMemo(
 		() => hasPersistedCreateSchedule({ phases: formValues.phases }),
 		[formValues.phases],
@@ -230,7 +229,6 @@ export function CreateScheduleFormProvider({
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 	});
-	const previewRequestBody = isDirty ? generationRequestBody : null;
 
 	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
@@ -253,7 +251,7 @@ export function CreateScheduleFormProvider({
 		data: preview,
 		isLoading: isPreviewLoading,
 		error: previewError,
-	} = useCreateSchedulePreview({ requestBody: previewRequestBody });
+	} = useCreateSchedulePreview({ requestBody: generationRequestBody });
 
 	// Only the checkout stage sets this, so drop it once the schedule no longer
 	// goes through checkout — otherwise a stale `true` reaches a direct submit.
