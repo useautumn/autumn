@@ -14,6 +14,17 @@ const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"pending_quantity_change_dropped",
 ]);
 
+type BannerLine = { message: string; count: number };
+
+/** Identical messages (e.g. one per entity) collapse into a single counted line. */
+const toBannerLines = (warnings: SetPlansPreviewWarning[]): BannerLine[] => {
+	const countByMessage = new Map<string, number>();
+	for (const { message } of warnings) {
+		countByMessage.set(message, (countByMessage.get(message) ?? 0) + 1);
+	}
+	return [...countByMessage].map(([message, count]) => ({ message, count }));
+};
+
 export function ReviewWarnings({
 	warnings,
 }: {
@@ -24,22 +35,41 @@ export function ReviewWarnings({
 	);
 	if (bannerWarnings.length === 0) return null;
 
-	return (
-		<div className="flex flex-col gap-2 px-4 pt-4">
-			{bannerWarnings.map((warning) => {
-				const isInfo = warning.severity === "info";
-				const Icon = isInfo ? InfoIcon : WarningCircleIcon;
+	const isInfoOnly = bannerWarnings.every(
+		(warning) => warning.severity === "info",
+	);
+	const Icon = isInfoOnly ? InfoIcon : WarningCircleIcon;
+	const lines = toBannerLines(bannerWarnings);
 
-				return (
-					<Alert
-						key={`${warning.type}-${warning.message}`}
-						variant={isInfo ? "default" : "warning"}
-					>
-						<Icon weight="fill" />
-						<AlertDescription>{warning.message}</AlertDescription>
-					</Alert>
-				);
-			})}
+	return (
+		<div className="px-4 pt-4">
+			<Alert variant={isInfoOnly ? "default" : "warning"}>
+				<Icon weight="fill" />
+				<AlertDescription>
+					{lines.length === 1 ? (
+						<BannerLineText line={lines[0]} />
+					) : (
+						<ul className="flex list-disc flex-col gap-1 pl-4">
+							{lines.map((line) => (
+								<li key={line.message}>
+									<BannerLineText line={line} />
+								</li>
+							))}
+						</ul>
+					)}
+				</AlertDescription>
+			</Alert>
 		</div>
+	);
+}
+
+function BannerLineText({ line }: { line: BannerLine }) {
+	return (
+		<>
+			{line.message}
+			{line.count > 1 && (
+				<span className="text-tertiary-foreground"> ×{line.count}</span>
+			)}
+		</>
 	);
 }
