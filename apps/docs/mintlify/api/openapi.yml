@@ -68733,6 +68733,15 @@ paths:
                   type: boolean
                   description: If true, returns the calculated lines and totals without creating
                     an invoice.
+                issue_method:
+                  enum:
+                    - draft
+                    - finalize
+                    - send
+                  type: string
+                  description: draft leaves the invoice editable. finalize opens it without Stripe
+                    emailing, reminding or charging (auto_advance off). send
+                    opens it with auto_advance on. Defaults to send.
               required:
                 - customer_id
               additionalProperties: false
@@ -70391,6 +70400,15 @@ paths:
                   type: boolean
                   description: If true, returns the replacement invoice's lines and totals without
                     voiding anything or issuing it.
+                issue_method:
+                  enum:
+                    - draft
+                    - finalize
+                    - send
+                  type: string
+                  description: "How far the replacement advances: draft, finalize (opened without
+                    emails, reminders or charges) or send. Defaults to send. The
+                    original is retired either way."
                 update_customer_email:
                   type: string
                   format: email
