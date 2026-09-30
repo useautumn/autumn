@@ -25,10 +25,9 @@ concurrency:
   group: build-${{ github.event.inputs.sha || github.ref }}
   cancel-in-progress: true
 
-env:
-  # ECR region is selected per-branch in the "Extract metadata" step:
-  #   prod repo (autumn)         -> us-east-2
-  #   staging repo (autumn-staging) -> us-east-1
+# ECR region is selected per-branch in the "Extract metadata" step:
+#   prod repo (autumn)         -> us-east-2
+#   staging repo (autumn-staging) -> us-east-1
 
 jobs:
   checks:
