@@ -72,6 +72,8 @@ export function isRecordsHandler(
 export type TopicConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	/** Joins the group again after kafkajs gave it up; only between `start` and `stop`. */
+	restart(): Promise<void>;
 	withdrawPartition(position: { partition: number }): Promise<void>;
 	resumePartition(position: { partition: number }): void;
 	seekPartition(position: { partition: number; nextOffset: bigint }): void;

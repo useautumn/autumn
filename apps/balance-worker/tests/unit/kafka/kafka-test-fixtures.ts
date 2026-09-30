@@ -128,6 +128,7 @@ export function createKafkaOwnedPartitionGroup(
 		partitionsConsumedConcurrently,
 		healthRefreshIntervalMs = 60_000,
 		partitionBootstrapRetryIntervalMs,
+		consumerRejoin,
 		onUnhealthyPartition = ignoreUnhealthy,
 		createRuntime: factory,
 		...dependencies
@@ -189,6 +190,7 @@ export function createKafkaOwnedPartitionGroup(
 			partitionsConsumedConcurrently,
 			healthRefreshIntervalMs,
 			partitionBootstrapRetryIntervalMs,
+			consumerRejoin,
 			handoffReadyTimeoutMs: 1,
 			handoffClaimTimeoutMs: 1,
 		},

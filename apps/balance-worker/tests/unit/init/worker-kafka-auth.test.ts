@@ -43,6 +43,7 @@ test.each(["none", "msk_iam"] as const)(
 			expect(createTransport).toHaveBeenCalledWith({
 				authMode,
 				region: "us-east-1",
+				onToken: expect.any(Function),
 			});
 			expect(createClient).toHaveBeenCalledTimes(1);
 			expect(createClient.mock.calls[0]?.[0]).toMatchObject({

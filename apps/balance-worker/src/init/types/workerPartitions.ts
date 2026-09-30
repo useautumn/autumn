@@ -57,6 +57,7 @@ export type WorkerPartitionsConfig = {
 	handoffReadyTimeoutMs?: number;
 	handoffClaimTimeoutMs?: number;
 	handoffDrainCapMs?: number;
+	consumerRejoin?: { initialBackoffMs: number; maxBackoffMs: number };
 };
 
 export type WorkerPartitionHighWatermarks = {

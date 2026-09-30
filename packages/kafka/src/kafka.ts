@@ -14,6 +14,7 @@ export {
 	metadataToBaseOffset,
 	parseKafkaOffset,
 } from "./client/kafkaOffsetUtils.js";
+export type { KafkaTokenInfo } from "./client/mskTokenInfo.js";
 export {
 	createSettledAdmin,
 	isEmptyTopicMetadataFailure,
@@ -39,6 +40,7 @@ export type {
 } from "./client/types/kafkaLimits.js";
 export {
 	isConsumerGroupGoneError,
+	isKafkaAccessRefusal,
 	KafkaPartitionOffsetsNotFoundError,
 } from "./consumer/consumerErrors.js";
 export { coPartitionedAssigner } from "./consumer/coPartitionedAssigner.js";

@@ -10,6 +10,7 @@ import {
 	readTopicHighWatermarks,
 	subscribePartitionChanges,
 } from "@autumn/kafka";
+import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js";
 import { createCommandRecordHandler } from "../../kafka/commandConsumer/createCommandRecordHandler.js";
 import { createMeteringConsumer } from "../../kafka/meteringConsumer/createMeteringConsumer.js";
 import { createOwnerEpochCell } from "../../kafka/ownerEpochCell.js";
@@ -253,7 +254,15 @@ export function createWorkerPartitions({
 	}: {
 		topic: string;
 	}): Promise<WorkerPartitionHighWatermarks> {
-		const highWatermarks = await readTopicHighWatermarks({ ctx, topic });
+		// The commands topic has its own admin: kafkajs admins sharing topics overwrite each other's metadata mid-read.
+		const partitionOffsets =
+			topic === config.commandTopic && commandTopicOffsets
+				? commandTopicOffsets
+				: ctx.partitionOffsets;
+		const highWatermarks = await readTopicHighWatermarks({
+			ctx: { partitionOffsets },
+			topic,
+		});
 		function readHighWatermark({ partition }: { partition: number }): bigint {
 			const highWatermark = highWatermarks.get(partition);
 			if (highWatermark !== undefined) return highWatermark;
@@ -285,9 +294,11 @@ export function createWorkerPartitions({
 			consumer: {
 				start: meteringConsumer.start,
 				stop: meteringConsumer.stop,
+				restart: meteringConsumer.restart,
 				pause,
 				resume,
 			},
+			logger: ctx.logger,
 			partitionOffsets: { connect, disconnect, fetchHighWatermarks },
 			progress: { readProgress, observeHighWatermark },
 			subscribePartitionChanges: subscribeChanges,
@@ -301,5 +312,30 @@ export function createWorkerPartitions({
 		},
 		config,
 	});
-	return partitions;
+
+	/** Each served partition's command lag beside its log progress: the bookmark says what is decided, the topic what is queued. */
+	function withCommandLag(health: OwnedPartitionHealth): OwnedPartitionHealth {
+		const { commandTopic } = config;
+		if (!commandTopic) return health;
+		const consumedNextOffset = readCommandNextOffset({
+			partition: health.partition,
+		});
+		const { highWatermark } = positionTracker.readProgress({
+			topic: commandTopic,
+			partition: health.partition,
+		});
+		const lag =
+			consumedNextOffset === null || highWatermark === null
+				? null
+				: highWatermark > consumedNextOffset
+					? highWatermark - consumedNextOffset
+					: 0n;
+		return { ...health, commands: { consumedNextOffset, highWatermark, lag } };
+	}
+
+	function partitionsWithCommandLag(): OwnedPartitionHealth[] {
+		return partitions.partitions().map(withCommandLag);
+	}
+
+	return { ...partitions, partitions: partitionsWithCommandLag };
 }

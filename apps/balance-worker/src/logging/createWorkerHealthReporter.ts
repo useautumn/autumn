@@ -1,6 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import type { BalanceWorkerState } from "../init/types/balanceWorkerState.js";
+import type { PartitionConsumerStatus } from "../partitions/types/partitions.js";
 import { partitionHealthLogFields } from "./partitionHealthLogFields.js";
 
 const HEALTH_REPORT_INTERVAL_MS = 10_000;
@@ -9,6 +10,7 @@ type WorkerHealthReporterContext = {
 	logger: Pick<AutumnLogger, "info" | "warn">;
 	readPartitions(): OwnedPartitionHealth[];
 	readWorkerStatus(): BalanceWorkerState["status"];
+	readConsumer?(): PartitionConsumerStatus;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
 };
 
@@ -49,6 +51,7 @@ export function createWorkerHealthReporter({
 						reportedAt,
 						reportedPartitions: health.length,
 						partitionStatusCounts,
+						consumer: ctx.readConsumer?.() ?? null,
 					},
 				},
 				"Balance worker health",

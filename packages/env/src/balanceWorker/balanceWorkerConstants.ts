@@ -130,3 +130,9 @@ export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
  *  sees and how far the commands topic's reported lag trails. The Postgres
  *  bookmark, not this commit, decides where a restart resumes. */
 export const BALANCE_WORKER_COMMAND_OFFSET_SETTLE_GAP_MS = 1_000;
+/** How long a worker waits before joining the group again after a broker
+ *  refused its identity, doubling per refusal up to the cap. A refusal that
+ *  clears in seconds costs a minute of fail-open; one that lasts a quarter of
+ *  an hour, as prod's did, costs that quarter hour and no task. */
+export const BALANCE_WORKER_CONSUMER_REJOIN_INITIAL_BACKOFF_MS = 1_000;
+export const BALANCE_WORKER_CONSUMER_REJOIN_MAX_BACKOFF_MS = 30_000;
