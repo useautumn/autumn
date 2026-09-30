@@ -15,9 +15,6 @@ export const getSlackAdminProvider = ({
 	clientId?: string;
 } = {}) => `${slackAdminProviderPrefix}:${clientId}` as const;
 
-/** Scopes that enable extra features but don't require a reconnect when absent. */
-const OPTIONAL_SLACK_SCOPES: readonly string[] = [SLACK_EMAIL_SCOPE];
-
 /** Slack user resolution depends on these, even when SLACK_BOT_SCOPES overrides the defaults. */
 const REQUIRED_USER_RESOLUTION_SCOPES: readonly string[] = [
 	SLACK_USERS_READ_SCOPE,
@@ -26,9 +23,7 @@ const REQUIRED_USER_RESOLUTION_SCOPES: readonly string[] = [
 
 export const getMissingSlackScopes = (scopes: string[]) => {
 	const granted = new Set(scopes);
-	return DEFAULT_SLACK_BOT_SCOPES.filter(
-		(scope) => !(OPTIONAL_SLACK_SCOPES.includes(scope) || granted.has(scope)),
-	);
+	return DEFAULT_SLACK_BOT_SCOPES.filter((scope) => !granted.has(scope));
 };
 
 export const getRequiredChatEnv = (key: string) => {

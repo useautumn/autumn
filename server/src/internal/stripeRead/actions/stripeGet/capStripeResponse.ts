@@ -1,7 +1,13 @@
 const MAX_RESPONSE_BYTES = 200_000;
 const TRUNCATION_NOTE = `Response exceeded ${MAX_RESPONSE_BYTES} bytes and was truncated; narrow the request with params (limit, filters) or fewer pages.`;
 
-type StripeList = { object: "list"; data: unknown[]; has_more: boolean };
+type StripeList = {
+	object: "list" | "search_result";
+	data: unknown[];
+	has_more: boolean;
+};
+
+const LIST_OBJECTS = new Set(["list", "search_result"]);
 
 const byteLength = (value: unknown) =>
 	Buffer.byteLength(JSON.stringify(value) ?? "");
@@ -9,7 +15,7 @@ const byteLength = (value: unknown) =>
 const isStripeList = (body: unknown): body is StripeList =>
 	typeof body === "object" &&
 	body !== null &&
-	(body as { object?: unknown }).object === "list" &&
+	LIST_OBJECTS.has(String((body as { object?: unknown }).object)) &&
 	Array.isArray((body as { data?: unknown }).data);
 
 const truncateList = ({ list }: { list: StripeList }) => {

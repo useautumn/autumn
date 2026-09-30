@@ -4,6 +4,7 @@ import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStrip
 import { payStripeInvoiceOutOfBand } from "@/external/stripe/invoices/operations/payStripeInvoiceOutOfBand";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
+import { assertInvoiceNotReissued } from "../invoiceUtils/assertInvoiceNotReissued";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 
 /** Marks a Stripe invoice paid without charging, then mirrors the result to our row. */
@@ -38,6 +39,8 @@ export const payInvoiceOutOfBand = async ({
 		invoiceId: row.invoice.stripe_id,
 		expand: [],
 	});
+
+	assertInvoiceNotReissued({ invoiceId, stripeInvoice });
 
 	if (stripeInvoice.status !== "open" && stripeInvoice.status !== "paid") {
 		throw new RecaseError({

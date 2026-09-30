@@ -99,9 +99,16 @@ export const stripeGet = async ({
 		next = nextPageRequest({ page, path, params });
 	}
 
+	const isSearch = first.object === "search_result";
+	const searchCursor = isSearch ? next?.params?.page : undefined;
 	return capStripeResponse({
 		body: redactStripeResponse({
-			body: { object: "list", data, has_more: Boolean(next) },
+			body: {
+				object: isSearch ? "search_result" : "list",
+				data,
+				has_more: Boolean(next),
+				...(searchCursor ? { next_page: searchCursor } : {}),
+			},
 		}),
 	});
 };

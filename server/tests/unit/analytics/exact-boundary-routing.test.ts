@@ -17,10 +17,22 @@ test("rollup totals read complete hours and one exact raw edge range", () => {
 			"timestamp >= {start_date:DateTime} AND timestamp <= {end_date:DateTime}",
 		);
 		expect(query).toContain(
-			"timestamp < full_hours_start OR timestamp >= full_hours_end",
+			"{start_date:DateTime} < full_hours_start AND timestamp < full_hours_start",
 		);
+		expect(query).toContain("NOT end_is_live AND timestamp >= full_hours_end");
 		expect(query.match(/FROM events\s/g)?.length).toBe(1);
 	}
+});
+
+test("a live end reads its open hour from the rollup instead of raw events", () => {
+	const query = buildCountAndSumQuery({
+		source: "org_hourly",
+		aggregateAll: true,
+	});
+	expect(query).toContain(
+		"{end_date:DateTime} >= now() - INTERVAL 30 SECOND AS end_is_live",
+	);
+	expect(query).toContain("addHours(toStartOfHour({end_date:DateTime}), 1)");
 });
 
 test("raw edges preserve customer and entity scope without restricting org totals", () => {

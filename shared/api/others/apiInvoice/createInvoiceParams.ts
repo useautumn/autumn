@@ -170,6 +170,12 @@ export const InvoicePlanParamsSchema = z
 	})
 	.strict();
 
+/** How far a new invoice advances: left editable, opened silently, or opened and sent. */
+export const InvoiceIssueMethodSchema = z.enum(["draft", "finalize", "send"]);
+
+const ISSUE_METHOD_DESCRIPTION =
+	"draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.";
+
 export const CreateInvoiceParamsSchema = z
 	.object({
 		customer_id: z.string().meta({
@@ -211,6 +217,9 @@ export const CreateInvoiceParamsSchema = z
 		preview: z.boolean().optional().meta({
 			description:
 				"If true, returns the calculated lines and totals without creating an invoice.",
+		}),
+		issue_method: InvoiceIssueMethodSchema.optional().meta({
+			description: ISSUE_METHOD_DESCRIPTION,
 		}),
 	})
 	.strict()
@@ -296,4 +305,5 @@ export type CreateInvoicePreview = z.infer<typeof CreateInvoicePreviewSchema>;
 export type CreateInvoicePreviewLine = z.infer<
 	typeof CreateInvoicePreviewLineSchema
 >;
+export type InvoiceIssueMethod = z.infer<typeof InvoiceIssueMethodSchema>;
 export type CreateInvoiceResponse = z.infer<typeof CreateInvoiceResponseSchema>;
