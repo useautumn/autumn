@@ -2,61 +2,88 @@ import {
 	AccordionContent,
 	AccordionItem,
 	AccordionTrigger,
+	Skeleton,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
+import { cn } from "@/lib/utils";
 import type {
 	ReviewChangeSection,
 	ReviewChangeSystem,
 } from "../../utils/review/types/reviewChange";
 import { ReviewChangePhaseBlock } from "./ReviewChangePhaseBlock";
+import { ReviewChangeSkeletonPhases } from "./ReviewChangeSkeletonPhases";
 import { ReviewStripeIdsPopover } from "./ReviewStripeIdsPopover";
 import { ReviewSystemMark } from "./ReviewSystemMark";
 
+const hasContent = (section: ReviewChangeSection) =>
+	section.phases.length > 0 || Boolean(section.stripeIds?.length);
+
+/** Renders a skeleton in the same slots until `section` resolves, so nothing shifts on load. */
 export function ReviewChangeGroup({
 	value,
 	system,
 	title,
 	section,
+	placeholderRowCounts = [],
 }: {
 	value: string;
 	system: ReviewChangeSystem;
 	title: string;
-	section: ReviewChangeSection;
+	section?: ReviewChangeSection;
+	placeholderRowCounts?: number[];
 }) {
-	const showsStatus = section.phases.some((phase) =>
-		phase.rows.some(
-			(row) => row.status || row.items?.some((item) => item.status),
+	const showsStatus = Boolean(
+		section?.phases.some((phase) =>
+			phase.rows.some(
+				(row) => row.status || row.items?.some((item) => item.status),
+			),
 		),
 	);
 
+	const isEmpty = section ? !hasContent(section) : false;
+
 	return (
-		<AccordionItem value={value} className="border-none">
-			<AccordionTrigger className="h-[42px] items-center gap-[9px] rounded-none py-0 hover:no-underline [&>svg]:translate-y-0">
+		<AccordionItem value={value} disabled={isEmpty} className="border-none">
+			<AccordionTrigger
+				className={cn(
+					"h-[42px] items-center gap-[9px] rounded-none py-0 hover:no-underline [&>svg]:translate-y-0",
+					isEmpty &&
+						"disabled:opacity-100 data-disabled:opacity-100 [&>svg]:invisible",
+				)}
+			>
 				<ReviewSystemMark system={system} />
 				<span className="text-sm font-medium text-foreground">{title}</span>
-				<ReviewStripeIdsPopover stripeIds={section.stripeIds ?? []} />
+				<ReviewStripeIdsPopover stripeIds={section?.stripeIds ?? []} />
 				<span className="flex-1" />
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<span className="min-w-0 truncate text-xs font-normal text-tertiary-foreground">
-							{section.summary}
-						</span>
-					</TooltipTrigger>
-					<TooltipContent side="top">{section.summary}</TooltipContent>
-				</Tooltip>
+				{section ? (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="min-w-0 truncate text-xs font-normal text-tertiary-foreground">
+								{section.summary}
+							</span>
+						</TooltipTrigger>
+						<TooltipContent side="top">{section.summary}</TooltipContent>
+					</Tooltip>
+				) : (
+					<Skeleton className="h-3.5 w-24 rounded-sm" />
+				)}
 			</AccordionTrigger>
 			<AccordionContent className="pb-4">
-				<div className="flex flex-col gap-4">
-					{section.phases.map((phase) => (
-						<ReviewChangePhaseBlock
-							key={phase.key}
-							phase={phase}
-							showsStatus={showsStatus}
-						/>
-					))}
-				</div>
+				{section ? (
+					<div className="flex flex-col gap-4">
+						{section.phases.map((phase) => (
+							<ReviewChangePhaseBlock
+								key={phase.key}
+								phase={phase}
+								showsStatus={showsStatus}
+							/>
+						))}
+					</div>
+				) : (
+					<ReviewChangeSkeletonPhases rowCounts={placeholderRowCounts} />
+				)}
 			</AccordionContent>
 		</AccordionItem>
 	);

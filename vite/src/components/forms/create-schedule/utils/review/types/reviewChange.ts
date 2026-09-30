@@ -1,3 +1,4 @@
+import type { StatusGlyph, StatusTone } from "@autumn/ui";
 import type { ReviewChangeLine } from "../planChangeLines";
 
 export type ReviewChangeSystem = "autumn" | "stripe";
@@ -16,6 +17,8 @@ export type ReviewChangeStatus =
 export type ReviewChangeValue = {
 	amount: string;
 	suffix?: string;
+	/** A billing basis like "Usage-based" rather than a charge. */
+	isBasis?: boolean;
 };
 
 export type ReviewChangeRow = {
@@ -27,6 +30,8 @@ export type ReviewChangeRow = {
 	changes?: ReviewChangeLine[];
 	trialEndsAt?: number;
 	value?: ReviewChangeValue;
+	/** Type icon shown before the title, e.g. a Stripe item's feature type. */
+	icon?: { tone: StatusTone; glyph: StatusGlyph };
 	/** Rows grouped under this one, e.g. the Stripe items billed for a plan. */
 	items?: ReviewChangeRow[];
 };

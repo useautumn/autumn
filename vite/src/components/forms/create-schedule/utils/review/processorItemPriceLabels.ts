@@ -67,7 +67,8 @@ export const processorItemValue = (
 			suffix: priceIntervalSuffix(price),
 		};
 	}
-	if (price.usage_type === "metered") return { amount: "Usage-based" };
-	if (price.tiers_mode) return { amount: "Tiered" };
+	if (price.usage_type === "metered")
+		return { amount: "Usage-based", isBasis: true };
+	if (price.tiers_mode) return { amount: "Tiered", isBasis: true };
 	return undefined;
 };

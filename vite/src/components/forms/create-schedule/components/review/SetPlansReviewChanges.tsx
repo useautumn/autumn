@@ -1,56 +1,66 @@
 import { Accordion } from "@autumn/ui";
-import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../../context/CreateScheduleFormProvider";
 import { useSetPlansReviewSections } from "../../hooks/useSetPlansReviewSections";
+import type { ReviewChangeSystem } from "../../utils/review/types/reviewChange";
 import { ReviewChangeGroup } from "./ReviewChangeGroup";
 import { ReviewWarnings } from "./ReviewWarnings";
 
+const REVIEW_GROUPS: {
+	value: string;
+	system: ReviewChangeSystem;
+	title: string;
+	sectionKey: "plans" | "balances" | "processor";
+}[] = [
+	{ value: "plans", system: "autumn", title: "Plans", sectionKey: "plans" },
+	{
+		value: "balances",
+		system: "autumn",
+		title: "Balances",
+		sectionKey: "balances",
+	},
+	{
+		value: "subscription",
+		system: "stripe",
+		title: "Subscription",
+		sectionKey: "processor",
+	},
+];
+
 const DEFAULT_OPEN_GROUPS = ["plans"];
 
+/** Every group always renders, as a skeleton until the first preview lands, so the sheet never jumps. */
 export function SetPlansReviewChanges() {
-	const { isPreviewLoading } = useCreateScheduleFormContext();
+	const { isPreviewLoading, formValues } = useCreateScheduleFormContext();
 	const sections = useSetPlansReviewSections();
-	if (!sections) return null;
+	if (!sections && !isPreviewLoading) return null;
 
-	const { warnings, plans, balances, processor } = sections;
-	const groups: ComponentProps<typeof ReviewChangeGroup>[] = [
-		{ value: "plans", system: "autumn", title: "Plans", section: plans },
-		{
-			value: "balances",
-			system: "autumn",
-			title: "Balances",
-			section: balances,
-		},
-		{
-			value: "subscription",
-			system: "stripe",
-			title: "Subscription",
-			section: processor,
-		},
-	];
-	const visibleGroups = groups.filter(
-		({ section }) =>
-			section === plans ||
-			section.phases.length > 0 ||
-			Boolean(section.stripeIds?.length),
+	const placeholderRowCounts = formValues.phases.map((phase) =>
+		Math.max(phase.plans.length, 1),
 	);
 
 	return (
 		<div
 			className={cn(
 				"flex flex-col transition-opacity",
-				isPreviewLoading && "opacity-60",
+				sections && isPreviewLoading && "opacity-60",
 			)}
 		>
-			<ReviewWarnings warnings={warnings} />
+			{sections && <ReviewWarnings warnings={sections.warnings} />}
 			<Accordion
 				type="multiple"
 				defaultValue={DEFAULT_OPEN_GROUPS}
 				className="px-4 pt-1"
 			>
-				{visibleGroups.map((group) => (
-					<ReviewChangeGroup key={group.value} {...group} />
+				{REVIEW_GROUPS.map(({ sectionKey, ...group }) => (
+					<ReviewChangeGroup
+						key={group.value}
+						{...group}
+						section={sections?.[sectionKey]}
+						placeholderRowCounts={
+							sectionKey === "plans" ? placeholderRowCounts : undefined
+						}
+					/>
 				))}
 			</Accordion>
 		</div>
