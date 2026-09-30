@@ -4,7 +4,6 @@ import {
 	getMigrationItemRun,
 } from "./getMigrationItemRun.js";
 import { listItemRunCountRows } from "./listItemRunCountRows.js";
-import { listMigrationIdsWithLiveRuns } from "./listMigrationIdsWithLiveRuns.js";
 import {
 	getMigrationItemRunCounts,
 	listMigrationItemRunCountsByRun,
@@ -25,7 +24,6 @@ export const migrationItemRunRepo = {
 	listCountsByRun: listMigrationItemRunCountsByRun,
 	listCountRows: listItemRunCountRows,
 	listForItems: listMigrationItemRunsForItems,
-	listIdsWithLiveRuns: listMigrationIdsWithLiveRuns,
 	markSucceeded: markMigrationItemRunSucceeded,
 	markSkipped: markMigrationItemRunSkipped,
 	markFailed: markMigrationItemRunFailed,
