@@ -68,6 +68,10 @@ class ListInvoicesParamsTypedDict(TypedDict):
     r"""Filter invoices to a single customer by ID."""
     entity_id: NotRequired[str]
     r"""Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer."""
+    invoice_id: NotRequired[str]
+    r"""Filter to the invoice with this Autumn invoice ID (e.g. inv_2b3c4d5e6f7g8h)."""
+    stripe_id: NotRequired[str]
+    r"""Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H)."""
     status: NotRequired[List[ListInvoicesStatus]]
     r"""Filter by invoice status (draft, open, paid, void, uncollectible)."""
     processor_types: NotRequired[List[ListInvoicesProcessorTypeRequestBody]]
@@ -87,6 +91,12 @@ class ListInvoicesParams(BaseModel):
     entity_id: Optional[str] = None
     r"""Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer."""
 
+    invoice_id: Optional[str] = None
+    r"""Filter to the invoice with this Autumn invoice ID (e.g. inv_2b3c4d5e6f7g8h)."""
+
+    stripe_id: Optional[str] = None
+    r"""Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H)."""
+
     status: Optional[List[ListInvoicesStatus]] = None
     r"""Filter by invoice status (draft, open, paid, void, uncollectible)."""
 
@@ -101,6 +111,8 @@ class ListInvoicesParams(BaseModel):
                 "limit",
                 "customer_id",
                 "entity_id",
+                "invoice_id",
+                "stripe_id",
                 "status",
                 "processor_types",
             ]

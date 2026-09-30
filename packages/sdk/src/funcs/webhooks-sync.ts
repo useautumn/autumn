@@ -27,7 +27,7 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+ * Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone, unless `skip_deletions` is false: then every webhook not listed is deleted, including ones made in the dashboard. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
  */
 export function webhooksSync(
   client: AutumnCore,

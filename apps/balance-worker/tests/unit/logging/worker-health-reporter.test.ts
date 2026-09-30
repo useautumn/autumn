@@ -167,3 +167,41 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	"the health line says whether the group is joined, and each partition how far its commands are behind",
+	() => {
+		const { reporter, health, logs, timers } = createHealthReporterFixture();
+		try {
+			reporter.start();
+			health.status = "running";
+			health.consumer = { status: "rejoining", rejoinAttempts: 3 };
+			health.partitions = [
+				partitionHealth({
+					commands: {
+						consumedNextOffset: 4_812n,
+						highWatermark: 5_000n,
+						lag: 188n,
+					},
+				}),
+			];
+			timers[0].run();
+			expect(logs[1][0]).toMatchObject({
+				event: "balance_worker.health",
+				data: { consumer: { status: "rejoining", rejoinAttempts: 3 } },
+			});
+			expect(logs[2][0]).toMatchObject({
+				event: "balance_worker.partition_health",
+				data: {
+					commands: {
+						consumedNextOffset: "4812",
+						highWatermark: "5000",
+						lag: "188",
+					},
+				},
+			});
+		} finally {
+			reporter.stop();
+		}
+	},
+);

@@ -1,4 +1,6 @@
 import {
+	Alert,
+	AlertDescription,
 	Button,
 	Checkbox,
 	Sheet,
@@ -116,14 +118,14 @@ export function RevenueCatSyncSheet({
 				/>
 
 				<div className="px-4 pt-3">
-					<div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-amber-600 dark:text-amber-500">
-						<WarningIcon className="mt-0.5 h-4 w-4 shrink-0" weight="fill" />
-						<p className="text-[12px] leading-snug">
+					<Alert variant="warning">
+						<WarningIcon weight="fill" />
+						<AlertDescription>
 							Test Store prices are set automatically from each plan's price.
 							Real App Store / Google Play prices are owned by Apple/Google —
 							set or confirm those in App Store Connect / Play Console.
-						</p>
-					</div>
+						</AlertDescription>
+					</Alert>
 				</div>
 
 				<div className="flex-1 overflow-y-auto px-4 pt-3">

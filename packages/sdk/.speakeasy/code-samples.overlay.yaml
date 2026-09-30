@@ -129,6 +129,31 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/balances.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.balances.list({
+                customerId: "cus_123",
+                statuses: [
+                  "expired",
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/balances.track"]["post"]
     update:
       x-codeSamples:
@@ -1067,6 +1092,28 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.finalize"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.finalize({
+                invoiceId: "inv_2b3c4d5e6f7g8h",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/invoices.insert"]["post"]
     update:
       x-codeSamples:
@@ -1604,6 +1651,32 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/purchases.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.customers.listPurchases({
+                customerId: "cus_123",
+                statuses: [
+                  "active",
+                  "expired",
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/referral_programs.create"]["post"]
     update:
       x-codeSamples:
@@ -1991,6 +2064,31 @@ actions:
 
             async function run() {
               const result = await autumn.sandboxes.reset({});
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/subscriptions.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.customers.listSubscriptions({
+                customerId: "cus_123",
+                statuses: [
+                  "expired",
+                ],
+              });
 
               console.log(result);
             }

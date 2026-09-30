@@ -1,4 +1,9 @@
+import {
+	BALANCE_WORKER_LOG_END_SETTLE_ATTEMPTS,
+	BALANCE_WORKER_LOG_END_SETTLE_DELAY_MS,
+} from "@autumn/env/balanceWorkerConstants";
 import { type PartitionPosition, readPartitionLogRange } from "@autumn/kafka";
+import { sleepWithSignal } from "../../../runtime/bootstrap/read/loadPartitionCheckpoint.js";
 import type { PartitionLogRange } from "../../../runtime/bootstrap/types/partitionBootstrap.js";
 import type { RuntimeUnavailableListener } from "../../../runtime/types/partitionRuntime.js";
 import { PartitionProgressNotFoundError } from "../../../state/stateStoreErrors.js";
@@ -102,14 +107,16 @@ async function catchUpPartition({
 	const storedNextOffset = ctx.stateStore.readNextOffset({ topic, partition });
 	if (storedNextOffset === null)
 		throw new PartitionProgressNotFoundError({ topic, partition });
-	if (storedNextOffset > targetNextOffset) {
-		throw new StateAheadOfKafkaLogEndError({
-			topic,
-			partition,
-			storedNextOffset,
-			logEndOffset: targetNextOffset,
-		});
-	}
+	const catchUpTarget =
+		storedNextOffset > targetNextOffset
+			? await settleLogEnd({
+					ctx,
+					state,
+					storedNextOffset,
+					staleLogEndOffset: targetNextOffset,
+					signal,
+				})
+			: targetNextOffset;
 	const floor = fromBookmark
 		? storedNextOffset
 		: await readReplayFloor({ ctx, state, bookmark: storedNextOffset });
@@ -126,7 +133,7 @@ async function catchUpPartition({
 		await ctx.positionTracker.waitUntil({
 			topic,
 			partition,
-			nextOffset: targetNextOffset,
+			nextOffset: catchUpTarget,
 			signal,
 		});
 	} finally {
@@ -134,6 +141,65 @@ async function catchUpPartition({
 	}
 	if (signal.aborted) throw signal.reason;
 	state.status = "following";
+}
+
+/** The state was hydrated from a bookmark the owner wrote after the log end was read, so the
+ *  owner's latest record is usually one high-watermark update away. The log end is re-read
+ *  until it reaches the stored offset; state that stays ahead is a real divergence. */
+async function settleLogEnd({
+	ctx,
+	state,
+	storedNextOffset,
+	staleLogEndOffset,
+	signal,
+}: {
+	ctx: PartitionReplayContext;
+	state: PartitionReplayState;
+	storedNextOffset: bigint;
+	staleLogEndOffset: bigint;
+	signal: AbortSignal;
+}): Promise<bigint> {
+	const { topic, partition } = state.position;
+	const { attempts, delayMs } = ctx.logEndSettle ?? {
+		attempts: BALANCE_WORKER_LOG_END_SETTLE_ATTEMPTS,
+		delayMs: BALANCE_WORKER_LOG_END_SETTLE_DELAY_MS,
+	};
+	let logEndOffset = staleLogEndOffset;
+	let attempt = 0;
+	while (attempt < attempts) {
+		attempt += 1;
+		await sleepWithSignal({ delayMs, signal });
+		const range = await readReplayLogRange({
+			ctx,
+			state,
+			topic,
+			partition,
+			signal,
+		});
+		logEndOffset = range.logEndOffset;
+		if (logEndOffset < storedNextOffset) continue;
+		ctx.logger?.warn(
+			{
+				event: "balance_worker.log_end_settled",
+				data: {
+					topic,
+					partition,
+					storedNextOffset: storedNextOffset.toString(),
+					staleLogEndOffset: staleLogEndOffset.toString(),
+					logEndOffset: logEndOffset.toString(),
+					attempt,
+				},
+			},
+			`Kafka log end for ${topic}[${partition}] caught up with stored state after ${attempt} re-read(s)`,
+		);
+		return logEndOffset;
+	}
+	throw new StateAheadOfKafkaLogEndError({
+		topic,
+		partition,
+		storedNextOffset,
+		logEndOffset,
+	});
 }
 
 function validateReplayPosition({ topic, partition }: PartitionPosition): void {

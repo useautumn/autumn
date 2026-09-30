@@ -46,9 +46,9 @@ export type SyncWebhooksWebhookRequest = {
    */
   url: string;
   /**
-   * The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+   * The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.
    */
-  events: Array<SyncWebhooksEvent>;
+  events?: Array<SyncWebhooksEvent> | undefined;
   /**
    * A note for your own reference.
    */
@@ -61,9 +61,13 @@ export type SyncWebhooksWebhookRequest = {
 
 export type SyncWebhooksSyncWebhooksParams = {
   /**
-   * The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+   * The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.
    */
   webhooks: Array<SyncWebhooksWebhookRequest>;
+  /**
+   * When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.
+   */
+  skipDeletions?: boolean | undefined;
 };
 
 export type SyncWebhooksWebhookResponse = {
@@ -80,7 +84,7 @@ export type SyncWebhooksWebhookResponse = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -123,7 +127,7 @@ export type SyncWebhooksResponse = {
    */
   secrets: Array<Secret>;
   /**
-   * Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be.
+   * Webhooks that couldn't be created, updated or deleted. The others were still applied; the request fails only when none could be.
    */
   errors: Array<SyncWebhooksError>;
 };
@@ -137,7 +141,7 @@ export const SyncWebhooksEvent$outboundSchema: z.ZodMiniEnum<
 export type SyncWebhooksWebhookRequest$Outbound = {
   id: string;
   url: string;
-  events: Array<string>;
+  events?: Array<string> | undefined;
   description?: string | undefined;
   disabled?: boolean | undefined;
 };
@@ -149,7 +153,7 @@ export const SyncWebhooksWebhookRequest$outboundSchema: z.ZodMiniType<
 > = z.object({
   id: z.string(),
   url: z.string(),
-  events: z.array(SyncWebhooksEvent$outboundSchema),
+  events: z.optional(z.array(SyncWebhooksEvent$outboundSchema)),
   description: z.optional(z.string()),
   disabled: z.optional(z.boolean()),
 });
@@ -165,15 +169,24 @@ export function syncWebhooksWebhookRequestToJSON(
 /** @internal */
 export type SyncWebhooksSyncWebhooksParams$Outbound = {
   webhooks: Array<SyncWebhooksWebhookRequest$Outbound>;
+  skip_deletions: boolean;
 };
 
 /** @internal */
 export const SyncWebhooksSyncWebhooksParams$outboundSchema: z.ZodMiniType<
   SyncWebhooksSyncWebhooksParams$Outbound,
   SyncWebhooksSyncWebhooksParams
-> = z.object({
-  webhooks: z.array(z.lazy(() => SyncWebhooksWebhookRequest$outboundSchema)),
-});
+> = z.pipe(
+  z.object({
+    webhooks: z.array(z.lazy(() => SyncWebhooksWebhookRequest$outboundSchema)),
+    skipDeletions: z._default(z.boolean(), true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      skipDeletions: "skip_deletions",
+    });
+  }),
+);
 
 export function syncWebhooksSyncWebhooksParamsToJSON(
   syncWebhooksSyncWebhooksParams: SyncWebhooksSyncWebhooksParams,

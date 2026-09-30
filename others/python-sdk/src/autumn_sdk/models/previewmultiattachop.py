@@ -1564,8 +1564,9 @@ class PreviewMultiAttachAttachDiscount(BaseModel):
 PreviewMultiAttachBillingBehavior = Literal[
     "prorate_immediately",
     "none",
+    "bill_difference",
 ]
-r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
+r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
 
 PreviewMultiAttachRedirectMode = Literal[
@@ -1958,7 +1959,7 @@ class PreviewMultiAttachParamsTypedDict(TypedDict):
     discounts: NotRequired[List[PreviewMultiAttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     billing_behavior: NotRequired[PreviewMultiAttachBillingBehavior]
-    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
     billing_cycle_anchor: Literal["now"]
     r"""Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request."""
     success_url: NotRequired[str]
@@ -2002,7 +2003,7 @@ class PreviewMultiAttachParams(BaseModel):
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
     billing_behavior: Optional[PreviewMultiAttachBillingBehavior] = None
-    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
     billing_cycle_anchor: Annotated[
         Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],

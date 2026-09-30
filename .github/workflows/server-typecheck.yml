@@ -22,8 +22,9 @@ jobs:
             server:
               - "server/**"
               - "shared/**"
-              - "package.json"
+              - "**/package.json"
               - "bun.lock"
+              - ".github/scripts/check-workspaces.ts"
               - ".github/workflows/server-typecheck.yml"
 
   typecheck:
@@ -40,6 +41,10 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
+
+      - name: Check workspace list
+        working-directory: .github/scripts
+        run: bun check-workspaces.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

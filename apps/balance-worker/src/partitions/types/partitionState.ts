@@ -34,6 +34,11 @@ export type PartitionsState = {
 	handoffSuccessors: Map<number, PartitionSuccessor>;
 	terminalHealthByPartition: Map<number, OwnedPartitionHealth>;
 	partitionRetryTimers: Map<number, ReturnType<typeof setTimeout>>;
+	/** Refusals since the group last dealt this worker partitions, and the pending rejoin. */
+	consumerRejoin: {
+		attempts: number;
+		timer: ReturnType<typeof setTimeout> | null;
+	};
 	status: "created" | "running" | "stopping" | "stopped";
 	retirementFailed: boolean;
 	generation: number;

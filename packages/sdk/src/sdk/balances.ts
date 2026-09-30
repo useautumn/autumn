@@ -5,6 +5,7 @@
 import { balancesCreate } from "../funcs/balances-create.js";
 import { balancesDelete } from "../funcs/balances-delete.js";
 import { balancesFinalize } from "../funcs/balances-finalize.js";
+import { balancesList } from "../funcs/balances-list.js";
 import { balancesUpdate } from "../funcs/balances-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -19,6 +20,20 @@ export class Balances extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.CreateBalanceResponse> {
     return unwrapAsync(balancesCreate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Lists individual balances (one row per grant) across customers, live or expired: plan balances, standalone balances, top-ups, and pooled balances. Pages may hold fewer than `limit` rows while `has_more` is true.
+   */
+  async list(
+    request: models.ListBalancesParams,
+    options?: RequestOptions,
+  ): Promise<models.ListBalancesResponse> {
+    return unwrapAsync(balancesList(
       this,
       request,
       options,

@@ -16,7 +16,7 @@ import { cn } from "@autumn/ui/lib/utils";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type SearchableSelectFooter =
 	| ReactNode
@@ -86,13 +86,12 @@ export function SearchableSelect<T>({
 }: SearchableSelectProps<T>) {
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const open = controlledOpen ?? uncontrolledOpen;
-	const setOpen = useCallback(
-		(next: boolean) => {
-			setUncontrolledOpen(next);
-			onOpenChange?.(next);
-		},
-		[onOpenChange],
-	);
+	const onOpenChangeRef = useRef(onOpenChange);
+	onOpenChangeRef.current = onOpenChange;
+	const setOpen = useCallback((next: boolean) => {
+		setUncontrolledOpen(next);
+		onOpenChangeRef.current?.(next);
+	}, []);
 
 	useEffect(() => {
 		if (!defaultOpen) return;

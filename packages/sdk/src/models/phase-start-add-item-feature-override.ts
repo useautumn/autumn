@@ -22,14 +22,15 @@ import {
   UnscheduledPlanItemPlanItem,
   UnscheduledPlanItemPlanItem$Outbound,
   UnscheduledPlanItemPlanItem$outboundSchema,
+  UnscheduledPlanLicenseQuantity,
+  UnscheduledPlanLicenseQuantity$Outbound,
+  UnscheduledPlanLicenseQuantity$outboundSchema,
   UnscheduledPlanPlanItemFilter,
   UnscheduledPlanPlanItemFilter$Outbound,
   UnscheduledPlanPlanItemFilter$outboundSchema,
   UnscheduledPlanUpsertLicenseBasePrice,
   UnscheduledPlanUpsertLicenseBasePrice$Outbound,
   UnscheduledPlanUpsertLicenseBasePrice$outboundSchema,
-  UnscheduledPlanUpsertLicenseExpiryDurationType,
-  UnscheduledPlanUpsertLicenseExpiryDurationType$outboundSchema,
   UnscheduledPlanUpsertLicensePrice,
   UnscheduledPlanUpsertLicensePrice$Outbound,
   UnscheduledPlanUpsertLicensePrice$outboundSchema,
@@ -42,7 +43,21 @@ import {
   UnscheduledPlanUpsertLicenseThresholdBilling,
   UnscheduledPlanUpsertLicenseThresholdBilling$Outbound,
   UnscheduledPlanUpsertLicenseThresholdBilling$outboundSchema,
-} from "./unscheduled-plan-upsert-license-expiry-duration-type.js";
+} from "./unscheduled-plan-upsert-license-proration.js";
+
+/**
+ * When rolled over units expire.
+ */
+export const UnscheduledPlanUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type UnscheduledPlanUpsertLicenseExpiryDurationType = ClosedEnum<
+  typeof UnscheduledPlanUpsertLicenseExpiryDurationType
+>;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
@@ -595,6 +610,10 @@ export type UnscheduledPlan = {
    */
   featureQuantities?: Array<UnscheduledPlanFeatureQuantity> | undefined;
   /**
+   * Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.
+   */
+  licenseQuantities?: Array<UnscheduledPlanLicenseQuantity> | undefined;
+  /**
    * Optional explicit plan version to schedule.
    */
   version?: number | undefined;
@@ -655,6 +674,17 @@ export type PhaseStartFeatureQuantity = {
    * Whether the customer can adjust the quantity.
    */
   adjustable?: boolean | undefined;
+};
+
+export type PhaseStartLicenseQuantity = {
+  /**
+   * The license plan to set seat quantity for.
+   */
+  licensePlanId: string;
+  /**
+   * Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid.
+   */
+  quantity: number;
 };
 
 /**
@@ -1835,69 +1865,11 @@ export type PhaseStartAddItemFeatureOverride = {
   markups?: PhaseStartAddItemMarkups | undefined;
 };
 
-/**
- * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
- */
-export type PhaseStartAddItemPlanItem = {
-  /**
-   * Bills this many feature units when outstanding overage reaches it.
-   */
-  thresholdBilling?: PhaseStartAddItemThresholdBilling | null | undefined;
-  /**
-   * The ID of the feature to configure.
-   */
-  featureId: string;
-  /**
-   * Number of free units included. Balance resets to this each interval for consumable features.
-   */
-  included?: number | undefined;
-  /**
-   * If true, customer has unlimited access to this feature.
-   */
-  unlimited?: boolean | undefined;
-  /**
-   * Whether entity-level grants contribute to a shared customer balance.
-   */
-  pooled?: boolean | undefined;
-  /**
-   * Reset configuration for consumable features. Omit for non-consumable features like seats.
-   */
-  reset?: PhaseStartAddItemReset | undefined;
-  /**
-   * Pricing for usage beyond included units. Omit for free features.
-   */
-  price?: PhaseStartAddItemPrice | undefined;
-  /**
-   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
-   */
-  proration?: PhaseStartAddItemProration | undefined;
-  /**
-   * Rollover config for unused units. If set, unused included units carry over.
-   */
-  rollover?: PhaseStartAddItemRollover | undefined;
-  /**
-   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
-   */
-  expiry?: PhaseStartAddItemExpiry | undefined;
-  /**
-   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
-   */
-  featureOverride?: PhaseStartAddItemFeatureOverride | undefined;
-};
-
-/**
- * Match items with this billing method (prepaid or usage_based).
- */
-export const PhaseStartRemoveItemBillingMethod = {
-  Prepaid: "prepaid",
-  UsageBased: "usage_based",
-} as const;
-/**
- * Match items with this billing method (prepaid or usage_based).
- */
-export type PhaseStartRemoveItemBillingMethod = ClosedEnum<
-  typeof PhaseStartRemoveItemBillingMethod
->;
+/** @internal */
+export const UnscheduledPlanUpsertLicenseExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof UnscheduledPlanUpsertLicenseExpiryDurationType> = z.enum(
+    UnscheduledPlanUpsertLicenseExpiryDurationType,
+  );
 
 /** @internal */
 export type UnscheduledPlanUpsertLicenseRollover$Outbound = {
@@ -3234,6 +3206,9 @@ export type UnscheduledPlan$Outbound = {
   feature_quantities?:
     | Array<UnscheduledPlanFeatureQuantity$Outbound>
     | undefined;
+  license_quantities?:
+    | Array<UnscheduledPlanLicenseQuantity$Outbound>
+    | undefined;
   version?: number | undefined;
   customize?: UnscheduledPlanCustomize$Outbound | undefined;
   subscription_id?: string | undefined;
@@ -3250,6 +3225,9 @@ export const UnscheduledPlan$outboundSchema: z.ZodMiniType<
     featureQuantities: z.optional(
       z.array(UnscheduledPlanFeatureQuantity$outboundSchema),
     ),
+    licenseQuantities: z.optional(
+      z.array(UnscheduledPlanLicenseQuantity$outboundSchema),
+    ),
     version: z.optional(z.number()),
     customize: z.optional(
       z.lazy(() => UnscheduledPlanCustomize$outboundSchema),
@@ -3261,6 +3239,7 @@ export const UnscheduledPlan$outboundSchema: z.ZodMiniType<
       planId: "plan_id",
       entityId: "entity_id",
       featureQuantities: "feature_quantities",
+      licenseQuantities: "license_quantities",
       subscriptionId: "subscription_id",
     });
   }),
@@ -3346,6 +3325,36 @@ export function phaseStartFeatureQuantityToJSON(
 ): string {
   return JSON.stringify(
     PhaseStartFeatureQuantity$outboundSchema.parse(phaseStartFeatureQuantity),
+  );
+}
+
+/** @internal */
+export type PhaseStartLicenseQuantity$Outbound = {
+  license_plan_id: string;
+  quantity: number;
+};
+
+/** @internal */
+export const PhaseStartLicenseQuantity$outboundSchema: z.ZodMiniType<
+  PhaseStartLicenseQuantity$Outbound,
+  PhaseStartLicenseQuantity
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+    quantity: z.int(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+    });
+  }),
+);
+
+export function phaseStartLicenseQuantityToJSON(
+  phaseStartLicenseQuantity: PhaseStartLicenseQuantity,
+): string {
+  return JSON.stringify(
+    PhaseStartLicenseQuantity$outboundSchema.parse(phaseStartLicenseQuantity),
   );
 }
 
@@ -5868,71 +5877,3 @@ export function phaseStartAddItemFeatureOverrideToJSON(
     ),
   );
 }
-
-/** @internal */
-export type PhaseStartAddItemPlanItem$Outbound = {
-  threshold_billing?:
-    | PhaseStartAddItemThresholdBilling$Outbound
-    | null
-    | undefined;
-  feature_id: string;
-  included?: number | undefined;
-  unlimited?: boolean | undefined;
-  pooled: boolean;
-  reset?: PhaseStartAddItemReset$Outbound | undefined;
-  price?: PhaseStartAddItemPrice$Outbound | undefined;
-  proration?: PhaseStartAddItemProration$Outbound | undefined;
-  rollover?: PhaseStartAddItemRollover$Outbound | undefined;
-  expiry?: PhaseStartAddItemExpiry$Outbound | undefined;
-  feature_override?: PhaseStartAddItemFeatureOverride$Outbound | undefined;
-};
-
-/** @internal */
-export const PhaseStartAddItemPlanItem$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemPlanItem$Outbound,
-  PhaseStartAddItemPlanItem
-> = z.pipe(
-  z.object({
-    thresholdBilling: z.optional(
-      z.nullable(
-        z.lazy(() => PhaseStartAddItemThresholdBilling$outboundSchema),
-      ),
-    ),
-    featureId: z.string(),
-    included: z.optional(z.number()),
-    unlimited: z.optional(z.boolean()),
-    pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() => PhaseStartAddItemReset$outboundSchema)),
-    price: z.optional(z.lazy(() => PhaseStartAddItemPrice$outboundSchema)),
-    proration: z.optional(
-      z.lazy(() => PhaseStartAddItemProration$outboundSchema),
-    ),
-    rollover: z.optional(
-      z.lazy(() => PhaseStartAddItemRollover$outboundSchema),
-    ),
-    expiry: z.optional(z.lazy(() => PhaseStartAddItemExpiry$outboundSchema)),
-    featureOverride: z.optional(
-      z.lazy(() => PhaseStartAddItemFeatureOverride$outboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      thresholdBilling: "threshold_billing",
-      featureId: "feature_id",
-      featureOverride: "feature_override",
-    });
-  }),
-);
-
-export function phaseStartAddItemPlanItemToJSON(
-  phaseStartAddItemPlanItem: PhaseStartAddItemPlanItem,
-): string {
-  return JSON.stringify(
-    PhaseStartAddItemPlanItem$outboundSchema.parse(phaseStartAddItemPlanItem),
-  );
-}
-
-/** @internal */
-export const PhaseStartRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartRemoveItemBillingMethod
-> = z.enum(PhaseStartRemoveItemBillingMethod);

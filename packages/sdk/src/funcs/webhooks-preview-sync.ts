@@ -27,7 +27,7 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+ * Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create, update or delete, and which existing ones it would leave alone because the body doesn't list them.
  */
 export function webhooksPreviewSync(
   client: AutumnCore,

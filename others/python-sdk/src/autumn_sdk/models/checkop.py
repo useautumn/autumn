@@ -53,7 +53,7 @@ CheckOverageBehavior = Literal[
 r"""How to handle a lock that exceeds the available balance. \"reject\" (default) returns allowed: false and reserves nothing. \"cap\" reserves only what fits and returns allowed: true. \"overflow\" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here."""
 
 
-class CheckLockTypedDict(TypedDict):
+class LockTypedDict(TypedDict):
     r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
 
     lock_id: str
@@ -66,7 +66,7 @@ class CheckLockTypedDict(TypedDict):
     r"""How to handle a lock that exceeds the available balance. \"reject\" (default) returns allowed: false and reserves nothing. \"cap\" reserves only what fits and returns allowed: true. \"overflow\" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here."""
 
 
-class CheckLock(BaseModel):
+class Lock(BaseModel):
     r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
 
     lock_id: str
@@ -114,7 +114,7 @@ class CheckParamsTypedDict(TypedDict):
     r"""Additional properties to attach to the usage event if send_event is true."""
     send_event: NotRequired[bool]
     r"""If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call."""
-    lock: NotRequired[CheckLockTypedDict]
+    lock: NotRequired[LockTypedDict]
     r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
     with_preview: NotRequired[bool]
     r"""If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls."""
@@ -139,7 +139,7 @@ class CheckParams(BaseModel):
     send_event: Optional[bool] = None
     r"""If true, atomically records a usage event while checking access. The required_balance value is used as the usage amount. Combines check + track in one call."""
 
-    lock: Optional[CheckLock] = None
+    lock: Optional[Lock] = None
     r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
 
     with_preview: Optional[bool] = None
@@ -4487,7 +4487,7 @@ CheckResponse = TypeAliasType(
 
 
 try:
-    CheckLock.model_rebuild()
+    Lock.model_rebuild()
 except NameError:
     pass
 try:

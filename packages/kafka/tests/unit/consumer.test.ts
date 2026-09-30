@@ -1189,3 +1189,38 @@ test("steering a partition after the consumer group is gone is nothing to do, no
 	await other.start();
 	expect(() => other.pausePartition({ partition })).toThrow("connection reset");
 });
+
+test("after kafkajs gave up on the group, restart joins it again on the same listeners; a stopped consumer refuses", async () => {
+	const fixture = createConsumerFixture();
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	expect(fixture.events).toEqual(["connect", "subscribe", "run"]);
+	// kafkajs disconnected itself on the crash; the worker asks to go again.
+	await consumer.restart();
+	expect(fixture.events).toEqual([
+		"connect",
+		"subscribe",
+		"run",
+		"connect",
+		"subscribe",
+		"run",
+	]);
+	await consumer.stop();
+	await expect(consumer.restart()).rejects.toThrow("already stopped");
+	const fresh = createTopicConsumer({
+		ctx: {
+			consumer: createConsumerFixture().consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await expect(fresh.restart()).rejects.toThrow("not started");
+});

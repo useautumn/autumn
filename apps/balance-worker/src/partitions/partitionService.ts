@@ -7,6 +7,7 @@ import {
 	stopHealthRefresh,
 } from "./health/partitionHealth.js";
 import { beginPartitionHandoffs } from "./lifecycle/handOffPartition.js";
+import { clearConsumerRejoin } from "./lifecycle/rejoinConsumer.js";
 import { clearPartitionRetries } from "./lifecycle/retryPartition.js";
 import {
 	detachPartitions,
@@ -18,6 +19,7 @@ import type {
 	PartitionEntry,
 	PartitionsScope,
 } from "./types/partitionState.js";
+import type { PartitionServiceStopReason } from "./types/partitions.js";
 
 export async function startPartitionService({
 	ctx,
@@ -63,6 +65,7 @@ export function stopPartitionService({
 	state.status = "stopping";
 	stopHealthRefresh({ state });
 	clearPartitionRetries({ state });
+	clearConsumerRejoin({ state });
 	state.generation += 1;
 	state.unsubscribePartitionChanges?.();
 	state.unsubscribePartitionChanges = null;
@@ -115,22 +118,24 @@ export function requestPartitionServiceStop({
 	ctx,
 	state,
 	allocationGeneration,
-}: AllocationScope): void {
+	reason,
+}: AllocationScope & { reason: PartitionServiceStopReason }): void {
 	function stopCurrentAllocation(): void {
 		if (!isCurrentAllocation({ state, allocationGeneration })) return;
-		void stopServiceThenNotify({ ctx, state });
+		void stopServiceThenNotify({ ctx, state, reason });
 	}
 	queueMicrotask(stopCurrentAllocation);
 }
 
-/** The worker owns nothing after this and never will again: the entrypoint is told so the process can end. */
+/** The worker owns nothing after this and never will again: the entrypoint is told why, so the process can end. */
 export async function stopServiceThenNotify({
 	ctx,
 	state,
-}: PartitionsScope): Promise<void> {
+	reason,
+}: PartitionsScope & { reason: PartitionServiceStopReason }): Promise<void> {
 	await stopPartitionServiceSafely({ ctx, state });
 	try {
-		ctx.onServiceStopped?.();
+		ctx.onServiceStopped?.(reason);
 	} catch (cause) {
 		reportPartitionError({ ctx, cause });
 	}
@@ -145,7 +150,11 @@ export function failPartitionRetirement({
 	state.retirementFailed = true;
 	reportPartitionError({ ctx, cause });
 	function stopAfterRetirementFailure(): void {
-		void stopServiceThenNotify({ ctx, state });
+		void stopServiceThenNotify({
+			ctx,
+			state,
+			reason: { cause, scope: "retirement" },
+		});
 	}
 	queueMicrotask(stopAfterRetirementFailure);
 }

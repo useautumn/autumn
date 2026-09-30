@@ -26,16 +26,25 @@ env:
   #   staging repo (autumn-staging) -> us-east-1
   # Branches allowed to deploy to staging via workflow_dispatch with tag=deploy-staging.
   # Add short-lived PR branches here when you need staging without merging to dev.
-  STAGING_DEPLOY_BRANCH_ALLOWLIST: stack/cleanups stack/check-fail-open main dev feat/past-due-cancel-immediate-void feat/gate-cluster-wide feat/redis-monitor-fix feat/firelens-log-transport-v2 fix/dragonfly-resize-reconnect capy/standby-dragonfly-connection og/balance-worker-observability john/one-record og/balance-64-one-record og/balance-worker-perf og/command-offset-group-commit og/command-consumer-error-boundary og/not-owner-successor-hint
+  STAGING_DEPLOY_BRANCH_ALLOWLIST: stack/cleanups stack/check-fail-open main dev feat/past-due-cancel-immediate-void feat/gate-cluster-wide feat/redis-monitor-fix feat/firelens-log-transport-v2 fix/dragonfly-resize-reconnect capy/standby-dragonfly-connection og/balance-worker-observability john/one-record og/balance-64-one-record og/balance-worker-perf og/command-offset-group-commit og/command-consumer-error-boundary og/not-owner-successor-hint og/worker-auth-crash-resilience
 
 jobs:
   checks:
     name: Type Check
-    runs-on: peak-ubuntu-24.04-8
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+
+    permissions:
+      contents: read
+      actions: read
+
+    outputs:
+      deploy: ${{ steps.deploy-gate.outputs.deploy }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -48,6 +57,20 @@ jobs:
       - name: Run TypeScript type check
         run: |
           bun ts
+
+      # Merges that only touch frontends, docs, the CLI, etc. skip the prod deploy.
+      - name: Decide production deploy
+        id: deploy-gate
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: .github/scripts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Filter conclusions client-side; the API's status filter returns stale runs.
+          BASE_SHA=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main \
+            --event push --limit 50 --json headSha,conclusion \
+            --jq 'map(select(.conclusion == "success"))[0].headSha // ""')
+          BASE_SHA="$BASE_SHA" bun deploy-gate.ts
 
   build-and-push:
     name: Build and Push Docker Image
@@ -163,7 +186,7 @@ jobs:
           echo "Tag: ${COMBINED_TAG}"
 
       - name: Auto-deploy production
-        if: github.ref == 'refs/heads/main' && steps.meta.outputs.deploy_staging_override != 'true'
+        if: github.ref == 'refs/heads/main' && steps.meta.outputs.deploy_staging_override != 'true' && (github.event_name != 'push' || needs.checks.outputs.deploy == 'true')
         env:
           DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}

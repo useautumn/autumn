@@ -14,7 +14,7 @@ class Webhooks(BaseSDK):
         *,
         id: str,
         url: str,
-        events: List[models.CreateWebhookEvent],
+        events: Optional[List[models.CreateWebhookEvent]] = None,
         description: Optional[str] = None,
         disabled: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -26,7 +26,7 @@ class Webhooks(BaseSDK):
 
         :param id: Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation.
         :param url: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
-        :param events: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+        :param events: The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.
         :param description: A note for your own reference.
         :param disabled: When true, no events are sent to the webhook.
         :param retries: Override the default retry configuration for this method
@@ -116,7 +116,7 @@ class Webhooks(BaseSDK):
         *,
         id: str,
         url: str,
-        events: List[models.CreateWebhookEvent],
+        events: Optional[List[models.CreateWebhookEvent]] = None,
         description: Optional[str] = None,
         disabled: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -128,7 +128,7 @@ class Webhooks(BaseSDK):
 
         :param id: Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation.
         :param url: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
-        :param events: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+        :param events: The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.
         :param description: A note for your own reference.
         :param disabled: When true, no events are sent to the webhook.
         :param retries: Override the default retry configuration for this method
@@ -590,7 +590,7 @@ class Webhooks(BaseSDK):
 
         :param id: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.
         :param url: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
-        :param events: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+        :param events: The events sent to this webhook. Pass `[]` to send every event; omit it to keep the current list. `vercel.*` events can't be mixed with other events.
         :param description: A note for your own reference.
         :param disabled: When true, no events are sent to the webhook.
         :param retries: Override the default retry configuration for this method
@@ -692,7 +692,7 @@ class Webhooks(BaseSDK):
 
         :param id: The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.
         :param url: The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
-        :param events: The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+        :param events: The events sent to this webhook. Pass `[]` to send every event; omit it to keep the current list. `vercel.*` events can't be mixed with other events.
         :param description: A note for your own reference.
         :param disabled: When true, no events are sent to the webhook.
         :param retries: Override the default retry configuration for this method
@@ -964,14 +964,16 @@ class Webhooks(BaseSDK):
             List[models.PreviewSyncWebhooksWebhookRequest],
             List[models.PreviewSyncWebhooksWebhookRequestTypedDict],
         ],
+        skip_deletions: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.PreviewSyncWebhooksResponse:
-        r"""Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+        r"""Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create, update or delete, and which existing ones it would leave alone because the body doesn't list them.
 
-        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.
+        :param skip_deletions: When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -991,6 +993,7 @@ class Webhooks(BaseSDK):
             webhooks=utils.get_pydantic_model(
                 webhooks, List[models.PreviewSyncWebhooksWebhookRequest]
             ),
+            skip_deletions=skip_deletions,
         )
 
         req = self._build_request(
@@ -1063,14 +1066,16 @@ class Webhooks(BaseSDK):
             List[models.PreviewSyncWebhooksWebhookRequest],
             List[models.PreviewSyncWebhooksWebhookRequestTypedDict],
         ],
+        skip_deletions: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.PreviewSyncWebhooksResponse:
-        r"""Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+        r"""Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create, update or delete, and which existing ones it would leave alone because the body doesn't list them.
 
-        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.
+        :param skip_deletions: When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1090,6 +1095,7 @@ class Webhooks(BaseSDK):
             webhooks=utils.get_pydantic_model(
                 webhooks, List[models.PreviewSyncWebhooksWebhookRequest]
             ),
+            skip_deletions=skip_deletions,
         )
 
         req = self._build_request_async(
@@ -1162,14 +1168,16 @@ class Webhooks(BaseSDK):
             List[models.SyncWebhooksWebhookRequest],
             List[models.SyncWebhooksWebhookRequestTypedDict],
         ],
+        skip_deletions: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.SyncWebhooksResponse:
-        r"""Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+        r"""Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone, unless `skip_deletions` is false: then every webhook not listed is deleted, including ones made in the dashboard. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
 
-        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.
+        :param skip_deletions: When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1189,6 +1197,7 @@ class Webhooks(BaseSDK):
             webhooks=utils.get_pydantic_model(
                 webhooks, List[models.SyncWebhooksWebhookRequest]
             ),
+            skip_deletions=skip_deletions,
         )
 
         req = self._build_request(
@@ -1257,14 +1266,16 @@ class Webhooks(BaseSDK):
             List[models.SyncWebhooksWebhookRequest],
             List[models.SyncWebhooksWebhookRequestTypedDict],
         ],
+        skip_deletions: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.SyncWebhooksResponse:
-        r"""Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+        r"""Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone, unless `skip_deletions` is false: then every webhook not listed is deleted, including ones made in the dashboard. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
 
-        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+        :param webhooks: The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.
+        :param skip_deletions: When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1284,6 +1295,7 @@ class Webhooks(BaseSDK):
             webhooks=utils.get_pydantic_model(
                 webhooks, List[models.SyncWebhooksWebhookRequest]
             ),
+            skip_deletions=skip_deletions,
         )
 
         req = self._build_request_async(

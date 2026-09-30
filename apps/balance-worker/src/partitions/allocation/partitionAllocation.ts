@@ -1,9 +1,14 @@
+import { isKafkaAccessRefusal } from "@autumn/kafka";
 import {
 	beginPartitionHandoffs,
 	cancelPartitionHandoff,
 	watchForSuccessor,
 } from "../lifecycle/handOffPartition.js";
 import { subscribeEntryUnavailable } from "../lifecycle/partitionStartup.js";
+import {
+	noteConsumerJoined,
+	scheduleConsumerRejoin,
+} from "../lifecycle/rejoinConsumer.js";
 import { clearPartitionRetries } from "../lifecycle/retryPartition.js";
 import { startPartitions } from "../lifecycle/startPartitions.js";
 import {
@@ -64,6 +69,7 @@ function applyPartitionAllocation({
 	change,
 }: PartitionsScope & { change: PartitionAssignment }): void {
 	if (state.status !== "running") return;
+	noteConsumerJoined({ ctx, state });
 	discardUnallocatedHealth({ state, partitions: change.partitions });
 	clearPartitionRetries({ state });
 	const allocationGeneration = ++state.generation;
@@ -125,7 +131,9 @@ function revokePartitionAllocation({
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 }
 
-/** A crash kafkajs will restart from rejoins and is reassigned; one it will not leaves nothing to wait for. */
+/** A crash kafkajs will restart from rejoins and is reassigned. One it will not is the worker's to
+ *  judge: a broker refusing its identity is rejoined with backoff, since the verdict has cleared on
+ *  its own before; anything else leaves nothing to wait for, and the service stops. */
 function crashPartitionAllocation({
 	ctx,
 	state,
@@ -137,8 +145,22 @@ function crashPartitionAllocation({
 	const entriesToStop = detachPartitions({ state, failure: crash });
 	reportPartitionError({ ctx, cause: crash.cause });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
-	if (!crash.restart)
-		requestPartitionServiceStop({ ctx, state, allocationGeneration });
+	if (crash.restart) return;
+	if (ctx.consumer.restart && isKafkaAccessRefusal({ cause: crash.cause })) {
+		scheduleConsumerRejoin({
+			ctx,
+			state,
+			allocationGeneration,
+			cause: crash.cause,
+		});
+		return;
+	}
+	requestPartitionServiceStop({
+		ctx,
+		state,
+		allocationGeneration,
+		reason: { cause: crash.cause, scope: "consumer" },
+	});
 }
 
 export function isCurrentAllocation({

@@ -1,5 +1,5 @@
 import type { MigrationFilter, Operations } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import { Alert, AlertDescription, Button } from "@autumn/ui";
 import {
 	ArrowLeftIcon,
 	ArrowRightIcon,
@@ -75,18 +75,18 @@ export function OperationsStep({
 				}
 			/>
 			{saveError && (
-				<div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-500">
-					<WarningCircleIcon size={14} weight="fill" className="shrink-0" />
-					<span>{saveError}</span>
-				</div>
+				<Alert variant="destructive">
+					<WarningCircleIcon weight="fill" />
+					<AlertDescription>{saveError}</AlertDescription>
+				</Alert>
 			)}
 			{hasVersionOperation(operations) && (
-				<div className="flex items-center gap-2 rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-sm text-blue-500">
-					<InfoIcon size={14} weight="fill" className="shrink-0" />
-					<span>
+				<Alert variant="note">
+					<InfoIcon weight="fill" />
+					<AlertDescription>
 						Version updates won't apply to customers with custom plans.
-					</span>
-				</div>
+					</AlertDescription>
+				</Alert>
 			)}
 		</div>
 	);

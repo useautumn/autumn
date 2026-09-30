@@ -85,7 +85,7 @@ export class Webhooks extends ClientSDK {
   }
 
   /**
-   * Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+   * Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create, update or delete, and which existing ones it would leave alone because the body doesn't list them.
    */
   async previewSync(
     request: models.PreviewSyncWebhooksSyncWebhooksParams,
@@ -99,7 +99,7 @@ export class Webhooks extends ClientSDK {
   }
 
   /**
-   * Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+   * Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone, unless `skip_deletions` is false: then every webhook not listed is deleted, including ones made in the dashboard. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
    */
   async sync(
     request: models.SyncWebhooksSyncWebhooksParams,

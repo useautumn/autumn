@@ -95,6 +95,7 @@ import type {
 	ConsumerRebalancingEvent,
 	ConsumerRunConfig,
 } from "kafkajs";
+import { KafkaJSProtocolError } from "kafkajs";
 import {
 	type OwnedPartitionHealth,
 	ownedPartitionHealthOf,
@@ -145,6 +146,7 @@ type FakeGroupConsumer = KafkaOwnedPartitionGroupConsumerPort & {
 	emitRebalancing(): void;
 	emitCrash(error: Error, options?: { restart: boolean }): void;
 	failNextPause(error: Error): void;
+	failNextRun(error: Error): void;
 };
 
 const createFakeGroupConsumer = (): FakeGroupConsumer => {
@@ -153,6 +155,7 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 	const pauses: Array<{ topic: string; partitions?: number[] }> = [];
 	const resumes: Array<{ topic: string; partitions?: number[] }> = [];
 	let nextPauseError: Error | null = null;
+	let nextRunError: Error | null = null;
 	const emit = (eventName: string, event: unknown): void => {
 		for (const listener of listeners.get(eventName) ?? []) listener(event);
 	};
@@ -188,6 +191,11 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 		},
 		run: async function (config) {
 			lifecycle.push("consumer-run");
+			if (nextRunError) {
+				const error = nextRunError;
+				nextRunError = null;
+				throw error;
+			}
 			this.runConfig = config ?? null;
 		},
 		commitOffsets: async () => undefined,
@@ -244,6 +252,9 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 		},
 		failNextPause: (error) => {
 			nextPauseError = error;
+		},
+		failNextRun: (error) => {
+			nextRunError = error;
 		},
 	};
 };
@@ -643,13 +654,15 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
-	test("a crash kafkajs will not restart from ends the worker: nothing would ever rejoin", async () => {
+	test("a crash kafkajs will not restart from ends the worker, naming why: nothing would ever rejoin", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const consumer = createFakeGroupConsumer();
 			const started: number[] = [];
 			const stopped: number[] = [];
 			const events: string[] = [];
+			const reasons: unknown[] = [];
+			const failure = new Error("non-retriable");
 			const group = createKafkaOwnedPartitionGroup({
 				consumer,
 				partitionOffsets: createPartitionOffsets(),
@@ -665,6 +678,64 @@ describe("Kafka owned partition group", () => {
 				}),
 				onError: () => undefined,
 				onUnhealthyPartition: () => undefined,
+				onServiceStopped: (reason) => {
+					events.push("service-stopped");
+					reasons.push(reason);
+				},
+			});
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 1);
+
+			consumer.emitCrash(failure, { restart: false });
+			await waitFor(() => events.includes("service-stopped"));
+
+			expect(stopped).toEqual([0]);
+			expect(consumer.lifecycle).toContain("consumer-stop");
+			expect(events).toEqual(["service-stopped"]);
+			expect(reasons).toEqual([{ cause: failure, scope: "consumer" }]);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a broker refusing the worker's identity is rejoined with backoff, not exited: the fleet survives a verdict that clears", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const started: number[] = [];
+			const stopped: number[] = [];
+			const events: string[] = [];
+			const warnings: string[] = [];
+			const refusal = new KafkaJSProtocolError(
+				Object.assign(
+					new Error(
+						"Not authorized to access group: Group authorization failed",
+					),
+					{ type: "GROUP_AUTHORIZATION_FAILED", code: 30, retriable: false },
+				),
+			);
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
+				consumerRejoin: { initialBackoffMs: 1, maxBackoffMs: 4 },
+				logger: {
+					info: (...args: unknown[]) => warnings.push(`info:${args[1]}`),
+					warn: (...args: unknown[]) => warnings.push(`warn:${args[1]}`),
+				} as never,
+				createRuntime: createRuntimeFactory({
+					started,
+					stopped,
+					unavailable: [],
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
 				onServiceStopped: () => {
 					events.push("service-stopped");
 				},
@@ -672,14 +743,105 @@ describe("Kafka owned partition group", () => {
 			await group.start();
 			consumer.emitGroupJoin([0]);
 			await waitFor(() => started.length === 1);
+			expect(group.consumer()).toEqual({ status: "joined", rejoinAttempts: 0 });
 
-			consumer.emitCrash(new Error("non-retriable"), { restart: false });
-			await waitFor(() => events.includes("service-stopped"));
-
+			consumer.emitCrash(refusal, { restart: false });
+			// The partition it owned is retired, then the group is joined again after the backoff.
+			await waitFor(
+				() =>
+					consumer.lifecycle.filter((step) => step === "consumer-run")
+						.length === 2,
+			);
 			expect(stopped).toEqual([0]);
-			expect(consumer.lifecycle).toContain("consumer-stop");
-			expect(events).toEqual(["service-stopped"]);
+			expect(events).toEqual([]);
+			expect(group.consumer()).toEqual({
+				status: "rejoining",
+				rejoinAttempts: 1,
+			});
+			expect(warnings[0]).toMatch(
+				/^warn:Balance worker refused by the broker; rejoining in 1ms \(attempt 1\)/,
+			);
+
+			// Refused again on the rejoin: the backoff grows and nothing exits.
+			consumer.emitCrash(refusal, { restart: false });
+			await waitFor(
+				() =>
+					consumer.lifecycle.filter((step) => step === "consumer-run")
+						.length === 3,
+			);
+			expect(group.consumer().rejoinAttempts).toBe(2);
+			expect(warnings[1]).toMatch(/rejoining in 2ms \(attempt 2\)/);
+
+			// The verdict clears: the group deals the partition back and the worker serves it as before.
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 2);
+			expect(group.consumer()).toEqual({ status: "joined", rejoinAttempts: 0 });
+			expect(warnings.at(-1)).toMatch(
+				/^info:Balance worker rejoined the group after 2 attempts/,
+			);
+			expect(events).toEqual([]);
 			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a rejoin that fails for any reason but the broker's refusal ends the worker: nothing else clears on its own", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const started: number[] = [];
+			const stopped: number[] = [];
+			const events: string[] = [];
+			const reasons: unknown[] = [];
+			const refusal = new KafkaJSProtocolError(
+				Object.assign(
+					new Error(
+						"Not authorized to access group: Group authorization failed",
+					),
+					{ type: "GROUP_AUTHORIZATION_FAILED", code: 30, retriable: false },
+				),
+			);
+			const subscriptionFailure = new Error(
+				"Subscription to the balance topic was rejected",
+			);
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
+				consumerRejoin: { initialBackoffMs: 1, maxBackoffMs: 4 },
+				logger: { info: () => undefined, warn: () => undefined } as never,
+				createRuntime: createRuntimeFactory({
+					started,
+					stopped,
+					unavailable: [],
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+				onServiceStopped: (reason) => {
+					events.push("service-stopped");
+					reasons.push(reason);
+				},
+			});
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 1);
+
+			// The refusal is waited out, but the rejoin itself then fails for an unrelated reason.
+			consumer.failNextRun(subscriptionFailure);
+			consumer.emitCrash(refusal, { restart: false });
+			await waitFor(() => events.includes("service-stopped"));
+			expect(stopped).toEqual([0]);
+			expect(reasons).toEqual([
+				{ cause: subscriptionFailure, scope: "consumer" },
+			]);
+			expect(
+				consumer.lifecycle.filter((step) => step === "consumer-run").length,
+			).toBe(2);
 		} finally {
 			closeStoreFixture(fixture);
 		}

@@ -106,6 +106,26 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/balances.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.balances.list(customer_id="cus_123", limit=50, start_cursor="", statuses=[
+                    "expired",
+                ])
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/balances.track"]["post"]
     update:
       x-codeSamples:
@@ -862,6 +882,24 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/invoices.finalize"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.finalize(invoice_id="inv_2b3c4d5e6f7g8h")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/invoices.insert"]["post"]
     update:
       x-codeSamples:
@@ -1296,6 +1334,27 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/purchases.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.customers.list_purchases(customer_id="cus_123", limit=50, start_cursor="", statuses=[
+                    "active",
+                    "expired",
+                ])
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/referral_programs.create"]["post"]
     update:
       x-codeSamples:
@@ -1617,6 +1676,26 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/subscriptions.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.customers.list_subscriptions(customer_id="cus_123", limit=50, start_cursor="", statuses=[
+                    "expired",
+                ])
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/webhooks.create"]["post"]
     update:
       x-codeSamples:
@@ -1716,7 +1795,7 @@ actions:
                         ],
                         "description": "Plan changes and invoices",
                     },
-                ])
+                ], skip_deletions=True)
 
                 # Handle response
                 print(res)
@@ -1744,7 +1823,7 @@ actions:
                         ],
                         "description": "Plan changes and invoices",
                     },
-                ])
+                ], skip_deletions=True)
 
                 # Handle response
                 print(res)

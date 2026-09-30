@@ -22,7 +22,7 @@ export const ExpandedEnvTrigger = () => {
 		>
 			<div
 				className={cn(
-					"flex h-8 w-full items-center gap-2 overflow-hidden rounded-lg border bg-interactive-secondary text-foreground transition-colors duration-150 ease-out hover:bg-interactive-secondary-hover dark:border-[#262626] dark:bg-[#1A1A1A] dark:text-[#EDEDED] dark:hover:bg-[#1F1F1F]",
+					"flex h-8 w-full items-center gap-2 overflow-hidden rounded-md border bg-interactive-secondary text-foreground transition-colors duration-150 ease-out hover:bg-interactive-secondary-hover dark:border-[#232323] dark:bg-[#171717] dark:text-[#EDEDED] dark:hover:bg-[#1F1F1F]",
 					expanded ? "justify-between px-2.5" : "justify-center px-0",
 				)}
 			>

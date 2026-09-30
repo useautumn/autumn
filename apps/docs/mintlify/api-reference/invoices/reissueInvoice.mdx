@@ -25,6 +25,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.
 </DynamicParamField>
 
+<DynamicParamField body="issue_method" type="'draft' | 'finalize' | 'send'">
+  How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.
+</DynamicParamField>
+
 <DynamicParamField body="update_customer_email" type="string">
   Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.
 </DynamicParamField>

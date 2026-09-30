@@ -21,6 +21,8 @@ import {
 	assertRequestDeadline,
 	createRequestDeadline,
 	followNotOwnerAnswer,
+	MAX_NOT_READY_RETRIES,
+	ownerStillNotReadyError,
 	readNotOwnerResponse,
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
@@ -128,8 +130,10 @@ export function createTrackBatcher({
 		// Per batch, never shared: lanes for different partitions send concurrently, and one
 		// batch's hinted successor must not stop another's refresh.
 		let followingHint = false;
+		// A NOT_READY from the owner is retried apart from the route attempts: the route was right.
+		let notReadyRetries = 0;
 		try {
-			for (let attempt = 0; attempt < 2; attempt++) {
+			for (let attempt = 0; attempt < 2; ) {
 				pending = pending.filter(isLive);
 				if (pending.length === 0) return;
 				const batchAttempt = startAttempt({ items: pending });
@@ -147,7 +151,10 @@ export function createTrackBatcher({
 					command: pending[0].snapshot,
 				});
 				if (!resolved) {
-					if (attempt === 0) continue;
+					if (attempt === 0) {
+						attempt += 1;
+						continue;
+					}
 					rejectAll({
 						items: pending,
 						error: new BalanceWorkerClientError({
@@ -165,6 +172,15 @@ export function createTrackBatcher({
 				});
 				pending = posted.reroute;
 				followingHint = posted.followingHint;
+				if (posted.notReady) {
+					notReadyRetries += 1;
+					if (notReadyRetries > MAX_NOT_READY_RETRIES) {
+						rejectAll({ items: pending, error: ownerStillNotReadyError() });
+						return;
+					}
+					continue;
+				}
+				attempt += 1;
 			}
 			rejectAll({
 				items: pending,
@@ -191,8 +207,12 @@ export function createTrackBatcher({
 		}
 	}
 
-	/** What one send left to do: the items to reroute, and whether a NOT_OWNER named where. */
-	type PostedBatch = { reroute: TrackItem[]; followingHint: boolean };
+	/** What one send left to do: the items to reroute, whether a NOT_OWNER named where, and whether the owner was merely not ready yet. */
+	type PostedBatch = {
+		reroute: TrackItem[];
+		followingHint: boolean;
+		notReady: boolean;
+	};
 
 	/** Sends the live items and settles what the worker answered; returns the items to reroute. */
 	async function postBatch({
@@ -204,7 +224,7 @@ export function createTrackBatcher({
 		resolved: ResolvedCommandRoute;
 		batchAttempt: BatchAttempt;
 	}): Promise<PostedBatch> {
-		const hint = { following: false };
+		const hint = { following: false, notReady: false };
 		for (const item of items) item.phase = "sending";
 		let response: HttpResponse;
 		try {
@@ -229,7 +249,7 @@ export function createTrackBatcher({
 					cause,
 				}),
 			});
-			return { reroute: [], followingHint: false };
+			return { reroute: [], followingHint: false, notReady: false };
 		}
 		// Answered: settling items from here on must not cancel anything.
 		batchAttempt.live.clear();
@@ -244,15 +264,19 @@ export function createTrackBatcher({
 				})
 			) {
 				rejectAll({ items, error: invalidResponse({}) });
-				return { reroute: [], followingHint: false };
+				return { reroute: [], followingHint: false, notReady: false };
 			}
 			for (const item of items) if (isLive(item)) item.phase = "routing";
-			return { reroute: items.filter(isLive), followingHint: hint.following };
+			return {
+				reroute: items.filter(isLive),
+				followingHint: hint.following,
+				notReady: hint.notReady,
+			};
 		}
 		const results = readResults({ body: response.body, count: items.length });
 		if (!results) {
 			rejectAll({ items, error: invalidResponse({}) });
-			return { reroute: [], followingHint: false };
+			return { reroute: [], followingHint: false, notReady: false };
 		}
 		const reroute: TrackItem[] = [];
 		for (const [index, item] of items.entries()) {
@@ -275,7 +299,7 @@ export function createTrackBatcher({
 				reroute.push(item);
 			} else rejectAll({ items: [item], error: invalidResponse({}) });
 		}
-		return { reroute, followingHint: hint.following };
+		return { reroute, followingHint: hint.following, notReady: hint.notReady };
 	}
 
 	/** Same reading as a single request: NOT_OWNER reroutes, a named successor is followed, any other worker error settles the items. */
@@ -290,14 +314,15 @@ export function createTrackBatcher({
 		status: number;
 		body: unknown;
 		resolved: ResolvedCommandRoute;
-		/** This send's own record of a followed successor; nothing outside the send reads it. */
-		hint: { following: boolean };
+		/** This send's own record of a followed successor or a not-ready owner; nothing outside the send reads it. */
+		hint: { following: boolean; notReady: boolean };
 	}): boolean {
 		try {
 			const answer = readNotOwnerResponse({ response: { status, body } });
 			if (!answer) return false;
 			if (followNotOwnerAnswer({ ctx, resolved, answer }))
 				hint.following = true;
+			if (answer.notReady) hint.notReady = true;
 			return true;
 		} catch (cause) {
 			rejectAll({

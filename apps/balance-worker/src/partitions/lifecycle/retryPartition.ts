@@ -78,7 +78,12 @@ async function retryPartitionWhenDue(retry: PartitionRetry): Promise<void> {
 		await retryPartitionAfterCleanup(retry);
 	} catch (cause) {
 		reportPartitionError({ ctx, cause });
-		requestPartitionServiceStop({ ctx, state, allocationGeneration });
+		requestPartitionServiceStop({
+			ctx,
+			state,
+			allocationGeneration,
+			reason: { cause, scope: "partition" },
+		});
 	}
 }
 
@@ -93,7 +98,12 @@ async function retryPartitionAfterCleanup({
 	const result = await cleanup;
 	if (!result.ok) {
 		reportPartitionError({ ctx, cause: result.cause });
-		requestPartitionServiceStop({ ctx, state, allocationGeneration });
+		requestPartitionServiceStop({
+			ctx,
+			state,
+			allocationGeneration,
+			reason: { cause: result.cause, scope: "partition" },
+		});
 		return;
 	}
 	if (

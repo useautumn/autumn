@@ -56,6 +56,7 @@ export async function createBalanceWorker({
 	const fleetId = identity.serviceArn
 		? fleetIdOf({ serviceArn: identity.serviceArn })
 		: null;
+	dependencies.onIdentityResolved?.({ ...identity, fleetId });
 	const groupId = workerConsumerGroupIdOf({ env, fleetId });
 	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 		env,
@@ -204,6 +205,7 @@ export async function createBalanceWorker({
 				logger: dependencies.logger,
 				readPartitions: partitions.partitions,
 				readWorkerStatus,
+				readConsumer: partitions.consumer,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,

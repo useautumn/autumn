@@ -1735,7 +1735,7 @@ class UpdatePlanVariantDetailsAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanBasePriceResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -1750,7 +1750,7 @@ class UpdatePlanBasePriceResponseTypedDict(TypedDict):
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class UpdatePlanBasePriceResponse(BaseModel):
+class UpdatePlanVariantDetailsBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -1844,14 +1844,14 @@ class UpdatePlanVariantDetailsReset(BaseModel):
         return m
 
 
-class UpdatePlanAddItemAdditionalCurrencyResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsAddItemAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanAddItemAdditionalCurrencyResponse(BaseModel):
+class UpdatePlanVariantDetailsAddItemAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1965,7 +1965,7 @@ UpdatePlanVariantDetailsAddItemPriceInterval = Union[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-UpdatePlanAddItemBillingMethodResponse = Union[
+UpdatePlanVariantDetailsAddItemBillingMethod = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -1980,12 +1980,12 @@ class UpdatePlanVariantDetailsPriceTypedDict(TypedDict):
 
     interval: UpdatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: UpdatePlanAddItemBillingMethodResponse
+    billing_method: UpdatePlanVariantDetailsAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[
-        List[UpdatePlanAddItemAdditionalCurrencyResponseTypedDict]
+        List[UpdatePlanVariantDetailsAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[UpdatePlanVariantDetailsPriceTierTypedDict]]
@@ -2005,14 +2005,14 @@ class UpdatePlanVariantDetailsPrice(BaseModel):
     interval: UpdatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: UpdatePlanAddItemBillingMethodResponse
+    billing_method: UpdatePlanVariantDetailsAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
     additional_currencies: Optional[
-        List[UpdatePlanAddItemAdditionalCurrencyResponse]
+        List[UpdatePlanVariantDetailsAddItemAdditionalCurrency]
     ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
@@ -2066,7 +2066,7 @@ class UpdatePlanVariantDetailsPrice(BaseModel):
         return m
 
 
-UpdatePlanOnIncreaseResponse = Union[
+UpdatePlanVariantDetailsOnIncrease = Union[
     Literal[
         "bill_immediately",
         "prorate_immediately",
@@ -2078,7 +2078,7 @@ UpdatePlanOnIncreaseResponse = Union[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-UpdatePlanOnDecreaseResponse = Union[
+UpdatePlanVariantDetailsOnDecrease = Union[
     Literal[
         "prorate",
         "prorate_immediately",
@@ -2091,22 +2091,22 @@ UpdatePlanOnDecreaseResponse = Union[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class UpdatePlanProrationResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanOnIncreaseResponse
+    on_increase: UpdatePlanVariantDetailsOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: UpdatePlanOnDecreaseResponse
+    on_decrease: UpdatePlanVariantDetailsOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class UpdatePlanProrationResponse(BaseModel):
+class UpdatePlanVariantDetailsProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanOnIncreaseResponse
+    on_increase: UpdatePlanVariantDetailsOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: UpdatePlanOnDecreaseResponse
+    on_decrease: UpdatePlanVariantDetailsOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
@@ -2786,7 +2786,7 @@ class UpdatePlanVariantDetailsFeatureOverride(BaseModel):
         return m
 
 
-class UpdatePlanPlanItemResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2805,7 +2805,7 @@ class UpdatePlanPlanItemResponseTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[UpdatePlanVariantDetailsPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[UpdatePlanProrationResponseTypedDict]
+    proration: NotRequired[UpdatePlanVariantDetailsProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[UpdatePlanVariantDetailsRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
@@ -2815,7 +2815,7 @@ class UpdatePlanPlanItemResponseTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class UpdatePlanPlanItemResponse(BaseModel):
+class UpdatePlanVariantDetailsPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2841,7 +2841,7 @@ class UpdatePlanPlanItemResponse(BaseModel):
     price: Optional[UpdatePlanVariantDetailsPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[UpdatePlanProrationResponse] = None
+    proration: Optional[UpdatePlanVariantDetailsProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
     rollover: Optional[UpdatePlanVariantDetailsRollover] = None
@@ -2892,7 +2892,7 @@ class UpdatePlanPlanItemResponse(BaseModel):
         return m
 
 
-UpdatePlanRemoveItemBillingMethodResponse = Union[
+UpdatePlanVariantDetailsRemoveItemBillingMethod = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -2951,12 +2951,12 @@ UpdatePlanVariantDetailsIntervalUnion = TypeAliasType(
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-class UpdatePlanPlanItemFilterResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsPlanItemFilterTypedDict(TypedDict):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: NotRequired[str]
     r"""Match items linked to this feature."""
-    billing_method: NotRequired[UpdatePlanRemoveItemBillingMethodResponse]
+    billing_method: NotRequired[UpdatePlanVariantDetailsRemoveItemBillingMethod]
     r"""Match items with this billing method (prepaid or usage_based)."""
     interval: NotRequired[UpdatePlanVariantDetailsIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
@@ -2966,13 +2966,13 @@ class UpdatePlanPlanItemFilterResponseTypedDict(TypedDict):
     r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
-class UpdatePlanPlanItemFilterResponse(BaseModel):
+class UpdatePlanVariantDetailsPlanItemFilter(BaseModel):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: Optional[str] = None
     r"""Match items linked to this feature."""
 
-    billing_method: Optional[UpdatePlanRemoveItemBillingMethodResponse] = None
+    billing_method: Optional[UpdatePlanVariantDetailsRemoveItemBillingMethod] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
     interval: Optional[UpdatePlanVariantDetailsIntervalUnion] = None
@@ -3527,14 +3527,14 @@ UpdatePlanPriceVariantDetailsUpsertLicenseInterval = Union[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class UpdatePlanUpsertLicenseAdditionalCurrencyResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsUpsertLicenseAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanUpsertLicenseAdditionalCurrencyResponse(BaseModel):
+class UpdatePlanVariantDetailsUpsertLicenseAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -3552,7 +3552,7 @@ class UpdatePlanUpsertLicenseBasePriceResponseTypedDict(TypedDict):
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     additional_currencies: NotRequired[
-        List[UpdatePlanUpsertLicenseAdditionalCurrencyResponseTypedDict]
+        List[UpdatePlanVariantDetailsUpsertLicenseAdditionalCurrencyTypedDict]
     ]
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
@@ -3570,7 +3570,7 @@ class UpdatePlanUpsertLicenseBasePriceResponse(BaseModel):
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
     additional_currencies: Optional[
-        List[UpdatePlanUpsertLicenseAdditionalCurrencyResponse]
+        List[UpdatePlanVariantDetailsUpsertLicenseAdditionalCurrency]
     ] = None
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
@@ -3591,11 +3591,11 @@ class UpdatePlanUpsertLicenseBasePriceResponse(BaseModel):
         return m
 
 
-class UpdatePlanUpsertLicenseThresholdBillingResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsUpsertLicenseThresholdBillingTypedDict(TypedDict):
     threshold: float
 
 
-class UpdatePlanUpsertLicenseThresholdBillingResponse(BaseModel):
+class UpdatePlanVariantDetailsUpsertLicenseThresholdBilling(BaseModel):
     threshold: float
 
 
@@ -3651,14 +3651,16 @@ class UpdatePlanVariantDetailsUpsertLicenseReset(BaseModel):
         return m
 
 
-class UpdatePlanUpsertLicenseAddItemAdditionalCurrencyResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsUpsertLicenseAddItemAdditionalCurrencyTypedDict(
+    TypedDict
+):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanUpsertLicenseAddItemAdditionalCurrencyResponse(BaseModel):
+class UpdatePlanVariantDetailsUpsertLicenseAddItemAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -3676,7 +3678,7 @@ UpdatePlanVariantDetailsUpsertLicensePriceTo = TypeAliasType(
 )
 
 
-class UpdatePlanUpsertLicenseTierAdditionalCurrencyResponseTypedDict(TypedDict):
+class UpdatePlanVariantDetailsUpsertLicenseTierAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: NotRequired[float]
@@ -3685,7 +3687,7 @@ class UpdatePlanUpsertLicenseTierAdditionalCurrencyResponseTypedDict(TypedDict):
     r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
-class UpdatePlanUpsertLicenseTierAdditionalCurrencyResponse(BaseModel):
+class UpdatePlanVariantDetailsUpsertLicenseTierAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -3717,7 +3719,7 @@ class UpdatePlanVariantDetailsUpsertLicensePriceTierTypedDict(TypedDict):
     amount: float
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
-        List[UpdatePlanUpsertLicenseTierAdditionalCurrencyResponseTypedDict]
+        List[UpdatePlanVariantDetailsUpsertLicenseTierAdditionalCurrencyTypedDict]
     ]
 
 
@@ -3729,7 +3731,7 @@ class UpdatePlanVariantDetailsUpsertLicensePriceTier(BaseModel):
     flat_amount: Optional[float] = None
 
     additional_currencies: Optional[
-        List[UpdatePlanUpsertLicenseTierAdditionalCurrencyResponse]
+        List[UpdatePlanVariantDetailsUpsertLicenseTierAdditionalCurrency]
     ] = None
 
     @model_serializer(mode="wrap")
@@ -3772,7 +3774,7 @@ UpdatePlanVariantDetailsUpsertLicenseAddItemPriceInterval = Union[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-UpdatePlanUpsertLicenseAddItemBillingMethodResponse = Union[
+UpdatePlanVariantDetailsUpsertLicenseAddItemBillingMethod = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -3787,12 +3789,12 @@ class UpdatePlanVariantDetailsUpsertLicensePriceTypedDict(TypedDict):
 
     interval: UpdatePlanVariantDetailsUpsertLicenseAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: UpdatePlanUpsertLicenseAddItemBillingMethodResponse
+    billing_method: UpdatePlanVariantDetailsUpsertLicenseAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[
-        List[UpdatePlanUpsertLicenseAddItemAdditionalCurrencyResponseTypedDict]
+        List[UpdatePlanVariantDetailsUpsertLicenseAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[UpdatePlanVariantDetailsUpsertLicensePriceTierTypedDict]]
@@ -3812,14 +3814,14 @@ class UpdatePlanVariantDetailsUpsertLicensePrice(BaseModel):
     interval: UpdatePlanVariantDetailsUpsertLicenseAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: UpdatePlanUpsertLicenseAddItemBillingMethodResponse
+    billing_method: UpdatePlanVariantDetailsUpsertLicenseAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
     additional_currencies: Optional[
-        List[UpdatePlanUpsertLicenseAddItemAdditionalCurrencyResponse]
+        List[UpdatePlanVariantDetailsUpsertLicenseAddItemAdditionalCurrency]
     ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
@@ -3917,7 +3919,7 @@ class UpdatePlanUpsertLicenseProrationResponse(BaseModel):
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-UpdatePlanUpsertLicenseExpiryDurationTypeResponse = Union[
+UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType = Union[
     Literal[
         "month",
         "forever",
@@ -3930,7 +3932,7 @@ r"""When rolled over units expire."""
 class UpdatePlanVariantDetailsUpsertLicenseRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanUpsertLicenseExpiryDurationTypeResponse
+    expiry_duration_type: UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -3943,7 +3945,7 @@ class UpdatePlanVariantDetailsUpsertLicenseRolloverTypedDict(TypedDict):
 class UpdatePlanVariantDetailsUpsertLicenseRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanUpsertLicenseExpiryDurationTypeResponse
+    expiry_duration_type: UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None

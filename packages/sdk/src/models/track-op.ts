@@ -29,21 +29,6 @@ export const TrackOverageBehavior = {
  */
 export type TrackOverageBehavior = ClosedEnum<typeof TrackOverageBehavior>;
 
-export type TrackLock = {
-  /**
-   * A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
-   */
-  lockId: string;
-  /**
-   * Must be true to enable locking.
-   */
-  enabled: true;
-  /**
-   * Unix timestamp (ms) when the lock automatically expires and releases the held balance.
-   */
-  expiresAt?: number | undefined;
-};
-
 export type TrackParams = {
   /**
    * The ID of the customer.
@@ -81,7 +66,6 @@ export type TrackParams = {
    * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
   async?: boolean | undefined;
-  lock?: TrackLock | undefined;
 };
 
 export const TrackIntervalEnum2 = {
@@ -272,35 +256,6 @@ export const TrackOverageBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(TrackOverageBehavior);
 
 /** @internal */
-export type TrackLock$Outbound = {
-  lock_id: string;
-  enabled: true;
-  expires_at?: number | undefined;
-};
-
-/** @internal */
-export const TrackLock$outboundSchema: z.ZodMiniType<
-  TrackLock$Outbound,
-  TrackLock
-> = z.pipe(
-  z.object({
-    lockId: z.string(),
-    enabled: z.literal(true),
-    expiresAt: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      lockId: "lock_id",
-      expiresAt: "expires_at",
-    });
-  }),
-);
-
-export function trackLockToJSON(trackLock: TrackLock): string {
-  return JSON.stringify(TrackLock$outboundSchema.parse(trackLock));
-}
-
-/** @internal */
 export type TrackParams$Outbound = {
   customer_id: string;
   feature_id?: string | undefined;
@@ -311,7 +266,6 @@ export type TrackParams$Outbound = {
   timestamp?: number | undefined;
   overage_behavior?: string | undefined;
   async?: boolean | undefined;
-  lock?: TrackLock$Outbound | undefined;
 };
 
 /** @internal */
@@ -329,7 +283,6 @@ export const TrackParams$outboundSchema: z.ZodMiniType<
     timestamp: z.optional(z.int()),
     overageBehavior: z.optional(TrackOverageBehavior$outboundSchema),
     async: z.optional(z.boolean()),
-    lock: z.optional(z.lazy(() => TrackLock$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
