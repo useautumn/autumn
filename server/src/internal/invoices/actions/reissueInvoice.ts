@@ -387,7 +387,18 @@ const issueReplacement = async ({
 		stripeInvoice.status === "draft" &&
 		(await parkDraftOriginal({ ctx, stripeCli, stripeInvoice, draft }))
 			.status === "draft";
-	const issued = await issueStripeInvoice({ stripeCli, draft, issueMethod });
+	let issued: Stripe.Invoice;
+	try {
+		issued = await issueStripeInvoice({ stripeCli, draft, issueMethod });
+	} catch (error) {
+		if (originalIsDraft) {
+			await unparkDraftOriginal({ stripeCli, stripeInvoice }).catch(
+				() => undefined,
+			);
+		}
+		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
+		throw error;
+	}
 
 	try {
 		await repointDeferredReferences({
@@ -404,11 +415,9 @@ const issueReplacement = async ({
 			toStripeInvoiceId: stripeInvoice.id,
 		}).catch(() => undefined);
 		if (originalIsDraft) {
-			await setAutoAdvance({
-				stripeCli,
-				stripeInvoiceId: stripeInvoice.id,
-				autoAdvance: stripeInvoice.auto_advance ?? false,
-			}).catch(() => undefined);
+			await unparkDraftOriginal({ stripeCli, stripeInvoice }).catch(
+				() => undefined,
+			);
 		}
 		await retireReplacement({ ctx, stripeCli, invoiceId, issued });
 		// Stripe may have collected the original between our read and the void.
@@ -429,7 +438,10 @@ const issueReplacement = async ({
 	};
 };
 
-/** Stripe can't void a draft, so it is parked instead: nothing finalizes it on its own. */
+/**
+ * Stripe can't void a draft, so it is parked instead: nothing finalizes it on its own, and the
+ * stamp (the replacement keeps the draft's id when issued) makes Autumn refuse to finalize or pay it.
+ */
 const parkDraftOriginal = async ({
 	ctx,
 	stripeCli,
@@ -442,10 +454,9 @@ const parkDraftOriginal = async ({
 	draft: Stripe.Invoice;
 }) => {
 	try {
-		return await setAutoAdvance({
-			stripeCli,
-			stripeInvoiceId: stripeInvoice.id,
-			autoAdvance: false,
+		return await stripeCli.invoices.update(stripeInvoice.id, {
+			auto_advance: false,
+			metadata: { autumn_reissued_to: draft.id },
 		});
 	} catch (error) {
 		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
@@ -453,15 +464,18 @@ const parkDraftOriginal = async ({
 	}
 };
 
-const setAutoAdvance = ({
+/** Puts a draft original back the way the failed reissue found it. */
+const unparkDraftOriginal = ({
 	stripeCli,
-	stripeInvoiceId,
-	autoAdvance,
+	stripeInvoice,
 }: {
 	stripeCli: Stripe;
-	stripeInvoiceId: string;
-	autoAdvance: boolean;
-}) => stripeCli.invoices.update(stripeInvoiceId, { auto_advance: autoAdvance });
+	stripeInvoice: Stripe.Invoice;
+}) =>
+	stripeCli.invoices.update(stripeInvoice.id, {
+		auto_advance: stripeInvoice.auto_advance ?? false,
+		metadata: { autumn_reissued_to: "" },
+	});
 
 const retireReplacement = async ({
 	ctx,
@@ -1007,7 +1021,19 @@ export const reissueInvoice = async ({
 			invoiceId: issued.id,
 		}),
 		storedLines,
-		credits,
+		// A credit note issued during the reissue moved the balance a draft will draw on.
+		credits: creditNoteId
+			? stripeCustomerToInvoiceCredits({
+					stripeCustomer: await getExpandedStripeCustomer({
+						ctx,
+						stripeCustomerId: stripeInvoiceToStripeCustomerId({
+							stripeInvoice,
+						}),
+						errorOnNotFound: true,
+					}),
+					currency: stripeInvoice.currency,
+				})
+			: credits,
 		dueDateMs,
 		settled: issued.status !== "draft",
 	});
