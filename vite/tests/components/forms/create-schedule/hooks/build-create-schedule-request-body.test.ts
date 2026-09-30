@@ -407,6 +407,84 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].plans[0].plan_id).toBe("prod_1");
 	});
 
+	test("sends a custom billing cycle anchor and ends_at", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const anchor = Date.UTC(2027, 0, 15);
+		const endsAt = Date.UTC(2027, 6, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: now })],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: anchor,
+			endDate: endsAt,
+		});
+
+		expect(result).toMatchObject({
+			billing_cycle_anchor: Date.UTC(2027, 0, 15),
+			ends_at: Date.UTC(2027, 6, 1),
+		});
+	});
+
+	test("a custom anchor does not also reset the cycle at each future phase", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				schedulePhase({ startsAt: now }),
+				schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
+		});
+
+		expect(result!.billing_cycle_anchor).toBe(Date.UTC(2027, 0, 15));
+		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
+	});
+
+	test("sends a now billing cycle anchor without ends_at", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: now })],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "now",
+			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
+			endDate: null,
+		});
+
+		expect(result!.billing_cycle_anchor).toBe("now");
+		expect(result).not.toHaveProperty("ends_at");
+	});
+
+	test("omits the anchor when the billing cycle reset is off", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: now })],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: false,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
+			endDate: Date.UTC(2027, 6, 1),
+		});
+
+		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.ends_at).toBe(Date.UTC(2027, 6, 1));
+	});
+
 	test("sends unscheduled plans alongside the phases, not inside them", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({

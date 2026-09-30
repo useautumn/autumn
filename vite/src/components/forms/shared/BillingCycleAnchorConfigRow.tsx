@@ -1,7 +1,15 @@
-import { DateInputUnix, GroupedTabButton, Switch } from "@autumn/ui";
+import { DateInputUnix, GroupedTabButton } from "@autumn/ui";
 import { addDays } from "date-fns";
+import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import type { BillingOptionRule } from "@/components/forms/shared/utils/billingOptionRules";
 import type { BillingCycleAnchorMode } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
+
+const ENABLED_RULE: BillingOptionRule = {
+	visible: true,
+	disabled: false,
+	disabledReason: null,
+};
 
 export function BillingCycleAnchorConfigRow({
 	enabled,
@@ -10,6 +18,7 @@ export function BillingCycleAnchorConfigRow({
 	minUnixDate = Date.now(),
 	maxUnixDate,
 	allowCustomAnchor = true,
+	rule = ENABLED_RULE,
 	onEnabledChange,
 	onModeChange,
 	onCustomAnchorChange,
@@ -20,6 +29,7 @@ export function BillingCycleAnchorConfigRow({
 	minUnixDate?: number;
 	maxUnixDate?: number;
 	allowCustomAnchor?: boolean;
+	rule?: BillingOptionRule;
 	onEnabledChange: (enabled: boolean) => void;
 	onModeChange: (mode: BillingCycleAnchorMode) => void;
 	onCustomAnchorChange: (anchor: number | null) => void;
@@ -45,7 +55,8 @@ export function BillingCycleAnchorConfigRow({
 			}
 			expanded={enabled}
 			action={
-				<Switch
+				<BillingOptionToggle
+					rule={rule}
 					checked={enabled}
 					onCheckedChange={(checked) => onEnabledChange(!!checked)}
 				/>

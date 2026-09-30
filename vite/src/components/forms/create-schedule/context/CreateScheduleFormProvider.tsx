@@ -186,6 +186,12 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const getBillingCycleAnchorAndEndDate = useCallback(() => {
+		const { billingCycleAnchorMode, billingCycleAnchorDate, endDate } =
+			form.store.state.values;
+		return { billingCycleAnchorMode, billingCycleAnchorDate, endDate };
+	}, [form.store]);
+
 	const getEnablePlanImmediately = useCallback(
 		() => form.store.state.values.enablePlanImmediately ?? false,
 		[form.store],
@@ -205,6 +211,7 @@ export function CreateScheduleFormProvider({
 		getUnscheduledPlans,
 		getBillingBehavior,
 		getResetBillingCycle,
+		getBillingCycleAnchorAndEndDate,
 		getEnablePlanImmediately,
 		getAllowFirstPhaseBackdate,
 	});
@@ -218,6 +225,9 @@ export function CreateScheduleFormProvider({
 		nowMs,
 		billingBehavior: formValues.billingBehavior,
 		resetBillingCycle: formValues.resetBillingCycle,
+		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
+		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
+		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 	});
 	const previewRequestBody = isDirty ? generationRequestBody : null;
