@@ -109,7 +109,7 @@ function SubscriptionEditor({
 			planNotFoundReasons={handlePlanNotFoundReasons}
 		>
 			<div className="flex flex-1 flex-col overflow-hidden">
-				<div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-3">
+				<div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-3 *:shrink-0">
 					<button
 						type="button"
 						onClick={onBack}

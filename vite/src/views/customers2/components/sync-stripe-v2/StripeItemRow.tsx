@@ -1,4 +1,4 @@
-import { TABLE_TRAY_SURFACE_ROW_CLASS } from "@/components/general/table";
+import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import type { StripeItemMark } from "./previewMismatches";
 import { StripeItemMatchChip } from "./StripeItemMatchChip";
@@ -6,7 +6,7 @@ import type { DisplayItem } from "./syncPhaseSections";
 
 export const STRIPE_ROW_CLASS = cn(
 	"flex min-h-9 min-w-0 items-center gap-2 px-3 text-sm",
-	TABLE_TRAY_SURFACE_ROW_CLASS,
+	TABLE_TRAY_SURFACE_DIVIDER_CLASS,
 );
 
 export function StripeItemRow({

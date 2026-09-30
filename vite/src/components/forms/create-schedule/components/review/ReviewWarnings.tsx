@@ -1,33 +1,39 @@
 import type { SetPlansPreviewWarning } from "@autumn/shared";
+import { Alert, AlertDescription } from "@autumn/ui";
 import { InfoIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
+
+/** Only changes that remove or lose something get a banner; the review sections already show the rest. */
+const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
+	"unmanaged_stripe_item_removed",
+	"existing_schedule_replaced",
+	"future_phase_removed",
+	"pending_quantity_change_dropped",
+]);
 
 export function ReviewWarnings({
 	warnings,
 }: {
 	warnings: SetPlansPreviewWarning[];
 }) {
-	if (warnings.length === 0) return null;
+	const bannerWarnings = warnings.filter((warning) =>
+		BANNER_WARNING_TYPES.has(warning.type),
+	);
+	if (bannerWarnings.length === 0) return null;
 
 	return (
 		<div className="flex flex-col gap-2 px-4 pt-4">
-			{warnings.map((warning) => {
+			{bannerWarnings.map((warning) => {
 				const isInfo = warning.severity === "info";
 				const Icon = isInfo ? InfoIcon : WarningCircleIcon;
 
 				return (
-					<div
+					<Alert
 						key={`${warning.type}-${warning.message}`}
-						className={cn(
-							"flex items-start gap-2 rounded-[8px] px-3 py-2 text-sm",
-							isInfo
-								? "bg-tertiary-foreground/10 text-tertiary-foreground"
-								: "bg-amber-500/10 text-amber-500",
-						)}
+						variant={isInfo ? "default" : "warning"}
 					>
-						<Icon size={16} weight="fill" className="mt-px shrink-0" />
-						<span className="flex-1">{warning.message}</span>
-					</div>
+						<Icon weight="fill" />
+						<AlertDescription>{warning.message}</AlertDescription>
+					</Alert>
 				);
 			})}
 		</div>

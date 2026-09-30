@@ -3,13 +3,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 
 const alertVariants = cva(
-	"group/alert relative grid w-full gap-0.5 rounded-lg border px-2.5 py-2 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
+	"group/alert relative grid w-full gap-0.5 rounded-xl border px-3.5 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
-				default: "bg-card text-card-foreground",
+				default:
+					"border-zinc-500/15 bg-zinc-500/[0.04] text-foreground/80 *:[svg]:text-tertiary-foreground",
+				note: "border-sky-500/15 bg-sky-500/[0.04] text-foreground/80 *:[svg]:text-sky-500/80",
+				success:
+					"border-emerald-500/15 bg-emerald-500/[0.04] text-foreground/80 *:[svg]:text-emerald-500/80",
+				warning:
+					"border-amber-500/15 bg-amber-500/[0.04] text-foreground/80 *:[svg]:text-amber-500/80",
 				destructive:
-					"bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
+					"border-red-500/15 bg-red-500/[0.04] text-foreground/80 *:[svg]:text-red-500/80",
 			},
 		},
 		defaultVariants: {
@@ -54,7 +60,7 @@ function AlertDescription({
 		<div
 			data-slot="alert-description"
 			className={cn(
-				"text-sm text-balance text-muted-foreground md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+				"text-sm text-balance md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
 				className,
 			)}
 			{...props}

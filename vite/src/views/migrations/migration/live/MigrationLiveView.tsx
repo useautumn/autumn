@@ -1,5 +1,8 @@
 import { AppEnv, type MigrationFilter, type Operations } from "@autumn/shared";
 import {
+	Alert,
+	AlertAction,
+	AlertDescription,
 	Button,
 	Dialog,
 	DialogContent,
@@ -476,19 +479,22 @@ export function MigrationLiveView({
 				/>
 			))}
 			{latestFailedRun && latestFailedRun.internal_id !== dismissedError && (
-				<div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-500">
-					<WarningIcon size={14} weight="fill" className="shrink-0" />
-					<span className="flex-1 min-w-0">
+				<Alert variant="destructive">
+					<WarningIcon weight="fill" />
+					<AlertDescription>
 						Run failed: {latestFailedRun.error_message}
-					</span>
-					<button
-						type="button"
-						onClick={() => setDismissedError(latestFailedRun.internal_id)}
-						className="shrink-0 opacity-70 hover:opacity-100"
-					>
-						<XIcon size={14} />
-					</button>
-				</div>
+					</AlertDescription>
+					<AlertAction>
+						<button
+							type="button"
+							aria-label="Dismiss error"
+							onClick={() => setDismissedError(latestFailedRun.internal_id)}
+							className="opacity-70 hover:opacity-100"
+						>
+							<XIcon size={14} />
+						</button>
+					</AlertAction>
+				</Alert>
 			)}
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
