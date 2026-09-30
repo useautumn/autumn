@@ -96,6 +96,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			customer_id: customerId,
 			entity_id: entityId,
 			user_id: ctx.userId || undefined,
+			api_key_id: ctx.apiKeyId,
 			user_email: ctx.user?.email || undefined,
 			impersonated_by: ctx.impersonatedBy,
 			api_version: ctx.apiVersion?.semver,
