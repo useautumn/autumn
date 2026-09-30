@@ -9,18 +9,13 @@ const org = { id: "org_1", slug: "acme" } as Organization;
 const env = AppEnv.Sandbox;
 
 describe("cache deployment names", () => {
-	const original = {
-		NODE_ENV: process.env.NODE_ENV,
-		ATOM_DEPLOYMENT_PREFIX: process.env.ATOM_DEPLOYMENT_PREFIX,
-	};
+	const originalPrefix = process.env.ATOM_DEPLOYMENT_PREFIX;
 
 	afterEach(() => {
-		process.env.NODE_ENV = original.NODE_ENV;
-		process.env.ATOM_DEPLOYMENT_PREFIX = original.ATOM_DEPLOYMENT_PREFIX;
+		process.env.ATOM_DEPLOYMENT_PREFIX = originalPrefix;
 	});
 
 	test("a dev stack puts its own name in front, so two stacks can hold the same org", () => {
-		process.env.NODE_ENV = "development";
 		process.env.ATOM_DEPLOYMENT_PREFIX = "johnyeocx-wt5-john-atom";
 		expect(cacheExternalId({ org, env })).toBe(
 			"johnyeocx-wt5-john-atom.org_1.sandbox",
@@ -30,15 +25,13 @@ describe("cache deployment names", () => {
 		);
 	});
 
-	test("production ignores a prefix", () => {
-		process.env.NODE_ENV = "production";
-		process.env.ATOM_DEPLOYMENT_PREFIX = "johnyeocx-wt5-john-atom";
+	test("a blank prefix counts as none", () => {
+		process.env.ATOM_DEPLOYMENT_PREFIX = "  ";
 		expect(cacheExternalId({ org, env })).toBe("org_1.sandbox");
 		expect(cacheGroupLabel({ org, env })).toBe("autumn-byoc-acme-sandbox");
 	});
 
-	test("development without a prefix names the org bare", () => {
-		process.env.NODE_ENV = "development";
+	test("without a prefix the org is named bare", () => {
 		delete process.env.ATOM_DEPLOYMENT_PREFIX;
 		expect(cacheExternalId({ org, env })).toBe("org_1.sandbox");
 		expect(cacheGroupLabel({ org, env })).toBe("autumn-byoc-acme-sandbox");

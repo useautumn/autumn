@@ -8,11 +8,9 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
 
-/** A dev stack's name goes in front, so two worktrees can hold the same org on alien at once. */
-const cacheNamePrefix = (): string | null => {
-	const prefix = process.env.ATOM_DEPLOYMENT_PREFIX?.trim();
-	return process.env.NODE_ENV === "development" && prefix ? prefix : null;
-};
+/** A dev stack's name goes in front, so two worktrees can hold the same org on alien at once; only `scripts/dev.ts` sets it. */
+const cacheNamePrefix = (): string | null =>
+	process.env.ATOM_DEPLOYMENT_PREFIX?.trim() || null;
 
 /** One env's Atom, as its deployer knows it: one deployment group each, so lookups never match two. */
 export const cacheExternalId = ({
