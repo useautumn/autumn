@@ -1,4 +1,5 @@
 import type {
+	CustomerPlanChange,
 	Feature,
 	SetPlansPreviewPhase,
 	SetPlansPreviewPlan,
@@ -6,6 +7,7 @@ import type {
 import { formatPhaseDate } from "../schedulePhaseTiming";
 import { formatMoney } from "./formatMoney";
 import { phaseLabel, phaseSummaryLabel } from "./phaseTiming";
+import { findPlanChange, planChangeLines } from "./planChangeLines";
 import { reviewPlanPrice } from "./reviewPlanPrice";
 import {
 	joinDetail,
@@ -32,10 +34,29 @@ const planCreditValue = ({
 				suffix: "credit",
 			};
 
+const updatedChanges = ({
+	plan,
+	planChanges,
+	features,
+}: {
+	plan: SetPlansPreviewPlan;
+	planChanges: CustomerPlanChange[];
+	features: Feature[];
+}) => {
+	if (plan.status !== "updated") return undefined;
+	const change = findPlanChange({
+		planChanges,
+		planId: plan.plan_id,
+		entityId: plan.entity_id,
+	});
+	return change ? planChangeLines({ change, features }) : undefined;
+};
+
 const planToRow = ({
 	plan,
 	phaseIndex,
 	planIndex,
+	planChanges,
 	features,
 	currency,
 	nowMs,
@@ -43,6 +64,7 @@ const planToRow = ({
 	plan: SetPlansPreviewPlan;
 	phaseIndex: number;
 	planIndex: number;
+	planChanges: CustomerPlanChange[];
 	features: Feature[];
 	currency: string;
 	nowMs: number;
@@ -58,6 +80,7 @@ const planToRow = ({
 			: undefined,
 	]),
 	status: plan.status,
+	changes: updatedChanges({ plan, planChanges, features }),
 	trialEndsAt:
 		plan.status !== "ends" &&
 		plan.trial_ends_at !== null &&
@@ -86,7 +109,15 @@ export const plansToReviewSection = ({
 			key: `plans-${phaseIndex}`,
 			label: phaseLabel({ phase }),
 			rows: phase.plans.map((plan, planIndex) =>
-				planToRow({ plan, phaseIndex, planIndex, features, currency, nowMs }),
+				planToRow({
+					plan,
+					phaseIndex,
+					planIndex,
+					planChanges: phase.plan_changes,
+					features,
+					currency,
+					nowMs,
+				}),
 			),
 		})),
 	),

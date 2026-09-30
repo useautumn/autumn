@@ -24,7 +24,9 @@ export function ReviewChangeRowItem({
 				<span
 					className={cn(
 						"truncate text-sm font-medium",
-						row.status === "ends" ? "text-muted-foreground" : "text-foreground",
+						row.status === "ends" || row.status === "removed"
+							? "text-muted-foreground"
+							: "text-foreground",
 					)}
 				>
 					{row.title}
@@ -42,7 +44,9 @@ export function ReviewChangeRowItem({
 			)}
 			{showsStatus && (
 				<div className="w-[108px] shrink-0">
-					{row.status && <ReviewStatusChip status={row.status} />}
+					{row.status && (
+						<ReviewStatusChip status={row.status} changes={row.changes} />
+					)}
 				</div>
 			)}
 			<span className="flex min-w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap">

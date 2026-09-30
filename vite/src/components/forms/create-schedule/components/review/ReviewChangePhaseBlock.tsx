@@ -1,7 +1,24 @@
-import { PlanSection } from "@/components/forms/customer-state/components/tray/PlanSection";
+import { StatusChip } from "@autumn/ui";
+import {
+	PLAN_SECTION_HEADER_CLASS,
+	PlanSection,
+} from "@/components/forms/customer-state/components/tray/PlanSection";
 import { PlanTraySectionTitle } from "@/components/forms/customer-state/components/tray/PlanTraySectionTitle";
 import type { ReviewChangePhase } from "../../utils/review/types/reviewChange";
 import { ReviewChangeRowItem } from "./ReviewChangeRowItem";
+
+function RemovedPhaseTitle({ label }: { label: string }) {
+	return (
+		<div className={PLAN_SECTION_HEADER_CLASS}>
+			<span className="font-medium text-tertiary-foreground line-through">
+				{label}
+			</span>
+			<StatusChip tone="red" glyph="x">
+				Phase removed
+			</StatusChip>
+		</div>
+	);
+}
 
 export function ReviewChangePhaseBlock({
 	phase,
@@ -11,7 +28,16 @@ export function ReviewChangePhaseBlock({
 	showsStatus: boolean;
 }) {
 	return (
-		<PlanSection header={<PlanTraySectionTitle title={phase.label} />}>
+		<PlanSection
+			header={
+				phase.removed ? (
+					<RemovedPhaseTitle label={phase.label} />
+				) : (
+					<PlanTraySectionTitle title={phase.label} />
+				)
+			}
+			surfaceClassName={phase.removed ? "border-dashed opacity-80" : undefined}
+		>
 			{phase.rows.map((row) => (
 				<ReviewChangeRowItem
 					key={row.key}
