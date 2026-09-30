@@ -122,9 +122,10 @@ describe("worker producer ownership fence", () => {
 });
 
 function batchOf(count: number): ProducerRecord {
-	const messages = [];
-	for (let index = 0; index < count; index++)
-		messages.push({ key: Buffer.from(`k${index}`), value: Buffer.from("v") });
+	const messages = Array.from({ length: count }, (_, index) => ({
+		key: Buffer.from(`k${index}`),
+		value: Buffer.from("v"),
+	}));
 	return { topic, messages };
 }
 

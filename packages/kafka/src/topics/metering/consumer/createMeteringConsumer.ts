@@ -80,6 +80,26 @@ export function createMeteringConsumer({
 	): bigint | null | Promise<bigint | null> {
 		const secondary = secondaryHandlerOf(position);
 		if (secondary) return secondary.readResumeOffset(position);
+		const { handler } = ctx;
+		const keepsOwnFence = !isRecordsHandler(handler) && handler.applyFence;
+		if (keepsOwnFence || !handler.readOwnerFence)
+			return handler.readResumeOffset(position);
+		return seedFenceThenResume({ position, read: handler.readOwnerFence });
+	}
+
+	async function seedFenceThenResume({
+		position,
+		read,
+	}: {
+		position: TopicResumePosition;
+		read: NonNullable<MeteringRecordsHandler["readOwnerFence"]>;
+	}): Promise<bigint | null> {
+		const stored = await read(position);
+		if (stored)
+			raiseFence({
+				position: { ...position, offset: stored.offset },
+				ownerEpoch: stored.epoch,
+			});
 		return ctx.handler.readResumeOffset(position);
 	}
 

@@ -8,6 +8,7 @@ import {
 	type MeteringStaleRecord,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
+import { type PostgresExecutor, readPartitionProgress } from "@autumn/postgres";
 import type {
 	ConsumerCrashEvent,
 	ConsumerGroupJoinEvent,
@@ -45,6 +46,8 @@ export function createStreamConsumer({
 	ctx: {
 		kafka: Pick<Kafka, "consumer" | "admin">;
 		logger: AutumnLogger;
+		/** Where partition_progress lives; without it a fence is known only once read from the log. */
+		db?: PostgresExecutor;
 		/** The consumer died and kafkajs will not restart it: the process must end so the task is replaced. */
 		onCrashed: (params: { job: string; cause: unknown }) => void;
 	};
@@ -127,11 +130,24 @@ export function createStreamConsumer({
 		return null;
 	}
 
+	const { db } = ctx;
+	const readOwnerFence = db
+		? async (position: { topic: string; partition: number }) =>
+				(await readPartitionProgress({ ctx: { db }, ...position }))
+					?.ownerFence ?? null
+		: undefined;
+
 	const topicConsumer = createMeteringConsumer({
 		ctx: {
 			consumer,
 			progress,
-			handler: { readResumeOffset, applyRecords, onRecordError, onStaleRecord },
+			handler: {
+				readResumeOffset,
+				applyRecords,
+				onRecordError,
+				onStaleRecord,
+				readOwnerFence,
+			},
 		},
 		config: {
 			topic: config.topic,
