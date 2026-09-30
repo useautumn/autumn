@@ -16,6 +16,10 @@ import {
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
 import { useCustomerSchedules } from "@/components/forms/create-schedule/hooks/useCustomerSchedules";
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
+import {
+	customerProductsToCustomerState,
+	type PhaseStart,
+} from "@/components/forms/customer-state/customerProductsToCustomerState";
 import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
 import {
 	type CustomerStateForm,
@@ -149,21 +153,48 @@ export function buildInitialValues({
 		};
 	}
 
-	// A brand new schedule starts empty — existing plans are opt-in, via the
-	// picker's "Copy existing plans" action.
+	const seededState = customerProductsToSetPlansState({ customer, products });
 	return {
-		phases: [
-			{
-				startsAt: null,
-				persistedStartsAt: undefined,
-				plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
-			},
-		],
-		unscheduledPlans: [],
+		phases: seededState.phases.map((phase) =>
+			phase.plans.length > 0
+				? phase
+				: { ...phase, plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }] },
+		),
+		unscheduledPlans: seededState.unscheduledPlans,
 		billingBehavior: null,
 		resetBillingCycle: false,
 		enablePlanImmediately: false,
 	};
+}
+
+/** Without an Autumn schedule, the live plans are today's phase and each
+ * scheduled start is its own later phase. */
+function customerProductsToSetPlansState({
+	customer,
+	products,
+}: {
+	customer: FullCustomer | undefined;
+	products: ProductV2[];
+}) {
+	const customerProducts = customer?.customer_products ?? [];
+	const scheduledStarts = customerProducts
+		.filter(
+			(customerProduct) =>
+				customerProduct.status === CusProductStatus.Scheduled,
+		)
+		.map((customerProduct) => customerProduct.starts_at);
+	const phaseStarts: PhaseStart[] = [
+		"now",
+		...[...new Set(scheduledStarts)].sort((a, b) => a - b),
+	];
+
+	return customerProductsToCustomerState({
+		customerProducts,
+		phaseStarts,
+		canUnschedule: phaseStarts.length > 1,
+		entities: customer?.entities ?? [],
+		products,
+	});
 }
 
 function ScheduleSendInvoiceContent() {

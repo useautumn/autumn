@@ -811,20 +811,57 @@ describe("buildInitialValues", () => {
 		expect(priceItem!.price).toBe(4200);
 	});
 
-	test("starts empty when no schedule exists, even with active plans", () => {
-		const activeCp = makeCusProduct({
-			id: "cp_1",
-			productId: "prod_1",
-			status: CusProductStatus.Active,
-		});
+	test("seeds the current phase with live plans when no schedule exists", () => {
+		const activeCp = makeCusProduct({ id: "cp_1", productId: "prod_1" });
 		const customer = makeCustomer({ customerProducts: [activeCp] });
 
 		const result = buildInitialValues({ customer, schedules: [], products });
 
 		expect(result.phases).toHaveLength(1);
 		expect(result.phases[0].startsAt).toBeNull();
-		expect(result.phases[0].plans).toHaveLength(1);
-		expect(result.phases[0].plans[0]).toEqual(EMPTY_CUSTOMER_STATE_PLAN);
+		expect(result.phases[0].plans.map((plan) => plan.productId)).toEqual([
+			"prod_1",
+		]);
+		expect(result.unscheduledPlans).toEqual([]);
+	});
+
+	test("seeds past-due, scheduled and ongoing plans when no schedule exists", () => {
+		const scheduledStart = 1_790_000_000_000;
+		const ongoingCp = makeCusProduct({ id: "cp_ongoing", productId: "prod_1" });
+		const pastDueCp = {
+			...makeCusProduct({
+				id: "cp_past_due",
+				productId: "prod_2",
+				status: CusProductStatus.PastDue,
+			}),
+			ended_at: scheduledStart,
+		};
+		const scheduledCp = {
+			...makeCusProduct({
+				id: "cp_scheduled",
+				productId: "prod_2",
+				status: CusProductStatus.Scheduled,
+			}),
+			starts_at: scheduledStart,
+		};
+		const customer = makeCustomer({
+			customerProducts: [ongoingCp, pastDueCp, scheduledCp],
+		});
+
+		const result = buildInitialValues({ customer, schedules: [], products });
+
+		expect(
+			result.phases.map((phase) => ({
+				startsAt: phase.startsAt,
+				productIds: phase.plans.map((plan) => plan.productId),
+			})),
+		).toEqual([
+			{ startsAt: null, productIds: ["prod_2"] },
+			{ startsAt: scheduledStart, productIds: ["prod_2"] },
+		]);
+		expect(result.unscheduledPlans.map((plan) => plan.productId)).toEqual([
+			"prod_1",
+		]);
 	});
 
 	test("returns single empty plan when no active products and no schedule", () => {
