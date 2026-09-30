@@ -1,0 +1,121 @@
+---
+title: "List Purchases"
+openapi: "openapi POST /v1/purchases.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+Lists one-off plan purchases. By default only live purchases are returned; pass `statuses: ["expired"]` to see purchases that have ended.
+
+<Note>
+  A page can hold fewer than `limit` rows (even zero) while `has_more` is `true`. Keep paginating until `has_more` is `false`.
+</Note>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string">
+  Only return rows for this customer. Omit to list across every customer.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  Only return rows for this entity. Requires customer_id.
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 50, hard ceiling 200.
+</DynamicParamField>
+
+<DynamicParamField body="start_cursor" type="string">
+  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+</DynamicParamField>
+
+<DynamicParamField body="statuses" type="('active' | 'scheduled' | 'past_due' | 'expired')[]">
+  Statuses to include. Defaults to active and scheduled. past_due matches plans with overdue payments, which read as status active with past_due true.
+</DynamicParamField>
+
+<DynamicParamField body="plan_id" type="string">
+  Only return rows for this plan.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Rows on this page.
+  <Expandable title="properties">
+    <DynamicResponseField name="plan_id" type="string">
+      The unique identifier of the purchased plan.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      Timestamp when the purchase expires, or null for lifetime access.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="started_at" type="number">
+      Timestamp when the purchase was made.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="quantity" type="number">
+      Number of units purchased.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="scope" type="'customer' | 'entity'">
+      Whether this purchase is attached at the customer level or entity level.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="id" type="string">
+      The unique identifier of this purchase. Falls back to the internal ID when none was provided.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="'active' | 'scheduled' | 'expired'">
+      Current status of the purchase.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string">
+      The customer this row belongs to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="entity_id" type="string | null">
+      The entity this row is scoped to, or null.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp when this row was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more results exist. A page may hold fewer than `limit` items (even zero) while `has_more` is true, so paginate until `has_more` is false.
+</DynamicResponseField>
+
+<DynamicResponseField name="next_cursor" type="string | null">
+  Pass as start_cursor to fetch the next page. Null when has_more is false.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "cus_prod_123",
+      "plan_id": "credit_pack",
+      "status": "expired",
+      "expires_at": null,
+      "started_at": 1768817161016,
+      "quantity": 1,
+      "scope": "customer",
+      "customer_id": "cus_123",
+      "entity_id": null,
+      "created_at": 1768817161016
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}
+```
+</ResponseExample>
