@@ -23,6 +23,7 @@ import { endRetainedSubscriptionCustomerProducts } from "./endRetainedSubscripti
 export type ImmediatePhaseTransition = {
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
+	keptCustomerProducts: FullCusProduct[];
 };
 
 export type SetPlansPlanResult = {
@@ -41,7 +42,7 @@ export const computeSetPlansPlan = ({
 }): SetPlansPlanResult => {
 	const nextPhaseStartsAt = billingContext.futurePhases[0]?.starts_at;
 	const {
-		recurringOutgoing: outgoingCustomerProducts,
+		recurringOutgoing,
 		recurringEndingAtPhase,
 		recurringScheduled: existingScheduledCustomerProducts,
 	} = resolveSetPlansRecurringProducts({ billingContext });
@@ -49,9 +50,10 @@ export const computeSetPlansPlan = ({
 	const immediate = computeImmediatePhaseCustomerProducts({
 		ctx,
 		billingContext,
-		currentRecurringCustomerProducts: outgoingCustomerProducts,
+		currentRecurringCustomerProducts: recurringOutgoing,
 		nextPhaseStartsAt,
 	});
+	const { outgoingCustomerProducts, keptCustomerProducts } = immediate;
 
 	const scheduled = computeScheduledCustomerProducts({
 		ctx,
@@ -60,7 +62,7 @@ export const computeSetPlansPlan = ({
 	});
 	const immediateCustomerProducts = immediate.insertCustomerProducts;
 
-	// The immediate phase expires the outgoing rows and inserts fresh ones, so
+	// The immediate phase expires the changed rows and inserts fresh ones, so
 	// pools must re-parent now; future phases carry theirs at activation.
 	const customerLicenseTransitions = computeCustomerLicenseTransitions({
 		outgoingCustomerProducts,
@@ -136,7 +138,7 @@ export const computeSetPlansPlan = ({
 				billingContext,
 				handledCustomerProductIds: new Set(
 					[
-						...outgoingCustomerProducts,
+						...recurringOutgoing,
 						...recurringEndingAtPhase.map(
 							({ customerProduct }) => customerProduct,
 						),
@@ -144,6 +146,9 @@ export const computeSetPlansPlan = ({
 				),
 			}),
 		],
+		patchCustomerProducts: immediate.patchCustomerProducts.length
+			? immediate.patchCustomerProducts
+			: undefined,
 		deleteCustomerProducts: scheduled.deleteCustomerProducts,
 		customPrices: billingContext.customPrices,
 		customEntitlements: [
@@ -187,6 +192,7 @@ export const computeSetPlansPlan = ({
 		immediatePhaseTransition: {
 			outgoingCustomerProducts,
 			incomingCustomerProducts: immediateCustomerProducts,
+			keptCustomerProducts,
 		},
 	};
 };

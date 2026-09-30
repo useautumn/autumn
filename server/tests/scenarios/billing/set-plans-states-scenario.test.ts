@@ -1,7 +1,10 @@
 /** Customers left in each Stripe state set_plans must handle; run by hand from the dashboard. */
 
 import { expect, test } from "bun:test";
-import { cancelSubscriptionForResync } from "@tests/integration/billing/set-plans/utils/resyncUtils";
+import {
+	cancelSubscriptionForResync,
+	cancelSubscriptionMissingWebhook,
+} from "@tests/integration/billing/set-plans/utils/resyncUtils";
 import {
 	findStripeSubscriptionByStatus,
 	setupPausedPro,
@@ -10,10 +13,7 @@ import { driveProductPastDue } from "@tests/integration/billing/utils/driveProdu
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import { CusService } from "@/internal/customers/CusService";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 const TRACKED_MESSAGES = 40;
 
@@ -27,35 +27,6 @@ const resyncProducts = () => ({
 		items: [items.monthlyMessages({ includedUsage: 100 })],
 	}),
 });
-
-/** Cancels in Stripe while Autumn's rows are unlinked, as if the webhook never arrived. */
-const cancelSubscriptionMissingWebhook = async ({
-	ctx,
-	customerId,
-}: {
-	ctx: TestContext;
-	customerId: string;
-}) => {
-	const { customer_products: customerProducts } = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-	});
-	for (const customerProduct of customerProducts) {
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates: { subscription_ids: [] },
-		});
-	}
-	await cancelSubscriptionForResync({ ctx, customerId });
-	for (const customerProduct of customerProducts) {
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates: { subscription_ids: customerProduct.subscription_ids },
-		});
-	}
-};
 
 test.concurrent(
 	"scenario A: pro cancelled in Stripe 10 days in, webhook processed",
