@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ProducerRecord } from "kafkajs";
+import type { ConsumerConfig, ProducerRecord } from "kafkajs";
 import {
 	createCatalogInvalidationConsumer,
 	createCatalogInvalidationPublisher,
@@ -78,18 +78,21 @@ describe("catalog invalidation topic", () => {
 					message: { offset: string; key: Buffer | null; value: Buffer | null };
 			  }) => Promise<void>)
 			| undefined;
+		let groupConfig: ConsumerConfig | undefined;
 		const consumer = createCatalogInvalidationConsumer({
 			ctx: {
 				kafka: {
-					consumer: () =>
-						({
+					consumer: (config: ConsumerConfig) => {
+						groupConfig = config;
+						return {
 							connect: async () => {},
 							subscribe: async () => {},
-							run: async (config: { eachMessage?: typeof run }) => {
-								run = config.eachMessage;
+							run: async (runConfig: { eachMessage?: typeof run }) => {
+								run = runConfig.eachMessage;
 							},
 							disconnect: async () => {},
-						}) as never,
+						} as never;
+					},
 				},
 				handler: {
 					apply: ({ record: read }) => {
@@ -104,6 +107,11 @@ describe("catalog invalidation topic", () => {
 		});
 
 		await consumer.start();
+		expect(groupConfig).toMatchObject({
+			readUncommitted: false,
+			allowAutoTopicCreation: false,
+			maxWaitTimeInMs: 5_000,
+		});
 		await run?.({
 			message: {
 				offset: "0",

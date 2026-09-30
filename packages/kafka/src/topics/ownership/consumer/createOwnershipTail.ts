@@ -1,5 +1,8 @@
 import type { ConsumerCrashEvent, EachBatchPayload } from "kafkajs";
-import { createConsumerGroupConfig } from "../../../client/createConsumerGroupConfig.js";
+import {
+	createConsumerGroupConfig,
+	TAIL_FETCH_MAX_WAIT_MS,
+} from "../../../client/createConsumerGroupConfig.js";
 import { parseKafkaOffset } from "../../../client/kafkaOffsetUtils.js";
 import { ownershipTopic } from "../ownershipTopic.js";
 import type {
@@ -25,7 +28,7 @@ export function createOwnershipTail({
 		createConsumerGroupConfig({
 			groupId: `${config.groupIdPrefix ?? "autumn-ownership-tail"}-${crypto.randomUUID()}`,
 			timings: config.timings ?? {
-				fetchMaxWaitTimeMs: 250,
+				fetchMaxWaitTimeMs: TAIL_FETCH_MAX_WAIT_MS,
 				heartbeatIntervalMs: 3_000,
 				sessionTimeoutMs: 30_000,
 				rebalanceTimeoutMs: 60_000,

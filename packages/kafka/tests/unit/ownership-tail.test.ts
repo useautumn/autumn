@@ -218,6 +218,7 @@ describe("ownershipTail", function ownershipTailTests() {
 			expect(groupConfig).toMatchObject({
 				readUncommitted: false,
 				allowAutoTopicCreation: false,
+				maxWaitTimeInMs: 5_000,
 			});
 			expect(groupConfig?.groupId).toStartWith("autumn-ownership-tail-");
 			expect(lifecycle).toEqual(["connect", "subscribe", "run"]);
