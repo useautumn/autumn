@@ -66,5 +66,7 @@ export type {
 } from "./contracts/worker.js";
 export {
 	parseWorkerRequest,
+	readRequestBudgetHeader,
+	WORKER_REQUEST_BUDGET_HEADER,
 	WorkerProtocolError,
 } from "./contracts/worker.js";

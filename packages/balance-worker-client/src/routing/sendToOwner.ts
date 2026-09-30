@@ -1,3 +1,7 @@
+import {
+	requestBudgetHeaderValue,
+	WORKER_REQUEST_BUDGET_HEADER,
+} from "../contracts/worker.js";
 import { HttpResponseError } from "../http/types/httpClient.js";
 import {
 	BalanceWorkerClientError,
@@ -10,6 +14,7 @@ import { resolveCommandRoute } from "./resolveCommandRoute.js";
 import type { RoutedCommand, RoutingContext } from "./types/routing.js";
 import {
 	assertRequestDeadline,
+	canRetryNotReady,
 	createRequestDeadline,
 	followNotOwnerAnswer,
 	MAX_NOT_READY_RETRIES,
@@ -97,6 +102,11 @@ export async function sendToOwner<Response>({
 						? {}
 						: { payload: payloadSnapshot }),
 				},
+				headers: {
+					[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
+						expiresAt: deadline.expiresAt,
+					}),
+				},
 				signal: deadline.signal,
 			});
 			assertRequestDeadline({ deadline, outcome });
@@ -108,7 +118,10 @@ export async function sendToOwner<Response>({
 			if (notOwner.notReady) {
 				notReadyRetries += 1;
 				routing.notReadyAnswers = notReadyRetries;
-				if (notReadyRetries > MAX_NOT_READY_RETRIES)
+				if (
+					notReadyRetries > MAX_NOT_READY_RETRIES ||
+					!canRetryNotReady({ deadline })
+				)
 					throw ownerStillNotReadyError();
 				continue;
 			}

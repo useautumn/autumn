@@ -3,6 +3,10 @@ import { meteringIdentityToPartition } from "@autumn/kafka/partitioning";
 import type { TrackReply } from "../contracts/track.js";
 import type { TrackBatchItemResult } from "../contracts/trackBatch.js";
 import {
+	requestBudgetHeaderValue,
+	WORKER_REQUEST_BUDGET_HEADER,
+} from "../contracts/worker.js";
+import {
 	type HttpResponse,
 	HttpResponseError,
 } from "../http/types/httpClient.js";
@@ -21,6 +25,7 @@ import type {
 } from "./types/routing.js";
 import {
 	assertRequestDeadline,
+	canRetryNotReady,
 	createRequestDeadline,
 	followNotOwnerAnswer,
 	MAX_NOT_READY_RETRIES,
@@ -190,7 +195,12 @@ export function createTrackBatcher({
 				if (posted.notReady) {
 					notReadyRetries += 1;
 					routing.notReadyAnswers = notReadyRetries;
-					if (notReadyRetries > MAX_NOT_READY_RETRIES) {
+					if (
+						notReadyRetries > MAX_NOT_READY_RETRIES ||
+						!canRetryNotReady({
+							deadline: earliestDeadline({ items: pending }),
+						})
+					) {
 						rejectAll({
 							items: pending,
 							error: ownerStillNotReadyError(),
@@ -257,6 +267,12 @@ export function createTrackBatcher({
 				body: {
 					route: resolved.route,
 					commands: items.map(snapshotOf),
+				},
+				// The batch waits only as long as its most impatient item.
+				headers: {
+					[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
+						expiresAt: earliestDeadline({ items }).expiresAt,
+					}),
 				},
 				signal: batchAttempt.controller.signal,
 			});
@@ -460,6 +476,15 @@ function snapshotOf(item: TrackItem): TrackCommand {
 
 function isLive(item: TrackItem): boolean {
 	return item.phase !== "settled";
+}
+
+/** The soonest any item in the batch expires: a hold at the worker must end before it. */
+function earliestDeadline({ items }: { items: TrackItem[] }): RequestDeadline {
+	let earliest: RequestDeadline | undefined;
+	for (const item of items)
+		if (!earliest || item.deadline.expiresAt < earliest.expiresAt)
+			earliest = item.deadline;
+	return earliest ?? { expiresAt: 0, signal: AbortSignal.abort() };
 }
 
 /** A route refresh waits as long as any item in the batch still does. */

@@ -15,6 +15,7 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
+import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
 
 const command: TrackCommand = {
 	schemaVersion: 1,
@@ -141,6 +142,8 @@ function createFixture({
 	let currentOwner = owner;
 	let refreshes = 0;
 	const requests: Array<{ url: string; body: unknown }> = [];
+	/** The budget header of each send, in order. */
+	const budgets: string[] = [];
 	const refreshed = Promise.withResolvers<void>();
 	function findOwner(): PartitionOwner | undefined {
 		return currentOwner ?? undefined;
@@ -154,6 +157,7 @@ function createFixture({
 	}
 	async function postJson(request: HttpRequest): Promise<HttpResponse> {
 		requests.push({ url: request.url, body: structuredClone(request.body) });
+		budgets.push(request.headers?.[WORKER_REQUEST_BUDGET_HEADER] ?? "");
 		if (transportFailure) throw transportFailure;
 		return responses[requests.length - 1] ?? success;
 	}
@@ -169,7 +173,7 @@ function createFixture({
 			batchTracks: false,
 		},
 	});
-	return { client, stats, refreshed: refreshed.promise };
+	return { client, stats, budgets, refreshed: refreshed.promise };
 }
 
 async function usesCachedOwner(): Promise<void> {
@@ -761,6 +765,42 @@ test(
 test(
 	"an owner still not ready after every retry fails not_submitted as NOT_READY",
 	givesUpOnAnOwnerThatStaysNotReady,
+);
+
+async function tellsTheWorkerHowLongItCanWait(): Promise<void> {
+	// An owner still activating holds the request for this long instead of a fixed moment.
+	const fixture = createFixture({ timeoutMs: 1000 });
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	const [budget] = fixture.budgets;
+	expect(budget).toMatch(/^\d+$/);
+	expect(Number(budget)).toBeGreaterThan(900);
+	expect(Number(budget)).toBeLessThanOrEqual(1000);
+}
+
+test(
+	"every send carries how long the caller will still wait",
+	tellsTheWorkerHowLongItCanWait,
+);
+
+async function doesNotRetryNotReadyWithoutBudget(): Promise<void> {
+	// The owner held the request for the budget it was told; what is left is the margin, so a
+	// resend could only run the deadline out mid-flight. The clean NOT_READY stands.
+	const fixture = createFixture({
+		timeoutMs: 150,
+		responses: [notReady, success],
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		code: "WORKER_ERROR",
+		workerCode: "NOT_READY",
+		outcome: "not_submitted",
+		routing: { sends: 1, notReadyAnswers: 1 },
+	});
+	expect(fixture.stats().requests).toHaveLength(1);
+}
+
+test(
+	"a NOT_READY with less than the retry budget left is not resent",
+	doesNotRetryNotReadyWithoutBudget,
 );
 
 async function ignoresAHintOlderThanKnownOwnership(): Promise<void> {

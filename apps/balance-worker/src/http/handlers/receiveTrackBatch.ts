@@ -14,6 +14,10 @@ import {
 	PartitionRouteMismatchError,
 	PartitionRouteNotOwnedError,
 } from "../middlewares/runtimeRouting/runtimeRoutingErrors.js";
+import {
+	readRequestBudget,
+	withRequestBudget,
+} from "../middlewares/runtimeRouting/withRequestBudget.js";
 import type {
 	BalanceWorkerBatchLog,
 	BalanceWorkerHttpContext,
@@ -42,7 +46,10 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 				}),
 			});
 		}
-		const runtime: Runtime = owner;
+		const runtime: Runtime = withRequestBudget({
+			runtime: owner,
+			budgetMs: readRequestBudget(context),
+		});
 
 		function runCommand(input: unknown): Promise<TrackReply> {
 			return runTrack({ ctx, runtime, input, route });

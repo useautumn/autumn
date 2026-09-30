@@ -10,6 +10,7 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
+import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
 
 const baseCommand: TrackCommand = {
 	schemaVersion: 1,
@@ -86,6 +87,7 @@ const replacement: PartitionOwner = {
 };
 
 type PendingRequest = {
+	budget?: string;
 	url: string;
 	body: { route: unknown; commands: TrackCommand[] };
 	signal: AbortSignal;
@@ -126,6 +128,7 @@ function createFixture({
 		requests.push({
 			url: request.url,
 			body: structuredClone(request.body) as PendingRequest["body"],
+			budget: request.headers?.[WORKER_REQUEST_BUDGET_HEADER],
 			signal: request.signal,
 			respond: response.resolve,
 			fail: response.reject,
@@ -525,6 +528,32 @@ test("a batch that fails after following a successor hint records the hint on ev
 			notReadyAnswers: 0,
 		},
 	});
+});
+
+test("a batch tells the worker how long its most impatient item will wait", async () => {
+	const fixture = createFixture({ timeoutMs: 1000 });
+	const pending = fixture.client.track({ command: commandFor("a") });
+	await fixture.sent(1);
+	const budget = fixture.requests[0].budget ?? "";
+	expect(budget).toMatch(/^\d+$/);
+	expect(Number(budget)).toBeGreaterThan(900);
+	expect(Number(budget)).toBeLessThanOrEqual(1000);
+	fixture.requests[0].respond(okResults(["a"]));
+	expect(await pending).toEqual(replyFor("a"));
+});
+
+test("a batch answered NOT_READY with less than the retry budget left is not resent", async () => {
+	const fixture = createFixture({ timeoutMs: 150 });
+	const pending = fixture.client.track({ command: commandFor("a") });
+	await fixture.sent(1);
+	fixture.requests[0].respond(notReady);
+	await expect(pending).rejects.toMatchObject({
+		code: "WORKER_ERROR",
+		workerCode: "NOT_READY",
+		outcome: "not_submitted",
+		routing: { sends: 1, notReadyAnswers: 1 },
+	});
+	expect(fixture.requests).toHaveLength(1);
 });
 
 test("a route still stale after one refresh rejects not_submitted", async () => {

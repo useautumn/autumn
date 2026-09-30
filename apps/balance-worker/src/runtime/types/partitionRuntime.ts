@@ -117,8 +117,13 @@ export type PartitionRuntime = {
 	getStatus(): PartitionRuntimeStatus;
 	getHealth(): OwnedPartitionHealth;
 	subscribeUnavailable(listener: RuntimeUnavailableListener): () => void;
-	/** Runs one processor command behind the readiness gate and recovery mapping. */
+	/** Runs one processor command behind the readiness gate and recovery mapping.
+	 *  `budgetMs` is how long the caller will still wait: an activating runtime holds
+	 *  the command for that long (less a margin) before answering not ready. */
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,
+		options?: ProcessOptions,
 	): Promise<Decision>;
 };
+
+export type ProcessOptions = { budgetMs?: number };

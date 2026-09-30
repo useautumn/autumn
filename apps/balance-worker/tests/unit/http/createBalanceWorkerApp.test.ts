@@ -160,8 +160,15 @@ const fixture = ({
 		},
 		drain: async () => undefined,
 	};
-	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>
-		run(processor);
+	/** The budget each command was run with, in order; undefined when the request carried none. */
+	const budgets: Array<number | undefined> = [];
+	const process: BalanceWorkerRequestContext["runtime"]["process"] = (
+		run,
+		options,
+	) => {
+		budgets.push(options?.budgetMs);
+		return run(processor);
+	};
 	const runtime = { process };
 	const findRuntime = (requested: PartitionRoute) => {
 		lookups.push(requested);
@@ -188,13 +195,29 @@ const fixture = ({
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify(body),
 		});
-	const postBatch = (body: unknown) =>
+	const postBatch = (body: unknown, headers: Record<string, string> = {}) =>
 		app.request("/v1/track-batch", {
 			method: "POST",
-			headers: { "content-type": "application/json" },
+			headers: { "content-type": "application/json", ...headers },
 			body: JSON.stringify(body),
 		});
-	return { app, ctx, post, postBatch, submitted, lookups, logs };
+	const postWithHeaders = (headers: Record<string, string>) =>
+		app.request("/v1/track", {
+			method: "POST",
+			headers: { "content-type": "application/json", ...headers },
+			body: JSON.stringify(request),
+		});
+	return {
+		app,
+		ctx,
+		post,
+		postBatch,
+		postWithHeaders,
+		submitted,
+		lookups,
+		logs,
+		budgets,
+	};
 };
 
 test(
@@ -561,6 +584,25 @@ describe("Balance worker HTTP", () => {
 		expect(batch.status).toBe(409);
 		expect((await batch.json()).error.successor).toEqual(successor);
 		expect(submitted).toEqual([]);
+	});
+	test("the caller's budget header reaches every command the request runs", async () => {
+		const { postWithHeaders, postBatch, post, budgets } = fixture();
+		expect(
+			(await postWithHeaders({ "x-request-budget-ms": "750" })).status,
+		).toBe(200);
+		expect((await post()).status).toBe(200);
+		expect(
+			(
+				await postBatch(
+					{ route, commands: [command, command] },
+					{ "x-request-budget-ms": "640" },
+				)
+			).status,
+		).toBe(200);
+		expect(
+			(await postWithHeaders({ "x-request-budget-ms": "soon" })).status,
+		).toBe(200);
+		expect(budgets).toEqual([750, undefined, 640, 640, undefined]);
 	});
 	test("maps runtime readiness races centrally", async () => {
 		const { post } = fixture({
