@@ -1,5 +1,5 @@
 workflowVersion: 1.0.0
-speakeasyVersion: 1.762.0
+speakeasyVersion: 1.763.6
 sources:
     Autumn API:
         inputs:

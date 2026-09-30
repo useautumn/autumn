@@ -1,4 +1,4 @@
-speakeasyVersion: 1.762.0
+speakeasyVersion: 1.763.6
 sources:
     Autumn API:
         sourceNamespace: autumn-api
@@ -31,7 +31,7 @@ targets:
         codeSamplesRevisionDigest: sha256:068bc9c7fec0a311a10615ec80bf17fd147b941e14db5be305243001a5e57bea
 workflow:
     workflowVersion: 1.0.0
-    speakeasyVersion: 1.762.0
+    speakeasyVersion: 1.763.6
     sources:
         Autumn API:
             inputs:
