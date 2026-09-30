@@ -87,6 +87,7 @@ import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
 import { handleRemoveRolloutCustomers } from "./rollouts/handleRemoveRolloutCustomers";
+import { handleResetRolloutOrgs } from "./rollouts/handleResetRolloutOrgs";
 import { handleUpdateRollout } from "./rollouts/handleUpdateRollout";
 import { handleUpdateRolloutOrg } from "./rollouts/handleUpdateRolloutOrg";
 
@@ -309,6 +310,10 @@ honoAdminRouter.delete("/rollouts/:rollout_id", ...handleDeleteRollout);
 honoAdminRouter.delete(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleDeleteRolloutOrg,
+);
+honoAdminRouter.post(
+	"/rollouts/:rollout_id/orgs/reset",
+	...handleResetRolloutOrgs,
 );
 honoAdminRouter.put(
 	"/rollouts/:rollout_id/orgs/:org_id/customers",

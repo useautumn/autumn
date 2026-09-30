@@ -120,6 +120,41 @@ export const removeRolloutOrg = async ({
 	return config;
 };
 
+/** Every org override above 0 is scheduled down to 0; one already there keeps its change time. */
+export const scheduleOrgsToZero = ({
+	orgs,
+	now,
+}: {
+	orgs: RolloutEntry["orgs"];
+	now: number;
+}): RolloutEntry["orgs"] =>
+	Object.fromEntries(
+		Object.entries(orgs).map(([orgId, current]) => [
+			orgId,
+			current.percent === 0
+				? current
+				: scheduleRolloutPercent({ current, percent: 0, now }),
+		]),
+	);
+
+/** Send every org override back to the legacy path in one write; the overrides stay, at 0. */
+export const resetRolloutOrgs = async ({
+	rolloutId,
+	now = Date.now(),
+}: {
+	rolloutId: string;
+	now?: number;
+}) => {
+	const config = await store.readFromSource();
+	const entry = config.rollouts[rolloutId];
+	if (!entry) return config;
+
+	entry.orgs = scheduleOrgsToZero({ orgs: entry.orgs, now });
+	await store.writeToSource({ config });
+
+	return config;
+};
+
 /** Re-adding a customer before its removal lands cancels the removal, so it never dips back to the fallback. */
 export const scheduleCustomerAdd = ({
 	current,

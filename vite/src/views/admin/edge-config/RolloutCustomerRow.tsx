@@ -2,6 +2,7 @@ import { IconButton } from "@autumn/ui";
 import { cn } from "@autumn/ui/lib/utils";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Trash2 } from "lucide-react";
+import { ROW_ACTIONS_REVEAL, ROW_LAYOUT } from "./rolloutRowStyles";
 import type {
 	RolloutCustomer,
 	RolloutCustomerName,
@@ -9,8 +10,8 @@ import type {
 } from "./rolloutTypes";
 import { useNow } from "./useNow";
 
-export const CUSTOMER_ROW_GRID =
-	"grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_200px_40px] items-center gap-4 px-4";
+export const CUSTOMER_ROW_COLUMNS =
+	"md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_200px_40px]";
 
 type PinStatus = { label: string; pending: boolean };
 
@@ -65,7 +66,7 @@ const PinStatusLabel = ({
 	);
 };
 
-/** One pinned customer: its org, its id, where its last add or removal stands, and remove on hover. */
+/** One pinned customer: its org, its id, where its last add or removal stands, and remove. */
 export const RolloutCustomerRow = ({
 	orgId,
 	org,
@@ -84,15 +85,21 @@ export const RolloutCustomerRow = ({
 	onRemove: () => void;
 }) => (
 	<div
-		className={`group h-12 hover:bg-interactive-secondary-hover ${CUSTOMER_ROW_GRID}`}
+		className={cn(
+			"group hover:bg-interactive-secondary-hover",
+			ROW_LAYOUT,
+			CUSTOMER_ROW_COLUMNS,
+		)}
 	>
-		<div className="min-w-0">
-			<p className="truncate text-sm text-foreground">{org?.name ?? orgId}</p>
-			<p className="truncate font-mono text-tiny text-tertiary-foreground">
+		<div className="order-3 min-w-0 md:order-none">
+			<p className="truncate text-xs text-tertiary-foreground md:text-sm md:text-foreground">
+				{org?.name ?? orgId}
+			</p>
+			<p className="hidden truncate font-mono text-tiny text-tertiary-foreground md:block">
 				{org ? `${org.slug} · ${org.id}` : orgId}
 			</p>
 		</div>
-		<div className="min-w-0">
+		<div className="order-1 min-w-0 md:order-none">
 			<p className="truncate text-sm text-foreground">
 				{customerName?.name ?? customerId}
 			</p>
@@ -102,8 +109,15 @@ export const RolloutCustomerRow = ({
 					: customerId}
 			</p>
 		</div>
-		<PinStatusLabel customer={customer} settleMs={settleMs} />
-		<div className="flex justify-end opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+		<div className="order-4 justify-self-end md:order-none md:justify-self-start">
+			<PinStatusLabel customer={customer} settleMs={settleMs} />
+		</div>
+		<div
+			className={cn(
+				"order-2 flex justify-end md:order-none",
+				ROW_ACTIONS_REVEAL,
+			)}
+		>
 			{customer.removedAt === undefined && (
 				<IconButton
 					icon={<Trash2 className="size-3.5" />}

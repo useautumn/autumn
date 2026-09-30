@@ -90,6 +90,18 @@ export const useBalanceWorkerRollout = () => {
 			toast.error(getBackendErr(error, "Failed to remove org override")),
 	});
 
+	const resetOrgs = useMutation({
+		mutationFn: async () => {
+			await axiosInstance.post(`${rolloutPath}/orgs/reset`);
+		},
+		onSuccess: () => {
+			toast.success("Org overrides scheduled to 0%");
+			void refresh();
+		},
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to reset org overrides")),
+	});
+
 	const addCustomers = useMutation({
 		mutationFn: async ({
 			orgId,
@@ -156,6 +168,7 @@ export const useBalanceWorkerRollout = () => {
 		setGlobalPercent,
 		setOrgPercent,
 		removeOrg,
+		resetOrgs,
 		addCustomers,
 		removeCustomer,
 	};

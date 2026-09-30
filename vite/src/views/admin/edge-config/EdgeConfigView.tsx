@@ -1,21 +1,26 @@
 import { Button, IconButton, PageContainer, PageHeader } from "@autumn/ui";
 import { cn } from "@autumn/ui/lib/utils";
-import { Plus, RefreshCw, Sliders } from "lucide-react";
+import { Plus, RefreshCw, RotateCcw, Sliders } from "lucide-react";
 import { useState } from "react";
 import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
 import { useAdmin } from "../hooks/useAdmin";
 import { RolloutConfirmDialog } from "./RolloutConfirmDialog";
-import { CUSTOMER_ROW_GRID, RolloutCustomerRow } from "./RolloutCustomerRow";
+import { RolloutCustomerList } from "./RolloutCustomerList";
 import { RolloutCustomersDialog } from "./RolloutCustomersDialog";
 import { RolloutGlobalControl } from "./RolloutGlobalControl";
 import { RolloutOrgDialog } from "./RolloutOrgDialog";
-import { ORG_ROW_GRID, RolloutOrgRow } from "./RolloutOrgRow";
+import { RolloutOrgList } from "./RolloutOrgList";
 import { RolloutSection } from "./RolloutSection";
 import { useBalanceWorkerRollout } from "./useBalanceWorkerRollout";
 
-type PendingRemoval = { orgId: string; name: string };
-type PendingCustomerRemoval = { orgId: string; customerId: string };
+/** The one dialog open at a time, with what it acts on. */
+type RolloutDialog =
+	| { kind: "addOrg" }
+	| { kind: "removeOrg"; orgId: string; name: string }
+	| { kind: "resetOrgs" }
+	| { kind: "addCustomers" }
+	| { kind: "removeCustomer"; orgId: string; customerId: string };
 
 const ConfigHealth = ({ healthy }: { healthy: boolean }) => (
 	<span className="flex items-center gap-2 px-2 text-tiny text-subtle">
@@ -29,15 +34,12 @@ const ConfigHealth = ({ healthy }: { healthy: boolean }) => (
 	</span>
 );
 
-/** The balance-worker rollout: one global percent, per-org overrides, and where each change stands. */
+/** The balance-worker rollout: one global percent, per-org and per-customer overrides, and where each change stands. */
 export const EdgeConfigView = () => {
 	const { isAdmin, isPending } = useAdmin();
 	const rollout = useBalanceWorkerRollout();
-	const [addingOrg, setAddingOrg] = useState(false);
-	const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>();
-	const [addingCustomers, setAddingCustomers] = useState(false);
-	const [pendingCustomerRemoval, setPendingCustomerRemoval] =
-		useState<PendingCustomerRemoval>();
+	const [dialog, setDialog] = useState<RolloutDialog>();
+	const closeDialog = () => setDialog(undefined);
 
 	if (isPending || rollout.isLoading) {
 		return (
@@ -58,62 +60,81 @@ export const EdgeConfigView = () => {
 		health,
 	} = rollout;
 	const settleSeconds = Math.round(settleMs / 1_000);
-	const pendingCustomerRemovalName = pendingCustomerRemoval
-		? (customerNamesByOrgId[pendingCustomerRemoval.orgId]?.[
-				pendingCustomerRemoval.customerId
-			]?.name ?? pendingCustomerRemoval.customerId)
-		: undefined;
+	const activeOrgCount = orgOverrides.filter(
+		([, { percent }]) => percent > 0,
+	).length;
+	const removingOrg = dialog?.kind === "removeOrg" ? dialog : undefined;
+	const removingCustomer =
+		dialog?.kind === "removeCustomer" ? dialog : undefined;
+	const removingCustomerName = removingCustomer
+		? (customerNamesByOrgId[removingCustomer.orgId]?.[
+				removingCustomer.customerId
+			]?.name ?? removingCustomer.customerId)
+		: "This customer";
 
 	return (
 		<PageContainer className="gap-6">
 			<RolloutOrgDialog
-				open={addingOrg}
-				onOpenChange={setAddingOrg}
+				open={dialog?.kind === "addOrg"}
+				onOpenChange={(open) => !open && closeDialog()}
 				onSubmit={({ orgId, percent }) =>
 					rollout.setOrgPercent.mutate(
 						{ orgId, percent },
-						{ onSuccess: () => setAddingOrg(false) },
+						{ onSuccess: closeDialog },
 					)
 				}
 				isSaving={rollout.setOrgPercent.isPending}
 			/>
 			<RolloutConfirmDialog
-				open={Boolean(pendingRemoval)}
-				onOpenChange={(open) => !open && setPendingRemoval(undefined)}
+				open={Boolean(removingOrg)}
+				onOpenChange={(open) => !open && closeDialog()}
 				title="Remove override"
-				description={`${pendingRemoval?.name ?? "This org"} will follow the global percent (${global.percent}%) ${settleSeconds}s after removal.`}
+				description={`${removingOrg?.name ?? "This org"} will follow the global percent (${global.percent}%) ${settleSeconds}s after removal.`}
 				confirmLabel="Remove override"
 				onConfirm={() =>
-					pendingRemoval &&
+					removingOrg &&
 					rollout.removeOrg.mutate(
-						{ orgId: pendingRemoval.orgId },
-						{ onSuccess: () => setPendingRemoval(undefined) },
+						{ orgId: removingOrg.orgId },
+						{ onSuccess: closeDialog },
 					)
 				}
 				isPending={rollout.removeOrg.isPending}
 			/>
+			<RolloutConfirmDialog
+				open={dialog?.kind === "resetOrgs"}
+				onOpenChange={(open) => !open && closeDialog()}
+				title="Reset all org overrides to 0%"
+				description={`${activeOrgCount} org ${activeOrgCount === 1 ? "override drops" : "overrides drop"} to 0% ${settleSeconds}s after you confirm, sending those orgs back to the legacy path. The overrides stay listed at 0%; the global percent and customer overrides are not changed.`}
+				confirmLabel="Reset all to 0%"
+				onConfirm={() =>
+					rollout.resetOrgs.mutate(undefined, { onSuccess: closeDialog })
+				}
+				isPending={rollout.resetOrgs.isPending}
+			/>
 			<RolloutCustomersDialog
-				open={addingCustomers}
-				onOpenChange={setAddingCustomers}
+				open={dialog?.kind === "addCustomers"}
+				onOpenChange={(open) => !open && closeDialog()}
 				onSubmit={(input) =>
-					rollout.addCustomers.mutate(input, {
-						onSuccess: () => setAddingCustomers(false),
-					})
+					rollout.addCustomers.mutate(input, { onSuccess: closeDialog })
 				}
 				isSaving={rollout.addCustomers.isPending}
 				settleSeconds={settleSeconds}
 			/>
 			<RolloutConfirmDialog
-				open={Boolean(pendingCustomerRemoval)}
-				onOpenChange={(open) => !open && setPendingCustomerRemoval(undefined)}
+				open={Boolean(removingCustomer)}
+				onOpenChange={(open) => !open && closeDialog()}
 				title="Remove customer"
-				description={`${pendingCustomerRemovalName ?? "This customer"} will follow its org's percent ${settleSeconds}s after removal.`}
+				description={`${removingCustomerName} will follow its org's percent ${settleSeconds}s after removal.`}
 				confirmLabel="Remove customer"
 				onConfirm={() =>
-					pendingCustomerRemoval &&
-					rollout.removeCustomer.mutate(pendingCustomerRemoval, {
-						onSuccess: () => setPendingCustomerRemoval(undefined),
-					})
+					removingCustomer &&
+					rollout.removeCustomer.mutate(
+						{
+							orgId: removingCustomer.orgId,
+							customerId: removingCustomer.customerId,
+						},
+						{ onSuccess: closeDialog },
+					)
 				}
 				isPending={rollout.removeCustomer.isPending}
 			/>
@@ -150,53 +171,41 @@ export const EdgeConfigView = () => {
 				title="Org overrides"
 				description="An org with an override ignores the global percent until the override is removed."
 				actions={
-					<Button
-						size="sm"
-						variant="secondary"
-						onClick={() => setAddingOrg(true)}
-					>
-						<Plus className="size-3.5" />
-						Add org
-					</Button>
+					<>
+						{orgOverrides.length > 0 && (
+							<Button
+								size="sm"
+								variant="secondary"
+								onClick={() => setDialog({ kind: "resetOrgs" })}
+								disabled={activeOrgCount === 0}
+							>
+								<RotateCcw className="size-3.5" />
+								Reset all to 0%
+							</Button>
+						)}
+						<Button
+							size="sm"
+							variant="secondary"
+							onClick={() => setDialog({ kind: "addOrg" })}
+						>
+							<Plus className="size-3.5" />
+							Add org
+						</Button>
+					</>
 				}
 			>
-				<div className="divide-y overflow-clip rounded-lg border bg-interactive-secondary">
-					{orgOverrides.length === 0 ? (
-						<div className="flex h-12 items-center px-4 text-sm text-tertiary-foreground">
-							No overrides. Every org follows the global percent.
-						</div>
-					) : (
-						<>
-							<div
-								className={`h-9 text-tiny uppercase tracking-wide text-subtle ${ORG_ROW_GRID}`}
-							>
-								<span>Org</span>
-								<span>On the worker</span>
-								<span>Status</span>
-								<span />
-							</div>
-							{orgOverrides.map(([orgId, orgRollout]) => (
-								<RolloutOrgRow
-									key={orgId}
-									orgId={orgId}
-									org={orgsById[orgId]}
-									rollout={orgRollout}
-									settleMs={settleMs}
-									onApply={({ percent }) =>
-										rollout.setOrgPercent.mutate({ orgId, percent })
-									}
-									onRemove={() =>
-										setPendingRemoval({
-											orgId,
-											name: orgsById[orgId]?.name ?? orgId,
-										})
-									}
-									isSaving={rollout.setOrgPercent.isPending}
-								/>
-							))}
-						</>
-					)}
-				</div>
+				<RolloutOrgList
+					orgOverrides={orgOverrides}
+					orgsById={orgsById}
+					settleMs={settleMs}
+					onApply={({ orgId, percent }) =>
+						rollout.setOrgPercent.mutate({ orgId, percent })
+					}
+					onRemove={({ orgId, name }) =>
+						setDialog({ kind: "removeOrg", orgId, name })
+					}
+					isSaving={rollout.setOrgPercent.isPending}
+				/>
 			</RolloutSection>
 
 			<RolloutSection
@@ -206,45 +215,22 @@ export const EdgeConfigView = () => {
 					<Button
 						size="sm"
 						variant="secondary"
-						onClick={() => setAddingCustomers(true)}
+						onClick={() => setDialog({ kind: "addCustomers" })}
 					>
 						<Plus className="size-3.5" />
 						Add customers
 					</Button>
 				}
 			>
-				<div className="divide-y overflow-clip rounded-lg border bg-interactive-secondary">
-					{customerPins.length === 0 ? (
-						<div className="flex h-12 items-center px-4 text-sm text-tertiary-foreground">
-							No customer overrides.
-						</div>
-					) : (
-						<>
-							<div
-								className={`h-9 text-tiny uppercase tracking-wide text-subtle ${CUSTOMER_ROW_GRID}`}
-							>
-								<span>Org</span>
-								<span>Customer</span>
-								<span>Status</span>
-								<span />
-							</div>
-							{customerPins.map(({ orgId, customerId, customer }) => (
-								<RolloutCustomerRow
-									key={`${orgId}:${customerId}`}
-									orgId={orgId}
-									org={orgsById[orgId]}
-									customerId={customerId}
-									customerName={customerNamesByOrgId[orgId]?.[customerId]}
-									customer={customer}
-									settleMs={settleMs}
-									onRemove={() =>
-										setPendingCustomerRemoval({ orgId, customerId })
-									}
-								/>
-							))}
-						</>
-					)}
-				</div>
+				<RolloutCustomerList
+					customerPins={customerPins}
+					orgsById={orgsById}
+					customerNamesByOrgId={customerNamesByOrgId}
+					settleMs={settleMs}
+					onRemove={({ orgId, customerId }) =>
+						setDialog({ kind: "removeCustomer", orgId, customerId })
+					}
+				/>
 			</RolloutSection>
 		</PageContainer>
 	);

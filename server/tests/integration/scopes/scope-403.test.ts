@@ -360,6 +360,19 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
+		handlerName: "handleResetRolloutOrgs",
+		handlerFile: "src/internal/admin/rollouts/handleResetRolloutOrgs.ts",
+		method: "POST",
+		path: "/admin/rollouts/:rollout_id/orgs/reset",
+		style: "REST",
+		group: "admin",
+		mountChain: ["", "admin", "/rollouts/:rollout_id/orgs/reset"],
+		sourceRouterFile: "src/internal/admin/adminRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
 		handlerName: "handleAddRolloutCustomers",
 		handlerFile: "src/internal/admin/rollouts/handleAddRolloutCustomers.ts",
 		method: "PUT",
@@ -3882,6 +3895,12 @@ const SCOPE_DECISIONS: Record<
 		scopes: ["superuser"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:15:04.775Z",
+	},
+	"POST|/admin/rollouts/:rollout_id/orgs/reset|handleResetRolloutOrgs": {
+		decision: "decided",
+		scopes: ["superuser"],
+		shape: "array",
+		decidedAt: "2026-09-30T00:00:00.000Z",
 	},
 	"PUT|/admin/rollouts/:rollout_id/orgs/:org_id/customers|handleAddRolloutCustomers":
 		{
