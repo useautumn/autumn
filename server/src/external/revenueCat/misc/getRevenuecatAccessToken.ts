@@ -24,7 +24,7 @@ const getOAuthConfigForEnv = ({
 }): RevenueCatOAuthConfig | undefined =>
 	env === AppEnv.Live ? revenueCatConfig.oauth : revenueCatConfig.sandbox_oauth;
 
-const REFRESH_LOCK_TTL_MS = 10_000;
+const REFRESH_LOCK_TTL_MS = 30_000;
 const REFRESH_LOCK_MAX_WAIT_MS = 5_000;
 
 const persistOAuthTokens = async ({
@@ -106,17 +106,20 @@ const refreshRcTokensOrThrow = async ({
 	}
 };
 
-/** Refresh under a per-org/env lock, re-reading the stored tokens so waiters reuse the holder's result. */
+/** Refresh under a per-org/env lock, re-reading the stored tokens so waiters reuse the holder's result.
+ *  `force` still reuses a pair another caller rotated after `observedRefreshToken` was read. */
 const refreshAndPersistTokens = async ({
 	db,
 	org,
 	env,
 	force,
+	observedRefreshToken,
 }: {
 	db: DrizzleCli;
 	org: Organization;
 	env: AppEnv;
 	force: boolean;
+	observedRefreshToken: string;
 }): Promise<string | null> =>
 	withRefreshLock({
 		org,
@@ -129,7 +132,12 @@ const refreshAndPersistTokens = async ({
 			});
 			if (!oauthConfig) return null;
 
-			if (!force && isOAuthAccessTokenValid(oauthConfig)) {
+			const rotatedByAnotherCaller =
+				oauthConfig.refresh_token !== observedRefreshToken;
+			const canReuseStoredToken =
+				(!force || rotatedByAnotherCaller) &&
+				isOAuthAccessTokenValid(oauthConfig);
+			if (canReuseStoredToken) {
 				return decryptData(oauthConfig.access_token);
 			}
 
@@ -175,7 +183,13 @@ export const refreshRevenuecatOAuthAccessToken = async ({
 		env,
 	});
 	if (!oauthConfig) return null;
-	return refreshAndPersistTokens({ db, org, env, force: true });
+	return refreshAndPersistTokens({
+		db,
+		org,
+		env,
+		force: true,
+		observedRefreshToken: oauthConfig.refresh_token,
+	});
 };
 
 export const getRevenuecatAccessToken = async ({
@@ -197,7 +211,13 @@ export const getRevenuecatAccessToken = async ({
 			return decryptData(oauthConfig.access_token);
 		}
 
-		return refreshAndPersistTokens({ db, org, env, force: false });
+		return refreshAndPersistTokens({
+			db,
+			org,
+			env,
+			force: false,
+			observedRefreshToken: oauthConfig.refresh_token,
+		});
 	}
 
 	const apiKey =

@@ -199,6 +199,25 @@ describe("getRevenuecatAccessToken", () => {
 		expect(mockRefreshRcTokens).toHaveBeenCalledTimes(1);
 	});
 
+	test("concurrent force refreshes coalesce into a single rotation", async () => {
+		const org = buildOrg({ expiresAt: Date.now() + 60 * 60 * 1000 });
+		storedOrg = org;
+
+		const tokens = await Promise.all(
+			[1, 2].map(() =>
+				refreshRevenuecatOAuthAccessToken({
+					db: {} as never,
+					org,
+					env: AppEnv.Sandbox,
+				}),
+			),
+		);
+
+		expect(tokens).toEqual(["atk_refreshed", "atk_refreshed"]);
+		expect(mockRefreshRcTokens).toHaveBeenCalledTimes(1);
+		expect(mockOrgUpdate).toHaveBeenCalledTimes(1);
+	});
+
 	test("revoked refresh token surfaces a reconnect error and releases the lock", async () => {
 		const org = buildOrg({ expiresAt: Date.now() - 1000 });
 		storedOrg = org;
