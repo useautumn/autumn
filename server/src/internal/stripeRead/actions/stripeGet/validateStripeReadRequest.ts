@@ -23,6 +23,15 @@ const reject = (message: string): never => {
 export const isBlacklistedStripePath = ({ path }: { path: string }) =>
 	BLACKLISTED_PATH_PATTERNS.some((pattern) => pattern.test(path.toLowerCase()));
 
+/** Every leaf under an expand key, however nested: qs serializes them all. */
+const leafStrings = (value: unknown): string[] => {
+	if (Array.isArray(value)) return value.flatMap(leafStrings);
+	if (value && typeof value === "object") {
+		return Object.values(value).flatMap(leafStrings);
+	}
+	return [String(value)];
+};
+
 const expandValues = ({
 	params,
 }: {
@@ -30,8 +39,7 @@ const expandValues = ({
 }): string[] =>
 	Object.entries(params ?? {})
 		.filter(([key]) => key.startsWith("expand"))
-		.flatMap(([, value]) => (Array.isArray(value) ? value : [value]))
-		.map(String);
+		.flatMap(([, value]) => leafStrings(value));
 
 export const validateStripeReadRequest = ({
 	path,

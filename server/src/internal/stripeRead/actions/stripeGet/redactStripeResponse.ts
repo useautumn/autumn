@@ -1,4 +1,5 @@
 const REDACTED_KEYS = new Set(["client_secret"]);
+const ISSUING_CARD_SECRET_KEYS = new Set(["number", "cvc"]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
@@ -11,7 +12,8 @@ const shouldRedact = ({
 	key: string;
 }) =>
 	REDACTED_KEYS.has(key) ||
-	(key === "url" && record.object === "checkout.session");
+	(key === "url" && record.object === "checkout.session") ||
+	(record.object === "issuing.card" && ISSUING_CARD_SECRET_KEYS.has(key));
 
 export const redactStripeResponse = ({ body }: { body: unknown }): unknown => {
 	if (Array.isArray(body)) {
