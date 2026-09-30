@@ -1,4 +1,11 @@
-import { AccordionContent, AccordionItem, AccordionTrigger } from "@autumn/ui";
+import {
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import type {
 	ReviewChangeSection,
 	ReviewChangeSystem,
@@ -29,9 +36,14 @@ export function ReviewChangeGroup({
 				<span className="text-sm font-medium text-foreground">{title}</span>
 				<ReviewStripeIdsPopover stripeIds={section.stripeIds ?? []} />
 				<span className="flex-1" />
-				<span className="text-xs font-normal text-tertiary-foreground">
-					{section.summary}
-				</span>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<span className="min-w-0 truncate text-xs font-normal text-tertiary-foreground">
+							{section.summary}
+						</span>
+					</TooltipTrigger>
+					<TooltipContent side="top">{section.summary}</TooltipContent>
+				</Tooltip>
 			</AccordionTrigger>
 			<AccordionContent className="pb-4">
 				<div className="flex flex-col gap-4">
