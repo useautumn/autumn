@@ -43,6 +43,7 @@ const createDeployedApp = () => {
 	const auth = createDeployedAuth({
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
+		slotCount: 2,
 	});
 	opened.push(auth);
 	const { logger, logged } = createLogger();
@@ -56,7 +57,7 @@ const createDeployedApp = () => {
 
 /** An Atom as a dev stack runs it: no Atoms until the stack's server puts one. */
 const createDevApp = () => {
-	const auth = createDevAuth({ dataDir: newDataDir() });
+	const auth = createDevAuth({ dataDir: newDataDir(), slotCount: 2 });
 	opened.push(auth);
 	const { logger } = createLogger();
 	return createAtomApp({
@@ -259,6 +260,30 @@ describe("an Atom in an org's cloud", () => {
 		);
 
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("a customer push that arrives late", () => {
+	test("is reported as not stored, and the newer customer stays", async () => {
+		const { app } = createDeployedApp();
+		const newer = { ...subjectBody({ balance: 3 }), read_at: 1800 };
+		const older = { ...subjectBody({ balance: 10 }), read_at: 1700 };
+		const push = (body: unknown) =>
+			app.request(
+				"/v1/subjects.set",
+				post({ headers: withToken(ATOM_TOKEN), body }),
+			);
+
+		const first = await push(newer);
+		const late = await push(older);
+		const check = await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 5 }),
+		);
+
+		expect(await first.json()).toEqual({ stored: true });
+		expect(await late.json()).toEqual({ stored: false });
+		expect(await check.json()).toMatchObject({ allowed: false });
 	});
 });
 

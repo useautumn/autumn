@@ -21,9 +21,13 @@ const openAuth = ({
 			auth: createDeployedAuth({
 				dataDir: env.ATOM_DATA_DIR,
 				tokenHash: env.ATOM_TOKEN_HASH,
+				slotCount: env.ATOM_SLOT_COUNT,
 			}),
 		};
-	const auth = createDevAuth({ dataDir: env.ATOM_DATA_DIR });
+	const auth = createDevAuth({
+		dataDir: env.ATOM_DATA_DIR,
+		slotCount: env.ATOM_SLOT_COUNT,
+	});
 	return { auth, dev: { auth } };
 };
 
@@ -50,6 +54,8 @@ export const createAtomServer = ({
 		listener = Bun.serve({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PORT,
+			// Several processes listen on the one port, and Linux gives each connection to one of them.
+			reusePort: env.ATOM_PROCESSES > 1,
 			fetch: app.fetch,
 		});
 		ctx.logger.info(

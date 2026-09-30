@@ -25,12 +25,18 @@ const emptyCatalog: StoredSubject["catalog"] = {
 	planLicenses: {},
 	freeTrials: {},
 };
-const subjectAt = ({ logOffset }: { logOffset: bigint }): StoredSubject => ({
+const subjectAt = ({
+	logOffset,
+	readAt = 1700,
+}: {
+	logOffset: bigint;
+	readAt?: number;
+}): StoredSubject => ({
 	state: createSubjectState({ identity }),
 	catalog: emptyCatalog,
 	org: atomOrg,
 	logOffset,
-	readAt: 1700,
+	readAt,
 });
 
 const directories: string[] = [];
@@ -76,6 +82,45 @@ describe("sqlite store", () => {
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
 				?.logOffset,
 		).toBe(42n);
+		sqliteStore.close();
+	});
+
+	test("a subject read earlier than the one held is ignored: a late push never undoes a newer one", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 42n, readAt: 1800 }),
+		});
+
+		const stored = sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 41n, readAt: 1700 }),
+		});
+
+		expect(stored).toBe(false);
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
+		).toEqual(subjectAt({ logOffset: 42n, readAt: 1800 }));
+		sqliteStore.close();
+	});
+
+	test("a subject read at the same instant or later replaces the one held", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 41n, readAt: 1700 }),
+		});
+
+		const sameInstant = sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 42n, readAt: 1700 }),
+		});
+		const later = sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 43n, readAt: 1701 }),
+		});
+
+		expect(sameInstant).toBe(true);
+		expect(later).toBe(true);
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
+				?.logOffset,
+		).toBe(43n);
 		sqliteStore.close();
 	});
 

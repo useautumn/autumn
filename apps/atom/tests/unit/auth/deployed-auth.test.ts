@@ -14,6 +14,7 @@ const createAuth = () => {
 	const auth = createDeployedAuth({
 		dataDir,
 		tokenHash: hashToken({ token: "token_deployed" }),
+		slotCount: 2,
 	});
 	opened.push(auth);
 	return { auth, dataDir };
@@ -33,9 +34,10 @@ describe("deployed auth", () => {
 		expect(auth.authorize({ token: "" })).toBeNull();
 	});
 
-	test("the slot file sits directly in the data directory", () => {
+	test("the slot files sit directly in the data directory", () => {
 		const { dataDir } = createAuth();
 
-		expect(existsSync(join(dataDir, "slot-000.sqlite"))).toBe(true);
+		expect(existsSync(join(dataDir, "slot-000-of-002.sqlite"))).toBe(true);
+		expect(existsSync(join(dataDir, "slot-001-of-002.sqlite"))).toBe(true);
 	});
 });

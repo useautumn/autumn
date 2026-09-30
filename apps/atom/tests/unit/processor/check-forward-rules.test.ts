@@ -24,7 +24,6 @@ const forwardedRequests: [ForwardReason, CheckRequest][] = [
 		checkRequestFor({ params: { lock: { enabled: true, lock_id: "lock_1" } } }),
 	],
 	["with_preview", checkRequestFor({ params: { with_preview: true } })],
-	["entity", checkRequestFor({ params: { entity_id: "seat_1" } })],
 	[
 		"customer_data",
 		checkRequestFor({ params: { customer_data: { name: "Ada" } } }),
@@ -55,11 +54,19 @@ describe("which checks Atom answers itself", () => {
 			occurredAt: expect.any(Number),
 			customerId: "cus_1",
 			featureId: "messages",
+			entityId: null,
 			requiredBalance: 1,
 			properties: null,
 			query: {},
 			apiVersion: latestApiVersion,
 		});
+	});
+
+	test("a check on an entity is Atom's too", () => {
+		const request = checkRequestFor({ params: { entity_id: "seat_1" } });
+
+		expect(checkForwardReason({ request })).toBeNull();
+		expect(checkRequestToAnswerableCheck({ request }).entityId).toBe("seat_1");
 	});
 
 	test("the older name for the required balance is still read", () => {

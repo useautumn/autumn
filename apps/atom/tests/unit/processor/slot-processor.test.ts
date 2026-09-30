@@ -8,6 +8,7 @@ import {
 	checkRequestFor,
 	forwardReasonOf,
 	oldestApiVersion,
+	storedEntitySubjectWith,
 	storedSubjectWith,
 } from "../utils/atomFixtures.js";
 
@@ -119,5 +120,86 @@ describe("slot processor check", () => {
 		expect(forwardReasonOf(() => processor.check({ request }))).toBe(
 			"feature_not_stored",
 		);
+	});
+});
+
+describe("slot processor check on an entity", () => {
+	const checkEntity = ({ requiredBalance }: { requiredBalance: number }) =>
+		checkRequestFor({
+			params: { entity_id: "ent_42", required_balance: requiredBalance },
+		});
+
+	test("an entity is answered from the customer's balance and its own together", () => {
+		const processor = createProcessor();
+		processor.setSubject({
+			subject: storedEntitySubjectWith({
+				customerBalance: 10,
+				entityBalance: 5,
+			}),
+		});
+
+		const within = processor.check({
+			request: checkEntity({ requiredBalance: 15 }),
+		});
+		const past = processor.check({
+			request: checkEntity({ requiredBalance: 16 }),
+		});
+
+		expect(within).toMatchObject({ allowed: true, entity_id: "ent_42" });
+		expect(past.allowed).toBe(false);
+	});
+
+	test("the entity's push also stores the customer, without the entity's own rows", () => {
+		const processor = createProcessor();
+		processor.setSubject({
+			subject: storedEntitySubjectWith({
+				customerBalance: 10,
+				entityBalance: 5,
+			}),
+		});
+
+		const customerAt10 = processor.check({
+			request: checkRequestFor({ params: { required_balance: 10 } }),
+		});
+		const customerAt11 = processor.check({
+			request: checkRequestFor({ params: { required_balance: 11 } }),
+		});
+
+		expect(customerAt10.allowed).toBe(true);
+		expect(customerAt11.allowed).toBe(false);
+	});
+
+	test("a later push of the customer alone changes what its entity is answered", () => {
+		const processor = createProcessor();
+		processor.setSubject({
+			subject: storedEntitySubjectWith({
+				customerBalance: 10,
+				entityBalance: 5,
+				readAt: 1000,
+			}),
+		});
+
+		processor.setSubject({
+			subject: storedSubjectWith({ balance: 2, readAt: 2000 }),
+		});
+
+		// 2 left on the customer and 5 on the entity.
+		expect(
+			processor.check({ request: checkEntity({ requiredBalance: 7 }) }).allowed,
+		).toBe(true);
+		expect(
+			processor.check({ request: checkEntity({ requiredBalance: 8 }) }).allowed,
+		).toBe(false);
+	});
+
+	test("an entity Atom does not hold goes to the API", () => {
+		const processor = createProcessor();
+		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+
+		expect(
+			forwardReasonOf(() =>
+				processor.check({ request: checkEntity({ requiredBalance: 1 }) }),
+			),
+		).toBe("entity_not_stored");
 	});
 });

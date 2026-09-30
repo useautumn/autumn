@@ -1,14 +1,33 @@
 import { getAtomEnv } from "@autumn/env/atom";
 import { createAtomServer } from "./init/createAtomServer.js";
+import { createAtomSupervisor } from "./init/createAtomSupervisor.js";
+import { ATOM_CHILD_INDEX, spawnAtomChild } from "./init/spawnAtomChild.js";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
 
+/** How long a process that died stays down before another takes its place. */
+const RESTART_DELAY_MS = 1000;
+
+/** One process serves. Told to run several, the first process only supervises the ones that do. */
+function createAtom(): AtomServer {
+	const env = getAtomEnv();
+	const logger = getAtomLogger();
+	const isSupervisor =
+		env.ATOM_PROCESSES > 1 && process.env[ATOM_CHILD_INDEX] === undefined;
+	if (!isSupervisor)
+		return createAtomServer({ ctx: { logger }, config: { env } });
+	return createAtomSupervisor({
+		ctx: { spawnChild: spawnAtomChild, logger },
+		config: {
+			processes: env.ATOM_PROCESSES,
+			restartDelayMs: RESTART_DELAY_MS,
+		},
+	});
+}
+
 async function main(): Promise<void> {
 	try {
-		const atomServer = createAtomServer({
-			ctx: { logger: getAtomLogger() },
-			config: { env: getAtomEnv() },
-		});
+		const atomServer = createAtom();
 		registerShutdownSignals({ atomServer });
 		await atomServer.start();
 	} catch (cause) {

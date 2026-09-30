@@ -1,3 +1,4 @@
+import { createSubjectState } from "@autumn/balance-engine";
 import {
 	ApiVersion,
 	ApiVersionClass,
@@ -7,7 +8,11 @@ import {
 } from "@autumn/shared";
 import {
 	createCatalogFor,
+	createCustomerEntitlement,
+	createCustomerProduct,
 	createState,
+	entity,
+	identity,
 	occurredAt,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import {
@@ -32,6 +37,44 @@ export const storedSubjectWith = ({
 	readAt?: number;
 }): StoredSubject => {
 	const state = createState({ balance });
+	return {
+		state,
+		catalog: createCatalogFor({ state }),
+		org: atomOrg,
+		logOffset: 1n,
+		readAt,
+	};
+};
+
+/**
+ * `cus_1` as Autumn sends it for its entity `ent_42`: the customer's own messages and the entity's own,
+ * in one view under the entity's identity.
+ */
+export const storedEntitySubjectWith = ({
+	customerBalance,
+	entityBalance,
+	readAt = 1000,
+}: {
+	customerBalance: number;
+	entityBalance: number;
+	readAt?: number;
+}): StoredSubject => {
+	const state = createSubjectState({
+		identity: { ...identity, entityId: entity.id },
+		customerProducts: [createCustomerProduct()],
+		customerEntitlements: [
+			createCustomerEntitlement({ balance: customerBalance }),
+			{
+				...createCustomerEntitlement({
+					id: "messages_ent_42",
+					balance: entityBalance,
+				}),
+				customer_product_id: null,
+				internal_entity_id: entity.internal_id,
+			},
+		],
+		entity,
+	});
 	return {
 		state,
 		catalog: createCatalogFor({ state }),

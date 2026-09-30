@@ -4,32 +4,47 @@ import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
+import { customerIdToSlot } from "./customerIdToSlot.js";
+import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
 import type { Slots } from "./types/slots.js";
 
-/** One slot file holds every customer until slots are split. */
-const SLOT_FILE = "slot-000.sqlite";
 const CATALOG_FILE = "catalog.sqlite";
 
-/** Opens a data folder once: its files stay open, and its processor answers from them. */
-export const openSlots = ({ folder }: { folder: string }): Slots => {
+/** Opens a data folder once: one file per slot and the one catalog they share stay open, and each slot's processor answers from its own file. */
+export const openSlots = ({
+	folder,
+	slotCount,
+}: {
+	folder: string;
+	slotCount: number;
+}): Slots => {
 	mkdirSync(folder, { recursive: true });
-	const sqliteStore = openSqliteStore({
-		databasePath: join(folder, SLOT_FILE),
-	});
+	removeSlotFilesOfOtherCounts({ folder, slotCount });
+
 	const catalogStore = openCatalogStore({
 		databasePath: join(folder, CATALOG_FILE),
 	});
-	const processor = createSlotProcessor({
-		ctx: { sqliteStore, catalogStore, logger: getAtomLogger() },
+	const logger = getAtomLogger();
+	const slots = Array.from({ length: slotCount }, (_, slot) => {
+		const sqliteStore = openSqliteStore({
+			databasePath: slotFilePath({ folder, slot, slotCount }),
+		});
+		return {
+			sqliteStore,
+			processor: createSlotProcessor({
+				ctx: { sqliteStore, catalogStore, logger },
+			}),
+		};
 	});
 
 	function close(): void {
-		sqliteStore.close();
+		for (const { sqliteStore } of slots) sqliteStore.close();
 		catalogStore.close();
 	}
 
 	return {
-		processorFor: () => processor,
+		processorFor: ({ customerId }) =>
+			slots[customerIdToSlot({ customerId, slotCount })].processor,
 		setCatalog: (params) => catalogStore.set(params),
 		close,
 	};

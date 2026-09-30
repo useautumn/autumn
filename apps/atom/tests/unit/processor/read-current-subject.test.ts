@@ -10,7 +10,7 @@ import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSu
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
-import { atomOrg } from "../utils/atomFixtures.js";
+import { atomOrg, forwardReasonOf } from "../utils/atomFixtures.js";
 
 const state = createState({ balance: 10 });
 const customerCatalog = createCatalogFor({ state });
@@ -58,8 +58,11 @@ afterEach(() => {
 });
 
 const allowanceOf = ({ ctx }: { ctx: SlotProcessorContext }) => {
-	const subject = readCurrentSubject({ ctx, customerId: "cus_1" });
-	if (!subject) throw new Error("cus_1 is not stored");
+	const subject = readCurrentSubject({
+		ctx,
+		customerId: "cus_1",
+		entityId: null,
+	});
 	const { customer_products, extra_customer_entitlements } =
 		subject.fullSubject;
 	const [customerEntitlement] = [
@@ -87,10 +90,14 @@ describe("the subject a check runs on", () => {
 		expect(allowanceOf({ ctx })).toBe(ownAllowance);
 	});
 
-	test("is null when Atom does not hold the customer", () => {
+	test("is left to the API when Atom does not hold the customer", () => {
 		const ctx = createContext({ shared: sharedRows });
 
-		expect(readCurrentSubject({ ctx, customerId: "cus_unknown" })).toBeNull();
+		expect(
+			forwardReasonOf(() =>
+				readCurrentSubject({ ctx, customerId: "cus_unknown", entityId: null }),
+			),
+		).toBe("customer_not_stored");
 	});
 
 	test("carries every feature Atom knows for the org, not only the customer's own", () => {
@@ -106,9 +113,13 @@ describe("the subject a check runs on", () => {
 		);
 		const ctx = createContext({ shared: [...sharedRows, ...seats] });
 
-		const subject = readCurrentSubject({ ctx, customerId: "cus_1" });
+		const subject = readCurrentSubject({
+			ctx,
+			customerId: "cus_1",
+			entityId: null,
+		});
 
-		expect(subject?.features.map((feature) => feature.id).sort()).toEqual([
+		expect(subject.features.map((feature) => feature.id).sort()).toEqual([
 			"messages",
 			"seats",
 		]);

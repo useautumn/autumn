@@ -12,7 +12,12 @@ export class UnsupportedSchemaVersionError extends Error {
 	}
 }
 
+/** Several processes share each file. A writer waits this long for another's write before giving up. */
+const BUSY_TIMEOUT_MS = 5000;
+
 const configureDatabase = ({ database }: { database: Database }) => {
+	// First, before anything touches the file: another process may be recovering its log right now.
+	database.run(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
 	database.run("PRAGMA journal_mode = WAL");
 	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
 	database.run("PRAGMA synchronous = NORMAL");

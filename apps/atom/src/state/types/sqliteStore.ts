@@ -7,6 +7,9 @@ export type SqliteStore = {
 		customerId: string;
 		entityId: string | null;
 	}): StoredSubject | null;
-	setSubject(params: { subject: StoredSubject }): void;
+	/** False when the subject was read before the one held, and so ignored. */
+	setSubject(params: { subject: StoredSubject }): boolean;
+	/** All in one write, so a reader never sees one without the others. One answer per subject, in order. */
+	setSubjects(params: { subjects: StoredSubject[] }): boolean[];
 	close(): void;
 };

@@ -52,15 +52,28 @@ export const readSubject = ({
 	return storedSubjectFromRow({ row });
 };
 
+/** Subjects that came from one read are written together. One answer each, as `upsertSubject` gives. */
+export const upsertSubjects = ({
+	ctx,
+	subjects,
+}: {
+	ctx: SlotContext;
+	subjects: StoredSubject[];
+}): boolean[] =>
+	ctx.sqliteDb.transaction(() =>
+		subjects.map((subject) => upsertSubject({ ctx, subject })),
+	)();
+
+/** False when the subject was read before the one held: a push can arrive late, and must never undo a newer one. */
 export const upsertSubject = ({
 	ctx,
 	subject,
 }: {
 	ctx: SlotContext;
 	subject: StoredSubject;
-}): void => {
+}): boolean => {
 	const { customerId, entityId } = subject.state.identity;
-	ctx.sqliteDb
+	const { changes } = ctx.sqliteDb
 		.query(`
 			INSERT INTO subject_states
 				(customer_id, entity_id, log_offset, read_at, state_json, catalog_json, org_json)
@@ -72,6 +85,7 @@ export const upsertSubject = ({
 				state_json = excluded.state_json,
 				catalog_json = excluded.catalog_json,
 				org_json = excluded.org_json
+			WHERE excluded.read_at >= subject_states.read_at
 		`)
 		.run({
 			customerId,
@@ -82,4 +96,5 @@ export const upsertSubject = ({
 			catalogJson: JSON.stringify(subject.catalog),
 			orgJson: JSON.stringify(subject.org),
 		});
+	return changes > 0;
 };

@@ -16,6 +16,8 @@ export type AnswerableCheck = {
 	requestId: string;
 	occurredAt: number;
 	customerId: string;
+	/** Null for a check on the customer itself. */
+	entityId: string | null;
 	featureId: string;
 	requiredBalance: number;
 	properties: CheckCommand["properties"];

@@ -4,7 +4,7 @@ import type { Catalog, CatalogRow } from "@autumn/balance-engine";
 export type SharedCatalog = { catalog: Catalog; readAt: number };
 
 export type CatalogStore = {
-	/** Null until Autumn has sent one. Held in memory and swapped on `set`, so a check never reads the file. */
+	/** Null until Autumn has sent one. Held in memory, and read from the file again only when another process has written it. */
 	read(): SharedCatalog | null;
 	/** Replaces every row: what Autumn sends is the whole shared catalog. False when it was read before the one held, and so ignored. */
 	set(params: { rows: CatalogRow[]; readAt: number }): boolean;

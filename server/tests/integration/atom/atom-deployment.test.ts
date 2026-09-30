@@ -3,10 +3,11 @@
  *
  * Contract:
  *  1. a track through the API reaches the Atom: its check answers off the new balance;
- *  2. byoc.create_atom hands back an endpoint and a token, and only that token opens the Atom;
+ *  2. the same for an entity: its check answers off the entity's own balance, and a second entity's is untouched;
+ *  3. byoc.create_atom hands back an endpoint and a token, and only that token opens the Atom;
  *     creating again returns the same Atom; byoc.delete_atom forgets it and the token stops working.
  *
- * Both scenarios use the test org's one Atom, so they run in order, in this one file.
+ * The scenarios use the test org's one Atom, so they run in order, in this one file.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -97,7 +98,76 @@ test.skipIf(!isBalanceWorkerRoute())(
 	120_000,
 );
 
-test(`${chalk.yellowBright("atom-deployment2: only the token opens the Atom → create again is a no-op → delete → gone")}`, async () => {
+// A track only reaches the Atom through the balance worker's log.
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-deployment2: a track on an entity reaches the Atom's check for that entity")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId, entities, autumnV2_4 } = await initScenario({
+			customerId: "atom-deployment2",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [free] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: free.id, entityIndex: 0 }),
+				s.billing.attach({ productId: free.id, entityIndex: 1 }),
+			],
+		});
+		const atom = await ensureAtomDeployment({ autumn });
+		const [tracked, untouched] = entities;
+		const messages = {
+			atom,
+			secretKey: defaultCtx.orgSecretKey,
+			customerId,
+			featureId: TestFeature.Messages,
+		};
+
+		await autumnV2_4.track({
+			customer_id: customerId,
+			entity_id: tracked.id,
+			feature_id: TestFeature.Messages,
+			value: 40,
+		});
+		const atomResponse = await expectAtomCheckCorrect({
+			...messages,
+			entityId: tracked.id,
+			requiredBalance: 60,
+			allowed: true,
+		});
+		await expectAtomCheckCorrect({
+			...messages,
+			entityId: tracked.id,
+			requiredBalance: 61,
+			allowed: false,
+		});
+
+		// The Atom answers exactly what the API answers for the same entity check.
+		const apiResponse = await autumnV2_4.post("/balances.check", {
+			customer_id: customerId,
+			entity_id: tracked.id,
+			feature_id: TestFeature.Messages,
+			required_balance: 60,
+		});
+		expect(atomResponse).toEqual(apiResponse);
+
+		// The other entity was never tracked, so the Atom has not been sent it: the API answers, through the Atom.
+		const other = await checkOnAtom({
+			...messages,
+			entityId: untouched.id,
+			requiredBalance: 100,
+		});
+		expect(other.forwarded).toBe("entity_not_stored");
+		expect(other.body).toMatchObject({ allowed: true });
+	},
+	120_000,
+);
+
+test(`${chalk.yellowBright("atom-deployment3: only the token opens the Atom → create again is a no-op → delete → gone")}`, async () => {
 	const atom = await ensureAtomDeployment({ autumn });
 	const anyCheck = {
 		atom,

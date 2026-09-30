@@ -29,7 +29,6 @@ const FORWARD_RULES: {
 		reason: "with_preview",
 		applies: ({ params }) => params.with_preview === true,
 	},
-	{ reason: "entity", applies: ({ params }) => params.entity_id !== undefined },
 	// These can create the customer or the entity.
 	{
 		reason: "customer_data",
@@ -67,6 +66,7 @@ export const checkRequestToAnswerableCheck = ({
 		requestId: request.requestId,
 		occurredAt: request.occurredAt,
 		customerId: params.customer_id,
+		entityId: params.entity_id ?? null,
 		featureId: params.feature_id,
 		requiredBalance:
 			params.required_balance ??

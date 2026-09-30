@@ -7,11 +7,13 @@ import type { Auth } from "./types/auth.js";
 export const createDeployedAuth = ({
 	dataDir,
 	tokenHash,
+	slotCount,
 }: {
 	dataDir: string;
 	tokenHash: string;
+	slotCount: number;
 }): Auth => {
-	const slots = openSlots({ folder: dataDir });
+	const slots = openSlots({ folder: dataDir, slotCount });
 	const expectedHash = Buffer.from(tokenHash, "hex");
 
 	function authorize({ token }: { token: string }) {

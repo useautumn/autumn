@@ -12,6 +12,7 @@ export const checkOnAtom = async ({
 	token = atom.token,
 	secretKey,
 	customerId,
+	entityId,
 	featureId,
 	requiredBalance = 1,
 }: {
@@ -19,6 +20,7 @@ export const checkOnAtom = async ({
 	token?: string | null;
 	secretKey: string;
 	customerId: string;
+	entityId?: string;
 	featureId: string;
 	requiredBalance?: number;
 }): Promise<{ status: number; forwarded: string | null; body: unknown }> => {
@@ -32,6 +34,7 @@ export const checkOnAtom = async ({
 		},
 		body: JSON.stringify({
 			customer_id: customerId,
+			entity_id: entityId,
 			feature_id: featureId,
 			required_balance: requiredBalance,
 		}),
@@ -48,6 +51,7 @@ export const expectAtomCheckCorrect = async ({
 	atom,
 	secretKey,
 	customerId,
+	entityId,
 	featureId,
 	requiredBalance,
 	allowed,
@@ -55,13 +59,21 @@ export const expectAtomCheckCorrect = async ({
 	atom: TestAtom;
 	secretKey: string;
 	customerId: string;
+	entityId?: string;
 	featureId: string;
 	requiredBalance: number;
 	allowed: boolean;
 }): Promise<unknown> => {
 	const { body } = await pollUntilAsserted({
 		fetch: () =>
-			checkOnAtom({ atom, secretKey, customerId, featureId, requiredBalance }),
+			checkOnAtom({
+				atom,
+				secretKey,
+				customerId,
+				entityId,
+				featureId,
+				requiredBalance,
+			}),
 		assert: ({ forwarded, body }) => {
 			expect(forwarded).toBeNull();
 			expect(body).toMatchObject({ allowed });

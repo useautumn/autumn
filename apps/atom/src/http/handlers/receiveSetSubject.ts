@@ -7,6 +7,9 @@ export async function receiveSetSubject(context: Context<AtomHttpEnv>) {
 		body: await context.req.json(),
 	});
 	const { customerId } = subject.state.identity;
-	context.get("slots").processorFor({ customerId }).setSubject({ subject });
-	return context.json({ stored: true });
+	const stored = context
+		.get("slots")
+		.processorFor({ customerId })
+		.setSubject({ subject });
+	return context.json({ stored });
 }

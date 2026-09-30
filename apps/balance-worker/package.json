@@ -18,6 +18,8 @@
 		"benchmark:handoff:worker": "bun --config=./bunfig.toml tests/benchmarks/ownership-handoff/benchWorker.ts",
 		"benchmark:effects": "bun --config=./bunfig.toml tests/benchmarks/track-effects/run.ts",
 		"benchmark:track": "bun --config=./bunfig.toml tests/benchmarks/track-throughput/run.ts",
+		"benchmark:slots": "bun --config=./bunfig.toml tests/benchmarks/slot-contention/run.ts",
+		"benchmark:slots:worker": "bun --config=./bunfig.toml tests/benchmarks/slot-contention/worker.ts",
 		"ts": "tsc --noEmit",
 		"test:postgres": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/postgres"
 	},

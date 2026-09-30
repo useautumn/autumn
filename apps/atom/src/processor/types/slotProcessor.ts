@@ -15,5 +15,6 @@ export type SlotProcessorContext = {
 export type SlotProcessor = {
 	/** The API's check response at the caller's version; throws CannotAnswerError for a check the API must answer. */
 	check(params: { request: CheckRequest }): CheckResponseV3;
-	setSubject(params: { subject: StoredSubject }): void;
+	/** False when the subject was read before the one held, and so ignored. */
+	setSubject(params: { subject: StoredSubject }): boolean;
 };

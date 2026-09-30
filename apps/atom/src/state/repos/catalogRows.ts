@@ -19,6 +19,19 @@ export const readCatalogRows = ({
 		.all()
 		.map(({ rowJson }) => JSON.parse(rowJson));
 
+/** Moves whenever another connection, in this process or any other, changes the file; this connection's own writes leave it alone. */
+export const readCatalogDataVersion = ({
+	ctx,
+}: {
+	ctx: CatalogContext;
+}): bigint => {
+	const row = ctx.sqliteDb
+		.query<{ data_version: bigint }, []>("PRAGMA data_version")
+		.get();
+	if (!row) throw new Error("Unable to read the catalog file's data version");
+	return row.data_version;
+};
+
 /** Null until Autumn has sent a catalog. */
 export const readCatalogReadAt = ({
 	ctx,

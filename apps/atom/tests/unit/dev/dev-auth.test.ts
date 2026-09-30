@@ -19,7 +19,7 @@ const newDataDir = () => {
 	return dataDir;
 };
 const open = ({ dataDir }: { dataDir: string }) => {
-	const auth = createDevAuth({ dataDir });
+	const auth = createDevAuth({ dataDir, slotCount: 2 });
 	opened.push(auth);
 	return auth;
 };

@@ -2,6 +2,7 @@ import type { Database } from "bun:sqlite";
 import { catalogRowsToCatalog } from "@autumn/balance-engine";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
 import {
+	readCatalogDataVersion,
 	readCatalogReadAt,
 	readCatalogRows,
 	replaceCatalog,
@@ -56,11 +57,22 @@ export const openCatalogStore = ({
 	}
 
 	let sharedCatalog = readFromFile();
+	let dataVersion = readCatalogDataVersion({ ctx });
+
+	/** The held copy, read again from the file only when another process has written it. */
+	function read(): SharedCatalog | null {
+		const currentVersion = readCatalogDataVersion({ ctx });
+		if (currentVersion !== dataVersion) {
+			sharedCatalog = readFromFile();
+			dataVersion = currentVersion;
+		}
+		return sharedCatalog;
+	}
 
 	function set({ rows, readAt }: Parameters<CatalogStore["set"]>[0]): boolean {
-		// A push can arrive late, after a retry: an earlier read never replaces a later one.
-		const wasReadEarlier =
-			sharedCatalog !== null && readAt < sharedCatalog.readAt;
+		// A push can arrive late, after a retry, or have been beaten by another process: an earlier read never replaces a later one.
+		const held = read();
+		const wasReadEarlier = held !== null && readAt < held.readAt;
 		if (wasReadEarlier) return false;
 
 		replaceCatalog({ ctx, rows, readAt });
@@ -69,7 +81,7 @@ export const openCatalogStore = ({
 	}
 
 	return {
-		read: () => sharedCatalog,
+		read,
 		set,
 		close: () => ctx.sqliteDb.close(true),
 	};

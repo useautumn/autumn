@@ -21,7 +21,13 @@ export type DevAuth = Auth & {
 
 type HeldAtom = DevAtom & { slots: Slots };
 
-export const createDevAuth = ({ dataDir }: { dataDir: string }): DevAuth => {
+export const createDevAuth = ({
+	dataDir,
+	slotCount,
+}: {
+	dataDir: string;
+	slotCount: number;
+}): DevAuth => {
 	const heldById = new Map<string, HeldAtom>();
 	const heldByTokenHash = new Map<string, HeldAtom>();
 
@@ -32,7 +38,7 @@ export const createDevAuth = ({ dataDir }: { dataDir: string }): DevAuth => {
 
 	function open(devAtom: DevAtom): void {
 		const folder = atomFolderPath({ dataDir, id: devAtom.id });
-		hold({ ...devAtom, slots: openSlots({ folder }) });
+		hold({ ...devAtom, slots: openSlots({ folder, slotCount }) });
 	}
 
 	function authorize({ token }: { token: string }): Slots | null {

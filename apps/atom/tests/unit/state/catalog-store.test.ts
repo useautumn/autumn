@@ -84,4 +84,35 @@ describe("catalog store", () => {
 		});
 		after.close();
 	});
+
+	test("a catalog another process wrote is seen on the next read", () => {
+		const databasePath = catalogPath();
+		const written = openCatalogStore({ databasePath });
+		const reading = openCatalogStore({ databasePath });
+		expect(reading.read()).toBeNull();
+
+		written.set({ rows, readAt: 1700 });
+		const first = reading.read();
+		written.set({ rows: features, readAt: 1800 });
+
+		expect(first).toEqual({
+			catalog: catalogRowsToCatalog({ rows }),
+			readAt: 1700,
+		});
+		expect(reading.read()).toEqual({
+			catalog: catalogRowsToCatalog({ rows: features }),
+			readAt: 1800,
+		});
+		written.close();
+		reading.close();
+	});
+
+	test("a catalog nobody changed is not read from the file again", () => {
+		const catalogStore = openCatalogStore({ databasePath: catalogPath() });
+		catalogStore.set({ rows, readAt: 1700 });
+
+		// The same object back means the held copy was reused, not rebuilt.
+		expect(catalogStore.read()).toBe(catalogStore.read());
+		catalogStore.close();
+	});
 });

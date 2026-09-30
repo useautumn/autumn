@@ -7,10 +7,10 @@ export type ForwardReason =
 	| "send_event"
 	| "lock"
 	| "with_preview"
-	| "entity"
 	| "customer_data"
 	| "skip_cache"
 	| "customer_not_stored"
+	| "entity_not_stored"
 	| "feature_not_stored";
 
 /**
