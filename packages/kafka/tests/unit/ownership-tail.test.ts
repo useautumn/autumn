@@ -1,7 +1,10 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import type { ConsumerConfig, ConsumerRunConfig } from "kafkajs";
 import type { KafkaConsumerClient } from "../../src/consumer/types/consumer.js";
-import { createOwnershipTail } from "../../src/topics/ownership/consumer/createOwnershipTail.js";
+import {
+	createOwnershipTail,
+	ownershipTailStartTimeoutMs,
+} from "../../src/topics/ownership/consumer/createOwnershipTail.js";
 import type { OwnershipTailRecord } from "../../src/topics/ownership/consumer/types/ownershipTail.js";
 import { ownershipTopic } from "../../src/topics/ownership/ownershipTopic.js";
 import type { OwnershipRecord } from "../../src/topics/ownership/types/ownershipRecord.js";
@@ -208,6 +211,24 @@ async function startTail(fixture: ReturnType<typeof createFakeTailKafka>) {
 }
 
 describe("ownershipTail", function ownershipTailTests() {
+	test("the default start allowance covers connecting plus one idle fetch", () => {
+		const timings = {
+			fetchMaxWaitTimeMs: 5_000,
+			heartbeatIntervalMs: 3_000,
+			sessionTimeoutMs: 30_000,
+			rebalanceTimeoutMs: 60_000,
+		};
+		expect(ownershipTailStartTimeoutMs({ timings })).toBe(15_000);
+		expect(
+			ownershipTailStartTimeoutMs({ startTimeoutMs: 1_000, timings }),
+		).toBe(1_000);
+		expect(
+			ownershipTailStartTimeoutMs({
+				timings: { ...timings, fetchMaxWaitTimeMs: 250 },
+			}),
+		).toBe(10_250);
+	});
+
 	test("starts one consumer at the log end and settles after the first fetch", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail } = await startTail(fixture);
@@ -218,6 +239,7 @@ describe("ownershipTail", function ownershipTailTests() {
 			expect(groupConfig).toMatchObject({
 				readUncommitted: false,
 				allowAutoTopicCreation: false,
+				maxWaitTimeInMs: 5_000,
 			});
 			expect(groupConfig?.groupId).toStartWith("autumn-ownership-tail-");
 			expect(lifecycle).toEqual(["connect", "subscribe", "run"]);

@@ -10,6 +10,7 @@ export const BALANCE_WORKER_MAX_REQUEST_BYTES = 1_048_576;
  *  quickly rather than wait out. The refresh below is what kept the retry from
  *  fitting, so that is bounded separately instead of widening this. */
 export const BALANCE_WORKER_REQUEST_TIMEOUT_MS = 1_000;
+export const BALANCE_WORKER_FETCH_MAX_WAIT_MS = 250;
 
 /** A partition moving is routine, and the refresh lets a request that arrived
  *  mid-move still land instead of failing outright. But it must not spend the

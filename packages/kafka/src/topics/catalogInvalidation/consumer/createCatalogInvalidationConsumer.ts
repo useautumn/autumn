@@ -1,4 +1,7 @@
-import { createConsumerGroupConfig } from "../../../client/createConsumerGroupConfig.js";
+import {
+	createConsumerGroupConfig,
+	TAIL_FETCH_MAX_WAIT_MS,
+} from "../../../client/createConsumerGroupConfig.js";
 import { parseCatalogInvalidationRecord } from "../catalogInvalidationTopic.js";
 import type {
 	CatalogInvalidationConsumer,
@@ -10,7 +13,7 @@ import type {
 
 /** A long session is cheap: a per-process group has no one to hand its partition to, and a shared one only delays a takeover. */
 const CONSUMER_TIMINGS = {
-	fetchMaxWaitTimeMs: 250,
+	fetchMaxWaitTimeMs: TAIL_FETCH_MAX_WAIT_MS,
 	heartbeatIntervalMs: 3_000,
 	sessionTimeoutMs: 60_000,
 	rebalanceTimeoutMs: 90_000,

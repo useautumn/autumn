@@ -85,6 +85,18 @@ describe("Kafka balance worker config", () => {
 		).toThrow("healthRefreshIntervalMs");
 	});
 
+	test("rejects a fetch wait longer than the heartbeat interval", () => {
+		expect(() =>
+			createWorkerConsumerConfig({
+				groupId: "balance-worker-staging",
+				timings: {
+					...timings,
+					fetchMaxWaitTimeMs: timings.heartbeatIntervalMs + 1,
+				},
+			}),
+		).toThrow("fetchMaxWaitTimeMs");
+	});
+
 	test("rejects a heartbeat that cannot fit inside the session", () => {
 		expect(() =>
 			createWorkerConsumerConfig({
