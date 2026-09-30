@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { Glob } from "bun";
 import { needsSvix } from "./svix.ts";
 
 const testsDir = join(import.meta.dir, "../../../server/tests");
@@ -36,6 +37,27 @@ test("routes atmn CLI crud and scenario files to the Svix shard", async () => {
 		"integration/atmn/scenarios/pull/empty-dir.test.ts",
 	]) {
 		expect({ file, svix: await needsSvix(join(testsDir, file)) }).toEqual({
+			file,
+			svix: true,
+		});
+	}
+});
+
+test("routes every runnable atmn integration file to the Svix shard", async () => {
+	const atmnDir = join(testsDir, "integration/atmn");
+	const files = await Array.fromAsync(
+		new Glob("**/*.test.ts").scan({ cwd: atmnDir }),
+	);
+	const runnable = [];
+	for (const file of files) {
+		const source = await readFile(join(atmnDir, file), "utf8");
+		if (/^\s*test(\.concurrent)?\(/m.test(source)) {
+			runnable.push(file);
+		}
+	}
+	expect(runnable.length).toBeGreaterThan(100);
+	for (const file of runnable) {
+		expect({ file, svix: await needsSvix(join(atmnDir, file)) }).toEqual({
 			file,
 			svix: true,
 		});
