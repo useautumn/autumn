@@ -128,6 +128,7 @@ export function createKafkaOwnedPartitionGroup(
 		partitionsConsumedConcurrently,
 		healthRefreshIntervalMs = 60_000,
 		partitionBootstrapRetryIntervalMs,
+		consumerRejoin,
 		onUnhealthyPartition = ignoreUnhealthy,
 		createRuntime: factory,
 		...dependencies
@@ -189,6 +190,7 @@ export function createKafkaOwnedPartitionGroup(
 			partitionsConsumedConcurrently,
 			healthRefreshIntervalMs,
 			partitionBootstrapRetryIntervalMs,
+			consumerRejoin,
 			handoffReadyTimeoutMs: 1,
 			handoffClaimTimeoutMs: 1,
 		},
@@ -302,6 +304,8 @@ export function createKafkaPartitionOutcomeFollower({
 	positionTracker,
 	replayWindow = { windowMs: 600_000, lookupTimeoutMs: 50, now: () => 0 },
 	replayFloorByPartition = new Map(),
+	logEndSettle,
+	logger,
 }: {
 	assignedPartition?: number;
 	consumer: KafkaPartitionControlPort;
@@ -310,6 +314,8 @@ export function createKafkaPartitionOutcomeFollower({
 	positionTracker: ProgressTracker;
 	replayWindow?: ReplayWindow;
 	replayFloorByPartition?: Map<number, bigint>;
+	logEndSettle?: PartitionReplayContext["logEndSettle"];
+	logger?: PartitionReplayContext["logger"];
 }) {
 	async function withdrawPartition(): Promise<void> {}
 	function resumePartition(): void {}
@@ -336,6 +342,8 @@ export function createKafkaPartitionOutcomeFollower({
 			positionTracker,
 			replayWindow,
 			replayFloorByPartition,
+			logEndSettle,
+			logger,
 			consumption: {
 				withdrawPartition,
 				resumePartition,

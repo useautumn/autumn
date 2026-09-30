@@ -45,16 +45,42 @@ export async function refreshPartitionHighWatermarks({
 	state,
 	allocationGeneration,
 }: AllocationScope): Promise<boolean> {
-	const { topic } = ctx.config;
-	const offsets = await ctx.partitionOffsets.fetchHighWatermarks({ topic });
-	if (!isCurrentAllocation({ state, allocationGeneration })) return false;
-	for (const entry of state.entries.values()) {
-		ctx.progress.observeHighWatermark({
+	// The commands topic too, so a partition's command lag is read while it is idle as well as under load.
+	const topics = [ctx.config.topic, ctx.config.commandTopic].filter(
+		(topic): topic is string => typeof topic === "string",
+	);
+	const reads = await Promise.allSettled(
+		topics.map(async (topic) => ({
 			topic,
-			partition: entry.partition,
-			highWatermark: offsets.readHighWatermark({ partition: entry.partition }),
-		});
+			offsets: await ctx.partitionOffsets.fetchHighWatermarks({ topic }),
+		})),
+	);
+	if (!isCurrentAllocation({ state, allocationGeneration })) return false;
+	// One topic's read failing must not hide the other's progress, so every read that
+	// succeeded is recorded before the failures are reported.
+	const failures: unknown[] = [];
+	for (const read of reads) {
+		if (read.status === "rejected") {
+			failures.push(read.reason);
+			continue;
+		}
+		const { topic, offsets } = read.value;
+		for (const entry of state.entries.values()) {
+			ctx.progress.observeHighWatermark({
+				topic,
+				partition: entry.partition,
+				highWatermark: offsets.readHighWatermark({
+					partition: entry.partition,
+				}),
+			});
+		}
 	}
+	if (failures.length === 1) throw failures[0];
+	if (failures.length > 1)
+		throw new AggregateError(
+			failures,
+			"Partition high watermarks could not be read",
+		);
 	return true;
 }
 
@@ -97,7 +123,12 @@ export function respondToPartitionFailure({
 		retryPartition({ ctx, state, partition, entry, allocationGeneration });
 		return "partition_parked";
 	}
-	requestPartitionServiceStop({ ctx, state, allocationGeneration });
+	requestPartitionServiceStop({
+		ctx,
+		state,
+		allocationGeneration,
+		reason: { cause, scope: "partition" },
+	});
 	return "group_stopping";
 }
 

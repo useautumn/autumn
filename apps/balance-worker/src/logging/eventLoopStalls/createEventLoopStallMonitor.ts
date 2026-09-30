@@ -32,10 +32,13 @@ export function createEventLoopStallMonitor({
 		recorder: SyncSectionRecorder;
 		now?: () => number;
 		schedule?: (params: { intervalMs: number; run(): void }) => () => void;
+		/** Read once per logged stall: a stall with nothing timed and a heap that just moved is the collector's. */
+		memory?: () => { heapUsed: number; rss: number };
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
 	const now = ctx.now ?? (() => performance.now());
+	const memory = ctx.memory ?? (() => process.memoryUsage());
 	let cancel: (() => void) | undefined;
 	let lastTickAt = 0;
 	let lastReportAt = 0;
@@ -80,6 +83,7 @@ export function createEventLoopStallMonitor({
 		const attributedMs = round(
 			sections.reduce((sum, section) => sum + section.durationMs, 0),
 		);
+		const { heapUsed, rss } = memory();
 		ctx.logger.warn(
 			{
 				event: "balance_worker.event_loop_stall",
@@ -89,6 +93,8 @@ export function createEventLoopStallMonitor({
 					lagMs: round(lagMs),
 					sections,
 					attributedMs,
+					heapUsedMb: Math.round(heapUsed / 1_048_576),
+					rssMb: Math.round(rss / 1_048_576),
 				},
 			},
 			`Balance worker thread blocked ${round(lagMs)}ms${sections[0] ? ` (${sections[0].label} ${sections[0].durationMs}ms)` : " (unattributed)"}`,

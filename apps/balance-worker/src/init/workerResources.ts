@@ -7,6 +7,7 @@ import type { EdgeConfigS3Client } from "@autumn/edge-config";
 import {
 	createKafkaClient,
 	createKafkaTransport,
+	type KafkaTokenInfo,
 	KafkaWithSettledTopicOffsets,
 	meteringIdentityToPartition,
 } from "@autumn/kafka";
@@ -68,6 +69,13 @@ export async function openWorkerResources({
 	bootstrap: WorkerBootstrapConfig;
 }): Promise<WorkerResources> {
 	const { env } = config;
+	/** Every token the client presents, so a broker's refusal can be read against the key and lifetime it was shown. */
+	function logKafkaToken(info: KafkaTokenInfo): void {
+		dependencies.logger?.info(
+			{ event: "balance_worker.kafka_token", data: info },
+			`Kafka token signed with key …${info.keyIdSuffix ?? "?"}; expires ${info.expiresAt}`,
+		);
+	}
 	const kafka = new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
 			clientId: `balance-worker-${crypto.randomUUID()}`,
@@ -75,6 +83,7 @@ export async function openWorkerResources({
 			transport: createKafkaTransport({
 				authMode: env.KAFKA_AUTH_MODE,
 				region: env.AWS_REGION,
+				onToken: logKafkaToken,
 			}),
 			limits: {
 				connectionTimeoutMs: 5000,

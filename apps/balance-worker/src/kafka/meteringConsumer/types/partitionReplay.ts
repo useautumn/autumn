@@ -46,6 +46,8 @@ export type PartitionReplayContext = {
 	/** Set while a replay reads below the bookmark; the record handler reads it. */
 	replayFloorByPartition: Map<number, bigint>;
 	logger?: Pick<AutumnLogger, "warn">;
+	/** How often, and how many times, a stale log end is re-read before stored state counts as ahead of it. */
+	logEndSettle?: { attempts: number; delayMs: number };
 	consumption: Pick<
 		TopicConsumer,
 		| "resumePartition"

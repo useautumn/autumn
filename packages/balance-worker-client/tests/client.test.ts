@@ -98,6 +98,16 @@ function staleNaming(successor: {
 		},
 	};
 }
+/** The named successor holds the request for its activation wait, then gives up first. */
+const notReady = {
+	status: 503,
+	body: {
+		error: {
+			code: "NOT_READY",
+			message: "Owned partition runtime is not ready: activating",
+		},
+	},
+};
 const initialOwner = {
 	partition: 0,
 	routeEpoch: "1",
@@ -241,7 +251,6 @@ async function preservesCommandAcrossRetry(): Promise<void> {
 async function doesNotRetryWorkerErrors(): Promise<void> {
 	for (const [status, code] of [
 		[400, "INVALID_REQUEST"],
-		[503, "NOT_READY"],
 		[429, "OVERLOADED"],
 		[422, "RECORD_TOO_LARGE"],
 		[500, "INTERNAL"],
@@ -642,6 +651,45 @@ async function followsTheSuccessorWithoutARefresh(): Promise<void> {
 test(
 	"a NOT_OWNER that names the successor is followed without an ownership refresh",
 	followsTheSuccessorWithoutARefresh,
+);
+
+async function retriesASuccessorThatIsNotReadyYet(): Promise<void> {
+	// Run 56 on staging: the redirect landed, but the successor was still activating and the
+	// request failed open with half its budget unspent. The same owner is tried again instead.
+	const fixture = createFixture({
+		responses: [staleNaming(replacement), notReady, success],
+	});
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().refreshes).toBe(0);
+	expect(fixture.stats().requests.map((request) => request.url)).toEqual([
+		"http://worker-a:8080/v1/track",
+		"http://worker-b:8080/v1/track",
+		"http://worker-b:8080/v1/track",
+	]);
+}
+
+test(
+	"a NOT_READY from the named successor is retried at the same owner without a refresh",
+	retriesASuccessorThatIsNotReadyYet,
+);
+
+async function givesUpOnAnOwnerThatStaysNotReady(): Promise<void> {
+	// The retries are bounded apart from the deadline, and the failure is the one a single NOT_READY raised before.
+	const fixture = createFixture({
+		responses: [notReady, notReady, notReady, notReady, success],
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		code: "WORKER_ERROR",
+		workerCode: "NOT_READY",
+		outcome: "not_submitted",
+	});
+	expect(fixture.stats().refreshes).toBe(0);
+	expect(fixture.stats().requests).toHaveLength(4);
+}
+
+test(
+	"an owner still not ready after every retry fails not_submitted as NOT_READY",
+	givesUpOnAnOwnerThatStaysNotReady,
 );
 
 async function ignoresAHintOlderThanKnownOwnership(): Promise<void> {

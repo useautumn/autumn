@@ -15,7 +15,33 @@ export async function startConsumer({
 }): Promise<void> {
 	if (state.isStarted) throw new Error("Kafka topic consumer already started");
 	if (state.isStopped) throw new Error("Kafka topic consumer already stopped");
+	await joinGroup({ ctx, state });
+	state.isStarted = true;
+}
 
+/** After kafkajs gave the group up for good (a crash it would not restart from), joins it again on the
+ *  same subscription and listeners. Only for a consumer that was started and not stopped: kafkajs has
+ *  already disconnected itself by then, so connecting again is the whole of resuming. */
+export async function restartConsumer({
+	ctx,
+	state,
+}: {
+	ctx: TopicConsumerContext;
+	state: TopicConsumerState;
+}): Promise<void> {
+	if (!state.isStarted) throw new Error("Kafka topic consumer not started");
+	if (state.isStopped) throw new Error("Kafka topic consumer already stopped");
+	removeConsumerListeners({ state });
+	await joinGroup({ ctx, state });
+}
+
+async function joinGroup({
+	ctx,
+	state,
+}: {
+	ctx: TopicConsumerContext;
+	state: TopicConsumerState;
+}): Promise<void> {
 	function onGroupJoin(): void {
 		state.initializedPartitions.clear();
 	}
@@ -49,7 +75,6 @@ export async function startConsumer({
 				ctx.config.partitionsConsumedConcurrently ?? 1,
 			eachBatch,
 		});
-		state.isStarted = true;
 	} catch (cause) {
 		try {
 			await ctx.consumer.disconnect();

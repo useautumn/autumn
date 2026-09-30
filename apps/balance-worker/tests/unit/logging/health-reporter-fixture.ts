@@ -13,6 +13,10 @@ export function createHealthReporterFixture({
 	const health = {
 		partitions: [] as OwnedPartitionHealth[],
 		status: "starting" as BalanceWorkerState["status"],
+		consumer: { status: "joined", rejoinAttempts: 0 } as {
+			status: "joined" | "rejoining";
+			rejoinAttempts: number;
+		},
 		readFailure: false,
 		logFailure: false,
 		reads: 0,
@@ -35,6 +39,7 @@ export function createHealthReporterFixture({
 				return health.partitions;
 			},
 			readWorkerStatus: () => health.status,
+			readConsumer: () => health.consumer,
 			schedule: ({ intervalMs, run }) => {
 				const timer = { intervalMs, run, cancelled: false };
 				timers.push(timer);

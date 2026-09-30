@@ -126,13 +126,25 @@ const createPartitionOffsets = ({
 	high: string;
 }) => {
 	const calls: string[] = [];
+	let currentHigh = high;
 	return {
 		calls,
+		setHigh: (nextHigh: string) => {
+			currentHigh = nextHigh;
+		},
 		fetchTopicOffsets: async (requestedTopic: string) => {
 			calls.push(requestedTopic);
-			return [{ partition, offset: high, low, high }];
+			return [{ partition, offset: currentHigh, low, high: currentHigh }];
 		},
 	};
+};
+
+const until = async (condition: () => boolean): Promise<void> => {
+	for (let attempt = 0; attempt < 200; attempt += 1) {
+		if (condition()) return;
+		await new Promise<void>((resolve) => setTimeout(resolve, 1));
+	}
+	throw new Error("Condition was not reached");
 };
 
 const activeSignal = (): AbortSignal => new AbortController().signal;
@@ -337,24 +349,70 @@ describe("Kafka partition outcome follower", () => {
 		}
 	});
 
-	test("refuses state ahead of the supplied catch-up target", async () => {
+	test("refuses state that stays ahead of the log end once the re-reads are spent", async () => {
 		const aheadFixture = createStoreFixture({ nextOffset: 12n });
 		try {
+			const partitionOffsets = createPartitionOffsets({ low: "5", high: "10" });
 			const aheadFollower = createKafkaPartitionOutcomeFollower({
 				consumer: createPartitionControl(),
-				partitionOffsets: createPartitionOffsets({ low: "5", high: "10" }),
+				partitionOffsets,
 				stateStore: aheadFixture.store,
 				positionTracker: createProgressTracker(),
+				logEndSettle: { attempts: 3, delayMs: 0 },
 			});
 
-			await expect(
-				aheadFollower.startAndCatchUp({
+			const failure = await aheadFollower
+				.startAndCatchUp({
 					topic,
 					partition,
 					targetNextOffset: 10n,
 					onUnavailable: () => undefined,
-				}),
-			).rejects.toBeInstanceOf(StateAheadOfKafkaLogEndError);
+				})
+				.then(
+					() => null,
+					(cause: unknown) => cause,
+				);
+			expect(failure).toBeInstanceOf(StateAheadOfKafkaLogEndError);
+			expect((failure as StateAheadOfKafkaLogEndError).logEndOffset).toBe(10n);
+			// Every re-read still saw the stale log end before the state was judged ahead of it.
+			expect(partitionOffsets.calls).toEqual([topic, topic, topic]);
+		} finally {
+			closeStoreFixture(aheadFixture);
+		}
+	});
+
+	test("waits for a log end one record behind the stored state to catch up instead of refusing", async () => {
+		const aheadFixture = createStoreFixture({ nextOffset: 12n });
+		try {
+			const partitionOffsets = createPartitionOffsets({ low: "5", high: "11" });
+			const positionTracker = createProgressTracker();
+			const warnings: string[] = [];
+			const follower = createKafkaPartitionOutcomeFollower({
+				consumer: createPartitionControl(),
+				partitionOffsets,
+				stateStore: aheadFixture.store,
+				positionTracker,
+				logEndSettle: { attempts: 3, delayMs: 0 },
+				logger: {
+					warn: (...args: unknown[]) => warnings.push(String(args[1])),
+				} as never,
+			});
+
+			// The owner's latest record reaches the high watermark before the first re-read.
+			partitionOffsets.setHigh("12");
+			const catchUp = follower.startAndCatchUp({
+				topic,
+				partition,
+				targetNextOffset: 11n,
+				onUnavailable: () => undefined,
+			});
+			await until(() => partitionOffsets.calls.length === 1);
+			await catchUp;
+			expect(positionTracker.read({ topic, partition })).toBe(12n);
+			expect(partitionOffsets.calls).toEqual([topic]);
+			expect(warnings).toEqual([
+				`Kafka log end for ${topic}[${partition}] caught up with stored state after 1 re-read(s)`,
+			]);
 		} finally {
 			closeStoreFixture(aheadFixture);
 		}

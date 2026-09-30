@@ -2,8 +2,13 @@ import { getBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { initInfisical } from "@autumn/shared/utils/infisical";
 import { createBalanceWorker } from "./init/createBalanceWorker.js";
 import type { BalanceWorker } from "./init/types/balanceWorker.js";
-import { getBalanceWorkerLogger } from "./logging/getBalanceWorkerLogger.js";
+import { errorCauseChain } from "./logging/errorCauseChain.js";
+import {
+	bindBalanceWorkerLogIdentity,
+	getBalanceWorkerLogger,
+} from "./logging/getBalanceWorkerLogger.js";
 import { reportWorkerError } from "./logging/reportWorkerError.js";
+import type { PartitionServiceStopReason } from "./partitions/types/partitions.js";
 
 async function main(): Promise<void> {
 	try {
@@ -13,6 +18,7 @@ async function main(): Promise<void> {
 			ctx: {
 				onError: reportError,
 				onServiceStopped: exitAfterServiceStopped,
+				onIdentityResolved: bindBalanceWorkerLogIdentity,
 				logger: getBalanceWorkerLogger(),
 			},
 			config: { env },
@@ -49,10 +55,14 @@ function registerShutdownSignals({ worker }: { worker: BalanceWorker }): void {
  *  never replaces it: staging watched a fleet sit at zero ready partitions until
  *  someone redeployed it by hand. Exiting non-zero hands that decision back to
  *  the scheduler, which is what the shutdown was assuming all along. */
-function exitAfterServiceStopped(): void {
+function exitAfterServiceStopped({
+	cause,
+	scope,
+}: PartitionServiceStopReason): void {
+	const chain = errorCauseChain({ error: cause }).map(causeToLine).join(" <- ");
 	getBalanceWorkerLogger().error(
-		{},
-		"Balance worker partition service stopped; exiting so the task is replaced",
+		{ error: cause, data: { scope } },
+		`Balance worker partition service stopped (${scope}); exiting so the task is replaced${chain ? ` <- ${chain}` : ""}`,
 	);
 	process.exitCode = 1;
 	async function endProcess(): Promise<void> {
@@ -63,6 +73,10 @@ function exitAfterServiceStopped(): void {
 		}
 	}
 	void endProcess();
+}
+
+function causeToLine({ name, message }: { name: string; message: string }) {
+	return `${name}: ${message}`;
 }
 
 function reportError({ cause }: { cause: unknown }): void {
