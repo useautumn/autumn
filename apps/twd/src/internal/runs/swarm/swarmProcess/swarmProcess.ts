@@ -30,6 +30,7 @@ import type {
 	SwarmParentMessage,
 } from "../../types/swarmMessages.ts";
 import { createBootTimeline } from "./bootTimeline.ts";
+import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
 import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import {
 	loadTwModules,
@@ -147,9 +148,10 @@ const main = async (init: SwarmInit) => {
 	process.env.STRIPE_TEST_KEY_POOL_OLD = "";
 
 	setLogSubscriber((line) => {
-		if (line.trim())
+		if (line.trim() && !isWorkerEchoLine(line))
 			send({ type: "log", file: null, worker: null, text: line });
 	});
+	const outputGate = createOutputGate();
 	enableHub();
 	const boot = createBootTimeline();
 	const bootOf = new Map<string, WorkerBoot>();
@@ -193,8 +195,10 @@ const main = async (init: SwarmInit) => {
 				event.chunk,
 			);
 		} else if (event.type === "workerOutput") {
-			boot.recordOutput(event.worker, event.chunk);
-			bufferOutput(null, event.worker, event.chunk);
+			if (outputGate.forwardWorker(event.worker)) {
+				boot.recordOutput(event.worker, event.chunk);
+				bufferOutput(null, event.worker, event.chunk);
+			}
 		} else if (event.type === "workerStatus") {
 			workerFile.delete(event.worker);
 			if (event.status === "ready") boot.mark(event.worker, "ready");
@@ -443,6 +447,7 @@ const main = async (init: SwarmInit) => {
 				workerUrl: publicUrl,
 			});
 			boot.mark(name, "mapped");
+			outputGate.markServing(name);
 			const timeline = boot.finish(name);
 			if (timeline) bootOf.set(name, timeline);
 			send({ type: "worker", worker: workerState(name, "ready", null) });
