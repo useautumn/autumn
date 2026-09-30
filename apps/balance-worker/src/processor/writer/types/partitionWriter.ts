@@ -55,9 +55,8 @@ export type CommittedOutcomeAppender = {
 		partition: number;
 		nextOffset: bigint;
 	}): Promise<void>;
-	/** Records that the command before `nextOffset` is decided: the offset rides with the next
-	 *  batch or lands through the consumer group's commit after a short gap. Never throws: a
-	 *  refused landing is retried, and the Postgres bookmark decides where a restart resumes. */
+	/** Records that the command before `nextOffset` is decided; the offset lands through the group commit
+	 *  after a short gap. Never throws: a refused landing is retried, and the Postgres bookmark decides the resume. */
 	settleCommandOffset?(params: {
 		topic: string;
 		partition: number;
