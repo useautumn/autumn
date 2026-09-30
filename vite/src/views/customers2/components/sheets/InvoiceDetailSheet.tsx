@@ -286,11 +286,11 @@ export function InvoiceDetailSheet({
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Uncollectible);
-	// An open invoice is voided and replaced; a paid one is credited and replaced.
-	// An uncollectible one is rejected.
+	// Open is voided, paid is credited, draft is parked; each is then replaced.
 	const canReissue =
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
+			invoice.status === InvoiceStatus.Draft ||
 			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id

@@ -239,6 +239,7 @@ function ReissueInvoiceForm({
 			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 		});
 	const isPaid = invoice.status === InvoiceStatus.Paid;
+	const isDraft = invoice.status === InvoiceStatus.Draft;
 	const sendsInvoice = sendsReplacementInvoice({ form, prefill });
 	const total =
 		previewState.ready && previewResult
@@ -259,8 +260,10 @@ function ReissueInvoiceForm({
 					title="Reissue Invoice"
 					description={
 						isPaid
-							? `Credit this ${money(invoice.total)} invoice to the customer's balance and send a corrected${total ? ` ${total}` : ""} invoice.`
-							: `Send a new${total ? ` ${total}` : ""} invoice and void this one.`
+							? `Credit this ${money(invoice.total)} invoice to the customer's balance and issue a corrected${total ? ` ${total}` : ""} invoice.`
+							: isDraft
+								? `Issue a new${total ? ` ${total}` : ""} invoice to replace this draft. The draft is kept but can no longer be finalized or paid.`
+								: `Issue a new${total ? ` ${total}` : ""} invoice and void this one.`
 					}
 				/>
 
