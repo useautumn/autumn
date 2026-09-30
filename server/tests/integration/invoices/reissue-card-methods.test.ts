@@ -6,11 +6,12 @@
  *   allowed_payment_methods applies to send-invoice replacements only; a card
  *   replacement is created without payment_method_types, so Stripe does not
  *   reject customer_balance on a charge_automatically invoice.
+ *   Asking for a non-card method on a card invoice makes the replacement a
+ *   send-invoice one on the org's default terms instead of rejecting it.
  */
 
 import { expect, test } from "bun:test";
-import { type ApiListInvoiceV1, ErrCode, organizations } from "@autumn/shared";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
+import { type ApiListInvoiceV1, organizations } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
@@ -18,6 +19,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { SECRET_KEY_L1_TTL_MS } from "@/external/redis/actions/secretKeyCache/secretKeyCache";
+import { DEFAULT_NET_TERMS_DAYS } from "@/internal/invoices/actions/create/setup/setupCreateInvoiceContext";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
 
 const withInvoicePaymentMethods = async <T>({
@@ -134,15 +136,6 @@ test(`${chalk.yellowBright("invoices.reissue: payment_method_types adds bank tra
 		planId: "pro-reissue-method-types",
 	});
 
-	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
-		func: () =>
-			autumnV2_3.post("/invoices.reissue", {
-				invoice_id: original.id,
-				invoice: { payment_method_types: ["card", "customer_balance"] },
-			}),
-	});
-
 	const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
 		invoice_id: original.id,
 		net_terms_days: 7,
@@ -154,4 +147,29 @@ test(`${chalk.yellowBright("invoices.reissue: payment_method_types adds bank tra
 		"card",
 		"customer_balance",
 	]);
+});
+
+test(`${chalk.yellowBright("invoices.reissue: bank transfer on a card invoice without terms sends the replacement on default terms")}`, async () => {
+	const { ctx, autumnV2_3, original } = await cardInvoiceScenario({
+		customerId: "inv-reissue-method-types-default",
+		planId: "pro-reissue-method-types-default",
+	});
+
+	const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+		invoice_id: original.id,
+		invoice: { payment_method_types: ["card", "customer_balance"] },
+	})) as { invoice: ApiListInvoiceV1 };
+	const replacement = await ctx.stripeCli.invoices.retrieve(invoice.stripe_id);
+	expect(replacement.collection_method).toBe("send_invoice");
+	expect(replacement.payment_settings.payment_method_types).toEqual([
+		"card",
+		"customer_balance",
+	]);
+	const expectedDays =
+		ctx.org.config.default_invoice_net_terms_days ?? DEFAULT_NET_TERMS_DAYS;
+	expect(
+		Math.round(
+			((replacement.due_date ?? 0) - (replacement.created ?? 0)) / 86_400,
+		),
+	).toBe(expectedDays);
 });

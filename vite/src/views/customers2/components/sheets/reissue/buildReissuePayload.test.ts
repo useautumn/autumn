@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { InvoiceLineItem } from "@autumn/shared";
 import { getReissuePreviewState } from "./getReissuePreviewState";
-import { buildReissuePayload, type ReissueFormState } from "./useReissueForm";
+import {
+	buildReissuePayload,
+	type ReissueFormState,
+	sendsReplacementInvoice,
+} from "./useReissueForm";
 
 const lineItems = [
 	{ id: "li_base", description: "Pro", amount: 20 },
@@ -280,16 +284,29 @@ describe("reissue payment method types", () => {
 		).toEqual(["card", "customer_balance"]);
 	});
 
-	it("omits types when unchanged or when the replacement is charged automatically", () => {
+	it("omits types when unchanged", () => {
 		expect(
 			typesSent({
 				form: untouched(),
 				nextPrefill: { ...orgTypes, sendsInvoice: true },
 			}),
 		).toBeUndefined();
+	});
+
+	it("sends bank transfer on a card invoice, which turns the replacement into a sent one", () => {
 		expect(
 			typesSent({ form: withBankTransfer, nextPrefill: orgTypes }),
-		).toBeUndefined();
+		).toEqual(["card", "customer_balance"]);
+		expect(
+			sendsReplacementInvoice({ form: withBankTransfer, prefill: orgTypes }),
+		).toBe(true);
+	});
+
+	it("keeps a card-only card invoice charged automatically", () => {
+		const cardOnly = { ...untouched(), paymentMethodTypes: ["card" as const] };
+		expect(sendsReplacementInvoice({ form: cardOnly, prefill: orgTypes })).toBe(
+			false,
+		);
 	});
 });
 
