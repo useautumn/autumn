@@ -14,10 +14,11 @@ export const getSsoProviderIdFromCallbackPath = (
 	path: string | null | undefined,
 	params?: Record<string, unknown>,
 ) => {
+	const match = path?.match(/\/sso\/callback\/([^/?#]+)$/);
+	if (!match) return null;
 	if (typeof params?.providerId === "string" && params.providerId) {
 		return decodeURIComponent(params.providerId);
 	}
-	const match = path?.match(/\/sso\/callback\/([^/?#]+)$/);
 	return match?.[1] && !match[1].startsWith(":")
 		? decodeURIComponent(match[1])
 		: null;
