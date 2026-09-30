@@ -2,7 +2,10 @@ import { secondsToMilliseconds } from "date-fns";
 import type Stripe from "stripe";
 import { schedulePhaseItemShape } from "@/external/stripe/subscriptionSchedules/utils/schedulePhaseItemShape";
 
-/** The live schedule already runs these phases: same current and future phases, start dates, items and end behavior. */
+const phaseEndSeconds = (endDate: unknown) =>
+	typeof endDate === "number" ? endDate : null;
+
+/** The live schedule already runs these phases: same current and future phases, start dates, items, end date and end behavior. */
 export const stripeScheduleMatchesPhases = ({
 	schedule,
 	phases,
@@ -19,6 +22,12 @@ export const stripeScheduleMatchesPhases = ({
 		(phase) => !phase.end_date || secondsToMilliseconds(phase.end_date) > nowMs,
 	);
 	if (openPhases.length !== phases.length) return false;
+	// A released schedule's last phase has a Stripe-derived end; only a cancel end is ours.
+	const endsWhereRequested =
+		endBehavior !== "cancel" ||
+		phaseEndSeconds(openPhases.at(-1)?.end_date) ===
+			phaseEndSeconds(phases.at(-1)?.end_date);
+	if (!endsWhereRequested) return false;
 
 	return phases.every((phase, index) => {
 		const openPhase = openPhases[index];
