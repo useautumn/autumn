@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { type WorkerHandle, WorkerPool } from "./pool.ts";
+import type { WorkerHandle } from "../types.ts";
+import { WorkerPool } from "./pool.ts";
 
 const worker = (i: number) =>
 	({ name: `w${i}`, inFlight: 0 }) as unknown as WorkerHandle;
