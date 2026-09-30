@@ -33,7 +33,7 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: peak
+    runs-on: peak-ubuntu-24.04-4
     timeout-minutes: 5
 
     steps:

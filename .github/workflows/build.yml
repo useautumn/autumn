@@ -31,7 +31,7 @@ env:
 jobs:
   checks:
     name: Type Check
-    runs-on: peak-x64-8
+    runs-on: peak-ubuntu-24.04-8
     
     steps:
       - name: Checkout code

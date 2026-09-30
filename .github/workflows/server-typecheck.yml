@@ -10,7 +10,7 @@ permissions:
 jobs:
   changes:
     name: Check changed files
-    runs-on: peak
+    runs-on: peak-ubuntu-24.04-4
     outputs:
       server: ${{ steps.filter.outputs.server }}
     steps:
@@ -30,7 +30,7 @@ jobs:
     name: Type Check
     needs: changes
     if: needs.changes.outputs.server == 'true'
-    runs-on: peak
+    runs-on: peak-ubuntu-24.04-4
 
     steps:
       - name: Checkout code
