@@ -73,12 +73,12 @@ const planToRow = ({
 	title: plan.name,
 	description: joinDetail([
 		plan.credit === null ? undefined : "Unused time credited",
-		plan.entity_id ? `Entity ${plan.entity_id}` : undefined,
 		plan.custom ? "Custom" : undefined,
 		plan.status === "updated" && plan.expires_at !== null
 			? `Ends ${formatPhaseDate({ startsAt: plan.expires_at })}`
 			: undefined,
 	]),
+	entityId: plan.entity_id ?? null,
 	status: plan.status,
 	changes: updatedChanges({ plan, planChanges, features }),
 	trialEndsAt:

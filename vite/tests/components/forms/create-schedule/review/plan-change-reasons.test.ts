@@ -87,11 +87,7 @@ test("a saved future phase missing from the edited schedule is listed as removed
 			phase.rows.map((row) => [row.title, row.description, row.status]),
 		]),
 	).toEqual([
-		[
-			"Jul 31, 2027",
-			true,
-			[["Enterprise", "Entity plum · Won't start", "removed"]],
-		],
+		["Jul 31, 2027", true, [["Enterprise", "Won't start", "removed"]]],
 	]);
 	expect(
 		removedPhasesToReviewPhases({

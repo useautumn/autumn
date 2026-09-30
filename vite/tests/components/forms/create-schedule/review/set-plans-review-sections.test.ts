@@ -116,12 +116,7 @@ test("plan rows present each phase's plans as the server returns them", () => {
 		[
 			"Nov 1, 2026",
 			[
-				[
-					"Seats",
-					"Entity ent_a · Custom",
-					"starts",
-					{ amount: "$5", suffix: "/mo" },
-				],
+				["Seats", "Custom", "starts", { amount: "$5", suffix: "/mo" }],
 				["Premium", undefined, "kept", { amount: "$7", suffix: "/mo" }],
 			],
 		],

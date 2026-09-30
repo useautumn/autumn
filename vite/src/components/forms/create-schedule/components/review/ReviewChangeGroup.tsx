@@ -8,6 +8,7 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { cn } from "@/lib/utils";
+import { hasScopedRows } from "../../utils/review/groupRowsByScope";
 import type {
 	ReviewChangeSection,
 	ReviewChangeSystem,
@@ -43,6 +44,9 @@ export function ReviewChangeGroup({
 	);
 
 	const isEmpty = section ? !hasContent(section) : false;
+	const showsScopes = Boolean(
+		section?.phases.some((phase) => hasScopedRows({ rows: phase.rows })),
+	);
 
 	return (
 		<AccordionItem value={value} disabled={isEmpty} className="border-none">
@@ -78,6 +82,7 @@ export function ReviewChangeGroup({
 								key={phase.key}
 								phase={phase}
 								showsStatus={showsStatus}
+								showsScopes={showsScopes}
 							/>
 						))}
 					</div>
