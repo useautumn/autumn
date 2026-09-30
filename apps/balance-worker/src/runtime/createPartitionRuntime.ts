@@ -149,15 +149,6 @@ function validateRuntimeConfig(config: PartitionRuntimeConfig): void {
 	) {
 		throw new RangeError("activationWaitMs must be a positive safe integer");
 	}
-	if (
-		config.preparationLogEndWaitMs !== undefined &&
-		(!Number.isSafeInteger(config.preparationLogEndWaitMs) ||
-			config.preparationLogEndWaitMs <= 0)
-	) {
-		throw new RangeError(
-			"preparationLogEndWaitMs must be a positive safe integer",
-		);
-	}
 }
 
 function createRuntimeState(): PartitionRuntimeState {

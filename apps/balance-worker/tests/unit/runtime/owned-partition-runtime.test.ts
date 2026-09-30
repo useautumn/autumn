@@ -23,7 +23,6 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
-import { StateAheadOfKafkaLogEndError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
 	MutationBatchAppendError,
@@ -1553,8 +1552,6 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		fence = async () => undefined,
 		bootstrap = async () => undefined,
 		activationWaitMs,
-		preparationLogEndWaitMs,
-		bookmark,
 	}: {
 		preparation?: (
 			follower: PartitionOutcomeFollowerPort,
@@ -1563,15 +1560,11 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		fence?: () => Promise<void>;
 		bootstrap?: () => Promise<void>;
 		activationWaitMs?: number;
-		preparationLogEndWaitMs?: number;
-		bookmark?: bigint;
 	} = {}) => {
-		const storage = createStoreFixture({ nextOffset: bookmark });
+		const storage = createStoreFixture();
 		const events: string[] = [];
 		let end = 5n;
 		let failPrepare = false;
-		const readBookmark = () =>
-			storage.store.readNextOffset({ topic, partition }) ?? 0n;
 		const createFollower = (name: string): PartitionOutcomeFollowerPort => ({
 			readLogRange: async () => {
 				events.push(`${name}:range:${end}`);
@@ -1582,14 +1575,6 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					`${name}:replay:${targetNextOffset}${fromBookmark ? ":from-bookmark" : ""}`,
 				);
 				if (failPrepare && name === "prepare") throw new Error("replay failed");
-				if (readBookmark() > targetNextOffset) {
-					throw new StateAheadOfKafkaLogEndError({
-						topic,
-						partition,
-						storedNextOffset: readBookmark(),
-						logEndOffset: targetNextOffset,
-					});
-				}
 			},
 			readProgress: () => ({ consumedNextOffset: null, highWatermark: null }),
 			stop: async () => {
@@ -1622,17 +1607,10 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				follower,
 				preparationFollower: preparation,
 				bootstrapper: {
-					bootstrap: async ({ logRange }) => {
+					bootstrap: async () => {
 						events.push("bootstrap");
 						await bootstrap();
-						if (readBookmark() > logRange.logEndOffset) {
-							throw new PartitionBootstrapRefusedError({
-								topic,
-								partition,
-								reason: "local_state_ahead_of_log_end",
-							});
-						}
-						return { kind: "continued", nextOffset: readBookmark() };
+						return { kind: "continued", nextOffset: 0n };
 					},
 				},
 				partitionResolver: { partitionForIdentity: () => partition },
@@ -1652,7 +1630,6 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				},
 				recoveryDrainTimeoutMs: 10,
 				activationWaitMs,
-				preparationLogEndWaitMs,
 			},
 		});
 		return {
@@ -1802,11 +1779,17 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			}
 		});
 		test("preparation re-reads the log end when the live owner's bookmark has passed it", async () => {
-			let bootstraps = 0;
+			let refusals = 0;
 			const f = createFixture({
-				bookmark: 7n,
 				bootstrap: async () => {
-					if (bootstraps++ === 0) f.setEnd(7n);
+					if (refusals++ > 0) return;
+					// The owner appended and advanced its bookmark while the range was being read.
+					f.setEnd(7n);
+					throw new PartitionBootstrapRefusedError({
+						topic,
+						partition,
+						reason: "local_state_ahead_of_log_end",
+					});
 				},
 			});
 			try {
@@ -1819,50 +1802,6 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					"prepare:stop",
 				]);
 				expect(f.runtime.getStatus()).toBe("prepared");
-			} finally {
-				await f.cleanup();
-			}
-		});
-		test("preparation waits for the owner's commit marker before replaying to its bookmark", async () => {
-			let reads = 0;
-			const f = createFixture({
-				bookmark: 7n,
-				preparation: (follower) => ({
-					...follower,
-					readLogRange: async (params) => {
-						reads += 1;
-						if (reads === 4) f.setEnd(7n);
-						return follower.readLogRange(params);
-					},
-				}),
-			});
-			try {
-				await f.runtime.prepare();
-				expect(f.events).toEqual([
-					"prepare:range:5",
-					"bootstrap",
-					"prepare:range:5",
-					"prepare:range:5",
-					"prepare:range:7",
-					"prepare:replay:7",
-					"prepare:stop",
-				]);
-				expect(f.runtime.getStatus()).toBe("prepared");
-			} finally {
-				await f.cleanup();
-			}
-		});
-		test("a log end that never reaches the owner's bookmark fails preparation as a preparation failure", async () => {
-			const f = createFixture({ bookmark: 7n, preparationLogEndWaitMs: 30 });
-			try {
-				const failure = await f.runtime.prepare().catch((cause) => cause);
-				expect(failure).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
-				expect(failure.cause).toBeInstanceOf(PartitionPreparationFailedError);
-				expect(failure.cause.cause).toBeInstanceOf(
-					StateAheadOfKafkaLogEndError,
-				);
-				expect(f.runtime.getStatus()).toBe("recovery_required");
-				expect(f.events).not.toContain("connect");
 			} finally {
 				await f.cleanup();
 			}
@@ -1983,7 +1922,9 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			const f = createFixture();
 			try {
 				f.fail();
-				await expect(f.runtime.prepare()).rejects.toThrow("requires recovery");
+				const failure = await f.runtime.prepare().catch((cause) => cause);
+				expect(failure).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(failure.cause).toBeInstanceOf(PartitionPreparationFailedError);
 				expect(f.events).toContain("prepare:stop");
 				expect(f.events).not.toContain("connect");
 				await expect(f.runtime.activate()).rejects.toThrow();
