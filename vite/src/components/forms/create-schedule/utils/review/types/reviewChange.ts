@@ -1,3 +1,5 @@
+import type { ReviewChangeLine } from "../planChangeLines";
+
 export type ReviewChangeSystem = "autumn" | "stripe";
 
 export type ReviewChangeStatus =
@@ -21,6 +23,8 @@ export type ReviewChangeRow = {
 	title: string;
 	description?: string;
 	status?: ReviewChangeStatus;
+	/** What changed on an updated row, shown in the status chip's tooltip. */
+	changes?: ReviewChangeLine[];
 	trialEndsAt?: number;
 	value?: ReviewChangeValue;
 };
@@ -28,6 +32,8 @@ export type ReviewChangeRow = {
 export type ReviewChangePhase = {
 	key: string;
 	label: string;
+	/** A saved future phase the edited schedule drops. */
+	removed?: boolean;
 	rows: ReviewChangeRow[];
 };
 
