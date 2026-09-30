@@ -56,5 +56,6 @@ export type {
 export type {
 	BalanceWorkerClientErrorCode,
 	WorkerRequestOutcome,
+	WorkerRequestRouting,
 } from "./types/balanceWorkerClientErrors.js";
 export { BalanceWorkerClientError } from "./types/balanceWorkerClientErrors.js";

@@ -203,6 +203,13 @@ async function reroutesOnce(): Promise<void> {
 	await expect(stillStale.client.track({ command })).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 		outcome: "not_submitted",
+		// The error says how far the request got: four sends, three refreshes between them.
+		routing: {
+			sends: 4,
+			refreshes: 3,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
 	});
 	expect(stillStale.stats().requests).toHaveLength(4);
 	expect(stillStale.stats().refreshes).toBe(3);
@@ -217,6 +224,12 @@ async function refreshesMissingOwner(): Promise<void> {
 	await expect(missing.client.track({ command })).rejects.toMatchObject({
 		code: "NO_OWNER",
 		outcome: "not_submitted",
+		routing: {
+			sends: 0,
+			refreshes: 1,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
 	});
 	expect(missing.stats().requests).toHaveLength(0);
 	const staleAfterMiss = createFixture({
@@ -682,10 +695,68 @@ async function givesUpOnAnOwnerThatStaysNotReady(): Promise<void> {
 		code: "WORKER_ERROR",
 		workerCode: "NOT_READY",
 		outcome: "not_submitted",
+		routing: {
+			sends: 4,
+			refreshes: 0,
+			followedHint: false,
+			notReadyAnswers: 4,
+		},
 	});
 	expect(fixture.stats().refreshes).toBe(0);
 	expect(fixture.stats().requests).toHaveLength(4);
 }
+
+async function recordsAFollowedHintOnTheFailure(): Promise<void> {
+	// Staging shrink, worst case: redirected to the successor, which never became ready. The error
+	// records the hint and every send, so the fail-open line can tell this apart from a route with no owner.
+	const fixture = createFixture({
+		responses: [
+			staleNaming(replacement),
+			notReady,
+			notReady,
+			notReady,
+			notReady,
+		],
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		workerCode: "NOT_READY",
+		routing: {
+			sends: 5,
+			refreshes: 0,
+			followedHint: true,
+			notReadyAnswers: 4,
+		},
+	});
+}
+
+test(
+	"a failure after following a successor hint records the hint and every send on the error",
+	recordsAFollowedHintOnTheFailure,
+);
+
+async function recordsRoutingOnADeadline(): Promise<void> {
+	// A refresh that never settles runs the request out of budget; the error still says nothing was sent.
+	const fixture = createFixture({
+		owner: null,
+		timeoutMs: 30,
+		refreshGate: new Promise<void>(() => undefined),
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		code: "DEADLINE",
+		outcome: "not_submitted",
+		routing: {
+			sends: 0,
+			refreshes: 1,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
+	});
+}
+
+test(
+	"a request that runs out of budget waiting on ownership records that nothing was sent",
+	recordsRoutingOnADeadline,
+);
 
 test(
 	"an owner still not ready after every retry fails not_submitted as NOT_READY",

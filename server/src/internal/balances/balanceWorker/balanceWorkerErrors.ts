@@ -40,6 +40,47 @@ export type BalanceWorkerFailOpenReason =
 	| typeof UNAVAILABLE_CODE
 	| typeof OVERLOADED_CODE
 	| typeof RESULT_UNKNOWN_CODE;
+
+/** Which step of a worker request gave up, kept on the error so a fail-open line can say so:
+ *  the client's own code (no owner, stale route, deadline...), the worker's code when one
+ *  answered, and how far the request got before that. */
+export type BalanceWorkerFailure = {
+	clientCode: string;
+	workerCode?: string;
+	outcome: string;
+	sends?: number;
+	refreshes?: number;
+	followedHint?: boolean;
+	notReadyAnswers?: number;
+};
+
+function balanceWorkerFailureOf({
+	cause,
+}: {
+	cause: BalanceWorkerClientError;
+}): BalanceWorkerFailure {
+	return {
+		clientCode: cause.code,
+		...(cause.workerCode ? { workerCode: cause.workerCode } : {}),
+		outcome: cause.outcome,
+		...cause.routing,
+	};
+}
+
+/** The failure a fail-open error carries, or undefined for an error that is not one. */
+export function describeBalanceWorkerFailure({
+	error,
+}: {
+	error: unknown;
+}): BalanceWorkerFailure | undefined {
+	if (!(error instanceof RecaseError) || !FAIL_OPEN_CODES.has(error.code))
+		return undefined;
+	const { data } = error;
+	if (typeof data !== "object" || data === null) return undefined;
+	const { failure } = data as { failure?: unknown };
+	if (typeof failure !== "object" || failure === null) return undefined;
+	return failure as BalanceWorkerFailure;
+}
 const FAIL_OPEN_CODES: ReadonlySet<string> = new Set([
 	UNAVAILABLE_CODE,
 	OVERLOADED_CODE,
@@ -197,6 +238,7 @@ export function rethrowBalanceWorkerError({
 			statusCode: 429,
 			message:
 				"Too many concurrent requests for this customer; retry with backoff",
+			data: { failure: balanceWorkerFailureOf({ cause }) },
 		});
 	}
 	if (
@@ -213,7 +255,7 @@ export function rethrowBalanceWorkerError({
 			message: mayHaveApplied
 				? "Balance worker did not confirm the command; it may already have been applied"
 				: "Balance worker is temporarily unavailable and the command was not submitted",
-			data: { reason: cause.code },
+			data: { reason: cause.code, failure: balanceWorkerFailureOf({ cause }) },
 		});
 	}
 	throw cause;

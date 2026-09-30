@@ -2,7 +2,9 @@ import { HttpResponseError } from "../http/types/httpClient.js";
 import {
 	BalanceWorkerClientError,
 	type BalanceWorkerClientErrorCode,
+	describeRequestRouting,
 	type WorkerRequestOutcome,
+	type WorkerRequestRouting,
 } from "../types/balanceWorkerClientErrors.js";
 import { resolveCommandRoute } from "./resolveCommandRoute.js";
 import type { RoutedCommand, RoutingContext } from "./types/routing.js";
@@ -43,6 +45,12 @@ export async function sendToOwner<Response>({
 		payload === undefined ? undefined : structuredClone(payload);
 	let outcome: WorkerRequestOutcome = "not_submitted";
 	let failureCode: BalanceWorkerClientErrorCode = "OWNERSHIP_UNAVAILABLE";
+	const routing: WorkerRequestRouting = {
+		sends: 0,
+		refreshes: 0,
+		followedHint: false,
+		notReadyAnswers: 0,
+	};
 	try {
 		// A partition mid-handoff answers NOT_OWNER until its successor is named; the
 		// route is refreshed and tried again while the request's budget allows, so a
@@ -55,12 +63,14 @@ export async function sendToOwner<Response>({
 		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; ) {
 			failureCode = "OWNERSHIP_UNAVAILABLE";
 			assertRequestDeadline({ deadline, outcome });
-			if (attempt > 0 && !followingHint)
+			if (attempt > 0 && !followingHint) {
+				routing.refreshes += 1;
 				await refreshCommandRoute({
 					owners: ctx.owners,
 					deadline,
 					timeoutMs: ctx.routeRefreshTimeoutMs,
 				});
+			}
 			followingHint = false;
 			const resolved = resolveCommandRoute({ ctx, command: snapshot });
 			if (!resolved) {
@@ -77,6 +87,7 @@ export async function sendToOwner<Response>({
 			assertRequestDeadline({ deadline, outcome });
 			outcome = "unknown";
 			failureCode = "TRANSPORT";
+			routing.sends += 1;
 			const response = await ctx.http.postJson({
 				url: `${resolved.endpoint}${path}`,
 				body: {
@@ -96,10 +107,12 @@ export async function sendToOwner<Response>({
 			followingHint = followNotOwnerAnswer({ ctx, resolved, answer: notOwner });
 			if (notOwner.notReady) {
 				notReadyRetries += 1;
+				routing.notReadyAnswers = notReadyRetries;
 				if (notReadyRetries > MAX_NOT_READY_RETRIES)
 					throw ownerStillNotReadyError();
 				continue;
 			}
+			if (followingHint) routing.followedHint = true;
 			attempt += 1;
 		}
 		throw new BalanceWorkerClientError({
@@ -108,15 +121,25 @@ export async function sendToOwner<Response>({
 			message: "Worker route is still stale after refreshing ownership",
 		});
 	} catch (cause) {
-		if (cause instanceof BalanceWorkerClientError) throw cause;
-		assertRequestDeadline({ deadline, outcome });
+		if (cause instanceof BalanceWorkerClientError) {
+			describeRequestRouting({ error: cause, routing });
+			throw cause;
+		}
+		try {
+			assertRequestDeadline({ deadline, outcome });
+		} catch (deadlineError) {
+			describeRequestRouting({ error: deadlineError, routing });
+			throw deadlineError;
+		}
 		if (failureCode === "TRANSPORT" && cause instanceof HttpResponseError)
 			failureCode = "INVALID_RESPONSE";
-		throw new BalanceWorkerClientError({
+		const error = new BalanceWorkerClientError({
 			code: failureCode,
 			outcome,
 			message: "Worker request failed",
 			cause,
 		});
+		describeRequestRouting({ error, routing });
+		throw error;
 	}
 }

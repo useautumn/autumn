@@ -489,9 +489,42 @@ test("a batch whose owner stays not ready rejects not_submitted as NOT_READY onc
 		code: "WORKER_ERROR",
 		workerCode: "NOT_READY",
 		outcome: "not_submitted",
+		routing: {
+			sends: 4,
+			refreshes: 0,
+			followedHint: false,
+			notReadyAnswers: 4,
+		},
 	});
 	expect(fixture.refreshes()).toBe(0);
 	expect(fixture.requests).toHaveLength(4);
+});
+
+test("a batch that fails after following a successor hint records the hint on every item's error", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	fixture.requests[0].respond({
+		status: 409,
+		body: {
+			error: {
+				code: "NOT_OWNER",
+				message: "Stale route",
+				successor: replacement,
+			},
+		},
+	});
+	await fixture.sent(2);
+	fixture.requests[1].fail(new Error("socket reset"));
+	await expect(pending).rejects.toMatchObject({
+		code: "TRANSPORT",
+		outcome: "unknown",
+		routing: {
+			sends: 2,
+			refreshes: 0,
+			followedHint: true,
+			notReadyAnswers: 0,
+		},
+	});
 });
 
 test("a route still stale after one refresh rejects not_submitted", async () => {
@@ -503,6 +536,12 @@ test("a route still stale after one refresh rejects not_submitted", async () => 
 	await expect(pending).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 		outcome: "not_submitted",
+		routing: {
+			sends: 2,
+			refreshes: 1,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
 	});
 	expect(fixture.refreshes()).toBe(1);
 	expect(fixture.requests).toHaveLength(2);

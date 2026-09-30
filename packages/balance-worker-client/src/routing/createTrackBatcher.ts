@@ -9,7 +9,9 @@ import {
 import type { TrackParams } from "../types/balanceWorkerClient.js";
 import {
 	BalanceWorkerClientError,
+	describeRequestRouting,
 	type WorkerRequestOutcome,
+	type WorkerRequestRouting,
 } from "../types/balanceWorkerClientErrors.js";
 import { resolveCommandRoute } from "./resolveCommandRoute.js";
 import type {
@@ -46,8 +48,13 @@ type TrackItem = {
 /** One partition's tracks: at most one batch in flight, the rest waiting for it to return. */
 type PartitionLane = { queue: TrackItem[]; busy: boolean };
 
-/** One routing-and-send of a batch. Its signal aborts once nobody is waiting on it. */
-type BatchAttempt = { controller: AbortController; live: Set<TrackItem> };
+/** One routing-and-send of a batch. Its signal aborts once nobody is waiting on it.
+ *  `routing` is the whole batch's record, shared by every attempt of the same batch. */
+type BatchAttempt = {
+	controller: AbortController;
+	live: Set<TrackItem>;
+	routing: WorkerRequestRouting;
+};
 
 /**
  * Tracks for one partition share one request: an idle partition sends at once as a
@@ -132,12 +139,19 @@ export function createTrackBatcher({
 		let followingHint = false;
 		// A NOT_READY from the owner is retried apart from the route attempts: the route was right.
 		let notReadyRetries = 0;
+		const routing: WorkerRequestRouting = {
+			sends: 0,
+			refreshes: 0,
+			followedHint: false,
+			notReadyAnswers: 0,
+		};
 		try {
 			for (let attempt = 0; attempt < 2; ) {
 				pending = pending.filter(isLive);
 				if (pending.length === 0) return;
-				const batchAttempt = startAttempt({ items: pending });
+				const batchAttempt = startAttempt({ items: pending, routing });
 				if (attempt > 0 && !followingHint) {
+					routing.refreshes += 1;
 					await refreshCommandRoute({
 						owners: ctx.owners,
 						deadline: attemptDeadline({ items: pending, batchAttempt }),
@@ -162,6 +176,7 @@ export function createTrackBatcher({
 							outcome: "not_submitted",
 							message: "No worker owns the command partition",
 						}),
+						routing,
 					});
 					return;
 				}
@@ -174,8 +189,13 @@ export function createTrackBatcher({
 				followingHint = posted.followingHint;
 				if (posted.notReady) {
 					notReadyRetries += 1;
+					routing.notReadyAnswers = notReadyRetries;
 					if (notReadyRetries > MAX_NOT_READY_RETRIES) {
-						rejectAll({ items: pending, error: ownerStillNotReadyError() });
+						rejectAll({
+							items: pending,
+							error: ownerStillNotReadyError(),
+							routing,
+						});
 						return;
 					}
 					continue;
@@ -189,6 +209,7 @@ export function createTrackBatcher({
 					outcome: "not_submitted",
 					message: "Worker route is still stale after refreshing ownership",
 				}),
+				routing,
 			});
 		} catch (cause) {
 			// Only routing throws here; nothing in `pending` is on the wire.
@@ -203,6 +224,7 @@ export function createTrackBatcher({
 								message: "Worker request failed",
 								cause,
 							}),
+				routing,
 			});
 		}
 	}
@@ -225,9 +247,11 @@ export function createTrackBatcher({
 		batchAttempt: BatchAttempt;
 	}): Promise<PostedBatch> {
 		const hint = { following: false, notReady: false };
+		const { routing } = batchAttempt;
 		for (const item of items) item.phase = "sending";
 		let response: HttpResponse;
 		try {
+			routing.sends += 1;
 			response = await ctx.http.postJson({
 				url: `${resolved.endpoint}/v1/track-batch`,
 				body: {
@@ -248,6 +272,7 @@ export function createTrackBatcher({
 					message: "Worker request failed",
 					cause,
 				}),
+				routing,
 			});
 			return { reroute: [], followingHint: false, notReady: false };
 		}
@@ -261,9 +286,10 @@ export function createTrackBatcher({
 					body: response.body,
 					resolved,
 					hint,
+					routing,
 				})
 			) {
-				rejectAll({ items, error: invalidResponse({}) });
+				rejectAll({ items, error: invalidResponse({}), routing });
 				return { reroute: [], followingHint: false, notReady: false };
 			}
 			for (const item of items) if (isLive(item)) item.phase = "routing";
@@ -275,7 +301,7 @@ export function createTrackBatcher({
 		}
 		const results = readResults({ body: response.body, count: items.length });
 		if (!results) {
-			rejectAll({ items, error: invalidResponse({}) });
+			rejectAll({ items, error: invalidResponse({}), routing });
 			return { reroute: [], followingHint: false, notReady: false };
 		}
 		const reroute: TrackItem[] = [];
@@ -289,6 +315,7 @@ export function createTrackBatcher({
 			if (
 				isNotOwner({
 					items: [item],
+					routing,
 					status: result.status,
 					body: { error: result.error },
 					resolved,
@@ -309,6 +336,7 @@ export function createTrackBatcher({
 		body,
 		resolved,
 		hint,
+		routing,
 	}: {
 		items: TrackItem[];
 		status: number;
@@ -316,12 +344,15 @@ export function createTrackBatcher({
 		resolved: ResolvedCommandRoute;
 		/** This send's own record of a followed successor or a not-ready owner; nothing outside the send reads it. */
 		hint: { following: boolean; notReady: boolean };
+		routing: WorkerRequestRouting;
 	}): boolean {
 		try {
 			const answer = readNotOwnerResponse({ response: { status, body } });
 			if (!answer) return false;
-			if (followNotOwnerAnswer({ ctx, resolved, answer }))
-				hint.following = true;
+			const followed = followNotOwnerAnswer({ ctx, resolved, answer });
+			if (followed) hint.following = true;
+			// Only a named successor counts as a hint; a NOT_READY keeps the route it already had.
+			if (followed && answer.successor) routing.followedHint = true;
 			if (answer.notReady) hint.notReady = true;
 			return true;
 		} catch (cause) {
@@ -331,6 +362,7 @@ export function createTrackBatcher({
 					cause instanceof BalanceWorkerClientError
 						? cause
 						: invalidResponse({ cause }),
+				routing,
 			});
 			return false;
 		}
@@ -345,18 +377,27 @@ export function createTrackBatcher({
 	}): void {
 		// A reply that lands after the deadline is still uncertain to the caller, as for a single request.
 		const late = deadlineErrorOf({ item, outcome: "unknown" });
+		const routing = item.attempt?.routing;
 		settleItem({ item });
-		if (late) item.reject(late);
-		else item.resolve(reply);
+		if (!late) {
+			item.resolve(reply);
+			return;
+		}
+		if (routing) describeRequestRouting({ error: late, routing });
+		item.reject(late);
 	}
 
 	function rejectAll({
 		items,
 		error,
+		routing,
 	}: {
 		items: TrackItem[];
 		error: unknown;
+		/** The batch's routing so far; every item in it shares the same record. */
+		routing?: WorkerRequestRouting;
 	}): void {
+		if (routing) describeRequestRouting({ error, routing });
 		for (const item of items) {
 			if (!isLive(item)) continue;
 			settleItem({ item });
@@ -380,6 +421,8 @@ export function createTrackBatcher({
 				outcome,
 				message: "Worker request aborted",
 			});
+		const routing = item.attempt?.routing;
+		if (routing) describeRequestRouting({ error, routing });
 		settleItem({ item });
 		item.reject(error);
 	}
@@ -392,10 +435,17 @@ export function createTrackBatcher({
 		if (attempt.live.size === 0) attempt.controller.abort();
 	}
 
-	function startAttempt({ items }: { items: TrackItem[] }): BatchAttempt {
+	function startAttempt({
+		items,
+		routing,
+	}: {
+		items: TrackItem[];
+		routing: WorkerRequestRouting;
+	}): BatchAttempt {
 		const batchAttempt: BatchAttempt = {
 			controller: new AbortController(),
 			live: new Set(items),
+			routing,
 		};
 		for (const item of items) item.attempt = batchAttempt;
 		return batchAttempt;

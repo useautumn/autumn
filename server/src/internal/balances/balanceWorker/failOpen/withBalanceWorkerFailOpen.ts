@@ -2,6 +2,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 import {
 	balanceWorkerFailOpenReasonOf,
+	describeBalanceWorkerFailure,
 	type BalanceWorkerFailOpenReason as WorkerFailOpenReason,
 } from "../balanceWorkerErrors.js";
 
@@ -26,11 +27,14 @@ export type BalanceWorkerFailOpenReason =
 export const withBalanceWorkerFailOpen = async <Result>({
 	ctx,
 	source,
+	commandId,
 	run,
 	fallback,
 }: {
 	ctx: AutumnContext;
 	source: string;
+	/** Logged with a fail-open so an unconfirmed command can be found again; omit when the request carries several. */
+	commandId?: string;
 	run: () => Promise<Result>;
 	fallback: (params: {
 		error: unknown;
@@ -52,6 +56,10 @@ export const withBalanceWorkerFailOpen = async <Result>({
 		if (!reason) throw error;
 		ctx.logger.warn(`[balanceWorker] ${reason}; failing open`, {
 			type: "balance_worker_fail_open",
+			fail_open_reason: reason,
+			fail_open_source: source,
+			...(commandId ? { command_id: commandId } : {}),
+			worker_failure: describeBalanceWorkerFailure({ error }),
 			data: { source, reason },
 			error,
 		});
