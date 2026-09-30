@@ -20,7 +20,6 @@ export type MeteringFenceApplication = {
 	ownerEpoch: bigint;
 };
 
-/** A record a superseded owner wrote after a higher epoch's fence: dropped, whoever is reading. */
 export type MeteringStaleRecord = {
 	position: { topic: string; partition: number; offset: bigint };
 	ownerEpoch: bigint;
@@ -44,11 +43,10 @@ export type MeteringRecordHandler = {
 		partition: number;
 		offset: bigint;
 	}): boolean;
-	/** A fence marker in the log; absent, the consumer keeps the fence itself and drops what a lower epoch writes after it. */
+	/** A fence marker in the log; absent, markers pass unread. */
 	applyFence?(
 		fence: MeteringFenceApplication,
 	): TopicRecordResult | Promise<TopicRecordResult>;
-	/** Told of every record the consumer dropped as a stale owner's; only when `applyFence` is absent. */
 	onStaleRecord?(record: MeteringStaleRecord): void;
 	applyRecord(
 		application: MeteringRecordApplication,
@@ -78,7 +76,6 @@ export type MeteringRecordsHandler = {
 	applyRecords(slice: MeteringRecordSlice): void | Promise<void>;
 	/** A record that will not decode: throw to fail the slice, or return to drop that one record. */
 	onRecordError?(failure: MeteringRecordFailure): void;
-	/** Told of every record the consumer dropped as a stale owner's. */
 	onStaleRecord?(record: MeteringStaleRecord): void;
 };
 

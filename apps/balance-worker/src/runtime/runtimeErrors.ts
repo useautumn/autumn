@@ -43,7 +43,6 @@ export class OwnedPartitionProducerFencedError extends OwnedPartitionRecoveryReq
 	}
 }
 
-/** Idempotent mode: the owner's batch must land right behind its last write; a gap means a later owner wrote between. */
 export class OwnedPartitionLogDivergedError extends OwnedPartitionProducerFencedError {
 	readonly expectedOffset: bigint;
 	readonly actualOffset: bigint;
@@ -64,6 +63,14 @@ export class OwnedPartitionLogDivergedError extends OwnedPartitionProducerFenced
 		this.message = `Owned partition ${topic}[${partition}] log diverged: expected its batch at offset ${expectedOffset}, it landed at ${actualOffset}`;
 		this.expectedOffset = expectedOffset;
 		this.actualOffset = actualOffset;
+	}
+}
+
+export class OwnedPartitionUnfencedError extends OwnedPartitionRecoveryRequiredError {
+	constructor({ topic, partition }: { topic: string; partition: number }) {
+		super({ topic, partition, cause: undefined });
+		this.name = "OwnedPartitionUnfencedError";
+		this.message = `Owned partition ${topic}[${partition}] has no fence marker under its epoch; idempotent commits are refused`;
 	}
 }
 

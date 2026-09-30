@@ -59,7 +59,6 @@ function createFakeCommitterDb({
 			const applied = request.changes.map(
 				(change) => !staleIds.has(subjectRowIdOf(change)),
 			);
-			// Like Postgres: the bookmark holds still for a writer whose epoch a stored fence outranks.
 			const moved = request.bookmarks.filter(
 				(bookmark) =>
 					progress.get(`${bookmark.topic}[${bookmark.partition}]`) ===

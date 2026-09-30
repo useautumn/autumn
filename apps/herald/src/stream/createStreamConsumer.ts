@@ -87,7 +87,6 @@ export function createStreamConsumer({
 		);
 	}
 
-	/** A superseded owner's write after a higher fence: the log's readers all drop it, and herald says so. */
 	function onStaleRecord({
 		position,
 		ownerEpoch,

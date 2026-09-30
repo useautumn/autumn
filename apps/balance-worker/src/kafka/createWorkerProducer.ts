@@ -7,7 +7,10 @@ import {
 
 export { createWorkerProducerConfig } from "../init/workerConfig.js";
 
-import { OwnedPartitionLogDivergedError } from "../runtime/runtimeErrors.js";
+import {
+	OwnedPartitionLogDivergedError,
+	OwnedPartitionUnfencedError,
+} from "../runtime/runtimeErrors.js";
 import { translateKafkaProducerError } from "./workerKafkaErrors.js";
 
 export type WorkerProducer = KafkaProducerSession & {
@@ -29,7 +32,6 @@ export function createWorkerProducer({
 	const { session } = ctx;
 	const { topic, partition } = config;
 	const { isUsable } = session;
-	// Idempotent mode has no broker fence: the next batch landing anywhere but here means another owner wrote between.
 	let expectedNextOffset: bigint | null = null;
 
 	function disconnect({
@@ -107,14 +109,17 @@ export function createWorkerProducer({
 	async function send(
 		...params: Parameters<KafkaProducerSession["send"]>
 	): ReturnType<KafkaProducerSession["send"]> {
+		const [record] = params;
+		const guarded = session.mode === "idempotent" && record.topic === topic;
+		if (guarded && expectedNextOffset === null)
+			throw new OwnedPartitionUnfencedError({ topic, partition });
 		let metadata: Awaited<ReturnType<KafkaProducerSession["send"]>>;
 		try {
 			metadata = await session.send(...params);
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}
-		if (session.mode === "idempotent")
-			verifyContiguity({ record: params[0], metadata });
+		if (guarded) verifyContiguity({ record, metadata });
 		return metadata;
 	}
 

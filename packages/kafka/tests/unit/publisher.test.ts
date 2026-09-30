@@ -726,6 +726,33 @@ describe("idempotent batches", () => {
 			[OWNER_EPOCH_HEADER]: "99",
 		});
 	});
+
+	test("an idempotent batch without an owner epoch is refused before anything is sent", async () => {
+		const fake = createFakeSender();
+		const publisher = createMeteringPublisher({
+			ctx: {
+				producer: {
+					transaction: async () => {
+						throw new Error("no");
+					},
+					send: fake.sender.send,
+					mode: "idempotent",
+				} as never,
+				commit: { mode: "idempotent" },
+				ownerEpoch: () => undefined,
+			},
+		});
+		await expect(
+			publisher.append({
+				topic,
+				partition,
+				records: [
+					createTrackMutation({ state: createState(), commandId: "c" }),
+				],
+			}),
+		).rejects.toThrow("owner epoch");
+		expect(fake.records).toEqual([]);
+	});
 });
 
 describe("owner fence marker", () => {

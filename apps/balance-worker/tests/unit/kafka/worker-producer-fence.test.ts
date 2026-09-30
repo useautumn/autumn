@@ -5,6 +5,7 @@ import { createWorkerProducer } from "../../../src/kafka/createWorkerProducer.js
 import {
 	OwnedPartitionLogDivergedError,
 	OwnedPartitionProducerFencedError,
+	OwnedPartitionUnfencedError,
 } from "../../../src/runtime/runtimeErrors.js";
 
 const topic = "metering";
@@ -17,7 +18,6 @@ function createFakeSession({
 }: {
 	mode: KafkaProducerSession["mode"];
 	sendError?: Error;
-	/** Where each send lands, in order; the last one repeats. */
 	baseOffsets?: string[];
 }) {
 	const calls: string[] = [];
@@ -161,20 +161,32 @@ describe("worker producer log contiguity", () => {
 		expect(failure.actualOffset).toBe(43n);
 	});
 
-	test("without a marker the first batch anchors the position", async () => {
-		const fake = createFakeSession({
-			mode: "idempotent",
-			baseOffsets: ["41", "43", "50"],
-		});
+	test("without a marker an idempotent batch is refused before anything is sent", async () => {
+		const fake = createFakeSession({ mode: "idempotent" });
 		const producer = createWorkerProducer({
 			ctx: { session: fake.session, ownerEpoch: () => undefined },
 			config: { topic, partition },
 		});
-		await producer.send(batchOf(2));
-		await producer.send(batchOf(1));
+		expect(await producer.fenceOwnership()).toBeNull();
 		await expect(producer.send(batchOf(1))).rejects.toBeInstanceOf(
-			OwnedPartitionLogDivergedError,
+			OwnedPartitionUnfencedError,
 		);
+		expect(fake.calls).toEqual([]);
+	});
+
+	test("records for another topic through the same session are neither anchored nor checked", async () => {
+		const fake = createFakeSession({
+			mode: "idempotent",
+			baseOffsets: ["41", "900", "42"],
+		});
+		const producer = createWorkerProducer({
+			ctx: { session: fake.session, ownerEpoch: () => "2516" },
+			config: { topic, partition },
+		});
+		await producer.fenceOwnership();
+		await producer.send({ ...batchOf(1), topic: "ownership" });
+		await producer.send(batchOf(1));
+		expect(fake.calls).toEqual(["send", "send", "send"]);
 	});
 
 	test("transactional commits never check offsets: the broker fences", async () => {

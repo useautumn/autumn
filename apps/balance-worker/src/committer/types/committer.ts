@@ -55,7 +55,6 @@ export type FlushCall = PartitionPosition & {
 	expectedOffset: bigint;
 	commandNextOffset?: bigint;
 	ownerFence?: OwnerFence;
-	/** The epoch the writer holds; Postgres refuses the bookmark when a stored fence outranks it. */
 	writerEpoch?: bigint;
 	records: readonly DurableMutationRecord[];
 	rows: number;

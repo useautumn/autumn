@@ -39,7 +39,6 @@ export function createMeteringConsumer({
 		return handler;
 	}
 
-	// The highest fence each partition's log has shown this consumer; a handler with its own applyFence keeps its own.
 	const fences = new Map<string, MeteringStaleRecord["fence"]>();
 	function fenceKeyOf({
 		topic,
@@ -62,7 +61,6 @@ export function createMeteringConsumer({
 		if (current && current.epoch >= ownerEpoch) return;
 		fences.set(key, { epoch: ownerEpoch, offset: position.offset });
 	}
-	/** Written after the fence by an epoch it outranks: a stale owner's record. */
 	function staleFenceOf({
 		position,
 		ownerEpoch,
