@@ -17,10 +17,29 @@ import { resolveReissueTax } from "./resolveReissueTax";
 /**
  * Stripe hides $0 zero-quantity lines (zero-usage metered placeholders) on the
  * hosted invoice and PDF. Copied as price-less items they'd become visible
- * "0 × ..." lines with quantity 1, so they're dropped.
+ * "0 × ..." lines with quantity 1, so they're dropped unless an edit reprices
+ * them.
  */
-const isBillableSourceLine = (line: ExpandedStripeInvoiceLineItem) =>
-	line.amount !== 0 || (line.quantity ?? 0) !== 0;
+const isHiddenSourceLine = (line: ExpandedStripeInvoiceLineItem) =>
+	line.amount === 0 && line.quantity === 0;
+
+/** Stripe line ids that the request's `update` edits target. */
+const updatedStripeLineIds = ({
+	storedLines,
+	lineEdits,
+}: {
+	storedLines: DbInvoiceLineItem[];
+	lineEdits?: ReissueLineEdits;
+}) => {
+	const updatedIds = new Set(
+		(lineEdits?.update ?? []).map((update) => update.id),
+	);
+	return new Set(
+		storedLines.flatMap((line) =>
+			updatedIds.has(line.id) && line.stripe_id ? [line.stripe_id] : [],
+		),
+	);
+};
 
 export const buildReissueLines = async ({
 	ctx,
@@ -44,13 +63,17 @@ export const buildReissueLines = async ({
 		stripeClient: stripeCli,
 		invoiceId: stripeInvoice.id,
 	});
+	const repricedLineIds = updatedStripeLineIds({ storedLines, lineEdits });
+	const keptSourceLines = sourceLines.filter(
+		(line) => !isHiddenSourceLine(line) || repricedLineIds.has(line.id),
+	);
 	const lines = await applyReissueLineEdits({
 		ctx,
 		customerId,
 		storedLines,
 		edits: lineEdits,
 		currency: stripeInvoice.currency,
-		lines: sourceLines.filter(isBillableSourceLine).map((line) => ({
+		lines: keptSourceLines.map((line) => ({
 			description: line.description ?? undefined,
 			amount:
 				line.amount -
