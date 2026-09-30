@@ -298,6 +298,63 @@ describe("ownershipTail", function ownershipTailTests() {
 		]);
 	});
 
+	test("keeps a view of an announced preparation until its author is named, released, or ready", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail } = await startTail(fixture);
+		try {
+			const preparing: OwnershipRecord = {
+				schemaVersion: 1,
+				type: "preparing",
+				partition: 4,
+				endpoint: "http://successor:8080",
+				preparingAt: 1,
+			};
+			const readyBySuccessor: OwnershipRecord = {
+				schemaVersion: 1,
+				type: "ready",
+				partition: 4,
+				endpoint: "http://successor:8080",
+				readyAt: 2,
+			};
+			const claimedBySuccessor: OwnershipRecord = {
+				schemaVersion: 1,
+				type: "claimed",
+				partition: 4,
+				endpoint: "http://successor:8080",
+				claimedAt: 3,
+			};
+			// A preparation before any known owner is still worth remembering: the owner reads it.
+			await fixture.deliver({
+				partition: 4,
+				messages: [serialized({ record: preparing, offset: 20n })],
+			});
+			expect(tail.readView({ partition: 4 })).toEqual({
+				owner: null,
+				activeDrain: null,
+				activePreparation: { endpoint: "http://successor:8080" },
+			});
+			await fixture.deliver({
+				partition: 4,
+				messages: [serialized({ record: readyBySuccessor, offset: 21n })],
+			});
+			expect(tail.readView({ partition: 4 })?.activePreparation).toBeNull();
+			await fixture.deliver({
+				partition: 4,
+				messages: [
+					serialized({ record: preparing, offset: 22n }),
+					serialized({ record: claimedBySuccessor, offset: 23n }),
+				],
+			});
+			expect(tail.readView({ partition: 4 })).toEqual({
+				owner: "http://successor:8080",
+				activeDrain: null,
+				activePreparation: null,
+			});
+		} finally {
+			await tail.stop();
+		}
+	});
+
 	test("keeps a view of each partition's owner and its unfinished drain, listeners or not", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);
@@ -334,6 +391,7 @@ describe("ownershipTail", function ownershipTailTests() {
 			expect(tail.readView({ partition: 3 })).toEqual({
 				owner: "http://successor:8080",
 				activeDrain: null,
+				activePreparation: null,
 			});
 			// Only the owner's own drain counts; a stranger's is a late record.
 			await fixture.deliver({
@@ -351,6 +409,7 @@ describe("ownershipTail", function ownershipTailTests() {
 					endpoint: "http://successor:8080",
 					successor: "http://third:8080",
 				},
+				activePreparation: null,
 			});
 			// A claim or release concludes the drain.
 			await fixture.deliver({
@@ -360,6 +419,7 @@ describe("ownershipTail", function ownershipTailTests() {
 			expect(tail.readView({ partition: 3 })).toEqual({
 				owner: null,
 				activeDrain: null,
+				activePreparation: null,
 			});
 			expect(tail.readView({ partition: 4 })).toBeNull();
 			expect(errors).toEqual([]);

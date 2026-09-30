@@ -233,7 +233,10 @@ async function announceDraining({
 	}
 }
 
-/** The successor's endpoint, or null when none announced in time and the old release path applies. */
+/** The successor's endpoint, or null when none announced in time and the old release path applies.
+ *  The timeout covers silence: a successor that has said it is preparing is on its way, and this
+ *  worker keeps serving for it up to the drain cap rather than releasing a partition that a
+ *  grow or rebalance already assigned elsewhere. */
 async function awaitSuccessor({
 	ctx,
 	entry,
@@ -244,14 +247,21 @@ async function awaitSuccessor({
 	cancel: AbortSignal;
 }): Promise<string | null> {
 	const timeout = new AbortController();
+	const signal = AbortSignal.any([cancel, timeout.signal]);
 	function expire(): void {
 		timeout.abort(new HandoffReadyTimeoutError({ partition: entry.partition }));
 	}
-	const timer = setTimeout(expire, ctx.config.handoffReadyTimeoutMs);
+	let timer = setTimeout(expire, ctx.config.handoffReadyTimeoutMs);
+	function holdForPreparation(): void {
+		if (timeout.signal.aborted) return;
+		clearTimeout(timer);
+		timer = setTimeout(expire, ctx.config.handoffDrainCapMs);
+	}
+	const preparing = entry.publication.awaitPreparing({ signal });
+	void preparing.then(holdForPreparation, noop);
+	if (entry.publication.readActivePreparation()) holdForPreparation();
 	try {
-		const { endpoint } = await entry.publication.awaitReady({
-			signal: AbortSignal.any([cancel, timeout.signal]),
-		});
+		const { endpoint } = await entry.publication.awaitReady({ signal });
 		return endpoint;
 	} catch (cause) {
 		if (!(cause instanceof HandoffReadyTimeoutError) && !cancel.aborted)
@@ -259,5 +269,6 @@ async function awaitSuccessor({
 		return null;
 	} finally {
 		clearTimeout(timer);
+		timeout.abort(new HandoffReadyTimeoutError({ partition: entry.partition }));
 	}
 }

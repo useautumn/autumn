@@ -4,6 +4,7 @@ import type {
 	BalanceWorkerHttpEnv,
 } from "../../types/balanceWorkerHttp.js";
 import { resolveRequestRuntime } from "./resolveRequestRuntime.js";
+import { readRequestBudget, withRequestBudget } from "./withRequestBudget.js";
 
 export function runtimeRoutingMiddleware({
 	ctx,
@@ -20,7 +21,12 @@ export function runtimeRoutingMiddleware({
 			route,
 			command,
 		});
-		context.set("ctx", { runtime });
+		context.set("ctx", {
+			runtime: withRequestBudget({
+				runtime,
+				budgetMs: readRequestBudget(context),
+			}),
+		});
 		await next();
 	}
 	return routeRequest;

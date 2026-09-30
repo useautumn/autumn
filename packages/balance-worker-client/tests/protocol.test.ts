@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import type { TrackCommand } from "@autumn/balance-engine";
 import { Glob } from "bun";
 import ts from "typescript";
-import { parseWorkerRequest, WorkerProtocolError } from "../src/protocol.js";
+import {
+	parseWorkerRequest,
+	readRequestBudgetHeader,
+	WorkerProtocolError,
+} from "../src/protocol.js";
 
 export const command: TrackCommand = {
 	schemaVersion: 1,
@@ -169,3 +173,20 @@ test(
 	"client uses named direct calls and keeps HTTP/domain boundaries separate",
 	enforcesClientBoundaries,
 );
+
+test("the request budget header reads as a whole number of milliseconds or nothing", () => {
+	expect(readRequestBudgetHeader({ value: "750" })).toBe(750);
+	expect(readRequestBudgetHeader({ value: " 12 " })).toBe(12);
+	expect(readRequestBudgetHeader({ value: "0" })).toBe(0);
+	for (const value of [
+		null,
+		undefined,
+		"",
+		"abc",
+		"-1",
+		"1.5",
+		"1e3",
+		"1234567890",
+	])
+		expect(readRequestBudgetHeader({ value })).toBeUndefined();
+});

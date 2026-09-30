@@ -9,6 +9,7 @@ import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorke
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	balanceWorkerFailOpenReasonOf,
+	describeBalanceWorkerFailure,
 	rethrowBalanceWorkerError,
 } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { requestContextToCommandBase } from "@/internal/balances/balanceWorker/requestContextToCommandBase.js";
@@ -92,6 +93,9 @@ export const readBalanceWorkerSubject = async ({
 			`[balanceWorker] ${reason}; reading the subject from Postgres`,
 			{
 				type: "balance_worker_fail_open",
+				fail_open_reason: reason,
+				fail_open_source: "read",
+				worker_failure: describeBalanceWorkerFailure({ error }),
 				data: { source: "read", reason },
 				error,
 			},

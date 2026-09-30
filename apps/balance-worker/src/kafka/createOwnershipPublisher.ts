@@ -76,6 +76,15 @@ export function createOwnershipPublisher({
 		});
 	}
 
+	async function announcePreparing(): Promise<void> {
+		if (!ctx.handoff) return;
+		await publisher.announcePreparing({
+			partition: config.partition,
+			endpoint: config.endpoint,
+			preparingAt: Date.now(),
+		});
+	}
+
 	async function announceDraining({
 		successor,
 	}: {
@@ -143,6 +152,27 @@ export function createOwnershipPublisher({
 		return { endpoint: drain.endpoint };
 	}
 
+	/** A preparation another worker announced and has not concluded: a successor is on its way. */
+	function readActivePreparation(): { endpoint: string } | null {
+		const view = ctx.handoff?.tail.readView({ partition: config.partition });
+		const preparation = view?.activePreparation;
+		if (!preparation || preparation.endpoint === config.endpoint) return null;
+		return { endpoint: preparation.endpoint };
+	}
+
+	function awaitPreparing({
+		signal,
+	}: {
+		signal: AbortSignal;
+	}): Promise<{ endpoint: string }> {
+		function matchPreparing({ record }: OwnershipTailRecord) {
+			if (record.type !== "preparing" || record.endpoint === config.endpoint)
+				return undefined;
+			return { endpoint: record.endpoint };
+		}
+		return awaitRecord({ signal, match: matchPreparing });
+	}
+
 	function awaitDraining({
 		signal,
 	}: {
@@ -196,9 +226,12 @@ export function createOwnershipPublisher({
 		claim,
 		release,
 		announceReady,
+		announcePreparing,
 		announceDraining,
 		awaitReady,
 		readActiveDrain,
+		readActivePreparation,
+		awaitPreparing,
 		awaitDraining,
 		awaitForeignClaim,
 		awaitClaim,

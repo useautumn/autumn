@@ -132,3 +132,31 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 			return 500;
 	}
 }
+
+/** How many milliseconds the caller will still wait for this request. A worker still
+ *  activating the partition holds the request for that long instead of a fixed wait,
+ *  so a handoff to an idle successor costs the caller latency, not a fail-open. */
+export const WORKER_REQUEST_BUDGET_HEADER = "x-request-budget-ms";
+
+/** The header's value for a request that expires at `expiresAt` (a performance.now() time). */
+export function requestBudgetHeaderValue({
+	expiresAt,
+	now = performance.now(),
+}: {
+	expiresAt: number;
+	now?: number;
+}): string {
+	return String(Math.max(0, Math.floor(expiresAt - now)));
+}
+
+/** Undefined for a missing or malformed header: the worker then waits its fixed default. */
+export function readRequestBudgetHeader({
+	value,
+}: {
+	value: string | null | undefined;
+}): number | undefined {
+	if (value === null || value === undefined) return undefined;
+	const trimmed = value.trim();
+	if (!/^\d{1,9}$/.test(trimmed)) return undefined;
+	return Number(trimmed);
+}

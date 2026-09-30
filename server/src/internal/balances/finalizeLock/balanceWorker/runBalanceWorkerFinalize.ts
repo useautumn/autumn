@@ -104,6 +104,7 @@ export async function runBalanceWorkerFinalize({
 	const { result } = await withBalanceWorkerFailOpen({
 		ctx,
 		source: "finalize",
+		commandId: command.commandId,
 		run: () => finalizeOnWorker({ ctx, command, client }),
 		// An unconfirmed finalize may have been rejected; queueing it would answer success for a verdict never heard.
 		fallback: ({ error, reason }) =>

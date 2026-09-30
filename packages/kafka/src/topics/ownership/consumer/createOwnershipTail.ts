@@ -44,24 +44,41 @@ export function createOwnershipTail({
 		ctx.onError?.({ cause });
 	}
 
-	/** A drain counts only while its author still owns the partition; a claim or release ends it. */
+	/** A drain counts only while its author still owns the partition; a claim or release ends it.
+	 *  A preparation counts until its author is named, the partition is released, or it announces ready. */
 	function remember({ record }: Parameters<OwnershipTailListener>[0]): void {
 		const view = state.viewByPartition.get(record.partition);
 		if (record.type === "claimed") {
 			state.viewByPartition.set(record.partition, {
 				owner: record.endpoint,
 				activeDrain: null,
+				activePreparation: null,
 			});
 		} else if (record.type === "unowned") {
 			state.viewByPartition.set(record.partition, {
 				owner: null,
 				activeDrain: null,
+				activePreparation: null,
 			});
 		} else if (record.type === "draining" && view?.owner === record.endpoint) {
 			view.activeDrain = {
 				endpoint: record.endpoint,
 				successor: record.successor,
 			};
+		} else if (record.type === "preparing") {
+			const preparation = { endpoint: record.endpoint };
+			if (view) view.activePreparation = preparation;
+			else
+				state.viewByPartition.set(record.partition, {
+					owner: null,
+					activeDrain: null,
+					activePreparation: preparation,
+				});
+		} else if (
+			record.type === "ready" &&
+			view?.activePreparation?.endpoint === record.endpoint
+		) {
+			view.activePreparation = null;
 		}
 	}
 

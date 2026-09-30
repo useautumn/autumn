@@ -33,12 +33,20 @@ export type PartitionOwnershipPublication = {
 	claim(params?: { endpoint: string }): Promise<{ routeEpoch: string }>;
 	release(): Promise<void>;
 	announceReady(): Promise<void>;
+	/** Tells the owner this worker is preparing the partition, so it keeps serving instead of releasing at its timeout. */
+	announcePreparing(): Promise<void>;
 	/** Tells the successor this worker has withdrawn and is draining, so it holds its claim timeout. */
 	announceDraining(params: { successor: string }): Promise<void>;
 	/** Resolves with the successor's endpoint on its `ready`, rejects with the signal's reason. */
 	awaitReady(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
 	/** A drain the current owner began before this worker started listening, or null. */
 	readActiveDrain(): { endpoint: string } | null;
+	/** Another worker's unfinished preparation of this partition, announced before this worker started listening, or null. */
+	readActivePreparation(): { endpoint: string } | null;
+	/** Resolves with the preparing worker's endpoint on its `preparing`, rejects with the signal's reason. */
+	awaitPreparing(params: {
+		signal: AbortSignal;
+	}): Promise<{ endpoint: string }>;
 	/** Resolves with the predecessor's endpoint on its `draining`, rejects with the signal's reason. */
 	awaitDraining(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
 	/** Resolves when a `claimed` names another worker, rejects with the signal's reason. */

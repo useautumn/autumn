@@ -98,8 +98,10 @@ export async function completeRuntimePreparation({
 	}
 
 	try {
+		const startedAt = performance.now();
 		let logRange = await follower.readLogRange({ topic, partition, signal });
 		signal.throwIfAborted();
+		const bootstrapStartedAt = performance.now();
 		try {
 			await ctx.bootstrapper.bootstrap({ topic, partition, logRange, signal });
 		} catch (cause) {
@@ -108,6 +110,8 @@ export async function completeRuntimePreparation({
 			logRange = await follower.readLogRange({ topic, partition, signal });
 		}
 		signal.throwIfAborted();
+		const replayStartedAt = performance.now();
+		const bookmark = ctx.stateStore.readNextOffset({ topic, partition });
 		await follower.startAndCatchUp({
 			topic,
 			partition,
@@ -115,15 +119,65 @@ export async function completeRuntimePreparation({
 			onUnavailable,
 		});
 		signal.throwIfAborted();
+		const replayedUntil = performance.now();
 		await stopRuntimePreparation({ state });
 		signal.throwIfAborted();
 		state.status = "prepared";
+		logPreparation({
+			ctx,
+			startedAt,
+			bootstrapStartedAt,
+			replayStartedAt,
+			replayedUntil,
+			bookmark,
+			logEndOffset: logRange.logEndOffset,
+		});
 	} catch (cause) {
 		if (state.terminalError) throw state.terminalError;
 		if (state.status === "draining")
 			throw new OwnedPartitionNotReadyError({ status: state.status });
 		throw await enterRuntimeRecovery({ ctx, state, cause });
 	}
+}
+
+/** Where a successor's preparation spent its time, so a slow handoff can be attributed. */
+function logPreparation({
+	ctx,
+	startedAt,
+	bootstrapStartedAt,
+	replayStartedAt,
+	replayedUntil,
+	bookmark,
+	logEndOffset,
+}: {
+	ctx: PartitionRuntimeScope["ctx"];
+	startedAt: number;
+	bootstrapStartedAt: number;
+	replayStartedAt: number;
+	replayedUntil: number;
+	bookmark: bigint | null;
+	logEndOffset: bigint;
+}): void {
+	const { topic, partition } = ctx.config;
+	const totalMs = Math.round(performance.now() - startedAt);
+	ctx.logger?.info?.(
+		{
+			event: "balance_worker.partition_prepared",
+			data: {
+				topic,
+				partition,
+				totalMs,
+				logRangeMs: Math.round(bootstrapStartedAt - startedAt),
+				bootstrapMs: Math.round(replayStartedAt - bootstrapStartedAt),
+				replayMs: Math.round(replayedUntil - replayStartedAt),
+				bookmark: bookmark === null ? null : bookmark.toString(),
+				logEndOffset: logEndOffset.toString(),
+				recordsBehind:
+					bookmark === null ? null : (logEndOffset - bookmark).toString(),
+			},
+		},
+		`Partition ${topic}[${partition}] prepared in ${totalMs}ms`,
+	);
 }
 
 function isProgressAheadOfLiveLog({ cause }: { cause: unknown }): boolean {

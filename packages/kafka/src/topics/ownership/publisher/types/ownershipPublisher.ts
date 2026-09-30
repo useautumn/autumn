@@ -45,6 +45,13 @@ export type OwnershipDraining = {
 	drainingAt: number;
 };
 
+export type OwnershipPreparation = {
+	partition: number;
+	/** The worker assigned the partition that has started preparing it. */
+	endpoint: string;
+	preparingAt: number;
+};
+
 export type OwnershipPublication = {
 	routeEpoch: string;
 };
@@ -54,4 +61,5 @@ export type OwnershipPublisher = {
 	release(params: OwnershipRelease): Promise<OwnershipPublication>;
 	announceReady(params: OwnershipReadiness): Promise<void>;
 	announceDraining(params: OwnershipDraining): Promise<void>;
+	announcePreparing(params: OwnershipPreparation): Promise<void>;
 };

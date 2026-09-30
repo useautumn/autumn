@@ -80,7 +80,7 @@ export type PartitionRuntimeDependencies = {
 	partitionResolver: MeteringPartitionResolver;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
-	logger?: Partial<Pick<AutumnLogger, "warn">>;
+	logger?: Partial<Pick<AutumnLogger, "warn" | "info">>;
 	receiptPolicy: ReceiptPolicy;
 	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
 	recentCommands: RecentCommands;
@@ -117,8 +117,13 @@ export type PartitionRuntime = {
 	getStatus(): PartitionRuntimeStatus;
 	getHealth(): OwnedPartitionHealth;
 	subscribeUnavailable(listener: RuntimeUnavailableListener): () => void;
-	/** Runs one processor command behind the readiness gate and recovery mapping. */
+	/** Runs one processor command behind the readiness gate and recovery mapping.
+	 *  `budgetMs` is how long the caller will still wait: an activating runtime holds
+	 *  the command for that long (less a margin) before answering not ready. */
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,
+		options?: ProcessOptions,
 	): Promise<Decision>;
 };
+
+export type ProcessOptions = { budgetMs?: number };

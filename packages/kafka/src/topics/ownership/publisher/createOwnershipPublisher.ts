@@ -1,10 +1,12 @@
 import { announceDraining } from "./announceDraining.js";
+import { announcePreparing } from "./announcePreparing.js";
 import { announceReady } from "./announceReady.js";
 import { claimPartition } from "./claimPartition.js";
 import { releasePartition } from "./releasePartition.js";
 import type {
 	OwnershipClaim,
 	OwnershipDraining,
+	OwnershipPreparation,
 	OwnershipPublication,
 	OwnershipPublisher,
 	OwnershipPublisherContext,
@@ -47,10 +49,23 @@ export function createOwnershipPublisher({
 		});
 	}
 
+	async function announcePreparation(
+		params: OwnershipPreparation,
+	): Promise<void> {
+		if (!ctx.sender)
+			throw new Error("Ownership preparing requires a plain producer");
+		await announcePreparing({
+			ctx: { sender: ctx.sender },
+			topic: config.topic,
+			...params,
+		});
+	}
+
 	return {
 		claim,
 		release,
 		announceReady: announce,
 		announceDraining: announceDrain,
+		announcePreparing: announcePreparation,
 	};
 }

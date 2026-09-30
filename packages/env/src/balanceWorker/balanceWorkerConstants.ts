@@ -122,6 +122,11 @@ export const BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS = 30_000;
  *  still fencing and catching up. The activation is a fence plus a bookmark
  *  read; holding the request for it turns a NOT_READY into a 200. */
 export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
+/** A caller that says how long it can still wait is held for that long, less
+ *  this margin so the answer lands before the caller's own deadline, and never
+ *  past the cap: an activation that slow is a fault, not a wait. */
+export const BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS = 100;
+export const BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS = 5_000;
 /** How long a command-offset landing holds the next one back. A skipped command
  *  (an evict, a queued track already applied) leaves no record to carry its
  *  offset, so the offset rides with the next batch or lands through the consumer

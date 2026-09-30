@@ -137,6 +137,22 @@ export type NotOwnerAnswer = {
 /** How many attempts in a row may end at a NOT_READY owner before the request gives up on it. */
 export const MAX_NOT_READY_RETRIES = 3;
 
+/** A NOT_READY is retried only with this much budget left: the owner already held the
+ *  request for the budget it was told, so what remains is the margin it left, and a
+ *  resend could only run the deadline out mid-flight. */
+export const MIN_NOT_READY_RETRY_BUDGET_MS = 200;
+
+/** True when a request still has enough of its budget to be worth resending to a not-ready owner. */
+export function canRetryNotReady({
+	deadline,
+	now = performance.now(),
+}: {
+	deadline: RequestDeadline;
+	now?: number;
+}): boolean {
+	return deadline.expiresAt - now >= MIN_NOT_READY_RETRY_BUDGET_MS;
+}
+
 /** Null for a success; the NOT_OWNER answer with any successor it names, or a NOT_READY
  *  answer from an owner still activating; throws for every other worker error. */
 export function readNotOwnerResponse({

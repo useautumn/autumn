@@ -30,6 +30,7 @@ const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
 
 type OwnershipEvent =
 	| { type: "ready"; partition: number; endpoint: string }
+	| { type: "preparing"; partition: number; endpoint: string }
 	| { type: "draining"; partition: number; endpoint: string; successor: string }
 	| { type: "claimed"; partition: number; endpoint: string; routeEpoch: string }
 	| { type: "unowned"; partition: number; endpoint: string };
@@ -78,6 +79,17 @@ const createOwnershipLog = () => {
 		}
 		return undefined;
 	};
+	/** A preparation announced and not yet concluded by a claim, release, or that worker's ready. */
+	const activePreparation = ({ partition }: { partition: number }) => {
+		for (let i = records.length - 1; i >= 0; i--) {
+			const event = records[i];
+			if (!event || event.partition !== partition) continue;
+			if (event.type === "claimed" || event.type === "unowned") return null;
+			if (event.type === "preparing") return { endpoint: event.endpoint };
+			if (event.type === "ready") return null;
+		}
+		return null;
+	};
 	/** A drain by the current owner not yet concluded by a claim. */
 	const activeDrain = ({ partition }: { partition: number }) => {
 		for (let i = records.length - 1; i >= 0; i--) {
@@ -99,6 +111,7 @@ const createOwnershipLog = () => {
 		await: await_,
 		owner,
 		activeDrain,
+		activePreparation,
 	};
 };
 
@@ -114,6 +127,8 @@ type WorkerOptions = {
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
 	deaf?: boolean;
+	/** Says nothing before preparing: stands in for a successor on a build without the announcement. */
+	silentPreparation?: boolean;
 };
 
 const createWorker = ({
@@ -126,6 +141,7 @@ const createWorker = ({
 	activateGate,
 	awaitReadyAnnouncement,
 	deaf = false,
+	silentPreparation = false,
 }: WorkerOptions) => {
 	const { events } = log;
 	const errors: unknown[] = [];
@@ -197,6 +213,28 @@ const createWorker = ({
 				record("announce");
 				log.publish({ type: "ready", partition, endpoint });
 			},
+			announcePreparing: async () => {
+				if (silentPreparation) return;
+				record("preparing");
+				log.publish({ type: "preparing", partition, endpoint });
+			},
+			readActivePreparation: () => {
+				const preparation = log.activePreparation({ partition });
+				return preparation && preparation.endpoint !== endpoint
+					? preparation
+					: null;
+			},
+			awaitPreparing: ({ signal }) =>
+				log.await({
+					signal,
+					match: (event) =>
+						!deaf &&
+						event.type === "preparing" &&
+						event.partition === partition &&
+						event.endpoint !== endpoint
+							? { endpoint: event.endpoint }
+							: undefined,
+				}),
 			announceDraining: async ({ successor }) => {
 				record("draining");
 				await announceDrainingGate;
@@ -427,6 +465,68 @@ describe("partition handoff", () => {
 			await A.ownership.awaitHandoff({ partition: 9 });
 		} finally {
 			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a successor that announced it is preparing is waited for past the ready timeout", async () => {
+		// Run 60 on staging: a grow put the partition on an idle worker whose preparation outran the
+		// old owner's 5 s wait, the old owner released, and nobody owned the partition for 8 s.
+		const log = createOwnershipLog();
+		const prepare = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20, handoffDrainCapMs: 5_000 },
+		});
+		const B = createWorker({ name: "B", log, prepareGate: prepare.promise });
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("preparing:2"));
+			// Well past the ready timeout: A heard B preparing, keeps serving, and has not released.
+			await Bun.sleep(60);
+			expect(A.has("release:2")).toBe(false);
+			expect(A.has("withdraw:2")).toBe(false);
+			expect(A.status(2)).toBe("ready");
+
+			prepare.resolve();
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.has("release:2")).toBe(false);
+			expect(A.index("withdraw:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(B.has("claim:B:2")).toBe(false);
+			expect(A.errors).toEqual([]);
+			expect(B.errors).toEqual([]);
+		} finally {
+			prepare.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a preparation that never becomes ready still ends in a release at the drain cap", async () => {
+		const log = createOwnershipLog();
+		const prepare = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20, handoffDrainCapMs: 60 },
+		});
+		const B = createWorker({ name: "B", log, prepareGate: prepare.promise });
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("preparing:2"));
+			await waitFor(() => A.has("release:2"), 400);
+			expect(A.index("withdraw:2")).toBeLessThan(A.index("release:2"));
+			expect(A.errors).toEqual([]);
+		} finally {
+			prepare.resolve();
 			await A.ownership.stop();
 			await B.ownership.stop();
 		}
