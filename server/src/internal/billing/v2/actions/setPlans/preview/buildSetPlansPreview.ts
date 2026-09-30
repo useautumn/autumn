@@ -64,6 +64,7 @@ export const buildSetPlansPreview = async ({
 		billingContext,
 		billingPlan,
 		phases,
+		keptCustomerProducts: immediatePhaseTransition.keptCustomerProducts,
 		processorItemContext,
 	});
 	const processorChanges = stripeBillingPlanToProcessorChanges({

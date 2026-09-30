@@ -2,6 +2,7 @@ import { getApiBalances } from "@api/customers/cusFeatures";
 import type {
 	BillingPlan,
 	CreateScheduleBillingContext,
+	FullCusProduct,
 	SetPlansPreviewPhase,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -34,12 +35,14 @@ export const buildSetPlansPreviewPhases = async ({
 	billingContext,
 	billingPlan,
 	phases,
+	keptCustomerProducts,
 	processorItemContext,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	phases: SchedulePhasePlan[];
+	keptCustomerProducts: FullCusProduct[];
 	processorItemContext: ProcessorItemContext;
 }): Promise<SetPlansPreviewPhase[]> => {
 	const { fullCustomer, stripeSubscription } = billingContext;
@@ -61,6 +64,9 @@ export const buildSetPlansPreviewPhases = async ({
 		originalFullCustomer: fullCustomer,
 		phases,
 		phaseCustomers,
+		keptCustomerProductIds: new Set(
+			keptCustomerProducts.map((customerProduct) => customerProduct.id),
+		),
 	});
 	const phasePlans = setPlansPhasePlans({
 		phaseTransitions,

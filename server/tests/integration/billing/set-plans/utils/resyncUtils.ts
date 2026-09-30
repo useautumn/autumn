@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { timeout } from "@/utils/genUtils";
 import { findStripeSubscriptionByStatus } from "./subscriptionStateUtils";
 
@@ -37,7 +38,37 @@ export const cancelSubscriptionForResync = async ({
 	};
 };
 
-/** The rebuilt subscription starts on the old start, anchors on the old period end and charged nothing. */
+/** Cancels in Stripe while Autumn's rows are unlinked, as if the webhook never arrived. */
+export const cancelSubscriptionMissingWebhook = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}) => {
+	const { customer_products: customerProducts } = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	for (const customerProduct of customerProducts) {
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates: { subscription_ids: [] },
+		});
+	}
+	const cancelled = await cancelSubscriptionForResync({ ctx, customerId });
+	for (const customerProduct of customerProducts) {
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates: { subscription_ids: customerProduct.subscription_ids },
+		});
+	}
+	return cancelled;
+};
+
+/** The rebuilt subscription anchors on the old period end, starts on startMs when given, and charged nothing. */
 export const expectResyncedSubscriptionCorrect = async ({
 	ctx,
 	customerId,
@@ -48,7 +79,7 @@ export const expectResyncedSubscriptionCorrect = async ({
 	ctx: TestContext;
 	customerId: string;
 	oldSubscriptionId: string;
-	startMs: number;
+	startMs?: number;
 	anchorMs: number;
 }) => {
 	const subscription = await findStripeSubscriptionByStatus({
@@ -57,7 +88,9 @@ export const expectResyncedSubscriptionCorrect = async ({
 		status: "active",
 	});
 	expect(subscription.id).not.toBe(oldSubscriptionId);
-	expect(subscription.start_date).toBe(msToSeconds(startMs));
+	if (startMs !== undefined) {
+		expect(subscription.start_date).toBe(msToSeconds(startMs));
+	}
 	expect(subscription.billing_cycle_anchor).toBe(msToSeconds(anchorMs));
 
 	const { data: invoices } = await ctx.stripeCli.invoices.list({
@@ -69,6 +102,32 @@ export const expectResyncedSubscriptionCorrect = async ({
 	);
 	expect(amountDue).toBe(0);
 	return subscription;
+};
+
+/** The same customer product row is still active, linked to exactly the given subscription. */
+export const expectPlanKept = async ({
+	ctx,
+	customerId,
+	productId,
+	customerProductId,
+	subscriptionId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productId: string;
+	customerProductId: string;
+	subscriptionId: string;
+}) => {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const customerProduct = findActiveCustomerProductById({
+		fullCus: fullCustomer,
+		productId,
+	});
+	expect(customerProduct?.id).toBe(customerProductId);
+	expect(customerProduct?.subscription_ids).toEqual([subscriptionId]);
 };
 
 export const expectPlanStartsAt = async ({

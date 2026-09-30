@@ -27,6 +27,7 @@ import {
 import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
 import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
 import { markUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
+import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
 type SetPlansCheckoutModeContext = Pick<
@@ -308,6 +309,15 @@ export const setupSetPlansBillingContext = async ({
 		scheduledPhaseContexts,
 		endsAt: params.ends_at,
 	};
+
+	Object.assign(
+		scheduleBillingContext,
+		setupKeptSubscriptionCycle({
+			ctx,
+			billingContext: scheduleBillingContext,
+			requestedProrationBehavior: params.proration_behavior,
+		}),
+	);
 
 	const { recurringActive } = resolveSetPlansRecurringProducts({
 		billingContext: scheduleBillingContext,

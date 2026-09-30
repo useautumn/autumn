@@ -52,6 +52,19 @@ const onlyEndsAtLaterPhase = ({
 	);
 };
 
+/** A kept plan moved onto a new subscription changes nothing the customer sees. */
+const onlyRelinksKeptPlan = ({
+	transition: { before, after },
+	keptCustomerProductIds,
+}: {
+	transition: CustomerProductTransition;
+	keptCustomerProductIds: Set<string>;
+}) =>
+	before !== null &&
+	after !== null &&
+	keptCustomerProductIds.has(after.id) &&
+	buildLifecyclePreviousAttributes({ before, after }) === null;
+
 const phaseExpiryTransitions = ({
 	previousCustomer,
 	phaseCustomer,
@@ -80,16 +93,22 @@ export const setPlansPhaseTransitions = ({
 	originalFullCustomer,
 	phases,
 	phaseCustomers,
+	keptCustomerProductIds,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 	originalFullCustomer: FullCustomer;
 	phases: SchedulePhasePlan[];
 	phaseCustomers: FullCustomer[];
+	keptCustomerProductIds: Set<string>;
 }): CustomerProductTransition[][] => {
 	const transitions = autumnBillingPlanToTransitions({
 		autumnBillingPlan,
 		originalFullCustomer,
-	}).filter((transition) => !onlyEndsAtLaterPhase({ transition, phases }));
+	}).filter(
+		(transition) =>
+			!onlyEndsAtLaterPhase({ transition, phases }) &&
+			!onlyRelinksKeptPlan({ transition, keptCustomerProductIds }),
+	);
 
 	return phases.map((_, phaseIndex) => {
 		const startingTransitions = transitions.filter(

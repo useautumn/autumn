@@ -408,3 +408,208 @@ describe(
 		});
 	},
 );
+
+const proWithCustomerProduct = ({
+	subscriptionIds = [],
+}: {
+	subscriptionIds?: string[];
+} = {}) => {
+	const pro = products.createFull({
+		id: "pro",
+		prices: [prices.createFixed({ id: "price_pro" })],
+	});
+	const customerProduct = customerProducts.create({
+		id: "cus_prod_pro",
+		productId: pro.id,
+		product: pro,
+		subscriptionIds,
+		customerPrices: [
+			prices.createCustomer({
+				price: pro.prices[0]!,
+				customerProductId: "cus_prod_pro",
+			}),
+		],
+	});
+	return { pro, customerProduct };
+};
+
+const requestProductContext = ({
+	fullProduct,
+	currentCustomerProduct,
+}: {
+	fullProduct: MultiAttachProductContext["fullProduct"];
+	currentCustomerProduct?: FullCusProduct;
+}) => ({
+	fullProduct,
+	customPrices: [],
+	customEnts: [],
+	featureQuantities: [],
+	scopeCustomerProducts: currentCustomerProduct ? [currentCustomerProduct] : [],
+	currentCustomerProduct,
+});
+
+const cancelledSubscription = {
+	id: "sub_dead",
+	status: "canceled",
+} as Stripe.Subscription;
+
+describe(chalk.yellowBright("computeSetPlansPlan: unchanged plans"), () => {
+	test("an identical plan on a live subscription is left untouched", () => {
+		const ctx = contexts.create({});
+		const currentEpochMs = 1_800_000_000_000;
+		const { pro, customerProduct } = proWithCustomerProduct({
+			subscriptionIds: ["sub_live"],
+		});
+
+		const billingContext = createBillingContext({
+			currentEpochMs,
+			productContexts: [
+				requestProductContext({
+					fullProduct: pro,
+					currentCustomerProduct: customerProduct,
+				}),
+			],
+			immediatePhase: {
+				starts_at: currentEpochMs,
+				plans: [{ plan_id: pro.id }],
+			},
+		});
+
+		const { autumnBillingPlan, phases, immediatePhaseTransition } =
+			computeSetPlansPlan({ ctx, billingContext });
+
+		expect(autumnBillingPlan.insertCustomerProducts).toEqual([]);
+		expect(autumnBillingPlan.updateCustomerProducts).toEqual([]);
+		expect(autumnBillingPlan.patchCustomerProducts).toBeUndefined();
+		expect(phases[0]?.customerProductIds).toEqual([customerProduct.id]);
+		expect(immediatePhaseTransition.outgoingCustomerProducts).toEqual([]);
+		expect(
+			immediatePhaseTransition.keptCustomerProducts.map(({ id }) => id),
+		).toEqual([customerProduct.id]);
+	});
+
+	test("an identical plan on a cancelled subscription only moves onto the new one", () => {
+		const ctx = contexts.create({});
+		const currentEpochMs = 1_800_000_000_000;
+		const { pro, customerProduct } = proWithCustomerProduct({
+			subscriptionIds: [cancelledSubscription.id],
+		});
+
+		const billingContext = {
+			...createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({
+						fullProduct: pro,
+						currentCustomerProduct: customerProduct,
+					}),
+				],
+				immediatePhase: {
+					starts_at: currentEpochMs,
+					plans: [{ plan_id: pro.id }],
+				},
+			}),
+			replacedStripeSubscription: cancelledSubscription,
+		};
+
+		const { autumnBillingPlan, phases } = computeSetPlansPlan({
+			ctx,
+			billingContext,
+		});
+
+		expect(autumnBillingPlan.insertCustomerProducts).toEqual([]);
+		expect(
+			autumnBillingPlan.updateCustomerProducts?.map(
+				({ customerProduct, updates }) => ({ id: customerProduct.id, updates }),
+			),
+		).toEqual([{ id: customerProduct.id, updates: { subscription_ids: [] } }]);
+		expect(
+			autumnBillingPlan.patchCustomerProducts?.map(
+				({ customerProduct }) => customerProduct.id,
+			),
+		).toEqual([customerProduct.id]);
+		expect(phases[0]?.customerProductIds).toEqual([customerProduct.id]);
+	});
+
+	test("a cancelled subscription rebuilt with another paid plan replaces the identical plan too", () => {
+		const ctx = contexts.create({});
+		const currentEpochMs = 1_800_000_000_000;
+		const { pro, customerProduct } = proWithCustomerProduct({
+			subscriptionIds: [cancelledSubscription.id],
+		});
+		const addOn = products.createFull({
+			id: "addon",
+			isAddOn: true,
+			prices: [prices.createFixed({ id: "price_addon" })],
+		});
+
+		const billingContext = {
+			...createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({
+						fullProduct: pro,
+						currentCustomerProduct: customerProduct,
+					}),
+					requestProductContext({ fullProduct: addOn }),
+				],
+				immediatePhase: {
+					starts_at: currentEpochMs,
+					plans: [{ plan_id: pro.id }, { plan_id: addOn.id }],
+				},
+			}),
+			replacedStripeSubscription: cancelledSubscription,
+		};
+
+		const { autumnBillingPlan } = computeSetPlansPlan({ ctx, billingContext });
+
+		expect(
+			autumnBillingPlan.insertCustomerProducts.map(
+				({ product_id }) => product_id,
+			),
+		).toEqual([pro.id, addOn.id]);
+		expect(autumnBillingPlan.updateCustomerProducts?.[0]?.updates.status).toBe(
+			CusProductStatus.Expired,
+		);
+	});
+
+	test("a paused subscription replaces the identical plan, since its period was never paid", () => {
+		const ctx = contexts.create({});
+		const currentEpochMs = 1_800_000_000_000;
+		const pausedSubscription = {
+			id: "sub_paused",
+			status: "paused",
+		} as Stripe.Subscription;
+		const { pro, customerProduct } = proWithCustomerProduct({
+			subscriptionIds: [pausedSubscription.id],
+		});
+
+		const billingContext = {
+			...createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({
+						fullProduct: pro,
+						currentCustomerProduct: customerProduct,
+					}),
+				],
+				immediatePhase: {
+					starts_at: currentEpochMs,
+					plans: [{ plan_id: pro.id }],
+				},
+			}),
+			replacedStripeSubscription: pausedSubscription,
+		};
+
+		const { autumnBillingPlan } = computeSetPlansPlan({ ctx, billingContext });
+
+		expect(
+			autumnBillingPlan.insertCustomerProducts.map(
+				({ product_id }) => product_id,
+			),
+		).toEqual([pro.id]);
+		expect(autumnBillingPlan.updateCustomerProducts?.[0]?.updates.status).toBe(
+			CusProductStatus.Expired,
+		);
+	});
+});

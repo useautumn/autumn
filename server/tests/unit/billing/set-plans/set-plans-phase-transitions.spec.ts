@@ -14,6 +14,7 @@ import { setPlansPhaseTransitions } from "@/internal/billing/v2/actions/setPlans
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import {
 	makeAutumnBillingPlan,
+	makePatch,
 	makeUpdate,
 } from "../billing-change-response/helpers/makeAutumnBillingPlan";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
@@ -28,11 +29,13 @@ const previewPhases = ({
 	originalFullCustomer,
 	phases,
 	creditLineItems = [],
+	keptCustomerProductIds = [],
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 	originalFullCustomer: FullCustomer;
 	phases: SchedulePhasePlan[];
 	creditLineItems?: LineItem[];
+	keptCustomerProductIds?: string[];
 }) => {
 	const phaseCustomers = buildSetPlansPhaseCustomers({
 		ctx,
@@ -45,6 +48,7 @@ const previewPhases = ({
 		originalFullCustomer,
 		phases,
 		phaseCustomers,
+		keptCustomerProductIds: new Set(keptCustomerProductIds),
 	});
 	return {
 		planChanges: phaseTransitions.map((transitions) =>
@@ -64,6 +68,31 @@ const previewPhases = ({
 };
 
 describe("setPlansPhaseTransitions", () => {
+	test("a kept plan moved onto a new subscription is kept, not updated", () => {
+		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
+		const originalFullCustomer = makeFullCustomer({ customerProducts: [pro] });
+		const autumnBillingPlan = makeAutumnBillingPlan({
+			updates: [
+				makeUpdate({ customerProduct: pro, updates: { subscription_ids: [] } }),
+			],
+			patches: [makePatch({ customerProduct: pro })],
+		});
+
+		const { planChanges, plans } = previewPhases({
+			autumnBillingPlan,
+			originalFullCustomer,
+			phases: [{ startsAt: NOW, customerProductIds: [pro.id] }],
+			keptCustomerProductIds: [pro.id],
+		});
+
+		expect(planChanges).toEqual([[]]);
+		expect(
+			plans.map((phasePlans) =>
+				phasePlans.map((plan) => [plan.status, plan.plan_id, plan.credit]),
+			),
+		).toEqual([[["kept", "pro", null]]]);
+	});
+
 	test("groups plan changes by the phase they take effect in", () => {
 		const free = makeFullCusProduct({ planId: "free", startedAt: NOW - 1000 });
 		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW });

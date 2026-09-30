@@ -243,6 +243,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 				immediatePhaseTransition: {
 					outgoingCustomerProducts: [],
 					incomingCustomerProducts: [],
+					keptCustomerProducts: [],
 				},
 			}),
 		).resolves.toBeUndefined();
@@ -265,6 +266,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 				immediatePhaseTransition: {
 					outgoingCustomerProducts: [],
 					incomingCustomerProducts: [],
+					keptCustomerProducts: [],
 				},
 			}),
 		).rejects.toThrow("2 assigned, but the incoming plan grants 1");
