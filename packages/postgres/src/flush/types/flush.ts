@@ -10,6 +10,8 @@ export type FlushBookmark = {
 	commandNextOffset?: bigint;
 	/** The latest ownership fence the partition's log carried; kept only when its epoch is higher than the stored one. */
 	ownerFence?: { epoch: bigint; offset: bigint };
+	/** The epoch the writer holds; the bookmark holds still when the stored fence epoch is higher (a later owner landed). */
+	writerEpoch?: bigint;
 };
 
 /** Everything one transaction lands: row changes (any row may repeat) and the bookmarks they advance. */

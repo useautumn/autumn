@@ -38,6 +38,7 @@ function createFakeCommitterDb({
 		progress.set(`${topic}[${partition}]`, storedNextOffset);
 	const updates: SubjectRowChange[] = [];
 	const transactions: ("committed" | "rolled_back")[] = [];
+	const requests: Parameters<CommitterDb["flush"]>[0][] = [];
 	const db: CommitterDb = {
 		readPartitionProgress: async (position) => {
 			const key = `${position.topic}[${position.partition}]`;
@@ -54,13 +55,18 @@ function createFakeCommitterDb({
 		},
 		// Rolls back like Postgres would: nothing lands unless every bookmark moved.
 		flush: async (request) => {
+			requests.push(request);
 			const applied = request.changes.map(
 				(change) => !staleIds.has(subjectRowIdOf(change)),
 			);
+			// Like Postgres: the bookmark holds still for a writer whose epoch a stored fence outranks.
 			const moved = request.bookmarks.filter(
 				(bookmark) =>
 					progress.get(`${bookmark.topic}[${bookmark.partition}]`) ===
-					bookmark.expectedOffset,
+						bookmark.expectedOffset &&
+					(bookmark.writerEpoch === undefined ||
+						(fences.get(`${bookmark.topic}[${bookmark.partition}]`)?.epoch ??
+							-1n) <= bookmark.writerEpoch),
 			);
 			const conflicted = request.changes.some((change) =>
 				conflictIds.has(subjectRowIdOf(change)),
@@ -90,7 +96,15 @@ function createFakeCommitterDb({
 			return { applied };
 		},
 	};
-	return { db, progress, commandProgress, fences, updates, transactions };
+	return {
+		db,
+		progress,
+		commandProgress,
+		fences,
+		updates,
+		transactions,
+		requests,
+	};
 }
 
 function createStore(fake: ReturnType<typeof createFakeCommitterDb>) {
@@ -100,6 +114,43 @@ function createStore(fake: ReturnType<typeof createFakeCommitterDb>) {
 }
 
 describe("committer state store", () => {
+	test("once bound, the writer's epoch rides every bookmark it moves", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+		store.bindOwnerEpoch?.({ topic, partition, read: () => "300" });
+		await store.advanceCommandNextOffset({
+			topic,
+			partition,
+			commandNextOffset: 5n,
+		});
+		expect(fake.requests.at(-1)?.bookmarks[0]?.writerEpoch).toBe(300n);
+		expect(fake.transactions).toEqual(["committed"]);
+	});
+
+	test("a writer below the stored fence epoch cannot move the bookmark: the flush is lost ownership, never landed", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
+		fake.fences.set(`${topic}[${partition}]`, { epoch: 512n, offset: 40n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+		store.bindOwnerEpoch?.({ topic, partition, read: () => "300" });
+		const results = await store.applyDurableMutations({
+			records: [
+				{
+					position: { topic, partition, offset: 43n },
+					mutation: createTrackMutation({
+						state: createState(),
+						commandId: "stale-owner",
+					}),
+				},
+			],
+		});
+		expect(fake.transactions).toEqual(["rolled_back"]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
+		expect(fake.updates).toEqual([]);
+		expect(results[0]?.kind).not.toBe("applied");
+	});
+
 	test("an owner fence lands beside the bookmark, reloads with it, and a lower epoch never replaces it", async () => {
 		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
 		const store = createStore(fake);

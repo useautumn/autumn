@@ -56,6 +56,12 @@ export type StateStore = {
 		commandNextOffset: bigint;
 	}): void | Promise<void>;
 	/** Null for a store that keeps no fence, or a partition whose log has carried none. */
+	/** Names the epoch the partition's writer holds, so every bookmark the store moves carries it. */
+	bindOwnerEpoch?(
+		params: { topic: string; partition: number } & {
+			read(): string | undefined;
+		},
+	): void;
 	readOwnerFence?(params: {
 		topic: string;
 		partition: number;

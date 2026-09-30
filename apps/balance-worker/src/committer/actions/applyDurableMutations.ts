@@ -73,6 +73,7 @@ export const applyDurableMutations = async ({
 		topic,
 		partition,
 		expectedOffset,
+		writerEpoch: ctx.ownerEpochOf?.({ topic, partition }),
 		records: pending,
 	});
 	ctx.progress.setNextOffset({

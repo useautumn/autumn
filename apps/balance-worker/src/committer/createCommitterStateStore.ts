@@ -23,9 +23,21 @@ export const createCommitterStateStore = ({
 		db: Pick<CommitterDb, "readPartitionProgress" | "insertPartitionProgress">;
 	};
 }): CommitterStateStore => {
+	const epochReaders = new Map<string, () => string | undefined>();
+	function ownerEpochOf(position: PartitionPosition): bigint | undefined {
+		const epoch = epochReaders.get(keyOf(position))?.();
+		return epoch === undefined ? undefined : BigInt(epoch);
+	}
+	function bindOwnerEpoch({
+		read,
+		...position
+	}: PartitionPosition & { read(): string | undefined }): void {
+		epochReaders.set(keyOf(position), read);
+	}
 	const ctx: CommitterStateStoreContext = {
 		...dependencies,
 		progress: createProgressMirror(),
+		ownerEpochOf,
 	};
 	// Replay, writer applies and command-only bookmarks share one lane per partition.
 	const laneByPartition = new Map<string, Promise<unknown>>();
@@ -36,7 +48,7 @@ export const createCommitterStateStore = ({
 		position: PartitionPosition;
 		run(): Promise<Result>;
 	}): Promise<Result> {
-		const key = `${position.topic}[${position.partition}]`;
+		const key = keyOf(position);
 		const previous = laneByPartition.get(key) ?? Promise.resolve();
 		const operation = previous.catch(() => undefined).then(run);
 		laneByPartition.set(key, operation);
@@ -98,6 +110,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
+		bindOwnerEpoch,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,
 		initializePartition: initialize,
@@ -112,3 +125,7 @@ export const createCommitterStateStore = ({
 		close,
 	};
 };
+
+function keyOf(position: PartitionPosition): string {
+	return `${position.topic}[${position.partition}]`;
+}

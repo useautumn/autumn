@@ -55,6 +55,8 @@ export type FlushCall = PartitionPosition & {
 	expectedOffset: bigint;
 	commandNextOffset?: bigint;
 	ownerFence?: OwnerFence;
+	/** The epoch the writer holds; Postgres refuses the bookmark when a stored fence outranks it. */
+	writerEpoch?: bigint;
 	records: readonly DurableMutationRecord[];
 	rows: number;
 	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
@@ -84,6 +86,7 @@ export type Committer = {
 			expectedOffset: bigint;
 			commandNextOffset?: bigint;
 			ownerFence?: OwnerFence;
+			writerEpoch?: bigint;
 			records: readonly DurableMutationRecord[];
 		},
 	): Promise<FlushOutcome>;

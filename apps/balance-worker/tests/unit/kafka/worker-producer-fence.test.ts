@@ -2,6 +2,10 @@ import { describe, expect, test } from "bun:test";
 import type { KafkaProducerSession } from "@autumn/kafka";
 import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import { createWorkerProducer } from "../../../src/kafka/createWorkerProducer.js";
+import {
+	OwnedPartitionLogDivergedError,
+	OwnedPartitionProducerFencedError,
+} from "../../../src/runtime/runtimeErrors.js";
 
 const topic = "metering";
 const partition = 4;
@@ -9,12 +13,22 @@ const partition = 4;
 function createFakeSession({
 	mode,
 	sendError,
+	baseOffsets = [],
 }: {
 	mode: KafkaProducerSession["mode"];
 	sendError?: Error;
+	/** Where each send lands, in order; the last one repeats. */
+	baseOffsets?: string[];
 }) {
 	const calls: string[] = [];
 	const records: ProducerRecord[] = [];
+	const landing = [...baseOffsets];
+	function nextBaseOffset(): string {
+		if (landing.length === 0) return "41";
+		const next = landing.shift() as string;
+		if (landing.length === 0) landing.push(next);
+		return next;
+	}
 	const session: KafkaProducerSession = {
 		connect: async () => {
 			calls.push("connect");
@@ -29,7 +43,14 @@ function createFakeSession({
 			calls.push("send");
 			records.push(record);
 			if (sendError) throw sendError;
-			return [{ topicName: topic, partition, errorCode: 0, baseOffset: "41" }];
+			return [
+				{
+					topicName: topic,
+					partition,
+					errorCode: 0,
+					baseOffset: nextBaseOffset(),
+				},
+			];
 		},
 		isUsable: () => true,
 		disconnect: async () => {
@@ -97,5 +118,76 @@ describe("worker producer ownership fence", () => {
 			config: { topic, partition },
 		});
 		await expect(producer.fenceOwnership()).rejects.toThrow();
+	});
+});
+
+function batchOf(count: number): ProducerRecord {
+	const messages = [];
+	for (let index = 0; index < count; index++)
+		messages.push({ key: Buffer.from(`k${index}`), value: Buffer.from("v") });
+	return { topic, messages };
+}
+
+describe("worker producer log contiguity", () => {
+	test("after the marker, each batch must land right behind the last write", async () => {
+		const fake = createFakeSession({
+			mode: "idempotent",
+			baseOffsets: ["41", "42", "44"],
+		});
+		const producer = createWorkerProducer({
+			ctx: { session: fake.session, ownerEpoch: () => "2516" },
+			config: { topic, partition },
+		});
+		expect(await producer.fenceOwnership()).toEqual({ offset: 41n });
+		await producer.send(batchOf(2));
+		await producer.send(batchOf(1));
+		expect(fake.calls).toEqual(["send", "send", "send"]);
+	});
+
+	test("a batch that lands past the expected offset is a diverged log: fenced, not acknowledged", async () => {
+		const fake = createFakeSession({
+			mode: "idempotent",
+			baseOffsets: ["41", "43"],
+		});
+		const producer = createWorkerProducer({
+			ctx: { session: fake.session, ownerEpoch: () => "2516" },
+			config: { topic, partition },
+		});
+		await producer.fenceOwnership();
+		const failure = await producer.send(batchOf(1)).catch((cause) => cause);
+		expect(failure).toBeInstanceOf(OwnedPartitionLogDivergedError);
+		expect(failure).toBeInstanceOf(OwnedPartitionProducerFencedError);
+		expect(failure.expectedOffset).toBe(42n);
+		expect(failure.actualOffset).toBe(43n);
+	});
+
+	test("without a marker the first batch anchors the position", async () => {
+		const fake = createFakeSession({
+			mode: "idempotent",
+			baseOffsets: ["41", "43", "50"],
+		});
+		const producer = createWorkerProducer({
+			ctx: { session: fake.session, ownerEpoch: () => undefined },
+			config: { topic, partition },
+		});
+		await producer.send(batchOf(2));
+		await producer.send(batchOf(1));
+		await expect(producer.send(batchOf(1))).rejects.toBeInstanceOf(
+			OwnedPartitionLogDivergedError,
+		);
+	});
+
+	test("transactional commits never check offsets: the broker fences", async () => {
+		const fake = createFakeSession({
+			mode: "transactional",
+			baseOffsets: ["41", "99"],
+		});
+		const producer = createWorkerProducer({
+			ctx: { session: fake.session, ownerEpoch: () => "9" },
+			config: { topic, partition },
+		});
+		await producer.send(batchOf(1));
+		await producer.send(batchOf(1));
+		expect(fake.calls).toEqual(["send", "send"]);
 	});
 });

@@ -70,6 +70,7 @@ export async function advanceOwnerFence({
 	await ctx.committer.apply({
 		...position,
 		expectedOffset,
+		writerEpoch: ctx.ownerEpochOf?.(position),
 		records: [],
 		ownerFence: fence,
 	});
@@ -88,6 +89,11 @@ export async function advanceCommandNextOffset({
 	const expectedOffset = ctx.progress.readNextOffset(position);
 	if (expectedOffset === null)
 		throw new PartitionProgressNotFoundError(position);
-	await ctx.committer.apply({ ...position, expectedOffset, records: [] });
+	await ctx.committer.apply({
+		...position,
+		expectedOffset,
+		writerEpoch: ctx.ownerEpochOf?.(position),
+		records: [],
+	});
 	ctx.progress.setCommandNextOffset(position);
 }

@@ -5,6 +5,7 @@ import {
 	type KafkaConsumerGroupTimings,
 	type MeteringRecordFailure,
 	type MeteringRecordSlice,
+	type MeteringStaleRecord,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type {
@@ -86,6 +87,29 @@ export function createStreamConsumer({
 		);
 	}
 
+	/** A superseded owner's write after a higher fence: the log's readers all drop it, and herald says so. */
+	function onStaleRecord({
+		position,
+		ownerEpoch,
+		fence,
+	}: MeteringStaleRecord): void {
+		ctx.logger.warn(
+			{
+				type: "herald_record_stale",
+				data: {
+					job,
+					topic: position.topic,
+					partition: position.partition,
+					offset: position.offset.toString(),
+					ownerEpoch: ownerEpoch.toString(),
+					fenceEpoch: fence.epoch.toString(),
+					fenceOffset: fence.offset.toString(),
+				},
+			},
+			"Herald dropped a stale owner's record",
+		);
+	}
+
 	// Stopped mid-slice: thrown so nothing of the slice is resolved; the runner is already stopping, so it ends there.
 	async function applyRecords(slice: MeteringRecordSlice): Promise<void> {
 		const settled = await landRecords({
@@ -108,7 +132,7 @@ export function createStreamConsumer({
 		ctx: {
 			consumer,
 			progress,
-			handler: { readResumeOffset, applyRecords, onRecordError },
+			handler: { readResumeOffset, applyRecords, onRecordError, onStaleRecord },
 		},
 		config: {
 			topic: config.topic,

@@ -1,11 +1,13 @@
 import {
 	type KafkaProducerSession,
 	type KafkaTransaction,
+	metadataToBaseOffset,
 	sendOwnerFence,
 } from "@autumn/kafka";
 
 export { createWorkerProducerConfig } from "../init/workerConfig.js";
 
+import { OwnedPartitionLogDivergedError } from "../runtime/runtimeErrors.js";
 import { translateKafkaProducerError } from "./workerKafkaErrors.js";
 
 export type WorkerProducer = KafkaProducerSession & {
@@ -27,6 +29,8 @@ export function createWorkerProducer({
 	const { session } = ctx;
 	const { topic, partition } = config;
 	const { isUsable } = session;
+	// Idempotent mode has no broker fence: the next batch landing anywhere but here means another owner wrote between.
+	let expectedNextOffset: bigint | null = null;
 
 	function disconnect({
 		waitForTransactions = false,
@@ -58,8 +62,9 @@ export function createWorkerProducer({
 		if (session.mode !== "idempotent") return null;
 		const ownerEpoch = ctx.ownerEpoch?.();
 		if (ownerEpoch === undefined) return null;
+		let landed: { offset: bigint };
 		try {
-			return await sendOwnerFence({
+			landed = await sendOwnerFence({
 				sender: session,
 				topic,
 				partition,
@@ -68,6 +73,27 @@ export function createWorkerProducer({
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}
+		expectedNextOffset = landed.offset + 1n;
+		return landed;
+	}
+
+	function verifyContiguity({
+		record,
+		metadata,
+	}: {
+		record: Parameters<KafkaProducerSession["send"]>[0];
+		metadata: Awaited<ReturnType<KafkaProducerSession["send"]>>;
+	}): void {
+		const baseOffset = metadataToBaseOffset({ metadata, topic, partition });
+		if (expectedNextOffset !== null && baseOffset !== expectedNextOffset) {
+			throw new OwnedPartitionLogDivergedError({
+				topic,
+				partition,
+				expectedOffset: expectedNextOffset,
+				actualOffset: baseOffset,
+			});
+		}
+		expectedNextOffset = baseOffset + BigInt(record.messages.length);
 	}
 
 	async function transaction(): Promise<KafkaTransaction> {
@@ -81,11 +107,15 @@ export function createWorkerProducer({
 	async function send(
 		...params: Parameters<KafkaProducerSession["send"]>
 	): ReturnType<KafkaProducerSession["send"]> {
+		let metadata: Awaited<ReturnType<KafkaProducerSession["send"]>>;
 		try {
-			return await session.send(...params);
+			metadata = await session.send(...params);
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}
+		if (session.mode === "idempotent")
+			verifyContiguity({ record: params[0], metadata });
+		return metadata;
 	}
 
 	return {

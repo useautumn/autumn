@@ -64,6 +64,7 @@ export function createPartitionRuntimeFactory({
 			ctx: { session, ownerEpoch: epochCell.read },
 			config: { topic, partition },
 		});
+		ctx.stateStore.bindOwnerEpoch?.({ topic, partition, read: epochCell.read });
 		const ownership = createOwnershipPublisher({
 			ctx: {
 				session: producer,

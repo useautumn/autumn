@@ -43,6 +43,30 @@ export class OwnedPartitionProducerFencedError extends OwnedPartitionRecoveryReq
 	}
 }
 
+/** Idempotent mode: the owner's batch must land right behind its last write; a gap means a later owner wrote between. */
+export class OwnedPartitionLogDivergedError extends OwnedPartitionProducerFencedError {
+	readonly expectedOffset: bigint;
+	readonly actualOffset: bigint;
+
+	constructor({
+		topic,
+		partition,
+		expectedOffset,
+		actualOffset,
+	}: {
+		topic: string;
+		partition: number;
+		expectedOffset: bigint;
+		actualOffset: bigint;
+	}) {
+		super({ topic, partition, cause: undefined });
+		this.name = "OwnedPartitionLogDivergedError";
+		this.message = `Owned partition ${topic}[${partition}] log diverged: expected its batch at offset ${expectedOffset}, it landed at ${actualOffset}`;
+		this.expectedOffset = expectedOffset;
+		this.actualOffset = actualOffset;
+	}
+}
+
 export class PartitionPreparationFailedError extends Error {
 	constructor({
 		topic,
