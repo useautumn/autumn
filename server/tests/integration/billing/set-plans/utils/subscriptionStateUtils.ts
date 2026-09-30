@@ -95,6 +95,31 @@ export const expectSubscriptionReplaced = async ({
 	expect(pendingRows).toHaveLength(0);
 };
 
+/** The customer's live subscription has collected exactly `total` (major units) so far. */
+export const expectLiveSubscriptionCharged = async ({
+	ctx,
+	customerId,
+	total,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	total: number;
+}) => {
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const { data: invoices } = await ctx.stripeCli.invoices.list({
+		subscription: subscription.id,
+	});
+	const amountPaid = invoices.reduce(
+		(sum, invoice) => sum + invoice.amount_paid,
+		0,
+	);
+	expect(amountPaid / 100).toBe(total);
+};
+
 /** The preview names the warning, and its message mentions each given fragment. */
 export const expectPreviewWarning = ({
 	preview,

@@ -1,8 +1,9 @@
-/** set_plans cancels an incomplete or paused subscription and moves its plans onto one new subscription, through Checkout when there is no card. */
+/** set_plans cancels an incomplete or paused subscription and moves its plans onto one new subscription billed in full now, through Checkout when there is no card. */
 
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
+	expectLiveSubscriptionCharged,
 	expectPreviewWarning,
 	expectSubscriptionReplaced,
 	findStripeSubscriptionByStatus,
@@ -22,6 +23,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { timeout } from "@/utils/genUtils";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
+const PRO_PRICE = 20;
 const SESSION_LIST_ATTEMPTS = 10;
 const SESSION_LIST_POLL_MS = 2_000;
 
@@ -54,12 +56,15 @@ test.concurrent(
 			customer_id: customerId,
 			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
 		};
+		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);
 		expectPreviewWarning({
-			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			preview,
 			type: "subscription_replaced",
 			messageContains: [incomplete.id, "Stripe voids its first invoice"],
 		});
+		expect(preview.total).toBe(PRO_PRICE);
 		await autumnV2_4.billing.setPlans(setPlansParams);
+		await expectLiveSubscriptionCharged({ ctx, customerId, total: PRO_PRICE });
 
 		await expectSubscriptionReplaced({
 			ctx,
@@ -91,11 +96,13 @@ test.concurrent(
 			customer_id: customerId,
 			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
 		};
+		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);
 		expectPreviewWarning({
-			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			preview,
 			type: "subscription_replaced",
 			messageContains: [paused.id, "paused"],
 		});
+		expect(preview.total).toBe(PRO_PRICE);
 		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		await expectSubscriptionReplaced({
@@ -104,6 +111,7 @@ test.concurrent(
 			productId: pro.id,
 			replacedSubscriptionId: paused.id,
 		});
+		await expectLiveSubscriptionCharged({ ctx, customerId, total: PRO_PRICE });
 	},
 );
 
@@ -179,11 +187,13 @@ test.concurrent(
 			customer_id: customerId,
 			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
 		};
+		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);
 		expectPreviewWarning({
-			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
+			preview,
 			type: "subscription_replaced",
 			messageContains: [paused.id, "once checkout completes"],
 		});
+		expect(preview.total).toBe(PRO_PRICE);
 		const response = await autumnV2_4.billing.setPlans(setPlansParams);
 		expect(response.payment_url).toBeDefined();
 		expect((await ctx.stripeCli.subscriptions.retrieve(paused.id)).status).toBe(
@@ -203,6 +213,7 @@ test.concurrent(
 			productId: pro.id,
 			replacedSubscriptionId: paused.id,
 		});
+		await expectLiveSubscriptionCharged({ ctx, customerId, total: PRO_PRICE });
 	},
 );
 
