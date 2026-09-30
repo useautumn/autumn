@@ -14,7 +14,15 @@ import { monthlyPrice, processorItem } from "./reviewFixtures";
 const NOW = Date.UTC(2026, 8, 25);
 const NOV_1 = Date.UTC(2026, 10, 1);
 
-const features = [{ id: "credits", name: "API Credits" }] as Feature[];
+const features = [
+	{ id: "credits", name: "API Credits" },
+	{
+		id: "seats",
+		name: "Seats",
+		type: "metered",
+		config: { usage_type: "continuous_use" },
+	},
+] as Feature[];
 
 const phase = (
 	startsAt: number,
@@ -240,7 +248,7 @@ test("balance rows show the server's behaviour with labelled numbers", () => {
 	expect(section.summary).toBe("1 reset · 1 carried over");
 });
 
-test("Stripe rows group each phase's items under the plan that bills them", () => {
+test("Stripe rows group each phase's items under the plan that bills them, iconed by type", () => {
 	const seats = processorItem({
 		price_id: "price_seats",
 		feature_id: "seats",
@@ -251,6 +259,7 @@ test("Stripe rows group each phase's items under the plan that bills them", () =
 	});
 
 	const section = processorItemsToReviewSection({
+		features,
 		preview: preview({
 			processor_changes: [
 				{ type: "subscription", id: "sub_1", action: "updated" },
@@ -281,7 +290,13 @@ test("Stripe rows group each phase's items under the plan that bills them", () =
 				title: row.title,
 				status: row.status,
 				value: row.value,
-				items: row.items?.map((item) => [item.title, item.status, item.value]),
+				items: row.items?.map((item) => [
+					item.title,
+					item.description,
+					item.icon,
+					item.status,
+					item.value,
+				]),
 			})),
 		]),
 	).toEqual([
@@ -292,13 +307,23 @@ test("Stripe rows group each phase's items under the plan that bills them", () =
 					title: "Premium",
 					status: undefined,
 					value: { amount: "$50", suffix: "/mo" },
-					items: [["Base price", undefined, { amount: "$50", suffix: "/mo" }]],
+					items: [
+						[
+							"Base price",
+							undefined,
+							{ tone: "neutral", glyph: "tag" },
+							undefined,
+							{ amount: "$50", suffix: "/mo" },
+						],
+					],
 				},
 				{
 					title: "Legacy Support",
 					status: "unmanaged",
 					value: undefined,
-					items: [["Legacy Support", undefined, undefined]],
+					items: [
+						["Legacy Support", undefined, undefined, undefined, undefined],
+					],
 				},
 			],
 		],
@@ -310,8 +335,20 @@ test("Stripe rows group each phase's items under the plan that bills them", () =
 					status: undefined,
 					value: undefined,
 					items: [
-						["Base price", undefined, { amount: "$50", suffix: "/mo" }],
-						["Seats · 4 × $10", undefined, { amount: "$40", suffix: "/mo" }],
+						[
+							"Base price",
+							undefined,
+							{ tone: "neutral", glyph: "tag" },
+							undefined,
+							{ amount: "$50", suffix: "/mo" },
+						],
+						[
+							"Seats",
+							"4 × $10",
+							{ tone: "blue", glyph: "ticket" },
+							undefined,
+							{ amount: "$40", suffix: "/mo" },
+						],
 					],
 				},
 			],
@@ -328,6 +365,7 @@ test("Stripe rows group each phase's items under the plan that bills them", () =
 
 test("a phase the server says ends the subscription shows it ending", () => {
 	const section = processorItemsToReviewSection({
+		features,
 		preview: preview({
 			phases: [
 				phase(NOW, { processor_items: [processorItem()] }),
@@ -346,6 +384,7 @@ test("a phase the server says ends the subscription shows it ending", () => {
 
 test("canceling now reads as Canceled", () => {
 	const section = processorItemsToReviewSection({
+		features,
 		preview: preview({ phases: [phase(NOW, { ends_subscription: true })] }),
 	});
 

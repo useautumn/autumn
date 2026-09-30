@@ -61,7 +61,7 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 				phases: preview.phases,
 				features,
 			}),
-			processor: processorItemsToReviewSection({ preview }),
+			processor: processorItemsToReviewSection({ preview, features }),
 		};
 	}, [
 		preview,

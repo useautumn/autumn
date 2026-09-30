@@ -48,10 +48,12 @@ export function ReviewChangeRowTrailing({
 	row,
 	showsStatus,
 	valueOverride,
+	isNested = false,
 }: {
 	row: ReviewChangeRow;
 	showsStatus: boolean;
 	valueOverride?: ReactNode;
+	isNested?: boolean;
 }) {
 	return (
 		<>
@@ -71,7 +73,15 @@ export function ReviewChangeRowTrailing({
 				{valueOverride ??
 					(row.value && (
 						<>
-							<span className="text-sm font-medium tabular-nums text-foreground">
+							<span
+								className={cn(
+									"text-sm tabular-nums",
+									row.value.isBasis
+										? "text-tertiary-foreground"
+										: "text-foreground",
+									!(isNested || row.value.isBasis) && "font-medium",
+								)}
+							>
 								{row.value.amount}
 							</span>
 							{row.value.suffix && (
