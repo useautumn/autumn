@@ -511,7 +511,7 @@ function ReissueInvoiceForm({
 					}}
 				/>
 
-				<SheetFooter className="pt-4">
+				<SheetFooter className="sticky bottom-0 mt-auto border-t bg-card pt-4 dark:border-[#1F1F1F] dark:bg-[#141414]">
 					<Button
 						variant="secondary"
 						className="w-full"
