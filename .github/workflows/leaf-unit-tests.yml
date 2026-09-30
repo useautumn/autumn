@@ -16,7 +16,7 @@ concurrency:
 jobs:
   changes:
     name: Check changed files
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: peak
     outputs:
       leaf: ${{ steps.filter.outputs.leaf }}
     steps:
@@ -41,7 +41,7 @@ jobs:
     name: Unit Tests
     needs: changes
     if: needs.changes.outputs.leaf == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: peak
     timeout-minutes: 10
 
     steps:

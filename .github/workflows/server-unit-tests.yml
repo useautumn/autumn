@@ -10,7 +10,7 @@ permissions:
 jobs:
   changes:
     name: Check changed files
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: peak
     outputs:
       server: ${{ steps.filter.outputs.server }}
     steps:
@@ -32,7 +32,7 @@ jobs:
     if: needs.changes.outputs.server == 'true'
     # 8 vcpus: the sharded suite is CPU-bound on the server import graph
     # (~2s per shard, 8 shards); 4 vcpus put the test step at ~11s.
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: peak-x64-8
 
     steps:
       - name: Checkout code

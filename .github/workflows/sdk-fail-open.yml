@@ -11,7 +11,7 @@ permissions:
 jobs:
   sdk-fail-open:
     name: SDK Fail-Open Contract
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: peak
     timeout-minutes: 5
     steps:
       - name: Checkout code
