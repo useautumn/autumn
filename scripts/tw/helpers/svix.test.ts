@@ -30,6 +30,26 @@ test("still routes shared svixWebhookTestUtils importers to the Svix shard", asy
 	).toBe(true);
 });
 
+test("routes atmn CLI crud and scenario files to the Svix shard", async () => {
+	for (const file of [
+		"integration/atmn/crud/plans/free-no-items.test.ts",
+		"integration/atmn/scenarios/pull/empty-dir.test.ts",
+	]) {
+		expect({ file, svix: await needsSvix(join(testsDir, file)) }).toEqual({
+			file,
+			svix: true,
+		});
+	}
+});
+
+test("keeps non-atmn billing files on the normal pool", async () => {
+	expect(
+		await needsSvix(
+			join(testsDir, "integration/billing/attach/attach-metadata.test.ts"),
+		),
+	).toBe(false);
+});
+
 test("keeps files without Svix imports on the normal pool", async () => {
 	expect(
 		await needsSvix(
