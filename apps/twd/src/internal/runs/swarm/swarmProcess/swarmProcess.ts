@@ -30,6 +30,7 @@ import type {
 	SwarmParentMessage,
 } from "../../types/swarmMessages.ts";
 import { createBootTimeline } from "./bootTimeline.ts";
+import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import {
 	loadTwModules,
 	type ProviderSandbox,
@@ -44,6 +45,8 @@ const OUTPUT_FLUSH_MS = 1_000;
 const TEARDOWN_TIMEOUT_MS = 20_000;
 /** After this many failed forks/boots the run stops asking for accounts. */
 const MAX_PROVISION_FAILURES = 5;
+/** Concurrent Modal creates; an unbounded 3,000-wide burst gets RESOURCE_EXHAUSTED from its control plane. */
+const FORK_CONCURRENCY = 64;
 
 const send = (message: SwarmChildMessage) => process.send?.(message);
 
@@ -361,12 +364,14 @@ const main = async (init: SwarmInit) => {
 		Math.max(0, shard.files.length - shard.started - workersOf(shard));
 
 	let provisionFailures = 0;
+	const breaker = createFailureBreaker({ limit: MAX_PROVISION_FAILURES });
+	const forkLimit = pLimit(FORK_CONCURRENCY);
 	let firstFailure: string | undefined;
 	let nextWorkerIdx = 0;
 	let lastDemand: number | undefined;
 	let stopCulling: (() => void) | undefined;
 	const currentDemand = () =>
-		teardownPromise || provisionFailures >= MAX_PROVISION_FAILURES
+		teardownPromise || breaker.tripped()
 			? 0
 			: shards.reduce((sum, shard) => sum + shortfall(shard), 0);
 	/** Tell twd how many more accounts help; once none do, the tail starts culling idle workers. */
@@ -399,7 +404,7 @@ const main = async (init: SwarmInit) => {
 				svixAppIds.push(svixAppId);
 			}
 			boot.mark(name, "forkStart");
-			sandbox = await tw.provider.forkWorker({
+			const forkOptions = {
 				sourceSandbox: warmName,
 				name,
 				env: {
@@ -417,7 +422,10 @@ const main = async (init: SwarmInit) => {
 				},
 				tags: { owner: "twd", run: init.runId, kind: "bun-tw" },
 				signal,
-			});
+			};
+			sandbox = await forkLimit(() =>
+				withTransientRetry({ run: () => tw.provider.forkWorker(forkOptions) }),
+			);
 			boot.mark(name, "forkDone");
 			track({ name, sandbox, accountId: account.accountId });
 			const publicUrl = await tw.provider.getPublicUrl(sandbox, SERVER_PORT);
@@ -444,15 +452,17 @@ const main = async (init: SwarmInit) => {
 				inFlight: 0,
 			});
 			shard.markReady();
+			breaker.success();
 		} catch (error) {
 			shard.provisioning--;
 			provisionFailures++;
+			breaker.failure();
 			const reason = error instanceof Error ? error.message : String(error);
 			firstFailure ??= reason;
 			setWorkerStatus(name, "failed", reason.slice(0, 300));
 			if (sandbox) void retire({ name, accountId: account.accountId });
 			else send({ type: "release_accounts", accountIds: [account.accountId] });
-			if (provisionFailures >= MAX_PROVISION_FAILURES) {
+			if (breaker.tripped()) {
 				for (const stuck of shards) {
 					if (stuck.files.length === 0 || workersOf(stuck) > 0) continue;
 					stuck.fail(
