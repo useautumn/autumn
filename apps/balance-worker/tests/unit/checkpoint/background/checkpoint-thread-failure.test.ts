@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
 	deserializeCheckpointThreadFailure,
 	PartitionCheckpointThreadError,
@@ -10,6 +10,9 @@ import { PartitionCheckpointLimitExceededError } from "../../../../src/checkpoin
 import { PartitionCheckpointPublisherError } from "../../../../src/checkpoint/partitionCheckpointPublisher.js";
 import { checkpointFailureOf } from "../../../../src/checkpoint/scheduling/partitionCheckpointEntry.js";
 import { createSchedulerFixture } from "../scheduling/scheduler-fixtures.js";
+import { THREAD_TEST_TIMEOUT_MS } from "./thread-fixtures.js";
+
+setDefaultTimeout(THREAD_TEST_TIMEOUT_MS);
 
 describe("checkpoint thread failures", () => {
 	test.concurrent.each([

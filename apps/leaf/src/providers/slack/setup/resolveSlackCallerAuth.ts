@@ -1,8 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatInstallation, ChatTrustedBot } from "@autumn/shared";
-import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { decrypt } from "../../../lib/crypto.js";
-import { resolveInstallationAuthMode } from "../users.js";
 import {
 	resolveSlackStaffAuth,
 	resolveSlackUserAuth,
@@ -54,12 +52,8 @@ export const resolveSlackCallerAuth = async ({
 	/** Set when the caller is a trusted bot; it runs as its configured member. */
 	trustedBot?: ChatTrustedBot;
 }): Promise<SlackCallerAuthResult> => {
-	const usePerUser =
-		resolveInstallationAuthMode({ installation }) === ChatAuthMode.PerUser;
-	if (!usePerUser) {
-		return { usePerUser: false };
-	}
-
+	// Every install, unrestricted included, acts with the sender's own org role;
+	// a sender we cannot resolve is denied, never granted the installer's access.
 	try {
 		if (trustedBot) {
 			return toCallerAuthResult(

@@ -321,11 +321,10 @@ test.concurrent(`${chalk.yellowBright("track-misc9: idempotency key prevents dup
 		usage: deductValue1,
 	});
 
-	await timeout(2000);
-	const events1 = await getCustomerEvents({ customerId });
-	expect(events1).toHaveLength(1);
-	expect(events1?.[0].idempotency_key).toBe(idempotencyKey1);
-	expect(events1?.[0].value).toBe(deductValue1);
+	await expectCustomerEventsCorrect({
+		customerId,
+		events: [{ value: deductValue1, idempotencyKey: idempotencyKey1 }],
+	});
 
 	await expectAutumnError({
 		errCode: ErrCode.DuplicateIdempotencyKey,
@@ -354,9 +353,10 @@ test.concurrent(`${chalk.yellowBright("track-misc9: idempotency key prevents dup
 		expectedBalance1,
 	);
 
-	const events2 = await getCustomerEvents({ customerId });
-	expect(events2).toHaveLength(1);
-	expect(events2?.[0].idempotency_key).toBe(idempotencyKey1);
+	await expectCustomerEventsCorrect({
+		customerId,
+		events: [{ value: deductValue1, idempotencyKey: idempotencyKey1 }],
+	});
 
 	const deductValue2 = 15.25;
 	const expectedBalance2 = new Decimal(expectedBalance1)

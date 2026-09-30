@@ -8,6 +8,7 @@ import {
 } from "./autumnAuth.js";
 import { leafMcpBaseUrl, serverToolMetadata } from "./autumnToolMetadata.js";
 import { previewLedger } from "./previewLedger.js";
+import { isStripeCodeModeTool, stripeCodeModeTools } from "./stripeCodeMode.js";
 import { type LeafAgentConnection, toolAllowlists } from "./toolAllowlists.js";
 import { slimToolSchema } from "./toolSchemaSlim.js";
 
@@ -57,6 +58,8 @@ export const autumnDirectTools = ({
 				const entries: Record<string, ReturnType<typeof defineTool>> = {};
 				for (const tool of metadata) {
 					if (!allowlist.has(tool.name)) continue;
+					// Stripe reads are only reachable through the code-mode tools.
+					if (isStripeCodeModeTool(tool.name)) continue;
 					const qualified = `autumn__${tool.name}`;
 					const toolName = tool.name;
 					const requiresApproval = approvalToolNames.has(toolName);
@@ -97,7 +100,15 @@ export const autumnDirectTools = ({
 							: inputSchema,
 					});
 				}
-				return entries;
+				return {
+					...entries,
+					...stripeCodeModeTools({
+						specs: metadata.filter(
+							(tool) =>
+								allowlist.has(tool.name) && isStripeCodeModeTool(tool.name),
+						),
+					}),
+				};
 			},
 		},
 	});
