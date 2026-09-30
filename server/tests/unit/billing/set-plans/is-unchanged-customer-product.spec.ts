@@ -83,11 +83,24 @@ const productContext = ({
 	};
 };
 
+const isUnchanged = ({
+	customerProduct,
+	productContext,
+}: {
+	customerProduct: FullCusProduct;
+	productContext: MultiAttachProductContext;
+}) =>
+	isUnchangedCustomerProduct({
+		ctx,
+		customerProduct,
+		productContext,
+		internalEntityId: productContext.fullCustomer.entity?.internal_id,
+	});
+
 describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 	test("the same plan, scope and quantities is unchanged", () => {
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct(),
 				productContext: productContext(),
 			}),
@@ -98,8 +111,7 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 		const proV2 = { ...pro, internal_id: "internal_pro_v2", version: 2 };
 
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct(),
 				productContext: productContext({ fullProduct: proV2 }),
 			}),
@@ -108,8 +120,7 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 
 	test("the plan on another entity is a change", () => {
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct(),
 				productContext: productContext({ entityId: "seat_1" }),
 			}),
@@ -129,8 +140,7 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 		});
 
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct(),
 				productContext: productContext({ fullProduct: repriced }),
 			}),
@@ -139,8 +149,7 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 
 	test("a different prepaid quantity is a change", () => {
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct({
 					options: [{ feature_id: "messages", quantity: 200 }],
 				}),

@@ -16,6 +16,7 @@ import {
 	isFreePhasePlaceholderItem,
 } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
+import { stripeScheduleMatchesPhases } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/stripeScheduleMatchesPhases";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -140,6 +141,8 @@ const buildNoPhasesAction = ({
  */
 const buildActionForScenario = ({
 	scenario,
+	existingSchedule,
+	nowMs,
 	hasSchedule,
 	hasSubscription,
 	scheduleId,
@@ -149,6 +152,8 @@ const buildActionForScenario = ({
 	subscriptionStartsAt,
 }: {
 	scenario: ScheduleScenario;
+	existingSchedule: Stripe.SubscriptionSchedule | undefined;
+	nowMs: number;
 	hasSchedule: boolean;
 	hasSubscription: boolean;
 	scheduleId: string | undefined;
@@ -192,6 +197,15 @@ const buildActionForScenario = ({
 		case "multi_phase": {
 			// Multiple transitions: need a schedule
 			const endBehavior = endsWithEmptyPhase ? "cancel" : "release";
+			const scheduleUnchanged =
+				existingSchedule &&
+				stripeScheduleMatchesPhases({
+					schedule: existingSchedule,
+					phases: scheduledPhases,
+					endBehavior,
+					nowMs,
+				});
+			if (scheduleUnchanged) return { subscriptionStartsAt };
 
 			return hasSchedule
 				? {
@@ -339,6 +353,8 @@ export const buildStripeSubscriptionScheduleAction = ({
 
 	return buildActionForScenario({
 		scenario,
+		existingSchedule: stripeSubscriptionSchedule ?? undefined,
+		nowMs: billingContext.currentEpochMs,
 		hasSchedule: !!stripeSubscriptionSchedule,
 		hasSubscription: !!stripeSubscription,
 		scheduleId: stripeSubscriptionSchedule?.id,

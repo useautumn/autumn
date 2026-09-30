@@ -45,24 +45,29 @@ export const getExistingScheduleState = async ({
 	};
 };
 
-/** Remove an existing schedule and any scheduled products it owns. */
+/** Remove an existing schedule and the scheduled products it owns that the new schedule no longer keeps. */
 const deleteExistingSchedules = async ({
 	ctx,
 	scheduleIds,
 	existingCustomerProductIds,
+	keptCustomerProductIds,
 }: {
 	ctx: AutumnContext;
 	scheduleIds: string[];
 	existingCustomerProductIds: string[];
+	keptCustomerProductIds: Set<string>;
 }) => {
 	if (scheduleIds.length === 0) return;
 
-	if (existingCustomerProductIds.length > 0) {
+	const droppedCustomerProductIds = existingCustomerProductIds.filter(
+		(customerProductId) => !keptCustomerProductIds.has(customerProductId),
+	);
+	if (droppedCustomerProductIds.length > 0) {
 		await ctx.db
 			.delete(customerProducts)
 			.where(
 				and(
-					inArray(customerProducts.id, existingCustomerProductIds),
+					inArray(customerProducts.id, droppedCustomerProductIds),
 					eq(customerProducts.status, CusProductStatus.Scheduled),
 				),
 			);
@@ -97,6 +102,9 @@ export const persistSetPlansSchedule = async ({
 		await deleteExistingSchedules({
 			ctx: txCtx,
 			...existingScheduleState,
+			keptCustomerProductIds: new Set(
+				phases.flatMap((phase) => phase.customerProductIds),
+			),
 		});
 
 		const scheduleId = generateId("sched");

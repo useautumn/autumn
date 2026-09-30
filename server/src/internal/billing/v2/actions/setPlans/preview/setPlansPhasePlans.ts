@@ -1,4 +1,5 @@
 import {
+	CusProductStatus,
 	type CustomerPlanChange,
 	cp,
 	cusProductToPrices,
@@ -28,6 +29,20 @@ const PLAN_STATUS: Record<
 
 const isActive = (customerProduct: FullCusProduct) =>
 	cp(customerProduct).hasActiveStatus().valid;
+
+/** An untouched row the customer already had scheduled: it starting on schedule is not a change. */
+const isAlreadyScheduled = ({
+	customerProduct,
+	originalFullCustomer,
+}: {
+	customerProduct: FullCusProduct;
+	originalFullCustomer: FullCustomer;
+}) =>
+	originalFullCustomer.customer_products.some(
+		(original) =>
+			original.id === customerProduct.id &&
+			original.status === CusProductStatus.Scheduled,
+	);
 
 const planCredit = ({
 	customerProduct,
@@ -119,10 +134,11 @@ export const setPlansPhasePlans = ({
 				(customerProduct) =>
 					!touchedIds.has(customerProduct.id) &&
 					isActive(customerProduct) &&
-					previousCustomer.customer_products.some(
-						(previous) =>
-							previous.id === customerProduct.id && isActive(previous),
-					),
+					(isAlreadyScheduled({ customerProduct, originalFullCustomer }) ||
+						previousCustomer.customer_products.some(
+							(previous) =>
+								previous.id === customerProduct.id && isActive(previous),
+						)),
 			)
 			.map((customerProduct) =>
 				toPreviewPlan({
