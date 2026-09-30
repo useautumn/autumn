@@ -56,7 +56,7 @@ const replacedSubscriptionWarning = ({
 
 const createsStripeSubscription = (stripeBillingPlan: StripeBillingPlan) =>
 	stripeBillingPlan.subscriptionAction?.type === "create" ||
-	!!stripeBillingPlan.checkoutSessionAction;
+	stripeBillingPlan.checkoutSessionAction?.params.mode === "subscription";
 
 const newSubscriptionWarning = ({
 	billingContext,

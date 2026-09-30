@@ -356,6 +356,7 @@ describe("canResetScheduleBillingCycle", () => {
 
 describe("buildCreateScheduleRequestBody", () => {
 	const defaultProducts = [makeProduct({ id: "prod_1" })];
+	const paidProducts = [makeProduct({ id: "prod_1", items: [basePriceItem] })];
 
 	test("returns null when customerId is missing", () => {
 		const result = buildCreateScheduleRequestBody({
@@ -414,7 +415,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
 			phases: [schedulePhase({ startsAt: now })],
-			products: defaultProducts,
+			products: paidProducts,
 			features,
 			nowMs: now,
 			resetBillingCycle: true,
@@ -472,7 +473,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
 			phases: [schedulePhase({ startsAt: now })],
-			products: defaultProducts,
+			products: paidProducts,
 			features,
 			nowMs: now,
 			resetBillingCycle: false,
@@ -483,6 +484,20 @@ describe("buildCreateScheduleRequestBody", () => {
 
 		expect(result).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.ends_at).toBe(Date.UTC(2027, 6, 1));
+	});
+
+	test("drops a hidden end date when no plan bills a recurring price", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: now })],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			endDate: Date.UTC(2027, 6, 1),
+		});
+
+		expect(result).not.toHaveProperty("ends_at");
 	});
 
 	test("sends unscheduled plans alongside the phases, not inside them", () => {

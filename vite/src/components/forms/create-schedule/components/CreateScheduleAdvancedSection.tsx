@@ -1,7 +1,7 @@
-import { isFreeProductV2, isOneOffProductV2 } from "@autumn/shared";
 import {
 	canResetScheduleBillingCycle,
 	hasMultipleImmediateSchedulePlans,
+	hasPersistedCreateSchedule,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { AdvancedSection } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
@@ -9,6 +9,7 @@ import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 
 export function CreateScheduleAdvancedSection() {
 	const { form, formValues, products, nowMs } = useCreateScheduleFormContext();
@@ -21,16 +22,10 @@ export function CreateScheduleAdvancedSection() {
 		phases,
 	} = formValues;
 
-	const hasPaidRecurringPlan = phases.some((phase) =>
-		phase.plans.some((plan) => {
-			const product = products.find(({ id }) => id === plan.productId);
-			return (
-				!!product &&
-				!isFreeProductV2({ items: product.items }) &&
-				!isOneOffProductV2({ items: product.items })
-			);
-		}),
-	);
+	const hasPaidRecurringPlan = hasPaidRecurringSchedulePlan({
+		phases,
+		products,
+	});
 
 	const rules = getBillingOptionRules({
 		flow: "schedule",
@@ -62,6 +57,7 @@ export function CreateScheduleAdvancedSection() {
 					rule={rules.resetBillingCycle}
 					enabled={resetBillingCycle}
 					mode={billingCycleAnchorMode}
+					allowCustomAnchor={!hasPersistedCreateSchedule({ phases })}
 					customAnchor={billingCycleAnchorDate}
 					maxUnixDate={endDate ? endDate - 1_000 : undefined}
 					onEnabledChange={(enabled) =>

@@ -19,6 +19,7 @@ import {
 	type BillingCycleAnchorMode,
 	resolveBillingCycleAnchor,
 } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
+import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 
 export function buildCreateScheduleRequestBody({
 	customerId,
@@ -111,7 +112,9 @@ export function buildCreateScheduleRequestBody({
 	};
 
 	if (billingBehavior) body.proration_behavior = billingBehavior;
-	if (endDate) body.ends_at = endDate;
+	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
+		body.ends_at = endDate;
+	}
 
 	// Anchor resets aren't supported when the immediate phase is a multi-attach;
 	// future phase anchor resets are allowed for persisted schedules.

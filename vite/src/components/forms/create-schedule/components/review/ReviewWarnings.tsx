@@ -2,7 +2,7 @@ import type { SetPlansPreviewWarning } from "@autumn/shared";
 import { Alert, AlertDescription } from "@autumn/ui";
 import { InfoIcon, WarningCircleIcon } from "@phosphor-icons/react";
 
-/** Only changes that remove or lose something get a banner; the review sections already show the rest. */
+/** Changes that remove or lose something, or charge now, get a banner; the review sections already show the rest. */
 const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"subscription_replaced",
 	"open_invoice_not_collected",
@@ -12,6 +12,9 @@ const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"existing_schedule_replaced",
 	"future_phase_removed",
 	"pending_quantity_change_dropped",
+	"trial_ended",
+	"interval_change_invoices_now",
+	"past_due_invoice_open",
 ]);
 
 type BannerLine = { message: string; count: number };
