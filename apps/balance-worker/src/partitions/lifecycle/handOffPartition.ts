@@ -128,6 +128,7 @@ export function cancelPartitionHandoff({
 	entry.handoffAbort = new AbortController();
 	entry.retirement = null;
 	state.handingOff.delete(entry.partition);
+	state.handoffSuccessors.delete(entry.partition);
 	state.entries.set(entry.partition, entry);
 	return true;
 }
@@ -163,8 +164,17 @@ async function handOffPartition({
 		const drained = await entry.drain;
 		if (!drained?.ok) return;
 		// The claim is the successor's signal to fence: it must follow the drain, never precede it.
-		if (successor) await entry.publication.claim({ endpoint: successor });
-		else if (entry.claimAttempted) await entry.publication.release();
+		if (successor) {
+			const { routeEpoch } = await entry.publication.claim({
+				endpoint: successor,
+			});
+			// A caller that still arrives here is told this route, and skips reading the ownership topic for it.
+			state.handoffSuccessors.set(partition, {
+				partition,
+				endpoint: successor,
+				routeEpoch,
+			});
+		} else if (entry.claimAttempted) await entry.publication.release();
 	} catch (cause) {
 		entry.publicationFailed = true;
 		reportPartitionError({ ctx, cause });

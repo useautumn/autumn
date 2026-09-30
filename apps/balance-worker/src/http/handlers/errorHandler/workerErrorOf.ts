@@ -146,6 +146,7 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 		error = {
 			code: "NOT_OWNER",
 			message: "Route is not admitted by this worker",
+			...(cause.successor && { successor: cause.successor }),
 		};
 	} else if (cause instanceof OwnedPartitionNotReadyError) {
 		status = 503;
