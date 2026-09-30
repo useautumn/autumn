@@ -551,12 +551,10 @@ const main = async (init: SwarmInit) => {
 			(shard) =>
 				`${shard.isSvix ? "svix" : "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
 		);
-		send({
-			type: "log",
-			file: null,
-			worker: null,
-			text: `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`,
-		});
+		const line = `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`;
+		// stdout too: twd forwards child output to its own logs, so this survives any log budget.
+		console.log(line.trimEnd());
+		send({ type: "log", file: null, worker: null, text: line });
 		maxLagMs = 0;
 	}, PROGRESS_LOG_MS);
 
