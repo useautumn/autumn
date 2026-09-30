@@ -10,5 +10,8 @@ export const TABLE_TRAY_FOOTER_CLASS =
 export const TABLE_TRAY_SURFACE_CLASS =
 	"rounded-lg border border-table-surface-border bg-table-surface overflow-hidden";
 
-export const TABLE_TRAY_SURFACE_ROW_CLASS =
-	"border-b border-table-row-divider last:border-b-0 hover:bg-table-row-hover";
+/** Divider between rows on the raised surface, for rows that aren't interactive. */
+export const TABLE_TRAY_SURFACE_DIVIDER_CLASS =
+	"border-b border-table-row-divider last:border-b-0";
+
+export const TABLE_TRAY_SURFACE_ROW_CLASS = `${TABLE_TRAY_SURFACE_DIVIDER_CLASS} hover:bg-table-row-hover`;
