@@ -1,5 +1,9 @@
 import { isConsumerGroupGoneError } from "./consumerErrors.js";
-import { startConsumer, stopConsumer } from "./consumerLifecycle.js";
+import {
+	restartConsumer,
+	startConsumer,
+	stopConsumer,
+} from "./consumerLifecycle.js";
 import type {
 	TopicConsumer,
 	TopicConsumerConfig,
@@ -34,6 +38,10 @@ export function createTopicConsumer({
 
 	function stop(): Promise<void> {
 		return stopConsumer({ ctx, state });
+	}
+
+	function restart(): Promise<void> {
+		return restartConsumer({ ctx, state });
 	}
 
 	async function withdrawPartition({
@@ -104,6 +112,7 @@ export function createTopicConsumer({
 	return {
 		start,
 		stop,
+		restart,
 		withdrawPartition,
 		resumePartition,
 		seekPartition,

@@ -122,6 +122,11 @@ export const BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS = 30_000;
  *  still fencing and catching up. The activation is a fence plus a bookmark
  *  read; holding the request for it turns a NOT_READY into a 200. */
 export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
+/** A caller that says how long it can still wait is held for that long, less
+ *  this margin so the answer lands before the caller's own deadline, and never
+ *  past the cap: an activation that slow is a fault, not a wait. */
+export const BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS = 100;
+export const BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS = 5_000;
 /** How long a command-offset landing holds the next one back. A skipped command
  *  (an evict, a queued track already applied) leaves no record to carry its
  *  offset, so the offset rides with the next batch or lands through the consumer
@@ -130,3 +135,16 @@ export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
  *  sees and how far the commands topic's reported lag trails. The Postgres
  *  bookmark, not this commit, decides where a restart resumes. */
 export const BALANCE_WORKER_COMMAND_OFFSET_SETTLE_GAP_MS = 1_000;
+/** How long a worker waits before joining the group again after a broker
+ *  refused its identity, doubling per refusal up to the cap. A refusal that
+ *  clears in seconds costs a minute of fail-open; one that lasts a quarter of
+ *  an hour, as prod's did, costs that quarter hour and no task. */
+export const BALANCE_WORKER_CONSUMER_REJOIN_INITIAL_BACKOFF_MS = 1_000;
+export const BALANCE_WORKER_CONSUMER_REJOIN_MAX_BACKOFF_MS = 30_000;
+/** How long a starting replay waits for the Kafka log end to catch up with the
+ *  state it hydrated. The owner's bookmark can run one record ahead of the log
+ *  end the broker reports for a moment (prod standbys exited nine times in two
+ *  minutes over exactly one record), so the log end is re-read at this cadence
+ *  before the gap is treated as real divergence. */
+export const BALANCE_WORKER_LOG_END_SETTLE_ATTEMPTS = 20;
+export const BALANCE_WORKER_LOG_END_SETTLE_DELAY_MS = 250;

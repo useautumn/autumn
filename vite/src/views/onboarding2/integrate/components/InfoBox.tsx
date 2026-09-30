@@ -1,5 +1,19 @@
-import { InfoIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@autumn/ui";
+import {
+	CheckCircleIcon,
+	InfoIcon,
+	WarningCircleIcon,
+} from "@phosphor-icons/react";
+
+type InfoBoxVariant = "info" | "warning" | "error" | "note" | "success";
+
+const INFO_BOX_STYLES = {
+	note: { alertVariant: "note", Icon: InfoIcon },
+	info: { alertVariant: "default", Icon: InfoIcon },
+	warning: { alertVariant: "warning", Icon: WarningCircleIcon },
+	error: { alertVariant: "destructive", Icon: WarningCircleIcon },
+	success: { alertVariant: "success", Icon: CheckCircleIcon },
+} as const;
 
 export const InfoBox = ({
 	classNames,
@@ -13,28 +27,17 @@ export const InfoBox = ({
 	};
 	children: React.ReactNode;
 	action?: React.ReactNode;
-	variant?: "info" | "warning" | "error" | "note" | "success";
+	variant?: InfoBoxVariant;
 }) => {
+	const { alertVariant, Icon } = INFO_BOX_STYLES[variant];
+
 	return (
-		<div
-			className={cn(
-				"px-4 py-2 text-sandbox flex gap-2 rounded-lg text-sm",
-				variant === "note" && "bg-sandbox/10 text-sandbox",
-				variant === "info" &&
-					"bg-tertiary-foreground/10 text-tertiary-foreground",
-				variant === "warning" && "bg-yellow-500/10 text-yellow-500",
-				variant === "error" && "bg-red-500/10 text-red-500",
-				variant === "success" && "bg-green-500/10 text-green-500",
-				classNames?.infoBox,
-			)}
-		>
-			<div className={cn("pt-0.25 mr-1 shrink-0", classNames?.infoIcon)}>
-				<InfoIcon size={16} className="" weight="fill" />
-			</div>
-			<div className="flex min-w-0 flex-col gap-2">
+		<Alert variant={alertVariant} className={classNames?.infoBox}>
+			<Icon weight="fill" className={classNames?.infoIcon} />
+			<AlertDescription className="flex min-w-0 flex-col gap-2">
 				<span className="whitespace-pre-wrap">{children}</span>
 				{action && <div className="self-start">{action}</div>}
-			</div>
-		</div>
+			</AlertDescription>
+		</Alert>
 	);
 };

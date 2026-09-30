@@ -19,6 +19,7 @@ import {
 	admin,
 	customSession,
 	emailOTP,
+	genericOAuth,
 	jwt,
 	type Organization,
 	organization,
@@ -27,6 +28,7 @@ import {
 import type { AccessControl } from "better-auth/plugins/access";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
+import { getAgentIdOAuthConfigs } from "@/external/agentId/agentIdOAuthConfig.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { deleteMarketingContacts } from "@/external/resend/deleteMarketingContacts.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
@@ -279,6 +281,7 @@ const options = {
 		}),
 
 		jwt(),
+		genericOAuth({ config: getAgentIdOAuthConfigs() }),
 		oauthProvider({
 			loginPage: `${process.env.CLIENT_URL}/sign-in`,
 			consentPage: `${process.env.CLIENT_URL}/consent`,

@@ -15,6 +15,7 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
+import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
 
 const command: TrackCommand = {
 	schemaVersion: 1,
@@ -98,6 +99,16 @@ function staleNaming(successor: {
 		},
 	};
 }
+/** The named successor holds the request for its activation wait, then gives up first. */
+const notReady = {
+	status: 503,
+	body: {
+		error: {
+			code: "NOT_READY",
+			message: "Owned partition runtime is not ready: activating",
+		},
+	},
+};
 const initialOwner = {
 	partition: 0,
 	routeEpoch: "1",
@@ -131,6 +142,8 @@ function createFixture({
 	let currentOwner = owner;
 	let refreshes = 0;
 	const requests: Array<{ url: string; body: unknown }> = [];
+	/** The budget header of each send, in order. */
+	const budgets: string[] = [];
 	const refreshed = Promise.withResolvers<void>();
 	function findOwner(): PartitionOwner | undefined {
 		return currentOwner ?? undefined;
@@ -144,6 +157,7 @@ function createFixture({
 	}
 	async function postJson(request: HttpRequest): Promise<HttpResponse> {
 		requests.push({ url: request.url, body: structuredClone(request.body) });
+		budgets.push(request.headers?.[WORKER_REQUEST_BUDGET_HEADER] ?? "");
 		if (transportFailure) throw transportFailure;
 		return responses[requests.length - 1] ?? success;
 	}
@@ -159,7 +173,7 @@ function createFixture({
 			batchTracks: false,
 		},
 	});
-	return { client, stats, refreshed: refreshed.promise };
+	return { client, stats, budgets, refreshed: refreshed.promise };
 }
 
 async function usesCachedOwner(): Promise<void> {
@@ -193,6 +207,13 @@ async function reroutesOnce(): Promise<void> {
 	await expect(stillStale.client.track({ command })).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 		outcome: "not_submitted",
+		// The error says how far the request got: four sends, three refreshes between them.
+		routing: {
+			sends: 4,
+			refreshes: 3,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
 	});
 	expect(stillStale.stats().requests).toHaveLength(4);
 	expect(stillStale.stats().refreshes).toBe(3);
@@ -207,6 +228,12 @@ async function refreshesMissingOwner(): Promise<void> {
 	await expect(missing.client.track({ command })).rejects.toMatchObject({
 		code: "NO_OWNER",
 		outcome: "not_submitted",
+		routing: {
+			sends: 0,
+			refreshes: 1,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
 	});
 	expect(missing.stats().requests).toHaveLength(0);
 	const staleAfterMiss = createFixture({
@@ -241,7 +268,6 @@ async function preservesCommandAcrossRetry(): Promise<void> {
 async function doesNotRetryWorkerErrors(): Promise<void> {
 	for (const [status, code] of [
 		[400, "INVALID_REQUEST"],
-		[503, "NOT_READY"],
 		[429, "OVERLOADED"],
 		[422, "RECORD_TOO_LARGE"],
 		[500, "INTERNAL"],
@@ -642,6 +668,139 @@ async function followsTheSuccessorWithoutARefresh(): Promise<void> {
 test(
 	"a NOT_OWNER that names the successor is followed without an ownership refresh",
 	followsTheSuccessorWithoutARefresh,
+);
+
+async function retriesASuccessorThatIsNotReadyYet(): Promise<void> {
+	// Run 56 on staging: the redirect landed, but the successor was still activating and the
+	// request failed open with half its budget unspent. The same owner is tried again instead.
+	const fixture = createFixture({
+		responses: [staleNaming(replacement), notReady, success],
+	});
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().refreshes).toBe(0);
+	expect(fixture.stats().requests.map((request) => request.url)).toEqual([
+		"http://worker-a:8080/v1/track",
+		"http://worker-b:8080/v1/track",
+		"http://worker-b:8080/v1/track",
+	]);
+}
+
+test(
+	"a NOT_READY from the named successor is retried at the same owner without a refresh",
+	retriesASuccessorThatIsNotReadyYet,
+);
+
+async function givesUpOnAnOwnerThatStaysNotReady(): Promise<void> {
+	// The retries are bounded apart from the deadline, and the failure is the one a single NOT_READY raised before.
+	const fixture = createFixture({
+		responses: [notReady, notReady, notReady, notReady, success],
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		code: "WORKER_ERROR",
+		workerCode: "NOT_READY",
+		outcome: "not_submitted",
+		routing: {
+			sends: 4,
+			refreshes: 0,
+			followedHint: false,
+			notReadyAnswers: 4,
+		},
+	});
+	expect(fixture.stats().refreshes).toBe(0);
+	expect(fixture.stats().requests).toHaveLength(4);
+}
+
+async function recordsAFollowedHintOnTheFailure(): Promise<void> {
+	// Staging shrink, worst case: redirected to the successor, which never became ready. The error
+	// records the hint and every send, so the fail-open line can tell this apart from a route with no owner.
+	const fixture = createFixture({
+		responses: [
+			staleNaming(replacement),
+			notReady,
+			notReady,
+			notReady,
+			notReady,
+		],
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		workerCode: "NOT_READY",
+		routing: {
+			sends: 5,
+			refreshes: 0,
+			followedHint: true,
+			notReadyAnswers: 4,
+		},
+	});
+}
+
+test(
+	"a failure after following a successor hint records the hint and every send on the error",
+	recordsAFollowedHintOnTheFailure,
+);
+
+async function recordsRoutingOnADeadline(): Promise<void> {
+	// A refresh that never settles runs the request out of budget; the error still says nothing was sent.
+	const fixture = createFixture({
+		owner: null,
+		timeoutMs: 30,
+		refreshGate: new Promise<void>(() => undefined),
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		code: "DEADLINE",
+		outcome: "not_submitted",
+		routing: {
+			sends: 0,
+			refreshes: 1,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
+	});
+}
+
+test(
+	"a request that runs out of budget waiting on ownership records that nothing was sent",
+	recordsRoutingOnADeadline,
+);
+
+test(
+	"an owner still not ready after every retry fails not_submitted as NOT_READY",
+	givesUpOnAnOwnerThatStaysNotReady,
+);
+
+async function tellsTheWorkerHowLongItCanWait(): Promise<void> {
+	// An owner still activating holds the request for this long instead of a fixed moment.
+	const fixture = createFixture({ timeoutMs: 1000 });
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	const [budget] = fixture.budgets;
+	expect(budget).toMatch(/^\d+$/);
+	expect(Number(budget)).toBeGreaterThan(900);
+	expect(Number(budget)).toBeLessThanOrEqual(1000);
+}
+
+test(
+	"every send carries how long the caller will still wait",
+	tellsTheWorkerHowLongItCanWait,
+);
+
+async function doesNotRetryNotReadyWithoutBudget(): Promise<void> {
+	// The owner held the request for the budget it was told; what is left is the margin, so a
+	// resend could only run the deadline out mid-flight. The clean NOT_READY stands.
+	const fixture = createFixture({
+		timeoutMs: 150,
+		responses: [notReady, success],
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		code: "WORKER_ERROR",
+		workerCode: "NOT_READY",
+		outcome: "not_submitted",
+		routing: { sends: 1, notReadyAnswers: 1 },
+	});
+	expect(fixture.stats().requests).toHaveLength(1);
+}
+
+test(
+	"a NOT_READY with less than the retry budget left is not resent",
+	doesNotRetryNotReadyWithoutBudget,
 );
 
 async function ignoresAHintOlderThanKnownOwnership(): Promise<void> {

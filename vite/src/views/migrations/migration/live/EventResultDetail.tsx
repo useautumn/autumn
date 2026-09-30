@@ -3,8 +3,14 @@ import type {
 	CustomerPlanChange,
 	CustomerPlanItemChange,
 } from "@autumn/shared/api/billing/common/customerPlanChange";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
-import { PackageIcon } from "@phosphor-icons/react";
+import {
+	Alert,
+	AlertDescription,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import { PackageIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
@@ -401,12 +407,12 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 		const message = formatUnknownError(error?.message ?? error);
 		if (!message) return null;
 		return (
-			<div className="flex items-start gap-2 min-h-8 px-3 py-2 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-500">
-				<span className="size-2 rounded-full bg-red-500 shrink-0 mt-1" />
-				<span className="break-words min-w-0 whitespace-pre-wrap">
+			<Alert variant="destructive">
+				<WarningCircleIcon weight="fill" />
+				<AlertDescription className="break-words whitespace-pre-wrap">
 					{message}
-				</span>
-			</div>
+				</AlertDescription>
+			</Alert>
 		);
 	}
 

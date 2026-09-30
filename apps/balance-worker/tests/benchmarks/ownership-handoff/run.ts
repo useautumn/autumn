@@ -86,7 +86,7 @@ type OwnershipEvent = {
 	seenAt: number;
 	partition: number;
 	offset: string;
-	type: "claimed" | "unowned" | "ready" | "draining";
+	type: "claimed" | "unowned" | "ready" | "draining" | "preparing";
 	endpoint?: string;
 	at: number;
 };
@@ -106,6 +106,27 @@ type RawHttp = {
 };
 
 const workerEvents: WorkerEvent[] = [];
+
+/** When the record's author wrote it, whichever kind it is. */
+function recordTimestamp({
+	record,
+}: {
+	record: ReturnType<typeof ownershipTopic.parse>;
+}): number {
+	switch (record.type) {
+		case "claimed":
+			return record.claimedAt;
+		case "ready":
+			return record.readyAt;
+		case "draining":
+			return record.drainingAt;
+		case "preparing":
+			return record.preparingAt;
+		case "unowned":
+			return record.releasedAt;
+	}
+}
+
 const ownershipEvents: OwnershipEvent[] = [];
 const outcomes: ClientOutcome[] = [];
 const probeOutcomes: ClientOutcome[] = [];
@@ -181,14 +202,7 @@ await watcher.run({
 			offset: message.offset,
 			type: record.type,
 			endpoint: record.endpoint,
-			at:
-				record.type === "claimed"
-					? record.claimedAt
-					: record.type === "ready"
-						? record.readyAt
-						: record.type === "draining"
-							? record.drainingAt
-							: record.releasedAt,
+			at: recordTimestamp({ record }),
 		});
 	},
 });

@@ -45,6 +45,14 @@ class ReissueInvoiceGlobals(BaseModel):
         return m
 
 
+ReissueInvoiceIssueMethod = Literal[
+    "draft",
+    "finalize",
+    "send",
+]
+r"""How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way."""
+
+
 class CustomFieldTypedDict(TypedDict):
     name: str
     value: str
@@ -1779,6 +1787,8 @@ class ReissueInvoiceParamsTypedDict(TypedDict):
     r"""Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead."""
     preview: NotRequired[bool]
     r"""If true, returns the replacement invoice's lines and totals without voiding anything or issuing it."""
+    issue_method: NotRequired[ReissueInvoiceIssueMethod]
+    r"""How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way."""
     update_customer_email: NotRequired[str]
     r"""Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address."""
     invoice: NotRequired[ReissueInvoiceInvoiceRequestBodyTypedDict]
@@ -1802,6 +1812,9 @@ class ReissueInvoiceParams(BaseModel):
     preview: Optional[bool] = None
     r"""If true, returns the replacement invoice's lines and totals without voiding anything or issuing it."""
 
+    issue_method: Optional[ReissueInvoiceIssueMethod] = None
+    r"""How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way."""
+
     update_customer_email: Optional[str] = None
     r"""Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address."""
 
@@ -1821,6 +1834,7 @@ class ReissueInvoiceParams(BaseModel):
                 "invoice_template_id",
                 "net_terms_days",
                 "preview",
+                "issue_method",
                 "update_customer_email",
                 "invoice",
                 "customer",

@@ -7,7 +7,10 @@ import type { PostgresClient } from "@autumn/postgres";
 import type { Admin, Kafka } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { WorkerEdgeConfigs } from "../../edgeConfig/createWorkerEdgeConfigs.js";
-import type { Partitions } from "../../partitions/types/partitions.js";
+import type {
+	PartitionServiceStopReason,
+	Partitions,
+} from "../../partitions/types/partitions.js";
 import type { PartitionBootstrapper } from "../../runtime/bootstrap/types/partitionBootstrap.js";
 import type { MeteringPartitionResolver } from "../../runtime/types/partitionRuntime.js";
 import type { StateBackend } from "../../state/stateBackend.js";
@@ -27,7 +30,13 @@ export type BalanceWorkerDependencies = {
 	/** Raised when the partition service shuts itself down and will not resume.
 	 *  The entrypoint uses it to end the process so the scheduler replaces the
 	 *  task; leaving it unset keeps the old behaviour of staying up and idle. */
-	onServiceStopped?(): void;
+	onServiceStopped?(reason: PartitionServiceStopReason): void;
+	/** Which ECS service, fleet and build this task is, once known: the entrypoint puts it on every log line. */
+	onIdentityResolved?(identity: {
+		serviceArn: string | null;
+		imageSha: string | null;
+		fleetId: string | null;
+	}): void;
 };
 
 export type BalanceWorkerConfig = {

@@ -54,11 +54,25 @@ export const drainingOwnershipRecordSchema = z
 	})
 	.strict();
 
+/** A successor assigned the partition has started preparing it and will announce `ready`;
+ *  the owner keeps serving and holds its handoff wait instead of releasing at its timeout.
+ *  The owner table ignores it. */
+export const preparingOwnershipRecordSchema = z
+	.object({
+		schemaVersion: z.literal(1),
+		type: z.literal("preparing"),
+		partition: partitionSchema,
+		endpoint: nonEmptyStringSchema,
+		preparingAt: z.number().int().nonnegative(),
+	})
+	.strict();
+
 export const ownershipRecordSchema = z.discriminatedUnion("type", [
 	claimedOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
 	readyOwnershipRecordSchema,
 	drainingOwnershipRecordSchema,
+	preparingOwnershipRecordSchema,
 ]);
 
 export type OwnershipRecord = z.infer<typeof ownershipRecordSchema>;

@@ -121,4 +121,12 @@ describe("SSO domain utilities", () => {
 		).toBeNull();
 		expect(getSsoProviderIdFromCallbackPath("/sign-in/email-otp")).toBeNull();
 	});
+
+	test("ignores generic OAuth callbacks that also carry a providerId param", () => {
+		expect(
+			getSsoProviderIdFromCallbackPath("/oauth2/callback/:providerId", {
+				providerId: "agentid",
+			}),
+		).toBeNull();
+	});
 });

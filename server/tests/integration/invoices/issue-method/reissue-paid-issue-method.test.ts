@@ -3,7 +3,8 @@
  *
  * Contract:
  *   paid original + "draft" -> credit note as today, original stays paid,
- *                              replacement is a draft and the credit waits on the customer's balance
+ *                              replacement is a draft and the credit waits on the customer's balance;
+ *                              the response's amount_due already counts that credit
  */
 
 import { expect, test } from "bun:test";
@@ -44,7 +45,7 @@ test.concurrent(
 		});
 		await payOpenInvoice({ ctx, customerId });
 
-		const { invoice, voided_invoice_id, credit_note_id } =
+		const { invoice, voided_invoice_id, credit_note_id, preview } =
 			(await autumnV2_3.post("/invoices.reissue", {
 				invoice_id: original.id,
 				issue_method: "draft",
@@ -59,6 +60,7 @@ test.concurrent(
 		expect(originalStripe.metadata?.autumn_reissued_to).toBe(invoice.stripe_id);
 
 		await expectIssuedAs({ invoice, issueMethod: "draft" });
+		expect(preview.amount_due).toBe(0);
 
 		const stripeCustomer = await ctx.stripeCli.customers.retrieve(
 			originalStripe.customer as string,

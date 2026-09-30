@@ -116,14 +116,15 @@ export type CreateScheduleRedirectMode = ClosedEnum<
 >;
 
 /**
- * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+ * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
  */
 export const CreateScheduleBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
+  BillDifference: "bill_difference",
 } as const;
 /**
- * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+ * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
  */
 export type CreateScheduleBillingBehavior = ClosedEnum<
   typeof CreateScheduleBillingBehavior
@@ -145,6 +146,17 @@ export type UnscheduledPlanFeatureQuantity = {
    * Whether the customer can adjust the quantity.
    */
   adjustable?: boolean | undefined;
+};
+
+export type UnscheduledPlanLicenseQuantity = {
+  /**
+   * The license plan to set seat quantity for.
+   */
+  licensePlanId: string;
+  /**
+   * Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid.
+   */
+  quantity: number;
 };
 
 /**
@@ -2006,20 +2018,6 @@ export type UnscheduledPlanUpsertLicenseProration = {
   onDecrease: UnscheduledPlanUpsertLicenseOnDecrease;
 };
 
-/**
- * When rolled over units expire.
- */
-export const UnscheduledPlanUpsertLicenseExpiryDurationType = {
-  Month: "month",
-  Forever: "forever",
-} as const;
-/**
- * When rolled over units expire.
- */
-export type UnscheduledPlanUpsertLicenseExpiryDurationType = ClosedEnum<
-  typeof UnscheduledPlanUpsertLicenseExpiryDurationType
->;
-
 /** @internal */
 export const CreateScheduleFreeTrialDurationType$outboundSchema: z.ZodMiniEnum<
   typeof CreateScheduleFreeTrialDurationType
@@ -2183,6 +2181,38 @@ export function unscheduledPlanFeatureQuantityToJSON(
   return JSON.stringify(
     UnscheduledPlanFeatureQuantity$outboundSchema.parse(
       unscheduledPlanFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type UnscheduledPlanLicenseQuantity$Outbound = {
+  license_plan_id: string;
+  quantity: number;
+};
+
+/** @internal */
+export const UnscheduledPlanLicenseQuantity$outboundSchema: z.ZodMiniType<
+  UnscheduledPlanLicenseQuantity$Outbound,
+  UnscheduledPlanLicenseQuantity
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+    quantity: z.int(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+    });
+  }),
+);
+
+export function unscheduledPlanLicenseQuantityToJSON(
+  unscheduledPlanLicenseQuantity: UnscheduledPlanLicenseQuantity,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanLicenseQuantity$outboundSchema.parse(
+      unscheduledPlanLicenseQuantity,
     ),
   );
 }
@@ -5775,9 +5805,3 @@ export function unscheduledPlanUpsertLicenseProrationToJSON(
     ),
   );
 }
-
-/** @internal */
-export const UnscheduledPlanUpsertLicenseExpiryDurationType$outboundSchema:
-  z.ZodMiniEnum<typeof UnscheduledPlanUpsertLicenseExpiryDurationType> = z.enum(
-    UnscheduledPlanUpsertLicenseExpiryDurationType,
-  );

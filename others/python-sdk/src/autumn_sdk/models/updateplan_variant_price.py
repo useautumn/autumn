@@ -1269,7 +1269,7 @@ class UpdatePlanItemPlanItem(BaseModel):
         return m
 
 
-UpdatePlanPriceLicenseInterval = Literal[
+UpdatePlanPriceLicenseIntervalRequestBody = Literal[
     "one_off",
     "week",
     "month",
@@ -1280,14 +1280,14 @@ UpdatePlanPriceLicenseInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class UpdatePlanLicenseAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanLicenseAdditionalCurrencyRequestBodyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanLicenseAdditionalCurrency(BaseModel):
+class UpdatePlanLicenseAdditionalCurrencyRequestBody(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1295,34 +1295,36 @@ class UpdatePlanLicenseAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanLicenseBasePriceTypedDict(TypedDict):
+class UpdatePlanLicenseBasePriceRequestBodyTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-    interval: UpdatePlanPriceLicenseInterval
+    interval: UpdatePlanPriceLicenseIntervalRequestBody
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     additional_currencies: NotRequired[
-        List[UpdatePlanLicenseAdditionalCurrencyTypedDict]
+        List[UpdatePlanLicenseAdditionalCurrencyRequestBodyTypedDict]
     ]
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class UpdatePlanLicenseBasePrice(BaseModel):
+class UpdatePlanLicenseBasePriceRequestBody(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
-    interval: UpdatePlanPriceLicenseInterval
+    interval: UpdatePlanPriceLicenseIntervalRequestBody
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[UpdatePlanLicenseAdditionalCurrency]] = None
+    additional_currencies: Optional[
+        List[UpdatePlanLicenseAdditionalCurrencyRequestBody]
+    ] = None
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
     @model_serializer(mode="wrap")
@@ -1342,15 +1344,15 @@ class UpdatePlanLicenseBasePrice(BaseModel):
         return m
 
 
-class UpdatePlanLicenseThresholdBillingTypedDict(TypedDict):
+class UpdatePlanLicenseThresholdBillingRequestBodyTypedDict(TypedDict):
     threshold: float
 
 
-class UpdatePlanLicenseThresholdBilling(BaseModel):
+class UpdatePlanLicenseThresholdBillingRequestBody(BaseModel):
     threshold: float
 
 
-UpdatePlanLicenseResetInterval = Literal[
+UpdatePlanLicenseResetIntervalRequestBody = Literal[
     "one_off",
     "minute",
     "hour",
@@ -1364,19 +1366,19 @@ UpdatePlanLicenseResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class UpdatePlanLicenseResetTypedDict(TypedDict):
+class UpdatePlanLicenseResetRequestBodyTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanLicenseResetInterval
+    interval: UpdatePlanLicenseResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class UpdatePlanLicenseReset(BaseModel):
+class UpdatePlanLicenseResetRequestBody(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanLicenseResetInterval
+    interval: UpdatePlanLicenseResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = 1
@@ -1399,14 +1401,14 @@ class UpdatePlanLicenseReset(BaseModel):
         return m
 
 
-class UpdatePlanLicenseAddItemAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanLicenseAddItemAdditionalCurrencyRequestBodyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanLicenseAddItemAdditionalCurrency(BaseModel):
+class UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1414,15 +1416,17 @@ class UpdatePlanLicenseAddItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-UpdatePlanLicensePriceToTypedDict = TypeAliasType(
-    "UpdatePlanLicensePriceToTypedDict", Union[float, str]
+UpdatePlanLicensePriceToRequestBodyTypedDict = TypeAliasType(
+    "UpdatePlanLicensePriceToRequestBodyTypedDict", Union[float, str]
 )
 
 
-UpdatePlanLicensePriceTo = TypeAliasType("UpdatePlanLicensePriceTo", Union[float, str])
+UpdatePlanLicensePriceToRequestBody = TypeAliasType(
+    "UpdatePlanLicensePriceToRequestBody", Union[float, str]
+)
 
 
-class UpdatePlanLicenseTierAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanLicenseTierAdditionalCurrencyRequestBodyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: NotRequired[float]
@@ -1431,7 +1435,7 @@ class UpdatePlanLicenseTierAdditionalCurrencyTypedDict(TypedDict):
     r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
-class UpdatePlanLicenseTierAdditionalCurrency(BaseModel):
+class UpdatePlanLicenseTierAdditionalCurrencyRequestBody(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1458,26 +1462,26 @@ class UpdatePlanLicenseTierAdditionalCurrency(BaseModel):
         return m
 
 
-class UpdatePlanLicensePriceTierTypedDict(TypedDict):
-    to: UpdatePlanLicensePriceToTypedDict
+class UpdatePlanLicensePriceTierRequestBodyTypedDict(TypedDict):
+    to: UpdatePlanLicensePriceToRequestBodyTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
-        List[UpdatePlanLicenseTierAdditionalCurrencyTypedDict]
+        List[UpdatePlanLicenseTierAdditionalCurrencyRequestBodyTypedDict]
     ]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class UpdatePlanLicensePriceTier(BaseModel):
-    to: UpdatePlanLicensePriceTo
+class UpdatePlanLicensePriceTierRequestBody(BaseModel):
+    to: UpdatePlanLicensePriceToRequestBody
 
     amount: Optional[float] = None
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[UpdatePlanLicenseTierAdditionalCurrency]] = (
-        None
-    )
+    additional_currencies: Optional[
+        List[UpdatePlanLicenseTierAdditionalCurrencyRequestBody]
+    ] = None
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
     @model_serializer(mode="wrap")
@@ -1497,13 +1501,13 @@ class UpdatePlanLicensePriceTier(BaseModel):
         return m
 
 
-UpdatePlanLicenseTierBehavior = Literal[
+UpdatePlanLicenseTierBehaviorRequestBody = Literal[
     "graduated",
     "volume",
 ]
 
 
-UpdatePlanLicenseAddItemPriceInterval = Literal[
+UpdatePlanLicenseAddItemPriceIntervalRequestBody = Literal[
     "one_off",
     "week",
     "month",
@@ -1514,29 +1518,29 @@ UpdatePlanLicenseAddItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-UpdatePlanLicenseAddItemBillingMethod = Literal[
+UpdatePlanLicenseAddItemBillingMethodRequestBody = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class UpdatePlanLicensePriceTypedDict(TypedDict):
+class UpdatePlanLicensePriceRequestBodyTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: UpdatePlanLicenseAddItemPriceInterval
+    interval: UpdatePlanLicenseAddItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: UpdatePlanLicenseAddItemBillingMethod
+    billing_method: UpdatePlanLicenseAddItemBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[
-        List[UpdatePlanLicenseAddItemAdditionalCurrencyTypedDict]
+        List[UpdatePlanLicenseAddItemAdditionalCurrencyRequestBodyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[UpdatePlanLicensePriceTierTypedDict]]
+    tiers: NotRequired[List[UpdatePlanLicensePriceTierRequestBodyTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[UpdatePlanLicenseTierBehavior]
+    tier_behavior: NotRequired[UpdatePlanLicenseTierBehaviorRequestBody]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -1545,27 +1549,27 @@ class UpdatePlanLicensePriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class UpdatePlanLicensePrice(BaseModel):
+class UpdatePlanLicensePriceRequestBody(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: UpdatePlanLicenseAddItemPriceInterval
+    interval: UpdatePlanLicenseAddItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: UpdatePlanLicenseAddItemBillingMethod
+    billing_method: UpdatePlanLicenseAddItemBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
     additional_currencies: Optional[
-        List[UpdatePlanLicenseAddItemAdditionalCurrency]
+        List[UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody]
     ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[UpdatePlanLicensePriceTier]] = None
+    tiers: Optional[List[UpdatePlanLicensePriceTierRequestBody]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[UpdatePlanLicenseTierBehavior] = None
+    tier_behavior: Optional[UpdatePlanLicenseTierBehaviorRequestBody] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -1612,7 +1616,7 @@ class UpdatePlanLicensePrice(BaseModel):
         return m
 
 
-UpdatePlanLicenseOnIncrease = Literal[
+UpdatePlanLicenseOnIncreaseRequestBody = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -1621,7 +1625,7 @@ UpdatePlanLicenseOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-UpdatePlanLicenseOnDecrease = Literal[
+UpdatePlanLicenseOnDecreaseRequestBody = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -1631,36 +1635,36 @@ UpdatePlanLicenseOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class UpdatePlanLicenseProrationTypedDict(TypedDict):
+class UpdatePlanLicenseProrationRequestBodyTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanLicenseOnIncrease
+    on_increase: UpdatePlanLicenseOnIncreaseRequestBody
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: UpdatePlanLicenseOnDecrease
+    on_decrease: UpdatePlanLicenseOnDecreaseRequestBody
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class UpdatePlanLicenseProration(BaseModel):
+class UpdatePlanLicenseProrationRequestBody(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanLicenseOnIncrease
+    on_increase: UpdatePlanLicenseOnIncreaseRequestBody
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: UpdatePlanLicenseOnDecrease
+    on_decrease: UpdatePlanLicenseOnDecreaseRequestBody
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-UpdatePlanLicenseExpiryDurationType = Literal[
+UpdatePlanLicenseExpiryDurationTypeRequestBody = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class UpdatePlanLicenseRolloverTypedDict(TypedDict):
+class UpdatePlanLicenseRolloverRequestBodyTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanLicenseExpiryDurationType
+    expiry_duration_type: UpdatePlanLicenseExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -1670,10 +1674,10 @@ class UpdatePlanLicenseRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class UpdatePlanLicenseRollover(BaseModel):
+class UpdatePlanLicenseRolloverRequestBody(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanLicenseExpiryDurationType
+    expiry_duration_type: UpdatePlanLicenseExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -1702,7 +1706,7 @@ class UpdatePlanLicenseRollover(BaseModel):
         return m
 
 
-UpdatePlanLicenseDuration = Literal[
+UpdatePlanLicenseDurationRequestBody = Literal[
     "day",
     "week",
     "month",
@@ -1710,17 +1714,17 @@ UpdatePlanLicenseDuration = Literal[
 ]
 
 
-class UpdatePlanLicenseExpiryTypedDict(TypedDict):
+class UpdatePlanLicenseExpiryRequestBodyTypedDict(TypedDict):
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    duration: UpdatePlanLicenseDuration
+    duration: UpdatePlanLicenseDurationRequestBody
     length: float
 
 
-class UpdatePlanLicenseExpiry(BaseModel):
+class UpdatePlanLicenseExpiryRequestBody(BaseModel):
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    duration: UpdatePlanLicenseDuration
+    duration: UpdatePlanLicenseDurationRequestBody
 
     length: float
 
@@ -1735,7 +1739,7 @@ UpdatePlanDimensionsLicenseMatch4 = TypeAliasType(
 )
 
 
-class UpdatePlanDimensionsLicense4TypedDict(TypedDict):
+class UpdatePlanDimensionsLicenseRequestBody4TypedDict(TypedDict):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
@@ -1744,7 +1748,7 @@ class UpdatePlanDimensionsLicense4TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class UpdatePlanDimensionsLicense4(BaseModel):
+class UpdatePlanDimensionsLicenseRequestBody4(BaseModel):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
@@ -1781,52 +1785,52 @@ UpdatePlanDimensionsLicenseMatch3 = TypeAliasType(
 )
 
 
-UpdatePlanDimensionsToLicenseEnum2 = Literal["inf",]
+UpdatePlanDimensionsToLicenseRequestBodyEnum2 = Literal["inf",]
 
 
-UpdatePlanDimensionsLicenseToUnion2TypedDict = TypeAliasType(
-    "UpdatePlanDimensionsLicenseToUnion2TypedDict",
-    Union[float, UpdatePlanDimensionsToLicenseEnum2],
+UpdatePlanDimensionsLicenseToRequestBodyUnion2TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToRequestBodyUnion2TypedDict",
+    Union[float, UpdatePlanDimensionsToLicenseRequestBodyEnum2],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-UpdatePlanDimensionsLicenseToUnion2 = TypeAliasType(
-    "UpdatePlanDimensionsLicenseToUnion2",
-    Union[float, UpdatePlanDimensionsToLicenseEnum2],
+UpdatePlanDimensionsLicenseToRequestBodyUnion2 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToRequestBodyUnion2",
+    Union[float, UpdatePlanDimensionsToLicenseRequestBodyEnum2],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class UpdatePlanDimensionsLicenseTier2TypedDict(TypedDict):
-    to: UpdatePlanDimensionsLicenseToUnion2TypedDict
+class UpdatePlanDimensionsLicenseTierRequestBody2TypedDict(TypedDict):
+    to: UpdatePlanDimensionsLicenseToRequestBodyUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class UpdatePlanDimensionsLicenseTier2(BaseModel):
-    to: UpdatePlanDimensionsLicenseToUnion2
+class UpdatePlanDimensionsLicenseTierRequestBody2(BaseModel):
+    to: UpdatePlanDimensionsLicenseToRequestBodyUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class UpdatePlanDimensionsLicense3TypedDict(TypedDict):
+class UpdatePlanDimensionsLicenseRequestBody3TypedDict(TypedDict):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[UpdatePlanDimensionsLicenseTier2TypedDict]
+    tiers: List[UpdatePlanDimensionsLicenseTierRequestBody2TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class UpdatePlanDimensionsLicense3(BaseModel):
+class UpdatePlanDimensionsLicenseRequestBody3(BaseModel):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[UpdatePlanDimensionsLicenseTier2]
+    tiers: List[UpdatePlanDimensionsLicenseTierRequestBody2]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -1853,15 +1857,20 @@ class UpdatePlanDimensionsLicense3(BaseModel):
         return m
 
 
-UpdatePlanLicenseDimensionsUnion2TypedDict = TypeAliasType(
-    "UpdatePlanLicenseDimensionsUnion2TypedDict",
-    Union[UpdatePlanDimensionsLicense4TypedDict, UpdatePlanDimensionsLicense3TypedDict],
+UpdatePlanLicenseDimensionsRequestBodyUnion2TypedDict = TypeAliasType(
+    "UpdatePlanLicenseDimensionsRequestBodyUnion2TypedDict",
+    Union[
+        UpdatePlanDimensionsLicenseRequestBody4TypedDict,
+        UpdatePlanDimensionsLicenseRequestBody3TypedDict,
+    ],
 )
 
 
-UpdatePlanLicenseDimensionsUnion2 = TypeAliasType(
-    "UpdatePlanLicenseDimensionsUnion2",
-    Union[UpdatePlanDimensionsLicense4, UpdatePlanDimensionsLicense3],
+UpdatePlanLicenseDimensionsRequestBodyUnion2 = TypeAliasType(
+    "UpdatePlanLicenseDimensionsRequestBodyUnion2",
+    Union[
+        UpdatePlanDimensionsLicenseRequestBody4, UpdatePlanDimensionsLicenseRequestBody3
+    ],
 )
 
 
@@ -1875,7 +1884,7 @@ UpdatePlanLicenseMultipliersMatch2 = TypeAliasType(
 )
 
 
-class UpdatePlanLicenseMultipliers2TypedDict(TypedDict):
+class UpdatePlanLicenseMultipliersRequestBody2TypedDict(TypedDict):
     match: Dict[str, UpdatePlanLicenseMultipliersMatch2TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
@@ -1884,7 +1893,7 @@ class UpdatePlanLicenseMultipliers2TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class UpdatePlanLicenseMultipliers2(BaseModel):
+class UpdatePlanLicenseMultipliersRequestBody2(BaseModel):
     match: Dict[str, UpdatePlanLicenseMultipliersMatch2]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
@@ -1911,20 +1920,24 @@ class UpdatePlanLicenseMultipliers2(BaseModel):
         return m
 
 
-class UpdatePlanCreditSchemaLicense2TypedDict(TypedDict):
+class UpdatePlanCreditSchemaLicenseRequestBody2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
     r"""Credits consumed per billing-unit group."""
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, UpdatePlanLicenseDimensionsUnion2TypedDict]]
+    dimensions: NotRequired[
+        Dict[str, UpdatePlanLicenseDimensionsRequestBodyUnion2TypedDict]
+    ]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, UpdatePlanLicenseMultipliers2TypedDict]]
+    multipliers: NotRequired[
+        Dict[str, UpdatePlanLicenseMultipliersRequestBody2TypedDict]
+    ]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
 
-class UpdatePlanCreditSchemaLicense2(BaseModel):
+class UpdatePlanCreditSchemaLicenseRequestBody2(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
@@ -1934,10 +1947,10 @@ class UpdatePlanCreditSchemaLicense2(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, UpdatePlanLicenseDimensionsUnion2]] = None
+    dimensions: Optional[Dict[str, UpdatePlanLicenseDimensionsRequestBodyUnion2]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, UpdatePlanLicenseMultipliers2]] = None
+    multipliers: Optional[Dict[str, UpdatePlanLicenseMultipliersRequestBody2]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     @model_serializer(mode="wrap")
@@ -1967,7 +1980,7 @@ UpdatePlanDimensionsLicenseMatch2 = TypeAliasType(
 )
 
 
-class UpdatePlanDimensionsLicense2TypedDict(TypedDict):
+class UpdatePlanDimensionsLicenseRequestBody2TypedDict(TypedDict):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch2TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
@@ -1976,7 +1989,7 @@ class UpdatePlanDimensionsLicense2TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class UpdatePlanDimensionsLicense2(BaseModel):
+class UpdatePlanDimensionsLicenseRequestBody2(BaseModel):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch2]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
@@ -2013,52 +2026,52 @@ UpdatePlanDimensionsLicenseMatch1 = TypeAliasType(
 )
 
 
-UpdatePlanDimensionsToLicenseEnum1 = Literal["inf",]
+UpdatePlanDimensionsToLicenseRequestBodyEnum1 = Literal["inf",]
 
 
-UpdatePlanDimensionsLicenseToUnion1TypedDict = TypeAliasType(
-    "UpdatePlanDimensionsLicenseToUnion1TypedDict",
-    Union[float, UpdatePlanDimensionsToLicenseEnum1],
+UpdatePlanDimensionsLicenseToRequestBodyUnion1TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToRequestBodyUnion1TypedDict",
+    Union[float, UpdatePlanDimensionsToLicenseRequestBodyEnum1],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-UpdatePlanDimensionsLicenseToUnion1 = TypeAliasType(
-    "UpdatePlanDimensionsLicenseToUnion1",
-    Union[float, UpdatePlanDimensionsToLicenseEnum1],
+UpdatePlanDimensionsLicenseToRequestBodyUnion1 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToRequestBodyUnion1",
+    Union[float, UpdatePlanDimensionsToLicenseRequestBodyEnum1],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class UpdatePlanDimensionsLicenseTier1TypedDict(TypedDict):
-    to: UpdatePlanDimensionsLicenseToUnion1TypedDict
+class UpdatePlanDimensionsLicenseTierRequestBody1TypedDict(TypedDict):
+    to: UpdatePlanDimensionsLicenseToRequestBodyUnion1TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class UpdatePlanDimensionsLicenseTier1(BaseModel):
-    to: UpdatePlanDimensionsLicenseToUnion1
+class UpdatePlanDimensionsLicenseTierRequestBody1(BaseModel):
+    to: UpdatePlanDimensionsLicenseToRequestBodyUnion1
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class UpdatePlanDimensionsLicense1TypedDict(TypedDict):
+class UpdatePlanDimensionsLicenseRequestBody1TypedDict(TypedDict):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch1TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[UpdatePlanDimensionsLicenseTier1TypedDict]
+    tiers: List[UpdatePlanDimensionsLicenseTierRequestBody1TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class UpdatePlanDimensionsLicense1(BaseModel):
+class UpdatePlanDimensionsLicenseRequestBody1(BaseModel):
     match: Dict[str, UpdatePlanDimensionsLicenseMatch1]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[UpdatePlanDimensionsLicenseTier1]
+    tiers: List[UpdatePlanDimensionsLicenseTierRequestBody1]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -2085,15 +2098,20 @@ class UpdatePlanDimensionsLicense1(BaseModel):
         return m
 
 
-UpdatePlanLicenseDimensionsUnion1TypedDict = TypeAliasType(
-    "UpdatePlanLicenseDimensionsUnion1TypedDict",
-    Union[UpdatePlanDimensionsLicense2TypedDict, UpdatePlanDimensionsLicense1TypedDict],
+UpdatePlanLicenseDimensionsRequestBodyUnion1TypedDict = TypeAliasType(
+    "UpdatePlanLicenseDimensionsRequestBodyUnion1TypedDict",
+    Union[
+        UpdatePlanDimensionsLicenseRequestBody2TypedDict,
+        UpdatePlanDimensionsLicenseRequestBody1TypedDict,
+    ],
 )
 
 
-UpdatePlanLicenseDimensionsUnion1 = TypeAliasType(
-    "UpdatePlanLicenseDimensionsUnion1",
-    Union[UpdatePlanDimensionsLicense2, UpdatePlanDimensionsLicense1],
+UpdatePlanLicenseDimensionsRequestBodyUnion1 = TypeAliasType(
+    "UpdatePlanLicenseDimensionsRequestBodyUnion1",
+    Union[
+        UpdatePlanDimensionsLicenseRequestBody2, UpdatePlanDimensionsLicenseRequestBody1
+    ],
 )
 
 
@@ -2107,7 +2125,7 @@ UpdatePlanLicenseMultipliersMatch1 = TypeAliasType(
 )
 
 
-class UpdatePlanLicenseMultipliers1TypedDict(TypedDict):
+class UpdatePlanLicenseMultipliersRequestBody1TypedDict(TypedDict):
     match: Dict[str, UpdatePlanLicenseMultipliersMatch1TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
@@ -2116,7 +2134,7 @@ class UpdatePlanLicenseMultipliers1TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class UpdatePlanLicenseMultipliers1(BaseModel):
+class UpdatePlanLicenseMultipliersRequestBody1(BaseModel):
     match: Dict[str, UpdatePlanLicenseMultipliersMatch1]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
@@ -2143,63 +2161,68 @@ class UpdatePlanLicenseMultipliers1(BaseModel):
         return m
 
 
-UpdatePlanToLicenseEnum = Literal["inf",]
+UpdatePlanToLicenseRequestBodyEnum = Literal["inf",]
 
 
-UpdatePlanLicenseFeatureOverrideToUnionTypedDict = TypeAliasType(
-    "UpdatePlanLicenseFeatureOverrideToUnionTypedDict",
-    Union[float, UpdatePlanToLicenseEnum],
+UpdatePlanLicenseFeatureOverrideToRequestBodyUnionTypedDict = TypeAliasType(
+    "UpdatePlanLicenseFeatureOverrideToRequestBodyUnionTypedDict",
+    Union[float, UpdatePlanToLicenseRequestBodyEnum],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-UpdatePlanLicenseFeatureOverrideToUnion = TypeAliasType(
-    "UpdatePlanLicenseFeatureOverrideToUnion", Union[float, UpdatePlanToLicenseEnum]
+UpdatePlanLicenseFeatureOverrideToRequestBodyUnion = TypeAliasType(
+    "UpdatePlanLicenseFeatureOverrideToRequestBodyUnion",
+    Union[float, UpdatePlanToLicenseRequestBodyEnum],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class UpdatePlanLicenseFeatureOverrideTierTypedDict(TypedDict):
-    to: UpdatePlanLicenseFeatureOverrideToUnionTypedDict
+class UpdatePlanLicenseFeatureOverrideTierRequestBodyTypedDict(TypedDict):
+    to: UpdatePlanLicenseFeatureOverrideToRequestBodyUnionTypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class UpdatePlanLicenseFeatureOverrideTier(BaseModel):
-    to: UpdatePlanLicenseFeatureOverrideToUnion
+class UpdatePlanLicenseFeatureOverrideTierRequestBody(BaseModel):
+    to: UpdatePlanLicenseFeatureOverrideToRequestBodyUnion
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class UpdatePlanCreditSchemaLicense1TypedDict(TypedDict):
+class UpdatePlanCreditSchemaLicenseRequestBody1TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
-    tiers: List[UpdatePlanLicenseFeatureOverrideTierTypedDict]
+    tiers: List[UpdatePlanLicenseFeatureOverrideTierRequestBodyTypedDict]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, UpdatePlanLicenseDimensionsUnion1TypedDict]]
+    dimensions: NotRequired[
+        Dict[str, UpdatePlanLicenseDimensionsRequestBodyUnion1TypedDict]
+    ]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, UpdatePlanLicenseMultipliers1TypedDict]]
+    multipliers: NotRequired[
+        Dict[str, UpdatePlanLicenseMultipliersRequestBody1TypedDict]
+    ]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
     tier_behavior: Literal["graduated"]
 
 
-class UpdatePlanCreditSchemaLicense1(BaseModel):
+class UpdatePlanCreditSchemaLicenseRequestBody1(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
-    tiers: List[UpdatePlanLicenseFeatureOverrideTier]
+    tiers: List[UpdatePlanLicenseFeatureOverrideTierRequestBody]
 
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, UpdatePlanLicenseDimensionsUnion1]] = None
+    dimensions: Optional[Dict[str, UpdatePlanLicenseDimensionsRequestBodyUnion1]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, UpdatePlanLicenseMultipliers1]] = None
+    multipliers: Optional[Dict[str, UpdatePlanLicenseMultipliersRequestBody1]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     tier_behavior: Annotated[
@@ -2224,35 +2247,39 @@ class UpdatePlanCreditSchemaLicense1(BaseModel):
         return m
 
 
-UpdatePlanLicenseCreditSchemaUnionTypedDict = TypeAliasType(
-    "UpdatePlanLicenseCreditSchemaUnionTypedDict",
+UpdatePlanLicenseCreditSchemaRequestBodyUnionTypedDict = TypeAliasType(
+    "UpdatePlanLicenseCreditSchemaRequestBodyUnionTypedDict",
     Union[
-        UpdatePlanCreditSchemaLicense2TypedDict, UpdatePlanCreditSchemaLicense1TypedDict
+        UpdatePlanCreditSchemaLicenseRequestBody2TypedDict,
+        UpdatePlanCreditSchemaLicenseRequestBody1TypedDict,
     ],
 )
 
 
-UpdatePlanLicenseCreditSchemaUnion = TypeAliasType(
-    "UpdatePlanLicenseCreditSchemaUnion",
-    Union[UpdatePlanCreditSchemaLicense2, UpdatePlanCreditSchemaLicense1],
+UpdatePlanLicenseCreditSchemaRequestBodyUnion = TypeAliasType(
+    "UpdatePlanLicenseCreditSchemaRequestBodyUnion",
+    Union[
+        UpdatePlanCreditSchemaLicenseRequestBody2,
+        UpdatePlanCreditSchemaLicenseRequestBody1,
+    ],
 )
 
 
-class UpdatePlanLicenseProviderMarkupsTypedDict(TypedDict):
+class UpdatePlanLicenseProviderMarkupsRequestBodyTypedDict(TypedDict):
     markup: float
 
 
-class UpdatePlanLicenseProviderMarkups(BaseModel):
+class UpdatePlanLicenseProviderMarkupsRequestBody(BaseModel):
     markup: float
 
 
-class UpdatePlanLicenseModelMarkupsTypedDict(TypedDict):
+class UpdatePlanLicenseModelMarkupsRequestBodyTypedDict(TypedDict):
     markup: NotRequired[float]
     input_cost: NotRequired[float]
     output_cost: NotRequired[float]
 
 
-class UpdatePlanLicenseModelMarkups(BaseModel):
+class UpdatePlanLicenseModelMarkupsRequestBody(BaseModel):
     markup: Optional[float] = None
 
     input_cost: Optional[float] = None
@@ -2276,33 +2303,35 @@ class UpdatePlanLicenseModelMarkups(BaseModel):
         return m
 
 
-class UpdatePlanLicenseMarkupsTypedDict(TypedDict):
+class UpdatePlanLicenseMarkupsRequestBodyTypedDict(TypedDict):
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     default_markup: NotRequired[float]
     r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
     provider_markups: NotRequired[
-        Nullable[Dict[str, UpdatePlanLicenseProviderMarkupsTypedDict]]
+        Nullable[Dict[str, UpdatePlanLicenseProviderMarkupsRequestBodyTypedDict]]
     ]
     r"""Per-provider markup percentages for customers on this plan."""
     model_markups: NotRequired[
-        Nullable[Dict[str, UpdatePlanLicenseModelMarkupsTypedDict]]
+        Nullable[Dict[str, UpdatePlanLicenseModelMarkupsRequestBodyTypedDict]]
     ]
     r"""Per-model markup overrides for customers on this plan."""
 
 
-class UpdatePlanLicenseMarkups(BaseModel):
+class UpdatePlanLicenseMarkupsRequestBody(BaseModel):
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     default_markup: Optional[float] = None
     r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
 
-    provider_markups: OptionalNullable[Dict[str, UpdatePlanLicenseProviderMarkups]] = (
-        UNSET
-    )
+    provider_markups: OptionalNullable[
+        Dict[str, UpdatePlanLicenseProviderMarkupsRequestBody]
+    ] = UNSET
     r"""Per-provider markup percentages for customers on this plan."""
 
-    model_markups: OptionalNullable[Dict[str, UpdatePlanLicenseModelMarkups]] = UNSET
+    model_markups: OptionalNullable[
+        Dict[str, UpdatePlanLicenseModelMarkupsRequestBody]
+    ] = UNSET
     r"""Per-model markup overrides for customers on this plan."""
 
     @model_serializer(mode="wrap")
@@ -2331,22 +2360,24 @@ class UpdatePlanLicenseMarkups(BaseModel):
         return m
 
 
-class UpdatePlanLicenseFeatureOverrideTypedDict(TypedDict):
+class UpdatePlanLicenseFeatureOverrideRequestBodyTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: NotRequired[List[UpdatePlanLicenseCreditSchemaUnionTypedDict]]
+    credit_schema: NotRequired[
+        List[UpdatePlanLicenseCreditSchemaRequestBodyUnionTypedDict]
+    ]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
-    markups: NotRequired[UpdatePlanLicenseMarkupsTypedDict]
+    markups: NotRequired[UpdatePlanLicenseMarkupsRequestBodyTypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
 
-class UpdatePlanLicenseFeatureOverride(BaseModel):
+class UpdatePlanLicenseFeatureOverrideRequestBody(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: Optional[List[UpdatePlanLicenseCreditSchemaUnion]] = None
+    credit_schema: Optional[List[UpdatePlanLicenseCreditSchemaRequestBodyUnion]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
-    markups: Optional[UpdatePlanLicenseMarkups] = None
+    markups: Optional[UpdatePlanLicenseMarkupsRequestBody] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     @model_serializer(mode="wrap")
@@ -2366,12 +2397,14 @@ class UpdatePlanLicenseFeatureOverride(BaseModel):
         return m
 
 
-class UpdatePlanLicensePlanItemTypedDict(TypedDict):
+class UpdatePlanLicensePlanItemRequestBodyTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
     r"""The ID of the feature to configure."""
-    threshold_billing: NotRequired[Nullable[UpdatePlanLicenseThresholdBillingTypedDict]]
+    threshold_billing: NotRequired[
+        Nullable[UpdatePlanLicenseThresholdBillingRequestBodyTypedDict]
+    ]
     r"""Bills this many feature units when outstanding overage reaches it."""
     included: NotRequired[float]
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
@@ -2379,27 +2412,29 @@ class UpdatePlanLicensePlanItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[UpdatePlanLicenseResetTypedDict]
+    reset: NotRequired[UpdatePlanLicenseResetRequestBodyTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[UpdatePlanLicensePriceTypedDict]
+    price: NotRequired[UpdatePlanLicensePriceRequestBodyTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[UpdatePlanLicenseProrationTypedDict]
+    proration: NotRequired[UpdatePlanLicenseProrationRequestBodyTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[UpdatePlanLicenseRolloverTypedDict]
+    rollover: NotRequired[UpdatePlanLicenseRolloverRequestBodyTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
-    expiry: NotRequired[UpdatePlanLicenseExpiryTypedDict]
+    expiry: NotRequired[UpdatePlanLicenseExpiryRequestBodyTypedDict]
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
-    feature_override: NotRequired[UpdatePlanLicenseFeatureOverrideTypedDict]
+    feature_override: NotRequired[UpdatePlanLicenseFeatureOverrideRequestBodyTypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class UpdatePlanLicensePlanItem(BaseModel):
+class UpdatePlanLicensePlanItemRequestBody(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
     r"""The ID of the feature to configure."""
 
-    threshold_billing: OptionalNullable[UpdatePlanLicenseThresholdBilling] = UNSET
+    threshold_billing: OptionalNullable[
+        UpdatePlanLicenseThresholdBillingRequestBody
+    ] = UNSET
     r"""Bills this many feature units when outstanding overage reaches it."""
 
     included: Optional[float] = None
@@ -2411,22 +2446,22 @@ class UpdatePlanLicensePlanItem(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[UpdatePlanLicenseReset] = None
+    reset: Optional[UpdatePlanLicenseResetRequestBody] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[UpdatePlanLicensePrice] = None
+    price: Optional[UpdatePlanLicensePriceRequestBody] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[UpdatePlanLicenseProration] = None
+    proration: Optional[UpdatePlanLicenseProrationRequestBody] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[UpdatePlanLicenseRollover] = None
+    rollover: Optional[UpdatePlanLicenseRolloverRequestBody] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry: Optional[UpdatePlanLicenseExpiry] = None
+    expiry: Optional[UpdatePlanLicenseExpiryRequestBody] = None
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    feature_override: Optional[UpdatePlanLicenseFeatureOverride] = None
+    feature_override: Optional[UpdatePlanLicenseFeatureOverrideRequestBody] = None
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     @model_serializer(mode="wrap")
@@ -2468,14 +2503,14 @@ class UpdatePlanLicensePlanItem(BaseModel):
         return m
 
 
-UpdatePlanLicenseRemoveItemBillingMethod = Literal[
+UpdatePlanLicenseRemoveItemBillingMethodRequestBody = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-UpdatePlanIntervalLicenseRemoveItemEnum2 = Literal[
+UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2 = Literal[
     "one_off",
     "minute",
     "hour",
@@ -2488,7 +2523,7 @@ UpdatePlanIntervalLicenseRemoveItemEnum2 = Literal[
 ]
 
 
-UpdatePlanIntervalLicenseRemoveItemEnum1 = Literal[
+UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1 = Literal[
     "one_off",
     "week",
     "month",
@@ -2498,34 +2533,34 @@ UpdatePlanIntervalLicenseRemoveItemEnum1 = Literal[
 ]
 
 
-UpdatePlanLicenseIntervalUnionTypedDict = TypeAliasType(
-    "UpdatePlanLicenseIntervalUnionTypedDict",
+UpdatePlanLicenseIntervalRequestBodyUnionTypedDict = TypeAliasType(
+    "UpdatePlanLicenseIntervalRequestBodyUnionTypedDict",
     Union[
-        UpdatePlanIntervalLicenseRemoveItemEnum1,
-        UpdatePlanIntervalLicenseRemoveItemEnum2,
+        UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1,
+        UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2,
     ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-UpdatePlanLicenseIntervalUnion = TypeAliasType(
-    "UpdatePlanLicenseIntervalUnion",
+UpdatePlanLicenseIntervalRequestBodyUnion = TypeAliasType(
+    "UpdatePlanLicenseIntervalRequestBodyUnion",
     Union[
-        UpdatePlanIntervalLicenseRemoveItemEnum1,
-        UpdatePlanIntervalLicenseRemoveItemEnum2,
+        UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1,
+        UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2,
     ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-class UpdatePlanLicensePlanItemFilterTypedDict(TypedDict):
+class UpdatePlanLicensePlanItemFilterRequestBodyTypedDict(TypedDict):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: NotRequired[str]
     r"""Match items linked to this feature."""
-    billing_method: NotRequired[UpdatePlanLicenseRemoveItemBillingMethod]
+    billing_method: NotRequired[UpdatePlanLicenseRemoveItemBillingMethodRequestBody]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[UpdatePlanLicenseIntervalUnionTypedDict]
+    interval: NotRequired[UpdatePlanLicenseIntervalRequestBodyUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
@@ -2533,16 +2568,16 @@ class UpdatePlanLicensePlanItemFilterTypedDict(TypedDict):
     r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
-class UpdatePlanLicensePlanItemFilter(BaseModel):
+class UpdatePlanLicensePlanItemFilterRequestBody(BaseModel):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: Optional[str] = None
     r"""Match items linked to this feature."""
 
-    billing_method: Optional[UpdatePlanLicenseRemoveItemBillingMethod] = None
+    billing_method: Optional[UpdatePlanLicenseRemoveItemBillingMethodRequestBody] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[UpdatePlanLicenseIntervalUnion] = None
+    interval: Optional[UpdatePlanLicenseIntervalRequestBodyUnion] = None
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
     interval_count: Optional[int] = None
@@ -2570,18 +2605,18 @@ class UpdatePlanLicensePlanItemFilter(BaseModel):
         return m
 
 
-class UpdatePlanLicenseCustomizeTypedDict(TypedDict):
-    price: NotRequired[Nullable[UpdatePlanLicenseBasePriceTypedDict]]
-    add_items: NotRequired[List[UpdatePlanLicensePlanItemTypedDict]]
-    remove_items: NotRequired[List[UpdatePlanLicensePlanItemFilterTypedDict]]
+class UpdatePlanLicenseCustomizeRequestBodyTypedDict(TypedDict):
+    price: NotRequired[Nullable[UpdatePlanLicenseBasePriceRequestBodyTypedDict]]
+    add_items: NotRequired[List[UpdatePlanLicensePlanItemRequestBodyTypedDict]]
+    remove_items: NotRequired[List[UpdatePlanLicensePlanItemFilterRequestBodyTypedDict]]
 
 
-class UpdatePlanLicenseCustomize(BaseModel):
-    price: OptionalNullable[UpdatePlanLicenseBasePrice] = UNSET
+class UpdatePlanLicenseCustomizeRequestBody(BaseModel):
+    price: OptionalNullable[UpdatePlanLicenseBasePriceRequestBody] = UNSET
 
-    add_items: Optional[List[UpdatePlanLicensePlanItem]] = None
+    add_items: Optional[List[UpdatePlanLicensePlanItemRequestBody]] = None
 
-    remove_items: Optional[List[UpdatePlanLicensePlanItemFilter]] = None
+    remove_items: Optional[List[UpdatePlanLicensePlanItemFilterRequestBody]] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -2609,16 +2644,16 @@ class UpdatePlanLicenseCustomize(BaseModel):
         return m
 
 
-class UpdatePlanLicenseTypedDict(TypedDict):
+class UpdatePlanLicenseRequestTypedDict(TypedDict):
     license_plan_id: str
     version_slug: NotRequired[str]
     included: NotRequired[int]
     prepaid_only: NotRequired[bool]
-    customize: NotRequired[Nullable[UpdatePlanLicenseCustomizeTypedDict]]
+    customize: NotRequired[Nullable[UpdatePlanLicenseCustomizeRequestBodyTypedDict]]
     metadata: NotRequired[Dict[str, Any]]
 
 
-class UpdatePlanLicense(BaseModel):
+class UpdatePlanLicenseRequest(BaseModel):
     license_plan_id: str
 
     version_slug: Optional[str] = None
@@ -2627,7 +2662,7 @@ class UpdatePlanLicense(BaseModel):
 
     prepaid_only: Optional[bool] = None
 
-    customize: OptionalNullable[UpdatePlanLicenseCustomize] = UNSET
+    customize: OptionalNullable[UpdatePlanLicenseCustomizeRequestBody] = UNSET
 
     metadata: Optional[Dict[str, Any]] = None
 
@@ -3600,15 +3635,15 @@ try:
 except NameError:
     pass
 try:
-    UpdatePlanDimensionsLicense3.model_rebuild()
+    UpdatePlanDimensionsLicenseRequestBody3.model_rebuild()
 except NameError:
     pass
 try:
-    UpdatePlanDimensionsLicense1.model_rebuild()
+    UpdatePlanDimensionsLicenseRequestBody1.model_rebuild()
 except NameError:
     pass
 try:
-    UpdatePlanCreditSchemaLicense1.model_rebuild()
+    UpdatePlanCreditSchemaLicenseRequestBody1.model_rebuild()
 except NameError:
     pass
 try:

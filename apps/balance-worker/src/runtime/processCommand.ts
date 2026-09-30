@@ -1,4 +1,8 @@
-import { BALANCE_WORKER_ACTIVATION_WAIT_MS } from "@autumn/env/balanceWorkerConstants";
+import {
+	BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS,
+	BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS,
+	BALANCE_WORKER_ACTIVATION_WAIT_MS,
+} from "@autumn/env/balanceWorkerConstants";
 import type { PartitionProcessor } from "../processor/types/partitionProcessor.js";
 import { PartitionWriterRecoveryRequiredError } from "../processor/writer/writerErrors.js";
 import { assertRuntimeReady } from "./getRuntimeHealth.js";
@@ -15,10 +19,14 @@ export async function processCommand<Decision>({
 	ctx,
 	state,
 	run,
+	budgetMs,
 }: PartitionRuntimeScope & {
 	run: ProcessorRun<Decision>;
+	/** How long the caller will still wait; unset for a caller that did not say. */
+	budgetMs?: number;
 }): Promise<Decision> {
-	if (state.status === "activating") await waitForActivation({ ctx, state });
+	if (state.status === "activating")
+		await waitForActivation({ ctx, state, budgetMs });
 	assertRuntimeReady({ state });
 	try {
 		return await run(ctx.processor);
@@ -36,13 +44,17 @@ export async function processCommand<Decision>({
 	}
 }
 
-/** A request the API resent to a freshly named owner waits for its fence and catch-up, briefly. */
+/** A request the API resent to a freshly named owner waits for its fence and catch-up: for as
+ *  long as the caller said it can wait, less a margin so the answer lands first, or a fixed
+ *  moment when it did not say. Holding for the caller's budget is what lets a handoff to an
+ *  idle successor cost latency rather than a fail-open. */
 async function waitForActivation({
 	ctx,
 	state,
-}: PartitionRuntimeScope): Promise<void> {
-	const waitMs =
-		ctx.config.activationWaitMs ?? BALANCE_WORKER_ACTIVATION_WAIT_MS;
+	budgetMs,
+}: PartitionRuntimeScope & { budgetMs?: number }): Promise<void> {
+	const waitMs = activationWaitMsOf({ ctx, budgetMs });
+	if (waitMs <= 0) return;
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	function scheduleTimeout(resolve: () => void): void {
 		timer = setTimeout(resolve, waitMs);
@@ -59,4 +71,16 @@ async function waitForActivation({
 	} finally {
 		if (timer) clearTimeout(timer);
 	}
+}
+
+function activationWaitMsOf({
+	ctx,
+	budgetMs,
+}: Pick<PartitionRuntimeScope, "ctx"> & { budgetMs?: number }): number {
+	if (budgetMs === undefined || !Number.isFinite(budgetMs))
+		return ctx.config.activationWaitMs ?? BALANCE_WORKER_ACTIVATION_WAIT_MS;
+	return Math.min(
+		Math.max(budgetMs - BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS, 0),
+		BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS,
+	);
 }

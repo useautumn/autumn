@@ -1,4 +1,6 @@
 import {
+	BALANCE_WORKER_CONSUMER_REJOIN_INITIAL_BACKOFF_MS,
+	BALANCE_WORKER_CONSUMER_REJOIN_MAX_BACKOFF_MS,
 	BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS,
 	BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS,
 	BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS,
@@ -6,12 +8,14 @@ import {
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import { createRuntimeDirectory } from "./directory/createRuntimeDirectory.js";
 import { listPartitionHealth } from "./health/partitionHealth.js";
+import { consumerStatusOf } from "./lifecycle/rejoinConsumer.js";
 import {
 	startPartitionService,
 	stopPartitionService,
 } from "./partitionService.js";
 import type { PartitionsState } from "./types/partitionState.js";
 import type {
+	PartitionConsumerStatus,
 	PartitionSuccessor,
 	Partitions,
 	PartitionsConfig,
@@ -62,6 +66,10 @@ export function createPartitions({
 		return successor ? { ...successor } : undefined;
 	}
 
+	function consumer(): PartitionConsumerStatus {
+		return consumerStatusOf({ state });
+	}
+
 	return {
 		start,
 		stop,
@@ -72,6 +80,7 @@ export function createPartitions({
 		findOwnedRuntime,
 		awaitHandoff,
 		findSuccessor,
+		consumer,
 	};
 }
 
@@ -90,6 +99,10 @@ function resolvePartitionConfig(
 			config.handoffClaimTimeoutMs ?? BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS,
 		handoffDrainCapMs:
 			config.handoffDrainCapMs ?? BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS,
+		consumerRejoin: config.consumerRejoin ?? {
+			initialBackoffMs: BALANCE_WORKER_CONSUMER_REJOIN_INITIAL_BACKOFF_MS,
+			maxBackoffMs: BALANCE_WORKER_CONSUMER_REJOIN_MAX_BACKOFF_MS,
+		},
 	};
 	for (const name of [
 		"healthRefreshIntervalMs",
@@ -113,6 +126,7 @@ function createPartitionState(): PartitionsState {
 		retiringEntries: new Map(),
 		handoffSettlements: new Map(),
 		handoffSuccessors: new Map(),
+		consumerRejoin: { attempts: 0, timer: null },
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
 		status: "created",

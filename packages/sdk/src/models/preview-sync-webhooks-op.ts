@@ -50,9 +50,9 @@ export type PreviewSyncWebhooksWebhookRequest = {
    */
   url: string;
   /**
-   * The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+   * The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.
    */
-  events: Array<PreviewSyncWebhooksEvent>;
+  events?: Array<PreviewSyncWebhooksEvent> | undefined;
   /**
    * A note for your own reference.
    */
@@ -65,9 +65,50 @@ export type PreviewSyncWebhooksWebhookRequest = {
 
 export type PreviewSyncWebhooksSyncWebhooksParams = {
   /**
-   * The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+   * The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.
    */
   webhooks: Array<PreviewSyncWebhooksWebhookRequest>;
+  /**
+   * When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.
+   */
+  skipDeletions?: boolean | undefined;
+};
+
+export type ChangeWebhook3 = {
+  /**
+   * The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+   */
+  id: string;
+  /**
+   * The URL Autumn sends events to.
+   */
+  url: string;
+  /**
+   * A note for your own reference.
+   */
+  description: string | null;
+  /**
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
+   */
+  events: Array<string>;
+  /**
+   * When true, no events are sent to the webhook.
+   */
+  disabled: boolean;
+  /**
+   * When the webhook was created, ms since epoch.
+   */
+  createdAt: number;
+  /**
+   * When the webhook was last changed, ms since epoch.
+   */
+  updatedAt: number;
+};
+
+export type Change5 = {
+  action: "delete";
+  id: string;
+  webhook: ChangeWebhook3;
 };
 
 export type ChangeWebhook2 = {
@@ -84,7 +125,7 @@ export type ChangeWebhook2 = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -121,7 +162,7 @@ export type Before2 = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -152,7 +193,7 @@ export type After2 = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -190,7 +231,7 @@ export type Before1 = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -221,7 +262,7 @@ export type After1 = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -259,7 +300,7 @@ export type ChangeWebhook1 = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -287,6 +328,7 @@ export type ChangeUnion =
   | Change2
   | Change3
   | Change4
+  | Change5
   | discriminatedUnionTypes.Unknown<"action">;
 
 export type PreviewSyncWebhooksError = {
@@ -299,13 +341,14 @@ export type PreviewSyncWebhooksError = {
  */
 export type PreviewSyncWebhooksResponse = {
   /**
-   * What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone.
+   * What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. `delete` webhooks aren't listed and `skip_deletions` is false, so sync deletes them.
    */
   changes: Array<
     | Change1
     | Change2
     | Change3
     | Change4
+    | Change5
     | discriminatedUnionTypes.Unknown<"action">
   >;
   /**
@@ -323,7 +366,7 @@ export const PreviewSyncWebhooksEvent$outboundSchema: z.ZodMiniEnum<
 export type PreviewSyncWebhooksWebhookRequest$Outbound = {
   id: string;
   url: string;
-  events: Array<string>;
+  events?: Array<string> | undefined;
   description?: string | undefined;
   disabled?: boolean | undefined;
 };
@@ -335,7 +378,7 @@ export const PreviewSyncWebhooksWebhookRequest$outboundSchema: z.ZodMiniType<
 > = z.object({
   id: z.string(),
   url: z.string(),
-  events: z.array(PreviewSyncWebhooksEvent$outboundSchema),
+  events: z.optional(z.array(PreviewSyncWebhooksEvent$outboundSchema)),
   description: z.optional(z.string()),
   disabled: z.optional(z.boolean()),
 });
@@ -353,6 +396,7 @@ export function previewSyncWebhooksWebhookRequestToJSON(
 /** @internal */
 export type PreviewSyncWebhooksSyncWebhooksParams$Outbound = {
   webhooks: Array<PreviewSyncWebhooksWebhookRequest$Outbound>;
+  skip_deletions: boolean;
 };
 
 /** @internal */
@@ -360,11 +404,19 @@ export const PreviewSyncWebhooksSyncWebhooksParams$outboundSchema:
   z.ZodMiniType<
     PreviewSyncWebhooksSyncWebhooksParams$Outbound,
     PreviewSyncWebhooksSyncWebhooksParams
-  > = z.object({
-    webhooks: z.array(
-      z.lazy(() => PreviewSyncWebhooksWebhookRequest$outboundSchema),
-    ),
-  });
+  > = z.pipe(
+    z.object({
+      webhooks: z.array(
+        z.lazy(() => PreviewSyncWebhooksWebhookRequest$outboundSchema),
+      ),
+      skipDeletions: z._default(z.boolean(), true),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        skipDeletions: "skip_deletions",
+      });
+    }),
+  );
 
 export function previewSyncWebhooksSyncWebhooksParamsToJSON(
   previewSyncWebhooksSyncWebhooksParams: PreviewSyncWebhooksSyncWebhooksParams,
@@ -373,6 +425,55 @@ export function previewSyncWebhooksSyncWebhooksParamsToJSON(
     PreviewSyncWebhooksSyncWebhooksParams$outboundSchema.parse(
       previewSyncWebhooksSyncWebhooksParams,
     ),
+  );
+}
+
+/** @internal */
+export const ChangeWebhook3$inboundSchema: z.ZodMiniType<
+  ChangeWebhook3,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    url: types.string(),
+    description: types.nullable(types.string()),
+    events: z.array(types.string()),
+    disabled: types.boolean(),
+    created_at: types.number(),
+    updated_at: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "created_at": "createdAt",
+      "updated_at": "updatedAt",
+    });
+  }),
+);
+
+export function changeWebhook3FromJSON(
+  jsonString: string,
+): SafeParseResult<ChangeWebhook3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ChangeWebhook3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ChangeWebhook3' from JSON`,
+  );
+}
+
+/** @internal */
+export const Change5$inboundSchema: z.ZodMiniType<Change5, unknown> = z.object({
+  action: types.literal("delete"),
+  id: types.string(),
+  webhook: z.lazy(() => ChangeWebhook3$inboundSchema),
+});
+
+export function change5FromJSON(
+  jsonString: string,
+): SafeParseResult<Change5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Change5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Change5' from JSON`,
   );
 }
 
@@ -633,6 +734,7 @@ export const ChangeUnion$inboundSchema: z.ZodMiniType<ChangeUnion, unknown> =
     update: z.lazy(() => Change2$inboundSchema),
     adopt: z.lazy(() => Change3$inboundSchema),
     unmanaged: z.lazy(() => Change4$inboundSchema),
+    delete: z.lazy(() => Change5$inboundSchema),
   });
 
 export function changeUnionFromJSON(
@@ -674,6 +776,7 @@ export const PreviewSyncWebhooksResponse$inboundSchema: z.ZodMiniType<
     update: z.lazy(() => Change2$inboundSchema),
     adopt: z.lazy(() => Change3$inboundSchema),
     unmanaged: z.lazy(() => Change4$inboundSchema),
+    delete: z.lazy(() => Change5$inboundSchema),
   })),
   errors: z.array(z.lazy(() => PreviewSyncWebhooksError$inboundSchema)),
 });

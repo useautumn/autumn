@@ -1,4 +1,4 @@
-import { Skeleton } from "@autumn/ui";
+import { Alert, Skeleton } from "@autumn/ui";
 import {
 	MinusCircleIcon,
 	PauseCircleIcon,
@@ -11,10 +11,10 @@ import { useAttachFormContext } from "../context/AttachFormProvider";
 function AttachUpdatesSkeleton() {
 	return (
 		<SheetSection withSeparator={false}>
-			<div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-				<Skeleton className="h-4 w-4 rounded-full shrink-0" />
+			<Alert variant="note" className="flex items-center gap-2.5">
+				<Skeleton className="size-4 shrink-0 rounded-full" />
 				<Skeleton className="h-4 w-48" />
-			</div>
+			</Alert>
 		</SheetSection>
 	);
 }

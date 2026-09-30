@@ -47,7 +47,7 @@ export function createMeteringConsumer({
 		},
 		config,
 	});
-	const { start, stop, withdrawPartition, resumePartition } = consumer;
+	const { start, stop, restart, withdrawPartition, resumePartition } = consumer;
 
 	function createReplay({
 		partition,
@@ -97,5 +97,12 @@ export function createMeteringConsumer({
 		return { ...replay, startAndCatchUp, stop };
 	}
 
-	return { start, stop, createReplay, withdrawPartition, resumePartition };
+	return {
+		start,
+		stop,
+		restart,
+		createReplay,
+		withdrawPartition,
+		resumePartition,
+	};
 }

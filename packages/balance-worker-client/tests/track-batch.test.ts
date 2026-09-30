@@ -10,6 +10,7 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
+import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
 
 const baseCommand: TrackCommand = {
 	schemaVersion: 1,
@@ -64,6 +65,16 @@ const notOwner: HttpResponse = {
 	body: { error: { code: "NOT_OWNER", message: "Stale route" } },
 };
 
+const notReady: HttpResponse = {
+	status: 503,
+	body: {
+		error: {
+			code: "NOT_READY",
+			message: "Owned partition runtime is not ready: activating",
+		},
+	},
+};
+
 const initialOwner: PartitionOwner = {
 	partition: 0,
 	routeEpoch: "1",
@@ -76,6 +87,7 @@ const replacement: PartitionOwner = {
 };
 
 type PendingRequest = {
+	budget?: string;
 	url: string;
 	body: { route: unknown; commands: TrackCommand[] };
 	signal: AbortSignal;
@@ -116,6 +128,7 @@ function createFixture({
 		requests.push({
 			url: request.url,
 			body: structuredClone(request.body) as PendingRequest["body"],
+			budget: request.headers?.[WORKER_REQUEST_BUDGET_HEADER],
 			signal: request.signal,
 			respond: response.resolve,
 			fail: response.reject,
@@ -316,15 +329,16 @@ test("a batch-level worker error rejects every item without rerouting", async ()
 	const fixture = createFixture();
 	const pending = fixture.client.track({ command: commandFor("a") });
 	fixture.requests[0].respond({
-		status: 503,
-		body: { error: { code: "NOT_READY", message: "Draining" } },
+		status: 429,
+		body: { error: { code: "OVERLOADED", message: "Shedding" } },
 	});
 	await expect(pending).rejects.toMatchObject({
 		code: "WORKER_ERROR",
-		workerCode: "NOT_READY",
+		workerCode: "OVERLOADED",
 		outcome: "not_submitted",
 	});
 	expect(fixture.refreshes()).toBe(0);
+	expect(fixture.requests).toHaveLength(1);
 });
 
 test("a queued item past its deadline rejects not_submitted and is never sent", async () => {
@@ -441,6 +455,107 @@ test("a batch told where the partition went is re-sent there without a refresh",
 	expect(await pending).toEqual(replyFor("a"));
 });
 
+test("a batch told where the partition went retries a successor that is not ready yet", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	fixture.requests[0].respond({
+		status: 409,
+		body: {
+			error: {
+				code: "NOT_OWNER",
+				message: "Stale route",
+				successor: replacement,
+			},
+		},
+	});
+	await fixture.sent(2);
+	fixture.requests[1].respond(notReady);
+	await fixture.sent(3);
+	expect(fixture.refreshes()).toBe(0);
+	expect(fixture.requests[2].url).toBe("http://worker-b:8080/v1/track-batch");
+	expect(fixture.requests[2].body).toEqual({
+		route: { partition: 0, routeEpoch: "2" },
+		commands: [commandFor("a")],
+	});
+	fixture.requests[2].respond(okResults(["a"]));
+	expect(await pending).toEqual(replyFor("a"));
+});
+
+test("a batch whose owner stays not ready rejects not_submitted as NOT_READY once the retries are spent", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	for (let sent = 1; sent <= 4; sent += 1) {
+		await fixture.sent(sent);
+		fixture.requests[sent - 1].respond(notReady);
+	}
+	await expect(pending).rejects.toMatchObject({
+		code: "WORKER_ERROR",
+		workerCode: "NOT_READY",
+		outcome: "not_submitted",
+		routing: {
+			sends: 4,
+			refreshes: 0,
+			followedHint: false,
+			notReadyAnswers: 4,
+		},
+	});
+	expect(fixture.refreshes()).toBe(0);
+	expect(fixture.requests).toHaveLength(4);
+});
+
+test("a batch that fails after following a successor hint records the hint on every item's error", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	fixture.requests[0].respond({
+		status: 409,
+		body: {
+			error: {
+				code: "NOT_OWNER",
+				message: "Stale route",
+				successor: replacement,
+			},
+		},
+	});
+	await fixture.sent(2);
+	fixture.requests[1].fail(new Error("socket reset"));
+	await expect(pending).rejects.toMatchObject({
+		code: "TRANSPORT",
+		outcome: "unknown",
+		routing: {
+			sends: 2,
+			refreshes: 0,
+			followedHint: true,
+			notReadyAnswers: 0,
+		},
+	});
+});
+
+test("a batch tells the worker how long its most impatient item will wait", async () => {
+	const fixture = createFixture({ timeoutMs: 1000 });
+	const pending = fixture.client.track({ command: commandFor("a") });
+	await fixture.sent(1);
+	const budget = fixture.requests[0].budget ?? "";
+	expect(budget).toMatch(/^\d+$/);
+	expect(Number(budget)).toBeGreaterThan(900);
+	expect(Number(budget)).toBeLessThanOrEqual(1000);
+	fixture.requests[0].respond(okResults(["a"]));
+	expect(await pending).toEqual(replyFor("a"));
+});
+
+test("a batch answered NOT_READY with less than the retry budget left is not resent", async () => {
+	const fixture = createFixture({ timeoutMs: 150 });
+	const pending = fixture.client.track({ command: commandFor("a") });
+	await fixture.sent(1);
+	fixture.requests[0].respond(notReady);
+	await expect(pending).rejects.toMatchObject({
+		code: "WORKER_ERROR",
+		workerCode: "NOT_READY",
+		outcome: "not_submitted",
+		routing: { sends: 1, notReadyAnswers: 1 },
+	});
+	expect(fixture.requests).toHaveLength(1);
+});
+
 test("a route still stale after one refresh rejects not_submitted", async () => {
 	const fixture = createFixture();
 	const pending = fixture.client.track({ command: commandFor("a") });
@@ -450,6 +565,12 @@ test("a route still stale after one refresh rejects not_submitted", async () => 
 	await expect(pending).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 		outcome: "not_submitted",
+		routing: {
+			sends: 2,
+			refreshes: 1,
+			followedHint: false,
+			notReadyAnswers: 0,
+		},
 	});
 	expect(fixture.refreshes()).toBe(1);
 	expect(fixture.requests).toHaveLength(2);

@@ -130,9 +130,31 @@ export function isNotOwnerResponse({
 export type NotOwnerAnswer = {
 	/** Where the old owner says the partition went; absent while its handoff is unnamed or released. */
 	successor?: PartitionOwner;
+	/** The route was right but its owner is still activating the partition: the same route is tried again. */
+	notReady?: true;
 };
 
-/** Null for a success; the NOT_OWNER answer with any successor it names; throws for every other worker error. */
+/** How many attempts in a row may end at a NOT_READY owner before the request gives up on it. */
+export const MAX_NOT_READY_RETRIES = 3;
+
+/** A NOT_READY is retried only with this much budget left: the owner already held the
+ *  request for the budget it was told, so what remains is the margin it left, and a
+ *  resend could only run the deadline out mid-flight. */
+export const MIN_NOT_READY_RETRY_BUDGET_MS = 200;
+
+/** True when a request still has enough of its budget to be worth resending to a not-ready owner. */
+export function canRetryNotReady({
+	deadline,
+	now = performance.now(),
+}: {
+	deadline: RequestDeadline;
+	now?: number;
+}): boolean {
+	return deadline.expiresAt - now >= MIN_NOT_READY_RETRY_BUDGET_MS;
+}
+
+/** Null for a success; the NOT_OWNER answer with any successor it names, or a NOT_READY
+ *  answer from an owner still activating; throws for every other worker error. */
 export function readNotOwnerResponse({
 	response,
 }: {
@@ -146,12 +168,26 @@ export function readNotOwnerResponse({
 		const successor = readSuccessor({ input: error.successor });
 		return successor ? { successor } : {};
 	}
+	// A successor named a moment ago is still fencing and catching up. It held the
+	// request for its activation wait and gave up first; the activation is usually a
+	// second or so, so the request tries the same owner again while its budget lasts.
+	if (error.code === "NOT_READY") return { notReady: true };
 	throw new BalanceWorkerClientError({
 		code: "WORKER_ERROR",
 		outcome: error.code === "INTERNAL" ? "unknown" : "not_submitted",
 		message: error.message,
 		workerCode: error.code,
 		workerReason: error.reason,
+	});
+}
+
+/** The owner was still activating on every retry the request had; the same error a single NOT_READY raised before retries existed. */
+export function ownerStillNotReadyError(): BalanceWorkerClientError {
+	return new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: "not_submitted",
+		message: "Worker is still activating the partition",
+		workerCode: "NOT_READY",
 	});
 }
 
@@ -172,7 +208,9 @@ function readSuccessor({
 	return { partition: partition as number, routeEpoch, endpoint };
 }
 
-/** Keeps a named successor for the next attempt, or forgets a hint the named endpoint has now declined. */
+/** True when the next attempt should go to the route already in hand: a named successor is
+ *  kept for it, and an owner still activating is simply tried again. A plain NOT_OWNER
+ *  forgets any hint the answering endpoint carried, so the next attempt refreshes. */
 export function followNotOwnerAnswer({
 	ctx,
 	resolved,
@@ -182,6 +220,7 @@ export function followNotOwnerAnswer({
 	resolved: ResolvedCommandRoute;
 	answer: NotOwnerAnswer;
 }): boolean {
+	if (answer.notReady) return true;
 	const { partition } = resolved.route;
 	const { successor } = answer;
 	if (

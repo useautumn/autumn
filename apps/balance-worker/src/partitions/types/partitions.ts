@@ -1,3 +1,4 @@
+import type { AutumnLogger } from "@autumn/logging";
 import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 
@@ -32,12 +33,20 @@ export type PartitionOwnershipPublication = {
 	claim(params?: { endpoint: string }): Promise<{ routeEpoch: string }>;
 	release(): Promise<void>;
 	announceReady(): Promise<void>;
+	/** Tells the owner this worker is preparing the partition, so it keeps serving instead of releasing at its timeout. */
+	announcePreparing(): Promise<void>;
 	/** Tells the successor this worker has withdrawn and is draining, so it holds its claim timeout. */
 	announceDraining(params: { successor: string }): Promise<void>;
 	/** Resolves with the successor's endpoint on its `ready`, rejects with the signal's reason. */
 	awaitReady(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
 	/** A drain the current owner began before this worker started listening, or null. */
 	readActiveDrain(): { endpoint: string } | null;
+	/** Another worker's unfinished preparation of this partition, announced before this worker started listening, or null. */
+	readActivePreparation(): { endpoint: string } | null;
+	/** Resolves with the preparing worker's endpoint on its `preparing`, rejects with the signal's reason. */
+	awaitPreparing(params: {
+		signal: AbortSignal;
+	}): Promise<{ endpoint: string }>;
 	/** Resolves with the predecessor's endpoint on its `draining`, rejects with the signal's reason. */
 	awaitDraining(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
 	/** Resolves when a `claimed` names another worker, rejects with the signal's reason. */
@@ -81,6 +90,8 @@ export type SubscribePartitionChanges = (
 export type PartitionConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	/** Joins the group again after kafkajs gave it up; absent, such a crash stops the service. */
+	restart?(): Promise<void>;
 	pause(position: { topic: string; partitions: number[] }): void;
 	resume(position: {
 		topic: string;
@@ -143,7 +154,20 @@ export type PartitionsDependencies = {
 	 *  stopped consumer, so without someone acting on this the task stays alive
 	 *  and idle and the scheduler never learns to replace it. Left optional so a
 	 *  test can observe the stop without taking the runner down with it. */
-	onServiceStopped?(): void;
+	onServiceStopped?(reason: PartitionServiceStopReason): void;
+	logger?: Pick<AutumnLogger, "info" | "warn">;
+};
+
+/** Why the service stopped for good: the failure, and whether it was one partition's or the shared consumer's. */
+export type PartitionServiceStopReason = {
+	cause: unknown;
+	scope: "consumer" | "partition" | "retirement";
+};
+
+export type PartitionConsumerStatus = {
+	/** Rejoining: the broker refused this worker and it is waiting to try the group again. */
+	status: "joined" | "rejoining";
+	rejoinAttempts: number;
 };
 
 export type PartitionsConfig = {
@@ -158,6 +182,8 @@ export type PartitionsConfig = {
 	handoffClaimTimeoutMs?: number;
 	/** How long it keeps waiting after the predecessor announced `draining`. */
 	handoffDrainCapMs?: number;
+	/** The pause before joining the group again after the broker refused this worker, doubling up to the cap. */
+	consumerRejoin?: { initialBackoffMs: number; maxBackoffMs: number };
 };
 
 export interface ResolvedPartitionsConfig extends PartitionsConfig {
@@ -165,6 +191,7 @@ export interface ResolvedPartitionsConfig extends PartitionsConfig {
 	handoffReadyTimeoutMs: number;
 	handoffClaimTimeoutMs: number;
 	handoffDrainCapMs: number;
+	consumerRejoin: { initialBackoffMs: number; maxBackoffMs: number };
 }
 
 export type Partitions = {
@@ -182,6 +209,8 @@ export type Partitions = {
 	findOwnedRuntime(target: PartitionTarget): PartitionRuntimePort | undefined;
 	/** The route this worker claimed for a partition's successor, until the partition is admitted here again. */
 	findSuccessor(target: PartitionTarget): PartitionSuccessor | undefined;
+	/** Whether the group has this worker, or it is waiting to rejoin after a refusal. */
+	consumer(): PartitionConsumerStatus;
 };
 
 export type PartitionTarget = { partition: number };

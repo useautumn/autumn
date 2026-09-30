@@ -1494,6 +1494,14 @@ class CreateInvoiceAttachDiscount(BaseModel):
         return m
 
 
+CreateInvoiceIssueMethod = Literal[
+    "draft",
+    "finalize",
+    "send",
+]
+r"""draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send."""
+
+
 class CreateInvoiceParamsTypedDict(TypedDict):
     customer_id: str
     r"""The customer to invoice."""
@@ -1518,6 +1526,8 @@ class CreateInvoiceParamsTypedDict(TypedDict):
     r"""End of the period being invoiced, in milliseconds."""
     preview: NotRequired[bool]
     r"""If true, returns the calculated lines and totals without creating an invoice."""
+    issue_method: NotRequired[CreateInvoiceIssueMethod]
+    r"""draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send."""
 
 
 class CreateInvoiceParams(BaseModel):
@@ -1556,6 +1566,9 @@ class CreateInvoiceParams(BaseModel):
     preview: Optional[bool] = None
     r"""If true, returns the calculated lines and totals without creating an invoice."""
 
+    issue_method: Optional[CreateInvoiceIssueMethod] = None
+    r"""draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1571,6 +1584,7 @@ class CreateInvoiceParams(BaseModel):
                 "period_start",
                 "period_end",
                 "preview",
+                "issue_method",
             ]
         )
         serialized = handler(self)

@@ -820,14 +820,15 @@ export type PreviewMultiAttachAttachDiscount = {
 };
 
 /**
- * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+ * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
  */
 export const PreviewMultiAttachBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
+  BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+ * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
  */
 export type PreviewMultiAttachBillingBehavior = ClosedEnum<
   typeof PreviewMultiAttachBillingBehavior
@@ -1105,7 +1106,7 @@ export type PreviewMultiAttachParams = {
    */
   discounts?: Array<PreviewMultiAttachAttachDiscount> | undefined;
   /**
-   * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+   * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
    */
   billingBehavior?: PreviewMultiAttachBillingBehavior | undefined;
   /**

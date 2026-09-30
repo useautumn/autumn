@@ -11,9 +11,27 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import {
-  PhaseStartAddItemPlanItem,
-  PhaseStartAddItemPlanItem$Outbound,
-  PhaseStartAddItemPlanItem$outboundSchema,
+  PhaseStartAddItemExpiry,
+  PhaseStartAddItemExpiry$Outbound,
+  PhaseStartAddItemExpiry$outboundSchema,
+  PhaseStartAddItemFeatureOverride,
+  PhaseStartAddItemFeatureOverride$Outbound,
+  PhaseStartAddItemFeatureOverride$outboundSchema,
+  PhaseStartAddItemPrice,
+  PhaseStartAddItemPrice$Outbound,
+  PhaseStartAddItemPrice$outboundSchema,
+  PhaseStartAddItemProration,
+  PhaseStartAddItemProration$Outbound,
+  PhaseStartAddItemProration$outboundSchema,
+  PhaseStartAddItemReset,
+  PhaseStartAddItemReset$Outbound,
+  PhaseStartAddItemReset$outboundSchema,
+  PhaseStartAddItemRollover,
+  PhaseStartAddItemRollover$Outbound,
+  PhaseStartAddItemRollover$outboundSchema,
+  PhaseStartAddItemThresholdBilling,
+  PhaseStartAddItemThresholdBilling$Outbound,
+  PhaseStartAddItemThresholdBilling$outboundSchema,
   PhaseStartBasePrice,
   PhaseStartBasePrice$Outbound,
   PhaseStartBasePrice$outboundSchema,
@@ -23,8 +41,9 @@ import {
   PhaseStartItemPlanItem,
   PhaseStartItemPlanItem$Outbound,
   PhaseStartItemPlanItem$outboundSchema,
-  PhaseStartRemoveItemBillingMethod,
-  PhaseStartRemoveItemBillingMethod$outboundSchema,
+  PhaseStartLicenseQuantity,
+  PhaseStartLicenseQuantity$Outbound,
+  PhaseStartLicenseQuantity$outboundSchema,
   StartingAfter2,
   StartingAfter2$Outbound,
   StartingAfter2$outboundSchema,
@@ -34,7 +53,7 @@ import {
   UnscheduledPlan,
   UnscheduledPlan$Outbound,
   UnscheduledPlan$outboundSchema,
-} from "./phase-start-remove-item-billing-method.js";
+} from "./phase-start-add-item-feature-override.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 import {
   CreateScheduleAttachDiscount,
@@ -50,7 +69,71 @@ import {
   CreateScheduleInvoiceMode$outboundSchema,
   CreateScheduleRedirectMode,
   CreateScheduleRedirectMode$outboundSchema,
-} from "./unscheduled-plan-upsert-license-expiry-duration-type.js";
+} from "./unscheduled-plan-upsert-license-proration.js";
+
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type PhaseStartAddItemPlanItem = {
+  /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: PhaseStartAddItemThresholdBilling | null | undefined;
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: PhaseStartAddItemReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: PhaseStartAddItemPrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: PhaseStartAddItemProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: PhaseStartAddItemRollover | undefined;
+  /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: PhaseStartAddItemExpiry | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: PhaseStartAddItemFeatureOverride | undefined;
+};
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const PhaseStartRemoveItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type PhaseStartRemoveItemBillingMethod = ClosedEnum<
+  typeof PhaseStartRemoveItemBillingMethod
+>;
 
 export const PhaseStartIntervalRemoveItemEnum2 = {
   OneOff: "one_off",
@@ -1166,6 +1249,10 @@ export type CreateSchedulePlan2 = {
    */
   featureQuantities?: Array<PhaseStartFeatureQuantity> | undefined;
   /**
+   * Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.
+   */
+  licenseQuantities?: Array<PhaseStartLicenseQuantity> | undefined;
+  /**
    * Optional explicit plan version to schedule.
    */
   version?: number | undefined;
@@ -1251,7 +1338,7 @@ export type CreateScheduleParams = {
    */
   redirectMode?: CreateScheduleRedirectMode | undefined;
   /**
-   * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+   * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
    */
   billingBehavior?: CreateScheduleBillingBehavior | undefined;
   /**
@@ -1392,6 +1479,68 @@ export type CreateScheduleResponse = {
   paymentUrl: string | null;
   requiredAction?: CreateScheduleRequiredAction | undefined;
 };
+
+/** @internal */
+export type PhaseStartAddItemPlanItem$Outbound = {
+  threshold_billing?:
+    | PhaseStartAddItemThresholdBilling$Outbound
+    | null
+    | undefined;
+  feature_id: string;
+  included?: number | undefined;
+  unlimited?: boolean | undefined;
+  pooled: boolean;
+  reset?: PhaseStartAddItemReset$Outbound | undefined;
+  price?: PhaseStartAddItemPrice$Outbound | undefined;
+  proration?: PhaseStartAddItemProration$Outbound | undefined;
+  rollover?: PhaseStartAddItemRollover$Outbound | undefined;
+  expiry?: PhaseStartAddItemExpiry$Outbound | undefined;
+  feature_override?: PhaseStartAddItemFeatureOverride$Outbound | undefined;
+};
+
+/** @internal */
+export const PhaseStartAddItemPlanItem$outboundSchema: z.ZodMiniType<
+  PhaseStartAddItemPlanItem$Outbound,
+  PhaseStartAddItemPlanItem
+> = z.pipe(
+  z.object({
+    thresholdBilling: z.optional(
+      z.nullable(PhaseStartAddItemThresholdBilling$outboundSchema),
+    ),
+    featureId: z.string(),
+    included: z.optional(z.number()),
+    unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
+    reset: z.optional(PhaseStartAddItemReset$outboundSchema),
+    price: z.optional(PhaseStartAddItemPrice$outboundSchema),
+    proration: z.optional(PhaseStartAddItemProration$outboundSchema),
+    rollover: z.optional(PhaseStartAddItemRollover$outboundSchema),
+    expiry: z.optional(PhaseStartAddItemExpiry$outboundSchema),
+    featureOverride: z.optional(
+      PhaseStartAddItemFeatureOverride$outboundSchema,
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      thresholdBilling: "threshold_billing",
+      featureId: "feature_id",
+      featureOverride: "feature_override",
+    });
+  }),
+);
+
+export function phaseStartAddItemPlanItemToJSON(
+  phaseStartAddItemPlanItem: PhaseStartAddItemPlanItem,
+): string {
+  return JSON.stringify(
+    PhaseStartAddItemPlanItem$outboundSchema.parse(phaseStartAddItemPlanItem),
+  );
+}
+
+/** @internal */
+export const PhaseStartRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartRemoveItemBillingMethod
+> = z.enum(PhaseStartRemoveItemBillingMethod);
 
 /** @internal */
 export const PhaseStartIntervalRemoveItemEnum2$outboundSchema: z.ZodMiniEnum<
@@ -3440,7 +3589,9 @@ export const PhaseStartCustomize$outboundSchema: z.ZodMiniType<
   z.object({
     price: z.optional(z.nullable(PhaseStartBasePrice$outboundSchema)),
     items: z.optional(z.array(PhaseStartItemPlanItem$outboundSchema)),
-    addItems: z.optional(z.array(PhaseStartAddItemPlanItem$outboundSchema)),
+    addItems: z.optional(
+      z.array(z.lazy(() => PhaseStartAddItemPlanItem$outboundSchema)),
+    ),
     removeItems: z.optional(
       z.array(z.lazy(() => PhaseStartPlanItemFilter$outboundSchema)),
     ),
@@ -3478,6 +3629,7 @@ export type CreateSchedulePlan2$Outbound = {
   plan_id: string;
   entity_id?: string | null | undefined;
   feature_quantities?: Array<PhaseStartFeatureQuantity$Outbound> | undefined;
+  license_quantities?: Array<PhaseStartLicenseQuantity$Outbound> | undefined;
   version?: number | undefined;
   customize?: PhaseStartCustomize$Outbound | undefined;
   subscription_id?: string | undefined;
@@ -3494,6 +3646,9 @@ export const CreateSchedulePlan2$outboundSchema: z.ZodMiniType<
     featureQuantities: z.optional(
       z.array(PhaseStartFeatureQuantity$outboundSchema),
     ),
+    licenseQuantities: z.optional(
+      z.array(PhaseStartLicenseQuantity$outboundSchema),
+    ),
     version: z.optional(z.number()),
     customize: z.optional(z.lazy(() => PhaseStartCustomize$outboundSchema)),
     subscriptionId: z.optional(z.string()),
@@ -3503,6 +3658,7 @@ export const CreateSchedulePlan2$outboundSchema: z.ZodMiniType<
       planId: "plan_id",
       entityId: "entity_id",
       featureQuantities: "feature_quantities",
+      licenseQuantities: "license_quantities",
       subscriptionId: "subscription_id",
     });
   }),

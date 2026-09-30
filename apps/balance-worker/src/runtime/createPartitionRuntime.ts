@@ -18,6 +18,7 @@ import type {
 	PartitionRuntimeConfig,
 	PartitionRuntimeContext,
 	PartitionRuntimeDependencies,
+	ProcessOptions,
 	RuntimeUnavailableListener,
 } from "./types/partitionRuntime.js";
 import type {
@@ -87,8 +88,11 @@ export function createPartitionRuntime({
 		return waitForRuntimeQuiescence({ ctx, state });
 	}
 
-	function process<Decision>(run: ProcessorRun<Decision>): Promise<Decision> {
-		return processCommand({ ctx, state, run });
+	function process<Decision>(
+		run: ProcessorRun<Decision>,
+		options?: ProcessOptions,
+	): Promise<Decision> {
+		return processCommand({ ctx, state, run, budgetMs: options?.budgetMs });
 	}
 
 	function getStatus(): PartitionRuntimeStatus {

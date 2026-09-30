@@ -1173,7 +1173,7 @@ export type GetPlanVariantDetailsAdditionalCurrency = {
 /**
  * Base price configuration for a plan.
  */
-export type GetPlanBasePrice = {
+export type GetPlanVariantDetailsBasePrice = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
    */
@@ -1201,7 +1201,7 @@ export type GetPlanVariantDetailsThresholdBilling = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const GetPlanAddItemResetInterval = {
+export const GetPlanVariantDetailsResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1215,8 +1215,8 @@ export const GetPlanAddItemResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type GetPlanAddItemResetInterval = OpenEnum<
-  typeof GetPlanAddItemResetInterval
+export type GetPlanVariantDetailsResetInterval = OpenEnum<
+  typeof GetPlanVariantDetailsResetInterval
 >;
 
 /**
@@ -1226,14 +1226,14 @@ export type GetPlanVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: GetPlanAddItemResetInterval;
+  interval: GetPlanVariantDetailsResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount: number;
 };
 
-export type GetPlanAddItemAdditionalCurrency = {
+export type GetPlanVariantDetailsAddItemAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -1281,7 +1281,7 @@ export type GetPlanVariantDetailsTierBehavior = OpenEnum<
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const GetPlanAddItemPriceInterval = {
+export const GetPlanVariantDetailsAddItemPriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1292,22 +1292,22 @@ export const GetPlanAddItemPriceInterval = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type GetPlanAddItemPriceInterval = OpenEnum<
-  typeof GetPlanAddItemPriceInterval
+export type GetPlanVariantDetailsAddItemPriceInterval = OpenEnum<
+  typeof GetPlanVariantDetailsAddItemPriceInterval
 >;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const GetPlanAddItemBillingMethod = {
+export const GetPlanVariantDetailsAddItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type GetPlanAddItemBillingMethod = OpenEnum<
-  typeof GetPlanAddItemBillingMethod
+export type GetPlanVariantDetailsAddItemBillingMethod = OpenEnum<
+  typeof GetPlanVariantDetailsAddItemBillingMethod
 >;
 
 /**
@@ -1321,7 +1321,9 @@ export type GetPlanVariantDetailsPrice = {
   /**
    * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
    */
-  additionalCurrencies?: Array<GetPlanAddItemAdditionalCurrency> | undefined;
+  additionalCurrencies?:
+    | Array<GetPlanVariantDetailsAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -1330,7 +1332,7 @@ export type GetPlanVariantDetailsPrice = {
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: GetPlanAddItemPriceInterval;
+  interval: GetPlanVariantDetailsAddItemPriceInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -1342,7 +1344,7 @@ export type GetPlanVariantDetailsPrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: GetPlanAddItemBillingMethod;
+  billingMethod: GetPlanVariantDetailsAddItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -1352,7 +1354,7 @@ export type GetPlanVariantDetailsPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const GetPlanOnIncrease = {
+export const GetPlanVariantDetailsOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1361,12 +1363,14 @@ export const GetPlanOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type GetPlanOnIncrease = OpenEnum<typeof GetPlanOnIncrease>;
+export type GetPlanVariantDetailsOnIncrease = OpenEnum<
+  typeof GetPlanVariantDetailsOnIncrease
+>;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const GetPlanOnDecrease = {
+export const GetPlanVariantDetailsOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1376,20 +1380,22 @@ export const GetPlanOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type GetPlanOnDecrease = OpenEnum<typeof GetPlanOnDecrease>;
+export type GetPlanVariantDetailsOnDecrease = OpenEnum<
+  typeof GetPlanVariantDetailsOnDecrease
+>;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type GetPlanProration = {
+export type GetPlanVariantDetailsProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: GetPlanOnIncrease;
+  onIncrease: GetPlanVariantDetailsOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: GetPlanOnDecrease;
+  onDecrease: GetPlanVariantDetailsOnDecrease;
 };
 
 /**
@@ -1726,7 +1732,7 @@ export type GetPlanVariantDetailsFeatureOverride = {
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type GetPlanPlanItem = {
+export type GetPlanVariantDetailsPlanItem = {
   /**
    * Bills this many feature units when outstanding overage reaches it.
    */
@@ -1758,7 +1764,7 @@ export type GetPlanPlanItem = {
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: GetPlanProration | undefined;
+  proration?: GetPlanVariantDetailsProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
@@ -1776,18 +1782,18 @@ export type GetPlanPlanItem = {
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export const GetPlanRemoveItemBillingMethod = {
+export const GetPlanVariantDetailsRemoveItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export type GetPlanRemoveItemBillingMethod = OpenEnum<
-  typeof GetPlanRemoveItemBillingMethod
+export type GetPlanVariantDetailsRemoveItemBillingMethod = OpenEnum<
+  typeof GetPlanVariantDetailsRemoveItemBillingMethod
 >;
 
-export const GetPlanIntervalRemoveItemEnum2 = {
+export const GetPlanIntervalVariantDetailsRemoveItemEnum2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1798,11 +1804,11 @@ export const GetPlanIntervalRemoveItemEnum2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type GetPlanIntervalRemoveItemEnum2 = OpenEnum<
-  typeof GetPlanIntervalRemoveItemEnum2
+export type GetPlanIntervalVariantDetailsRemoveItemEnum2 = OpenEnum<
+  typeof GetPlanIntervalVariantDetailsRemoveItemEnum2
 >;
 
-export const GetPlanIntervalRemoveItemEnum1 = {
+export const GetPlanIntervalVariantDetailsRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1810,21 +1816,21 @@ export const GetPlanIntervalRemoveItemEnum1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type GetPlanIntervalRemoveItemEnum1 = OpenEnum<
-  typeof GetPlanIntervalRemoveItemEnum1
+export type GetPlanIntervalVariantDetailsRemoveItemEnum1 = OpenEnum<
+  typeof GetPlanIntervalVariantDetailsRemoveItemEnum1
 >;
 
 /**
  * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
  */
-export type GetPlanIntervalUnion =
-  | GetPlanIntervalRemoveItemEnum1
-  | GetPlanIntervalRemoveItemEnum2;
+export type GetPlanVariantDetailsIntervalUnion =
+  | GetPlanIntervalVariantDetailsRemoveItemEnum1
+  | GetPlanIntervalVariantDetailsRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
  */
-export type GetPlanPlanItemFilter = {
+export type GetPlanVariantDetailsPlanItemFilter = {
   /**
    * Match items linked to this feature.
    */
@@ -1832,13 +1838,13 @@ export type GetPlanPlanItemFilter = {
   /**
    * Match items with this billing method (prepaid or usage_based).
    */
-  billingMethod?: GetPlanRemoveItemBillingMethod | undefined;
+  billingMethod?: GetPlanVariantDetailsRemoveItemBillingMethod | undefined;
   /**
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
   interval?:
-    | GetPlanIntervalRemoveItemEnum1
-    | GetPlanIntervalRemoveItemEnum2
+    | GetPlanIntervalVariantDetailsRemoveItemEnum1
+    | GetPlanIntervalVariantDetailsRemoveItemEnum2
     | undefined;
   /**
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
@@ -3876,8 +3882,8 @@ export function getPlanVariantDetailsAdditionalCurrencyFromJSON(
 }
 
 /** @internal */
-export const GetPlanBasePrice$inboundSchema: z.ZodMiniType<
-  GetPlanBasePrice,
+export const GetPlanVariantDetailsBasePrice$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsBasePrice,
   unknown
 > = z.pipe(
   z.object({
@@ -3896,13 +3902,13 @@ export const GetPlanBasePrice$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getPlanBasePriceFromJSON(
+export function getPlanVariantDetailsBasePriceFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanBasePrice, SDKValidationError> {
+): SafeParseResult<GetPlanVariantDetailsBasePrice, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanBasePrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanBasePrice' from JSON`,
+    (x) => GetPlanVariantDetailsBasePrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsBasePrice' from JSON`,
   );
 }
 
@@ -3926,10 +3932,10 @@ export function getPlanVariantDetailsThresholdBillingFromJSON(
 }
 
 /** @internal */
-export const GetPlanAddItemResetInterval$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemResetInterval,
+export const GetPlanVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsResetInterval,
   unknown
-> = openEnums.inboundSchema(GetPlanAddItemResetInterval);
+> = openEnums.inboundSchema(GetPlanVariantDetailsResetInterval);
 
 /** @internal */
 export const GetPlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -3937,7 +3943,7 @@ export const GetPlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: GetPlanAddItemResetInterval$inboundSchema,
+    interval: GetPlanVariantDetailsResetInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
   }),
   z.transform((v) => {
@@ -3958,21 +3964,26 @@ export function getPlanVariantDetailsResetFromJSON(
 }
 
 /** @internal */
-export const GetPlanAddItemAdditionalCurrency$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemAdditionalCurrency,
-  unknown
-> = z.object({
-  currency: types.string(),
-  amount: types.number(),
-});
+export const GetPlanVariantDetailsAddItemAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<GetPlanVariantDetailsAddItemAdditionalCurrency, unknown> = z
+    .object({
+      currency: types.string(),
+      amount: types.number(),
+    });
 
-export function getPlanAddItemAdditionalCurrencyFromJSON(
+export function getPlanVariantDetailsAddItemAdditionalCurrencyFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanAddItemAdditionalCurrency, SDKValidationError> {
+): SafeParseResult<
+  GetPlanVariantDetailsAddItemAdditionalCurrency,
+  SDKValidationError
+> {
   return safeParse(
     jsonString,
-    (x) => GetPlanAddItemAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanAddItemAdditionalCurrency' from JSON`,
+    (x) =>
+      GetPlanVariantDetailsAddItemAdditionalCurrency$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'GetPlanVariantDetailsAddItemAdditionalCurrency' from JSON`,
   );
 }
 
@@ -4061,16 +4072,14 @@ export const GetPlanVariantDetailsTierBehavior$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetPlanVariantDetailsTierBehavior);
 
 /** @internal */
-export const GetPlanAddItemPriceInterval$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemPriceInterval,
-  unknown
-> = openEnums.inboundSchema(GetPlanAddItemPriceInterval);
+export const GetPlanVariantDetailsAddItemPriceInterval$inboundSchema:
+  z.ZodMiniType<GetPlanVariantDetailsAddItemPriceInterval, unknown> = openEnums
+    .inboundSchema(GetPlanVariantDetailsAddItemPriceInterval);
 
 /** @internal */
-export const GetPlanAddItemBillingMethod$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemBillingMethod,
-  unknown
-> = openEnums.inboundSchema(GetPlanAddItemBillingMethod);
+export const GetPlanVariantDetailsAddItemBillingMethod$inboundSchema:
+  z.ZodMiniType<GetPlanVariantDetailsAddItemBillingMethod, unknown> = openEnums
+    .inboundSchema(GetPlanVariantDetailsAddItemBillingMethod);
 
 /** @internal */
 export const GetPlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
@@ -4079,19 +4088,19 @@ export const GetPlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
-    additional_currencies: types.optional(
-      z.array(z.lazy(() => GetPlanAddItemAdditionalCurrency$inboundSchema)),
-    ),
-    tiers: types.optional(
-      z.array(z.lazy(() => GetPlanVariantDetailsPriceTier$inboundSchema)),
-    ),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      GetPlanVariantDetailsAddItemAdditionalCurrency$inboundSchema
+    ))),
+    tiers: types.optional(z.array(z.lazy(() =>
+      GetPlanVariantDetailsPriceTier$inboundSchema
+    ))),
     tier_behavior: types.optional(
       GetPlanVariantDetailsTierBehavior$inboundSchema,
     ),
-    interval: GetPlanAddItemPriceInterval$inboundSchema,
+    interval: GetPlanVariantDetailsAddItemPriceInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     billing_units: z._default(types.number(), 1),
-    billing_method: GetPlanAddItemBillingMethod$inboundSchema,
+    billing_method: GetPlanVariantDetailsAddItemBillingMethod$inboundSchema,
     max_purchase: z.optional(z.nullable(types.number())),
   }),
   z.transform((v) => {
@@ -4117,25 +4126,25 @@ export function getPlanVariantDetailsPriceFromJSON(
 }
 
 /** @internal */
-export const GetPlanOnIncrease$inboundSchema: z.ZodMiniType<
-  GetPlanOnIncrease,
+export const GetPlanVariantDetailsOnIncrease$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsOnIncrease,
   unknown
-> = openEnums.inboundSchema(GetPlanOnIncrease);
+> = openEnums.inboundSchema(GetPlanVariantDetailsOnIncrease);
 
 /** @internal */
-export const GetPlanOnDecrease$inboundSchema: z.ZodMiniType<
-  GetPlanOnDecrease,
+export const GetPlanVariantDetailsOnDecrease$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsOnDecrease,
   unknown
-> = openEnums.inboundSchema(GetPlanOnDecrease);
+> = openEnums.inboundSchema(GetPlanVariantDetailsOnDecrease);
 
 /** @internal */
-export const GetPlanProration$inboundSchema: z.ZodMiniType<
-  GetPlanProration,
+export const GetPlanVariantDetailsProration$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsProration,
   unknown
 > = z.pipe(
   z.object({
-    on_increase: GetPlanOnIncrease$inboundSchema,
-    on_decrease: GetPlanOnDecrease$inboundSchema,
+    on_increase: GetPlanVariantDetailsOnIncrease$inboundSchema,
+    on_decrease: GetPlanVariantDetailsOnDecrease$inboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4145,13 +4154,13 @@ export const GetPlanProration$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getPlanProrationFromJSON(
+export function getPlanVariantDetailsProrationFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanProration, SDKValidationError> {
+): SafeParseResult<GetPlanVariantDetailsProration, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanProration$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanProration' from JSON`,
+    (x) => GetPlanVariantDetailsProration$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsProration' from JSON`,
   );
 }
 
@@ -4806,8 +4815,8 @@ export function getPlanVariantDetailsFeatureOverrideFromJSON(
 }
 
 /** @internal */
-export const GetPlanPlanItem$inboundSchema: z.ZodMiniType<
-  GetPlanPlanItem,
+export const GetPlanVariantDetailsPlanItem$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsPlanItem,
   unknown
 > = z.pipe(
   z.object({
@@ -4824,7 +4833,9 @@ export const GetPlanPlanItem$inboundSchema: z.ZodMiniType<
     price: types.optional(
       z.lazy(() => GetPlanVariantDetailsPrice$inboundSchema),
     ),
-    proration: types.optional(z.lazy(() => GetPlanProration$inboundSchema)),
+    proration: types.optional(
+      z.lazy(() => GetPlanVariantDetailsProration$inboundSchema),
+    ),
     rollover: types.optional(
       z.lazy(() => GetPlanVariantDetailsRollover$inboundSchema),
     ),
@@ -4844,67 +4855,65 @@ export const GetPlanPlanItem$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getPlanPlanItemFromJSON(
+export function getPlanVariantDetailsPlanItemFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanPlanItem, SDKValidationError> {
+): SafeParseResult<GetPlanVariantDetailsPlanItem, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanPlanItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanPlanItem' from JSON`,
+    (x) => GetPlanVariantDetailsPlanItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsPlanItem' from JSON`,
   );
 }
 
 /** @internal */
-export const GetPlanRemoveItemBillingMethod$inboundSchema: z.ZodMiniType<
-  GetPlanRemoveItemBillingMethod,
-  unknown
-> = openEnums.inboundSchema(GetPlanRemoveItemBillingMethod);
+export const GetPlanVariantDetailsRemoveItemBillingMethod$inboundSchema:
+  z.ZodMiniType<GetPlanVariantDetailsRemoveItemBillingMethod, unknown> =
+    openEnums.inboundSchema(GetPlanVariantDetailsRemoveItemBillingMethod);
 
 /** @internal */
-export const GetPlanIntervalRemoveItemEnum2$inboundSchema: z.ZodMiniType<
-  GetPlanIntervalRemoveItemEnum2,
-  unknown
-> = openEnums.inboundSchema(GetPlanIntervalRemoveItemEnum2);
+export const GetPlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema:
+  z.ZodMiniType<GetPlanIntervalVariantDetailsRemoveItemEnum2, unknown> =
+    openEnums.inboundSchema(GetPlanIntervalVariantDetailsRemoveItemEnum2);
 
 /** @internal */
-export const GetPlanIntervalRemoveItemEnum1$inboundSchema: z.ZodMiniType<
-  GetPlanIntervalRemoveItemEnum1,
-  unknown
-> = openEnums.inboundSchema(GetPlanIntervalRemoveItemEnum1);
+export const GetPlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema:
+  z.ZodMiniType<GetPlanIntervalVariantDetailsRemoveItemEnum1, unknown> =
+    openEnums.inboundSchema(GetPlanIntervalVariantDetailsRemoveItemEnum1);
 
 /** @internal */
-export const GetPlanIntervalUnion$inboundSchema: z.ZodMiniType<
-  GetPlanIntervalUnion,
+export const GetPlanVariantDetailsIntervalUnion$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsIntervalUnion,
   unknown
 > = smartUnion([
-  GetPlanIntervalRemoveItemEnum1$inboundSchema,
-  GetPlanIntervalRemoveItemEnum2$inboundSchema,
+  GetPlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema,
+  GetPlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema,
 ]);
 
-export function getPlanIntervalUnionFromJSON(
+export function getPlanVariantDetailsIntervalUnionFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanIntervalUnion, SDKValidationError> {
+): SafeParseResult<GetPlanVariantDetailsIntervalUnion, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanIntervalUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanIntervalUnion' from JSON`,
+    (x) =>
+      GetPlanVariantDetailsIntervalUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsIntervalUnion' from JSON`,
   );
 }
 
 /** @internal */
-export const GetPlanPlanItemFilter$inboundSchema: z.ZodMiniType<
-  GetPlanPlanItemFilter,
+export const GetPlanVariantDetailsPlanItemFilter$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsPlanItemFilter,
   unknown
 > = z.pipe(
   z.object({
     feature_id: types.optional(types.string()),
     billing_method: types.optional(
-      GetPlanRemoveItemBillingMethod$inboundSchema,
+      GetPlanVariantDetailsRemoveItemBillingMethod$inboundSchema,
     ),
     interval: types.optional(
       smartUnion([
-        GetPlanIntervalRemoveItemEnum1$inboundSchema,
-        GetPlanIntervalRemoveItemEnum2$inboundSchema,
+        GetPlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema,
+        GetPlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema,
       ]),
     ),
     interval_count: types.optional(types.number()),
@@ -4919,13 +4928,14 @@ export const GetPlanPlanItemFilter$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getPlanPlanItemFilterFromJSON(
+export function getPlanVariantDetailsPlanItemFilterFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanPlanItemFilter, SDKValidationError> {
+): SafeParseResult<GetPlanVariantDetailsPlanItemFilter, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanPlanItemFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanPlanItemFilter' from JSON`,
+    (x) =>
+      GetPlanVariantDetailsPlanItemFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsPlanItemFilter' from JSON`,
   );
 }
 

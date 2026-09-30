@@ -6,6 +6,8 @@ import { customersAdvanceTestClock } from "../funcs/customers-advance-test-clock
 import { customersDelete } from "../funcs/customers-delete.js";
 import { customersGetOrCreate } from "../funcs/customers-get-or-create.js";
 import { customersGet } from "../funcs/customers-get.js";
+import { customersListPurchases } from "../funcs/customers-list-purchases.js";
+import { customersListSubscriptions } from "../funcs/customers-list-subscriptions.js";
 import { customersList } from "../funcs/customers-list.js";
 import { customersUpdate } from "../funcs/customers-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
@@ -131,6 +133,34 @@ export class Customers extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.AdvanceTestClockResponse> {
     return unwrapAsync(customersAdvanceTestClock(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Lists recurring plans (including add-ons) across customers, live or expired. Filter by customer, entity, plan, or status. Pages may hold fewer than `limit` rows while `has_more` is true.
+   */
+  async listSubscriptions(
+    request: models.ListSubscriptionsParams,
+    options?: RequestOptions,
+  ): Promise<models.ListSubscriptionsResponse> {
+    return unwrapAsync(customersListSubscriptions(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Lists one-off plan purchases across customers, live or expired. Filter by customer, entity, plan, or status. Pages may hold fewer than `limit` rows while `has_more` is true.
+   */
+  async listPurchases(
+    request: models.ListPurchasesParams,
+    options?: RequestOptions,
+  ): Promise<models.ListPurchasesResponse> {
+    return unwrapAsync(customersListPurchases(
       this,
       request,
       options,

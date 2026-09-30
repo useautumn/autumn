@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
-import { OAuth2Tokens } from "arctic";
+import { OAuth2RequestError, OAuth2Tokens } from "arctic";
 import { encryptData } from "@/utils/encryptUtils.js";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
@@ -16,8 +16,41 @@ const mockRefreshRcTokens = mock(() =>
 	),
 );
 
+let storedOrg: Organization | null = null;
+
 const mockOrgUpdate = mock(
-	(_args: { updates: Organization }): Promise<null> => Promise.resolve(null),
+	async ({ updates }: { updates: Partial<Organization> }): Promise<null> => {
+		storedOrg = { ...(storedOrg as Organization), ...updates };
+		return null;
+	},
+);
+
+const mockOrgGet = mock(async () => storedOrg as Organization);
+
+// In-memory stand-in for the Redis lock so waiters really queue behind the holder.
+const heldLocks = new Set<string>();
+
+const mockAcquireLockWithWait = mock(
+	async ({ lockKey }: { lockKey: string }) => {
+		while (heldLocks.has(lockKey)) {
+			await new Promise((resolve) => setTimeout(resolve, 1));
+		}
+		heldLocks.add(lockKey);
+	},
+);
+
+const mockClearLock = mock(async ({ lockKey }: { lockKey: string }) => {
+	heldLocks.delete(lockKey);
+});
+
+await mockModuleWithRestore(
+	"@/external/redis/utils/lockUtils/acquireLockWithWait.js",
+	() => ({ acquireLockWithWait: mockAcquireLockWithWait }),
+);
+
+await mockModuleWithRestore(
+	"@/external/redis/utils/lockUtils/clearLock.js",
+	() => ({ clearLock: mockClearLock }),
 );
 
 await mockModuleWithRestore(
@@ -30,12 +63,12 @@ await mockModuleWithRestore(
 await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		update: mockOrgUpdate,
+		get: mockOrgGet,
 	},
 }));
 
-const { getRevenuecatAccessToken } = await import(
-	"@/external/revenueCat/misc/getRevenuecatAccessToken.js"
-);
+const { getRevenuecatAccessToken, refreshRevenuecatOAuthAccessToken } =
+	await import("@/external/revenueCat/misc/getRevenuecatAccessToken.js");
 
 const buildOrg = ({
 	expiresAt,
@@ -67,6 +100,9 @@ describe("getRevenuecatAccessToken", () => {
 		process.env.ENCRYPTION_PASSWORD = "test-encryption-password";
 		mockRefreshRcTokens.mockClear();
 		mockOrgUpdate.mockClear();
+		mockOrgGet.mockClear();
+		heldLocks.clear();
+		storedOrg = null;
 	});
 
 	afterEach(() => {
@@ -89,6 +125,7 @@ describe("getRevenuecatAccessToken", () => {
 
 	test("refreshes and persists rotated tokens when expired", async () => {
 		const org = buildOrg({ expiresAt: Date.now() - 1000 });
+		storedOrg = org;
 
 		const token = await getRevenuecatAccessToken({
 			db: {} as never,
@@ -127,5 +164,71 @@ describe("getRevenuecatAccessToken", () => {
 
 		expect(token).toBe("legacy_api_key");
 		expect(mockRefreshRcTokens).not.toHaveBeenCalled();
+	});
+
+	test("concurrent callers with an expired token share a single refresh", async () => {
+		const org = buildOrg({ expiresAt: Date.now() - 1000 });
+		storedOrg = org;
+
+		const tokens = await Promise.all(
+			[1, 2, 3].map(() =>
+				getRevenuecatAccessToken({
+					db: {} as never,
+					org,
+					env: AppEnv.Sandbox,
+				}),
+			),
+		);
+
+		expect(tokens).toEqual(["atk_refreshed", "atk_refreshed", "atk_refreshed"]);
+		expect(mockRefreshRcTokens).toHaveBeenCalledTimes(1);
+		expect(mockOrgUpdate).toHaveBeenCalledTimes(1);
+	});
+
+	test("force refresh always rotates, even when the stored token is fresh", async () => {
+		const org = buildOrg({ expiresAt: Date.now() + 60 * 60 * 1000 });
+		storedOrg = org;
+
+		const token = await refreshRevenuecatOAuthAccessToken({
+			db: {} as never,
+			org,
+			env: AppEnv.Sandbox,
+		});
+
+		expect(token).toBe("atk_refreshed");
+		expect(mockRefreshRcTokens).toHaveBeenCalledTimes(1);
+	});
+
+	test("concurrent force refreshes coalesce into a single rotation", async () => {
+		const org = buildOrg({ expiresAt: Date.now() + 60 * 60 * 1000 });
+		storedOrg = org;
+
+		const tokens = await Promise.all(
+			[1, 2].map(() =>
+				refreshRevenuecatOAuthAccessToken({
+					db: {} as never,
+					org,
+					env: AppEnv.Sandbox,
+				}),
+			),
+		);
+
+		expect(tokens).toEqual(["atk_refreshed", "atk_refreshed"]);
+		expect(mockRefreshRcTokens).toHaveBeenCalledTimes(1);
+		expect(mockOrgUpdate).toHaveBeenCalledTimes(1);
+	});
+
+	test("revoked refresh token surfaces a reconnect error and releases the lock", async () => {
+		const org = buildOrg({ expiresAt: Date.now() - 1000 });
+		storedOrg = org;
+		mockRefreshRcTokens.mockImplementationOnce(() =>
+			Promise.reject(new OAuth2RequestError("invalid_grant", null, null, null)),
+		);
+
+		await expect(
+			getRevenuecatAccessToken({ db: {} as never, org, env: AppEnv.Sandbox }),
+		).rejects.toMatchObject({ statusCode: 400 });
+		expect(mockOrgUpdate).not.toHaveBeenCalled();
+		expect(heldLocks.size).toBe(0);
 	});
 });

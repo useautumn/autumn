@@ -3,51 +3,28 @@ import type {
 	Feature,
 	FullCusProduct,
 	ProductV2,
-	SyncPhase,
 	SyncPlanInstance,
 	SyncProposalV2,
 } from "@autumn/shared";
 import {
-	CusProductStatus,
-	filterCustomerProductsByStripeSubscriptionId,
+	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
-import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
+import {
+	customerProductsToCustomerState,
+	resolveEntityId,
+	toCustomerStatePhase,
+} from "@/components/forms/customer-state/customerProductsToCustomerState";
 import {
 	type CustomerStateForm,
-	type CustomerStatePhase,
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
-import { entityKey } from "@/components/forms/shared/utils/entityKey";
 import { quantityRecordFrom } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import { applyCustomizeToProduct } from "./applyCustomizeToProduct";
 
-type ProposalPhase = SyncProposalV2["phases"][number];
-
-/** Autumn's scheduled start is anchored, Stripe's phase start is not, so the
- * two drift by minutes on the same phase. */
-const MAX_PHASE_START_DRIFT_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Customer products store their entity by internal id — resolve it to the id
- * the scope picker uses. Null is customer-level.
- */
-const resolveEntityId = ({
-	entityId,
-	entities,
-}: {
-	entityId: string | null | undefined;
-	entities: Entity[];
-}): string | null => {
-	if (!entityId) return null;
-	const entity = entities.find(
-		(candidate) =>
-			candidate.id === entityId || candidate.internal_id === entityId,
-	);
-	return entity ? entityKey(entity) : null;
-};
-
+/** Scheduled plans link through the Stripe schedule only, so a subscription's
+ * plans are the ones on it or on its schedule. */
 const findLinkedCustomerProducts = ({
 	proposal,
 	customerProducts,
@@ -56,68 +33,18 @@ const findLinkedCustomerProducts = ({
 	customerProducts: FullCusProduct[];
 }): FullCusProduct[] => {
 	const { stripe_subscription_id, stripe_schedule_id } = proposal;
-	if (stripe_subscription_id)
-		return filterCustomerProductsByStripeSubscriptionId({
-			customerProducts,
-			stripeSubscriptionId: stripe_subscription_id,
-		});
-
-	return customerProducts.filter((customerProduct) =>
-		isCustomerProductOnStripeSubscriptionSchedule({
-			customerProduct,
-			stripeSubscriptionScheduleId: stripe_schedule_id,
-		}),
+	return customerProducts.filter(
+		(customerProduct) =>
+			(stripe_subscription_id &&
+				isCustomerProductOnStripeSubscription({
+					customerProduct,
+					stripeSubscriptionId: stripe_subscription_id,
+				})) ||
+			isCustomerProductOnStripeSubscriptionSchedule({
+				customerProduct,
+				stripeSubscriptionScheduleId: stripe_schedule_id,
+			}),
 	);
-};
-
-const findCopiesOnPhase = ({
-	customerProducts,
-	startsAt,
-}: {
-	customerProducts: FullCusProduct[];
-	startsAt: SyncPhase["starts_at"];
-}): FullCusProduct[] => {
-	if (startsAt === "now")
-		return customerProducts.filter(
-			(customerProduct) => customerProduct.status === CusProductStatus.Active,
-		);
-
-	const scheduled = customerProducts.filter(
-		(customerProduct) => customerProduct.status === CusProductStatus.Scheduled,
-	);
-	const nearestStart = scheduled
-		.map((customerProduct) => customerProduct.starts_at)
-		.filter((start) => Math.abs(start - startsAt) <= MAX_PHASE_START_DRIFT_MS)
-		.sort((a, b) => Math.abs(a - startsAt) - Math.abs(b - startsAt))[0];
-
-	return nearestStart === undefined
-		? []
-		: scheduled.filter(
-				(customerProduct) => customerProduct.starts_at === nearestStart,
-			);
-};
-
-/** A saved plan, as the customer holds it today. */
-const savedPlanToCustomerStatePlan = ({
-	customerProduct,
-	entities,
-	products,
-}: {
-	customerProduct: FullCusProduct;
-	entities: Entity[];
-	products: ProductV2[];
-}): CustomerStatePlan => {
-	return {
-		...customerProductToCustomerStatePlan({
-			cusProduct: customerProduct,
-			products,
-		}),
-		entityId: resolveEntityId({
-			entityId: customerProduct.entity_id ?? customerProduct.internal_entity_id,
-			entities,
-		}),
-		quantity: customerProduct.quantity,
-	};
 };
 
 /** A plan the matcher guessed from Stripe's prices, for a subscription Autumn
@@ -162,17 +89,6 @@ const matchedPlanToCustomerStatePlan = ({
 	};
 };
 
-const toCustomerStatePhase = ({
-	phase,
-	plans,
-}: {
-	phase: ProposalPhase;
-	plans: CustomerStatePlan[];
-}): CustomerStatePhase => ({
-	startsAt: phase.starts_at === "now" ? null : phase.starts_at,
-	plans,
-});
-
 /**
  * The customer state a Stripe subscription implies. Rows come from the plans
  * Autumn already holds for it, cut into Stripe's phases; with nothing saved
@@ -208,7 +124,7 @@ export const syncProposalToCustomerState = ({
 			...options,
 			phases: proposal.phases.map((phase) =>
 				toCustomerStatePhase({
-					phase,
+					startsAt: phase.starts_at,
 					plans: phase.plans.map((plan) =>
 						matchedPlanToCustomerStatePlan({
 							plan,
@@ -224,42 +140,15 @@ export const syncProposalToCustomerState = ({
 		};
 	}
 
-	// With several phases, a live plan that never ends runs across all of them.
-	const canUnschedule =
-		proposal.phases.length > 1 && Boolean(proposal.stripe_subscription_id);
-	const isOpenEnded = (customerProduct: FullCusProduct) =>
-		canUnschedule &&
-		customerProduct.status === CusProductStatus.Active &&
-		!customerProduct.ended_at;
-
-	const toPlans = ({
-		customerProducts: phaseCustomerProducts,
-	}: {
-		customerProducts: FullCusProduct[];
-	}) =>
-		phaseCustomerProducts.map((customerProduct) =>
-			savedPlanToCustomerStatePlan({
-				customerProduct,
-				entities,
-				products,
-			}),
-		);
-
 	return {
 		...options,
-		phases: proposal.phases.map((phase) =>
-			toCustomerStatePhase({
-				phase,
-				plans: toPlans({
-					customerProducts: findCopiesOnPhase({
-						customerProducts: linkedCustomerProducts,
-						startsAt: phase.starts_at,
-					}).filter((customerProduct) => !isOpenEnded(customerProduct)),
-				}),
-			}),
-		),
-		unscheduledPlans: toPlans({
-			customerProducts: linkedCustomerProducts.filter(isOpenEnded),
+		...customerProductsToCustomerState({
+			customerProducts: linkedCustomerProducts,
+			phaseStarts: proposal.phases.map((phase) => phase.starts_at),
+			canUnschedule:
+				proposal.phases.length > 1 && Boolean(proposal.stripe_subscription_id),
+			entities,
+			products,
 		}),
 	};
 };

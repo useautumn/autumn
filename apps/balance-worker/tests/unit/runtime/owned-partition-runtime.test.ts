@@ -1846,6 +1846,50 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				await f.cleanup();
 			}
 		});
+		test("a command that says how long it can wait is held for that long, not the fixed wait", async () => {
+			let finishFence = () => {};
+			const fence = new Promise<void>((resolve) => {
+				finishFence = resolve;
+			});
+			const f = createFixture({ fence: () => fence, activationWaitMs: 10 });
+			try {
+				await f.runtime.prepare();
+				const activation = f.runtime.activate();
+				const command = f.runtime.process(async () => "served", {
+					budgetMs: 5_000,
+				});
+				// Well past the fixed wait: the command is still held, not refused.
+				await new Promise<void>((resolve) => setTimeout(resolve, 40));
+				expect(f.runtime.getStatus()).toBe("activating");
+				finishFence();
+				await activation;
+				expect(await command).toBe("served");
+			} finally {
+				finishFence();
+				await f.cleanup();
+			}
+		});
+		test("a command whose budget is inside the answer margin is refused at once", async () => {
+			let finishFence = () => {};
+			const fence = new Promise<void>((resolve) => {
+				finishFence = resolve;
+			});
+			const f = createFixture({ fence: () => fence, activationWaitMs: 5_000 });
+			try {
+				await f.runtime.prepare();
+				const activation = f.runtime.activate();
+				const startedAt = performance.now();
+				await expect(
+					f.runtime.process(async () => "served", { budgetMs: 50 }),
+				).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
+				expect(performance.now() - startedAt).toBeLessThan(1_000);
+				finishFence();
+				await activation;
+			} finally {
+				finishFence();
+				await f.cleanup();
+			}
+		});
 		test("rejects activation before preparation without touching the producer", async () => {
 			const f = createFixture();
 			try {

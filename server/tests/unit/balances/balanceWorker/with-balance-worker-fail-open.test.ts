@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { contexts } from "@tests/utils/fixtures/db/contexts.js";
-import { rethrowBalanceWorkerError } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
+import {
+	describeBalanceWorkerFailure,
+	rethrowBalanceWorkerError,
+} from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
 
 const failingWith = (cause: BalanceWorkerClientError) => async () =>
@@ -94,6 +97,82 @@ describe("withBalanceWorkerFailOpen", () => {
 			result: "fallback",
 			failedOpen: true,
 		});
+	});
+
+	test("the fail-open line says which step of the request gave up, and which command", async () => {
+		// The client got a successor hint, followed it, and the successor stayed NOT_READY through every retry.
+		const stillNotReady = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			outcome: "not_submitted",
+			message: "Worker is still activating the partition",
+			workerCode: "NOT_READY",
+		});
+		stillNotReady.routing = {
+			sends: 5,
+			refreshes: 0,
+			followedHint: true,
+			notReadyAnswers: 4,
+		};
+		const warnings: unknown[][] = [];
+		const base = contexts.create({});
+		const ctx = {
+			...base,
+			logger: {
+				...base.logger,
+				warn: (...args: unknown[]) => {
+					warnings.push(args);
+				},
+			},
+		} as typeof base;
+		expect(
+			await withBalanceWorkerFailOpen({
+				ctx,
+				source: "finalize",
+				commandId: "cmd_1",
+				run: failingWith(stillNotReady),
+				fallback: async () => "fallback",
+			}),
+		).toEqual({ result: "fallback", failedOpen: true });
+		expect(warnings).toHaveLength(1);
+		expect(warnings[0][0]).toBe(
+			"[balanceWorker] balance_worker_unavailable; failing open",
+		);
+		expect(warnings[0][1]).toMatchObject({
+			type: "balance_worker_fail_open",
+			fail_open_reason: "balance_worker_unavailable",
+			fail_open_source: "finalize",
+			command_id: "cmd_1",
+			worker_failure: {
+				clientCode: "WORKER_ERROR",
+				workerCode: "NOT_READY",
+				outcome: "not_submitted",
+				sends: 5,
+				refreshes: 0,
+				followedHint: true,
+				notReadyAnswers: 4,
+			},
+		});
+	});
+
+	test("a failure before any routing is described by its client code alone", () => {
+		const noOwner = new BalanceWorkerClientError({
+			code: "NO_OWNER",
+			outcome: "not_submitted",
+			message: "no owner for the partition",
+		});
+		let thrown: unknown;
+		try {
+			rethrowBalanceWorkerError({ cause: noOwner });
+		} catch (error) {
+			thrown = error;
+		}
+		expect(describeBalanceWorkerFailure({ error: thrown })).toEqual({
+			clientCode: "NO_OWNER",
+			outcome: "not_submitted",
+		});
+		expect(
+			describeBalanceWorkerFailure({ error: new Error("unrelated") }),
+		).toBeUndefined();
 	});
 
 	test("a worker verdict propagates", async () => {

@@ -57,7 +57,7 @@ class GetWebhookWebhookTypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -79,7 +79,7 @@ class GetWebhookWebhook(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""

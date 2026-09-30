@@ -37,7 +37,7 @@ export type GetWebhookWebhook = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**

@@ -3,6 +3,7 @@
  */
 
 import { invoicesCreate } from "../funcs/invoices-create.js";
+import { invoicesFinalize } from "../funcs/invoices-finalize.js";
 import { invoicesInsert } from "../funcs/invoices-insert.js";
 import { invoicesListTemplates } from "../funcs/invoices-list-templates.js";
 import { invoicesList } from "../funcs/invoices-list.js";
@@ -22,6 +23,20 @@ export class Invoices extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.CreateInvoiceResponse> {
     return unwrapAsync(invoicesCreate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Finalizes a draft Stripe invoice, such as one left in draft by invoice mode with finalize set to false. Stripe then collects it: a send-invoice invoice is emailed and an automatically-charged one is charged. Any plan still waiting on the invoice to be paid expires at its due date. Already open or paid invoices are returned unchanged.
+   */
+  async finalize(
+    request: models.FinalizeInvoiceParams,
+    options?: RequestOptions,
+  ): Promise<models.FinalizeInvoiceResponse> {
+    return unwrapAsync(invoicesFinalize(
       this,
       request,
       options,
