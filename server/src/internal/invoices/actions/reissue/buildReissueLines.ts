@@ -6,10 +6,21 @@ import {
 	type ReissueLineEdits,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
+import {
+	type ExpandedStripeInvoiceLineItem,
+	getStripeInvoiceLineItems,
+} from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyReissueLineEdits } from "./applyReissueLineEdits";
 import { resolveReissueTax } from "./resolveReissueTax";
+
+/**
+ * Stripe hides $0 zero-quantity lines (zero-usage metered placeholders) on the
+ * hosted invoice and PDF. Copied as price-less items they'd become visible
+ * "0 × ..." lines with quantity 1, so they're dropped.
+ */
+const isBillableSourceLine = (line: ExpandedStripeInvoiceLineItem) =>
+	line.amount !== 0 || (line.quantity ?? 0) !== 0;
 
 export const buildReissueLines = async ({
 	ctx,
@@ -39,7 +50,7 @@ export const buildReissueLines = async ({
 		storedLines,
 		edits: lineEdits,
 		currency: stripeInvoice.currency,
-		lines: sourceLines.map((line) => ({
+		lines: sourceLines.filter(isBillableSourceLine).map((line) => ({
 			description: line.description ?? undefined,
 			amount:
 				line.amount -
