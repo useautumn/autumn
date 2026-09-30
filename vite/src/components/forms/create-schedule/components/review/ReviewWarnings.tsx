@@ -4,6 +4,10 @@ import { InfoIcon, WarningCircleIcon } from "@phosphor-icons/react";
 
 /** Only changes that remove or lose something get a banner; the review sections already show the rest. */
 const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
+	"subscription_replaced",
+	"open_invoice_not_collected",
+	"discount_not_carried",
+	"usage_not_billed",
 	"unmanaged_stripe_item_removed",
 	"existing_schedule_replaced",
 	"future_phase_removed",
