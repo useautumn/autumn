@@ -45,7 +45,7 @@ export const sharedCatalogRowsSql = ({
 			'[]'::json
 		),
 		'plan_licenses', COALESCE(
-			(${planLicenseCatalogRowsSql({ orgId: ctx.orgId, env: ctx.env, planLicenseIds: sql`(SELECT id FROM plan_license)` })}),
+			(${planLicenseCatalogRowsSql({ orgId: ctx.orgId, env: ctx.env, planLicenseIds: sql`(SELECT id FROM plan_license WHERE is_custom IS NOT TRUE)` })}),
 			'[]'::json
 		),
 		'free_trials', COALESCE(

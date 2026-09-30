@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -8,6 +9,7 @@ import {
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { replaceCatalog } from "../../../src/state/repos/catalogRows.js";
 
 const rows = createCatalogRowsFor({ state: createState() });
 const features = rows.filter((row) => row.table === "features");
@@ -67,6 +69,28 @@ describe("catalog store", () => {
 			catalog: catalogRowsToCatalog({ rows }),
 			readAt: 1800,
 		});
+		catalogStore.close();
+	});
+
+	test("another process's later catalog is seen under the write lock, not from a copy read before it", () => {
+		const databasePath = catalogPath();
+		const catalogStore = openCatalogStore({ databasePath });
+		catalogStore.set({ rows, readAt: 1800 });
+		// A second process compares nothing beforehand: the replace itself must refuse the earlier read.
+		const otherProcess = { sqliteDb: new Database(databasePath) };
+
+		const stored = replaceCatalog({
+			ctx: otherProcess,
+			rows: features,
+			readAt: 1750,
+		});
+
+		expect(stored).toBe(false);
+		expect(catalogStore.read()).toEqual({
+			catalog: catalogRowsToCatalog({ rows }),
+			readAt: 1800,
+		});
+		otherProcess.sqliteDb.close();
 		catalogStore.close();
 	});
 

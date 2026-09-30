@@ -70,12 +70,8 @@ export const openCatalogStore = ({
 	}
 
 	function set({ rows, readAt }: Parameters<CatalogStore["set"]>[0]): boolean {
-		// A push can arrive late, after a retry, or have been beaten by another process: an earlier read never replaces a later one.
-		const held = read();
-		const wasReadEarlier = held !== null && readAt < held.readAt;
-		if (wasReadEarlier) return false;
-
-		replaceCatalog({ ctx, rows, readAt });
+		// A push can arrive late, after a retry, or be beaten by another process: the file decides, under its write lock.
+		if (!replaceCatalog({ ctx, rows, readAt })) return false;
 		sharedCatalog = { catalog: catalogRowsToCatalog({ rows }), readAt };
 		return true;
 	}

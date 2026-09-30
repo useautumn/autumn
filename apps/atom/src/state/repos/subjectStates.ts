@@ -64,7 +64,7 @@ export const upsertSubjects = ({
 		subjects.map((subject) => upsertSubject({ ctx, subject })),
 	)();
 
-/** False when the subject was read before the one held: a push can arrive late, and must never undo a newer one. */
+/** False when the subject was read before the one held, or at the same instant for an earlier change: a late push never undoes a newer one. */
 export const upsertSubject = ({
 	ctx,
 	subject,
@@ -85,7 +85,9 @@ export const upsertSubject = ({
 				state_json = excluded.state_json,
 				catalog_json = excluded.catalog_json,
 				org_json = excluded.org_json
-			WHERE excluded.read_at >= subject_states.read_at
+			WHERE excluded.read_at > subject_states.read_at
+				OR (excluded.read_at = subject_states.read_at
+					AND excluded.log_offset >= subject_states.log_offset)
 		`)
 		.run({
 			customerId,

@@ -25,6 +25,7 @@ export const createAtomSupervisor = ({
 		void child.exited.then(() => replaceChild({ index, child }));
 	}
 
+	/** Keeps trying at the restart pace until the place is filled, stopped, or filled by someone else. */
 	async function replaceChild({
 		index,
 		child,
@@ -37,15 +38,29 @@ export const createAtomSupervisor = ({
 			{ type: "atom_process_died", data: { index } },
 			"An Atom process died; starting another in its place",
 		);
-		await Bun.sleep(config.restartDelayMs);
-		// Stopped while waiting, or already replaced: nothing to start.
-		if (stopping || children.get(index) !== child) return;
-		startChild({ index });
+		while (!stopping && children.get(index) === child) {
+			await Bun.sleep(config.restartDelayMs);
+			if (stopping || children.get(index) !== child) return;
+			try {
+				startChild({ index });
+			} catch (error) {
+				ctx.logger.error(
+					{ type: "atom_process_spawn_failed", error, data: { index } },
+					"An Atom process could not be started; trying again",
+				);
+			}
+		}
 	}
 
+	/** A process that cannot start takes the others down: a half-started Atom is not left serving unsupervised. */
 	async function start(): Promise<void> {
-		for (let index = 0; index < config.processes; index++)
-			startChild({ index });
+		try {
+			for (let index = 0; index < config.processes; index++)
+				startChild({ index });
+		} catch (error) {
+			await stop();
+			throw error;
+		}
 		ctx.logger.info(`Atom running as ${config.processes} processes`);
 	}
 

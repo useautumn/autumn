@@ -6,6 +6,7 @@ import {
 	isDeploymentAwaitingSetup,
 	isDeploymentRunning,
 } from "@autumn/alien";
+import { getAutumnEnv } from "@autumn/env";
 import {
 	type AppEnv,
 	ByocCacheStatus,
@@ -54,6 +55,13 @@ const startAlienAtom = ({
 			{
 				name: "ATOM_TOKEN_HASH",
 				value: tokenHash,
+				type: "plain",
+				targetResources: null,
+			},
+			// A check Atom forwards must reach this environment's API, not the production default.
+			{
+				name: "AUTUMN_API_URL",
+				value: getAutumnEnv().AUTUMN_PUBLIC_API_URL,
 				type: "plain",
 				targetResources: null,
 			},

@@ -124,6 +124,28 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
+	test("two reads at the same instant are ordered by log offset: the earlier change never replaces the later, a retry still lands", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 42n, readAt: 1700 }),
+		});
+
+		const earlierChange = sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 41n, readAt: 1700 }),
+		});
+		const retry = sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 42n, readAt: 1700 }),
+		});
+
+		expect(earlierChange).toBe(false);
+		expect(retry).toBe(true);
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
+				?.logOffset,
+		).toBe(42n);
+		sqliteStore.close();
+	});
+
 	test("the file keeps its subjects across a restart", () => {
 		const databasePath = slotPath();
 		const first = openSqliteStore({ databasePath });

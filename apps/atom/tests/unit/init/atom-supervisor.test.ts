@@ -2,10 +2,22 @@ import { describe, expect, test } from "bun:test";
 import { createAtomSupervisor } from "../../../src/init/createAtomSupervisor.js";
 import type { AtomChild } from "../../../src/init/types/atomSupervisor.js";
 
+/** Which spawn attempts throw instead of starting a child. */
+type SpawnFailing = (params: { index: number; attempt: number }) => boolean;
+
 /** A child process the test ends by hand. */
-const createFakeChildren = () => {
+const createFakeChildren = ({
+	failing = () => false,
+}: {
+	failing?: SpawnFailing;
+} = {}) => {
 	const spawned: { index: number; signals: string[]; exit(): void }[] = [];
+	const attempts = new Map<number, number>();
 	const spawnChild = ({ index }: { index: number }): AtomChild => {
+		const attempt = (attempts.get(index) ?? 0) + 1;
+		attempts.set(index, attempt);
+		if (failing({ index, attempt }))
+			throw new Error(`spawn of child ${index} failed`);
 		const exited = Promise.withResolvers<void>();
 		const child = { index, signals: [] as string[], exit: exited.resolve };
 		spawned.push(child);
@@ -21,21 +33,28 @@ const createFakeChildren = () => {
 	return { spawned, spawnChild };
 };
 
-const createSupervisor = ({ processes }: { processes: number }) => {
-	const { spawned, spawnChild } = createFakeChildren();
+const createSupervisor = ({
+	processes,
+	failing,
+}: {
+	processes: number;
+	failing?: SpawnFailing;
+}) => {
+	const { spawned, spawnChild } = createFakeChildren({ failing });
 	const logged: unknown[] = [];
+	const errors: unknown[] = [];
 	const supervisor = createAtomSupervisor({
 		ctx: {
 			spawnChild,
 			logger: {
 				info: () => undefined,
 				warn: (...args: unknown[]) => void logged.push(args),
-				error: () => undefined,
+				error: (...args: unknown[]) => void errors.push(args),
 			},
 		},
 		config: { processes, restartDelayMs: 0 },
 	});
-	return { supervisor, spawned, logged };
+	return { supervisor, spawned, logged, errors };
 };
 
 /** Lets a child's exit be noticed and its replacement started. */
@@ -71,6 +90,34 @@ describe("the Atom supervisor", () => {
 			["SIGTERM"],
 			["SIGTERM"],
 		]);
+	});
+
+	test("a child that cannot be started at startup takes the started ones down with it", async () => {
+		const { supervisor, spawned } = createSupervisor({
+			processes: 3,
+			failing: ({ index }) => index === 2,
+		});
+
+		await expect(supervisor.start()).rejects.toThrow("spawn of child 2");
+
+		expect(spawned.map((child) => child.signals)).toEqual([
+			["SIGTERM"],
+			["SIGTERM"],
+		]);
+	});
+
+	test("a replacement that cannot be started is tried again", async () => {
+		const { supervisor, spawned, errors } = createSupervisor({
+			processes: 2,
+			failing: ({ index, attempt }) => index === 1 && attempt === 2,
+		});
+		await supervisor.start();
+
+		spawned[1]?.exit();
+		await settle();
+
+		expect(spawned.map((child) => child.index)).toEqual([0, 1, 1]);
+		expect(errors).toHaveLength(1);
 	});
 
 	test("a child that stops because it was asked to is not replaced", async () => {
