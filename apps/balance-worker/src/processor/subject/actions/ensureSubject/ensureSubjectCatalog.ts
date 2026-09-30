@@ -3,7 +3,6 @@ import {
 	type MeteringIdentity,
 	planLicensesToItemCatalogKeys,
 	type SubjectState,
-	subjectStateToCatalogKeys,
 	subjectStateToFreeTrialCatalogKeys,
 	subjectStateToPlanLicenseCatalogKeys,
 } from "@autumn/balance-engine";
@@ -12,7 +11,7 @@ import {
 	ensureCatalogForState,
 } from "@autumn/catalog-lru";
 import type { SubjectScope } from "../../types/subject.js";
-import { readPlanLicenseCatalogKeys } from "../readPlanLicenseCatalogKeys.js";
+import { readSubjectCatalog } from "../readSubject.js";
 
 /** Best effort: only a read renders license definitions, so a link removed since hydration must not fail a track. */
 const ensurePlanLicenseCatalog = async ({
@@ -77,12 +76,6 @@ export const ensureSubjectCatalog = async ({
 	await ensureCatalogForState({ catalogCache, identity, state });
 	await ensurePlanLicenseCatalog({ scope, identity, state });
 	await ensureFreeTrialCatalog({ scope, identity, state });
-	const catalog = catalogCache.read({
-		keys: [
-			...subjectStateToCatalogKeys({ state }),
-			...readPlanLicenseCatalogKeys({ scope, state }),
-			...subjectStateToFreeTrialCatalogKeys({ state }),
-		],
-	});
-	return scope.state.joinCache.readCatalog({ state, join: () => catalog });
+	// The awaits above can outlast a row's ttl; the read path's join tolerates that and checks every key.
+	return readSubjectCatalog({ scope, state });
 };

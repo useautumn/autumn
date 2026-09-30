@@ -415,6 +415,13 @@ describe("partition handoff", () => {
 			drain.resolve();
 			await waiting;
 			expect(A.has("claim:B:2")).toBe(true);
+			// The route it claimed for the successor is what a caller meeting the withdrawn route is told to try.
+			expect(A.ownership.findSuccessor({ partition: 2 })).toEqual({
+				partition: 2,
+				endpoint: "http://B",
+				routeEpoch: expect.any(String),
+			});
+			expect(A.ownership.findSuccessor({ partition: 9 })).toBeUndefined();
 			// Nothing to wait for once the successor is named, or on a partition that is not mid-handoff.
 			await A.ownership.awaitHandoff({ partition: 2 });
 			await A.ownership.awaitHandoff({ partition: 9 });

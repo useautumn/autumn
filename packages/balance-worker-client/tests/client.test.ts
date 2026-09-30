@@ -85,6 +85,19 @@ const stale = {
 	status: 409,
 	body: { error: { code: "NOT_OWNER", message: "Stale route" } },
 };
+/** The old owner has finished its handoff and names where the partition went. */
+function staleNaming(successor: {
+	partition: number;
+	routeEpoch: string;
+	endpoint: string;
+}) {
+	return {
+		status: 409,
+		body: {
+			error: { code: "NOT_OWNER", message: "Stale route", successor },
+		},
+	};
+}
 const initialOwner = {
 	partition: 0,
 	routeEpoch: "1",
@@ -565,7 +578,7 @@ async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
 	await expect(
 		fixture.client.check({ command: checkCommand }),
 	).rejects.toMatchObject({
-		code: "OWNERSHIP_UNAVAILABLE",
+		code: "NO_OWNER",
 		outcome: "not_submitted",
 	});
 	// The point of the bound: the caller is released in its own slice, not the
@@ -577,4 +590,107 @@ async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
 test(
 	"a stalled ownership refresh gives up on its own budget, not the request's",
 	boundsTheRouteRefreshBelowTheDeadline,
+);
+
+async function retriesARefreshThatOutrunsItsBudget(): Promise<void> {
+	// A fleet swap: the old owner answers NOT_OWNER, and ownership takes longer
+	// to settle than one refresh slice. The refresh keeps running past its
+	// slice, and the route is tried again as soon as it has settled, so the
+	// request lands on the successor instead of failing open with budget left.
+	const settles = Promise.withResolvers<void>();
+	const fixture = createFixture({
+		responses: [stale, stale, success],
+		timeoutMs: 1000,
+		routeRefreshTimeoutMs: 25,
+		refreshGate: settles.promise,
+	});
+	setTimeout(settles.resolve, 40);
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().requests).toHaveLength(3);
+	expect(fixture.stats().requests[2]).toEqual({
+		url: "http://worker-b:8080/v1/track",
+		body: { route: { partition: 0, routeEpoch: "2" }, command },
+	});
+	expect(fixture.stats().refreshes).toBe(2);
+}
+
+test(
+	"a refresh that outruns its slice is retried within the request budget, so a slow handoff costs latency, not a fail-open",
+	retriesARefreshThatOutrunsItsBudget,
+);
+
+async function followsTheSuccessorWithoutARefresh(): Promise<void> {
+	// The claim the old owner wrote is exactly what a refresh would read; naming it saves the read.
+	const fixture = createFixture({
+		responses: [staleNaming(replacement), success],
+	});
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().refreshes).toBe(0);
+	expect(fixture.stats().requests).toHaveLength(2);
+	expect(fixture.stats().requests[1]).toEqual({
+		url: "http://worker-b:8080/v1/track",
+		body: { route: { partition: 0, routeEpoch: "2" }, command },
+	});
+	// The hint outlives the request: the next one goes straight to the successor.
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().requests[2]?.url).toBe(
+		"http://worker-b:8080/v1/track",
+	);
+	expect(fixture.stats().refreshes).toBe(0);
+}
+
+test(
+	"a NOT_OWNER that names the successor is followed without an ownership refresh",
+	followsTheSuccessorWithoutARefresh,
+);
+
+async function ignoresAHintOlderThanKnownOwnership(): Promise<void> {
+	// A late answer from a past owner can name a route older than the one already known.
+	const fixture = createFixture({
+		responses: [
+			staleNaming({
+				partition: 0,
+				routeEpoch: "0",
+				endpoint: "http://worker-z:8080",
+			}),
+			success,
+		],
+	});
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().refreshes).toBe(1);
+	expect(fixture.stats().requests[1]?.url).toBe(
+		"http://worker-b:8080/v1/track",
+	);
+}
+
+test(
+	"a successor hint older than the ownership already known is ignored",
+	ignoresAHintOlderThanKnownOwnership,
+);
+
+async function dropsAHintTheSuccessorDeclines(): Promise<void> {
+	// The named successor moved on too: its plain NOT_OWNER drops the hint and ownership is read as before.
+	const fixture = createFixture({
+		responses: [
+			staleNaming({
+				partition: 0,
+				routeEpoch: "3",
+				endpoint: "http://worker-c:8080",
+			}),
+			stale,
+			success,
+		],
+	});
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().refreshes).toBe(1);
+	expect(fixture.stats().requests.map((request) => request.url)).toEqual([
+		"http://worker-a:8080/v1/track",
+		"http://worker-c:8080/v1/track",
+		"http://worker-b:8080/v1/track",
+	]);
+}
+
+test(
+	"a hinted successor that also answers NOT_OWNER drops the hint and falls back to a refresh",
+	dropsAHintTheSuccessorDeclines,
 );

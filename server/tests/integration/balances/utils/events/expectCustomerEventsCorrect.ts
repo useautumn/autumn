@@ -11,6 +11,7 @@ export const EVENTS_ARRIVAL_TIMEOUT_MS = 30_000;
 type ExpectedEvent = {
 	value: number;
 	properties?: Exclude<CreateEvent["properties"], undefined>;
+	idempotencyKey?: string;
 };
 
 /**
@@ -33,6 +34,11 @@ export const expectCustomerEventsCorrect = async ({
 				expect(events[index].value).toBe(expectedEvent.value);
 				if (expectedEvent.properties !== undefined) {
 					expect(events[index].properties).toEqual(expectedEvent.properties);
+				}
+				if (expectedEvent.idempotencyKey !== undefined) {
+					expect(events[index].idempotency_key).toBe(
+						expectedEvent.idempotencyKey,
+					);
 				}
 			}
 		},

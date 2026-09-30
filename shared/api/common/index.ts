@@ -4,4 +4,5 @@ export * from "./customerId";
 export * from "./duration/durationSchema";
 export * from "./freeTrial/freeTrialParamsV1";
 export * from "./freeTrial/mappers/freeTrialParamsV1ToV0";
+export * from "./listPageSchemas";
 export * from "./paginationConfigs";

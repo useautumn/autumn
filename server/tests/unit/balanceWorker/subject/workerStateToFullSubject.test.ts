@@ -3,6 +3,7 @@ import {
 	type CatalogRow,
 	catalogRowsToCatalog,
 	mergeSubjectStates,
+	workerStateToFullSubject,
 } from "@autumn/balance-engine";
 import {
 	AppEnv,
@@ -15,7 +16,6 @@ import {
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements.js";
 import { products } from "@tests/utils/fixtures/db/products.js";
 import { autumnBillingPlanToCatalogRows } from "@/internal/balanceWorker/billingPlan/autumnBillingPlanToCatalogRows.js";
-import { workerStateToFullSubject } from "@/internal/balanceWorker/subject/workerStateToFullSubject.js";
 import {
 	firstGrantOf,
 	product,

@@ -1,0 +1,52 @@
+/* Autumn's own stylesheet: tokens, @theme, fonts, button/input presets. */
+@import "../../../../packages/ui/src/styles/index.css";
+
+/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind v4 directive */
+@source "./**/*.tsx";
+
+html,
+body,
+#root {
+	height: 100%;
+	background-color: var(--outer-background);
+}
+
+body {
+	overflow: hidden;
+	color: var(--foreground);
+}
+
+@keyframes twd-pulse {
+	50% {
+		opacity: 0.35;
+	}
+}
+
+.twd-pulse {
+	animation: twd-pulse 1.6s ease-in-out infinite;
+}
+
+/* Worker squares scale in as an elastic run attaches them. */
+@keyframes twd-pop {
+	from {
+		scale: 0.3;
+		opacity: 0;
+	}
+}
+
+.twd-pop {
+	animation: twd-pop 320ms ease-out;
+}
+
+.twd-pop.twd-pulse {
+	animation:
+		twd-pop 320ms ease-out,
+		twd-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.twd-pop,
+	.twd-pulse {
+		animation: none;
+	}
+}

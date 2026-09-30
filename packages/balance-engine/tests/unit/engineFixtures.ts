@@ -12,9 +12,11 @@ import {
 	type CommandOrg,
 	catalogRowsToCatalog,
 	createSubjectState,
+	type MutationRecord,
 	parseCheckCommand,
 	parseDeleteBalanceCommand,
 	parseInitializeRequest,
+	parseMutationRecord,
 	parseRecalculateBalanceCommand,
 	parseTrackCommand,
 	parseUpdateBalanceCommand,
@@ -281,6 +283,35 @@ export const createCatalogRowsFor = ({
 	].map(featureRowOf),
 	...state.customerProducts.map((row) => productRowOf(row.internal_product_id)),
 ];
+
+/** An evict as the worker logs it: nothing moves, the customer's revision steps once. */
+export const createEvictRecord = ({
+	commandId = "evict_1",
+	revisionBefore = 0,
+}: {
+	commandId?: string;
+	revisionBefore?: number;
+} = {}): MutationRecord =>
+	parseMutationRecord({
+		input: {
+			schemaVersion: 1,
+			type: "mutation",
+			id: commandId,
+			identity,
+			revision: { before: revisionBefore, after: revisionBefore + 1 },
+			command: {
+				schemaVersion: 1,
+				requestId: "req_evict",
+				identity,
+				occurredAt: 1_700_000_000_000,
+				type: "evict",
+				commandId,
+			},
+			changes: [],
+			result: { type: "evict" },
+			receipt: { fingerprint: "fp_evict", expiresAt: 1_700_086_400_000 },
+		},
+	});
 
 export const createCatalogFor = ({ state }: { state: SubjectState }): Catalog =>
 	catalogRowsToCatalog({ rows: createCatalogRowsFor({ state }) });

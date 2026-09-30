@@ -3,7 +3,7 @@ import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
 /** Pinned: written at OAuth start and consumed at the provider callback — two
  *  different requests, so ramp routing would break the handoff. */
-export const OAUTH_STATE_TTL_SECONDS = 10 * 60;
+export const OAUTH_STATE_TTL_SECONDS = 60 * 60;
 
 export const buildOAuthStateKey = (stateKey: string) =>
 	`oauth_state:${stateKey}`;

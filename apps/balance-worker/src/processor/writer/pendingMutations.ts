@@ -58,6 +58,8 @@ export function createPendingSettlement(): PendingSettlement {
 	const stored = Promise.withResolvers<void>();
 	// Log-only callers may never wait for the store; failure still reaches store waiters.
 	void stored.promise.catch(() => undefined);
+	const logged = Promise.withResolvers<void>();
+	void logged.promise.catch(() => undefined);
 	const waiters: {
 		kind: CommittedMutation["kind"];
 		resolvers: ReturnType<typeof Promise.withResolvers<CommittedMutation>>;
@@ -78,11 +80,18 @@ export function createPendingSettlement(): PendingSettlement {
 		state,
 	}: {
 		mutation: MutationRecord;
-		state: SubjectState;
+		state: SubjectState | null;
 	}): void {
+		logged.resolve();
+		// A log-only record projected no rows, and only a write is ever joined for them.
+		if (!state) return;
 		for (const { kind, resolvers } of waiters) {
 			resolvers.resolve({ kind, mutation, state });
 		}
+	}
+
+	function waitForLog(): Promise<void> {
+		return logged.promise;
 	}
 
 	function waitForStore(): Promise<void> {
@@ -94,6 +103,7 @@ export function createPendingSettlement(): PendingSettlement {
 	}
 
 	function rejectCommit({ error }: { error: unknown }): void {
+		logged.reject(error);
 		for (const { resolvers } of waiters) resolvers.reject(error);
 	}
 
@@ -102,7 +112,15 @@ export function createPendingSettlement(): PendingSettlement {
 		stored.reject(error);
 	}
 
-	return { join, settle, waitForStore, settleStore, rejectCommit, reject };
+	return {
+		join,
+		settle,
+		waitForLog,
+		waitForStore,
+		settleStore,
+		rejectCommit,
+		reject,
+	};
 }
 
 /** Kafka refuses a batch over the topic's max.message.bytes (1 MiB by default).
@@ -155,7 +173,8 @@ export function enqueueMutation({
 	pendingKey: string;
 	customerKey: string;
 	mutation: MutationRecord;
-	nextState: SubjectState;
+	/** Null for a log-only record: it leaves no rows resident. */
+	nextState: SubjectState | null;
 	projectedStates?: SubjectState[];
 	durability: MutationDurability;
 	effects?: MutationEffect[];
@@ -182,9 +201,9 @@ export function enqueueMutation({
 			maxBatchBytes,
 		});
 	const settlement = createPendingSettlement();
-	const committed = settlement.join({ kind: "new" });
 	const projectedStates =
-		explicitProjectedStates ?? projectedStatesOf({ state: nextState });
+		explicitProjectedStates ??
+		(nextState ? projectedStatesOf({ state: nextState }) : []);
 	const pending: PendingMutation = {
 		pendingKey,
 		customerKey,
@@ -198,7 +217,6 @@ export function enqueueMutation({
 		loggedRecord,
 		settlement,
 		encodedBytes,
-		committed,
 	};
 	for (const [index, projected] of projectedStates.entries()) {
 		const subjectKey = pending.projectedSubjectKeys[index];
@@ -231,11 +249,12 @@ export function pendingCommitsFor({
 }: {
 	state: PartitionWriterState;
 	customerKey: string;
-}): Promise<CommittedMutation>[] {
+}): Promise<void>[] {
 	const customerPending = state.pendingByCustomerKey.get(customerKey);
 	if (!customerPending) return [];
-	const commits: Promise<CommittedMutation>[] = [];
-	for (const pending of customerPending) commits.push(pending.committed);
+	const commits: Promise<void>[] = [];
+	for (const pending of customerPending)
+		commits.push(pending.settlement.waitForLog());
 	return commits;
 }
 

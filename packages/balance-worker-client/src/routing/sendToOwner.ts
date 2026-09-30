@@ -9,7 +9,8 @@ import type { RoutedCommand, RoutingContext } from "./types/routing.js";
 import {
 	assertRequestDeadline,
 	createRequestDeadline,
-	isNotOwnerResponse,
+	followNotOwnerAnswer,
+	readNotOwnerResponse,
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
 
@@ -41,16 +42,21 @@ export async function sendToOwner<Response>({
 	try {
 		// A partition mid-handoff answers NOT_OWNER until its successor is named; the
 		// route is refreshed and tried again while the request's budget allows, so a
-		// move of a second or two costs the caller latency, not an error.
+		// move of a second or two costs the caller latency, not an error. A refresh
+		// that outruns its slice hands back too: the route is tried as it stands,
+		// and the next stale answer waits on the same refresh again. An answer that
+		// names the successor skips the refresh: the old owner wrote that claim itself.
+		let followingHint = false;
 		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
 			failureCode = "OWNERSHIP_UNAVAILABLE";
 			assertRequestDeadline({ deadline, outcome });
-			if (attempt > 0)
+			if (attempt > 0 && !followingHint)
 				await refreshCommandRoute({
 					owners: ctx.owners,
 					deadline,
 					timeoutMs: ctx.routeRefreshTimeoutMs,
 				});
+			followingHint = false;
 			const resolved = resolveCommandRoute({ ctx, command: snapshot });
 			if (!resolved) {
 				if (attempt === 0) continue;
@@ -76,8 +82,10 @@ export async function sendToOwner<Response>({
 			});
 			assertRequestDeadline({ deadline, outcome });
 			failureCode = "INVALID_RESPONSE";
-			if (!isNotOwnerResponse({ response })) return response.body as Response;
+			const notOwner = readNotOwnerResponse({ response });
+			if (!notOwner) return response.body as Response;
 			outcome = "not_submitted";
+			followingHint = followNotOwnerAnswer({ ctx, resolved, answer: notOwner });
 		}
 		throw new BalanceWorkerClientError({
 			code: "ROUTE_STILL_STALE",

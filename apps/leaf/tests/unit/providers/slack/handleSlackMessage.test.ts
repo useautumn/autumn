@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Message, StateAdapter, Thread } from "chat";
-import { createSlackMessageHandlers } from "../../../../src/providers/slack/handlers/handleSlackMessage.js";
+import {
+	createSlackMessageHandlers,
+	messageTagsAnyAgent,
+} from "../../../../src/providers/slack/handlers/handleSlackMessage.js";
 
 let disposition: "close" | "keep" = "close";
 const dispatchSlackAgentMessage = mock(async (_input: unknown) => disposition);
@@ -12,6 +15,8 @@ let skipReply = false;
 const shouldSkipReply = mock(async (_input: unknown) => skipReply);
 let mentionsAgentResult = false;
 const mentionsAgent = mock(async (_input: unknown) => mentionsAgentResult);
+let tagsAnyAgentResult = false;
+const tagsAnyAgent = mock(async (_input: unknown) => tagsAnyAgentResult);
 const billBot = {
 	slack_id: "U_BILL",
 	name: "Bill",
@@ -37,6 +42,7 @@ const dependencies = {
 	getState: () => state,
 	mentionsAgent,
 	shouldSkipReply,
+	tagsAnyAgent,
 };
 const {
 	handleEditedSlackMessage,
@@ -108,6 +114,8 @@ beforeEach(() => {
 	disposition = "close";
 	mentionsAgentResult = false;
 	mentionsAgent.mockClear();
+	tagsAnyAgentResult = false;
+	tagsAnyAgent.mockClear();
 	trustedBotResult = undefined;
 	findTrustedBot.mockClear();
 	skipReply = false;
@@ -215,6 +223,103 @@ describe("handleSubscribedSlackMessage", () => {
 		await lastDispatchInput().onMissedMessagesDelivered();
 		await handleSubscribedSlackMessage(thread, tagged);
 		expect(await lastDispatchInput().missedMessages()).toBeUndefined();
+	});
+
+	test("a re-tag in a followed thread hands over files shared earlier in it", async () => {
+		tagsAnyAgentResult = true;
+		const contract = {
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} as const;
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [contract],
+		} as Message;
+		const current = createMessage({ id: "M3", text: "<@U_BOT> try again" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSubscribedSlackMessage(thread, current);
+
+		const { threadAttachments } = dispatchSlackAgentMessage.mock.calls.at(
+			-1,
+		)?.[0] as { threadAttachments: () => Promise<unknown> };
+		expect(await threadAttachments()).toEqual([
+			expect.objectContaining({ attachment: contract, fileIndex: 0 }),
+		]);
+	});
+
+	test("a tag of another workspace's copy of the agent still hands over earlier files", async () => {
+		// Slack Connect: the message arrives through this workspace's
+		// installation but tags the bot the other workspace sees.
+		mentionsAgentResult = false;
+		tagsAnyAgentResult = true;
+		const contract = {
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} as const;
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [contract],
+		} as Message;
+		const current = createMessage({ id: "M3", text: "<@U_OTHER_BOT> retry" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSubscribedSlackMessage(thread, current);
+
+		const { threadAttachments } = dispatchSlackAgentMessage.mock.calls.at(
+			-1,
+		)?.[0] as { threadAttachments: () => Promise<unknown> };
+		expect(await threadAttachments()).toEqual([
+			expect.objectContaining({ attachment: contract }),
+		]);
+	});
+
+	test("a re-tag leaves out files an earlier turn already read", async () => {
+		tagsAnyAgentResult = true;
+		const contract = {
+			mimeType: "application/pdf",
+			name: "contract.pdf",
+			type: "file",
+		} as const;
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [contract],
+			raw: { files: [{ id: "F_CONTRACT" }], team_id: "T1" },
+		} as Message;
+		const current = createMessage({ id: "M3", text: "<@U_BOT> again" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSubscribedSlackMessage(thread, current);
+		const first = dispatchSlackAgentMessage.mock.calls.at(-1)?.[0] as {
+			onAttachmentsDelivered: (fileIds: string[]) => Promise<void>;
+			threadAttachments: () => Promise<unknown[]>;
+		};
+		expect(await first.threadAttachments()).toHaveLength(1);
+		await first.onAttachmentsDelivered(["F_CONTRACT"]);
+
+		await handleSubscribedSlackMessage(thread, current);
+		const second = dispatchSlackAgentMessage.mock.calls.at(-1)?.[0] as {
+			threadAttachments: () => Promise<unknown[]>;
+		};
+		expect(await second.threadAttachments()).toEqual([]);
+	});
+
+	test("an untagged reply in a followed thread does not resend earlier files", async () => {
+		const parent = {
+			...createMessage({ id: "P", isBot: true, text: "see contract" }),
+			attachments: [{ mimeType: "application/pdf", type: "file" }],
+		} as Message;
+		const current = createMessage({ id: "M3", text: "thanks" });
+		const { thread } = createThread([parent, current]);
+
+		await handleSubscribedSlackMessage(thread, current);
+
+		const { threadAttachments } = dispatchSlackAgentMessage.mock.calls.at(
+			-1,
+		)?.[0] as { threadAttachments: () => Promise<unknown> };
+		expect(await threadAttachments()).toEqual([]);
 	});
 
 	test("ignores bot-authored messages", async () => {
@@ -455,5 +560,47 @@ describe("handleEditedSlackMessage", () => {
 
 		expect(subscribe).not.toHaveBeenCalled();
 		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+	});
+});
+
+describe("messageTagsAnyAgent", () => {
+	// The bot users of every installation, e.g. ours and a customer's copy of
+	// the app in a shared Slack Connect channel.
+	const storedBotUserIds = new Set(["U0B796GJARM", "U0BAS3B3G6N"]);
+	const isAgentBot = async ({ userIds }: { userIds: ReadonlyArray<string> }) =>
+		userIds.some((userId) => storedBotUserIds.has(userId));
+	const messageWithText = (text: string) =>
+		({ ...createMessage({ text }), raw: { team_id: "T1", text } }) as Message;
+
+	test("a mention of another workspace's copy of the agent is a tag", async () => {
+		expect(
+			await messageTagsAnyAgent({
+				isAgentBot,
+				message: messageWithText("<@U0BAS3B3G6N> retry"),
+			}),
+		).toBe(true);
+	});
+
+	test("a mention of a person is not a tag", async () => {
+		expect(
+			await messageTagsAnyAgent({
+				isAgentBot,
+				message: messageWithText("<@U07NL51UXL6> can you look?"),
+			}),
+		).toBe(false);
+	});
+
+	test("a message without mentions is not a tag", async () => {
+		const lookups: unknown[] = [];
+		expect(
+			await messageTagsAnyAgent({
+				isAgentBot: async (input) => {
+					lookups.push(input);
+					return false;
+				},
+				message: messageWithText("thanks"),
+			}),
+		).toBe(false);
+		expect(lookups).toEqual([{ userIds: [] }]);
 	});
 });

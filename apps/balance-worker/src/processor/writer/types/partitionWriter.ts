@@ -1,9 +1,11 @@
 import type {
 	MeteringIdentity,
+	MutatingCommand,
 	MutationEffect,
 	MutationRecord,
 	RowChange,
 	SubjectState,
+	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { StateStore } from "../../../state/types/stateStore.js";
@@ -24,6 +26,11 @@ export type PartitionWriter = {
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
+	/** Appends a record that leaves no rows resident, such as an evict; resolves once Kafka holds it. */
+	log(params: {
+		command: MutatingCommand;
+		mutation: SubjectStateMutation;
+	}): Promise<void>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
 	/** Throws once a commit has failed: the projection past it never became durable, so nothing may be read from it. */
@@ -45,13 +52,14 @@ export type CommittedOutcomeAppender = {
 		nextOffset: bigint;
 	}): Promise<void>;
 	/** Records that the command before `nextOffset` is decided: the offset rides with the next
-	 *  batch or lands on its own after a short gap. Throws a landing failure that already happened. */
+	 *  batch or lands through the consumer group's commit after a short gap. Never throws: a
+	 *  refused landing is retried, and the Postgres bookmark decides where a restart resumes. */
 	settleCommandOffset?(params: {
 		topic: string;
 		partition: number;
 		nextOffset: bigint;
 	}): void;
-	/** Lands whatever `settleCommandOffset` still holds; rejects with a landing failure. */
+	/** Lands whatever `settleCommandOffset` still holds and schedules nothing after; rejects when that landing is refused. */
 	flushCommandOffsets?(): Promise<void>;
 	/** Bytes `appendCommitted` would put on the wire for this record; absent, the writer estimates from JSON. Measuring here lets the appender keep the encoding it later sends. */
 	encodedBytesOf?(params: { record: MeteringRecord }): number;
@@ -109,7 +117,12 @@ export type PartitionWriterConfig = {
 /** Callers waiting on one queued mutation; the writer is "new", joiners are "duplicate". */
 export type PendingSettlement = {
 	join(params: { kind: CommittedMutation["kind"] }): Promise<CommittedMutation>;
-	settle(params: { mutation: MutationRecord; state: SubjectState }): void;
+	settle(params: {
+		mutation: MutationRecord;
+		state: SubjectState | null;
+	}): void;
+	/** Resolves when Kafka holds the record, whether or not it projected rows. */
+	waitForLog(): Promise<void>;
 	waitForStore(): Promise<void>;
 	settleStore(): void;
 	rejectCommit(params: { error: unknown }): void;
@@ -122,8 +135,8 @@ export type PendingMutation = {
 	/** The subjects this mutation projected; pinned in the map until it commits. */
 	projectedSubjectKeys: string[];
 	mutation: MutationRecord;
-	/** The subject's rows once this mutation is applied. */
-	nextState: SubjectState;
+	/** The subject's rows once this mutation is applied; null for a log-only record. */
+	nextState: SubjectState | null;
 	/** Whether the caller is answered at the append or after the store applies. */
 	durability: MutationDurability;
 	/** Stamped on the log's copy, never the store's. */
@@ -133,8 +146,6 @@ export type PendingMutation = {
 	settlement: PendingSettlement;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
-	/** What `waitForPendingCommits()` snapshots for this customer. */
-	committed: Promise<CommittedMutation>;
 };
 
 /** Mutable writer state: the subject map (projected and committed rows) and mutations awaiting commit. */

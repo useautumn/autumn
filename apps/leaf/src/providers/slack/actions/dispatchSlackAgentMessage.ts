@@ -32,11 +32,19 @@ import { createEveSlackPresenter } from "../evePresenter.js";
 import {
 	fetchSlackAttachmentFallback,
 	getSlackFilesFromRaw,
+	hydrateSlackAttachment,
 } from "../files.js";
 import { findSlackInstallationForWorkspace } from "../installations.js";
 import { presentSlackAgentTurn } from "../presenters/presentSlackAgentTurn.js";
 import { controlMessageFrom } from "../routing/controlMessage.js";
-import type { ThreadAttachment } from "../threadContext.js";
+import {
+	MAX_ATTACHMENTS,
+	MAX_THREAD_ATTACHMENTS,
+} from "../setup/prepareAttachments.js";
+import {
+	type ThreadAttachment,
+	threadAttachmentFileId,
+} from "../threadContext.js";
 import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
 
 type DispatchSlackAgentMessageInput = {
@@ -47,6 +55,8 @@ type DispatchSlackAgentMessageInput = {
 	/** Loaded only when a new run starts; an injected follow-up leaves them for
 	 * the next run. */
 	missedMessages?: () => Promise<AgentMissedMessages | undefined>;
+	/** Called with the Slack file ids a turn read, once it has run. */
+	onAttachmentsDelivered?: (fileIds: ReadonlyArray<string>) => Promise<void>;
 	/** Called once a turn has run with the missed messages in its prompt. */
 	onMissedMessagesDelivered?: () => Promise<void>;
 	providerUserId: string;
@@ -131,6 +141,7 @@ const runAndReply = async ({
 	channelId,
 	clientContext,
 	missedMessages: missedMessagesInput,
+	onAttachmentsDelivered,
 	onMissedMessagesDelivered,
 	providerUserId,
 	raw,
@@ -250,18 +261,77 @@ const runAndReply = async ({
 			),
 		];
 		const botToken = decrypt(installation.bot_access_token);
+		const hydrate = async ({
+			attachment,
+			fileIndex,
+			raw: fileRaw,
+		}: {
+			attachment: Attachment;
+			fileIndex: number;
+			raw: unknown;
+		}) => {
+			try {
+				return await hydrateSlackAttachment({
+					attachment,
+					botToken,
+					fileIndex,
+					raw: fileRaw,
+				});
+			} catch (error) {
+				logger.warn("Could not look up Slack file info", {
+					event: "leaf.slack_attachment_hydrate_failed",
+					data: { file_index: fileIndex },
+					error,
+				});
+				return attachment;
+			}
+		};
+		// Only files the turn can take are looked up, so a long thread of
+		// stubs does not fan out into dozens of Slack calls.
+		const [hydratedAttachments, hydratedThreadAttachments] = await Promise.all([
+			Promise.all(
+				(attachments ?? []).map((attachment, fileIndex) =>
+					fileIndex < MAX_ATTACHMENTS
+						? hydrate({ attachment, fileIndex, raw })
+						: attachment,
+				),
+			),
+			Promise.all(
+				(threadAttachments ?? []).map(async (earlier, index) =>
+					index < MAX_THREAD_ATTACHMENTS
+						? { ...earlier, attachment: await hydrate(earlier) }
+						: earlier,
+				),
+			),
+		]);
+		const fileIdByAttachment = new Map<Attachment, string>();
+		for (const [fileIndex, attachment] of hydratedAttachments.entries()) {
+			const fileId = threadAttachmentFileId({ fileIndex, raw });
+			if (fileId) fileIdByAttachment.set(attachment, fileId);
+		}
+		for (const earlier of hydratedThreadAttachments) {
+			const fileId = threadAttachmentFileId(earlier);
+			if (fileId) fileIdByAttachment.set(earlier.attachment, fileId);
+		}
+		let deliveredFileIds: string[] = [];
 
 		const output = await runSlackAgentTurn({
 			agentRunId: session.agentRunId,
 			attachmentFetchFallback: ({ attachment }) =>
 				fetchSlackAttachmentFallback({ attachment, botToken, rawFiles }),
-			attachments,
+			attachments: hydratedAttachments,
 			channelId,
 			clientContext,
 			installation,
 			logger,
 			missedMessages,
 			onAction: logAction,
+			onAttachmentsPrepared: (prepared) => {
+				deliveredFileIds = prepared.flatMap((attachment) => {
+					const fileId = fileIdByAttachment.get(attachment);
+					return fileId ? [fileId] : [];
+				});
+			},
 			onReasoning: evePresenter.onReasoning,
 			// A turn that settled while a follow-up was still to be read: post it
 			// now and leave the ticker running, because the reader is still on
@@ -287,7 +357,7 @@ const runAndReply = async ({
 			run,
 			speaker,
 			text,
-			threadAttachments,
+			threadAttachments: hydratedThreadAttachments,
 			threadId,
 			trustedBot,
 		});
@@ -301,6 +371,16 @@ const runAndReply = async ({
 					data: { error },
 				});
 			});
+			if (deliveredFileIds.length) {
+				await onAttachmentsDelivered?.(deliveredFileIds).catch(
+					(error: unknown) => {
+						logger.warn("Could not mark Slack files delivered", {
+							event: "leaf.slack_delivered_files_mark_failed",
+							data: { error },
+						});
+					},
+				);
+			}
 		}
 
 		if (output.kind === "stopped") {

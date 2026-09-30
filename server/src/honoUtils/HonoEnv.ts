@@ -20,6 +20,7 @@ export type RequestContext = {
 	features: Feature[];
 	user?: User;
 	userId?: string;
+	apiKeyId?: string;
 	impersonatedBy?: string;
 	customerId?: string;
 	entityId?: string;
@@ -103,6 +104,8 @@ export type RequestContext = {
 		mockVercelApi?: boolean;
 		allowVercelTestOidc?: boolean;
 		mockRevenueCat?: boolean;
+		/** Caps customers walked per list page (non-prod only). */
+		listScanCap?: number;
 		revenueCat?: {
 			subscriptions?: unknown[];
 			purchases?: unknown[];

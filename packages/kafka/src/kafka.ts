@@ -37,7 +37,10 @@ export type {
 	KafkaIdempotentProducerLimits,
 	KafkaProducerLimits,
 } from "./client/types/kafkaLimits.js";
-export { KafkaPartitionOffsetsNotFoundError } from "./consumer/consumerErrors.js";
+export {
+	isConsumerGroupGoneError,
+	KafkaPartitionOffsetsNotFoundError,
+} from "./consumer/consumerErrors.js";
 export { coPartitionedAssigner } from "./consumer/coPartitionedAssigner.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";

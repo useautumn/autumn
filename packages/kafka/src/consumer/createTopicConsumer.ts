@@ -1,3 +1,4 @@
+import { isConsumerGroupGoneError } from "./consumerErrors.js";
 import { startConsumer, stopConsumer } from "./consumerLifecycle.js";
 import type {
 	TopicConsumer,
@@ -64,21 +65,40 @@ export function createTopicConsumer({
 		nextOffset: bigint;
 	}): void {
 		if (state.isStopped) return;
-		ctx.consumer.seek({
-			topic: config.topic,
-			partition,
-			offset: nextOffset.toString(),
-		});
+		function seek(): void {
+			ctx.consumer.seek({
+				topic: config.topic,
+				partition,
+				offset: nextOffset.toString(),
+			});
+		}
+		steer(seek);
 	}
 
 	function pausePartition({ partition }: { partition: number }): void {
 		if (state.isStopped) return;
-		ctx.consumer.pause([{ topic: config.topic, partitions: [partition] }]);
+		function pause(): void {
+			ctx.consumer.pause([{ topic: config.topic, partitions: [partition] }]);
+		}
+		steer(pause);
 	}
 
 	function resumeFetching({ partition }: { partition: number }): void {
 		if (state.isStopped) return;
-		ctx.consumer.resume([{ topic: config.topic, partitions: [partition] }]);
+		function resume(): void {
+			ctx.consumer.resume([{ topic: config.topic, partitions: [partition] }]);
+		}
+		steer(resume);
+	}
+
+	/** The group can also be gone without a stop: kafkajs crashed the runner and is rejoining. The
+	 *  partition is then being reassigned, so there is nothing to steer and no failure to report. */
+	function steer(run: () => void): void {
+		try {
+			run();
+		} catch (cause) {
+			if (!isConsumerGroupGoneError({ cause })) throw cause;
+		}
 	}
 
 	return {

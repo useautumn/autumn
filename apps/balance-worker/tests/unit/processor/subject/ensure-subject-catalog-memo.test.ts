@@ -79,3 +79,44 @@ test("a replaced state, or a moved catalog, is ensured afresh", async () => {
 	expect(moved).not.toBe(first);
 	expect(reads()).toBeGreaterThan(afterReplaced);
 });
+
+test("a feature row that expires while ensure waits on Postgres is still in the catalog it saves", async () => {
+	const inner = createTestCatalogCache();
+	// Rows expire during the load's await: from then on a strict read skips feature rows, as ttl expiry does.
+	let expired = false;
+	const catalogCache: CatalogCache = {
+		...inner,
+		load: async (params) => {
+			const rows = await inner.load(params);
+			expired = true;
+			return rows;
+		},
+		read: (params) =>
+			inner.read({
+				...params,
+				keys:
+					expired && !params.allowStale
+						? params.keys.filter((key) => key.table !== "features")
+						: params.keys,
+			}),
+	};
+	const scope = {
+		ctx: { catalogCache },
+		state: {
+			joinCache: createSubjectJoinCache({
+				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
+			}),
+		},
+	} as unknown as SubjectScope;
+	const state = createState();
+
+	const catalog = await ensureSubjectCatalog({
+		scope,
+		identity: testIdentity,
+		state,
+	});
+
+	expect(expired).toBe(true);
+	for (const row of state.customerEntitlements)
+		expect(catalog.features[row.internal_feature_id]).toBeDefined();
+});

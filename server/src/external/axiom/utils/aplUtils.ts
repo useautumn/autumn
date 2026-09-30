@@ -80,3 +80,18 @@ ${wheres}
 | order by _time desc
 | limit ${limit}`;
 };
+
+export const buildApiKeysLastUsedQuery = ({
+	orgId,
+	env,
+	rangeDays = 7,
+}: {
+	orgId: string;
+	env: string;
+	rangeDays?: number;
+}): string => `['express']
+| where _time > ago(${rangeDays}d)
+| where ['context.org_id'] == '${escapeApl(orgId)}'
+| where ['context.env'] == '${escapeApl(env)}'
+| where isnotempty(['context.api_key_id'])
+| summarize last_used = max(_time) by api_key_id = tostring(['context.api_key_id'])`;

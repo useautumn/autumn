@@ -14,6 +14,7 @@ import {
 	BotIcon,
 	BuildingIcon,
 	CreditCardIcon,
+	DatabaseIcon,
 	KeyRoundIcon,
 	MousePointerClickIcon,
 	PaletteIcon,
@@ -29,6 +30,7 @@ import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
 import { SettingsGroupContext } from "./SettingsSection";
 import { AccountSection } from "./sections/AccountSection";
@@ -36,6 +38,7 @@ import { AgentSection } from "./sections/AgentSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
+import { ByocCacheSection } from "./sections/ByocCacheSection";
 import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
@@ -64,7 +67,8 @@ export type SettingsTab =
 	| "transition-rules"
 	| "stripe"
 	| "vercel"
-	| "revenuecat";
+	| "revenuecat"
+	| "cache";
 
 export interface SettingsNavItem {
 	readonly id: SettingsTab;
@@ -173,6 +177,11 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				label: "RevenueCat",
 				icon: <RevenueCatIcon size={16} />,
 			},
+			{
+				id: "cache",
+				label: "Cache",
+				icon: <DatabaseIcon className="size-4" />,
+			},
 		],
 	},
 ];
@@ -194,6 +203,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	stripe: StripeSection,
 	vercel: VercelSection,
 	revenuecat: RevenueCatSection,
+	cache: ByocCacheSection,
 };
 
 /** Tabs that only render while their feature flag is on. */
@@ -201,6 +211,9 @@ const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel">> = {
 	sso: "sso",
 	vercel: "vercel",
 };
+
+/** Tabs only Autumn admins see while the feature is internal. */
+const ADMIN_TABS: readonly SettingsTab[] = ["cache"];
 
 /** Integrations were previously behind the developer page's scope. */
 const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
@@ -212,10 +225,12 @@ const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
 export const useIsSettingsTabEnabled = () => {
 	const flags = useAutumnFlags();
 	const { has } = useScopes();
+	const { isAdmin } = useAdmin();
 
 	return (tab: SettingsTab) => {
 		const flag = FLAGGED_TABS[tab];
 		if (flag && !flags[flag]) return false;
+		if (ADMIN_TABS.includes(tab)) return isAdmin;
 		if (API_KEY_SCOPED_TABS.includes(tab)) return has(Scopes.ApiKeys.Read);
 		return true;
 	};

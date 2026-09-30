@@ -74,7 +74,8 @@ export const invoiceCheckout = async ({
 		)
 		.first()
 		.click();
-	const deadline = performance.now() + 30_000;
+	// Watches for errors and a CAPTCHA; the caller asks Stripe whether the payment went through.
+	const deadline = performance.now() + 10_000;
 	while (performance.now() < deadline) {
 		if (await paid.isVisible()) {
 			console.log("[invoiceCheckout] Payment confirmed by hosted page");
@@ -125,7 +126,7 @@ export const invoiceCheckout = async ({
 		}
 		await page.waitForTimeout(250);
 	}
-	throw new Error(
-		"Stripe hosted invoice did not confirm payment within 30000ms",
+	console.log(
+		"[invoiceCheckout] Submitted; hosted page showed no confirmation within 10000ms",
 	);
 };

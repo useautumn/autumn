@@ -27,6 +27,8 @@ export type SlackAgentTurnParams = Readonly<{
 	logger?: AutumnLogger;
 	missedMessages?: AgentMissedMessages;
 	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
+	/** Receives the attachments, as passed in, that the turn will read. */
+	onAttachmentsPrepared?: (attachments: ReadonlyArray<Attachment>) => void;
 	onReasoning?: (input: { id: string; text: string }) => void;
 	/** Receives a turn that settled while a follow-up was still to be read, so
 	 * its reply is posted before the reader moves on to the replacement. */

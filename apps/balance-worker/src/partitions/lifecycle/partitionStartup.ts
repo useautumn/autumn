@@ -181,6 +181,8 @@ function admitPartition({
 	entry: PartitionEntry;
 	routeEpoch: string;
 }): void {
+	// Admitted here again: whoever it was handed to before is no longer where to send callers.
+	state.handoffSuccessors.delete(entry.partition);
 	state.directory.admit({
 		partition: entry.partition,
 		routeEpoch,

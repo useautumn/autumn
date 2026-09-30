@@ -23,12 +23,13 @@ describe("Slack attachment message preparation", () => {
 			type: "file",
 		} satisfies Attachment;
 
-		const { attachmentCount, content } = await getUserContent({
+		const { attachmentCount, content, delivered } = await getUserContent({
 			attachments: [attachment],
 			text: "please provision this",
 		});
 
 		expect(attachmentCount).toBe(1);
+		expect(delivered).toEqual([attachment]);
 		expect(content[0]).toMatchObject({
 			filename: "contract.pdf",
 			mediaType: "application/pdf",
@@ -102,16 +103,18 @@ describe("Slack attachment message preparation", () => {
 			},
 		] satisfies Attachment[];
 
-		const { attachmentCount, notes } = await prepareAttachmentMessage({
-			attachments,
-			text: "read these",
-		});
+		const { attachmentCount, delivered, notes } =
+			await prepareAttachmentMessage({
+				attachments,
+				text: "read these",
+			});
 
 		expect(attachmentCount).toBe(0);
 		expect(notes).toEqual([
 			"Skipped archive.zip: unsupported file type.",
 			"Skipped huge.pdf: file is too large.",
 		]);
+		expect(delivered).toEqual([]);
 	});
 
 	test("adds files from earlier in the thread after the message's own, naming who shared them", async () => {

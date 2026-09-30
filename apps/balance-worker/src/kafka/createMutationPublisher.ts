@@ -6,7 +6,6 @@ import {
 	type KafkaOffsetCommit,
 	type KafkaProducer,
 	type MeteringRecord,
-	sendTransactionalOffsets,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
@@ -28,6 +27,7 @@ export function createMutationPublisher({
 		/** Defaults to transactional. */
 		commit?: { mode: KafkaCommitMode };
 		ownerEpoch?(): string | undefined;
+		/** The consumer group's own offset commit: lands offsets no batch carries, without a transaction. */
 		commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 		logger?: Partial<Pick<AutumnLogger, "warn">>;
 		/** Defaults to a real timer and the settle gap constant; tests drive it by hand. */
@@ -40,10 +40,12 @@ export function createMutationPublisher({
 		target: null,
 		pending: null,
 		landed: null,
-		landedAt: null,
+		lastLandingAt: null,
 		inFlight: null,
 		cancelScheduled: null,
-		failure: null,
+		lastFailure: null,
+		failing: false,
+		closed: false,
 	};
 	const publisher = createMeteringPublisher({
 		ctx: {
@@ -144,8 +146,10 @@ export function createMutationPublisher({
 		};
 	}
 
+	/** An offset no batch carries goes through the consumer group's own commit. A transaction of its own
+	 *  would take the partition's one transaction slot for three broker trips and refuse the next batch
+	 *  that arrives meanwhile; the group commit is one request that contends with nothing. */
 	async function commitCommandOffset({
-		topic,
 		partition,
 		nextOffset,
 	}: {
@@ -153,20 +157,12 @@ export function createMutationPublisher({
 		partition: number;
 		nextOffset: bigint;
 	}): Promise<void> {
-		try {
-			const offsets = offsetsOf({ partition, nextOffset });
-			if (ctx.commit?.mode === "idempotent") {
-				if (!ctx.commandOffsets)
-					throw new Error("Idempotent commits need a command offset committer");
-				await ctx.commandOffsets.commit(offsets);
-				markLanded({ nextOffset });
-				return;
-			}
-			await sendTransactionalOffsets({ producer: ctx.producer, offsets });
-			markLanded({ nextOffset });
-		} catch (cause) {
-			throw translateKafkaProducerError({ topic, partition, cause });
-		}
+		if (!ctx.commandOffsets)
+			throw new Error(
+				"Command offsets outside a batch need the consumer group's committer",
+			);
+		await ctx.commandOffsets.commit(offsetsOf({ partition, nextOffset }));
+		markLanded({ nextOffset });
 	}
 
 	function carryPendingOffset({
@@ -184,7 +180,9 @@ export function createMutationPublisher({
 	function markLanded({ nextOffset }: { nextOffset: bigint }): void {
 		if (settling.landed === null || nextOffset > settling.landed)
 			settling.landed = nextOffset;
-		settling.landedAt = settle.now();
+		settling.lastLandingAt = settle.now();
+		settling.failing = false;
+		settling.lastFailure = null;
 		if (settling.pending !== null && settling.pending <= settling.landed)
 			settling.pending = null;
 		if (settling.pending === null) cancelScheduledFlush();
@@ -196,6 +194,8 @@ export function createMutationPublisher({
 		if (cancel) cancel();
 	}
 
+	/** Never throws: the Postgres bookmark decides where a restart resumes, so a landing that
+	 *  fails costs lag telemetry and a retry, never the command. */
 	function settleCommandOffset({
 		topic,
 		partition,
@@ -205,7 +205,6 @@ export function createMutationPublisher({
 		partition: number;
 		nextOffset: bigint;
 	}): void {
-		if (settling.failure !== null) throw settling.failure;
 		if (settling.landed !== null && nextOffset <= settling.landed) return;
 		settling.target = { topic, partition };
 		if (settling.pending === null || nextOffset > settling.pending)
@@ -213,14 +212,15 @@ export function createMutationPublisher({
 		scheduleFlush();
 	}
 
-	/** One landing at a time, and never within the gap of the last: whatever settles meanwhile joins the next. */
+	/** One landing at a time, and never within the gap of the last attempt: whatever settles meanwhile joins the next. */
 	function scheduleFlush(): void {
-		if (settling.inFlight || settling.cancelScheduled) return;
-		const sinceLanded =
-			settling.landedAt === null
+		if (settling.closed || settling.inFlight || settling.cancelScheduled)
+			return;
+		const sinceLastLanding =
+			settling.lastLandingAt === null
 				? settle.gapMs
-				: settle.now() - settling.landedAt;
-		const delayMs = Math.max(0, settle.gapMs - sinceLanded);
+				: settle.now() - settling.lastLandingAt;
+		const delayMs = Math.max(0, settle.gapMs - sinceLastLanding);
 		settling.cancelScheduled = settle.schedule(runScheduledFlush, delayMs);
 	}
 
@@ -229,21 +229,22 @@ export function createMutationPublisher({
 		void flushPending();
 	}
 
-	function flushPending(): Promise<void> {
+	/** Resolves true once nothing is left waiting; false when the landing it ran was refused. */
+	function flushPending(): Promise<boolean> {
 		if (settling.inFlight) return settling.inFlight;
 		const target = settling.target;
 		const nextOffset = settling.pending;
-		if (target === null || nextOffset === null) return Promise.resolve();
+		if (target === null || nextOffset === null) return Promise.resolve(true);
 		if (settling.landed !== null && nextOffset <= settling.landed) {
 			settling.pending = null;
-			return Promise.resolve();
+			return Promise.resolve(true);
 		}
 		settling.pending = null;
 		settling.inFlight = landPending({ ...target, nextOffset });
 		return settling.inFlight;
 	}
 
-	/** A failure sticks: the next command, or the drain, reports it through the paths that already handle a refused commit. */
+	/** A refused landing keeps the offset waiting for the next batch or the next gap; it is warned once per streak. */
 	async function landPending({
 		topic,
 		partition,
@@ -252,31 +253,37 @@ export function createMutationPublisher({
 		topic: string;
 		partition: number;
 		nextOffset: bigint;
-	}): Promise<void> {
+	}): Promise<boolean> {
 		try {
 			await commitCommandOffset({ topic, partition, nextOffset });
+			return true;
 		} catch (cause) {
-			settling.failure = cause;
+			settling.lastLandingAt = settle.now();
+			settling.lastFailure = cause;
 			if (settling.pending === null || nextOffset > settling.pending)
 				settling.pending = nextOffset;
-			ctx.logger?.warn?.(
-				"Command offsets could not be landed; the next command reports it",
-				{ topic, partition, nextOffset: nextOffset.toString(), error: cause },
-			);
+			if (!settling.failing) {
+				settling.failing = true;
+				ctx.logger?.warn?.(
+					"Command offsets could not be landed; retrying after the gap",
+					{ topic, partition, nextOffset: nextOffset.toString(), error: cause },
+				);
+			}
+			return false;
 		} finally {
 			settling.inFlight = null;
-			if (settling.failure === null && settling.pending !== null)
-				scheduleFlush();
+			if (settling.pending !== null) scheduleFlush();
 		}
 	}
 
+	/** The drain's last word: lands what is waiting now, and nothing is scheduled after it. */
 	async function flushCommandOffsets(): Promise<void> {
+		settling.closed = true;
 		cancelScheduledFlush();
-		await flushPending();
+		if (!(await flushPending())) throw settling.lastFailure;
 		// Offsets settled while that landing was in flight land now too.
 		cancelScheduledFlush();
-		await flushPending();
-		if (settling.failure !== null) throw settling.failure;
+		if (!(await flushPending())) throw settling.lastFailure;
 	}
 
 	return {
@@ -299,10 +306,14 @@ type CommandOffsetSettling = {
 	target: { topic: string; partition: number } | null;
 	pending: bigint | null;
 	landed: bigint | null;
-	landedAt: number | null;
-	inFlight: Promise<void> | null;
+	/** When the last landing finished, whether it landed or was refused. */
+	lastLandingAt: number | null;
+	inFlight: Promise<boolean> | null;
 	cancelScheduled: (() => void) | null;
-	failure: unknown;
+	lastFailure: unknown;
+	failing: boolean;
+	/** Set by the drain: nothing is scheduled after it. */
+	closed: boolean;
 };
 
 function defaultSettleTiming(): CommandOffsetSettleTiming {

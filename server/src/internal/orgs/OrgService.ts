@@ -10,6 +10,7 @@ import {
 	OrgConfigSchema,
 	organizations,
 	productAliases,
+	productAliasesToPlanAliasMap,
 	user,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
@@ -29,7 +30,6 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { toPlanAliasMap } from "../catalogV2/productAliases/toPlanAliasMap.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
@@ -179,7 +179,9 @@ export class OrgService {
 			org: {
 				...org,
 				config: OrgConfigSchema.parse(org.config || {}),
-				planAliases: toPlanAliasMap({ rows: result.product_aliases }),
+				planAliases: productAliasesToPlanAliasMap({
+					rows: result.product_aliases,
+				}),
 			},
 			features: result.features || [],
 		};
@@ -432,7 +434,7 @@ export class OrgService {
 			org: {
 				...(result as Organization),
 				config: OrgConfigSchema.parse(result.config || {}),
-				planAliases: toPlanAliasMap({ rows: aliasRows }),
+				planAliases: productAliasesToPlanAliasMap({ rows: aliasRows }),
 			},
 			env,
 		};

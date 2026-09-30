@@ -53,6 +53,7 @@ import { handleGetOrgMember } from "./handleGetOrgMember";
 import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
+import { handleSearchAdminOrgCustomers } from "./handleSearchAdminOrgCustomers";
 import {
 	handleCreateSlackAdminInstall,
 	handleDeleteSlackAdminInstall,
@@ -81,9 +82,12 @@ import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
 import { handleCreateImpersonationCliTokens } from "./impersonation/handleCreateImpersonationCliTokens";
+import { handleAddRolloutCustomers } from "./rollouts/handleAddRolloutCustomers";
 import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
+import { handleRemoveRolloutCustomers } from "./rollouts/handleRemoveRolloutCustomers";
+import { handleResetRolloutOrgs } from "./rollouts/handleResetRolloutOrgs";
 import { handleUpdateRollout } from "./rollouts/handleUpdateRollout";
 import { handleUpdateRolloutOrg } from "./rollouts/handleUpdateRolloutOrg";
 
@@ -101,6 +105,10 @@ honoAdminRouter.put(
 	...handleUpsertAdminOrgRequestBlock,
 );
 honoAdminRouter.get("/orgs/:org_id/redis", ...handleGetAdminOrgRedisConfig);
+honoAdminRouter.get(
+	"/orgs/:org_id/customers",
+	...handleSearchAdminOrgCustomers,
+);
 honoAdminRouter.patch(
 	"/orgs/:org_id/redis",
 	...handleUpsertAdminOrgRedisConfig,
@@ -302,4 +310,16 @@ honoAdminRouter.delete("/rollouts/:rollout_id", ...handleDeleteRollout);
 honoAdminRouter.delete(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleDeleteRolloutOrg,
+);
+honoAdminRouter.post(
+	"/rollouts/:rollout_id/orgs/reset",
+	...handleResetRolloutOrgs,
+);
+honoAdminRouter.put(
+	"/rollouts/:rollout_id/orgs/:org_id/customers",
+	...handleAddRolloutCustomers,
+);
+honoAdminRouter.delete(
+	"/rollouts/:rollout_id/orgs/:org_id/customers",
+	...handleRemoveRolloutCustomers,
 );

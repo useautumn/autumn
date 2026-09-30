@@ -38,6 +38,8 @@ apps/balance-worker/.data/
 !packages/gateway/tests
 !apps/leaf/tests
 !packages/render/tests
+!packages/alien/tests
+!packages/byoc/tests
 !packages/ducklake/tests
 !packages/axiom/tests
 !packages/billing/tests

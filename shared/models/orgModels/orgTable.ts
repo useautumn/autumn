@@ -11,6 +11,7 @@ import {
 	timestamp,
 	unique,
 } from "drizzle-orm/pg-core";
+import type { ByocConfig } from "./byocConfig.js";
 import type { CustomButton } from "./customButton.js";
 import type { IdempotencyConfig } from "./idempotencyConfig.js";
 import type { OrgConfig } from "./orgConfig.js";
@@ -136,6 +137,12 @@ export const organizations = pgTable(
 		sandbox_icon: text("sandbox_icon"),
 
 		redis_config: jsonb("redis_config").$type<OrgRedisConfig>(),
+		sandbox_byoc_config: jsonb("sandbox_byoc_config")
+			.$type<ByocConfig>()
+			.default(sql`'{}'::jsonb`),
+		live_byoc_config: jsonb("live_byoc_config")
+			.$type<ByocConfig>()
+			.default(sql`'{}'::jsonb`),
 		provisioning_source: text(
 			"provisioning_source",
 		).$type<OrgProvisioningSource>(),

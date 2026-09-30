@@ -33,6 +33,7 @@ export type LogAppContext = {
 	customer_id?: string;
 	entity_id?: string;
 	user_id?: string;
+	api_key_id?: string;
 	user_email?: string;
 	impersonated_by?: string;
 	api_version: string;

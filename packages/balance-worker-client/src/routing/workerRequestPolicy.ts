@@ -7,7 +7,13 @@ import {
 	BalanceWorkerClientError,
 	type WorkerRequestOutcome,
 } from "../types/balanceWorkerClientErrors.js";
-import type { PartitionOwners, RequestDeadline } from "./types/routing.js";
+import type {
+	PartitionOwner,
+	PartitionOwners,
+	RequestDeadline,
+	ResolvedCommandRoute,
+	RoutingContext,
+} from "./types/routing.js";
 
 /** A request's whole budget: the client timeout, cut short by the caller's signal. */
 export function createRequestDeadline({
@@ -47,22 +53,18 @@ export function assertRequestDeadline({
 	});
 }
 
-/** Gives an ownership refresh its own expiry so a request can stop waiting on it
- *  without giving up its remaining budget. Cancelling before the timer fires
- *  means the rejection never happens, so nothing is left unhandled. */
+/** Gives an ownership refresh its own slice so a request can stop waiting on it
+ *  without giving up its remaining budget: the slice ending is not a failure,
+ *  it hands the caller back to try the route it has while the refresh runs on.
+ *  Cancelling before the timer fires means the promise never settles, so
+ *  nothing is left dangling. */
 function startRefreshExpiry({ timeoutMs }: { timeoutMs: number }): {
-	expired: Promise<never>;
+	expired: Promise<RouteRefreshResult>;
 	cancel(): void;
 } {
-	const expiry = Promise.withResolvers<never>();
+	const expiry = Promise.withResolvers<RouteRefreshResult>();
 	function expire(): void {
-		expiry.reject(
-			new BalanceWorkerClientError({
-				code: "OWNERSHIP_UNAVAILABLE",
-				outcome: "not_submitted",
-				message: "Ownership did not settle within the route refresh budget",
-			}),
-		);
+		expiry.resolve("expired");
 	}
 	const timer = setTimeout(expire, timeoutMs);
 	function cancel(): void {
@@ -71,6 +73,16 @@ function startRefreshExpiry({ timeoutMs }: { timeoutMs: number }): {
 	return { expired: expiry.promise, cancel };
 }
 
+/** "settled" once ownership caught up; "expired" when the refresh outran its slice. */
+export type RouteRefreshResult = "settled" | "expired";
+
+/** Waits for ownership to catch up, but only for `timeoutMs` of the request's budget.
+ *  A refresh that outruns that slice is not a failure: it keeps running, and the
+ *  caller tries the route it has, then refreshes again if that route is still stale.
+ *  During a fleet swap every server refreshes at once while a hundred-odd claims
+ *  land on the ownership topic, and failing the request the moment one slice
+ *  passed turned that into fail-opens with most of the request's budget unspent.
+ *  A refresh that fails, or a deadline that passes, still throws. */
 export async function refreshCommandRoute({
 	owners,
 	deadline,
@@ -79,7 +91,7 @@ export async function refreshCommandRoute({
 	owners: PartitionOwners;
 	deadline: RequestDeadline;
 	timeoutMs?: number;
-}): Promise<void> {
+}): Promise<RouteRefreshResult> {
 	assertRequestDeadline({ deadline, outcome: "not_submitted" });
 	const interrupted = Promise.withResolvers<never>();
 	function abort(): void {
@@ -89,13 +101,18 @@ export async function refreshCommandRoute({
 	// Deliberately not awaited on its own: the refresh outlives a request that
 	// stops waiting, so whoever routes next finds ownership already settled.
 	const refreshing = owners.refresh();
-	const racing: Promise<unknown>[] = [refreshing, interrupted.promise];
+	async function settle(): Promise<RouteRefreshResult> {
+		await refreshing;
+		return "settled";
+	}
+	const racing: Promise<RouteRefreshResult>[] = [settle(), interrupted.promise];
 	const expiry =
 		timeoutMs === undefined ? undefined : startRefreshExpiry({ timeoutMs });
 	if (expiry) racing.push(expiry.expired);
 	try {
-		await Promise.race(racing);
+		const result = await Promise.race(racing);
 		assertRequestDeadline({ deadline, outcome: "not_submitted" });
+		return result;
 	} finally {
 		expiry?.cancel();
 		deadline.signal.removeEventListener("abort", abort);
@@ -107,11 +124,28 @@ export function isNotOwnerResponse({
 }: {
 	response: HttpResponse;
 }): boolean {
-	if (response.status === 200) return false;
+	return readNotOwnerResponse({ response }) !== null;
+}
+
+export type NotOwnerAnswer = {
+	/** Where the old owner says the partition went; absent while its handoff is unnamed or released. */
+	successor?: PartitionOwner;
+};
+
+/** Null for a success; the NOT_OWNER answer with any successor it names; throws for every other worker error. */
+export function readNotOwnerResponse({
+	response,
+}: {
+	response: HttpResponse;
+}): NotOwnerAnswer | null {
+	if (response.status === 200) return null;
 	const error = (response.body as WorkerErrorResponse | null)?.error;
 	if (!error || workerErrorStatus({ code: error.code }) !== response.status)
 		throw new Error("Worker error does not match HTTP status");
-	if (error.code === "NOT_OWNER") return true;
+	if (error.code === "NOT_OWNER") {
+		const successor = readSuccessor({ input: error.successor });
+		return successor ? { successor } : {};
+	}
 	throw new BalanceWorkerClientError({
 		code: "WORKER_ERROR",
 		outcome: error.code === "INTERNAL" ? "unknown" : "not_submitted",
@@ -119,4 +153,43 @@ export function isNotOwnerResponse({
 		workerCode: error.code,
 		workerReason: error.reason,
 	});
+}
+
+/** A hint that does not parse is no hint: the refresh path still works without it. */
+function readSuccessor({
+	input,
+}: {
+	input: unknown;
+}): PartitionOwner | undefined {
+	if (typeof input !== "object" || input === null) return undefined;
+	const { partition, routeEpoch, endpoint } = input as Record<string, unknown>;
+	if (!Number.isSafeInteger(partition) || (partition as number) < 0)
+		return undefined;
+	if (typeof routeEpoch !== "string" || !/^\d+$/.test(routeEpoch))
+		return undefined;
+	if (typeof endpoint !== "string" || endpoint.trim().length === 0)
+		return undefined;
+	return { partition: partition as number, routeEpoch, endpoint };
+}
+
+/** Keeps a named successor for the next attempt, or forgets a hint the named endpoint has now declined. */
+export function followNotOwnerAnswer({
+	ctx,
+	resolved,
+	answer,
+}: {
+	ctx: Pick<RoutingContext, "owners" | "hints">;
+	resolved: ResolvedCommandRoute;
+	answer: NotOwnerAnswer;
+}): boolean {
+	const { partition } = resolved.route;
+	const { successor } = answer;
+	if (
+		successor &&
+		successor.partition === partition &&
+		ctx.hints?.adopt({ successor, known: ctx.owners.findOwner({ partition }) })
+	)
+		return true;
+	ctx.hints?.drop({ partition, endpoint: resolved.endpoint });
+	return false;
 }

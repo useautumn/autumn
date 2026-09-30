@@ -122,7 +122,9 @@
         "@autumn/auto-topup": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
         "@autumn/balance-webhooks": "workspace:*",
+        "@autumn/balance-worker-client": "workspace:*",
         "@autumn/blue-green": "workspace:*",
+        "@autumn/byoc": "workspace:*",
         "@autumn/cache": "workspace:*",
         "@autumn/catalog-lru": "workspace:*",
         "@autumn/edge-config": "workspace:*",
@@ -175,6 +177,7 @@
         "autoevals": "^0.0.132",
         "better-all": "0.0.7",
         "braintrust": "^3.14.0",
+        "callscript": "0.1.6",
         "chat": "^4.31.0",
         "date-fns": "^4.1.0",
         "drizzle-orm": "catalog:",
@@ -266,6 +269,43 @@
         "vite": "catalog:",
       },
     },
+    "apps/twd": {
+      "name": "@autumn/twd",
+      "version": "0.0.0",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+        "@modelcontextprotocol/sdk": "1.29.0",
+        "drizzle-orm": "catalog:",
+        "hono": "4.12.27",
+        "modal": "^0.8.0",
+        "p-limit": "^7.2.0",
+        "postgres": "3.4.7",
+        "stripe": "catalog:",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@base-ui/react": "^1.4.1",
+        "@phosphor-icons/react": "^2.1.10",
+        "@tailwindcss/vite": "catalog:",
+        "@tanstack/react-query": "catalog:",
+        "@tanstack/react-table": "^8.21.3",
+        "@types/bun": "1.3.14",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@typescript/native-preview": "catalog:",
+        "@vitejs/plugin-react": "catalog:",
+        "clsx": "^2.1.1",
+        "drizzle-kit": "catalog:",
+        "lucide-react": "^0.562.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^7.13.0",
+        "tailwind-merge": "^3.0.2",
+        "tailwindcss": "^4.0.13",
+        "typescript": "~5.9.3",
+        "vite": "catalog:",
+      },
+    },
     "apps/website": {
       "name": "@autumn/website",
       "version": "0.1.0",
@@ -313,6 +353,18 @@
       "devDependencies": {
         "@types/bun": "1.4.2",
         "@types/node": "^18.19.3",
+        "typescript": "~5.8.3",
+      },
+    },
+    "packages/alien": {
+      "name": "@autumn/alien",
+      "version": "0.0.1",
+      "dependencies": {
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/node": "^24.9.1",
         "typescript": "~5.8.3",
       },
     },
@@ -588,6 +640,19 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/byoc": {
+      "name": "@autumn/byoc",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/cache": {
       "name": "@autumn/cache",
       "version": "0.0.1",
@@ -596,6 +661,7 @@
         "@autumn/logging": "workspace:*",
         "@autumn/shared": "workspace:*",
         "ioredis": "^5.5.0",
+        "lru-cache": "^11.2.7",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -976,16 +1042,29 @@
         "@ai-sdk/anthropic": "^3.0.9",
         "@anthropic-ai/sdk": "^0.32.1",
         "@autumn/agent-docs": "workspace:*",
+        "@autumn/alien": "workspace:*",
         "@autumn/auth": "workspace:*",
+        "@autumn/auto-topup": "workspace:*",
         "@autumn/axiom": "workspace:*",
+        "@autumn/balance-engine": "workspace:*",
+        "@autumn/balance-webhooks": "workspace:*",
+        "@autumn/balance-worker-client": "workspace:*",
         "@autumn/billing": "workspace:*",
+        "@autumn/byoc": "workspace:*",
+        "@autumn/cache": "workspace:*",
+        "@autumn/catalog-lru": "workspace:*",
         "@autumn/ducklake": "workspace:*",
+        "@autumn/dynamodb": "workspace:*",
+        "@autumn/edge-config": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/fx": "workspace:*",
+        "@autumn/kafka": "workspace:*",
         "@autumn/ksuid": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/shared": "workspace:*",
+        "@autumn/sqs": "workspace:*",
         "@autumn/stripe-sync": "workspace:*",
+        "@autumn/svix": "workspace:*",
         "@aws-sdk/client-dynamodb": "^3.1095.0",
         "@aws-sdk/client-glue": "^3.958.0",
         "@aws-sdk/client-s3": "^3.1017.0",
@@ -1098,7 +1177,7 @@
         "zod": "^3.25.23",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/chai": "^5.0.1",
         "@types/chai-http": "^3.0.5",
         "@types/cors": "^2.8.19",
@@ -1225,7 +1304,7 @@
       },
       "devDependencies": {
         "@eslint/js": "^9.21.0",
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/lodash": "^4.17.16",
         "@types/node": "^22.13.10",
         "@types/react": "^19.0.0",
@@ -1390,6 +1469,8 @@
 
     "@autumn/agent-docs": ["@autumn/agent-docs@workspace:packages/agent-docs"],
 
+    "@autumn/alien": ["@autumn/alien@workspace:packages/alien"],
+
     "@autumn/atmn-generator": ["@autumn/atmn-generator@workspace:packages/atmn-generator"],
 
     "@autumn/atmn-old": ["@autumn/atmn-old@workspace:packages/atmn-old"],
@@ -1413,6 +1494,8 @@
     "@autumn/billing": ["@autumn/billing@workspace:packages/billing"],
 
     "@autumn/blue-green": ["@autumn/blue-green@workspace:packages/blue-green"],
+
+    "@autumn/byoc": ["@autumn/byoc@workspace:packages/byoc"],
 
     "@autumn/cache": ["@autumn/cache@workspace:packages/cache"],
 
@@ -1467,6 +1550,8 @@
     "@autumn/testbench": ["@autumn/testbench@workspace:apps/testbench"],
 
     "@autumn/tinybird": ["@autumn/tinybird@workspace:packages/tinybird"],
+
+    "@autumn/twd": ["@autumn/twd@workspace:apps/twd"],
 
     "@autumn/ui": ["@autumn/ui@workspace:packages/ui"],
 
@@ -3977,6 +4062,8 @@
     "call-bind-apply-helpers": ["call-bind-apply-helpers@1.0.2", "", { "dependencies": { "es-errors": "^1.3.0", "function-bind": "^1.1.2" } }, "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ=="],
 
     "call-bound": ["call-bound@1.0.4", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.2", "get-intrinsic": "^1.3.0" } }, "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg=="],
+
+    "callscript": ["callscript@0.1.6", "", { "dependencies": { "acorn": "^8.15.0", "zod": "^4.4.3" }, "peerDependencies": { "ai": ">=5" }, "optionalPeers": ["ai"] }, "sha512-61DOv+z2TlqX/DTUKfkg1N/igXnPIWtQmDf4afm8S20ZiYF//keGZAcv0YtzdkAzPdRaVODhrlEp7KbvwcBZsA=="],
 
     "callsites": ["callsites@4.2.0", "", {}, "sha512-kfzR4zzQtAE9PC7CzZsjl3aBNbXWuXiSeOCdLcPpBfGW8YuCqQHcRPFDbr/BPVmd3EEPVpuFzLyuT/cUhPr4OQ=="],
 
@@ -7160,6 +7247,8 @@
 
     "@autumn/blue-green/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
+    "@autumn/byoc/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
     "@autumn/ducklake/@types/node": ["@types/node@18.19.130", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg=="],
 
     "@autumn/edge-config/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
@@ -7237,6 +7326,16 @@
     "@autumn/testbench/react-dom": ["react-dom@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0", "scheduler": "^0.23.2" }, "peerDependencies": { "react": "^18.3.1" } }, "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw=="],
 
     "@autumn/testbench/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@autumn/twd/hono": ["hono@4.12.27", "", {}, "sha512-1yrb/+w6HWQJrUCLkJ2IF5jNIPvvFkblV5RNOYl6bV+OA6p9GLcMpHFFGTosSvHvcAUibuUukRqhlYI4z32C7Q=="],
+
+    "@autumn/twd/react": ["react@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ=="],
+
+    "@autumn/twd/react-dom": ["react-dom@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0", "scheduler": "^0.23.2" }, "peerDependencies": { "react": "^18.3.1" } }, "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw=="],
+
+    "@autumn/twd/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@autumn/twd/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/ui/ai": ["ai@6.0.264", "", { "dependencies": { "@ai-sdk/gateway": "3.0.179", "@ai-sdk/provider": "3.0.15", "@ai-sdk/provider-utils": "4.0.46", "@opentelemetry/api": "^1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-te59gArDNXoQYWuOkZNdM7n3McETAPWFuwT/iKWRJXySV/doIuKm8Az4X6IOalaGp3K8zqGT/ICn08z5ZZNDuw=="],
 
@@ -9015,6 +9114,8 @@
     "@autumn/server/autumn-js/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@autumn/testbench/react-dom/scheduler": ["scheduler@0.23.2", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ=="],
+
+    "@autumn/twd/react-dom/scheduler": ["scheduler@0.23.2", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ=="],
 
     "@autumn/ui/ai/@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.179", "", { "dependencies": { "@ai-sdk/provider": "3.0.15", "@ai-sdk/provider-utils": "4.0.46", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-UauCMcauBgcYNljb7RP4HEuUZj3dlk/yz0oOHdhGr3cXoe+uwwN9qwQlLlB2hnajXudSatI2xpPG8LiHPRgwLQ=="],
 

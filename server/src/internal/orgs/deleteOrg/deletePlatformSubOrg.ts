@@ -1,3 +1,4 @@
+import { clearOrgWithFeaturesCache } from "@autumn/cache";
 import {
 	AppEnv,
 	apiKeys,
@@ -11,8 +12,8 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { and, eq } from "drizzle-orm";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
+import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import {
 	deleteStripeAccounts,
 	deleteStripeWebhooks,
@@ -78,7 +79,7 @@ export const deletePlatformSubOrg = async ({
 	logger.info("6. Deleting organization");
 	await db.delete(organizations).where(eq(organizations.id, org.id));
 	await Promise.all([
-		clearOrgWithFeaturesCache({ orgId: org.id }),
+		clearOrgWithFeaturesCache({ ctx: getMiscCacheContext(), orgId: org.id }),
 		...keys.flatMap(({ hashedKey }) =>
 			hashedKey ? [clearSecretKeyCache({ hashedKey })] : [],
 		),
