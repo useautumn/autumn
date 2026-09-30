@@ -47,7 +47,7 @@ export const ReissueInvoiceOverridesSchema = z
 			.optional()
 			.meta({
 				description:
-					"Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements.",
+					"Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. A method other than card on a card-charged invoice sends the replacement for payment instead, on net_terms_days or the default terms.",
 			}),
 	})
 	.strict()

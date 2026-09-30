@@ -376,13 +376,17 @@ function ReissueInvoiceForm({
 								/>
 							</div>
 
-							{sendsInvoice && (
-								<ReissuePaymentMethodTypesSelect
-									value={form.paymentMethodTypes}
-									onValueChange={(paymentMethodTypes) =>
-										patch({ paymentMethodTypes })
-									}
-								/>
+							<ReissuePaymentMethodTypesSelect
+								value={form.paymentMethodTypes}
+								onValueChange={(paymentMethodTypes) =>
+									patch({ paymentMethodTypes })
+								}
+							/>
+							{sendsInvoice && !prefill.sendsInvoice && (
+								<p className="text-xs text-tertiary-foreground">
+									This invoice will be sent for payment instead of charging the
+									card.
+								</p>
 							)}
 						</div>
 					</SheetAccordionItem>

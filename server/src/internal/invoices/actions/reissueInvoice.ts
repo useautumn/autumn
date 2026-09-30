@@ -38,6 +38,7 @@ import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/Invoice
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
 import { issueStripeInvoice } from "../invoiceUtils/issueStripeInvoice";
 import { invoiceLineItemRepo } from "../lineItems/repos";
+import { DEFAULT_NET_TERMS_DAYS } from "./create/setup/setupCreateInvoiceContext";
 import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOverrides";
 import { buildReissueLines } from "./reissue/buildReissueLines";
 import { previewReissue } from "./reissue/previewReissue";
@@ -895,19 +896,23 @@ export const reissueInvoice = async ({
 		throw invalidRequest(`Invoice template ${invoiceTemplateId} not found`);
 	}
 
+	// Stripe only lets a customer choose e.g. bank transfer on a sent invoice,
+	// so asking for one on a card invoice sends the replacement on default terms.
+	const wantsNonCardMethod = Boolean(
+		invoiceOverrides?.payment_method_types?.some((type) => type !== "card"),
+	);
 	const { collectionMethod, dueDate, daysUntilDue } = resolveCollection({
 		stripeInvoice,
-		netTermsDays,
+		netTermsDays:
+			netTermsDays ??
+			(wantsNonCardMethod &&
+			stripeInvoice.collection_method === "charge_automatically"
+				? (template?.net_terms_days ??
+					ctx.org.config.default_invoice_net_terms_days ??
+					DEFAULT_NET_TERMS_DAYS)
+				: undefined),
 		nowMs: Date.now(),
 	});
-	if (
-		invoiceOverrides?.payment_method_types &&
-		collectionMethod !== "send_invoice"
-	) {
-		throw invalidRequest(
-			"payment_method_types only applies to send-invoice replacements; pass net_terms_days to send this invoice for payment",
-		);
-	}
 
 	const previewCustomerId = row.customer_id ?? row.invoice.internal_customer_id;
 	const storedLines = await invoiceLineItemRepo.getByInvoiceIds({

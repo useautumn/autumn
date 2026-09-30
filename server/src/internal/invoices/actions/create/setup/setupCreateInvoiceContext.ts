@@ -47,7 +47,7 @@ export type CreateInvoiceContext = {
 	invoiceCredits?: PreviewInvoiceCredits;
 };
 
-const DEFAULT_NET_TERMS_DAYS = 30;
+export const DEFAULT_NET_TERMS_DAYS = 30;
 const DEFAULT_CURRENCY = "usd";
 
 // Stripe cannot apply a `repeating` coupon to a one-off invoice.
