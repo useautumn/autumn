@@ -9,6 +9,7 @@ import {
 } from "../../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../../fullSubjectCacheModel.js";
 import { assertPrimarySourced } from "../../subjectProvenance.js";
+import { evictWorkerCopyAfterRollback } from "./evictWorkerCopyAfterRollback.js";
 import type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
 import { buildSharedBalanceWrites } from "./setSharedFullSubjectBalances.js";
 
@@ -85,6 +86,18 @@ export const setCachedFullSubject = async ({
 	logger.info(
 		`[setCachedFullSubject] ${subjectLabel}: ${result ?? "FAILED"}, balances=${cached.meteredFeatures.length}`,
 	);
+
+	if (result === "OK") {
+		// The view is already written; nothing here may fail the read that built it.
+		try {
+			evictWorkerCopyAfterRollback({ ctx, customerId });
+		} catch (error) {
+			logger.warn("[setCachedFullSubject] evict after rollback threw", {
+				error,
+				data: { customerId },
+			});
+		}
+	}
 
 	return result ?? "FAILED";
 };

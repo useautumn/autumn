@@ -1,0 +1,1 @@
+ALTER TABLE "stripe_accounts" ADD COLUMN "broken_reason" text;

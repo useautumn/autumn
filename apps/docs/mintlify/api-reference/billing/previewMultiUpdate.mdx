@@ -44,8 +44,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
     </DynamicParamField>
 
-    <DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
-      How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+    <DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
+      How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
     </DynamicParamField>
 
   </Expandable>

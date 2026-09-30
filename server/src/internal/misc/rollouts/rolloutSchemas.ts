@@ -15,8 +15,18 @@ export const RolloutPercentSchema = z.object({
 	decreases: z.array(RolloutDecreaseSchema).default([]),
 });
 
+/** A customer pinned to the worker; a removed one stays until its pre-removal Redis view has expired. */
+export const RolloutCustomerSchema = z.object({
+	addedAt: z.number(),
+	removedAt: z.number().optional(),
+});
+
 export const RolloutEntrySchema = RolloutPercentSchema.extend({
 	orgs: z.record(z.string(), RolloutPercentSchema).default({}),
+	/** Pinned customers by org id, then customer id. */
+	customers: z
+		.record(z.string(), z.record(z.string(), RolloutCustomerSchema))
+		.default({}),
 });
 
 export const RolloutConfigSchema = z.object({
@@ -25,5 +35,6 @@ export const RolloutConfigSchema = z.object({
 
 export type RolloutDecrease = z.infer<typeof RolloutDecreaseSchema>;
 export type RolloutPercent = z.infer<typeof RolloutPercentSchema>;
+export type RolloutCustomer = z.infer<typeof RolloutCustomerSchema>;
 export type RolloutEntry = z.infer<typeof RolloutEntrySchema>;
 export type RolloutConfig = z.infer<typeof RolloutConfigSchema>;

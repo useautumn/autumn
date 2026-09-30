@@ -60,7 +60,10 @@ export function TableMobileCards() {
 			{rows.map((row) => (
 				<MobileCard
 					key={row.id}
-					isSelected={selectedItemId === (row.original as { id?: string }).id}
+					isSelected={
+						selectedItemId != null &&
+						selectedItemId === (row.original as { id?: string }).id
+					}
 					linkComponent={linkComponent}
 					onRowClick={onRowClick}
 					row={row}

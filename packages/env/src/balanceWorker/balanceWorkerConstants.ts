@@ -98,9 +98,9 @@ export const BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE = 0.05;
  *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;
 
-/** On, an evict appends an empty record so the log's readers (herald's cache) learn Postgres changed.
- *  Stays off until every reader parses it: see plans/customer-cache/evictions.md. */
-export const BALANCE_WORKER_EVICTS_LOGGED = false;
+/** On: an evict appends an empty record so the log's readers (herald's cache) learn Postgres changed.
+ *  Never roll back below a build whose readers parse it: see plans/customer-cache/evictions.md. */
+export const BALANCE_WORKER_EVICTS_LOGGED = true;
 
 /** How long a revoked partition keeps serving while it waits for a successor's
  *  `ready`. A successor prepares in under a second; past this the old owner

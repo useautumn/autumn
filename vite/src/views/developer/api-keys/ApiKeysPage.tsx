@@ -3,6 +3,7 @@ import { KeyIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useApiKeysLastUsedQuery } from "@/hooks/queries/useApiKeysLastUsedQuery";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createAPIKeyTableColumns } from "./components/APIKeyTableColumns";
@@ -10,9 +11,13 @@ import { CreateApiKeySheet } from "./components/CreateApiKeySheet";
 
 export const ApiKeysPage = () => {
 	const { apiKeys } = useDevQuery();
+	const lastUsed = useApiKeysLastUsedQuery();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-	const columns = useMemo(() => createAPIKeyTableColumns(), []);
+	const columns = useMemo(
+		() => createAPIKeyTableColumns({ lastUsed }),
+		[lastUsed],
+	);
 
 	const apiKeyTable = useProductTable({
 		data: apiKeys || [],

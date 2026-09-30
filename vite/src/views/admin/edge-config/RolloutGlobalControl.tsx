@@ -14,16 +14,16 @@ export const RolloutGlobalControl = ({
 	onApply: ({ percent }: { percent: number }) => void;
 	isSaving: boolean;
 }) => (
-	<div className="flex flex-col gap-5 rounded-lg border bg-interactive-secondary p-5">
+	<div className="flex flex-col gap-4 rounded-lg border bg-interactive-secondary p-4">
 		<div className="flex flex-wrap items-end justify-between gap-4">
 			<div className="flex flex-col gap-1">
 				<div className="flex items-baseline gap-2">
-					<span className="font-mono text-4xl font-semibold tabular-nums leading-none text-foreground">
+					<span className="font-mono text-2xl font-semibold tabular-nums leading-none text-foreground">
 						{rollout.percent}
 					</span>
-					<span className="text-lg text-tertiary-foreground">%</span>
+					<span className="text-sm text-tertiary-foreground">%</span>
 				</div>
-				<span className="text-sm text-tertiary-foreground">
+				<span className="text-xs text-tertiary-foreground">
 					of customer buckets on the worker
 				</span>
 			</div>

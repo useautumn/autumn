@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	assertRolloutInactive,
+	scheduleOrgsToZero,
 	scheduleRolloutPercent,
 } from "@/internal/misc/rollouts/rolloutConfigStore.js";
 import type {
@@ -33,6 +34,7 @@ const entryWith = ({
 			},
 		]),
 	),
+	customers: {},
 });
 
 describe("assertRolloutInactive", () => {
@@ -148,5 +150,53 @@ describe("scheduleRolloutPercent", () => {
 			now: T + 10 * day,
 		});
 		expect(muchLater.decreases).toEqual([]);
+	});
+});
+
+describe("scheduleOrgsToZero", () => {
+	const T = 1_700_000_000_000;
+	const settled = T - ROLLOUT_SETTLE_MS;
+
+	test("every override above 0 drops to 0 from what routes now, recording the decrease", () => {
+		const orgs = {
+			org_full: {
+				percent: 100,
+				previousPercent: 0,
+				changedAt: settled,
+				decreases: [],
+			},
+			org_unsettled: {
+				percent: 50,
+				previousPercent: 10,
+				changedAt: T - 1_000,
+				decreases: [],
+			},
+		};
+		expect(scheduleOrgsToZero({ orgs, now: T })).toEqual({
+			org_full: {
+				percent: 0,
+				previousPercent: 100,
+				changedAt: T,
+				decreases: [{ from: 100, to: 0, at: T }],
+			},
+			org_unsettled: {
+				percent: 0,
+				previousPercent: 10,
+				changedAt: T,
+				decreases: [{ from: 10, to: 0, at: T }],
+			},
+		});
+	});
+
+	test("an override already at 0 is left untouched", () => {
+		const atZero = {
+			percent: 0,
+			previousPercent: 100,
+			changedAt: settled,
+			decreases: [{ from: 100, to: 0, at: settled }],
+		};
+		expect(scheduleOrgsToZero({ orgs: { org_zero: atZero }, now: T })).toEqual({
+			org_zero: atZero,
+		});
 	});
 });

@@ -12,6 +12,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgRepo } from "@/internal/orgs/repos/index.js";
 
 export type ApiKeyVerificationData = {
+	apiKeyId?: string;
 	org: Organization;
 	features: Feature[];
 	pendingMigrations: PendingMigration[];
@@ -42,6 +43,7 @@ export const getApiKeyVerificationData = async ({
 	if (!result) return null;
 
 	return {
+		apiKeyId: apiKey.id,
 		org: result.org,
 		features: result.features,
 		pendingMigrations: result.pendingMigrations,

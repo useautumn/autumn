@@ -95,8 +95,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
 </DynamicParamField>
 
-<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none'">
-  Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
+  Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
 </DynamicParamField>
 
 <DynamicParamField body="no_billing_changes" type="boolean">
@@ -139,6 +139,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
         <DynamicParamField body="adjustable" type="boolean">
           Whether the customer can adjust the quantity.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="license_quantities" type="object[]">
+      Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.
+      <Expandable title="properties">
+        <DynamicParamField body="license_plan_id" type="string" required>
+          The license plan to set seat quantity for.
+        </DynamicParamField>
+
+        <DynamicParamField body="quantity" type="integer" required>
+          Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid.
         </DynamicParamField>
 
       </Expandable>
@@ -1361,6 +1375,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicParamField body="adjustable" type="boolean">
               Whether the customer can adjust the quantity.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="license_quantities" type="object[]">
+          Seat quantities for this phase's licenses, keyed by license plan. Omitted on a later phase, the phase grants only the included seats.
+          <Expandable title="properties">
+            <DynamicParamField body="license_plan_id" type="string" required>
+              The license plan to set seat quantity for.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="integer" required>
+              Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid.
             </DynamicParamField>
 
           </Expandable>

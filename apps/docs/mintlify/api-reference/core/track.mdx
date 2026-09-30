@@ -91,23 +91,6 @@ await autumn.track({
   If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
 </DynamicParamField>
 
-<DynamicParamField body="lock" type="object">
-  <Expandable title="properties">
-    <DynamicParamField body="lock_id" type="string" required>
-      A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
-    </DynamicParamField>
-
-    <DynamicParamField body="enabled" type="true" required>
-      Must be true to enable locking.
-    </DynamicParamField>
-
-    <DynamicParamField body="expires_at" type="number">
-      Unix timestamp (ms) when the lock automatically expires and releases the held balance.
-    </DynamicParamField>
-
-  </Expandable>
-</DynamicParamField>
-
 
 ### Response
 

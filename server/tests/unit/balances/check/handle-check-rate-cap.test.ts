@@ -10,6 +10,8 @@ const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
 
 afterAll(() => {
+	// A spy outlives its file; left in place it throws in every later worker-check test on the shard.
+	balanceWorkerCheckSpy.mockRestore();
 	if (previousRollout === undefined)
 		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
