@@ -9,6 +9,11 @@
 			"types": "./src/balanceEngine.ts",
 			"import": "./src/balanceEngine.ts",
 			"default": "./src/balanceEngine.ts"
+		},
+		"./api-renderer": {
+			"types": "./src/apiRenderer/apiRenderer.ts",
+			"import": "./src/apiRenderer/apiRenderer.ts",
+			"default": "./src/apiRenderer/apiRenderer.ts"
 		}
 	},
 	"scripts": {

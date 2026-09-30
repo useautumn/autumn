@@ -100,7 +100,10 @@ describe("catalog invalidation topic", () => {
 					},
 				},
 			},
-			config: { topic: "local-catalog-invalidations", groupIdPrefix: "test" },
+			config: {
+				topic: "local-catalog-invalidations",
+				group: { kind: "perProcess", idPrefix: "test" },
+			},
 		});
 
 		await consumer.start();
@@ -124,5 +127,36 @@ describe("catalog invalidation topic", () => {
 
 		expect(applied).toEqual(["org_1:live", "org_2:live"]);
 		expect(skipped).toEqual(["1"]);
+	});
+
+	test("a per-process group is new each time, a shared group is the one named", () => {
+		const groupIds: string[] = [];
+		const consumerIn = (
+			group:
+				| { kind: "perProcess"; idPrefix: string }
+				| { kind: "shared"; id: string },
+		) =>
+			createCatalogInvalidationConsumer({
+				ctx: {
+					kafka: {
+						consumer: ({ groupId }) => {
+							groupIds.push(groupId);
+							return {} as never;
+						},
+					},
+					handler: { apply: () => {}, skip: () => {} },
+				},
+				config: { topic: "local-catalog-invalidations", group },
+			});
+
+		consumerIn({ kind: "perProcess", idPrefix: "herald-catalog" });
+		consumerIn({ kind: "perProcess", idPrefix: "herald-catalog" });
+		consumerIn({ kind: "shared", id: "herald-catalog-push" });
+
+		const [first, second, shared] = groupIds;
+		expect(first).toStartWith("herald-catalog-");
+		expect(second).toStartWith("herald-catalog-");
+		expect(first).not.toBe(second);
+		expect(shared).toBe("herald-catalog-push");
 	});
 });

@@ -1,96 +1,123 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-	createCatalogFor,
-	createState,
-	occurredAt,
-	org,
-} from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
+import { CheckExpand } from "@autumn/shared";
+import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
-import type { CheckRequest } from "../../../src/processor/types/check.js";
+import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
-import type { SqliteStore } from "../../../src/state/types/sqliteStore.js";
-import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
+import {
+	checkRequestFor,
+	forwardReasonOf,
+	oldestApiVersion,
+	storedSubjectWith,
+} from "../utils/atomFixtures.js";
 
-/** The fixture customer `cus_1` holding `balance` messages. */
-const subjectWith = ({ balance }: { balance: number }): StoredSubject => {
-	const state = createState({ balance });
-	return { state, catalog: createCatalogFor({ state }), org, logOffset: 1n };
-};
-
-const checkFor = ({
-	customerId = "cus_1",
-	featureId = "messages",
-	requiredBalance,
-}: {
-	customerId?: string;
-	featureId?: string;
-	requiredBalance: number;
-}): CheckRequest => ({
-	requestId: "req_check_1",
-	customerId,
-	featureId,
-	requiredBalance,
-	properties: null,
-	occurredAt,
-});
-
-const sqliteStores: SqliteStore[] = [];
+const stores: { close(): void }[] = [];
 const createProcessor = () => {
 	const sqliteStore = openSqliteStore({ databasePath: ":memory:" });
-	sqliteStores.push(sqliteStore);
-	return createSlotProcessor({ ctx: { sqliteStore } });
+	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
+	stores.push(sqliteStore, catalogStore);
+	return createSlotProcessor({
+		ctx: { sqliteStore, catalogStore, logger: getAtomLogger() },
+	});
 };
 afterEach(() => {
-	for (const sqliteStore of sqliteStores.splice(0)) sqliteStore.close();
+	for (const store of stores.splice(0)) store.close();
 });
 
-describe("slot processor check", () => {
-	test("a requirement within the stored balance is allowed", () => {
-		const processor = createProcessor();
-		processor.setSubject({ subject: subjectWith({ balance: 10 }) });
+const checkBalance = ({ requiredBalance }: { requiredBalance: number }) =>
+	checkRequestFor({ params: { required_balance: requiredBalance } });
 
-		expect(
-			processor.check({ request: checkFor({ requiredBalance: 10 }) }),
-		).toEqual({ allowed: true });
+describe("slot processor check", () => {
+	test("a requirement within the stored balance is allowed, answered as the API answers", () => {
+		const processor = createProcessor();
+		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+
+		const reply = processor.check({
+			request: checkBalance({ requiredBalance: 10 }),
+		});
+
+		expect(reply).toMatchObject({
+			allowed: true,
+			customer_id: "cus_1",
+			required_balance: 10,
+			balance: { feature_id: "messages", remaining: 10 },
+		});
 	});
 
 	test("a requirement past the stored balance is refused", () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: subjectWith({ balance: 10 }) });
+		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
-		expect(
-			processor.check({ request: checkFor({ requiredBalance: 11 }) }),
-		).toEqual({ allowed: false });
+		const reply = processor.check({
+			request: checkBalance({ requiredBalance: 11 }),
+		});
+
+		expect(reply.allowed).toBe(false);
 	});
 
 	test("the answer follows the subject Autumn sent last", () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: subjectWith({ balance: 10 }) });
-		processor.setSubject({ subject: subjectWith({ balance: 3 }) });
+		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		processor.setSubject({ subject: storedSubjectWith({ balance: 3 }) });
 
-		expect(
-			processor.check({ request: checkFor({ requiredBalance: 5 }) }),
-		).toEqual({ allowed: false });
+		const reply = processor.check({
+			request: checkBalance({ requiredBalance: 5 }),
+		});
+
+		expect(reply).toMatchObject({
+			allowed: false,
+			balance: { remaining: 3 },
+		});
 	});
 
-	test("a customer Atom does not hold goes back to the API", () => {
+	test("an older API version gets that version's response", () => {
 		const processor = createProcessor();
+		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
-		expect(
-			processor.check({
-				request: checkFor({ customerId: "cus_2", requiredBalance: 1 }),
-			}),
-		).toEqual({ askApi: "subject_not_stored" });
+		const reply = processor.check({
+			request: checkRequestFor({ apiVersion: oldestApiVersion }),
+		});
+
+		// The oldest version's shape, not the latest the reply is typed as.
+		expect<unknown>(reply).toEqual({
+			allowed: true,
+			balances: [{ feature_id: "messages", required: 1, balance: 10 }],
+		});
 	});
 
-	test("a feature missing from the subject's catalog goes back to the API", () => {
+	test("the feature is expanded in the balance only when asked for", () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: subjectWith({ balance: 10 }) });
+		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
-		expect(
-			processor.check({
-				request: checkFor({ featureId: "seats", requiredBalance: 1 }),
+		const plain = processor.check({ request: checkRequestFor() });
+		const expanded = processor.check({
+			request: checkRequestFor({
+				query: { expand: [CheckExpand.BalanceFeature] },
 			}),
-		).toEqual({ askApi: "feature_not_stored" });
+		});
+
+		expect(plain.balance?.feature).toBeUndefined();
+		expect(expanded.balance?.feature?.id).toBe("messages");
+	});
+
+	test("a customer Atom does not hold goes to the API", () => {
+		const processor = createProcessor();
+
+		const request = checkRequestFor({ params: { customer_id: "cus_unknown" } });
+
+		expect(forwardReasonOf(() => processor.check({ request }))).toBe(
+			"customer_not_stored",
+		);
+	});
+
+	test("a feature the org does not have, as far as Atom knows, goes to the API", () => {
+		const processor = createProcessor();
+		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+
+		const request = checkRequestFor({ params: { feature_id: "seats" } });
+
+		expect(forwardReasonOf(() => processor.check({ request }))).toBe(
+			"feature_not_stored",
+		);
 	});
 });

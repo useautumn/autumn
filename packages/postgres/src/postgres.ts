@@ -1,4 +1,5 @@
 export { getCatalogRows } from "./catalog/repos/getCatalogRows/getCatalogRows.js";
+export { getSharedCatalogRows } from "./catalog/repos/getSharedCatalogRows/getSharedCatalogRows.js";
 export type {
 	CatalogRowIds,
 	CatalogRowsEnvelope,

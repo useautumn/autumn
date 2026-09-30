@@ -1,32 +1,26 @@
-import {
-	computeCheck,
-	subjectStateToFullSubject,
-} from "@autumn/balance-engine";
-import type { CheckReply, CheckRequest } from "../../types/check.js";
+import type { CheckResponseV3 } from "@autumn/shared";
+import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import type { CheckRequest } from "../../types/check.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
-import { checkRequestToCommand } from "./checkRequestToCommand.js";
+import { readCurrentSubject } from "../readCurrentSubject/readCurrentSubject.js";
+import { answerCheck } from "./answerCheck.js";
+import { checkRequestToAnswerableCheck } from "./checkForwardRules.js";
 
-/** The engine's own check, run on the rows Autumn last sent; what they cannot decide goes back to the API. */
+/** A check answered from the subject Autumn last sent, in the API's own shape. One Atom cannot decide is left to the API. */
 export const check = ({
 	ctx,
 	request,
 }: {
 	ctx: SlotProcessorContext;
 	request: CheckRequest;
-}): CheckReply => {
-	const subject = ctx.sqliteStore.readSubject({
-		customerId: request.customerId,
-		entityId: null,
-	});
-	if (!subject) return { askApi: "subject_not_stored" };
+}): CheckResponseV3 => {
+	const answerableCheck = checkRequestToAnswerableCheck({ request });
 
-	const command = checkRequestToCommand({ request, subject });
-	if (!command) return { askApi: "feature_not_stored" };
-
-	const fullSubject = subjectStateToFullSubject({
-		state: subject.state,
-		catalog: subject.catalog,
-		entityId: null,
+	const subject = readCurrentSubject({
+		ctx,
+		customerId: answerableCheck.customerId,
 	});
-	return { allowed: computeCheck({ fullSubject, command }).allowed };
+	if (!subject) throw new CannotAnswerError({ reason: "customer_not_stored" });
+
+	return answerCheck({ ctx, check: answerableCheck, subject });
 };

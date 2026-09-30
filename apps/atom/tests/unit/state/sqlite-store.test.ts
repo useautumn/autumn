@@ -1,27 +1,21 @@
+import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-	type CommandOrg,
 	createSubjectState,
 	type MeteringIdentity,
 } from "@autumn/balance-engine";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
+import { atomOrg } from "../utils/atomFixtures.js";
 
 const identity: MeteringIdentity = {
 	orgId: "org_1",
 	env: "sandbox",
 	customerId: "cus_1",
 	entityId: null,
-};
-const org: CommandOrg = {
-	config: {
-		reverse_deduction_order: false,
-		block_overdue_entitlements: false,
-		include_past_due: true,
-	},
 };
 const emptyCatalog: StoredSubject["catalog"] = {
 	entitlements: {},
@@ -34,8 +28,9 @@ const emptyCatalog: StoredSubject["catalog"] = {
 const subjectAt = ({ logOffset }: { logOffset: bigint }): StoredSubject => ({
 	state: createSubjectState({ identity }),
 	catalog: emptyCatalog,
-	org,
+	org: atomOrg,
 	logOffset,
+	readAt: 1700,
 });
 
 const directories: string[] = [];
@@ -96,5 +91,24 @@ describe("sqlite store", () => {
 			reopened.readSubject({ customerId: "cus_1", entityId: null })?.logOffset,
 		).toBe(41n);
 		reopened.close();
+	});
+
+	test("a file from an older Atom is emptied, not read with the wrong columns", () => {
+		const databasePath = slotPath();
+		const older = new Database(databasePath, { create: true });
+		older.run(
+			"CREATE TABLE subject_states (customer_id TEXT PRIMARY KEY, state_json TEXT)",
+		);
+		older.run("INSERT INTO subject_states VALUES ('cus_1', '{}')");
+		older.run("PRAGMA user_version = 1");
+		older.close();
+
+		const sqliteStore = openSqliteStore({ databasePath });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 5n }) });
+
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
+		).toEqual(subjectAt({ logOffset: 5n }));
+		sqliteStore.close();
 	});
 });

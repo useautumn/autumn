@@ -1,33 +1,51 @@
-import { z } from "zod/v4";
-import type { CheckReply, CheckRequest } from "../../processor/types/check.js";
+import {
+	ApiVersionClass,
+	CheckParamsSchema,
+	CheckQuerySchema,
+	parseVersion,
+} from "@autumn/shared";
+import type { CheckRequest } from "../../processor/types/check.js";
+import { CannotAnswerError } from "../forward/cannotAnswerError.js";
 
-/** `POST /v1/balances.check` as the customer's app sends it. Not strict: a field Atom does not read is ignored, never refused. */
-const checkBodySchema = z.object({
-	customer_id: z.string().min(1),
-	feature_id: z.string().min(1),
-	required_balance: z.number().default(1),
-	properties: z.record(z.string(), z.json()).nullable().default(null),
-});
+/** `x-api-version` as the API reads it: absent is null, unreadable is undefined. */
+const headerToApiVersion = ({
+	header,
+}: {
+	header: string | undefined;
+}): ApiVersionClass | null | undefined => {
+	if (!header) return null;
+	const version = parseVersion({ versionStr: header });
+	return version ? new ApiVersionClass(version) : undefined;
+};
 
-export const checkBodyToRequest = ({
+/**
+ * `POST /v1/balances.check` exactly as Autumn's API takes it, read with the API's own schemas.
+ * A part that cannot be read is left to the API, which answers with its own error.
+ */
+export const checkCallToRequest = ({
 	body,
+	query,
+	apiVersionHeader,
 	requestId,
 	occurredAt,
 }: {
 	body: unknown;
+	query: Record<string, string>;
+	apiVersionHeader: string | undefined;
 	requestId: string;
 	occurredAt: number;
 }): CheckRequest => {
-	const parsed = checkBodySchema.parse(body);
+	const params = CheckParamsSchema.safeParse(body);
+	const parsedQuery = CheckQuerySchema.safeParse(query);
+	const apiVersion = headerToApiVersion({ header: apiVersionHeader });
+	if (!params.success || !parsedQuery.success || apiVersion === undefined)
+		throw new CannotAnswerError({ reason: "unreadable_request" });
+
 	return {
 		requestId,
-		customerId: parsed.customer_id,
-		featureId: parsed.feature_id,
-		requiredBalance: parsed.required_balance,
-		properties: parsed.properties,
 		occurredAt,
+		params: params.data,
+		query: parsedQuery.data,
+		apiVersion,
 	};
 };
-
-export const checkReplyToBody = ({ reply }: { reply: CheckReply }) =>
-	"askApi" in reply ? { ask_api: reply.askApi } : { allowed: reply.allowed };

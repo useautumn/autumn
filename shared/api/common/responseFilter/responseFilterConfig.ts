@@ -1,24 +1,36 @@
+import { z } from "zod/v4";
+import {
+	type AttachPreviewResponse,
+	AttachPreviewResponseSchema,
+} from "../../billing/common/attachPreviewResponse";
+import {
+	type BillingPreviewResponse,
+	BillingPreviewResponseSchema,
+	type PreviewLineItem,
+	PreviewLineItemSchema,
+} from "../../billing/common/billingPreviewResponse";
+import {
+	type PreviewUpdateSubscriptionResponse,
+	PreviewUpdateSubscriptionResponseSchema,
+} from "../../billing/updateSubscription/previewUpdateSubscriptionResponse";
+import {
+	type ApiInvoicePreviewV0,
+	ApiInvoicePreviewV0Schema,
+} from "../../customers/components/apiInvoicePreview/apiInvoicePreviewV0";
 import {
 	type ApiBalanceBreakdownV1,
 	ApiBalanceBreakdownV1Schema,
 	type ApiBalanceV1,
 	ApiBalanceV1Schema,
+} from "../../customers/cusFeatures/apiBalanceV1";
+import {
 	type ApiFlagV0,
 	ApiFlagV0Schema,
-	type ApiInvoicePreviewV0,
-	ApiInvoicePreviewV0Schema,
-	type AttachPreviewResponse,
-	AttachPreviewResponseSchema,
-	type BillingPreviewResponse,
-	BillingPreviewResponseSchema,
+} from "../../customers/flags/apiFlagV0";
+import {
 	type CustomerEligibility,
 	CustomerEligibilitySchema,
-	type PreviewLineItem,
-	PreviewLineItemSchema,
-	type PreviewUpdateSubscriptionResponse,
-	PreviewUpdateSubscriptionResponseSchema,
-} from "@autumn/shared";
-import { z } from "zod/v4";
+} from "../../products/components/customerEligibility";
 
 /**
  * Extract the object literal type from a schema with an `object` field.

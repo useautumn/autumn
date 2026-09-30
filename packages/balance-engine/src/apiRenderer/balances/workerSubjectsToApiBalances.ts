@@ -1,12 +1,12 @@
-import type { WorkerFullSubject } from "@autumn/balance-engine";
 import {
 	type ApiBalanceV1,
 	findFeatureById,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToRelevantFeatures,
 	isBooleanFeature,
+	type SharedContext,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { workerStateToApiBalance } from "./workerStateToApiBalance.js";
 
 /** A boolean feature is a flag, never a balance, as on the legacy subject. */
@@ -14,7 +14,7 @@ export const isFlagFeatureId = ({
 	ctx,
 	featureId,
 }: {
-	ctx: Pick<AutumnContext, "features">;
+	ctx: Pick<SharedContext, "features">;
 	featureId: string;
 }): boolean => {
 	const feature = findFeatureById({ features: ctx.features, featureId });
@@ -37,7 +37,7 @@ export const workerSubjectsToApiBalances = ({
 	ctx,
 	subjects,
 }: {
-	ctx: AutumnContext;
+	ctx: SharedContext;
 	subjects: { featureId: string; fullSubject: WorkerFullSubject }[];
 }): Record<string, ApiBalanceV1 | null> => {
 	const balances: Record<string, ApiBalanceV1 | null> = {};

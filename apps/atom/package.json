@@ -15,6 +15,7 @@
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/logging": "workspace:*",
+		"@autumn/shared": "workspace:*",
 		"hono": "^4.13.5",
 		"zod": "^3.25.23"
 	},

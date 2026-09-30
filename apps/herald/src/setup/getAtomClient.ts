@@ -1,10 +1,20 @@
 import { createAesCipher } from "@autumn/encryption";
 import { getCacheEnv } from "@autumn/env/cache";
 import { createAtomClient } from "../atom/createAtomClient.js";
-import type { AtomClient, GetAtomClient } from "../atom/types/atomClient.js";
+import type {
+	AtomClient,
+	AtomDelivery,
+	GetAtomClient,
+} from "../atom/types/atomClient.js";
 
-/** An Atom sits in the org's own cloud: a push that takes longer than this is given up on, never waited out. */
-const ATOM_REQUEST_TIMEOUT_MS = 2_000;
+/** A subject is sent once: an Atom sits in the org's own cloud, and the customer's next change corrects a miss. */
+const SUBJECT_DELIVERY: AtomDelivery = { timeoutMs: 2_000, retry: null };
+
+/** The catalog is rare and every customer reads it, so it gets three tries: at most ~35s, waits included. */
+const CATALOG_DELIVERY: AtomDelivery = {
+	timeoutMs: 10_000,
+	retry: { attempts: 3, baseDelayMs: 500, maxDelayMs: 5_000 },
+};
 
 const unreadableToken = (): string => {
 	throw new Error(
@@ -30,7 +40,7 @@ export const getAtomClient: GetAtomClient = ({ connection }) => {
 	decrypt ??= decryptOf();
 	const atomClient = createAtomClient({
 		connection,
-		config: { timeoutMs: ATOM_REQUEST_TIMEOUT_MS, decrypt },
+		config: { decrypt, subjects: SUBJECT_DELIVERY, catalog: CATALOG_DELIVERY },
 	});
 	atomClients.set(key, atomClient);
 	return atomClient;

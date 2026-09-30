@@ -1,25 +1,33 @@
 import { expect } from "bun:test";
+import { LATEST_VERSION } from "@autumn/shared";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { TestAtom } from "./ensureAtomDeployment.js";
 
-/** One check sent straight to the Atom, as the org's own app would. A null token sends none. */
+/** Set on a reply the Autumn API gave because the Atom did not answer the check itself. */
+const FORWARDED_HEADER = "x-atom-forwarded";
+
+/** One check sent to the Atom as an SDK on the latest API version sends it. A null token sends none. */
 export const checkOnAtom = async ({
 	atom,
 	token = atom.token,
+	secretKey,
 	customerId,
 	featureId,
 	requiredBalance = 1,
 }: {
 	atom: TestAtom;
 	token?: string | null;
+	secretKey: string;
 	customerId: string;
 	featureId: string;
 	requiredBalance?: number;
-}): Promise<{ status: number; body: unknown }> => {
+}): Promise<{ status: number; forwarded: string | null; body: unknown }> => {
 	const response = await fetch(`${atom.endpointUrl}/v1/balances.check`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
+			Authorization: `Bearer ${secretKey}`,
+			"x-api-version": LATEST_VERSION,
 			...(token && { "x-atom-token": token }),
 		},
 		body: JSON.stringify({
@@ -28,25 +36,36 @@ export const checkOnAtom = async ({
 			required_balance: requiredBalance,
 		}),
 	});
-	return { status: response.status, body: await response.json() };
+	return {
+		status: response.status,
+		forwarded: response.headers.get(FORWARDED_HEADER),
+		body: await response.json(),
+	};
 };
 
-/** Polls: a change reaches the Atom through the worker's log and herald, a moment after the API answers. */
+/** Polls until the Atom answers the check itself with `allowed`: a change reaches it through the worker's log and herald, a moment after the API answers. */
 export const expectAtomCheckCorrect = async ({
 	atom,
+	secretKey,
 	customerId,
 	featureId,
 	requiredBalance,
 	allowed,
 }: {
 	atom: TestAtom;
+	secretKey: string;
 	customerId: string;
 	featureId: string;
 	requiredBalance: number;
 	allowed: boolean;
-}): Promise<void> => {
-	await pollUntilAsserted({
-		fetch: () => checkOnAtom({ atom, customerId, featureId, requiredBalance }),
-		assert: ({ body }) => expect(body).toEqual({ allowed }),
+}): Promise<unknown> => {
+	const { body } = await pollUntilAsserted({
+		fetch: () =>
+			checkOnAtom({ atom, secretKey, customerId, featureId, requiredBalance }),
+		assert: ({ forwarded, body }) => {
+			expect(forwarded).toBeNull();
+			expect(body).toMatchObject({ allowed });
+		},
 	});
+	return body;
 };

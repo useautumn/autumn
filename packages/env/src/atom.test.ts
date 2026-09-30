@@ -36,4 +36,15 @@ describe("atom env", () => {
 			"SHA-256",
 		);
 	});
+
+	test("forwards to the public Autumn API unless told where the API is", () => {
+		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
+		const local = createAtomEnv({
+			ATOM_DEV: "true",
+			AUTUMN_API_URL: "http://localhost:8080",
+		});
+
+		expect(deployed.ATOM_AUTUMN_API_URL).toBe("https://api.useautumn.com");
+		expect(local.ATOM_AUTUMN_API_URL).toBe("http://localhost:8080");
+	});
 });

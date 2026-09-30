@@ -4,7 +4,9 @@ import {
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
 	subjectStateToCatalogKeys,
+	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
+import { workerStateToApiBalance } from "@autumn/balance-engine/api-renderer";
 import {
 	FeatureType,
 	FeatureUsageType,
@@ -15,10 +17,6 @@ import {
 	fullSubjectToCatalogRows,
 	fullSubjectToSubjectState,
 } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
-import {
-	workerReplyToFullSubject,
-	workerStateToApiBalance,
-} from "@/internal/balances/balanceWorker/workerStateToApiBalance.js";
 import { createCustomerFixture } from "./customer-fixture.js";
 
 test.concurrent(
@@ -97,14 +95,14 @@ test.concurrent(
 		expect(
 			workerStateToApiBalance({
 				ctx: fixture.ctx,
-				fullSubject: workerReplyToFullSubject({ state, catalog }),
+				fullSubject: subjectStateToFullSubject({ state, catalog }),
 				featureId: "messages",
 			}),
 		).toEqual(existing);
 		expect(
 			workerStateToApiBalance({
 				ctx: fixture.ctx,
-				fullSubject: workerReplyToFullSubject({
+				fullSubject: subjectStateToFullSubject({
 					catalog,
 					state: {
 						...state,

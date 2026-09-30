@@ -17,6 +17,8 @@ export const pushSubjectToCache = async ({
 	const cacheOrg = await readCacheReadyOrg({ ctx, identity });
 	if (!cacheOrg) return;
 
+	// Taken before the read: a catalog change that lands during it must still count as newer.
+	const readAt = Date.now();
 	const { state, catalog } = await readSubjectState({
 		ctx,
 		identity,
@@ -30,6 +32,7 @@ export const pushSubjectToCache = async ({
 			catalog,
 			org: orgToAtomOrg({ org: cacheOrg.org }),
 			log_offset: logOffset.toString(),
+			read_at: readAt,
 		},
 	});
 };

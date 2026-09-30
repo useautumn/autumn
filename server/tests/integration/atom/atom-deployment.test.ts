@@ -52,14 +52,19 @@ test.skipIf(!isBalanceWorkerRoute())(
 			actions: [s.billing.attach({ productId: free.id })],
 		});
 		const atom = await ensureAtomDeployment({ autumn });
-		const messages = { atom, customerId, featureId: TestFeature.Messages };
+		const messages = {
+			atom,
+			secretKey: defaultCtx.orgSecretKey,
+			customerId,
+			featureId: TestFeature.Messages,
+		};
 
 		await autumnV2_4.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 40,
 		});
-		await expectAtomCheckCorrect({
+		const atomResponse = await expectAtomCheckCorrect({
 			...messages,
 			requiredBalance: 60,
 			allowed: true,
@@ -69,6 +74,14 @@ test.skipIf(!isBalanceWorkerRoute())(
 			requiredBalance: 61,
 			allowed: false,
 		});
+
+		// The Atom answers exactly what the API answers for the same check.
+		const apiResponse = await autumnV2_4.post("/balances.check", {
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 60,
+		});
+		expect(atomResponse).toEqual(apiResponse);
 
 		await autumnV2_4.track({
 			customer_id: customerId,
@@ -86,12 +99,18 @@ test.skipIf(!isBalanceWorkerRoute())(
 
 test(`${chalk.yellowBright("atom-deployment2: only the token opens the Atom → create again is a no-op → delete → gone")}`, async () => {
 	const atom = await ensureAtomDeployment({ autumn });
-	const anyCheck = { atom, customerId: "unknown", featureId: "messages" };
+	const anyCheck = {
+		atom,
+		secretKey: defaultCtx.orgSecretKey,
+		customerId: "unknown",
+		featureId: "messages",
+	};
 
 	const withToken = await checkOnAtom(anyCheck);
 	const withoutToken = await checkOnAtom({ ...anyCheck, token: null });
 	const withWrongToken = await checkOnAtom({ ...anyCheck, token: "atom_no" });
-	expect(withToken.status).toBe(200);
+	// The Atom holds no such customer, so with its token the API answers through it.
+	expect(withToken.forwarded).toBe("customer_not_stored");
 	expect(withoutToken.status).toBe(401);
 	expect(withWrongToken.status).toBe(401);
 

@@ -1,16 +1,24 @@
 import type { CheckCommand } from "@autumn/balance-engine";
+import type { ApiVersionClass, CheckParams, CheckQuery } from "@autumn/shared";
 
-/** A check as the customer's app asks it, validated where it entered. */
+/** A check as the caller sent it to Autumn's own API, read where it entered. */
 export type CheckRequest = {
 	requestId: string;
+	occurredAt: number;
+	params: CheckParams;
+	query: CheckQuery;
+	/** Null when the caller named no `x-api-version`. */
+	apiVersion: ApiVersionClass | null;
+};
+
+/** A check Atom decides itself: a feature check on one customer, at a version the caller named. */
+export type AnswerableCheck = {
+	requestId: string;
+	occurredAt: number;
 	customerId: string;
 	featureId: string;
 	requiredBalance: number;
 	properties: CheckCommand["properties"];
-	occurredAt: number;
+	query: CheckQuery;
+	apiVersion: ApiVersionClass;
 };
-
-/** Why Atom hands a check back: the Autumn API answers it instead. */
-export type AskApiReason = "subject_not_stored" | "feature_not_stored";
-
-export type CheckReply = { allowed: boolean } | { askApi: AskApiReason };

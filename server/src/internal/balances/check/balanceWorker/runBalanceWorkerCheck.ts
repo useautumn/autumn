@@ -48,13 +48,17 @@ export async function runBalanceWorkerCheck({
 		customer: answer.state?.customer ?? null,
 	});
 	// Only a plain check tops up here: a deducting check is a track whose record reaches herald, which dispatches.
-	const plainCheck = async (): Promise<RunWithCustomer<CheckResponseWithPreview>> => {
+	const plainCheck = async (): Promise<
+		RunWithCustomer<CheckResponseWithPreview>
+	> => {
 		const answer = await client.check({ command });
 		triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
 		return answerToResult(answer);
 	};
 	// Deducts on the same engine a track would: Postgres when the worker refuses a v1 paid allocated grant.
-	const deductingCheck = (): Promise<RunWithCustomer<CheckResponseWithPreview>> =>
+	const deductingCheck = (): Promise<
+		RunWithCustomer<CheckResponseWithPreview>
+	> =>
 		withPaidAllocatedFallback({
 			ctx,
 			customerId: body.customer_id,
@@ -71,7 +75,9 @@ export async function runBalanceWorkerCheck({
 				customer: fullSubject.customer,
 			}),
 		});
-	const checkOnWorker = async (): Promise<RunWithCustomer<CheckResponseWithPreview>> => {
+	const checkOnWorker = async (): Promise<
+		RunWithCustomer<CheckResponseWithPreview>
+	> => {
 		try {
 			return isDeductingCheck ? await deductingCheck() : await plainCheck();
 		} catch (cause) {

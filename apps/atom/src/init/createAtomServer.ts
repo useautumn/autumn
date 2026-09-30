@@ -36,7 +36,14 @@ export const createAtomServer = ({
 }): AtomServer => {
 	const { env } = config;
 	const { auth, dev } = openAuth({ env });
-	const app = createAtomApp({ ctx: { auth, dev, logger: ctx.logger } });
+	const app = createAtomApp({
+		ctx: {
+			auth,
+			dev,
+			logger: ctx.logger,
+			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
+		},
+	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
 
 	async function start(): Promise<void> {

@@ -1,7 +1,7 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
-import { isByocCacheReady, orgToCacheDeployment } from "@autumn/byoc";
 import { AppEnv } from "@autumn/shared";
 import { z } from "zod/v4";
+import { orgToAtomConnection } from "../../../atom/orgToAtomConnection.js";
 import { getOrgWithFeaturesCached } from "../../../orgs/getOrgWithFeaturesCached.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 import type { CacheReadyOrg } from "../types/cacheReadyOrg.js";
@@ -24,14 +24,7 @@ export const readCacheReadyOrg = async ({
 	});
 	if (!orgWithFeatures) return null;
 	const { org } = orgWithFeatures;
-	const cacheDeployment = orgToCacheDeployment({ org, env });
-	if (!isByocCacheReady(cacheDeployment)) return null;
-	if (!cacheDeployment.endpoint_url) return null;
-	return {
-		org,
-		atomConnection: {
-			endpointUrl: cacheDeployment.endpoint_url,
-			encryptedToken: cacheDeployment.encrypted_token,
-		},
-	};
+	const atomConnection = orgToAtomConnection({ org, env });
+	if (!atomConnection) return null;
+	return { org, atomConnection };
 };

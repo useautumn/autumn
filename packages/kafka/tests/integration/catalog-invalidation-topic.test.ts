@@ -85,7 +85,10 @@ test("every subscriber reads every invalidation published after it started", asy
 					},
 				},
 			},
-			config: { topic, groupIdPrefix: uniqueName({ prefix: name }) },
+			config: {
+				topic,
+				group: { kind: "perProcess", idPrefix: uniqueName({ prefix: name }) },
+			},
 		});
 	const worker = subscribe("worker");
 	const herald = subscribe("herald");

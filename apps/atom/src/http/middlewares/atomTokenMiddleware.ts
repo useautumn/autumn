@@ -15,9 +15,7 @@ export function atomTokenMiddleware({
 		const slots = token ? ctx.auth.authorize({ token }) : null;
 		if (!slots)
 			return context.json(
-				{
-					error: { code: "unauthorized", message: "Atom token required" },
-				},
+				{ message: "Atom token required", code: "atom_token_required" },
 				401,
 			);
 		context.set("slots", slots);

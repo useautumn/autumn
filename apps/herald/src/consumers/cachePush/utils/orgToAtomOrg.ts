@@ -1,11 +1,11 @@
-import type { CommandOrg } from "@autumn/balance-engine";
-import type { Organization } from "@autumn/shared";
+import type { Organization, SharedContext } from "@autumn/shared";
 
-/** The org settings a check reads and nothing else: an Atom keeps them in the org's own cloud. */
-export const orgToAtomOrg = ({ org }: { org: Organization }): CommandOrg => ({
-	config: {
-		reverse_deduction_order: org.config.reverse_deduction_order,
-		block_overdue_entitlements: org.config.block_overdue_entitlements,
-		include_past_due: org.config.include_past_due,
-	},
+/** The org's settings and default currency, which is all a check or its response reads: an Atom never holds the org row. */
+export const orgToAtomOrg = ({
+	org,
+}: {
+	org: Organization;
+}): SharedContext["org"] => ({
+	config: org.config,
+	default_currency: org.default_currency,
 });

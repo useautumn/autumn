@@ -3,6 +3,7 @@ import { mountDevRoutes } from "../dev/mountDevRoutes.js";
 import { atomErrorHandler } from "./handlers/atomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
+import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
@@ -18,6 +19,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	authorized.use(atomTokenMiddleware({ ctx }));
 	authorized.post("/balances.check", receiveCheck);
 	authorized.post("/subjects.set", receiveSetSubject);
+	authorized.post("/catalog.set", receiveSetCatalog);
 	app.route("/v1", authorized);
 	return app;
 }

@@ -1,6 +1,7 @@
 import { loopbackHost, positiveInteger } from "./balanceWorker/primitives.js";
 
 const LOCAL_ATOM_PORT = 8790;
+const AUTUMN_API_URL = "https://api.useautumn.com";
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
 type AtomModeEnv =
@@ -31,13 +32,15 @@ const modeEnvOf = ({
 	return { ATOM_DEV: false, ATOM_TOKEN_HASH: tokenHash };
 };
 
-/** What Atom reads: where it listens, its data directory, and which tokens it answers to. */
+/** What Atom reads: where it listens, its data directory, the Autumn API it forwards to, and which tokens it answers to. */
 export function createAtomEnv(runtimeEnv: Record<string, string | undefined>) {
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
 	return {
 		ATOM_HOSTNAME: hostname,
 		ATOM_PORT: positiveInteger.parse(runtimeEnv.ATOM_PORT ?? LOCAL_ATOM_PORT),
 		ATOM_DATA_DIR: runtimeEnv.ATOM_DATA_DIR?.trim() || ".data/atom",
+		/** Where a request Atom does not answer itself is sent. */
+		ATOM_AUTUMN_API_URL: runtimeEnv.AUTUMN_API_URL?.trim() || AUTUMN_API_URL,
 		...modeEnvOf({ runtimeEnv, hostname }),
 	};
 }

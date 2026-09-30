@@ -18,7 +18,8 @@ const idsOf = ({
 	table: CatalogKey["table"];
 }): string[] => keys.filter((key) => key.table === table).map((key) => key.id);
 
-const envelopeToCatalogRows = ({
+/** Postgres hands the catalog back one array per table; the engine reads rows tagged with theirs. */
+export const catalogRowsEnvelopeToCatalogRows = ({
 	envelope,
 }: {
 	envelope: CatalogRowsEnvelope;
@@ -63,7 +64,7 @@ const fetchAndPut = async ({
 			freeTrialIds: idsOf({ keys, table: "freeTrials" }),
 		},
 	});
-	const rows = envelopeToCatalogRows({ envelope });
+	const rows = catalogRowsEnvelopeToCatalogRows({ envelope });
 	putCatalogRows({ scope, rows, versionOf });
 	return rows;
 };

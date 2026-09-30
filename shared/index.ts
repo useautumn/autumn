@@ -25,6 +25,7 @@ export * from "./api/catalogV2/planUpdate/params/catalogPlanItemIdentity";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/common/paginationConfigs";
+export * from "./api/common/responseFilter/stripInternalFields";
 export * from "./api/customers/advanceTestClock/advanceTestClock";
 export * from "./api/customers/components/customerExpand/customerExpand";
 export * from "./api/entities/crud/createEntityParams";

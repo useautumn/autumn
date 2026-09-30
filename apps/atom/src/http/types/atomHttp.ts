@@ -6,6 +6,8 @@ import type { Slots } from "../../slots/types/slots.js";
 export type AtomHttpContext = {
 	auth: Auth;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
+	/** Where a request Atom does not answer itself is sent. */
+	autumnApiUrl: string;
 	/** Present only on a dev stack. */
 	dev?: DevContext;
 };

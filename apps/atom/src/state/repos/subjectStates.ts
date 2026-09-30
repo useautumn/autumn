@@ -8,6 +8,7 @@ const CUSTOMER_ENTITY_ID = "";
 
 type SubjectStateRow = {
 	logOffset: bigint;
+	readAt: bigint;
 	stateJson: string;
 	catalogJson: string;
 	orgJson: string;
@@ -23,6 +24,7 @@ const storedSubjectFromRow = ({
 	catalog: JSON.parse(row.catalogJson),
 	org: JSON.parse(row.orgJson),
 	logOffset: row.logOffset,
+	readAt: Number(row.readAt),
 });
 
 export const readSubject = ({
@@ -38,6 +40,7 @@ export const readSubject = ({
 		.query<SubjectStateRow, { customerId: string; entityId: string }>(`
 			SELECT
 				log_offset AS logOffset,
+				read_at AS readAt,
 				state_json AS stateJson,
 				catalog_json AS catalogJson,
 				org_json AS orgJson
@@ -60,11 +63,12 @@ export const upsertSubject = ({
 	ctx.sqliteDb
 		.query(`
 			INSERT INTO subject_states
-				(customer_id, entity_id, log_offset, state_json, catalog_json, org_json)
+				(customer_id, entity_id, log_offset, read_at, state_json, catalog_json, org_json)
 			VALUES
-				($customerId, $entityId, $logOffset, $stateJson, $catalogJson, $orgJson)
+				($customerId, $entityId, $logOffset, $readAt, $stateJson, $catalogJson, $orgJson)
 			ON CONFLICT (customer_id, entity_id) DO UPDATE SET
 				log_offset = excluded.log_offset,
+				read_at = excluded.read_at,
 				state_json = excluded.state_json,
 				catalog_json = excluded.catalog_json,
 				org_json = excluded.org_json
@@ -73,6 +77,7 @@ export const upsertSubject = ({
 			customerId,
 			entityId: entityId ?? CUSTOMER_ENTITY_ID,
 			logOffset: subject.logOffset,
+			readAt: subject.readAt,
 			stateJson: JSON.stringify(subject.state),
 			catalogJson: JSON.stringify(subject.catalog),
 			orgJson: JSON.stringify(subject.org),

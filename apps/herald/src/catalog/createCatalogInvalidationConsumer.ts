@@ -36,6 +36,10 @@ export function createCatalogInvalidationConsumer({
 
 	return createKafkaCatalogInvalidationConsumer({
 		ctx: { kafka: ctx.kafka, handler: { apply, skip } },
-		config,
+		// Every process clears its own cache, so each reads every record.
+		config: {
+			topic: config.topic,
+			group: { kind: "perProcess", idPrefix: config.groupIdPrefix },
+		},
 	});
 }

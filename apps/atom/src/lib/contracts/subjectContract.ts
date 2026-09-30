@@ -1,6 +1,8 @@
-import type { Catalog, CommandOrg, SubjectState } from "@autumn/balance-engine";
+import type { Catalog, SubjectState } from "@autumn/balance-engine";
+import type { SharedContext } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { StoredSubject } from "../../state/types/storedSubject.js";
+import { sentAs } from "./sentAs.js";
 
 // Autumn built these rows, so Atom confirms only the fields it reads itself and stores the rest as sent:
 // a field a newer Autumn adds must never make an older Atom refuse the subject.
@@ -16,17 +18,15 @@ const catalogShape = z.looseObject({
 });
 const orgShape = z.looseObject({ config: z.record(z.string(), z.unknown()) });
 
-/** Passes the value through untouched, typed as what Autumn sends, once its shape holds. */
-const sentAs = <Sent>(shape: z.ZodType) =>
-	z.custom<Sent>((value) => shape.safeParse(value).success);
-
 /** `POST /v1/subjects.set` as Autumn sends it. */
 const subjectBodySchema = z.object({
 	state: sentAs<SubjectState>(stateShape),
 	catalog: sentAs<Catalog>(catalogShape),
-	org: sentAs<CommandOrg>(orgShape),
+	org: sentAs<SharedContext["org"]>(orgShape),
 	/** A string: log offsets are 64-bit. */
 	log_offset: z.string().regex(/^\d+$/),
+	/** Epoch ms. */
+	read_at: z.number().int().nonnegative(),
 });
 
 export const subjectBodyToStoredSubject = ({
@@ -40,5 +40,6 @@ export const subjectBodyToStoredSubject = ({
 		catalog: parsed.catalog,
 		org: parsed.org,
 		logOffset: BigInt(parsed.log_offset),
+		readAt: parsed.read_at,
 	};
 };
