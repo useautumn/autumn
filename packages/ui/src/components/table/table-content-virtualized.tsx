@@ -121,7 +121,7 @@ export function TableContentVirtualized({
 					<ScrollArea.Viewport
 						ref={setScrollContainer}
 						className={cn(
-							"w-full transition-[max-height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+							"w-full transition-[max-height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-has-overflow-y:pr-2.5",
 							isFlexFill && "h-full",
 							showsSkeleton && "overflow-hidden!",
 						)}
