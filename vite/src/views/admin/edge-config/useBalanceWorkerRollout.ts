@@ -8,6 +8,7 @@ import {
 	type RolloutEntry,
 	type RolloutsResponse,
 } from "./rolloutTypes";
+import { useNow } from "./useNow";
 
 const QUERY_KEY = ["admin-rollouts"];
 
@@ -30,6 +31,24 @@ const toVisibleCustomerPins = ({
 			)
 			.map(([customerId, customer]) => ({ orgId, customerId, customer })),
 	);
+
+/** When the last removal still on its way lands; 0 when none is. */
+const toLastRemovalLandsAt = ({
+	entry,
+	settleMs,
+}: {
+	entry?: RolloutEntry;
+	settleMs: number;
+}): number =>
+	Object.values(entry?.customers ?? {})
+		.flatMap((customers) => Object.values(customers))
+		.reduce(
+			(latest, { removedAt }) =>
+				removedAt === undefined
+					? latest
+					: Math.max(latest, removedAt + settleMs),
+			0,
+		);
 
 /** Server state for the balance-worker rollout: the config as S3 holds it, plus the mutations that move it. */
 export const useBalanceWorkerRollout = () => {
@@ -144,6 +163,10 @@ export const useBalanceWorkerRollout = () => {
 
 	const entry = rolloutId ? query.data?.rollouts[rolloutId] : undefined;
 	const settleMs = query.data?.settleMs ?? 0;
+	// Ticks only while a removal is landing, so its row drops off without waiting for a refetch.
+	const tickingNow = useNow({
+		active: Date.now() < toLastRemovalLandsAt({ entry, settleMs }),
+	});
 
 	return {
 		isLoading: query.isLoading,
@@ -155,7 +178,7 @@ export const useBalanceWorkerRollout = () => {
 		customerPins: toVisibleCustomerPins({
 			entry,
 			settleMs,
-			now: query.dataUpdatedAt,
+			now: Math.max(tickingNow, query.dataUpdatedAt),
 		}),
 		orgsById: query.data?.orgsById ?? {},
 		customerNamesByOrgId: query.data?.customerNamesByOrgId ?? {},

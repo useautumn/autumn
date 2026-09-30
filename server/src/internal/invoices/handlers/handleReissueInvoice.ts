@@ -33,6 +33,7 @@ export const handleReissueInvoice = createRoute({
 			invoice,
 			customer,
 			lines,
+			issue_method,
 		} = c.req.valid("json");
 
 		const {
@@ -50,6 +51,7 @@ export const handleReissueInvoice = createRoute({
 			invoiceOverrides: invoice,
 			customerOverrides: customer,
 			lineEdits: lines,
+			issueMethod: issue_method,
 		});
 
 		if (!replacement) {

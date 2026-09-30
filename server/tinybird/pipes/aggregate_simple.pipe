@@ -3,6 +3,7 @@ DESCRIPTION >
     Fastest possible query for basic event aggregation.
     use_monthly_rollup=1 (server-set, UTC month bins only) serves the complete months of the window
     from events_customer_monthly_mv and only the partial months at either end from the hourly rollup.
+    A window ending at now (or later) reads its open hour from the hourly rollup instead of raw events.
 
 TOKEN "aggregate_simple_read" READ
 
@@ -14,8 +15,10 @@ SQL >
     {% set read_customer_monthly = no_property_filters and not use_org_rollup and defined(use_monthly_rollup) and String(use_monthly_rollup, '0') == '1' %}
     WITH
         toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
+        toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
         if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
-        toStartOfHour(toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})) AS full_hours_end
+        window_end >= now() - INTERVAL 30 SECOND AS end_is_live,
+        if(end_is_live, addHours(toStartOfHour(window_end), 1), toStartOfHour(window_end)) AS full_hours_end
     {% if read_customer_monthly %}
     SELECT
         period,
@@ -136,7 +139,8 @@ SQL >
         toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
         toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
         if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
-        toStartOfHour(window_end) AS full_hours_end
+        window_end >= now() - INTERVAL 30 SECOND AS end_is_live,
+        if(end_is_live, addHours(toStartOfHour(window_end), 1), toStartOfHour(window_end)) AS full_hours_end
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}
         formatDateTime(toStartOfHour(timestamp), '%F %T') as period,
@@ -154,7 +158,10 @@ SQL >
         AND env = {{ String(env, 'test') }}
         AND event_name IN {{ Array(event_names, 'String', default='[]') }}
         AND timestamp >= window_start AND timestamp <= window_end
-        AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
+        AND (
+            (window_start < full_hours_start AND timestamp < full_hours_start)
+            OR (NOT end_is_live AND timestamp >= full_hours_end)
+        )
         {% if defined(customer_id) and String(customer_id, '') != '' %}
         AND customer_id = {{ String(customer_id) }}
         {% end %}
