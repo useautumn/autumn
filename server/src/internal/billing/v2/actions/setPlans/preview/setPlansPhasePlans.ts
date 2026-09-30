@@ -66,6 +66,7 @@ const toPreviewPlan = ({
 	status,
 	custom: customerProduct.is_custom,
 	expires_at: customerProduct.ended_at ?? null,
+	trial_ends_at: customerProduct.trial_ends_at ?? null,
 	credit,
 	prices: cusProductToPrices({ cusProduct: customerProduct }).map((price) => ({
 		feature_id: price.config.feature_id ?? null,

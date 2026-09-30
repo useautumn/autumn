@@ -14,7 +14,7 @@ type SetPlansReviewSections = {
 };
 
 export function useSetPlansReviewSections(): SetPlansReviewSections | null {
-	const { preview, error, features } = useCreateScheduleFormContext();
+	const { preview, error, features, nowMs } = useCreateScheduleFormContext();
 
 	return useMemo(() => {
 		if (!preview || error) return null;
@@ -25,6 +25,7 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 				phases: preview.phases,
 				features,
 				currency: preview.currency,
+				nowMs,
 			}),
 			balances: balanceChangesToReviewSection({
 				phases: preview.phases,
@@ -32,5 +33,5 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 			}),
 			processor: processorItemsToReviewSection({ preview }),
 		};
-	}, [preview, error, features]);
+	}, [preview, error, features, nowMs]);
 }

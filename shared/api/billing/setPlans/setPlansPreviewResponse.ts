@@ -42,6 +42,7 @@ export const SetPlansPreviewPlanSchema = z.object({
 	status: z.enum(["starts", "ends", "updated", "kept"]),
 	custom: z.boolean(),
 	expires_at: z.number().nullable(),
+	trial_ends_at: z.number().nullable(),
 	credit: z.number().nullable(),
 	prices: z.array(
 		z.object({

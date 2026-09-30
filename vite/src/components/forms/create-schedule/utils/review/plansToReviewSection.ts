@@ -38,12 +38,14 @@ const planToRow = ({
 	planIndex,
 	features,
 	currency,
+	nowMs,
 }: {
 	plan: SetPlansPreviewPlan;
 	phaseIndex: number;
 	planIndex: number;
 	features: Feature[];
 	currency: string;
+	nowMs: number;
 }): ReviewChangeRow => ({
 	key: `plan-${phaseIndex}-${planIndex}-${plan.plan_id}`,
 	title: plan.name,
@@ -56,6 +58,12 @@ const planToRow = ({
 			: undefined,
 	]),
 	status: plan.status,
+	trialEndsAt:
+		plan.status !== "ends" &&
+		plan.trial_ends_at !== null &&
+		plan.trial_ends_at > nowMs
+			? plan.trial_ends_at
+			: undefined,
 	value:
 		plan.status === "ends"
 			? planCreditValue({ plan, currency })
@@ -66,17 +74,19 @@ export const plansToReviewSection = ({
 	phases,
 	features,
 	currency,
+	nowMs,
 }: {
 	phases: SetPlansPreviewPhase[];
 	features: Feature[];
 	currency: string;
+	nowMs: number;
 }): ReviewChangeSection => ({
 	phases: withoutEmptyPhases(
 		phases.map((phase, phaseIndex) => ({
 			key: `plans-${phaseIndex}`,
 			label: phaseLabel({ phase }),
 			rows: phase.plans.map((plan, planIndex) =>
-				planToRow({ plan, phaseIndex, planIndex, features, currency }),
+				planToRow({ plan, phaseIndex, planIndex, features, currency, nowMs }),
 			),
 		})),
 	),
