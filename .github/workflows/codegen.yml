@@ -22,7 +22,7 @@ jobs:
       !startsWith(github.event.head_commit.message, 'chore: regenerate artifacts')
     runs-on: blacksmith-8vcpu-ubuntu-2404
     concurrency:
-      group: codegen
+      group: codegen-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
