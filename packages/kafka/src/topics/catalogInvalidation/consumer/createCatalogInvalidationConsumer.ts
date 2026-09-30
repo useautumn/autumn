@@ -16,10 +16,11 @@ const CONSUMER_TIMINGS = {
 	rebalanceTimeoutMs: 90_000,
 };
 
-const groupIdOf = ({ group }: { group: CatalogInvalidationGroup }): string =>
-	group.kind === "shared"
+function groupIdOf({ group }: { group: CatalogInvalidationGroup }): string {
+	return group.kind === "shared"
 		? group.id
 		: `${group.idPrefix}-${crypto.randomUUID()}`;
+}
 
 /**
  * Reads catalog invalidations in log order. A group with no position yet starts from now:
