@@ -32,7 +32,8 @@ class Plans(BaseSDK):
         ] = None,
         licenses: Optional[
             Union[
-                List[models.CreatePlanLicense], List[models.CreatePlanLicenseTypedDict]
+                List[models.CreatePlanLicenseRequest],
+                List[models.CreatePlanLicenseRequestTypedDict],
             ]
         ] = None,
         free_trial: Optional[
@@ -106,7 +107,7 @@ class Plans(BaseSDK):
                 items, Optional[List[models.CreatePlanItemPlanItem]]
             ),
             licenses=utils.get_pydantic_model(
-                licenses, Optional[List[models.CreatePlanLicense]]
+                licenses, Optional[List[models.CreatePlanLicenseRequest]]
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, Optional[models.FreeTrialRequestBody]
@@ -203,7 +204,8 @@ class Plans(BaseSDK):
         ] = None,
         licenses: Optional[
             Union[
-                List[models.CreatePlanLicense], List[models.CreatePlanLicenseTypedDict]
+                List[models.CreatePlanLicenseRequest],
+                List[models.CreatePlanLicenseRequestTypedDict],
             ]
         ] = None,
         free_trial: Optional[
@@ -277,7 +279,7 @@ class Plans(BaseSDK):
                 items, Optional[List[models.CreatePlanItemPlanItem]]
             ),
             licenses=utils.get_pydantic_model(
-                licenses, Optional[List[models.CreatePlanLicense]]
+                licenses, Optional[List[models.CreatePlanLicenseRequest]]
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, Optional[models.FreeTrialRequestBody]
@@ -760,7 +762,8 @@ class Plans(BaseSDK):
         ] = None,
         licenses: Optional[
             Union[
-                List[models.UpdatePlanLicense], List[models.UpdatePlanLicenseTypedDict]
+                List[models.UpdatePlanLicenseRequest],
+                List[models.UpdatePlanLicenseRequestTypedDict],
             ]
         ] = None,
         free_trial: OptionalNullable[
@@ -870,7 +873,7 @@ class Plans(BaseSDK):
                 items, Optional[List[models.UpdatePlanItemPlanItem]]
             ),
             licenses=utils.get_pydantic_model(
-                licenses, Optional[List[models.UpdatePlanLicense]]
+                licenses, Optional[List[models.UpdatePlanLicenseRequest]]
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial,
@@ -984,7 +987,8 @@ class Plans(BaseSDK):
         ] = None,
         licenses: Optional[
             Union[
-                List[models.UpdatePlanLicense], List[models.UpdatePlanLicenseTypedDict]
+                List[models.UpdatePlanLicenseRequest],
+                List[models.UpdatePlanLicenseRequestTypedDict],
             ]
         ] = None,
         free_trial: OptionalNullable[
@@ -1094,7 +1098,7 @@ class Plans(BaseSDK):
                 items, Optional[List[models.UpdatePlanItemPlanItem]]
             ),
             licenses=utils.get_pydantic_model(
-                licenses, Optional[List[models.UpdatePlanLicense]]
+                licenses, Optional[List[models.UpdatePlanLicenseRequest]]
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial,

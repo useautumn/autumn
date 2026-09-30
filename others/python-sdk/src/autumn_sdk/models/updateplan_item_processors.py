@@ -18,8 +18,8 @@ from .updateplan_variant_price import (
     UpdatePlanFreeTrialParamsRequestBodyTypedDict,
     UpdatePlanItemPlanItem,
     UpdatePlanItemPlanItemTypedDict,
-    UpdatePlanLicense,
-    UpdatePlanLicenseTypedDict,
+    UpdatePlanLicenseRequest,
+    UpdatePlanLicenseRequestTypedDict,
     UpdatePlanVariantBasePrice,
     UpdatePlanVariantBasePriceTypedDict,
     UpdatePlanVariantPrice,
@@ -3139,7 +3139,7 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""The price of the plan. Set to null to remove the base price."""
     items: NotRequired[List[UpdatePlanItemPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
-    licenses: NotRequired[List[UpdatePlanLicenseTypedDict]]
+    licenses: NotRequired[List[UpdatePlanLicenseRequestTypedDict]]
     r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
     free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsRequestBodyTypedDict]]
     r"""The free trial of the plan. Set to null to remove the free trial."""
@@ -3195,7 +3195,7 @@ class UpdatePlanParams(BaseModel):
     items: Optional[List[UpdatePlanItemPlanItem]] = None
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
 
-    licenses: Optional[List[UpdatePlanLicense]] = None
+    licenses: Optional[List[UpdatePlanLicenseRequest]] = None
     r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
 
     free_trial: OptionalNullable[UpdatePlanFreeTrialParamsRequestBody] = UNSET

@@ -36,9 +36,9 @@ import {
   UpdatePlanItemPlanItem,
   UpdatePlanItemPlanItem$Outbound,
   UpdatePlanItemPlanItem$outboundSchema,
-  UpdatePlanLicense,
-  UpdatePlanLicense$Outbound,
-  UpdatePlanLicense$outboundSchema,
+  UpdatePlanLicenseRequest,
+  UpdatePlanLicenseRequest$Outbound,
+  UpdatePlanLicenseRequest$outboundSchema,
   UpdatePlanVariantBasePrice,
   UpdatePlanVariantBasePrice$Outbound,
   UpdatePlanVariantBasePrice$outboundSchema,
@@ -1750,7 +1750,7 @@ export type UpdatePlanParams = {
   /**
    * Plans offered as assignable licenses under this plan. The full set replaces existing links.
    */
-  licenses?: Array<UpdatePlanLicense> | undefined;
+  licenses?: Array<UpdatePlanLicenseRequest> | undefined;
   /**
    * The free trial of the plan. Set to null to remove the free trial.
    */
@@ -5477,7 +5477,7 @@ export type UpdatePlanParams$Outbound = {
   auto_enable?: boolean | undefined;
   price?: UpdatePlanBasePriceRequestBody$Outbound | null | undefined;
   items?: Array<UpdatePlanItemPlanItem$Outbound> | undefined;
-  licenses?: Array<UpdatePlanLicense$Outbound> | undefined;
+  licenses?: Array<UpdatePlanLicenseRequest$Outbound> | undefined;
   free_trial?: UpdatePlanFreeTrialParamsRequestBody$Outbound | null | undefined;
   config?: UpdatePlanConfigRequestBody$Outbound | undefined;
   billing_controls?: UpdatePlanBillingControlsRequestBody$Outbound | undefined;
@@ -5513,7 +5513,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
       z.nullable(UpdatePlanBasePriceRequestBody$outboundSchema),
     ),
     items: z.optional(z.array(UpdatePlanItemPlanItem$outboundSchema)),
-    licenses: z.optional(z.array(UpdatePlanLicense$outboundSchema)),
+    licenses: z.optional(z.array(UpdatePlanLicenseRequest$outboundSchema)),
     freeTrial: z.optional(
       z.nullable(UpdatePlanFreeTrialParamsRequestBody$outboundSchema),
     ),
