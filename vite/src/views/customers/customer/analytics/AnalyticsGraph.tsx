@@ -22,6 +22,8 @@ const MAX_TOOLTIP_ITEMS = 5;
 const SEGMENT_GAP = 2;
 const BUSY_SEGMENT_GAP = 1;
 const BUSY_SERIES_COUNT = 20;
+// Past this many bins a bar is only a few pixels wide, so the gap stroke would hide it.
+const DENSE_BIN_COUNT = 90;
 const TOP_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
 const CHART_STYLE = { cursor: "default" } as const;
 const BAR_STYLE = { cursor: "pointer" } as const;
@@ -91,7 +93,11 @@ export const EventsBarChart = memo(function EventsBarChart({
 	const seriesSetKey = chartConfig.map((series) => series.yKey).join("|");
 
 	const segmentGap =
-		chartConfig.length >= BUSY_SERIES_COUNT ? BUSY_SEGMENT_GAP : SEGMENT_GAP;
+		data.data.length > DENSE_BIN_COUNT
+			? 0
+			: chartConfig.length >= BUSY_SERIES_COUNT
+				? BUSY_SEGMENT_GAP
+				: SEGMENT_GAP;
 
 	const chart = useMemo(
 		() => (
