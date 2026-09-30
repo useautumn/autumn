@@ -17,7 +17,7 @@
 		"@autumn/shared": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"@modelcontextprotocol/sdk": "1.29.0",
-		"hono": "4.12.27",
+		"hono": "4.13.5",
 		"modal": "^0.8.0",
 		"p-limit": "^7.2.0",
 		"postgres": "3.4.7",
