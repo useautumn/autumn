@@ -5,56 +5,9 @@ import {
 	type MigrationRun,
 	MigrationRunStatus,
 } from "@autumn/shared";
-import pLimit from "p-limit";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	type MigrationItemRunCountRow,
-	migrationItemRunRepo,
-	migrationRunRepo,
-} from "../../repos/index.js";
+import type { MigrationItemRunCountRow } from "../../repos/index.js";
 import type { MigrationRunWithKind } from "../../repos/migrationRun/index.js";
-import { countCustomersCached } from "../countCustomersCached.js";
-
-const CUSTOMER_COUNT_CONCURRENCY = 4;
-
-type MigrationRef = Pick<
-	Migration,
-	"internal_id" | "id" | "filter" | "archived" | "created_at" | "updated_at"
->;
-
-const countMatchedCustomers = async ({
-	ctx,
-	migration,
-}: {
-	ctx: AutumnContext;
-	migration: MigrationRef;
-}): Promise<number | null> => {
-	const filter = migration.filter?.customer;
-	if (
-		migration.archived ||
-		!filter ||
-		!Object.values(filter).some((value) => value !== undefined)
-	)
-		return null;
-
-	try {
-		return await countCustomersCached({
-			ctx,
-			filter,
-			includeProcessed: { migrationInternalId: migration.internal_id },
-			cacheScope: {
-				migrationId: migration.id,
-				source: "filter",
-				executionStatuses: [],
-			},
-		});
-	} catch (error) {
-		ctx.logger.warn(`Migration ${migration.id} customer count failed`, {
-			error,
-		});
-		return null;
-	}
-};
+import type { MigrationListContext } from "./types/migrationListContext.js";
 
 const tallyCounts = (
 	rows: MigrationItemRunCountRow[],
@@ -99,12 +52,12 @@ const runOutcomeActivity = (
 /** Live runs of other migrations that hold or precede this queued Run All. */
 const countRunsAhead = ({
 	run,
-	activeRuns,
+	orgActiveRuns,
 }: {
 	run: MigrationRunWithKind;
-	activeRuns: MigrationRun[];
+	orgActiveRuns: MigrationRun[];
 }): number =>
-	activeRuns.filter(
+	orgActiveRuns.filter(
 		(active) =>
 			!active.dry_run &&
 			active.migration_internal_id !== run.migration_internal_id &&
@@ -112,19 +65,17 @@ const countRunsAhead = ({
 				active.created_at < run.created_at),
 	).length;
 
-const summarizeMigration = ({
+export const summarizeMigration = ({
 	migration,
-	runs,
-	countRows,
-	activeRuns,
-	customerCount,
+	listContext: { latestRuns, itemRunCounts, orgActiveRuns, customerCounts },
 }: {
-	migration: MigrationRef;
-	runs: MigrationRunWithKind[];
-	countRows: MigrationItemRunCountRow[];
-	activeRuns: MigrationRun[];
-	customerCount: number | null;
+	migration: Migration;
+	listContext: MigrationListContext;
 }): MigrationListSummary => {
+	const belongsToMigration = (row: { migration_internal_id: string }) =>
+		row.migration_internal_id === migration.internal_id;
+	const runs = latestRuns.filter(belongsToMigration);
+	const countRows = itemRunCounts.filter(belongsToMigration);
 	const runAll = runs.find((run) => run.kind === "run_all");
 	const dryRun = runs.find((run) => run.kind === "dry_run");
 	const sample = runs.find((run) => run.kind === "sample");
@@ -150,7 +101,7 @@ const summarizeMigration = ({
 		activities.push({ kind: "sample", at: sample.finished_at });
 
 	return {
-		customer_count: customerCount,
+		customer_count: customerCounts.get(migration.internal_id) ?? null,
 		latest_run: runAll
 			? {
 					status: runAll.status,
@@ -179,71 +130,10 @@ const summarizeMigration = ({
 			: null,
 		queue_position:
 			runAll?.status === MigrationRunStatus.Queued
-				? countRunsAhead({ run: runAll, activeRuns })
+				? countRunsAhead({ run: runAll, orgActiveRuns })
 				: null,
 		last_activity: activities.reduce((latest, activity) =>
 			activity.at > latest.at ? activity : latest,
 		),
 	};
-};
-
-/** Summarizes every migration's latest runs, item counts and filter size in a
- * fixed number of batched queries. */
-export const summarizeMigrations = async ({
-	ctx,
-	migrations,
-}: {
-	ctx: AutumnContext;
-	migrations: MigrationRef[];
-}): Promise<Map<string, MigrationListSummary>> => {
-	const limit = pLimit(CUSTOMER_COUNT_CONCURRENCY);
-	const runsWithCounts = async () => {
-		const latestRuns = await migrationRunRepo.listLatestByKind({
-			ctx,
-			migrationInternalIds: migrations.map(
-				(migration) => migration.internal_id,
-			),
-		});
-		const hasQueuedRunAll = latestRuns.some(
-			(run) =>
-				run.kind === "run_all" && run.status === MigrationRunStatus.Queued,
-		);
-		const [countRows, activeRuns] = await Promise.all([
-			migrationItemRunRepo.listCountRows({
-				ctx,
-				liveMigrationInternalIds: latestRuns
-					.filter((run) => run.kind === "run_all")
-					.map((run) => run.migration_internal_id),
-				runs: latestRuns.filter((run) => run.kind !== "run_all"),
-			}),
-			hasQueuedRunAll ? migrationRunRepo.list({ ctx, active: true }) : [],
-		]);
-		return { latestRuns, countRows, activeRuns };
-	};
-	const [{ latestRuns, countRows, activeRuns }, customerCounts] =
-		await Promise.all([
-			runsWithCounts(),
-			Promise.all(
-				migrations.map((migration) =>
-					limit(() => countMatchedCustomers({ ctx, migration })),
-				),
-			),
-		]);
-
-	return new Map(
-		migrations.map((migration, index) => {
-			const belongsToMigration = (row: { migration_internal_id: string }) =>
-				row.migration_internal_id === migration.internal_id;
-			return [
-				migration.internal_id,
-				summarizeMigration({
-					migration,
-					runs: latestRuns.filter(belongsToMigration),
-					countRows: countRows.filter(belongsToMigration),
-					activeRuns,
-					customerCount: customerCounts[index],
-				}),
-			];
-		}),
-	);
 };

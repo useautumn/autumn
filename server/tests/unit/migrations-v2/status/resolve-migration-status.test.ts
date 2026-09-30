@@ -9,7 +9,10 @@
 
 import { describe, expect, test } from "bun:test";
 import type { MigrationRun } from "@autumn/shared";
-import { resolveMigrationStatus } from "@/internal/migrations/v2/actions/migrationStatus/resolveMigrationStatus.js";
+import {
+	resolveMigrationStatus,
+	resolveMigrationStatusFromRunState,
+} from "@/internal/migrations/v2/actions/migrationStatus/resolveMigrationStatus.js";
 
 const MIGRATION_ID = "mig_self";
 const OTHER_MIGRATION_ID = "mig_other";
@@ -198,17 +201,6 @@ describe("resolveMigrationStatus: run", () => {
 		});
 	});
 
-	test("pre-aggregated history counts as run without the finished rows", () => {
-		expect(
-			resolveMigrationStatus({
-				migrationInternalId: MIGRATION_ID,
-				runs: [],
-				orgActiveRuns: [],
-				latestRunAllStatus: "succeeded",
-			}).status,
-		).toBe("run");
-	});
-
 	test("scoped runs after a Run All do not change run", () => {
 		expect(
 			resolve({
@@ -274,30 +266,6 @@ describe("resolveMigrationStatus: no_changes", () => {
 			}).status,
 		).toBe("running");
 	});
-
-	test("pre-aggregated history without run rows stays run", () => {
-		expect(
-			resolveMigrationStatus({
-				migrationInternalId: MIGRATION_ID,
-				runs: [],
-				orgActiveRuns: [],
-				latestRunAllStatus: "succeeded",
-			}).status,
-		).toBe("run");
-	});
-
-	/** The list endpoint passes only active runs, so a finished no-op run
-	 * reaches the resolver through this aggregate rather than in `runs`. */
-	test("pre-aggregated no_changes without run rows reads no_changes", () => {
-		expect(
-			resolveMigrationStatus({
-				migrationInternalId: MIGRATION_ID,
-				runs: [],
-				orgActiveRuns: [],
-				latestRunAllStatus: "no_changes",
-			}).status,
-		).toBe("no_changes");
-	});
 });
 
 describe("resolveMigrationStatus: failed and canceled", () => {
@@ -335,15 +303,48 @@ describe("resolveMigrationStatus: failed and canceled", () => {
 			}).status,
 		).toBe("failed");
 	});
+});
 
-	test("pre-aggregated failed history reads failed", () => {
+describe("resolveMigrationStatusFromRunState", () => {
+	test("the latest finished Run All decides status when nothing is active", () => {
 		expect(
-			resolveMigrationStatus({
+			resolveMigrationStatusFromRunState({
 				migrationInternalId: MIGRATION_ID,
-				runs: [],
-				orgActiveRuns: [],
-				latestRunAllStatus: "failed",
-			}).status,
-		).toBe("failed");
+				runState: {
+					orgActiveRuns: [],
+					latestRuns: [
+						{ ...run({ status: "no_changes" }), kind: "run_all" },
+						{ ...run({ dry_run: true, created_at: 5 }), kind: "dry_run" },
+						{
+							...run({
+								migration_internal_id: OTHER_MIGRATION_ID,
+								status: "failed",
+							}),
+							kind: "run_all",
+						},
+					],
+				},
+			}),
+		).toEqual({ status: "no_changes", blockedByMigrationInternalId: null });
+	});
+
+	test("an active Run All waits on another migration's running run", () => {
+		const blocker = run({
+			migration_internal_id: OTHER_MIGRATION_ID,
+			status: "running",
+			finished_at: null,
+		});
+		expect(
+			resolveMigrationStatusFromRunState({
+				migrationInternalId: MIGRATION_ID,
+				runState: {
+					orgActiveRuns: [run({ status: "queued", started_at: null }), blocker],
+					latestRuns: [{ ...run({ status: "succeeded" }), kind: "run_all" }],
+				},
+			}),
+		).toEqual({
+			status: "waiting",
+			blockedByMigrationInternalId: OTHER_MIGRATION_ID,
+		});
 	});
 });

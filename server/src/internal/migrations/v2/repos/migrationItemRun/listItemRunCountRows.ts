@@ -2,10 +2,9 @@ import {
 	MigrationItemKind,
 	type MigrationItemRunSkipReason,
 	type MigrationItemRunStatus,
-	type MigrationRun,
 	migrationItemRuns,
 } from "@autumn/shared";
-import { and, eq, inArray, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
 export type MigrationItemRunCountRow = {
@@ -17,42 +16,27 @@ export type MigrationItemRunCountRow = {
 	count: number;
 };
 
-/** Item-run counts grouped by status and skip reason, for every live item of
- * `liveMigrationInternalIds` plus every item of `runs`. */
+/** Customer item-run counts for every live item of the migrations plus every
+ * item of `dryRunIds`; each OR branch matches one partial index on `dry_run`. */
 export const listItemRunCountRows = async ({
 	ctx,
-	liveMigrationInternalIds,
-	runs,
+	migrationInternalIds,
+	dryRunIds,
 }: {
 	ctx: RepoContext;
-	liveMigrationInternalIds: string[];
-	runs: Pick<MigrationRun, "internal_id" | "migration_internal_id">[];
+	migrationInternalIds: string[];
+	dryRunIds: string[];
 }): Promise<MigrationItemRunCountRow[]> => {
-	const scopes: SQL[] = [];
-	if (liveMigrationInternalIds.length > 0)
-		scopes.push(
-			and(
-				inArray(
-					migrationItemRuns.migration_internal_id,
-					liveMigrationInternalIds,
-				),
-				eq(migrationItemRuns.dry_run, false),
-			) as SQL,
-		);
-	if (runs.length > 0)
-		scopes.push(
-			and(
-				inArray(
-					migrationItemRuns.migration_internal_id,
-					runs.map((run) => run.migration_internal_id),
-				),
-				inArray(
-					migrationItemRuns.migration_run_id,
-					runs.map((run) => run.internal_id),
-				),
-			) as SQL,
-		);
-	if (scopes.length === 0) return [];
+	if (migrationInternalIds.length === 0) return [];
+
+	const isLiveItem = eq(migrationItemRuns.dry_run, false);
+	const isListedDryRunItem =
+		dryRunIds.length > 0
+			? and(
+					eq(migrationItemRuns.dry_run, true),
+					inArray(migrationItemRuns.migration_run_id, dryRunIds),
+				)
+			: undefined;
 
 	return ctx.db
 		.select({
@@ -67,7 +51,8 @@ export const listItemRunCountRows = async ({
 		.where(
 			and(
 				eq(migrationItemRuns.item_kind, MigrationItemKind.Customer),
-				or(...scopes),
+				inArray(migrationItemRuns.migration_internal_id, migrationInternalIds),
+				or(isLiveItem, isListedDryRunItem),
 			),
 		)
 		.groupBy(
