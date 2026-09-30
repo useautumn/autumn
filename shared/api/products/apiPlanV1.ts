@@ -213,7 +213,14 @@ export const ApiPlanV1Schema = z.object({
 
 export type ApiPlanV1 = z.infer<typeof ApiPlanV1Schema>;
 
-export const ApiPlanV1WithMeta = ApiPlanV1Schema.meta({
+const planLicensesField = z.array(ApiPlanLicenseV1Schema).optional().meta({
+	description:
+		"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
+});
+
+export const ApiPlanV1WithMeta = ApiPlanV1Schema.extend({
+	licenses: planLicensesField,
+}).meta({
 	id: "Plan",
 	description:
 		"A plan defines a set of features, pricing, and entitlements that can be attached to customers.",
@@ -222,10 +229,7 @@ export const ApiPlanV1WithMeta = ApiPlanV1Schema.meta({
 
 /** ApiPlanV1 plus its license and variant edges. */
 export const ApiPlanExpandedV1Schema = ApiPlanV1Schema.extend({
-	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
-		description:
-			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
-	}),
+	licenses: planLicensesField,
 	variants: z.array(ApiPlanVariantV1Schema).optional().meta({
 		description:
 			"Variant plans derived from this base plan. Omitted when the plan has none.",
