@@ -28,6 +28,41 @@ describe("worker activity tracker", () => {
 		});
 	});
 
+	test("a poller that keeps completing empty polls is idle, not hung, and is not recycled", () => {
+		let now = 0;
+		const tracker = createWorkerActivityTracker({
+			idleAfterMs: IDLE_AFTER_MS,
+			now: () => now,
+		});
+
+		tracker.recordMessagesReceived({ count: 1 });
+		for (let poll = 0; poll < 30; poll++) {
+			now += 20 * 1000;
+			tracker.recordPollCompleted();
+		}
+
+		expect(tracker.getIdleStatus()).toMatchObject({
+			idleForMs: 30 * 20 * 1000,
+			shouldRecycle: false,
+		});
+	});
+
+	test("a poller whose receives stop completing is recycled after the window", () => {
+		let now = 0;
+		const tracker = createWorkerActivityTracker({
+			idleAfterMs: IDLE_AFTER_MS,
+			now: () => now,
+		});
+
+		tracker.recordMessagesReceived({ count: 1 });
+		now += 60 * 1000;
+		tracker.recordPollCompleted();
+		now += IDLE_AFTER_MS - 1;
+		expect(tracker.getIdleStatus().shouldRecycle).toBe(false);
+		now += 1;
+		expect(tracker.getIdleStatus().shouldRecycle).toBe(true);
+	});
+
 	test("does not recycle while work or acknowledgements are active", () => {
 		let now = 0;
 		const tracker = createWorkerActivityTracker({

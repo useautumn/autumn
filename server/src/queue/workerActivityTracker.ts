@@ -14,12 +14,18 @@ export const createWorkerActivityTracker = ({
 }) => {
 	let activeWorkCount = 0;
 	let lastMessageReceivedAt: number | null = null;
+	let lastPollCompletedAt: number | null = null;
 	let totalMessagesReceived = 0;
 
 	const recordMessagesReceived = ({ count }: { count: number }) => {
 		if (count <= 0) return;
 		lastMessageReceivedAt = now();
+		lastPollCompletedAt = lastMessageReceivedAt;
 		totalMessagesReceived += count;
+	};
+
+	const recordPollCompleted = () => {
+		lastPollCompletedAt = now();
 	};
 
 	const startWork = () => {
@@ -35,6 +41,10 @@ export const createWorkerActivityTracker = ({
 			lastMessageReceivedAt === null
 				? 0
 				: Math.max(0, now() - lastMessageReceivedAt);
+		const sinceLastPollMs =
+			lastPollCompletedAt === null
+				? idleForMs
+				: Math.max(0, now() - lastPollCompletedAt);
 
 		return {
 			activeWorkCount,
@@ -42,7 +52,8 @@ export const createWorkerActivityTracker = ({
 			shouldRecycle:
 				lastMessageReceivedAt !== null &&
 				activeWorkCount === 0 &&
-				idleForMs >= idleAfterMs,
+				idleForMs >= idleAfterMs &&
+				sinceLastPollMs >= idleAfterMs,
 			totalMessagesReceived,
 		};
 	};
@@ -51,6 +62,7 @@ export const createWorkerActivityTracker = ({
 		finishWork,
 		getIdleStatus,
 		recordMessagesReceived,
+		recordPollCompleted,
 		startWork,
 	};
 };
