@@ -5,6 +5,7 @@ import {
 } from "@/components/forms/customer-state/components/tray/PlanSection";
 import { PlanTraySectionTitle } from "@/components/forms/customer-state/components/tray/PlanTraySectionTitle";
 import type { ReviewChangePhase } from "../../utils/review/types/reviewChange";
+import { ReviewChangeRowGroup } from "./ReviewChangeRowGroup";
 import { ReviewChangeRowItem } from "./ReviewChangeRowItem";
 
 function RemovedPhaseTitle({ label }: { label: string }) {
@@ -38,13 +39,22 @@ export function ReviewChangePhaseBlock({
 			}
 			surfaceClassName={phase.removed ? "border-dashed opacity-80" : undefined}
 		>
-			{phase.rows.map((row) => (
-				<ReviewChangeRowItem
-					key={row.key}
-					row={row}
-					showsStatus={showsStatus}
-				/>
-			))}
+			{phase.rows.map((row) =>
+				row.items ? (
+					<ReviewChangeRowGroup
+						key={row.key}
+						row={row}
+						items={row.items}
+						showsStatus={showsStatus}
+					/>
+				) : (
+					<ReviewChangeRowItem
+						key={row.key}
+						row={row}
+						showsStatus={showsStatus}
+					/>
+				),
+			)}
 		</PlanSection>
 	);
 }

@@ -27,6 +27,8 @@ export type ReviewChangeRow = {
 	changes?: ReviewChangeLine[];
 	trialEndsAt?: number;
 	value?: ReviewChangeValue;
+	/** Rows grouped under this one, e.g. the Stripe items billed for a plan. */
+	items?: ReviewChangeRow[];
 };
 
 export type ReviewChangePhase = {
