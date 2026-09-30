@@ -33,7 +33,7 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: peak
     timeout-minutes: 5
 
     steps:
