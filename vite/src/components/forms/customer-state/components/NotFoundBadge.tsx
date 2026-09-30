@@ -17,6 +17,8 @@ export function NotFoundBadge({ reasons }: { reasons: string[] }) {
 					glyph="alert"
 					className="cursor-default"
 					tabIndex={0}
+					// StatusChip adds a native title; the tooltip already explains it.
+					title={undefined}
 				>
 					Not found
 				</StatusChip>

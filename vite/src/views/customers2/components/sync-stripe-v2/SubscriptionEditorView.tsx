@@ -66,12 +66,15 @@ function SubscriptionEditor({
 	const formValues = useStore(form.store, (state) => state.values);
 	const [options, setOptions] = useState<SyncOptions>(DEFAULT_SYNC_OPTIONS);
 
-	const { syncParams, previewMismatches } = useSyncPreview({
+	const { syncParams, previewMismatches, isPreviewFetching } = useSyncPreview({
 		proposal,
 		formValues,
 		options,
 	});
-	const { mismatches: todayMismatches } = useTodayMismatches({ proposal });
+	const { mismatches: todayMismatches, isFetching: isVerifyFetching } =
+		useTodayMismatches({
+			proposal,
+		});
 
 	const handlePlanNotFoundReasons = useCallback(
 		(location: PlanLocation) => {
@@ -129,6 +132,7 @@ function SubscriptionEditor({
 						showPhases={isMultiPhase}
 						todayMismatches={todayMismatches}
 						previewMismatches={previewMismatches}
+						isLoadingMatches={isVerifyFetching || isPreviewFetching}
 					/>
 
 					<PlanTraySectionTitle title="Autumn plans" />
@@ -147,7 +151,7 @@ function SubscriptionEditor({
 								}
 							/>
 						))}
-						<CustomerStateUnscheduledPlans />
+						<CustomerStateUnscheduledPlans withSeparator />
 					</div>
 
 					<PlanTraySectionTitle title="Options" />
