@@ -228,7 +228,9 @@ export function enqueueMutation({
 	customerPending.add(pending);
 	state.pendingByCustomerKey.set(customerKey, customerPending);
 	state.queue.push(pending);
-	state.storeCompletion = settlement.waitForStore();
+	// A log-only record lands no rows, so nothing that re-reads Postgres waits for it:
+	// an evict behind it enqueues its own record straight away and shares the next commit.
+	if (nextState) state.storeCompletion = settlement.waitForStore();
 	// A lingering commit loop has what it was waiting for.
 	if (state.lingerWake && state.queue.length >= config.limits.maxBatchSize) {
 		state.lingerWake();
