@@ -13,6 +13,7 @@ import {
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import {
+	findStripeScheduleReleaseTailPhase,
 	isStripeSubscriptionSchedulePhaseCurrent,
 	isStripeSubscriptionSchedulePhaseEnded,
 } from "@/external/stripe/subscriptionSchedules";
@@ -20,6 +21,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeSyncSchedule } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
 import { CusService } from "@/internal/customers/CusService";
 import { subscriptionToSyncParams } from "./subscriptionToSyncParams";
+import { customerProductsToOngoingStripePriceIds } from "./utils/customerProductsToOngoingStripePriceIds";
 
 const findAlreadyLinkedProductId = ({
 	stripeSubscriptionId,
@@ -50,14 +52,23 @@ const findAlreadyLinkedProductId = ({
 const buildScheduleProposalPhases = ({
 	schedule,
 	detectedPhases,
+	ongoingStripePriceIds,
 }: {
 	schedule: Stripe.SubscriptionSchedule;
 	detectedPhases: SyncPhase[];
+	ongoingStripePriceIds: ReadonlySet<string>;
 }): SyncPhase[] => {
 	const nowSeconds = Math.floor(Date.now() / 1000);
 
+	// The sheet can't hold a plan-less phase; sync ends the last phase at the tail.
+	const releaseTailPhase = findStripeScheduleReleaseTailPhase({
+		schedule,
+		ongoingStripePriceIds,
+	});
 	const openPhases = schedule.phases.filter(
-		(phase) => !isStripeSubscriptionSchedulePhaseEnded({ phase, nowSeconds }),
+		(phase) =>
+			phase !== releaseTailPhase &&
+			!isStripeSubscriptionSchedulePhaseEnded({ phase, nowSeconds }),
 	);
 
 	return openPhases.map((schedulePhase) => {
@@ -80,12 +91,18 @@ const buildScheduleProposalPhases = ({
 const buildProposalPhases = ({
 	schedule,
 	detectedPhases,
+	ongoingStripePriceIds,
 }: {
 	schedule: Stripe.SubscriptionSchedule | null;
 	detectedPhases: SyncPhase[];
+	ongoingStripePriceIds: ReadonlySet<string>;
 }): SyncPhase[] => {
 	if (schedule) {
-		return buildScheduleProposalPhases({ schedule, detectedPhases });
+		return buildScheduleProposalPhases({
+			schedule,
+			detectedPhases,
+			ongoingStripePriceIds,
+		});
 	}
 
 	if (detectedPhases.length > 0) return detectedPhases;
@@ -119,6 +136,10 @@ const buildProposal = async ({
 	const phases = buildProposalPhases({
 		schedule: resolvedSchedule,
 		detectedPhases,
+		ongoingStripePriceIds: customerProductsToOngoingStripePriceIds({
+			customerProducts,
+			stripeSubscriptionId: params.stripe_subscription_id,
+		}),
 	});
 
 	return {
