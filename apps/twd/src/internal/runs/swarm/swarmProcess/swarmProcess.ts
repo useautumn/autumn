@@ -30,6 +30,7 @@ import type {
 	SwarmParentMessage,
 } from "../../types/swarmMessages.ts";
 import { createBootTimeline } from "./bootTimeline.ts";
+import { coalesceChunks } from "./coalesceChunks.ts";
 import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
 import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import {
@@ -45,6 +46,7 @@ const FILE_POLL_MS = 500;
 const OUTPUT_FLUSH_MS = 1_000;
 const PROGRESS_LOG_MS = 15_000;
 const LAG_PROBE_MS = 250;
+const CHUNK_BATCH_MS = 1_000;
 const TEARDOWN_TIMEOUT_MS = 20_000;
 /** After this many failed forks/boots the run stops asking for accounts. */
 const MAX_PROVISION_FAILURES = 5;
@@ -496,6 +498,19 @@ const main = async (init: SwarmInit) => {
 						executor.run({ ...args, failedTestNames: [init.grep ?? ""] }),
 				}
 			: executor;
+	const batchedOutput = (executor: TestExecutor): TestExecutor => ({
+		run: async (args) => {
+			const chunks = coalesceChunks({
+				onChunk: args.onChunk,
+				intervalMs: CHUNK_BATCH_MS,
+			});
+			try {
+				return await executor.run({ ...args, onChunk: chunks.push });
+			} finally {
+				chunks.flush();
+			}
+		},
+	});
 	let running = false;
 	const totalFiles = svixFiles.length + normalFiles.length;
 	// pool.acquire gates on idle workers, so the window is every file and grows with the pool.
@@ -508,12 +523,14 @@ const main = async (init: SwarmInit) => {
 		}
 		await runSwarmTests(
 			shard.files,
-			withGrep(
-				new tw.remoteExecutor.RemoteExecutor({
-					pool: shard.pool,
-					resolveSandbox,
-					toWorkerPath: tw.run.toSandboxPath,
-				}),
+			batchedOutput(
+				withGrep(
+					new tw.remoteExecutor.RemoteExecutor({
+						pool: shard.pool,
+						resolveSandbox,
+						toWorkerPath: tw.run.toSandboxPath,
+					}),
+				),
 			),
 			{ maxParallel: shard.files.length, totalFiles },
 		);
