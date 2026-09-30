@@ -21,6 +21,7 @@ export type ReviewChangeRow = {
 	title: string;
 	description?: string;
 	status?: ReviewChangeStatus;
+	trialEndsAt?: number;
 	value?: ReviewChangeValue;
 };
 

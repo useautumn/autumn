@@ -1,3 +1,5 @@
+import { StatusChip } from "@autumn/ui";
+import { format } from "date-fns";
 import { TABLE_TRAY_SURFACE_ROW_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
@@ -33,6 +35,11 @@ export function ReviewChangeRowItem({
 					</span>
 				)}
 			</div>
+			{row.trialEndsAt !== undefined && (
+				<StatusChip tone="blue" glyph="clock" className="shrink-0">
+					{`Trial · ends ${format(row.trialEndsAt, "MMM d")}`}
+				</StatusChip>
+			)}
 			{showsStatus && (
 				<div className="w-[108px] shrink-0">
 					{row.status && <ReviewStatusChip status={row.status} />}

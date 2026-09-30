@@ -40,6 +40,7 @@ const plan = (
 	status: "starts",
 	custom: false,
 	expires_at: null,
+	trial_ends_at: null,
 	credit: null,
 	prices: [{ feature_id: null, price: monthlyPrice(name.length) }],
 	...overrides,
@@ -72,6 +73,7 @@ test("plan rows present each phase's plans as the server returns them", () => {
 	const section = plansToReviewSection({
 		currency: "usd",
 		features,
+		nowMs: NOW,
 		phases: [
 			phase(NOW, {
 				plans: [
@@ -123,6 +125,7 @@ test("an updated plan that ends later says when", () => {
 	const section = plansToReviewSection({
 		currency: "usd",
 		features,
+		nowMs: NOW,
 		phases: [
 			phase(NOW, {
 				plans: [plan("Pro", { status: "updated", expires_at: NOV_1 })],
@@ -133,11 +136,34 @@ test("an updated plan that ends later says when", () => {
 	expect(section.phases[0]?.rows[0]?.description).toBe("Ends Nov 1, 2026");
 });
 
+test("a plan still on trial shows when the trial ends; a lapsed trial doesn't", () => {
+	const OCT_14 = Date.UTC(2026, 9, 14);
+	const section = plansToReviewSection({
+		currency: "usd",
+		features,
+		nowMs: NOW,
+		phases: [
+			phase(NOW, {
+				plans: [
+					plan("Pro", { status: "kept", trial_ends_at: OCT_14 }),
+					plan("Team", { status: "kept", trial_ends_at: Date.UTC(2026, 8, 1) }),
+				],
+			}),
+		],
+	});
+
+	expect(section.phases[0]?.rows.map((row) => row.trialEndsAt)).toEqual([
+		OCT_14,
+		undefined,
+	]);
+});
+
 test("a first phase the server says is backdated is labelled with its date", () => {
 	const SEP_1 = Date.UTC(2026, 8, 1);
 	const section = plansToReviewSection({
 		currency: "usd",
 		features,
+		nowMs: NOW,
 		phases: [phase(SEP_1, { plans: [plan("Premium")] })],
 	});
 
