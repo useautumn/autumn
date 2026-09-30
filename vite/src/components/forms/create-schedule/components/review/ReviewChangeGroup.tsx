@@ -26,7 +26,9 @@ export function ReviewChangeGroup({
 	section: ReviewChangeSection;
 }) {
 	const showsStatus = section.phases.some((phase) =>
-		phase.rows.some((row) => row.status),
+		phase.rows.some(
+			(row) => row.status || row.items?.some((item) => item.status),
+		),
 	);
 
 	return (

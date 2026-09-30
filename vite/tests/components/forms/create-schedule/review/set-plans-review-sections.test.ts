@@ -240,7 +240,7 @@ test("balance rows show the server's behaviour with labelled numbers", () => {
 	expect(section.summary).toBe("1 reset · 1 carried over");
 });
 
-test("Stripe rows list the end state per phase, named by plan", () => {
+test("Stripe rows group each phase's items under the plan that bills them", () => {
 	const seats = processorItem({
 		price_id: "price_seats",
 		feature_id: "seats",
@@ -277,31 +277,43 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 	expect(
 		section.phases.map((reviewPhase) => [
 			reviewPhase.label,
-			reviewPhase.rows.map((row) => [
-				row.title,
-				row.description,
-				row.status,
-				row.value,
-			]),
+			reviewPhase.rows.map((row) => ({
+				title: row.title,
+				status: row.status,
+				value: row.value,
+				items: row.items?.map((item) => [item.title, item.status, item.value]),
+			})),
 		]),
 	).toEqual([
 		[
 			"Now",
 			[
-				["Premium", "Base price", undefined, { amount: "$50", suffix: "/mo" }],
-				["Legacy Support", undefined, "unmanaged", undefined],
+				{
+					title: "Premium",
+					status: undefined,
+					value: { amount: "$50", suffix: "/mo" },
+					items: [["Base price", undefined, { amount: "$50", suffix: "/mo" }]],
+				},
+				{
+					title: "Legacy Support",
+					status: "unmanaged",
+					value: undefined,
+					items: [["Legacy Support", undefined, undefined]],
+				},
 			],
 		],
 		[
 			"Nov 1, 2026",
 			[
-				["Premium", "Base price", undefined, { amount: "$50", suffix: "/mo" }],
-				[
-					"Premium",
-					"Seats · 4 × $10",
-					undefined,
-					{ amount: "$40", suffix: "/mo" },
-				],
+				{
+					title: "Premium",
+					status: undefined,
+					value: undefined,
+					items: [
+						["Base price", undefined, { amount: "$50", suffix: "/mo" }],
+						["Seats · 4 × $10", undefined, { amount: "$40", suffix: "/mo" }],
+					],
+				},
 			],
 		],
 	]);

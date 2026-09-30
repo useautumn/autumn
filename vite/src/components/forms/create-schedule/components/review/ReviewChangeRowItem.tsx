@@ -1,5 +1,6 @@
 import { StatusChip } from "@autumn/ui";
 import { format } from "date-fns";
+import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
@@ -37,6 +38,23 @@ export function ReviewChangeRowItem({
 					</span>
 				)}
 			</div>
+			<ReviewChangeRowTrailing row={row} showsStatus={showsStatus} />
+		</div>
+	);
+}
+
+/** Trial, status and value columns, shared by plain and grouped rows so they align. */
+export function ReviewChangeRowTrailing({
+	row,
+	showsStatus,
+	valueOverride,
+}: {
+	row: ReviewChangeRow;
+	showsStatus: boolean;
+	valueOverride?: ReactNode;
+}) {
+	return (
+		<>
 			{row.trialEndsAt !== undefined && (
 				<StatusChip tone="blue" glyph="clock" className="shrink-0">
 					{`Trial · ends ${format(row.trialEndsAt, "MMM d")}`}
@@ -50,19 +68,20 @@ export function ReviewChangeRowItem({
 				</div>
 			)}
 			<span className="flex min-w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap">
-				{row.value && (
-					<>
-						<span className="text-sm font-medium tabular-nums text-foreground">
-							{row.value.amount}
-						</span>
-						{row.value.suffix && (
-							<span className="text-xs text-tertiary-foreground">
-								{row.value.suffix}
+				{valueOverride ??
+					(row.value && (
+						<>
+							<span className="text-sm font-medium tabular-nums text-foreground">
+								{row.value.amount}
 							</span>
-						)}
-					</>
-				)}
+							{row.value.suffix && (
+								<span className="text-xs text-tertiary-foreground">
+									{row.value.suffix}
+								</span>
+							)}
+						</>
+					))}
 			</span>
-		</div>
+		</>
 	);
 }

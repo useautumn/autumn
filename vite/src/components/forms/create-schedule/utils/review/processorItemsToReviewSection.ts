@@ -4,7 +4,7 @@ import type {
 	SetPlansPreviewPhase,
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
-import { uniqBy } from "lodash";
+import { groupBy, uniqBy } from "lodash";
 import { phaseLabel, phaseSummaryLabel } from "./phaseTiming";
 import {
 	processorItemValue,
@@ -38,19 +38,53 @@ const itemDescription = (item: ProcessorItem) =>
 
 const processorItemToRow = ({
 	item,
-	phaseIndex,
-	itemIndex,
+	rowKey,
+	showsUnmanaged,
 }: {
 	item: ProcessorItem;
-	phaseIndex: number;
-	itemIndex: number;
+	rowKey: string;
+	showsUnmanaged: boolean;
 }): ReviewChangeRow => ({
-	key: `item-${phaseIndex}-${itemIndex}-${item.price_id ?? item.display_name}`,
-	title: item.display_name,
-	description: itemDescription(item),
-	status: item.managed_by_autumn ? undefined : "unmanaged",
+	key: `${rowKey}-${item.price_id ?? item.display_name}`,
+	title: itemDescription(item) ?? item.display_name,
+	status: showsUnmanaged && !item.managed_by_autumn ? "unmanaged" : undefined,
 	value: processorItemValue(item),
 });
+
+const processorItemPlanKey = (item: ProcessorItem) =>
+	item.plan_id ?? item.display_name;
+
+/** One row per plan, with the Stripe items it bills nested under it. */
+const processorItemsToPlanRows = ({
+	items,
+	phaseIndex,
+}: {
+	items: ProcessorItem[];
+	phaseIndex: number;
+}): ReviewChangeRow[] =>
+	Object.values(groupBy(items, processorItemPlanKey)).map(
+		(planItems, planIndex): ReviewChangeRow => {
+			const [firstItem] = planItems;
+			const rowKey = `plan-${phaseIndex}-${planIndex}-${processorItemPlanKey(firstItem)}`;
+			const isUnmanagedPlan = planItems.every(
+				(item) => !item.managed_by_autumn,
+			);
+			const itemRows = planItems.map((item) =>
+				processorItemToRow({
+					item,
+					rowKey,
+					showsUnmanaged: !isUnmanagedPlan,
+				}),
+			);
+			return {
+				key: rowKey,
+				title: firstItem.display_name,
+				status: isUnmanagedPlan ? "unmanaged" : undefined,
+				value: itemRows.length === 1 ? itemRows[0].value : undefined,
+				items: itemRows,
+			};
+		},
+	);
 
 const pluralizeItems = (count: number) =>
 	count === 1 ? "1 item" : `${count} items`;
@@ -117,9 +151,10 @@ export const processorItemsToReviewSection = ({
 			label: phaseLabel({ phase }),
 			rows: phase.ends_subscription
 				? [subscriptionEndRow({ phaseIndex })]
-				: phase.processor_items.map((item: ProcessorItem, itemIndex: number) =>
-						processorItemToRow({ item, phaseIndex, itemIndex }),
-					),
+				: processorItemsToPlanRows({
+						items: phase.processor_items,
+						phaseIndex,
+					}),
 		}),
 	);
 
