@@ -1,9 +1,5 @@
-import type {
-	FullCustomer,
-	FullCustomerSchedule,
-	ProductV2,
-} from "@autumn/shared";
-import { CusProductStatus, findCustomerProductById } from "@autumn/shared";
+import type { FullCusProduct, FullCustomer, ProductV2 } from "@autumn/shared";
+import { ACTIVE_STATUSES, CusProductStatus } from "@autumn/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import {
@@ -14,7 +10,6 @@ import {
 	CreateScheduleFormProvider,
 	useCreateScheduleFormContext,
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
-import { useCustomerSchedules } from "@/components/forms/create-schedule/hooks/useCustomerSchedules";
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
 import {
 	customerProductsToCustomerState,
@@ -36,61 +31,44 @@ import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleAppro
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
-type MergedSchedulePhase = {
-	starts_at: number;
-	customer_product_ids: string[];
-};
+const isScheduledCustomerProduct = (customerProduct: FullCusProduct) =>
+	customerProduct.status === CusProductStatus.Scheduled;
 
-function hasSchedulePhaseBillingCycleReset({
-	customer,
-	phases,
+/** A scheduled plan whose start also resets the billing cycle. */
+const hasUpcomingBillingCycleReset = ({
+	customerProducts,
 	nowMs,
 }: {
-	customer: FullCustomer | undefined;
-	phases: MergedSchedulePhase[];
+	customerProducts: FullCusProduct[];
 	nowMs: number;
-}) {
-	return phases.some(
-		(phase) =>
-			phase.starts_at > nowMs &&
-			phase.customer_product_ids.some((cpId) => {
-				const cusProduct = findCustomerProductById({
-					fullCustomer: customer,
-					customerProductId: cpId,
-				});
-				return cusProduct?.billing_cycle_anchor_resets_at === phase.starts_at;
-			}),
+}) =>
+	customerProducts.some(
+		(customerProduct) =>
+			isScheduledCustomerProduct(customerProduct) &&
+			customerProduct.starts_at > nowMs &&
+			customerProduct.billing_cycle_anchor_resets_at ===
+				customerProduct.starts_at,
 	);
-}
 
-/**
- * Schedules span scopes, so the sheet edits every schedule at once: phases that
- * start at the same instant collapse into one row of plans, each keeping its own
- * scope.
- */
-function mergeSchedulePhases({
-	schedules,
+/** When today's phase began: its earliest live plan that ends at a scheduled
+ * phase. Ongoing plans aren't part of it, so their start doesn't count. */
+const findCurrentPhaseStart = ({
+	customerProducts,
 }: {
-	schedules: FullCustomerSchedule[];
-}): MergedSchedulePhase[] {
-	const productIdsByStart = new Map<number, string[]>();
-
-	for (const schedule of schedules) {
-		for (const phase of schedule.phases) {
-			const existing = productIdsByStart.get(phase.starts_at);
-			if (existing) existing.push(...phase.customer_product_ids);
-			else
-				productIdsByStart.set(phase.starts_at, [...phase.customer_product_ids]);
-		}
-	}
-
-	return [...productIdsByStart.entries()]
-		.sort(([a], [b]) => a - b)
-		.map(([starts_at, customer_product_ids]) => ({
-			starts_at,
-			customer_product_ids,
-		}));
-}
+	customerProducts: FullCusProduct[];
+}): number | undefined => {
+	const currentPhaseStarts = customerProducts
+		.filter(
+			(customerProduct) =>
+				ACTIVE_STATUSES.includes(customerProduct.status) &&
+				customerProduct.ended_at != null &&
+				customerProduct.starts_at != null,
+		)
+		.map((customerProduct) => customerProduct.starts_at);
+	return currentPhaseStarts.length > 0
+		? Math.min(...currentPhaseStarts)
+		: undefined;
+};
 
 /** Every active plan, whatever its scope — each row carries its own. */
 export function getActiveCustomerPlans({
@@ -109,63 +87,48 @@ export function getActiveCustomerPlans({
 	);
 }
 
+/** Built from the customer's plans alone, the same way Sync from Stripe reads
+ * them; scheduled plans mean the customer is already on a schedule. */
 export function buildInitialValues({
 	customer,
-	schedules,
 	products,
 	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
-	schedules: FullCustomerSchedule[];
 	products: ProductV2[];
 	nowMs?: number;
 }): CustomerStateForm {
-	const scheduledPhases = mergeSchedulePhases({ schedules });
-	// An id with no live customer product is a stale phase entry, not a plan the
-	// user has yet to pick — skip it rather than seed a blank row.
-	const persistedPhases = scheduledPhases
-		.map((phase) => ({
-			startsAt: phase.starts_at,
-			persistedStartsAt: phase.starts_at,
-			plans: phase.customer_product_ids.flatMap((cpId) => {
-				const cusProduct = findCustomerProductById({
-					fullCustomer: customer,
-					customerProductId: cpId,
-				});
-				return cusProduct
-					? [customerProductToCustomerStatePlan({ cusProduct, products })]
-					: [];
-			}),
-		}))
-		.filter((phase) => phase.plans.length > 0);
-
-	if (persistedPhases.length > 0) {
-		return {
-			phases: persistedPhases,
-			unscheduledPlans: [],
-			billingBehavior: null,
-			resetBillingCycle: hasSchedulePhaseBillingCycleReset({
-				customer,
-				phases: scheduledPhases,
-				nowMs,
-			}),
-			billingCycleAnchorMode: "now",
-			billingCycleAnchorDate: null,
-			endDate: null,
-			enablePlanImmediately: false,
-		};
-	}
+	const customerProducts = customer?.customer_products ?? [];
+	const hasScheduledPlans = customerProducts.some(isScheduledCustomerProduct);
+	const currentPhaseStart = hasScheduledPlans
+		? findCurrentPhaseStart({ customerProducts })
+		: undefined;
 
 	const seededState = customerProductsToSetPlansState({ customer, products });
+	const phases = seededState.phases.map((phase, index) => {
+		const persistedStartsAt =
+			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
+		return {
+			...phase,
+			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
+			...(hasScheduledPlans && persistedStartsAt != null
+				? { persistedStartsAt }
+				: {}),
+			plans:
+				phase.plans.length > 0
+					? phase.plans
+					: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
+		};
+	});
+
 	return {
-		phases: seededState.phases.map((phase) =>
-			phase.plans.length > 0
-				? phase
-				: { ...phase, plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }] },
-		),
+		phases,
 		unscheduledPlans: seededState.unscheduledPlans,
 		billingBehavior: null,
-		resetBillingCycle: false,
+		resetBillingCycle: hasUpcomingBillingCycleReset({
+			customerProducts,
+			nowMs,
+		}),
 		billingCycleAnchorMode: "now",
 		billingCycleAnchorDate: null,
 		endDate: null,
@@ -173,8 +136,8 @@ export function buildInitialValues({
 	};
 }
 
-/** Without an Autumn schedule, the live plans are today's phase and each
- * scheduled start is its own later phase. */
+/** The live plans are today's phase and each scheduled start is its own later
+ * phase. */
 function customerProductsToSetPlansState({
 	customer,
 	products,
@@ -268,11 +231,10 @@ export function CreateScheduleSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
 	const onApplied = useSettleApprovalOnApply();
-	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
+	const { customer, testClockFrozenTimeMs } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | undefined;
 
 	const { products } = useProductsQuery();
-	const schedules = useCustomerSchedules();
 
 	const seedOverrides = approvalSeed?.defaultOverrides as
 		| Partial<CustomerStateForm>
@@ -280,14 +242,13 @@ export function CreateScheduleSheet() {
 	const initialValues = useMemo(() => {
 		const base = buildInitialValues({
 			customer: fullCustomer,
-			schedules,
 			products,
 			nowMs: testClockFrozenTimeMs,
 		});
 		// An approval seed is the proposed schedule itself — it replaces the
 		// customer's current schedule as the starting point.
 		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
-	}, [fullCustomer, schedules, products, testClockFrozenTimeMs, seedOverrides]);
+	}, [fullCustomer, products, testClockFrozenTimeMs, seedOverrides]);
 
 	const existingPlans = useMemo(
 		() => getActiveCustomerPlans({ customer: fullCustomer, products }),
