@@ -1,10 +1,12 @@
 import { runLogs } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { createLogBudget } from "./logBudget.ts";
 
 const FLUSH_MS = 1_000;
 const MAX_BUFFERED = 2_000;
-/** One chatty worker shouldn't grow the table without bound. */
-const MAX_CHARS_PER_RUN = 50_000_000;
+const CHARS_PER_WORKER = 256_000;
+const CHARS_PER_FILE = 2_000_000;
+const CHARS_RUN_LEVEL = 5_000_000;
 
 type Pending = { file: string | null; worker: string | null; chunk: string };
 
@@ -17,7 +19,11 @@ export const createRunLogWriter = ({
 	runId: string;
 }) => {
 	let pending: Pending[] = [];
-	let written = 0;
+	const budget = createLogBudget({
+		perWorker: CHARS_PER_WORKER,
+		perFile: CHARS_PER_FILE,
+		run: CHARS_RUN_LEVEL,
+	});
 	let chain: Promise<void> = Promise.resolve();
 
 	const flush = () => {
@@ -41,8 +47,7 @@ export const createRunLogWriter = ({
 	const timer = setInterval(() => void flush(), FLUSH_MS);
 
 	const append = (row: Pending) => {
-		if (written >= MAX_CHARS_PER_RUN) return;
-		written += row.chunk.length;
+		if (!budget.take({ ...row, chars: row.chunk.length })) return;
 		pending.push(row);
 		if (pending.length >= MAX_BUFFERED) void flush();
 	};

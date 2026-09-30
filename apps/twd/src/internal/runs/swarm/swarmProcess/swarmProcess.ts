@@ -42,6 +42,8 @@ import {
 
 const FILE_POLL_MS = 500;
 const OUTPUT_FLUSH_MS = 1_000;
+const PROGRESS_LOG_MS = 15_000;
+const LAG_PROBE_MS = 250;
 const TEARDOWN_TIMEOUT_MS = 20_000;
 /** After this many failed forks/boots the run stops asking for accounts. */
 const MAX_PROVISION_FAILURES = 5;
@@ -180,8 +182,11 @@ const main = async (init: SwarmInit) => {
 	const workerFile = new Map<string, string>();
 	const startedFiles = new Set<string>();
 	const shardOf = new Map<string, Shard>();
+	const streamingFiles = new Set<string>();
+	let finishedFiles = 0;
 	onHubEvent((event) => {
 		if (event.type === "fileOutput") {
+			streamingFiles.add(event.file);
 			bufferOutput(
 				toTestId({ absolutePath: event.file }),
 				getWorkerOf(event.file) ?? null,
@@ -517,6 +522,7 @@ const main = async (init: SwarmInit) => {
 			const key = JSON.stringify(file);
 			if (lastSent.get(file.file) === key) continue;
 			lastSent.set(file.file, key);
+			if (final) finishedFiles++;
 			send({ type: "file", file, final });
 			if (file.status !== "running") {
 				for (const [worker, current] of workerFile) {
@@ -532,6 +538,27 @@ const main = async (init: SwarmInit) => {
 		reportDemand();
 	};
 	const poll = setInterval(flushFiles, FILE_POLL_MS);
+	// Where a wide run is stuck: dispatch vs streaming vs done, pool state, and event-loop lag.
+	let lastTick = performance.now();
+	let maxLagMs = 0;
+	const lagProbe = setInterval(() => {
+		const now = performance.now();
+		maxLagMs = Math.max(maxLagMs, now - lastTick - LAG_PROBE_MS);
+		lastTick = now;
+	}, LAG_PROBE_MS);
+	const progress = setInterval(() => {
+		const pools = shards.map(
+			(shard) =>
+				`${shard.isSvix ? "svix" : "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
+		);
+		send({
+			type: "log",
+			file: null,
+			worker: null,
+			text: `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`,
+		});
+		maxLagMs = 0;
+	}, PROGRESS_LOG_MS);
 
 	const runs = shards.map(runShard);
 	grow = (accounts) => {
@@ -562,6 +589,8 @@ const main = async (init: SwarmInit) => {
 				accountIds: accounts.map(({ accountId }) => accountId),
 			});
 		clearInterval(poll);
+		clearInterval(lagProbe);
+		clearInterval(progress);
 		clearInterval(outputTimer);
 		flushOutput();
 		flushFiles();
