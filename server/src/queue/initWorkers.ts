@@ -263,7 +263,7 @@ export const startPollingLoop = async ({
 			const idleStatus = workerActivity.getIdleStatus();
 			if (shouldIdleSelfKill && idleStatus.shouldRecycle) {
 				console.log(
-					`[SQS Worker ${process.pid}] Idle self-kill: no messages received across any queue for ${Math.floor(idleStatus.idleForMs / 60_000)} minutes after receiving ${idleStatus.totalMessagesReceived} total. Exiting for cluster respawn.`,
+					`[SQS Worker ${process.pid}] Idle self-kill: no messages and no completed receive on any queue for ${Math.floor(idleStatus.idleForMs / 60_000)} minutes after receiving ${idleStatus.totalMessagesReceived} total. Exiting for cluster respawn.`,
 				);
 				process.exit(0);
 			}
@@ -422,6 +422,7 @@ export const startPollingLoop = async ({
 	};
 
 	const handleEmptyPoll = (): SQSClient | null => {
+		workerActivity.recordPollCompleted();
 		consecutiveEmptyPolls++;
 
 		const now = Date.now();
