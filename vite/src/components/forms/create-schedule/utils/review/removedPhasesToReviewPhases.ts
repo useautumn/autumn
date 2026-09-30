@@ -1,7 +1,6 @@
 import type { ProductV2 } from "@autumn/shared";
 import type { CustomerStatePhase } from "@/components/forms/customer-state/customerStateSchema";
 import { formatPhaseDate } from "../schedulePhaseTiming";
-import { joinDetail } from "./reviewSectionText";
 import type { ReviewChangePhase } from "./types/reviewChange";
 
 const isRemovedFuturePhase = ({
@@ -47,10 +46,8 @@ export const removedPhasesToReviewPhases = ({
 						title:
 							products.find((product) => product.id === plan.productId)?.name ??
 							plan.productId,
-						description: joinDetail([
-							plan.entityId ? `Entity ${plan.entityId}` : undefined,
-							"Won't start",
-						]),
+						description: "Won't start",
+						entityId: plan.entityId ?? null,
 						status: "removed" as const,
 					})),
 			};
