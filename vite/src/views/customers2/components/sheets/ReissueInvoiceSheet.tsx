@@ -239,6 +239,7 @@ function ReissueInvoiceForm({
 			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 		});
 	const isPaid = invoice.status === InvoiceStatus.Paid;
+	const isDraft = invoice.status === InvoiceStatus.Draft;
 	const sendsInvoice = sendsReplacementInvoice({ form, prefill });
 	const total =
 		previewState.ready && previewResult
@@ -259,8 +260,10 @@ function ReissueInvoiceForm({
 					title="Reissue Invoice"
 					description={
 						isPaid
-							? `Credit this ${money(invoice.total)} invoice to the customer's balance and send a corrected${total ? ` ${total}` : ""} invoice.`
-							: `Send a new${total ? ` ${total}` : ""} invoice and void this one.`
+							? `Credit this ${money(invoice.total)} invoice to the customer's balance and issue a corrected${total ? ` ${total}` : ""} invoice.`
+							: isDraft
+								? `Issue a new${total ? ` ${total}` : ""} invoice to replace this draft. The draft is kept but can no longer be finalized or paid.`
+								: `Issue a new${total ? ` ${total}` : ""} invoice and void this one.`
 					}
 				/>
 
@@ -373,13 +376,17 @@ function ReissueInvoiceForm({
 								/>
 							</div>
 
-							{sendsInvoice && (
-								<ReissuePaymentMethodTypesSelect
-									value={form.paymentMethodTypes}
-									onValueChange={(paymentMethodTypes) =>
-										patch({ paymentMethodTypes })
-									}
-								/>
+							<ReissuePaymentMethodTypesSelect
+								value={form.paymentMethodTypes}
+								onValueChange={(paymentMethodTypes) =>
+									patch({ paymentMethodTypes })
+								}
+							/>
+							{sendsInvoice && !prefill.sendsInvoice && (
+								<p className="text-xs text-tertiary-foreground">
+									This invoice will be sent for payment instead of charging the
+									card.
+								</p>
 							)}
 						</div>
 					</SheetAccordionItem>
@@ -508,7 +515,7 @@ function ReissueInvoiceForm({
 					}}
 				/>
 
-				<SheetFooter className="pt-4">
+				<SheetFooter className="sticky bottom-0 mt-auto border-t bg-card pt-4 dark:border-[#1F1F1F] dark:bg-[#141414]">
 					<Button
 						variant="secondary"
 						className="w-full"

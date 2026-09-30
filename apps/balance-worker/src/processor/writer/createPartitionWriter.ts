@@ -1,5 +1,6 @@
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { adopt as adoptState } from "./actions/adopt.js";
+import { flushDeferredLogs as flushDeferred } from "./actions/commit.js";
 import {
 	decide as decideMutation,
 	readFreshestState as readFreshestSubjectState,
@@ -44,6 +45,10 @@ export function createPartitionWriter({
 		return logMutation({ scope, ...params });
 	}
 
+	function flushDeferredLogs(): Promise<void> {
+		return flushDeferred({ scope });
+	}
+
 	function waitForPendingCommits({
 		customerKey,
 	}: {
@@ -84,6 +89,7 @@ export function createPartitionWriter({
 		waitForApplies,
 		decide,
 		log,
+		flushDeferredLogs,
 		waitForPendingCommits,
 		assertCommitsHealthy,
 		readFreshestState,

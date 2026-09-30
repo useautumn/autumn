@@ -1,7 +1,10 @@
 import { KafkaBatchNotCommittedError } from "@autumn/kafka";
 import { FlushBookmarkConflictError } from "@autumn/postgres";
 import { MutationBatchNotCommittedError } from "../../processor/writer/writerErrors.js";
-import { OwnedPartitionProducerFencedError } from "../../runtime/runtimeErrors.js";
+import {
+	OwnedPartitionProducerFencedError,
+	PartitionPreparationFailedError,
+} from "../../runtime/runtimeErrors.js";
 
 /** A partition whose memory is merely behind the log and the store is rebuilt
  *  by a fresh bootstrap, and says nothing about the other partitions this
@@ -14,8 +17,10 @@ import { OwnedPartitionProducerFencedError } from "../../runtime/runtimeErrors.j
  *  the broker fenced is the third: whether a newer producer took the
  *  transactional id or the coordinator expired a transaction a stalled thread
  *  left open, this runtime's word on what landed is gone, and a fresh bootstrap
- *  reads the answer from the log and the store. Restarting goes through the
- *  ownership claim, so a partition another worker now holds is not taken back.
+ *  reads the answer from the log and the store. A standby preparation that
+ *  failed is the fourth: it holds no producer and wrote nothing. Restarting
+ *  goes through the ownership claim, so a partition another worker now holds
+ *  is not taken back.
  *  Stopping the whole service instead, as it did before, turned one stalled
  *  partition into an exit that took the worker's healthy partitions with it. */
 export function isPartitionRestartableCause({
@@ -54,6 +59,7 @@ function isRestartableError(error: object): boolean {
 		error instanceof MutationBatchNotCommittedError ||
 		error instanceof KafkaBatchNotCommittedError ||
 		error instanceof FlushBookmarkConflictError ||
-		error instanceof OwnedPartitionProducerFencedError
+		error instanceof OwnedPartitionProducerFencedError ||
+		error instanceof PartitionPreparationFailedError
 	);
 }

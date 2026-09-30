@@ -31,12 +31,14 @@ function createFixture({
 	owned = true,
 	commandNextOffset = null,
 	canPark = false,
+	evictLog,
 }: {
 	outcome?: "applied" | "rejected" | Error;
 	owned?: boolean;
 	commandNextOffset?: bigint | null;
 	/** Gives the handler somewhere to park a partition, as the worker wiring does. */
 	canPark?: boolean;
+	evictLog?: Promise<void>;
 } = {}) {
 	const tracked: TrackCommand[] = [];
 	const evicted: EvictCommand[] = [];
@@ -44,16 +46,20 @@ function createFixture({
 	const completed: unknown[] = [];
 	const logs: string[] = [];
 	const parked: { partition: number; cause: unknown }[] = [];
+	let deferredLogs: Promise<void>[] = [];
 	const runtime = {
 		process: async (run: (processor: never) => Promise<unknown>) => {
 			const processor = {
 				execute: async ({
 					source,
 					run,
+					deferredLogs: logs,
 				}: {
 					source: unknown;
 					run: (processor: never) => Promise<unknown>;
+					deferredLogs?: Promise<void>[];
 				}) => {
+					deferredLogs = logs ?? [];
 					sources.push(source);
 					const result = await run(processor as never);
 					completed.push(source);
@@ -71,6 +77,7 @@ function createFixture({
 				},
 				evict: async (params: { command: EvictCommand }) => {
 					evicted.push(params.command);
+					if (evictLog) deferredLogs.push(evictLog);
 					if (outcome instanceof Error) throw outcome;
 					return { evicted: true };
 				},
@@ -220,6 +227,35 @@ describe("command record handler", () => {
 		expect(fixture.evicted).toEqual([evictCommand]);
 		expect(fixture.completed).toEqual([{ commandOffset: "7" }]);
 		expect(fixture.logs).toEqual([]);
+	});
+
+	test("a queued evict does not hold the stream for its record: the batch waits for it before its offset commits", async () => {
+		const log = Promise.withResolvers<void>();
+		const fixture = createFixture({ evictLog: log.promise });
+		await fixture.handler.applyRecord(recordOf({ command: evictCommand }));
+		const settling = fixture.handler.settleBatch?.({ topic, partition });
+		expect(settling).toBeInstanceOf(Promise);
+		const early = await Promise.race([
+			settling?.then(() => "settled"),
+			Bun.sleep(20).then(() => "waiting"),
+		]);
+		expect(early).toBe("waiting");
+		log.resolve();
+		await settling;
+	});
+
+	test("an evict record the broker refused parks the partition when the batch settles", async () => {
+		const log = Promise.withResolvers<void>();
+		const fixture = createFixture({ evictLog: log.promise, canPark: true });
+		await fixture.handler.applyRecord(recordOf({ command: evictCommand }));
+		log.reject(
+			new MutationBatchNotCommittedError({
+				cause: new Error("CONCURRENT_TRANSACTIONS"),
+			}),
+		);
+		await fixture.handler.settleBatch?.({ topic, partition });
+		expect(fixture.parked).toHaveLength(1);
+		expect(fixture.parked[0]?.partition).toBe(partition);
 	});
 
 	test("anything else is thrown so Kafka redelivers, and an unowned partition never consumes", async () => {

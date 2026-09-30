@@ -1,5 +1,8 @@
 import { PartitionBootstrapRefusedError } from "../bootstrap/partitionBootstrapErrors.js";
-import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
+import {
+	OwnedPartitionNotReadyError,
+	PartitionPreparationFailedError,
+} from "../runtimeErrors.js";
 import type {
 	PartitionOutcomeFollowerPort,
 	RuntimeFailure,
@@ -136,7 +139,11 @@ export async function completeRuntimePreparation({
 		if (state.terminalError) throw state.terminalError;
 		if (state.status === "draining")
 			throw new OwnedPartitionNotReadyError({ status: state.status });
-		throw await enterRuntimeRecovery({ ctx, state, cause });
+		throw await enterRuntimeRecovery({
+			ctx,
+			state,
+			cause: new PartitionPreparationFailedError({ topic, partition, cause }),
+		});
 	}
 }
 

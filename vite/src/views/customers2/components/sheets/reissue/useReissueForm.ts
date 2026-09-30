@@ -65,14 +65,17 @@ const rowId = (prefix: string) => `${prefix}_${Date.now()}_${rowCounter++}`;
 
 const trimmed = (value: string) => value.trim();
 
-/** Payment method types only apply when the replacement is sent for payment. */
+/** A non-card method can only be offered on a sent invoice, so choosing one sends the replacement. */
 export const sendsReplacementInvoice = ({
 	form,
 	prefill,
 }: {
 	form: ReissueFormState;
 	prefill: ReissuePrefill;
-}) => Boolean(prefill.sendsInvoice) || form.netTermsDays.trim() !== "";
+}) =>
+	Boolean(prefill.sendsInvoice) ||
+	form.netTermsDays.trim() !== "" ||
+	(form.paymentMethodTypes ?? []).some((type) => type !== "card");
 
 const paymentMethodTypesChanged = ({
 	form,

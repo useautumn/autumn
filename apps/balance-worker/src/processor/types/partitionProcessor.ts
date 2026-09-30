@@ -48,6 +48,7 @@ export type PartitionProcessor = {
 	execute<Decision>(params: {
 		source: MutationSource;
 		run: (processor: PartitionProcessor) => Promise<Decision>;
+		deferredLogs?: Promise<void>[];
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;

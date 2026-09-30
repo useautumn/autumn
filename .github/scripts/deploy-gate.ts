@@ -22,6 +22,7 @@ const NON_RUNTIME_PATHS = [
 	/^\.github\//,
 	/^\.(agents|claude|codex|conductor|context|cursor|husky|opencode|plans|superset|vscode|zed)\//,
 	/^plans\//,
+	/^\.bun-version$/,
 	/^ai$/,
 	/^[^/]+\.md$/,
 ];

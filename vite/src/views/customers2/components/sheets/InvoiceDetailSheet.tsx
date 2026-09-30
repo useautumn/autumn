@@ -172,7 +172,10 @@ export function InvoiceDetailSheet({
 	} = useInvoiceMetadataQuery({
 		customerId: customer?.id || customer?.internal_id,
 		stripeInvoiceId: invoice?.stripe_id,
-		enabled: invoiceIsStripe && invoice?.status === InvoiceStatus.Paid,
+		enabled:
+			invoiceIsStripe &&
+			(invoice?.status === InvoiceStatus.Paid ||
+				invoice?.status === InvoiceStatus.Draft),
 	});
 
 	const productGroups = useMemo(() => {
@@ -286,11 +289,16 @@ export function InvoiceDetailSheet({
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Uncollectible);
-	// An open invoice is voided and replaced; a paid one is credited and replaced.
-	// An uncollectible one is rejected.
+	// A reissued draft stays a draft; the API refuses to finalize or reissue it again.
+	const isReissuedDraft =
+		invoice.status === InvoiceStatus.Draft &&
+		(metadataLoading || Boolean(invoiceMetadata.autumn_reissued_to));
+	// Open is voided, paid is credited, draft is parked; each is then replaced.
 	const canReissue =
 		invoiceIsStripe &&
+		!isReissuedDraft &&
 		(invoice.status === InvoiceStatus.Open ||
+			invoice.status === InvoiceStatus.Draft ||
 			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
@@ -340,7 +348,10 @@ export function InvoiceDetailSheet({
 
 	const openUrl = (url: string) => window.open(url, "_blank", "noopener");
 
-	const canFinalize = invoiceIsStripe && invoice.status === InvoiceStatus.Draft;
+	const canFinalize =
+		invoiceIsStripe &&
+		invoice.status === InvoiceStatus.Draft &&
+		!isReissuedDraft;
 	const finalizeAction: InvoiceSheetAction | undefined = canFinalize
 		? {
 				label: "Finalize",

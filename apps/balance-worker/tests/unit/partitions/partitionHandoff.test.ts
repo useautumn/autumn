@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ownedPartitionHealthOf } from "../../../src/health/ownedPartitionHealth.js";
+import { StateAheadOfKafkaLogEndError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { createPartitions } from "../../../src/partitions/createPartitions.js";
 import type {
 	PartitionChangeListeners,
@@ -8,6 +9,10 @@ import type {
 	PartitionsConfig,
 	PartitionsDependencies,
 } from "../../../src/partitions/types/partitions.js";
+import {
+	OwnedPartitionRecoveryRequiredError,
+	PartitionPreparationFailedError,
+} from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionRuntimeStatus } from "../../../src/runtime/types/partitionRuntimeState.js";
 
 const deferred = () => {
@@ -123,6 +128,7 @@ type WorkerOptions = {
 	/** Holds the `draining` send; a slow topic must never hold the drain itself. */
 	announceDrainingGate?: Promise<void>;
 	prepareGate?: Promise<void>;
+	prepareFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
@@ -138,6 +144,7 @@ const createWorker = ({
 	drainGate,
 	announceDrainingGate,
 	prepareGate,
+	prepareFailures,
 	activateGate,
 	awaitReadyAnnouncement,
 	deaf = false,
@@ -166,6 +173,12 @@ const createWorker = ({
 		const runtime = {
 			prepare: async () => {
 				record("prepare");
+				const failure = prepareFailures?.get(partition);
+				if (failure !== undefined) {
+					prepareFailures?.delete(partition);
+					status = "recovery_required";
+					throw failure;
+				}
 				await prepareGate;
 				status = "prepared";
 			},
@@ -1089,6 +1102,44 @@ describe("partition handoff", () => {
 			expect(B.errors).toEqual([]);
 		} finally {
 			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a standby whose preparation fails is retried alone while its other partitions keep preparing", async () => {
+		const log = createOwnershipLog();
+		const prepare = deferred();
+		const failure = new OwnedPartitionRecoveryRequiredError({
+			topic: "metering",
+			partition: 2,
+			cause: new PartitionPreparationFailedError({
+				topic: "metering",
+				partition: 2,
+				cause: new StateAheadOfKafkaLogEndError({
+					topic: "metering",
+					partition: 2,
+					storedNextOffset: 7n,
+					logEndOffset: 5n,
+				}),
+			}),
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { partitionBootstrapRetryIntervalMs: 10 },
+			prepareGate: prepare.promise,
+			prepareFailures: new Map([[2, failure]]),
+		});
+		try {
+			await B.ownership.start();
+			B.assign([1, 2]);
+			await waitFor(
+				() => B.events.filter((e) => e === "B:prepare:2").length === 2,
+			);
+			expect(B.status(1)).toBe("created");
+			expect(B.has("consumer-stop")).toBe(false);
+		} finally {
+			prepare.resolve();
 			await B.ownership.stop();
 		}
 	});

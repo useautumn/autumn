@@ -43,6 +43,21 @@ export class OwnedPartitionProducerFencedError extends OwnedPartitionRecoveryReq
 	}
 }
 
+export class PartitionPreparationFailedError extends Error {
+	constructor({
+		topic,
+		partition,
+		cause,
+	}: {
+		topic: string;
+		partition: number;
+		cause: unknown;
+	}) {
+		super(`Standby preparation of ${topic}[${partition}] failed`, { cause });
+		this.name = "PartitionPreparationFailedError";
+	}
+}
+
 /** The partition's log carried a fence from a higher epoch: another worker owns it now, whatever this one still believes. */
 export class OwnerEpochSupersededError extends Error {
 	readonly retriable = false;
