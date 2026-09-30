@@ -1,0 +1,1 @@
+ALTER TABLE "runs" ADD COLUMN "pinned_sha" boolean DEFAULT false NOT NULL;
