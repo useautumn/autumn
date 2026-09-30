@@ -1,0 +1,16 @@
+diff --git a/dist/index.js b/dist/index.js
+index 0a11bc72b93cb9d1113ba9fcb4d6072577f4c11a..52f8d4a3d7a4831bdf3859fa163fca6cd782f0cb 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -471,7 +471,10 @@ var Chat = class {
+       return;
+     }
+     if (!this.initPromise) {
+-      this.initPromise = this.doInitialize();
++      this.initPromise = this.doInitialize().catch((error) => {
++        this.initPromise = null;
++        throw error;
++      });
+     }
+     await this.initPromise;
+   }
