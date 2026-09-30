@@ -21,7 +21,7 @@ const MAX_PHASE_START_DRIFT_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Customer products store their entity by internal id — resolve it to the id
- * the scope picker uses. Null is customer-level.
+ * the scope picker uses, keeping the saved id for entities past the loaded page.
  */
 export const resolveEntityId = ({
 	entityId,
@@ -35,7 +35,7 @@ export const resolveEntityId = ({
 		(candidate) =>
 			candidate.id === entityId || candidate.internal_id === entityId,
 	);
-	return entity ? entityKey(entity) : null;
+	return entity ? entityKey(entity) : entityId;
 };
 
 const findCopiesOnPhase = ({

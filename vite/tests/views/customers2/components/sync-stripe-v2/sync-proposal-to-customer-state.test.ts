@@ -103,3 +103,22 @@ test("a plan scheduled on the subscription's Stripe schedule fills its phase", (
 		{ startsAt: scheduledStart, productIds: ["credits"] },
 	]);
 });
+
+test("a plan on an entity outside the loaded page keeps its entity", () => {
+	const { phases } = syncProposalToCustomerState({
+		proposal: {
+			stripe_subscription_id: STRIPE_SUBSCRIPTION_ID,
+			stripe_schedule_id: null,
+			phases: [{ starts_at: "now", plans: [] }],
+		} as unknown as SyncProposalV2,
+		customerProducts: [
+			linkedCustomerProduct({ status: CusProductStatus.Active }),
+		],
+		entities: [],
+		contextEntityId: null,
+		products: [],
+		features: [],
+	});
+
+	expect(phases[0]?.plans[0]?.entityId).toBe("ety_seat_1");
+});
