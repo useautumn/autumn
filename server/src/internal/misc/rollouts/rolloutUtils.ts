@@ -1,5 +1,9 @@
 import { getRolloutConfig } from "./rolloutConfigStore.js";
-import type { RolloutConfig, RolloutPercent } from "./rolloutSchemas.js";
+import type {
+	RolloutConfig,
+	RolloutCustomer,
+	RolloutPercent,
+} from "./rolloutSchemas.js";
 
 /** The one rollout a request snapshot freezes; the store may hold others, nothing reads them. */
 export const ACTIVE_ROLLOUT_ID = "balance-worker";
@@ -63,7 +67,35 @@ export const resolveRolloutPercent = ({
 	return entry.orgs[orgId] ?? entry;
 };
 
-/** Checks whether a rollout is enabled for a given customer. */
+export const findRolloutCustomer = ({
+	rolloutId,
+	orgId,
+	customerId,
+	config = getRolloutConfig(),
+}: {
+	rolloutId: string;
+	orgId: string;
+	customerId: string;
+	config?: RolloutConfig;
+}): RolloutCustomer | undefined =>
+	config.rollouts[rolloutId]?.customers[orgId]?.[customerId];
+
+/** Pinned from its add until its removal, each landing one settle window after it was saved. */
+export const isCustomerPinnedAt = ({
+	customer,
+	now,
+}: {
+	customer: RolloutCustomer;
+	now: number;
+}): boolean => {
+	const added = now >= rolloutEffectiveAt({ changedAt: customer.addedAt });
+	const removed =
+		customer.removedAt !== undefined &&
+		now >= rolloutEffectiveAt({ changedAt: customer.removedAt });
+	return added && !removed;
+};
+
+/** Checks whether a rollout is enabled for a given customer: a pinned customer, else the org or global percent. */
 export const isRolloutEnabled = ({
 	rolloutId,
 	orgId,
@@ -77,6 +109,11 @@ export const isRolloutEnabled = ({
 	now?: number;
 	config?: RolloutConfig;
 }): boolean => {
+	const customer = customerId
+		? findRolloutCustomer({ rolloutId, orgId, customerId, config })
+		: undefined;
+	if (customer && isCustomerPinnedAt({ customer, now })) return true;
+
 	const rollout = resolveRolloutPercent({ rolloutId, orgId, config });
 	if (!rollout) return false;
 	return isEnabledAtPercent({
@@ -85,9 +122,44 @@ export const isRolloutEnabled = ({
 	});
 };
 
+const viewPredatesCustomerRemoval = ({
+	customer,
+	cachedAt,
+	now,
+}: {
+	customer: RolloutCustomer;
+	cachedAt?: number;
+	now: number;
+}): boolean => {
+	if (customer.removedAt === undefined) return false;
+	const cameBackAt = rolloutEffectiveAt({ changedAt: customer.removedAt });
+	return now >= cameBackAt && (cachedAt ?? 0) < cameBackAt;
+};
+
+const viewPredatesPercentDecrease = ({
+	rollout,
+	customerId,
+	cachedAt,
+	now,
+}: {
+	rollout: RolloutPercent;
+	customerId: string;
+	cachedAt?: number;
+	now: number;
+}): boolean => {
+	const customerBucket = getCustomerBucket({ customerId });
+	return rollout.decreases.some(({ from, to, at }) => {
+		const sentThisBucketBack = customerBucket >= to && customerBucket < from;
+		const cameBackAt = rolloutEffectiveAt({ changedAt: at });
+		return (
+			sentThisBucketBack && now >= cameBackAt && (cachedAt ?? 0) < cameBackAt
+		);
+	});
+};
+
 /**
- * A legacy customer's Redis view is stale when a settled decrease sent their bucket back to legacy after
- * the view was built. A view with no timestamp counts as older than any decrease.
+ * A legacy customer's Redis view is stale when a settled removal or decrease sent them back to legacy after
+ * the view was built. A view with no timestamp counts as older than any of them.
  */
 export const isRolloutCacheStale = ({
 	rolloutId,
@@ -104,15 +176,18 @@ export const isRolloutCacheStale = ({
 	now?: number;
 	config?: RolloutConfig;
 }): boolean => {
-	const rollout = resolveRolloutPercent({ rolloutId, orgId, config });
-	if (!rollout) return false;
-
-	const customerBucket = getCustomerBucket({ customerId });
-	return rollout.decreases.some(({ from, to, at }) => {
-		const sentThisBucketBack = customerBucket >= to && customerBucket < from;
-		const cameBackAt = rolloutEffectiveAt({ changedAt: at });
-		return (
-			sentThisBucketBack && now >= cameBackAt && (cachedAt ?? 0) < cameBackAt
-		);
+	const customer = findRolloutCustomer({
+		rolloutId,
+		orgId,
+		customerId,
+		config,
 	});
+	const rollout = resolveRolloutPercent({ rolloutId, orgId, config });
+	const staleByRemoval =
+		customer !== undefined &&
+		viewPredatesCustomerRemoval({ customer, cachedAt, now });
+	const staleByDecrease =
+		rollout !== undefined &&
+		viewPredatesPercentDecrease({ rollout, customerId, cachedAt, now });
+	return staleByRemoval || staleByDecrease;
 };
