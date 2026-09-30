@@ -1,5 +1,4 @@
 import {
-	CusProductStatus,
 	cp,
 	type Entity,
 	EntityNotFoundError,
@@ -16,6 +15,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { findStripeScheduleReleaseTailPhase } from "@/external/stripe/subscriptionSchedules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
@@ -29,8 +29,11 @@ import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { customerProductsToOngoingStripePriceIds } from "../utils/customerProductsToOngoingStripePriceIds";
+import { findQueuedCustomerProducts } from "./findQueuedCustomerProducts";
 import { linkSyncedPricesToStripe } from "./linkSyncedPricesToStripe";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
+import { resolveSyncPhaseEndsAt } from "./resolveSyncPhaseEndsAt";
 
 const resolvePlanEntity = ({
 	plan,
@@ -284,6 +287,15 @@ export const setupSyncContext = async ({
 	const currentEpochMs = Date.now();
 	const inputPhases = params.phases ?? [];
 	const firstPhaseIsImmediate = inputPhases[0]?.starts_at === "now";
+	const releaseTailPhase = stripeSchedule
+		? findStripeScheduleReleaseTailPhase({
+				schedule: stripeSchedule,
+				ongoingStripePriceIds: customerProductsToOngoingStripePriceIds({
+					customerProducts: fullCustomer.customer_products,
+					stripeSubscriptionId: params.stripe_subscription_id,
+				}),
+			})
+		: null;
 
 	// Unscheduled plans bill alongside the immediate phase, so they share its claims.
 	const claimedImmediateStripePriceIds = new Set<string>();
@@ -294,12 +306,18 @@ export const setupSyncContext = async ({
 				currentEpochMs,
 			});
 			const nextPhase = inputPhases[index + 1];
-			const endsAt = nextPhase
-				? resolvePhaseStart({
-						startsAt: nextPhase.starts_at,
-						currentEpochMs,
-					})
-				: null;
+			const endsAt = resolveSyncPhaseEndsAt({
+				startsAt,
+				nextPhaseStartsAt: nextPhase
+					? resolvePhaseStart({
+							startsAt: nextPhase.starts_at,
+							currentEpochMs,
+						})
+					: null,
+				releaseTailStartsAt: releaseTailPhase
+					? secondsToMs(releaseTailPhase.start_date)
+					: null,
+			});
 
 			const productContexts = await buildPlanProductContexts({
 				ctx,
@@ -355,12 +373,11 @@ export const setupSyncContext = async ({
 		ctx,
 		internalCustomerId: fullCustomer.internal_id,
 	});
-	const queuedCustomerProductIds = new Set(existingCustomerProductIds);
-	const queuedCustomerProducts = fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			customerProduct.status === CusProductStatus.Scheduled &&
-			queuedCustomerProductIds.has(customerProduct.id),
-	);
+	const queuedCustomerProducts = findQueuedCustomerProducts({
+		customerProducts: fullCustomer.customer_products,
+		autumnScheduledCustomerProductIds: new Set(existingCustomerProductIds),
+		stripeScheduleId: stripeSchedule?.id,
+	});
 
 	return {
 		customer_id: params.customer_id,
