@@ -74,14 +74,29 @@ export async function ensureTestOrgStripeAccount({
 	});
 }
 
+async function ensureTestInviterUser({ db }: { db: DrizzleCli }) {
+	await db
+		.insert(user)
+		.values({
+			id: TEST_INVITER_USER.id,
+			name: TEST_INVITER_USER.name,
+			email: TEST_INVITER_USER.email,
+			emailVerified: true,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		})
+		.onConflictDoNothing();
+}
+
 /** Secret-key sandbox routes act as the org's owner, so the test org needs one. */
 export async function ensureTestOrgOwner({
 	db,
 }: {
 	db: DrizzleCli;
 }): Promise<void> {
-	const existing = await db
-		.select({ id: member.id })
+	await ensureTestInviterUser({ db });
+	const [existing] = await db
+		.select({ id: member.id, role: member.role })
 		.from(member)
 		.where(
 			and(
@@ -90,7 +105,15 @@ export async function ensureTestOrgOwner({
 			),
 		)
 		.limit(1);
-	if (existing.length > 0) return;
+	if (existing?.role === "owner") return;
+
+	if (existing) {
+		await db
+			.update(member)
+			.set({ role: "owner" })
+			.where(eq(member.id, existing.id));
+		return;
+	}
 
 	const { generateId } = await import("@server/utils/genUtils.js");
 	await db.insert(member).values({
@@ -285,17 +308,7 @@ async function seedTeamInvites({ db }: { db: DrizzleCli }): Promise<void> {
 	const { generateId } = await import("@server/utils/genUtils.js");
 
 	// Ensure a synthetic inviter exists so invitation.inviter_id FK resolves.
-	await db
-		.insert(user)
-		.values({
-			id: TEST_INVITER_USER.id,
-			name: TEST_INVITER_USER.name,
-			email: TEST_INVITER_USER.email,
-			emailVerified: true,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		})
-		.onConflictDoNothing();
+	await ensureTestInviterUser({ db });
 
 	const existingUsers = await db
 		.select()
