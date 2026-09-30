@@ -27,6 +27,7 @@ export type TestExecutor = {
 };
 
 export type WorkerPool = {
+	readonly idleCount: number;
 	readonly size: number;
 	close(): void;
 	add(worker: WorkerHandle): void;

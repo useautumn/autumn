@@ -30,6 +30,9 @@ import type {
 	SwarmParentMessage,
 } from "../../types/swarmMessages.ts";
 import { createBootTimeline } from "./bootTimeline.ts";
+import { coalesceChunks } from "./coalesceChunks.ts";
+import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
+import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import {
 	loadTwModules,
 	type ProviderSandbox,
@@ -41,9 +44,14 @@ import {
 
 const FILE_POLL_MS = 500;
 const OUTPUT_FLUSH_MS = 1_000;
+const PROGRESS_LOG_MS = 15_000;
+const LAG_PROBE_MS = 250;
+const CHUNK_BATCH_MS = 1_000;
 const TEARDOWN_TIMEOUT_MS = 20_000;
 /** After this many failed forks/boots the run stops asking for accounts. */
 const MAX_PROVISION_FAILURES = 5;
+/** Concurrent Modal creates; an unbounded 3,000-wide burst gets RESOURCE_EXHAUSTED from its control plane. */
+const FORK_CONCURRENCY = 64;
 
 const send = (message: SwarmChildMessage) => process.send?.(message);
 
@@ -142,9 +150,10 @@ const main = async (init: SwarmInit) => {
 	process.env.STRIPE_TEST_KEY_POOL_OLD = "";
 
 	setLogSubscriber((line) => {
-		if (line.trim())
+		if (line.trim() && !isWorkerEchoLine(line))
 			send({ type: "log", file: null, worker: null, text: line });
 	});
+	const outputGate = createOutputGate();
 	enableHub();
 	const boot = createBootTimeline();
 	const bootOf = new Map<string, WorkerBoot>();
@@ -177,16 +186,21 @@ const main = async (init: SwarmInit) => {
 	const workerFile = new Map<string, string>();
 	const startedFiles = new Set<string>();
 	const shardOf = new Map<string, Shard>();
+	const streamingFiles = new Set<string>();
+	let finishedFiles = 0;
 	onHubEvent((event) => {
 		if (event.type === "fileOutput") {
+			streamingFiles.add(event.file);
 			bufferOutput(
 				toTestId({ absolutePath: event.file }),
 				getWorkerOf(event.file) ?? null,
 				event.chunk,
 			);
 		} else if (event.type === "workerOutput") {
-			boot.recordOutput(event.worker, event.chunk);
-			bufferOutput(null, event.worker, event.chunk);
+			if (outputGate.forwardWorker(event.worker)) {
+				boot.recordOutput(event.worker, event.chunk);
+				bufferOutput(null, event.worker, event.chunk);
+			}
 		} else if (event.type === "workerStatus") {
 			workerFile.delete(event.worker);
 			if (event.status === "ready") boot.mark(event.worker, "ready");
@@ -361,12 +375,14 @@ const main = async (init: SwarmInit) => {
 		Math.max(0, shard.files.length - shard.started - workersOf(shard));
 
 	let provisionFailures = 0;
+	const breaker = createFailureBreaker({ limit: MAX_PROVISION_FAILURES });
+	const forkLimit = pLimit(FORK_CONCURRENCY);
 	let firstFailure: string | undefined;
 	let nextWorkerIdx = 0;
 	let lastDemand: number | undefined;
 	let stopCulling: (() => void) | undefined;
 	const currentDemand = () =>
-		teardownPromise || provisionFailures >= MAX_PROVISION_FAILURES
+		teardownPromise || breaker.tripped()
 			? 0
 			: shards.reduce((sum, shard) => sum + shortfall(shard), 0);
 	/** Tell twd how many more accounts help; once none do, the tail starts culling idle workers. */
@@ -399,7 +415,7 @@ const main = async (init: SwarmInit) => {
 				svixAppIds.push(svixAppId);
 			}
 			boot.mark(name, "forkStart");
-			sandbox = await tw.provider.forkWorker({
+			const forkOptions = {
 				sourceSandbox: warmName,
 				name,
 				env: {
@@ -417,7 +433,10 @@ const main = async (init: SwarmInit) => {
 				},
 				tags: { owner: "twd", run: init.runId, kind: "bun-tw" },
 				signal,
-			});
+			};
+			sandbox = await forkLimit(() =>
+				withTransientRetry({ run: () => tw.provider.forkWorker(forkOptions) }),
+			);
 			boot.mark(name, "forkDone");
 			track({ name, sandbox, accountId: account.accountId });
 			const publicUrl = await tw.provider.getPublicUrl(sandbox, SERVER_PORT);
@@ -430,6 +449,7 @@ const main = async (init: SwarmInit) => {
 				workerUrl: publicUrl,
 			});
 			boot.mark(name, "mapped");
+			outputGate.markServing(name);
 			const timeline = boot.finish(name);
 			if (timeline) bootOf.set(name, timeline);
 			send({ type: "worker", worker: workerState(name, "ready", null) });
@@ -444,15 +464,19 @@ const main = async (init: SwarmInit) => {
 				inFlight: 0,
 			});
 			shard.markReady();
+			breaker.success();
 		} catch (error) {
 			shard.provisioning--;
 			provisionFailures++;
+			breaker.failure();
 			const reason = error instanceof Error ? error.message : String(error);
 			firstFailure ??= reason;
 			setWorkerStatus(name, "failed", reason.slice(0, 300));
 			if (sandbox) void retire({ name, accountId: account.accountId });
 			else send({ type: "release_accounts", accountIds: [account.accountId] });
-			if (provisionFailures >= MAX_PROVISION_FAILURES) {
+			// Only once nothing is in flight: a slower provision may still succeed and reset the breaker.
+			const inFlight = shards.some((s) => s.provisioning > 0);
+			if (breaker.tripped() && !inFlight) {
 				for (const stuck of shards) {
 					if (stuck.files.length === 0 || workersOf(stuck) > 0) continue;
 					stuck.fail(
@@ -474,6 +498,19 @@ const main = async (init: SwarmInit) => {
 						executor.run({ ...args, failedTestNames: [init.grep ?? ""] }),
 				}
 			: executor;
+	const batchedOutput = (executor: TestExecutor): TestExecutor => ({
+		run: async (args) => {
+			const chunks = coalesceChunks({
+				onChunk: args.onChunk,
+				intervalMs: CHUNK_BATCH_MS,
+			});
+			try {
+				return await executor.run({ ...args, onChunk: chunks.push });
+			} finally {
+				chunks.flush();
+			}
+		},
+	});
 	let running = false;
 	const totalFiles = svixFiles.length + normalFiles.length;
 	// pool.acquire gates on idle workers, so the window is every file and grows with the pool.
@@ -486,12 +523,14 @@ const main = async (init: SwarmInit) => {
 		}
 		await runSwarmTests(
 			shard.files,
-			withGrep(
-				new tw.remoteExecutor.RemoteExecutor({
-					pool: shard.pool,
-					resolveSandbox,
-					toWorkerPath: tw.run.toSandboxPath,
-				}),
+			batchedOutput(
+				withGrep(
+					new tw.remoteExecutor.RemoteExecutor({
+						pool: shard.pool,
+						resolveSandbox,
+						toWorkerPath: tw.run.toSandboxPath,
+					}),
+				),
 			),
 			{ maxParallel: shard.files.length, totalFiles },
 		);
@@ -505,6 +544,7 @@ const main = async (init: SwarmInit) => {
 			const key = JSON.stringify(file);
 			if (lastSent.get(file.file) === key) continue;
 			lastSent.set(file.file, key);
+			if (final) finishedFiles++;
 			send({ type: "file", file, final });
 			if (file.status !== "running") {
 				for (const [worker, current] of workerFile) {
@@ -520,6 +560,25 @@ const main = async (init: SwarmInit) => {
 		reportDemand();
 	};
 	const poll = setInterval(flushFiles, FILE_POLL_MS);
+	// Where a wide run is stuck: dispatch vs streaming vs done, pool state, and event-loop lag.
+	let lastTick = performance.now();
+	let maxLagMs = 0;
+	const lagProbe = setInterval(() => {
+		const now = performance.now();
+		maxLagMs = Math.max(maxLagMs, now - lastTick - LAG_PROBE_MS);
+		lastTick = now;
+	}, LAG_PROBE_MS);
+	const progress = setInterval(() => {
+		const pools = shards.map(
+			(shard) =>
+				`${shard.isSvix ? "svix" : "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
+		);
+		const line = `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`;
+		// stdout too: twd forwards child output to its own logs, so this survives any log budget.
+		console.log(line.trimEnd());
+		send({ type: "log", file: null, worker: null, text: line });
+		maxLagMs = 0;
+	}, PROGRESS_LOG_MS);
 
 	const runs = shards.map(runShard);
 	grow = (accounts) => {
@@ -550,6 +609,8 @@ const main = async (init: SwarmInit) => {
 				accountIds: accounts.map(({ accountId }) => accountId),
 			});
 		clearInterval(poll);
+		clearInterval(lagProbe);
+		clearInterval(progress);
 		clearInterval(outputTimer);
 		flushOutput();
 		flushFiles();
