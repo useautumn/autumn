@@ -9,6 +9,7 @@ import { autumnBillingPlanToTransitions } from "@/internal/billing/v2/actions/bu
 import type { CustomerProductTransition } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildCustomerPlanChange";
 import { buildLifecyclePreviousAttributes } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildLifecyclePreviousAttributes";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import { phaseStartsMatch } from "@/internal/billing/v2/utils/phaseStartsMatch";
 
 const IMMEDIATE_PHASE_INDEX = 0;
 
@@ -65,6 +66,23 @@ const onlyRelinksKeptPlan = ({
 	keptCustomerProductIds.has(after.id) &&
 	buildLifecyclePreviousAttributes({ before, after }) === null;
 
+/** Only a phase already in the customer's schedule can have plans taken out of it. */
+const phaseExistedBefore = ({
+	phaseStartsAt,
+	originalFullCustomer,
+}: {
+	phaseStartsAt: number;
+	originalFullCustomer: FullCustomer;
+}) =>
+	originalFullCustomer.customer_products.some(
+		(customerProduct) =>
+			customerProduct.status === CusProductStatus.Scheduled &&
+			phaseStartsMatch({
+				startsAt: customerProduct.starts_at,
+				otherStartsAt: phaseStartsAt,
+			}),
+	);
+
 const phaseExpiryTransitions = ({
 	previousCustomer,
 	phaseCustomer,
@@ -110,18 +128,23 @@ export const setPlansPhaseTransitions = ({
 			!onlyRelinksKeptPlan({ transition, keptCustomerProductIds }),
 	);
 
-	return phases.map((_, phaseIndex) => {
+	return phases.map((phase, phaseIndex) => {
 		const startingTransitions = transitions.filter(
 			(transition) =>
 				transitionPhaseIndex({ transition, phases }) === phaseIndex,
 		);
-		const expiringTransitions =
-			phaseIndex === IMMEDIATE_PHASE_INDEX
-				? []
-				: phaseExpiryTransitions({
-						previousCustomer: phaseCustomers[phaseIndex - 1],
-						phaseCustomer: phaseCustomers[phaseIndex],
-					});
+		const listsExpiries =
+			phaseIndex !== IMMEDIATE_PHASE_INDEX &&
+			phaseExistedBefore({
+				phaseStartsAt: phase.startsAt,
+				originalFullCustomer,
+			});
+		const expiringTransitions = listsExpiries
+			? phaseExpiryTransitions({
+					previousCustomer: phaseCustomers[phaseIndex - 1],
+					phaseCustomer: phaseCustomers[phaseIndex],
+				})
+			: [];
 
 		return [...startingTransitions, ...expiringTransitions];
 	});

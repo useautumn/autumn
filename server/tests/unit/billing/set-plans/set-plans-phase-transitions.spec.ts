@@ -138,10 +138,7 @@ describe("setPlansPhaseTransitions", () => {
 				["activated", "pro"],
 				["expired", "free"],
 			],
-			[
-				["scheduled", "premium"],
-				["expired", "pro"],
-			],
+			[["scheduled", "premium"]],
 		]);
 		expect(
 			plans.map((phasePlans) =>
@@ -152,23 +149,21 @@ describe("setPlansPhaseTransitions", () => {
 				["starts", "pro"],
 				["ends", "free"],
 			],
-			[
-				["starts", "premium"],
-				["ends", "pro"],
-			],
+			[["starts", "premium"]],
 		]);
 	});
 
-	test("a kept plan ending at a later phase only appears as that phase's expiry", () => {
+	test("a kept plan ending at an existing later phase only appears as that phase's expiry", () => {
 		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
 		const premium = makeFullCusProduct({
 			planId: "premium",
 			status: CusProductStatus.Scheduled,
 			startedAt: PHASE_TWO,
 		});
-		const originalFullCustomer = makeFullCustomer({ customerProducts: [pro] });
+		const originalFullCustomer = makeFullCustomer({
+			customerProducts: [pro, premium],
+		});
 		const autumnBillingPlan = makeAutumnBillingPlan({
-			inserts: [premium],
 			updates: [
 				makeUpdate({
 					customerProduct: pro,
@@ -185,30 +180,19 @@ describe("setPlansPhaseTransitions", () => {
 			autumnBillingPlan,
 			originalFullCustomer,
 			phases,
+			keptCustomerProductIds: [premium.id],
 		});
 
 		expect(
 			plans.map((phasePlans) =>
 				phasePlans.map((plan) => [plan.status, plan.plan_id]),
 			),
-		).toEqual([
-			[["kept", "pro"]],
-			[
-				["starts", "premium"],
-				["ends", "pro"],
-			],
-		]);
+		).toEqual([[["kept", "pro"]], [["ends", "pro"]]]);
 		expect(
 			planChanges.map((changes) =>
 				changes.map((change) => [change.action, change.subscription?.plan_id]),
 			),
-		).toEqual([
-			[],
-			[
-				["scheduled", "premium"],
-				["expired", "pro"],
-			],
-		]);
+		).toEqual([[], [["expired", "pro"]]]);
 	});
 
 	test("an immediate lifecycle change on a kept plan stays in the first phase", () => {
@@ -285,5 +269,42 @@ describe("setPlansPhaseTransitions", () => {
 			["ends", -14.35, false],
 			["kept", null, true],
 		]);
+	});
+
+	test("a newly added phase does not list the previous phase's plans as ending", () => {
+		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
+		const premium = makeFullCusProduct({
+			planId: "premium",
+			status: CusProductStatus.Scheduled,
+			startedAt: PHASE_TWO,
+		});
+		const originalFullCustomer = makeFullCustomer({ customerProducts: [pro] });
+		const autumnBillingPlan = makeAutumnBillingPlan({
+			inserts: [premium],
+			updates: [
+				makeUpdate({ customerProduct: pro, updates: { ended_at: PHASE_TWO } }),
+			],
+		});
+
+		const { planChanges, plans } = previewPhases({
+			autumnBillingPlan,
+			originalFullCustomer,
+			phases: [
+				{ startsAt: NOW, customerProductIds: [] },
+				{ startsAt: PHASE_TWO, customerProductIds: [premium.id] },
+			],
+		});
+
+		expect(
+			plans.map((phasePlans) =>
+				phasePlans.map((plan) => [plan.status, plan.plan_id]),
+			),
+		).toEqual([[["kept", "pro"]], [["starts", "premium"]]]);
+		expect(
+			planChanges[1].map((change) => [
+				change.action,
+				change.subscription?.plan_id,
+			]),
+		).toEqual([["scheduled", "premium"]]);
 	});
 });
