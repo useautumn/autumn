@@ -10,7 +10,7 @@ permissions:
 jobs:
   changes:
     name: Check changed files
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: peak-ubuntu-24.04-4
     outputs:
       vite: ${{ steps.filter.outputs.vite }}
     steps:
@@ -32,7 +32,7 @@ jobs:
     name: Build & Type Check
     needs: changes
     if: needs.changes.outputs.vite == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: peak-ubuntu-24.04-8
 
     steps:
       - name: Checkout code
