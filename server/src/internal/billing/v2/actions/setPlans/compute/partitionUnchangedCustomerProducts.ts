@@ -61,7 +61,12 @@ export const partitionUnchangedCustomerProducts = ({
 				!keptCustomerProducts.some(
 					(kept) => kept.customerProduct.id === customerProduct.id,
 				) &&
-				isUnchangedCustomerProduct({ ctx, customerProduct, productContext }),
+				isUnchangedCustomerProduct({
+					ctx,
+					customerProduct,
+					productContext,
+					internalEntityId: productContext.fullCustomer.entity?.internal_id,
+				}),
 		);
 
 		if (unchangedCustomerProduct) {

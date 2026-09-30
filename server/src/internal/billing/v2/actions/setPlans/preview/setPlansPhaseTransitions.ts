@@ -83,12 +83,36 @@ const phaseExistedBefore = ({
 			}),
 	);
 
+/** The customer's schedule already ended this plan here, so its expiry is not a change. */
+const alreadyEndedHere = ({
+	customerProduct,
+	originalFullCustomer,
+}: {
+	customerProduct: FullCustomer["customer_products"][number];
+	originalFullCustomer: FullCustomer;
+}) => {
+	const originalCustomerProduct = findCustomerProductById({
+		fullCustomer: originalFullCustomer,
+		customerProductId: customerProduct.id,
+	});
+	return (
+		originalCustomerProduct?.ended_at != null &&
+		customerProduct.ended_at != null &&
+		phaseStartsMatch({
+			startsAt: originalCustomerProduct.ended_at,
+			otherStartsAt: customerProduct.ended_at,
+		})
+	);
+};
+
 const phaseExpiryTransitions = ({
 	previousCustomer,
 	phaseCustomer,
+	originalFullCustomer,
 }: {
 	previousCustomer: FullCustomer;
 	phaseCustomer: FullCustomer;
+	originalFullCustomer: FullCustomer;
 }): CustomerProductTransition[] =>
 	phaseCustomer.customer_products.flatMap((customerProduct) => {
 		const previousCustomerProduct = findCustomerProductById({
@@ -98,7 +122,8 @@ const phaseExpiryTransitions = ({
 		const expiresInPhase =
 			customerProduct.status === CusProductStatus.Expired &&
 			previousCustomerProduct !== undefined &&
-			cp(previousCustomerProduct).hasActiveStatus().valid;
+			cp(previousCustomerProduct).hasActiveStatus().valid &&
+			!alreadyEndedHere({ customerProduct, originalFullCustomer });
 
 		return expiresInPhase
 			? [{ before: previousCustomerProduct, after: customerProduct }]
@@ -143,6 +168,7 @@ export const setPlansPhaseTransitions = ({
 			? phaseExpiryTransitions({
 					previousCustomer: phaseCustomers[phaseIndex - 1],
 					phaseCustomer: phaseCustomers[phaseIndex],
+					originalFullCustomer,
 				})
 			: [];
 

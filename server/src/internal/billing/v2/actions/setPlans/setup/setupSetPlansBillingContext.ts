@@ -12,6 +12,7 @@ import {
 	normalizeSetPlansPhases,
 	phaseHasNumericStart,
 } from "../errors/normalizeSetPlansPhases";
+import { alignPhasesToScheduledStarts } from "./alignPhasesToScheduledStarts";
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
@@ -45,13 +46,16 @@ export const setupSetPlansBillingContext = async ({
 		...SET_PLANS_IMMEDIATE_SETUP_OPTIONS,
 	});
 
-	const normalizedPhases = normalizeSetPlansPhases({
-		phases: params.phases,
-		currentEpochMs: initialBillingContext.currentEpochMs,
-		cycleBoundaryMs: setupSetPlansCycleBoundaryMs({
-			billingContext: initialBillingContext,
-			params,
+	const normalizedPhases = alignPhasesToScheduledStarts({
+		phases: normalizeSetPlansPhases({
+			phases: params.phases,
+			currentEpochMs: initialBillingContext.currentEpochMs,
+			cycleBoundaryMs: setupSetPlansCycleBoundaryMs({
+				billingContext: initialBillingContext,
+				params,
+			}),
 		}),
+		fullCustomer: initialBillingContext.fullCustomer,
 	});
 
 	const { billingContext, immediatePhase, futurePhases } =

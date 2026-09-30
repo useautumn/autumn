@@ -12,6 +12,7 @@ import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/t
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
 import { classifySetPlansBalanceChange } from "./classifySetPlansBalanceChange";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
+import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
 import {
 	phasesEndingSubscription,
 	scheduleActionToProcessorItems,
@@ -94,7 +95,13 @@ export const buildSetPlansPreviewPhases = async ({
 			}),
 		],
 		...scheduleActionToProcessorItems({
-			subscriptionScheduleAction: stripeBillingPlan.subscriptionScheduleAction,
+			subscriptionScheduleAction:
+				stripeBillingPlan.subscriptionScheduleAction ??
+				(billingContext.stripeSubscriptionSchedule
+					? liveScheduleAsUpdateAction(
+							billingContext.stripeSubscriptionSchedule,
+						)
+					: undefined),
 			phases,
 			context: processorItemContext,
 		}),

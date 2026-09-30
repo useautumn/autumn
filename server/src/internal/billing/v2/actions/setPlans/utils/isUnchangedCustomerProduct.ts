@@ -16,23 +16,24 @@ export const isUnchangedCustomerProduct = ({
 	ctx,
 	customerProduct,
 	productContext,
+	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
-	productContext: MultiAttachProductContext;
+	productContext: Pick<
+		MultiAttachProductContext,
+		"fullProduct" | "featureQuantities" | "customerLicenseQuantities"
+	>;
+	internalEntityId: string | undefined;
 }) => {
-	const {
-		fullProduct,
-		fullCustomer,
-		featureQuantities,
-		customerLicenseQuantities,
-	} = productContext;
+	const { fullProduct, featureQuantities, customerLicenseQuantities } =
+		productContext;
 
 	const samePlanVersion =
 		customerProduct.internal_product_id === fullProduct.internal_id;
 	const sameScope = isCusProductOnEntity({
 		cusProduct: customerProduct,
-		internalEntityId: fullCustomer.entity?.internal_id,
+		internalEntityId,
 	});
 	const samePlanQuantity =
 		(customerProduct.quantity ?? INSERTED_PLAN_QUANTITY) ===
