@@ -1,11 +1,13 @@
 import {
+	cusProductToProduct,
 	type FullCusProduct,
+	featureOptionsAreSame,
 	isCusProductOnEntity,
 	type MultiAttachProductContext,
+	productsAreSame,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
-import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
 
 const INSERTED_PLAN_QUANTITY = 1;
 
@@ -40,17 +42,23 @@ export const isUnchangedCustomerProduct = ({
 			customerProduct,
 			customerLicenseQuantities,
 		}).length === 0;
+	const sameFeatureQuantities = featureOptionsAreSame({
+		curFeatureOptions: customerProduct.options ?? [],
+		newFeatureOptions: featureQuantities,
+	});
+	const { itemsSame, freeTrialsSame } = productsAreSame({
+		newProductV1: fullProduct,
+		curProductV1: cusProductToProduct({ cusProduct: customerProduct }),
+		features: ctx.features,
+	});
 
 	return (
 		samePlanVersion &&
 		sameScope &&
 		samePlanQuantity &&
 		sameLicenseQuantities &&
-		!pendingPlanRebills({
-			ctx,
-			customerProduct,
-			replacementProduct: fullProduct,
-			replacementQuantities: featureQuantities,
-		})
+		sameFeatureQuantities &&
+		itemsSame &&
+		freeTrialsSame
 	);
 };
