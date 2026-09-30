@@ -319,7 +319,12 @@ export const buildCountAndSumQuery = ({
 				toStartOfHour({start_date:DateTime}),
 				addHours(toStartOfHour({start_date:DateTime}), 1)
 			) AS full_hours_start,
-			toStartOfHour({end_date:DateTime}) AS full_hours_end
+			{end_date:DateTime} >= now() - INTERVAL 30 SECOND AS end_is_live,
+			if(
+				end_is_live,
+				addHours(toStartOfHour({end_date:DateTime}), 1),
+				toStartOfHour({end_date:DateTime})
+			) AS full_hours_end
 		SELECT event_name, sum(event_count_value) AS count, sum(total_value_value) AS sum
 		FROM (
 			SELECT event_name, count AS event_count_value, sum AS total_value_value
@@ -333,7 +338,10 @@ export const buildCountAndSumQuery = ({
 				${customerFilterSql({ aggregateAll: aggregateAll || source === "org_hourly" })}
 				${entityFilterSql({ hasEntityId })}${filterBySql}
 				AND timestamp >= {start_date:DateTime} AND timestamp <= {end_date:DateTime}
-				AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
+				AND (
+					({start_date:DateTime} < full_hours_start AND timestamp < full_hours_start)
+					OR (NOT end_is_live AND timestamp >= full_hours_end)
+				)
 				AND event_name IN {event_names:Array(String)}
 			GROUP BY event_name
 		)
