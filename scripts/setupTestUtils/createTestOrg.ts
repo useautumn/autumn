@@ -74,6 +74,34 @@ export async function ensureTestOrgStripeAccount({
 	});
 }
 
+/** Secret-key sandbox routes act as the org's owner, so the test org needs one. */
+export async function ensureTestOrgOwner({
+	db,
+}: {
+	db: DrizzleCli;
+}): Promise<void> {
+	const existing = await db
+		.select({ id: member.id })
+		.from(member)
+		.where(
+			and(
+				eq(member.organizationId, TEST_ORG_CONFIG.id),
+				eq(member.userId, TEST_INVITER_USER.id),
+			),
+		)
+		.limit(1);
+	if (existing.length > 0) return;
+
+	const { generateId } = await import("@server/utils/genUtils.js");
+	await db.insert(member).values({
+		id: generateId("mem"),
+		organizationId: TEST_ORG_CONFIG.id,
+		userId: TEST_INVITER_USER.id,
+		role: "owner",
+		createdAt: new Date(),
+	});
+}
+
 const TEAM_INVITE_EMAILS = [
 	"ayush@useautumn.com",
 	"jy@useautumn.com",
@@ -113,6 +141,7 @@ export async function createTestOrg({
 		await ensureTestOrgStripeAccount({ org: existingOrg });
 
 		await seedTeamInvites({ db });
+		await ensureTestOrgOwner({ db });
 		await clearOrgDbOnly({
 			db,
 			orgId: TEST_ORG_CONFIG.id,
@@ -198,6 +227,7 @@ export async function createTestOrg({
 	});
 
 	await seedTeamInvites({ db });
+	await ensureTestOrgOwner({ db });
 	await clearOrgDbOnly({ db, orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 	await setupOrg({ orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 
