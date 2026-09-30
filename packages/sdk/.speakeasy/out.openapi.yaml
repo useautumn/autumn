@@ -14607,6 +14607,39 @@ paths:
                     required:
                       - base_plan_id
                     description: Details about how this variant relates to its latest base plan.
+                  licenses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        license_plan_id:
+                          type: string
+                          description: The plan offered as a license under this plan.
+                        version:
+                          type: integer
+                          minimum: 1
+                          maximum: 9.007199254740991e+15
+                          description: The exact license-plan version pinned by this link.
+                        version_slug:
+                          type: string
+                          description: Version slug of the license-plan row this link points at.
+                        included:
+                          type: number
+                          description: Number of license assignments included with this plan for free.
+                        metadata:
+                          type: object
+                          propertyNames:
+                            type: string
+                          additionalProperties: {}
+                          description: Arbitrary key-value metadata defined by you on this link.
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded.
+                      required:
+                        - license_plan_id
+                        - version
+                        - included
+                    description: Plans offered as assignable licenses under this plan. Omitted when the plan has none.
                 required:
                   - id
                   - name
@@ -17303,6 +17336,39 @@ paths:
                     required:
                       - base_plan_id
                     description: Details about how this variant relates to its latest base plan.
+                  licenses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        license_plan_id:
+                          type: string
+                          description: The plan offered as a license under this plan.
+                        version:
+                          type: integer
+                          minimum: 1
+                          maximum: 9.007199254740991e+15
+                          description: The exact license-plan version pinned by this link.
+                        version_slug:
+                          type: string
+                          description: Version slug of the license-plan row this link points at.
+                        included:
+                          type: number
+                          description: Number of license assignments included with this plan for free.
+                        metadata:
+                          type: object
+                          propertyNames:
+                            type: string
+                          additionalProperties: {}
+                          description: Arbitrary key-value metadata defined by you on this link.
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded.
+                      required:
+                        - license_plan_id
+                        - version
+                        - included
+                    description: Plans offered as assignable licenses under this plan. Omitted when the plan has none.
                 required:
                   - id
                   - name
@@ -28483,6 +28549,39 @@ paths:
                     required:
                       - base_plan_id
                     description: Details about how this variant relates to its latest base plan.
+                  licenses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        license_plan_id:
+                          type: string
+                          description: The plan offered as a license under this plan.
+                        version:
+                          type: integer
+                          minimum: 1
+                          maximum: 9.007199254740991e+15
+                          description: The exact license-plan version pinned by this link.
+                        version_slug:
+                          type: string
+                          description: Version slug of the license-plan row this link points at.
+                        included:
+                          type: number
+                          description: Number of license assignments included with this plan for free.
+                        metadata:
+                          type: object
+                          propertyNames:
+                            type: string
+                          additionalProperties: {}
+                          description: Arbitrary key-value metadata defined by you on this link.
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded.
+                      required:
+                        - license_plan_id
+                        - version
+                        - included
+                    description: Plans offered as assignable licenses under this plan. Omitted when the plan has none.
                 required:
                   - id
                   - name
@@ -59821,6 +59920,10 @@ paths:
                                 anyOf:
                                   - type: number
                                   - type: "null"
+                              trial_ends_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                               credit:
                                 anyOf:
                                   - type: number
@@ -59893,6 +59996,7 @@ paths:
                               - status
                               - custom
                               - expires_at
+                              - trial_ends_at
                               - credit
                               - prices
                         plan_changes:
@@ -80862,6 +80966,13 @@ paths:
                 preview:
                   type: boolean
                   description: If true, returns the calculated lines and totals without creating an invoice.
+                issue_method:
+                  enum:
+                    - draft
+                    - finalize
+                    - send
+                  type: string
+                  description: draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
               required:
                 - customer_id
               additionalProperties: false
@@ -82229,6 +82340,13 @@ paths:
                 preview:
                   type: boolean
                   description: If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.
+                issue_method:
+                  enum:
+                    - draft
+                    - finalize
+                    - send
+                  type: string
+                  description: "How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way."
                 update_customer_email:
                   type: string
                   format: email

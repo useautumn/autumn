@@ -2250,7 +2250,7 @@ class GetPlanVariantDetailsAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class GetPlanVariantDetailsBasePriceTypedDict(TypedDict):
+class GetPlanBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -2265,7 +2265,7 @@ class GetPlanVariantDetailsBasePriceTypedDict(TypedDict):
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class GetPlanVariantDetailsBasePrice(BaseModel):
+class GetPlanBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -2359,14 +2359,14 @@ class GetPlanVariantDetailsReset(BaseModel):
         return m
 
 
-class GetPlanVariantDetailsAddItemAdditionalCurrencyTypedDict(TypedDict):
+class GetPlanAddItemAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class GetPlanVariantDetailsAddItemAdditionalCurrency(BaseModel):
+class GetPlanAddItemAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2466,7 +2466,7 @@ GetPlanVariantDetailsTierBehavior = Union[
 ]
 
 
-GetPlanVariantDetailsAddItemPriceInterval = Union[
+GetPlanAddItemPriceInterval = Union[
     Literal[
         "one_off",
         "week",
@@ -2480,7 +2480,7 @@ GetPlanVariantDetailsAddItemPriceInterval = Union[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-GetPlanVariantDetailsAddItemBillingMethod = Union[
+GetPlanAddItemBillingMethod = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -2493,15 +2493,13 @@ r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 class GetPlanVariantDetailsPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: GetPlanVariantDetailsAddItemPriceInterval
+    interval: GetPlanAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: GetPlanVariantDetailsAddItemBillingMethod
+    billing_method: GetPlanAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[GetPlanVariantDetailsAddItemAdditionalCurrencyTypedDict]
-    ]
+    additional_currencies: NotRequired[List[GetPlanAddItemAdditionalCurrencyTypedDict]]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[GetPlanVariantDetailsPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
@@ -2517,18 +2515,16 @@ class GetPlanVariantDetailsPriceTypedDict(TypedDict):
 class GetPlanVariantDetailsPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: GetPlanVariantDetailsAddItemPriceInterval
+    interval: GetPlanAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: GetPlanVariantDetailsAddItemBillingMethod
+    billing_method: GetPlanAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[
-        List[GetPlanVariantDetailsAddItemAdditionalCurrency]
-    ] = None
+    additional_currencies: Optional[List[GetPlanAddItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
     tiers: Optional[List[GetPlanVariantDetailsPriceTier]] = None
@@ -2581,7 +2577,7 @@ class GetPlanVariantDetailsPrice(BaseModel):
         return m
 
 
-GetPlanVariantDetailsOnIncrease = Union[
+GetPlanOnIncrease = Union[
     Literal[
         "bill_immediately",
         "prorate_immediately",
@@ -2593,7 +2589,7 @@ GetPlanVariantDetailsOnIncrease = Union[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-GetPlanVariantDetailsOnDecrease = Union[
+GetPlanOnDecrease = Union[
     Literal[
         "prorate",
         "prorate_immediately",
@@ -2606,22 +2602,22 @@ GetPlanVariantDetailsOnDecrease = Union[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class GetPlanVariantDetailsProrationTypedDict(TypedDict):
+class GetPlanProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: GetPlanVariantDetailsOnIncrease
+    on_increase: GetPlanOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: GetPlanVariantDetailsOnDecrease
+    on_decrease: GetPlanOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class GetPlanVariantDetailsProration(BaseModel):
+class GetPlanProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: GetPlanVariantDetailsOnIncrease
+    on_increase: GetPlanOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: GetPlanVariantDetailsOnDecrease
+    on_decrease: GetPlanOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
@@ -3297,7 +3293,7 @@ class GetPlanVariantDetailsFeatureOverride(BaseModel):
         return m
 
 
-class GetPlanVariantDetailsPlanItemTypedDict(TypedDict):
+class GetPlanPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -3316,7 +3312,7 @@ class GetPlanVariantDetailsPlanItemTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[GetPlanVariantDetailsPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[GetPlanVariantDetailsProrationTypedDict]
+    proration: NotRequired[GetPlanProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[GetPlanVariantDetailsRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
@@ -3326,7 +3322,7 @@ class GetPlanVariantDetailsPlanItemTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class GetPlanVariantDetailsPlanItem(BaseModel):
+class GetPlanPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -3350,7 +3346,7 @@ class GetPlanVariantDetailsPlanItem(BaseModel):
     price: Optional[GetPlanVariantDetailsPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[GetPlanVariantDetailsProration] = None
+    proration: Optional[GetPlanProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
     rollover: Optional[GetPlanVariantDetailsRollover] = None
@@ -3401,7 +3397,7 @@ class GetPlanVariantDetailsPlanItem(BaseModel):
         return m
 
 
-GetPlanVariantDetailsRemoveItemBillingMethod = Union[
+GetPlanRemoveItemBillingMethod = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -3411,7 +3407,7 @@ GetPlanVariantDetailsRemoveItemBillingMethod = Union[
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-GetPlanIntervalVariantDetailsRemoveItemEnum2 = Union[
+GetPlanIntervalRemoveItemEnum2 = Union[
     Literal[
         "one_off",
         "minute",
@@ -3427,7 +3423,7 @@ GetPlanIntervalVariantDetailsRemoveItemEnum2 = Union[
 ]
 
 
-GetPlanIntervalVariantDetailsRemoveItemEnum1 = Union[
+GetPlanIntervalRemoveItemEnum1 = Union[
     Literal[
         "one_off",
         "week",
@@ -3440,34 +3436,28 @@ GetPlanIntervalVariantDetailsRemoveItemEnum1 = Union[
 ]
 
 
-GetPlanVariantDetailsIntervalUnionTypedDict = TypeAliasType(
-    "GetPlanVariantDetailsIntervalUnionTypedDict",
-    Union[
-        GetPlanIntervalVariantDetailsRemoveItemEnum1,
-        GetPlanIntervalVariantDetailsRemoveItemEnum2,
-    ],
+GetPlanIntervalUnionTypedDict = TypeAliasType(
+    "GetPlanIntervalUnionTypedDict",
+    Union[GetPlanIntervalRemoveItemEnum1, GetPlanIntervalRemoveItemEnum2],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-GetPlanVariantDetailsIntervalUnion = TypeAliasType(
-    "GetPlanVariantDetailsIntervalUnion",
-    Union[
-        GetPlanIntervalVariantDetailsRemoveItemEnum1,
-        GetPlanIntervalVariantDetailsRemoveItemEnum2,
-    ],
+GetPlanIntervalUnion = TypeAliasType(
+    "GetPlanIntervalUnion",
+    Union[GetPlanIntervalRemoveItemEnum1, GetPlanIntervalRemoveItemEnum2],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-class GetPlanVariantDetailsPlanItemFilterTypedDict(TypedDict):
+class GetPlanPlanItemFilterTypedDict(TypedDict):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: NotRequired[str]
     r"""Match items linked to this feature."""
-    billing_method: NotRequired[GetPlanVariantDetailsRemoveItemBillingMethod]
+    billing_method: NotRequired[GetPlanRemoveItemBillingMethod]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[GetPlanVariantDetailsIntervalUnionTypedDict]
+    interval: NotRequired[GetPlanIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
@@ -3475,16 +3465,16 @@ class GetPlanVariantDetailsPlanItemFilterTypedDict(TypedDict):
     r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
-class GetPlanVariantDetailsPlanItemFilter(BaseModel):
+class GetPlanPlanItemFilter(BaseModel):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: Optional[str] = None
     r"""Match items linked to this feature."""
 
-    billing_method: Optional[GetPlanVariantDetailsRemoveItemBillingMethod] = None
+    billing_method: Optional[GetPlanRemoveItemBillingMethod] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[GetPlanVariantDetailsIntervalUnion] = None
+    interval: Optional[GetPlanIntervalUnion] = None
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
     interval_count: Optional[int] = None

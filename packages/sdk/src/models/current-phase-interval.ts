@@ -1728,6 +1728,7 @@ export type PhasePlan = {
   status: PhasePlanStatus;
   custom: boolean;
   expiresAt: number | null;
+  trialEndsAt: number | null;
   credit: number | null;
   prices: Array<PhasePlanPrice>;
 };
@@ -5433,6 +5434,7 @@ export const PhasePlan$inboundSchema: z.ZodMiniType<PhasePlan, unknown> = z
       status: PhasePlanStatus$inboundSchema,
       custom: types.boolean(),
       expires_at: types.nullable(types.number()),
+      trial_ends_at: types.nullable(types.number()),
       credit: types.nullable(types.number()),
       prices: z.array(z.lazy(() => PhasePlanPrice$inboundSchema)),
     }),
@@ -5441,6 +5443,7 @@ export const PhasePlan$inboundSchema: z.ZodMiniType<PhasePlan, unknown> = z
         "plan_id": "planId",
         "entity_id": "entityId",
         "expires_at": "expiresAt",
+        "trial_ends_at": "trialEndsAt",
       });
     }),
   );

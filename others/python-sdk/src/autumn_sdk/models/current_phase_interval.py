@@ -3138,6 +3138,7 @@ class PhasePlanTypedDict(TypedDict):
     status: PhasePlanStatus
     custom: bool
     expires_at: Nullable[float]
+    trial_ends_at: Nullable[float]
     credit: Nullable[float]
     prices: List[PhasePlanPriceTypedDict]
 
@@ -3154,6 +3155,8 @@ class PhasePlan(BaseModel):
     custom: bool
 
     expires_at: Nullable[float]
+
+    trial_ends_at: Nullable[float]
 
     credit: Nullable[float]
 

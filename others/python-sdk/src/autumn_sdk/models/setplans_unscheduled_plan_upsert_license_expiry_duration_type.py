@@ -204,19 +204,7 @@ SetPlansRedirectMode = Literal[
 r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
 
 
-<<<<<<<< HEAD:others/python-sdk/src/autumn_sdk/models/unscheduled_plan_upsert_license_proration.py
-CreateScheduleBillingBehavior = Literal[
-    "prorate_immediately",
-    "none",
-    "bill_difference",
-]
-r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference."""
-
-
-class UnscheduledPlanFeatureQuantityTypedDict(TypedDict):
-========
 class SetPlansUnscheduledPlanFeatureQuantityTypedDict(TypedDict):
->>>>>>>> 7a0d175a9c (chore(api): regenerate SDKs and docs for set_plans):others/python-sdk/src/autumn_sdk/models/setplans_unscheduled_plan_upsert_license_expiry_duration_type.py
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -256,22 +244,14 @@ class SetPlansUnscheduledPlanFeatureQuantity(BaseModel):
         return m
 
 
-<<<<<<<< HEAD:others/python-sdk/src/autumn_sdk/models/unscheduled_plan_upsert_license_proration.py
-class UnscheduledPlanLicenseQuantityTypedDict(TypedDict):
-========
 class SetPlansUnscheduledPlanLicenseQuantityTypedDict(TypedDict):
->>>>>>>> 7a0d175a9c (chore(api): regenerate SDKs and docs for set_plans):others/python-sdk/src/autumn_sdk/models/setplans_unscheduled_plan_upsert_license_expiry_duration_type.py
     license_plan_id: str
     r"""The license plan to set seat quantity for."""
     quantity: int
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
-<<<<<<<< HEAD:others/python-sdk/src/autumn_sdk/models/unscheduled_plan_upsert_license_proration.py
-class UnscheduledPlanLicenseQuantity(BaseModel):
-========
 class SetPlansUnscheduledPlanLicenseQuantity(BaseModel):
->>>>>>>> 7a0d175a9c (chore(api): regenerate SDKs and docs for set_plans):others/python-sdk/src/autumn_sdk/models/setplans_unscheduled_plan_upsert_license_expiry_duration_type.py
     license_plan_id: str
     r"""The license plan to set seat quantity for."""
 
@@ -279,11 +259,7 @@ class SetPlansUnscheduledPlanLicenseQuantity(BaseModel):
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
-<<<<<<<< HEAD:others/python-sdk/src/autumn_sdk/models/unscheduled_plan_upsert_license_proration.py
-PriceUnscheduledPlanInterval = Literal[
-========
 SetPlansPriceUnscheduledPlanInterval = Literal[
->>>>>>>> 7a0d175a9c (chore(api): regenerate SDKs and docs for set_plans):others/python-sdk/src/autumn_sdk/models/setplans_unscheduled_plan_upsert_license_expiry_duration_type.py
     "one_off",
     "week",
     "month",
@@ -3619,8 +3595,6 @@ class SetPlansUnscheduledPlanUpsertLicenseProration(BaseModel):
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-<<<<<<<< HEAD:others/python-sdk/src/autumn_sdk/models/unscheduled_plan_upsert_license_proration.py
-========
 SetPlansUnscheduledPlanUpsertLicenseExpiryDurationType = Literal[
     "month",
     "forever",
@@ -3628,7 +3602,6 @@ SetPlansUnscheduledPlanUpsertLicenseExpiryDurationType = Literal[
 r"""When rolled over units expire."""
 
 
->>>>>>>> 7a0d175a9c (chore(api): regenerate SDKs and docs for set_plans):others/python-sdk/src/autumn_sdk/models/setplans_unscheduled_plan_upsert_license_expiry_duration_type.py
 try:
     SetPlansDimensionsUnscheduledPlanItem3.model_rebuild()
 except NameError:

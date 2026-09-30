@@ -1849,7 +1849,7 @@ class CreatePlanVariantDetailsAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class CreatePlanVariantDetailsBasePriceTypedDict(TypedDict):
+class CreatePlanBasePriceResponseTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -1864,7 +1864,7 @@ class CreatePlanVariantDetailsBasePriceTypedDict(TypedDict):
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class CreatePlanVariantDetailsBasePrice(BaseModel):
+class CreatePlanBasePriceResponse(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -2180,7 +2180,7 @@ class CreatePlanVariantDetailsPrice(BaseModel):
         return m
 
 
-CreatePlanVariantDetailsOnIncrease = Union[
+CreatePlanOnIncreaseResponse = Union[
     Literal[
         "bill_immediately",
         "prorate_immediately",
@@ -2192,7 +2192,7 @@ CreatePlanVariantDetailsOnIncrease = Union[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-CreatePlanVariantDetailsOnDecrease = Union[
+CreatePlanOnDecreaseResponse = Union[
     Literal[
         "prorate",
         "prorate_immediately",
@@ -2205,22 +2205,22 @@ CreatePlanVariantDetailsOnDecrease = Union[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class CreatePlanVariantDetailsProrationTypedDict(TypedDict):
+class CreatePlanProrationResponseTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: CreatePlanVariantDetailsOnIncrease
+    on_increase: CreatePlanOnIncreaseResponse
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: CreatePlanVariantDetailsOnDecrease
+    on_decrease: CreatePlanOnDecreaseResponse
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class CreatePlanVariantDetailsProration(BaseModel):
+class CreatePlanProrationResponse(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: CreatePlanVariantDetailsOnIncrease
+    on_increase: CreatePlanOnIncreaseResponse
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: CreatePlanVariantDetailsOnDecrease
+    on_decrease: CreatePlanOnDecreaseResponse
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
@@ -2900,7 +2900,7 @@ class CreatePlanVariantDetailsFeatureOverride(BaseModel):
         return m
 
 
-class CreatePlanVariantDetailsPlanItemTypedDict(TypedDict):
+class CreatePlanPlanItemResponseTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2919,7 +2919,7 @@ class CreatePlanVariantDetailsPlanItemTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[CreatePlanVariantDetailsPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[CreatePlanVariantDetailsProrationTypedDict]
+    proration: NotRequired[CreatePlanProrationResponseTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[CreatePlanVariantDetailsRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
@@ -2929,7 +2929,7 @@ class CreatePlanVariantDetailsPlanItemTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class CreatePlanVariantDetailsPlanItem(BaseModel):
+class CreatePlanPlanItemResponse(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2955,7 +2955,7 @@ class CreatePlanVariantDetailsPlanItem(BaseModel):
     price: Optional[CreatePlanVariantDetailsPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[CreatePlanVariantDetailsProration] = None
+    proration: Optional[CreatePlanProrationResponse] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
     rollover: Optional[CreatePlanVariantDetailsRollover] = None
@@ -3065,7 +3065,7 @@ CreatePlanVariantDetailsIntervalUnion = TypeAliasType(
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-class CreatePlanVariantDetailsPlanItemFilterTypedDict(TypedDict):
+class CreatePlanPlanItemFilterResponseTypedDict(TypedDict):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: NotRequired[str]
@@ -3080,7 +3080,7 @@ class CreatePlanVariantDetailsPlanItemFilterTypedDict(TypedDict):
     r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
-class CreatePlanVariantDetailsPlanItemFilter(BaseModel):
+class CreatePlanPlanItemFilterResponse(BaseModel):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: Optional[str] = None

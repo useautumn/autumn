@@ -675,7 +675,7 @@ export type UpdatePlanItemPlanItem = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const UpdatePlanPriceLicenseIntervalRequestBody = {
+export const UpdatePlanPriceLicenseInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -686,11 +686,11 @@ export const UpdatePlanPriceLicenseIntervalRequestBody = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type UpdatePlanPriceLicenseIntervalRequestBody = ClosedEnum<
-  typeof UpdatePlanPriceLicenseIntervalRequestBody
+export type UpdatePlanPriceLicenseInterval = ClosedEnum<
+  typeof UpdatePlanPriceLicenseInterval
 >;
 
-export type UpdatePlanLicenseAdditionalCurrencyRequestBody = {
+export type UpdatePlanLicenseAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -704,7 +704,7 @@ export type UpdatePlanLicenseAdditionalCurrencyRequestBody = {
 /**
  * Base price configuration for a plan.
  */
-export type UpdatePlanLicenseBasePriceRequestBody = {
+export type UpdatePlanLicenseBasePrice = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
    */
@@ -712,7 +712,7 @@ export type UpdatePlanLicenseBasePriceRequestBody = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: UpdatePlanPriceLicenseIntervalRequestBody;
+  interval: UpdatePlanPriceLicenseInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -720,19 +720,17 @@ export type UpdatePlanLicenseBasePriceRequestBody = {
   /**
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
-  additionalCurrencies?:
-    | Array<UpdatePlanLicenseAdditionalCurrencyRequestBody>
-    | undefined;
+  additionalCurrencies?: Array<UpdatePlanLicenseAdditionalCurrency> | undefined;
 };
 
-export type UpdatePlanLicenseThresholdBillingRequestBody = {
+export type UpdatePlanLicenseThresholdBilling = {
   threshold: number;
 };
 
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const UpdatePlanLicenseResetIntervalRequestBody = {
+export const UpdatePlanLicenseResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -746,25 +744,25 @@ export const UpdatePlanLicenseResetIntervalRequestBody = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type UpdatePlanLicenseResetIntervalRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseResetIntervalRequestBody
+export type UpdatePlanLicenseResetInterval = ClosedEnum<
+  typeof UpdatePlanLicenseResetInterval
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type UpdatePlanLicenseResetRequestBody = {
+export type UpdatePlanLicenseReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: UpdatePlanLicenseResetIntervalRequestBody;
+  interval: UpdatePlanLicenseResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody = {
+export type UpdatePlanLicenseAddItemAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -775,9 +773,9 @@ export type UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody = {
   amount: number;
 };
 
-export type UpdatePlanLicensePriceToRequestBody = number | string;
+export type UpdatePlanLicensePriceTo = number | string;
 
-export type UpdatePlanLicenseTierAdditionalCurrencyRequestBody = {
+export type UpdatePlanLicenseTierAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -792,7 +790,7 @@ export type UpdatePlanLicenseTierAdditionalCurrencyRequestBody = {
   flatAmount?: number | undefined;
 };
 
-export type UpdatePlanLicensePriceTierRequestBody = {
+export type UpdatePlanLicensePriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -800,22 +798,22 @@ export type UpdatePlanLicensePriceTierRequestBody = {
    * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
    */
   additionalCurrencies?:
-    | Array<UpdatePlanLicenseTierAdditionalCurrencyRequestBody>
+    | Array<UpdatePlanLicenseTierAdditionalCurrency>
     | undefined;
 };
 
-export const UpdatePlanLicenseTierBehaviorRequestBody = {
+export const UpdatePlanLicenseTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type UpdatePlanLicenseTierBehaviorRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseTierBehaviorRequestBody
+export type UpdatePlanLicenseTierBehavior = ClosedEnum<
+  typeof UpdatePlanLicenseTierBehavior
 >;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const UpdatePlanLicenseAddItemPriceIntervalRequestBody = {
+export const UpdatePlanLicenseAddItemPriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -826,28 +824,28 @@ export const UpdatePlanLicenseAddItemPriceIntervalRequestBody = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type UpdatePlanLicenseAddItemPriceIntervalRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseAddItemPriceIntervalRequestBody
+export type UpdatePlanLicenseAddItemPriceInterval = ClosedEnum<
+  typeof UpdatePlanLicenseAddItemPriceInterval
 >;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const UpdatePlanLicenseAddItemBillingMethodRequestBody = {
+export const UpdatePlanLicenseAddItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type UpdatePlanLicenseAddItemBillingMethodRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseAddItemBillingMethodRequestBody
+export type UpdatePlanLicenseAddItemBillingMethod = ClosedEnum<
+  typeof UpdatePlanLicenseAddItemBillingMethod
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type UpdatePlanLicensePriceRequestBody = {
+export type UpdatePlanLicensePrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -856,17 +854,17 @@ export type UpdatePlanLicensePriceRequestBody = {
    * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
    */
   additionalCurrencies?:
-    | Array<UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody>
+    | Array<UpdatePlanLicenseAddItemAdditionalCurrency>
     | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<UpdatePlanLicensePriceTierRequestBody> | undefined;
-  tierBehavior?: UpdatePlanLicenseTierBehaviorRequestBody | undefined;
+  tiers?: Array<UpdatePlanLicensePriceTier> | undefined;
+  tierBehavior?: UpdatePlanLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: UpdatePlanLicenseAddItemPriceIntervalRequestBody;
+  interval: UpdatePlanLicenseAddItemPriceInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -878,7 +876,7 @@ export type UpdatePlanLicensePriceRequestBody = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: UpdatePlanLicenseAddItemBillingMethodRequestBody;
+  billingMethod: UpdatePlanLicenseAddItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -888,7 +886,7 @@ export type UpdatePlanLicensePriceRequestBody = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const UpdatePlanLicenseOnIncreaseRequestBody = {
+export const UpdatePlanLicenseOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -897,14 +895,14 @@ export const UpdatePlanLicenseOnIncreaseRequestBody = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type UpdatePlanLicenseOnIncreaseRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseOnIncreaseRequestBody
+export type UpdatePlanLicenseOnIncrease = ClosedEnum<
+  typeof UpdatePlanLicenseOnIncrease
 >;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const UpdatePlanLicenseOnDecreaseRequestBody = {
+export const UpdatePlanLicenseOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -914,42 +912,42 @@ export const UpdatePlanLicenseOnDecreaseRequestBody = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type UpdatePlanLicenseOnDecreaseRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseOnDecreaseRequestBody
+export type UpdatePlanLicenseOnDecrease = ClosedEnum<
+  typeof UpdatePlanLicenseOnDecrease
 >;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type UpdatePlanLicenseProrationRequestBody = {
+export type UpdatePlanLicenseProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: UpdatePlanLicenseOnIncreaseRequestBody;
+  onIncrease: UpdatePlanLicenseOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: UpdatePlanLicenseOnDecreaseRequestBody;
+  onDecrease: UpdatePlanLicenseOnDecrease;
 };
 
 /**
  * When rolled over units expire.
  */
-export const UpdatePlanLicenseExpiryDurationTypeRequestBody = {
+export const UpdatePlanLicenseExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type UpdatePlanLicenseExpiryDurationTypeRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseExpiryDurationTypeRequestBody
+export type UpdatePlanLicenseExpiryDurationType = ClosedEnum<
+  typeof UpdatePlanLicenseExpiryDurationType
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type UpdatePlanLicenseRolloverRequestBody = {
+export type UpdatePlanLicenseRollover = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -961,34 +959,34 @@ export type UpdatePlanLicenseRolloverRequestBody = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: UpdatePlanLicenseExpiryDurationTypeRequestBody;
+  expiryDurationType: UpdatePlanLicenseExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
   expiryDurationLength?: number | undefined;
 };
 
-export const UpdatePlanLicenseDurationRequestBody = {
+export const UpdatePlanLicenseDuration = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
-export type UpdatePlanLicenseDurationRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseDurationRequestBody
+export type UpdatePlanLicenseDuration = ClosedEnum<
+  typeof UpdatePlanLicenseDuration
 >;
 
 /**
  * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
  */
-export type UpdatePlanLicenseExpiryRequestBody = {
-  duration: UpdatePlanLicenseDurationRequestBody;
+export type UpdatePlanLicenseExpiry = {
+  duration: UpdatePlanLicenseDuration;
   length: number;
 };
 
 export type UpdatePlanDimensionsLicenseMatch4 = string | number | boolean;
 
-export type UpdatePlanDimensionsLicenseRequestBody4 = {
+export type UpdatePlanDimensionsLicense4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1005,32 +1003,32 @@ export type UpdatePlanDimensionsLicenseRequestBody4 = {
 
 export type UpdatePlanDimensionsLicenseMatch3 = string | number | boolean;
 
-export const UpdatePlanDimensionsToLicenseRequestBodyEnum2 = {
+export const UpdatePlanDimensionsToLicenseEnum2 = {
   Inf: "inf",
 } as const;
-export type UpdatePlanDimensionsToLicenseRequestBodyEnum2 = ClosedEnum<
-  typeof UpdatePlanDimensionsToLicenseRequestBodyEnum2
+export type UpdatePlanDimensionsToLicenseEnum2 = ClosedEnum<
+  typeof UpdatePlanDimensionsToLicenseEnum2
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type UpdatePlanDimensionsLicenseToRequestBodyUnion2 =
+export type UpdatePlanDimensionsLicenseToUnion2 =
   | number
-  | UpdatePlanDimensionsToLicenseRequestBodyEnum2;
+  | UpdatePlanDimensionsToLicenseEnum2;
 
-export type UpdatePlanDimensionsLicenseTierRequestBody2 = {
+export type UpdatePlanDimensionsLicenseTier2 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | UpdatePlanDimensionsToLicenseRequestBodyEnum2;
+  to: number | UpdatePlanDimensionsToLicenseEnum2;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type UpdatePlanDimensionsLicenseRequestBody3 = {
+export type UpdatePlanDimensionsLicense3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1040,16 +1038,16 @@ export type UpdatePlanDimensionsLicenseRequestBody3 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<UpdatePlanDimensionsLicenseTierRequestBody2>;
+  tiers: Array<UpdatePlanDimensionsLicenseTier2>;
 };
 
-export type UpdatePlanLicenseDimensionsRequestBodyUnion2 =
-  | UpdatePlanDimensionsLicenseRequestBody3
-  | UpdatePlanDimensionsLicenseRequestBody4;
+export type UpdatePlanLicenseDimensionsUnion2 =
+  | UpdatePlanDimensionsLicense3
+  | UpdatePlanDimensionsLicense4;
 
 export type UpdatePlanLicenseMultipliersMatch2 = string | number | boolean;
 
-export type UpdatePlanLicenseMultipliersRequestBody2 = {
+export type UpdatePlanLicenseMultipliers2 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1064,7 +1062,7 @@ export type UpdatePlanLicenseMultipliersRequestBody2 = {
   add?: number | undefined;
 };
 
-export type UpdatePlanCreditSchemaLicenseRequestBody2 = {
+export type UpdatePlanCreditSchemaLicense2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -1077,16 +1075,12 @@ export type UpdatePlanCreditSchemaLicenseRequestBody2 = {
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
   dimensions?: {
-    [k: string]:
-      | UpdatePlanDimensionsLicenseRequestBody3
-      | UpdatePlanDimensionsLicenseRequestBody4;
+    [k: string]: UpdatePlanDimensionsLicense3 | UpdatePlanDimensionsLicense4;
   } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?:
-    | { [k: string]: UpdatePlanLicenseMultipliersRequestBody2 }
-    | undefined;
+  multipliers?: { [k: string]: UpdatePlanLicenseMultipliers2 } | undefined;
   /**
    * Credits consumed per billing-unit group.
    */
@@ -1095,7 +1089,7 @@ export type UpdatePlanCreditSchemaLicenseRequestBody2 = {
 
 export type UpdatePlanDimensionsLicenseMatch2 = string | number | boolean;
 
-export type UpdatePlanDimensionsLicenseRequestBody2 = {
+export type UpdatePlanDimensionsLicense2 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1112,32 +1106,32 @@ export type UpdatePlanDimensionsLicenseRequestBody2 = {
 
 export type UpdatePlanDimensionsLicenseMatch1 = string | number | boolean;
 
-export const UpdatePlanDimensionsToLicenseRequestBodyEnum1 = {
+export const UpdatePlanDimensionsToLicenseEnum1 = {
   Inf: "inf",
 } as const;
-export type UpdatePlanDimensionsToLicenseRequestBodyEnum1 = ClosedEnum<
-  typeof UpdatePlanDimensionsToLicenseRequestBodyEnum1
+export type UpdatePlanDimensionsToLicenseEnum1 = ClosedEnum<
+  typeof UpdatePlanDimensionsToLicenseEnum1
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type UpdatePlanDimensionsLicenseToRequestBodyUnion1 =
+export type UpdatePlanDimensionsLicenseToUnion1 =
   | number
-  | UpdatePlanDimensionsToLicenseRequestBodyEnum1;
+  | UpdatePlanDimensionsToLicenseEnum1;
 
-export type UpdatePlanDimensionsLicenseTierRequestBody1 = {
+export type UpdatePlanDimensionsLicenseTier1 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | UpdatePlanDimensionsToLicenseRequestBodyEnum1;
+  to: number | UpdatePlanDimensionsToLicenseEnum1;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type UpdatePlanDimensionsLicenseRequestBody1 = {
+export type UpdatePlanDimensionsLicense1 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1147,16 +1141,16 @@ export type UpdatePlanDimensionsLicenseRequestBody1 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<UpdatePlanDimensionsLicenseTierRequestBody1>;
+  tiers: Array<UpdatePlanDimensionsLicenseTier1>;
 };
 
-export type UpdatePlanLicenseDimensionsRequestBodyUnion1 =
-  | UpdatePlanDimensionsLicenseRequestBody1
-  | UpdatePlanDimensionsLicenseRequestBody2;
+export type UpdatePlanLicenseDimensionsUnion1 =
+  | UpdatePlanDimensionsLicense1
+  | UpdatePlanDimensionsLicense2;
 
 export type UpdatePlanLicenseMultipliersMatch1 = string | number | boolean;
 
-export type UpdatePlanLicenseMultipliersRequestBody1 = {
+export type UpdatePlanLicenseMultipliers1 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1171,32 +1165,32 @@ export type UpdatePlanLicenseMultipliersRequestBody1 = {
   add?: number | undefined;
 };
 
-export const UpdatePlanToLicenseRequestBodyEnum = {
+export const UpdatePlanToLicenseEnum = {
   Inf: "inf",
 } as const;
-export type UpdatePlanToLicenseRequestBodyEnum = ClosedEnum<
-  typeof UpdatePlanToLicenseRequestBodyEnum
+export type UpdatePlanToLicenseEnum = ClosedEnum<
+  typeof UpdatePlanToLicenseEnum
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type UpdatePlanLicenseFeatureOverrideToRequestBodyUnion =
+export type UpdatePlanLicenseFeatureOverrideToUnion =
   | number
-  | UpdatePlanToLicenseRequestBodyEnum;
+  | UpdatePlanToLicenseEnum;
 
-export type UpdatePlanLicenseFeatureOverrideTierRequestBody = {
+export type UpdatePlanLicenseFeatureOverrideTier = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | UpdatePlanToLicenseRequestBodyEnum;
+  to: number | UpdatePlanToLicenseEnum;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type UpdatePlanCreditSchemaLicenseRequestBody1 = {
+export type UpdatePlanCreditSchemaLicense1 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -1209,29 +1203,25 @@ export type UpdatePlanCreditSchemaLicenseRequestBody1 = {
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
   dimensions?: {
-    [k: string]:
-      | UpdatePlanDimensionsLicenseRequestBody1
-      | UpdatePlanDimensionsLicenseRequestBody2;
+    [k: string]: UpdatePlanDimensionsLicense1 | UpdatePlanDimensionsLicense2;
   } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?:
-    | { [k: string]: UpdatePlanLicenseMultipliersRequestBody1 }
-    | undefined;
+  multipliers?: { [k: string]: UpdatePlanLicenseMultipliers1 } | undefined;
   tierBehavior: "graduated";
-  tiers: Array<UpdatePlanLicenseFeatureOverrideTierRequestBody>;
+  tiers: Array<UpdatePlanLicenseFeatureOverrideTier>;
 };
 
-export type UpdatePlanLicenseCreditSchemaRequestBodyUnion =
-  | UpdatePlanCreditSchemaLicenseRequestBody1
-  | UpdatePlanCreditSchemaLicenseRequestBody2;
+export type UpdatePlanLicenseCreditSchemaUnion =
+  | UpdatePlanCreditSchemaLicense1
+  | UpdatePlanCreditSchemaLicense2;
 
-export type UpdatePlanLicenseProviderMarkupsRequestBody = {
+export type UpdatePlanLicenseProviderMarkups = {
   markup: number;
 };
 
-export type UpdatePlanLicenseModelMarkupsRequestBody = {
+export type UpdatePlanLicenseModelMarkups = {
   markup?: number | undefined;
   inputCost?: number | undefined;
   outputCost?: number | undefined;
@@ -1240,7 +1230,7 @@ export type UpdatePlanLicenseModelMarkupsRequestBody = {
 /**
  * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
  */
-export type UpdatePlanLicenseMarkupsRequestBody = {
+export type UpdatePlanLicenseMarkups = {
   /**
    * Default percentage markup for customers on this plan. Use -100 to make usage free.
    */
@@ -1249,14 +1239,14 @@ export type UpdatePlanLicenseMarkupsRequestBody = {
    * Per-provider markup percentages for customers on this plan.
    */
   providerMarkups?:
-    | { [k: string]: UpdatePlanLicenseProviderMarkupsRequestBody }
+    | { [k: string]: UpdatePlanLicenseProviderMarkups }
     | null
     | undefined;
   /**
    * Per-model markup overrides for customers on this plan.
    */
   modelMarkups?:
-    | { [k: string]: UpdatePlanLicenseModelMarkupsRequestBody }
+    | { [k: string]: UpdatePlanLicenseModelMarkups }
     | null
     | undefined;
 };
@@ -1264,33 +1254,27 @@ export type UpdatePlanLicenseMarkupsRequestBody = {
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
-export type UpdatePlanLicenseFeatureOverrideRequestBody = {
+export type UpdatePlanLicenseFeatureOverride = {
   /**
    * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
    */
   creditSchema?:
-    | Array<
-      | UpdatePlanCreditSchemaLicenseRequestBody1
-      | UpdatePlanCreditSchemaLicenseRequestBody2
-    >
+    | Array<UpdatePlanCreditSchemaLicense1 | UpdatePlanCreditSchemaLicense2>
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
    */
-  markups?: UpdatePlanLicenseMarkupsRequestBody | undefined;
+  markups?: UpdatePlanLicenseMarkups | undefined;
 };
 
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type UpdatePlanLicensePlanItemRequestBody = {
+export type UpdatePlanLicensePlanItem = {
   /**
    * Bills this many feature units when outstanding overage reaches it.
    */
-  thresholdBilling?:
-    | UpdatePlanLicenseThresholdBillingRequestBody
-    | null
-    | undefined;
+  thresholdBilling?: UpdatePlanLicenseThresholdBilling | null | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -1310,44 +1294,44 @@ export type UpdatePlanLicensePlanItemRequestBody = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: UpdatePlanLicenseResetRequestBody | undefined;
+  reset?: UpdatePlanLicenseReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: UpdatePlanLicensePriceRequestBody | undefined;
+  price?: UpdatePlanLicensePrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: UpdatePlanLicenseProrationRequestBody | undefined;
+  proration?: UpdatePlanLicenseProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: UpdatePlanLicenseRolloverRequestBody | undefined;
+  rollover?: UpdatePlanLicenseRollover | undefined;
   /**
    * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
    */
-  expiry?: UpdatePlanLicenseExpiryRequestBody | undefined;
+  expiry?: UpdatePlanLicenseExpiry | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
-  featureOverride?: UpdatePlanLicenseFeatureOverrideRequestBody | undefined;
+  featureOverride?: UpdatePlanLicenseFeatureOverride | undefined;
 };
 
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export const UpdatePlanLicenseRemoveItemBillingMethodRequestBody = {
+export const UpdatePlanLicenseRemoveItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export type UpdatePlanLicenseRemoveItemBillingMethodRequestBody = ClosedEnum<
-  typeof UpdatePlanLicenseRemoveItemBillingMethodRequestBody
+export type UpdatePlanLicenseRemoveItemBillingMethod = ClosedEnum<
+  typeof UpdatePlanLicenseRemoveItemBillingMethod
 >;
 
-export const UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2 = {
+export const UpdatePlanIntervalLicenseRemoveItemEnum2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1358,11 +1342,11 @@ export const UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2 = ClosedEnum<
-  typeof UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2
+export type UpdatePlanIntervalLicenseRemoveItemEnum2 = ClosedEnum<
+  typeof UpdatePlanIntervalLicenseRemoveItemEnum2
 >;
 
-export const UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1 = {
+export const UpdatePlanIntervalLicenseRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1370,21 +1354,21 @@ export const UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1 = ClosedEnum<
-  typeof UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1
+export type UpdatePlanIntervalLicenseRemoveItemEnum1 = ClosedEnum<
+  typeof UpdatePlanIntervalLicenseRemoveItemEnum1
 >;
 
 /**
  * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
  */
-export type UpdatePlanLicenseIntervalRequestBodyUnion =
-  | UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1
-  | UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2;
+export type UpdatePlanLicenseIntervalUnion =
+  | UpdatePlanIntervalLicenseRemoveItemEnum1
+  | UpdatePlanIntervalLicenseRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
  */
-export type UpdatePlanLicensePlanItemFilterRequestBody = {
+export type UpdatePlanLicensePlanItemFilter = {
   /**
    * Match items linked to this feature.
    */
@@ -1392,15 +1376,13 @@ export type UpdatePlanLicensePlanItemFilterRequestBody = {
   /**
    * Match items with this billing method (prepaid or usage_based).
    */
-  billingMethod?:
-    | UpdatePlanLicenseRemoveItemBillingMethodRequestBody
-    | undefined;
+  billingMethod?: UpdatePlanLicenseRemoveItemBillingMethod | undefined;
   /**
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
   interval?:
-    | UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1
-    | UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2
+    | UpdatePlanIntervalLicenseRemoveItemEnum1
+    | UpdatePlanIntervalLicenseRemoveItemEnum2
     | undefined;
   /**
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
@@ -1412,10 +1394,10 @@ export type UpdatePlanLicensePlanItemFilterRequestBody = {
   included?: number | undefined;
 };
 
-export type UpdatePlanLicenseCustomizeRequestBody = {
-  price?: UpdatePlanLicenseBasePriceRequestBody | null | undefined;
-  addItems?: Array<UpdatePlanLicensePlanItemRequestBody> | undefined;
-  removeItems?: Array<UpdatePlanLicensePlanItemFilterRequestBody> | undefined;
+export type UpdatePlanLicenseCustomize = {
+  price?: UpdatePlanLicenseBasePrice | null | undefined;
+  addItems?: Array<UpdatePlanLicensePlanItem> | undefined;
+  removeItems?: Array<UpdatePlanLicensePlanItemFilter> | undefined;
 };
 
 export type UpdatePlanLicenseRequest = {
@@ -1423,7 +1405,7 @@ export type UpdatePlanLicenseRequest = {
   versionSlug?: string | undefined;
   included?: number | undefined;
   prepaidOnly?: boolean | undefined;
-  customize?: UpdatePlanLicenseCustomizeRequestBody | null | undefined;
+  customize?: UpdatePlanLicenseCustomize | null | undefined;
   metadata?: { [k: string]: any } | undefined;
 };
 
@@ -3406,124 +3388,115 @@ export function updatePlanItemPlanItemToJSON(
 }
 
 /** @internal */
-export const UpdatePlanPriceLicenseIntervalRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanPriceLicenseIntervalRequestBody> = z.enum(
-    UpdatePlanPriceLicenseIntervalRequestBody,
-  );
+export const UpdatePlanPriceLicenseInterval$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanPriceLicenseInterval
+> = z.enum(UpdatePlanPriceLicenseInterval);
 
 /** @internal */
-export type UpdatePlanLicenseAdditionalCurrencyRequestBody$Outbound = {
+export type UpdatePlanLicenseAdditionalCurrency$Outbound = {
   currency: string;
   amount: number;
 };
 
 /** @internal */
-export const UpdatePlanLicenseAdditionalCurrencyRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseAdditionalCurrencyRequestBody$Outbound,
-    UpdatePlanLicenseAdditionalCurrencyRequestBody
-  > = z.object({
-    currency: z.string(),
-    amount: z.number(),
-  });
+export const UpdatePlanLicenseAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseAdditionalCurrency$Outbound,
+  UpdatePlanLicenseAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
 
-export function updatePlanLicenseAdditionalCurrencyRequestBodyToJSON(
-  updatePlanLicenseAdditionalCurrencyRequestBody:
-    UpdatePlanLicenseAdditionalCurrencyRequestBody,
+export function updatePlanLicenseAdditionalCurrencyToJSON(
+  updatePlanLicenseAdditionalCurrency: UpdatePlanLicenseAdditionalCurrency,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseAdditionalCurrencyRequestBody$outboundSchema.parse(
-      updatePlanLicenseAdditionalCurrencyRequestBody,
+    UpdatePlanLicenseAdditionalCurrency$outboundSchema.parse(
+      updatePlanLicenseAdditionalCurrency,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseBasePriceRequestBody$Outbound = {
+export type UpdatePlanLicenseBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count: number;
   additional_currencies?:
-    | Array<UpdatePlanLicenseAdditionalCurrencyRequestBody$Outbound>
+    | Array<UpdatePlanLicenseAdditionalCurrency$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseBasePriceRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseBasePriceRequestBody$Outbound,
-    UpdatePlanLicenseBasePriceRequestBody
-  > = z.pipe(
-    z.object({
-      amount: z.number(),
-      interval: UpdatePlanPriceLicenseIntervalRequestBody$outboundSchema,
-      intervalCount: z._default(z.number(), 1),
-      additionalCurrencies: z.optional(z.array(z.lazy(() =>
-        UpdatePlanLicenseAdditionalCurrencyRequestBody$outboundSchema
-      ))),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        intervalCount: "interval_count",
-        additionalCurrencies: "additional_currencies",
-      });
-    }),
-  );
+export const UpdatePlanLicenseBasePrice$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseBasePrice$Outbound,
+  UpdatePlanLicenseBasePrice
+> = z.pipe(
+  z.object({
+    amount: z.number(),
+    interval: UpdatePlanPriceLicenseInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => UpdatePlanLicenseAdditionalCurrency$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
+    });
+  }),
+);
 
-export function updatePlanLicenseBasePriceRequestBodyToJSON(
-  updatePlanLicenseBasePriceRequestBody: UpdatePlanLicenseBasePriceRequestBody,
+export function updatePlanLicenseBasePriceToJSON(
+  updatePlanLicenseBasePrice: UpdatePlanLicenseBasePrice,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseBasePriceRequestBody$outboundSchema.parse(
-      updatePlanLicenseBasePriceRequestBody,
-    ),
+    UpdatePlanLicenseBasePrice$outboundSchema.parse(updatePlanLicenseBasePrice),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseThresholdBillingRequestBody$Outbound = {
+export type UpdatePlanLicenseThresholdBilling$Outbound = {
   threshold: number;
 };
 
 /** @internal */
-export const UpdatePlanLicenseThresholdBillingRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseThresholdBillingRequestBody$Outbound,
-    UpdatePlanLicenseThresholdBillingRequestBody
-  > = z.object({
-    threshold: z.number(),
-  });
+export const UpdatePlanLicenseThresholdBilling$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseThresholdBilling$Outbound,
+  UpdatePlanLicenseThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
 
-export function updatePlanLicenseThresholdBillingRequestBodyToJSON(
-  updatePlanLicenseThresholdBillingRequestBody:
-    UpdatePlanLicenseThresholdBillingRequestBody,
+export function updatePlanLicenseThresholdBillingToJSON(
+  updatePlanLicenseThresholdBilling: UpdatePlanLicenseThresholdBilling,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseThresholdBillingRequestBody$outboundSchema.parse(
-      updatePlanLicenseThresholdBillingRequestBody,
+    UpdatePlanLicenseThresholdBilling$outboundSchema.parse(
+      updatePlanLicenseThresholdBilling,
     ),
   );
 }
 
 /** @internal */
-export const UpdatePlanLicenseResetIntervalRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseResetIntervalRequestBody> = z.enum(
-    UpdatePlanLicenseResetIntervalRequestBody,
-  );
+export const UpdatePlanLicenseResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseResetInterval
+> = z.enum(UpdatePlanLicenseResetInterval);
 
 /** @internal */
-export type UpdatePlanLicenseResetRequestBody$Outbound = {
+export type UpdatePlanLicenseReset$Outbound = {
   interval: string;
   interval_count: number;
 };
 
 /** @internal */
-export const UpdatePlanLicenseResetRequestBody$outboundSchema: z.ZodMiniType<
-  UpdatePlanLicenseResetRequestBody$Outbound,
-  UpdatePlanLicenseResetRequestBody
+export const UpdatePlanLicenseReset$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseReset$Outbound,
+  UpdatePlanLicenseReset
 > = z.pipe(
   z.object({
-    interval: UpdatePlanLicenseResetIntervalRequestBody$outboundSchema,
+    interval: UpdatePlanLicenseResetInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
@@ -3533,74 +3506,70 @@ export const UpdatePlanLicenseResetRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanLicenseResetRequestBodyToJSON(
-  updatePlanLicenseResetRequestBody: UpdatePlanLicenseResetRequestBody,
+export function updatePlanLicenseResetToJSON(
+  updatePlanLicenseReset: UpdatePlanLicenseReset,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseResetRequestBody$outboundSchema.parse(
-      updatePlanLicenseResetRequestBody,
-    ),
+    UpdatePlanLicenseReset$outboundSchema.parse(updatePlanLicenseReset),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody$Outbound = {
+export type UpdatePlanLicenseAddItemAdditionalCurrency$Outbound = {
   currency: string;
   amount: number;
 };
 
 /** @internal */
-export const UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody$outboundSchema:
+export const UpdatePlanLicenseAddItemAdditionalCurrency$outboundSchema:
   z.ZodMiniType<
-    UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody$Outbound,
-    UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody
+    UpdatePlanLicenseAddItemAdditionalCurrency$Outbound,
+    UpdatePlanLicenseAddItemAdditionalCurrency
   > = z.object({
     currency: z.string(),
     amount: z.number(),
   });
 
-export function updatePlanLicenseAddItemAdditionalCurrencyRequestBodyToJSON(
-  updatePlanLicenseAddItemAdditionalCurrencyRequestBody:
-    UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody,
+export function updatePlanLicenseAddItemAdditionalCurrencyToJSON(
+  updatePlanLicenseAddItemAdditionalCurrency:
+    UpdatePlanLicenseAddItemAdditionalCurrency,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody$outboundSchema.parse(
-      updatePlanLicenseAddItemAdditionalCurrencyRequestBody,
+    UpdatePlanLicenseAddItemAdditionalCurrency$outboundSchema.parse(
+      updatePlanLicenseAddItemAdditionalCurrency,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicensePriceToRequestBody$Outbound = number | string;
+export type UpdatePlanLicensePriceTo$Outbound = number | string;
 
 /** @internal */
-export const UpdatePlanLicensePriceToRequestBody$outboundSchema: z.ZodMiniType<
-  UpdatePlanLicensePriceToRequestBody$Outbound,
-  UpdatePlanLicensePriceToRequestBody
+export const UpdatePlanLicensePriceTo$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePriceTo$Outbound,
+  UpdatePlanLicensePriceTo
 > = smartUnion([z.number(), z.string()]);
 
-export function updatePlanLicensePriceToRequestBodyToJSON(
-  updatePlanLicensePriceToRequestBody: UpdatePlanLicensePriceToRequestBody,
+export function updatePlanLicensePriceToToJSON(
+  updatePlanLicensePriceTo: UpdatePlanLicensePriceTo,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicensePriceToRequestBody$outboundSchema.parse(
-      updatePlanLicensePriceToRequestBody,
-    ),
+    UpdatePlanLicensePriceTo$outboundSchema.parse(updatePlanLicensePriceTo),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseTierAdditionalCurrencyRequestBody$Outbound = {
+export type UpdatePlanLicenseTierAdditionalCurrency$Outbound = {
   currency: string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseTierAdditionalCurrencyRequestBody$outboundSchema:
+export const UpdatePlanLicenseTierAdditionalCurrency$outboundSchema:
   z.ZodMiniType<
-    UpdatePlanLicenseTierAdditionalCurrencyRequestBody$Outbound,
-    UpdatePlanLicenseTierAdditionalCurrencyRequestBody
+    UpdatePlanLicenseTierAdditionalCurrency$Outbound,
+    UpdatePlanLicenseTierAdditionalCurrency
   > = z.pipe(
     z.object({
       currency: z.string(),
@@ -3614,82 +3583,80 @@ export const UpdatePlanLicenseTierAdditionalCurrencyRequestBody$outboundSchema:
     }),
   );
 
-export function updatePlanLicenseTierAdditionalCurrencyRequestBodyToJSON(
-  updatePlanLicenseTierAdditionalCurrencyRequestBody:
-    UpdatePlanLicenseTierAdditionalCurrencyRequestBody,
+export function updatePlanLicenseTierAdditionalCurrencyToJSON(
+  updatePlanLicenseTierAdditionalCurrency:
+    UpdatePlanLicenseTierAdditionalCurrency,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseTierAdditionalCurrencyRequestBody$outboundSchema.parse(
-      updatePlanLicenseTierAdditionalCurrencyRequestBody,
+    UpdatePlanLicenseTierAdditionalCurrency$outboundSchema.parse(
+      updatePlanLicenseTierAdditionalCurrency,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicensePriceTierRequestBody$Outbound = {
+export type UpdatePlanLicensePriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
   additional_currencies?:
-    | Array<UpdatePlanLicenseTierAdditionalCurrencyRequestBody$Outbound>
+    | Array<UpdatePlanLicenseTierAdditionalCurrency$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicensePriceTierRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicensePriceTierRequestBody$Outbound,
-    UpdatePlanLicensePriceTierRequestBody
-  > = z.pipe(
-    z.object({
-      to: smartUnion([z.number(), z.string()]),
-      amount: z.optional(z.number()),
-      flatAmount: z.optional(z.number()),
-      additionalCurrencies: z.optional(z.array(z.lazy(() =>
-        UpdatePlanLicenseTierAdditionalCurrencyRequestBody$outboundSchema
-      ))),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        flatAmount: "flat_amount",
-        additionalCurrencies: "additional_currencies",
-      });
-    }),
-  );
+export const UpdatePlanLicensePriceTier$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePriceTier$Outbound,
+  UpdatePlanLicensePriceTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      UpdatePlanLicenseTierAdditionalCurrency$outboundSchema
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
+    });
+  }),
+);
 
-export function updatePlanLicensePriceTierRequestBodyToJSON(
-  updatePlanLicensePriceTierRequestBody: UpdatePlanLicensePriceTierRequestBody,
+export function updatePlanLicensePriceTierToJSON(
+  updatePlanLicensePriceTier: UpdatePlanLicensePriceTier,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicensePriceTierRequestBody$outboundSchema.parse(
-      updatePlanLicensePriceTierRequestBody,
-    ),
+    UpdatePlanLicensePriceTier$outboundSchema.parse(updatePlanLicensePriceTier),
   );
 }
 
 /** @internal */
-export const UpdatePlanLicenseTierBehaviorRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseTierBehaviorRequestBody> = z.enum(
-    UpdatePlanLicenseTierBehaviorRequestBody,
+export const UpdatePlanLicenseTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseTierBehavior
+> = z.enum(UpdatePlanLicenseTierBehavior);
+
+/** @internal */
+export const UpdatePlanLicenseAddItemPriceInterval$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanLicenseAddItemPriceInterval> = z.enum(
+    UpdatePlanLicenseAddItemPriceInterval,
   );
 
 /** @internal */
-export const UpdatePlanLicenseAddItemPriceIntervalRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseAddItemPriceIntervalRequestBody> = z
-    .enum(UpdatePlanLicenseAddItemPriceIntervalRequestBody);
+export const UpdatePlanLicenseAddItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanLicenseAddItemBillingMethod> = z.enum(
+    UpdatePlanLicenseAddItemBillingMethod,
+  );
 
 /** @internal */
-export const UpdatePlanLicenseAddItemBillingMethodRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseAddItemBillingMethodRequestBody> = z
-    .enum(UpdatePlanLicenseAddItemBillingMethodRequestBody);
-
-/** @internal */
-export type UpdatePlanLicensePriceRequestBody$Outbound = {
+export type UpdatePlanLicensePrice$Outbound = {
   amount?: number | undefined;
   additional_currencies?:
-    | Array<UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody$Outbound>
+    | Array<UpdatePlanLicenseAddItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<UpdatePlanLicensePriceTierRequestBody$Outbound> | undefined;
+  tiers?: Array<UpdatePlanLicensePriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -3699,26 +3666,23 @@ export type UpdatePlanLicensePriceRequestBody$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanLicensePriceRequestBody$outboundSchema: z.ZodMiniType<
-  UpdatePlanLicensePriceRequestBody$Outbound,
-  UpdatePlanLicensePriceRequestBody
+export const UpdatePlanLicensePrice$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePrice$Outbound,
+  UpdatePlanLicensePrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
     additionalCurrencies: z.optional(z.array(z.lazy(() =>
-      UpdatePlanLicenseAddItemAdditionalCurrencyRequestBody$outboundSchema
+      UpdatePlanLicenseAddItemAdditionalCurrency$outboundSchema
     ))),
     tiers: z.optional(z.array(z.lazy(() =>
-      UpdatePlanLicensePriceTierRequestBody$outboundSchema
+      UpdatePlanLicensePriceTier$outboundSchema
     ))),
-    tierBehavior: z.optional(
-      UpdatePlanLicenseTierBehaviorRequestBody$outboundSchema,
-    ),
-    interval: UpdatePlanLicenseAddItemPriceIntervalRequestBody$outboundSchema,
+    tierBehavior: z.optional(UpdatePlanLicenseTierBehavior$outboundSchema),
+    interval: UpdatePlanLicenseAddItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod:
-      UpdatePlanLicenseAddItemBillingMethodRequestBody$outboundSchema,
+    billingMethod: UpdatePlanLicenseAddItemBillingMethod$outboundSchema,
     maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
@@ -3733,70 +3697,62 @@ export const UpdatePlanLicensePriceRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanLicensePriceRequestBodyToJSON(
-  updatePlanLicensePriceRequestBody: UpdatePlanLicensePriceRequestBody,
+export function updatePlanLicensePriceToJSON(
+  updatePlanLicensePrice: UpdatePlanLicensePrice,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicensePriceRequestBody$outboundSchema.parse(
-      updatePlanLicensePriceRequestBody,
-    ),
+    UpdatePlanLicensePrice$outboundSchema.parse(updatePlanLicensePrice),
   );
 }
 
 /** @internal */
-export const UpdatePlanLicenseOnIncreaseRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseOnIncreaseRequestBody> = z.enum(
-    UpdatePlanLicenseOnIncreaseRequestBody,
-  );
+export const UpdatePlanLicenseOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseOnIncrease
+> = z.enum(UpdatePlanLicenseOnIncrease);
 
 /** @internal */
-export const UpdatePlanLicenseOnDecreaseRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseOnDecreaseRequestBody> = z.enum(
-    UpdatePlanLicenseOnDecreaseRequestBody,
-  );
+export const UpdatePlanLicenseOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseOnDecrease
+> = z.enum(UpdatePlanLicenseOnDecrease);
 
 /** @internal */
-export type UpdatePlanLicenseProrationRequestBody$Outbound = {
+export type UpdatePlanLicenseProration$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const UpdatePlanLicenseProrationRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseProrationRequestBody$Outbound,
-    UpdatePlanLicenseProrationRequestBody
-  > = z.pipe(
-    z.object({
-      onIncrease: UpdatePlanLicenseOnIncreaseRequestBody$outboundSchema,
-      onDecrease: UpdatePlanLicenseOnDecreaseRequestBody$outboundSchema,
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        onIncrease: "on_increase",
-        onDecrease: "on_decrease",
-      });
-    }),
-  );
+export const UpdatePlanLicenseProration$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseProration$Outbound,
+  UpdatePlanLicenseProration
+> = z.pipe(
+  z.object({
+    onIncrease: UpdatePlanLicenseOnIncrease$outboundSchema,
+    onDecrease: UpdatePlanLicenseOnDecrease$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      onIncrease: "on_increase",
+      onDecrease: "on_decrease",
+    });
+  }),
+);
 
-export function updatePlanLicenseProrationRequestBodyToJSON(
-  updatePlanLicenseProrationRequestBody: UpdatePlanLicenseProrationRequestBody,
+export function updatePlanLicenseProrationToJSON(
+  updatePlanLicenseProration: UpdatePlanLicenseProration,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseProrationRequestBody$outboundSchema.parse(
-      updatePlanLicenseProrationRequestBody,
-    ),
+    UpdatePlanLicenseProration$outboundSchema.parse(updatePlanLicenseProration),
   );
 }
 
 /** @internal */
-export const UpdatePlanLicenseExpiryDurationTypeRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseExpiryDurationTypeRequestBody> = z.enum(
-    UpdatePlanLicenseExpiryDurationTypeRequestBody,
-  );
+export const UpdatePlanLicenseExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseExpiryDurationType
+> = z.enum(UpdatePlanLicenseExpiryDurationType);
 
 /** @internal */
-export type UpdatePlanLicenseRolloverRequestBody$Outbound = {
+export type UpdatePlanLicenseRollover$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -3804,15 +3760,14 @@ export type UpdatePlanLicenseRolloverRequestBody$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanLicenseRolloverRequestBody$outboundSchema: z.ZodMiniType<
-  UpdatePlanLicenseRolloverRequestBody$Outbound,
-  UpdatePlanLicenseRolloverRequestBody
+export const UpdatePlanLicenseRollover$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseRollover$Outbound,
+  UpdatePlanLicenseRollover
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType:
-      UpdatePlanLicenseExpiryDurationTypeRequestBody$outboundSchema,
+    expiryDurationType: UpdatePlanLicenseExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -3824,43 +3779,39 @@ export const UpdatePlanLicenseRolloverRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanLicenseRolloverRequestBodyToJSON(
-  updatePlanLicenseRolloverRequestBody: UpdatePlanLicenseRolloverRequestBody,
+export function updatePlanLicenseRolloverToJSON(
+  updatePlanLicenseRollover: UpdatePlanLicenseRollover,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseRolloverRequestBody$outboundSchema.parse(
-      updatePlanLicenseRolloverRequestBody,
-    ),
+    UpdatePlanLicenseRollover$outboundSchema.parse(updatePlanLicenseRollover),
   );
 }
 
 /** @internal */
-export const UpdatePlanLicenseDurationRequestBody$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanLicenseDurationRequestBody
-> = z.enum(UpdatePlanLicenseDurationRequestBody);
+export const UpdatePlanLicenseDuration$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseDuration
+> = z.enum(UpdatePlanLicenseDuration);
 
 /** @internal */
-export type UpdatePlanLicenseExpiryRequestBody$Outbound = {
+export type UpdatePlanLicenseExpiry$Outbound = {
   duration: string;
   length: number;
 };
 
 /** @internal */
-export const UpdatePlanLicenseExpiryRequestBody$outboundSchema: z.ZodMiniType<
-  UpdatePlanLicenseExpiryRequestBody$Outbound,
-  UpdatePlanLicenseExpiryRequestBody
+export const UpdatePlanLicenseExpiry$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseExpiry$Outbound,
+  UpdatePlanLicenseExpiry
 > = z.object({
-  duration: UpdatePlanLicenseDurationRequestBody$outboundSchema,
+  duration: UpdatePlanLicenseDuration$outboundSchema,
   length: z.number(),
 });
 
-export function updatePlanLicenseExpiryRequestBodyToJSON(
-  updatePlanLicenseExpiryRequestBody: UpdatePlanLicenseExpiryRequestBody,
+export function updatePlanLicenseExpiryToJSON(
+  updatePlanLicenseExpiry: UpdatePlanLicenseExpiry,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseExpiryRequestBody$outboundSchema.parse(
-      updatePlanLicenseExpiryRequestBody,
-    ),
+    UpdatePlanLicenseExpiry$outboundSchema.parse(updatePlanLicenseExpiry),
   );
 }
 
@@ -3887,40 +3838,38 @@ export function updatePlanDimensionsLicenseMatch4ToJSON(
 }
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseRequestBody4$Outbound = {
+export type UpdatePlanDimensionsLicense4$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseRequestBody4$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseRequestBody4$Outbound,
-    UpdatePlanDimensionsLicenseRequestBody4
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
+export const UpdatePlanDimensionsLicense4$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicense4$Outbound,
+  UpdatePlanDimensionsLicense4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
 
-export function updatePlanDimensionsLicenseRequestBody4ToJSON(
-  updatePlanDimensionsLicenseRequestBody4:
-    UpdatePlanDimensionsLicenseRequestBody4,
+export function updatePlanDimensionsLicense4ToJSON(
+  updatePlanDimensionsLicense4: UpdatePlanDimensionsLicense4,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseRequestBody4$outboundSchema.parse(
-      updatePlanDimensionsLicenseRequestBody4,
+    UpdatePlanDimensionsLicense4$outboundSchema.parse(
+      updatePlanDimensionsLicense4,
     ),
   );
 }
@@ -3948,141 +3897,125 @@ export function updatePlanDimensionsLicenseMatch3ToJSON(
 }
 
 /** @internal */
-export const UpdatePlanDimensionsToLicenseRequestBodyEnum2$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanDimensionsToLicenseRequestBodyEnum2> = z.enum(
-    UpdatePlanDimensionsToLicenseRequestBodyEnum2,
-  );
+export const UpdatePlanDimensionsToLicenseEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanDimensionsToLicenseEnum2
+> = z.enum(UpdatePlanDimensionsToLicenseEnum2);
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseToRequestBodyUnion2$Outbound =
-  | number
-  | string;
+export type UpdatePlanDimensionsLicenseToUnion2$Outbound = number | string;
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseToRequestBodyUnion2$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseToRequestBodyUnion2$Outbound,
-    UpdatePlanDimensionsLicenseToRequestBodyUnion2
-  > = smartUnion([
-    z.number(),
-    UpdatePlanDimensionsToLicenseRequestBodyEnum2$outboundSchema,
-  ]);
+export const UpdatePlanDimensionsLicenseToUnion2$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicenseToUnion2$Outbound,
+  UpdatePlanDimensionsLicenseToUnion2
+> = smartUnion([z.number(), UpdatePlanDimensionsToLicenseEnum2$outboundSchema]);
 
-export function updatePlanDimensionsLicenseToRequestBodyUnion2ToJSON(
-  updatePlanDimensionsLicenseToRequestBodyUnion2:
-    UpdatePlanDimensionsLicenseToRequestBodyUnion2,
+export function updatePlanDimensionsLicenseToUnion2ToJSON(
+  updatePlanDimensionsLicenseToUnion2: UpdatePlanDimensionsLicenseToUnion2,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseToRequestBodyUnion2$outboundSchema.parse(
-      updatePlanDimensionsLicenseToRequestBodyUnion2,
+    UpdatePlanDimensionsLicenseToUnion2$outboundSchema.parse(
+      updatePlanDimensionsLicenseToUnion2,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseTierRequestBody2$Outbound = {
+export type UpdatePlanDimensionsLicenseTier2$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseTierRequestBody2$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseTierRequestBody2$Outbound,
-    UpdatePlanDimensionsLicenseTierRequestBody2
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        UpdatePlanDimensionsToLicenseRequestBodyEnum2$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
+export const UpdatePlanDimensionsLicenseTier2$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicenseTier2$Outbound,
+  UpdatePlanDimensionsLicenseTier2
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      UpdatePlanDimensionsToLicenseEnum2$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
 
-export function updatePlanDimensionsLicenseTierRequestBody2ToJSON(
-  updatePlanDimensionsLicenseTierRequestBody2:
-    UpdatePlanDimensionsLicenseTierRequestBody2,
+export function updatePlanDimensionsLicenseTier2ToJSON(
+  updatePlanDimensionsLicenseTier2: UpdatePlanDimensionsLicenseTier2,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseTierRequestBody2$outboundSchema.parse(
-      updatePlanDimensionsLicenseTierRequestBody2,
+    UpdatePlanDimensionsLicenseTier2$outboundSchema.parse(
+      updatePlanDimensionsLicenseTier2,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseRequestBody3$Outbound = {
+export type UpdatePlanDimensionsLicense3$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
-  tiers: Array<UpdatePlanDimensionsLicenseTierRequestBody2$Outbound>;
+  tiers: Array<UpdatePlanDimensionsLicenseTier2$Outbound>;
 };
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseRequestBody3$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseRequestBody3$Outbound,
-    UpdatePlanDimensionsLicenseRequestBody3
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      tierBehavior: z.literal("graduated"),
-      tiers: z.array(
-        z.lazy(() =>
-          UpdatePlanDimensionsLicenseTierRequestBody2$outboundSchema
-        ),
-      ),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        tierBehavior: "tier_behavior",
-      });
-    }),
-  );
+export const UpdatePlanDimensionsLicense3$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicense3$Outbound,
+  UpdatePlanDimensionsLicense3
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => UpdatePlanDimensionsLicenseTier2$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
 
-export function updatePlanDimensionsLicenseRequestBody3ToJSON(
-  updatePlanDimensionsLicenseRequestBody3:
-    UpdatePlanDimensionsLicenseRequestBody3,
+export function updatePlanDimensionsLicense3ToJSON(
+  updatePlanDimensionsLicense3: UpdatePlanDimensionsLicense3,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseRequestBody3$outboundSchema.parse(
-      updatePlanDimensionsLicenseRequestBody3,
+    UpdatePlanDimensionsLicense3$outboundSchema.parse(
+      updatePlanDimensionsLicense3,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseDimensionsRequestBodyUnion2$Outbound =
-  | UpdatePlanDimensionsLicenseRequestBody3$Outbound
-  | UpdatePlanDimensionsLicenseRequestBody4$Outbound;
+export type UpdatePlanLicenseDimensionsUnion2$Outbound =
+  | UpdatePlanDimensionsLicense3$Outbound
+  | UpdatePlanDimensionsLicense4$Outbound;
 
 /** @internal */
-export const UpdatePlanLicenseDimensionsRequestBodyUnion2$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseDimensionsRequestBodyUnion2$Outbound,
-    UpdatePlanLicenseDimensionsRequestBodyUnion2
-  > = smartUnion([
-    z.lazy(() => UpdatePlanDimensionsLicenseRequestBody3$outboundSchema),
-    z.lazy(() => UpdatePlanDimensionsLicenseRequestBody4$outboundSchema),
-  ]);
+export const UpdatePlanLicenseDimensionsUnion2$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseDimensionsUnion2$Outbound,
+  UpdatePlanLicenseDimensionsUnion2
+> = smartUnion([
+  z.lazy(() => UpdatePlanDimensionsLicense3$outboundSchema),
+  z.lazy(() => UpdatePlanDimensionsLicense4$outboundSchema),
+]);
 
-export function updatePlanLicenseDimensionsRequestBodyUnion2ToJSON(
-  updatePlanLicenseDimensionsRequestBodyUnion2:
-    UpdatePlanLicenseDimensionsRequestBodyUnion2,
+export function updatePlanLicenseDimensionsUnion2ToJSON(
+  updatePlanLicenseDimensionsUnion2: UpdatePlanLicenseDimensionsUnion2,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseDimensionsRequestBodyUnion2$outboundSchema.parse(
-      updatePlanLicenseDimensionsRequestBodyUnion2,
+    UpdatePlanLicenseDimensionsUnion2$outboundSchema.parse(
+      updatePlanLicenseDimensionsUnion2,
     ),
   );
 }
@@ -4110,90 +4043,86 @@ export function updatePlanLicenseMultipliersMatch2ToJSON(
 }
 
 /** @internal */
-export type UpdatePlanLicenseMultipliersRequestBody2$Outbound = {
+export type UpdatePlanLicenseMultipliers2$Outbound = {
   match: { [k: string]: string | number | boolean };
   factor?: number | undefined;
   add?: number | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseMultipliersRequestBody2$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseMultipliersRequestBody2$Outbound,
-    UpdatePlanLicenseMultipliersRequestBody2
-  > = z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    factor: z.optional(z.number()),
-    add: z.optional(z.number()),
-  });
+export const UpdatePlanLicenseMultipliers2$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseMultipliers2$Outbound,
+  UpdatePlanLicenseMultipliers2
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
 
-export function updatePlanLicenseMultipliersRequestBody2ToJSON(
-  updatePlanLicenseMultipliersRequestBody2:
-    UpdatePlanLicenseMultipliersRequestBody2,
+export function updatePlanLicenseMultipliers2ToJSON(
+  updatePlanLicenseMultipliers2: UpdatePlanLicenseMultipliers2,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseMultipliersRequestBody2$outboundSchema.parse(
-      updatePlanLicenseMultipliersRequestBody2,
+    UpdatePlanLicenseMultipliers2$outboundSchema.parse(
+      updatePlanLicenseMultipliers2,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanCreditSchemaLicenseRequestBody2$Outbound = {
+export type UpdatePlanCreditSchemaLicense2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
   dimensions?: {
     [k: string]:
-      | UpdatePlanDimensionsLicenseRequestBody3$Outbound
-      | UpdatePlanDimensionsLicenseRequestBody4$Outbound;
+      | UpdatePlanDimensionsLicense3$Outbound
+      | UpdatePlanDimensionsLicense4$Outbound;
   } | undefined;
-  multipliers?: {
-    [k: string]: UpdatePlanLicenseMultipliersRequestBody2$Outbound;
-  } | undefined;
+  multipliers?:
+    | { [k: string]: UpdatePlanLicenseMultipliers2$Outbound }
+    | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdatePlanCreditSchemaLicenseRequestBody2$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanCreditSchemaLicenseRequestBody2$Outbound,
-    UpdatePlanCreditSchemaLicenseRequestBody2
-  > = z.pipe(
-    z.object({
-      meteredFeatureId: z.string(),
-      billingUnits: z.optional(z.number()),
-      dimensions: z.optional(z.record(
-        z.string(),
-        smartUnion([
-          z.lazy(() => UpdatePlanDimensionsLicenseRequestBody3$outboundSchema),
-          z.lazy(() => UpdatePlanDimensionsLicenseRequestBody4$outboundSchema),
-        ]),
-      )),
-      multipliers: z.optional(z.record(
-        z.string(),
-        z.lazy(() => UpdatePlanLicenseMultipliersRequestBody2$outboundSchema),
-      )),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        meteredFeatureId: "metered_feature_id",
-        billingUnits: "billing_units",
-        creditCost: "credit_cost",
-      });
-    }),
-  );
+export const UpdatePlanCreditSchemaLicense2$outboundSchema: z.ZodMiniType<
+  UpdatePlanCreditSchemaLicense2$Outbound,
+  UpdatePlanCreditSchemaLicense2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdatePlanDimensionsLicense3$outboundSchema),
+        z.lazy(() => UpdatePlanDimensionsLicense4$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdatePlanLicenseMultipliers2$outboundSchema),
+    )),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
 
-export function updatePlanCreditSchemaLicenseRequestBody2ToJSON(
-  updatePlanCreditSchemaLicenseRequestBody2:
-    UpdatePlanCreditSchemaLicenseRequestBody2,
+export function updatePlanCreditSchemaLicense2ToJSON(
+  updatePlanCreditSchemaLicense2: UpdatePlanCreditSchemaLicense2,
 ): string {
   return JSON.stringify(
-    UpdatePlanCreditSchemaLicenseRequestBody2$outboundSchema.parse(
-      updatePlanCreditSchemaLicenseRequestBody2,
+    UpdatePlanCreditSchemaLicense2$outboundSchema.parse(
+      updatePlanCreditSchemaLicense2,
     ),
   );
 }
@@ -4221,40 +4150,38 @@ export function updatePlanDimensionsLicenseMatch2ToJSON(
 }
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseRequestBody2$Outbound = {
+export type UpdatePlanDimensionsLicense2$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseRequestBody2$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseRequestBody2$Outbound,
-    UpdatePlanDimensionsLicenseRequestBody2
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
+export const UpdatePlanDimensionsLicense2$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicense2$Outbound,
+  UpdatePlanDimensionsLicense2
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
 
-export function updatePlanDimensionsLicenseRequestBody2ToJSON(
-  updatePlanDimensionsLicenseRequestBody2:
-    UpdatePlanDimensionsLicenseRequestBody2,
+export function updatePlanDimensionsLicense2ToJSON(
+  updatePlanDimensionsLicense2: UpdatePlanDimensionsLicense2,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseRequestBody2$outboundSchema.parse(
-      updatePlanDimensionsLicenseRequestBody2,
+    UpdatePlanDimensionsLicense2$outboundSchema.parse(
+      updatePlanDimensionsLicense2,
     ),
   );
 }
@@ -4282,141 +4209,125 @@ export function updatePlanDimensionsLicenseMatch1ToJSON(
 }
 
 /** @internal */
-export const UpdatePlanDimensionsToLicenseRequestBodyEnum1$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanDimensionsToLicenseRequestBodyEnum1> = z.enum(
-    UpdatePlanDimensionsToLicenseRequestBodyEnum1,
-  );
+export const UpdatePlanDimensionsToLicenseEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanDimensionsToLicenseEnum1
+> = z.enum(UpdatePlanDimensionsToLicenseEnum1);
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseToRequestBodyUnion1$Outbound =
-  | number
-  | string;
+export type UpdatePlanDimensionsLicenseToUnion1$Outbound = number | string;
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseToRequestBodyUnion1$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseToRequestBodyUnion1$Outbound,
-    UpdatePlanDimensionsLicenseToRequestBodyUnion1
-  > = smartUnion([
-    z.number(),
-    UpdatePlanDimensionsToLicenseRequestBodyEnum1$outboundSchema,
-  ]);
+export const UpdatePlanDimensionsLicenseToUnion1$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicenseToUnion1$Outbound,
+  UpdatePlanDimensionsLicenseToUnion1
+> = smartUnion([z.number(), UpdatePlanDimensionsToLicenseEnum1$outboundSchema]);
 
-export function updatePlanDimensionsLicenseToRequestBodyUnion1ToJSON(
-  updatePlanDimensionsLicenseToRequestBodyUnion1:
-    UpdatePlanDimensionsLicenseToRequestBodyUnion1,
+export function updatePlanDimensionsLicenseToUnion1ToJSON(
+  updatePlanDimensionsLicenseToUnion1: UpdatePlanDimensionsLicenseToUnion1,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseToRequestBodyUnion1$outboundSchema.parse(
-      updatePlanDimensionsLicenseToRequestBodyUnion1,
+    UpdatePlanDimensionsLicenseToUnion1$outboundSchema.parse(
+      updatePlanDimensionsLicenseToUnion1,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseTierRequestBody1$Outbound = {
+export type UpdatePlanDimensionsLicenseTier1$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseTierRequestBody1$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseTierRequestBody1$Outbound,
-    UpdatePlanDimensionsLicenseTierRequestBody1
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        UpdatePlanDimensionsToLicenseRequestBodyEnum1$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
+export const UpdatePlanDimensionsLicenseTier1$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicenseTier1$Outbound,
+  UpdatePlanDimensionsLicenseTier1
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      UpdatePlanDimensionsToLicenseEnum1$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
 
-export function updatePlanDimensionsLicenseTierRequestBody1ToJSON(
-  updatePlanDimensionsLicenseTierRequestBody1:
-    UpdatePlanDimensionsLicenseTierRequestBody1,
+export function updatePlanDimensionsLicenseTier1ToJSON(
+  updatePlanDimensionsLicenseTier1: UpdatePlanDimensionsLicenseTier1,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseTierRequestBody1$outboundSchema.parse(
-      updatePlanDimensionsLicenseTierRequestBody1,
+    UpdatePlanDimensionsLicenseTier1$outboundSchema.parse(
+      updatePlanDimensionsLicenseTier1,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanDimensionsLicenseRequestBody1$Outbound = {
+export type UpdatePlanDimensionsLicense1$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
-  tiers: Array<UpdatePlanDimensionsLicenseTierRequestBody1$Outbound>;
+  tiers: Array<UpdatePlanDimensionsLicenseTier1$Outbound>;
 };
 
 /** @internal */
-export const UpdatePlanDimensionsLicenseRequestBody1$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanDimensionsLicenseRequestBody1$Outbound,
-    UpdatePlanDimensionsLicenseRequestBody1
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      tierBehavior: z.literal("graduated"),
-      tiers: z.array(
-        z.lazy(() =>
-          UpdatePlanDimensionsLicenseTierRequestBody1$outboundSchema
-        ),
-      ),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        tierBehavior: "tier_behavior",
-      });
-    }),
-  );
+export const UpdatePlanDimensionsLicense1$outboundSchema: z.ZodMiniType<
+  UpdatePlanDimensionsLicense1$Outbound,
+  UpdatePlanDimensionsLicense1
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => UpdatePlanDimensionsLicenseTier1$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
 
-export function updatePlanDimensionsLicenseRequestBody1ToJSON(
-  updatePlanDimensionsLicenseRequestBody1:
-    UpdatePlanDimensionsLicenseRequestBody1,
+export function updatePlanDimensionsLicense1ToJSON(
+  updatePlanDimensionsLicense1: UpdatePlanDimensionsLicense1,
 ): string {
   return JSON.stringify(
-    UpdatePlanDimensionsLicenseRequestBody1$outboundSchema.parse(
-      updatePlanDimensionsLicenseRequestBody1,
+    UpdatePlanDimensionsLicense1$outboundSchema.parse(
+      updatePlanDimensionsLicense1,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseDimensionsRequestBodyUnion1$Outbound =
-  | UpdatePlanDimensionsLicenseRequestBody1$Outbound
-  | UpdatePlanDimensionsLicenseRequestBody2$Outbound;
+export type UpdatePlanLicenseDimensionsUnion1$Outbound =
+  | UpdatePlanDimensionsLicense1$Outbound
+  | UpdatePlanDimensionsLicense2$Outbound;
 
 /** @internal */
-export const UpdatePlanLicenseDimensionsRequestBodyUnion1$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseDimensionsRequestBodyUnion1$Outbound,
-    UpdatePlanLicenseDimensionsRequestBodyUnion1
-  > = smartUnion([
-    z.lazy(() => UpdatePlanDimensionsLicenseRequestBody1$outboundSchema),
-    z.lazy(() => UpdatePlanDimensionsLicenseRequestBody2$outboundSchema),
-  ]);
+export const UpdatePlanLicenseDimensionsUnion1$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseDimensionsUnion1$Outbound,
+  UpdatePlanLicenseDimensionsUnion1
+> = smartUnion([
+  z.lazy(() => UpdatePlanDimensionsLicense1$outboundSchema),
+  z.lazy(() => UpdatePlanDimensionsLicense2$outboundSchema),
+]);
 
-export function updatePlanLicenseDimensionsRequestBodyUnion1ToJSON(
-  updatePlanLicenseDimensionsRequestBodyUnion1:
-    UpdatePlanLicenseDimensionsRequestBodyUnion1,
+export function updatePlanLicenseDimensionsUnion1ToJSON(
+  updatePlanLicenseDimensionsUnion1: UpdatePlanLicenseDimensionsUnion1,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseDimensionsRequestBodyUnion1$outboundSchema.parse(
-      updatePlanLicenseDimensionsRequestBodyUnion1,
+    UpdatePlanLicenseDimensionsUnion1$outboundSchema.parse(
+      updatePlanLicenseDimensionsUnion1,
     ),
   );
 }
@@ -4444,281 +4355,261 @@ export function updatePlanLicenseMultipliersMatch1ToJSON(
 }
 
 /** @internal */
-export type UpdatePlanLicenseMultipliersRequestBody1$Outbound = {
+export type UpdatePlanLicenseMultipliers1$Outbound = {
   match: { [k: string]: string | number | boolean };
   factor?: number | undefined;
   add?: number | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseMultipliersRequestBody1$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseMultipliersRequestBody1$Outbound,
-    UpdatePlanLicenseMultipliersRequestBody1
-  > = z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    factor: z.optional(z.number()),
-    add: z.optional(z.number()),
-  });
+export const UpdatePlanLicenseMultipliers1$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseMultipliers1$Outbound,
+  UpdatePlanLicenseMultipliers1
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
 
-export function updatePlanLicenseMultipliersRequestBody1ToJSON(
-  updatePlanLicenseMultipliersRequestBody1:
-    UpdatePlanLicenseMultipliersRequestBody1,
+export function updatePlanLicenseMultipliers1ToJSON(
+  updatePlanLicenseMultipliers1: UpdatePlanLicenseMultipliers1,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseMultipliersRequestBody1$outboundSchema.parse(
-      updatePlanLicenseMultipliersRequestBody1,
+    UpdatePlanLicenseMultipliers1$outboundSchema.parse(
+      updatePlanLicenseMultipliers1,
     ),
   );
 }
 
 /** @internal */
-export const UpdatePlanToLicenseRequestBodyEnum$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanToLicenseRequestBodyEnum
-> = z.enum(UpdatePlanToLicenseRequestBodyEnum);
+export const UpdatePlanToLicenseEnum$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanToLicenseEnum
+> = z.enum(UpdatePlanToLicenseEnum);
 
 /** @internal */
-export type UpdatePlanLicenseFeatureOverrideToRequestBodyUnion$Outbound =
-  | number
-  | string;
+export type UpdatePlanLicenseFeatureOverrideToUnion$Outbound = number | string;
 
 /** @internal */
-export const UpdatePlanLicenseFeatureOverrideToRequestBodyUnion$outboundSchema:
+export const UpdatePlanLicenseFeatureOverrideToUnion$outboundSchema:
   z.ZodMiniType<
-    UpdatePlanLicenseFeatureOverrideToRequestBodyUnion$Outbound,
-    UpdatePlanLicenseFeatureOverrideToRequestBodyUnion
-  > = smartUnion([
-    z.number(),
-    UpdatePlanToLicenseRequestBodyEnum$outboundSchema,
-  ]);
+    UpdatePlanLicenseFeatureOverrideToUnion$Outbound,
+    UpdatePlanLicenseFeatureOverrideToUnion
+  > = smartUnion([z.number(), UpdatePlanToLicenseEnum$outboundSchema]);
 
-export function updatePlanLicenseFeatureOverrideToRequestBodyUnionToJSON(
-  updatePlanLicenseFeatureOverrideToRequestBodyUnion:
-    UpdatePlanLicenseFeatureOverrideToRequestBodyUnion,
+export function updatePlanLicenseFeatureOverrideToUnionToJSON(
+  updatePlanLicenseFeatureOverrideToUnion:
+    UpdatePlanLicenseFeatureOverrideToUnion,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseFeatureOverrideToRequestBodyUnion$outboundSchema.parse(
-      updatePlanLicenseFeatureOverrideToRequestBodyUnion,
+    UpdatePlanLicenseFeatureOverrideToUnion$outboundSchema.parse(
+      updatePlanLicenseFeatureOverrideToUnion,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseFeatureOverrideTierRequestBody$Outbound = {
+export type UpdatePlanLicenseFeatureOverrideTier$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdatePlanLicenseFeatureOverrideTierRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseFeatureOverrideTierRequestBody$Outbound,
-    UpdatePlanLicenseFeatureOverrideTierRequestBody
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        UpdatePlanToLicenseRequestBodyEnum$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
+export const UpdatePlanLicenseFeatureOverrideTier$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseFeatureOverrideTier$Outbound,
+  UpdatePlanLicenseFeatureOverrideTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), UpdatePlanToLicenseEnum$outboundSchema]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
 
-export function updatePlanLicenseFeatureOverrideTierRequestBodyToJSON(
-  updatePlanLicenseFeatureOverrideTierRequestBody:
-    UpdatePlanLicenseFeatureOverrideTierRequestBody,
+export function updatePlanLicenseFeatureOverrideTierToJSON(
+  updatePlanLicenseFeatureOverrideTier: UpdatePlanLicenseFeatureOverrideTier,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseFeatureOverrideTierRequestBody$outboundSchema.parse(
-      updatePlanLicenseFeatureOverrideTierRequestBody,
+    UpdatePlanLicenseFeatureOverrideTier$outboundSchema.parse(
+      updatePlanLicenseFeatureOverrideTier,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanCreditSchemaLicenseRequestBody1$Outbound = {
+export type UpdatePlanCreditSchemaLicense1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
   dimensions?: {
     [k: string]:
-      | UpdatePlanDimensionsLicenseRequestBody1$Outbound
-      | UpdatePlanDimensionsLicenseRequestBody2$Outbound;
+      | UpdatePlanDimensionsLicense1$Outbound
+      | UpdatePlanDimensionsLicense2$Outbound;
   } | undefined;
-  multipliers?: {
-    [k: string]: UpdatePlanLicenseMultipliersRequestBody1$Outbound;
-  } | undefined;
+  multipliers?:
+    | { [k: string]: UpdatePlanLicenseMultipliers1$Outbound }
+    | undefined;
   tier_behavior: "graduated";
-  tiers: Array<UpdatePlanLicenseFeatureOverrideTierRequestBody$Outbound>;
+  tiers: Array<UpdatePlanLicenseFeatureOverrideTier$Outbound>;
 };
 
 /** @internal */
-export const UpdatePlanCreditSchemaLicenseRequestBody1$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanCreditSchemaLicenseRequestBody1$Outbound,
-    UpdatePlanCreditSchemaLicenseRequestBody1
-  > = z.pipe(
-    z.object({
-      meteredFeatureId: z.string(),
-      billingUnits: z.optional(z.number()),
-      dimensions: z.optional(z.record(
-        z.string(),
-        smartUnion([
-          z.lazy(() => UpdatePlanDimensionsLicenseRequestBody1$outboundSchema),
-          z.lazy(() => UpdatePlanDimensionsLicenseRequestBody2$outboundSchema),
-        ]),
-      )),
-      multipliers: z.optional(z.record(
-        z.string(),
-        z.lazy(() => UpdatePlanLicenseMultipliersRequestBody1$outboundSchema),
-      )),
-      tierBehavior: z.literal("graduated"),
-      tiers: z.array(z.lazy(() =>
-        UpdatePlanLicenseFeatureOverrideTierRequestBody$outboundSchema
-      )),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        meteredFeatureId: "metered_feature_id",
-        billingUnits: "billing_units",
-        tierBehavior: "tier_behavior",
-      });
-    }),
-  );
+export const UpdatePlanCreditSchemaLicense1$outboundSchema: z.ZodMiniType<
+  UpdatePlanCreditSchemaLicense1$Outbound,
+  UpdatePlanCreditSchemaLicense1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdatePlanDimensionsLicense1$outboundSchema),
+        z.lazy(() => UpdatePlanDimensionsLicense2$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdatePlanLicenseMultipliers1$outboundSchema),
+    )),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.lazy(() =>
+      UpdatePlanLicenseFeatureOverrideTier$outboundSchema
+    )),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
 
-export function updatePlanCreditSchemaLicenseRequestBody1ToJSON(
-  updatePlanCreditSchemaLicenseRequestBody1:
-    UpdatePlanCreditSchemaLicenseRequestBody1,
+export function updatePlanCreditSchemaLicense1ToJSON(
+  updatePlanCreditSchemaLicense1: UpdatePlanCreditSchemaLicense1,
 ): string {
   return JSON.stringify(
-    UpdatePlanCreditSchemaLicenseRequestBody1$outboundSchema.parse(
-      updatePlanCreditSchemaLicenseRequestBody1,
+    UpdatePlanCreditSchemaLicense1$outboundSchema.parse(
+      updatePlanCreditSchemaLicense1,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseCreditSchemaRequestBodyUnion$Outbound =
-  | UpdatePlanCreditSchemaLicenseRequestBody1$Outbound
-  | UpdatePlanCreditSchemaLicenseRequestBody2$Outbound;
+export type UpdatePlanLicenseCreditSchemaUnion$Outbound =
+  | UpdatePlanCreditSchemaLicense1$Outbound
+  | UpdatePlanCreditSchemaLicense2$Outbound;
 
 /** @internal */
-export const UpdatePlanLicenseCreditSchemaRequestBodyUnion$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseCreditSchemaRequestBodyUnion$Outbound,
-    UpdatePlanLicenseCreditSchemaRequestBodyUnion
-  > = smartUnion([
-    z.lazy(() => UpdatePlanCreditSchemaLicenseRequestBody1$outboundSchema),
-    z.lazy(() => UpdatePlanCreditSchemaLicenseRequestBody2$outboundSchema),
-  ]);
+export const UpdatePlanLicenseCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseCreditSchemaUnion$Outbound,
+  UpdatePlanLicenseCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => UpdatePlanCreditSchemaLicense1$outboundSchema),
+  z.lazy(() => UpdatePlanCreditSchemaLicense2$outboundSchema),
+]);
 
-export function updatePlanLicenseCreditSchemaRequestBodyUnionToJSON(
-  updatePlanLicenseCreditSchemaRequestBodyUnion:
-    UpdatePlanLicenseCreditSchemaRequestBodyUnion,
+export function updatePlanLicenseCreditSchemaUnionToJSON(
+  updatePlanLicenseCreditSchemaUnion: UpdatePlanLicenseCreditSchemaUnion,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseCreditSchemaRequestBodyUnion$outboundSchema.parse(
-      updatePlanLicenseCreditSchemaRequestBodyUnion,
+    UpdatePlanLicenseCreditSchemaUnion$outboundSchema.parse(
+      updatePlanLicenseCreditSchemaUnion,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseProviderMarkupsRequestBody$Outbound = {
+export type UpdatePlanLicenseProviderMarkups$Outbound = {
   markup: number;
 };
 
 /** @internal */
-export const UpdatePlanLicenseProviderMarkupsRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseProviderMarkupsRequestBody$Outbound,
-    UpdatePlanLicenseProviderMarkupsRequestBody
-  > = z.object({
-    markup: z.number(),
-  });
+export const UpdatePlanLicenseProviderMarkups$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseProviderMarkups$Outbound,
+  UpdatePlanLicenseProviderMarkups
+> = z.object({
+  markup: z.number(),
+});
 
-export function updatePlanLicenseProviderMarkupsRequestBodyToJSON(
-  updatePlanLicenseProviderMarkupsRequestBody:
-    UpdatePlanLicenseProviderMarkupsRequestBody,
+export function updatePlanLicenseProviderMarkupsToJSON(
+  updatePlanLicenseProviderMarkups: UpdatePlanLicenseProviderMarkups,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseProviderMarkupsRequestBody$outboundSchema.parse(
-      updatePlanLicenseProviderMarkupsRequestBody,
+    UpdatePlanLicenseProviderMarkups$outboundSchema.parse(
+      updatePlanLicenseProviderMarkups,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseModelMarkupsRequestBody$Outbound = {
+export type UpdatePlanLicenseModelMarkups$Outbound = {
   markup?: number | undefined;
   input_cost?: number | undefined;
   output_cost?: number | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseModelMarkupsRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseModelMarkupsRequestBody$Outbound,
-    UpdatePlanLicenseModelMarkupsRequestBody
-  > = z.pipe(
-    z.object({
-      markup: z.optional(z.number()),
-      inputCost: z.optional(z.number()),
-      outputCost: z.optional(z.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        inputCost: "input_cost",
-        outputCost: "output_cost",
-      });
-    }),
-  );
+export const UpdatePlanLicenseModelMarkups$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseModelMarkups$Outbound,
+  UpdatePlanLicenseModelMarkups
+> = z.pipe(
+  z.object({
+    markup: z.optional(z.number()),
+    inputCost: z.optional(z.number()),
+    outputCost: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      inputCost: "input_cost",
+      outputCost: "output_cost",
+    });
+  }),
+);
 
-export function updatePlanLicenseModelMarkupsRequestBodyToJSON(
-  updatePlanLicenseModelMarkupsRequestBody:
-    UpdatePlanLicenseModelMarkupsRequestBody,
+export function updatePlanLicenseModelMarkupsToJSON(
+  updatePlanLicenseModelMarkups: UpdatePlanLicenseModelMarkups,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseModelMarkupsRequestBody$outboundSchema.parse(
-      updatePlanLicenseModelMarkupsRequestBody,
+    UpdatePlanLicenseModelMarkups$outboundSchema.parse(
+      updatePlanLicenseModelMarkups,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseMarkupsRequestBody$Outbound = {
+export type UpdatePlanLicenseMarkups$Outbound = {
   default_markup?: number | undefined;
   provider_markups?:
-    | { [k: string]: UpdatePlanLicenseProviderMarkupsRequestBody$Outbound }
+    | { [k: string]: UpdatePlanLicenseProviderMarkups$Outbound }
     | null
     | undefined;
   model_markups?:
-    | { [k: string]: UpdatePlanLicenseModelMarkupsRequestBody$Outbound }
+    | { [k: string]: UpdatePlanLicenseModelMarkups$Outbound }
     | null
     | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseMarkupsRequestBody$outboundSchema: z.ZodMiniType<
-  UpdatePlanLicenseMarkupsRequestBody$Outbound,
-  UpdatePlanLicenseMarkupsRequestBody
+export const UpdatePlanLicenseMarkups$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseMarkups$Outbound,
+  UpdatePlanLicenseMarkups
 > = z.pipe(
   z.object({
     defaultMarkup: z.optional(z.number()),
     providerMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => UpdatePlanLicenseProviderMarkupsRequestBody$outboundSchema),
+      z.lazy(() => UpdatePlanLicenseProviderMarkups$outboundSchema),
     ))),
     modelMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => UpdatePlanLicenseModelMarkupsRequestBody$outboundSchema),
+      z.lazy(() => UpdatePlanLicenseModelMarkups$outboundSchema),
     ))),
   }),
   z.transform((v) => {
@@ -4730,113 +4621,103 @@ export const UpdatePlanLicenseMarkupsRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanLicenseMarkupsRequestBodyToJSON(
-  updatePlanLicenseMarkupsRequestBody: UpdatePlanLicenseMarkupsRequestBody,
+export function updatePlanLicenseMarkupsToJSON(
+  updatePlanLicenseMarkups: UpdatePlanLicenseMarkups,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseMarkupsRequestBody$outboundSchema.parse(
-      updatePlanLicenseMarkupsRequestBody,
-    ),
+    UpdatePlanLicenseMarkups$outboundSchema.parse(updatePlanLicenseMarkups),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseFeatureOverrideRequestBody$Outbound = {
+export type UpdatePlanLicenseFeatureOverride$Outbound = {
   credit_schema?:
     | Array<
-      | UpdatePlanCreditSchemaLicenseRequestBody1$Outbound
-      | UpdatePlanCreditSchemaLicenseRequestBody2$Outbound
+      | UpdatePlanCreditSchemaLicense1$Outbound
+      | UpdatePlanCreditSchemaLicense2$Outbound
     >
     | undefined;
-  markups?: UpdatePlanLicenseMarkupsRequestBody$Outbound | undefined;
+  markups?: UpdatePlanLicenseMarkups$Outbound | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseFeatureOverrideRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseFeatureOverrideRequestBody$Outbound,
-    UpdatePlanLicenseFeatureOverrideRequestBody
-  > = z.pipe(
-    z.object({
-      creditSchema: z.optional(z.array(smartUnion([
-        z.lazy(() => UpdatePlanCreditSchemaLicenseRequestBody1$outboundSchema),
-        z.lazy(() =>
-          UpdatePlanCreditSchemaLicenseRequestBody2$outboundSchema
-        ),
-      ]))),
-      markups: z.optional(z.lazy(() =>
-        UpdatePlanLicenseMarkupsRequestBody$outboundSchema
-      )),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditSchema: "credit_schema",
-      });
-    }),
-  );
+export const UpdatePlanLicenseFeatureOverride$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseFeatureOverride$Outbound,
+  UpdatePlanLicenseFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => UpdatePlanCreditSchemaLicense1$outboundSchema),
+      z.lazy(() =>
+        UpdatePlanCreditSchemaLicense2$outboundSchema
+      ),
+    ]))),
+    markups: z.optional(z.lazy(() =>
+      UpdatePlanLicenseMarkups$outboundSchema
+    )),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
 
-export function updatePlanLicenseFeatureOverrideRequestBodyToJSON(
-  updatePlanLicenseFeatureOverrideRequestBody:
-    UpdatePlanLicenseFeatureOverrideRequestBody,
+export function updatePlanLicenseFeatureOverrideToJSON(
+  updatePlanLicenseFeatureOverride: UpdatePlanLicenseFeatureOverride,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseFeatureOverrideRequestBody$outboundSchema.parse(
-      updatePlanLicenseFeatureOverrideRequestBody,
+    UpdatePlanLicenseFeatureOverride$outboundSchema.parse(
+      updatePlanLicenseFeatureOverride,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicensePlanItemRequestBody$Outbound = {
+export type UpdatePlanLicensePlanItem$Outbound = {
   threshold_billing?:
-    | UpdatePlanLicenseThresholdBillingRequestBody$Outbound
+    | UpdatePlanLicenseThresholdBilling$Outbound
     | null
     | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   pooled: boolean;
-  reset?: UpdatePlanLicenseResetRequestBody$Outbound | undefined;
-  price?: UpdatePlanLicensePriceRequestBody$Outbound | undefined;
-  proration?: UpdatePlanLicenseProrationRequestBody$Outbound | undefined;
-  rollover?: UpdatePlanLicenseRolloverRequestBody$Outbound | undefined;
-  expiry?: UpdatePlanLicenseExpiryRequestBody$Outbound | undefined;
-  feature_override?:
-    | UpdatePlanLicenseFeatureOverrideRequestBody$Outbound
-    | undefined;
+  reset?: UpdatePlanLicenseReset$Outbound | undefined;
+  price?: UpdatePlanLicensePrice$Outbound | undefined;
+  proration?: UpdatePlanLicenseProration$Outbound | undefined;
+  rollover?: UpdatePlanLicenseRollover$Outbound | undefined;
+  expiry?: UpdatePlanLicenseExpiry$Outbound | undefined;
+  feature_override?: UpdatePlanLicenseFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicensePlanItemRequestBody$outboundSchema: z.ZodMiniType<
-  UpdatePlanLicensePlanItemRequestBody$Outbound,
-  UpdatePlanLicensePlanItemRequestBody
+export const UpdatePlanLicensePlanItem$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePlanItem$Outbound,
+  UpdatePlanLicensePlanItem
 > = z.pipe(
   z.object({
-    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
-      UpdatePlanLicenseThresholdBillingRequestBody$outboundSchema
-    ))),
+    thresholdBilling: z.optional(
+      z.nullable(
+        z.lazy(() => UpdatePlanLicenseThresholdBilling$outboundSchema),
+      ),
+    ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() =>
-      UpdatePlanLicenseResetRequestBody$outboundSchema
-    )),
-    price: z.optional(z.lazy(() =>
-      UpdatePlanLicensePriceRequestBody$outboundSchema
-    )),
-    proration: z.optional(z.lazy(() =>
-      UpdatePlanLicenseProrationRequestBody$outboundSchema
-    )),
-    rollover: z.optional(z.lazy(() =>
-      UpdatePlanLicenseRolloverRequestBody$outboundSchema
-    )),
-    expiry: z.optional(z.lazy(() =>
-      UpdatePlanLicenseExpiryRequestBody$outboundSchema
-    )),
-    featureOverride: z.optional(z.lazy(() =>
-      UpdatePlanLicenseFeatureOverrideRequestBody$outboundSchema
-    )),
+    reset: z.optional(z.lazy(() => UpdatePlanLicenseReset$outboundSchema)),
+    price: z.optional(z.lazy(() => UpdatePlanLicensePrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => UpdatePlanLicenseProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => UpdatePlanLicenseRollover$outboundSchema),
+    ),
+    expiry: z.optional(z.lazy(() => UpdatePlanLicenseExpiry$outboundSchema)),
+    featureOverride: z.optional(
+      z.lazy(() => UpdatePlanLicenseFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4847,59 +4728,56 @@ export const UpdatePlanLicensePlanItemRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanLicensePlanItemRequestBodyToJSON(
-  updatePlanLicensePlanItemRequestBody: UpdatePlanLicensePlanItemRequestBody,
+export function updatePlanLicensePlanItemToJSON(
+  updatePlanLicensePlanItem: UpdatePlanLicensePlanItem,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicensePlanItemRequestBody$outboundSchema.parse(
-      updatePlanLicensePlanItemRequestBody,
+    UpdatePlanLicensePlanItem$outboundSchema.parse(updatePlanLicensePlanItem),
+  );
+}
+
+/** @internal */
+export const UpdatePlanLicenseRemoveItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanLicenseRemoveItemBillingMethod> = z.enum(
+    UpdatePlanLicenseRemoveItemBillingMethod,
+  );
+
+/** @internal */
+export const UpdatePlanIntervalLicenseRemoveItemEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanIntervalLicenseRemoveItemEnum2> = z.enum(
+    UpdatePlanIntervalLicenseRemoveItemEnum2,
+  );
+
+/** @internal */
+export const UpdatePlanIntervalLicenseRemoveItemEnum1$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanIntervalLicenseRemoveItemEnum1> = z.enum(
+    UpdatePlanIntervalLicenseRemoveItemEnum1,
+  );
+
+/** @internal */
+export type UpdatePlanLicenseIntervalUnion$Outbound = string | string;
+
+/** @internal */
+export const UpdatePlanLicenseIntervalUnion$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseIntervalUnion$Outbound,
+  UpdatePlanLicenseIntervalUnion
+> = smartUnion([
+  UpdatePlanIntervalLicenseRemoveItemEnum1$outboundSchema,
+  UpdatePlanIntervalLicenseRemoveItemEnum2$outboundSchema,
+]);
+
+export function updatePlanLicenseIntervalUnionToJSON(
+  updatePlanLicenseIntervalUnion: UpdatePlanLicenseIntervalUnion,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseIntervalUnion$outboundSchema.parse(
+      updatePlanLicenseIntervalUnion,
     ),
   );
 }
 
 /** @internal */
-export const UpdatePlanLicenseRemoveItemBillingMethodRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanLicenseRemoveItemBillingMethodRequestBody> = z
-    .enum(UpdatePlanLicenseRemoveItemBillingMethodRequestBody);
-
-/** @internal */
-export const UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2> = z
-    .enum(UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2);
-
-/** @internal */
-export const UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1$outboundSchema:
-  z.ZodMiniEnum<typeof UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1> = z
-    .enum(UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1);
-
-/** @internal */
-export type UpdatePlanLicenseIntervalRequestBodyUnion$Outbound =
-  | string
-  | string;
-
-/** @internal */
-export const UpdatePlanLicenseIntervalRequestBodyUnion$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseIntervalRequestBodyUnion$Outbound,
-    UpdatePlanLicenseIntervalRequestBodyUnion
-  > = smartUnion([
-    UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1$outboundSchema,
-    UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2$outboundSchema,
-  ]);
-
-export function updatePlanLicenseIntervalRequestBodyUnionToJSON(
-  updatePlanLicenseIntervalRequestBodyUnion:
-    UpdatePlanLicenseIntervalRequestBodyUnion,
-): string {
-  return JSON.stringify(
-    UpdatePlanLicenseIntervalRequestBodyUnion$outboundSchema.parse(
-      updatePlanLicenseIntervalRequestBodyUnion,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdatePlanLicensePlanItemFilterRequestBody$Outbound = {
+export type UpdatePlanLicensePlanItemFilter$Outbound = {
   feature_id?: string | undefined;
   billing_method?: string | undefined;
   interval?: string | string | undefined;
@@ -4908,86 +4786,79 @@ export type UpdatePlanLicensePlanItemFilterRequestBody$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanLicensePlanItemFilterRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicensePlanItemFilterRequestBody$Outbound,
-    UpdatePlanLicensePlanItemFilterRequestBody
-  > = z.pipe(
-    z.object({
-      featureId: z.optional(z.string()),
-      billingMethod: z.optional(
-        UpdatePlanLicenseRemoveItemBillingMethodRequestBody$outboundSchema,
-      ),
-      interval: z.optional(
-        smartUnion([
-          UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum1$outboundSchema,
-          UpdatePlanIntervalLicenseRemoveItemRequestBodyEnum2$outboundSchema,
-        ]),
-      ),
-      intervalCount: z.optional(z.int()),
-      included: z.optional(z.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        featureId: "feature_id",
-        billingMethod: "billing_method",
-        intervalCount: "interval_count",
-      });
-    }),
-  );
+export const UpdatePlanLicensePlanItemFilter$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePlanItemFilter$Outbound,
+  UpdatePlanLicensePlanItemFilter
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    billingMethod: z.optional(
+      UpdatePlanLicenseRemoveItemBillingMethod$outboundSchema,
+    ),
+    interval: z.optional(
+      smartUnion([
+        UpdatePlanIntervalLicenseRemoveItemEnum1$outboundSchema,
+        UpdatePlanIntervalLicenseRemoveItemEnum2$outboundSchema,
+      ]),
+    ),
+    intervalCount: z.optional(z.int()),
+    included: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingMethod: "billing_method",
+      intervalCount: "interval_count",
+    });
+  }),
+);
 
-export function updatePlanLicensePlanItemFilterRequestBodyToJSON(
-  updatePlanLicensePlanItemFilterRequestBody:
-    UpdatePlanLicensePlanItemFilterRequestBody,
+export function updatePlanLicensePlanItemFilterToJSON(
+  updatePlanLicensePlanItemFilter: UpdatePlanLicensePlanItemFilter,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicensePlanItemFilterRequestBody$outboundSchema.parse(
-      updatePlanLicensePlanItemFilterRequestBody,
+    UpdatePlanLicensePlanItemFilter$outboundSchema.parse(
+      updatePlanLicensePlanItemFilter,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanLicenseCustomizeRequestBody$Outbound = {
-  price?: UpdatePlanLicenseBasePriceRequestBody$Outbound | null | undefined;
-  add_items?: Array<UpdatePlanLicensePlanItemRequestBody$Outbound> | undefined;
-  remove_items?:
-    | Array<UpdatePlanLicensePlanItemFilterRequestBody$Outbound>
-    | undefined;
+export type UpdatePlanLicenseCustomize$Outbound = {
+  price?: UpdatePlanLicenseBasePrice$Outbound | null | undefined;
+  add_items?: Array<UpdatePlanLicensePlanItem$Outbound> | undefined;
+  remove_items?: Array<UpdatePlanLicensePlanItemFilter$Outbound> | undefined;
 };
 
 /** @internal */
-export const UpdatePlanLicenseCustomizeRequestBody$outboundSchema:
-  z.ZodMiniType<
-    UpdatePlanLicenseCustomizeRequestBody$Outbound,
-    UpdatePlanLicenseCustomizeRequestBody
-  > = z.pipe(
-    z.object({
-      price: z.optional(z.nullable(z.lazy(() =>
-        UpdatePlanLicenseBasePriceRequestBody$outboundSchema
-      ))),
-      addItems: z.optional(z.array(z.lazy(() =>
-        UpdatePlanLicensePlanItemRequestBody$outboundSchema
-      ))),
-      removeItems: z.optional(z.array(z.lazy(() =>
-        UpdatePlanLicensePlanItemFilterRequestBody$outboundSchema
-      ))),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        addItems: "add_items",
-        removeItems: "remove_items",
-      });
-    }),
-  );
+export const UpdatePlanLicenseCustomize$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseCustomize$Outbound,
+  UpdatePlanLicenseCustomize
+> = z.pipe(
+  z.object({
+    price: z.optional(
+      z.nullable(z.lazy(() => UpdatePlanLicenseBasePrice$outboundSchema)),
+    ),
+    addItems: z.optional(
+      z.array(z.lazy(() => UpdatePlanLicensePlanItem$outboundSchema)),
+    ),
+    removeItems: z.optional(
+      z.array(z.lazy(() => UpdatePlanLicensePlanItemFilter$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      addItems: "add_items",
+      removeItems: "remove_items",
+    });
+  }),
+);
 
-export function updatePlanLicenseCustomizeRequestBodyToJSON(
-  updatePlanLicenseCustomizeRequestBody: UpdatePlanLicenseCustomizeRequestBody,
+export function updatePlanLicenseCustomizeToJSON(
+  updatePlanLicenseCustomize: UpdatePlanLicenseCustomize,
 ): string {
   return JSON.stringify(
-    UpdatePlanLicenseCustomizeRequestBody$outboundSchema.parse(
-      updatePlanLicenseCustomizeRequestBody,
-    ),
+    UpdatePlanLicenseCustomize$outboundSchema.parse(updatePlanLicenseCustomize),
   );
 }
 
@@ -4997,7 +4868,7 @@ export type UpdatePlanLicenseRequest$Outbound = {
   version_slug?: string | undefined;
   included?: number | undefined;
   prepaid_only?: boolean | undefined;
-  customize?: UpdatePlanLicenseCustomizeRequestBody$Outbound | null | undefined;
+  customize?: UpdatePlanLicenseCustomize$Outbound | null | undefined;
   metadata?: { [k: string]: any } | undefined;
 };
 
@@ -5011,9 +4882,9 @@ export const UpdatePlanLicenseRequest$outboundSchema: z.ZodMiniType<
     versionSlug: z.optional(z.string()),
     included: z.optional(z.int()),
     prepaidOnly: z.optional(z.boolean()),
-    customize: z.optional(z.nullable(z.lazy(() =>
-      UpdatePlanLicenseCustomizeRequestBody$outboundSchema
-    ))),
+    customize: z.optional(
+      z.nullable(z.lazy(() => UpdatePlanLicenseCustomize$outboundSchema)),
+    ),
     metadata: z.optional(z.record(z.string(), z.any())),
   }),
   z.transform((v) => {

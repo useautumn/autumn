@@ -10,6 +10,7 @@ import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
+import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 import {
   UpdatePlanBasePriceResponse,
@@ -525,6 +526,30 @@ export type UpdatePlanVariantDetails = {
   customize?: UpdatePlanCustomizeResponse | undefined;
 };
 
+export type UpdatePlanLicenseResponse = {
+  /**
+   * The plan offered as a license under this plan.
+   */
+  licensePlanId: string;
+  /**
+   * The exact license-plan version pinned by this link.
+   */
+  version: number;
+  /**
+   * Version slug of the license-plan row this link points at.
+   */
+  versionSlug?: string | undefined;
+  /**
+   * Number of license assignments included with this plan for free.
+   */
+  included: number;
+  /**
+   * Arbitrary key-value metadata defined by you on this link.
+   */
+  metadata?: { [k: string]: any } | undefined;
+  plan?: Plan | undefined;
+};
+
 /**
  * A plan defines a set of features, pricing, and entitlements that can be attached to customers.
  */
@@ -614,6 +639,10 @@ export type UpdatePlanResponse = {
    * Details about how this variant relates to its latest base plan.
    */
   variantDetails?: UpdatePlanVariantDetails | undefined;
+  /**
+   * Plans offered as assignable licenses under this plan. Omitted when the plan has none.
+   */
+  licenses?: Array<UpdatePlanLicenseResponse> | undefined;
 };
 
 /** @internal */
@@ -1616,6 +1645,37 @@ export function updatePlanVariantDetailsFromJSON(
 }
 
 /** @internal */
+export const UpdatePlanLicenseResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    license_plan_id: types.string(),
+    version: types.number(),
+    version_slug: types.optional(types.string()),
+    included: types.number(),
+    metadata: types.optional(z.record(z.string(), z.any())),
+    plan: types.optional(Plan$inboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "license_plan_id": "licensePlanId",
+      "version_slug": "versionSlug",
+    });
+  }),
+);
+
+export function updatePlanLicenseResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanLicenseResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdatePlanLicenseResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanLicenseResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
   UpdatePlanResponse,
   unknown
@@ -1648,6 +1708,9 @@ export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
     base_variant_id: types.nullable(types.string()),
     variant_details: types.optional(
       z.lazy(() => UpdatePlanVariantDetails$inboundSchema),
+    ),
+    licenses: types.optional(
+      z.array(z.lazy(() => UpdatePlanLicenseResponse$inboundSchema)),
     ),
   }),
   z.transform((v) => {
