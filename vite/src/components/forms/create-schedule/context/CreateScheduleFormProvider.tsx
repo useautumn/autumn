@@ -44,7 +44,6 @@ import {
 	useBuildCreateScheduleRequestBody,
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
-import { useHasSchedule } from "../hooks/useHasSchedule";
 
 interface CreateScheduleFormContextValue {
 	generation: BillingGenerationState;
@@ -113,8 +112,15 @@ export function CreateScheduleFormProvider({
 	);
 
 	const { customer } = useCusQuery();
-	const hasSchedule = useHasSchedule();
 	const fullCustomer = customer as FullCustomer | null;
+	const hasScheduledPlans = useMemo(
+		() =>
+			(fullCustomer?.customer_products ?? []).some(
+				(customerProduct) =>
+					customerProduct.status === CusProductStatus.Scheduled,
+			),
+		[fullCustomer?.customer_products],
+	);
 
 	// Only a new scoped subscription can backdate its immediate phase, so this
 	// asks whether any scope the opening phase targets is already subscribed.
@@ -330,7 +336,7 @@ export function CreateScheduleFormProvider({
 				nowMs={nowMs}
 				existingPlans={existingPlans}
 				// Updating a schedule can't attach new plans, so only a new one can.
-				canMakeUnscheduled={!hasSchedule}
+				canMakeUnscheduled={!hasScheduledPlans}
 			>
 				{children}
 			</CustomerStateProvider>
