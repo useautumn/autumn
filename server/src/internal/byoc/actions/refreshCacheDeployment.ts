@@ -1,12 +1,9 @@
-import type { ByocCacheDeployment } from "@autumn/shared";
+import { type ByocCacheDeployment, ByocCacheStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
 import { updateCacheDeployment } from "../repos/cacheDeployments.js";
-import {
-	alienDeploymentToCacheStatus,
-	getAlienClientOrThrow,
-} from "../utils/byocCacheUtils.js";
 
-/** Reads the deployment's state from alien and saves it when it moved. */
+/** Reads the Atom's state from its deployer and saves it when it moved. */
 export const refreshCacheDeployment = async ({
 	ctx,
 	cacheDeployment,
@@ -14,17 +11,19 @@ export const refreshCacheDeployment = async ({
 	ctx: AutumnContext;
 	cacheDeployment: ByocCacheDeployment;
 }): Promise<ByocCacheDeployment> => {
-	const deployment = await getAlienClientOrThrow().findDeployment({
+	const deployment = await getAtomDeployer().find({
 		deploymentGroupId: cacheDeployment.deployment_group_id,
 	});
 	const refreshed: ByocCacheDeployment = {
 		...cacheDeployment,
 		deployment_id: deployment?.id ?? null,
-		status: alienDeploymentToCacheStatus({ deployment }),
+		status: deployment?.status ?? ByocCacheStatus.AwaitingSetup,
+		endpoint_url: deployment?.endpointUrl ?? null,
 	};
 	const hasMoved =
 		refreshed.status !== cacheDeployment.status ||
-		refreshed.deployment_id !== cacheDeployment.deployment_id;
+		refreshed.deployment_id !== cacheDeployment.deployment_id ||
+		refreshed.endpoint_url !== cacheDeployment.endpoint_url;
 	if (hasMoved)
 		await updateCacheDeployment({ ctx, cacheDeployment: refreshed });
 	return refreshed;

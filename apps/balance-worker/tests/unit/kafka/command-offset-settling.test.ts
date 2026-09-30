@@ -141,7 +141,23 @@ test("a burst of skipped commands lands as one group commit, never a transaction
 	expect(fakes.lifecycle).toEqual(["group:15"]);
 });
 
-test("a batch that commits carries the offsets still waiting, so nothing lands twice", async () => {
+test("a batch's command offset lands through the group commit after the transaction, never inside it", async () => {
+	const fakes = createFakes();
+	const clock = createClock();
+	const appender = createAppender({ fakes, timing: clock.timing });
+	const mutation = {
+		...createMutation({ state: createState(), commandId: "queued" }),
+		source: { commandOffset: "17" },
+	};
+	await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
+	expect(fakes.lifecycle).toEqual(["transaction", "send", "commit"]);
+	fakes.lifecycle.length = 0;
+	await clock.advance(0);
+	expect(fakes.lifecycle).toEqual(["group:18"]);
+	expect(clock.scheduled()).toBe(0);
+});
+
+test("a batch behind the waiting offsets lands the waiting one, so nothing lands twice", async () => {
 	const fakes = createFakes();
 	const clock = createClock();
 	const appender = createAppender({ fakes, timing: clock.timing });
@@ -151,19 +167,16 @@ test("a batch that commits carries the offsets still waiting, so nothing lands t
 		source: { commandOffset: "17" },
 	};
 	await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
-	expect(fakes.lifecycle).toEqual([
-		"transaction",
-		"send",
-		"offset:20",
-		"commit",
-	]);
+	expect(fakes.lifecycle).toEqual(["transaction", "send", "commit"]);
 	fakes.lifecycle.length = 0;
+	await clock.advance(0);
+	expect(fakes.lifecycle).toEqual(["group:20"]);
 	await clock.advance(100);
-	expect(fakes.lifecycle).toEqual([]);
+	expect(fakes.lifecycle).toEqual(["group:20"]);
 	expect(clock.scheduled()).toBe(0);
 });
 
-test("a batch past the waiting offsets commits its own, and the waiting ones are covered", async () => {
+test("a batch past the waiting offsets lands its own, and the waiting ones are covered", async () => {
 	const fakes = createFakes();
 	const clock = createClock();
 	const appender = createAppender({ fakes, timing: clock.timing });
@@ -173,15 +186,37 @@ test("a batch past the waiting offsets commits its own, and the waiting ones are
 		source: { commandOffset: "25" },
 	};
 	await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
-	expect(fakes.lifecycle).toEqual([
-		"transaction",
-		"send",
-		"offset:26",
-		"commit",
-	]);
+	expect(fakes.lifecycle).toEqual(["transaction", "send", "commit"]);
 	fakes.lifecycle.length = 0;
+	await clock.advance(0);
+	expect(fakes.lifecycle).toEqual(["group:26"]);
 	await clock.advance(100);
-	expect(fakes.lifecycle).toEqual([]);
+	expect(fakes.lifecycle).toEqual(["group:26"]);
+});
+
+test("a batch stands when its offset landing is refused; the offset is retried after the gap", async () => {
+	const fakes = createFakes({
+		refuseGroupCommit: ({ offset, attempt }) =>
+			offset === "18" && attempt === 1,
+	});
+	const clock = createClock();
+	const warnings: string[] = [];
+	const appender = createAppender({ fakes, timing: clock.timing, warnings });
+	const mutation = {
+		...createMutation({ state: createState(), commandId: "queued" }),
+		source: { commandOffset: "17" },
+	};
+	await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
+	expect(fakes.lifecycle).toEqual(["transaction", "send", "commit"]);
+	fakes.lifecycle.length = 0;
+	await clock.advance(0);
+	expect(fakes.lifecycle).toEqual(["group:18"]);
+	expect(warnings).toEqual([
+		"Command offsets could not be landed; retrying after the gap",
+	]);
+	await clock.advance(50);
+	expect(fakes.lifecycle).toEqual(["group:18", "group:18"]);
+	expect(clock.scheduled()).toBe(0);
 });
 
 test("an offset already landed is never committed again", async () => {

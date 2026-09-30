@@ -779,6 +779,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			expect(fixture.readStats().groupConfig).toMatchObject({
 				readUncommitted: false,
 				allowAutoTopicCreation: false,
+				maxWaitTimeInMs: 5_000,
 			});
 		} finally {
 			await consumer.stop();

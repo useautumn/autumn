@@ -30,6 +30,11 @@ export function assertKafkaBalanceWorkerTimings({
 			throw new RangeError(`${name} must be a positive safe integer`);
 		}
 	}
+	if (timings.fetchMaxWaitTimeMs > timings.heartbeatIntervalMs) {
+		throw new RangeError(
+			"fetchMaxWaitTimeMs cannot exceed heartbeatIntervalMs: kafkajs heartbeats only between fetches",
+		);
+	}
 	if (
 		timings.rebalanceTimeoutMs - timings.recoveryDrainTimeoutMs <
 		timings.heartbeatIntervalMs
@@ -162,7 +167,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 			maxRetryTimeMs: 1000,
 		},
 		timings: {
-			fetchMaxWaitTimeMs: 250,
+			fetchMaxWaitTimeMs: env.BALANCE_WORKER_FETCH_MAX_WAIT_MS,
 			healthRefreshIntervalMs: 1000,
 			heartbeatIntervalMs: 3000,
 			recoveryDrainTimeoutMs: 5000,

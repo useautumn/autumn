@@ -6,7 +6,10 @@ import {
 	parseMeteringRecord,
 } from "@autumn/kafka";
 import type { ProducerRecord, RecordMetadata } from "kafkajs";
-import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
+import {
+	type CommandOffsetSettleTiming,
+	createMutationPublisher,
+} from "../../../src/kafka/createMutationPublisher.js";
 import { MutationBatchNotCommittedError } from "../../../src/processor/writer/writerErrors.js";
 import {
 	createMutation,
@@ -83,8 +86,22 @@ const waitForTurn = async (): Promise<void> => {
 	await new Promise<void>((resolve) => setImmediate(resolve));
 };
 
+/** Real timers with no gap: a settled offset lands on the next timer turn. */
+const promptSettleTiming = (): CommandOffsetSettleTiming => ({
+	gapMs: 0,
+	now: () => performance.now(),
+	schedule(run, delayMs) {
+		const timer = setTimeout(run, delayMs);
+		return () => clearTimeout(timer);
+	},
+});
+
+const settleGap = async (): Promise<void> => {
+	await new Promise<void>((resolve) => setTimeout(resolve, 10));
+};
+
 describe("Kafka committed track outcome appender", () => {
-	test("source offsets commit with the mutation, while offset-only completions use the consumer group's commit", async () => {
+	test("source offsets land through the consumer group's commit once the transaction holds the batch", async () => {
 		const fake = createFakeProducer();
 		const groupCommits: string[] = [];
 		const appender = createMutationPublisher({
@@ -95,6 +112,7 @@ describe("Kafka committed track outcome appender", () => {
 						groupCommits.push(`${offsets.topics[0]?.partitions[0]?.offset}`);
 					},
 				},
+				settle: promptSettleTiming(),
 			},
 			config: { commandTopic: "commands", groupId: "workers" },
 		});
@@ -103,39 +121,39 @@ describe("Kafka committed track outcome appender", () => {
 			source: { commandOffset: "41" },
 		};
 		await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
-		expect(fake.lifecycle).toEqual([
-			"transaction",
-			"send",
-			"offset:42",
-			"commit",
-		]);
+		expect(fake.lifecycle).toEqual(["transaction", "send", "commit"]);
+		expect(groupCommits).toEqual([]);
+		await settleGap();
+		expect(groupCommits).toEqual(["42"]);
 		fake.lifecycle.length = 0;
 		await appender.commitCommandOffset({ topic, partition, nextOffset: 43n });
 		expect(fake.lifecycle).toEqual([]);
-		expect(groupCommits).toEqual(["43"]);
+		expect(groupCommits).toEqual(["42", "43"]);
 	});
 
-	test("an offset send failure aborts the mutation transaction", async () => {
+	test("the transaction never carries offsets, so a batch cannot be lost to an offset refusal", async () => {
 		const fake = createFakeProducer({
 			offsetError: new Error("offset refused"),
 		});
 		const appender = createMutationPublisher({
-			ctx: { producer: fake.producer },
+			ctx: {
+				producer: fake.producer,
+				commandOffsets: { commit: async () => {} },
+				settle: promptSettleTiming(),
+			},
 			config: { commandTopic: "commands", groupId: "workers" },
 		});
 		const mutation = {
 			...createMutation({ state: createState(), commandId: "queued" }),
 			source: { commandOffset: "41" },
 		};
-		await expect(
-			appender.appendCommitted({ topic, partition, outcomes: [mutation] }),
-		).rejects.toBeInstanceOf(MutationBatchNotCommittedError);
-		expect(fake.lifecycle).toEqual([
-			"transaction",
-			"send",
-			"offset:42",
-			"abort",
-		]);
+		const appended = await appender.appendCommitted({
+			topic,
+			partition,
+			outcomes: [mutation],
+		});
+		expect(appended.baseOffset).toBe(41n);
+		expect(fake.lifecycle).toEqual(["transaction", "send", "commit"]);
 	});
 
 	test("commits one ordered partition batch and returns its first offset", async () => {
@@ -404,6 +422,7 @@ describe("idempotent commits", () => {
 						committed.push(offsets);
 					},
 				},
+				settle: promptSettleTiming(),
 			},
 			config: { commandTopic: "commands", groupId: "workers" },
 		});
@@ -423,12 +442,31 @@ describe("idempotent commits", () => {
 		expect(record.messages[0]?.headers).toEqual({ ownerEpoch: "2516" });
 		expect(committed).toEqual([]);
 
-		await appender.commitCommandOffset({ topic, partition, nextOffset: 12n });
+		const sourced = {
+			...createMutation({ state: createState(), commandId: "queued" }),
+			source: { commandOffset: "11" },
+		};
+		await appender.appendCommitted({ topic, partition, outcomes: [sourced] });
+		// One produce; the offset is not awaited inline, it lands through the group after the gap.
+		expect(sends).toHaveLength(2);
+		expect(committed).toEqual([]);
+		await settleGap();
 		expect(committed).toEqual([
 			{
 				consumerGroupId: "workers",
 				topics: [
 					{ topic: "commands", partitions: [{ partition, offset: "12" }] },
+				],
+			},
+		]);
+		committed.length = 0;
+
+		await appender.commitCommandOffset({ topic, partition, nextOffset: 13n });
+		expect(committed).toEqual([
+			{
+				consumerGroupId: "workers",
+				topics: [
+					{ topic: "commands", partitions: [{ partition, offset: "13" }] },
 				],
 			},
 		]);

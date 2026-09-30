@@ -2,6 +2,17 @@ export type AlienDeployment = {
 	id: string;
 	/** alien's lifecycle status, e.g. `provisioning`, `running`, `provisioning-failed`. */
 	status: string;
+	/** alien's resource outputs; read them with `deploymentToPublicEndpointUrl`. */
+	stackState?: unknown;
+};
+
+/** A value the deployment's containers start with. */
+export type AlienEnvironmentVariable = {
+	name: string;
+	value: string;
+	type: "plain" | "secret";
+	/** Resource id patterns the variable reaches; null means every resource. */
+	targetResources: string[] | null;
 };
 
 export type AlienSetup = {
@@ -21,6 +32,7 @@ export type AlienClient = {
 	startSetup(params: {
 		externalId: string;
 		label: string;
+		environmentVariables: AlienEnvironmentVariable[];
 	}): Promise<AlienSetup>;
 	findDeployment(params: {
 		deploymentGroupId: string;

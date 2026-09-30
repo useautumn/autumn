@@ -1,6 +1,10 @@
 import type { ConsumerCrashEvent, EachBatchPayload } from "kafkajs";
-import { createConsumerGroupConfig } from "../../../client/createConsumerGroupConfig.js";
+import {
+	createConsumerGroupConfig,
+	TAIL_FETCH_MAX_WAIT_MS,
+} from "../../../client/createConsumerGroupConfig.js";
 import { parseKafkaOffset } from "../../../client/kafkaOffsetUtils.js";
+import type { KafkaConsumerGroupTimings } from "../../../client/types/kafkaLimits.js";
 import { ownershipTopic } from "../ownershipTopic.js";
 import type {
 	OwnershipTail,
@@ -11,6 +15,25 @@ import type {
 	OwnershipTailView,
 } from "./types/ownershipTail.js";
 
+const DEFAULT_TAIL_TIMINGS: KafkaConsumerGroupTimings = {
+	fetchMaxWaitTimeMs: TAIL_FETCH_MAX_WAIT_MS,
+	heartbeatIntervalMs: 3_000,
+	sessionTimeoutMs: 30_000,
+	rebalanceTimeoutMs: 60_000,
+};
+
+/** Connect, join and one fetch that may wait its full idle allowance before the position settles at the log end. */
+const TAIL_START_ALLOWANCE_MS = 10_000;
+
+export function ownershipTailStartTimeoutMs({
+	startTimeoutMs,
+	timings,
+}: Pick<OwnershipTailConfig, "startTimeoutMs"> & {
+	timings: KafkaConsumerGroupTimings;
+}): number {
+	return startTimeoutMs ?? TAIL_START_ALLOWANCE_MS + timings.fetchMaxWaitTimeMs;
+}
+
 export function createOwnershipTail({
 	ctx,
 	config,
@@ -18,18 +41,17 @@ export function createOwnershipTail({
 	ctx: OwnershipTailContext;
 	config: OwnershipTailConfig;
 }): OwnershipTail {
-	const startTimeoutMs = config.startTimeoutMs ?? 10_000;
+	const timings = config.timings ?? DEFAULT_TAIL_TIMINGS;
+	const startTimeoutMs = ownershipTailStartTimeoutMs({
+		startTimeoutMs: config.startTimeoutMs,
+		timings,
+	});
 	if (!Number.isSafeInteger(startTimeoutMs) || startTimeoutMs <= 0)
 		throw new RangeError("Invalid ownership tail start timeout");
 	const consumer = ctx.kafka.consumer(
 		createConsumerGroupConfig({
 			groupId: `${config.groupIdPrefix ?? "autumn-ownership-tail"}-${crypto.randomUUID()}`,
-			timings: config.timings ?? {
-				fetchMaxWaitTimeMs: 250,
-				heartbeatIntervalMs: 3_000,
-				sessionTimeoutMs: 30_000,
-				rebalanceTimeoutMs: 60_000,
-			},
+			timings,
 		}),
 	);
 	const state: OwnershipTailState = {

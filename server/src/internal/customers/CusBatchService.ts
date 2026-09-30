@@ -24,7 +24,6 @@ import {
 	type StandardCursorFields,
 	shouldAggregateEntityData,
 } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import { isMotherDuckConfigured } from "@/external/motherduck/initMotherDuck.js";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
@@ -104,8 +103,8 @@ export class CusBatchService {
 		}).catch((err) => {
 			ctx.logger.error(
 				`[CusBatchService.getByInternalIds] batch reset failed: ${err}`,
+				{ error: err },
 			);
-			Sentry.captureException(err);
 		});
 
 		return fullCustomers;
@@ -203,7 +202,6 @@ export class CusBatchService {
 			fullCustomers,
 		}).catch((err) => {
 			ctx.logger.error("[CusBatchService.getPage] batch reset failed:", err);
-			Sentry.captureException(err);
 		});
 
 		return finals;
@@ -323,7 +321,6 @@ export class CusBatchService {
 				"[CusBatchService.getCursorPage] batch reset failed:",
 				err,
 			);
-			Sentry.captureException(err);
 		});
 
 		const lastCustomer = fullCustomers[fullCustomers.length - 1];
@@ -564,7 +561,6 @@ export class CusBatchService {
 					"[CusBatchService.getDashboardCursorPage] batch reset failed:",
 					err,
 				);
-				Sentry.captureException(err);
 			},
 		);
 
@@ -654,7 +650,6 @@ export class CusBatchService {
 					"[CusBatchService.getBalanceFilteredPage] batch reset failed:",
 					err,
 				);
-				Sentry.captureException(err);
 			},
 		);
 
@@ -851,7 +846,6 @@ export class CusBatchService {
 					"[CusBatchService.getFeatureBalanceSortedPage] batch reset failed:",
 					err,
 				);
-				Sentry.captureException(err);
 			},
 		);
 
@@ -931,7 +925,6 @@ export class CusBatchService {
 					"[CusBatchService.getBasePriceSortedPage] batch reset failed:",
 					err,
 				);
-				Sentry.captureException(err);
 			},
 		);
 

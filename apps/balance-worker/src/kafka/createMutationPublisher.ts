@@ -27,7 +27,7 @@ export function createMutationPublisher({
 		/** Defaults to transactional. */
 		commit?: { mode: KafkaCommitMode };
 		ownerEpoch?(): string | undefined;
-		/** The consumer group's own offset commit: lands offsets no batch carries, without a transaction. */
+		/** The consumer group's own offset commit: every command offset lands through it, after its batch, without a transaction. */
 		commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 		logger?: Partial<Pick<AutumnLogger, "warn">>;
 		/** Defaults to a real timer and the settle gap constant; tests drive it by hand. */
@@ -73,20 +73,17 @@ export function createMutationPublisher({
 				if (commandNextOffset === undefined || next > commandNextOffset)
 					commandNextOffset = next;
 			}
-			// A skipped command that is still waiting to land rides with this batch.
-			commandNextOffset = carryPendingOffset({ commandNextOffset });
-			const offsets =
-				commandNextOffset !== undefined
-					? offsetsOf({ partition, nextOffset: commandNextOffset })
-					: undefined;
 			const appended = await publisher.append({
 				topic,
 				partition,
 				records: outcomes,
-				offsets,
 			});
 			if (commandNextOffset !== undefined)
-				markLanded({ nextOffset: commandNextOffset });
+				settleCommandOffset({
+					topic,
+					partition,
+					nextOffset: commandNextOffset,
+				});
 			ctx.producedOffsets?.remember({
 				from: appended.baseOffset,
 				to: appended.baseOffset + BigInt(outcomes.length) - 1n,
@@ -146,9 +143,8 @@ export function createMutationPublisher({
 		};
 	}
 
-	/** An offset no batch carries goes through the consumer group's own commit. A transaction of its own
-	 *  would take the partition's one transaction slot for three broker trips and refuse the next batch
-	 *  that arrives meanwhile; the group commit is one request that contends with nothing. */
+	/** Every command offset lands through the consumer group's own commit: one request, no transaction,
+	 *  so it never takes the partition's one transaction slot away from a batch. */
 	async function commitCommandOffset({
 		partition,
 		nextOffset,
@@ -163,18 +159,6 @@ export function createMutationPublisher({
 			);
 		await ctx.commandOffsets.commit(offsetsOf({ partition, nextOffset }));
 		markLanded({ nextOffset });
-	}
-
-	function carryPendingOffset({
-		commandNextOffset,
-	}: {
-		commandNextOffset: bigint | undefined;
-	}): bigint | undefined {
-		const pending = settling.pending;
-		if (pending === null) return commandNextOffset;
-		if (commandNextOffset === undefined || pending > commandNextOffset)
-			return pending;
-		return commandNextOffset;
 	}
 
 	function markLanded({ nextOffset }: { nextOffset: bigint }): void {

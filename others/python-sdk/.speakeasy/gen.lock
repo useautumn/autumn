@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: 42c16d9ff3a94ed9134641ab37d6af05
+  docChecksum: 08142a3b26409d47106cd1cb36c6f0d8
   docVersion: 2.4.0
   speakeasyVersion: 1.763.6
   generationVersion: 2.884.13
   releaseVersion: 1.1.0
   configChecksum: 16593a23b9d6e917b198473dd835d916
 persistentEdits:
-  generation_id: 70487a90-35cd-4514-9f86-9b66d68282d2
-  pristine_commit_hash: 6f8cbcf0ccc8eef63c82770b1d59d717171ced50
-  pristine_tree_hash: 68ffd1162780e07a44094848844be2b041cdf0c4
+  generation_id: f2d8564e-23e8-4c89-9588-f84f5ee830cc
+  pristine_commit_hash: 1afb84c444f84b3284610bca8c91f1a062e7a6e8
+  pristine_tree_hash: 2a4f3c14f1d708231cda6d3e6bf9dbf2f04daae8
 features:
   python:
     additionalDependencies: 1.0.0
@@ -15688,8 +15688,8 @@ trackedFiles:
     pristine_git_object: e494e01e15b7c257564ec1afa73158f0ba94225b
   docs/models/reissueinvoiceinvoicerequestbody.md:
     id: 7ac9e8aebe01
-    last_write_checksum: sha1:6dcadf660fd5146c4355c467875645d284c3eab5
-    pristine_git_object: 6bbd81d9e9a1f87779d47d5bc47235d88af2363e
+    last_write_checksum: sha1:3ab02f28bf1296a48d637a0ccf1bdf3295f674f7
+    pristine_git_object: 54ef7019c19e280beb27c31a3a64d33397f2ee51
   docs/models/reissueinvoiceinvoiceresponse.md:
     id: 9d60b6eb5593
     last_write_checksum: sha1:67d96b5137a5d5ddd2bbb7292ac3ca0405a193b8
@@ -21720,8 +21720,8 @@ trackedFiles:
     pristine_git_object: 84519f08b115b5c027c5b2c05997a93b5d4f0c17
   src/autumn_sdk/models/reissueinvoiceop.py:
     id: 1d3b9bb2dc5b
-    last_write_checksum: sha1:31f673ac8ff3851f13c567d5d82f7c2a0d705ced
-    pristine_git_object: 9cb0889c66912f2c76bc60ff38c118bdf194ce2e
+    last_write_checksum: sha1:79b4d13f621d613380c76923c67781c06d41c6fa
+    pristine_git_object: c32f919979acd47edb69073d541ac12fcc6cda75
   src/autumn_sdk/models/releaselicenseop.py:
     id: 29d50398c57a
     last_write_checksum: sha1:db54c8d7ff18176408b2b86a1a92a970d707b69a

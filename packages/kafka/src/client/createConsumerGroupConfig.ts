@@ -2,6 +2,8 @@ import type { ConsumerConfig } from "kafkajs";
 import { assertPositiveSafeInteger } from "../lib/assert.js";
 import type { KafkaConsumerGroupTimings } from "./types/kafkaLimits.js";
 
+export const TAIL_FETCH_MAX_WAIT_MS = 5_000;
+
 export function assertConsumerGroupTimings({
 	timings,
 }: {

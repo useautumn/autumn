@@ -1,6 +1,4 @@
 import type { AppEnv, Organization } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
-import { getSentryTags } from "@/external/sentry/sentryUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSvixAppId, getSvixClient, safeSvix } from "./svixUtils.js";
 
@@ -72,10 +70,8 @@ export const sendSvixEvent = async ({
 		const status = error as { code?: number; statusCode?: number };
 		ctx.logger.error(
 			`[svix] Failed to send ${eventType}: ${error} | status=${status.code ?? status.statusCode} | tags=${JSON.stringify(tags ?? [])}`,
+			{ error },
 		);
-		Sentry.captureException(error, {
-			tags: getSentryTags({ ctx }),
-		});
 	}
 };
 

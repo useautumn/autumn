@@ -62,7 +62,11 @@ export const orgPersistFreeOverage = ({ org }: { org: Organization }) => {
 	return org.config.persist_free_overage ?? false;
 };
 
-export const orgMultiCurrencyEnabled = ({ org }: { org: Organization }) => {
+export const orgMultiCurrencyEnabled = ({
+	org,
+}: {
+	org: { config: Pick<Organization["config"], "multi_currency"> };
+}) => {
 	return org.config.multi_currency ?? false;
 };
 

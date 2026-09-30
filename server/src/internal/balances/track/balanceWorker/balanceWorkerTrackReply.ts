@@ -1,3 +1,10 @@
+import { subjectStateToFullSubject } from "@autumn/balance-engine";
+import {
+	isFeatureHeld,
+	isFlagFeatureId,
+	workerStateToApiBalance,
+	workerSubjectsToApiBalances,
+} from "@autumn/balance-engine/api-renderer";
 import type { TrackReply } from "@autumn/balance-worker-client";
 import {
 	AffectedResource,
@@ -9,15 +16,6 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	workerReplyToFullSubject,
-	workerStateToApiBalance,
-} from "../../balanceWorker/workerStateToApiBalance.js";
-import {
-	isFeatureHeld,
-	isFlagFeatureId,
-	workerSubjectsToApiBalances,
-} from "../../balanceWorker/workerSubjectsToApiBalances.js";
 
 /** One worker track and the feature it was sent for; an event name yields one per feature it maps to. */
 export type FeatureTrackReply = {
@@ -66,7 +64,7 @@ const workerResponseParts = ({
 	// Each reply carries only the rows that fund its own feature, so every feature is read off the reply that tracked it.
 	const subjects = replies.map(({ featureId, reply }) => ({
 		featureId,
-		fullSubject: workerReplyToFullSubject({
+		fullSubject: subjectStateToFullSubject({
 			state: reply.state,
 			catalog: reply.catalog,
 			entityId: body.entity_id,

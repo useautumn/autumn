@@ -234,12 +234,31 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 				failed_only: z.boolean().optional(),
 				file: z.string().optional(),
 				worker: z.string().optional(),
+				run_only: z
+					.boolean()
+					.optional()
+					.describe(
+						"Only the orchestrator's own lines (phases, [twd-progress] counters), no worker or file output.",
+					),
 				max_chars: z.number().int().min(1_000).max(500_000).optional(),
 			}),
-			run: async ({ run_id, failed_only, file, worker, max_chars }) => {
+			run: async ({
+				run_id,
+				failed_only,
+				file,
+				worker,
+				run_only,
+				max_chars,
+			}) => {
 				const text = failed_only
 					? await getFailedLogs({ ctx, runId: run_id })
-					: await getRunLogs({ ctx, runId: run_id, file, worker });
+					: await getRunLogs({
+							ctx,
+							runId: run_id,
+							file,
+							worker,
+							scope: run_only ? "run" : undefined,
+						});
 				const limit = max_chars ?? 60_000;
 				const clipped =
 					text.length > limit

@@ -218,7 +218,10 @@ export {
 	subjectStateToFreeTrialCatalogKeys,
 	subjectStateToPlanLicenseCatalogKeys,
 } from "./utils/catalogUtils/convertCatalogUtils.js";
-export { filterCatalogKeysMissingFrom } from "./utils/catalogUtils/filterCatalogUtils.js";
+export {
+	filterCatalogForState,
+	filterCatalogKeysMissingFrom,
+} from "./utils/catalogUtils/filterCatalogUtils.js";
 export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
 export {
 	meteringIdentityToPartitionKey,

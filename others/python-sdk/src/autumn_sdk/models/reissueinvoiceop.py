@@ -91,7 +91,7 @@ class ReissueInvoiceInvoiceRequestBodyTypedDict(TypedDict):
     memo: NotRequired[Nullable[str]]
     r"""Memo shown near the top of the invoice."""
     payment_method_types: NotRequired[List[PaymentMethodType]]
-    r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements."""
+    r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. A method other than card on a card-charged invoice sends the replacement for payment instead, on net_terms_days or the default terms."""
 
 
 class ReissueInvoiceInvoiceRequestBody(BaseModel):
@@ -116,7 +116,7 @@ class ReissueInvoiceInvoiceRequestBody(BaseModel):
     r"""Memo shown near the top of the invoice."""
 
     payment_method_types: Optional[List[PaymentMethodType]] = None
-    r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements."""
+    r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. A method other than card on a card-charged invoice sends the replacement for payment instead, on net_terms_days or the default terms."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

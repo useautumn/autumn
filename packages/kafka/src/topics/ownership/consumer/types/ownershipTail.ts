@@ -47,7 +47,8 @@ export type OwnershipTailContext = {
 export type OwnershipTailConfig = {
 	topic: string;
 	groupIdPrefix?: string;
-	/** How long start waits for the first fetch, which is when the position settles at the log end. */
+	/** How long start waits for the first fetch, which is when the position settles at the log end;
+	 *  defaults to 10 s plus the fetch wait, since an idle first fetch runs the full wait. */
 	startTimeoutMs?: number;
 	timings?: KafkaConsumerGroupTimings;
 };

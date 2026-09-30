@@ -1,5 +1,8 @@
 import type { ConsumerCrashEvent } from "kafkajs";
-import { createConsumerGroupConfig } from "../../../client/createConsumerGroupConfig.js";
+import {
+	createConsumerGroupConfig,
+	TAIL_FETCH_MAX_WAIT_MS,
+} from "../../../client/createConsumerGroupConfig.js";
 import { parseKafkaOffset } from "../../../client/kafkaOffsetUtils.js";
 import { createProgressTracker } from "../../../consumer/createProgressTracker.js";
 import { createTopicConsumer } from "../../../consumer/createTopicConsumer.js";
@@ -54,7 +57,7 @@ export function createOwnershipConsumer({
 			 *  Compaction is what keeps the log short; this is what survives it
 			 *  being long. */
 			timings: config.timings ?? {
-				fetchMaxWaitTimeMs: 250,
+				fetchMaxWaitTimeMs: TAIL_FETCH_MAX_WAIT_MS,
 				heartbeatIntervalMs: 3_000,
 				sessionTimeoutMs: 60_000,
 				rebalanceTimeoutMs: 90_000,

@@ -166,7 +166,7 @@ export class WorkerPool {
 
 		// Otherwise re-evaluate parked waiters: removing the dead worker may unblock
 		// a waiter that was strictly avoiding it (it's now the only live worker, or a
-		// different idle worker is the obvious pick), and lets `pickFor` recompute
+		// different idle worker is the obvious pick), and lets `pickFrom` recompute
 		// "the only live worker" semantics. Without this pump a death never wakes a
 		// parked waiter.
 		this.pump();
@@ -250,16 +250,28 @@ export class WorkerPool {
 		if (this.waiters.length === 0) {
 			return;
 		}
+		// Compute the free set once per pump (not once per waiter): at swarm width
+		// (thousands of waiters × workers) the per-waiter filter was quadratic.
+		const available = this.workers.filter(
+			(w) => w.inFlight < this.slotsPerWorker,
+		);
+		if (available.length === 0) {
+			return;
+		}
 
 		const stillWaiting: Waiter[] = [];
 		for (const waiter of this.waiters) {
-			const worker = this.pickFor(waiter);
-			if (worker) {
-				worker.inFlight += 1;
-				waiter.resolve(worker);
-			} else {
+			const worker =
+				available.length > 0 ? this.pickFrom(available, waiter) : undefined;
+			if (!worker) {
 				stillWaiting.push(waiter);
+				continue;
 			}
+			worker.inFlight += 1;
+			if (worker.inFlight >= this.slotsPerWorker) {
+				available.splice(available.indexOf(worker), 1);
+			}
+			waiter.resolve(worker);
 		}
 
 		this.waiters.length = 0;
@@ -270,16 +282,12 @@ export class WorkerPool {
 	 * Choose the best idle worker for a waiter per the §8.7 policy, or
 	 * `undefined` if none is currently available.
 	 */
-	private pickFor(waiter: Waiter): WorkerHandle | undefined {
-		// A worker is available while it has a free slot (`--per-worker`). Among
-		// available workers we pick the LEAST-loaded so files spread evenly instead
-		// of piling K onto worker 1 before touching worker 2.
-		const available = this.workers.filter(
-			(w) => w.inFlight < this.slotsPerWorker,
-		);
-		if (available.length === 0) {
-			return undefined;
-		}
+	private pickFrom(
+		available: WorkerHandle[],
+		waiter: Waiter,
+	): WorkerHandle | undefined {
+		// Among workers with a free slot (`--per-worker`) pick the LEAST-loaded so
+		// files spread evenly instead of piling K onto worker 1 before worker 2.
 
 		if (!waiter.avoidName) {
 			return leastLoaded(available);

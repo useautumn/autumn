@@ -10,6 +10,7 @@ import type {
 	HeraldLifecycleState,
 } from "./lifecycle/types/heraldLifecycle.js";
 import { createHerald } from "./setup/createHerald.js";
+import { getAtomClient } from "./setup/getAtomClient.js";
 import { getBalanceWorkerClient } from "./setup/getBalanceWorkerClient.js";
 import { getCatalogCache } from "./setup/getCatalogCache.js";
 import { getEventsDb } from "./setup/getEventsDb.js";
@@ -40,8 +41,7 @@ async function main(): Promise<void> {
 			sqsJobs: getSqsJobs(),
 			edgeConfigs: getHeraldEdgeConfigs(),
 			balanceWorkerClient: getBalanceWorkerClient(),
-			// No writer until alien ships remote kv; cache-push builds each entry and skips the write.
-			cacheWriter: null,
+			getAtomClient,
 			onConsumerCrashed,
 		},
 		config: { env: getHeraldEnv() },

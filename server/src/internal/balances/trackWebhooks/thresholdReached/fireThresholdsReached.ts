@@ -1,3 +1,8 @@
+import { subjectStateToFullSubject } from "@autumn/balance-engine";
+import {
+	isFeatureHeld,
+	workerStateToApiBalance,
+} from "@autumn/balance-engine/api-renderer";
 import {
 	type ThresholdReached,
 	trackToThresholdsReached,
@@ -10,11 +15,6 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	workerReplyToFullSubject,
-	workerStateToApiBalance,
-} from "@/internal/balances/balanceWorker/workerStateToApiBalance.js";
-import { isFeatureHeld } from "@/internal/balances/balanceWorker/workerSubjectsToApiBalances.js";
 import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject.js";
 import { sendThresholdsReached } from "./sendThresholdsReached.js";
 
@@ -45,7 +45,7 @@ const replyToThresholdsReached = ({
 	body: TrackParams;
 	reply: TrackReply;
 }): ThresholdReached[] => {
-	const fullSubject = workerReplyToFullSubject({
+	const fullSubject = subjectStateToFullSubject({
 		state: reply.state,
 		catalog: reply.catalog,
 		entityId: body.entity_id,

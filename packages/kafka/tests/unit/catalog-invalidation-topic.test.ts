@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ProducerRecord } from "kafkajs";
+import type { ConsumerConfig, ProducerRecord } from "kafkajs";
 import {
 	createCatalogInvalidationConsumer,
 	createCatalogInvalidationPublisher,
@@ -78,18 +78,21 @@ describe("catalog invalidation topic", () => {
 					message: { offset: string; key: Buffer | null; value: Buffer | null };
 			  }) => Promise<void>)
 			| undefined;
+		let groupConfig: ConsumerConfig | undefined;
 		const consumer = createCatalogInvalidationConsumer({
 			ctx: {
 				kafka: {
-					consumer: () =>
-						({
+					consumer: (config: ConsumerConfig) => {
+						groupConfig = config;
+						return {
 							connect: async () => {},
 							subscribe: async () => {},
-							run: async (config: { eachMessage?: typeof run }) => {
-								run = config.eachMessage;
+							run: async (runConfig: { eachMessage?: typeof run }) => {
+								run = runConfig.eachMessage;
 							},
 							disconnect: async () => {},
-						}) as never,
+						} as never;
+					},
 				},
 				handler: {
 					apply: ({ record: read }) => {
@@ -100,10 +103,18 @@ describe("catalog invalidation topic", () => {
 					},
 				},
 			},
-			config: { topic: "local-catalog-invalidations", groupIdPrefix: "test" },
+			config: {
+				topic: "local-catalog-invalidations",
+				group: { kind: "perProcess", idPrefix: "test" },
+			},
 		});
 
 		await consumer.start();
+		expect(groupConfig).toMatchObject({
+			readUncommitted: false,
+			allowAutoTopicCreation: false,
+			maxWaitTimeInMs: 5_000,
+		});
 		await run?.({
 			message: {
 				offset: "0",
@@ -124,5 +135,36 @@ describe("catalog invalidation topic", () => {
 
 		expect(applied).toEqual(["org_1:live", "org_2:live"]);
 		expect(skipped).toEqual(["1"]);
+	});
+
+	test("a per-process group is new each time, a shared group is the one named", () => {
+		const groupIds: string[] = [];
+		const consumerIn = (
+			group:
+				| { kind: "perProcess"; idPrefix: string }
+				| { kind: "shared"; id: string },
+		) =>
+			createCatalogInvalidationConsumer({
+				ctx: {
+					kafka: {
+						consumer: ({ groupId }) => {
+							groupIds.push(groupId);
+							return {} as never;
+						},
+					},
+					handler: { apply: () => {}, skip: () => {} },
+				},
+				config: { topic: "local-catalog-invalidations", group },
+			});
+
+		consumerIn({ kind: "perProcess", idPrefix: "herald-catalog" });
+		consumerIn({ kind: "perProcess", idPrefix: "herald-catalog" });
+		consumerIn({ kind: "shared", id: "herald-catalog-push" });
+
+		const [first, second, shared] = groupIds;
+		expect(first).toStartWith("herald-catalog-");
+		expect(second).toStartWith("herald-catalog-");
+		expect(first).not.toBe(second);
+		expect(shared).toBe("herald-catalog-push");
 	});
 });

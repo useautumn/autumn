@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, ErrCode } from "@autumn/shared";
 import { Hono } from "hono";
-import { errorMiddleware } from "@/honoMiddlewares/errorMiddleware.js";
+import { errorMiddleware } from "@/honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 type MockJobQueueConfig = {

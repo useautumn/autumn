@@ -1,5 +1,4 @@
 import type { FullCustomer } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
@@ -107,8 +106,8 @@ export const resetCustomerEntitlements = async ({
 	} catch (error) {
 		logger.error(
 			`[resetCustomerEntitlements] customer=${customerId}, failed: ${error}`,
+			{ error },
 		);
-		Sentry.captureException(error);
 		return false;
 	}
 };

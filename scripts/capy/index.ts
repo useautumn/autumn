@@ -9,7 +9,7 @@ import {
 async function main(): Promise<void> {
 	const sub = process.argv[2];
 	if (!sub || sub.startsWith("--")) {
-		await cmdCapy();
+		await cmdCapy({ args: process.argv.slice(2) });
 		return;
 	}
 	switch (sub) {
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
 			cmdCapyStop();
 			break;
 		case "restart":
-			await cmdCapyRestart();
+			await cmdCapyRestart({ args: process.argv.slice(3) });
 			break;
 		default:
 			throw new Error(`unknown capy subcommand: ${sub}`);

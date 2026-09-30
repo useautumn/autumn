@@ -1,23 +1,33 @@
-import { createConsumerGroupConfig } from "../../../client/createConsumerGroupConfig.js";
+import {
+	createConsumerGroupConfig,
+	TAIL_FETCH_MAX_WAIT_MS,
+} from "../../../client/createConsumerGroupConfig.js";
 import { parseCatalogInvalidationRecord } from "../catalogInvalidationTopic.js";
 import type {
 	CatalogInvalidationConsumer,
 	CatalogInvalidationConsumerConfig,
+	CatalogInvalidationGroup,
 	CatalogInvalidationHandler,
 	CatalogInvalidationKafka,
 } from "./types/catalogInvalidationConsumer.js";
 
-/** Nothing waits to take this group's partition over, so a long session is cheap and a rebalance never happens. */
+/** A long session is cheap: a per-process group has no one to hand its partition to, and a shared one only delays a takeover. */
 const CONSUMER_TIMINGS = {
-	fetchMaxWaitTimeMs: 250,
+	fetchMaxWaitTimeMs: TAIL_FETCH_MAX_WAIT_MS,
 	heartbeatIntervalMs: 3_000,
 	sessionTimeoutMs: 60_000,
 	rebalanceTimeoutMs: 90_000,
 };
 
+function groupIdOf({ group }: { group: CatalogInvalidationGroup }): string {
+	return group.kind === "shared"
+		? group.id
+		: `${group.idPrefix}-${crypto.randomUUID()}`;
+}
+
 /**
- * Reads catalog invalidations from now on under a group of its own, so every process sees every one.
- * A record from before the process started is nothing to it: a fresh cache holds nothing stale.
+ * Reads catalog invalidations in log order. A group with no position yet starts from now:
+ * a per-process group always does, a shared group only the first time it ever runs.
  */
 export function createCatalogInvalidationConsumer({
 	ctx,
@@ -26,7 +36,7 @@ export function createCatalogInvalidationConsumer({
 	ctx: { kafka: CatalogInvalidationKafka; handler: CatalogInvalidationHandler };
 	config: CatalogInvalidationConsumerConfig;
 }): CatalogInvalidationConsumer {
-	const groupId = `${config.groupIdPrefix}-${crypto.randomUUID()}`;
+	const groupId = groupIdOf({ group: config.group });
 	const consumer = ctx.kafka.consumer(
 		createConsumerGroupConfig({ groupId, timings: CONSUMER_TIMINGS }),
 	);

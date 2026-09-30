@@ -86,6 +86,22 @@ therefore use Autumn's standard `http://localhost:8080` and
 `http://localhost:3000` URLs. Capy's Desktop services menu detects these ports
 without repository preview configuration.
 
+## Opt-in infra
+
+Some infra only runs on a sandbox that asks for it. Pass `--<name>` once and
+`bun capy` keeps it on through sleep and reboot, via a marker file in
+`~/.capy/work/autumn-capy/opt-ins/`. `--no-<name>` turns it off. Changing an
+opt-in restarts the stack.
+
+| Opt-in | Off (default) | On |
+| --- | --- | --- |
+| `alien` | `ALIEN_API_KEY` is withheld, so `byoc.create_atom` uses the local Atom | The server deploys Atoms through hosted Alien |
+
+```sh
+bun capy --alien      # real-cloud Atom from now on
+bun capy --no-alien   # back to the local Atom
+```
+
 ## Provisioning model
 
 `scripts/capy/provision.ts` mints a random machine id on first run, persists it

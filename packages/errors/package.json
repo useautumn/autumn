@@ -1,0 +1,30 @@
+{
+	"name": "@autumn/errors",
+	"version": "0.0.1",
+	"author": "Autumn",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/errors.ts",
+			"import": "./src/errors.ts",
+			"default": "./src/errors.ts"
+		}
+	},
+	"scripts": {
+		"ts": "tsc --noEmit",
+		"test": "bun test tests/unit"
+	},
+	"dependencies": {
+		"@autumn/logging": "workspace:*",
+		"@autumn/shared": "workspace:*",
+		"@sentry/bun": "catalog:",
+		"pino": "^9.6.0",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.2",
+		"@types/node": "^18.19.3",
+		"typescript": "~5.8.3"
+	}
+}
