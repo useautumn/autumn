@@ -60,7 +60,7 @@ class UpdateWebhookParamsTypedDict(TypedDict):
     url: NotRequired[str]
     r"""The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work."""
     events: NotRequired[List[UpdateWebhookEvent]]
-    r"""The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events."""
+    r"""The events sent to this webhook. Pass `[]` to send every event; omit it to keep the current list. `vercel.*` events can't be mixed with other events."""
     description: NotRequired[str]
     r"""A note for your own reference."""
     disabled: NotRequired[bool]
@@ -75,7 +75,7 @@ class UpdateWebhookParams(BaseModel):
     r"""The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work."""
 
     events: Optional[List[UpdateWebhookEvent]] = None
-    r"""The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events."""
+    r"""The events sent to this webhook. Pass `[]` to send every event; omit it to keep the current list. `vercel.*` events can't be mixed with other events."""
 
     description: Optional[str] = None
     r"""A note for your own reference."""
@@ -110,7 +110,7 @@ class UpdateWebhookWebhookTypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -132,7 +132,7 @@ class UpdateWebhookWebhook(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""

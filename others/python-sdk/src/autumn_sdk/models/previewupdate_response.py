@@ -1180,8 +1180,9 @@ class PreviewUpdateInvoiceMode(BaseModel):
 PreviewUpdateProrationBehavior = Literal[
     "prorate_immediately",
     "none",
+    "bill_difference",
 ]
-r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
 
 PreviewUpdateRedirectMode = Literal[
@@ -1367,7 +1368,7 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     invoice_mode: NotRequired[PreviewUpdateInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[PreviewUpdateProrationBehavior]
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
     redirect_mode: NotRequired[PreviewUpdateRedirectMode]
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
     subscription_id: NotRequired[str]
@@ -1422,7 +1423,7 @@ class PreviewUpdateParams(BaseModel):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
 
     proration_behavior: Optional[PreviewUpdateProrationBehavior] = None
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
     redirect_mode: Optional[PreviewUpdateRedirectMode] = "if_required"
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""

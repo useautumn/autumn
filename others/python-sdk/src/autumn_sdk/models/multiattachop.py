@@ -1529,8 +1529,9 @@ class MultiAttachAttachDiscount(BaseModel):
 MultiAttachBillingBehavior = Literal[
     "prorate_immediately",
     "none",
+    "bill_difference",
 ]
-r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
+r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
 
 MultiAttachRedirectMode = Literal[
@@ -1923,7 +1924,7 @@ class MultiAttachParamsTypedDict(TypedDict):
     discounts: NotRequired[List[MultiAttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     billing_behavior: NotRequired[MultiAttachBillingBehavior]
-    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
     billing_cycle_anchor: Literal["now"]
     r"""Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request."""
     success_url: NotRequired[str]
@@ -1967,7 +1968,7 @@ class MultiAttachParams(BaseModel):
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
     billing_behavior: Optional[MultiAttachBillingBehavior] = None
-    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
     billing_cycle_anchor: Annotated[
         Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],

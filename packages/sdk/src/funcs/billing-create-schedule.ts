@@ -46,7 +46,7 @@ import { Result } from "../types/fp.js";
  * @param successUrl - URL to redirect to after successful checkout. (optional)
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
- * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
+ * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference. (optional)
  * @param noBillingChanges - If true, skips any billing changes for the schedule. (optional)
  * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
  * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)

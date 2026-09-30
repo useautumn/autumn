@@ -29,21 +29,6 @@ export type BatchTrackOverageBehavior = ClosedEnum<
   typeof BatchTrackOverageBehavior
 >;
 
-export type BatchTrackLock = {
-  /**
-   * A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
-   */
-  lockId: string;
-  /**
-   * Must be true to enable locking.
-   */
-  enabled: true;
-  /**
-   * Unix timestamp (ms) when the lock automatically expires and releases the held balance.
-   */
-  expiresAt?: number | undefined;
-};
-
 export type RequestBody = {
   /**
    * The ID of the customer.
@@ -85,7 +70,6 @@ export type RequestBody = {
    * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
   async?: boolean | undefined;
-  lock?: BatchTrackLock | undefined;
 };
 
 /**
@@ -112,35 +96,6 @@ export const BatchTrackOverageBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BatchTrackOverageBehavior);
 
 /** @internal */
-export type BatchTrackLock$Outbound = {
-  lock_id: string;
-  enabled: true;
-  expires_at?: number | undefined;
-};
-
-/** @internal */
-export const BatchTrackLock$outboundSchema: z.ZodMiniType<
-  BatchTrackLock$Outbound,
-  BatchTrackLock
-> = z.pipe(
-  z.object({
-    lockId: z.string(),
-    enabled: z.literal(true),
-    expiresAt: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      lockId: "lock_id",
-      expiresAt: "expires_at",
-    });
-  }),
-);
-
-export function batchTrackLockToJSON(batchTrackLock: BatchTrackLock): string {
-  return JSON.stringify(BatchTrackLock$outboundSchema.parse(batchTrackLock));
-}
-
-/** @internal */
 export type RequestBody$Outbound = {
   customer_id: string;
   feature_id?: string | undefined;
@@ -152,7 +107,6 @@ export type RequestBody$Outbound = {
   timestamp?: number | undefined;
   overage_behavior?: string | undefined;
   async?: boolean | undefined;
-  lock?: BatchTrackLock$Outbound | undefined;
 };
 
 /** @internal */
@@ -171,7 +125,6 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
     timestamp: z.optional(z.int()),
     overageBehavior: z.optional(BatchTrackOverageBehavior$outboundSchema),
     async: z.optional(z.boolean()),
-    lock: z.optional(z.lazy(() => BatchTrackLock$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

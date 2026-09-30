@@ -62,8 +62,8 @@ class PreviewSyncWebhooksWebhookRequestTypedDict(TypedDict):
     r"""Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation."""
     url: str
     r"""The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work."""
-    events: List[PreviewSyncWebhooksEvent]
-    r"""The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events."""
+    events: NotRequired[List[PreviewSyncWebhooksEvent]]
+    r"""The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events."""
     description: NotRequired[str]
     r"""A note for your own reference."""
     disabled: NotRequired[bool]
@@ -77,8 +77,8 @@ class PreviewSyncWebhooksWebhookRequest(BaseModel):
     url: str
     r"""The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work."""
 
-    events: List[PreviewSyncWebhooksEvent]
-    r"""The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events."""
+    events: Optional[List[PreviewSyncWebhooksEvent]] = None
+    r"""The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events."""
 
     description: Optional[str] = None
     r"""A note for your own reference."""
@@ -88,7 +88,7 @@ class PreviewSyncWebhooksWebhookRequest(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["description", "disabled"])
+        optional_fields = set(["events", "description", "disabled"])
         serialized = handler(self)
         m = {}
 
@@ -105,12 +105,104 @@ class PreviewSyncWebhooksWebhookRequest(BaseModel):
 
 class PreviewSyncWebhooksSyncWebhooksParamsTypedDict(TypedDict):
     webhooks: List[PreviewSyncWebhooksWebhookRequestTypedDict]
-    r"""The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted."""
+    r"""The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false."""
+    skip_deletions: NotRequired[bool]
+    r"""When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone."""
 
 
 class PreviewSyncWebhooksSyncWebhooksParams(BaseModel):
     webhooks: List[PreviewSyncWebhooksWebhookRequest]
-    r"""The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted."""
+    r"""The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false."""
+
+    skip_deletions: Optional[bool] = True
+    r"""When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["skip_deletions"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ChangeWebhook3TypedDict(TypedDict):
+    id: str
+    r"""The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID."""
+    url: str
+    r"""The URL Autumn sends events to."""
+    description: Nullable[str]
+    r"""A note for your own reference."""
+    events: List[str]
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
+    disabled: bool
+    r"""When true, no events are sent to the webhook."""
+    created_at: float
+    r"""When the webhook was created, ms since epoch."""
+    updated_at: float
+    r"""When the webhook was last changed, ms since epoch."""
+
+
+class ChangeWebhook3(BaseModel):
+    id: str
+    r"""The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID."""
+
+    url: str
+    r"""The URL Autumn sends events to."""
+
+    description: Nullable[str]
+    r"""A note for your own reference."""
+
+    events: List[str]
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
+
+    disabled: bool
+    r"""When true, no events are sent to the webhook."""
+
+    created_at: float
+    r"""When the webhook was created, ms since epoch."""
+
+    updated_at: float
+    r"""When the webhook was last changed, ms since epoch."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+class Change5TypedDict(TypedDict):
+    id: str
+    webhook: ChangeWebhook3TypedDict
+    action: Literal["delete"]
+
+
+class Change5(BaseModel):
+    id: str
+
+    webhook: ChangeWebhook3
+
+    action: Annotated[
+        Annotated[Literal["delete"], AfterValidator(validate_const("delete"))],
+        pydantic.Field(alias="action"),
+    ] = "delete"
 
 
 class ChangeWebhook2TypedDict(TypedDict):
@@ -121,7 +213,7 @@ class ChangeWebhook2TypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -141,7 +233,7 @@ class ChangeWebhook2(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""
@@ -192,7 +284,7 @@ class Before2TypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -212,7 +304,7 @@ class Before2(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""
@@ -246,7 +338,7 @@ class After2TypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -266,7 +358,7 @@ class After2(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""
@@ -320,7 +412,7 @@ class Before1TypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -340,7 +432,7 @@ class Before1(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""
@@ -374,7 +466,7 @@ class After1TypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -394,7 +486,7 @@ class After1(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""
@@ -448,7 +540,7 @@ class ChangeWebhook1TypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -468,7 +560,7 @@ class ChangeWebhook1(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""
@@ -513,7 +605,13 @@ class Change1(BaseModel):
 
 ChangeUnionTypedDict = TypeAliasType(
     "ChangeUnionTypedDict",
-    Union[Change1TypedDict, Change4TypedDict, Change2TypedDict, Change3TypedDict],
+    Union[
+        Change1TypedDict,
+        Change4TypedDict,
+        Change5TypedDict,
+        Change2TypedDict,
+        Change3TypedDict,
+    ],
 )
 
 
@@ -532,11 +630,12 @@ _CHANGE_UNION_VARIANTS: dict[str, Any] = {
     "update": Change2,
     "adopt": Change3,
     "unmanaged": Change4,
+    "delete": Change5,
 }
 
 
 ChangeUnion = Annotated[
-    Union[Change1, Change2, Change3, Change4, UnknownChangeUnion],
+    Union[Change1, Change2, Change3, Change4, Change5, UnknownChangeUnion],
     BeforeValidator(
         partial(
             parse_open_union,
@@ -564,7 +663,7 @@ class PreviewSyncWebhooksResponseTypedDict(TypedDict):
     r"""OK"""
 
     changes: List[ChangeUnionTypedDict]
-    r"""What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone."""
+    r"""What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. `delete` webhooks aren't listed and `skip_deletions` is false, so sync deletes them."""
     errors: List[PreviewSyncWebhooksErrorTypedDict]
     r"""Listed webhooks `webhooks.sync` would refuse, e.g. when several dashboard webhooks share the URL."""
 
@@ -573,12 +672,16 @@ class PreviewSyncWebhooksResponse(BaseModel):
     r"""OK"""
 
     changes: List[ChangeUnion]
-    r"""What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone."""
+    r"""What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. `delete` webhooks aren't listed and `skip_deletions` is false, so sync deletes them."""
 
     errors: List[PreviewSyncWebhooksError]
     r"""Listed webhooks `webhooks.sync` would refuse, e.g. when several dashboard webhooks share the URL."""
 
 
+try:
+    Change5.model_rebuild()
+except NameError:
+    pass
 try:
     Change4.model_rebuild()
 except NameError:

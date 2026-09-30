@@ -338,6 +338,104 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		],
 	},
 	{
+		group: "subscriptions",
+		method: "list",
+		path: "/v1/subscriptions.list",
+		description:
+			"Lists recurring plans (including add-ons) across customers, live or expired. Filter by customer, entity, plan, or status. Pages may hold fewer than `limit` rows while `has_more` is true.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: false,
+				description:
+					"Only return rows for this customer. Omit to list across every customer.",
+			},
+			{
+				name: "entity_id",
+				type: "string",
+				required: false,
+				description: "Only return rows for this entity. Requires customer_id.",
+			},
+			{
+				name: "limit",
+				type: "number",
+				required: false,
+				description: "Number of items to return. Default 50, hard ceiling 200.",
+			},
+			{
+				name: "start_cursor",
+				type: "string",
+				required: false,
+				description:
+					"Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.",
+			},
+			{
+				name: "statuses",
+				type: "json",
+				required: false,
+				description:
+					"Statuses to include. Defaults to active and scheduled. past_due matches plans with overdue payments, which read as status active with past_due true.",
+			},
+			{
+				name: "plan_id",
+				type: "string",
+				required: false,
+				description: "Only return rows for this plan.",
+			},
+		],
+	},
+	{
+		group: "purchases",
+		method: "list",
+		path: "/v1/purchases.list",
+		description:
+			"Lists one-off plan purchases across customers, live or expired. Filter by customer, entity, plan, or status. Pages may hold fewer than `limit` rows while `has_more` is true.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: false,
+				description:
+					"Only return rows for this customer. Omit to list across every customer.",
+			},
+			{
+				name: "entity_id",
+				type: "string",
+				required: false,
+				description: "Only return rows for this entity. Requires customer_id.",
+			},
+			{
+				name: "limit",
+				type: "number",
+				required: false,
+				description: "Number of items to return. Default 50, hard ceiling 200.",
+			},
+			{
+				name: "start_cursor",
+				type: "string",
+				required: false,
+				description:
+					"Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.",
+			},
+			{
+				name: "statuses",
+				type: "json",
+				required: false,
+				description:
+					"Statuses to include. Defaults to active and scheduled. past_due matches plans with overdue payments, which read as status active with past_due true.",
+			},
+			{
+				name: "plan_id",
+				type: "string",
+				required: false,
+				description: "Only return rows for this plan.",
+			},
+		],
+	},
+	{
 		group: "plans",
 		method: "create",
 		path: "/v1/plans.create",
@@ -955,7 +1053,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1190,7 +1288,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"Whether to prorate the immediate phase. 'none' skips proration charges and credits.",
+					"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.",
 			},
 			{
 				name: "no_billing_changes",
@@ -1300,7 +1398,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.",
+					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 			},
 			{
 				name: "billing_cycle_anchor",
@@ -1420,7 +1518,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1648,7 +1746,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.",
+					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 			},
 			{
 				name: "billing_cycle_anchor",
@@ -1769,7 +1867,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1929,7 +2027,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -2198,7 +2296,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
 			},
 			{
 				name: "subscription_id",
@@ -2480,6 +2578,62 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"A unique identifier for this balance. Use this to target the balance in future update / delete calls.",
+			},
+		],
+	},
+	{
+		group: "balances",
+		method: "list",
+		path: "/v1/balances.list",
+		description:
+			"Lists individual balances (one row per grant) across customers, live or expired: plan balances, standalone balances, top-ups, and pooled balances. Pages may hold fewer than `limit` rows while `has_more` is true.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: false,
+				description:
+					"Only return rows for this customer. Omit to list across every customer.",
+			},
+			{
+				name: "entity_id",
+				type: "string",
+				required: false,
+				description: "Only return rows for this entity. Requires customer_id.",
+			},
+			{
+				name: "limit",
+				type: "number",
+				required: false,
+				description: "Number of items to return. Default 50, hard ceiling 200.",
+			},
+			{
+				name: "start_cursor",
+				type: "string",
+				required: false,
+				description:
+					"Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.",
+			},
+			{
+				name: "statuses",
+				type: "json",
+				required: false,
+				description:
+					"Statuses to include. Defaults to active. A balance is expired when its plan expired, or when a standalone balance passed its expires_at.",
+			},
+			{
+				name: "plan_id",
+				type: "string",
+				required: false,
+				description:
+					"Only return balances from this plan. Pass null for standalone balances only (top-ups, balances.create, rollovers).",
+			},
+			{
+				name: "feature_id",
+				type: "string",
+				required: false,
+				description: "Only return balances for this feature.",
 			},
 		],
 	},
@@ -2784,11 +2938,6 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
-			},
-			{
-				name: "lock",
-				type: "json",
-				required: false,
 			},
 		],
 	},
@@ -3165,6 +3314,29 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				description:
 					"If true, returns the calculated lines and totals without creating an invoice.",
 			},
+			{
+				name: "issue_method",
+				type: "string",
+				required: false,
+				description:
+					"draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.",
+			},
+		],
+	},
+	{
+		group: "invoices",
+		method: "finalize",
+		path: "/v1/invoices.finalize",
+		description:
+			"Finalizes a draft Stripe invoice, such as one left in draft by invoice mode with finalize set to false. Stripe then collects it: a send-invoice invoice is emailed and an automatically-charged one is charged. Any plan still waiting on the invoice to be paid expires at its due date. Already open or paid invoices are returned unchanged.",
+		body: "object",
+		fields: [
+			{
+				name: "invoice_id",
+				type: "string",
+				required: true,
+				description: "The Autumn invoice ID to finalize.",
+			},
 		],
 	},
 	{
@@ -3217,6 +3389,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.",
+			},
+			{
+				name: "invoice_id",
+				type: "string",
+				required: false,
+				description:
+					"Filter to the invoice with this Autumn invoice ID (e.g. inv_2b3c4d5e6f7g8h).",
+			},
+			{
+				name: "stripe_id",
+				type: "string",
+				required: false,
+				description:
+					"Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H).",
 			},
 			{
 				name: "status",
@@ -3284,6 +3470,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.",
+			},
+			{
+				name: "issue_method",
+				type: "string",
+				required: false,
+				description:
+					"How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.",
 			},
 			{
 				name: "update_customer_email",
