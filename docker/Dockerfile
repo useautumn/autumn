@@ -11,72 +11,26 @@
 #   ducklake        -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
 ARG BUN_VERSION=1.4.2
 
+# Collect every workspace manifest listed in the root package.json. Only this
+# stage's output feeds deps, so install stays cached until a manifest changes.
+FROM oven/bun:${BUN_VERSION} AS manifests
+COPY . /src
+WORKDIR /
+RUN bun -e 'const { cpSync } = require("node:fs"); \
+	for (const w of require("/src/package.json").workspaces.packages) \
+		cpSync(`/src/${w}/package.json`, `/out/${w}/package.json`);'
+
 FROM oven/bun:${BUN_VERSION} AS deps
 ARG BUN_VERSION
 WORKDIR /app
 
-# Copy the committed lockfile + every workspace manifest. Installing against the
-# real bun.lock (not a turbo-pruned one) keeps resolution byte-for-byte identical
-# to local/CI: zod v3 stays hoisted for the server, autumn-js keeps its nested
-# zod v4. --frozen-lockfile needs every workspace manifest present, so list them
-# all (add a line here when a workspace is added). Source is copied later, so this
-# layer caches until a package.json or the lockfile changes.
+# Install against the real bun.lock (not a turbo-pruned one) so zod v3 stays
+# hoisted for the server while autumn-js keeps its nested zod v4.
 COPY package.json bun.lock bunfig.toml ./
 # patchedDependencies in package.json are applied during install, so the
 # patch files must be present before it runs.
 COPY patches/ patches/
-COPY server/package.json server/
-COPY shared/package.json shared/
-COPY vite/package.json vite/
-COPY scripts/package.json scripts/
-COPY apps/leaf/package.json apps/leaf/
-COPY apps/herald/package.json apps/herald/
-COPY apps/checkout/package.json apps/checkout/
-COPY apps/docs/package.json apps/docs/
-COPY apps/sdk-test/package.json apps/sdk-test/
-COPY apps/testbench/package.json apps/testbench/
-COPY apps/website/package.json apps/website/
-COPY packages/agent-docs/package.json packages/agent-docs/
-COPY packages/atmn/package.json packages/atmn/
-COPY packages/atmn-old/package.json packages/atmn-old/
-COPY packages/atmn-generator/package.json packages/atmn-generator/
-COPY packages/ax-evals/package.json packages/ax-evals/
-COPY packages/atmn-tests/package.json packages/atmn-tests/
-COPY packages/auth/package.json packages/auth/
-COPY packages/autumn-js/package.json packages/autumn-js/
-COPY packages/balance-engine/package.json packages/balance-engine/
-COPY packages/balance-webhooks/package.json packages/balance-webhooks/
-COPY packages/balance-worker-client/package.json packages/balance-worker-client/
-COPY packages/kafka/package.json packages/kafka/
-COPY packages/edge-config/package.json packages/edge-config/
-COPY packages/blue-green/package.json packages/blue-green/
-COPY packages/postgres/package.json packages/postgres/
-COPY packages/auto-topup/package.json packages/auto-topup/
-COPY packages/sqs/package.json packages/sqs/
-COPY packages/cache/package.json packages/cache/
-COPY packages/encryption/package.json packages/encryption/
-COPY packages/dynamodb/package.json packages/dynamodb/
-COPY packages/catalog-lru/package.json packages/catalog-lru/
-COPY apps/balance-worker/package.json apps/balance-worker/
-COPY packages/env/package.json packages/env/
-COPY packages/gateway/package.json packages/gateway/
-COPY packages/ksuid/package.json packages/ksuid/
-COPY packages/logging/package.json packages/logging/
-COPY packages/mcp/package.json packages/mcp/
-COPY packages/openapi/package.json packages/openapi/
-COPY packages/render/package.json packages/render/
-COPY packages/svix/package.json packages/svix/
-COPY packages/alien/package.json packages/alien/
-COPY packages/byoc/package.json packages/byoc/
-COPY packages/tinybird/package.json packages/tinybird/
-COPY packages/ducklake/package.json packages/ducklake/
-COPY packages/axiom/package.json packages/axiom/
-COPY packages/billing/package.json packages/billing/
-COPY packages/fx/package.json packages/fx/
-COPY packages/sdk/package.json packages/sdk/
-COPY packages/stripe-sync/package.json packages/stripe-sync/
-COPY packages/ui/package.json packages/ui/
-COPY apps/sso-test-idp/package.json apps/sso-test-idp/
+COPY --from=manifests /out/ ./
 
 # bunfig.toml preloads ./scripts/preload-env.ts on every bun run; stub it so the
 # install step doesn't fail before the real source is copied.
