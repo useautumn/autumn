@@ -18,7 +18,7 @@ import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
 import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePreview } from "./SchedulePreview";
 
-const IS_PER_PHASE_REVIEW_READY = false;
+const IS_PER_PHASE_REVIEW_READY = true;
 
 export function CreateScheduleSheetContent() {
 	const { form } = useCreateScheduleFormContext();
