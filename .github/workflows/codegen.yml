@@ -1,0 +1,114 @@
+name: Codegen
+
+# Regenerates committed artifacts (specs, SDKs, docs, atmn client) and npm versions on dev,
+# so feature PRs never carry `bun api` output and releases bring it to main.
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  codegen:
+    name: Regenerate artifacts
+    # Bot commits are exactly the regeneration of their parent; the run that pushed them marks them done.
+    if: >-
+      github.event_name != 'push' ||
+      !endsWith(github.event.head_commit.author.name, '[bot]') ||
+      !startsWith(github.event.head_commit.message, 'chore: regenerate artifacts')
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    concurrency:
+      group: codegen-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Create app token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.CODEGEN_APP_ID || secrets.CODEGEN_APP_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      # A pending `codegen` status on the release PR head blocks 🚀 until artifacts land.
+      - name: Mark codegen pending
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=pending -f context=codegen -f description="Regenerating artifacts"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Speakeasy CLI
+        env:
+          VERSION: 1.798.0
+        run: |
+          curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
+          speakeasy --version
+
+      - name: Regenerate
+        env:
+          SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
+        run: |
+          bun api
+          bun -F @autumn/agent-docs gen
+          bun -F @autumn/atmn-generator generate
+
+      - name: Sync npm versions
+        working-directory: .github/scripts
+        run: bun sync-npm-versions.ts
+
+      - name: Commit regenerated artifacts
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to regenerate."
+            exit 0
+          fi
+          git diff --cached --stat
+          BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git commit -m "chore: regenerate artifacts for ${GITHUB_SHA::8}"
+          if ! git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            git fetch origin "${GITHUB_REF_NAME}"
+            test "$(git rev-parse "origin/${GITHUB_REF_NAME}")" != "$GITHUB_SHA" || exit 1
+            echo "Branch moved on; the newer push regenerates instead."
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" \
+            -f state=success -f context=codegen -f description="Artifacts up to date"
+
+      - name: Mark codegen done
+        if: success()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=success -f context=codegen -f description="Artifacts up to date"
+
+      - name: Mark codegen failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=failure -f context=codegen -f description="Regeneration failed"
