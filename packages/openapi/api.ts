@@ -38,20 +38,16 @@ async function main() {
 
 	if (process.argv.includes("--spec-only")) return;
 
-	const docsOnly = process.argv.includes("--docs-only");
-	if (!docsOnly) {
-		await generateSdksInParallel({
-			speakeasySdkDir: paths.tsSdkDir,
-			pythonSdkDir: paths.pythonSdkDir,
-		});
-	}
+	await generateSdksInParallel({
+		speakeasySdkDir: paths.tsSdkDir,
+		pythonSdkDir: paths.pythonSdkDir,
+	});
 
 	// Merge code samples into OpenAPI for docs
 	mergeCodeSamples({
 		speakeasySdkDir: paths.tsSdkDir,
 		pythonSdkDir: paths.pythonSdkDir,
 		outputPath: paths.docsOpenApiPath,
-		baseOpenApiPath: docsOnly ? paths.openApiOutput : undefined,
 	});
 
 	// Generate Mintlify docs (transform OpenAPI + generate MDX)
@@ -65,8 +61,6 @@ async function main() {
 		svixTransformsDir: paths.svixTransformsDir,
 		docsDir: paths.docsDir,
 	});
-
-	if (docsOnly) return;
 
 	// Generate Zod schemas for autumn-js from SDK types
 	await generateZodSchemas({
