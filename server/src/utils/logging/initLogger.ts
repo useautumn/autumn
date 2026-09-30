@@ -1,5 +1,6 @@
 import { hostname } from "node:os";
 import { Writable } from "node:stream";
+import { createErrorLogHook } from "@autumn/errors";
 import { normalizeErrorValues, resolveDeployment } from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
@@ -255,6 +256,12 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 				deployment,
 				hostname: hostname(),
 				pid: process.pid,
+			},
+			hooks: {
+				logMethod: createErrorLogHook({
+					service: "server",
+					captureToSentry: process.env.SENTRY_CAPTURE_LOGGED_ERRORS !== "false",
+				}),
 			},
 			// Tag every log line with this process's AWS task identity so Axiom
 			// can distinguish blue/green task sets. Returns {} until

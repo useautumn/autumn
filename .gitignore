@@ -44,6 +44,7 @@ apps/balance-worker/.data/
 !packages/axiom/tests
 !packages/billing/tests
 !packages/fx/tests
+!packages/errors/tests
 !vite/tests
 .secrets
 

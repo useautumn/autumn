@@ -1,5 +1,4 @@
-import { RecaseError, tryCatch } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
+import { tryCatch } from "@autumn/shared";
 import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { neonEventsDb } from "@/db/initNeonEvents.js";
@@ -69,12 +68,9 @@ export const runInsertEventBatch = async ({
 
 			if (error) {
 				logger.error(
+					{ error },
 					`❌ Failed to insert ${customerEvents.length} events for customer ${customerId}: ${error.message}`,
 				);
-
-				if (!(error instanceof RecaseError)) {
-					Sentry.captureException(error);
-				}
 				return {
 					success: false,
 					customerId,

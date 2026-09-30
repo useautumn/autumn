@@ -5,7 +5,6 @@ import {
 	orgToInStatuses,
 	usageWindowsToRolls,
 } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { usageWindowRepo } from "@/internal/customers/usageWindows/repos/index.js";
@@ -77,8 +76,8 @@ export const lazyResetSubjectUsageWindows = async ({
 	} catch (error) {
 		ctx.logger.error(
 			`[lazyResetSubjectUsageWindows] customer: ${fullSubject.customerId}, failed: ${error}`,
+			{ error },
 		);
-		Sentry.captureException(error);
 		return false;
 	}
 };

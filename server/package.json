@@ -62,6 +62,7 @@
 		"@autumn/dynamodb": "workspace:*",
 		"@autumn/edge-config": "workspace:*",
 		"@autumn/env": "workspace:*",
+		"@autumn/errors": "workspace:*",
 		"@autumn/kafka": "workspace:*",
 		"@autumn/ksuid": "workspace:*",
 		"@autumn/ducklake": "workspace:*",

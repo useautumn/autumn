@@ -4,7 +4,6 @@ import {
 	fullSubjectToCustomerEntitlements,
 	type NormalizedFullSubject,
 } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
@@ -147,8 +146,8 @@ export const lazyResetSubjectEntitlements = async ({
 	} catch (error) {
 		logger.error(
 			`[lazyResetSubjectEntitlements] customer: ${customerId}, failed: ${error}`,
+			{ error },
 		);
-		Sentry.captureException(error);
 		return false;
 	}
 };

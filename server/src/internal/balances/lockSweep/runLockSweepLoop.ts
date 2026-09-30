@@ -1,5 +1,4 @@
 import { ms } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import { isActiveSlot } from "@/queue/blueGreen/blueGreenGate.js";
 import {
@@ -40,9 +39,6 @@ const sweepOnce = async ({
 			{ jobName: "lock-sweep", err: error },
 			"[lock-sweep] batch failed",
 		);
-		Sentry.captureException(error, {
-			extra: { context: "runLockSweepLoop.sweepOnce" },
-		});
 		return null;
 	}
 };

@@ -11,7 +11,7 @@ import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
 import { vercelTestApiRouter } from "./external/vercel/vercelTestApiRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
-import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
+import { errorMiddleware } from "./honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import { inFlightTrackingMiddleware } from "./honoMiddlewares/inFlightTrackingMiddleware.js";
 import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";

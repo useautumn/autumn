@@ -1,6 +1,5 @@
 import * as crypto from "node:crypto";
 import type { EventInsert } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { tinybirdIngest } from "../initTinybird.js";
 import { isTinybirdConfigured } from "../tinybirdUtils.js";
@@ -14,7 +13,7 @@ const generateErrorId = (): string => {
 /**
  * Send EventInsert[] to Tinybird using zod-bird client.
  * The zod-bird client has built-in retry logic (10 retries with exponential backoff).
- * Does not throw - logs and captures errors in Sentry instead.
+ * Does not throw - logs errors instead (the logger reports bugs to Sentry).
  */
 export const sendEventsToTinybird = async ({
 	events,
@@ -41,6 +40,7 @@ export const sendEventsToTinybird = async ({
 		logger?.error(
 			`[${errorId}] Failed to send events to Tinybird (${region})`,
 			{
+				error,
 				data: {
 					errorId,
 					region,
@@ -50,20 +50,6 @@ export const sendEventsToTinybird = async ({
 				},
 			},
 		);
-
-		Sentry.captureException(error, {
-			tags: {
-				errorId,
-				service: "tinybird",
-				tinybird_region: region,
-			},
-			extra: {
-				data: {
-					eventCount: events.length,
-					events,
-				},
-			},
-		});
 	};
 
 	await tinybirdIngest

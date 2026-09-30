@@ -10,7 +10,6 @@ import {
 	type ReceiveMessageCommandOutput,
 	type SQSClient,
 } from "@aws-sdk/client-sqs";
-import * as Sentry from "@sentry/bun";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "@/db/pgPoolMonitor.js";
 import { stopBalanceShadow } from "@/external/balanceWorker/balanceShadow.js";
@@ -361,11 +360,10 @@ export const startPollingLoop = async ({
 		} catch (error) {
 			if (override?.ack !== "always-after-processing") throw error;
 
-			console.error(
-				`${prefix} ${job.name} failed; ACKing after processing so the next scan can retry it:`,
-				error instanceof Error ? error.message : error,
+			logger.error(
+				`${prefix} ${job.name} failed; ACKing after processing so the next scan can retry it`,
+				{ error },
 			);
-			Sentry.captureException(error);
 		}
 
 		messagesProcessed++;
@@ -398,8 +396,7 @@ export const startPollingLoop = async ({
 				const senderFailures = failed.filter((failure) => failure.SenderFault);
 				if (senderFailures.length > 0) {
 					const message = `${prefix} SQS rejected ${senderFailures.length} message deletion(s): ${senderFailures.map((failure) => `${failure.Id}:${failure.Code}`).join(", ")}`;
-					console.error(message);
-					Sentry.captureMessage(message, "error");
+					logger.error(message);
 				}
 				const retryIds = new Set(
 					failed
@@ -420,8 +417,7 @@ export const startPollingLoop = async ({
 
 		if (pending.length > 0) {
 			const message = `${prefix} Failed to delete ${pending.length} message(s) after ${DELETE_RETRY_DELAYS_MS.length + 1} attempts`;
-			console.error(message);
-			Sentry.captureMessage(message, "error");
+			logger.error(message);
 		}
 	};
 
@@ -541,11 +537,9 @@ export const startPollingLoop = async ({
 						workerActivity.startWork();
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
-								console.error(
-									`${prefix} Background job ${job.name} failed:`,
-									error instanceof Error ? error.message : error,
-								);
-								Sentry.captureException(error);
+								logger.error(`${prefix} Background job ${job.name} failed`, {
+									error,
+								});
 							})
 							.finally(() => {
 								activeMigrationJobs--;
@@ -583,7 +577,6 @@ export const startPollingLoop = async ({
 
 				await batchDeleteMessages({ sqs, toDelete });
 
-				Sentry.getCurrentScope().clear();
 				recycleWorkerIfNeeded();
 			} else {
 				const newClient = handleEmptyPoll();

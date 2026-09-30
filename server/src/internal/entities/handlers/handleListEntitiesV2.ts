@@ -18,7 +18,6 @@ import {
 	StandardCursor,
 	type SubjectQueryRow,
 } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv, RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -102,7 +101,6 @@ const buildApiEntitiesFromRows = async ({
 		fullSubjects,
 	}).catch((err) => {
 		ctx.logger.error("[handleListEntitiesV2] batch reset failed:", err);
-		Sentry.captureException(err);
 	});
 
 	return entities;
