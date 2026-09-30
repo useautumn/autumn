@@ -7,6 +7,7 @@
  *                          autumn_reissued_to; voided_invoice_id is null
  *                       -> the pending plan's pointer moves to the replacement
  *   stamped original    -> invoices.finalize and invoices.pay reject it
+ *   replacement fails   -> original is restored (auto_advance back, unstamped), no draft left behind
  *   issue_method        -> replacement is sent (default) or left as a draft
  */
 
@@ -138,5 +139,57 @@ test.concurrent(
 		expect(
 			(await ctx.stripeCli.invoices.retrieve(original.stripe_id)).status,
 		).toBe("draft");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue: draft original + replacement fails to finalize → original restored, no stray draft")}`,
+	async () => {
+		const customerId = "inv-issue-draft-original-rollback";
+		const pro = products.base({
+			id: "pro-issue-draft-original-rollback",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const { autumnV2_3, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+		const original = await attachInvoiceModePlan({
+			autumnV2_3,
+			autumnV2_4,
+			customerId,
+			planId: pro.id,
+			finalize: false,
+		});
+		await ctx.stripeCli.invoices.update(original.stripe_id, {
+			auto_advance: true,
+		});
+		const before = await ctx.stripeCli.invoices.retrieve(original.stripe_id);
+		const stripeCustomerId = before.customer as string;
+		const countDrafts = async () =>
+			(
+				await ctx.stripeCli.invoices.list({
+					customer: stripeCustomerId,
+					status: "draft",
+					limit: 100,
+				})
+			).data.length;
+		const draftsBefore = await countDrafts();
+
+		// Automatic tax with no customer address makes Stripe refuse to finalize.
+		await expectAutumnError({
+			func: () =>
+				autumnV2_3.post("/invoices.reissue", {
+					invoice_id: original.id,
+					invoice: { automatic_tax: true },
+				}),
+		});
+
+		const after = await ctx.stripeCli.invoices.retrieve(original.stripe_id);
+		expect(after.status).toBe("draft");
+		expect(after.auto_advance).toBe(true);
+		expect(after.metadata?.autumn_reissued_to).toBeFalsy();
+		expect(await countDrafts()).toBe(draftsBefore);
 	},
 );
