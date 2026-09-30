@@ -9,6 +9,7 @@ import {
 } from "@/components/v2/LineItemsPreview";
 import { PreviewTotalsBlock } from "@/components/v2/preview-totals/PreviewTotalsBlock";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { SHEET_EASE } from "@/views/customers2/customer/customerAnimations";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -90,8 +91,8 @@ const formatCredit = ({
 	});
 
 /**
- * Shared pricing preview. Nothing renders until the whole preview has
- * resolved — a shimmer holds the section, then the full block folds in.
+ * Shared pricing preview. A shimmer holds the section until the first preview
+ * resolves; refetches dim the last preview in place so the sheet never jumps.
  */
 export function PreviewSection({
 	previewQuery,
@@ -140,9 +141,7 @@ export function PreviewSection({
 		);
 	}
 
-	if (loading) return <PreviewLoadingSection />;
-
-	if (!previewData) return null;
+	if (!previewData) return loading ? <PreviewLoadingSection /> : null;
 
 	const totals = buildPreviewTotals({
 		previewData,
@@ -178,6 +177,8 @@ export function PreviewSection({
 				initial={{ opacity: 0, y: -4 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={PREVIEW_REVEAL_TRANSITION}
+				aria-busy={loading}
+				className={cn("transition-opacity", loading && "opacity-60")}
 			>
 				<div className="flex flex-col gap-3">
 					{creditNoteVisible && (

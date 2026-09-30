@@ -14,8 +14,8 @@ const REVIEW_STATUSES: Record<
 	ReviewChangeStatus,
 	{ label: string; tone: StatusTone; glyph: StatusGlyph }
 > = {
-	starts: { label: "Starts", tone: "green", glyph: "check" },
-	ends: { label: "Ends", tone: "red", glyph: "x" },
+	starts: { label: "Created", tone: "green", glyph: "check" },
+	ends: { label: "Removed", tone: "red", glyph: "x" },
 	kept: { label: "Kept", tone: "neutral", glyph: "check" },
 	updated: { label: "Updated", tone: "blue", glyph: "pencil" },
 	added: { label: "Added", tone: "green", glyph: "check" },
