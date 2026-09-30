@@ -60,3 +60,46 @@ test("an active linked plan stays in the current phase on its entity", () => {
 		{ productId: "credits", entityId: "seat_1" },
 	]);
 });
+
+test("a plan scheduled on the subscription's Stripe schedule fills its phase", () => {
+	const scheduleId = "sub_sched_1";
+	const scheduledStart = 1_790_000_000_000;
+	const livePlan = {
+		...linkedCustomerProduct({ status: CusProductStatus.Active }),
+		scheduled_ids: [scheduleId],
+		ended_at: scheduledStart,
+	} as FullCusProduct;
+	const scheduledPlan = {
+		...linkedCustomerProduct({ status: CusProductStatus.Scheduled }),
+		id: "cus_prod_scheduled",
+		subscription_ids: null,
+		scheduled_ids: [scheduleId],
+		starts_at: scheduledStart,
+	} as unknown as FullCusProduct;
+
+	const { phases } = syncProposalToCustomerState({
+		proposal: {
+			stripe_subscription_id: STRIPE_SUBSCRIPTION_ID,
+			stripe_schedule_id: scheduleId,
+			phases: [
+				{ starts_at: "now", plans: [] },
+				{ starts_at: scheduledStart, plans: [] },
+			],
+		} as unknown as SyncProposalV2,
+		customerProducts: [livePlan, scheduledPlan],
+		entities: [{ id: "seat_1", internal_id: "ety_seat_1" } as Entity],
+		contextEntityId: null,
+		products: [],
+		features: [],
+	});
+
+	expect(
+		phases.map((phase) => ({
+			startsAt: phase.startsAt,
+			productIds: phase.plans.map(({ productId }) => productId),
+		})),
+	).toEqual([
+		{ startsAt: null, productIds: ["credits"] },
+		{ startsAt: scheduledStart, productIds: ["credits"] },
+	]);
+});

@@ -7,7 +7,7 @@ import type {
 	SyncProposalV2,
 } from "@autumn/shared";
 import {
-	filterCustomerProductsByStripeSubscriptionId,
+	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import {
@@ -23,6 +23,8 @@ import {
 import { quantityRecordFrom } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import { applyCustomizeToProduct } from "./applyCustomizeToProduct";
 
+/** Scheduled plans link through the Stripe schedule only, so a subscription's
+ * plans are the ones on it or on its schedule. */
 const findLinkedCustomerProducts = ({
 	proposal,
 	customerProducts,
@@ -31,17 +33,17 @@ const findLinkedCustomerProducts = ({
 	customerProducts: FullCusProduct[];
 }): FullCusProduct[] => {
 	const { stripe_subscription_id, stripe_schedule_id } = proposal;
-	if (stripe_subscription_id)
-		return filterCustomerProductsByStripeSubscriptionId({
-			customerProducts,
-			stripeSubscriptionId: stripe_subscription_id,
-		});
-
-	return customerProducts.filter((customerProduct) =>
-		isCustomerProductOnStripeSubscriptionSchedule({
-			customerProduct,
-			stripeSubscriptionScheduleId: stripe_schedule_id,
-		}),
+	return customerProducts.filter(
+		(customerProduct) =>
+			(stripe_subscription_id &&
+				isCustomerProductOnStripeSubscription({
+					customerProduct,
+					stripeSubscriptionId: stripe_subscription_id,
+				})) ||
+			isCustomerProductOnStripeSubscriptionSchedule({
+				customerProduct,
+				stripeSubscriptionScheduleId: stripe_schedule_id,
+			}),
 	);
 };
 
