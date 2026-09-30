@@ -8,7 +8,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { capyHandoffText, ensureCapyBashrc } from "./command.ts";
+import {
+	capyHandoffText,
+	capyUnsetCommand,
+	ensureCapyBashrc,
+} from "./command.ts";
 
 describe("ensureCapyBashrc", () => {
 	const homes: string[] = [];
@@ -59,5 +63,15 @@ describe("capyHandoffText", () => {
 		expect(text).toContain("tmux session: capy");
 		expect(text).toContain("browser API uses /__autumn_api");
 		expect(text).toContain("expose only port 3000");
+	});
+});
+
+describe("capyUnsetCommand", () => {
+	test("unsets withheld keys after the login shell re-exports them", () => {
+		expect(capyUnsetCommand(["ALIEN_API_KEY"])).toBe("unset ALIEN_API_KEY; ");
+	});
+
+	test("adds nothing when every opt-in is on", () => {
+		expect(capyUnsetCommand([])).toBe("");
 	});
 });

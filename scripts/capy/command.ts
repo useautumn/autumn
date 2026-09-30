@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fatal, sh, shInherit } from "../dw/helpers/shell.ts";
 import { spawnDevInTmux, tmuxSessionExists } from "../dw/helpers/tmux.ts";
+import { applyOptInFlags, withheldEnvKeys } from "./optIns.ts";
 
 const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
 const REPO_ROOT = join(SCRIPT_DIR, "..", "..");
@@ -172,6 +173,10 @@ function ensureStartup(): void {
 	}
 }
 
+export function capyUnsetCommand(keys: string[]): string {
+	return keys.length > 0 ? `unset ${keys.join(" ")}; ` : "";
+}
+
 function ensureAppProcess(): void {
 	ensureBunGlobalBin();
 	if (tmuxSessionExists(CAPY_SESSION)) return;
@@ -181,6 +186,8 @@ function ensureAppProcess(): void {
 		CAPY_DEV: "1",
 		VITE_EMULATE_GOOGLE_PROXY: "1",
 	} as Record<string, string>;
+	const withheld = withheldEnvKeys();
+	for (const key of withheld) delete env[key];
 	const { app: appLog } = capyLogPaths();
 	mkdirSync(dirname(appLog), { recursive: true, mode: 0o700 });
 	writeFileSync(appLog, "", { mode: 0o600 });
@@ -191,13 +198,19 @@ function ensureAppProcess(): void {
 		[
 			"bash",
 			"-lc",
-			`set -o pipefail; bun scripts/dev.ts --worktree 1 2>&1 | tee -a '${appLog.replace(/'/g, "'\\''")}'`,
+			// The login shell re-exports Capy's project secrets, so withheld keys are unset after it.
+			`${capyUnsetCommand(withheld)}set -o pipefail; bun scripts/dev.ts --worktree 1 2>&1 | tee -a '${appLog.replace(/'/g, "'\\''")}'`,
 		],
 		REPO_ROOT,
 	);
 }
 
-export async function cmdCapy(): Promise<void> {
+export async function cmdCapy({
+	args = [],
+}: {
+	args?: string[];
+} = {}): Promise<void> {
+	if (applyOptInFlags({ args })) cmdCapyStop();
 	ensureCapyBashrc();
 	ensureAppProcess();
 	await waitForReady();
@@ -228,7 +241,11 @@ export function cmdCapyStop(): void {
 	}
 }
 
-export async function cmdCapyRestart(): Promise<void> {
+export async function cmdCapyRestart({
+	args = [],
+}: {
+	args?: string[];
+} = {}): Promise<void> {
 	cmdCapyStop();
-	await cmdCapy();
+	await cmdCapy({ args });
 }
