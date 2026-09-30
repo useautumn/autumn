@@ -15,7 +15,7 @@ export type SubscriptionStateDecision = {
 };
 
 const UPDATE: SubscriptionStateDecision = { action: "update", warning: null };
-const CREATE_AFTER_TERMINAL: SubscriptionStateDecision = {
+const CREATE_NEW_SUBSCRIPTION: SubscriptionStateDecision = {
 	action: "create",
 	warning: "new_stripe_subscription",
 };
@@ -29,12 +29,12 @@ const SUBSCRIPTION_STATE_DECISIONS: Record<
 	SubscriptionState,
 	SubscriptionStateDecision
 > = {
-	none: { action: "create", warning: null },
+	none: CREATE_NEW_SUBSCRIPTION,
 	active: UPDATE,
 	trialing: UPDATE,
 	past_due: UPDATE,
-	canceled: CREATE_AFTER_TERMINAL,
-	incomplete_expired: CREATE_AFTER_TERMINAL,
+	canceled: CREATE_NEW_SUBSCRIPTION,
+	incomplete_expired: CREATE_NEW_SUBSCRIPTION,
 	incomplete: CANCEL_AND_CREATE,
 	unpaid: CANCEL_AND_CREATE,
 	paused: CANCEL_AND_CREATE,

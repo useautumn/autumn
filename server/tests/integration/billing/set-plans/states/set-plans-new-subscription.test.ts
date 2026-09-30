@@ -54,10 +54,10 @@ test.concurrent(
 		};
 		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);
 		expect(
-			preview.warnings.filter((warning) =>
-				SUBSCRIPTION_STATE_WARNINGS.includes(warning.type),
-			),
-		).toEqual([]);
+			preview.warnings
+				.filter((warning) => SUBSCRIPTION_STATE_WARNINGS.includes(warning.type))
+				.map((warning) => warning.type),
+		).toEqual(["new_stripe_subscription"]);
 		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		expect(await liveStripeSubscriptions({ ctx, customerId })).toHaveLength(1);
