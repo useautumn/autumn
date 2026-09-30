@@ -42,7 +42,10 @@ import { useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
-import { impersonateUser } from "@/views/admin/adminUtils";
+import {
+	getImpersonationUser,
+	impersonateUser,
+} from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
@@ -343,16 +346,14 @@ const CommandBar = () => {
 				}
 				const orgFromSearch = rawOrgs.find((o) => o.id === id);
 				if (!orgFromSearch) return;
-				const firstNonAdminUser = orgFromSearch.users?.find(
-					(u) => u.role !== "admin",
-				);
-				if (!firstNonAdminUser) return;
+				const impersonationUser = getImpersonationUser(orgFromSearch.users);
+				if (!impersonationUser) return;
 				addOrg({
 					kind: "org",
 					org_id: id,
 					org_slug: orgFromSearch.slug,
 					org_name: orgFromSearch.name,
-					impersonation_user_id: firstNonAdminUser.id,
+					impersonation_user_id: impersonationUser.id,
 				});
 			} else if (kind === "user") {
 				if (isUserFav(id)) {
@@ -879,10 +880,8 @@ const CommandBar = () => {
 									>
 										{results.map((result) => {
 											const org = result.data as Org;
-											const firstNonAdminUser = org.users?.find(
-												(user) => user.role !== "admin",
-											);
-											if (!firstNonAdminUser) return null;
+											const impersonationUser = getImpersonationUser(org.users);
+											if (!impersonationUser) return null;
 
 											return (
 												<CommandRow
@@ -903,7 +902,7 @@ const CommandBar = () => {
 													onSelect={async () => {
 														try {
 															await impersonateUser({
-																userId: firstNonAdminUser.id,
+																userId: impersonationUser.id,
 																organizationId: org.id,
 																isCurrentlyImpersonating,
 															});
