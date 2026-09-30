@@ -1,9 +1,8 @@
-import type { AppEnv, Feature, Organization } from "@autumn/shared";
+import type { Organization } from "@autumn/shared";
+import type { AtomConnection } from "../../../atom/types/atomClient.js";
 
-/** An org whose env has a ready cache: what rendering needs, and the deployment its KV lives in. */
+/** An org whose env has a ready cache, and how its Atom is reached. */
 export type CacheReadyOrg = {
 	org: Organization;
-	env: AppEnv;
-	features: Feature[];
-	deploymentId: string;
+	atomConnection: AtomConnection;
 };

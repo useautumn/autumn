@@ -28,8 +28,10 @@ tests/
 !packages/sqs/tests
 !packages/catalog-lru/tests
 apps/balance-worker/.data/
+/.data/
 !packages/kafka/tests
 !apps/balance-worker/tests
+!apps/atom/tests
 !packages/balance-engine/tests
 !packages/balance-webhooks/tests
 !packages/postgres/tests

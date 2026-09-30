@@ -1,18 +1,50 @@
 {
 	"id": "autumn-byoc",
 	"resources": {
-		"cache": {
+		"atom": {
 			"config": {
-				"id": "cache",
-				"type": "kv"
+				"id": "atom",
+				"type": "container",
+				"code": {
+					"type": "source",
+					"src": "../../../../apps/atom",
+					"toolchain": { "type": "typescript", "binaryName": "atom" }
+				},
+				"commandsEnabled": false,
+				"cpu": { "min": "0.5", "desired": "0.5" },
+				"memory": { "min": "512Mi", "desired": "512Mi" },
+				"environment": {
+					"ATOM_HOSTNAME": "0.0.0.0",
+					"ATOM_PORT": "8080",
+					"ATOM_DATA_DIR": "/data"
+				},
+				"healthCheck": {
+					"path": "/health",
+					"method": "GET",
+					"timeoutSeconds": 1,
+					"failureThreshold": 3
+				},
+				"kubernetesSecretMounts": [],
+				"links": [],
+				"permissions": "atom",
+				"persistentStorage": { "mountPath": "/data", "size": "10Gi" },
+				"ports": [{ "port": 8080 }],
+				"publicEndpoints": [
+					{
+						"name": "api",
+						"port": 8080,
+						"protocol": "http",
+						"wildcardSubdomains": false
+					}
+				],
+				"stateful": true
 			},
-			"lifecycle": "frozen",
-			"dependencies": [],
-			"remoteAccess": true
+			"lifecycle": "live",
+			"dependencies": []
 		}
 	},
 	"permissions": {
-		"profiles": {},
+		"profiles": { "atom": {} },
 		"management": "auto"
 	}
 }

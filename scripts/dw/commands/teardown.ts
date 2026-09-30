@@ -1,3 +1,6 @@
+import { rmSync } from "node:fs";
+import { join } from "node:path";
+import { stopPublicAccess } from "../helpers/cloudflare.ts";
 import {
 	removeAllAutumnComposeStacks,
 	removeComposeStack,
@@ -7,7 +10,6 @@ import { isPlainCanonical } from "../helpers/entry.ts";
 import { removeEnvLocalFiles } from "../helpers/env-files.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { deleteBranch } from "../helpers/neon.ts";
-import { stopPublicAccess } from "../helpers/cloudflare.ts";
 import { releaseNgrokIfPresent } from "../helpers/ngrok.ts";
 import { unregisterPortlessAliases } from "../helpers/portless.ts";
 import {
@@ -91,4 +93,6 @@ async function teardownEntry(entry: RegistryEntry): Promise<void> {
 		killTmuxSession(tmuxSessionName(entry.worktreeNum));
 	}
 	removeComposeStack(entry.worktreeNum, entry.branchName);
+	// The dev stack's Atom keeps each deployed org's folder here.
+	rmSync(join(entry.path, ".data", "atom"), { recursive: true, force: true });
 }

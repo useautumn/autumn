@@ -6,10 +6,17 @@ export type CatalogInvalidationKafka = {
 	consumer(config: ConsumerConfig): KafkaConsumerClient;
 };
 
+/**
+ * `perProcess`: a group of its own under this prefix, so every process reads every record from now on.
+ * `shared`: one named group, so one process reads each record and a restart resumes where the group stopped.
+ */
+export type CatalogInvalidationGroup =
+	| { kind: "perProcess"; idPrefix: string }
+	| { kind: "shared"; id: string };
+
 export type CatalogInvalidationConsumerConfig = {
 	topic: string;
-	/** Prefix of a group id unique to this process: every subscriber reads every record. */
-	groupIdPrefix: string;
+	group: CatalogInvalidationGroup;
 };
 
 export type CatalogInvalidationHandler = {

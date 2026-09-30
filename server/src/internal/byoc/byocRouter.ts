@@ -6,6 +6,6 @@ import { handleGetCache } from "./handlers/handleGetCache.js";
 
 export const byocRpcRouter = new Hono<HonoEnv>();
 
-byocRpcRouter.post("/byoc.create_cache", ...handleCreateCache);
-byocRpcRouter.post("/byoc.get_cache", ...handleGetCache);
-byocRpcRouter.post("/byoc.delete_cache", ...handleDeleteCache);
+byocRpcRouter.post("/byoc.create_atom", ...handleCreateCache);
+byocRpcRouter.post("/byoc.get_atom", ...handleGetCache);
+byocRpcRouter.post("/byoc.delete_atom", ...handleDeleteCache);

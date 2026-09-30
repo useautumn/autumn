@@ -41,6 +41,8 @@ import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
 import chalk from "chalk";
 import {
+	ATOM_PORT,
+	ATOM_URL,
 	BALANCE_WORKER_PORT,
 	DRAGONFLY_PORT,
 	DYNAMODB_PORT,
@@ -229,6 +231,25 @@ export const startHerald = (repoRoot: string): Subprocess => {
 };
 
 /**
+ * Starts Atom (`apps/atom`) in dev mode, as on a dev stack: one process stands in for
+ * every org's Atom, and the server registers each through `ATOM_URL`.
+ */
+export const startAtom = (repoRoot: string): Subprocess => {
+	log(`starting Atom (bun src/main.ts) on :${ATOM_PORT}`);
+	return spawn(["bun", "--config=./bunfig.toml", "src/main.ts"], {
+		cwd: join(repoRoot, "apps/atom"),
+		stdout: "inherit",
+		stderr: "inherit",
+		env: {
+			...process.env,
+			ATOM_DEV: "true",
+			ATOM_PORT: String(ATOM_PORT),
+			ATOM_DATA_DIR: join(repoRoot, ".data", "atom"),
+		} as Record<string, string>,
+	});
+};
+
+/**
  * Spawns the image start script that brings up the native services. The script
  * lives in the image layer (`scripts/tw/image/start-services.sh`) and is resolved
  * against the in-sandbox repo root. Throws loudly if it exits non-zero.
@@ -317,6 +338,8 @@ export const startServer = (repoRoot: string, port: number): Subprocess => {
 			...process.env,
 			NODE_ENV: "development",
 			SERVER_PORT: String(port),
+			// Set here, not by the orchestrator: boot.ts runs from the ref under test.
+			ATOM_URL,
 		} as Record<string, string>,
 	});
 };
@@ -481,6 +504,13 @@ const main = async (): Promise<void> => {
 	} else {
 		log("balance worker rollout off — server keeps the Postgres path");
 	}
+
+	// 4c. Atom is up before the server, which registers an org's Atom on byoc.create_atom.
+	const atomProc = startAtom(repoRoot);
+	void atomProc.exited.then((code) => {
+		console.error(chalk.red(`[tw-boot] Atom exited early with code ${code}`));
+	});
+	await waitForTcpPort("Atom", ATOM_PORT, SERVICE_HEALTH_TIMEOUT_MS);
 
 	// 5 + 6. Start the server and wait for health.
 	const serverProc = startServer(repoRoot, serverPort);

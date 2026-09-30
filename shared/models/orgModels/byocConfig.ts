@@ -14,6 +14,10 @@ export type ByocCacheDeployment = {
 	/** Null until the org runs the setup and alien creates the deployment. */
 	deployment_id: string | null;
 	status: ByocCacheStatus;
+	/** Where the env's Atom answers; null until its deployment reports one. */
+	endpoint_url: string | null;
+	/** The Atom's token, encrypted at rest. The Atom itself holds only its hash. */
+	encrypted_token: string;
 	created_at: number;
 };
 

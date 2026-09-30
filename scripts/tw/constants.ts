@@ -153,6 +153,9 @@ export const KAFKA_PORT = 19092;
 export const KAFKA_BROKERS = `127.0.0.1:${KAFKA_PORT}`;
 /** The balance worker's loopback listener (`BALANCE_WORKER_PORT` default). */
 export const BALANCE_WORKER_PORT = 8082;
+/** The µVM's one Atom process (dev mode); same port as dw's base worktree. */
+export const ATOM_PORT = 8086;
+export const ATOM_URL = `http://127.0.0.1:${ATOM_PORT}`;
 
 /**
  * Build-time localhost service URLs for a worker (plan §5a / §11a). All point at

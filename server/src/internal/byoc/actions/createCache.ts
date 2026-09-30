@@ -7,14 +7,18 @@ import {
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { encryptData } from "@/utils/encryptUtils.js";
+import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
 import { insertCacheDeployment } from "../repos/cacheDeployments.js";
 import {
+	atomTokenToHash,
+	cacheDeploymentToAtomToken,
+	generateAtomToken,
+} from "../utils/atomTokenUtils.js";
+import {
 	CACHE_LOCK_TTL_MS,
-	cacheDeploymentToApiCache,
-	cacheExternalId,
-	cacheGroupLabel,
+	cacheDeploymentToCreateResponse,
 	cacheLockKey,
-	getAlienClientOrThrow,
 } from "../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
@@ -22,14 +26,18 @@ import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 const claimCacheDeployment = async ({
 	ctx,
 	deploymentGroupId,
+	token,
 }: {
 	ctx: AutumnContext;
 	deploymentGroupId: string;
+	token: string;
 }): Promise<ByocCacheDeployment> => {
 	const cacheDeployment: ByocCacheDeployment = {
 		deployment_group_id: deploymentGroupId,
 		deployment_id: null,
 		status: ByocCacheStatus.AwaitingSetup,
+		endpoint_url: null,
+		encrypted_token: encryptData(token),
 		created_at: Date.now(),
 	};
 	if (await insertCacheDeployment({ ctx, cacheDeployment }))
@@ -65,27 +73,35 @@ const startCacheSetup = async ({
 	const existing = orgToCacheDeployment({ org, env });
 	const isAwaitingSetup = existing?.status === ByocCacheStatus.AwaitingSetup;
 	if (existing && !isAwaitingSetup)
-		return {
-			...cacheDeploymentToApiCache({ cacheDeployment: existing, env }),
-			setup_url: null,
-		};
+		return cacheDeploymentToCreateResponse({
+			cacheDeployment: existing,
+			env,
+			setupUrl: null,
+		});
 
-	const setup = await getAlienClientOrThrow().startSetup({
-		externalId: cacheExternalId({ org, env }),
-		label: cacheGroupLabel({ org, env }),
+	// A setup that is still waiting keeps its token, so a fresh link starts the same Atom.
+	const token = existing
+		? cacheDeploymentToAtomToken({ cacheDeployment: existing })
+		: generateAtomToken();
+	const setup = await getAtomDeployer().start({
+		org,
+		env,
+		tokenHash: atomTokenToHash({ token }),
 	});
 	const claimed =
 		existing ??
 		(await claimCacheDeployment({
 			ctx,
 			deploymentGroupId: setup.deploymentGroupId,
+			token,
 		}));
 	const cacheDeployment = await refreshCacheDeployment({
 		ctx,
 		cacheDeployment: claimed,
 	});
-	return {
-		...cacheDeploymentToApiCache({ cacheDeployment, env }),
-		setup_url: setup.setupUrl,
-	};
+	return cacheDeploymentToCreateResponse({
+		cacheDeployment,
+		env,
+		setupUrl: setup.setupUrl,
+	});
 };

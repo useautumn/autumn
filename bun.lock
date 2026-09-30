@@ -35,6 +35,23 @@
         "turbo": "2.10.9",
       },
     },
+    "apps/atom": {
+      "name": "@autumn/atom",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/balance-engine": "workspace:*",
+        "@autumn/env": "workspace:*",
+        "@autumn/logging": "workspace:*",
+        "@autumn/shared": "workspace:*",
+        "hono": "^4.13.5",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "apps/balance-worker": {
       "name": "@autumn/balance-worker",
       "version": "0.0.1",
@@ -1492,6 +1509,8 @@
     "@autumn/atmn-generator": ["@autumn/atmn-generator@workspace:packages/atmn-generator"],
 
     "@autumn/atmn-old": ["@autumn/atmn-old@workspace:packages/atmn-old"],
+
+    "@autumn/atom": ["@autumn/atom@workspace:apps/atom"],
 
     "@autumn/auth": ["@autumn/auth@workspace:packages/auth"],
 
@@ -7248,6 +7267,8 @@
     "@autumn/atmn-old/dotenv": ["dotenv@17.4.2", "", {}, "sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw=="],
 
     "@autumn/atmn-old/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@autumn/atom/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/auth/@types/node": ["@types/node@18.19.130", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg=="],
 

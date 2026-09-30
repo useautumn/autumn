@@ -21,6 +21,12 @@ and the org's app reads it through autumn-js without a round trip to Autumn.
   verdict plus the rows; the SDK's React hook already checks locally with a weaker rule.
 - `data-model/how-an-org-owns-external-infra-today.md` — dedicated org Redis (the sibling),
   integrations tabs, Svix app per env, edge configs, encryption.
+- `data-model/what-changes-a-check-answer.md` — entity caps are separate meters, credit prices
+  depend on properties and tier position, time moves answers with no write.
+- `data-model/how-other-platforms-cache-checks.md` — Schematic, Stigg, flag systems: ship rules +
+  state, one engine, version in the key, additive only.
+- `design/byoc-service.md` — draft: one service image, SQLite files per slot, check via the
+  balance engine, fed by a pull from Autumn. Supersedes `design/check-document.md`.
 - `code-paths/how-herald-runs-a-job.md` — a job is a folder plus one line; `cache-push` exists and
   pushes nothing; herald has no worker client yet.
 - `code-paths/how-a-check-is-answered-today.md` — SDK → server → worker → rendered balance, and
@@ -61,4 +67,4 @@ reads the worker's `readSubjectState`, not the log, and the worker is not touche
 | 5 | Herald reading from the worker: budget per read, and whether the read should be `check` per touched feature or one `readSubjectState` per subject | John |
 | 6 | The value stored: a per-feature verdict + headroom (24 KiB fits), or the subject's `ApiCustomer` (does not fit for entities) | John, after 1 |
 
-Next: John reviews (`bun brief`); corrections folded in; then `units.md`.
+Next: John reviews `design/byoc-service.md`; Alon answers its open question 1; then `units.md`.

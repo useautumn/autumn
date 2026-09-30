@@ -5,11 +5,11 @@ import {
 	resolveTaskIdentity,
 	type TaskIdentity,
 } from "@autumn/blue-green";
-import type { ByocCacheWriter } from "@autumn/byoc";
 import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
 import {
+	type CatalogInvalidationConsumer,
 	createKafkaClient,
 	createKafkaTransport,
 	KafkaWithSettledTopicOffsets,
@@ -19,7 +19,9 @@ import type { EventsDb, PostgresClient } from "@autumn/postgres";
 import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
+import type { GetAtomClient } from "../atom/types/atomClient.js";
 import { createCatalogInvalidationConsumer } from "../catalog/createCatalogInvalidationConsumer.js";
+import { createCatalogPushConsumer } from "../consumers/cachePush/catalogPushConsumer.js";
 import { createHeraldConsumers } from "../consumers/heraldConsumers.js";
 import type { HeraldEdgeConfigs } from "../edgeConfig/createHeraldEdgeConfigs.js";
 import { createSlotFollower } from "../slot/followSlot.js";
@@ -30,6 +32,8 @@ import { createStreamConsumer } from "../stream/createStreamConsumer.js";
 import type { RunningStreamConsumer } from "../stream/types/streamConsumer.js";
 
 export type Herald = { start(): Promise<void>; stop(): Promise<void> };
+
+type Stoppable = { stop(): Promise<void> };
 
 /** How long a task on ECS waits for its first read of the slot record; the heartbeat reports the wait meanwhile. */
 const FIRST_RECORD_RETRY_MS = 2_000;
@@ -56,7 +60,7 @@ export function createHerald({
 			BalanceWorkerClient,
 			"start" | "stop" | "readSubjectState"
 		>;
-		cacheWriter: ByocCacheWriter | null;
+		getAtomClient: GetAtomClient;
 		/** A job's consumer died for good; the caller ends the process so the task is replaced. */
 		onConsumerCrashed: (params: { job: string; cause: unknown }) => void;
 		/** Tests only: the identity ECS would have given this task. */
@@ -96,6 +100,8 @@ export function createHerald({
 	});
 	/** The jobs of the current activation; empty while idle. A stopped consumer is single-use, so each activation builds anew. */
 	let jobs: RunningStreamConsumer[] = [];
+	/** The current activation's catalog push to each org's Atom; null while idle, and single-use like the jobs. */
+	let catalogPush: CatalogInvalidationConsumer | null = null;
 	let heartbeat: { start(): Promise<void>; stop(): void } | null = null;
 	let follower: ReturnType<typeof createSlotFollower> | null = null;
 	const started: Array<() => Promise<void>> = [];
@@ -113,26 +119,44 @@ export function createHerald({
 		);
 	}
 
-	/** Every job joins; one that fails to start takes the others back out, so the slot is never half in. */
+	function buildCatalogPush(): CatalogInvalidationConsumer {
+		return createCatalogPushConsumer({
+			ctx: {
+				kafka,
+				logger: ctx.logger,
+				db: ctx.postgres.db,
+				getAtomClient: ctx.getAtomClient,
+			},
+			config: {
+				topic: env.HERALD_CATALOG_INVALIDATION_TOPIC,
+				groupId: `${env.HERALD_GROUP_ID}-catalog-push`,
+			},
+		});
+	}
+
+	/** Every job and the catalog push join; one that fails to start takes the others back out, so the slot is never half in. */
 	async function startJobs(): Promise<void> {
 		jobs = buildJobs();
-		const running: RunningStreamConsumer[] = [];
+		catalogPush = buildCatalogPush();
+		const running: Stoppable[] = [];
 		try {
-			for (const job of jobs) {
-				await job.start();
-				running.push(job);
+			for (const consumer of [...jobs, catalogPush]) {
+				await consumer.start();
+				running.push(consumer);
 			}
 		} catch (cause) {
 			await Promise.allSettled(running.map(stopConsumer));
 			jobs = [];
+			catalogPush = null;
 			throw cause;
 		}
 	}
 
-	/** Every job leaves, in parallel; a job that fails to stop does not keep the others in their groups. */
+	/** Every job and the catalog push leave, in parallel; one that fails to stop does not keep the others in their groups. */
 	async function stopJobs(): Promise<void> {
-		const stopping = jobs;
+		const stopping: Stoppable[] = catalogPush ? [...jobs, catalogPush] : jobs;
 		jobs = [];
+		catalogPush = null;
 		const results = await Promise.allSettled(stopping.map(stopConsumer));
 		const errors = results.flatMap((result) =>
 			result.status === "rejected" ? [result.reason] : [],
@@ -142,7 +166,7 @@ export function createHerald({
 			throw new AggregateError(errors, "Jobs did not stop");
 	}
 
-	function stopConsumer(consumer: RunningStreamConsumer): Promise<void> {
+	function stopConsumer(consumer: Stoppable): Promise<void> {
 		return consumer.stop();
 	}
 

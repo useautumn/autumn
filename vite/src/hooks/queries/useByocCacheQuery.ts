@@ -26,7 +26,7 @@ export const useByocCacheQuery = ({ enabled = true } = {}) => {
 		queryKey,
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<GetByocCacheResponse>(
-				"/v1/byoc.get_cache",
+				"/v1/byoc.get_atom",
 				{},
 			);
 			return data;
