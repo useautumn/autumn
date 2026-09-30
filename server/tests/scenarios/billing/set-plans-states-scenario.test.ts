@@ -1,6 +1,7 @@
 /** Customers left in each Stripe state set_plans must handle; run by hand from the dashboard. */
 
 import { expect, test } from "bun:test";
+import { ms } from "@autumn/shared";
 import {
 	cancelSubscriptionForResync,
 	cancelSubscriptionMissingWebhook,
@@ -247,5 +248,73 @@ test.concurrent(
 			status: "active",
 		});
 		expect(canceling.cancel_at).not.toBeNull();
+	},
+);
+
+test.concurrent(
+	"scenario K: multi-entity schedule with future plan changes and an add-on",
+	async () => {
+		const pro = products.pro({ items: [items.monthlyMessages()] });
+		const enterpriseNextYear = products.base({
+			id: "enterprise-next-year",
+			items: [
+				items.monthlyMessages({ includedUsage: 500 }),
+				items.monthlyPrice({ price: 50 }),
+			],
+		});
+		const enterpriseYearAfter = products.base({
+			id: "enterprise-year-after",
+			items: [
+				items.monthlyMessages({ includedUsage: 1000 }),
+				items.monthlyPrice({ price: 80 }),
+			],
+		});
+		const creditsAddOn = products.base({
+			id: "credits-add-on",
+			isAddOn: true,
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+
+		const { customerId, autumnV2_4 } = await initScenario({
+			customerId: "set-plans-scenario-multi-entity-schedule",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({
+					list: [pro, enterpriseNextYear, enterpriseYearAfter, creditsAddOn],
+				}),
+				s.entities({ count: 3, featureId: TestFeature.Users }),
+			],
+			actions: [],
+		});
+
+		const continuingPlans = [
+			{ plan_id: pro.id, entity_id: "ent-1" },
+			{ plan_id: pro.id, entity_id: "ent-2" },
+		];
+		await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [...continuingPlans, { plan_id: pro.id, entity_id: "ent-3" }],
+				},
+				{
+					starts_at: Date.now() + ms.days(365),
+					plans: [
+						...continuingPlans,
+						{ plan_id: enterpriseNextYear.id, entity_id: "ent-3" },
+						{ plan_id: creditsAddOn.id },
+					],
+				},
+				{
+					starts_at: Date.now() + ms.days(730),
+					plans: [
+						...continuingPlans,
+						{ plan_id: enterpriseYearAfter.id, entity_id: "ent-3" },
+						{ plan_id: creditsAddOn.id },
+					],
+				},
+			],
+		});
 	},
 );
