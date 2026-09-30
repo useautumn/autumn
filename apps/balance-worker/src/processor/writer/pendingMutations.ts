@@ -41,6 +41,9 @@ export function createPartitionWriterState({
 		recoveryError: null,
 		lastBatchSize: 0,
 		lingerWake: null,
+		deferredQueued: 0,
+		deferredCommitTimer: null,
+		deferredCommitDue: false,
 	};
 }
 
@@ -168,6 +171,7 @@ export function enqueueMutation({
 	projectedStates: explicitProjectedStates,
 	durability,
 	effects,
+	defersCommit = false,
 }: {
 	scope: PartitionWriterScope;
 	pendingKey: string;
@@ -178,6 +182,7 @@ export function enqueueMutation({
 	projectedStates?: SubjectState[];
 	durability: MutationDurability;
 	effects?: MutationEffect[];
+	defersCommit?: boolean;
 }): PendingMutation {
 	const { state, config } = scope;
 	const customerPending =
@@ -217,6 +222,7 @@ export function enqueueMutation({
 		loggedRecord,
 		settlement,
 		encodedBytes,
+		defersCommit,
 	};
 	for (const [index, projected] of projectedStates.entries()) {
 		const subjectKey = pending.projectedSubjectKeys[index];
@@ -228,6 +234,7 @@ export function enqueueMutation({
 	customerPending.add(pending);
 	state.pendingByCustomerKey.set(customerKey, customerPending);
 	state.queue.push(pending);
+	if (defersCommit) state.deferredQueued += 1;
 	// A log-only record lands no rows, so nothing that re-reads Postgres waits for it:
 	// an evict behind it enqueues its own record straight away and shares the next commit.
 	if (nextState) state.storeCompletion = settlement.waitForStore();
@@ -256,7 +263,7 @@ export function pendingCommitsFor({
 	if (!customerPending) return [];
 	const commits: Promise<void>[] = [];
 	for (const pending of customerPending)
-		commits.push(pending.settlement.waitForLog());
+		if (pending.nextState) commits.push(pending.settlement.waitForLog());
 	return commits;
 }
 
@@ -294,6 +301,10 @@ export function rejectAllPending({
 	// Log-acknowledged writes have left pendingByKey but still own an unfinished store milestone.
 	for (const pending of batch) pending.settlement.reject({ error });
 	state.queue.length = 0;
+	state.deferredQueued = 0;
+	if (state.deferredCommitTimer) clearTimeout(state.deferredCommitTimer);
+	state.deferredCommitTimer = null;
+	state.deferredCommitDue = false;
 	state.pendingByKey.clear();
 	state.pendingByCustomerKey.clear();
 	state.subjects.clear();

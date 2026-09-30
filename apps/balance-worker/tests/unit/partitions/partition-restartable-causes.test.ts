@@ -6,6 +6,7 @@ import {
 import { FlushBookmarkConflictError } from "@autumn/postgres";
 import { KafkaJSProtocolError } from "kafkajs";
 import { FlushRecordFailedError } from "../../../src/committer/committerErrors.js";
+import { StateAheadOfKafkaLogEndError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { isPartitionRestartableCause } from "../../../src/partitions/health/partitionRestartableCauses.js";
 import {
 	MutationBatchNotCommittedError,
@@ -14,6 +15,7 @@ import {
 import {
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
+	PartitionPreparationFailedError,
 } from "../../../src/runtime/runtimeErrors.js";
 
 const topic = "events";
@@ -80,6 +82,24 @@ test("a producer the broker fenced restarts the partition alone: the log and the
 			cause: new KafkaTransactionStateUnknownError({
 				failureStage: "commit",
 				cause: expired,
+			}),
+		}),
+	});
+	expect(isPartitionRestartableCause({ cause })).toBe(true);
+});
+
+test("a standby whose preparation failed restarts the partition alone: it holds no producer and wrote nothing", () => {
+	const cause = new OwnedPartitionRecoveryRequiredError({
+		topic,
+		partition,
+		cause: new PartitionPreparationFailedError({
+			topic,
+			partition,
+			cause: new StateAheadOfKafkaLogEndError({
+				topic,
+				partition,
+				storedNextOffset: 7n,
+				logEndOffset: 5n,
 			}),
 		}),
 	});

@@ -6,7 +6,7 @@ import type {
 } from "../types/partitionState.js";
 import {
 	createPartitionEntries,
-	reportPartitionStartupFailures,
+	reportPartitionStartupFailure,
 	startPartition,
 } from "./partitionStartup.js";
 
@@ -105,19 +105,23 @@ export async function startPartitions({
 	});
 
 	async function startOne({ entry }: { entry: PartitionEntry }): Promise<void> {
-		await startPartition({ ctx, state, entry, allocationGeneration });
+		try {
+			await startPartition({ ctx, state, entry, allocationGeneration });
+		} catch (cause) {
+			reportPartitionStartupFailure({
+				ctx,
+				state,
+				entry,
+				cause,
+				allocationGeneration,
+			});
+			throw cause;
+		}
 	}
 
-	const results = await runBoundedStartups({
+	await runBoundedStartups({
 		entries,
 		width: BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY,
 		start: startOne,
-	});
-	reportPartitionStartupFailures({
-		ctx,
-		state,
-		entries,
-		results,
-		allocationGeneration,
 	});
 }

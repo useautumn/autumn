@@ -136,10 +136,21 @@ export function createMeteringConsumer({
 		}
 	}
 
+	async function settleBatch(position: {
+		topic: string;
+		partition: number;
+	}): Promise<void> {
+		await secondaryHandlerOf(position)?.settleBatch?.(position);
+	}
+
 	// The handler kind is decided once here, never per record.
 	const handler: TopicConsumerHandler = isRecordsHandler(ctx.handler)
 		? { readResumeOffset, applyRecords: bindApplyRecords(ctx.handler) }
-		: { readResumeOffset, applyRecord: bindApplyRecord(ctx.handler) };
+		: {
+				readResumeOffset,
+				applyRecord: bindApplyRecord(ctx.handler),
+				settleBatch,
+			};
 
 	return createTopicConsumer({
 		ctx: { consumer: ctx.consumer, progress: ctx.progress, handler },

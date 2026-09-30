@@ -135,6 +135,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		records,
 		lastOffset: fetchedLastOffset,
 		uncommittedPartition = partition,
+		topic: deliveredTopic = topic,
 	}: {
 		records: Array<{
 			offset: string;
@@ -144,6 +145,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		}>;
 		lastOffset?: string;
 		uncommittedPartition?: number | string;
+		topic?: string;
 	}): Promise<void> {
 		if (!runConfig?.eachBatch) throw new Error("Consumer has not started");
 		let resolvedOffset: string | undefined;
@@ -186,7 +188,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 			return {
 				topics: [
 					{
-						topic,
+						topic: deliveredTopic,
 						partitions: [
 							{
 								partition: uncommittedPartition as number,
@@ -224,7 +226,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		}
 		const payload: EachBatchPayload = {
 			batch: {
-				topic,
+				topic: deliveredTopic,
 				partition,
 				highWatermark: "100",
 				messages,
@@ -1113,6 +1115,72 @@ describe("partition allocation events", function allocationEvents() {
 		"reports invalid assigned partition %s without forwarding the assignment",
 		reportsInvalidAssignment,
 	);
+});
+
+test("a handler that holds a batch's durability settles it before the batch's offset is committed", async () => {
+	const fixture = createConsumerFixture();
+	const landed = Promise.withResolvers<void>();
+	function applyRecord({ message }: TopicRecord): undefined {
+		fixture.events.push(`apply:${message.offset}`);
+	}
+	async function settleBatch({
+		partition: settled,
+	}: {
+		topic: string;
+		partition: number;
+	}): Promise<void> {
+		fixture.events.push(`settle:${settled}`);
+		await landed.promise;
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord, settleBatch },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	const delivery = fixture.deliverBatch({
+		records: [createRecord("0"), createRecord("1")],
+	});
+	await Bun.sleep(0);
+	expect(fixture.events).toContain(`settle:${partition}`);
+	expect(fixture.commits).toEqual([]);
+	landed.resolve();
+	await delivery;
+	expect(fixture.commits).toEqual([[{ topic, partition, offset: "2" }]]);
+	await consumer.stop();
+});
+
+test("the metering consumer settles a command batch through the command topic's own handler", async () => {
+	const fixture = createConsumerFixture();
+	const commandTopic = "commands";
+	const settled: string[] = [];
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord: () => undefined },
+			secondaryHandlers: {
+				[commandTopic]: {
+					readResumeOffset,
+					applyRecord,
+					settleBatch: async ({ topic: settledTopic }) => {
+						settled.push(settledTopic);
+					},
+				},
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await fixture.deliverBatch({
+		topic: commandTopic,
+		records: [createRecord("0")],
+	});
+	expect(settled).toEqual([commandTopic]);
+	await consumer.stop();
 });
 
 test("a handler that declines a position gets the record passed without decoding it", async () => {

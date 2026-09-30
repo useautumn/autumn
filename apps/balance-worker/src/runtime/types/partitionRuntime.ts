@@ -94,6 +94,7 @@ export type PartitionRuntimeConfig = {
 	recoveryDrainTimeoutMs: number;
 	/** How long a command waits for an activating runtime before it is refused. */
 	activationWaitMs?: number;
+	preparationLogEndWaitMs?: number;
 };
 
 export interface PartitionRuntimeContext extends PartitionRuntimeDependencies {

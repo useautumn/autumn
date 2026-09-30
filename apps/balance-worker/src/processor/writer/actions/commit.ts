@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type {
@@ -39,6 +40,67 @@ export function scheduleCommit({
 	setImmediate(runScheduledDrain);
 }
 
+export function scheduleDeferredCommit({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): void {
+	const { state, config } = scope;
+	if (state.deferredCommitTimer || state.deferredCommitDue) return;
+	if (state.recoveryError) return;
+	function commitDeferredRecords(): void {
+		state.deferredCommitTimer = null;
+		if (state.deferredQueued === 0) return;
+		state.deferredCommitDue = true;
+		scheduleCommit({ scope });
+	}
+	state.deferredCommitTimer = setTimeout(
+		commitDeferredRecords,
+		config.limits.deferredCommitMs ?? BALANCE_WORKER_DEFERRED_COMMIT_MS,
+	);
+	state.deferredCommitTimer.unref?.();
+}
+
+export function flushDeferredLogs({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> {
+	const { state } = scope;
+	const logs: Promise<void>[] = [];
+	for (const pending of state.pendingByKey.values())
+		if (pending.defersCommit) logs.push(pending.settlement.waitForLog());
+	if (logs.length === 0) return Promise.resolve();
+	if (state.deferredQueued > 0) {
+		state.deferredCommitDue = true;
+		scheduleCommit({ scope });
+	}
+	return Promise.all(logs).then(() => undefined);
+}
+
+function holdsOnlyDeferredRecords({
+	state,
+}: {
+	state: PartitionWriterScope["state"];
+}): boolean {
+	return state.deferredQueued === state.queue.length;
+}
+
+function releaseDeferredRecords({
+	state,
+	batch,
+}: {
+	state: PartitionWriterScope["state"];
+	batch: PendingMutation[];
+}): void {
+	for (const pending of batch)
+		if (pending.defersCommit) state.deferredQueued -= 1;
+	if (state.deferredQueued > 0) return;
+	if (state.deferredCommitTimer) clearTimeout(state.deferredCommitTimer);
+	state.deferredCommitTimer = null;
+	state.deferredCommitDue = false;
+}
+
 /** Kafka commit → answer log callers → hand the batch to the store, then straight
  *  on to the next batch. The store applies behind the log in order; the loop only
  *  waits for it when too many batches are still unapplied. */
@@ -52,6 +114,10 @@ async function commitOutcomes({
 	state.draining = true;
 	try {
 		while (state.queue.length > 0 && !state.recoveryError) {
+			if (holdsOnlyDeferredRecords({ state }) && !state.deferredCommitDue) {
+				scheduleDeferredCommit({ scope });
+				return;
+			}
 			while (
 				state.unapplied.length >=
 				maxUnappliedBatchesOf({ limits: config.limits })
@@ -64,6 +130,7 @@ async function commitOutcomes({
 			await lingerForBatch({ scope });
 			if (state.recoveryError) return;
 			const batch = takeBatch({ scope });
+			releaseDeferredRecords({ state, batch });
 			state.lastBatchSize = batch.length;
 			const baseOffset = await appendBatch({ scope, batch });
 			if (baseOffset === null) return;

@@ -1,5 +1,8 @@
 import { PartitionBootstrapRefusedError } from "../bootstrap/partitionBootstrapErrors.js";
-import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
+import {
+	OwnedPartitionNotReadyError,
+	PartitionPreparationFailedError,
+} from "../runtimeErrors.js";
 import type {
 	PartitionOutcomeFollowerPort,
 	RuntimeFailure,
@@ -13,6 +16,7 @@ import {
 	stopRuntimePreparation,
 } from "./disposeRuntimeResources.js";
 import { enterRuntimeRecovery } from "./enterRuntimeRecovery.js";
+import { readLogRangeReachingBookmark } from "./readLogRangeReachingBookmark.js";
 
 export async function completeRuntimeStartup({
 	ctx,
@@ -107,8 +111,13 @@ export async function completeRuntimePreparation({
 		} catch (cause) {
 			// The owner is still writing: its bookmark can pass a log end read a moment earlier.
 			if (!isProgressAheadOfLiveLog({ cause })) throw cause;
-			logRange = await follower.readLogRange({ topic, partition, signal });
 		}
+		logRange = await readLogRangeReachingBookmark({
+			ctx,
+			follower,
+			logRange,
+			signal,
+		});
 		signal.throwIfAborted();
 		const replayStartedAt = performance.now();
 		const bookmark = ctx.stateStore.readNextOffset({ topic, partition });
@@ -136,7 +145,11 @@ export async function completeRuntimePreparation({
 		if (state.terminalError) throw state.terminalError;
 		if (state.status === "draining")
 			throw new OwnedPartitionNotReadyError({ status: state.status });
-		throw await enterRuntimeRecovery({ ctx, state, cause });
+		throw await enterRuntimeRecovery({
+			ctx,
+			state,
+			cause: new PartitionPreparationFailedError({ topic, partition, cause }),
+		});
 	}
 }
 
