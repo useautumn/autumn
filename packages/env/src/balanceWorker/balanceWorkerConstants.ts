@@ -136,3 +136,10 @@ export const BALANCE_WORKER_COMMAND_OFFSET_SETTLE_GAP_MS = 1_000;
  *  an hour, as prod's did, costs that quarter hour and no task. */
 export const BALANCE_WORKER_CONSUMER_REJOIN_INITIAL_BACKOFF_MS = 1_000;
 export const BALANCE_WORKER_CONSUMER_REJOIN_MAX_BACKOFF_MS = 30_000;
+/** How long a starting replay waits for the Kafka log end to catch up with the
+ *  state it hydrated. The owner's bookmark can run one record ahead of the log
+ *  end the broker reports for a moment (prod standbys exited nine times in two
+ *  minutes over exactly one record), so the log end is re-read at this cadence
+ *  before the gap is treated as real divergence. */
+export const BALANCE_WORKER_LOG_END_SETTLE_ATTEMPTS = 20;
+export const BALANCE_WORKER_LOG_END_SETTLE_DELAY_MS = 250;
