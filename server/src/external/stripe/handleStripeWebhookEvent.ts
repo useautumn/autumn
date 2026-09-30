@@ -1,10 +1,8 @@
-import * as Sentry from "@sentry/bun";
 import type { Context } from "hono";
 import { Stripe } from "stripe";
 
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
-import { getSentryTags } from "../sentry/sentryUtils.js";
 import { runStripeWebhookHandlers } from "./runStripeWebhookHandlers.js";
 import type {
 	StripeWebhookContext,
@@ -19,19 +17,11 @@ export const handleStripeWebhookEvent = async (
 	c: Context<StripeWebhookHonoEnv>,
 ) => {
 	const ctx = c.get("ctx") as StripeWebhookContext;
-	const { db, logger, org, env, stripeEvent } = ctx;
-	const event = stripeEvent;
+	const { db, logger, org, env } = ctx;
 
 	try {
 		await runStripeWebhookHandlers({ ctx });
 	} catch (error) {
-		Sentry.captureException(error, {
-			tags: getSentryTags({
-				ctx,
-				method: event.type,
-			}),
-		});
-
 		if (error instanceof Stripe.errors.StripeError) {
 			if (error.message.includes("No such customer")) {
 				logger.warn(`stripe customer missing: ${error.message}`);

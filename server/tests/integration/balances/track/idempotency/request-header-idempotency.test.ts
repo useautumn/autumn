@@ -20,7 +20,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Hono } from "hono";
-import { errorMiddleware } from "@/honoMiddlewares/errorMiddleware.js";
+import { errorMiddleware } from "@/honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import { idempotencyMiddleware } from "@/honoMiddlewares/idempotencyMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 

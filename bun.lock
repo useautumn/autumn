@@ -747,6 +747,22 @@
         "typescript": "^5.7.3",
       },
     },
+    "packages/errors": {
+      "name": "@autumn/errors",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/logging": "workspace:*",
+        "@autumn/shared": "workspace:*",
+        "@sentry/bun": "catalog:",
+        "pino": "^9.6.0",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/node": "^18.19.3",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/fx": {
       "name": "@autumn/fx",
       "version": "0.0.1",
@@ -1057,6 +1073,7 @@
         "@autumn/dynamodb": "workspace:*",
         "@autumn/edge-config": "workspace:*",
         "@autumn/env": "workspace:*",
+        "@autumn/errors": "workspace:*",
         "@autumn/fx": "workspace:*",
         "@autumn/kafka": "workspace:*",
         "@autumn/ksuid": "workspace:*",
@@ -1513,6 +1530,8 @@
     "@autumn/encryption": ["@autumn/encryption@workspace:packages/encryption"],
 
     "@autumn/env": ["@autumn/env@workspace:packages/env"],
+
+    "@autumn/errors": ["@autumn/errors@workspace:packages/errors"],
 
     "@autumn/fx": ["@autumn/fx@workspace:packages/fx"],
 
@@ -7260,6 +7279,10 @@
 
     "@autumn/env/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
+    "@autumn/errors/@types/node": ["@types/node@18.19.130", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg=="],
+
+    "@autumn/errors/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
     "@autumn/fx/@types/node": ["@types/node@25.9.5", "", { "dependencies": { "undici-types": ">=7.24.0 <7.24.7" } }, "sha512-OScDchr2fwuUmWdf4kZ9h7PcJiYDVInhJizG/biAq3cAvqwYktuy/TYGGdZNMtNTFUP7rnb0NU4TUdm82kt4Rg=="],
 
     "@autumn/fx/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
@@ -9089,6 +9112,8 @@
     "@autumn/ducklake/@types/node/undici-types": ["undici-types@5.26.5", "", {}, "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="],
 
     "@autumn/env/@types/node/undici-types": ["undici-types@7.24.6", "", {}, "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg=="],
+
+    "@autumn/errors/@types/node/undici-types": ["undici-types@5.26.5", "", {}, "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="],
 
     "@autumn/fx/@types/node/undici-types": ["undici-types@7.24.6", "", {}, "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg=="],
 

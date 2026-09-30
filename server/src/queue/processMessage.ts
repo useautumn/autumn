@@ -1,6 +1,6 @@
+import { reportError } from "@autumn/errors";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
-import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import type { Logger } from "pino";
 import { isTransientDbError } from "@/db/dbUtils.js";
@@ -41,7 +41,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { logContextExtras } from "@/utils/logging/logContextExtras.js";
 import { withWorkerSpan } from "@/utils/otel/withWorkerSpan.js";
-import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { JobName } from "./JobName.js";
 
@@ -201,13 +200,6 @@ export const processMessage = async ({
 			skipCache: !usesCustomerCache,
 		});
 		workerCtx = ctx;
-
-		if (ctx) {
-			setSentryTags({
-				ctx,
-				messageId: message.MessageId,
-			});
-		}
 
 		if (job.name === JobName.CustomerCreationRecovery) {
 			if (!ctx) {
@@ -474,32 +466,15 @@ export const processMessage = async ({
 			fn: executeJob,
 		});
 	} catch (error) {
-		const errorLogger = workerCtx?.logger ?? workerLogger;
+		reportError({
+			ctx: workerCtx ?? { logger: workerLogger },
+			error,
+			operation: job.name,
+		});
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
 		// Application errors (RecaseError, InternalError) are swallowed — they
 		// won't fix on retry. DB errors (connection, timeout) will.
-		if (shouldRetrySqsJobError({ jobName: job.name, error })) {
-			Sentry.captureException(error);
-			errorLogger.error(`[${job.name}] Retryable error, keeping in SQS`, {
-				jobName: job.name,
-				error:
-					error instanceof Error
-						? { message: error.message, stack: error.stack }
-						: {},
-			});
-			throw error;
-		}
-
-		Sentry.captureException(error);
-		if (error instanceof Error) {
-			errorLogger.error(`Failed to process SQS job: ${job.name}`, {
-				jobName: job.name,
-				error: {
-					message: error.message,
-					stack: error.stack,
-				},
-			});
-		}
+		if (shouldRetrySqsJobError({ jobName: job.name, error })) throw error;
 	} finally {
 		if (workerCtx) {
 			logContextExtras({ ctx: workerCtx, message: `[${job.name}] Finished` });

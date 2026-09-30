@@ -1,5 +1,4 @@
 import { ms } from "@autumn/shared";
-import * as Sentry from "@sentry/bun";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import { getBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import type {
@@ -229,9 +228,6 @@ export const runResetLoopV2 = async ({
 				ctx.logger.error("[reset-cus-ents-v2] page failed", {
 					jobName: JOB_NAME,
 					err: error,
-				});
-				Sentry.captureException(error, {
-					extra: { context: "runResetLoopV2.fetchPage" },
 				});
 			}
 		}

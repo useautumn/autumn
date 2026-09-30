@@ -13,16 +13,6 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
 		return str.replace(/\/app\//g, "./");
 	}
 
-	function rewriteErrorStack(error: Error) {
-		if (error instanceof Error && typeof error.stack === "string") {
-			const newError = new Error(error.message);
-			newError.stack = rewriteAppPath(error.stack);
-			return newError;
-		}
-
-		return error;
-	}
-
 	return (...args: any[]) => {
 		let message = "";
 		let mergedObj = {};
@@ -35,7 +25,7 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
 
 		const objects = args
 			.filter((arg) => typeof arg !== "string" && arg !== null)
-			.map((obj) => (obj instanceof Error ? rewriteErrorStack(obj) : obj));
+			.map((obj) => (obj instanceof Error ? { error: obj } : obj));
 
 		// Use last string as message, or use Error message if no strings provided
 		if (strings.length > 0) {
