@@ -124,6 +124,9 @@ export async function startPartition({
 		);
 	}
 	try {
+		// Best effort, not awaited: the owner that hears it keeps serving through this preparation
+		// instead of releasing at its handoff timeout; without it the old path still applies.
+		void announcePreparing({ ctx, entry });
 		await entry.runtime.prepare();
 		if (!isStillStarting()) return;
 		await ctx.awaitReadyAnnouncement?.({
@@ -169,6 +172,20 @@ export async function startPartition({
 		await resumeCommands({ ctx, partition });
 	} finally {
 		entry.startupSettled = true;
+	}
+}
+
+async function announcePreparing({
+	ctx,
+	entry,
+}: {
+	ctx: AllocationScope["ctx"];
+	entry: PartitionEntry;
+}): Promise<void> {
+	try {
+		await entry.publication.announcePreparing();
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
 	}
 }
 

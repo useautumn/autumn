@@ -80,7 +80,7 @@ export type PartitionRuntimeDependencies = {
 	partitionResolver: MeteringPartitionResolver;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
-	logger?: Partial<Pick<AutumnLogger, "warn">>;
+	logger?: Partial<Pick<AutumnLogger, "warn" | "info">>;
 	receiptPolicy: ReceiptPolicy;
 	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
 	recentCommands: RecentCommands;

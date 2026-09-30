@@ -99,6 +99,20 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
 		});
 
+		test("round-trips a preparing record keyed apart from ready and the owner", () => {
+			const record = {
+				schemaVersion: 1 as const,
+				type: "preparing" as const,
+				partition: 7,
+				endpoint: "http://10.0.0.6:8080",
+				preparingAt: 1_700_000_000_400,
+			};
+			const serialized = ownershipTopic.serialize({ record });
+
+			expect(serialized.key.toString("utf8")).toBe("7:preparing");
+			expect(ownershipTopic.parse(serialized)).toEqual(record);
+		});
+
 		test("rejects a record whose Kafka key names another partition", () => {
 			const serialized = ownershipTopic.serialize({ record: claimed });
 

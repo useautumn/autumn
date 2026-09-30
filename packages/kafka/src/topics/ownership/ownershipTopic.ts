@@ -12,6 +12,7 @@ import {
 	claimedOwnershipRecordSchema,
 	drainingOwnershipRecordSchema,
 	type OwnershipRecord,
+	preparingOwnershipRecordSchema,
 	readyOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
 } from "./types/ownershipRecord.js";
@@ -62,6 +63,16 @@ function parseDraining({
 	return parsed.data;
 }
 
+function parsePreparing({
+	input,
+}: {
+	input: unknown;
+}): Extract<OwnershipRecord, { type: "preparing" }> {
+	const parsed = preparingOwnershipRecordSchema.safeParse(input);
+	if (!parsed.success) throw new InvalidRecordError({ cause: parsed.error });
+	return parsed.data;
+}
+
 function ownershipRecordToKey({ record }: { record: OwnershipRecord }): string {
 	if (record.type === "claimed" || record.type === "unowned")
 		return record.partition.toString();
@@ -81,6 +92,8 @@ function parseOwnershipPayload({
 			return parseReady({ input: payload });
 		case "draining":
 			return parseDraining({ input: payload });
+		case "preparing":
+			return parsePreparing({ input: payload });
 		default:
 			throw new InvalidRecordError();
 	}
@@ -91,6 +104,7 @@ const OWNERSHIP_RECORD_TYPES = new Set<OwnershipRecord["type"]>([
 	"unowned",
 	"ready",
 	"draining",
+	"preparing",
 ]);
 
 /** The first `ready` records were keyed like the owner; they still read, they are just never written. */

@@ -547,7 +547,11 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			expect(await first).toEqual({ endpoint: "http://other.test" });
 
 			// The owner is known to be someone else: a drain from a past owner is late and ignored.
-			f.views.set(2, { owner: "http://third.test", activeDrain: null });
+			f.views.set(2, {
+				owner: "http://third.test",
+				activeDrain: null,
+				activePreparation: null,
+			});
 			const second = f.publication.awaitDraining({ signal: controller.signal });
 			f.deliver({
 				partition: 2,
@@ -573,6 +577,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			f.views.set(2, {
 				owner: "http://third.test",
 				activeDrain: { endpoint: "http://third.test", successor: "http://x" },
+				activePreparation: null,
 			});
 			expect(f.publication.readActiveDrain()).toEqual({
 				endpoint: "http://third.test",

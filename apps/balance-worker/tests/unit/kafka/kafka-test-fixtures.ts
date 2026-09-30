@@ -215,17 +215,23 @@ async function announceNothing(): Promise<void> {}
 export const noHandoffPublication: Pick<
 	PartitionOwnershipPublication,
 	| "announceReady"
+	| "announcePreparing"
 	| "announceDraining"
 	| "awaitReady"
 	| "readActiveDrain"
+	| "readActivePreparation"
+	| "awaitPreparing"
 	| "awaitDraining"
 	| "awaitForeignClaim"
 	| "awaitClaim"
 > = {
 	announceReady: announceNothing,
+	announcePreparing: announceNothing,
 	announceDraining: announceNothing,
 	awaitReady: awaitSignal,
 	readActiveDrain: () => null,
+	readActivePreparation: () => null,
+	awaitPreparing: awaitSignal,
 	awaitDraining: awaitSignal,
 	awaitForeignClaim: awaitSignal,
 	awaitClaim: awaitSignal,
