@@ -62,6 +62,7 @@ export type {
 	WorkerErrorCode,
 	WorkerErrorResponse,
 	WorkerRequest,
+	WorkerRouteSuccessor,
 } from "./contracts/worker.js";
 export {
 	parseWorkerRequest,

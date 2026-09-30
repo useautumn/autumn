@@ -180,9 +180,18 @@ export type Partitions = {
 	awaitHandoff(target: PartitionTarget): Promise<void>;
 	/** For the partition's own queued commands: no route epoch, since no server chose the route. */
 	findOwnedRuntime(target: PartitionTarget): PartitionRuntimePort | undefined;
+	/** The route this worker claimed for a partition's successor, until the partition is admitted here again. */
+	findSuccessor(target: PartitionTarget): PartitionSuccessor | undefined;
 };
 
 export type PartitionTarget = { partition: number };
+
+/** The route a handoff claimed for its successor: what a caller meeting the withdrawn route should try next. */
+export type PartitionSuccessor = {
+	partition: number;
+	endpoint: string;
+	routeEpoch: string;
+};
 
 export type PartitionRoute = {
 	partition: number;
