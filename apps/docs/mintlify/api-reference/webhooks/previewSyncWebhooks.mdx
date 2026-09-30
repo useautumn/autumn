@@ -10,7 +10,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 ### Body Parameters
 
 <DynamicParamField body="webhooks" type="object[]" required>
-  The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.
+  The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.
   <Expandable title="properties">
     <DynamicParamField body="id" type="string" required>
       Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation.
@@ -20,8 +20,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
     </DynamicParamField>
 
-    <DynamicParamField body="events" type="('customer.products.updated' | 'customer.threshold_reached' | 'balances.usage_alert_triggered' | 'balances.limit_reached' | 'billing.auto_topup_failed' | 'billing.auto_topup_succeeded' | 'billing.updated' | 'invoice.finalized' | 'vercel.resources.deleted' | 'vercel.resources.provisioned' | 'vercel.resources.rotate_secrets' | 'vercel.webhooks.event')[]" required>
-      The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+    <DynamicParamField body="events" type="('customer.products.updated' | 'customer.threshold_reached' | 'balances.usage_alert_triggered' | 'balances.limit_reached' | 'billing.auto_topup_failed' | 'billing.auto_topup_succeeded' | 'billing.updated' | 'invoice.finalized' | 'vercel.resources.deleted' | 'vercel.resources.provisioned' | 'vercel.resources.rotate_secrets' | 'vercel.webhooks.event')[]">
+      The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.
     </DynamicParamField>
 
     <DynamicParamField body="description" type="string">
@@ -35,11 +35,15 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="skip_deletions" type="boolean">
+  When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.
+</DynamicParamField>
+
 
 ### Response
 
-<DynamicResponseField name="changes" type="object | object | object | object[]">
-  What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone.
+<DynamicResponseField name="changes" type="object | object | object | object | object[]">
+  What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. `delete` webhooks aren't listed and `skip_deletions` is false, so sync deletes them.
   <Expandable title="properties">
     <DynamicResponseField name="action" type="any" />
 
@@ -60,7 +64,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicResponseField>
 
         <DynamicResponseField name="events" type="string[]">
-          The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+          The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
         </DynamicResponseField>
 
         <DynamicResponseField name="disabled" type="boolean">
@@ -93,7 +97,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicResponseField>
 
         <DynamicResponseField name="events" type="string[]">
-          The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+          The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
         </DynamicResponseField>
 
         <DynamicResponseField name="disabled" type="boolean">
@@ -126,7 +130,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicResponseField>
 
         <DynamicResponseField name="events" type="string[]">
-          The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+          The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
         </DynamicResponseField>
 
         <DynamicResponseField name="disabled" type="boolean">

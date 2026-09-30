@@ -1,0 +1,222 @@
+---
+title: "List Balances"
+openapi: "openapi POST /v1/balances.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+Lists individual balances, one row per grant: plan balances, standalone balances from `balances.create`, top-ups, and pooled balances. By default only active balances are returned; pass `statuses: ["expired"]` for balances whose plan expired or whose `expires_at` has passed.
+
+Pass `plan_id: null` to list only balances that don't come from a plan. Rollovers are returned on the balance they belong to.
+
+<Note>
+  A page can hold fewer than `limit` rows (even zero) while `has_more` is `true`. Keep paginating until `has_more` is `false`.
+</Note>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string">
+  Only return rows for this customer. Omit to list across every customer.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  Only return rows for this entity. Requires customer_id.
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 50, hard ceiling 200.
+</DynamicParamField>
+
+<DynamicParamField body="start_cursor" type="string">
+  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+</DynamicParamField>
+
+<DynamicParamField body="statuses" type="('active' | 'expired')[]">
+  Statuses to include. Defaults to active. A balance is expired when its plan expired, or when a standalone balance passed its expires_at.
+</DynamicParamField>
+
+<DynamicParamField body="plan_id" type="string | null">
+  Only return balances from this plan. Pass null for standalone balances only (top-ups, balances.create, rollovers).
+</DynamicParamField>
+
+<DynamicParamField body="feature_id" type="string">
+  Only return balances for this feature.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Rows on this page.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier for this balance breakdown.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="plan_id" type="string | null">
+      The plan ID this balance originates from, or null for standalone balances.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="included_grant" type="number">
+      Amount granted from the plan's included usage.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="prepaid_grant" type="number">
+      Amount granted from prepaid purchases or top-ups.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="remaining" type="number">
+      Remaining balance available for use.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage" type="number">
+      Amount consumed in the current period.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="unlimited" type="boolean">
+      Whether this balance has unlimited usage.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="reset" type="object | null">
+      Reset configuration for this balance, or null if no reset.
+      <Expandable title="properties">
+        <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+          The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="interval_count" type="number">
+          Number of intervals between resets (eg. 2 for bi-monthly).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="resets_at" type="number | null">
+          Timestamp when the balance will next reset.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="price" type="object | null">
+      Pricing configuration if this balance has usage-based pricing.
+      <Expandable title="properties">
+        <DynamicResponseField name="amount" type="number">
+          The per-unit price amount.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="tiers" type="object[]">
+          Tiered pricing configuration if applicable.
+          <Expandable title="properties">
+            <DynamicResponseField name="to" type="number" />
+
+            <DynamicResponseField name="amount" type="number" />
+
+            <DynamicResponseField name="flat_amount" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+          How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="billing_units" type="number">
+          The number of units per billing increment (eg. $9 / 250 units).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'">
+          Whether usage is prepaid or billed pay-per-use.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="max_purchase" type="number | null">
+          Maximum quantity that can be purchased, or null for unlimited.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      Timestamp when this balance expires, or null for no expiration.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature_id" type="string">
+      The feature this balance is for.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="'active' | 'expired'">
+      Whether this balance is active or expired.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="rollovers" type="object[]">
+      Rollover balances carried over onto this balance.
+      <Expandable title="properties">
+        <DynamicResponseField name="granted" type="number">
+          Amount originally rolled over from a previous period, before any of it was consumed.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="balance" type="number">
+          Amount of balance rolled over from a previous period.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expires_at" type="number">
+          Timestamp when the rollover balance expires.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string">
+      The customer this balance belongs to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="entity_id" type="string | null">
+      The entity this balance is scoped to, or null.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp when this balance was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more results exist. A page may hold fewer than `limit` items (even zero) while `has_more` is true, so paginate until `has_more` is false.
+</DynamicResponseField>
+
+<DynamicResponseField name="next_cursor" type="string | null">
+  Pass as start_cursor to fetch the next page. Null when has_more is false.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "bonus_credits",
+      "plan_id": null,
+      "included_grant": 50,
+      "prepaid_grant": 0,
+      "remaining": 0,
+      "usage": 50,
+      "unlimited": false,
+      "reset": {
+        "interval": "one_off",
+        "resets_at": null
+      },
+      "price": null,
+      "expires_at": 1771999921437,
+      "feature_id": "messages",
+      "status": "expired",
+      "rollovers": [],
+      "customer_id": "cus_123",
+      "entity_id": null,
+      "created_at": 1769904000000
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}
+```
+</ResponseExample>
