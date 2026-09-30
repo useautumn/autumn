@@ -14,7 +14,11 @@ describe("isTransientModalError", () => {
 				),
 			),
 		).toBe(true);
-		expect(isTransientModalError(new Error("14 UNAVAILABLE: io"))).toBe(true);
+	});
+
+	test("ambiguous transport errors are not retried: the sandbox may already exist", () => {
+		expect(isTransientModalError(new Error("14 UNAVAILABLE: io"))).toBe(false);
+		expect(isTransientModalError(new Error("DEADLINE_EXCEEDED"))).toBe(false);
 	});
 
 	test("real boot failures are not", () => {

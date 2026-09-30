@@ -1,7 +1,7 @@
-const TRANSIENT =
-	/RESOURCE_EXHAUSTED|UNAVAILABLE|DEADLINE_EXCEEDED|rate limit|too many requests/i;
+const TRANSIENT = /RESOURCE_EXHAUSTED|rate limit|too many requests/i;
 
-/** Modal control-plane throttling during a wide fan-out; worth retrying, unlike a real boot failure. */
+/** Throttling rejects a create before it happens, so retrying can't orphan a sandbox; transport errors
+ * (UNAVAILABLE, DEADLINE_EXCEEDED) may land after Modal accepted it, so they aren't retried. */
 export const isTransientModalError = (error: unknown) =>
 	TRANSIENT.test(error instanceof Error ? error.message : String(error));
 

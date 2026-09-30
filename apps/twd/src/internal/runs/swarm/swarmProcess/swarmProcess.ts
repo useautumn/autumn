@@ -462,7 +462,9 @@ const main = async (init: SwarmInit) => {
 			setWorkerStatus(name, "failed", reason.slice(0, 300));
 			if (sandbox) void retire({ name, accountId: account.accountId });
 			else send({ type: "release_accounts", accountIds: [account.accountId] });
-			if (breaker.tripped()) {
+			// Only once nothing is in flight: a slower provision may still succeed and reset the breaker.
+			const inFlight = shards.some((s) => s.provisioning > 0);
+			if (breaker.tripped() && !inFlight) {
 				for (const stuck of shards) {
 					if (stuck.files.length === 0 || workersOf(stuck) > 0) continue;
 					stuck.fail(
