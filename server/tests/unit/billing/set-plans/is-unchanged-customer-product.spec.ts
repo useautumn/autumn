@@ -162,8 +162,7 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 
 	test("an extra feature-only item on the requested plan is a change", () => {
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct(),
 				productContext: productContext({ fullProduct: proWithMessages }),
 			}),
@@ -172,8 +171,7 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 
 	test("a customized feature-only item requested back to the base plan is a change", () => {
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct({
 					customerEntitlements: [customMessagesEntitlement()],
 				}),
@@ -184,8 +182,7 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 
 	test("the same plan with the same feature-only item is unchanged", () => {
 		expect(
-			isUnchangedCustomerProduct({
-				ctx,
+			isUnchanged({
 				customerProduct: proCustomerProduct({
 					product: proWithMessages,
 					customerEntitlements: [customMessagesEntitlement()],
