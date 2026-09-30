@@ -3,6 +3,7 @@ import type {
 	MutatingCommand,
 	MutationEffect,
 	MutationRecord,
+	MutationSource,
 	RowChange,
 	SubjectState,
 	SubjectStateMutation,
@@ -30,7 +31,10 @@ export type PartitionWriter = {
 	log(params: {
 		command: MutatingCommand;
 		mutation: SubjectStateMutation;
+		source?: MutationSource;
+		defersCommit?: boolean;
 	}): Promise<void>;
+	flushDeferredLogs(): Promise<void>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
 	/** Throws once a commit has failed: the projection past it never became durable, so nothing may be read from it. */
@@ -106,6 +110,7 @@ export type PartitionWriterLimits = {
 	subjectMapMaxBytes?: number;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
+	deferredCommitMs?: number;
 };
 
 export type PartitionWriterConfig = {
@@ -146,6 +151,7 @@ export type PendingMutation = {
 	settlement: PendingSettlement;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
+	defersCommit: boolean;
 };
 
 /** Mutable writer state: the subject map (projected and committed rows) and mutations awaiting commit. */
@@ -168,6 +174,9 @@ export type PartitionWriterState = {
 	lastBatchSize: number;
 	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */
 	lingerWake: (() => void) | null;
+	deferredQueued: number;
+	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
+	deferredCommitDue: boolean;
 };
 
 export type UnappliedBatch = {

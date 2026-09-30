@@ -12,6 +12,7 @@ import { consumeTrack } from "../../consume/consumeTrack.js";
 import { consumeUpdateBalance } from "../../consume/consumeUpdateBalance.js";
 import { settleQueuedFailure } from "../../consume/settleQueuedFailure.js";
 import { isPartitionRestartableCause } from "../../partitions/health/partitionRestartableCauses.js";
+import type { PartitionRuntimePort } from "../../partitions/types/partitions.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import { CommandPartitionUnavailableError } from "./commandConsumerErrors.js";
 import type { CommandConsumerContext } from "./types/commandConsumer.js";
@@ -22,6 +23,43 @@ export function createCommandRecordHandler({
 }: {
 	ctx: CommandConsumerContext;
 }): TopicRecordHandler {
+	const deferredLogsByPartition = new Map<
+		number,
+		{ runtime: PartitionRuntimePort; logs: Promise<void>[] }
+	>();
+
+	function deferredLogsOf({
+		partition,
+		runtime,
+	}: {
+		partition: number;
+		runtime: PartitionRuntimePort;
+	}): Promise<void>[] {
+		const existing = deferredLogsByPartition.get(partition);
+		if (existing?.runtime === runtime) return existing.logs;
+		const logs: Promise<void>[] = [];
+		deferredLogsByPartition.set(partition, { runtime, logs });
+		return logs;
+	}
+
+	async function settleBatch({
+		topic,
+		partition,
+	}: {
+		topic: string;
+		partition: number;
+	}): Promise<void> {
+		const deferred = deferredLogsByPartition.get(partition);
+		if (!deferred) return;
+		deferredLogsByPartition.delete(partition);
+		if (deferred.runtime !== ctx.findOwnedRuntime({ partition })) return;
+		try {
+			await Promise.all(deferred.logs);
+		} catch (cause) {
+			parkOrRethrow({ topic, partition, cause });
+		}
+	}
+
 	/** Postgres says how far the commands are decided; a batch starting below that is skipped forward, never re-decided. */
 	function readResumeOffset({
 		partition,
@@ -101,9 +139,10 @@ export function createCommandRecordHandler({
 				settleQueuedFailure({ ctx: { logger: ctx.logger }, command, cause });
 			}
 		}
+		const deferredLogs = deferredLogsOf({ partition, runtime });
 		try {
 			return await runtime.process((processor) =>
-				processor.execute({ source, run }),
+				processor.execute({ source, run, deferredLogs }),
 			);
 		} catch (cause) {
 			parkOrRethrow({ topic, partition, offset, cause });
@@ -123,18 +162,18 @@ export function createCommandRecordHandler({
 	}: {
 		topic: string;
 		partition: number;
-		offset: bigint;
+		offset?: bigint;
 		cause: unknown;
 	}): never | undefined {
 		if (!ctx.markUnavailable || !isPartitionRestartableCause({ cause }))
 			throw cause;
 		ctx.logger?.warn(
 			"Queued command could not be committed; parking the partition",
-			{ topic, partition, offset: offset.toString(), error: cause },
+			{ topic, partition, offset: offset?.toString(), error: cause },
 		);
 		ctx.markUnavailable({ partition, cause });
 		return undefined;
 	}
 
-	return { readResumeOffset, applyRecord };
+	return { readResumeOffset, applyRecord, settleBatch };
 }

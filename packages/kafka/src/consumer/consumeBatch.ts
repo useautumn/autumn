@@ -105,6 +105,7 @@ async function applyBatch({
 			return;
 		const recordOffset = parseKafkaOffset({ offset: message.offset });
 		if (result && result.nextOffset > recordOffset + 1n) {
+			await ctx.handler.settleBatch?.({ topic, partition });
 			await reconcilePartitionOffset({
 				ctx,
 				state,
@@ -118,6 +119,7 @@ async function applyBatch({
 		await payload.heartbeat();
 	}
 
+	await ctx.handler.settleBatch?.({ topic, partition });
 	await commitBatchOffsets({ ctx, state, payload, generation });
 }
 

@@ -31,8 +31,10 @@ const createProcessor = async ({
 	logsEvicts,
 	storeHeld = Promise.resolve(),
 	appendHeld = Promise.resolve(),
+	deferredCommitMs,
 }: {
 	logsEvicts: boolean;
+	deferredCommitMs?: number;
 	/** The store applies nothing until this resolves. */
 	storeHeld?: Promise<void>;
 	/** The first Kafka commit stays in flight until this resolves. */
@@ -40,6 +42,7 @@ const createProcessor = async ({
 }) => {
 	const appended: MeteringRecord[] = [];
 	const batchSizes: number[] = [];
+	const offsetEvents: string[] = [];
 	const committer: Committer = {
 		apply: async ({ records, expectedOffset }) => {
 			await storeHeld;
@@ -76,7 +79,11 @@ const createProcessor = async ({
 					const baseOffset = BigInt(appended.length);
 					appended.push(...outcomes);
 					batchSizes.push(outcomes.length);
+					offsetEvents.push(`append:${outcomes.length}`);
 					return { baseOffset };
+				},
+				settleCommandOffset: ({ nextOffset }) => {
+					offsetEvents.push(`settle:${nextOffset}`);
 				},
 			},
 			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
@@ -90,11 +97,12 @@ const createProcessor = async ({
 				maxBatchSize: 100,
 				maxPendingCommands: 100,
 				maxPendingCommandsPerCustomer: 100,
+				deferredCommitMs,
 			},
 			logsEvicts,
 		},
 	});
-	return { processor, appended, batchSizes };
+	return { processor, appended, batchSizes, offsetEvents };
 };
 
 const evictOf = ({ customerId }: { customerId: string }): EvictCommand => ({
@@ -113,6 +121,161 @@ const settlesWithin = async ({
 		operation.then(() => true),
 		new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms)),
 	]);
+
+const queueEvict = ({
+	processor,
+	customerId,
+	commandOffset,
+	deferredLogs,
+}: {
+	processor: Awaited<ReturnType<typeof createProcessor>>["processor"];
+	customerId: string;
+	commandOffset: number;
+	deferredLogs: Promise<void>[];
+}) =>
+	processor.execute({
+		source: { commandOffset: String(commandOffset) },
+		deferredLogs,
+		run: (queued) => queued.evict({ command: evictOf({ customerId }) }),
+	});
+
+describe("queued evict logging", () => {
+	test("a queued evict starts no commit of its own: its record rides the next one", async () => {
+		const { processor, batchSizes } = await createProcessor({
+			logsEvicts: true,
+			deferredCommitMs: 60_000,
+		});
+		const deferredLogs: Promise<void>[] = [];
+
+		await queueEvict({
+			processor,
+			customerId: "cus_1",
+			commandOffset: 1,
+			deferredLogs,
+		});
+		await queueEvict({
+			processor,
+			customerId: "cus_2",
+			commandOffset: 2,
+			deferredLogs,
+		});
+		await Bun.sleep(10);
+		expect(batchSizes).toEqual([]);
+
+		await processor.evict({ command: evictOf({ customerId: "cus_3" }) });
+		await Promise.all(deferredLogs);
+		expect(batchSizes).toEqual([3]);
+	});
+
+	test("held evicts commit together once the hold has passed", async () => {
+		const { processor, batchSizes } = await createProcessor({
+			logsEvicts: true,
+			deferredCommitMs: 20,
+		});
+		const deferredLogs: Promise<void>[] = [];
+
+		for (const [index, customerId] of ["cus_1", "cus_2", "cus_3"].entries())
+			await queueEvict({
+				processor,
+				customerId,
+				commandOffset: index,
+				deferredLogs,
+			});
+		await Promise.all(deferredLogs);
+
+		expect(batchSizes).toEqual([3]);
+	});
+
+	test("a queued evict's record carries its command offset, so the offset lands only with the record", async () => {
+		const { processor, appended } = await createProcessor({
+			logsEvicts: true,
+			deferredCommitMs: 1,
+		});
+		const deferredLogs: Promise<void>[] = [];
+
+		await queueEvict({
+			processor,
+			customerId: "cus_1",
+			commandOffset: 7,
+			deferredLogs,
+		});
+		await Promise.all(deferredLogs);
+
+		expect(appended[0]?.source).toEqual({ commandOffset: "7" });
+	});
+
+	test("a skipped command behind a held evict lands the evict's record before its own offset", async () => {
+		const { processor, offsetEvents } = await createProcessor({
+			logsEvicts: true,
+			deferredCommitMs: 60_000,
+		});
+		const deferredLogs: Promise<void>[] = [];
+
+		await queueEvict({
+			processor,
+			customerId: "cus_1",
+			commandOffset: 1,
+			deferredLogs,
+		});
+		await processor.execute({
+			source: { commandOffset: "2" },
+			deferredLogs,
+			run: async () => undefined,
+		});
+
+		expect(offsetEvents).toEqual(["append:1", "settle:3"]);
+	});
+
+	test("a flush for the customer does not wait for a held evict: its record lands no rows", async () => {
+		const { processor } = await createProcessor({
+			logsEvicts: true,
+			deferredCommitMs: 60_000,
+		});
+		const deferredLogs: Promise<void>[] = [];
+
+		await queueEvict({
+			processor,
+			customerId: "cus_1",
+			commandOffset: 1,
+			deferredLogs,
+		});
+		const flushed = processor.flush({
+			command: {
+				schemaVersion: 1,
+				type: "flush",
+				requestId: "req_flush",
+				identity: {
+					...evictOf({ customerId: "cus_1" }).identity,
+					entityId: null,
+				},
+				occurredAt: 1_700_000_000_000,
+			},
+		});
+
+		expect(await settlesWithin({ operation: flushed, ms: 250 })).toBe(true);
+		await processor.drain();
+	});
+
+	test("a drain lands held evicts at once instead of waiting out the hold", async () => {
+		const { processor, appended } = await createProcessor({
+			logsEvicts: true,
+			deferredCommitMs: 60_000,
+		});
+		const deferredLogs: Promise<void>[] = [];
+
+		await queueEvict({
+			processor,
+			customerId: "cus_1",
+			commandOffset: 1,
+			deferredLogs,
+		});
+
+		expect(await settlesWithin({ operation: processor.drain(), ms: 250 })).toBe(
+			true,
+		);
+		expect(appended).toHaveLength(1);
+	});
+});
 
 describe("evict logging", () => {
 	test("on, an evict appends one empty record naming the customer, after dropping it", async () => {

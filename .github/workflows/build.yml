@@ -31,7 +31,7 @@ env:
   #   staging repo (autumn-staging) -> us-east-1
   # Branches allowed to deploy to staging via workflow_dispatch with tag=deploy-staging.
   # Add short-lived PR branches here when you need staging without merging to dev.
-  STAGING_DEPLOY_BRANCH_ALLOWLIST: stack/cleanups stack/check-fail-open main dev feat/past-due-cancel-immediate-void feat/gate-cluster-wide feat/redis-monitor-fix feat/firelens-log-transport-v2 fix/dragonfly-resize-reconnect capy/standby-dragonfly-connection og/balance-worker-observability john/one-record og/balance-64-one-record og/balance-worker-perf og/command-offset-group-commit og/command-consumer-error-boundary og/not-owner-successor-hint og/worker-auth-crash-resilience og/fail-open-error-codes og/activation-hold-for-budget
+  STAGING_DEPLOY_BRANCH_ALLOWLIST: stack/cleanups stack/check-fail-open main dev feat/past-due-cancel-immediate-void feat/gate-cluster-wide feat/redis-monitor-fix feat/firelens-log-transport-v2 fix/dragonfly-resize-reconnect capy/standby-dragonfly-connection og/balance-worker-observability john/one-record og/balance-64-one-record og/balance-worker-perf og/command-offset-group-commit og/command-consumer-error-boundary og/not-owner-successor-hint og/worker-auth-crash-resilience og/fail-open-error-codes og/activation-hold-for-budget og/evict-deferred-commit
 
 jobs:
   checks:

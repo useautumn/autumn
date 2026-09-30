@@ -262,29 +262,21 @@ async function awaitHandoffClaim({
 
 function noop(): void {}
 
-export function reportPartitionStartupFailures({
+export function reportPartitionStartupFailure({
 	ctx,
 	state,
-	entries,
-	results,
+	entry,
+	cause,
 	allocationGeneration,
-}: AllocationScope & {
-	entries: PartitionEntry[];
-	results: PromiseSettledResult<void>[];
-}): void {
-	for (const [index, result] of results.entries()) {
-		if (result.status !== "rejected") continue;
-		reportPartitionError({ ctx, cause: result.reason });
-		const entry = entries[index];
-		if (!entry) continue;
-		respondToPartitionFailure({
-			ctx,
-			state,
-			partition: entry.partition,
-			entry,
-			cause: result.reason,
-			health: entry.runtime.getHealth(),
-			allocationGeneration,
-		});
-	}
+}: PartitionScope & { cause: unknown }): void {
+	reportPartitionError({ ctx, cause });
+	respondToPartitionFailure({
+		ctx,
+		state,
+		partition: entry.partition,
+		entry,
+		cause,
+		health: entry.runtime.getHealth(),
+		allocationGeneration,
+	});
 }

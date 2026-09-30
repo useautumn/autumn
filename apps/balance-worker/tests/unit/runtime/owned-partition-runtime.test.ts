@@ -38,6 +38,7 @@ import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
+	PartitionPreparationFailedError,
 } from "../../../src/runtime/runtimeErrors.js";
 import type {
 	PartitionOutcomeFollowerPort,
@@ -1921,7 +1922,9 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			const f = createFixture();
 			try {
 				f.fail();
-				await expect(f.runtime.prepare()).rejects.toThrow("requires recovery");
+				const failure = await f.runtime.prepare().catch((cause) => cause);
+				expect(failure).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(failure.cause).toBeInstanceOf(PartitionPreparationFailedError);
 				expect(f.events).toContain("prepare:stop");
 				expect(f.events).not.toContain("connect");
 				await expect(f.runtime.activate()).rejects.toThrow();
