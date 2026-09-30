@@ -9,6 +9,8 @@ const EVE_HOST = process.env.EVE_HOST ?? "127.0.0.1";
 /** srvx's Bun adapter is Bun.serve, whose idle timeout reaps quiet streams. */
 const EVE_SERVER_PRESET = "node-server";
 const READY_POLL_MS = 1000;
+const DURABLE_WORLD_WORKER_CONCURRENCY = "10";
+const DURABLE_WORLD_MAX_POOL_SIZE = "6";
 const NOT_READY_WARN_EVERY_MS = 30_000;
 
 const logBuiltServerPreset = async (leafRoot: string) => {
@@ -70,7 +72,13 @@ const durableWorldUrl = async () => {
 const eveProcessEnv = (worldUrl: string | undefined) => {
 	const { CHAT_DATABASE_URL: _chatDatabaseUrl, ...base } = process.env;
 	return worldUrl
-		? { ...base, CHAT_DATABASE_URL: worldUrl, WORKFLOW_POSTGRES_URL: worldUrl }
+		? {
+				WORKFLOW_POSTGRES_WORKER_CONCURRENCY: DURABLE_WORLD_WORKER_CONCURRENCY,
+				WORKFLOW_POSTGRES_MAX_POOL_SIZE: DURABLE_WORLD_MAX_POOL_SIZE,
+				...base,
+				CHAT_DATABASE_URL: worldUrl,
+				WORKFLOW_POSTGRES_URL: worldUrl,
+			}
 		: base;
 };
 
