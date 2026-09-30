@@ -28,6 +28,10 @@ export const useSyncPreview = ({
 		features,
 		...options,
 	});
-	const { mismatches } = usePreviewSyncV2({ params: syncParams });
-	return { syncParams, previewMismatches: mismatches };
+	const { mismatches, isFetching } = usePreviewSyncV2({ params: syncParams });
+	return {
+		syncParams,
+		previewMismatches: mismatches,
+		isPreviewFetching: isFetching,
+	};
 };
