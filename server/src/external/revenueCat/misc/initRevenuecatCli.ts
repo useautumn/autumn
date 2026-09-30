@@ -1,4 +1,5 @@
 import { decryptData } from "@server/utils/encryptUtils.js";
+import { revenuecatAuthError } from "./revenuecatAuthError.js";
 import { callRcMcpTool } from "./revenuecatMcp.js";
 import type {
 	RevenueCatApp,
@@ -63,6 +64,9 @@ export const initRevenuecatCli = ({
 				message = JSON.stringify(body);
 			} catch {
 				message = response.statusText;
+			}
+			if (response.status === 401 || response.status === 403) {
+				throw revenuecatAuthError({ detail: message });
 			}
 			const error = new Error(
 				`RevenueCat error (${response.status}): ${message}`,

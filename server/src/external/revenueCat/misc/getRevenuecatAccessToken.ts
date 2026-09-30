@@ -4,7 +4,11 @@ import {
 	type RevenueCatOAuthConfig,
 	type RevenueCatProcessorConfig,
 } from "@autumn/shared";
+import { OAuth2RequestError } from "arctic";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { acquireLockWithWait } from "@/external/redis/utils/lockUtils/acquireLockWithWait.js";
+import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
+import { revenuecatAuthError } from "@/external/revenueCat/misc/revenuecatAuthError.js";
 import { refreshRcTokens } from "@/external/revenueCat/misc/revenuecatOAuth.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
@@ -19,6 +23,9 @@ const getOAuthConfigForEnv = ({
 	env: AppEnv;
 }): RevenueCatOAuthConfig | undefined =>
 	env === AppEnv.Live ? revenueCatConfig.oauth : revenueCatConfig.sandbox_oauth;
+
+const REFRESH_LOCK_TTL_MS = 10_000;
+const REFRESH_LOCK_MAX_WAIT_MS = 5_000;
 
 const persistOAuthTokens = async ({
 	db,
@@ -53,32 +60,100 @@ const persistOAuthTokens = async ({
 const isOAuthAccessTokenValid = (oauthConfig: RevenueCatOAuthConfig) =>
 	oauthConfig.expires_at - TOKEN_EXPIRY_SKEW_MS > Date.now();
 
-/** Rotate the OAuth tokens, persist the new pair, and return the fresh access token. */
+// RC revokes the old token pair on every refresh, so concurrent refreshes invalidate each other.
+const withRefreshLock = async <T>({
+	org,
+	env,
+	fn,
+}: {
+	org: Organization;
+	env: AppEnv;
+	fn: () => Promise<T>;
+}): Promise<T> => {
+	const lockKey = `revenuecat_oauth_refresh:${org.id}:${env}`;
+	const token = crypto.randomUUID();
+
+	await acquireLockWithWait({
+		lockKey,
+		token,
+		ttlMs: REFRESH_LOCK_TTL_MS,
+		maxWaitMs: REFRESH_LOCK_MAX_WAIT_MS,
+		retryMs: 100,
+		retryJitterMs: 50,
+		errorMessage:
+			"RevenueCat token refresh in progress, try again in a few seconds",
+	});
+
+	try {
+		return await fn();
+	} finally {
+		await clearLock({ lockKey, token });
+	}
+};
+
+const refreshRcTokensOrThrow = async ({
+	refreshToken,
+}: {
+	refreshToken: string;
+}) => {
+	try {
+		return await refreshRcTokens({ refreshToken });
+	} catch (error) {
+		if (error instanceof OAuth2RequestError && error.code === "invalid_grant") {
+			throw revenuecatAuthError({ detail: "refresh token is no longer valid" });
+		}
+		throw error;
+	}
+};
+
+/** Refresh under a per-org/env lock, re-reading the stored tokens so waiters reuse the holder's result. */
 const refreshAndPersistTokens = async ({
 	db,
 	org,
 	env,
-	oauthConfig,
+	force,
 }: {
 	db: DrizzleCli;
 	org: Organization;
 	env: AppEnv;
-	oauthConfig: RevenueCatOAuthConfig;
-}): Promise<string> => {
-	const refreshToken = decryptData(oauthConfig.refresh_token);
-	const tokens = await refreshRcTokens({ refreshToken });
+	force: boolean;
+}): Promise<string | null> =>
+	withRefreshLock({
+		org,
+		env,
+		fn: async () => {
+			const latestOrg = await OrgService.get({ db, orgId: org.id });
+			const oauthConfig = getOAuthConfigForEnv({
+				revenueCatConfig: latestOrg.processor_configs?.revenuecat ?? {},
+				env,
+			});
+			if (!oauthConfig) return null;
 
-	const refreshedOAuthConfig: RevenueCatOAuthConfig = {
-		...oauthConfig,
-		access_token: encryptData(tokens.accessToken()),
-		refresh_token: encryptData(tokens.refreshToken()),
-		expires_at: tokens.accessTokenExpiresAt().getTime(),
-		...(tokens.hasScopes() ? { scope: tokens.scopes().join(" ") } : {}),
-	};
+			if (!force && isOAuthAccessTokenValid(oauthConfig)) {
+				return decryptData(oauthConfig.access_token);
+			}
 
-	await persistOAuthTokens({ db, org, env, oauthConfig: refreshedOAuthConfig });
-	return tokens.accessToken();
-};
+			const tokens = await refreshRcTokensOrThrow({
+				refreshToken: decryptData(oauthConfig.refresh_token),
+			});
+
+			const refreshedOAuthConfig: RevenueCatOAuthConfig = {
+				...oauthConfig,
+				access_token: encryptData(tokens.accessToken()),
+				refresh_token: encryptData(tokens.refreshToken()),
+				expires_at: tokens.accessTokenExpiresAt().getTime(),
+				...(tokens.hasScopes() ? { scope: tokens.scopes().join(" ") } : {}),
+			};
+
+			await persistOAuthTokens({
+				db,
+				org: latestOrg,
+				env,
+				oauthConfig: refreshedOAuthConfig,
+			});
+			return tokens.accessToken();
+		},
+	});
 
 /**
  * Force-refresh the env's OAuth access token, persisting the rotated refresh token for us.
@@ -100,7 +175,7 @@ export const refreshRevenuecatOAuthAccessToken = async ({
 		env,
 	});
 	if (!oauthConfig) return null;
-	return refreshAndPersistTokens({ db, org, env, oauthConfig });
+	return refreshAndPersistTokens({ db, org, env, force: true });
 };
 
 export const getRevenuecatAccessToken = async ({
@@ -122,7 +197,7 @@ export const getRevenuecatAccessToken = async ({
 			return decryptData(oauthConfig.access_token);
 		}
 
-		return refreshAndPersistTokens({ db, org, env, oauthConfig });
+		return refreshAndPersistTokens({ db, org, env, force: false });
 	}
 
 	const apiKey =

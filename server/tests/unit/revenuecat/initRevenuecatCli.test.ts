@@ -62,6 +62,26 @@ describe("initRevenuecatCli.createProject", () => {
 		const cli = initRevenuecatCli({ accessToken: "test-token", fetchImpl });
 		await expect(cli.createProject({ name: "bad" })).rejects.toThrow();
 	});
+
+	test("maps a revoked token to a 400 reconnect error", async () => {
+		mockFetch.mockImplementationOnce(() =>
+			Promise.resolve(
+				new Response(
+					JSON.stringify({
+						type: "authorization_error",
+						message: "The access token has been revoked.",
+					}),
+					{ status: 403, headers: { "Content-Type": "application/json" } },
+				),
+			),
+		);
+
+		const cli = initRevenuecatCli({ accessToken: "test-token", fetchImpl });
+		await expect(cli.createProject({ name: "x" })).rejects.toMatchObject({
+			statusCode: 400,
+			message: expect.stringContaining("Reconnect RevenueCat"),
+		});
+	});
 });
 
 const jsonResponse = (body: unknown, status = 200) =>
