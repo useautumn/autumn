@@ -11,6 +11,8 @@ export type AlienEnvironmentVariable = {
 	name: string;
 	value: string;
 	type: "plain" | "secret";
+	/** Resource id patterns the variable reaches; null means every resource. */
+	targetResources: string[] | null;
 };
 
 export type AlienSetup = {

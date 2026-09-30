@@ -185,6 +185,8 @@ async function startDev() {
 		worktreeNum,
 	});
 	process.env.TRIGGER_DEV_BRANCH = triggerDevBranch;
+	// The same name keeps this worktree's alien deployments apart from other stacks'.
+	process.env.ATOM_DEPLOYMENT_PREFIX = triggerDevBranch;
 
 	try {
 		if (serverOnly) {
@@ -256,7 +258,7 @@ async function startDev() {
 		if (serverOnly) {
 			// Only start server and workers (for test sandboxes)
 			if (isWindows) {
-				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun start`;
+				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && set ATOM_DEPLOYMENT_PREFIX=${triggerDevBranch} && bun start`;
 				const workersCmd = `cd server && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun workers`;
 				shellArgs = [
 					"cmd",
@@ -267,7 +269,7 @@ async function startDev() {
 				shellArgs = [
 					"sh",
 					"-c",
-					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} bun start" "cd server && TRIGGER_DEV_BRANCH=${triggerDevBranch} bun workers"`,
+					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} ATOM_DEPLOYMENT_PREFIX=${triggerDevBranch} bun start" "cd server && TRIGGER_DEV_BRANCH=${triggerDevBranch} bun workers"`,
 				];
 			}
 		} else {
@@ -279,8 +281,8 @@ async function startDev() {
 			// is not enough (odw/ol can drop it); SDK must send x-trigger-branch.
 			const cmds = [
 				isWindows
-					? `"cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun ${serverScript}"`
-					: `"cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} bun ${serverScript}"`,
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && set ATOM_DEPLOYMENT_PREFIX=${triggerDevBranch} && bun ${serverScript}"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} ATOM_DEPLOYMENT_PREFIX=${triggerDevBranch} bun ${serverScript}"`,
 			];
 
 			if (launchBalanceWorker) {

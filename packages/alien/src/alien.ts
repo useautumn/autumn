@@ -1,4 +1,4 @@
-export { ALIEN_PROJECT, ALIEN_WORKSPACE } from "./alienConstants.js";
+export { ALIEN_WORKSPACE } from "./alienConstants.js";
 export {
 	AlienRequestError,
 	isAlienRequestError,

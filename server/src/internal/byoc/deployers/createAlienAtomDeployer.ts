@@ -51,7 +51,12 @@ const startAlienAtom = ({
 		externalId: cacheExternalId({ org, env }),
 		label: cacheGroupLabel({ org, env }),
 		environmentVariables: [
-			{ name: "ATOM_TOKEN_HASH", value: tokenHash, type: "plain" },
+			{
+				name: "ATOM_TOKEN_HASH",
+				value: tokenHash,
+				type: "plain",
+				targetResources: null,
+			},
 		],
 	});
 

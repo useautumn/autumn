@@ -8,6 +8,12 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
 
+/** A dev stack's name goes in front, so two worktrees can hold the same org on alien at once. */
+const cacheNamePrefix = (): string | null => {
+	const prefix = process.env.ATOM_DEPLOYMENT_PREFIX?.trim();
+	return process.env.NODE_ENV === "development" && prefix ? prefix : null;
+};
+
 /** One env's Atom, as its deployer knows it: one deployment group each, so lookups never match two. */
 export const cacheExternalId = ({
 	org,
@@ -15,16 +21,17 @@ export const cacheExternalId = ({
 }: {
 	org: Organization;
 	env: AppEnv;
-}) => `${org.id}.${env}`;
+}) => [cacheNamePrefix(), org.id, env].filter(Boolean).join(".");
 
-/** The deployment group's name, which also names the org's stack and its table in AWS. */
+/** The deployment group's name, which also names the org's stack in AWS. */
 export const cacheGroupLabel = ({
 	org,
 	env,
 }: {
 	org: Organization;
 	env: AppEnv;
-}) => `autumn-byoc-${org.slug}-${env}`;
+}) =>
+	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
 
 /** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
 export const CACHE_LOCK_TTL_MS = 30_000;

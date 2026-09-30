@@ -1,5 +1,4 @@
 import {
-	ALIEN_PROJECT,
 	ALIEN_WORKSPACE,
 	type AlienClient,
 	type AlienConfig,
@@ -12,14 +11,18 @@ let alienClient: AlienClient | null | undefined;
 
 /** Hosted alien when its key is set; a local `alien dev` manager only when its URL is given. */
 const envToAlienConfig = (): AlienConfig | null => {
-	const { ALIEN_API_KEY, ALIEN_MANAGER_URL } = process.env;
-	if (ALIEN_API_KEY)
+	const { ALIEN_API_KEY, ALIEN_PROJECT, ALIEN_MANAGER_URL } = process.env;
+	if (ALIEN_API_KEY) {
+		// Each environment has its own project; defaulting one would point staging at prod's deployments.
+		if (!ALIEN_PROJECT)
+			throw new Error("ALIEN_PROJECT is required when ALIEN_API_KEY is set");
 		return {
 			kind: "hosted",
 			apiKey: ALIEN_API_KEY,
 			project: ALIEN_PROJECT,
 			workspace: ALIEN_WORKSPACE,
 		};
+	}
 	if (ALIEN_MANAGER_URL) return { kind: "local", baseUrl: ALIEN_MANAGER_URL };
 	return null;
 };
