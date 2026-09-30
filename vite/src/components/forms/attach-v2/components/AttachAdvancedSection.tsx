@@ -34,6 +34,7 @@ import {
 } from "@/components/forms/shared/CustomLineItemRows";
 import { AppliedDiscountRow } from "@/components/forms/shared/discount-row/AppliedDiscountRow";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
+import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { cn } from "@/lib/utils";
@@ -282,30 +283,11 @@ export function AttachAdvancedSection() {
 			)}
 
 			{rules.endDate.visible && (
-				<ConfigRow
-					title="End Date"
-					description="End the plan on a future date"
-					expanded={endDate !== null}
-					action={
-						<Switch
-							checked={endDate !== null}
-							onCheckedChange={(checked) =>
-								form.setFieldValue(
-									"endDate",
-									checked ? addDays(endDateMin, 1).getTime() : null,
-								)
-							}
-						/>
-					}
-				>
-					<DateInputUnix
-						unixDate={endDate}
-						setUnixDate={(value) => form.setFieldValue("endDate", value)}
-						disablePastDates
-						minUnixDate={endDateMin}
-						withTime
-					/>
-				</ConfigRow>
+				<EndDateConfigRow
+					endDate={endDate}
+					minUnixDate={endDateMin}
+					onEndDateChange={(value) => form.setFieldValue("endDate", value)}
+				/>
 			)}
 
 			{rules.carryOverBalances.visible && (

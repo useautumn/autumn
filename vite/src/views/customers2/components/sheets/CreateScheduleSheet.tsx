@@ -149,6 +149,9 @@ export function buildInitialValues({
 				phases: scheduledPhases,
 				nowMs,
 			}),
+			billingCycleAnchorMode: "now",
+			billingCycleAnchorDate: null,
+			endDate: null,
 			enablePlanImmediately: false,
 		};
 	}
@@ -163,6 +166,9 @@ export function buildInitialValues({
 		unscheduledPlans: seededState.unscheduledPlans,
 		billingBehavior: null,
 		resetBillingCycle: false,
+		billingCycleAnchorMode: "now",
+		billingCycleAnchorDate: null,
+		endDate: null,
 		enablePlanImmediately: false,
 	};
 }

@@ -233,4 +233,46 @@ describe("scheduleFormFromRequestBody", () => {
 
 		expect(form?.resetBillingCycle).toBe(true);
 	});
+
+	test("round trips a custom billing cycle anchor and ends_at", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const form = scheduleFormFromRequestBody({
+			billing_cycle_anchor: Date.UTC(2027, 0, 15),
+			ends_at: Date.UTC(2027, 6, 1),
+			phases: [{ plans: [{ plan_id: "launch" }], starts_at: now }],
+		});
+		expect(form).toMatchObject({
+			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
+			billingCycleAnchorMode: "custom",
+			endDate: Date.UTC(2027, 6, 1),
+			resetBillingCycle: true,
+		});
+
+		const request = buildCreateScheduleRequestBody({
+			...form,
+			customerId: "cus_1",
+			features: [],
+			nowMs: now,
+			phases: form?.phases ?? [],
+			products: [{ id: "launch", items: [] } as unknown as ProductV2],
+		});
+		expect(request).toMatchObject({
+			billing_cycle_anchor: Date.UTC(2027, 0, 15),
+			ends_at: Date.UTC(2027, 6, 1),
+		});
+	});
+
+	test("maps a now anchor without an end date", () => {
+		const form = scheduleFormFromRequestBody({
+			billing_cycle_anchor: "now",
+			phases: [{ plans: [{ plan_id: "launch" }], starts_at: "now" }],
+		});
+
+		expect(form).toMatchObject({
+			billingCycleAnchorMode: "now",
+			endDate: null,
+			resetBillingCycle: true,
+		});
+		expect(form).not.toHaveProperty("billingCycleAnchorDate");
+	});
 });
