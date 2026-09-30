@@ -49,14 +49,22 @@ export async function refreshPartitionHighWatermarks({
 	const topics = [ctx.config.topic, ctx.config.commandTopic].filter(
 		(topic): topic is string => typeof topic === "string",
 	);
-	const watermarks = await Promise.all(
+	const reads = await Promise.allSettled(
 		topics.map(async (topic) => ({
 			topic,
 			offsets: await ctx.partitionOffsets.fetchHighWatermarks({ topic }),
 		})),
 	);
 	if (!isCurrentAllocation({ state, allocationGeneration })) return false;
-	for (const { topic, offsets } of watermarks) {
+	// One topic's read failing must not hide the other's progress, so every read that
+	// succeeded is recorded before the failures are reported.
+	const failures: unknown[] = [];
+	for (const read of reads) {
+		if (read.status === "rejected") {
+			failures.push(read.reason);
+			continue;
+		}
+		const { topic, offsets } = read.value;
 		for (const entry of state.entries.values()) {
 			ctx.progress.observeHighWatermark({
 				topic,
@@ -67,6 +75,12 @@ export async function refreshPartitionHighWatermarks({
 			});
 		}
 	}
+	if (failures.length === 1) throw failures[0];
+	if (failures.length > 1)
+		throw new AggregateError(
+			failures,
+			"Partition high watermarks could not be read",
+		);
 	return true;
 }
 

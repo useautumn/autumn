@@ -1,4 +1,6 @@
+import { isKafkaAccessRefusal } from "@autumn/kafka";
 import { isCurrentAllocation } from "../allocation/partitionAllocation.js";
+import { requestPartitionServiceStop } from "../partitionService.js";
 import type {
 	AllocationScope,
 	PartitionsScope,
@@ -60,8 +62,20 @@ async function runConsumerRejoin({
 	try {
 		await ctx.consumer.restart?.();
 	} catch (cause) {
-		if (isCurrentAllocation({ state, allocationGeneration }))
+		if (!isCurrentAllocation({ state, allocationGeneration })) return;
+		// Only the broker's refusal is waited out. Any other reason the rejoin fails has nothing to
+		// clear on its own, and a worker kept alive owning nothing would leave its callers failing
+		// open for good, so the service stops and the task is replaced.
+		if (isKafkaAccessRefusal({ cause })) {
 			scheduleConsumerRejoin({ ctx, state, allocationGeneration, cause });
+			return;
+		}
+		requestPartitionServiceStop({
+			ctx,
+			state,
+			allocationGeneration,
+			reason: { cause, scope: "consumer" },
+		});
 	}
 }
 

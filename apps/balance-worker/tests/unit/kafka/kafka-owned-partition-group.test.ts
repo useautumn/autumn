@@ -146,6 +146,7 @@ type FakeGroupConsumer = KafkaOwnedPartitionGroupConsumerPort & {
 	emitRebalancing(): void;
 	emitCrash(error: Error, options?: { restart: boolean }): void;
 	failNextPause(error: Error): void;
+	failNextRun(error: Error): void;
 };
 
 const createFakeGroupConsumer = (): FakeGroupConsumer => {
@@ -154,6 +155,7 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 	const pauses: Array<{ topic: string; partitions?: number[] }> = [];
 	const resumes: Array<{ topic: string; partitions?: number[] }> = [];
 	let nextPauseError: Error | null = null;
+	let nextRunError: Error | null = null;
 	const emit = (eventName: string, event: unknown): void => {
 		for (const listener of listeners.get(eventName) ?? []) listener(event);
 	};
@@ -189,6 +191,11 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 		},
 		run: async function (config) {
 			lifecycle.push("consumer-run");
+			if (nextRunError) {
+				const error = nextRunError;
+				nextRunError = null;
+				throw error;
+			}
 			this.runConfig = config ?? null;
 		},
 		commitOffsets: async () => undefined,
@@ -245,6 +252,9 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 		},
 		failNextPause: (error) => {
 			nextPauseError = error;
+		},
+		failNextRun: (error) => {
+			nextRunError = error;
 		},
 	};
 };
@@ -771,6 +781,67 @@ describe("Kafka owned partition group", () => {
 			);
 			expect(events).toEqual([]);
 			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a rejoin that fails for any reason but the broker's refusal ends the worker: nothing else clears on its own", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const started: number[] = [];
+			const stopped: number[] = [];
+			const events: string[] = [];
+			const reasons: unknown[] = [];
+			const refusal = new KafkaJSProtocolError(
+				Object.assign(
+					new Error(
+						"Not authorized to access group: Group authorization failed",
+					),
+					{ type: "GROUP_AUTHORIZATION_FAILED", code: 30, retriable: false },
+				),
+			);
+			const subscriptionFailure = new Error(
+				"Subscription to the balance topic was rejected",
+			);
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
+				consumerRejoin: { initialBackoffMs: 1, maxBackoffMs: 4 },
+				logger: { info: () => undefined, warn: () => undefined } as never,
+				createRuntime: createRuntimeFactory({
+					started,
+					stopped,
+					unavailable: [],
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+				onServiceStopped: (reason) => {
+					events.push("service-stopped");
+					reasons.push(reason);
+				},
+			});
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 1);
+
+			// The refusal is waited out, but the rejoin itself then fails for an unrelated reason.
+			consumer.failNextRun(subscriptionFailure);
+			consumer.emitCrash(refusal, { restart: false });
+			await waitFor(() => events.includes("service-stopped"));
+			expect(stopped).toEqual([0]);
+			expect(reasons).toEqual([
+				{ cause: subscriptionFailure, scope: "consumer" },
+			]);
+			expect(
+				consumer.lifecycle.filter((step) => step === "consumer-run").length,
+			).toBe(2);
 		} finally {
 			closeStoreFixture(fixture);
 		}
