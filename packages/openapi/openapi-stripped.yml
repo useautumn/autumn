@@ -10907,6 +10907,372 @@ paths:
       x-speakeasy-name-override: advanceTestClock
       parameters:
         - *a5
+  /v1/subscriptions.list:
+    post:
+      operationId: listSubscriptions
+      description: Lists recurring plans (including add-ons) across customers, live or
+        expired. Filter by customer, entity, plan, or status. Pages may hold
+        fewer than `limit` rows while `has_more` is true.
+      tags:
+        - customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Only return rows for this customer. Omit to list across every
+                    customer.
+                entity_id:
+                  type: string
+                  description: Only return rows for this entity. Requires customer_id.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 200.
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
+                statuses:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - active
+                      - scheduled
+                      - past_due
+                      - expired
+                    type: string
+                  description: Statuses to include. Defaults to active and scheduled. past_due
+                    matches plans with overdue payments, which read as status
+                    active with past_due true.
+                plan_id:
+                  type: string
+                  description: Only return rows for this plan.
+              title: ListSubscriptionsParams
+              examples:
+                - &a11
+                  customer_id: cus_123
+                  statuses:
+                    - expired
+                - plan_id: pro
+                  statuses:
+                    - past_due
+            example: *a11
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id
+                            was provided at attach time, it is used; otherwise,
+                            falls back to the internal ID.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the subscribed plan.
+                        auto_enable:
+                          type: boolean
+                          description: Whether the plan was automatically enabled for the customer.
+                        add_on:
+                          type: boolean
+                          description: Whether this is an add-on plan rather than a base subscription.
+                        past_due:
+                          type: boolean
+                          description: Whether the subscription has overdue payments.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription was canceled, or null if not
+                            canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription will expire, or null if no expiry
+                            set.
+                        trial_ends_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the trial period ends, or null if not on trial.
+                        started_at:
+                          type: number
+                          description: Timestamp when the subscription started.
+                        current_period_start:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Start timestamp of the current billing period.
+                        current_period_end:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: End timestamp of the current billing period.
+                        quantity:
+                          type: number
+                          description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                            - expired
+                          type: string
+                          description: Current status of the subscription.
+                        customer_id:
+                          type: string
+                          description: The customer this row belongs to.
+                        entity_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The entity this row is scoped to, or null.
+                        created_at:
+                          type: number
+                          description: Timestamp when this row was created.
+                      required:
+                        - id
+                        - plan_id
+                        - auto_enable
+                        - add_on
+                        - past_due
+                        - canceled_at
+                        - expires_at
+                        - trial_ends_at
+                        - started_at
+                        - current_period_start
+                        - current_period_end
+                        - quantity
+                        - status
+                        - customer_id
+                        - entity_id
+                        - created_at
+                    description: Rows on this page.
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist. A page may hold fewer than `limit`
+                      items (even zero) while `has_more` is true, so paginate
+                      until `has_more` is false.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Pass as start_cursor to fetch the next page. Null when has_more is
+                      false.
+                required:
+                  - list
+                  - has_more
+                  - next_cursor
+                examples:
+                  - &a12
+                    list:
+                      - id: sub_123
+                        plan_id: pro
+                        auto_enable: false
+                        add_on: false
+                        status: expired
+                        past_due: false
+                        canceled_at: 1771409161016
+                        expires_at: 1771409161016
+                        trial_ends_at: null
+                        started_at: 1768817161016
+                        current_period_start: null
+                        current_period_end: null
+                        quantity: 1
+                        scope: customer
+                        customer_id: cus_123
+                        entity_id: null
+                        created_at: 1768817161016
+                    has_more: false
+                    next_cursor: null
+              example: *a12
+      x-speakeasy-name-override: listSubscriptions
+      parameters:
+        - *a5
+  /v1/purchases.list:
+    post:
+      operationId: listPurchases
+      description: Lists one-off plan purchases across customers, live or expired.
+        Filter by customer, entity, plan, or status. Pages may hold fewer than
+        `limit` rows while `has_more` is true.
+      tags:
+        - customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Only return rows for this customer. Omit to list across every
+                    customer.
+                entity_id:
+                  type: string
+                  description: Only return rows for this entity. Requires customer_id.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 200.
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
+                statuses:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - active
+                      - scheduled
+                      - past_due
+                      - expired
+                    type: string
+                  description: Statuses to include. Defaults to active and scheduled. past_due
+                    matches plans with overdue payments, which read as status
+                    active with past_due true.
+                plan_id:
+                  type: string
+                  description: Only return rows for this plan.
+              title: ListPurchasesParams
+              examples:
+                - &a13
+                  customer_id: cus_123
+                  statuses:
+                    - active
+                    - expired
+            example: *a13
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the purchased plan.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the purchase expires, or null for lifetime access.
+                        started_at:
+                          type: number
+                          description: Timestamp when the purchase was made.
+                        quantity:
+                          type: number
+                          description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
+                        id:
+                          type: string
+                          description: The unique identifier of this purchase. Falls back to the internal
+                            ID when none was provided.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                            - expired
+                          type: string
+                          description: Current status of the purchase.
+                        customer_id:
+                          type: string
+                          description: The customer this row belongs to.
+                        entity_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The entity this row is scoped to, or null.
+                        created_at:
+                          type: number
+                          description: Timestamp when this row was created.
+                      required:
+                        - plan_id
+                        - expires_at
+                        - started_at
+                        - quantity
+                        - id
+                        - status
+                        - customer_id
+                        - entity_id
+                        - created_at
+                    description: Rows on this page.
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist. A page may hold fewer than `limit`
+                      items (even zero) while `has_more` is true, so paginate
+                      until `has_more` is false.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Pass as start_cursor to fetch the next page. Null when has_more is
+                      false.
+                required:
+                  - list
+                  - has_more
+                  - next_cursor
+                examples:
+                  - &a14
+                    list:
+                      - id: cus_prod_123
+                        plan_id: credit_pack
+                        status: expired
+                        expires_at: null
+                        started_at: 1768817161016
+                        quantity: 1
+                        scope: customer
+                        customer_id: cus_123
+                        entity_id: null
+                        created_at: 1768817161016
+                    has_more: false
+                    next_cursor: null
+              example: *a14
+      x-speakeasy-name-override: listPurchases
+      parameters:
+        - *a5
   /v1/plans.create:
     post:
       operationId: createPlan
@@ -12632,7 +12998,7 @@ paths:
                 - name
               title: CreatePlanParams
               examples:
-                - &a11
+                - &a15
                   plan_id: free_plan
                   name: Free
                   auto_enable: true
@@ -12669,7 +13035,7 @@ paths:
                         interval: month
                         billing_units: 1
                         billing_method: prepaid
-            example: *a11
+            example: *a15
       responses:
         "200":
           description: OK
@@ -15569,7 +15935,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a12
+                  - &a16
                     id: pro
                     name: Pro Plan
                     description: null
@@ -15620,7 +15986,7 @@ paths:
                       ignore_past_due: false
                     billing_controls: {}
                     metadata: {}
-              example: *a12
+              example: *a16
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -15654,11 +16020,11 @@ paths:
                 - plan_id
               title: GetPlanParams
               examples:
-                - &a13
+                - &a17
                   plan_id: pro_plan
                 - plan_id: pro_plan
                   version: 2
-            example: *a13
+            example: *a17
       responses:
         "200":
           description: OK
@@ -18558,7 +18924,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a14
+                  - &a18
                     id: pro
                     name: Pro Plan
                     description: null
@@ -18609,7 +18975,7 @@ paths:
                       ignore_past_due: false
                     billing_controls: {}
                     metadata: {}
-              example: *a14
+              example: *a18
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -18647,10 +19013,10 @@ paths:
                   description: If true, includes all plan versions.
               title: ListPlansParams
               examples:
-                - &a15 {}
+                - &a19 {}
                 - customer_id: cus_123
                 - include_archived: true
-            example: *a15
+            example: *a19
       responses:
         "200":
           description: OK
@@ -24565,7 +24931,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a16
+                  - &a20
                     list:
                       - id: pro
                         name: Pro Plan
@@ -24622,7 +24988,7 @@ paths:
                             version: 1
                             version_slug: v1
                             included: 3
-              example: *a16
+              example: *a20
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -28215,7 +28581,7 @@ paths:
                 - plan_id
               title: UpdatePlanParams
               examples:
-                - &a17
+                - &a21
                   plan_id: pro_plan
                   name: Pro Plan (Updated)
                   price:
@@ -28225,7 +28591,7 @@ paths:
                   price: null
                 - plan_id: old_plan
                   archived: true
-            example: *a17
+            example: *a21
       responses:
         "200":
           description: OK
@@ -31125,7 +31491,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a18
+                  - &a22
                     id: pro
                     name: Pro Plan
                     description: null
@@ -31176,7 +31542,7 @@ paths:
                       ignore_past_due: false
                     billing_controls: {}
                     metadata: {}
-              example: *a18
+              example: *a22
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -31212,11 +31578,11 @@ paths:
                 - plan_id
               title: DeletePlanParams
               examples:
-                - &a19
+                - &a23
                   plan_id: unused_plan
                 - plan_id: legacy_plan
                   all_versions: true
-            example: *a19
+            example: *a23
       responses:
         "200":
           description: OK
@@ -31645,7 +32011,7 @@ paths:
                 - feature_id
               title: CreateFeatureParams
               examples:
-                - &a20
+                - &a24
                   feature_id: api-calls
                   name: API Calls
                   type: metered
@@ -31659,7 +32025,7 @@ paths:
                       credit_cost: 1
                     - metered_feature_id: image-generations
                       credit_cost: 10
-            example: *a20
+            example: *a24
       responses:
         "200":
           description: OK
@@ -32191,7 +32557,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a21
+                  - &a25
                     id: api-calls
                     name: API Calls
                     type: metered
@@ -32200,7 +32566,7 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a21
+              example: *a25
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -32227,9 +32593,9 @@ paths:
                 - feature_id
               title: GetFeatureParams
               examples:
-                - &a22
+                - &a26
                   feature_id: api-calls
-            example: *a22
+            example: *a26
       responses:
         "200":
           description: OK
@@ -32761,7 +33127,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a23
+                  - &a27
                     id: api-calls
                     name: API Calls
                     type: metered
@@ -32770,7 +33136,7 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a23
+              example: *a27
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -33333,7 +33699,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a24
+                  - &a28
                     list:
                       - id: api-calls
                         name: API Calls
@@ -33356,7 +33722,7 @@ paths:
                         display:
                           singular: credit
                           plural: credits
-              example: *a24
+              example: *a28
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -33780,7 +34146,7 @@ paths:
                 - feature_id
               title: UpdateFeatureParams
               examples:
-                - &a25
+                - &a29
                   feature_id: api-calls
                   name: API Requests
                   display:
@@ -33788,7 +34154,7 @@ paths:
                     plural: API requests
                 - feature_id: old-feature
                   archived: true
-            example: *a25
+            example: *a29
       responses:
         "200":
           description: OK
@@ -34320,7 +34686,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a26
+                  - &a30
                     id: api-calls
                     name: API Calls
                     type: metered
@@ -34329,7 +34695,7 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a26
+              example: *a30
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -34358,9 +34724,9 @@ paths:
                 - feature_id
               title: DeleteFeatureParams
               examples:
-                - &a27
+                - &a31
                   feature_id: old-feature
-            example: *a27
+            example: *a31
       responses:
         "200":
           description: OK
@@ -34374,9 +34740,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a28
+                  - &a32
                     success: true
-              example: *a28
+              example: *a32
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -37058,10 +37424,10 @@ paths:
                 - plan_id
               title: AttachParams
               examples:
-                - &a29
+                - &a33
                   customer_id: cus_123
                   plan_id: pro_plan
-            example: *a29
+            example: *a33
       responses:
         "200":
           description: OK
@@ -37136,10 +37502,10 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a30
+                  - &a34
                     customer_id: cus_123
                     payment_url: https://checkout.stripe.com/...
-              example: *a30
+              example: *a34
       x-speakeasy-name-override: attach
       parameters:
         - *a5
@@ -45762,7 +46128,7 @@ paths:
                 - plans
               title: MultiAttachParams
               examples:
-                - &a31
+                - &a35
                   customer_id: cus_123
                   plans:
                     - plan_id: pro_plan
@@ -45770,7 +46136,7 @@ paths:
                       feature_quantities:
                         - feature_id: seats
                           quantity: 5
-            example: *a31
+            example: *a35
       responses:
         "200":
           description: OK
@@ -45845,7 +46211,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a32
+                  - &a36
                     customer_id: cus_123
                     invoice:
                       status: paid
@@ -45854,7 +46220,7 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a32
+              example: *a36
       x-speakeasy-name-override: multiAttach
       parameters:
         - *a5
@@ -48536,10 +48902,10 @@ paths:
                 - plan_id
               title: PreviewAttachParams
               examples:
-                - &a33
+                - &a37
                   customer_id: cus_123
                   plan_id: pro_plan
-            example: *a33
+            example: *a37
       responses:
         "200":
           description: OK
@@ -48940,7 +49306,7 @@ paths:
                   - redirect_to_checkout
                   - checkout_type
                 examples:
-                  - &a34
+                  - &a38
                     customerId: charles
                     lineItems:
                       - display_name: Pro seed
@@ -48951,7 +49317,7 @@ paths:
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a34
+              example: *a38
       x-speakeasy-name-override: previewAttach
       parameters:
         - *a5
@@ -50015,7 +50381,7 @@ paths:
                 - plans
               title: PreviewMultiAttachParams
               examples:
-                - &a35
+                - &a39
                   customer_id: cus_123
                   plans:
                     - plan_id: pro_plan
@@ -50023,7 +50389,7 @@ paths:
                       feature_quantities:
                         - feature_id: seats
                           quantity: 5
-            example: *a35
+            example: *a39
       responses:
         "200":
           description: OK
@@ -50424,7 +50790,7 @@ paths:
                   - redirect_to_checkout
                   - checkout_type
                 examples:
-                  - &a36
+                  - &a40
                     customerId: charles
                     lineItems:
                       - display_name: Pro seed
@@ -50435,7 +50801,7 @@ paths:
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a36
+              example: *a40
       x-speakeasy-name-override: previewMultiAttach
       parameters:
         - *a5
@@ -57901,7 +58267,7 @@ paths:
                 - phases
               title: SetPlansParams
               examples:
-                - &a37
+                - &a41
                   customer_id: cus_123
                   phases:
                     - starts_at: now
@@ -57912,7 +58278,7 @@ paths:
                         duration_count: 1
                       plans:
                         - plan_id: pro_plan
-            example: *a37
+            example: *a41
       responses:
         "200":
           description: OK
@@ -58027,7 +58393,7 @@ paths:
                   - payment_url
                 title: SetPlansResponse
                 examples:
-                  - &a38
+                  - &a42
                     customer_id: cus_123
                     entity_id: null
                     status: created
@@ -58043,7 +58409,7 @@ paths:
                           - cus_prod_2222
                     invoice: null
                     payment_url: null
-              example: *a38
+              example: *a42
       x-speakeasy-name-override: setPlans
       parameters:
         - *a5
@@ -65508,7 +65874,7 @@ paths:
                 - phases
               title: PreviewSetPlansParams
               examples:
-                - &a39
+                - &a43
                   customer_id: cus_123
                   phases:
                     - starts_at: now
@@ -65519,7 +65885,7 @@ paths:
                         duration_count: 1
                       plans:
                         - plan_id: pro_plan
-            example: *a39
+            example: *a43
       responses:
         "200":
           description: OK
@@ -75897,13 +76263,13 @@ paths:
                 - customer_id
               title: UpdateSubscriptionParams
               examples:
-                - &a40
+                - &a44
                   customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 10
-            example: *a40
+            example: *a44
       responses:
         "200":
           description: OK
@@ -75978,7 +76344,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a41
+                  - &a45
                     customer_id: cus_123
                     invoice:
                       status: paid
@@ -75987,7 +76353,7 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a41
+              example: *a45
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -78615,13 +78981,13 @@ paths:
                 - customer_id
               title: PreviewUpdateParams
               examples:
-                - &a42
+                - &a46
                   customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 15
-            example: *a42
+            example: *a46
       responses:
         "200":
           description: OK
@@ -79018,7 +79384,7 @@ paths:
                   - outgoing
                   - intent
                 examples:
-                  - &a43
+                  - &a47
                     customerId: charles
                     lineItems:
                       - display_name: Pro seed
@@ -79029,7 +79395,7 @@ paths:
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a43
+              example: *a47
       x-speakeasy-name-override: previewUpdate
       parameters:
         - *a5
@@ -79126,14 +79492,14 @@ paths:
                 - updates
               title: MultiUpdateParams
               examples:
-                - &a44
+                - &a48
                   customer_id: cus_123
                   updates:
                     - plan_id: pro_plan
                       cancel_action: cancel_end_of_cycle
                     - plan_id: addon_seats
                       cancel_action: cancel_end_of_cycle
-            example: *a44
+            example: *a48
       responses:
         "200":
           description: OK
@@ -79208,7 +79574,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a45
+                  - &a49
                     customer_id: cus_123
                     invoice:
                       status: paid
@@ -79217,7 +79583,7 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a45
+              example: *a49
       x-speakeasy-name-override: multiUpdate
       parameters:
         - *a5
@@ -79312,14 +79678,14 @@ paths:
                 - updates
               title: PreviewMultiUpdateParams
               examples:
-                - &a46
+                - &a50
                   customer_id: cus_123
                   updates:
                     - plan_id: pro_plan
                       cancel_action: cancel_immediately
                     - plan_id: addon_seats
                       cancel_action: cancel_immediately
-            example: *a46
+            example: *a50
       responses:
         "200":
           description: OK
@@ -79687,7 +80053,7 @@ paths:
                   - subscriptions
                 title: MultiUpdatePreviewResponse
                 examples:
-                  - &a47
+                  - &a51
                     customer_id: cus_123
                     currency: usd
                     total: -40
@@ -79716,7 +80082,7 @@ paths:
                         currency: usd
                         plan_ids:
                           - addon_seats
-              example: *a47
+              example: *a51
       x-speakeasy-name-override: previewMultiUpdate
       parameters:
         - *a5
@@ -79749,10 +80115,10 @@ paths:
                 - customer_id
               title: OpenCustomerPortalParams
               examples:
-                - &a48
+                - &a52
                   customer_id: cus_123
                   return_url: https://useautumn.com
-            example: *a48
+            example: *a52
       responses:
         "200":
           description: OK
@@ -79771,10 +80137,10 @@ paths:
                   - customer_id
                   - url
                 examples:
-                  - &a49
+                  - &a53
                     customer_id: cus_123
                     url: https://billing.stripe.com/session/...
-              example: *a49
+              example: *a53
       x-speakeasy-name-override: openCustomerPortal
       parameters:
         - *a5
@@ -82389,10 +82755,10 @@ paths:
                 - customer_id
               title: SetupPaymentParams
               examples:
-                - &a50
+                - &a54
                   customer_id: cus_123
                   success_url: https://example.com/account/billing
-            example: *a50
+            example: *a54
       responses:
         "200":
           description: OK
@@ -82416,10 +82782,10 @@ paths:
                   - url
                 title: SetupPaymentResponse
                 examples:
-                  - &a51
+                  - &a55
                     customer_id: cus_123
                     url: https://checkout.stripe.com/...
-              example: *a51
+              example: *a55
       x-speakeasy-name-override: setupPayment
       parameters:
         - *a5
@@ -82465,9 +82831,9 @@ paths:
                 - customer_id
               title: VerifyParams
               examples:
-                - &a52
+                - &a56
                   customer_id: cus_123
-            example: *a52
+            example: *a56
       responses:
         "200":
           description: OK
@@ -83230,7 +83596,7 @@ paths:
                   - subscriptions
                 title: VerifyResponse
                 examples:
-                  - &a53
+                  - &a57
                     customer_id: cus_123
                     customer_mismatches: []
                     subscriptions:
@@ -83248,7 +83614,7 @@ paths:
                       - stripe_subscription_id: sub_5678
                         status: correct
                         mismatches: []
-              example: *a53
+              example: *a57
       x-speakeasy-name-override: verify
       parameters:
         - *a5
@@ -83451,7 +83817,7 @@ paths:
                 - billables
               title: DfuFlashParams
               examples:
-                - &a54
+                - &a58
                   customer_id: cus_123
                   processors:
                     - type: stripe
@@ -83466,7 +83832,7 @@ paths:
                         balances:
                           - feature_id: messages
                             usage: 10
-            example: *a54
+            example: *a58
       responses:
         "200":
           description: OK
@@ -83535,7 +83901,7 @@ paths:
                   - customer
                 title: DfuFlashResult
                 examples:
-                  - &a55
+                  - &a59
                     customer_id: cus_123
                     flashed:
                       - plan_id: pro
@@ -83599,7 +83965,7 @@ paths:
                       config:
                         disable_pooled_balance: false
                         disable_overage_billing: false
-              example: *a55
+              example: *a59
       x-speakeasy-name-override: import
       parameters:
         - *a5
@@ -83702,13 +84068,13 @@ paths:
                 - feature_id
               title: CreateBalanceParams
               examples:
-                - &a56
+                - &a60
                   customer_id: cus_123
                   feature_id: api_calls
                   included: 1000
                   reset:
                     interval: month
-            example: *a56
+            example: *a60
       responses:
         "200":
           description: OK
@@ -83722,6 +84088,297 @@ paths:
                 required:
                   - success
       x-speakeasy-name-override: create
+      parameters:
+        - *a5
+  /v1/balances.list:
+    post:
+      operationId: listBalances
+      description: "Lists individual balances (one row per grant) across customers,
+        live or expired: plan balances, standalone balances, top-ups, and pooled
+        balances. Pages may hold fewer than `limit` rows while `has_more` is
+        true."
+      tags:
+        - balances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Only return rows for this customer. Omit to list across every
+                    customer.
+                entity_id:
+                  type: string
+                  description: Only return rows for this entity. Requires customer_id.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 200.
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
+                statuses:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - active
+                      - expired
+                    type: string
+                  description: Statuses to include. Defaults to active. A balance is expired when
+                    its plan expired, or when a standalone balance passed its
+                    expires_at.
+                plan_id:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Only return balances from this plan. Pass null for standalone
+                    balances only (top-ups, balances.create, rollovers).
+                feature_id:
+                  type: string
+                  description: Only return balances for this feature.
+              title: ListBalancesParams
+              examples:
+                - &a61
+                  customer_id: cus_123
+                  statuses:
+                    - expired
+                - customer_id: cus_123
+                  feature_id: messages
+                  plan_id: null
+            example: *a61
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          default: ""
+                          description: The unique identifier for this balance breakdown.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this balance originates from, or null for standalone
+                            balances.
+                        included_grant:
+                          type: number
+                          description: Amount granted from the plan's included usage.
+                        prepaid_grant:
+                          type: number
+                          description: Amount granted from prepaid purchases or top-ups.
+                        remaining:
+                          type: number
+                          description: Remaining balance available for use.
+                        usage:
+                          type: number
+                          description: Amount consumed in the current period.
+                        unlimited:
+                          type: boolean
+                          description: Whether this balance has unlimited usage.
+                        reset:
+                          anyOf:
+                            - type: object
+                              properties:
+                                interval:
+                                  anyOf:
+                                    - enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                    - const: multiple
+                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                    combined from different intervals.
+                                interval_count:
+                                  type: number
+                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                resets_at:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Timestamp when the balance will next reset.
+                              required:
+                                - interval
+                                - resets_at
+                            - type: "null"
+                          description: Reset configuration for this balance, or null if no reset.
+                        price:
+                          anyOf:
+                            - type: object
+                              properties:
+                                amount:
+                                  type: number
+                                  description: The per-unit price amount.
+                                tiers:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      to:
+                                        anyOf:
+                                          - type: number
+                                          - const: inf
+                                      amount:
+                                        type: number
+                                      flat_amount:
+                                        type: number
+                                    required:
+                                      - to
+                                      - amount
+                                  description: Tiered pricing configuration if applicable.
+                                tier_behavior:
+                                  enum:
+                                    - graduated
+                                    - volume
+                                  type: string
+                                  description: "How tiers are applied: graduated (split across bands) or volume
+                                    (flat rate for the matched tier)."
+                                billing_units:
+                                  type: number
+                                  description: The number of units per billing increment (eg. $9 / 250 units).
+                                billing_method:
+                                  enum:
+                                    - prepaid
+                                    - usage_based
+                                  type: string
+                                  description: Whether usage is prepaid or billed pay-per-use.
+                                max_purchase:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Maximum quantity that can be purchased, or null for unlimited.
+                              required:
+                                - billing_units
+                                - billing_method
+                                - max_purchase
+                            - type: "null"
+                          description: Pricing configuration if this balance has usage-based pricing.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this balance expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature this balance is for.
+                        status:
+                          enum:
+                            - active
+                            - expired
+                          type: string
+                          description: Whether this balance is active or expired.
+                        rollovers:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              granted:
+                                type: number
+                                description: Amount originally rolled over from a previous period, before any of
+                                  it was consumed.
+                              balance:
+                                type: number
+                                description: Amount of balance rolled over from a previous period.
+                              expires_at:
+                                type: number
+                                description: Timestamp when the rollover balance expires.
+                            required:
+                              - granted
+                              - balance
+                              - expires_at
+                          description: Rollover balances carried over onto this balance.
+                        customer_id:
+                          type: string
+                          description: The customer this balance belongs to.
+                        entity_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The entity this balance is scoped to, or null.
+                        created_at:
+                          type: number
+                          description: Timestamp when this balance was created.
+                      required:
+                        - plan_id
+                        - included_grant
+                        - prepaid_grant
+                        - remaining
+                        - usage
+                        - unlimited
+                        - reset
+                        - price
+                        - expires_at
+                        - feature_id
+                        - status
+                        - rollovers
+                        - customer_id
+                        - entity_id
+                        - created_at
+                    description: Rows on this page.
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist. A page may hold fewer than `limit`
+                      items (even zero) while `has_more` is true, so paginate
+                      until `has_more` is false.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Pass as start_cursor to fetch the next page. Null when has_more is
+                      false.
+                required:
+                  - list
+                  - has_more
+                  - next_cursor
+                examples:
+                  - &a62
+                    list:
+                      - id: bonus_credits
+                        plan_id: null
+                        included_grant: 50
+                        prepaid_grant: 0
+                        remaining: 0
+                        usage: 50
+                        unlimited: false
+                        reset:
+                          interval: one_off
+                          resets_at: null
+                        price: null
+                        expires_at: 1771999921437
+                        feature_id: messages
+                        status: expired
+                        rollovers: []
+                        customer_id: cus_123
+                        entity_id: null
+                        created_at: 1769904000000
+                    has_more: false
+                    next_cursor: null
+              example: *a62
+      x-speakeasy-name-override: list
       parameters:
         - *a5
   /v1/balances.update:
@@ -83796,11 +84453,11 @@ paths:
                 - feature_id
               title: UpdateBalanceParams
               examples:
-                - &a57
+                - &a63
                   customer_id: cus_123
                   feature_id: api_calls
                   remaining: 5
-            example: *a57
+            example: *a63
       responses:
         "200":
           description: OK
@@ -83867,10 +84524,10 @@ paths:
                 - customer_id
               title: DeleteBalanceParams
               examples:
-                - &a58
+                - &a64
                   customer_id: cus_123
                   feature_id: api_calls
-            example: *a58
+            example: *a64
       responses:
         "200":
           description: OK
@@ -83924,7 +84581,7 @@ paths:
                 - action
               title: FinalizeBalanceParams
               examples:
-                - &a59
+                - &a65
                   lock_id: lock_abc123
                   action: confirm
                 - lock_id: lock_abc123
@@ -83932,7 +84589,7 @@ paths:
                   override_value: 3
                 - lock_id: lock_abc123
                   action: release
-            example: *a59
+            example: *a65
       responses:
         "200":
           description: OK
@@ -84042,14 +84699,14 @@ paths:
                 - feature_id
               title: CheckParams
               examples:
-                - &a60
+                - &a66
                   customer_id: cus_123
                   feature_id: messages
                 - customer_id: cus_123
                   feature_id: messages
                   required_balance: 3
                   send_event: true
-            example: *a60
+            example: *a66
       responses:
         "200":
           description: OK
@@ -85262,7 +85919,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a61
+                  - &a67
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -85289,7 +85946,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a61
+              example: *a67
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so access was allowed fail-open.
@@ -86502,7 +87159,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a62
+                  - &a68
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -86529,7 +87186,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a62
+              example: *a68
       x-speakeasy-name-override: check
       parameters:
         - *a5
@@ -86601,11 +87258,11 @@ paths:
                 - customer_id
               title: TrackParams
               examples:
-                - &a63
+                - &a69
                   customer_id: cus_123
                   feature_id: messages
                   value: 1
-            example: *a63
+            example: *a69
       responses:
         "200":
           description: OK
@@ -86717,7 +87374,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a64
+                  - &a70
                     customer_id: cus_123
                     value: 1
                     balance:
@@ -86750,7 +87407,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 1
-              example: *a64
+              example: *a70
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so the event was accepted for replay and will be tracked
@@ -86863,7 +87520,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a65
+                  - &a71
                     customer_id: cus_123
                     value: 1
                     balance:
@@ -86896,7 +87553,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 1
-              example: *a65
+              example: *a71
       x-speakeasy-name-override: track
       parameters:
         - *a5
@@ -87008,13 +87665,13 @@ paths:
                 - output_tokens
               title: TrackTokensParams
               examples:
-                - &a66
+                - &a72
                   customer_id: cus_123
                   feature_id: ai_credits
                   model_id: anthropic/claude-sonnet-4-20250514
                   input_tokens: 1000
                   output_tokens: 500
-            example: *a66
+            example: *a72
       responses:
         "200":
           description: OK
@@ -87126,7 +87783,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a67
+                  - &a73
                     customer_id: cus_123
                     value: 0.006
                     balance:
@@ -87159,7 +87816,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 0.006
-              example: *a67
+              example: *a73
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so the token usage event was accepted for replay and will
@@ -87272,7 +87929,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a68
+                  - &a74
                     customer_id: cus_123
                     value: 0.006
                     balance:
@@ -87305,7 +87962,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 0.006
-              example: *a68
+              example: *a74
       x-speakeasy-name-override: trackTokens
       parameters:
         - *a5
@@ -87389,14 +88046,14 @@ paths:
                   - customer_id
               title: BatchTrackParams
               examples:
-                - &a69
+                - &a75
                   - customer_id: cus_123
                     feature_id: messages
                     value: 1
                   - customer_id: cus_123
                     event_name: message.sent
                     value: 1
-            example: *a69
+            example: *a75
       responses:
         "200":
           description: OK
@@ -87410,9 +88067,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a70
+                  - &a76
                     success: true
-              example: *a70
+              example: *a76
         "202":
           description: "Batch accepted. All items passed synchronous validation. Enqueue
             is best-effort: partial failures (some items enqueued, some not) are
@@ -87429,9 +88086,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a71
+                  - &a77
                     success: true
-              example: *a71
+              example: *a77
       x-speakeasy-name-override: batchTrack
       parameters:
         - *a5
@@ -87501,7 +88158,7 @@ paths:
                     events.aggregate. Cannot be combined with custom_range
               title: EventsListParams
               examples:
-                - &a72
+                - &a78
                   start_cursor: ""
                   customer_id: cus_123
                   limit: 50
@@ -87510,7 +88167,7 @@ paths:
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a72
+            example: *a78
       responses:
         "200":
           description: OK
@@ -87635,7 +88292,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a73
+                  - &a79
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -87659,7 +88316,7 @@ paths:
                         properties: {}
                         deductions: null
                     next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
-              example: *a73
+              example: *a79
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -87768,7 +88425,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a74
+                - &a80
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -87779,7 +88436,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a74
+            example: *a80
       responses:
         "200":
           description: OK
@@ -87957,7 +88614,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a75
+                  - &a81
                     list:
                       - period: 1762905600000
                         values:
@@ -88004,7 +88661,7 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a75
+              example: *a81
       x-speakeasy-name-override: aggregate
       parameters:
         - *a5
@@ -88049,10 +88706,10 @@ paths:
               additionalProperties: false
               title: SearchRequestLogsParams
               examples:
-                - &a76
+                - &a82
                   query: where status_code >= 400 | order by timestamp desc
                   limit: 50
-            example: *a76
+            example: *a82
       responses:
         "200":
           description: OK
@@ -88186,7 +88843,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a77
+                  - &a83
                     list:
                       - timestamp: 2026-09-21T12:00:00.000Z
                         source: api_request
@@ -88210,7 +88867,7 @@ paths:
                           customer_id: cus_123
                         response_body:
                           allowed: true
-              example: *a77
+              example: *a83
       x-speakeasy-name-override: search
       parameters:
         - *a5
@@ -89012,7 +89669,7 @@ paths:
               additionalProperties: false
               title: CreateInvoiceParams
               examples:
-                - &a78
+                - &a84
                   customer_id: cus_123
                   net_terms_days: 30
                   plans:
@@ -89027,7 +89684,7 @@ paths:
                   custom_line_items:
                     - description: Implementation services
                       amount: 500
-            example: *a78
+            example: *a84
       responses:
         "200":
           description: OK
@@ -89310,7 +89967,7 @@ paths:
                   - invoice
                   - preview
                 examples:
-                  - &a79
+                  - &a85
                     invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
@@ -89363,613 +90020,18 @@ paths:
                         currency: usd
                       amount_due: 19.99
                       due_date: 1761839877000
-              example: *a79
+              example: *a85
       x-speakeasy-name-override: create
       parameters:
         - *a5
-  /v1/invoices.insert:
+  /v1/invoices.finalize:
     post:
-      operationId: insertInvoices
-      description: Inserts or updates up to 500 historical invoices without reading or
-        mutating the billing processor.
-      tags:
-        - invoices
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                invoices:
-                  type: array
-                  maxItems: 500
-                  items:
-                    type: object
-                    properties:
-                      customer_id:
-                        type: string
-                        description: The customer this invoice belongs to.
-                      plan_ids:
-                        type: array
-                        items:
-                          type: string
-                        default: []
-                        description: Plan IDs represented by this invoice.
-                      stripe_id:
-                        type: string
-                        description: The processor's stable invoice ID.
-                      processor_type:
-                        enum:
-                          - stripe
-                          - revenuecat
-                        type: string
-                        default: stripe
-                        description: The billing processor that owns this invoice.
-                      status:
-                        enum:
-                          - draft
-                          - open
-                          - void
-                          - paid
-                          - uncollectible
-                        type: string
-                        description: The invoice status.
-                      total:
-                        type: number
-                        description: The invoice total in major currency units.
-                      amount_paid:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                        default: null
-                        description: The amount paid in major currency units.
-                      refunded_amount:
-                        type: number
-                        default: 0
-                        description: The refunded amount in major currency units.
-                      currency:
-                        type: string
-                        description: The currency code. Defaults to the organization's default currency.
-                      created_at:
-                        type: number
-                        description: The invoice creation timestamp in milliseconds.
-                      hosted_invoice_url:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                        default: null
-                        description: The hosted invoice URL, when available.
-                    required:
-                      - customer_id
-                      - stripe_id
-                      - status
-                      - total
-                      - created_at
-                  description: Invoices to insert or update, in response order.
-              required:
-                - invoices
-              title: InsertInvoicesParams
-              examples:
-                - &a80
-                  invoices:
-                    - customer_id: cus_123
-                      plan_ids:
-                        - pro
-                      stripe_id: in_legacy_123
-                      processor_type: stripe
-                      status: paid
-                      total: 29.99
-                      amount_paid: 29.99
-                      refunded_amount: 0
-                      currency: usd
-                      created_at: 1451606400000
-                      hosted_invoice_url: https://billing.example.com/invoices/legacy-123
-            example: *a80
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  invoices:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan_ids:
-                          type: array
-                          items:
-                            type: string
-                          description: Array of plan IDs included in this invoice
-                        stripe_id:
-                          type: string
-                          description: The Stripe invoice ID
-                        processor_type:
-                          enum:
-                            - stripe
-                            - revenuecat
-                          type: string
-                          default: stripe
-                          description: The billing processor that owns this invoice.
-                        status:
-                          type: string
-                          description: The status of the invoice
-                        total:
-                          type: number
-                          description: The total amount of the invoice
-                        currency:
-                          type: string
-                          description: The currency code for the invoice
-                        created_at:
-                          type: number
-                          description: Timestamp when the invoice was created
-                        hosted_invoice_url:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: URL to the Stripe-hosted invoice page
-                        id:
-                          type: string
-                          description: The Autumn invoice ID.
-                        customer_id:
-                          type: string
-                          description: The customer this invoice belongs to.
-                        amount_paid:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: The amount paid in major currency units.
-                        refunded_amount:
-                          type: number
-                          description: The refunded amount in major currency units.
-                      required:
-                        - plan_ids
-                        - stripe_id
-                        - status
-                        - total
-                        - currency
-                        - created_at
-                        - id
-                        - customer_id
-                        - amount_paid
-                        - refunded_amount
-                    description: Inserted or updated invoices in request order.
-                required:
-                  - invoices
-                examples:
-                  - &a81
-                    invoices:
-                      - id: inv_2b3c4d5e6f7g8h
-                        customer_id: cus_123
-                        plan_ids:
-                          - pro
-                        stripe_id: in_legacy_123
-                        processor_type: stripe
-                        status: paid
-                        total: 29.99
-                        amount_paid: 29.99
-                        refunded_amount: 0
-                        currency: usd
-                        created_at: 1451606400000
-                        hosted_invoice_url: https://billing.example.com/invoices/legacy-123
-              example: *a81
-      x-speakeasy-name-override: insert
-      parameters:
-        - *a5
-  /v1/invoices.list:
-    post:
-      operationId: listInvoices
-      description: 'Lists invoices with cursor pagination and optional filters
-        (customer, entity, status, processor). Pass `start_cursor: ""` (or omit)
-        for the first page; use `next_cursor` from a prior response for
-        subsequent pages.'
-      tags:
-        - invoices
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                start_cursor:
-                  type: string
-                  default: ""
-                  description: Opaque pagination cursor. Empty string (default) requests the first
-                    page; use next_cursor from a prior response for subsequent
-                    pages.
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 5000
-                  default: 50
-                  description: Number of items to return. Default 50, hard ceiling 5000.
-                customer_id:
-                  type: string
-                  description: Filter invoices to a single customer by ID.
-                entity_id:
-                  type: string
-                  description: Filter invoices to a single entity by ID. Must be provided together
-                    with customer_id, since entity IDs are only unique per
-                    customer.
-                invoice_id:
-                  type: string
-                  description: Filter to the invoice with this Autumn invoice ID (e.g.
-                    inv_2b3c4d5e6f7g8h).
-                stripe_id:
-                  type: string
-                  description: Filter to the invoice with this Stripe invoice ID (e.g.
-                    in_1A2B3C4D5E6F7G8H).
-                status:
-                  type: array
-                  items:
-                    enum:
-                      - draft
-                      - open
-                      - void
-                      - paid
-                      - uncollectible
-                    type: string
-                  description: Filter by invoice status (draft, open, paid, void, uncollectible).
-                processor_types:
-                  type: array
-                  items:
-                    enum:
-                      - stripe
-                      - revenuecat
-                    type: string
-                  description: Filter by billing processor (stripe, revenuecat). Invoices recorded
-                    before processor tracking count as stripe.
-              title: ListInvoicesParams
-              examples:
-                - &a82
-                  start_cursor: ""
-                  limit: 10
-                  customer_id: cus_123
-                  status:
-                    - open
-                    - paid
-            example: *a82
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  list:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan_ids:
-                          type: array
-                          items:
-                            type: string
-                          description: Array of plan IDs included in this invoice
-                        stripe_id:
-                          type: string
-                          description: The Stripe invoice ID
-                        processor_type:
-                          enum:
-                            - stripe
-                            - revenuecat
-                          type: string
-                          default: stripe
-                          description: The billing processor that owns this invoice.
-                        status:
-                          type: string
-                          description: The status of the invoice
-                        total:
-                          type: number
-                          description: The total amount of the invoice
-                        currency:
-                          type: string
-                          description: The currency code for the invoice
-                        created_at:
-                          type: number
-                          description: Timestamp when the invoice was created
-                        hosted_invoice_url:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: URL to the Stripe-hosted invoice page
-                        id:
-                          type: string
-                          description: The Autumn invoice ID
-                        customer_id:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: The ID of the customer this invoice belongs to. Null for customers
-                            created without an ID.
-                        entity_id:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: The ID of the entity this invoice belongs to, if entity-scoped
-                        amount_paid:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: The amount paid on the invoice. Null on invoices recorded before
-                            amounts paid were tracked.
-                        refunded_amount:
-                          type: number
-                          description: The total amount refunded on the invoice
-                        items:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                description: The Autumn invoice line item ID. Stable across reads, and can be
-                                  used to reference this line in later calls.
-                              description:
-                                type: string
-                                description: Description of the invoice line item
-                              period_start:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Timestamp when the billing period starts
-                              period_end:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Timestamp when the billing period ends
-                              plan_id:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The plan this line item came from. Null for lines with no Autumn
-                                  plan behind them.
-                              feature_id:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The ID of the feature associated with this line item
-                              feature_name:
-                                anyOf:
-                                  - type: string
-                                  - type: "null"
-                                description: The name of the feature associated with this line item
-                              quantity:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: Quantity actually charged on this line. Null on fixed-price lines.
-                              amount:
-                                type: number
-                                description: Amount charged on this line, pre-discount and pre-tax. Negative for
-                                  credits.
-                              entities:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    entity_id:
-                                      type: string
-                                      description: The entity this share of the line item is attributed to
-                                    quantity:
-                                      anyOf:
-                                        - type: number
-                                        - type: "null"
-                                      description: Quantity charged to this entity. Null on fixed-price lines.
-                                    amount:
-                                      type: number
-                                      description: Amount attributed to this entity, pre-discount and pre-tax
-                                  required:
-                                    - entity_id
-                                    - quantity
-                                    - amount
-                                description: How this line splits by entity. Empty for customer-level lines.
-                                  Only populated for invoices finalized after
-                                  entity attribution shipped.
-                            required:
-                              - id
-                              - description
-                              - period_start
-                              - period_end
-                              - plan_id
-                              - feature_id
-                              - feature_name
-                              - quantity
-                              - amount
-                              - entities
-                          description: Line items on the invoice, one per line as shown in Stripe. Capped
-                            at 100. Empty for invoices recorded before line item
-                            storage.
-                      required:
-                        - plan_ids
-                        - stripe_id
-                        - status
-                        - total
-                        - currency
-                        - created_at
-                        - id
-                        - customer_id
-                        - entity_id
-                        - amount_paid
-                        - refunded_amount
-                    description: Items for current page.
-                  next_cursor:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: Opaque cursor for the next page. Null when there are no more
-                      results.
-                required:
-                  - list
-                  - next_cursor
-                examples:
-                  - &a83
-                    list:
-                      - id: inv_2b3c4d5e6f7g8h
-                        customer_id: cus_123
-                        entity_id: null
-                        plan_ids:
-                          - pro_plan
-                        stripe_id: in_1A2B3C4D5E6F7G8H
-                        processor_type: stripe
-                        status: paid
-                        total: 29.99
-                        amount_paid: 29.99
-                        refunded_amount: 0
-                        currency: usd
-                        created_at: 1759247877000
-                        hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
-                        items:
-                          - id: invoice_li_2b3c4d5e6f7g8h
-                            description: Pro plan
-                            plan_id: pro_plan
-                            feature_id: null
-                            feature_name: null
-                            quantity: null
-                            amount: 20
-                            period_start: 1759247877000
-                            period_end: 1761839877000
-                            entities: []
-                          - id: invoice_li_3c4d5e6f7g8h9i
-                            description: AI credits
-                            plan_id: pro_plan
-                            feature_id: ai_credits
-                            feature_name: AI Credits
-                            quantity: 4995
-                            amount: 9.99
-                            period_start: 1759247877000
-                            period_end: 1761839877000
-                            entities:
-                              - entity_id: acme-docs-prod
-                                quantity: 4995
-                                amount: 9.99
-                    next_cursor: null
-              example: *a83
-      x-speakeasy-name-override: list
-      parameters:
-        - *a5
-  /v1/invoices.listTemplates:
-    post:
-      operationId: listInvoiceTemplates
-      description: Lists the organization's invoice templates, newest first, with
-        offset pagination. Use a template's `id` as `invoice_template_id` when
-        creating or reissuing an invoice.
-      tags:
-        - invoices
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                offset:
-                  type: integer
-                  minimum: 0
-                  maximum: 9007199254740991
-                  default: 0
-                  description: Number of items to skip
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 1000
-                  default: 10
-                  description: Number of items to return. Default 10, max 1000.
-              additionalProperties: false
-              title: ListInvoiceTemplatesParams
-              description: Parameters for listing an organization's invoice templates.
-              examples:
-                - &a84
-                  limit: 10
-                  offset: 0
-            example: *a84
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  list:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          description: Unique identifier for the invoice template.
-                        name:
-                          type: string
-                          description: User-defined name to distinguish this template when sending an
-                            invoice.
-                        footer:
-                          type: string
-                          description: Footer text rendered on the invoice, typically bank details so
-                            customers can pay directly.
-                        memo:
-                          type: string
-                          description: Memo shown near the top of the invoice (Stripe invoice
-                            description), e.g. a contact line for payment
-                            questions.
-                        net_terms_days:
-                          type: integer
-                          minimum: -9007199254740991
-                          maximum: 9007199254740991
-                          exclusiveMinimum: 0
-                          description: Default number of days the customer has to pay before the invoice
-                            is due. Overridable when sending.
-                        created_at:
-                          type: number
-                          description: Timestamp (ms) when the template was created.
-                      required:
-                        - id
-                        - name
-                    description: Invoice templates, newest first.
-                  total:
-                    type: number
-                    description: Number of templates returned in this page.
-                  limit:
-                    type: number
-                  offset:
-                    type: number
-                  has_more:
-                    type: boolean
-                    description: Whether more templates exist after this page.
-                required:
-                  - list
-                  - total
-                  - limit
-                  - offset
-                  - has_more
-                examples:
-                  - &a85
-                    list:
-                      - id: inv_tmpl_2b3c4d5e6f7g8h
-                        name: Bank transfer
-                        footer: Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00
-                        memo: Questions? billing@example.com
-                        net_terms_days: 30
-                        created_at: 1759247877000
-                    total: 1
-                    limit: 10
-                    offset: 0
-                    has_more: false
-              example: *a85
-      x-speakeasy-name-override: listTemplates
-      parameters:
-        - *a5
-  /v1/invoices.pay:
-    post:
-      operationId: payInvoice
-      description: Marks an open Stripe invoice as paid out of band. No charge is
-        attempted; use this when payment was collected elsewhere (e.g. a
-        marketplace). Already-paid invoices are returned unchanged.
+      operationId: finalizeInvoice
+      description: "Finalizes a draft Stripe invoice, such as one left in draft by
+        invoice mode with finalize set to false. Stripe then collects it: a
+        send-invoice invoice is emailed and an automatically-charged one is
+        charged. Any plan still waiting on the invoice to be paid expires at its
+        due date. Already open or paid invoices are returned unchanged."
       tags:
         - invoices
       requestBody:
@@ -89981,10 +90043,10 @@ paths:
               properties:
                 invoice_id:
                   type: string
-                  description: The Autumn invoice ID to mark as paid.
+                  description: The Autumn invoice ID to finalize.
               required:
                 - invoice_id
-              title: PayInvoiceParams
+              title: FinalizeInvoiceParams
               examples:
                 - &a86
                   invoice_id: inv_2b3c4d5e6f7g8h
@@ -90163,7 +90225,7 @@ paths:
                         - pro_plan
                       stripe_id: in_1A2B3C4D5E6F7G8H
                       processor_type: stripe
-                      status: paid
+                      status: open
                       total: 29.99
                       amount_paid: 29.99
                       refunded_amount: 0
@@ -90195,6 +90257,837 @@ paths:
                               quantity: 4995
                               amount: 9.99
               example: *a87
+      x-speakeasy-name-override: finalize
+      parameters:
+        - *a5
+  /v1/invoices.insert:
+    post:
+      operationId: insertInvoices
+      description: Inserts or updates up to 500 historical invoices without reading or
+        mutating the billing processor.
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoices:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    properties:
+                      customer_id:
+                        type: string
+                        description: The customer this invoice belongs to.
+                      plan_ids:
+                        type: array
+                        items:
+                          type: string
+                        default: []
+                        description: Plan IDs represented by this invoice.
+                      stripe_id:
+                        type: string
+                        description: The processor's stable invoice ID.
+                      processor_type:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        default: stripe
+                        description: The billing processor that owns this invoice.
+                      status:
+                        enum:
+                          - draft
+                          - open
+                          - void
+                          - paid
+                          - uncollectible
+                        type: string
+                        description: The invoice status.
+                      total:
+                        type: number
+                        description: The invoice total in major currency units.
+                      amount_paid:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        default: null
+                        description: The amount paid in major currency units.
+                      refunded_amount:
+                        type: number
+                        default: 0
+                        description: The refunded amount in major currency units.
+                      currency:
+                        type: string
+                        description: The currency code. Defaults to the organization's default currency.
+                      created_at:
+                        type: number
+                        description: The invoice creation timestamp in milliseconds.
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        default: null
+                        description: The hosted invoice URL, when available.
+                    required:
+                      - customer_id
+                      - stripe_id
+                      - status
+                      - total
+                      - created_at
+                  description: Invoices to insert or update, in response order.
+              required:
+                - invoices
+              title: InsertInvoicesParams
+              examples:
+                - &a88
+                  invoices:
+                    - customer_id: cus_123
+                      plan_ids:
+                        - pro
+                      stripe_id: in_legacy_123
+                      processor_type: stripe
+                      status: paid
+                      total: 29.99
+                      amount_paid: 29.99
+                      refunded_amount: 0
+                      currency: usd
+                      created_at: 1451606400000
+                      hosted_invoice_url: https://billing.example.com/invoices/legacy-123
+            example: *a88
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                        id:
+                          type: string
+                          description: The Autumn invoice ID.
+                        customer_id:
+                          type: string
+                          description: The customer this invoice belongs to.
+                        amount_paid:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: The amount paid in major currency units.
+                        refunded_amount:
+                          type: number
+                          description: The refunded amount in major currency units.
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                        - id
+                        - customer_id
+                        - amount_paid
+                        - refunded_amount
+                    description: Inserted or updated invoices in request order.
+                required:
+                  - invoices
+                examples:
+                  - &a89
+                    invoices:
+                      - id: inv_2b3c4d5e6f7g8h
+                        customer_id: cus_123
+                        plan_ids:
+                          - pro
+                        stripe_id: in_legacy_123
+                        processor_type: stripe
+                        status: paid
+                        total: 29.99
+                        amount_paid: 29.99
+                        refunded_amount: 0
+                        currency: usd
+                        created_at: 1451606400000
+                        hosted_invoice_url: https://billing.example.com/invoices/legacy-123
+              example: *a89
+      x-speakeasy-name-override: insert
+      parameters:
+        - *a5
+  /v1/invoices.list:
+    post:
+      operationId: listInvoices
+      description: 'Lists invoices with cursor pagination and optional filters
+        (customer, entity, status, processor). Pass `start_cursor: ""` (or omit)
+        for the first page; use `next_cursor` from a prior response for
+        subsequent pages.'
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 5000
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 5000.
+                customer_id:
+                  type: string
+                  description: Filter invoices to a single customer by ID.
+                entity_id:
+                  type: string
+                  description: Filter invoices to a single entity by ID. Must be provided together
+                    with customer_id, since entity IDs are only unique per
+                    customer.
+                invoice_id:
+                  type: string
+                  description: Filter to the invoice with this Autumn invoice ID (e.g.
+                    inv_2b3c4d5e6f7g8h).
+                stripe_id:
+                  type: string
+                  description: Filter to the invoice with this Stripe invoice ID (e.g.
+                    in_1A2B3C4D5E6F7G8H).
+                status:
+                  type: array
+                  items:
+                    enum:
+                      - draft
+                      - open
+                      - void
+                      - paid
+                      - uncollectible
+                    type: string
+                  description: Filter by invoice status (draft, open, paid, void, uncollectible).
+                processor_types:
+                  type: array
+                  items:
+                    enum:
+                      - stripe
+                      - revenuecat
+                    type: string
+                  description: Filter by billing processor (stripe, revenuecat). Invoices recorded
+                    before processor tracking count as stripe.
+              title: ListInvoicesParams
+              examples:
+                - &a90
+                  start_cursor: ""
+                  limit: 10
+                  customer_id: cus_123
+                  status:
+                    - open
+                    - paid
+            example: *a90
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                        id:
+                          type: string
+                          description: The Autumn invoice ID
+                        customer_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The ID of the customer this invoice belongs to. Null for customers
+                            created without an ID.
+                        entity_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The ID of the entity this invoice belongs to, if entity-scoped
+                        amount_paid:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: The amount paid on the invoice. Null on invoices recorded before
+                            amounts paid were tracked.
+                        refunded_amount:
+                          type: number
+                          description: The total amount refunded on the invoice
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: The Autumn invoice line item ID. Stable across reads, and can be
+                                  used to reference this line in later calls.
+                              description:
+                                type: string
+                                description: Description of the invoice line item
+                              period_start:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: Timestamp when the billing period starts
+                              period_end:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: Timestamp when the billing period ends
+                              plan_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: The plan this line item came from. Null for lines with no Autumn
+                                  plan behind them.
+                              feature_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: The ID of the feature associated with this line item
+                              feature_name:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: The name of the feature associated with this line item
+                              quantity:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: Quantity actually charged on this line. Null on fixed-price lines.
+                              amount:
+                                type: number
+                                description: Amount charged on this line, pre-discount and pre-tax. Negative for
+                                  credits.
+                              entities:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    entity_id:
+                                      type: string
+                                      description: The entity this share of the line item is attributed to
+                                    quantity:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
+                                      description: Quantity charged to this entity. Null on fixed-price lines.
+                                    amount:
+                                      type: number
+                                      description: Amount attributed to this entity, pre-discount and pre-tax
+                                  required:
+                                    - entity_id
+                                    - quantity
+                                    - amount
+                                description: How this line splits by entity. Empty for customer-level lines.
+                                  Only populated for invoices finalized after
+                                  entity attribution shipped.
+                            required:
+                              - id
+                              - description
+                              - period_start
+                              - period_end
+                              - plan_id
+                              - feature_id
+                              - feature_name
+                              - quantity
+                              - amount
+                              - entities
+                          description: Line items on the invoice, one per line as shown in Stripe. Capped
+                            at 100. Empty for invoices recorded before line item
+                            storage.
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                        - id
+                        - customer_id
+                        - entity_id
+                        - amount_paid
+                        - refunded_amount
+                    description: Items for current page.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Opaque cursor for the next page. Null when there are no more
+                      results.
+                required:
+                  - list
+                  - next_cursor
+                examples:
+                  - &a91
+                    list:
+                      - id: inv_2b3c4d5e6f7g8h
+                        customer_id: cus_123
+                        entity_id: null
+                        plan_ids:
+                          - pro_plan
+                        stripe_id: in_1A2B3C4D5E6F7G8H
+                        processor_type: stripe
+                        status: paid
+                        total: 29.99
+                        amount_paid: 29.99
+                        refunded_amount: 0
+                        currency: usd
+                        created_at: 1759247877000
+                        hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                        items:
+                          - id: invoice_li_2b3c4d5e6f7g8h
+                            description: Pro plan
+                            plan_id: pro_plan
+                            feature_id: null
+                            feature_name: null
+                            quantity: null
+                            amount: 20
+                            period_start: 1759247877000
+                            period_end: 1761839877000
+                            entities: []
+                          - id: invoice_li_3c4d5e6f7g8h9i
+                            description: AI credits
+                            plan_id: pro_plan
+                            feature_id: ai_credits
+                            feature_name: AI Credits
+                            quantity: 4995
+                            amount: 9.99
+                            period_start: 1759247877000
+                            period_end: 1761839877000
+                            entities:
+                              - entity_id: acme-docs-prod
+                                quantity: 4995
+                                amount: 9.99
+                    next_cursor: null
+              example: *a91
+      x-speakeasy-name-override: list
+      parameters:
+        - *a5
+  /v1/invoices.listTemplates:
+    post:
+      operationId: listInvoiceTemplates
+      description: Lists the organization's invoice templates, newest first, with
+        offset pagination. Use a template's `id` as `invoice_template_id` when
+        creating or reissuing an invoice.
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                offset:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  default: 0
+                  description: Number of items to skip
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 1000
+                  default: 10
+                  description: Number of items to return. Default 10, max 1000.
+              additionalProperties: false
+              title: ListInvoiceTemplatesParams
+              description: Parameters for listing an organization's invoice templates.
+              examples:
+                - &a92
+                  limit: 10
+                  offset: 0
+            example: *a92
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier for the invoice template.
+                        name:
+                          type: string
+                          description: User-defined name to distinguish this template when sending an
+                            invoice.
+                        footer:
+                          type: string
+                          description: Footer text rendered on the invoice, typically bank details so
+                            customers can pay directly.
+                        memo:
+                          type: string
+                          description: Memo shown near the top of the invoice (Stripe invoice
+                            description), e.g. a contact line for payment
+                            questions.
+                        net_terms_days:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                          exclusiveMinimum: 0
+                          description: Default number of days the customer has to pay before the invoice
+                            is due. Overridable when sending.
+                        created_at:
+                          type: number
+                          description: Timestamp (ms) when the template was created.
+                      required:
+                        - id
+                        - name
+                    description: Invoice templates, newest first.
+                  total:
+                    type: number
+                    description: Number of templates returned in this page.
+                  limit:
+                    type: number
+                  offset:
+                    type: number
+                  has_more:
+                    type: boolean
+                    description: Whether more templates exist after this page.
+                required:
+                  - list
+                  - total
+                  - limit
+                  - offset
+                  - has_more
+                examples:
+                  - &a93
+                    list:
+                      - id: inv_tmpl_2b3c4d5e6f7g8h
+                        name: Bank transfer
+                        footer: Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00
+                        memo: Questions? billing@example.com
+                        net_terms_days: 30
+                        created_at: 1759247877000
+                    total: 1
+                    limit: 10
+                    offset: 0
+                    has_more: false
+              example: *a93
+      x-speakeasy-name-override: listTemplates
+      parameters:
+        - *a5
+  /v1/invoices.pay:
+    post:
+      operationId: payInvoice
+      description: Marks an open Stripe invoice as paid out of band. No charge is
+        attempted; use this when payment was collected elsewhere (e.g. a
+        marketplace). Already-paid invoices are returned unchanged.
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_id:
+                  type: string
+                  description: The Autumn invoice ID to mark as paid.
+              required:
+                - invoice_id
+              title: PayInvoiceParams
+              examples:
+                - &a94
+                  invoice_id: inv_2b3c4d5e6f7g8h
+            example: *a94
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoice:
+                    type: object
+                    properties:
+                      plan_ids:
+                        type: array
+                        items:
+                          type: string
+                        description: Array of plan IDs included in this invoice
+                      stripe_id:
+                        type: string
+                        description: The Stripe invoice ID
+                      processor_type:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        default: stripe
+                        description: The billing processor that owns this invoice.
+                      status:
+                        type: string
+                        description: The status of the invoice
+                      total:
+                        type: number
+                        description: The total amount of the invoice
+                      currency:
+                        type: string
+                        description: The currency code for the invoice
+                      created_at:
+                        type: number
+                        description: Timestamp when the invoice was created
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: URL to the Stripe-hosted invoice page
+                      id:
+                        type: string
+                        description: The Autumn invoice ID
+                      customer_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The ID of the customer this invoice belongs to. Null for customers
+                          created without an ID.
+                      entity_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The ID of the entity this invoice belongs to, if entity-scoped
+                      amount_paid:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        description: The amount paid on the invoice. Null on invoices recorded before
+                          amounts paid were tracked.
+                      refunded_amount:
+                        type: number
+                        description: The total amount refunded on the invoice
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The Autumn invoice line item ID. Stable across reads, and can be
+                                used to reference this line in later calls.
+                            description:
+                              type: string
+                              description: Description of the invoice line item
+                            period_start:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Timestamp when the billing period starts
+                            period_end:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Timestamp when the billing period ends
+                            plan_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The plan this line item came from. Null for lines with no Autumn
+                                plan behind them.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature associated with this line item
+                            feature_name:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The name of the feature associated with this line item
+                            quantity:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Quantity actually charged on this line. Null on fixed-price lines.
+                            amount:
+                              type: number
+                              description: Amount charged on this line, pre-discount and pre-tax. Negative for
+                                credits.
+                            entities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  entity_id:
+                                    type: string
+                                    description: The entity this share of the line item is attributed to
+                                  quantity:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: Quantity charged to this entity. Null on fixed-price lines.
+                                  amount:
+                                    type: number
+                                    description: Amount attributed to this entity, pre-discount and pre-tax
+                                required:
+                                  - entity_id
+                                  - quantity
+                                  - amount
+                              description: How this line splits by entity. Empty for customer-level lines.
+                                Only populated for invoices finalized after
+                                entity attribution shipped.
+                          required:
+                            - id
+                            - description
+                            - period_start
+                            - period_end
+                            - plan_id
+                            - feature_id
+                            - feature_name
+                            - quantity
+                            - amount
+                            - entities
+                        description: Line items on the invoice, one per line as shown in Stripe. Capped
+                          at 100. Empty for invoices recorded before line item
+                          storage.
+                    required:
+                      - plan_ids
+                      - stripe_id
+                      - status
+                      - total
+                      - currency
+                      - created_at
+                      - id
+                      - customer_id
+                      - entity_id
+                      - amount_paid
+                      - refunded_amount
+                required:
+                  - invoice
+                examples:
+                  - &a95
+                    invoice:
+                      id: inv_2b3c4d5e6f7g8h
+                      customer_id: cus_123
+                      entity_id: null
+                      plan_ids:
+                        - pro_plan
+                      stripe_id: in_1A2B3C4D5E6F7G8H
+                      processor_type: stripe
+                      status: paid
+                      total: 29.99
+                      amount_paid: 29.99
+                      refunded_amount: 0
+                      currency: usd
+                      created_at: 1759247877000
+                      hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                      items:
+                        - id: invoice_li_2b3c4d5e6f7g8h
+                          description: Pro plan
+                          plan_id: pro_plan
+                          feature_id: null
+                          feature_name: null
+                          quantity: null
+                          amount: 20
+                          period_start: 1759247877000
+                          period_end: 1761839877000
+                          entities: []
+                        - id: invoice_li_3c4d5e6f7g8h9i
+                          description: AI credits
+                          plan_id: pro_plan
+                          feature_id: ai_credits
+                          feature_name: AI Credits
+                          quantity: 4995
+                          amount: 9.99
+                          period_start: 1759247877000
+                          period_end: 1761839877000
+                          entities:
+                            - entity_id: acme-docs-prod
+                              quantity: 4995
+                              amount: 9.99
+              example: *a95
       x-speakeasy-name-override: pay
       parameters:
         - *a5
@@ -91131,10 +92024,10 @@ paths:
                 - invoice_id
               title: ReissueInvoiceParams
               examples:
-                - &a88
+                - &a96
                   invoice_id: inv_2b3c4d5e6f7g8h
                   invoice_template_id: inv_tmpl_bank_transfer
-            example: *a88
+            example: *a96
       responses:
         "200":
           description: OK
@@ -91435,7 +92328,7 @@ paths:
                   - credit_note_id
                   - preview
                 examples:
-                  - &a89
+                  - &a97
                     invoice:
                       id: inv_3c4d5e6f7g8h9i
                       customer_id: cus_123
@@ -91485,7 +92378,7 @@ paths:
                       total: 29.99
                       amount_due: 29.99
                       due_date: 1761839877000
-              example: *a89
+              example: *a97
       x-speakeasy-name-override: reissue
       parameters:
         - *a5
@@ -91513,9 +92406,9 @@ paths:
                 - invoice_id
               title: VoidInvoiceParams
               examples:
-                - &a90
+                - &a98
                   invoice_id: inv_2b3c4d5e6f7g8h
-            example: *a90
+            example: *a98
       responses:
         "200":
           description: OK
@@ -91681,7 +92574,7 @@ paths:
                 required:
                   - invoice
                 examples:
-                  - &a91
+                  - &a99
                     invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
@@ -91721,7 +92614,7 @@ paths:
                             - entity_id: acme-docs-prod
                               quantity: 4995
                               amount: 9.99
-              example: *a91
+              example: *a99
       x-speakeasy-name-override: void
       parameters:
         - *a5
@@ -91768,13 +92661,13 @@ paths:
                 - entities
               title: AttachLicenseParams
               examples:
-                - &a92
+                - &a100
                   customer_id: cus_123
                   plan_id: seat_plan
                   entities:
                     - entity_id: user_123
                       name: Ada Lovelace
-            example: *a92
+            example: *a100
       responses:
         "200":
           description: OK
@@ -91818,12 +92711,12 @@ paths:
                 - entity_ids
               title: ReleaseLicenseParams
               examples:
-                - &a93
+                - &a101
                   customer_id: cus_123
                   license_plan_id: seat_plan
                   entity_ids:
                     - user_123
-            example: *a93
+            example: *a101
       responses:
         "200":
           description: OK
@@ -91865,10 +92758,10 @@ paths:
                 - customer_id
               title: ListLicenseAssignmentsParams
               examples:
-                - &a94
+                - &a102
                   customer_id: cus_123
                   active: true
-            example: *a94
+            example: *a102
       responses:
         "200":
           description: OK
@@ -91903,14 +92796,14 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a95
+                  - &a103
                     list:
                       - id: lic_asn_123
                         entity_id: user_123
                         license_plan_id: seat_plan
                         started_at: 1759247877000
                         ended_at: null
-              example: *a95
+              example: *a103
       x-speakeasy-name-override: listAssignments
       x-speakeasy-ignore: true
       parameters:
@@ -91936,9 +92829,9 @@ paths:
                 - customer_id
               title: ListLicensesParams
               examples:
-                - &a96
+                - &a104
                   customer_id: cus_123
-            example: *a96
+            example: *a104
       responses:
         "200":
           description: OK
@@ -91984,7 +92877,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a97
+                  - &a105
                     list:
                       - license_plan_id: seat_plan
                         parent_plan_id: pro_plan
@@ -91993,7 +92886,7 @@ paths:
                         usage: 3
                         remaining: 7
                         paid_quantity: 5
-              example: *a97
+              example: *a105
       x-speakeasy-name-override: list
       x-speakeasy-ignore: true
       parameters:
@@ -92219,12 +93112,12 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a98
+                - &a106
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a98
+            example: *a106
       responses:
         "200":
           description: OK
@@ -93218,7 +94111,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a99
+                  - &a107
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -93263,7 +94156,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a99
+              example: *a107
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -93295,11 +94188,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a100
+                - &a108
                   entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a100
+            example: *a108
       responses:
         "200":
           description: OK
@@ -94293,7 +95186,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a101
+                  - &a109
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -94338,7 +95231,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a101
+              example: *a109
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -94417,12 +95310,12 @@ paths:
                     paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
-                - &a102
+                - &a110
                   start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
-            example: *a102
+            example: *a110
       responses:
         "200":
           description: OK
@@ -95437,7 +96330,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a103
+                  - &a111
                     list:
                       - id: seat_42
                         name: Seat 42
@@ -95484,7 +96377,7 @@ paths:
                                 expires_at: null
                         invoices: []
                     next_cursor: null
-              example: *a103
+              example: *a111
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -95750,7 +96643,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a104
+                - &a112
                   customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
@@ -95759,7 +96652,7 @@ paths:
                         enabled: true
                         limit_type: usage_percentage
                         overage_limit: 120
-            example: *a104
+            example: *a112
       responses:
         "200":
           description: OK
@@ -96753,7 +97646,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a105
+                  - &a113
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -96798,7 +97691,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a105
+              example: *a113
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -96830,10 +97723,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a106
+                - &a114
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a106
+            example: *a114
       responses:
         "200":
           description: OK
@@ -96847,9 +97740,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a107
+                  - &a115
                     success: true
-              example: *a107
+              example: *a115
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -96877,10 +97770,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a108
+                - &a116
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a108
+            example: *a116
       responses:
         "200":
           description: OK
@@ -96903,11 +97796,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a109
+                  - &a117
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a109
+              example: *a117
       x-speakeasy-name-override: createCode
       parameters:
         - *a5
@@ -96935,10 +97828,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a110
+                - &a118
                   code: REF123
                   customer_id: cus_456
-            example: *a110
+            example: *a118
       responses:
         "200":
           description: OK
@@ -96961,11 +97854,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a111
+                  - &a119
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a111
+              example: *a119
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -97036,7 +97929,7 @@ paths:
               additionalProperties: false
               title: CreateReferralProgramParams
               examples:
-                - &a112
+                - &a120
                   id: refer_a_friend
                   reward_id: beta_credits_grant
                   redeem_on: customer_creation
@@ -97045,7 +97938,7 @@ paths:
                   plan_ids: null
                   exclude_trial: false
                   created_at: 1718000000000
-            example: *a112
+            example: *a120
       responses:
         "200":
           description: OK
@@ -97104,7 +97997,7 @@ paths:
                   - created_at
                 title: CreateReferralProgramResponse
                 examples:
-                  - &a113
+                  - &a121
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -97113,7 +98006,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a113
+              example: *a121
       x-speakeasy-name-override: createProgram
       parameters:
         - *a5
@@ -97131,8 +98024,8 @@ paths:
               type: object
               title: ListReferralProgramsParams
               examples:
-                - &a114 {}
-            example: *a114
+                - &a122 {}
+            example: *a122
       responses:
         "200":
           description: OK
@@ -97207,7 +98100,7 @@ paths:
                   - list
                 title: ListReferralProgramsResponse
                 examples:
-                  - &a115
+                  - &a123
                     list:
                       - id: refer_a_friend
                         reward_id: beta_credits_grant
@@ -97217,7 +98110,7 @@ paths:
                         plan_ids: null
                         exclude_trial: false
                         created_at: 1718000000000
-              example: *a115
+              example: *a123
       x-speakeasy-name-override: listPrograms
       parameters:
         - *a5
@@ -97300,7 +98193,7 @@ paths:
                   - created_at
                 title: GetReferralProgramResponse
                 examples:
-                  - &a116
+                  - &a124
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -97309,7 +98202,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a116
+              example: *a124
       x-speakeasy-name-override: getProgram
       parameters:
         - *a5
@@ -97432,7 +98325,7 @@ paths:
                   - created_at
                 title: UpdateReferralProgramResponse
                 examples:
-                  - &a117
+                  - &a125
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -97441,7 +98334,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a117
+              example: *a125
       x-speakeasy-name-override: updateProgram
       parameters:
         - *a5
@@ -97480,9 +98373,9 @@ paths:
                   - success
                 title: DeleteReferralProgramResponse
                 examples:
-                  - &a118
+                  - &a126
                     success: true
-              example: *a118
+              example: *a126
       x-speakeasy-name-override: deleteProgram
       parameters:
         - *a5
@@ -97679,7 +98572,7 @@ paths:
               additionalProperties: false
               title: CreateRewardParams
               examples:
-                - &a119
+                - &a127
                   coupon:
                     id: summer_sale
                     name: Summer Sale
@@ -97691,7 +98584,7 @@ paths:
                     plan_ids: null
                     promo_codes:
                       - code: SUMMER20
-            example: *a119
+            example: *a127
       responses:
         "200":
           description: OK
@@ -97916,8 +98809,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a120 {}
-            example: *a120
+                - &a128 {}
+            example: *a128
       responses:
         "200":
           description: OK
@@ -98130,10 +99023,10 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a121
+                  - &a129
                     coupons: []
                     feature_grants: []
-              example: *a121
+              example: *a129
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -98363,7 +99256,7 @@ paths:
                 additionalProperties: false
                 title: GetRewardResponse
                 examples:
-                  - &a122
+                  - &a130
                     coupon:
                       id: summer_sale
                       name: Summer Sale
@@ -98380,7 +99273,7 @@ paths:
                           global_max_redemption: 100
                           first_time_transaction: false
                       created_at: 1718000000000
-              example: *a122
+              example: *a130
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -98692,7 +99585,7 @@ paths:
                 additionalProperties: false
                 title: UpdateRewardResponse
                 examples:
-                  - &a123
+                  - &a131
                     feature_grant:
                       id: beta_credits_grant
                       name: Beta Tester Credits
@@ -98706,7 +99599,7 @@ paths:
                             type: month
                             length: 1
                       created_at: 1718000000000
-              example: *a123
+              example: *a131
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -98745,9 +99638,9 @@ paths:
                   - success
                 title: DeleteRewardResponse
                 examples:
-                  - &a124
+                  - &a132
                     success: true
-              example: *a124
+              example: *a132
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -98775,10 +99668,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a125
+                - &a133
                   code: REWARD10
                   customer_id: cus_456
-            example: *a125
+            example: *a133
       responses:
         "200":
           description: OK
@@ -98809,12 +99702,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a126
+                  - &a134
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a126
+              example: *a134
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -98848,10 +99741,10 @@ paths:
                 - env
               title: GetStripeConnectionParams
               examples:
-                - &a127
+                - &a135
                   organization_slug: my-app
                   env: test
-            example: *a127
+            example: *a135
       responses:
         "200":
           description: OK
@@ -98882,14 +99775,14 @@ paths:
                   - connected_at
                 title: GetStripeConnectionResponse
                 examples:
-                  - &a128
+                  - &a136
                     connected: true
                     account_id: acct_example
                     connected_at: 1781113864000
                   - connected: false
                     account_id: null
                     connected_at: null
-              example: *a128
+              example: *a136
       x-speakeasy-name-override: getStripeConnection
       parameters:
         - *a5
@@ -98924,10 +99817,10 @@ paths:
                 - env
               title: DisconnectStripeParams
               examples:
-                - &a129
+                - &a137
                   organization_slug: my-app
                   env: test
-            example: *a129
+            example: *a137
       responses:
         "200":
           description: OK
@@ -98942,9 +99835,9 @@ paths:
                   - success
                 title: DisconnectStripeResponse
                 examples:
-                  - &a130
+                  - &a138
                     success: true
-              example: *a130
+              example: *a138
       x-speakeasy-name-override: disconnectStripe
       parameters:
         - *a5
@@ -98983,12 +99876,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a131
+                - &a139
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a131
+            example: *a139
       responses:
         "200":
           description: OK
@@ -99003,9 +99896,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a132
+                  - &a140
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a132
+              example: *a140
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -99045,13 +99938,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a133
+                - &a141
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a133
+            example: *a141
       responses:
         "200":
           description: OK
@@ -99117,7 +100010,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a134
+                  - &a142
                     results:
                       - plan_id: pro
                         status: synced
@@ -99128,7 +100021,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a134
+              example: *a142
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -99162,10 +100055,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a135
+                - &a143
                   organization_slug: acme
                   env: test
-            example: *a135
+            example: *a143
       responses:
         "200":
           description: OK
@@ -99228,7 +100121,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a136
+                  - &a144
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -99239,7 +100132,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a136
+              example: *a144
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -99271,9 +100164,9 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a137
+                - &a145
                   customer_id: cus_123
-            example: *a137
+            example: *a145
       responses:
         "200":
           description: OK
@@ -99302,12 +100195,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a138
+                  - &a146
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a138
+              example: *a146
       x-speakeasy-name-override: mint
       parameters:
         - *a5
@@ -99331,8 +100224,8 @@ paths:
               description: No body. The refresh token is supplied as the Bearer credential;
                 the response is a freshly rotated access + refresh pair.
               examples:
-                - &a139 {}
-            example: *a139
+                - &a147 {}
+            example: *a147
       responses:
         "200":
           description: OK
@@ -99361,12 +100254,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a140
+                  - &a148
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a140
+              example: *a148
       x-speakeasy-name-override: refresh
       parameters:
         - *a5
@@ -99393,9 +100286,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a141
+                - &a149
                   customer_id: cus_123
-            example: *a141
+            example: *a149
       responses:
         "200":
           description: OK
@@ -99409,9 +100302,9 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a142
+                  - &a150
                     revoked: true
-              example: *a142
+              example: *a150
       x-speakeasy-name-override: revoke
       parameters:
         - *a5
@@ -99458,11 +100351,11 @@ paths:
                 - name
               title: CreateSandboxParams
               examples:
-                - &a143
+                - &a151
                   name: staging
                   color: blue
                   icon: Flask
-            example: *a143
+            example: *a151
       responses:
         "200":
           description: OK
@@ -99513,7 +100406,7 @@ paths:
                   - secret_key
                 title: CreateSandboxResponse
                 examples:
-                  - &a144
+                  - &a152
                     id: org_123
                     name: staging
                     slug: staging-abc123|org_456
@@ -99521,7 +100414,7 @@ paths:
                     color: blue
                     icon: Flask
                     secret_key: am_sk_test_abc123
-              example: *a144
+              example: *a152
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -99541,8 +100434,8 @@ paths:
               title: ListSandboxesParams
               description: No body. Lists every sandbox belonging to your organization.
               examples:
-                - &a145 {}
-            example: *a145
+                - &a153 {}
+            example: *a153
       responses:
         "200":
           description: OK
@@ -99595,7 +100488,7 @@ paths:
                   - list
                 title: ListSandboxesResponse
                 examples:
-                  - &a146
+                  - &a154
                     list:
                       - id: org_123
                         name: staging
@@ -99603,7 +100496,7 @@ paths:
                         created_at: 1781113864000
                         color: blue
                         icon: Flask
-              example: *a146
+              example: *a154
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -99629,9 +100522,9 @@ paths:
                 - id
               title: DeleteSandboxParams
               examples:
-                - &a147
+                - &a155
                   id: org_123
-            example: *a147
+            example: *a155
       responses:
         "200":
           description: OK
@@ -99647,9 +100540,9 @@ paths:
                   - success
                 title: DeleteSandboxResponse
                 examples:
-                  - &a148
+                  - &a156
                     success: true
-              example: *a148
+              example: *a156
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -99674,8 +100567,8 @@ paths:
               description: No body. Resets the sandbox the calling key belongs to — there is
                 no id to pass.
               examples:
-                - &a149 {}
-            example: *a149
+                - &a157 {}
+            example: *a157
       responses:
         "200":
           description: OK
@@ -99691,9 +100584,9 @@ paths:
                   - success
                 title: ResetSandboxResponse
                 examples:
-                  - &a150
+                  - &a158
                     success: true
-              example: *a150
+              example: *a158
       x-speakeasy-name-override: reset
       parameters:
         - *a5
@@ -99757,14 +100650,14 @@ paths:
                 - url
               title: CreateWebhookParams
               examples:
-                - &a151
+                - &a159
                   id: billing
                   url: https://example.com/webhooks/autumn
                   events:
                     - billing.updated
                     - invoice.finalized
                   description: Plan changes and invoices
-            example: *a151
+            example: *a159
       responses:
         "200":
           description: OK
@@ -99817,7 +100710,7 @@ paths:
                   - secret
                 title: CreateWebhookResponse
                 examples:
-                  - &a152
+                  - &a160
                     id: billing
                     url: https://example.com/webhooks/autumn
                     events:
@@ -99828,7 +100721,7 @@ paths:
                     created_at: 1781113864000
                     updated_at: 1781113864000
                     secret: whsec_abc123
-              example: *a152
+              example: *a160
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -99858,9 +100751,9 @@ paths:
                 - id
               title: GetWebhookParams
               examples:
-                - &a153
+                - &a161
                   id: billing
-            example: *a153
+            example: *a161
       responses:
         "200":
           description: OK
@@ -99907,7 +100800,7 @@ paths:
                   - updated_at
                 title: Webhook
                 examples:
-                  - &a154
+                  - &a162
                     id: billing
                     url: https://example.com/webhooks/autumn
                     events:
@@ -99917,7 +100810,7 @@ paths:
                     disabled: false
                     created_at: 1781113864000
                     updated_at: 1781113864000
-              example: *a154
+              example: *a162
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -99937,8 +100830,8 @@ paths:
               title: ListWebhooksParams
               description: No body. Lists every webhook in the environment of the calling key.
               examples:
-                - &a155 {}
-            example: *a155
+                - &a163 {}
+            example: *a163
       responses:
         "200":
           description: OK
@@ -99993,7 +100886,7 @@ paths:
                   - list
                 title: ListWebhooksResponse
                 examples:
-                  - &a156
+                  - &a164
                     list:
                       - id: billing
                         url: https://example.com/webhooks/autumn
@@ -100004,7 +100897,7 @@ paths:
                         disabled: false
                         created_at: 1781113864000
                         updated_at: 1781113864000
-              example: *a156
+              example: *a164
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -100066,10 +100959,10 @@ paths:
                 - id
               title: UpdateWebhookParams
               examples:
-                - &a157
+                - &a165
                   id: billing
                   disabled: true
-            example: *a157
+            example: *a165
       responses:
         "200":
           description: OK
@@ -100116,7 +101009,7 @@ paths:
                   - updated_at
                 title: Webhook
                 examples:
-                  - &a158
+                  - &a166
                     id: billing
                     url: https://example.com/webhooks/autumn
                     events:
@@ -100126,7 +101019,7 @@ paths:
                     disabled: true
                     created_at: 1781113864000
                     updated_at: 1781113864000
-              example: *a158
+              example: *a166
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -100155,9 +101048,9 @@ paths:
                 - id
               title: DeleteWebhookParams
               examples:
-                - &a159
+                - &a167
                   id: billing
-            example: *a159
+            example: *a167
       responses:
         "200":
           description: OK
@@ -100173,9 +101066,9 @@ paths:
                   - success
                 title: DeleteWebhookResponse
                 examples:
-                  - &a160
+                  - &a168
                     success: true
-              example: *a160
+              example: *a168
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -100255,7 +101148,7 @@ paths:
                 - webhooks
               title: SyncWebhooksParams
               examples:
-                - &a161
+                - &a169
                   webhooks:
                     - id: billing
                       url: https://example.com/webhooks/autumn
@@ -100263,7 +101156,7 @@ paths:
                         - billing.updated
                         - invoice.finalized
                       description: Plan changes and invoices
-            example: *a161
+            example: *a169
       responses:
         "200":
           description: OK
@@ -100632,7 +101525,7 @@ paths:
                   - errors
                 title: PreviewSyncWebhooksResponse
                 examples:
-                  - &a162
+                  - &a170
                     changes:
                       - action: create
                         id: billing
@@ -100647,7 +101540,7 @@ paths:
                           created_at: 1781113864000
                           updated_at: 1781113864000
                     errors: []
-              example: *a162
+              example: *a170
       x-speakeasy-name-override: previewSync
       parameters:
         - *a5
@@ -100730,7 +101623,7 @@ paths:
                 - webhooks
               title: SyncWebhooksParams
               examples:
-                - &a163
+                - &a171
                   webhooks:
                     - id: billing
                       url: https://example.com/webhooks/autumn
@@ -100738,7 +101631,7 @@ paths:
                         - billing.updated
                         - invoice.finalized
                       description: Plan changes and invoices
-            example: *a163
+            example: *a171
       responses:
         "200":
           description: OK
@@ -100828,7 +101721,7 @@ paths:
                   - errors
                 title: SyncWebhooksResponse
                 examples:
-                  - &a164
+                  - &a172
                     webhooks:
                       - id: billing
                         url: https://example.com/webhooks/autumn
@@ -100843,7 +101736,7 @@ paths:
                       - id: billing
                         secret: whsec_abc123
                     errors: []
-              example: *a164
+              example: *a172
       x-speakeasy-name-override: sync
       parameters:
         - *a5

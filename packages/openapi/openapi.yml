@@ -10970,6 +10970,364 @@ paths:
       x-speakeasy-name-override: advanceTestClock
       parameters:
         - *a1
+  /v1/subscriptions.list:
+    post:
+      operationId: listSubscriptions
+      description: Lists recurring plans (including add-ons) across customers, live or
+        expired. Filter by customer, entity, plan, or status. Pages may hold
+        fewer than `limit` rows while `has_more` is true.
+      tags:
+        - customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Only return rows for this customer. Omit to list across every
+                    customer.
+                entity_id:
+                  type: string
+                  description: Only return rows for this entity. Requires customer_id.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 200.
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
+                statuses:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - active
+                      - scheduled
+                      - past_due
+                      - expired
+                    type: string
+                  description: Statuses to include. Defaults to active and scheduled. past_due
+                    matches plans with overdue payments, which read as status
+                    active with past_due true.
+                plan_id:
+                  type: string
+                  description: Only return rows for this plan.
+              title: ListSubscriptionsParams
+              examples:
+                - customer_id: cus_123
+                  statuses:
+                    - expired
+                - plan_id: pro
+                  statuses:
+                    - past_due
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id
+                            was provided at attach time, it is used; otherwise,
+                            falls back to the internal ID.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the subscribed plan.
+                        auto_enable:
+                          type: boolean
+                          description: Whether the plan was automatically enabled for the customer.
+                        add_on:
+                          type: boolean
+                          description: Whether this is an add-on plan rather than a base subscription.
+                        past_due:
+                          type: boolean
+                          description: Whether the subscription has overdue payments.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription was canceled, or null if not
+                            canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription will expire, or null if no expiry
+                            set.
+                        trial_ends_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the trial period ends, or null if not on trial.
+                        started_at:
+                          type: number
+                          description: Timestamp when the subscription started.
+                        current_period_start:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Start timestamp of the current billing period.
+                        current_period_end:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: End timestamp of the current billing period.
+                        quantity:
+                          type: number
+                          description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                            - expired
+                          type: string
+                          description: Current status of the subscription.
+                        customer_id:
+                          type: string
+                          description: The customer this row belongs to.
+                        entity_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The entity this row is scoped to, or null.
+                        created_at:
+                          type: number
+                          description: Timestamp when this row was created.
+                      required:
+                        - id
+                        - plan_id
+                        - auto_enable
+                        - add_on
+                        - past_due
+                        - canceled_at
+                        - expires_at
+                        - trial_ends_at
+                        - started_at
+                        - current_period_start
+                        - current_period_end
+                        - quantity
+                        - status
+                        - customer_id
+                        - entity_id
+                        - created_at
+                    description: Rows on this page.
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist. A page may hold fewer than `limit`
+                      items (even zero) while `has_more` is true, so paginate
+                      until `has_more` is false.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Pass as start_cursor to fetch the next page. Null when has_more is
+                      false.
+                required:
+                  - list
+                  - has_more
+                  - next_cursor
+                examples:
+                  - list:
+                      - id: sub_123
+                        plan_id: pro
+                        auto_enable: false
+                        add_on: false
+                        status: expired
+                        past_due: false
+                        canceled_at: 1771409161016
+                        expires_at: 1771409161016
+                        trial_ends_at: null
+                        started_at: 1768817161016
+                        current_period_start: null
+                        current_period_end: null
+                        quantity: 1
+                        scope: customer
+                        customer_id: cus_123
+                        entity_id: null
+                        created_at: 1768817161016
+                    has_more: false
+                    next_cursor: null
+      x-speakeasy-name-override: listSubscriptions
+      parameters:
+        - *a1
+  /v1/purchases.list:
+    post:
+      operationId: listPurchases
+      description: Lists one-off plan purchases across customers, live or expired.
+        Filter by customer, entity, plan, or status. Pages may hold fewer than
+        `limit` rows while `has_more` is true.
+      tags:
+        - customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Only return rows for this customer. Omit to list across every
+                    customer.
+                entity_id:
+                  type: string
+                  description: Only return rows for this entity. Requires customer_id.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 200.
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
+                statuses:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - active
+                      - scheduled
+                      - past_due
+                      - expired
+                    type: string
+                  description: Statuses to include. Defaults to active and scheduled. past_due
+                    matches plans with overdue payments, which read as status
+                    active with past_due true.
+                plan_id:
+                  type: string
+                  description: Only return rows for this plan.
+              title: ListPurchasesParams
+              examples:
+                - customer_id: cus_123
+                  statuses:
+                    - active
+                    - expired
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the purchased plan.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the purchase expires, or null for lifetime access.
+                        started_at:
+                          type: number
+                          description: Timestamp when the purchase was made.
+                        quantity:
+                          type: number
+                          description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
+                        id:
+                          type: string
+                          description: The unique identifier of this purchase. Falls back to the internal
+                            ID when none was provided.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                            - expired
+                          type: string
+                          description: Current status of the purchase.
+                        customer_id:
+                          type: string
+                          description: The customer this row belongs to.
+                        entity_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The entity this row is scoped to, or null.
+                        created_at:
+                          type: number
+                          description: Timestamp when this row was created.
+                      required:
+                        - plan_id
+                        - expires_at
+                        - started_at
+                        - quantity
+                        - id
+                        - status
+                        - customer_id
+                        - entity_id
+                        - created_at
+                    description: Rows on this page.
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist. A page may hold fewer than `limit`
+                      items (even zero) while `has_more` is true, so paginate
+                      until `has_more` is false.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Pass as start_cursor to fetch the next page. Null when has_more is
+                      false.
+                required:
+                  - list
+                  - has_more
+                  - next_cursor
+                examples:
+                  - list:
+                      - id: cus_prod_123
+                        plan_id: credit_pack
+                        status: expired
+                        expires_at: null
+                        started_at: 1768817161016
+                        quantity: 1
+                        scope: customer
+                        customer_id: cus_123
+                        entity_id: null
+                        created_at: 1768817161016
+                    has_more: false
+                    next_cursor: null
+      x-speakeasy-name-override: listPurchases
+      parameters:
+        - *a1
   /v1/plans.create:
     post:
       operationId: createPlan
@@ -84745,6 +85103,293 @@ paths:
       x-speakeasy-name-override: create
       parameters:
         - *a1
+  /v1/balances.list:
+    post:
+      operationId: listBalances
+      description: "Lists individual balances (one row per grant) across customers,
+        live or expired: plan balances, standalone balances, top-ups, and pooled
+        balances. Pages may hold fewer than `limit` rows while `has_more` is
+        true."
+      tags:
+        - balances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Only return rows for this customer. Omit to list across every
+                    customer.
+                entity_id:
+                  type: string
+                  description: Only return rows for this entity. Requires customer_id.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 200.
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
+                statuses:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - active
+                      - expired
+                    type: string
+                  description: Statuses to include. Defaults to active. A balance is expired when
+                    its plan expired, or when a standalone balance passed its
+                    expires_at.
+                plan_id:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Only return balances from this plan. Pass null for standalone
+                    balances only (top-ups, balances.create, rollovers).
+                feature_id:
+                  type: string
+                  description: Only return balances for this feature.
+              title: ListBalancesParams
+              examples:
+                - customer_id: cus_123
+                  statuses:
+                    - expired
+                - customer_id: cus_123
+                  feature_id: messages
+                  plan_id: null
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          default: ""
+                          description: The unique identifier for this balance breakdown.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this balance originates from, or null for standalone
+                            balances.
+                        included_grant:
+                          type: number
+                          description: Amount granted from the plan's included usage.
+                        prepaid_grant:
+                          type: number
+                          description: Amount granted from prepaid purchases or top-ups.
+                        remaining:
+                          type: number
+                          description: Remaining balance available for use.
+                        usage:
+                          type: number
+                          description: Amount consumed in the current period.
+                        unlimited:
+                          type: boolean
+                          description: Whether this balance has unlimited usage.
+                        reset:
+                          anyOf:
+                            - type: object
+                              properties:
+                                interval:
+                                  anyOf:
+                                    - enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                    - const: multiple
+                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                    combined from different intervals.
+                                interval_count:
+                                  type: number
+                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                resets_at:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Timestamp when the balance will next reset.
+                              required:
+                                - interval
+                                - resets_at
+                            - type: "null"
+                          description: Reset configuration for this balance, or null if no reset.
+                        price:
+                          anyOf:
+                            - type: object
+                              properties:
+                                amount:
+                                  type: number
+                                  description: The per-unit price amount.
+                                tiers:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      to:
+                                        anyOf:
+                                          - type: number
+                                          - const: inf
+                                      amount:
+                                        type: number
+                                      flat_amount:
+                                        type: number
+                                    required:
+                                      - to
+                                      - amount
+                                  description: Tiered pricing configuration if applicable.
+                                tier_behavior:
+                                  enum:
+                                    - graduated
+                                    - volume
+                                  type: string
+                                  description: "How tiers are applied: graduated (split across bands) or volume
+                                    (flat rate for the matched tier)."
+                                billing_units:
+                                  type: number
+                                  description: The number of units per billing increment (eg. $9 / 250 units).
+                                billing_method:
+                                  enum:
+                                    - prepaid
+                                    - usage_based
+                                  type: string
+                                  description: Whether usage is prepaid or billed pay-per-use.
+                                max_purchase:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Maximum quantity that can be purchased, or null for unlimited.
+                              required:
+                                - billing_units
+                                - billing_method
+                                - max_purchase
+                            - type: "null"
+                          description: Pricing configuration if this balance has usage-based pricing.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this balance expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature this balance is for.
+                        status:
+                          enum:
+                            - active
+                            - expired
+                          type: string
+                          description: Whether this balance is active or expired.
+                        rollovers:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              granted:
+                                type: number
+                                description: Amount originally rolled over from a previous period, before any of
+                                  it was consumed.
+                              balance:
+                                type: number
+                                description: Amount of balance rolled over from a previous period.
+                              expires_at:
+                                type: number
+                                description: Timestamp when the rollover balance expires.
+                            required:
+                              - granted
+                              - balance
+                              - expires_at
+                          description: Rollover balances carried over onto this balance.
+                        customer_id:
+                          type: string
+                          description: The customer this balance belongs to.
+                        entity_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The entity this balance is scoped to, or null.
+                        created_at:
+                          type: number
+                          description: Timestamp when this balance was created.
+                      required:
+                        - plan_id
+                        - included_grant
+                        - prepaid_grant
+                        - remaining
+                        - usage
+                        - unlimited
+                        - reset
+                        - price
+                        - expires_at
+                        - feature_id
+                        - status
+                        - rollovers
+                        - customer_id
+                        - entity_id
+                        - created_at
+                    description: Rows on this page.
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist. A page may hold fewer than `limit`
+                      items (even zero) while `has_more` is true, so paginate
+                      until `has_more` is false.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Pass as start_cursor to fetch the next page. Null when has_more is
+                      false.
+                required:
+                  - list
+                  - has_more
+                  - next_cursor
+                examples:
+                  - list:
+                      - id: bonus_credits
+                        plan_id: null
+                        included_grant: 50
+                        prepaid_grant: 0
+                        remaining: 0
+                        usage: 50
+                        unlimited: false
+                        reset:
+                          interval: one_off
+                          resets_at: null
+                        price: null
+                        expires_at: 1771999921437
+                        feature_id: messages
+                        status: expired
+                        rollovers: []
+                        customer_id: cus_123
+                        entity_id: null
+                        created_at: 1769904000000
+                    has_more: false
+                    next_cursor: null
+      x-speakeasy-name-override: list
+      parameters:
+        - *a1
   /v1/balances.update:
     post:
       operationId: updateBalance
@@ -90537,6 +91182,238 @@ paths:
                       amount_due: 19.99
                       due_date: 1761839877000
       x-speakeasy-name-override: create
+      parameters:
+        - *a1
+  /v1/invoices.finalize:
+    post:
+      operationId: finalizeInvoice
+      description: "Finalizes a draft Stripe invoice, such as one left in draft by
+        invoice mode with finalize set to false. Stripe then collects it: a
+        send-invoice invoice is emailed and an automatically-charged one is
+        charged. Any plan still waiting on the invoice to be paid expires at its
+        due date. Already open or paid invoices are returned unchanged."
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_id:
+                  type: string
+                  description: The Autumn invoice ID to finalize.
+              required:
+                - invoice_id
+              title: FinalizeInvoiceParams
+              examples:
+                - invoice_id: inv_2b3c4d5e6f7g8h
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoice:
+                    type: object
+                    properties:
+                      plan_ids:
+                        type: array
+                        items:
+                          type: string
+                        description: Array of plan IDs included in this invoice
+                      stripe_id:
+                        type: string
+                        description: The Stripe invoice ID
+                      processor_type:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        default: stripe
+                        description: The billing processor that owns this invoice.
+                      status:
+                        type: string
+                        description: The status of the invoice
+                      total:
+                        type: number
+                        description: The total amount of the invoice
+                      currency:
+                        type: string
+                        description: The currency code for the invoice
+                      created_at:
+                        type: number
+                        description: Timestamp when the invoice was created
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: URL to the Stripe-hosted invoice page
+                      id:
+                        type: string
+                        description: The Autumn invoice ID
+                      customer_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The ID of the customer this invoice belongs to. Null for customers
+                          created without an ID.
+                      entity_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The ID of the entity this invoice belongs to, if entity-scoped
+                      amount_paid:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        description: The amount paid on the invoice. Null on invoices recorded before
+                          amounts paid were tracked.
+                      refunded_amount:
+                        type: number
+                        description: The total amount refunded on the invoice
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The Autumn invoice line item ID. Stable across reads, and can be
+                                used to reference this line in later calls.
+                            description:
+                              type: string
+                              description: Description of the invoice line item
+                            period_start:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Timestamp when the billing period starts
+                            period_end:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Timestamp when the billing period ends
+                            plan_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The plan this line item came from. Null for lines with no Autumn
+                                plan behind them.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature associated with this line item
+                            feature_name:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The name of the feature associated with this line item
+                            quantity:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Quantity actually charged on this line. Null on fixed-price lines.
+                            amount:
+                              type: number
+                              description: Amount charged on this line, pre-discount and pre-tax. Negative for
+                                credits.
+                            entities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  entity_id:
+                                    type: string
+                                    description: The entity this share of the line item is attributed to
+                                  quantity:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: Quantity charged to this entity. Null on fixed-price lines.
+                                  amount:
+                                    type: number
+                                    description: Amount attributed to this entity, pre-discount and pre-tax
+                                required:
+                                  - entity_id
+                                  - quantity
+                                  - amount
+                              description: How this line splits by entity. Empty for customer-level lines.
+                                Only populated for invoices finalized after
+                                entity attribution shipped.
+                          required:
+                            - id
+                            - description
+                            - period_start
+                            - period_end
+                            - plan_id
+                            - feature_id
+                            - feature_name
+                            - quantity
+                            - amount
+                            - entities
+                        description: Line items on the invoice, one per line as shown in Stripe. Capped
+                          at 100. Empty for invoices recorded before line item
+                          storage.
+                    required:
+                      - plan_ids
+                      - stripe_id
+                      - status
+                      - total
+                      - currency
+                      - created_at
+                      - id
+                      - customer_id
+                      - entity_id
+                      - amount_paid
+                      - refunded_amount
+                required:
+                  - invoice
+                examples:
+                  - invoice:
+                      id: inv_2b3c4d5e6f7g8h
+                      customer_id: cus_123
+                      entity_id: null
+                      plan_ids:
+                        - pro_plan
+                      stripe_id: in_1A2B3C4D5E6F7G8H
+                      processor_type: stripe
+                      status: open
+                      total: 29.99
+                      amount_paid: 29.99
+                      refunded_amount: 0
+                      currency: usd
+                      created_at: 1759247877000
+                      hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                      items:
+                        - id: invoice_li_2b3c4d5e6f7g8h
+                          description: Pro plan
+                          plan_id: pro_plan
+                          feature_id: null
+                          feature_name: null
+                          quantity: null
+                          amount: 20
+                          period_start: 1759247877000
+                          period_end: 1761839877000
+                          entities: []
+                        - id: invoice_li_3c4d5e6f7g8h9i
+                          description: AI credits
+                          plan_id: pro_plan
+                          feature_id: ai_credits
+                          feature_name: AI Credits
+                          quantity: 4995
+                          amount: 9.99
+                          period_start: 1759247877000
+                          period_end: 1761839877000
+                          entities:
+                            - entity_id: acme-docs-prod
+                              quantity: 4995
+                              amount: 9.99
+      x-speakeasy-name-override: finalize
       parameters:
         - *a1
   /v1/invoices.insert:
