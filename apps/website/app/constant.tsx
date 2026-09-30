@@ -1465,7 +1465,7 @@ export const customerStoriesData: CustomerStory[] = [
 			{ value: "5", label: "Engineers avoided" },
 		],
 		quote:
-			"Autumn's infrastructure has allowed us to focus on what matters, which is making Runable better with every iteration and helping small businesses build, run and grow.",
+			"Autumn's infrastructure has allowed us to focus on what matters, which is making Runable better with every iteration.",
 		author: { name: "Saksham Sarda", title: "Co-Founder at Runable" },
 	},
 	{
