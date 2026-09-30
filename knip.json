@@ -42,7 +42,6 @@
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
 			"ignore": [
-				"src/external/tinybird/connections/eventsS3.ts",
 				"src/external/connect/attachSandboxStripeAccount.ts",
 				"src/cron/resetCron/runClearExpiredResetCron.ts",
 				"src/external/stripe/common/simulateTestWebhookFailure.ts"
