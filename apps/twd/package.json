@@ -1,0 +1,49 @@
+{
+	"name": "@autumn/twd",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun --watch src/main.ts",
+		"start": "bun src/main.ts",
+		"web": "vite --config web/vite.config.ts",
+		"web:build": "vite build --config web/vite.config.ts",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "bun src/db/migrate.ts",
+		"ts": "bunx tsgo --noEmit -p tsconfig.json",
+		"web:mock": "VITE_TWD_MOCK=1 vite --config web/vite.config.ts"
+	},
+	"dependencies": {
+		"@autumn/shared": "workspace:*",
+		"drizzle-orm": "catalog:",
+		"@modelcontextprotocol/sdk": "1.29.0",
+		"hono": "4.12.27",
+		"modal": "^0.8.0",
+		"p-limit": "^7.2.0",
+		"postgres": "3.4.7",
+		"stripe": "catalog:",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "1.3.14",
+		"@typescript/native-preview": "catalog:",
+		"drizzle-kit": "catalog:",
+		"typescript": "~5.9.3",
+		"@base-ui/react": "^1.4.1",
+		"@tailwindcss/vite": "catalog:",
+		"@tanstack/react-query": "catalog:",
+		"@types/react": "^19.0.0",
+		"@types/react-dom": "^19.0.0",
+		"@vitejs/plugin-react": "catalog:",
+		"clsx": "^2.1.1",
+		"lucide-react": "^0.562.0",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"react-router-dom": "^7.13.0",
+		"tailwind-merge": "^3.0.2",
+		"tailwindcss": "^4.0.13",
+		"vite": "catalog:",
+		"@phosphor-icons/react": "^2.1.10",
+		"@tanstack/react-table": "^8.21.3"
+	}
+}

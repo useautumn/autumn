@@ -9,6 +9,7 @@ import {
 	ACTIVE_ROLLOUT_ID,
 	ROLLOUT_SETTLE_MS,
 } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { findRolloutCustomerNames } from "./findRolloutCustomerNames.js";
 
 export const handleGetRollouts = createRoute({
 	scopes: [Scopes.Superuser],
@@ -18,9 +19,10 @@ export const handleGetRollouts = createRoute({
 		const config = await getRolloutConfigFromSource();
 		const orgIds = [
 			...new Set(
-				Object.values(config.rollouts).flatMap((rollout) =>
-					Object.keys(rollout.orgs),
-				),
+				Object.values(config.rollouts).flatMap((rollout) => [
+					...Object.keys(rollout.orgs),
+					...Object.keys(rollout.customers),
+				]),
 			),
 		];
 		const orgs =
@@ -35,11 +37,17 @@ export const handleGetRollouts = createRoute({
 						.where(inArray(organizations.id, orgIds))
 				: [];
 
+		const customerNamesByOrgId = await findRolloutCustomerNames({
+			db,
+			customersByOrgId: config.rollouts[ACTIVE_ROLLOUT_ID]?.customers ?? {},
+		});
+
 		return c.json({
 			activeRolloutId: ACTIVE_ROLLOUT_ID,
 			settleMs: ROLLOUT_SETTLE_MS,
 			rollouts: config.rollouts,
 			orgsById: Object.fromEntries(orgs.map((org) => [org.id, org])),
+			customerNamesByOrgId,
 			configHealthy: status.healthy,
 			configConfigured: status.configured,
 			lastSuccessAt: status.lastSuccessAt ?? null,

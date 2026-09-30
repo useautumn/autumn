@@ -1,12 +1,15 @@
 import { type ApiKey, groupAndFormatScopes } from "@autumn/shared";
 import {
+	Skeleton,
 	StatusChip,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { CalendarIcon } from "lucide-react";
+import { formatDistanceToNowStrict } from "date-fns";
+import { CalendarIcon, ClockIcon } from "lucide-react";
+import type { ApiKeysLastUsed } from "@/hooks/queries/useApiKeysLastUsedQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
@@ -32,7 +35,11 @@ function getSourceInfo(meta: ApiKey["meta"]): {
 	return { type: null };
 }
 
-export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
+export const createAPIKeyTableColumns = ({
+	lastUsed,
+}: {
+	lastUsed: ApiKeysLastUsed;
+}): ColumnDef<ApiKey, unknown>[] => [
 	{
 		size: 120,
 		header: "Name",
@@ -156,6 +163,56 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 				<div className="text-xs text-tertiary-foreground pr-4 w-full">
 					{date} <span className="truncate">{time}</span>
 				</div>
+			);
+		},
+	},
+	{
+		header: () => (
+			<div className="flex items-center gap-1.5">
+				<ClockIcon size={14} className="text-subtle" />
+				<span>Last used</span>
+			</div>
+		),
+		id: "last_used",
+		size: 120,
+		enableSorting: false,
+		cell: ({ row }: { row: Row<ApiKey> }) => {
+			if (lastUsed.isLoading) {
+				return <Skeleton className="h-4 w-20" aria-label="Loading" />;
+			}
+
+			if (!lastUsed.isAvailable) {
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<div className="text-subtle w-fit">—</div>
+						</TooltipTrigger>
+						<TooltipContent>Usage data unavailable</TooltipContent>
+					</Tooltip>
+				);
+			}
+
+			const lastUsedAt = lastUsed.lastUsed[row.original.id];
+			if (!lastUsedAt) {
+				return (
+					<div className="text-xs text-tertiary-foreground">Not used in 7d</div>
+				);
+			}
+
+			const { date, time } = formatUnixToDateTime(lastUsedAt, {
+				withYear: true,
+			});
+			return (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<div className="text-xs text-tertiary-foreground w-fit">
+							{formatDistanceToNowStrict(lastUsedAt, { addSuffix: true })}
+						</div>
+					</TooltipTrigger>
+					<TooltipContent>
+						{date} {time}
+					</TooltipContent>
+				</Tooltip>
 			);
 		},
 	},

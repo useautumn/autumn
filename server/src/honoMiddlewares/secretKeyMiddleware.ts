@@ -116,6 +116,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.features = features;
 	ctx.env = env;
 	ctx.userId = userId ?? undefined;
+	ctx.apiKeyId = data.apiKeyId;
 	ctx.authType = AuthType.SecretKey;
 	ctx.scopes = scopes;
 	if (data.user) {

@@ -269,6 +269,43 @@
         "vite": "catalog:",
       },
     },
+    "apps/twd": {
+      "name": "@autumn/twd",
+      "version": "0.0.0",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+        "@modelcontextprotocol/sdk": "1.29.0",
+        "drizzle-orm": "catalog:",
+        "hono": "4.12.27",
+        "modal": "^0.8.0",
+        "p-limit": "^7.2.0",
+        "postgres": "3.4.7",
+        "stripe": "catalog:",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@base-ui/react": "^1.4.1",
+        "@phosphor-icons/react": "^2.1.10",
+        "@tailwindcss/vite": "catalog:",
+        "@tanstack/react-query": "catalog:",
+        "@tanstack/react-table": "^8.21.3",
+        "@types/bun": "1.3.14",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@typescript/native-preview": "catalog:",
+        "@vitejs/plugin-react": "catalog:",
+        "clsx": "^2.1.1",
+        "drizzle-kit": "catalog:",
+        "lucide-react": "^0.562.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^7.13.0",
+        "tailwind-merge": "^3.0.2",
+        "tailwindcss": "^4.0.13",
+        "typescript": "~5.9.3",
+        "vite": "catalog:",
+      },
+    },
     "apps/website": {
       "name": "@autumn/website",
       "version": "0.1.0",
@@ -1513,6 +1550,8 @@
     "@autumn/testbench": ["@autumn/testbench@workspace:apps/testbench"],
 
     "@autumn/tinybird": ["@autumn/tinybird@workspace:packages/tinybird"],
+
+    "@autumn/twd": ["@autumn/twd@workspace:apps/twd"],
 
     "@autumn/ui": ["@autumn/ui@workspace:packages/ui"],
 
@@ -7288,6 +7327,16 @@
 
     "@autumn/testbench/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
+    "@autumn/twd/hono": ["hono@4.12.27", "", {}, "sha512-1yrb/+w6HWQJrUCLkJ2IF5jNIPvvFkblV5RNOYl6bV+OA6p9GLcMpHFFGTosSvHvcAUibuUukRqhlYI4z32C7Q=="],
+
+    "@autumn/twd/react": ["react@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ=="],
+
+    "@autumn/twd/react-dom": ["react-dom@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0", "scheduler": "^0.23.2" }, "peerDependencies": { "react": "^18.3.1" } }, "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw=="],
+
+    "@autumn/twd/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@autumn/twd/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
     "@autumn/ui/ai": ["ai@6.0.264", "", { "dependencies": { "@ai-sdk/gateway": "3.0.179", "@ai-sdk/provider": "3.0.15", "@ai-sdk/provider-utils": "4.0.46", "@opentelemetry/api": "^1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-te59gArDNXoQYWuOkZNdM7n3McETAPWFuwT/iKWRJXySV/doIuKm8Az4X6IOalaGp3K8zqGT/ICn08z5ZZNDuw=="],
 
     "@autumn/ui/date-fns": ["date-fns@3.6.0", "", {}, "sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww=="],
@@ -9065,6 +9114,8 @@
     "@autumn/server/autumn-js/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@autumn/testbench/react-dom/scheduler": ["scheduler@0.23.2", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ=="],
+
+    "@autumn/twd/react-dom/scheduler": ["scheduler@0.23.2", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ=="],
 
     "@autumn/ui/ai/@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.179", "", { "dependencies": { "@ai-sdk/provider": "3.0.15", "@ai-sdk/provider-utils": "4.0.46", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-UauCMcauBgcYNljb7RP4HEuUZj3dlk/yz0oOHdhGr3cXoe+uwwN9qwQlLlB2hnajXudSatI2xpPG8LiHPRgwLQ=="],
 
