@@ -10,11 +10,15 @@ import {
 	assertRequestDeadline,
 	createRequestDeadline,
 	followNotOwnerAnswer,
+	MAX_NOT_READY_RETRIES,
+	ownerStillNotReadyError,
 	readNotOwnerResponse,
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
 
-/** One send, then up to three more after an ownership refresh each; the deadline cuts it short. */
+/** One send, then up to three more after an ownership refresh each; the deadline cuts it short.
+ *  Attempts that end at an owner still activating are counted apart, so a redirect followed
+ *  by a NOT_READY still has its retries. */
 const MAX_ROUTE_ATTEMPTS = 4;
 
 /** The command picks the owner; `payload` rides beside it in the envelope. */
@@ -47,7 +51,8 @@ export async function sendToOwner<Response>({
 		// and the next stale answer waits on the same refresh again. An answer that
 		// names the successor skips the refresh: the old owner wrote that claim itself.
 		let followingHint = false;
-		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
+		let notReadyRetries = 0;
+		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; ) {
 			failureCode = "OWNERSHIP_UNAVAILABLE";
 			assertRequestDeadline({ deadline, outcome });
 			if (attempt > 0 && !followingHint)
@@ -59,7 +64,10 @@ export async function sendToOwner<Response>({
 			followingHint = false;
 			const resolved = resolveCommandRoute({ ctx, command: snapshot });
 			if (!resolved) {
-				if (attempt === 0) continue;
+				if (attempt === 0) {
+					attempt += 1;
+					continue;
+				}
 				throw new BalanceWorkerClientError({
 					code: "NO_OWNER",
 					outcome,
@@ -86,6 +94,13 @@ export async function sendToOwner<Response>({
 			if (!notOwner) return response.body as Response;
 			outcome = "not_submitted";
 			followingHint = followNotOwnerAnswer({ ctx, resolved, answer: notOwner });
+			if (notOwner.notReady) {
+				notReadyRetries += 1;
+				if (notReadyRetries > MAX_NOT_READY_RETRIES)
+					throw ownerStillNotReadyError();
+				continue;
+			}
+			attempt += 1;
 		}
 		throw new BalanceWorkerClientError({
 			code: "ROUTE_STILL_STALE",
