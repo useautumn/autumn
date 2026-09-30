@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";
+import { capStripeResponse } from "@/internal/stripeRead/actions/stripeGet/capStripeResponse.js";
 import { redactStripeResponse } from "@/internal/stripeRead/actions/stripeGet/redactStripeResponse.js";
 import { resolveStripeReadClient } from "@/internal/stripeRead/actions/stripeGet/resolveStripeReadClient.js";
 import { stripeGet } from "@/internal/stripeRead/actions/stripeGet/stripeGet.js";
@@ -236,5 +237,96 @@ describe("resolveStripeReadClient", () => {
 				createClient,
 			}),
 		).toThrow();
+	});
+});
+
+describe("stripeGet hardening", () => {
+	test("rejects card PAN/CVC expands hidden inside nested params", async () => {
+		for (const expand of [
+			{ "0": "number" },
+			{ nested: ["card.cvc"] },
+			[["data.number"]],
+		]) {
+			const { client, calls } = fakeClient({ responses: [{}] });
+			await expect(
+				stripeGet({
+					client,
+					path: "/v1/issuing/cards/ic_1",
+					params: { expand },
+				}),
+			).rejects.toThrow("not allowed");
+			expect(calls()).toHaveLength(0);
+		}
+	});
+
+	test("strips card number and cvc from issuing cards in any response", () => {
+		expect(
+			redactStripeResponse({
+				body: {
+					object: "list",
+					data: [
+						{
+							object: "issuing.card",
+							id: "ic_1",
+							number: "4242",
+							cvc: "123",
+							last4: "4242",
+						},
+					],
+				},
+			}),
+		).toEqual({
+			object: "list",
+			data: [{ object: "issuing.card", id: "ic_1", last4: "4242" }],
+		});
+	});
+
+	test("a truncated search keeps its next_page cursor", async () => {
+		const { client } = fakeClient({
+			responses: [
+				{
+					object: "search_result",
+					data: [{ id: "cus_1" }],
+					has_more: true,
+					next_page: "cursor_2",
+				},
+			],
+		});
+		expect(
+			await stripeGet({
+				client,
+				path: "/v1/customers/search",
+				params: { query: "email:'a'" },
+			}),
+		).toEqual({
+			object: "search_result",
+			data: [{ id: "cus_1" }],
+			has_more: true,
+			next_page: "cursor_2",
+		});
+	});
+});
+
+describe("capping oversized searches", () => {
+	test("a truncated search stays a search_result and keeps next_page", () => {
+		const big = "x".repeat(1_000);
+		const capped = capStripeResponse({
+			body: {
+				object: "search_result",
+				data: Array.from({ length: 400 }, (_, i) => ({ id: `cus_${i}`, big })),
+				has_more: true,
+				next_page: "cursor_2",
+			},
+		}) as {
+			object: string;
+			next_page?: string;
+			truncated?: boolean;
+			data: unknown[];
+		};
+
+		expect(capped.object).toBe("search_result");
+		expect(capped.next_page).toBe("cursor_2");
+		expect(capped.truncated).toBe(true);
+		expect(capped.data.length).toBeLessThan(400);
 	});
 });

@@ -1,6 +1,9 @@
 import { timeout } from "@tests/utils/genUtils.js";
 import { getBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { addRolloutCustomersToWorker } from "@/internal/misc/rollouts/addRolloutCustomersToWorker.js";
 import {
+	removeRolloutCustomers,
 	removeRolloutOrg,
 	updateRolloutPercent,
 } from "@/internal/misc/rollouts/rolloutConfigStore.js";
@@ -38,6 +41,27 @@ export const setOrgRolloutPercent = async ({
 }) => {
 	if (!serverRoutesByRolloutConfig()) return;
 	await updateRolloutPercent({ rolloutId: ACTIVE_ROLLOUT_ID, orgId, percent });
+	await timeout(ROLLOUT_SETTLE_MS + LOCAL_POLL_MS + SETTLE_MARGIN_MS);
+};
+
+/** Pins or unpins one customer and waits until the server has flipped it; a no-op when the override decides. */
+export const setCustomerRolloutPinned = async ({
+	ctx,
+	customerId,
+	pinned,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	pinned: boolean;
+}) => {
+	if (!serverRoutesByRolloutConfig()) return;
+	const params = {
+		rolloutId: ACTIVE_ROLLOUT_ID,
+		orgId: ctx.org.id,
+		customerIds: [customerId],
+	};
+	if (pinned) await addRolloutCustomersToWorker({ ctx, ...params });
+	else await removeRolloutCustomers(params);
 	await timeout(ROLLOUT_SETTLE_MS + LOCAL_POLL_MS + SETTLE_MARGIN_MS);
 };
 

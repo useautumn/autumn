@@ -1,0 +1,160 @@
+---
+title: "List Subscriptions"
+openapi: "openapi POST /v1/subscriptions.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+Lists recurring plans, including add-ons. By default only `active` and `scheduled` plans are returned; pass `statuses: ["expired"]` to see plans a customer no longer has.
+
+<Note>
+  `past_due` is a filter, not a status. A past-due plan is returned with `status: "active"` and `past_due: true`.
+</Note>
+
+<Note>
+  A page can hold fewer than `limit` rows (even zero) while `has_more` is `true`. Keep paginating until `has_more` is `false`.
+</Note>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string">
+  Only return rows for this customer. Omit to list across every customer.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  Only return rows for this entity. Requires customer_id.
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 50, hard ceiling 200.
+</DynamicParamField>
+
+<DynamicParamField body="start_cursor" type="string">
+  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+</DynamicParamField>
+
+<DynamicParamField body="statuses" type="('active' | 'scheduled' | 'past_due' | 'expired')[]">
+  Statuses to include. Defaults to active and scheduled. past_due matches plans with overdue payments, which read as status active with past_due true.
+</DynamicParamField>
+
+<DynamicParamField body="plan_id" type="string">
+  Only return rows for this plan.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Rows on this page.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="plan_id" type="string">
+      The unique identifier of the subscribed plan.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="auto_enable" type="boolean">
+      Whether the plan was automatically enabled for the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="add_on" type="boolean">
+      Whether this is an add-on plan rather than a base subscription.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="past_due" type="boolean">
+      Whether the subscription has overdue payments.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="canceled_at" type="number | null">
+      Timestamp when the subscription was canceled, or null if not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      Timestamp when the subscription will expire, or null if no expiry set.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="trial_ends_at" type="number | null">
+      Timestamp when the trial period ends, or null if not on trial.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="started_at" type="number">
+      Timestamp when the subscription started.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="current_period_start" type="number | null">
+      Start timestamp of the current billing period.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="current_period_end" type="number | null">
+      End timestamp of the current billing period.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="quantity" type="number">
+      Number of units of this subscription (for per-seat plans).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="scope" type="'customer' | 'entity'">
+      Whether this subscription is attached at the customer level or entity level.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="'active' | 'scheduled' | 'expired'">
+      Current status of the subscription.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string">
+      The customer this row belongs to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="entity_id" type="string | null">
+      The entity this row is scoped to, or null.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp when this row was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more results exist. A page may hold fewer than `limit` items (even zero) while `has_more` is true, so paginate until `has_more` is false.
+</DynamicResponseField>
+
+<DynamicResponseField name="next_cursor" type="string | null">
+  Pass as start_cursor to fetch the next page. Null when has_more is false.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "sub_123",
+      "plan_id": "pro",
+      "auto_enable": false,
+      "add_on": false,
+      "status": "expired",
+      "past_due": false,
+      "canceled_at": 1771409161016,
+      "expires_at": 1771409161016,
+      "trial_ends_at": null,
+      "started_at": 1768817161016,
+      "current_period_start": null,
+      "current_period_end": null,
+      "quantity": 1,
+      "scope": "customer",
+      "customer_id": "cus_123",
+      "entity_id": null,
+      "created_at": 1768817161016
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}
+```
+</ResponseExample>

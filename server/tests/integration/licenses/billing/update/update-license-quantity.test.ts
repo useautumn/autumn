@@ -123,6 +123,8 @@ test.concurrent(
 				seatPrice: DEV_SEAT_PRICE,
 				includedSeats: 0,
 				attachedSeats: 5,
+				// Two updates take long enough on a busy runner for wall-clock proration to drift past the cent tolerance.
+				testClock: true,
 			});
 
 		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({

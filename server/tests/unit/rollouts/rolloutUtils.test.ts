@@ -33,12 +33,14 @@ const configWith = ({
 	previousPercent,
 	changedAt = CHANGED_AT,
 	orgs = {},
+	customers = {},
 	rolloutId = ACTIVE_ROLLOUT_ID,
 }: {
 	percent: number;
 	previousPercent: number;
 	changedAt?: number;
 	orgs?: RolloutConfig["rollouts"][string]["orgs"];
+	customers?: RolloutConfig["rollouts"][string]["customers"];
 	rolloutId?: string;
 }): RolloutConfig => ({
 	rollouts: {
@@ -51,6 +53,7 @@ const configWith = ({
 					? [{ from: previousPercent, to: percent, at: changedAt }]
 					: [],
 			orgs,
+			customers,
 		},
 	},
 });
@@ -267,6 +270,7 @@ describe("isRolloutCacheStale", () => {
 						{ from: 50, to: 0, at: CHANGED_AT + day },
 					],
 					orgs: {},
+					customers: {},
 				},
 			},
 		};

@@ -34,7 +34,7 @@ export const RolloutFlipStatus = ({
 
 	if (!rollout.changedAt) {
 		return (
-			<span className={cn("text-tiny text-subtle", className)}>
+			<span className={cn("text-xs text-subtle", className)}>
 				Never changed
 			</span>
 		);
@@ -46,7 +46,7 @@ export const RolloutFlipStatus = ({
 	return (
 		<span
 			className={cn(
-				"flex shrink-0 items-center gap-2 text-tiny tabular-nums text-subtle",
+				"flex shrink-0 items-center gap-2 text-xs tabular-nums text-subtle",
 				className,
 			)}
 		>

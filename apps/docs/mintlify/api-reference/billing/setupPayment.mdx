@@ -1248,8 +1248,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
-  How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+<DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
+  How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
 </DynamicParamField>
 
 <DynamicParamField body="subscription_id" type="string">

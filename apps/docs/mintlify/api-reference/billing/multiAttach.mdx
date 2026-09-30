@@ -447,8 +447,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none'">
-  How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
+  How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
 </DynamicParamField>
 
 <DynamicParamField body="billing_cycle_anchor" type="any">

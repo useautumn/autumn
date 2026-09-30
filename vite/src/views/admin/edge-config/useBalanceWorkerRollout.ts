@@ -2,9 +2,53 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { NO_ROLLOUT, type RolloutsResponse } from "./rolloutTypes";
+import {
+	NO_ROLLOUT,
+	type RolloutCustomerPin,
+	type RolloutEntry,
+	type RolloutsResponse,
+} from "./rolloutTypes";
+import { useNow } from "./useNow";
 
 const QUERY_KEY = ["admin-rollouts"];
+
+/** Pins still on the worker or on their way off; a landed removal only lingers for cache staleness. */
+const toVisibleCustomerPins = ({
+	entry,
+	settleMs,
+	now,
+}: {
+	entry?: RolloutEntry;
+	settleMs: number;
+	now: number;
+}): RolloutCustomerPin[] =>
+	Object.entries(entry?.customers ?? {}).flatMap(([orgId, customers]) =>
+		Object.entries(customers)
+			.filter(
+				([, customer]) =>
+					customer.removedAt === undefined ||
+					now < customer.removedAt + settleMs,
+			)
+			.map(([customerId, customer]) => ({ orgId, customerId, customer })),
+	);
+
+/** When the last removal still on its way lands; 0 when none is. */
+const toLastRemovalLandsAt = ({
+	entry,
+	settleMs,
+}: {
+	entry?: RolloutEntry;
+	settleMs: number;
+}): number =>
+	Object.values(entry?.customers ?? {})
+		.flatMap((customers) => Object.values(customers))
+		.reduce(
+			(latest, { removedAt }) =>
+				removedAt === undefined
+					? latest
+					: Math.max(latest, removedAt + settleMs),
+			0,
+		);
 
 /** Server state for the balance-worker rollout: the config as S3 holds it, plus the mutations that move it. */
 export const useBalanceWorkerRollout = () => {
@@ -65,16 +109,79 @@ export const useBalanceWorkerRollout = () => {
 			toast.error(getBackendErr(error, "Failed to remove org override")),
 	});
 
+	const resetOrgs = useMutation({
+		mutationFn: async () => {
+			await axiosInstance.post(`${rolloutPath}/orgs/reset`);
+		},
+		onSuccess: () => {
+			toast.success("Org overrides scheduled to 0%");
+			void refresh();
+		},
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to reset org overrides")),
+	});
+
+	const addCustomers = useMutation({
+		mutationFn: async ({
+			orgId,
+			customerIds,
+		}: {
+			orgId: string;
+			customerIds: string[];
+		}) => {
+			await axiosInstance.put(`${rolloutPath}/orgs/${orgId}/customers`, {
+				customer_ids: customerIds,
+			});
+		},
+		onSuccess: () => {
+			toast.success("Customers scheduled onto the worker");
+			void refresh();
+		},
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to add customers")),
+	});
+
+	const removeCustomer = useMutation({
+		mutationFn: async ({
+			orgId,
+			customerId,
+		}: {
+			orgId: string;
+			customerId: string;
+		}) => {
+			await axiosInstance.delete(`${rolloutPath}/orgs/${orgId}/customers`, {
+				data: { customer_ids: [customerId] },
+			});
+		},
+		onSuccess: () => {
+			toast.success("Customer scheduled off the worker");
+			void refresh();
+		},
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to remove customer")),
+	});
+
 	const entry = rolloutId ? query.data?.rollouts[rolloutId] : undefined;
+	const settleMs = query.data?.settleMs ?? 0;
+	// Ticks only while a removal is landing, so its row drops off without waiting for a refetch.
+	const tickingNow = useNow({
+		active: Date.now() < toLastRemovalLandsAt({ entry, settleMs }),
+	});
 
 	return {
 		isLoading: query.isLoading,
 		refresh,
 		rolloutId,
-		settleMs: query.data?.settleMs ?? 0,
+		settleMs,
 		global: entry ?? NO_ROLLOUT,
 		orgOverrides: Object.entries(entry?.orgs ?? {}),
+		customerPins: toVisibleCustomerPins({
+			entry,
+			settleMs,
+			now: Math.max(tickingNow, query.dataUpdatedAt),
+		}),
 		orgsById: query.data?.orgsById ?? {},
+		customerNamesByOrgId: query.data?.customerNamesByOrgId ?? {},
 		health: query.data
 			? {
 					healthy: query.data.configHealthy,
@@ -84,5 +191,8 @@ export const useBalanceWorkerRollout = () => {
 		setGlobalPercent,
 		setOrgPercent,
 		removeOrg,
+		resetOrgs,
+		addCustomers,
+		removeCustomer,
 	};
 };
