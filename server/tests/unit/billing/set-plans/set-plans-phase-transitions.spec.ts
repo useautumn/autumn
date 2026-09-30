@@ -187,7 +187,13 @@ describe("setPlansPhaseTransitions", () => {
 			plans.map((phasePlans) =>
 				phasePlans.map((plan) => [plan.status, plan.plan_id]),
 			),
-		).toEqual([[["kept", "pro"]], [["ends", "pro"]]]);
+		).toEqual([
+			[["kept", "pro"]],
+			[
+				["ends", "pro"],
+				["kept", "premium"],
+			],
+		]);
 		expect(
 			planChanges.map((changes) =>
 				changes.map((change) => [change.action, change.subscription?.plan_id]),
