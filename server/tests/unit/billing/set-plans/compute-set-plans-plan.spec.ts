@@ -13,6 +13,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
+import type Stripe from "stripe";
 import { computeSetPlansPlan } from "@/internal/billing/v2/actions/setPlans/compute/computeSetPlansPlan";
 
 const createBillingContext = ({
@@ -334,3 +335,76 @@ describe(chalk.yellowBright("computeSetPlansPlan"), () => {
 		);
 	});
 });
+
+describe(
+	chalk.yellowBright("computeSetPlansPlan: replaced subscriptions"),
+	() => {
+		test("a plan on a paused subscription is not credited, since Stripe never collected its period", () => {
+			const ctx = contexts.create({});
+			const currentEpochMs = 1_800_000_000_000;
+			const pausedSubscription = {
+				id: "sub_paused",
+				status: "paused",
+			} as Stripe.Subscription;
+			const starter = products.createFull({
+				id: "starter",
+				prices: [prices.createFixed({ id: "price_starter" })],
+			});
+			const pro = products.createFull({
+				id: "pro",
+				prices: [prices.createFixed({ id: "price_pro" })],
+			});
+			const starterCustomerProduct = customerProducts.create({
+				id: "cus_prod_starter",
+				productId: starter.id,
+				product: starter,
+				subscriptionIds: [pausedSubscription.id],
+				startsAt: currentEpochMs - ms.days(1),
+				customerPrices: [
+					prices.createCustomer({
+						price: starter.prices[0]!,
+						customerProductId: "cus_prod_starter",
+					}),
+				],
+			});
+
+			const billingContext = {
+				...createBillingContext({
+					currentEpochMs,
+					productContexts: [
+						{
+							fullProduct: pro,
+							customPrices: [],
+							customEnts: [],
+							featureQuantities: [],
+							scopeCustomerProducts: [starterCustomerProduct],
+							currentCustomerProduct: starterCustomerProduct,
+						},
+					],
+					immediatePhase: {
+						starts_at: currentEpochMs,
+						plans: [{ plan_id: pro.id }],
+					},
+				}),
+				replacedStripeSubscription: pausedSubscription,
+			};
+
+			const { autumnBillingPlan } = computeSetPlansPlan({
+				ctx,
+				billingContext,
+			});
+
+			expect(
+				(autumnBillingPlan.lineItems ?? []).filter(
+					(lineItem) =>
+						lineItem.context.customerProduct?.id === starterCustomerProduct.id,
+				),
+			).toEqual([]);
+			expect(
+				(autumnBillingPlan.lineItems ?? []).some(
+					(lineItem) => lineItem.context.customerProduct?.product_id === pro.id,
+				),
+			).toBe(true);
+		});
+	},
+);

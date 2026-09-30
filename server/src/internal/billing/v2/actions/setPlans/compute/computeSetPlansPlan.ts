@@ -11,6 +11,7 @@ import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finali
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
+import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
 import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
@@ -88,12 +89,16 @@ export const computeSetPlansPlan = ({
 		),
 	].flatMap((productContext) => productContext.insertPlanLicenses ?? []);
 
+	const creditedCustomerProducts = outgoingCustomerProducts.filter(
+		(customerProduct) =>
+			!isOnUncollectedReplacedSubscription({ billingContext, customerProduct }),
+	);
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: immediateCustomerProducts,
-		deletedCustomerProducts: outgoingCustomerProducts,
+		deletedCustomerProducts: creditedCustomerProducts,
 		billingContext,
-		includeArrearLineItems: outgoingCustomerProducts.length > 0,
+		includeArrearLineItems: creditedCustomerProducts.length > 0,
 	});
 
 	const oneOffPrepaidCarryOvers = cusProductsToOneOffPrepaidCarryOvers({
