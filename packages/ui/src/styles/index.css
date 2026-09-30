@@ -26,8 +26,10 @@
 @custom-variant dark (&:is(.dark *));
 @custom-variant preset (&:is(.preset-modern *, .preset-cursed *, .preset-scraps *));
 
-html {
-	overscroll-behavior: none;
+@media (pointer: fine) {
+	html {
+		overscroll-behavior: none;
+	}
 }
 
 * {
