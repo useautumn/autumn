@@ -13,20 +13,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  typecheck:
-    name: typecheck r${{ matrix.round }} ${{ matrix.provider }}
+  arch:
+    name: arch r${{ matrix.round }} ${{ matrix.provider }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
         include:
-          - { round: 1, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
-          - { round: 1, provider: peak, runner: peak-x64-8 }
-          - { round: 2, provider: peak, runner: peak-x64-8 }
-          - { round: 2, provider: blacksmith, runner: blacksmith-8vcpu-ubuntu-2404 }
+          - { round: 1, provider: x64, runner: peak-ubuntu-24.04-8 }
+          - { round: 1, provider: arm, runner: peak-ubuntu-24.04-arm-8 }
+          - { round: 2, provider: arm, runner: peak-ubuntu-24.04-arm-8 }
+          - { round: 2, provider: x64, runner: peak-ubuntu-24.04-8 }
+          - { round: 3, provider: x64, runner: peak-ubuntu-24.04-8 }
+          - { round: 3, provider: arm, runner: peak-ubuntu-24.04-arm-8 }
+          - { round: 4, provider: arm, runner: peak-ubuntu-24.04-arm-8 }
+          - { round: 4, provider: x64, runner: peak-ubuntu-24.04-8 }
 
     steps:
+      - name: Hardware fingerprint
+        run: |
+          uname -m
+          lscpu | grep -E "Model name|^CPU\(s\)"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -41,41 +50,6 @@ jobs:
       - name: Run TypeScript type check
         run: bun ts
 
-  docker:
-    name: docker r${{ matrix.round }} ${{ matrix.provider }}
-    needs: typecheck
-    if: always()
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - { round: 1, provider: blacksmith, runner: blacksmith-16vcpu-ubuntu-2404 }
-          - { round: 1, provider: peak, runner: peak-x64-16 }
-          - { round: 2, provider: peak, runner: peak-x64-16 }
-          - { round: 2, provider: blacksmith, runner: blacksmith-16vcpu-ubuntu-2404 }
-
-    steps:
-      - name: Hardware fingerprint
-        run: |
-          lscpu | grep -E "Model name|^CPU\(s\)"
-          free -g | head -2
-          df -h / | tail -1
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # Same cold builder on both arms; Blacksmith's sticky-disk builder would warm only its side.
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --provenance=false \
-            --sbom=false \
-            --output type=cacheonly \
-            -f docker/Dockerfile \
-            .
+      - name: Run unit tests
+        run: bun run test:unit
+        working-directory: server
