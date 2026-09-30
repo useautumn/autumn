@@ -1,8 +1,4 @@
-export {
-	ALIEN_LOCAL_MANAGER_URL,
-	ALIEN_PROJECT,
-	ALIEN_WORKSPACE,
-} from "./alienConstants.js";
+export { ALIEN_PROJECT, ALIEN_WORKSPACE } from "./alienConstants.js";
 export {
 	AlienRequestError,
 	isAlienRequestError,
@@ -14,9 +10,11 @@ export {
 	isDeploymentBeingDeleted,
 	isDeploymentRunning,
 } from "./deployments/classifyDeployments.js";
+export { deploymentToPublicEndpointUrl } from "./deployments/deploymentToPublicEndpointUrl.js";
 export type {
 	AlienClient,
 	AlienConfig,
 	AlienDeployment,
+	AlienEnvironmentVariable,
 	AlienSetup,
 } from "./types/alienClient.js";

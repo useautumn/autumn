@@ -20,6 +20,10 @@ export const ApiByocCacheSchema = z.object({
 		.string()
 		.nullable()
 		.describe("The deployment in your cloud, once setup has created it."),
+	endpoint_url: z
+		.string()
+		.nullable()
+		.describe("Where the cache answers, once it is running."),
 	created_at: z
 		.number()
 		.describe("When the cache was requested, ms since epoch."),
@@ -34,6 +38,9 @@ export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 		.describe(
 			"Where to run the setup in your cloud. Minted per call, so call again for a fresh link.",
 		),
+	token: z
+		.string()
+		.describe("Sent as `x-atom-token` on every request to the cache."),
 });
 
 export const GetByocCacheParamsSchema = z.object({});

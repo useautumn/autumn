@@ -1,0 +1,26 @@
+{
+	"name": "@autumn/atom",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"main": "src/main.ts",
+	"scripts": {
+		"start": "bun --config=./bunfig.toml src/main.ts",
+		"dev": "NODE_ENV=development bun --watch --no-clear-screen --config=./bunfig.toml src/main.ts",
+		"test": "bun test --config ./bunfig.toml tests/unit",
+		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@autumn/balance-engine": "workspace:*",
+		"@autumn/env": "workspace:*",
+		"@autumn/logging": "workspace:*",
+		"hono": "^4.13.5",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.2",
+		"@types/node": "^24.9.1",
+		"typescript": "~5.8.3"
+	}
+}

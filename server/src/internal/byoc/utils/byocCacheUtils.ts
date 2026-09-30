@@ -1,24 +1,14 @@
-import {
-	type AlienClient,
-	type AlienDeployment,
-	hasDeploymentFailed,
-	isDeploymentAwaitingSetup,
-	isDeploymentRunning,
-} from "@autumn/alien";
-import {
-	type ApiByocCache,
-	type AppEnv,
-	type ByocCacheDeployment,
-	ByocCacheStatus,
-	type ByocConfig,
-	ErrCode,
-	type Organization,
-	RecaseError,
+import type {
+	ApiByocCache,
+	AppEnv,
+	ByocCacheDeployment,
+	CreateByocCacheResponse,
+	Organization,
 } from "@autumn/shared";
-import { getAlienClient } from "@/external/alien/getAlienClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
 
-/** alien's customer key for one env's cache: one deployment group each, so lookups never match two. */
+/** One env's Atom, as its deployer knows it: one deployment group each, so lookups never match two. */
 export const cacheExternalId = ({
 	org,
 	env,
@@ -43,18 +33,6 @@ export const CACHE_LOCK_TTL_MS = 30_000;
 export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
 	`lock:byoc-cache:${ctx.org.id}:${ctx.env}`;
 
-export const alienDeploymentToCacheStatus = ({
-	deployment,
-}: {
-	deployment: AlienDeployment | null;
-}): ByocCacheStatus => {
-	if (!deployment || isDeploymentAwaitingSetup({ deployment }))
-		return ByocCacheStatus.AwaitingSetup;
-	if (isDeploymentRunning({ deployment })) return ByocCacheStatus.Ready;
-	if (hasDeploymentFailed({ deployment })) return ByocCacheStatus.Failed;
-	return ByocCacheStatus.Provisioning;
-};
-
 export const cacheDeploymentToApiCache = ({
 	cacheDeployment,
 	env,
@@ -65,15 +43,21 @@ export const cacheDeploymentToApiCache = ({
 	env,
 	status: cacheDeployment.status,
 	deployment_id: cacheDeployment.deployment_id,
+	endpoint_url: cacheDeployment.endpoint_url,
 	created_at: cacheDeployment.created_at,
 });
 
-export const getAlienClientOrThrow = (): AlienClient => {
-	const alienClient = getAlienClient();
-	if (alienClient) return alienClient;
-	throw new RecaseError({
-		message: "Cache deployments are not configured on this server.",
-		code: ErrCode.ByocUnavailable,
-		statusCode: 503,
-	});
-};
+/** Only a create hands out the token, so reading a cache never reveals it. */
+export const cacheDeploymentToCreateResponse = ({
+	cacheDeployment,
+	env,
+	setupUrl,
+}: {
+	cacheDeployment: ByocCacheDeployment;
+	env: AppEnv;
+	setupUrl: string | null;
+}): CreateByocCacheResponse => ({
+	...cacheDeploymentToApiCache({ cacheDeployment, env }),
+	setup_url: setupUrl,
+	token: cacheDeploymentToAtomToken({ cacheDeployment }),
+});

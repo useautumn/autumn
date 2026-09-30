@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	appPortsFor,
+	atomPortFor,
 	checkoutPortFor,
 	dragonflyPortFor,
 	dynamoDbPortFor,
@@ -66,6 +67,7 @@ describe("appPortsFor", () => {
 			vitePortFor(n),
 			checkoutPortFor(n),
 			leafPortFor(n),
+			atomPortFor(n),
 		]);
 		expect(appPortsFor(n)).not.toContain(ngrokApiPortFor(n));
 		expect(appPortsFor(n)).not.toContain(EMULATE_PORT);

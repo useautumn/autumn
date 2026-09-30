@@ -1,11 +1,11 @@
 import type { CachePushContext } from "../types/cachePushContext.js";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
-import { fullSubjectToCacheEntry } from "./fullSubjectToCacheEntry.js";
+import { orgToAtomOrg } from "../utils/orgToAtomOrg.js";
 import { readCacheReadyOrg } from "./readCacheReadyOrg.js";
-import { readFullSubject } from "./readFullSubject.js";
-import { writeCacheEntry } from "./writeCacheEntry.js";
+import { readSubjectState } from "./readSubjectState.js";
+import { sendSubjectToAtom } from "./sendSubjectToAtom.js";
 
-/** One subject into its org's cache, as its worker holds it now; skipped unless that cache is ready. */
+/** One subject into its org's Atom, as its worker holds it now; skipped unless that cache is ready. */
 export const pushSubjectToCache = async ({
 	ctx,
 	cacheSubject,
@@ -13,25 +13,23 @@ export const pushSubjectToCache = async ({
 	ctx: CachePushContext;
 	cacheSubject: CacheSubjectRef;
 }): Promise<void> => {
-	const { identity } = cacheSubject;
+	const { identity, logOffset } = cacheSubject;
 	const cacheOrg = await readCacheReadyOrg({ ctx, identity });
 	if (!cacheOrg) return;
 
-	const fullSubject = await readFullSubject({
+	const { state, catalog } = await readSubjectState({
 		ctx,
 		identity,
 		org: cacheOrg.org,
 	});
-	const { key, entry } = await fullSubjectToCacheEntry({
+	await sendSubjectToAtom({
 		ctx,
-		cacheSubject,
-		fullSubject,
-		cacheOrg,
-	});
-	await writeCacheEntry({
-		ctx,
-		deploymentId: cacheOrg.deploymentId,
-		key,
-		entry,
+		atomConnection: cacheOrg.atomConnection,
+		body: {
+			state,
+			catalog,
+			org: orgToAtomOrg({ org: cacheOrg.org }),
+			log_offset: logOffset.toString(),
+		},
 	});
 };

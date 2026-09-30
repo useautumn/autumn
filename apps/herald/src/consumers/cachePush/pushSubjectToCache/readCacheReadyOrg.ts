@@ -8,7 +8,7 @@ import type { CacheReadyOrg } from "../types/cacheReadyOrg.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
-/** The subject's org with its features, or null unless that env's cache is ready to take entries. */
+/** The subject's org and its Atom's address, or null unless that env's cache is ready and reachable. */
 export const readCacheReadyOrg = async ({
 	ctx,
 	identity,
@@ -23,8 +23,15 @@ export const readCacheReadyOrg = async ({
 		env,
 	});
 	if (!orgWithFeatures) return null;
-	const { org, features } = orgWithFeatures;
+	const { org } = orgWithFeatures;
 	const cacheDeployment = orgToCacheDeployment({ org, env });
 	if (!isByocCacheReady(cacheDeployment)) return null;
-	return { org, env, features, deploymentId: cacheDeployment.deployment_id };
+	if (!cacheDeployment.endpoint_url) return null;
+	return {
+		org,
+		atomConnection: {
+			endpointUrl: cacheDeployment.endpoint_url,
+			encryptedToken: cacheDeployment.encrypted_token,
+		},
+	};
 };

@@ -1,5 +1,4 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
-import type { ByocCacheWriter } from "@autumn/byoc";
 import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
@@ -7,6 +6,7 @@ import type { EventsDb, PostgresDb } from "@autumn/postgres";
 import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
+import type { GetAtomClient } from "../atom/types/atomClient.js";
 import type { StreamConsumer } from "../stream/types/streamConsumer.js";
 import { createAutoTopupsConsumer } from "./autoTopups/autoTopupsConsumer.js";
 import { createBalanceWebhooksConsumer } from "./balanceWebhooks/balanceWebhooksConsumer.js";
@@ -25,7 +25,7 @@ export function createHeraldConsumers({
 		miscCache: Pick<MiscCache, "getActive" | "resolve" | "forEachTarget">;
 		db: PostgresDb;
 		balanceWorkerClient: Pick<BalanceWorkerClient, "readSubjectState">;
-		cacheWriter: ByocCacheWriter | null;
+		getAtomClient: GetAtomClient;
 		sqsJobs: Pick<SqsJobs, "autoTopup">;
 		logger: AutumnLogger;
 	};

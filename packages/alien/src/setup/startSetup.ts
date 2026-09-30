@@ -3,7 +3,10 @@ import { alienRequest } from "../common/alienRequest.js";
 import { findDeploymentGroupByExternalId } from "../deploymentGroups/deploymentGroups.js";
 import { AlienDeploymentSchema } from "../deployments/deploymentSchemas.js";
 import type { AlienApi } from "../types/alienApi.js";
-import type { AlienSetup } from "../types/alienClient.js";
+import type {
+	AlienEnvironmentVariable,
+	AlienSetup,
+} from "../types/alienClient.js";
 import { toDeploymentGroupName } from "./deploymentGroupName.js";
 import { revokeSetupLinks } from "./setupLinks.js";
 
@@ -11,9 +14,11 @@ import { revokeSetupLinks } from "./setupLinks.js";
 const startLocalSetup = async ({
 	api,
 	name,
+	environmentVariables,
 }: {
 	api: AlienApi;
 	name: string;
+	environmentVariables: AlienEnvironmentVariable[];
 }): Promise<AlienSetup> => {
 	const group = await alienRequest({
 		api,
@@ -26,7 +31,12 @@ const startLocalSetup = async ({
 		api,
 		method: "POST",
 		path: "/v1/deployments",
-		body: { name, platform: "local", deploymentGroupId: group.id },
+		body: {
+			name,
+			platform: "local",
+			deploymentGroupId: group.id,
+			environmentVariables,
+		},
 		schema: z.object({ deployment: AlienDeploymentSchema }),
 	});
 	return { deploymentGroupId: group.id, setupUrl: null };
@@ -38,11 +48,13 @@ const startHostedSetup = async ({
 	config,
 	externalId,
 	name,
+	environmentVariables,
 }: {
 	api: AlienApi;
 	config: { project: string; workspace: string };
 	externalId: string;
 	name: string;
+	environmentVariables: AlienEnvironmentVariable[];
 }): Promise<AlienSetup> => {
 	const existingGroup = await findDeploymentGroupByExternalId({
 		api,
@@ -67,7 +79,7 @@ const startHostedSetup = async ({
 					allowedPlatforms: ["aws"],
 					allowedSetupMethods: ["cloudformation"],
 				},
-				environmentVariables: [],
+				environmentVariables,
 			},
 			// Without a setup item the portal has nothing to run and reports setup complete.
 			setupItems: [{ item: "deployment", required: true }],
@@ -87,13 +99,22 @@ export const startSetup = ({
 	ctx,
 	externalId,
 	label,
+	environmentVariables,
 }: {
 	ctx: { api: AlienApi };
 	externalId: string;
 	label: string;
+	environmentVariables: AlienEnvironmentVariable[];
 }): Promise<AlienSetup> => {
 	const { api } = ctx;
 	const name = toDeploymentGroupName({ label });
-	if (api.config.kind === "local") return startLocalSetup({ api, name });
-	return startHostedSetup({ api, config: api.config, externalId, name });
+	if (api.config.kind === "local")
+		return startLocalSetup({ api, name, environmentVariables });
+	return startHostedSetup({
+		api,
+		config: api.config,
+		externalId,
+		name,
+		environmentVariables,
+	});
 };

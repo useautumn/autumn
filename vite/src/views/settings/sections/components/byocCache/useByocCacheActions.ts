@@ -25,7 +25,7 @@ export const useByocCacheActions = () => {
 	const create = useMutation({
 		mutationFn: async () => {
 			const { data } = await axiosInstance.post<CreateByocCacheResponse>(
-				"/v1/byoc.create_cache",
+				"/v1/byoc.create_atom",
 				{},
 			);
 			return data;
@@ -35,7 +35,7 @@ export const useByocCacheActions = () => {
 
 	const remove = useMutation({
 		mutationFn: async () => {
-			await axiosInstance.post("/v1/byoc.delete_cache", {});
+			await axiosInstance.post("/v1/byoc.delete_atom", {});
 		},
 		onSuccess: () => setCache(null),
 	});

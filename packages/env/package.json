@@ -30,6 +30,11 @@
 			"import": "./src/viteDev.ts",
 			"default": "./src/viteDev.ts"
 		},
+		"./atom": {
+			"types": "./src/atom.ts",
+			"import": "./src/atom.ts",
+			"default": "./src/atom.ts"
+		},
 		"./herald": {
 			"types": "./src/herald.ts",
 			"import": "./src/herald.ts",

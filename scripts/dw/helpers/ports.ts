@@ -38,6 +38,11 @@ export function balanceWorkerPortFor(worktreeNum: number): number {
 	return 8082 + (worktreeNum - 1) * 100;
 }
 
+// Base 8086 shares its last two digits with no other app or compose base.
+export function atomPortFor(worktreeNum: number): number {
+	return 8086 + (worktreeNum - 1) * 100;
+}
+
 export function serverPortFor(worktreeNum: number): number {
 	return 8080 + (worktreeNum - 1) * 100;
 }
@@ -103,6 +108,7 @@ export function appPortsFor(worktreeNum: number): number[] {
 		vitePortFor(worktreeNum),
 		checkoutPortFor(worktreeNum),
 		leafPortFor(worktreeNum),
+		atomPortFor(worktreeNum),
 	];
 }
 

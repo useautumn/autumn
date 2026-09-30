@@ -5,7 +5,6 @@ import {
 	resolveTaskIdentity,
 	type TaskIdentity,
 } from "@autumn/blue-green";
-import type { ByocCacheWriter } from "@autumn/byoc";
 import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
@@ -19,6 +18,7 @@ import type { EventsDb, PostgresClient } from "@autumn/postgres";
 import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
+import type { GetAtomClient } from "../atom/types/atomClient.js";
 import { createCatalogInvalidationConsumer } from "../catalog/createCatalogInvalidationConsumer.js";
 import { createHeraldConsumers } from "../consumers/heraldConsumers.js";
 import type { HeraldEdgeConfigs } from "../edgeConfig/createHeraldEdgeConfigs.js";
@@ -56,7 +56,7 @@ export function createHerald({
 			BalanceWorkerClient,
 			"start" | "stop" | "readSubjectState"
 		>;
-		cacheWriter: ByocCacheWriter | null;
+		getAtomClient: GetAtomClient;
 		/** A job's consumer died for good; the caller ends the process so the task is replaced. */
 		onConsumerCrashed: (params: { job: string; cause: unknown }) => void;
 		/** Tests only: the identity ECS would have given this task. */

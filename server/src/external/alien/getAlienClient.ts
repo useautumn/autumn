@@ -1,5 +1,4 @@
 import {
-	ALIEN_LOCAL_MANAGER_URL,
 	ALIEN_PROJECT,
 	ALIEN_WORKSPACE,
 	type AlienClient,
@@ -11,7 +10,7 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 
 let alienClient: AlienClient | null | undefined;
 
-/** Hosted alien when its key is set; otherwise the local `alien dev` manager outside production. */
+/** Hosted alien when its key is set; a local `alien dev` manager only when its URL is given. */
 const envToAlienConfig = (): AlienConfig | null => {
 	const { ALIEN_API_KEY, ALIEN_MANAGER_URL } = process.env;
 	if (ALIEN_API_KEY)
@@ -21,10 +20,8 @@ const envToAlienConfig = (): AlienConfig | null => {
 			project: ALIEN_PROJECT,
 			workspace: ALIEN_WORKSPACE,
 		};
-	const isProduction = process.env.NODE_ENV === "production";
-	const baseUrl =
-		ALIEN_MANAGER_URL ?? (isProduction ? null : ALIEN_LOCAL_MANAGER_URL);
-	return baseUrl ? { kind: "local", baseUrl } : null;
+	if (ALIEN_MANAGER_URL) return { kind: "local", baseUrl: ALIEN_MANAGER_URL };
+	return null;
 };
 
 const toByocUnavailable = ({ error }: { error: unknown }) => {

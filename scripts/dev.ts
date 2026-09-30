@@ -62,8 +62,8 @@ const CHAT_PORT = process.env.CHAT_PORT
 const EVE_PORT = process.env.EVE_PORT
 	? Number.parseInt(process.env.EVE_PORT, 10)
 	: 3999 + portOffset;
-const ALIEN_MANAGER_PORT = 9090 + portOffset;
-const ALIEN_MANAGER_URL = `http://localhost:${ALIEN_MANAGER_PORT}`;
+const ATOM_PORT = 8086 + portOffset;
+const ATOM_URL = `http://127.0.0.1:${ATOM_PORT}`;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
 const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
@@ -203,7 +203,14 @@ async function startDev() {
 			} else {
 				console.log("Cleaning up local dev ports...\n");
 				killPorts({
-					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, CHAT_PORT, EVE_PORT],
+					ports: [
+						VITE_PORT,
+						SERVER_PORT,
+						CHECKOUT_PORT,
+						CHAT_PORT,
+						EVE_PORT,
+						ATOM_PORT,
+					],
 				});
 			}
 
@@ -293,13 +300,11 @@ async function startDev() {
 				cmds.push('"cd apps/herald && bun dev"');
 			}
 
-			// Stands in for the org's cloud when a BYOC cache is deployed locally.
-			if (Bun.which("alien")) {
-				names.push("alien");
+			// Stands in for every org's Atom deployment; herald feeds it, so it runs where herald does.
+			if (launchBalanceWorker) {
+				names.push("atom");
 				colors.push("gray");
-				cmds.push(
-					`"cd packages/alien/stacks/byoc && alien dev --port ${ALIEN_MANAGER_PORT} -c alien.json --no-browser"`,
-				);
+				cmds.push('"cd apps/atom && bun dev"');
 			}
 
 			if (!skipWorkers) {
@@ -449,7 +454,11 @@ async function startDev() {
 			EVE_PORT: EVE_PORT.toString(),
 			EVE_SERVER_URL,
 			EVE_INTERNAL_AUTH_TOKEN,
-			ALIEN_MANAGER_URL: process.env.ALIEN_MANAGER_URL ?? ALIEN_MANAGER_URL,
+			// A dev-mode Atom keeps each deployed org's folder under the worktree's .data/atom.
+			ATOM_DEV: "true",
+			ATOM_PORT: ATOM_PORT.toString(),
+			ATOM_DATA_DIR: join(projectRoot, ".data", "atom"),
+			ATOM_URL,
 			MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 			// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
 			// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.

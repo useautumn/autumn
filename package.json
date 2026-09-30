@@ -10,6 +10,7 @@
 			"scripts",
 			"apps/balance-worker",
 			"apps/herald",
+			"apps/atom",
 			"apps/checkout",
 			"apps/docs",
 			"apps/website",
