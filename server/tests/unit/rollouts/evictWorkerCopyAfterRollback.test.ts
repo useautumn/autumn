@@ -73,7 +73,9 @@ describe("evictWorkerCopyAfterRollback", () => {
 		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "config";
 	});
 	afterAll(() => {
-		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousOverride;
+		if (previousOverride === undefined)
+			delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+		else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousOverride;
 		_setRolloutConfigForTesting({ config: { rollouts: {} } });
 	});
 
