@@ -7,9 +7,9 @@ import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/util
 import {
 	addStripeInvoiceLines,
 	createStripeInvoice,
-	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { issueStripeInvoice } from "@/internal/invoices/invoiceUtils/issueStripeInvoice";
 import { storeLineItems } from "@/internal/invoices/lineItems/actions/storeLineItems";
 import { upsertInvoiceFromStripe } from "../../upsertFromStripe";
 import type { InvoiceLine } from "../compute/computeInvoiceLines";
@@ -18,7 +18,7 @@ import type { CreateInvoiceContext } from "../setup/setupCreateInvoiceContext";
 
 const ADD_LINES_BATCH_SIZE = 100;
 
-/** Creates, populates and finalizes the Stripe invoice, then mirrors it into Autumn. */
+/** Creates and populates the Stripe invoice, issues it per issue_method, then mirrors it into Autumn. */
 export const executeStripeInvoicePlan = async ({
 	ctx,
 	invoiceContext,
@@ -69,22 +69,23 @@ export const executeStripeInvoicePlan = async ({
 			: undefined,
 	});
 
+	let populated = draft;
 	for (
 		let start = 0;
 		start < stripePlan.lines.length;
 		start += ADD_LINES_BATCH_SIZE
 	) {
-		await addStripeInvoiceLines({
+		populated = await addStripeInvoiceLines({
 			stripeCli,
 			invoiceId: draft.id,
 			lines: stripePlan.lines.slice(start, start + ADD_LINES_BATCH_SIZE),
 		});
 	}
 
-	const finalized = await finalizeStripeInvoice({
+	const issued = await issueStripeInvoice({
 		stripeCli,
-		invoiceId: draft.id,
-		autoAdvance: true,
+		draft: populated,
+		issueMethod: invoiceContext.params.issue_method,
 	});
 
 	// License lines carry their own product, so derive products from the lines.
@@ -98,14 +99,14 @@ export const executeStripeInvoicePlan = async ({
 	];
 	const { invoice: autumnInvoice } = await upsertInvoiceFromStripe({
 		ctx,
-		stripeInvoice: finalized,
+		stripeInvoice: issued,
 		fullCustomer,
 		fullProducts,
 	});
 	if (!autumnInvoice) {
-		// The Stripe invoice is finalized and payable; nothing here voids it.
+		// Nothing here voids or deletes the Stripe invoice.
 		throw new RecaseError({
-			message: `Stripe invoice ${finalized.id} was finalized but could not be stored in Autumn; it is open in Stripe and must be reconciled or voided manually`,
+			message: `Stripe invoice ${issued.id} was created but could not be stored in Autumn; it is in Stripe and must be reconciled or voided manually`,
 			code: ErrCode.InternalError,
 			statusCode: 500,
 		});
@@ -114,7 +115,7 @@ export const executeStripeInvoicePlan = async ({
 	// Stored inline, not queued: the response reports the invoice's line items.
 	await storeLineItems({
 		ctx,
-		stripeInvoiceId: finalized.id,
+		stripeInvoiceId: issued.id,
 		autumnInvoiceId: autumnInvoice.id,
 		billingLineItems: lines.map((line) => line.lineItem),
 	});
@@ -127,11 +128,7 @@ export const executeStripeInvoicePlan = async ({
 
 	return {
 		invoice: autumnInvoice,
-		issueDateMs: fromUnixTime(
-			finalized.effective_at ?? finalized.created,
-		).getTime(),
-		dueDateMs: finalized.due_date
-			? fromUnixTime(finalized.due_date).getTime()
-			: null,
+		issueDateMs: fromUnixTime(issued.effective_at ?? issued.created).getTime(),
+		dueDateMs: issued.due_date ? fromUnixTime(issued.due_date).getTime() : null,
 	};
 };

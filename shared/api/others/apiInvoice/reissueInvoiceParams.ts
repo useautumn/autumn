@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
 import {
 	CreateInvoicePreviewSchema,
+	InvoiceIssueMethodSchema,
 	InvoicePlanParamsSchema,
 } from "./createInvoiceParams.js";
 
@@ -152,6 +153,10 @@ export const ReissueInvoiceParamsSchema = z.object({
 	preview: z.boolean().optional().meta({
 		description:
 			"If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.",
+	}),
+	issue_method: InvoiceIssueMethodSchema.optional().meta({
+		description:
+			"How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.",
 	}),
 	update_customer_email: z.email().optional().meta({
 		description:
