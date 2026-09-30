@@ -8,18 +8,40 @@ import {
 	type MultiAttachProductContext,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
+import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { entities } from "@tests/utils/fixtures/db/entities";
+import { entitlements } from "@tests/utils/fixtures/db/entitlements";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import { isUnchangedCustomerProduct } from "@/internal/billing/v2/actions/setPlans/utils/isUnchangedCustomerProduct";
 
-const ctx = contexts.create({});
+const messagesEntitlement = entitlements.create({
+	id: "ent_messages",
+	featureId: "messages",
+	featureName: "Messages",
+	allowance: 100,
+});
+const ctx = contexts.create({ features: [messagesEntitlement.feature] });
 const pro = products.createFull({
 	id: "pro",
 	prices: [prices.createFixed({ id: "price_pro" })],
 });
+const proWithMessages = products.createFull({
+	id: "pro",
+	prices: pro.prices,
+	entitlements: [messagesEntitlement],
+});
+const customMessagesEntitlement = () =>
+	customerEntitlements.create({
+		entitlementId: messagesEntitlement.id,
+		featureId: "messages",
+		featureName: "Messages",
+		allowance: 100,
+		balance: 100,
+		customerProductId: "cus_prod_pro",
+	});
 
 const proCustomerProduct = (
 	overrides: Partial<Parameters<typeof customerProducts.create>[0]> = {},
@@ -127,5 +149,40 @@ describe(chalk.yellowBright("isUnchangedCustomerProduct"), () => {
 				}),
 			}),
 		).toBe(false);
+	});
+
+	test("an extra feature-only item on the requested plan is a change", () => {
+		expect(
+			isUnchangedCustomerProduct({
+				ctx,
+				customerProduct: proCustomerProduct(),
+				productContext: productContext({ fullProduct: proWithMessages }),
+			}),
+		).toBe(false);
+	});
+
+	test("a customized feature-only item requested back to the base plan is a change", () => {
+		expect(
+			isUnchangedCustomerProduct({
+				ctx,
+				customerProduct: proCustomerProduct({
+					customerEntitlements: [customMessagesEntitlement()],
+				}),
+				productContext: productContext(),
+			}),
+		).toBe(false);
+	});
+
+	test("the same plan with the same feature-only item is unchanged", () => {
+		expect(
+			isUnchangedCustomerProduct({
+				ctx,
+				customerProduct: proCustomerProduct({
+					product: proWithMessages,
+					customerEntitlements: [customMessagesEntitlement()],
+				}),
+				productContext: productContext({ fullProduct: proWithMessages }),
+			}),
+		).toBe(true);
 	});
 });
