@@ -446,6 +446,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   If true, returns the calculated lines and totals without creating an invoice.
 </DynamicParamField>
 
+<DynamicParamField body="issue_method" type="'draft' | 'finalize' | 'send'">
+  draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
+</DynamicParamField>
+
 
 ### Response
 

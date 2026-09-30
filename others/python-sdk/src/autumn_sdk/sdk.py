@@ -130,7 +130,9 @@ class Autumn(BaseSDK):
         ), "The provided async_client must implement the AsyncHttpClient protocol."
 
         security: Any = None
-        if callable(secret_key):
+        if secret_key is None:
+            security = None
+        elif callable(secret_key):
             # pylint: disable=unnecessary-lambda-assignment
             security = lambda: models.Security(secret_key=secret_key())
         else:
@@ -251,7 +253,7 @@ class Autumn(BaseSDK):
         required_balance: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         send_event: Optional[bool] = None,
-        lock: Optional[Union[models.CheckLock, models.CheckLockTypedDict]] = None,
+        lock: Optional[Union[models.Lock, models.LockTypedDict]] = None,
         with_preview: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -292,7 +294,7 @@ class Autumn(BaseSDK):
             required_balance=required_balance,
             properties=properties,
             send_event=send_event,
-            lock=utils.get_pydantic_model(lock, Optional[models.CheckLock]),
+            lock=utils.get_pydantic_model(lock, Optional[models.Lock]),
             with_preview=with_preview,
         )
 
@@ -366,7 +368,7 @@ class Autumn(BaseSDK):
         required_balance: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         send_event: Optional[bool] = None,
-        lock: Optional[Union[models.CheckLock, models.CheckLockTypedDict]] = None,
+        lock: Optional[Union[models.Lock, models.LockTypedDict]] = None,
         with_preview: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -407,7 +409,7 @@ class Autumn(BaseSDK):
             required_balance=required_balance,
             properties=properties,
             send_event=send_event,
-            lock=utils.get_pydantic_model(lock, Optional[models.CheckLock]),
+            lock=utils.get_pydantic_model(lock, Optional[models.Lock]),
             with_preview=with_preview,
         )
 
@@ -484,7 +486,6 @@ class Autumn(BaseSDK):
         timestamp: Optional[int] = None,
         overage_behavior: Optional[models.TrackOverageBehavior] = None,
         async_: Optional[bool] = None,
-        lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -503,7 +504,6 @@ class Autumn(BaseSDK):
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
-        :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -529,7 +529,6 @@ class Autumn(BaseSDK):
             timestamp=timestamp,
             overage_behavior=overage_behavior,
             async_=async_,
-            lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
 
         req = self._build_request(
@@ -605,7 +604,6 @@ class Autumn(BaseSDK):
         timestamp: Optional[int] = None,
         overage_behavior: Optional[models.TrackOverageBehavior] = None,
         async_: Optional[bool] = None,
-        lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -624,7 +622,6 @@ class Autumn(BaseSDK):
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
-        :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -650,7 +647,6 @@ class Autumn(BaseSDK):
             timestamp=timestamp,
             overage_behavior=overage_behavior,
             async_=async_,
-            lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
 
         req = self._build_request_async(

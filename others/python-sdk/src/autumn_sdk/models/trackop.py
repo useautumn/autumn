@@ -3,10 +3,9 @@
 from __future__ import annotations
 from .balance import Balance, BalanceTypedDict
 from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL, UnrecognizedStr
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -46,45 +45,6 @@ TrackOverageBehavior = Literal[
 r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
 
 
-class TrackLockTypedDict(TypedDict):
-    lock_id: str
-    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
-    enabled: Literal[True]
-    r"""Must be true to enable locking."""
-    expires_at: NotRequired[float]
-    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
-
-
-class TrackLock(BaseModel):
-    lock_id: str
-    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
-
-    enabled: Annotated[
-        Annotated[Literal[True], AfterValidator(validate_const(True))],
-        pydantic.Field(alias="enabled"),
-    ] = True
-    r"""Must be true to enable locking."""
-
-    expires_at: Optional[float] = None
-    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["expires_at"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class TrackParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
@@ -104,7 +64,6 @@ class TrackParamsTypedDict(TypedDict):
     r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
     async_: NotRequired[bool]
     r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
-    lock: NotRequired[TrackLockTypedDict]
 
 
 class TrackParams(BaseModel):
@@ -135,8 +94,6 @@ class TrackParams(BaseModel):
     async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
     r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
 
-    lock: Optional[TrackLock] = None
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -149,7 +106,6 @@ class TrackParams(BaseModel):
                 "timestamp",
                 "overage_behavior",
                 "async",
-                "lock",
             ]
         )
         serialized = handler(self)
@@ -549,10 +505,6 @@ TrackResponse = TypeAliasType(
 )
 
 
-try:
-    TrackLock.model_rebuild()
-except NameError:
-    pass
 try:
     TrackParams.model_rebuild()
 except NameError:

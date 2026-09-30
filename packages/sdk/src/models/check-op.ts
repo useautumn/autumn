@@ -32,7 +32,7 @@ export type CheckOverageBehavior = ClosedEnum<typeof CheckOverageBehavior>;
 /**
  * Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
  */
-export type CheckLock = {
+export type Lock = {
   /**
    * A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
    */
@@ -79,7 +79,7 @@ export type CheckParams = {
   /**
    * Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
    */
-  lock?: CheckLock | undefined;
+  lock?: Lock | undefined;
   /**
    * If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls.
    */
@@ -2256,7 +2256,7 @@ export const CheckOverageBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CheckOverageBehavior);
 
 /** @internal */
-export type CheckLock$Outbound = {
+export type Lock$Outbound = {
   lock_id: string;
   enabled: true;
   expires_at?: number | undefined;
@@ -2264,10 +2264,7 @@ export type CheckLock$Outbound = {
 };
 
 /** @internal */
-export const CheckLock$outboundSchema: z.ZodMiniType<
-  CheckLock$Outbound,
-  CheckLock
-> = z.pipe(
+export const Lock$outboundSchema: z.ZodMiniType<Lock$Outbound, Lock> = z.pipe(
   z.object({
     lockId: z.string(),
     enabled: z.literal(true),
@@ -2283,8 +2280,8 @@ export const CheckLock$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function checkLockToJSON(checkLock: CheckLock): string {
-  return JSON.stringify(CheckLock$outboundSchema.parse(checkLock));
+export function lockToJSON(lock: Lock): string {
+  return JSON.stringify(Lock$outboundSchema.parse(lock));
 }
 
 /** @internal */
@@ -2295,7 +2292,7 @@ export type CheckParams$Outbound = {
   required_balance?: number | undefined;
   properties?: { [k: string]: any } | undefined;
   send_event?: boolean | undefined;
-  lock?: CheckLock$Outbound | undefined;
+  lock?: Lock$Outbound | undefined;
   with_preview?: boolean | undefined;
 };
 
@@ -2311,7 +2308,7 @@ export const CheckParams$outboundSchema: z.ZodMiniType<
     requiredBalance: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
     sendEvent: z.optional(z.boolean()),
-    lock: z.optional(z.lazy(() => CheckLock$outboundSchema)),
+    lock: z.optional(z.lazy(() => Lock$outboundSchema)),
     withPreview: z.optional(z.boolean()),
   }),
   z.transform((v) => {

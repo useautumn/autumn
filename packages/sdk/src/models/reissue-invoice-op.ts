@@ -16,6 +16,21 @@ export type ReissueInvoiceGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.
+ */
+export const ReissueInvoiceIssueMethod = {
+  Draft: "draft",
+  Finalize: "finalize",
+  Send: "send",
+} as const;
+/**
+ * How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.
+ */
+export type ReissueInvoiceIssueMethod = ClosedEnum<
+  typeof ReissueInvoiceIssueMethod
+>;
+
 export type CustomField = {
   name: string;
   value: string;
@@ -835,6 +850,10 @@ export type ReissueInvoiceParams = {
    */
   preview?: boolean | undefined;
   /**
+   * How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.
+   */
+  issueMethod?: ReissueInvoiceIssueMethod | undefined;
+  /**
    * Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.
    */
   updateCustomerEmail?: string | undefined;
@@ -1069,6 +1088,11 @@ export type ReissueInvoiceResponse = {
    */
   preview: ReissueInvoicePreview;
 };
+
+/** @internal */
+export const ReissueInvoiceIssueMethod$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoiceIssueMethod
+> = z.enum(ReissueInvoiceIssueMethod);
 
 /** @internal */
 export type CustomField$Outbound = {
@@ -2837,6 +2861,7 @@ export type ReissueInvoiceParams$Outbound = {
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
   preview?: boolean | undefined;
+  issue_method?: string | undefined;
   update_customer_email?: string | undefined;
   invoice?: ReissueInvoiceInvoiceRequestBody$Outbound | undefined;
   customer?: ReissueInvoiceCustomer$Outbound | undefined;
@@ -2853,6 +2878,7 @@ export const ReissueInvoiceParams$outboundSchema: z.ZodMiniType<
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
     preview: z.optional(z.boolean()),
+    issueMethod: z.optional(ReissueInvoiceIssueMethod$outboundSchema),
     updateCustomerEmail: z.optional(z.string()),
     invoice: z.optional(
       z.lazy(() => ReissueInvoiceInvoiceRequestBody$outboundSchema),
@@ -2865,6 +2891,7 @@ export const ReissueInvoiceParams$outboundSchema: z.ZodMiniType<
       invoiceId: "invoice_id",
       invoiceTemplateId: "invoice_template_id",
       netTermsDays: "net_terms_days",
+      issueMethod: "issue_method",
       updateCustomerEmail: "update_customer_email",
     });
   }),

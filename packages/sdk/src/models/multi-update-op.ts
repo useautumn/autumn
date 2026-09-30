@@ -45,14 +45,15 @@ export type MultiUpdateCancelAction = ClosedEnum<
 >;
 
 /**
- * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+ * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
  */
 export const MultiUpdateProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
+  BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+ * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
  */
 export type MultiUpdateProrationBehavior = ClosedEnum<
   typeof MultiUpdateProrationBehavior
@@ -76,7 +77,7 @@ export type MultiUpdateUpdate = {
    */
   cancelAction: MultiUpdateCancelAction;
   /**
-   * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+   * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
    */
   prorationBehavior?: MultiUpdateProrationBehavior | undefined;
 };

@@ -1121,8 +1121,9 @@ class SetupPaymentCustomize(BaseModel):
 SetupPaymentProrationBehavior = Literal[
     "prorate_immediately",
     "none",
+    "bill_difference",
 ]
-r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
 
 class SetupPaymentAttachDiscountTypedDict(TypedDict):
@@ -1302,7 +1303,7 @@ class SetupPaymentParamsTypedDict(TypedDict):
     customize: NotRequired[SetupPaymentCustomizeTypedDict]
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
     proration_behavior: NotRequired[SetupPaymentProrationBehavior]
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
     subscription_id: NotRequired[str]
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[SetupPaymentAttachDiscountTypedDict]]
@@ -1366,7 +1367,7 @@ class SetupPaymentParams(BaseModel):
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
 
     proration_behavior: Optional[SetupPaymentProrationBehavior] = None
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
 
     subscription_id: Optional[str] = None
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""

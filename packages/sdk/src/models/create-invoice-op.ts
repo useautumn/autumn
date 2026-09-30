@@ -702,6 +702,21 @@ export type CreateInvoiceAttachDiscount = {
   promotionCode?: string | undefined;
 };
 
+/**
+ * draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
+ */
+export const CreateInvoiceIssueMethod = {
+  Draft: "draft",
+  Finalize: "finalize",
+  Send: "send",
+} as const;
+/**
+ * draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
+ */
+export type CreateInvoiceIssueMethod = ClosedEnum<
+  typeof CreateInvoiceIssueMethod
+>;
+
 export type CreateInvoiceParams = {
   /**
    * The customer to invoice.
@@ -748,6 +763,10 @@ export type CreateInvoiceParams = {
    * If true, returns the calculated lines and totals without creating an invoice.
    */
   preview?: boolean | undefined;
+  /**
+   * draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
+   */
+  issueMethod?: CreateInvoiceIssueMethod | undefined;
 };
 
 /**
@@ -2484,6 +2503,11 @@ export function createInvoiceAttachDiscountToJSON(
 }
 
 /** @internal */
+export const CreateInvoiceIssueMethod$outboundSchema: z.ZodMiniEnum<
+  typeof CreateInvoiceIssueMethod
+> = z.enum(CreateInvoiceIssueMethod);
+
+/** @internal */
 export type CreateInvoiceParams$Outbound = {
   customer_id: string;
   plans?: Array<CreateInvoicePlan$Outbound> | undefined;
@@ -2497,6 +2521,7 @@ export type CreateInvoiceParams$Outbound = {
   period_start?: number | undefined;
   period_end?: number | undefined;
   preview?: boolean | undefined;
+  issue_method?: string | undefined;
 };
 
 /** @internal */
@@ -2521,6 +2546,7 @@ export const CreateInvoiceParams$outboundSchema: z.ZodMiniType<
     periodStart: z.optional(z.int()),
     periodEnd: z.optional(z.int()),
     preview: z.optional(z.boolean()),
+    issueMethod: z.optional(CreateInvoiceIssueMethod$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2533,6 +2559,7 @@ export const CreateInvoiceParams$outboundSchema: z.ZodMiniType<
       taxRateId: "tax_rate_id",
       periodStart: "period_start",
       periodEnd: "period_end",
+      issueMethod: "issue_method",
     });
   }),
 );

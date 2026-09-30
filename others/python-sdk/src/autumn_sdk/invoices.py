@@ -38,6 +38,7 @@ class Invoices(BaseSDK):
         period_start: Optional[int] = None,
         period_end: Optional[int] = None,
         preview: Optional[bool] = None,
+        issue_method: Optional[models.CreateInvoiceIssueMethod] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -57,6 +58,7 @@ class Invoices(BaseSDK):
         :param period_start: Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
         :param period_end: End of the period being invoiced, in milliseconds.
         :param preview: If true, returns the calculated lines and totals without creating an invoice.
+        :param issue_method: draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -91,6 +93,7 @@ class Invoices(BaseSDK):
             period_start=period_start,
             period_end=period_end,
             preview=preview,
+            issue_method=issue_method,
         )
 
         req = self._build_request(
@@ -181,6 +184,7 @@ class Invoices(BaseSDK):
         period_start: Optional[int] = None,
         period_end: Optional[int] = None,
         preview: Optional[bool] = None,
+        issue_method: Optional[models.CreateInvoiceIssueMethod] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -200,6 +204,7 @@ class Invoices(BaseSDK):
         :param period_start: Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
         :param period_end: End of the period being invoiced, in milliseconds.
         :param preview: If true, returns the calculated lines and totals without creating an invoice.
+        :param issue_method: draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -234,6 +239,7 @@ class Invoices(BaseSDK):
             period_start=period_start,
             period_end=period_end,
             preview=preview,
+            issue_method=issue_method,
         )
 
         req = self._build_request_async(
@@ -282,6 +288,186 @@ class Invoices(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(models.CreateInvoiceResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def finalize(
+        self,
+        *,
+        invoice_id: str,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.FinalizeInvoiceResponse:
+        r"""Finalizes a draft Stripe invoice, such as one left in draft by invoice mode with finalize set to false. Stripe then collects it: a send-invoice invoice is emailed and an automatically-charged one is charged. Any plan still waiting on the invoice to be paid expires at its due date. Already open or paid invoices are returned unchanged.
+
+        :param invoice_id: The Autumn invoice ID to finalize.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.FinalizeInvoiceParams(
+            invoice_id=invoice_id,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/invoices.finalize",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.FinalizeInvoiceGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.FinalizeInvoiceParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="finalizeInvoice",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.FinalizeInvoiceResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def finalize_async(
+        self,
+        *,
+        invoice_id: str,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.FinalizeInvoiceResponse:
+        r"""Finalizes a draft Stripe invoice, such as one left in draft by invoice mode with finalize set to false. Stripe then collects it: a send-invoice invoice is emailed and an automatically-charged one is charged. Any plan still waiting on the invoice to be paid expires at its due date. Already open or paid invoices are returned unchanged.
+
+        :param invoice_id: The Autumn invoice ID to finalize.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.FinalizeInvoiceParams(
+            invoice_id=invoice_id,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/invoices.finalize",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.FinalizeInvoiceGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.FinalizeInvoiceParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="finalizeInvoice",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.FinalizeInvoiceResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(
@@ -492,6 +678,8 @@ class Invoices(BaseSDK):
         limit: Optional[int] = 50,
         customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
+        invoice_id: Optional[str] = None,
+        stripe_id: Optional[str] = None,
         status: Optional[List[models.ListInvoicesStatus]] = None,
         processor_types: Optional[
             List[models.ListInvoicesProcessorTypeRequestBody]
@@ -507,6 +695,8 @@ class Invoices(BaseSDK):
         :param limit: Number of items to return. Default 50, hard ceiling 5000.
         :param customer_id: Filter invoices to a single customer by ID.
         :param entity_id: Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.
+        :param invoice_id: Filter to the invoice with this Autumn invoice ID (e.g. inv_2b3c4d5e6f7g8h).
+        :param stripe_id: Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H).
         :param status: Filter by invoice status (draft, open, paid, void, uncollectible).
         :param processor_types: Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe.
         :param retries: Override the default retry configuration for this method
@@ -529,6 +719,8 @@ class Invoices(BaseSDK):
             limit=limit,
             customer_id=customer_id,
             entity_id=entity_id,
+            invoice_id=invoice_id,
+            stripe_id=stripe_id,
             status=status,
             processor_types=processor_types,
         )
@@ -599,6 +791,8 @@ class Invoices(BaseSDK):
         limit: Optional[int] = 50,
         customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
+        invoice_id: Optional[str] = None,
+        stripe_id: Optional[str] = None,
         status: Optional[List[models.ListInvoicesStatus]] = None,
         processor_types: Optional[
             List[models.ListInvoicesProcessorTypeRequestBody]
@@ -614,6 +808,8 @@ class Invoices(BaseSDK):
         :param limit: Number of items to return. Default 50, hard ceiling 5000.
         :param customer_id: Filter invoices to a single customer by ID.
         :param entity_id: Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.
+        :param invoice_id: Filter to the invoice with this Autumn invoice ID (e.g. inv_2b3c4d5e6f7g8h).
+        :param stripe_id: Filter to the invoice with this Stripe invoice ID (e.g. in_1A2B3C4D5E6F7G8H).
         :param status: Filter by invoice status (draft, open, paid, void, uncollectible).
         :param processor_types: Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe.
         :param retries: Override the default retry configuration for this method
@@ -636,6 +832,8 @@ class Invoices(BaseSDK):
             limit=limit,
             customer_id=customer_id,
             entity_id=entity_id,
+            invoice_id=invoice_id,
+            stripe_id=stripe_id,
             status=status,
             processor_types=processor_types,
         )
@@ -1076,6 +1274,7 @@ class Invoices(BaseSDK):
         invoice_template_id: Optional[str] = None,
         net_terms_days: Optional[int] = None,
         preview: Optional[bool] = None,
+        issue_method: Optional[models.ReissueInvoiceIssueMethod] = None,
         update_customer_email: Optional[str] = None,
         invoice: Optional[
             Union[
@@ -1098,6 +1297,7 @@ class Invoices(BaseSDK):
         :param invoice_template_id: ID of an invoice template (configured in billing settings) whose footer and memo are applied to the replacement invoice.
         :param net_terms_days: Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead.
         :param preview: If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.
+        :param issue_method: How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.
         :param update_customer_email: Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.
         :param invoice: Changes that apply to the replacement invoice only.
         :param customer: Changes written to the customer, which the replacement snapshots and later invoices inherit.
@@ -1122,6 +1322,7 @@ class Invoices(BaseSDK):
             invoice_template_id=invoice_template_id,
             net_terms_days=net_terms_days,
             preview=preview,
+            issue_method=issue_method,
             update_customer_email=update_customer_email,
             invoice=utils.get_pydantic_model(
                 invoice, Optional[models.ReissueInvoiceInvoiceRequestBody]
@@ -1198,6 +1399,7 @@ class Invoices(BaseSDK):
         invoice_template_id: Optional[str] = None,
         net_terms_days: Optional[int] = None,
         preview: Optional[bool] = None,
+        issue_method: Optional[models.ReissueInvoiceIssueMethod] = None,
         update_customer_email: Optional[str] = None,
         invoice: Optional[
             Union[
@@ -1220,6 +1422,7 @@ class Invoices(BaseSDK):
         :param invoice_template_id: ID of an invoice template (configured in billing settings) whose footer and memo are applied to the replacement invoice.
         :param net_terms_days: Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead.
         :param preview: If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.
+        :param issue_method: How far the replacement advances: draft, finalize (opened without emails, reminders or charges) or send. Defaults to send. The original is retired either way.
         :param update_customer_email: Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.
         :param invoice: Changes that apply to the replacement invoice only.
         :param customer: Changes written to the customer, which the replacement snapshots and later invoices inherit.
@@ -1244,6 +1447,7 @@ class Invoices(BaseSDK):
             invoice_template_id=invoice_template_id,
             net_terms_days=net_terms_days,
             preview=preview,
+            issue_method=issue_method,
             update_customer_email=update_customer_email,
             invoice=utils.get_pydantic_model(
                 invoice, Optional[models.ReissueInvoiceInvoiceRequestBody]

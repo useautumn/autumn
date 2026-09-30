@@ -601,14 +601,15 @@ export type PreviewUpdateInvoiceMode = {
 };
 
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
  */
 export const PreviewUpdateProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
+  BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
  */
 export type PreviewUpdateProrationBehavior = ClosedEnum<
   typeof PreviewUpdateProrationBehavior
@@ -769,7 +770,7 @@ export type PreviewUpdateParams = {
    */
   invoiceMode?: PreviewUpdateInvoiceMode | undefined;
   /**
-   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
    */
   prorationBehavior?: PreviewUpdateProrationBehavior | undefined;
   /**

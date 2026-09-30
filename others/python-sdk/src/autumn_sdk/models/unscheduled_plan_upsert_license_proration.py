@@ -207,8 +207,9 @@ r"""Controls when to return a checkout URL for the immediate phase. 'always' for
 CreateScheduleBillingBehavior = Literal[
     "prorate_immediately",
     "none",
+    "bill_difference",
 ]
-r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
+r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference."""
 
 
 class UnscheduledPlanFeatureQuantityTypedDict(TypedDict):
@@ -249,6 +250,21 @@ class UnscheduledPlanFeatureQuantity(BaseModel):
                     m[k] = val
 
         return m
+
+
+class UnscheduledPlanLicenseQuantityTypedDict(TypedDict):
+    license_plan_id: str
+    r"""The license plan to set seat quantity for."""
+    quantity: int
+    r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
+
+
+class UnscheduledPlanLicenseQuantity(BaseModel):
+    license_plan_id: str
+    r"""The license plan to set seat quantity for."""
+
+    quantity: int
+    r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
 PriceUnscheduledPlanInterval = Literal[
@@ -3522,13 +3538,6 @@ class UnscheduledPlanUpsertLicenseProration(BaseModel):
 
     on_decrease: UnscheduledPlanUpsertLicenseOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
-
-
-UnscheduledPlanUpsertLicenseExpiryDurationType = Literal[
-    "month",
-    "forever",
-]
-r"""When rolled over units expire."""
 
 
 try:

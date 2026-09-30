@@ -46,9 +46,9 @@ export type CreateWebhookParams = {
    */
   url: string;
   /**
-   * The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+   * The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.
    */
-  events: Array<CreateWebhookEvent>;
+  events?: Array<CreateWebhookEvent> | undefined;
   /**
    * A note for your own reference.
    */
@@ -76,7 +76,7 @@ export type CreateWebhookResponse = {
    */
   description: string | null;
   /**
-   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+   * The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.
    */
   events: Array<string>;
   /**
@@ -106,7 +106,7 @@ export const CreateWebhookEvent$outboundSchema: z.ZodMiniEnum<
 export type CreateWebhookParams$Outbound = {
   id: string;
   url: string;
-  events: Array<string>;
+  events?: Array<string> | undefined;
   description?: string | undefined;
   disabled?: boolean | undefined;
 };
@@ -118,7 +118,7 @@ export const CreateWebhookParams$outboundSchema: z.ZodMiniType<
 > = z.object({
   id: z.string(),
   url: z.string(),
-  events: z.array(CreateWebhookEvent$outboundSchema),
+  events: z.optional(z.array(CreateWebhookEvent$outboundSchema)),
   description: z.optional(z.string()),
   disabled: z.optional(z.boolean()),
 });

@@ -59,8 +59,8 @@ class CreateWebhookParamsTypedDict(TypedDict):
     r"""Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation."""
     url: str
     r"""The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work."""
-    events: List[CreateWebhookEvent]
-    r"""The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events."""
+    events: NotRequired[List[CreateWebhookEvent]]
+    r"""The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events."""
     description: NotRequired[str]
     r"""A note for your own reference."""
     disabled: NotRequired[bool]
@@ -74,8 +74,8 @@ class CreateWebhookParams(BaseModel):
     url: str
     r"""The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work."""
 
-    events: List[CreateWebhookEvent]
-    r"""The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events."""
+    events: Optional[List[CreateWebhookEvent]] = None
+    r"""The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events."""
 
     description: Optional[str] = None
     r"""A note for your own reference."""
@@ -85,7 +85,7 @@ class CreateWebhookParams(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["description", "disabled"])
+        optional_fields = set(["events", "description", "disabled"])
         serialized = handler(self)
         m = {}
 
@@ -110,7 +110,7 @@ class CreateWebhookResponseTypedDict(TypedDict):
     description: Nullable[str]
     r"""A note for your own reference."""
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
     disabled: bool
     r"""When true, no events are sent to the webhook."""
     created_at: float
@@ -134,7 +134,7 @@ class CreateWebhookResponse(BaseModel):
     r"""A note for your own reference."""
 
     events: List[str]
-    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event."""
+    r"""The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event."""
 
     disabled: bool
     r"""When true, no events are sent to the webhook."""
