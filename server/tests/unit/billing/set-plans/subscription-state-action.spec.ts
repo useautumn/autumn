@@ -10,7 +10,7 @@ const EXPECTED_DECISIONS: [
 	SubscriptionState,
 	ReturnType<typeof subscriptionStateAction>,
 ][] = [
-	["none", { action: "create", warning: null }],
+	["none", { action: "create", warning: "new_stripe_subscription" }],
 	["active", { action: "update", warning: null }],
 	["trialing", { action: "update", warning: null }],
 	["past_due", { action: "update", warning: null }],

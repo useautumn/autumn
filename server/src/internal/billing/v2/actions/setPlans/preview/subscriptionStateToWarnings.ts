@@ -30,11 +30,9 @@ const stripeVoidsOpenInvoices = (subscription: Stripe.Subscription) =>
 const replacedSubscriptionWarning = ({
 	replacedStripeSubscription,
 	stripeBillingPlan,
-	billingContext,
 }: {
 	replacedStripeSubscription: Stripe.Subscription;
 	stripeBillingPlan: StripeBillingPlan;
-	billingContext: SubscriptionWarningContext;
 }): Warning | undefined => {
 	const { warning } = subscriptionStateAction({
 		state: replacedStripeSubscription.status,
@@ -53,21 +51,35 @@ const replacedSubscriptionWarning = ({
 		};
 	}
 
-	if (warning === "new_stripe_subscription") {
-		const {
-			currentEpochMs,
-			subscriptionBackdateStartMs,
-			billingCycleAnchorMs,
-		} = billingContext;
-		const firstInvoiceMs =
-			billingCycleAnchorMs === "now" ? currentEpochMs : billingCycleAnchorMs;
-		return {
-			type: warning,
-			message: `A new Stripe subscription will be created, starting ${formatMsToDate(subscriptionBackdateStartMs ?? currentEpochMs)} and first invoiced on ${formatMsToDate(firstInvoiceMs)}.`,
-		};
-	}
-
 	return undefined;
+};
+
+const createsStripeSubscription = (stripeBillingPlan: StripeBillingPlan) =>
+	stripeBillingPlan.subscriptionAction?.type === "create" ||
+	!!stripeBillingPlan.checkoutSessionAction;
+
+const newSubscriptionWarning = ({
+	billingContext,
+	stripeBillingPlan,
+}: {
+	billingContext: SubscriptionWarningContext;
+	stripeBillingPlan: StripeBillingPlan;
+}): Warning | undefined => {
+	const { replacedStripeSubscription, stripeSubscription } = billingContext;
+	const state =
+		(replacedStripeSubscription ?? stripeSubscription)?.status ?? "none";
+	const { warning } = subscriptionStateAction({ state });
+	if (warning !== "new_stripe_subscription") return undefined;
+	if (!createsStripeSubscription(stripeBillingPlan)) return undefined;
+
+	const { currentEpochMs, subscriptionBackdateStartMs, billingCycleAnchorMs } =
+		billingContext;
+	const firstInvoiceMs =
+		billingCycleAnchorMs === "now" ? currentEpochMs : billingCycleAnchorMs;
+	return {
+		type: warning,
+		message: `A new Stripe subscription will be created, starting ${formatMsToDate(subscriptionBackdateStartMs ?? currentEpochMs)} and first invoiced on ${formatMsToDate(firstInvoiceMs)}.`,
+	};
 };
 
 const describeInvoice = (invoice: Stripe.Invoice) =>
@@ -157,7 +169,6 @@ export const subscriptionStateToWarnings = ({
 				replacedSubscriptionWarning({
 					replacedStripeSubscription,
 					stripeBillingPlan,
-					billingContext,
 				}),
 				...(stripeVoidsOpenInvoices(replacedStripeSubscription)
 					? []
@@ -170,6 +181,7 @@ export const subscriptionStateToWarnings = ({
 		: [];
 
 	return [
+		newSubscriptionWarning({ billingContext, stripeBillingPlan }),
 		...replacedWarnings,
 		...pastDueInvoiceWarnings({
 			stripeSubscription: billingContext.stripeSubscription,

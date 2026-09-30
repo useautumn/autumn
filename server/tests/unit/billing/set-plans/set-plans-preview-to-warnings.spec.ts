@@ -188,6 +188,13 @@ const stripeSubscription = (
 		...overrides,
 	}) as Stripe.Subscription;
 
+const createsSubscription: Pick<StripeBillingPlan, "subscriptionAction"> = {
+	subscriptionAction: {
+		type: "create",
+		params: {},
+	} as StripeBillingPlan["subscriptionAction"],
+};
+
 const stateWarnings = (
 	overrides: Partial<Parameters<typeof setPlansPreviewToWarnings>[0]>,
 ) =>
@@ -294,7 +301,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				}),
 				stripeDiscounts: [],
 			},
-			stripeBillingPlan: {},
+			stripeBillingPlan: createsSubscription,
 			replacedOpenInvoices: [
 				{
 					id: "in_open",
@@ -327,6 +334,38 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
+	test("a customer with no subscription is told a new one will be created", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: NOON_UTC + 30 * DAY_MS,
+			},
+			stripeBillingPlan: createsSubscription,
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "new_stripe_subscription",
+				severity: "info",
+				message:
+					"A new Stripe subscription will be created, starting 29 Sep 2026 and first invoiced on 29 Oct 2026.",
+			},
+		]);
+	});
+
+	test("no warning when no Stripe subscription is created", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				replacedStripeSubscription: stripeSubscription({ status: "canceled" }),
+			},
+			stripeBillingPlan: {},
+		});
+
+		expect(warnings).toEqual([]);
+	});
+
 	test("a discount the request carries over is not flagged", () => {
 		const warnings = stateWarnings({
 			billingContext: {
@@ -342,7 +381,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 					{ source: { coupon: { id: "co_launch" } as Stripe.Coupon } },
 				],
 			},
-			stripeBillingPlan: {},
+			stripeBillingPlan: createsSubscription,
 		});
 
 		expect(warnings.map((warning) => warning.type)).toEqual([
