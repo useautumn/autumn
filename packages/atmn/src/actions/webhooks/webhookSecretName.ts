@@ -1,3 +1,5 @@
+import type { WebhookEnv } from "./types/webhookEnv";
+
 /** `-` reads as `_`, so the lint refuses two ids that collide once uppercased. */
 const envNameSegment = (value: string): string =>
 	value.toUpperCase().replace(/-/g, "_");
@@ -21,3 +23,13 @@ export const webhookSecretName = ({
 	const suffix = envKey === undefined ? "" : `_${envKeySegment(envKey)}`;
 	return `AUTUMN_WEBHOOK_${envNameSegment(id)}${suffix}_SECRET`;
 };
+
+/** The name a webhook's secret is saved under in `env`. */
+export const envWebhookSecretName = ({
+	env,
+	id,
+}: {
+	env: WebhookEnv;
+	id: string;
+}): string =>
+	webhookSecretName({ id, ...(env.live ? {} : { envKey: env.key }) });
