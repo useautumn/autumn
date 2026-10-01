@@ -1,4 +1,3 @@
-import { getApiBalances } from "@api/customers/cusFeatures";
 import type {
 	BillingPlan,
 	CreateScheduleBillingContext,
@@ -7,10 +6,8 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
-import { buildBalanceChanges } from "@/internal/billing/v2/actions/buildBillingChanges/buildBalanceChanges/buildBalanceChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
-import { classifySetPlansBalanceChange } from "./classifySetPlansBalanceChange";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
 import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
 import {
@@ -19,6 +16,7 @@ import {
 } from "./processorItems/scheduleActionToProcessorItems";
 import { subscriptionActionToProcessorItems } from "./processorItems/subscriptionActionToProcessorItems";
 import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
+import { setPlansPhaseBalanceChanges } from "./setPlansPhaseBalanceChanges";
 import { setPlansPhasePlans } from "./setPlansPhasePlans";
 import { setPlansPhaseTransitions } from "./setPlansPhaseTransitions";
 
@@ -55,11 +53,11 @@ export const buildSetPlansPreviewPhases = async ({
 		autumnBillingPlan,
 		phases,
 	});
-	const phaseBalances = await Promise.all(
-		[fullCustomer, ...phaseCustomers].map((phaseCustomer) =>
-			getApiBalances({ ctx, fullCus: phaseCustomer }),
-		),
-	);
+	const phaseBalanceChanges = await setPlansPhaseBalanceChanges({
+		ctx,
+		originalFullCustomer: fullCustomer,
+		phaseCustomers,
+	});
 	const phaseTransitions = setPlansPhaseTransitions({
 		autumnBillingPlan,
 		originalFullCustomer: fullCustomer,
@@ -119,10 +117,7 @@ export const buildSetPlansPreviewPhases = async ({
 			transitions: phaseTransitions[phaseIndex],
 			entities: fullCustomer.entities,
 		}),
-		balance_changes: buildBalanceChanges({
-			beforeBalances: phaseBalances[phaseIndex].balances,
-			afterBalances: phaseBalances[phaseIndex + 1].balances,
-		}).map(classifySetPlansBalanceChange),
+		balance_changes: phaseBalanceChanges[phaseIndex],
 		processor_items: processorItemsByPhase[phaseIndex],
 	}));
 };
