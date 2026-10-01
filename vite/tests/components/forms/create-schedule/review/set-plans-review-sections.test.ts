@@ -105,12 +105,7 @@ test("plan rows present each phase's plans as the server returns them", () => {
 			"Now",
 			[
 				["Premium", undefined, "starts", { amount: "$7", suffix: "/mo" }],
-				[
-					"Pro",
-					"Unused time credited",
-					"ends",
-					{ amount: "-$13.33", suffix: "credit" },
-				],
+				["Pro", "$13.33 credited", "ends", { amount: "$3", suffix: "/mo" }],
 				["Seats", undefined, "kept", { amount: "$5", suffix: "/mo" }],
 			],
 		],

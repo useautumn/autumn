@@ -19,22 +19,19 @@ import type {
 	ReviewChangePhase,
 	ReviewChangeRow,
 	ReviewChangeSection,
-	ReviewChangeValue,
 } from "./types/reviewChange";
 
-const planCreditValue = ({
+/** "$13.33 credited" for the unused time a plan ending now is refunded. */
+const planCreditDetail = ({
 	plan,
 	currency,
 }: {
 	plan: SetPlansPreviewPlan;
 	currency: string;
-}): ReviewChangeValue | undefined =>
+}) =>
 	plan.credit === null
 		? undefined
-		: {
-				amount: formatMoney({ amount: plan.credit, currency, showCents: true }),
-				suffix: "credit",
-			};
+		: `${formatMoney({ amount: Math.abs(plan.credit), currency, showCents: true })} credited`;
 
 const updatedChanges = ({
 	plan,
@@ -82,7 +79,7 @@ const planToRow = ({
 	key: `plan-${phaseIndex}-${planIndex}-${plan.plan_id}`,
 	title: plan.name,
 	description: joinDetail([
-		plan.credit === null ? undefined : "Unused time credited",
+		planCreditDetail({ plan, currency }),
 		plan.custom ? "Custom" : undefined,
 		endsLater(plan) && plan.expires_at !== null
 			? `Ends ${formatPhaseDate({ startsAt: plan.expires_at })}`
@@ -98,10 +95,7 @@ const planToRow = ({
 		plan.trial_ends_at > nowMs
 			? plan.trial_ends_at
 			: undefined,
-	value:
-		plan.status === "ends"
-			? planCreditValue({ plan, currency })
-			: reviewPlanPrice({ prices: plan.prices, features }),
+	value: reviewPlanPrice({ prices: plan.prices, features }),
 });
 
 const removedPhaseToReviewPhase = ({
