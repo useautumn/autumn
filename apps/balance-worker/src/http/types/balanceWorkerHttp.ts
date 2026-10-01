@@ -89,4 +89,6 @@ export type BalanceWorkerHttpContext = {
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
 	/** Absent, every request is logged; failures always are. */
 	requestLog?: { successSampleRate: number };
+	/** The stall hook, routed only when enabled (never on prod); `block` is for tests. */
+	chaos?: { enabled: boolean; block?(ms: number): void };
 };

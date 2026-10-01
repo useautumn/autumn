@@ -41,5 +41,7 @@ export function runProxyCall({
 			return client.enqueue(call.params);
 		case "invalidateOrgCatalog":
 			return client.catalog.invalidateOrgCatalog(call.params);
+		case "stallOwner":
+			return client.stallOwner(call.params);
 	}
 }

@@ -12,6 +12,7 @@ import { receiveInitialize } from "./handlers/receiveInitialize.js";
 import { receiveReadSubjectState } from "./handlers/receiveReadSubjectState.js";
 import { receiveRecalculateBalance } from "./handlers/receiveRecalculateBalance.js";
 import { receiveReset } from "./handlers/receiveReset.js";
+import { receiveStall } from "./handlers/receiveStall.js";
 import { receiveTrack } from "./handlers/receiveTrack.js";
 import { receiveTrackBatch } from "./handlers/receiveTrackBatch.js";
 import { receiveUpdateBalance } from "./handlers/receiveUpdateBalance.js";
@@ -34,6 +35,7 @@ export function createBalanceWorkerApp({
 	app.get("/health", receiveHealth);
 	// Parses its own envelope and checks ownership once, so it sits outside the per-command middleware.
 	app.post("/v1/track-batch", receiveTrackBatch({ ctx }));
+	if (ctx.chaos?.enabled) app.post("/v1/debug/stall", receiveStall({ ctx }));
 	// Every command shares one entry: parse the envelope, then route it to the partition's runtime.
 	const commands = new Hono<BalanceWorkerHttpEnv>();
 	commands.use(requestValidationMiddleware, runtimeRoutingMiddleware({ ctx }));

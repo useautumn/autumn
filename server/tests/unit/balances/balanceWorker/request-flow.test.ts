@@ -314,6 +314,9 @@ test.concurrent(
 				initialize: async () => {
 					throw cause;
 				},
+				stallOwner: async () => {
+					throw cause;
+				},
 				check: async () => {
 					throw cause;
 				},

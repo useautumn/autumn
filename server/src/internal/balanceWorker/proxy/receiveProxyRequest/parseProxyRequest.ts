@@ -29,6 +29,18 @@ function readRecord({ input }: { input: unknown }): Record<string, unknown> {
 	return Object.fromEntries(Object.entries(input));
 }
 
+function readPositiveInteger({ input }: { input: unknown }): number {
+	if (typeof input !== "number" || !Number.isSafeInteger(input) || input <= 0)
+		throw new Error("Balance worker proxy expected a positive integer");
+	return input;
+}
+
+function readPartition({ input }: { input: unknown }): number {
+	if (typeof input !== "number" || !Number.isSafeInteger(input) || input < 0)
+		throw new Error("Balance worker proxy expected a partition number");
+	return input;
+}
+
 function readNonEmptyString({ input }: { input: unknown }): string {
 	if (typeof input !== "string" || input.length === 0)
 		throw new Error("Balance worker proxy expected a non-empty string");
@@ -144,6 +156,14 @@ function parseProxyCall({
 				params: {
 					orgId: readNonEmptyString({ input: params.orgId }),
 					env: readNonEmptyString({ input: params.env }),
+				},
+			};
+		case "stallOwner":
+			return {
+				method,
+				params: {
+					partition: readPartition({ input: params.partition }),
+					ms: readPositiveInteger({ input: params.ms }),
 				},
 			};
 		default:

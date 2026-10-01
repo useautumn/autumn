@@ -69,6 +69,7 @@ export function createProxyBalanceWorkerClient({
 			finalize: enqueue,
 		},
 		enqueue,
+		stallOwner: proxied("stallOwner"),
 		catalog: { invalidateOrgCatalog: proxied("invalidateOrgCatalog") },
 		start,
 		stop,

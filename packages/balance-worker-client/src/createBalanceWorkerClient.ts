@@ -1,4 +1,5 @@
 import { createCatalogInvalidations } from "./catalog/createCatalogInvalidations.js";
+import { sendStallOwner } from "./chaos/sendStallOwner.js";
 import { sendApplyBillingPlan } from "./commands/sendApplyBillingPlan.js";
 import { sendCheck } from "./commands/sendCheck.js";
 import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
@@ -33,6 +34,7 @@ import type {
 	ReadSubjectStateParams,
 	RecalculateBalanceParams,
 	ResetParams,
+	StallOwnerParams,
 	TrackParams,
 	UpdateBalanceParams,
 } from "./types/balanceWorkerClient.js";
@@ -131,6 +133,10 @@ export function createBalanceWorkerClient({
 		return enqueueCommands({ ctx: queue, ...params });
 	}
 
+	function stallOwner(params: StallOwnerParams) {
+		return sendStallOwner({ ctx, ...params });
+	}
+
 	async function start(): Promise<void> {
 		await dependencies.lifecycle?.start();
 	}
@@ -155,6 +161,7 @@ export function createBalanceWorkerClient({
 		recalculateBalance,
 		queue: createCommandQueue({ ctx: queue }),
 		enqueue,
+		stallOwner,
 		catalog: createCatalogInvalidations({
 			ctx: {
 				publisher: dependencies.catalogInvalidations,

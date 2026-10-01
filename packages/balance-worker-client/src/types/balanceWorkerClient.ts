@@ -69,6 +69,12 @@ export type InitializeParams = {
 	request: InitializeRequest;
 	signal?: AbortSignal;
 };
+export type StallOwnerParams = {
+	partition: number;
+	ms: number;
+	signal?: AbortSignal;
+};
+export type StallOwnerReply = { endpoint: string; stallMs: number };
 export type BalanceWorkerClient = {
 	track(params: TrackParams): Promise<TrackReply>;
 	check(params: CheckParams): Promise<CheckReply>;
@@ -104,6 +110,8 @@ export type BalanceWorkerClient = {
 	enqueue(params: EnqueueParams): Promise<void>;
 	/** Tells every worker and herald that an org's catalog changed, so their cached rows are dropped. */
 	catalog: CatalogInvalidations;
+	/** Chaos hook: freezes the partition's owner for `ms`; a prod worker does not route it and the call fails. */
+	stallOwner(params: StallOwnerParams): Promise<StallOwnerReply>;
 	/** Reads the ownership log through, retrying until it does; routing answers nothing before. */
 	start(): Promise<void>;
 	stop(): Promise<void>;

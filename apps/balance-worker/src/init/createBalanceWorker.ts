@@ -171,6 +171,7 @@ export async function createBalanceWorker({
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 			},
 		});
+		const chaosEnabled = !env.BALANCE_WORKER_DEPLOYMENT.includes("prod");
 		const app = createBalanceWorkerApp({
 			ctx: {
 				ownership: partitions,
@@ -179,8 +180,13 @@ export async function createBalanceWorker({
 				requestLog: {
 					successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
 				},
+				chaos: { enabled: chaosEnabled },
 			},
 		});
+		if (chaosEnabled)
+			dependencies.logger.warn(
+				`Balance worker chaos hooks enabled for deployment ${env.BALANCE_WORKER_DEPLOYMENT}: POST /v1/debug/stall is routed`,
+			);
 
 		function listen(): WorkerListener {
 			const listener = Bun.serve({
