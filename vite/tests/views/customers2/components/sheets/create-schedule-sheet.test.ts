@@ -604,6 +604,40 @@ describe("buildInitialValues", () => {
 		expect(result.unscheduledPlans).toEqual([]);
 	});
 
+	const DAY = 24 * 60 * 60 * 1000;
+
+	test("a plan whose one row runs across a later phase is listed in that phase too", () => {
+		const running = withDates({
+			customerProduct: makeCusProduct({ id: "cp_1", productId: "prod_1" }),
+			startsAt: 0,
+			endedAt: 60 * DAY,
+		});
+		const startingLater = withDates({
+			customerProduct: makeCusProduct({
+				id: "cp_2",
+				productId: "prod_2",
+				status: CusProductStatus.Scheduled,
+			}),
+			startsAt: 30 * DAY,
+		});
+		const customer = makeCustomer({
+			customerProducts: [running, startingLater],
+		});
+
+		const result = buildInitialValues({ customer, products, nowMs: DAY });
+
+		expect(
+			result.phases.map((phase) => [
+				phase.startsAt,
+				phase.plans.map((plan) => plan.productId),
+			]),
+		).toEqual([
+			[0, ["prod_1"]],
+			[30 * DAY, ["prod_2", "prod_1"]],
+			[60 * DAY, ["prod_2"]],
+		]);
+	});
+
 	test("keeps ongoing plans next to scheduled plans", () => {
 		const ongoing = withDates({
 			customerProduct: makeCusProduct({

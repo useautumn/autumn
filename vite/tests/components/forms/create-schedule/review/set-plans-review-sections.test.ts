@@ -46,6 +46,7 @@ const plan = (
 	entity_id: null,
 	name,
 	status: "starts",
+	origin: "request",
 	custom: false,
 	expires_at: null,
 	trial_ends_at: null,
@@ -134,6 +135,73 @@ test("an updated plan that ends later says when", () => {
 				plans: [plan("Pro", { status: "updated", expires_at: NOV_1 })],
 			}),
 		],
+	});
+
+	expect(section.phases[0]?.rows[0]?.description).toBe("Ends Nov 1, 2026");
+});
+
+test("saved changes read muted, and a withdrawn saved phase sorts in as removed", () => {
+	const DEC_1 = Date.UTC(2026, 11, 1);
+	const section = plansToReviewSection({
+		currency: "usd",
+		features,
+		nowMs: NOW,
+		phases: [
+			phase(NOW, {
+				plans: [plan("Pro", { status: "kept", expires_at: NOV_1 })],
+			}),
+			phase(DEC_1, {
+				plans: [
+					plan("Enterprise", { origin: "saved" }),
+					plan("Pro", { status: "ends", origin: "saved", expires_at: DEC_1 }),
+				],
+			}),
+		],
+		unlistedPhases: [
+			{
+				starts_at: NOV_1,
+				plans: [
+					plan("Premium", { origin: "withdrawn" }),
+					plan("Pro", { status: "ends", origin: "withdrawn" }),
+				],
+			},
+		],
+	});
+
+	expect(
+		section.phases.map((reviewPhase) => [
+			reviewPhase.label,
+			reviewPhase.removed ?? false,
+			reviewPhase.rows.map((row) => [row.title, row.status, row.origin]),
+		]),
+	).toEqual([
+		["Now", false, [["Pro", "kept", "request"]]],
+		[
+			"Nov 1, 2026",
+			true,
+			[
+				["Premium", "starts", "withdrawn"],
+				["Pro", "ends", "withdrawn"],
+			],
+		],
+		[
+			"Dec 1, 2026",
+			false,
+			[
+				["Enterprise", "starts", "saved"],
+				["Pro", "ends", "saved"],
+			],
+		],
+	]);
+	expect(section.summary).toBe("1 phase removed");
+});
+
+test("a plan created until a later phase says when it ends", () => {
+	const section = plansToReviewSection({
+		currency: "usd",
+		features,
+		nowMs: NOW,
+		phases: [phase(NOW, { plans: [plan("SSO", { expires_at: NOV_1 })] })],
 	});
 
 	expect(section.phases[0]?.rows[0]?.description).toBe("Ends Nov 1, 2026");

@@ -19,6 +19,7 @@ import type { SetPlansSubscriptionTarget } from "@/components/forms/create-sched
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
 import {
 	customerProductsToCustomerState,
+	MAX_PHASE_START_DRIFT_MS,
 	type PhaseStart,
 } from "@/components/forms/customer-state/customerProductsToCustomerState";
 import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
@@ -162,8 +163,8 @@ export function buildInitialValues({
 	};
 }
 
-/** The live plans are today's phase and each scheduled start is its own later
- * phase. */
+/** The live plans are today's phase; each scheduled start, and each scheduled
+ * end of a live plan that isn't a cancellation, is its own later phase. */
 function customerProductsToSetPlansState({
 	customerProducts,
 	entities,
@@ -179,9 +180,23 @@ function customerProductsToSetPlansState({
 				customerProduct.status === CusProductStatus.Scheduled,
 		)
 		.map((customerProduct) => customerProduct.starts_at);
+	const scheduledEnds = customerProducts.flatMap((customerProduct) =>
+		ACTIVE_STATUSES.includes(customerProduct.status) &&
+		customerProduct.ended_at != null &&
+		!customerProduct.canceled_at &&
+		!scheduledStarts.some(
+			(startsAt) =>
+				Math.abs(startsAt - (customerProduct.ended_at ?? 0)) <=
+				MAX_PHASE_START_DRIFT_MS,
+		)
+			? [customerProduct.ended_at]
+			: [],
+	);
 	const phaseStarts: PhaseStart[] = [
 		"now",
-		...[...new Set(scheduledStarts)].sort((a, b) => a - b),
+		...[...new Set([...scheduledStarts, ...scheduledEnds])].sort(
+			(a, b) => a - b,
+		),
 	];
 
 	return customerProductsToCustomerState({

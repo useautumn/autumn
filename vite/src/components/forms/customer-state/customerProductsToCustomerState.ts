@@ -17,7 +17,7 @@ export type PhaseStart = SyncPhase["starts_at"];
 
 /** Autumn's scheduled start is anchored, Stripe's phase start is not, so the
  * two drift by minutes on the same phase. */
-const MAX_PHASE_START_DRIFT_MS = 24 * 60 * 60 * 1000;
+export const MAX_PHASE_START_DRIFT_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Customer products store their entity by internal id — resolve it to the id
@@ -59,11 +59,37 @@ const findCopiesOnPhase = ({
 		.filter((start) => Math.abs(start - startsAt) <= MAX_PHASE_START_DRIFT_MS)
 		.sort((a, b) => Math.abs(a - startsAt) - Math.abs(b - startsAt))[0];
 
-	return nearestStart === undefined
-		? []
-		: scheduled.filter(
-				(customerProduct) => customerProduct.starts_at === nearestStart,
-			);
+	const startingHere =
+		nearestStart === undefined
+			? []
+			: scheduled.filter(
+					(customerProduct) => customerProduct.starts_at === nearestStart,
+				);
+	return [
+		...startingHere,
+		...customerProducts.filter((customerProduct) =>
+			runsAcross({ customerProduct, startsAt }),
+		),
+	];
+};
+
+/** One row can span several phases, so a phase also holds the rows that started earlier and run past it. */
+const runsAcross = ({
+	customerProduct,
+	startsAt,
+}: {
+	customerProduct: FullCusProduct;
+	startsAt: number;
+}) => {
+	const isLiveOrScheduled =
+		ACTIVE_STATUSES.includes(customerProduct.status) ||
+		customerProduct.status === CusProductStatus.Scheduled;
+	const startedBefore =
+		customerProduct.starts_at < startsAt - MAX_PHASE_START_DRIFT_MS;
+	const endsAfter =
+		customerProduct.ended_at == null ||
+		customerProduct.ended_at > startsAt + MAX_PHASE_START_DRIFT_MS;
+	return isLiveOrScheduled && startedBefore && endsAfter;
 };
 
 /** A saved plan, as the customer holds it today. */
