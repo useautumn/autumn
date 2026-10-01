@@ -39,6 +39,11 @@ export const diffToReview = ({
 	currency: string;
 }): SetPlansReview => {
 	const { entities } = lookup.originalFullCustomer;
+	const savedHasLaterPhases = saved.segments.some(
+		(segment) =>
+			segment.startsAt > diff.now ||
+			(segment.endsAt !== null && segment.endsAt > diff.now),
+	);
 	const toPlans = ({
 		rows,
 		phaseStartsAt,
@@ -56,6 +61,7 @@ export const diffToReview = ({
 				creditLineItems: phaseCredits,
 				entities,
 				currency,
+				savedHasLaterPhases,
 			});
 			return plan ? [plan] : [];
 		});

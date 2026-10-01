@@ -154,7 +154,7 @@ describe(chalk.yellowBright("diffToReview"), () => {
 				opening: [{ fullProduct: pro }],
 			}),
 		});
-		expect(phaseRows(review)).toEqual([["sso:ends", "pro:kept"]]);
+		expect(phaseRows(review)).toEqual([["pro:kept", "sso:ends"]]);
 	});
 
 	test("a saved future phase that loses a plan shows it removed there only", () => {
@@ -171,7 +171,7 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		});
 		expect(phaseRows(review)).toEqual([
 			["pro:kept"],
-			["sso:ends", "enterprise:kept"],
+			["enterprise:kept", "sso:ends"],
 		]);
 		expect(removedRows(review)).toEqual([]);
 	});
@@ -287,7 +287,8 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		const review = reviewFor({
 			billingContext: buildContext({
 				existing: [
-					running({ product: pro }),
+					running({ product: pro, endedAt: PHASE_B }),
+					scheduled({ product: premium, startsAt: PHASE_B }),
 					running({ product: enterprise, internalEntityId: "ent_2" }),
 				],
 				opening: [{ fullProduct: pro }],
@@ -295,9 +296,12 @@ describe(chalk.yellowBright("diffToReview"), () => {
 			}),
 		});
 		expect(phaseRows(review)).toEqual([
-			["enterprise:ends", "pro:kept"],
-			["premium:starts"],
+			["pro:kept", "enterprise:ends"],
+			["premium:kept"],
 		]);
+		expect(
+			review.phases[0]?.plans.map((plan) => `${plan.plan_id}:${plan.ongoing}`),
+		).toEqual(["pro:false", "enterprise:true"]);
 	});
 
 	test("a plan updated now and updated differently later shows both updates", () => {
@@ -361,8 +365,8 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		expect(
 			review.phases[0]?.plans.map(({ plan_id, credit }) => [plan_id, credit]),
 		).toEqual([
-			["pro", -12.5],
 			["sso", null],
+			["pro", -12.5],
 		]);
 	});
 

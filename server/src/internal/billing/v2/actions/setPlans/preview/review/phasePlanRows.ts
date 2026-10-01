@@ -7,7 +7,7 @@ import type {
 	ReviewPlanStatus,
 } from "./types/reviewPhase";
 
-const STATUS_ORDER: ReviewPlanStatus[] = ["starts", "updated", "ends", "kept"];
+const STATUS_ORDER: ReviewPlanStatus[] = ["starts", "updated", "kept", "ends"];
 
 export const resolvedContentsAt = ({
 	timeline,

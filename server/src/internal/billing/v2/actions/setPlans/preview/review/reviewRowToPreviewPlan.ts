@@ -8,6 +8,7 @@ import {
 import { Decimal } from "decimal.js";
 import { customerProductToEntityId } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/customerProductToEntityId";
 import { autumnPriceToProcessorItemPrice } from "../processorItems/price/autumnPriceToProcessorItemPrice";
+import { isOngoingReviewSegment } from "./isOngoingReviewSegment";
 import {
 	type ReviewRowLookup,
 	reviewSegmentCustomerProduct,
@@ -44,11 +45,6 @@ const replacedPlanCredit = ({
 	return credit.isZero() ? null : credit.toDP(2).toNumber();
 };
 
-const isOngoingRow = (row: ReviewPlanRow) =>
-	row.status !== "ends" &&
-	row.after.source === "resolved" &&
-	row.after.segment.desired?.source.type === "ongoing";
-
 const pricesOf = ({
 	customerProduct,
 	currency,
@@ -69,6 +65,7 @@ export const reviewRowToPreviewPlan = ({
 	creditLineItems,
 	entities,
 	currency,
+	savedHasLaterPhases,
 }: {
 	row: ReviewPlanRow;
 	phaseStartsAt: number;
@@ -76,9 +73,11 @@ export const reviewRowToPreviewPlan = ({
 	creditLineItems: LineItem[];
 	entities: Entity[];
 	currency: string;
+	savedHasLaterPhases: boolean;
 }): SetPlansPreviewPlan | undefined => {
+	const reviewSegment = row.status === "ends" ? row.before : row.after;
 	const customerProduct = reviewSegmentCustomerProduct({
-		reviewSegment: row.status === "ends" ? row.before : row.after,
+		reviewSegment,
 		lookup,
 	});
 	if (!customerProduct) return undefined;
@@ -89,7 +88,7 @@ export const reviewRowToPreviewPlan = ({
 		name: customerProduct.product.name,
 		status: row.status,
 		custom: customerProduct.is_custom,
-		ongoing: isOngoingRow(row),
+		ongoing: isOngoingReviewSegment({ reviewSegment, savedHasLaterPhases }),
 		expires_at:
 			row.status === "ends"
 				? phaseStartsAt
