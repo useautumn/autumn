@@ -34,6 +34,7 @@ const atomClients = new Map<string, AtomClient>();
 
 /** One client per org's Atom, made on its first push. A re-created Atom has a new token, so a new client. */
 export const getAtomClient: GetAtomClient = ({ connection }) => {
+	// Deliberate: Atoms run on dev stacks and staging only for now, so production has no HTTP push path to keep.
 	if (!getHeraldEnv().HERALD_ATOM_HTTP_PUSH)
 		throw new Error(
 			"Atom pushes go over HTTP on dev stacks and staging only; production's queue push is not built yet",
