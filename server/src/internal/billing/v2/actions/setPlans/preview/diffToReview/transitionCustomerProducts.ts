@@ -52,29 +52,9 @@ export const transitionSubject = (
 	switch (transition.kind) {
 		case "starts":
 		case "updated":
-		case "switches":
 		case "continues":
 			return transition.to;
 		case "ends":
-			return transition.from;
-		default: {
-			const unreachable: never = transition;
-			return unreachable;
-		}
-	}
-};
-
-/** The side the subject replaces or continues from, if any. */
-export const transitionPredecessor = (
-	transition: TimelineTransition,
-): TransitionSide | undefined => {
-	switch (transition.kind) {
-		case "starts":
-		case "ends":
-			return undefined;
-		case "updated":
-		case "switches":
-		case "continues":
 			return transition.from;
 		default: {
 			const unreachable: never = transition;

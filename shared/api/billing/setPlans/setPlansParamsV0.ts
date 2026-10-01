@@ -12,6 +12,10 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 	billing_cycle_anchor: true,
 })
 	.extend({
+		phases: CreateScheduleParamsV0BaseSchema.shape.phases.meta({
+			description:
+				"Ordered phase definitions. Together with unscheduled_plans they are the full list of the customer's plans in the request's scope: a current plan none of them lists ends now (with credit per proration_behavior), and a plan a later phase leaves out ends when that phase starts. One-off purchases are never ended.",
+		}),
 		proration_behavior: BillingBehaviorSchema.optional().meta({
 			description:
 				"How to handle proration for the immediate phase. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",

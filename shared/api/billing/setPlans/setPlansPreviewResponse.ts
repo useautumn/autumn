@@ -43,16 +43,13 @@ export const SetPlansPreviewPlanSchema = z.object({
 	plan_id: z.string(),
 	entity_id: z.string().nullable(),
 	name: z.string(),
-	status: z.enum(["starts", "ends", "updated", "switches", "kept"]).meta({
+	status: z.enum(["starts", "ends", "updated", "kept"]).meta({
 		description:
-			"What happens to the plan at this date. 'switches' replaces previous_plan_id in the same group; 'kept' runs on unchanged.",
+			"What happens to the plan at this date; 'kept' runs on unchanged.",
 	}),
 	origin: z.enum(["request", "saved", "withdrawn"]).meta({
 		description:
 			"'request': this request causes the change. 'saved': already scheduled, and kept. 'withdrawn': already scheduled, and this request cancels it.",
-	}),
-	previous_plan_id: z.string().nullable().meta({
-		description: "The plan this one replaces or updates at this date.",
 	}),
 	custom: z.boolean(),
 	expires_at: z.number().nullable(),

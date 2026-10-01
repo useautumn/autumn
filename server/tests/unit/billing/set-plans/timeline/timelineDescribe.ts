@@ -24,7 +24,6 @@ const transitionSides = (transition: TimelineTransition) => {
 		case "ends":
 			return sideName(transition.from);
 		case "updated":
-		case "switches":
 		case "continues":
 			return `${sideName(transition.from)}->${sideName(transition.to)}`;
 		default: {

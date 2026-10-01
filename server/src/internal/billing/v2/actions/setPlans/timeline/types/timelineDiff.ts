@@ -60,7 +60,6 @@ export type TimelineTransition = { at: number; origin: TransitionOrigin } & (
 	| { kind: "starts"; to: TransitionSide }
 	| { kind: "ends"; from: TransitionSide }
 	| { kind: "updated"; from: TransitionSide; to: TransitionSide }
-	| { kind: "switches"; from: TransitionSide; to: TransitionSide }
 	| { kind: "continues"; from: TransitionSide; to: TransitionSide }
 );
 

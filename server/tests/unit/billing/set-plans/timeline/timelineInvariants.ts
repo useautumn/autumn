@@ -157,7 +157,6 @@ const transitionKeys = (transition: TimelineTransition): string[] => {
 		case "ends":
 			return [transition.from.key];
 		case "updated":
-		case "switches":
 		case "continues":
 			return [transition.from.key, transition.to.key];
 		default: {

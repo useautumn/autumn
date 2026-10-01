@@ -19,13 +19,7 @@ import {
 import { transitionToPlanChanges } from "./transitionToPlanChanges";
 import { transitionToPreviewPlan } from "./transitionToPreviewPlan";
 
-const KIND_ORDER: TransitionKind[] = [
-	"starts",
-	"switches",
-	"updated",
-	"ends",
-	"continues",
-];
+const KIND_ORDER: TransitionKind[] = ["starts", "updated", "ends", "continues"];
 
 export type SetPlansReview = {
 	phases: { plans: SetPlansPreviewPlan[]; planChanges: CustomerPlanChange[] }[];
@@ -54,8 +48,7 @@ const phaseIndexFor = ({
 			);
 
 const isWithdrawnStart = (transition: TimelineTransition) =>
-	transition.origin === "withdrawn" &&
-	(transition.kind === "starts" || transition.kind === "switches");
+	transition.origin === "withdrawn" && transition.kind === "starts";
 
 /** Projects the diff's transitions onto preview rows: each request phase, then any other changing date. */
 export const diffToReview = ({

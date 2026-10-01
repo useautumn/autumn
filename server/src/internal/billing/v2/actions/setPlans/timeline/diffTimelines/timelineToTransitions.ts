@@ -279,72 +279,6 @@ const boundaries = ({
 		),
 	].sort((first, second) => first - second);
 
-const isWithdrawn = (transition: TimelineTransition) =>
-	transition.origin === "withdrawn";
-
-const switchOrigin = ({
-	ending,
-	starting,
-}: {
-	ending: TimelineTransition;
-	starting: TimelineTransition;
-}): TransitionOrigin => {
-	if (isWithdrawn(ending)) return "withdrawn";
-	return ending.origin === "saved" && starting.origin === "saved"
-		? "saved"
-		: "request";
-};
-
-const isSwitchPair = ({
-	ending,
-	starting,
-}: {
-	ending: Extract<TimelineTransition, { kind: "ends" }>;
-	starting: Extract<TimelineTransition, { kind: "starts" }>;
-}) =>
-	ending.from.key !== starting.to.key &&
-	ending.from.replacementKey === starting.to.replacementKey &&
-	ending.from.internalEntityId === starting.to.internalEntityId &&
-	isWithdrawn(ending) === isWithdrawn(starting);
-
-/** A plan ending where another in its group and scope starts reads as one switch. */
-const foldSwitches = (
-	transitions: TimelineTransition[],
-): TimelineTransition[] => {
-	const folded: TimelineTransition[] = [];
-	const unpairedStarts = transitions.filter(
-		(
-			transition,
-		): transition is Extract<TimelineTransition, { kind: "starts" }> =>
-			transition.kind === "starts",
-	);
-
-	for (const transition of transitions) {
-		if (transition.kind === "starts") continue;
-		if (transition.kind !== "ends") {
-			folded.push(transition);
-			continue;
-		}
-		const starting = unpairedStarts.find((candidate) =>
-			isSwitchPair({ ending: transition, starting: candidate }),
-		);
-		if (!starting) {
-			folded.push(transition);
-			continue;
-		}
-		unpairedStarts.splice(unpairedStarts.indexOf(starting), 1);
-		folded.push({
-			kind: "switches",
-			from: transition.from,
-			to: starting.to,
-			at: transition.at,
-			origin: switchOrigin({ ending: transition, starting }),
-		});
-	}
-
-	return [...folded, ...unpairedStarts];
-};
-
 /** A plan the request creates shows its end on its own row, never as a separate removal. */
 const isEndOfCreatedSegment = ({
 	transition,
@@ -381,7 +315,7 @@ export const timelineToTransitions = ({
 	];
 
 	return boundaryTransitions
-		.flatMap(foldSwitches)
+		.flat()
 		.filter(
 			(transition) => !isEndOfCreatedSegment({ transition, createdSegmentIds }),
 		);

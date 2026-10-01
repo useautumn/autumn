@@ -62,11 +62,6 @@ export const transitionToPlanChanges = ({
 			return startingTransition({ side: transition.to, lookup });
 		case "ends":
 			return endingTransition({ side: transition.from, lookup });
-		case "switches":
-			return [
-				...endingTransition({ side: transition.from, lookup }),
-				...startingTransition({ side: transition.to, lookup }),
-			];
 		case "updated": {
 			const before = sideCustomerProduct({ side: transition.from, lookup });
 			const after = sideCustomerProduct({ side: transition.to, lookup });

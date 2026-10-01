@@ -40,7 +40,8 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 
 		expect(describeOperations(diff)).toEqual(["insert:sso:h1:now-B"]);
 		expect(describeTransitions(diff)).toEqual([
-			"B:switches:saved:pro:h1->ent:h1",
+			"B:ends:saved:pro:h1",
+			"B:starts:saved:ent:h1",
 			"now:continues:request:pro:h1->pro:h1",
 			"now:starts:request:sso:h1",
 		]);
@@ -91,8 +92,9 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 			"insert:hobby:h1:now-never",
 		]);
 		expect(describeTransitions(ended.diff)).toEqual([
+			"now:ends:request:pro:h1",
 			"now:ends:request:sso:h1",
-			"now:switches:request:pro:h1->hobby:h1",
+			"now:starts:request:hobby:h1",
 		]);
 
 		const retained = expectAllInvariants({
@@ -106,7 +108,8 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 		]);
 		expect(describeTransitions(retained.diff)).toEqual([
 			"now:continues:request:sso:h1->sso:h1",
-			"now:switches:request:pro:h1->hobby:h1",
+			"now:ends:request:pro:h1",
+			"now:starts:request:hobby:h1",
 		]);
 	});
 
@@ -133,7 +136,7 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 		]);
 	});
 
-	test("case 5: a saved switch reads as one muted switch, never a removal", () => {
+	test("case 5: a saved replacement reads as a muted end and start, never a removal", () => {
 		const { diff } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: B }),
@@ -150,7 +153,8 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 
 		expectIdempotent({ diff });
 		expect(describeTransitions(diff)).toEqual([
-			"B:switches:saved:pro:h1->ent:h1",
+			"B:ends:saved:pro:h1",
+			"B:starts:saved:ent:h1",
 			"now:continues:request:pro:h1->pro:h1",
 		]);
 	});
@@ -327,7 +331,7 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		]);
 	});
 
-	test("moving a saved phase re-times the running plan and moves the switch", () => {
+	test("moving a saved phase re-times the running plan and moves the replacement", () => {
 		const { diff } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: B }),
@@ -348,13 +352,15 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 			"retime:pro_row:B2",
 		]);
 		expect(describeTransitions(diff)).toEqual([
-			"B2:switches:request:pro:h1->ent:h1",
-			"B:switches:withdrawn:pro:h1->ent:h1",
+			"B2:ends:request:pro:h1",
+			"B2:starts:request:ent:h1",
+			"B:ends:withdrawn:pro:h1",
+			"B:starts:withdrawn:ent:h1",
 			"now:continues:request:pro:h1->pro:h1",
 		]);
 	});
 
-	test("deleting a saved phase lets the running plan continue and withdraws the switch", () => {
+	test("deleting a saved phase lets the running plan continue and withdraws the replacement", () => {
 		const { diff } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: B }),
@@ -369,7 +375,8 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 			"retime:pro_row:never",
 		]);
 		expect(describeTransitions(diff)).toEqual([
-			"B:switches:withdrawn:pro:h1->ent:h1",
+			"B:ends:withdrawn:pro:h1",
+			"B:starts:withdrawn:ent:h1",
 			"now:continues:request:pro:h1->pro:h1",
 		]);
 	});

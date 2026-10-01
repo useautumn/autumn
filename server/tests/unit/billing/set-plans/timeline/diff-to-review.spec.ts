@@ -57,12 +57,12 @@ const reviewFor = ({
 
 type Review = ReturnType<typeof reviewFor>;
 
-/** Rows as `plan:status:origin[<-previous][~ends]` per phase. */
+/** Rows as `plan:status:origin[~ends]` per phase. */
 const phaseRows = (review: Review) =>
 	review.phases.map(({ plans }) =>
 		plans.map(
 			(plan) =>
-				`${plan.plan_id}:${plan.status}:${plan.origin}${plan.previous_plan_id && plan.previous_plan_id !== plan.plan_id ? `<-${plan.previous_plan_id}` : ""}${plan.expires_at === null ? "" : `~${momentName(plan.expires_at)}`}`,
+				`${plan.plan_id}:${plan.status}:${plan.origin}${plan.expires_at === null ? "" : `~${momentName(plan.expires_at)}`}`,
 		),
 	);
 
@@ -97,18 +97,20 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		});
 		expect(phaseRows(review)).toEqual([
 			["sso:starts:request~B", "pro:kept:request~B"],
-			["enterprise:switches:saved<-pro"],
+			["enterprise:starts:saved", "pro:ends:saved~B"],
 		]);
 	});
 
-	test("switching a plan now is one switch row naming the previous plan", () => {
+	test("replacing a plan now ends the old plan and creates the new one", () => {
 		const review = reviewFor({
 			billingContext: buildContext({
 				existing: [running({ product: pro })],
 				opening: [{ fullProduct: enterprise }],
 			}),
 		});
-		expect(phaseRows(review)).toEqual([["enterprise:switches:request<-pro"]]);
+		expect(phaseRows(review)).toEqual([
+			["enterprise:starts:request", "pro:ends:request~now"],
+		]);
 	});
 
 	test("a new version of a running plan is updated, with its change listed", () => {
@@ -153,13 +155,15 @@ describe(chalk.yellowBright("diffToReview"), () => {
 			}),
 		});
 		expect(phaseRows(review)).toEqual([["pro:kept:request"]]);
-		expect(unlistedRows(review)).toEqual(["B: enterprise:switches:withdrawn"]);
+		expect(unlistedRows(review)).toEqual([
+			"B: enterprise:starts:withdrawn, pro:ends:withdrawn",
+		]);
 		expect(review.withdrawnStarts.map(({ product_id }) => product_id)).toEqual([
 			"enterprise",
 		]);
 	});
 
-	test("a moved phase withdraws the old date and switches on the new one", () => {
+	test("a moved phase withdraws the old date and replaces on the new one", () => {
 		const review = reviewFor({
 			billingContext: buildContext({
 				existing: [
@@ -172,9 +176,11 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		});
 		expect(phaseRows(review)).toEqual([
 			["pro:kept:request~B2"],
-			["enterprise:switches:request<-pro"],
+			["enterprise:starts:request", "pro:ends:request~B2"],
 		]);
-		expect(unlistedRows(review)).toEqual(["B: enterprise:switches:withdrawn"]);
+		expect(unlistedRows(review)).toEqual([
+			"B: enterprise:starts:withdrawn, pro:ends:withdrawn",
+		]);
 	});
 
 	test("a saved end the request keeps appears muted on its date", () => {

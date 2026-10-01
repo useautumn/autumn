@@ -12,7 +12,6 @@ import { autumnPriceToProcessorItemPrice } from "../processorItems/price/autumnP
 import {
 	sideCustomerProduct,
 	type TransitionRowLookup,
-	transitionPredecessor,
 	transitionSubject,
 } from "./transitionCustomerProducts";
 
@@ -26,8 +25,6 @@ const transitionStatus = (
 			return "ends";
 		case "updated":
 			return "updated";
-		case "switches":
-			return "switches";
 		case "continues":
 			return "kept";
 		default: {
@@ -54,7 +51,6 @@ const rowEndedNow = ({
 			return undefined;
 		case "ends":
 		case "updated":
-		case "switches":
 			return transition.from.ref.source === "saved"
 				? transition.from.ref.customerProductId
 				: undefined;
@@ -130,9 +126,11 @@ export const transitionToPreviewPlan = ({
 		name: customerProduct.product.name,
 		status: transitionStatus(transition),
 		origin: transition.origin,
-		previous_plan_id: transitionPredecessor(transition)?.planId ?? null,
 		custom: customerProduct.is_custom,
-		expires_at: customerProduct.ended_at ?? null,
+		expires_at:
+			transition.kind === "ends"
+				? transition.at
+				: (customerProduct.ended_at ?? null),
 		trial_ends_at: customerProduct.trial_ends_at ?? null,
 		credit: endedPlanCredit({ transition, creditLineItems, now }),
 		prices: pricesOf({ customerProduct, currency }),
