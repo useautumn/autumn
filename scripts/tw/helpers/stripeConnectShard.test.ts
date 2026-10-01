@@ -75,7 +75,11 @@ const fakeStripe = (initial: Partial<FakeEndpoint>[]) => {
 			},
 			update: async (
 				id: string,
-				params: { enabled_events: string[]; disabled: boolean },
+				params: {
+					enabled_events: string[];
+					disabled: boolean;
+					metadata: Record<string, string>;
+				},
 			) => {
 				updated.push({ id, params });
 				return { id };
@@ -157,6 +161,7 @@ test("a shard webhook missing events or disabled is repaired in place", async ()
 			params: {
 				enabled_events: ["customer.created", ...events],
 				disabled: false,
+				metadata: { autumn_tw_shard: "stripe-connect" },
 			},
 		},
 	]);
@@ -168,11 +173,23 @@ test("a shard webhook missing events or disabled is repaired in place", async ()
 	).toMatchObject({ repaired: false });
 });
 
-test("an untagged endpoint at the shard URL is refused, since its Connect flag can't be checked", async () => {
-	const { stripe, created } = fakeStripe([{ url }]);
-	await expect(
-		ensureStripeConnectWebhook({ stripe, url, events }),
-	).rejects.toThrow("not created by the stripe-connect shard");
+test("an untagged endpoint at the shard URL, left by the first version, is adopted and tagged", async () => {
+	const { stripe, created, updated } = fakeStripe([{ url }]);
+	expect(await ensureStripeConnectWebhook({ stripe, url, events })).toEqual({
+		id: "we_0",
+		created: false,
+		repaired: true,
+	});
+	expect(updated).toEqual([
+		{
+			id: "we_0",
+			params: {
+				enabled_events: events,
+				disabled: false,
+				metadata: { autumn_tw_shard: "stripe-connect" },
+			},
+		},
+	]);
 	expect(created).toEqual([]);
 });
 
