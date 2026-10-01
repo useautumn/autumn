@@ -25,19 +25,26 @@ export const createSubjectMapBudget = ({
 	totalBytes: number;
 }): SubjectMapBudget => {
 	if (!(totalBytes > 0)) throw new RangeError("totalBytes must be positive");
-	let members = 0;
-	const shareBytes = () => Math.floor(totalBytes / Math.max(members, 1));
-	const join = (): SubjectMapBudgetMember => {
-		members += 1;
-		let left = false;
+	const holders = new Set<{ sizeBytes: () => number }>();
+	const equalShare = () => Math.floor(totalBytes / Math.max(holders.size, 1));
+	const join = ({
+		sizeBytes,
+	}: {
+		sizeBytes: () => number;
+	}): SubjectMapBudgetMember => {
+		const holder = { sizeBytes };
+		holders.add(holder);
 		return {
-			maxBytes: shareBytes,
+			maxBytes: () => {
+				let heldByOthers = 0;
+				for (const other of holders)
+					if (other !== holder) heldByOthers += other.sizeBytes();
+				return Math.max(totalBytes - heldByOthers, equalShare());
+			},
 			leave: () => {
-				if (left) return;
-				left = true;
-				members -= 1;
+				holders.delete(holder);
 			},
 		};
 	};
-	return { totalBytes, members: () => members, join };
+	return { totalBytes, members: () => holders.size, join };
 };

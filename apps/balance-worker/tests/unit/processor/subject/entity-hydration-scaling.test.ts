@@ -9,6 +9,7 @@ import {
 	type SubjectState,
 	slimSubjectForFeatures,
 } from "@autumn/balance-engine";
+import { BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION } from "@autumn/env/balanceWorkerConstants";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
@@ -424,25 +425,24 @@ describe("entity hydration scaling", () => {
 		for (const { reply } of replies) expect(reply.result.allowed).toBe(false);
 	});
 
-	test("under a tenth of an 8 GiB worker shared by four partitions, a 6,000-entity customer stays resident across a second pass", async () => {
+	test("under the default budget of an 8 GiB worker whose other partitions hold a full equal share each, a 6,000-entity customer stays resident across a second pass", async () => {
 		const budget = createSubjectMapBudget({
 			totalBytes: subjectMapBudgetBytesOf({
 				containerMemoryBytes: 8 * 1024 * 1024 * 1024,
-				memoryFraction: 0.1,
+				memoryFraction: BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
 			}),
 		});
-		const members = [
-			budget.join(),
-			budget.join(),
-			budget.join(),
-			budget.join(),
-		];
-		const share = members[0];
-		if (!share) throw new Error("no budget member");
+		const partitions = 85;
+		const equalShare = Math.floor(budget.totalBytes / partitions);
+		for (let peer = 1; peer < partitions; peer++)
+			budget.join({ sizeBytes: () => equalShare });
+		let map: { sizeBytes(): number } | null = null;
+		const share = budget.join({ sizeBytes: () => map?.sizeBytes() ?? 0 });
 		const customer = createCustomer({
 			entities: 6_000,
 			maxBytes: () => share.maxBytes(),
 		});
+		map = customer.map;
 		await warmPass({ customer, entities: 6_000 });
 		const loadsAfterFirstPass = customer.loads();
 		await warmPass({ customer, entities: 6_000 });

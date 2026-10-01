@@ -25,7 +25,9 @@ export function createPartitionWriter({
 	config: PartitionWriterConfig;
 }): PartitionWriter {
 	validateWriterConfig(config);
-	const budgetShare = config.limits.subjectMapBudget?.join();
+	const budgetShare = config.limits.subjectMapBudget?.join({
+		sizeBytes: () => scope.state.subjects.sizeBytes(),
+	});
 	const scope: PartitionWriterScope = {
 		ctx,
 		config,

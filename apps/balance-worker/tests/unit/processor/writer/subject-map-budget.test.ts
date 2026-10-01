@@ -55,36 +55,44 @@ describe("subject map budget", () => {
 		expect(readContainerMemoryBytes({ readFile, totalMemory })).toBe(16 * gib);
 	});
 
-	test("partitions share the budget equally as they join and leave; leaving twice changes nothing", () => {
+	test("a partition may use what the others leave, and is always owed an equal share; leaving twice changes nothing", () => {
 		const budget = createSubjectMapBudget({ totalBytes: 1_000 });
-		const first = budget.join();
+		let heldBySecond = 0;
+		const first = budget.join({ sizeBytes: () => 0 });
 		expect(first.maxBytes()).toBe(1_000);
-		const second = budget.join();
+		const second = budget.join({ sizeBytes: () => heldBySecond });
+		expect(first.maxBytes()).toBe(1_000);
+		heldBySecond = 400;
+		expect(first.maxBytes()).toBe(600);
+		heldBySecond = 900;
 		expect(first.maxBytes()).toBe(500);
-		expect(second.maxBytes()).toBe(500);
 		second.leave();
 		second.leave();
 		expect(budget.members()).toBe(1);
 		expect(first.maxBytes()).toBe(1_000);
 	});
 
-	test("a map bound by its share re-reads it: another partition joining shrinks the share and the next write evicts", () => {
+	test("a map bound by the budget re-reads it: another partition filling up shrinks what this one may hold and the next write evicts", () => {
 		const state = createState();
 		const bytes = JSON.stringify(state).length;
 		const budget = createSubjectMapBudget({ totalBytes: bytes * 4 });
-		const member = budget.join();
 		const map = createSubjectMap({ maxBytes: () => member.maxBytes() });
+		const member = budget.join({ sizeBytes: () => map.sizeBytes() });
 		map.setState({ subjectKey: "a", customerKey: "a", state });
 		map.setState({ subjectKey: "b", customerKey: "b", state });
 		map.setState({ subjectKey: "c", customerKey: "c", state });
 		expect(map.readState({ subjectKey: "a" })).toEqual(state);
 
-		budget.join();
+		let heldByPeer = 0;
+		budget.join({ sizeBytes: () => heldByPeer });
 		map.setState({ subjectKey: "d", customerKey: "d", state });
-		expect(map.readState({ subjectKey: "b" })).toBeNull();
+		expect(map.readState({ subjectKey: "b" })).toEqual(state);
+
+		heldByPeer = bytes * 2.5;
+		map.setState({ subjectKey: "e", customerKey: "e", state });
 		expect(map.readState({ subjectKey: "c" })).toBeNull();
-		expect(map.readState({ subjectKey: "a" })).toEqual(state);
-		expect(map.readState({ subjectKey: "d" })).toEqual(state);
+		expect(map.readState({ subjectKey: "a" })).toBeNull();
+		expect(map.readState({ subjectKey: "e" })).toEqual(state);
 		expect(map.sizeBytes()).toBeLessThanOrEqual(member.maxBytes());
 	});
 });
