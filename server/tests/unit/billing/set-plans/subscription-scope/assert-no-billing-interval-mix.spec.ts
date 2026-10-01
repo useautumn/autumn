@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { BillingInterval, type FullCusProduct } from "@autumn/shared";
+import {
+	BillingInterval,
+	type FullCusProduct,
+	type RecaseError,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { assertNoBillingIntervalMix } from "@/internal/billing/v2/actions/setPlans/errors/subscriptionScope/assertNoBillingIntervalMix";
 import {
@@ -66,8 +70,30 @@ describe(chalk.yellowBright("assertNoBillingIntervalMix"), () => {
 				],
 			}),
 		).toThrow(
-			"annual_addon is billed per year, but subscription sub_a is billed per month. Plans on one subscription must share a billing interval.",
+			"annual_addon bills every year, but the pro subscription bills every month. Plans on one subscription must share a billing interval.",
 		);
+	});
+
+	test("the interval error names both intervals and the subscription for the dashboard", () => {
+		const thrown = (() => {
+			try {
+				checkMix({
+					incomingCustomerProducts: [
+						incoming({ id: "annual_addon", interval: BillingInterval.Year }),
+					],
+				})();
+			} catch (error) {
+				return error as RecaseError;
+			}
+		})();
+
+		expect(thrown?.details).toEqual({
+			type: "billing_interval_mismatch",
+			requested_plan_name: "annual_addon",
+			requested_interval: "every year",
+			subscription_plan_name: "pro",
+			subscription_interval: "every month",
+		});
 	});
 
 	test("allows a plan on the subscription's interval", () => {

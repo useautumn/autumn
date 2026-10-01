@@ -26,7 +26,7 @@ test.concurrent(
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: `is billed per year, but subscription ${subscriptionA} is billed per month. Plans on one subscription must share a billing interval.`,
+			errMessage: "Plans on one subscription must share a billing interval.",
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,
@@ -62,7 +62,7 @@ test.concurrent(
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			errMessage:
-				"Subscription sub_not_linked isn't linked to any of this customer's plans.",
+				"This subscription no longer has any of this customer's plans.",
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,

@@ -2,11 +2,9 @@ import {
 	type CreateScheduleBillingContext,
 	isOneOffProduct,
 } from "@autumn/shared";
-import {
-	outOfScopeLiveCustomerProducts,
-	subscriptionConflictError,
-} from "./outOfScopeLiveCustomerProducts";
+import { outOfScopeLiveCustomerProducts } from "./outOfScopeLiveCustomerProducts";
 import { requestedPlans } from "./requestedPlans";
+import { subscriptionConflictError } from "./subscriptionScopeErrors";
 
 /** A plan billed elsewhere can only be edited from its own subscription. */
 export const assertNoRequestedPlanOnAnotherSubscription = ({
@@ -29,7 +27,7 @@ export const assertNoRequestedPlanOnAnotherSubscription = ({
 		if (!billedElsewhere) continue;
 
 		throw subscriptionConflictError({
-			billingContext,
+			customerProducts: billingContext.fullCustomer.customer_products,
 			conflict: "already_billed",
 			requestedPlanName: fullProduct.name,
 			conflictingCustomerProduct: billedElsewhere,

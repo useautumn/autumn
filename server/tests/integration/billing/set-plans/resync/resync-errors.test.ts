@@ -106,8 +106,7 @@ test.concurrent(
 		});
 
 		await expectAutumnError({
-			errMessage:
-				"billing_cycle_anchor cannot be after the first future phase starts.",
+			errMessage: "is after the next phase starts on",
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,

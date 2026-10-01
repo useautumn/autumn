@@ -2,12 +2,11 @@ import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
 	ErrCode,
-	RecaseError,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isStripeConnected } from "@/internal/orgs/orgUtils";
 import { productsMissingStripeProduct } from "../utils/ensureFreePhaseStripeProducts";
+import { setPlansError } from "./setPlansError";
 
 /** A free phase that ends later needs a $0 Stripe placeholder, so Stripe must be connected. */
 export const handleFreePhaseStripeConnectionErrors = ({
@@ -20,13 +19,12 @@ export const handleFreePhaseStripeConnectionErrors = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	if (billingContext.dryRunStripe || billingContext.skipBillingChanges) return;
-	if (productsMissingStripeProduct({ autumnBillingPlan }).length === 0) return;
+	const [freeProduct] = productsMissingStripeProduct({ autumnBillingPlan });
+	if (!freeProduct) return;
 	if (isStripeConnected({ org: ctx.org, env: ctx.env })) return;
 
-	throw new RecaseError({
-		message:
-			"Connect Stripe to schedule a transition out of a free plan. Autumn uses a $0 Stripe subscription to run the schedule.",
+	throw setPlansError({
 		code: ErrCode.StripeConfigNotFound,
-		statusCode: StatusCodes.BAD_REQUEST,
+		details: { type: "free_plan_needs_stripe", plan_name: freeProduct.name },
 	});
 };

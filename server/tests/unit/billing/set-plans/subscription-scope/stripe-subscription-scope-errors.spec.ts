@@ -82,7 +82,7 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 				requestedProducts: [pro, seats],
 			}),
 		).toThrow(
-			"seats is already on the seats subscription. Open that subscription to change it.",
+			"seats is already billed on another subscription. Edit the seats subscription to change it.",
 		);
 	});
 
@@ -93,7 +93,7 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 				requestedProducts: [pro, credits],
 			}),
 		).toThrow(
-			"credits is already billed outside any Stripe subscription, so it can't be edited here.",
+			"credits is billed outside any Stripe subscription. It can't be changed from a subscription.",
 		);
 	});
 
@@ -104,7 +104,7 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 				requestedProducts: [premium],
 			}),
 		).toThrow(
-			"Adding premium would replace pro on the pro subscription. Open that subscription to change it.",
+			"Adding premium would replace pro, which is billed on another subscription. Edit the pro subscription to change it.",
 		);
 	});
 
@@ -148,7 +148,7 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 				stripeSubscriptionCurrency: "eur",
 			}),
 		).toThrow(
-			"Subscription sub_a bills in EUR, so plans can't be billed on it in USD.",
+			"The pro subscription bills in EUR, but these plans bill in USD. Plans on one subscription must share a currency.",
 		);
 	});
 
@@ -176,7 +176,7 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 			expect.objectContaining({
 				code: ErrCode.InvalidRequest,
 				message:
-					"Subscription sub_other isn't linked to any of this customer's plans.",
+					"This subscription no longer has any of this customer's plans. Pick another subscription to continue.",
 			}),
 		);
 	});

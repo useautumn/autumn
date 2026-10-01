@@ -2,15 +2,15 @@ import {
 	type BillingInterval,
 	customerProductHasActiveStatus,
 	customerProductToEffectivePrices,
-	ErrCode,
 	type FullCusProduct,
 	formatInterval,
 	getLargestInterval,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductPaidRecurring,
-	RecaseError,
 	type StripeSubscriptionScope,
 } from "@autumn/shared";
+import { setPlansError } from "../setPlansError";
+import { stripeSubscriptionPlanName } from "./subscriptionScopeErrors";
 
 type PlanInterval = { interval: BillingInterval; intervalCount: number };
 
@@ -21,6 +21,8 @@ const customerProductToInterval = (
 		prices: customerProductToEffectivePrices({ customerProduct }),
 		excludeOneOff: true,
 	});
+
+const BILLS_EVERY = "every ";
 
 const intervalKey = ({ interval, intervalCount }: PlanInterval) =>
 	`${interval}:${intervalCount}`;
@@ -66,10 +68,23 @@ export const assertNoBillingIntervalMix = ({
 			continue;
 		}
 
-		throw new RecaseError({
-			code: ErrCode.InvalidRequest,
-			message: `${customerProduct.product.name} is billed ${formatInterval(incomingInterval)}, but subscription ${stripeSubscriptionId} is billed ${formatInterval(subscriptionInterval)}. Plans on one subscription must share a billing interval.`,
-			statusCode: 400,
+		throw setPlansError({
+			details: {
+				type: "billing_interval_mismatch",
+				requested_plan_name: customerProduct.product.name,
+				requested_interval: formatInterval({
+					...incomingInterval,
+					prefix: BILLS_EVERY,
+				}),
+				subscription_plan_name: stripeSubscriptionPlanName({
+					customerProducts: currentCustomerProducts,
+					stripeSubscriptionId,
+				}),
+				subscription_interval: formatInterval({
+					...subscriptionInterval,
+					prefix: BILLS_EVERY,
+				}),
+			},
 		});
 	}
 };

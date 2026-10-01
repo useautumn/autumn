@@ -1,5 +1,5 @@
-import { type BillingPlan, ErrCode, RecaseError } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import type { BillingPlan } from "@autumn/shared";
+import { setPlansError } from "./setPlansError";
 
 const STRIPE_SUBSCRIPTION_SCHEDULE_MAX_PHASES = 10;
 
@@ -16,9 +16,11 @@ export const handleStripeSchedulePhaseLimitErrors = ({
 	const phaseCount = scheduleAction.params.phases?.length ?? 0;
 	if (phaseCount <= STRIPE_SUBSCRIPTION_SCHEDULE_MAX_PHASES) return;
 
-	throw new RecaseError({
-		code: ErrCode.InvalidRequest,
-		message: `Stripe subscription schedules support at most ${STRIPE_SUBSCRIPTION_SCHEDULE_MAX_PHASES} phases, but this request needs ${phaseCount}. Schedule fewer phases.`,
-		statusCode: StatusCodes.BAD_REQUEST,
+	throw setPlansError({
+		details: {
+			type: "too_many_phases",
+			phase_count: phaseCount,
+			max_phases: STRIPE_SUBSCRIPTION_SCHEDULE_MAX_PHASES,
+		},
 	});
 };

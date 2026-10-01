@@ -3,11 +3,9 @@ import {
 	isCustomerProductMain,
 	isOneOffProduct,
 } from "@autumn/shared";
-import {
-	outOfScopeLiveCustomerProducts,
-	subscriptionConflictError,
-} from "./outOfScopeLiveCustomerProducts";
+import { outOfScopeLiveCustomerProducts } from "./outOfScopeLiveCustomerProducts";
 import { requestedPlans } from "./requestedPlans";
+import { subscriptionConflictError } from "./subscriptionScopeErrors";
 
 /** A main plan would replace its group's live plan, which can't move between subscriptions. */
 export const assertNoMainPlanGroupOnAnotherSubscription = ({
@@ -36,7 +34,7 @@ export const assertNoMainPlanGroupOnAnotherSubscription = ({
 		if (!groupPlanElsewhere) continue;
 
 		throw subscriptionConflictError({
-			billingContext,
+			customerProducts: billingContext.fullCustomer.customer_products,
 			conflict: "replaces",
 			requestedPlanName: fullProduct.name,
 			conflictingCustomerProduct: groupPlanElsewhere,

@@ -1,5 +1,6 @@
 import type { CreateScheduleBillingContext } from "@autumn/shared";
 import { invalidSetPlansRequest } from "./invalidSetPlansRequest";
+import { setPlansError } from "./setPlansError";
 
 export const handleSetPlansEndDateErrors = ({
 	billingContext,
@@ -19,8 +20,14 @@ export const handleSetPlansEndDateErrors = ({
 	const lastPhase =
 		billingContext.futurePhases.at(-1) ?? billingContext.immediatePhase;
 	if (endsAt <= lastPhase.starts_at) {
-		throw invalidSetPlansRequest(
-			"ends_at must be after the last phase starts.",
-		);
+		throw setPlansError({
+			details: {
+				type: "date_order",
+				date: "end_date",
+				date_ms: endsAt,
+				boundary: "last_phase",
+				boundary_ms: lastPhase.starts_at,
+			},
+		});
 	}
 };

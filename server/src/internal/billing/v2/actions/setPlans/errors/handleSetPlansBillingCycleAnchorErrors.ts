@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { assertFutureBillingCycleAnchor } from "@/internal/billing/v2/common/errors/assertFutureBillingCycleAnchor";
 import { invalidSetPlansRequest } from "./invalidSetPlansRequest";
+import { setPlansError } from "./setPlansError";
 
 const anchorIsAfter = ({
 	anchorMs,
@@ -43,24 +44,39 @@ export const handleSetPlansBillingCycleAnchorErrors = ({
 	if (typeof requestedBillingCycleAnchor !== "number") return;
 
 	if (
+		endsAt !== undefined &&
 		anchorIsAfter({ anchorMs: requestedBillingCycleAnchor, boundaryMs: endsAt })
 	) {
-		throw invalidSetPlansRequest(
-			"billing_cycle_anchor cannot be after ends_at.",
-		);
+		throw setPlansError({
+			details: {
+				type: "date_order",
+				date: "billing_cycle_anchor",
+				date_ms: requestedBillingCycleAnchor,
+				boundary: "end_date",
+				boundary_ms: endsAt,
+			},
+		});
 	}
 
 	const resetsLiveSubscription =
 		billingContext.stripeSubscription !== undefined;
+	const nextPhaseStartsAt = billingContext.futurePhases[0]?.starts_at;
 	if (
 		resetsLiveSubscription &&
+		nextPhaseStartsAt !== undefined &&
 		anchorIsAfter({
 			anchorMs: requestedBillingCycleAnchor,
-			boundaryMs: billingContext.futurePhases[0]?.starts_at,
+			boundaryMs: nextPhaseStartsAt,
 		})
 	) {
-		throw invalidSetPlansRequest(
-			"billing_cycle_anchor cannot be after the first future phase starts.",
-		);
+		throw setPlansError({
+			details: {
+				type: "date_order",
+				date: "billing_cycle_anchor",
+				date_ms: requestedBillingCycleAnchor,
+				boundary: "next_phase",
+				boundary_ms: nextPhaseStartsAt,
+			},
+		});
 	}
 };

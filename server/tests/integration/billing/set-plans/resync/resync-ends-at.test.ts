@@ -162,7 +162,7 @@ test.concurrent(
 
 		const lastPhaseStartsAt = advancedTo + ms.days(20);
 		await expectAutumnError({
-			errMessage: "ends_at must be after the last phase starts.",
+			errMessage: "is before the last phase starts on",
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,
@@ -196,7 +196,7 @@ test.concurrent(
 		});
 
 		await expectAutumnError({
-			errMessage: "billing_cycle_anchor cannot be after ends_at.",
+			errMessage: "is after the end date",
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,

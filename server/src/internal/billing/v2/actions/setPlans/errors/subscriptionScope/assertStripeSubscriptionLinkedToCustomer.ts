@@ -1,9 +1,8 @@
 import {
-	ErrCode,
 	type FullCusProduct,
 	isCustomerProductOnStripeSubscription,
-	RecaseError,
 } from "@autumn/shared";
+import { setPlansError } from "../setPlansError";
 
 export const assertStripeSubscriptionLinkedToCustomer = ({
 	customerProducts,
@@ -20,9 +19,10 @@ export const assertStripeSubscriptionLinkedToCustomer = ({
 	);
 	if (isLinked) return;
 
-	throw new RecaseError({
-		code: ErrCode.InvalidRequest,
-		message: `Subscription ${stripeSubscriptionId} isn't linked to any of this customer's plans.`,
-		statusCode: 400,
+	throw setPlansError({
+		details: {
+			type: "subscription_not_linked",
+			stripe_subscription_id: stripeSubscriptionId,
+		},
 	});
 };

@@ -3,11 +3,8 @@ import type {
 	MultiAttachProductContext,
 	ScheduledPhaseContext,
 } from "@autumn/shared";
-import {
-	isOneOffProduct,
-	productToReplacementKey,
-	RecaseError,
-} from "@autumn/shared";
+import { isOneOffProduct, productToReplacementKey } from "@autumn/shared";
+import { setPlansError } from "./setPlansError";
 
 /** Identifies the group a plan replaces within one entity scope. */
 const groupAndScopeKey = ({
@@ -63,9 +60,8 @@ export const validateUnscheduledPlanScopes = ({
 		);
 		if (!isClaimedByPhase) continue;
 
-		throw new RecaseError({
-			message: `Plan "${fullProduct.id}" is in unscheduled_plans, but a later phase schedules its group and scope. Move it into the phases or drop it from the phase that claims it.`,
-			statusCode: 400,
+		throw setPlansError({
+			details: { type: "ongoing_plan_clash", plan_name: fullProduct.name },
 		});
 	}
 };

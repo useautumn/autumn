@@ -2,9 +2,10 @@ import {
 	type CreateScheduleBillingContext,
 	ErrCode,
 	isFreeProduct,
-	RecaseError,
 } from "@autumn/shared";
+import { setPlansError } from "../setPlansError";
 import { requestedPlans } from "./requestedPlans";
+import { stripeSubscriptionPlanName } from "./subscriptionScopeErrors";
 
 /** Paid plans bill on the targeted subscription, so they must share its currency. */
 export const assertTargetSubscriptionCurrency = ({
@@ -24,9 +25,16 @@ export const assertTargetSubscriptionCurrency = ({
 		return;
 	}
 
-	throw new RecaseError({
+	throw setPlansError({
 		code: ErrCode.CurrencyMismatch,
-		message: `Subscription ${stripeSubscription.id} bills in ${subscriptionCurrency.toUpperCase()}, so plans can't be billed on it in ${currency.toUpperCase()}.`,
-		statusCode: 400,
+		details: {
+			type: "currency_mismatch",
+			subscription_plan_name: stripeSubscriptionPlanName({
+				customerProducts: billingContext.fullCustomer.customer_products,
+				stripeSubscriptionId: stripeSubscription.id,
+			}),
+			subscription_currency: subscriptionCurrency,
+			requested_currency: currency,
+		},
 	});
 };

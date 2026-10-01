@@ -294,7 +294,7 @@ test.concurrent(
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: "Stripe subscription schedules support at most 10 phases",
+			errMessage: "phases, but Stripe allows at most 10.",
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,

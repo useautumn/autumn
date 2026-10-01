@@ -27,10 +27,11 @@ export * from "./openBillingPortal/openBillingPortalParamsV1";
 export * from "./openBillingPortal/openBillingPortalResponse";
 // Restore
 export * from "./restore/restoreParamsV1";
+export * from "./setPlans/setPlansErrorCopy";
+export * from "./setPlans/setPlansErrorDetails";
 // Set Plans
 export * from "./setPlans/setPlansParamsV0";
 export * from "./setPlans/setPlansPreviewResponse";
-export * from "./setPlans/setPlansSubscriptionConflict";
 // Setup Payment
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";
