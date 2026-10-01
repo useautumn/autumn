@@ -605,7 +605,7 @@ describe(chalk.yellowBright("setPlansPhaseBalanceChanges"), () => {
 		]);
 	});
 
-	test("(i) another entity's plan change stays out of an entity's balances", async () => {
+	test("(i) another entity's plan change is listed under that entity, apart from the request entity", async () => {
 		const entityA = entities.create({ id: "ent_a", featureId: "users" });
 		const entityB = entities.create({ id: "ent_b", featureId: "users" });
 		const proForA = planRow({
@@ -649,7 +649,13 @@ describe(chalk.yellowBright("setPlansPhaseBalanceChanges"), () => {
 			customerEntities: [entityA, entityB],
 		});
 
-		expect(describePhases(phaseChanges)).toEqual([[], []]);
+		expect(describePhases(phaseChanges)).toEqual([
+			[],
+			["words updated: 1000 -> 5000 granted, 0 used"],
+		]);
+		expect(phaseChanges[1]?.map((change) => change.entity_id)).toEqual([
+			"ent_b",
+		]);
 	});
 
 	test("(j) a plan unchanged across every phase has no balance changes", async () => {

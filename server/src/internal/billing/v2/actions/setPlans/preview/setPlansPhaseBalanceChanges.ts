@@ -1,38 +1,14 @@
-import { getApiBalances } from "@api/customers/cusFeatures";
-import {
-	CusProductStatus,
-	type FullCustomer,
-	type SetPlansPreviewBalanceChange,
+import type {
+	FullCustomer,
+	SetPlansPreviewBalanceChange,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { diffPhaseBalances, type PhaseBalances } from "./diffPhaseBalances";
+import { customerToScopedBalances } from "./balances/customerToScopedBalances";
+import { diffBalanceTimelines } from "./balances/diffBalanceTimelines";
+import { withOneOffPrepaidCarryOvers } from "./balances/withOneOffPrepaidCarryOvers";
 
-/** Stored trialing plans are Active with a trial end, the only shape balances read. */
-const withTrialingPlansActive = (fullCustomer: FullCustomer): FullCustomer => ({
-	...fullCustomer,
-	customer_products: fullCustomer.customer_products.map((customerProduct) =>
-		customerProduct.status === CusProductStatus.Trialing
-			? { ...customerProduct, status: CusProductStatus.Active }
-			: customerProduct,
-	),
-});
-
-const customerBalances = async ({
-	ctx,
-	fullCustomer,
-}: {
-	ctx: AutumnContext;
-	fullCustomer: FullCustomer;
-}): Promise<PhaseBalances> => {
-	const { balances } = await getApiBalances({
-		ctx,
-		fullCus: withTrialingPlansActive(fullCustomer),
-	});
-	return balances;
-};
-
-/** Each phase's balance changes at its start, against the customer just before it: today's state for the first phase, the previous phase otherwise. */
-export const setPlansPhaseBalanceChanges = async ({
+/** Scoped balances before the first phase, then at each phase start. */
+const timelineBalances = ({
 	ctx,
 	originalFullCustomer,
 	phaseCustomers,
@@ -40,18 +16,39 @@ export const setPlansPhaseBalanceChanges = async ({
 	ctx: AutumnContext;
 	originalFullCustomer: FullCustomer;
 	phaseCustomers: FullCustomer[];
-}): Promise<SetPlansPreviewBalanceChange[][]> => {
-	const [originalBalances, ...phaseBalances] = await Promise.all(
-		[originalFullCustomer, ...phaseCustomers].map((fullCustomer) =>
-			customerBalances({ ctx, fullCustomer }),
-		),
+}) =>
+	Promise.all(
+		[
+			originalFullCustomer,
+			...withOneOffPrepaidCarryOvers({ originalFullCustomer, phaseCustomers }),
+		].map((fullCustomer) => customerToScopedBalances({ ctx, fullCustomer })),
 	);
 
-	return phaseBalances.map((after, phaseIndex) =>
-		diffPhaseBalances({
-			before:
-				phaseIndex === 0 ? originalBalances : phaseBalances[phaseIndex - 1],
-			after,
-		}),
-	);
+/**
+ * Each phase's balance changes at its start, against the customer just before it.
+ * With the saved timeline, a change the saved schedule already makes is marked `saved`.
+ */
+export const setPlansPhaseBalanceChanges = async ({
+	ctx,
+	originalFullCustomer,
+	phaseCustomers,
+	savedPhaseCustomers,
+}: {
+	ctx: AutumnContext;
+	originalFullCustomer: FullCustomer;
+	phaseCustomers: FullCustomer[];
+	savedPhaseCustomers?: FullCustomer[];
+}): Promise<SetPlansPreviewBalanceChange[][]> => {
+	const [desired, saved] = await Promise.all([
+		timelineBalances({ ctx, originalFullCustomer, phaseCustomers }),
+		savedPhaseCustomers
+			? timelineBalances({
+					ctx,
+					originalFullCustomer,
+					phaseCustomers: savedPhaseCustomers,
+				})
+			: undefined,
+	]);
+
+	return diffBalanceTimelines({ desired, saved });
 };

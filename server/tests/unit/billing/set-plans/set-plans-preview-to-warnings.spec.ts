@@ -3,6 +3,7 @@ import type {
 	FullCusProduct,
 	LineItem,
 	ProcessorItem,
+	SetPlansPreviewBalanceChange,
 	SetPlansPreviewPhase,
 	StripeBillingPlan,
 } from "@autumn/shared";
@@ -42,6 +43,28 @@ const phase = (
 	balance_changes: [],
 	processor_items: [],
 	...overrides,
+});
+
+const resetMessages = ({
+	origin,
+	entityId = null,
+}: {
+	origin: SetPlansPreviewBalanceChange["origin"];
+	entityId?: string | null;
+}): SetPlansPreviewBalanceChange => ({
+	feature_id: "messages",
+	entity_id: entityId,
+	balance: {
+		granted: 500,
+		remaining: 500,
+		usage: 0,
+		unlimited: false,
+		next_reset_at: null,
+		overage_allowed: false,
+	},
+	previous_attributes: { usage: 40, granted: 100 },
+	behavior: "reset",
+	origin,
 });
 
 const noSubscriptionState = {
@@ -92,20 +115,7 @@ describe("setPlansPreviewToWarnings", () => {
 		const warnings = setPlansPreviewToWarnings({
 			phases: [
 				phase({
-					balance_changes: [
-						{
-							feature_id: "messages",
-							balance: {
-								granted: 500,
-								remaining: 500,
-								usage: 0,
-								unlimited: false,
-								next_reset_at: null,
-							},
-							previous_attributes: { usage: 40, granted: 100 },
-							behavior: "reset",
-						},
-					],
+					balance_changes: [resetMessages({ origin: "request" })],
 					processor_items: [
 						processorItem({ display_name: "premium", creates_price: true }),
 					],
@@ -166,6 +176,49 @@ describe("setPlansPreviewToWarnings", () => {
 				expect(textPartsToText(warning.parts)).toBe(warning.message);
 			}
 		}
+	});
+
+	test("a reset the saved schedule already makes doesn't warn", () => {
+		const warnings = setPlansPreviewToWarnings({
+			phases: [
+				phase({}),
+				phase({ balance_changes: [resetMessages({ origin: "saved" })] }),
+			],
+			liveProcessorItems: [],
+			processorChanges: [],
+			deletedCustomerProducts: [],
+			outgoingCustomerProducts: [],
+			features: [],
+			...noSubscriptionState,
+		});
+
+		expect(warnings.map((warning) => warning.type)).not.toContain(
+			"usage_reset",
+		);
+	});
+
+	test("a feature the request resets in several phases and scopes warns once", () => {
+		const warnings = setPlansPreviewToWarnings({
+			phases: [
+				phase({
+					balance_changes: [
+						resetMessages({ origin: "request" }),
+						resetMessages({ origin: "request", entityId: "ent_a" }),
+					],
+				}),
+				phase({ balance_changes: [resetMessages({ origin: "request" })] }),
+			],
+			liveProcessorItems: [],
+			processorChanges: [],
+			deletedCustomerProducts: [],
+			outgoingCustomerProducts: [],
+			features: [],
+			...noSubscriptionState,
+		});
+
+		expect(
+			warnings.filter((warning) => warning.type === "usage_reset"),
+		).toHaveLength(1);
 	});
 
 	test("updating a standalone schedule in place doesn't warn about replacing it", () => {

@@ -67,6 +67,7 @@ const aiCredits = ({
 		allowance,
 		balance: allowance,
 		customerProductId,
+		usageAllowed: !pooled,
 	});
 	return {
 		...customerEntitlement,

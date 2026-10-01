@@ -9,6 +9,7 @@ import {
 	type ProcessorChange,
 	type ProcessorItem,
 	plainText,
+	type SetPlansPreviewBalanceChange,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
@@ -72,6 +73,21 @@ const replacesExistingSchedule = (processorChanges: ProcessorChange[]) =>
 			processorChange.type === "subscription_schedule" &&
 			SCHEDULE_REPLACING_ACTIONS.includes(processorChange.action),
 	);
+
+/** One warning per feature this request resets, wherever and however often it resets. */
+const requestedResetFeatureIds = (
+	balanceChanges: SetPlansPreviewBalanceChange[],
+) => [
+	...new Set(
+		balanceChanges
+			.filter(
+				(balanceChange) =>
+					balanceChange.behavior === "reset" &&
+					balanceChange.origin === "request",
+			)
+			.map((balanceChange) => balanceChange.feature_id),
+	),
+];
 
 const hasPendingQuantityChange = (customerProduct: FullCusProduct) =>
 	customerProduct.options.some((option) =>
@@ -144,19 +160,14 @@ export const setPlansPreviewToWarnings = ({
 				boldText(`${item.display_name}.`),
 			]),
 		})),
-		...balanceChanges
-			.filter((balanceChange) => balanceChange.behavior === "reset")
-			.map((balanceChange) => ({
-				type: "usage_reset" as const,
-				...warningText([
-					plainText("Usage for"),
-					boldText(
-						findFeatureById({ features, featureId: balanceChange.feature_id })
-							?.name ?? balanceChange.feature_id,
-					),
-					plainText("restarts from zero."),
-				]),
-			})),
+		...requestedResetFeatureIds(balanceChanges).map((featureId) => ({
+			type: "usage_reset" as const,
+			...warningText([
+				plainText("Usage for"),
+				boldText(findFeatureById({ features, featureId })?.name ?? featureId),
+				plainText("restarts from zero."),
+			]),
+		})),
 		...(replacesExistingSchedule(processorChanges)
 			? [
 					{

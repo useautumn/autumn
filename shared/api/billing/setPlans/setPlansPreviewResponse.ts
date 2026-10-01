@@ -1,6 +1,9 @@
 import { AttachPreviewResponseSchema } from "@api/billing/common/attachPreviewResponse";
 import { CustomerPlanChangeSchema } from "@api/billing/common/customerPlanChange";
-import { PreviewBalanceChangeSchema } from "@api/billing/components/billingChanges/previewBalanceChange";
+import {
+	PreviewBalanceChangeSchema,
+	PreviewBalanceSchema,
+} from "@api/billing/components/billingChanges/previewBalanceChange";
 import { z } from "zod/v4";
 import { SetPlansTextPartSchema } from "./setPlansTextParts";
 
@@ -53,9 +56,22 @@ export const SetPlansPreviewPlanSchema = z.object({
 	),
 });
 
+export const SetPlansPreviewBalanceSchema = PreviewBalanceSchema.extend({
+	overage_allowed: z.boolean(),
+});
+
 export const SetPlansPreviewBalanceChangeSchema =
 	PreviewBalanceChangeSchema.extend({
+		entity_id: z.string().nullable().meta({
+			description:
+				"The entity whose plans hold this balance, or null for customer-level plans.",
+		}),
+		balance: SetPlansPreviewBalanceSchema,
 		behavior: z.enum(["added", "removed", "reset", "carried", "updated"]),
+		origin: z.enum(["request", "saved"]).meta({
+			description:
+				"request when this request causes the change; saved when the saved schedule already makes it.",
+		}),
 	});
 
 export const SetPlansPreviewPhaseSchema = z.object({
@@ -122,6 +138,9 @@ export type ProcessorChange = z.infer<typeof ProcessorChangeSchema>;
 export type ProcessorItemPrice = z.infer<typeof ProcessorItemPriceSchema>;
 export type ProcessorItem = z.infer<typeof ProcessorItemSchema>;
 export type SetPlansPreviewPlan = z.infer<typeof SetPlansPreviewPlanSchema>;
+export type SetPlansPreviewBalance = z.infer<
+	typeof SetPlansPreviewBalanceSchema
+>;
 export type SetPlansPreviewBalanceChange = z.infer<
 	typeof SetPlansPreviewBalanceChangeSchema
 >;

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type {
 	ApiBalanceV1,
-	PreviewBalance,
+	SetPlansPreviewBalance,
 	SetPlansPreviewBalanceChange,
 } from "@autumn/shared";
 import chalk from "chalk";
@@ -10,17 +10,18 @@ import {
 	type PhaseBalances,
 } from "@/internal/billing/v2/actions/setPlans/preview/diffPhaseBalances";
 
-const balance = (fields: Partial<PreviewBalance>) =>
+const balance = (fields: Partial<SetPlansPreviewBalance>) =>
 	({
 		granted: 0,
 		remaining: 0,
 		usage: 0,
 		unlimited: false,
 		next_reset_at: null,
+		overage_allowed: false,
 		...fields,
 	}) as ApiBalanceV1;
 
-const credits = (fields: Partial<PreviewBalance>): PhaseBalances => ({
+const credits = (fields: Partial<SetPlansPreviewBalance>): PhaseBalances => ({
 	credits: balance(fields),
 });
 
@@ -107,6 +108,36 @@ describe(chalk.yellowBright("diffPhaseBalances"), () => {
 			after: credits({}),
 			behaviors: [],
 		},
+		{
+			name: "a pay-per-use feature the customer gains is added",
+			before: NO_CREDITS,
+			after: credits({ overage_allowed: true }),
+			behaviors: ["added"],
+		},
+		{
+			name: "a pay-per-use feature with usage the customer loses is removed",
+			before: credits({ overage_allowed: true, usage: 40 }),
+			after: NO_CREDITS,
+			behaviors: ["removed"],
+		},
+		{
+			name: "an unused pay-per-use feature the customer loses is removed",
+			before: credits({ overage_allowed: true }),
+			after: NO_CREDITS,
+			behaviors: ["removed"],
+		},
+		{
+			name: "allowing overage on the same allowance is updated",
+			before: credits({ granted: 100, remaining: 100 }),
+			after: credits({ granted: 100, remaining: 100, overage_allowed: true }),
+			behaviors: ["updated"],
+		},
+		{
+			name: "remaining credits rebased onto a fresh grant are carried",
+			before: credits({ granted: 500, remaining: 300, usage: 200 }),
+			after: credits({ granted: 300, remaining: 300 }),
+			behaviors: ["carried"],
+		},
 	];
 
 	for (const { name, before, after, behaviors } of cases) {
@@ -129,10 +160,23 @@ describe(chalk.yellowBright("diffPhaseBalances"), () => {
 				usage: 40,
 				unlimited: false,
 				next_reset_at: null,
+				overage_allowed: false,
 			},
 			previous_attributes: { granted: 100, remaining: 60 },
 			behavior: "carried",
 		});
+	});
+
+	test("previous attributes overlaid on the balance reproduce the before state", () => {
+		const before = credits({ granted: 100, remaining: 60, usage: 40 });
+		const [change] = diffPhaseBalances({
+			before,
+			after: credits({ granted: 0, overage_allowed: true }),
+		});
+
+		expect({ ...change?.balance, ...change?.previous_attributes }).toEqual(
+			before.credits as SetPlansPreviewBalance,
+		);
 	});
 
 	test("a removed feature's after state is an empty balance", () => {
@@ -147,6 +191,7 @@ describe(chalk.yellowBright("diffPhaseBalances"), () => {
 			usage: 0,
 			unlimited: false,
 			next_reset_at: null,
+			overage_allowed: false,
 		});
 		expect(change?.previous_attributes).toEqual({
 			granted: 100,

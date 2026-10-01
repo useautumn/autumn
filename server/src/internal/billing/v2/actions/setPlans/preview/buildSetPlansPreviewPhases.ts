@@ -7,6 +7,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import { buildSavedPhaseCustomers } from "./balances/buildSavedPhaseCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
 import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
@@ -57,6 +58,12 @@ export const buildSetPlansPreviewPhases = async ({
 		ctx,
 		originalFullCustomer: fullCustomer,
 		phaseCustomers,
+		savedPhaseCustomers: buildSavedPhaseCustomers({
+			ctx,
+			fullCustomer,
+			autumnBillingPlan,
+			phases,
+		}),
 	});
 	const phaseTransitions = setPlansPhaseTransitions({
 		autumnBillingPlan,
