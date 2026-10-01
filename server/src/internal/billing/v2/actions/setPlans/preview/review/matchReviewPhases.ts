@@ -80,6 +80,24 @@ const groupByGap = ({
 	return groups;
 };
 
+/** Within a gap, the n-th unmatched request phase is the n-th unmatched saved phase moved. */
+const pairMovedPhases = ({
+	requestByGap,
+	savedByGap,
+}: {
+	requestByGap: Map<number, number[]>;
+	savedByGap: Map<number, number[]>;
+}) => {
+	const movedFrom = new Map<number, number>();
+	for (const [gap, requestDates] of requestByGap) {
+		for (const [index, at] of requestDates.entries()) {
+			const savedAt = savedByGap.get(gap)?.[index];
+			if (savedAt !== undefined) movedFrom.set(at, savedAt);
+		}
+	}
+	return movedFrom;
+};
+
 /**
  * The one place request phases meet saved phases: now with now, equal dates with each other,
  * then leftovers between two anchors pair up in order as moved phases.
@@ -112,13 +130,7 @@ export const matchReviewPhases = ({
 		dates: requestStarts.filter((at) => !anchors.includes(at)),
 	});
 
-	const movedFrom = new Map<number, number>();
-	for (const [gap, requestDates] of requestByGap) {
-		requestDates.forEach((at, index) => {
-			const savedAt = savedByGap.get(gap)?.[index];
-			if (savedAt !== undefined) movedFrom.set(at, savedAt);
-		});
-	}
+	const movedFrom = pairMovedPhases({ requestByGap, savedByGap });
 	const pairedSavedStarts = new Set(movedFrom.values());
 
 	const futurePhases = requestStarts.map((at): ReviewPhaseMatch => {

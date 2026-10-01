@@ -10,6 +10,8 @@ import {
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import chalk from "chalk";
+import { matchReviewPhases } from "@/internal/billing/v2/actions/setPlans/preview/review/matchReviewPhases";
+import { timelineToReviewRows } from "@/internal/billing/v2/actions/setPlans/preview/review/timelineToReviewRows";
 import { setupSetPlansTimeline } from "@/internal/billing/v2/actions/setPlans/setup/setupSetPlansTimeline";
 import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { computeSetPlansPlanFromContext } from "../setPlansTimelineHelpers";
@@ -91,11 +93,22 @@ const expectSettles = ({
 	expect(rerun.diff.operations.filter(({ type }) => type !== "keep")).toEqual(
 		[],
 	);
+	const review = timelineToReviewRows({
+		saved: rerun.saved,
+		diff: rerun.diff,
+		matches: matchReviewPhases({
+			saved: rerun.saved,
+			timeline: rerun.diff.timeline,
+			phaseStarts: rerun.requestedPhases.map(({ startsAt }) => startsAt),
+			now: rerun.diff.now,
+		}),
+	});
 	expect(
-		rerun.diff.transitions.filter(
-			({ origin, kind }) => origin !== "saved" && kind !== "continues",
+		review.phases.flatMap(({ rows }) =>
+			rows.filter(({ status }) => status !== "kept"),
 		),
 	).toEqual([]);
+	expect(review.removedPhases).toEqual([]);
 };
 
 const pro = paidProduct({ id: "pro" });

@@ -6,7 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
-import { buildSavedPhaseCustomers } from "./balances/buildSavedPhaseCustomers";
+import { savedComparisonCustomers } from "./balances/savedComparisonCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
 import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
@@ -17,6 +17,7 @@ import {
 import { subscriptionActionToProcessorItems } from "./processorItems/subscriptionActionToProcessorItems";
 import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
 import { diffToReview, type SetPlansReview } from "./review/diffToReview";
+import { matchReviewPhases } from "./review/matchReviewPhases";
 import { setPlansPhaseBalanceChanges } from "./setPlansPhaseBalanceChanges";
 
 /** Credits on the immediate invoice, unless custom line items replace the computed ones. */
@@ -57,21 +58,29 @@ export const buildSetPlansPreviewPhases = async ({
 		autumnBillingPlan,
 		phases,
 	});
+	const matches = matchReviewPhases({
+		saved: timeline.saved,
+		timeline: timeline.diff.timeline,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
+		now: timeline.diff.now,
+	});
 	const phaseBalanceChanges = await setPlansPhaseBalanceChanges({
 		ctx,
 		originalFullCustomer: fullCustomer,
 		phaseCustomers,
-		savedPhaseCustomers: buildSavedPhaseCustomers({
+		savedComparisonCustomers: savedComparisonCustomers({
 			ctx,
 			fullCustomer,
 			autumnBillingPlan,
 			phases,
+			matches,
+			now: timeline.diff.now,
 		}),
 	});
 	const review = diffToReview({
 		saved: timeline.saved,
 		diff: timeline.diff,
-		phaseStarts: phases.map(({ startsAt }) => startsAt),
+		matches,
 		lookup: {
 			originalFullCustomer: fullCustomer,
 			finalFullCustomer: phaseCustomers[0] ?? fullCustomer,

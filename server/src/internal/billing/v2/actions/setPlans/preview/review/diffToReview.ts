@@ -12,7 +12,7 @@ import { reviewRowToPlanChange } from "./reviewRowToPlanChange";
 import { reviewRowToPreviewPlan } from "./reviewRowToPreviewPlan";
 import type { ReviewRowLookup } from "./reviewSegmentCustomerProduct";
 import { timelineToReviewRows } from "./timelineToReviewRows";
-import type { ReviewPlanRow } from "./types/reviewPhase";
+import type { ReviewPhaseMatches, ReviewPlanRow } from "./types/reviewPhase";
 import { withdrawnScheduledStarts } from "./withdrawnScheduledStarts";
 
 export type SetPlansReview = {
@@ -26,14 +26,14 @@ export type SetPlansReview = {
 export const diffToReview = ({
 	saved,
 	diff,
-	phaseStarts,
+	matches,
 	lookup,
 	creditLineItems,
 	currency,
 }: {
 	saved: SavedTimeline;
 	diff: TimelineDiff;
-	phaseStarts: number[];
+	matches: ReviewPhaseMatches;
 	lookup: ReviewRowLookup;
 	creditLineItems: LineItem[];
 	currency: string;
@@ -60,7 +60,7 @@ export const diffToReview = ({
 			return plan ? [plan] : [];
 		});
 
-	const reviewRows = timelineToReviewRows({ saved, diff, phaseStarts });
+	const reviewRows = timelineToReviewRows({ saved, diff, matches });
 
 	return {
 		phases: reviewRows.phases.map(({ at, rows }, phaseIndex) => ({

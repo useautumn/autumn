@@ -4,8 +4,7 @@ import { isInRequestScope } from "@/internal/billing/v2/actions/setPlans/timelin
 import type { UndeclaredPlansPolicy } from "@/internal/billing/v2/actions/setPlans/timeline/types/setPlansPolicies";
 import type { TimelineRow } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineRow";
 import type { DesiredSegment } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineSegment";
-import { expectReviewInvariants } from "./reviewInvariants";
-import { describeTransitions } from "./timelineDescribe";
+import { describeReview } from "./timelineDescribe";
 import {
 	B,
 	B2,
@@ -339,25 +338,23 @@ describe(chalk.yellowBright("diffTimelines: generated table"), () => {
 	for (const tableCase of allCases) {
 		test(caseName(tableCase), () => {
 			const timelineCase = buildCase(tableCase);
-			const { diff } = expectAllInvariants(timelineCase);
-			expectReviewInvariants(timelineCase);
+			const result = expectAllInvariants(timelineCase);
+			const { diff, review } = result;
 
 			if (tableCase.operation === "keep" || isOutOfScope(tableCase)) {
-				expectIdempotent({ diff });
+				expectIdempotent(result);
 			}
 			if (isOutOfScope(tableCase)) {
 				const subjectId = SUBJECT_IDS[tableCase.kind];
 				expect(
 					diff.timeline.filter(({ planId }) => planId === subjectId),
 				).toEqual([]);
-				expect(describeTransitions(diff).join()).not.toContain(subjectId);
+				expect(describeReview(review).join()).not.toContain(subjectId);
 			}
 
 			const attachTwin = buildCase({ ...tableCase, howAdded: "attach" });
-			const { diff: attachDiff } = expectAllInvariants(attachTwin);
-			expect(describeTransitions(diff)).toEqual(
-				describeTransitions(attachDiff),
-			);
+			const { review: attachReview } = expectAllInvariants(attachTwin);
+			expect(describeReview(review)).toEqual(describeReview(attachReview));
 		});
 	}
 });

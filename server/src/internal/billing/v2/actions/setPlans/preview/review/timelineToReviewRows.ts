@@ -1,6 +1,5 @@
 import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { TimelineDiff } from "../../timeline/types/timelineDiff";
-import { matchReviewPhases } from "./matchReviewPhases";
 import {
 	phasePlanRows,
 	resolvedContentsAt,
@@ -9,6 +8,7 @@ import {
 import type {
 	ReviewPhaseComparison,
 	ReviewPhaseMatch,
+	ReviewPhaseMatches,
 	ReviewPlanRow,
 } from "./types/reviewPhase";
 
@@ -24,56 +24,53 @@ export type ReviewRows = {
 const comparisonContents = ({
 	saved,
 	diff,
-	phases,
-	phaseIndex,
+	phase,
+	previousPhase,
 }: {
 	saved: SavedTimeline;
 	diff: TimelineDiff;
-	phases: ReviewPhaseMatch[];
-	phaseIndex: number;
+	phase: ReviewPhaseMatch;
+	previousPhase?: ReviewPhaseMatch;
 }) => {
-	const { comparison } = phases[phaseIndex] as ReviewPhaseMatch;
-	if (comparison.type === "saved") {
-		return savedContentsAt({ saved, at: comparison.at });
+	if (phase.comparison.type === "saved") {
+		return savedContentsAt({ saved, at: phase.comparison.at });
 	}
-	const previousAt = phases[phaseIndex - 1]?.at ?? diff.now;
-	return resolvedContentsAt({ timeline: diff.timeline, at: previousAt });
+	return resolvedContentsAt({
+		timeline: diff.timeline,
+		at: previousPhase?.at ?? diff.now,
+	});
 };
 
 /** Each request phase against its matched saved self, or the phase before it when it is new. */
 export const timelineToReviewRows = ({
 	saved,
 	diff,
-	phaseStarts,
+	matches,
 }: {
 	saved: SavedTimeline;
 	diff: TimelineDiff;
-	phaseStarts: number[];
-}): ReviewRows => {
-	const { phases, removedPhaseStarts } = matchReviewPhases({
-		saved,
-		timeline: diff.timeline,
-		phaseStarts,
-		now: diff.now,
-	});
-
-	return {
-		phases: phases.map((phase, phaseIndex) => ({
-			at: phase.at,
-			comparison: phase.comparison,
-			rows: phasePlanRows({
-				contents: resolvedContentsAt({ timeline: diff.timeline, at: phase.at }),
-				comparison: comparisonContents({ saved, diff, phases, phaseIndex }),
-				showsEnds: phase.comparison.type === "saved",
+	matches: ReviewPhaseMatches;
+}): ReviewRows => ({
+	phases: matches.phases.map((phase, phaseIndex) => ({
+		at: phase.at,
+		comparison: phase.comparison,
+		rows: phasePlanRows({
+			contents: resolvedContentsAt({ timeline: diff.timeline, at: phase.at }),
+			comparison: comparisonContents({
+				saved,
+				diff,
+				phase,
+				previousPhase: matches.phases[phaseIndex - 1],
 			}),
-		})),
-		removedPhases: removedPhaseStarts.map((at) => ({
-			at,
-			rows: phasePlanRows({
-				contents: new Map(),
-				comparison: savedContentsAt({ saved, at }),
-				showsEnds: true,
-			}),
-		})),
-	};
-};
+			showsEnds: phase.comparison.type === "saved",
+		}),
+	})),
+	removedPhases: matches.removedPhaseStarts.map((at) => ({
+		at,
+		rows: phasePlanRows({
+			contents: new Map(),
+			comparison: savedContentsAt({ saved, at }),
+			showsEnds: true,
+		}),
+	})),
+});

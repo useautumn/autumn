@@ -90,10 +90,7 @@ const requestedResetFeatureIds = (
 ) => [
 	...new Set(
 		balanceChanges
-			.filter(
-				(balanceChange) =>
-					restartsUsage(balanceChange) && balanceChange.origin === "request",
-			)
+			.filter(restartsUsage)
 			.map((balanceChange) => balanceChange.feature_id),
 	),
 ];

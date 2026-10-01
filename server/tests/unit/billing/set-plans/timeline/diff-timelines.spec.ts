@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import chalk from "chalk";
-import { describeOperations, describeTransitions } from "./timelineDescribe";
+import { describeOperations, describeReview } from "./timelineDescribe";
 import {
 	B,
 	B2,
@@ -22,8 +22,8 @@ const sso = plan({ planId: "sso", kind: "addOn" });
 const credits = plan({ planId: "credits", kind: "oneOff" });
 
 describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
-	test("case 1: a plan added to the opening phase only ends with it, shown on its Created row", () => {
-		const { diff } = expectAllInvariants({
+	test("case 1: a plan added to the opening phase is created there only", () => {
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: B }),
 				savedRow({ id: "ent_row", plan: ent, startsAt: B }),
@@ -39,16 +39,15 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 		});
 
 		expect(describeOperations(diff)).toEqual(["insert:sso:h1:now-B"]);
-		expect(describeTransitions(diff)).toEqual([
-			"B:ends:saved:pro:h1",
-			"B:starts:saved:ent:h1",
-			"now:continues:request:pro:h1->pro:h1",
-			"now:starts:request:sso:h1",
+		expect(describeReview(review)).toEqual([
+			"B:kept:ent:h1",
+			"now:kept:pro:h1",
+			"now:starts:sso:h1",
 		]);
 	});
 
 	test("case 2: editing a plan now that a saved phase reverts reuses the saved row", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "ent_live", plan: ent, endsAt: B }),
 				savedRow({ id: "ent_later", plan: ent, startsAt: B }),
@@ -66,9 +65,9 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 			"expire:ent_live",
 			"insert:ent:custom:now-B",
 		]);
-		expect(describeTransitions(diff)).toEqual([
-			"B:updated:request:ent:custom->ent:h1",
-			"now:updated:request:ent:h1->ent:custom",
+		expect(describeReview(review)).toEqual([
+			"B:updated:ent:custom->ent:h1",
+			"now:updated:ent:h1->ent:custom",
 		]);
 	});
 
@@ -91,10 +90,10 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 			"expire:sso_row",
 			"insert:hobby:h1:now-never",
 		]);
-		expect(describeTransitions(ended.diff)).toEqual([
-			"now:ends:request:pro:h1",
-			"now:ends:request:sso:h1",
-			"now:starts:request:hobby:h1",
+		expect(describeReview(ended.review)).toEqual([
+			"now:ends:pro:h1",
+			"now:ends:sso:h1",
+			"now:starts:hobby:h1",
 		]);
 
 		const retained = expectAllInvariants({
@@ -106,15 +105,15 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 			"expire:pro_row",
 			"insert:hobby:h1:now-never",
 		]);
-		expect(describeTransitions(retained.diff)).toEqual([
-			"now:continues:request:sso:h1->sso:h1",
-			"now:ends:request:pro:h1",
-			"now:starts:request:hobby:h1",
+		expect(describeReview(retained.review)).toEqual([
+			"now:ends:pro:h1",
+			"now:kept:sso:h1",
+			"now:starts:hobby:h1",
 		]);
 	});
 
-	test("case 4: a saved end the request keeps shows as a muted end", () => {
-		const { diff } = expectAllInvariants({
+	test("case 4: a saved end the request keeps leaves both phases unchanged", () => {
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro }),
 				savedRow({ id: "sso_row", plan: sso, endsAt: B }),
@@ -129,15 +128,15 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 		});
 
 		expect(describeOperations(diff)).toEqual([]);
-		expect(describeTransitions(diff)).toEqual([
-			"B:ends:saved:sso:h1",
-			"now:continues:request:pro:h1->pro:h1",
-			"now:continues:request:sso:h1->sso:h1",
+		expect(describeReview(review)).toEqual([
+			"B:kept:pro:h1",
+			"now:kept:pro:h1",
+			"now:kept:sso:h1",
 		]);
 	});
 
-	test("case 5: a saved replacement reads as a muted end and start, never a removal", () => {
-		const { diff } = expectAllInvariants({
+	test("case 5: a saved replacement re-sent unchanged keeps every phase", () => {
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: B }),
 				savedRow({ id: "ent_row", plan: ent, startsAt: B }),
@@ -151,16 +150,15 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 			policies: policiesFor(),
 		});
 
-		expectIdempotent({ diff });
-		expect(describeTransitions(diff)).toEqual([
-			"B:ends:saved:pro:h1",
-			"B:starts:saved:ent:h1",
-			"now:continues:request:pro:h1->pro:h1",
+		expectIdempotent({ diff, review });
+		expect(describeReview(review)).toEqual([
+			"B:kept:ent:h1",
+			"now:kept:pro:h1",
 		]);
 	});
 
 	test("case 6: removing an ongoing plan ends it now", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro }),
 				savedRow({ id: "sso_row", plan: sso }),
@@ -170,14 +168,14 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 		});
 
 		expect(describeOperations(diff)).toEqual(["expire:sso_row"]);
-		expect(describeTransitions(diff)).toEqual([
-			"now:continues:request:pro:h1->pro:h1",
-			"now:ends:request:sso:h1",
+		expect(describeReview(review)).toEqual([
+			"now:ends:sso:h1",
+			"now:kept:pro:h1",
 		]);
 	});
 
 	test("case 7: a new phase with a customized plan re-times the running row and starts the new config", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [savedRow({ id: "pro_row", plan: pro })],
 			desired: desiredTimeline({
 				segments: [
@@ -197,21 +195,21 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 			"insert:pro:custom:C-never",
 			"retime:pro_row:C",
 		]);
-		expect(describeTransitions(diff)).toEqual([
-			"C:updated:request:pro:h1->pro:custom",
-			"now:continues:request:pro:h1->pro:h1",
+		expect(describeReview(review)).toEqual([
+			"C:updated:pro:h1->pro:custom",
+			"now:kept:pro:h1",
 		]);
 	});
 
 	test("case 7b: an unchanged plan re-sent is a no-op", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [savedRow({ id: "pro_row", plan: pro, hash: "custom" })],
 			desired: desiredTimeline({
 				segments: [desiredSegment({ plan: pro, hash: "custom" })],
 			}),
 			policies: policiesFor(),
 		});
-		expectIdempotent({ diff });
+		expectIdempotent({ diff, review });
 	});
 });
 
@@ -258,18 +256,18 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 			}),
 			policies: policiesFor(),
 		});
-		expectIdempotent({ diff: relisted.diff });
+		expectIdempotent(relisted);
 
 		const unlisted = expectAllInvariants({
 			rows,
 			desired: desiredTimeline({ segments: [desiredSegment({ plan: pro })] }),
 			policies: policiesFor(),
 		});
-		expectIdempotent({ diff: unlisted.diff });
+		expectIdempotent(unlisted);
 	});
 
 	test("a canceling plan re-listed unchanged keeps its row and its cancellation", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: C, canceling: true }),
 			],
@@ -277,11 +275,8 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 			policies: policiesFor(),
 		});
 
-		expectIdempotent({ diff });
-		expect(describeTransitions(diff)).toEqual([
-			"C:ends:saved:pro:h1",
-			"now:continues:request:pro:h1->pro:h1",
-		]);
+		expectIdempotent({ diff, review });
+		expect(describeReview(review)).toEqual(["now:kept:pro:h1"]);
 	});
 
 	test("a canceling plan given an explicit later end runs to that end instead", () => {
@@ -320,16 +315,16 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 	});
 
 	test("a past-due plan re-listed unchanged continues", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [savedRow({ id: "pro_row", plan: pro, pastDue: true })],
 			desired: desiredTimeline({ segments: [desiredSegment({ plan: pro })] }),
 			policies: policiesFor(),
 		});
-		expectIdempotent({ diff });
+		expectIdempotent({ diff, review });
 	});
 
-	test("a phase plan moved to ongoing no longer ends", () => {
-		const { diff } = expectAllInvariants({
+	test("a phase plan moved to ongoing removes the saved phase that ended it", () => {
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro }),
 				savedRow({ id: "sso_row", plan: sso, endsAt: B }),
@@ -344,15 +339,15 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		});
 
 		expect(describeOperations(diff)).toEqual(["retime:sso_row:never"]);
-		expect(describeTransitions(diff)).toEqual([
-			"B:ends:withdrawn:sso:h1",
-			"now:continues:request:pro:h1->pro:h1",
-			"now:continues:request:sso:h1->sso:h1",
+		expect(describeReview(review)).toEqual([
+			"B:removed:pro:h1",
+			"now:kept:pro:h1",
+			"now:kept:sso:h1",
 		]);
 	});
 
 	test("moving a saved phase re-times the running plan and moves the replacement", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: B }),
 				savedRow({ id: "ent_row", plan: ent, startsAt: B }),
@@ -371,17 +366,14 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 			"insert:ent:h1:B2-never",
 			"retime:pro_row:B2",
 		]);
-		expect(describeTransitions(diff)).toEqual([
-			"B2:ends:request:pro:h1",
-			"B2:starts:request:ent:h1",
-			"B:ends:withdrawn:pro:h1",
-			"B:starts:withdrawn:ent:h1",
-			"now:continues:request:pro:h1->pro:h1",
+		expect(describeReview(review)).toEqual([
+			"B2:kept:ent:h1",
+			"now:kept:pro:h1",
 		]);
 	});
 
 	test("deleting a saved phase lets the running plan continue and withdraws the replacement", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro, endsAt: B }),
 				savedRow({ id: "ent_row", plan: ent, startsAt: B }),
@@ -394,15 +386,14 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 			"delete:ent_row",
 			"retime:pro_row:never",
 		]);
-		expect(describeTransitions(diff)).toEqual([
-			"B:ends:withdrawn:pro:h1",
-			"B:starts:withdrawn:ent:h1",
-			"now:continues:request:pro:h1->pro:h1",
+		expect(describeReview(review)).toEqual([
+			"B:removed:ent:h1",
+			"now:kept:pro:h1",
 		]);
 	});
 
-	test("a new phase that leaves out a running plan shows its end", () => {
-		const { diff } = expectAllInvariants({
+	test("a new phase that leaves out a running plan never shows it removed", () => {
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro }),
 				savedRow({ id: "sso_row", plan: sso }),
@@ -417,7 +408,11 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		});
 
 		expect(describeOperations(diff)).toEqual(["retime:sso_row:C"]);
-		expect(describeTransitions(diff)).toContain("C:ends:request:sso:h1");
+		expect(describeReview(review)).toEqual([
+			"C:kept:pro:h1",
+			"now:kept:pro:h1",
+			"now:kept:sso:h1",
+		]);
 	});
 
 	test("a phase inserted between saved phases re-times rows instead of recreating them", () => {
@@ -449,7 +444,7 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 	});
 
 	test("a legacy saved schedule split into one row per phase reads as one unchanged plan", () => {
-		const { diff } = expectAllInvariants({
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_now", plan: pro, endsAt: B }),
 				savedRow({ id: "pro_later", plan: pro, startsAt: B }),
@@ -464,7 +459,7 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 			policies: policiesFor(),
 		});
 
-		expectIdempotent({ diff });
+		expectIdempotent({ diff, review });
 	});
 
 	test("the schedule end date ends retained plans on the live subscription only", () => {
@@ -508,8 +503,8 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 });
 
 describe(chalk.yellowBright("diffTimelines: boundaries"), () => {
-	test("a saved scheduled plan the request drops won't start", () => {
-		const { diff } = expectAllInvariants({
+	test("a saved scheduled plan the request drops removes its phase", () => {
+		const { diff, review } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro }),
 				savedRow({ id: "sso_row", plan: sso, startsAt: B }),
@@ -519,15 +514,19 @@ describe(chalk.yellowBright("diffTimelines: boundaries"), () => {
 		});
 
 		expect(describeOperations(diff)).toEqual(["delete:sso_row"]);
-		expect(describeTransitions(diff)).toContain("B:starts:withdrawn:sso:h1");
+		expect(describeReview(review)).toEqual([
+			"B:removed:pro:h1",
+			"B:removed:sso:h1",
+			"now:kept:pro:h1",
+		]);
 	});
 
 	test("a saved past start never surfaces as a boundary", () => {
-		const { diff } = expectAllInvariants({
+		const { review } = expectAllInvariants({
 			rows: [savedRow({ id: "pro_row", plan: pro, startsAt: PAST })],
 			desired: desiredTimeline({ segments: [desiredSegment({ plan: pro })] }),
 			policies: policiesFor(),
 		});
-		expect(diff.transitions.every(({ at }) => at >= NOW)).toBe(true);
+		expect(review.phases.every(({ at }) => at >= NOW)).toBe(true);
 	});
 });

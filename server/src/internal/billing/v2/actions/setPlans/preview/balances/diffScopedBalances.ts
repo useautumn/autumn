@@ -5,8 +5,6 @@ import type {
 	ScopedPhaseBalances,
 } from "./types/scopedPhaseBalances";
 
-export type ScopedBalanceDiff = Omit<SetPlansPreviewBalanceChange, "origin">;
-
 const scopesOf = ({
 	before,
 	after,
@@ -41,7 +39,7 @@ export const diffScopedBalances = ({
 }: {
 	before: ScopedPhaseBalances;
 	after: ScopedPhaseBalances;
-}): ScopedBalanceDiff[] =>
+}): SetPlansPreviewBalanceChange[] =>
 	scopesOf({ before, after }).flatMap((scope) =>
 		diffPhaseBalances({
 			before: balancesIn({ scopedBalances: before, scope }),

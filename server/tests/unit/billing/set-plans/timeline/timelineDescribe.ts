@@ -1,8 +1,6 @@
-import type {
-	TimelineDiff,
-	TimelineTransition,
-	TransitionSide,
-} from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineDiff";
+import type { ReviewRows } from "@/internal/billing/v2/actions/setPlans/preview/review/timelineToReviewRows";
+import type { ReviewPlanRow } from "@/internal/billing/v2/actions/setPlans/preview/review/types/reviewPhase";
+import type { TimelineDiff } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineDiff";
 import { B, B2, C, NOW } from "./timelineFixtures";
 
 const MOMENT_NAMES = new Map<number, string>([
@@ -15,32 +13,33 @@ const MOMENT_NAMES = new Map<number, string>([
 const momentName = (at: number | null) =>
 	at === null ? "never" : (MOMENT_NAMES.get(at) ?? String(at));
 
-const sideName = (side: TransitionSide) => side.configHash;
-
-const transitionSides = (transition: TimelineTransition) => {
-	switch (transition.kind) {
+const rowConfig = (row: ReviewPlanRow) => {
+	switch (row.status) {
 		case "starts":
-			return sideName(transition.to);
+			return row.after.segment.configHash;
 		case "ends":
-			return sideName(transition.from);
+			return row.before.segment.configHash;
 		case "updated":
-		case "continues":
-			return `${sideName(transition.from)}->${sideName(transition.to)}`;
+			return `${row.before.segment.configHash}->${row.after.segment.configHash}`;
+		case "kept":
+			return row.after.segment.configHash;
 		default: {
-			const unreachable: never = transition;
+			const unreachable: never = row;
 			return unreachable;
 		}
 	}
 };
 
-/** Transitions as `at:kind:origin:config`, sorted, for compact golden expectations. */
-export const describeTransitions = (diff: TimelineDiff) =>
-	diff.transitions
-		.map(
-			(transition) =>
-				`${momentName(transition.at)}:${transition.kind}:${transition.origin}:${transitionSides(transition)}`,
-		)
-		.sort();
+/** Review rows as `phase:status:config`, removed phases as `phase:removed:config`, sorted. */
+export const describeReview = (review: ReviewRows) =>
+	[
+		...review.phases.flatMap(({ at, rows }) =>
+			rows.map((row) => `${momentName(at)}:${row.status}:${rowConfig(row)}`),
+		),
+		...review.removedPhases.flatMap(({ at, rows }) =>
+			rows.map((row) => `${momentName(at)}:removed:${rowConfig(row)}`),
+		),
+	].sort();
 
 /** Row writes as `type:id[:end]`, keeps left out, sorted. */
 export const describeOperations = (diff: TimelineDiff) =>

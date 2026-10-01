@@ -1,5 +1,5 @@
 /**
- * Generated balance-preview cases (kind × prior usage × operation × timing × origin × scope),
+ * Generated balance-preview cases (kind × prior usage × operation × timing × who scheduled it × scope),
  * each checked against the invariants in the balances audit rather than a hand-written answer.
  */
 import { describe, expect, test } from "bun:test";
@@ -33,7 +33,7 @@ const KINDS = ["included", "allocated", "payPerUse", "oneOffPrepaid"] as const;
 const PRIORS = ["fresh", "partial", "overage"] as const;
 const OPERATIONS = ["keep", "remove", "add", "switch", "customise"] as const;
 const TIMINGS = ["immediate", "future"] as const;
-const ORIGINS = ["request", "saved"] as const;
+const SCHEDULED_BY = ["request", "savedSchedule"] as const;
 const SCOPES = ["customer", "entity"] as const;
 
 type BalanceCase = {
@@ -41,7 +41,7 @@ type BalanceCase = {
 	prior: (typeof PRIORS)[number];
 	operation: (typeof OPERATIONS)[number];
 	timing: (typeof TIMINGS)[number];
-	origin: (typeof ORIGINS)[number];
+	scheduledBy: (typeof SCHEDULED_BY)[number];
 	scope: (typeof SCOPES)[number];
 };
 
@@ -81,20 +81,23 @@ const isMeaningful = ({
 	prior,
 	operation,
 	timing,
-	origin,
+	scheduledBy,
 }: BalanceCase) =>
 	!(
 		prior === "overage" &&
 		(kind === "payPerUse" || kind === "oneOffPrepaid")
 	) &&
-	!(origin === "saved" && (timing === "immediate" || operation === "keep"));
+	!(
+		scheduledBy === "savedSchedule" &&
+		(timing === "immediate" || operation === "keep")
+	);
 
 const buildTimeline = (balanceCase: BalanceCase): BalanceTimeline => {
-	const { operation, timing, origin, scope } = balanceCase;
+	const { operation, timing, scheduledBy, scope } = balanceCase;
 	const internalEntityId = scope === "entity" ? ENTITY.internal_id : undefined;
 	const isFuture = timing === "future";
 	const changeAt = isFuture ? PHASE_TWO : NOW;
-	const savedEnd = origin === "saved" ? PHASE_TWO : undefined;
+	const savedEnd = scheduledBy === "savedSchedule" ? PHASE_TWO : undefined;
 
 	const base = planRow({
 		planId: "base",
@@ -152,7 +155,7 @@ const buildTimeline = (balanceCase: BalanceCase): BalanceTimeline => {
 	}
 
 	const startsIncoming = operation !== "remove";
-	const isSaved = origin === "saved";
+	const isSaved = scheduledBy === "savedSchedule";
 	const outgoing = operation === "add" ? base : current;
 	const holders = operation === "add" ? [base] : [current];
 
@@ -267,8 +270,13 @@ const assertInvariants = ({
 	const changes = phaseChanges[changeIndex] ?? [];
 	for (const change of changes) expect(change.entity_id).toBe(entityId);
 
-	if (balanceCase.operation === "keep") expect(changes).toEqual([]);
-	for (const change of changes) expect(change.origin).toBe(balanceCase.origin);
+	const leavesSavedPhaseAlone =
+		balanceCase.operation === "keep" ||
+		balanceCase.scheduledBy === "savedSchedule";
+	if (leavesSavedPhaseAlone) {
+		expect(changes).toEqual([]);
+		return;
+	}
 
 	if (balanceCase.operation === "add") {
 		expect(changes.map((change) => change.behavior)).toEqual(["added"]);
@@ -289,13 +297,13 @@ const allCases: BalanceCase[] = KINDS.flatMap((kind) =>
 	PRIORS.flatMap((prior) =>
 		OPERATIONS.flatMap((operation) =>
 			TIMINGS.flatMap((timing) =>
-				ORIGINS.flatMap((origin) =>
+				SCHEDULED_BY.flatMap((scheduledBy) =>
 					SCOPES.map((scope) => ({
 						kind,
 						prior,
 						operation,
 						timing,
-						origin,
+						scheduledBy,
 						scope,
 					})),
 				),

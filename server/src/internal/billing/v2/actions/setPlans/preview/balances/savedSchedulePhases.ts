@@ -18,7 +18,7 @@ const startsBy = ({
 	customerProduct.starts_at < at ||
 	phaseStartsMatch({ startsAt: customerProduct.starts_at, otherStartsAt: at });
 
-/** Saved scheduled rows the request keeps or deletes; rows it never touches behave alike in both timelines. */
+/** Saved scheduled rows the request keeps or deletes; rows it never touches behave alike either way. */
 const savedScheduledCustomerProducts = ({
 	fullCustomer,
 	phases,
@@ -41,15 +41,17 @@ const savedScheduledCustomerProducts = ({
 	);
 };
 
-/** The saved schedule cut at the request's phase starts: each phase starts the saved rows due since the previous one. */
+/** The saved schedule cut at the given dates: each starts the saved rows due since the previous one. */
 export const savedSchedulePhases = ({
 	fullCustomer,
 	phases,
 	autumnBillingPlan,
+	dates,
 }: {
 	fullCustomer: FullCustomer;
 	phases: SchedulePhasePlan[];
 	autumnBillingPlan: AutumnBillingPlan;
+	dates: number[];
 }): SchedulePhasePlan[] => {
 	const savedScheduled = savedScheduledCustomerProducts({
 		fullCustomer,
@@ -57,16 +59,16 @@ export const savedSchedulePhases = ({
 		autumnBillingPlan,
 	});
 
-	return phases.map((phase, phaseIndex) => {
-		const previousStartsAt = phases[phaseIndex - 1]?.startsAt;
+	return dates.map((at, dateIndex) => {
+		const previousAt = dates[dateIndex - 1];
 		return {
-			startsAt: phase.startsAt,
+			startsAt: at,
 			customerProductIds: savedScheduled
 				.filter(
 					(customerProduct) =>
-						startsBy({ customerProduct, at: phase.startsAt }) &&
-						(previousStartsAt === undefined ||
-							!startsBy({ customerProduct, at: previousStartsAt })),
+						startsBy({ customerProduct, at }) &&
+						(previousAt === undefined ||
+							!startsBy({ customerProduct, at: previousAt })),
 				)
 				.map((customerProduct) => customerProduct.id),
 		};

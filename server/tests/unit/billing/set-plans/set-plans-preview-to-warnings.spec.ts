@@ -46,12 +46,10 @@ const phase = (
 });
 
 const resetMessages = ({
-	origin,
 	entityId = null,
 }: {
-	origin: SetPlansPreviewBalanceChange["origin"];
 	entityId?: string | null;
-}): SetPlansPreviewBalanceChange => ({
+} = {}): SetPlansPreviewBalanceChange => ({
 	feature_id: "messages",
 	entity_id: entityId,
 	balance: {
@@ -64,7 +62,6 @@ const resetMessages = ({
 	},
 	previous_attributes: { usage: 40, granted: 100 },
 	behavior: "reset",
-	origin,
 });
 
 const noSubscriptionState = {
@@ -115,7 +112,7 @@ describe("setPlansPreviewToWarnings", () => {
 		const warnings = setPlansPreviewToWarnings({
 			phases: [
 				phase({
-					balance_changes: [resetMessages({ origin: "request" })],
+					balance_changes: [resetMessages()],
 					processor_items: [
 						processorItem({ display_name: "premium", creates_price: true }),
 					],
@@ -178,32 +175,11 @@ describe("setPlansPreviewToWarnings", () => {
 		}
 	});
 
-	test("a reset the saved schedule already makes doesn't warn", () => {
-		const warnings = setPlansPreviewToWarnings({
-			phases: [
-				phase({}),
-				phase({ balance_changes: [resetMessages({ origin: "saved" })] }),
-			],
-			liveProcessorItems: [],
-			processorChanges: [],
-			withdrawnCustomerProducts: [],
-			outgoingCustomerProducts: [],
-			features: [],
-			...noSubscriptionState,
-		});
-
-		expect(warnings.map((warning) => warning.type)).not.toContain(
-			"usage_reset",
-		);
-	});
-
 	test("an updated allowance that clears usage warns that usage restarts", () => {
 		const warnings = setPlansPreviewToWarnings({
 			phases: [
 				phase({
-					balance_changes: [
-						{ ...resetMessages({ origin: "request" }), behavior: "updated" },
-					],
+					balance_changes: [{ ...resetMessages(), behavior: "updated" }],
 				}),
 			],
 			liveProcessorItems: [],
@@ -222,11 +198,11 @@ describe("setPlansPreviewToWarnings", () => {
 			phases: [
 				phase({
 					balance_changes: [
-						resetMessages({ origin: "request" }),
-						resetMessages({ origin: "request", entityId: "ent_a" }),
+						resetMessages(),
+						resetMessages({ entityId: "ent_a" }),
 					],
 				}),
-				phase({ balance_changes: [resetMessages({ origin: "request" })] }),
+				phase({ balance_changes: [resetMessages()] }),
 			],
 			liveProcessorItems: [],
 			processorChanges: [],

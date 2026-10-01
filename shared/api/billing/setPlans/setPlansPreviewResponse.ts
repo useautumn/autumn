@@ -71,10 +71,6 @@ export const SetPlansPreviewBalanceChangeSchema =
 		}),
 		balance: SetPlansPreviewBalanceSchema,
 		behavior: z.enum(["added", "removed", "reset", "carried", "updated"]),
-		origin: z.enum(["request", "saved"]).meta({
-			description:
-				"request when this request causes the change; saved when the saved schedule already makes it.",
-		}),
 	});
 
 export const SetPlansPreviewPhaseSchema = z.object({

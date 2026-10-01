@@ -13,6 +13,7 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import chalk from "chalk";
 import { buildSetPlansPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPhaseCustomers";
 import { diffToReview } from "@/internal/billing/v2/actions/setPlans/preview/review/diffToReview";
+import { matchReviewPhases } from "@/internal/billing/v2/actions/setPlans/preview/review/matchReviewPhases";
 import { computeSetPlansPlanFromContext } from "../setPlansTimelineHelpers";
 import {
 	buildContext,
@@ -47,7 +48,12 @@ const reviewFor = ({
 	return diffToReview({
 		saved: timeline.saved,
 		diff: timeline.diff,
-		phaseStarts: phases.map(({ startsAt }) => startsAt),
+		matches: matchReviewPhases({
+			saved: timeline.saved,
+			timeline: timeline.diff.timeline,
+			phaseStarts: phases.map(({ startsAt }) => startsAt),
+			now: timeline.diff.now,
+		}),
 		lookup: {
 			originalFullCustomer: billingContext.fullCustomer,
 			finalFullCustomer: finalFullCustomer ?? billingContext.fullCustomer,

@@ -6,7 +6,7 @@ import type {
 
 export type PhaseBalances = Record<string, ApiBalanceV1>;
 
-/** One feature's change within a single scope; the caller adds scope and origin. */
+/** One feature's change within a single scope; the caller adds the scope. */
 export type PhaseBalanceDiff = Pick<
 	SetPlansPreviewBalanceChange,
 	"feature_id" | "balance" | "previous_attributes" | "behavior"

@@ -4,7 +4,6 @@ import type { TimelineDiff } from "../types/timelineDiff";
 import { plannedSegments } from "./plannedSegments";
 import { resolveTimeline } from "./resolveTimeline";
 import { timelineToOperations } from "./timelineToOperations";
-import { timelineToTransitions } from "./timelineToTransitions";
 
 /** The one place set_plans decides what happens: saved vs desired, under the request's policies. */
 export const diffTimelines = ({
@@ -25,6 +24,5 @@ export const diffTimelines = ({
 		now,
 		timeline,
 		operations: timelineToOperations({ saved, timeline, now }),
-		transitions: timelineToTransitions({ saved, timeline, now }),
 	};
 };

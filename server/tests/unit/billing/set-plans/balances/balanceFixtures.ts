@@ -19,8 +19,9 @@ import { features } from "@tests/utils/fixtures/db/features";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildSavedPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/balances/buildSavedPhaseCustomers";
+import { savedComparisonCustomers } from "@/internal/billing/v2/actions/setPlans/preview/balances/savedComparisonCustomers";
 import { buildSetPlansPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPhaseCustomers";
+import type { ReviewPhaseMatches } from "@/internal/billing/v2/actions/setPlans/preview/review/types/reviewPhase";
 import { setPlansPhaseBalanceChanges } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPhaseBalanceChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import {
@@ -257,24 +258,48 @@ export const previewBalanceChanges = ({
 			autumnBillingPlan,
 			phases,
 		}),
-		savedPhaseCustomers: buildSavedPhaseCustomers({
+		savedComparisonCustomers: savedComparisonCustomers({
 			ctx: balanceCtx,
 			fullCustomer,
 			autumnBillingPlan,
 			phases,
+			matches: exactDateMatches({ current, phases }),
+			now: NOW,
 		}),
 	});
+};
+
+/** Future phases on a date where a saved row starts or ends match that saved phase; others are new. */
+const exactDateMatches = ({
+	current,
+	phases,
+}: {
+	current: FullCusProduct[];
+	phases: SchedulePhasePlan[];
+}): ReviewPhaseMatches => {
+	const savedStarts = new Set(
+		current.flatMap(({ starts_at, ended_at }) => [starts_at, ended_at]),
+	);
+	return {
+		phases: phases.map(({ startsAt }, phaseIndex) => ({
+			at: startsAt,
+			comparison:
+				phaseIndex === 0 || savedStarts.has(startsAt)
+					? { type: "saved", at: phaseIndex === 0 ? NOW : startsAt }
+					: { type: "previousPhase" },
+		})),
+		removedPhaseStarts: [],
+	};
 };
 
 export const describeBalanceChange = ({
 	entity_id,
 	feature_id,
 	behavior,
-	origin,
 	balance,
 	previous_attributes,
 }: SetPlansPreviewBalanceChange) =>
-	`${entity_id ? `${entity_id}/` : ""}${feature_id} ${behavior} (${origin}): ${previous_attributes.granted ?? balance.granted} -> ${balance.granted} granted, ${balance.remaining} left`;
+	`${entity_id ? `${entity_id}/` : ""}${feature_id} ${behavior}: ${previous_attributes.granted ?? balance.granted} -> ${balance.granted} granted, ${balance.remaining} left`;
 
 export const describeBalancePhases = (
 	phaseChanges: SetPlansPreviewBalanceChange[][],

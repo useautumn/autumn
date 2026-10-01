@@ -43,8 +43,8 @@ describe(
 
 			expect(describeBalancePhases(phaseChanges)).toEqual([
 				[
-					"words updated (request): 1000 -> 2000 granted, 2000 left",
-					"credits carried (request): 500 -> 300 granted, 300 left",
+					"words updated: 1000 -> 2000 granted, 2000 left",
+					"credits carried: 500 -> 300 granted, 300 left",
 				],
 			]);
 		});
@@ -70,8 +70,8 @@ describe(
 			expect(describeBalancePhases(phaseChanges)).toEqual([
 				[],
 				[
-					"words updated (request): 1000 -> 2000 granted, 2000 left",
-					"credits carried (request): 500 -> 300 granted, 300 left",
+					"words updated: 1000 -> 2000 granted, 2000 left",
+					"credits carried: 500 -> 300 granted, 300 left",
 				],
 			]);
 		});
@@ -122,8 +122,8 @@ describe(chalk.yellowBright("set_plans balance preview: scope"), () => {
 
 		expect(describeBalancePhases(phaseChanges)).toEqual([
 			[
-				"ent_a/words updated (request): 1000 -> 2000 granted, 2000 left",
-				"ent_b/words updated (request): 2000 -> 1000 granted, 1000 left",
+				"ent_a/words updated: 1000 -> 2000 granted, 2000 left",
+				"ent_b/words updated: 2000 -> 1000 granted, 1000 left",
 			],
 		]);
 	});
@@ -155,12 +155,12 @@ describe(chalk.yellowBright("set_plans balance preview: scope"), () => {
 		});
 
 		expect(describeBalancePhases(phaseChanges)).toEqual([
-			["ent_a/words added (request): 0 -> 500 granted, 500 left"],
+			["ent_a/words added: 0 -> 500 granted, 500 left"],
 		]);
 	});
 });
 
-describe(chalk.yellowBright("set_plans balance preview: origin"), () => {
+describe(chalk.yellowBright("set_plans balance preview: phase scope"), () => {
 	const savedSwitch = () => {
 		const pro = planRow({
 			planId: "pro",
@@ -175,7 +175,7 @@ describe(chalk.yellowBright("set_plans balance preview: origin"), () => {
 		return { pro, enterprise };
 	};
 
-	test("re-sending a saved schedule unchanged marks its later change as saved", async () => {
+	test("re-sending a saved schedule unchanged shows no balance changes", async () => {
 		const { pro, enterprise } = savedSwitch();
 
 		const phaseChanges = await previewBalanceChanges({
@@ -186,13 +186,10 @@ describe(chalk.yellowBright("set_plans balance preview: origin"), () => {
 			],
 		});
 
-		expect(describeBalancePhases(phaseChanges)).toEqual([
-			[],
-			["words updated (saved): 1000 -> 3000 granted, 3000 left"],
-		]);
+		expect(describeBalancePhases(phaseChanges)).toEqual([[], []]);
 	});
 
-	test("changing the first phase makes the saved later change the request's", async () => {
+	test("changing the first phase leaves the unchanged saved later phase alone", async () => {
 		const { pro, enterprise } = savedSwitch();
 		const premium = planRow({
 			planId: "premium",
@@ -213,12 +210,12 @@ describe(chalk.yellowBright("set_plans balance preview: origin"), () => {
 		});
 
 		expect(describeBalancePhases(phaseChanges)).toEqual([
-			["words updated (request): 1000 -> 2000 granted, 2000 left"],
-			["words updated (request): 2000 -> 3000 granted, 3000 left"],
+			["words updated: 1000 -> 2000 granted, 2000 left"],
+			[],
 		]);
 	});
 
-	test("replacing the saved later plan makes its change the request's", async () => {
+	test("replacing the saved later plan compares with the plan it replaces", async () => {
 		const { pro, enterprise } = savedSwitch();
 		const team = scheduledRow({
 			planId: "team",
@@ -238,7 +235,7 @@ describe(chalk.yellowBright("set_plans balance preview: origin"), () => {
 
 		expect(describeBalancePhases(phaseChanges)).toEqual([
 			[],
-			["words updated (request): 1000 -> 5000 granted, 5000 left"],
+			["words updated: 3000 -> 5000 granted, 5000 left"],
 		]);
 	});
 });
