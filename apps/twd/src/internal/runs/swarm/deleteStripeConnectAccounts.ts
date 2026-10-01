@@ -5,12 +5,14 @@ import {
 import type { TwdLogger } from "../../../lib/logger.ts";
 import { isAccountGone, withRateLimitRetry } from "../../keys/stripeErrors.ts";
 
+type ListedAccount = { id: string; metadata?: Record<string, string> | null };
+
 type AccountsApi = {
 	accounts: {
-		list(params: { limit: number }): AsyncIterable<{
-			id: string;
-			metadata?: Record<string, string> | null;
-		}>;
+		list(
+			params: { limit: number; starting_after?: string },
+			options?: object,
+		): PromiseLike<{ data: ListedAccount[]; has_more: boolean }>;
 		del(id: string, params?: undefined, options?: object): Promise<unknown>;
 	};
 };
@@ -26,14 +28,26 @@ const runShardAccountIds = async ({
 	accountIds: string[];
 }) => {
 	const ids = new Set(accountIds);
-	for await (const account of stripe.accounts.list({ limit: 100 })) {
-		if (
-			account.metadata?.autumn_tw_shard === "stripe-connect" &&
-			account.metadata.autumn_tw_run === runId
-		)
-			ids.add(account.id);
+	let startingAfter: string | undefined;
+	for (;;) {
+		const page = await withRateLimitRetry(() =>
+			withStripeRequestSlot(async () =>
+				stripe.accounts.list(
+					{ limit: 100, starting_after: startingAfter },
+					STRIPE_REQUEST_OPTIONS,
+				),
+			),
+		);
+		for (const account of page.data) {
+			if (
+				account.metadata?.autumn_tw_shard === "stripe-connect" &&
+				account.metadata.autumn_tw_run === runId
+			)
+				ids.add(account.id);
+		}
+		if (!page.has_more || page.data.length === 0) return [...ids];
+		startingAfter = page.data[page.data.length - 1].id;
 	}
-	return [...ids];
 };
 
 /** Deletes a run's dedicated sub-accounts; returns the ids still alive after retries. */

@@ -103,13 +103,15 @@ test("events from a finished run's shard accounts are acked and never forwarded"
 		workerUrl: "https://next-run.worker",
 		runId: "run_b",
 	});
-	setIngressRoute({ accountId: "acct_pool", workerUrl: "https://old.worker" });
-	dropIngressAccounts({ accountIds: ["acct_old_shard", "acct_pool"] });
-	expect(
-		await deliver({ account: "acct_old_shard", shard: "stripe-connect" }),
-	).toBe(200);
-	expect(await deliver({ account: "acct_pool", shard: "stripe-connect" })).toBe(
-		200,
-	);
+	setIngressRoute({
+		accountId: "acct_dropped_mapped",
+		workerUrl: "https://old.worker",
+	});
+	dropIngressAccounts({
+		accountIds: ["acct_dropped_unmapped", "acct_dropped_mapped"],
+	});
+	for (const account of ["acct_dropped_unmapped", "acct_dropped_mapped"])
+		expect(await deliver({ account, shard: "stripe-connect" })).toBe(200);
 	expect(forwardedTo).toEqual([]);
+	deleteIngressRoute({ accountId: "acct_dropped_mapped" });
 });

@@ -7,22 +7,31 @@ const shardMeta = (runId: string) => ({
 	autumn_tw_run: runId,
 });
 
+const PAGE = 2;
+
 const fakeStripe = ({
 	listed = [],
 	fail = {},
+	listFailures = [],
 }: {
 	listed?: { id: string; metadata: Record<string, string> | null }[];
 	fail?: Record<string, unknown[]>;
+	listFailures?: unknown[];
 }) => {
 	const deleted: string[] = [];
 	return {
 		deleted,
 		stripe: {
 			accounts: {
-				list: () =>
-					(async function* () {
-						yield* listed;
-					})(),
+				list: async (params: { limit: number; starting_after?: string }) => {
+					const error = listFailures.shift();
+					if (error) throw error;
+					const start = params.starting_after
+						? listed.findIndex(({ id }) => id === params.starting_after) + 1
+						: 0;
+					const page = listed.slice(start, start + PAGE);
+					return { data: page, has_more: start + PAGE < listed.length };
+				},
 				del: async (id: string) => {
 					const error = fail[id]?.shift();
 					if (error) throw error;
@@ -83,4 +92,22 @@ test("a delete that keeps failing is returned, not thrown", async () => {
 			logger: logger as never,
 		}),
 	).toEqual(["acct_a"]);
+});
+
+test("a rate-limited sweep page is retried, so unreported accounts are still found", async () => {
+	const { stripe, deleted } = fakeStripe({
+		listed: [
+			{ id: "acct_x", metadata: null },
+			{ id: "acct_y", metadata: null },
+			{ id: "acct_late", metadata: shardMeta("run_1") },
+		],
+		listFailures: [{ statusCode: 429, message: "Too many requests" }],
+	});
+	await deleteStripeConnectAccounts({
+		runId: "run_1",
+		accountIds: [],
+		stripe,
+		logger: logger as never,
+	});
+	expect(deleted).toEqual(["acct_late"]);
 });

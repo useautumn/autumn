@@ -485,16 +485,22 @@ export const handleSwarmJob: JobHandler = async ({
 					shardAccountIds.push(message.accountId);
 					flush();
 				} else if (message.type === "shard_lease_request") {
-					void acquireStripeConnectLease().then((release) => {
+					void acquireStripeConnectLease().then(async (release) => {
 						releaseShardLease = release;
 						shardLeaseHeld = true;
-						enqueueWrite(() =>
-							checkpoint({
-								committed: true,
-								sandboxIds: [...sandboxIds],
-								shardAccountIds: [...shardAccountIds],
-							}),
-						);
+						// Recovery must know to sweep before the child can create anything.
+						await writes;
+						await checkpoint({
+							committed: true,
+							sandboxIds: [...sandboxIds],
+							shardAccountIds: [...shardAccountIds],
+						}).catch((error: unknown) => {
+							abort.abort();
+							ctx.logger.error("stripe-connect lease checkpoint failed", {
+								runId,
+								error: String(error),
+							});
+						});
 						if (closed || abort.signal.aborted) release();
 						else sendToChild?.({ type: "shard_lease_granted" });
 					});
