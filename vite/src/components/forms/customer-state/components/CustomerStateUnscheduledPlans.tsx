@@ -1,6 +1,7 @@
 import { Separator } from "@autumn/ui";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
+import { planRowKey } from "../utils/planRowKey";
 import { PlanScopeGroups } from "./tray/PlanScopeGroups";
 import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
 import { PlanTraySectionTitle } from "./tray/PlanTraySectionTitle";
@@ -32,7 +33,11 @@ export function CustomerStateUnscheduledPlans({
 					showHeaders={hasEntities}
 					renderPlan={(planIndex) => (
 						<UnscheduledPlanRow
-							key={`unscheduled-${planIndex}-${unscheduledPlans[planIndex]?.productId}-${unscheduledPlans[planIndex]?.entityId}`}
+							key={planRowKey({
+								section: "unscheduled",
+								planIndex,
+								productId: unscheduledPlans[planIndex]?.productId,
+							})}
 							planIndex={planIndex}
 						/>
 					)}
