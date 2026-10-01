@@ -58,9 +58,10 @@ const previewPhases = ({
 			}),
 		),
 		plans: setPlansPhasePlans({
-			phaseTransitions,
+			phases,
 			phaseCustomers,
 			originalFullCustomer,
+			features: [],
 			creditLineItems,
 			currency: "usd",
 		}),
@@ -149,7 +150,10 @@ describe("setPlansPhaseTransitions", () => {
 				["starts", "pro"],
 				["ends", "free"],
 			],
-			[["starts", "premium"]],
+			[
+				["starts", "premium"],
+				["ends", "free"],
+			],
 		]);
 	});
 
@@ -277,7 +281,7 @@ describe("setPlansPhaseTransitions", () => {
 		]);
 	});
 
-	test("a newly added phase does not list the previous phase's plans as ending", () => {
+	test("a newly added phase ends the plans the saved state still holds there", () => {
 		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
 		const premium = makeFullCusProduct({
 			planId: "premium",
@@ -305,7 +309,13 @@ describe("setPlansPhaseTransitions", () => {
 			plans.map((phasePlans) =>
 				phasePlans.map((plan) => [plan.status, plan.plan_id]),
 			),
-		).toEqual([[["kept", "pro"]], [["starts", "premium"]]]);
+		).toEqual([
+			[["kept", "pro"]],
+			[
+				["starts", "premium"],
+				["ends", "pro"],
+			],
+		]);
 		expect(
 			planChanges[1].map((change) => [
 				change.action,

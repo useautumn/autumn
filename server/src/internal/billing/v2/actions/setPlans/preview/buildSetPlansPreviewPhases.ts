@@ -70,9 +70,10 @@ export const buildSetPlansPreviewPhases = async ({
 		),
 	});
 	const phasePlans = setPlansPhasePlans({
-		phaseTransitions,
+		phases,
 		phaseCustomers,
 		originalFullCustomer: fullCustomer,
+		features: ctx.features,
 		creditLineItems: immediateCreditLineItems(billingPlan),
 		currency: processorItemContext.currency,
 	});

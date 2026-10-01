@@ -1,5 +1,6 @@
 import {
 	cusProductToProduct,
+	type Feature,
 	type FullCusProduct,
 	featureOptionsAreSame,
 	isCusProductOnEntity,
@@ -11,23 +12,27 @@ import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/com
 
 const INSERTED_PLAN_QUANTITY = 1;
 
-/** The requested plan is exactly this customer product: same plan version, scope, quantities and items. */
-export const isUnchangedCustomerProduct = ({
-	ctx,
+export type RequestedPlan = Pick<
+	MultiAttachProductContext,
+	"fullProduct" | "featureQuantities" | "customerLicenseQuantities"
+>;
+
+/** The customer product is exactly this plan: same plan version, scope, quantities and items. */
+export const customerProductMatchesPlan = ({
+	features,
 	customerProduct,
-	productContext,
+	requestedPlan,
 	internalEntityId,
+	planQuantity,
 }: {
-	ctx: AutumnContext;
+	features: Feature[];
 	customerProduct: FullCusProduct;
-	productContext: Pick<
-		MultiAttachProductContext,
-		"fullProduct" | "featureQuantities" | "customerLicenseQuantities"
-	>;
+	requestedPlan: RequestedPlan;
 	internalEntityId: string | undefined;
+	planQuantity: number;
 }) => {
 	const { fullProduct, featureQuantities, customerLicenseQuantities } =
-		productContext;
+		requestedPlan;
 
 	const samePlanVersion =
 		customerProduct.internal_product_id === fullProduct.internal_id;
@@ -36,8 +41,7 @@ export const isUnchangedCustomerProduct = ({
 		internalEntityId,
 	});
 	const samePlanQuantity =
-		(customerProduct.quantity ?? INSERTED_PLAN_QUANTITY) ===
-		INSERTED_PLAN_QUANTITY;
+		(customerProduct.quantity ?? INSERTED_PLAN_QUANTITY) === planQuantity;
 	const sameLicenseQuantities =
 		computeCustomerLicenseQuantityChanges({
 			customerProduct,
@@ -50,7 +54,7 @@ export const isUnchangedCustomerProduct = ({
 	const { itemsSame, freeTrialsSame } = productsAreSame({
 		newProductV1: fullProduct,
 		curProductV1: cusProductToProduct({ cusProduct: customerProduct }),
-		features: ctx.features,
+		features,
 	});
 
 	return (
@@ -63,3 +67,23 @@ export const isUnchangedCustomerProduct = ({
 		freeTrialsSame
 	);
 };
+
+/** The requested plan is exactly this customer product: same plan version, scope, quantities and items. */
+export const isUnchangedCustomerProduct = ({
+	ctx,
+	customerProduct,
+	productContext,
+	internalEntityId,
+}: {
+	ctx: AutumnContext;
+	customerProduct: FullCusProduct;
+	productContext: RequestedPlan;
+	internalEntityId: string | undefined;
+}) =>
+	customerProductMatchesPlan({
+		features: ctx.features,
+		customerProduct,
+		requestedPlan: productContext,
+		internalEntityId,
+		planQuantity: INSERTED_PLAN_QUANTITY,
+	});

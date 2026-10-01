@@ -1,48 +1,22 @@
 import {
-	CusProductStatus,
-	type CustomerPlanChange,
-	cp,
 	cusProductToPrices,
+	customerProductHasActiveStatus,
 	type Entity,
+	type Feature,
 	type FullCusProduct,
 	type FullCustomer,
+	findCustomerProductById,
 	type LineItem,
 	type SetPlansPreviewPlan,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import {
-	type CustomerProductTransition,
-	deriveCustomerPlanChangeAction,
-} from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/buildCustomerPlanChange";
 import { customerProductToEntityId } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/customerProductToEntityId";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import { diffPhasePlans, type PhasePlanDiff } from "./diffPhasePlans";
 import { autumnPriceToProcessorItemPrice } from "./processorItems/price/autumnPriceToProcessorItemPrice";
+import { savedCustomerProductsAt } from "./savedCustomerProductsAt";
 
-const PLAN_STATUS: Record<
-	CustomerPlanChange["action"],
-	SetPlansPreviewPlan["status"]
-> = {
-	activated: "starts",
-	scheduled: "starts",
-	expired: "ends",
-	updated: "updated",
-};
-
-const isActive = (customerProduct: FullCusProduct) =>
-	cp(customerProduct).hasActiveStatus().valid;
-
-/** An untouched row the customer already had scheduled: it starting on schedule is not a change. */
-const isAlreadyScheduled = ({
-	customerProduct,
-	originalFullCustomer,
-}: {
-	customerProduct: FullCusProduct;
-	originalFullCustomer: FullCustomer;
-}) =>
-	originalFullCustomer.customer_products.some(
-		(original) =>
-			original.id === customerProduct.id &&
-			original.status === CusProductStatus.Scheduled,
-	);
+const IMMEDIATE_PHASE_INDEX = 0;
 
 const planCredit = ({
 	customerProduct,
@@ -60,6 +34,37 @@ const planCredit = ({
 			new Decimal(0),
 		);
 	return credit.isZero() ? null : credit.toDP(2).toNumber();
+};
+
+/** An ending plan shows the phase's copy of its row, which carries the end date the request gives it. */
+const diffToCustomerProduct = ({
+	diff,
+	phaseCustomer,
+}: {
+	diff: PhasePlanDiff;
+	phaseCustomer: FullCustomer;
+}): FullCusProduct => {
+	if (diff.status !== "ends") return diff.after;
+	return (
+		findCustomerProductById({
+			fullCustomer: phaseCustomer,
+			customerProductId: diff.before.id,
+		}) ?? diff.before
+	);
+};
+
+const replacedPlanCredit = ({
+	diff,
+	phaseIndex,
+	creditLineItems,
+}: {
+	diff: PhasePlanDiff;
+	phaseIndex: number;
+	creditLineItems: LineItem[];
+}) => {
+	if (phaseIndex !== IMMEDIATE_PHASE_INDEX) return null;
+	if (diff.status !== "ends" && diff.status !== "updated") return null;
+	return planCredit({ customerProduct: diff.before, creditLineItems });
 };
 
 const toPreviewPlan = ({
@@ -89,66 +94,42 @@ const toPreviewPlan = ({
 	})),
 });
 
-/** Every plan each phase touches or keeps active, with its prices and any credit for ending now. */
+/** Every plan in each phase, classified against what the customer's saved state holds at that phase's start. */
 export const setPlansPhasePlans = ({
-	phaseTransitions,
+	phases,
 	phaseCustomers,
 	originalFullCustomer,
+	features,
 	creditLineItems,
 	currency,
 }: {
-	phaseTransitions: CustomerProductTransition[][];
+	phases: SchedulePhasePlan[];
 	phaseCustomers: FullCustomer[];
 	originalFullCustomer: FullCustomer;
+	features: Feature[];
 	creditLineItems: LineItem[];
 	currency: string;
 }): SetPlansPreviewPlan[][] =>
-	phaseTransitions.map((transitions, phaseIndex) => {
-		const entities = originalFullCustomer.entities;
-		const previousCustomer =
-			phaseIndex === 0 ? originalFullCustomer : phaseCustomers[phaseIndex - 1];
-		const changedPlans = new Map<string, SetPlansPreviewPlan>();
-		for (const { before, after } of transitions) {
-			if (!after || changedPlans.has(after.id)) continue;
-			changedPlans.set(
-				after.id,
-				toPreviewPlan({
-					customerProduct: after,
-					status:
-						PLAN_STATUS[deriveCustomerPlanChangeAction({ before, after })],
-					credit:
-						phaseIndex === 0 && before
-							? planCredit({ customerProduct: before, creditLineItems })
-							: null,
-					entities,
-					currency,
-				}),
-			);
-		}
+	phases.map((phase, phaseIndex) => {
+		const phaseCustomer = phaseCustomers[phaseIndex];
+		const diffs = diffPhasePlans({
+			features,
+			before: savedCustomerProductsAt({
+				fullCustomer: originalFullCustomer,
+				at: phase.startsAt,
+			}),
+			after: phaseCustomer.customer_products.filter(
+				customerProductHasActiveStatus,
+			),
+		});
 
-		const touchedIds = new Set(
-			transitions.flatMap(({ before, after }) => [before?.id, after?.id]),
+		return diffs.map((diff) =>
+			toPreviewPlan({
+				customerProduct: diffToCustomerProduct({ diff, phaseCustomer }),
+				status: diff.status,
+				credit: replacedPlanCredit({ diff, phaseIndex, creditLineItems }),
+				entities: originalFullCustomer.entities,
+				currency,
+			}),
 		);
-		const keptPlans = phaseCustomers[phaseIndex].customer_products
-			.filter(
-				(customerProduct) =>
-					!touchedIds.has(customerProduct.id) &&
-					isActive(customerProduct) &&
-					(isAlreadyScheduled({ customerProduct, originalFullCustomer }) ||
-						previousCustomer.customer_products.some(
-							(previous) =>
-								previous.id === customerProduct.id && isActive(previous),
-						)),
-			)
-			.map((customerProduct) =>
-				toPreviewPlan({
-					customerProduct,
-					status: "kept",
-					credit: null,
-					entities,
-					currency,
-				}),
-			);
-
-		return [...changedPlans.values(), ...keptPlans];
 	});
