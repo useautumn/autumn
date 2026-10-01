@@ -178,15 +178,18 @@ const balanceChange = (
 	overrides: Partial<SetPlansPreviewBalanceChange>,
 ): SetPlansPreviewBalanceChange => ({
 	feature_id: "credits",
+	entity_id: null,
 	balance: {
 		granted: 500,
 		remaining: 260,
 		usage: 240,
 		unlimited: false,
 		next_reset_at: null,
+		overage_allowed: false,
 	},
 	previous_attributes: { granted: 100 },
 	behavior: "carried",
+	origin: "request",
 	...overrides,
 });
 
@@ -204,6 +207,7 @@ test("balance rows show the server's behaviour with labelled numbers", () => {
 							usage: 0,
 							unlimited: false,
 							next_reset_at: null,
+							overage_allowed: false,
 						},
 						previous_attributes: { granted: 500, usage: 240 },
 						behavior: "reset",
@@ -241,6 +245,73 @@ test("balance rows show the server's behaviour with labelled numbers", () => {
 		],
 	]);
 	expect(section.summary).toBe("1 reset · 1 carried over");
+});
+
+test("balance rows carry their entity, and saved changes are marked but not counted", () => {
+	const section = balanceChangesToReviewSection({
+		features,
+		phases: [
+			phase(NOW, {
+				balance_changes: [
+					balanceChange({ entity_id: "ent_a" }),
+					balanceChange({ entity_id: "ent_b" }),
+				],
+			}),
+			phase(NOV_1, {
+				balance_changes: [
+					balanceChange({ behavior: "updated", origin: "saved" }),
+				],
+			}),
+		],
+	});
+
+	expect(
+		section.phases.map((reviewPhase) =>
+			reviewPhase.rows.map((row) => [row.key, row.entityId, row.description]),
+		),
+	).toEqual([
+		[
+			["balance-0-ent_a-credits", "ent_a", "100 → 500 granted · 240 used"],
+			["balance-0-ent_b-credits", "ent_b", "100 → 500 granted · 240 used"],
+		],
+		[
+			[
+				"balance-1-customer-credits",
+				null,
+				"100 → 500 granted · 240 used · already scheduled",
+			],
+		],
+	]);
+	expect(section.summary).toBe("2 carried over");
+});
+
+test("a pay-per-use balance reads as usage-based, not as nothing granted", () => {
+	const section = balanceChangesToReviewSection({
+		features,
+		phases: [
+			phase(NOW, {
+				balance_changes: [
+					balanceChange({
+						balance: {
+							granted: 0,
+							remaining: 0,
+							usage: 0,
+							unlimited: false,
+							next_reset_at: null,
+							overage_allowed: true,
+						},
+						previous_attributes: { overage_allowed: false },
+						behavior: "added",
+					}),
+				],
+			}),
+		],
+	});
+
+	expect(section.phases[0]?.rows[0]?.value).toEqual({
+		amount: "Usage-based",
+		isBasis: true,
+	});
 });
 
 const pricingRows = (

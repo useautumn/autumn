@@ -2,7 +2,7 @@ import {
 	type Feature,
 	findFeatureById,
 	numberWithCommas,
-	type PreviewBalance,
+	type SetPlansPreviewBalance,
 	type SetPlansPreviewBalanceChange,
 	type SetPlansPreviewPhase,
 } from "@autumn/shared";
@@ -19,7 +19,10 @@ import type {
 	ReviewChangeValue,
 } from "./types/reviewChange";
 
-type BalanceTransition = { before: PreviewBalance; after: PreviewBalance };
+type BalanceTransition = {
+	before: SetPlansPreviewBalance;
+	after: SetPlansPreviewBalance;
+};
 
 const BEHAVIOR_SUMMARY_LABELS: [
 	SetPlansPreviewBalanceChange["behavior"],
@@ -35,10 +38,14 @@ const BEHAVIOR_SUMMARY_LABELS: [
 /** `previous_attributes` is sparse — overlay it on the after-state for the before-state. */
 const balanceBefore = (
 	change: SetPlansPreviewBalanceChange,
-): PreviewBalance => ({
+): SetPlansPreviewBalance => ({
 	...change.balance,
-	...(change.previous_attributes as Partial<PreviewBalance>),
+	...(change.previous_attributes as Partial<SetPlansPreviewBalance>),
 });
+
+/** A saved schedule already makes this change; older previews have no origin. */
+const isSavedChange = (change: SetPlansPreviewBalanceChange) =>
+	change.origin === "saved";
 
 const describeGranted = ({ before, after }: BalanceTransition) =>
 	before.granted === after.granted || before.granted === 0
@@ -61,8 +68,12 @@ const describeBalance = ({ before, after }: BalanceTransition) => {
 	]);
 };
 
-const balanceValue = (balance: PreviewBalance): ReviewChangeValue => {
+const isPayPerUse = (balance: SetPlansPreviewBalance) =>
+	balance.overage_allowed && balance.granted === 0;
+
+const balanceValue = (balance: SetPlansPreviewBalance): ReviewChangeValue => {
 	if (balance.unlimited) return { amount: "Unlimited" };
+	if (isPayPerUse(balance)) return { amount: "Usage-based", isBasis: true };
 	return {
 		amount: numberWithCommas(balance.remaining),
 		suffix: `of ${numberWithCommas(balance.granted)} left`,
@@ -83,11 +94,15 @@ const balanceChangeToRow = ({
 	const feature = findFeatureById({ features, featureId: change.feature_id });
 
 	return {
-		key: `balance-${phaseIndex}-${change.feature_id}`,
+		key: `balance-${phaseIndex}-${change.entity_id ?? "customer"}-${change.feature_id}`,
 		title: feature?.name ?? change.feature_id,
-		description: describeBalance({ before, after }),
+		description: joinDetail([
+			describeBalance({ before, after }),
+			isSavedChange(change) ? "already scheduled" : undefined,
+		]),
 		status: change.behavior,
 		value: balanceValue(after),
+		entityId: change.entity_id ?? null,
 	};
 };
 
@@ -105,14 +120,17 @@ export const balanceChangesToReviewSection = ({
 			balanceChangeToRow({ change, phaseIndex, features }),
 		),
 	}));
-	const rows = phaseRows.flatMap((phase) => phase.rows);
+	const requestedChanges = phases
+		.flatMap((phase) => phase.balance_changes)
+		.filter((change) => !isSavedChange(change));
 
 	return {
 		phases: withoutEmptyPhases(phaseRows),
 		summary: summarizeCounts({
 			counts: BEHAVIOR_SUMMARY_LABELS.map(([behavior, label]) => [
 				label,
-				rows.filter((row) => row.status === behavior).length,
+				requestedChanges.filter((change) => change.behavior === behavior)
+					.length,
 			]),
 			emptyLabel: "No changes",
 		}),
