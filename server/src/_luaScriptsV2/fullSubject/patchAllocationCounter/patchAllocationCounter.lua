@@ -62,6 +62,9 @@ elseif math.abs(safe_number(existing.window_start_at) - safe_number(counter.wind
     and math.abs(safe_number(existing.window_end_at) - safe_number(counter.window_end_at))
       <= USAGE_WINDOW_BOUND_TOLERANCE_MS then
   existing.usage = math.max(0, safe_number(existing.usage) + usage_delta)
+  existing.window_start_at = counter.window_start_at
+  existing.window_end_at = counter.window_end_at
+  existing.anchor_customer_entitlement_id = counter.anchor_customer_entitlement_id
   existing.updated_at = now
 else
   existing.usage = math.max(0, safe_number(counter.usage))

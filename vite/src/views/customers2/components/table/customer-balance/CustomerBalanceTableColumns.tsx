@@ -414,19 +414,27 @@ function BarCell({
 	);
 }
 
-/** Shared, metered, resetting rows are the ones balances.allocate can split across entities. */
+/** balances.allocate splits one shared, finite, resetting interval; a row mixing intervals is ambiguous. */
 const isAllocatableSharedBalance = ({
-	balance,
+	customerEntitlements,
 }: {
-	balance: FullCusEntWithFullCusProduct;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
 }) => {
-	const interval = balance.entitlement.interval;
+	const intervals = new Set(
+		customerEntitlements.map((ent) => ent.entitlement.interval),
+	);
 	return (
-		!balance.internal_entity_id &&
-		!balance.customer_product?.internal_entity_id &&
-		balance.entitlement.allowance_type !== AllowanceType.Unlimited &&
-		!!interval &&
-		interval !== EntInterval.Lifetime
+		intervals.size === 1 &&
+		customerEntitlements.every(
+			(ent) =>
+				!ent.internal_entity_id &&
+				!ent.customer_product?.internal_entity_id &&
+				!ent.unlimited &&
+				ent.entitlement.allowance_type !== AllowanceType.Unlimited &&
+				ent.entitlement.allowance != null &&
+				!!ent.entitlement.interval &&
+				ent.entitlement.interval !== EntInterval.Lifetime,
+		)
 	);
 };
 
@@ -458,12 +466,6 @@ function BalanceActionsCell({
 		(!expired || !row.original.customer_product);
 	const canRecordUsage = !expired && isParentRow && !!onRecordUsageClick;
 	const canCheckBalance = !expired && isParentRow && !!onCheckBalanceClick;
-	const canAllocate =
-		!expired &&
-		isParentRow &&
-		!!onAllocateClick &&
-		(fullCustomer?.entities?.length ?? 0) > 0 &&
-		isAllocatableSharedBalance({ balance: row.original });
 	const canRecalculate =
 		!expired &&
 		isParentRow &&
@@ -478,6 +480,14 @@ function BalanceActionsCell({
 			? row.subRows.map((subRow) => subRow.original)
 			: [row.original]
 	).filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
+	const canAllocate =
+		!expired &&
+		isParentRow &&
+		!!onAllocateClick &&
+		(fullCustomer?.entities ?? []).some(
+			(entity) => entity.id && !entity.deleted,
+		) &&
+		isAllocatableSharedBalance({ customerEntitlements });
 
 	// Reserve the slot, or the column edge goes ragged.
 	if (
