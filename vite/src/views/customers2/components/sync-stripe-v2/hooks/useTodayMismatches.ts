@@ -6,12 +6,13 @@ export const useTodayMismatches = ({
 }: {
 	proposal: SyncProposalV2;
 }) => {
-	const { subscriptions, isLoading } = useVerifyStripeQuery();
+	const { subscriptions, isLoading, isRefetching } = useVerifyStripeQuery();
 	return {
 		mismatches: subscriptions.find(
 			(subscription) =>
 				subscription.stripe_subscription_id === proposal.stripe_subscription_id,
 		)?.mismatches,
 		isVerifying: isLoading,
+		isFetching: isLoading || isRefetching,
 	};
 };

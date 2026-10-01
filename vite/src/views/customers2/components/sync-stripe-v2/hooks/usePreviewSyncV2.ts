@@ -33,5 +33,5 @@ export const usePreviewSyncV2 = ({
 		placeholderData: keepPreviousData,
 	});
 
-	return { mismatches: query.data?.mismatches };
+	return { mismatches: query.data?.mismatches, isFetching: query.isFetching };
 };

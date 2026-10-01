@@ -1,4 +1,11 @@
-import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
+import {
+	StatusChipIcon,
+	type StatusGlyph,
+	type StatusTone,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import type { StripeItemMark } from "./previewMismatches";
 
 const STRIPE_ITEM_MATCHES: Record<
@@ -14,16 +21,23 @@ const STRIPE_ITEM_MATCHES: Record<
 	out_of_sync: { label: "Not matched", tone: "amber", glyph: "alert" },
 };
 
-export function StripeItemMatchChip({
+export function StripeItemMatchIcon({
 	mark,
+	tooltip,
 }: {
 	mark: StripeItemMark | undefined;
+	tooltip?: string;
 }) {
 	if (!mark) return null;
 	const { label, tone, glyph } = STRIPE_ITEM_MATCHES[mark];
 	return (
-		<StatusChip tone={tone} glyph={glyph}>
-			{label}
-		</StatusChip>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<span className="flex">
+					<StatusChipIcon tone={tone} glyph={glyph} />
+				</span>
+			</TooltipTrigger>
+			<TooltipContent>{tooltip ?? label}</TooltipContent>
+		</Tooltip>
 	);
 }

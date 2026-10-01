@@ -61,13 +61,20 @@ export const buildPhaseSections = ({
 	const sub = proposal.stripe_subscription;
 	const schedule = proposal.stripe_schedule;
 
-	// The server drops phases that had ended at load; align from the end so a phase ending mid-review can't shift items.
-	const openSchedulePhases = (schedule?.phases ?? []).slice(
-		-proposal.phases.length,
-	);
+	// The server drops ended phases and Stripe's release tail, so pair by start.
+	const findSchedulePhase = ({ phase }: { phase: SyncPhase }) =>
+		phase.starts_at === "now"
+			? schedule?.phases.find(
+					(schedulePhase) =>
+						schedulePhase.start_date === schedule.current_phase?.start_date,
+				)
+			: schedule?.phases.find(
+					(schedulePhase) =>
+						schedulePhase.start_date * 1000 === phase.starts_at,
+				);
 
 	return proposal.phases.map((phase, phaseIndex): PhaseSection => {
-		const schedulePhase = openSchedulePhases[phaseIndex];
+		const schedulePhase = findSchedulePhase({ phase });
 		if (schedulePhase) {
 			return {
 				phase,

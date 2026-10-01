@@ -1,3 +1,4 @@
+import { Separator } from "@autumn/ui";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanScopeGroups } from "./tray/PlanScopeGroups";
@@ -6,7 +7,11 @@ import { PlanTraySectionTitle } from "./tray/PlanTraySectionTitle";
 import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 
 /** Ongoing plans: billed with the first phase and never ended by the schedule. */
-export function CustomerStateUnscheduledPlans() {
+export function CustomerStateUnscheduledPlans({
+	withSeparator = false,
+}: {
+	withSeparator?: boolean;
+}) {
 	const { formValues, canMakeUnscheduled, handleAddUnscheduledPlan } =
 		useCustomerStateContext();
 	const { hasEntities } = useScopeEntitySearch({ selectedEntityId: undefined });
@@ -15,29 +20,32 @@ export function CustomerStateUnscheduledPlans() {
 	if (!canMakeUnscheduled && unscheduledPlans.length === 0) return null;
 
 	return (
-		<div className="flex flex-col gap-1.5">
-			<PlanTraySectionTitle
-				title="Ongoing plans"
-				hint="Billed now & kept across every phase"
-			/>
-			<PlanScopeGroups
-				plans={unscheduledPlans}
-				showHeaders={hasEntities}
-				renderPlan={(planIndex) => (
-					<UnscheduledPlanRow
-						key={`unscheduled-${planIndex}-${unscheduledPlans[planIndex]?.productId}-${unscheduledPlans[planIndex]?.entityId}`}
-						planIndex={planIndex}
-					/>
-				)}
-				addRow={
-					canMakeUnscheduled && (
-						<PlanTrayAddRow
-							label="Add ongoing plan"
-							onClick={handleAddUnscheduledPlan}
+		<>
+			{withSeparator && <Separator />}
+			<div className="flex flex-col gap-1.5">
+				<PlanTraySectionTitle
+					title="Ongoing plans"
+					hint="Billed now & kept across every phase"
+				/>
+				<PlanScopeGroups
+					plans={unscheduledPlans}
+					showHeaders={hasEntities}
+					renderPlan={(planIndex) => (
+						<UnscheduledPlanRow
+							key={`unscheduled-${planIndex}-${unscheduledPlans[planIndex]?.productId}-${unscheduledPlans[planIndex]?.entityId}`}
+							planIndex={planIndex}
 						/>
-					)
-				}
-			/>
-		</div>
+					)}
+					addRow={
+						canMakeUnscheduled && (
+							<PlanTrayAddRow
+								label="Add ongoing plan"
+								onClick={handleAddUnscheduledPlan}
+							/>
+						)
+					}
+				/>
+			</div>
+		</>
 	);
 }
