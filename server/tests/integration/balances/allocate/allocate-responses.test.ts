@@ -64,7 +64,8 @@ test.concurrent(
 			],
 		});
 		await autumnV2_3.customers.get(customerId);
-		await autumnV2_3.entities.get(customerId, a);
+		for (const entityId of [a, b, c])
+			await autumnV2_3.entities.get(customerId, entityId);
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: a,
