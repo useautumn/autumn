@@ -225,6 +225,40 @@ describe("catalog invalidation topic", () => {
 		expect(shared.seeks).toEqual([]);
 	});
 
+	test("a per-process consumer that fails to start leaves no rejoin listener behind", async () => {
+		let listeners = 0;
+		const consumer = createCatalogInvalidationConsumer({
+			ctx: {
+				kafka: {
+					consumer: () =>
+						({
+							connect: async () => {},
+							subscribe: async () => {},
+							run: async () => {
+								throw new Error("coordinator unavailable");
+							},
+							on: () => {
+								listeners++;
+								return () => {
+									listeners--;
+								};
+							},
+							events: { GROUP_JOIN: "consumer.group_join" },
+							disconnect: async () => {},
+						}) as never,
+				},
+				handler: { apply: () => {}, skip: () => {} },
+			},
+			config: {
+				topic: "local-catalog-invalidations",
+				group: { kind: "perProcess", idPrefix: "herald-catalog" },
+			},
+		});
+
+		await expect(consumer.start()).rejects.toThrow("coordinator unavailable");
+		expect(listeners).toBe(0);
+	});
+
 	test("a per-process group is new each time, a shared group is the one named", () => {
 		const groupIds: string[] = [];
 		const consumerIn = (

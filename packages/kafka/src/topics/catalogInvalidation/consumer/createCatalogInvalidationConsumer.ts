@@ -83,8 +83,17 @@ export function createCatalogInvalidationConsumer({
 				consumer.events.GROUP_JOIN,
 				resumeFromReadOffsets,
 			);
-		await consumer.subscribe({ topics: [config.topic], fromBeginning: false });
-		await consumer.run({ eachMessage, autoCommit: !isPerProcess });
+		try {
+			await consumer.subscribe({
+				topics: [config.topic],
+				fromBeginning: false,
+			});
+			await consumer.run({ eachMessage, autoCommit: !isPerProcess });
+		} catch (cause) {
+			removeGroupJoinListener?.();
+			removeGroupJoinListener = undefined;
+			throw cause;
+		}
 	}
 
 	async function stop(): Promise<void> {
