@@ -26,6 +26,32 @@ describe("a deployment's public endpoint", () => {
 		expect(url).toBe("http://localhost:60040");
 	});
 
+	test("is the resource's only endpoint when the manager keys it by another name", () => {
+		// The hosted manager keys a container's one endpoint `default`; the local manager keys it by name.
+		const hosted = {
+			...running,
+			stackState: {
+				resources: {
+					atom: {
+						outputs: {
+							publicEndpoints: {
+								default: { url: "https://api.01abcd.vpc.direct" },
+							},
+						},
+					},
+				},
+			},
+		};
+
+		expect(
+			deploymentToPublicEndpointUrl({
+				deployment: hosted,
+				resourceId: "atom",
+				endpointName: "api",
+			}),
+		).toBe("https://api.01abcd.vpc.direct");
+	});
+
 	test("is null until the resource has outputs", () => {
 		const pending = { id: "dep_1", status: "pending" };
 		const provisioning = {

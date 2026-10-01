@@ -1,7 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { openSlots } from "../slots/openSlots.js";
+import type { Slots } from "../slots/types/slots.js";
 import { hashToken } from "./hashToken.js";
 import type { Auth } from "./types/auth.js";
+
+/** A deployment holds one data folder, so what arrives without a token (Autumn's pushes) is applied to it directly. */
+export type DeployedAuth = Auth & { slots: Slots };
 
 /** An Atom in an org's cloud: one token, set at deploy by its hash, opens the one data folder. */
 export const createDeployedAuth = ({
@@ -12,7 +16,7 @@ export const createDeployedAuth = ({
 	dataDir: string;
 	tokenHash: string;
 	slotCount: number;
-}): Auth => {
+}): DeployedAuth => {
 	const slots = openSlots({ folder: dataDir, slotCount });
 	const expectedHash = Buffer.from(tokenHash, "hex");
 
@@ -21,5 +25,5 @@ export const createDeployedAuth = ({
 		return timingSafeEqual(sentHash, expectedHash) ? slots : null;
 	}
 
-	return { authorize, close: () => slots.close() };
+	return { authorize, slots, close: () => slots.close() };
 };

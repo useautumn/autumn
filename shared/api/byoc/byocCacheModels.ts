@@ -1,5 +1,10 @@
 import { z } from "zod/v4";
 import { AppEnv } from "../../models/genModels/genEnums";
+import {
+	BYOC_CACHE_MACHINES,
+	DEFAULT_BYOC_CACHE_MACHINE,
+	findByocCacheMachine,
+} from "../../models/orgModels/byocCacheMachines";
 import { ByocCacheStatus } from "../../models/orgModels/byocConfig";
 
 export const ByocCacheStatusSchema = z
@@ -27,9 +32,56 @@ export const ApiByocCacheSchema = z.object({
 	created_at: z
 		.number()
 		.describe("When the cache was requested, ms since epoch."),
+	cpu: z
+		.number()
+		.nullable()
+		.describe("vCPUs of the cache's machine, once it is running."),
+	memory: z
+		.number()
+		.nullable()
+		.describe("Memory of the cache's machine in GiB, once it is running."),
 });
 
-export const CreateByocCacheParamsSchema = z.object({});
+const OFFERED_MACHINES = BYOC_CACHE_MACHINES.map(
+	({ cpu, memory }) => `${cpu} vCPU / ${memory} GiB`,
+).join(", ");
+
+const isOfferedMachine = ({ cpu, memory }: { cpu: number; memory: number }) =>
+	findByocCacheMachine({ cpu, memory }) !== undefined;
+
+/** Both omitted takes the default machine; a lone `cpu` or `memory` names no machine. */
+const isDefaultOrOfferedMachine = ({
+	cpu,
+	memory,
+}: {
+	cpu?: number;
+	memory?: number;
+}) => {
+	const takesDefault = cpu === undefined && memory === undefined;
+	if (takesDefault) return true;
+	if (cpu === undefined || memory === undefined) return false;
+	return isOfferedMachine({ cpu, memory });
+};
+
+const ByocCacheResourcesSchema = z.object({
+	cpu: z.number().describe("vCPUs of the cache's machine."),
+	memory: z.number().describe("Memory of the cache's machine in GiB."),
+});
+
+const offeredMachineError = {
+	message: `cpu and memory must be one of: ${OFFERED_MACHINES}`,
+};
+
+export const CreateByocCacheParamsSchema = ByocCacheResourcesSchema.partial()
+	.refine(isDefaultOrOfferedMachine, offeredMachineError)
+	.describe(
+		`The machine to start the cache on; defaults to ${DEFAULT_BYOC_CACHE_MACHINE.cpu} vCPU / ${DEFAULT_BYOC_CACHE_MACHINE.memory} GiB.`,
+	);
+
+export const ResizeByocCacheParamsSchema = ByocCacheResourcesSchema.refine(
+	isOfferedMachine,
+	offeredMachineError,
+);
 
 export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 	setup_url: z
@@ -56,3 +108,5 @@ export type CreateByocCacheResponse = z.infer<
 	typeof CreateByocCacheResponseSchema
 >;
 export type GetByocCacheResponse = z.infer<typeof GetByocCacheResponseSchema>;
+export type CreateByocCacheParams = z.infer<typeof CreateByocCacheParamsSchema>;
+export type ResizeByocCacheParams = z.infer<typeof ResizeByocCacheParamsSchema>;

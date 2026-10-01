@@ -1,6 +1,8 @@
 import {
 	type AppEnv,
+	type ByocCacheMachine,
 	ByocCacheStatus,
+	DEFAULT_BYOC_CACHE_MACHINE,
 	ErrCode,
 	type Organization,
 	RecaseError,
@@ -13,7 +15,11 @@ import type {
 	AtomSetup,
 } from "./types/atomDeployer.js";
 
-type StackContext = { atomUrl: string };
+/** A dev stack has no machines, so each Atom's is only remembered here; a restart resets it to the default. */
+type StackContext = {
+	atomUrl: string;
+	machineById: Map<string, ByocCacheMachine>;
+};
 
 const STACK_ATOM_TIMEOUT_MS = 2000;
 
@@ -76,11 +82,13 @@ const startStackAtom = async ({
 	org,
 	env,
 	tokenHash,
+	machine,
 }: {
 	ctx: StackContext;
 	org: Organization;
 	env: AppEnv;
 	tokenHash: string;
+	machine: ByocCacheMachine;
 }): Promise<AtomSetup> => {
 	const id = cacheExternalId({ org, env });
 	await postToStackAtom({
@@ -88,6 +96,7 @@ const startStackAtom = async ({
 		route: "atoms.put",
 		body: { id, token_hash: tokenHash },
 	});
+	ctx.machineById.set(id, machine);
 	return { deploymentGroupId: id, setupUrl: null };
 };
 
@@ -110,7 +119,21 @@ const findStackAtom = async ({
 		id: atom.id,
 		status: ByocCacheStatus.Ready,
 		endpointUrl: ctx.atomUrl,
+		machine: ctx.machineById.get(atom.id) ?? DEFAULT_BYOC_CACHE_MACHINE,
 	};
+};
+
+const resizeStackAtom = ({
+	ctx,
+	deploymentGroupId,
+	machine,
+}: {
+	ctx: StackContext;
+	deploymentGroupId: string;
+	machine: ByocCacheMachine;
+}): Promise<void> => {
+	ctx.machineById.set(deploymentGroupId, machine);
+	return Promise.resolve();
 };
 
 const deleteStackAtom = async ({
@@ -125,6 +148,7 @@ const deleteStackAtom = async ({
 		route: "atoms.delete",
 		body: { id: deploymentGroupId },
 	});
+	ctx.machineById.delete(deploymentGroupId);
 };
 
 /** A dev stack runs one Atom process; every org's Atom is a token and a folder inside it. */
@@ -133,10 +157,11 @@ export const createStackAtomDeployer = ({
 }: {
 	atomUrl: string;
 }): AtomDeployer => {
-	const ctx = { atomUrl };
+	const ctx = { atomUrl, machineById: new Map<string, ByocCacheMachine>() };
 	return {
 		start: (params) => startStackAtom({ ctx, ...params }),
 		find: (params) => findStackAtom({ ctx, ...params }),
+		resize: (params) => resizeStackAtom({ ctx, ...params }),
 		delete: (params) => deleteStackAtom({ ctx, ...params }),
 	};
 };

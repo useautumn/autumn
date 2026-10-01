@@ -1,4 +1,6 @@
 import type {
+	ApiByocCache,
+	ByocCacheMachine,
 	CreateByocCacheResponse,
 	GetByocCacheResponse,
 } from "@autumn/shared";
@@ -13,7 +15,7 @@ const openSetupTab = (): Window | null => {
 	return setupTab;
 };
 
-/** Create and delete write straight into the query cache, so the card advances without a refetch. */
+/** Create, resize and delete write straight into the query cache, so the card advances without a refetch. */
 export const useByocCacheActions = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -23,14 +25,25 @@ export const useByocCacheActions = () => {
 		queryClient.setQueryData<GetByocCacheResponse>(queryKey, { cache });
 
 	const create = useMutation({
-		mutationFn: async () => {
+		mutationFn: async ({ cpu, memory }: ByocCacheMachine) => {
 			const { data } = await axiosInstance.post<CreateByocCacheResponse>(
 				"/v1/byoc.create_atom",
-				{},
+				{ cpu, memory },
 			);
 			return data;
 		},
 		onSuccess: ({ setup_url: _setupUrl, ...cache }) => setCache(cache),
+	});
+
+	const resize = useMutation({
+		mutationFn: async ({ cpu, memory }: ByocCacheMachine) => {
+			const { data } = await axiosInstance.post<ApiByocCache>(
+				"/v1/byoc.resize_atom",
+				{ cpu, memory },
+			);
+			return data;
+		},
+		onSuccess: setCache,
 	});
 
 	const remove = useMutation({
@@ -41,10 +54,10 @@ export const useByocCacheActions = () => {
 	});
 
 	/** Deploys, then opens alien's setup in a new tab; a deploy with no link to open (local dev) closes it again. */
-	const startSetup = async (): Promise<void> => {
+	const startSetup = async (machine: ByocCacheMachine): Promise<void> => {
 		const setupTab = openSetupTab();
 		try {
-			const { setup_url: setupUrl } = await create.mutateAsync();
+			const { setup_url: setupUrl } = await create.mutateAsync(machine);
 			if (setupUrl && setupTab) setupTab.location.href = setupUrl;
 			else setupTab?.close();
 		} catch (error) {
@@ -55,6 +68,7 @@ export const useByocCacheActions = () => {
 
 	return {
 		create,
+		resize,
 		remove,
 		startSetup,
 		setupUrl: create.data?.setup_url ?? null,

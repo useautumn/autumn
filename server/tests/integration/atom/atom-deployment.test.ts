@@ -21,6 +21,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
+	atomIsHosted,
 	deleteAtomDeployment,
 	ensureAtomDeployment,
 } from "./utils/ensureAtomDeployment.js";
@@ -31,6 +32,9 @@ import {
 
 const autumn = new AutumnInt({ secretKey: defaultCtx.orgSecretKey });
 
+// Every scenario starts from and ends with no Atom, which only the dev stack's own Atom can afford.
+const hostedAtom = atomIsHosted();
+
 beforeAll(async () => {
 	await deleteAtomDeployment({ autumn });
 });
@@ -40,7 +44,7 @@ afterAll(async () => {
 });
 
 // A track only reaches the Atom through the balance worker's log.
-test.skipIf(!isBalanceWorkerRoute())(
+test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
 	`${chalk.yellowBright("atom-deployment1: a track through the API reaches the Atom's check")}`,
 	async () => {
 		const free = products.base({
@@ -99,7 +103,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 );
 
 // A track only reaches the Atom through the balance worker's log.
-test.skipIf(!isBalanceWorkerRoute())(
+test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
 	`${chalk.yellowBright("atom-deployment2: a track on an entity reaches the Atom's check for that entity")}`,
 	async () => {
 		const free = products.base({
@@ -167,41 +171,44 @@ test.skipIf(!isBalanceWorkerRoute())(
 	120_000,
 );
 
-test(`${chalk.yellowBright("atom-deployment3: only the token opens the Atom → create again is a no-op → delete → gone")}`, async () => {
-	const atom = await ensureAtomDeployment({ autumn });
-	const anyCheck = {
-		atom,
-		secretKey: defaultCtx.orgSecretKey,
-		customerId: "unknown",
-		featureId: "messages",
-	};
+test.skipIf(hostedAtom)(
+	`${chalk.yellowBright("atom-deployment3: only the token opens the Atom → create again is a no-op → delete → gone")}`,
+	async () => {
+		const atom = await ensureAtomDeployment({ autumn });
+		const anyCheck = {
+			atom,
+			secretKey: defaultCtx.orgSecretKey,
+			customerId: "unknown",
+			featureId: "messages",
+		};
 
-	const withToken = await checkOnAtom(anyCheck);
-	const withoutToken = await checkOnAtom({ ...anyCheck, token: null });
-	const withWrongToken = await checkOnAtom({ ...anyCheck, token: "atom_no" });
-	// The Atom holds no such customer, so with its token the API answers through it.
-	expect(withToken.forwarded).toBe("customer_not_stored");
-	expect(withoutToken.status).toBe(401);
-	expect(withWrongToken.status).toBe(401);
+		const withToken = await checkOnAtom(anyCheck);
+		const withoutToken = await checkOnAtom({ ...anyCheck, token: null });
+		const withWrongToken = await checkOnAtom({ ...anyCheck, token: "atom_no" });
+		// The Atom holds no such customer, so with its token the API answers through it.
+		expect(withToken.forwarded).toBe("customer_not_stored");
+		expect(withoutToken.status).toBe(401);
+		expect(withWrongToken.status).toBe(401);
 
-	const fetched = await autumn.post("/byoc.get_atom", {});
-	expect(fetched.cache).toMatchObject({
-		env: "sandbox",
-		status: ByocCacheStatus.Ready,
-		endpoint_url: atom.endpointUrl,
-	});
-	expect(fetched.cache.token).toBeUndefined();
+		const fetched = await autumn.post("/byoc.get_atom", {});
+		expect(fetched.cache).toMatchObject({
+			env: "sandbox",
+			status: ByocCacheStatus.Ready,
+			endpoint_url: atom.endpointUrl,
+		});
+		expect(fetched.cache.token).toBeUndefined();
 
-	const again = await autumn.post("/byoc.create_atom", {});
-	expect(again).toMatchObject({
-		deployment_id: fetched.cache.deployment_id,
-		setup_url: null,
-		token: atom.token,
-	});
+		const again = await autumn.post("/byoc.create_atom", {});
+		expect(again).toMatchObject({
+			deployment_id: fetched.cache.deployment_id,
+			setup_url: null,
+			token: atom.token,
+		});
 
-	await deleteAtomDeployment({ autumn });
-	const afterDelete = await autumn.post("/byoc.get_atom", {});
-	const checkAfterDelete = await checkOnAtom(anyCheck);
-	expect(afterDelete).toEqual({ cache: null });
-	expect(checkAfterDelete.status).toBe(401);
-});
+		await deleteAtomDeployment({ autumn });
+		const afterDelete = await autumn.post("/byoc.get_atom", {});
+		const checkAfterDelete = await checkOnAtom(anyCheck);
+		expect(afterDelete).toEqual({ cache: null });
+		expect(checkAfterDelete.status).toBe(401);
+	},
+);

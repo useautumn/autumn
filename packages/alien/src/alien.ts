@@ -10,11 +10,13 @@ export {
 	isDeploymentBeingDeleted,
 	isDeploymentRunning,
 } from "./deployments/classifyDeployments.js";
+export { deploymentToPoolMachine } from "./deployments/deploymentToPoolMachine.js";
 export { deploymentToPublicEndpointUrl } from "./deployments/deploymentToPublicEndpointUrl.js";
 export type {
 	AlienClient,
 	AlienConfig,
 	AlienDeployment,
 	AlienEnvironmentVariable,
+	AlienFixedPools,
 	AlienSetup,
 } from "./types/alienClient.js";

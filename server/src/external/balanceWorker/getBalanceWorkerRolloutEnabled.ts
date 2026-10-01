@@ -1,3 +1,5 @@
+import { isStagingEnv } from "@autumn/env";
+
 /** What an unset BALANCE_WORKER_ROLLOUT_ENABLED means on a local stack: the one line to flip for a local run. */
 const LOCAL_DEFAULT = true;
 
@@ -9,7 +11,7 @@ const runsAgainstProduction = ({
 }): boolean =>
 	(runtimeEnv.NODE_ENV === "production" ||
 		runtimeEnv.ENV_FILE === ".env.prod") &&
-	runtimeEnv.STAGING_ENVIRONMENT !== "true";
+	!isStagingEnv({ runtimeEnv });
 
 /**
  * The env override: "true" forces the worker, "false" forces the legacy path, "config" defers to the rollout
