@@ -2,13 +2,16 @@ import { type UsageWindow, usageWindows } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Upserts allocation counters, re-stamping their cycle: a counter from a past cycle is replaced, not added to. */
+/**
+ * Moves allocation counters to `usage`, given the `readUsage` the caller computed from: a live counter gets the
+ * difference added, so a deduction that landed since the read is kept; a counter from a past cycle is replaced.
+ */
 export const setAllocationCounters = async ({
 	db,
 	counters,
 }: {
 	db: DrizzleCli;
-	counters: UsageWindow[];
+	counters: (UsageWindow & { readUsage: number })[];
 }): Promise<void> => {
 	for (const counter of counters) {
 		await db.execute(sql`
@@ -25,7 +28,12 @@ export const setAllocationCounters = async ({
    ON CONFLICT (internal_customer_id, internal_feature_id,
     (COALESCE(internal_entity_id, '')), (COALESCE(filter_key, '')))
    DO UPDATE SET
-    usage = EXCLUDED.usage,
+    usage = CASE
+     WHEN ${usageWindows}.window_start_at = EXCLUDED.window_start_at
+      AND ${usageWindows}.window_end_at = EXCLUDED.window_end_at
+     THEN GREATEST(0, ${usageWindows}.usage + (EXCLUDED.usage - ${counter.readUsage}))
+     ELSE EXCLUDED.usage
+    END,
     window_start_at = EXCLUDED.window_start_at,
     window_end_at = EXCLUDED.window_end_at,
     anchor_customer_entitlement_id = EXCLUDED.anchor_customer_entitlement_id,

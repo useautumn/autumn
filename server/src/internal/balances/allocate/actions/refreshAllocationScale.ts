@@ -95,16 +95,19 @@ const refitAllocations = async ({
 			await setAllocationCounters({
 				db: tx,
 				counters: [
-					toAllocationCounter({
-						id: generateId("uw"),
-						internalCustomerId,
-						internalFeatureId,
-						featureId: allocation.feature_id,
-						internalEntityId: null,
-						cycle,
-						usage: claimed,
-						now,
-					}),
+					{
+						readUsage: usage[""] ?? 0,
+						...toAllocationCounter({
+							id: generateId("uw"),
+							internalCustomerId,
+							internalFeatureId,
+							featureId: allocation.feature_id,
+							internalEntityId: null,
+							cycle,
+							usage: claimed,
+							now,
+						}),
+					},
 				],
 			});
 		const scale = solveAllocationScale({

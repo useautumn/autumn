@@ -161,25 +161,27 @@ export const allocateBalances = async ({
 					interval: params.interval,
 				});
 
+			const readUsage = await readAllocationCounters({
+				tx,
+				internalCustomerId: customer.internal_id,
+				internalFeatureId: feature.internal_id,
+				cycle,
+			});
 			const plan = computeAllocationPlan({
 				isFirstCall: !existing,
 				sharedGranted,
 				sharedRemaining,
 				currentAmounts: existing?.amounts ?? {},
-				currentUsage: await readAllocationCounters({
-					tx,
-					internalCustomerId: customer.internal_id,
-					internalFeatureId: feature.internal_id,
-					cycle,
-				}),
+				currentUsage: readUsage,
 				entries: params.allocations.map((entry) => ({
 					internalEntityId: internalIdById.get(entry.entity_id) as string,
 					amount: entry.amount,
 				})),
 			});
 
-			const counterOf = (internalEntityId: string | null, usage: number) =>
-				toAllocationCounter({
+			const counterOf = (internalEntityId: string | null, usage: number) => ({
+				readUsage: readUsage[internalEntityId ?? ""] ?? 0,
+				...toAllocationCounter({
 					id: generateId("uw"),
 					internalCustomerId: customer.internal_id,
 					internalFeatureId: feature.internal_id,
@@ -188,7 +190,8 @@ export const allocateBalances = async ({
 					cycle,
 					usage,
 					now,
-				});
+				}),
+			});
 			await setAllocationCounters({
 				db: tx,
 				counters: [
