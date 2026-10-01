@@ -148,7 +148,7 @@ const expectStripeInvoiceWithTotal = ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule: bills the first phase immediately and stores later phases as scheduled")}`,
+	`${chalk.yellowBright("create-schedule: bills the first phase immediately and keeps a plan listed in both phases on one row")}`,
 	async () => {
 		const pro = products.pro({
 			id: "pro",
@@ -228,13 +228,14 @@ test.concurrent(
 				(customerProduct) => customerProduct.status === CusProductStatus.Active,
 			),
 		).toBe(true);
+		// Pro runs unchanged across both phases, so the later phase lists the same live row.
 		expect(phase1CustomerProducts).toHaveLength(1);
-		expect(
-			phase1CustomerProducts.every(
-				(customerProduct) =>
-					customerProduct.status === CusProductStatus.Scheduled,
-			),
-		).toBe(true);
+		const immediatePro = immediatePhaseCustomerProducts.find(
+			(customerProduct) => customerProduct.product_id === pro.id,
+		);
+		expect(phase1CustomerProducts[0]!.id).toBe(immediatePro!.id);
+		expect(phase1CustomerProducts[0]!.status).toBe(CusProductStatus.Active);
+		expect(phase1CustomerProducts[0]!.ended_at).toBeNull();
 		expect(
 			immediatePhaseCustomerProducts.filter(
 				(customerProduct) => customerProduct.product_id === pro.id,

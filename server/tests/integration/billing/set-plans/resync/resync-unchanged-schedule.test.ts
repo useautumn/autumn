@@ -3,7 +3,8 @@
  *
  * Red (before):  every scheduled row was deleted and recreated, and the Stripe schedule rebuilt, so an
  *                untouched Set Plans sheet warned that the scheduled plans and schedule would be replaced.
- * Green (after): identical future-phase plans keep their rows and the live Stripe schedule; the preview shows them kept.
+ * Green (after): identical future-phase plans keep their rows and the live Stripe schedule; the preview shows
+ *                the saved change as already scheduled (origin saved), not as a request change.
  */
 
 import { expect, test } from "bun:test";
@@ -107,12 +108,12 @@ test.concurrent(
 		expect(preview.total).toBe(0);
 		expect(
 			preview.phases.map((phase) => ({
-				statuses: phase.plans.map((plan) => plan.status),
+				statuses: phase.plans.map((plan) => `${plan.status}:${plan.origin}`),
 				stripeItems: phase.processor_items.length,
 			})),
 		).toEqual([
-			{ statuses: ["kept"], stripeItems: 1 },
-			{ statuses: ["kept"], stripeItems: 1 },
+			{ statuses: ["kept:request"], stripeItems: 1 },
+			{ statuses: ["starts:saved", "ends:saved"], stripeItems: 1 },
 		]);
 		expect(
 			preview.warnings

@@ -1,11 +1,11 @@
-/** Without an end date, set_plans clears Stripe's scheduled cancel_at across any number of phases and says so in the preview. */
+/**
+ * A canceling plan re-listed unchanged keeps its cancellation: set_plans never un-cancels by
+ * omission. Several phases replacing it still clear cancel_at once a schedule takes over.
+ */
 
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
-import {
-	expectPreviewWarning,
-	findStripeSubscriptionByStatus,
-} from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
+import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -55,23 +55,21 @@ const expectCancelAtCleared = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans cancel_at: one phase without an end clears the scheduled cancellation")}`,
+	`${chalk.yellowBright("set-plans cancel_at: re-listing a canceling plan unchanged keeps the scheduled cancellation")}`,
 	async () => {
 		const { customerId, autumnV2_4, ctx, pro, canceling } =
 			await setupCancelingPro({ customerId: "set-plans-cancel-at-one-phase" });
 
-		const setPlansParams = {
+		await autumnV2_4.billing.setPlans({
 			customer_id: customerId,
 			phases: [{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] }],
-		};
-		expectPreviewWarning({
-			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
-			type: "scheduled_cancel_changed",
-			messageContains: ["is removed"],
 		});
-		await autumnV2_4.billing.setPlans(setPlansParams);
 
-		await expectCancelAtCleared({ ctx, subscriptionId: canceling.id });
+		const subscription = await ctx.stripeCli.subscriptions.retrieve(
+			canceling.id,
+		);
+		expect(subscription.status).toBe("active");
+		expect(subscription.cancel_at).toBe(canceling.cancel_at);
 	},
 );
 

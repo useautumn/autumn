@@ -103,7 +103,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans resync ends_at: an add-on left on the live subscription ends on ends_at too")}`,
+	`${chalk.yellowBright("set-plans resync ends_at: a retained add-on left on the live subscription ends on ends_at too")}`,
 	async () => {
 		const pro = products.pro({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -128,6 +128,7 @@ test.concurrent(
 		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 			customer_id: customerId,
 			ends_at: endsAt,
+			undeclared_plans: "retain",
 			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
 		});
 

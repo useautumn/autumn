@@ -78,7 +78,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans resync live: an add-on left on the subscription resets on the anchor too")}`,
+	`${chalk.yellowBright("set-plans resync live: a retained add-on left on the subscription resets on the anchor too")}`,
 	async () => {
 		const pro = products.pro({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -104,6 +104,7 @@ test.concurrent(
 			customer_id: customerId,
 			billing_cycle_anchor: anchorMs,
 			proration_behavior: "none",
+			undeclared_plans: "retain",
 			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
 		});
 

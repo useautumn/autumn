@@ -3,7 +3,7 @@ import chalk from "chalk";
 import { initMultiSubScenario } from "./multiSubScenario";
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans multi-sub preview: a targeted preview notes the other subscription is unaffected")}`,
+	`${chalk.yellowBright("set-plans multi-sub preview: a targeted preview leaves the other subscription's plans out and notes them unaffected")}`,
 	async () => {
 		const customerId = "set-plans-multi-sub-preview";
 		const { autumnV2_4, subscriptionA, plans } = await initMultiSubScenario({
@@ -21,6 +21,11 @@ test.concurrent(
 			severity: "info",
 			message: "Plans on 1 other subscription aren't affected.",
 		});
+		const previewPlanIds = [
+			...preview.phases.flatMap((phase) => phase.plans),
+			...preview.unlisted_phases.flatMap((phase) => phase.plans),
+		].map((plan) => plan.plan_id);
+		expect(previewPlanIds).not.toContain(plans.seats.id);
 		expect(
 			preview.processor_changes.every(
 				(processorChange) =>

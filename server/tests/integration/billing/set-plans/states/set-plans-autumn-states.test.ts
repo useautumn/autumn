@@ -1,4 +1,4 @@
-/** set_plans rebuilds only the Autumn plans the request governs, leaving add-ons and one-off purchases outside it alone. */
+/** set_plans declares every plan in its scope: unlisted recurring plans end, one-off purchases are never ended. */
 
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";
@@ -21,7 +21,7 @@ const messagePlans = () => ({
 });
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans autumn states: add-ons and one-off purchases outside the request are untouched")}`,
+	`${chalk.yellowBright("set-plans autumn states: an unlisted add-on ends while a one-off purchase is untouched")}`,
 	async () => {
 		const { pro, premium } = messagePlans();
 		const addOn = products.recurringAddOn({ items: [] });
@@ -47,8 +47,8 @@ test.concurrent(
 
 		await expectCustomerProducts({
 			customerId,
-			active: [premium.id, addOn.id, oneOffAddOn.id],
-			notPresent: [pro.id],
+			active: [premium.id, oneOffAddOn.id],
+			notPresent: [pro.id, addOn.id],
 		});
 	},
 );
@@ -93,7 +93,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans autumn states: a canceling plan kept in phase 0 comes back as a clean row")}`,
+	`${chalk.yellowBright("set-plans autumn states: a canceling plan kept in phase 0 keeps its cancellation")}`,
 	async () => {
 		const { pro } = messagePlans();
 
@@ -115,6 +115,6 @@ test.concurrent(
 			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
 		});
 
-		await expectCustomerProducts({ customerId, active: [pro.id] });
+		await expectCustomerProducts({ customerId, canceling: [pro.id] });
 	},
 );

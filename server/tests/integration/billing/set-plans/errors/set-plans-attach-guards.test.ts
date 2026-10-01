@@ -107,6 +107,7 @@ test.concurrent(
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,
+					undeclared_plans: "retain",
 					phases: [
 						{
 							starts_at: "now",
@@ -170,7 +171,7 @@ test.concurrent(
 	},
 );
 
-/** An active plan left out of the opening phase survives until a later phase replaces it, taking its subscription_id. */
+/** A retained plan left out of the opening phase survives until a later phase replaces it, taking its subscription_id. */
 test.concurrent(
 	`${chalk.yellowBright("set-plans guards: a future phase may reuse the subscription_id of a surviving plan it replaces")}`,
 	async () => {
@@ -198,6 +199,7 @@ test.concurrent(
 
 		const response = await autumnV2_4.billing.setPlans({
 			customer_id: customerId,
+			undeclared_plans: "retain",
 			phases: [
 				{ starts_at: "now", plans: [{ plan_id: addOn.id }] },
 				{
@@ -222,7 +224,7 @@ test.concurrent(
 	},
 );
 
-/** A plan replaced by a later phase still holds its subscription_id until that phase starts. */
+/** A retained plan replaced by a later phase still holds its subscription_id until that phase starts. */
 test.concurrent(
 	`${chalk.yellowBright("set-plans guards: an immediate plan cannot take the subscription_id of a plan replaced later")}`,
 	async () => {
@@ -253,6 +255,7 @@ test.concurrent(
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,
+					undeclared_plans: "retain",
 					phases: [
 						{
 							starts_at: "now",
