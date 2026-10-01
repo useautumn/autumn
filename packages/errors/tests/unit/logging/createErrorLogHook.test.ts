@@ -103,6 +103,24 @@ describe("createErrorLogHook", () => {
 		);
 	});
 
+	it("groups Stripe errors by code and operation, not the SDK's stack", () => {
+		captureException.mockClear();
+		const { jobLogger } = createTestLogger();
+		const error = Object.assign(new Error("No such invoice: 'in_1'"), {
+			type: "StripeInvalidRequestError",
+			code: "resource_missing",
+		});
+
+		jobLogger.error({ error }, "failed");
+
+		expect(captureException).toHaveBeenCalledWith(
+			error,
+			expect.objectContaining({
+				fingerprint: ["stripe", "resource_missing", "track"],
+			}),
+		);
+	});
+
 	it("prefers the request's route template over its concrete path", () => {
 		captureException.mockClear();
 		const { logger } = createTestLogger();
