@@ -16,7 +16,7 @@
  *       error and the --login / --keyless hint, without touching the repo
  */
 
-import { expect, test } from "bun:test";
+import { beforeAll, expect, test } from "bun:test";
 import {
 	existsSync,
 	mkdtempSync,
@@ -26,6 +26,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+	packAtmnCli,
+	writeBunLockfile,
+} from "@tests/utils/atmnUtils/bunRepo.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
@@ -38,6 +42,11 @@ import { createClient } from "../../../../../../packages/atmn/src/generated/clie
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
 const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
+
+let cliTarball = "";
+beforeAll(() => {
+	cliTarball = packAtmnCli();
+});
 
 /** The CLI in a fresh process, headless, with only the env the test states. */
 const runCliHeadless = ({
@@ -59,7 +68,7 @@ const runCliHeadless = ({
 			GIT_CEILING_DIRECTORIES: TMP_ROOT,
 			AUTUMN_BASE_URL: baseUrl,
 			// A package init writes depends on the CLI; from source that is this checkout.
-			ATMN_INIT_DEPENDENCY: `file:${CLI_PACKAGE_DIR}`,
+			ATMN_INIT_DEPENDENCY: `file:${cliTarball}`,
 			NO_COLOR: "1",
 			FORCE_COLOR: "0",
 			...env,
@@ -104,15 +113,7 @@ const makeRepo = ({
 			"\t",
 		),
 	);
-	const locked = Bun.spawnSync(["bun", "install", "--lockfile-only"], {
-		cwd: root,
-		stdout: "pipe",
-		stderr: "pipe",
-	});
-	if (locked.exitCode !== 0)
-		throw new Error(
-			`${locked.stdout.toString()}${locked.stderr.toString()}`.trim(),
-		);
+	writeBunLockfile({ root, name: "app" });
 	writeFileSync(join(root, ".env"), `AUTUMN_SECRET_KEY=${secretKey}\n`);
 	return root;
 };
