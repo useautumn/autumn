@@ -91,12 +91,12 @@ export const applySchedulePhaseToFullCustomer = ({
 		if (startingIds.has(customerProduct.id)) {
 			if (!cp(customerProduct).hasActiveStatus().valid) {
 				incomingCustomerProducts.push(customerProduct);
+				carryExistingStatesIntoStartingProduct({
+					ctx,
+					previousCustomer: fullCustomer,
+					customerProduct,
+				});
 			}
-			carryExistingStatesIntoStartingProduct({
-				ctx,
-				previousCustomer: fullCustomer,
-				customerProduct,
-			});
 			customerProduct.status = statusAtPhaseStart({ customerProduct, phase });
 			continue;
 		}
