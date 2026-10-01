@@ -20,7 +20,7 @@ export const logContextToSentryEvent = ({
 			error_kind: classification.kind,
 			error_code: classification.code,
 			service,
-			operation: workflow?.name ?? req?.name ?? type,
+			operation: workflow?.name ?? req?.route ?? req?.name ?? type,
 			env: context?.env,
 			org_id: orgId,
 			org_slug: orgSlug,

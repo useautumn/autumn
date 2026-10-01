@@ -19,6 +19,8 @@ export type LogRequestContext = {
 	body: unknown;
 
 	name: string;
+	/** `name` with the matched route template, so per-id paths group as one operation. */
+	route?: string;
 };
 
 export type InternalLogRequestContext = Omit<LogRequestContext, "body">;
