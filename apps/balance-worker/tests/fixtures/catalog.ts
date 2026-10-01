@@ -68,12 +68,32 @@ const syntheticCatalogRows = ({
 });
 
 /** A Postgres stand-in: no customers, and every catalog id resolves to a synthetic row so tests never miss. */
+/** Entity loads for a fake that only knows single-subject reads: one envelope per requested entity it can answer. */
+export const entitySubjectRowsFrom =
+	({
+		getSubjectRows,
+	}: Pick<WorkerDb, "getSubjectRows">): WorkerDb["getEntitySubjectRows"] =>
+	async ({ identity, entityIds, asOfTimestampMs }) => {
+		const envelopes: SubjectRowsEnvelope[] = [];
+		for (const entityId of entityIds) {
+			const envelope = await getSubjectRows({
+				identity: { ...identity, entityId },
+				asOfTimestampMs,
+			});
+			if (envelope) envelopes.push(envelope);
+		}
+		return envelopes;
+	};
+
 export const createSyntheticWorkerDb = ({
 	subjectRows = null,
 }: {
 	subjectRows?: SubjectRowsEnvelope | null;
 } = {}): WorkerDb => ({
 	getSubjectRows: async () => subjectRows,
+	getEntitySubjectRows: entitySubjectRowsFrom({
+		getSubjectRows: async () => subjectRows,
+	}),
 	getCatalogRows: async (params) => syntheticCatalogRows(params),
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
@@ -84,6 +104,7 @@ export const createSyntheticWorkerDb = ({
 /** A Postgres stand-in that knows nothing: every miss stays a miss. */
 export const createEmptyWorkerDb = (): WorkerDb => ({
 	getSubjectRows: async () => null,
+	getEntitySubjectRows: async () => [],
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
 	listPooledBalancesWithoutOtherContributions: async () => [],

@@ -6,6 +6,7 @@ import {
 	createPostgresClient,
 	getBillingCycleAnchors,
 	getCatalogRows,
+	getEntitySubjectRows,
 	getSubjectRows,
 	insertPartitionProgress,
 	listPooledBalancesWithoutOtherContributions,
@@ -77,6 +78,13 @@ export const createWorkerDb = ({
 					}),
 			}),
 		),
+	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
+		getEntitySubjectRows({
+			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
+			customerId: identity.customerId,
+			entityIds,
+			asOfTimestampMs,
+		}),
 	getCatalogRows: ({ identity, ids }) =>
 		timeQuery({
 			ctx,

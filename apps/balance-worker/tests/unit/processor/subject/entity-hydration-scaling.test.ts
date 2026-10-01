@@ -185,6 +185,8 @@ const createCustomer = ({
 		envelopes.set(entityIdOf({ index }), entityEnvelopeOf({ index }));
 	}
 	let loads = 0;
+	let entityLoads = 0;
+	let gate: Promise<void> | null = null;
 	const db = {
 		...createSyntheticWorkerDb(),
 		getSubjectRows: async ({
@@ -195,6 +197,21 @@ const createCustomer = ({
 			loads += 1;
 			if (!subjectIdentity.entityId) return customerEnvelope;
 			return envelopes.get(subjectIdentity.entityId) ?? null;
+		},
+		getEntitySubjectRows: async ({
+			entityIds,
+		}: {
+			identity: MeteringIdentity;
+			entityIds: readonly string[];
+			asOfTimestampMs: number;
+		}) => {
+			loads += 1;
+			entityLoads += 1;
+			if (gate) await gate;
+			return entityIds.flatMap((entityId) => {
+				const envelope = envelopes.get(entityId);
+				return envelope ? [envelope] : [];
+			});
 		},
 	};
 	const { writer, map } = createMapWriter({ maxBytes });
@@ -212,6 +229,16 @@ const createCustomer = ({
 		writer,
 		map,
 		loads: () => loads,
+		entityLoads: () => entityLoads,
+		envelopes,
+		holdEntityLoads: () => {
+			const held = Promise.withResolvers<void>();
+			gate = held.promise;
+			return () => {
+				gate = null;
+				held.resolve();
+			};
+		},
 		entityIdentity: ({ index }: { index: number }): MeteringIdentity => ({
 			...identity,
 			entityId: entityIdOf({ index }),
@@ -348,6 +375,53 @@ describe("entity hydration scaling", () => {
 			await warmPass({ customer, entities });
 			expect(customer.loads()).toBe(entities + 1);
 		}
+	});
+
+	test("concurrent first touches of a customer's entities coalesce: 6,000 cold entities cost at most ceil(6000/200)+1 subject loads", async () => {
+		const customer = createCustomer({ entities: 6_000, maxBytes: roomy });
+		const replies = await Promise.all(
+			sample({ count: 6_000 }).map((index) =>
+				runCheck({
+					hydrator: customer.hydrator,
+					writer: customer.writer,
+					entityIdentity: customer.entityIdentity({ index }),
+				}),
+			),
+		);
+		for (const { reply } of replies) expect(reply.result.allowed).toBe(true);
+		expect(customer.loads()).toBeLessThanOrEqual(Math.ceil(6_000 / 200) + 1);
+		expect(customer.entityLoads()).toBeGreaterThanOrEqual(2);
+	});
+
+	test("an evict landing while a batch is in flight makes those entities re-read, and the fresh rows win", async () => {
+		const customer = createCustomer({ entities: 20, maxBytes: roomy });
+		await warmPass({ customer, entities: 1 });
+		const release = customer.holdEntityLoads();
+		const pending = [5, 6, 7].map((index) =>
+			runCheck({
+				hydrator: customer.hydrator,
+				writer: customer.writer,
+				entityIdentity: customer.entityIdentity({ index }),
+			}),
+		);
+		await Promise.resolve();
+		for (const index of [5, 6, 7]) {
+			const stale = customer.envelopes.get(entityIdOf({ index }));
+			if (!stale) throw new Error("fixture entity missing");
+			customer.envelopes.set(entityIdOf({ index }), {
+				...stale,
+				customer_entitlements: stale.customer_entitlements.map((row) => ({
+					...row,
+					balance: 0,
+				})),
+			});
+		}
+		customer.hydrator.overtakeInFlightLoads({
+			customerKey: meteringIdentityToPartitionKey({ identity }),
+		});
+		release();
+		const replies = await Promise.all(pending);
+		for (const { reply } of replies) expect(reply.result.allowed).toBe(false);
 	});
 
 	test("under a tenth of an 8 GiB worker shared by four partitions, a 6,000-entity customer stays resident across a second pass", async () => {

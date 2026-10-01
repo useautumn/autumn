@@ -3,6 +3,7 @@ import { BALANCE_WORKER_CATALOG_RECHECK_MS } from "@autumn/env/balanceWorkerCons
 import { ensureSubject } from "./actions/ensureSubject/ensureSubject.js";
 import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatalog.js";
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
+import { createEntityLoads } from "./entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "./inFlightLoads/createInFlightLoads.js";
 import { createSubjectJoinCache } from "./subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectHydratorContext, SubjectScope } from "./types/subject.js";
@@ -23,6 +24,7 @@ export const createSubjectHydrator = ({
 					config: { catalogRecheckMs: BALANCE_WORKER_CATALOG_RECHECK_MS },
 				},
 			}),
+			entityLoads: createEntityLoads({ scopeOf: () => scope }),
 		},
 	};
 

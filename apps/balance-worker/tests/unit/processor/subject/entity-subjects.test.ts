@@ -157,6 +157,13 @@ const createFixture = () => {
 			subjectRowsCalls.push(requested);
 			return requested.entityId === entity.id ? entityEnvelope : null;
 		},
+		getEntitySubjectRows: async ({ identity: requested, entityIds }) => {
+			for (const entityId of entityIds)
+				subjectRowsCalls.push({ ...requested, entityId });
+			return entityIds.some((entityId) => entityId === entity.id)
+				? [entityEnvelope]
+				: [];
+		},
 		getCatalogRows: createSyntheticWorkerDb().getCatalogRows,
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,

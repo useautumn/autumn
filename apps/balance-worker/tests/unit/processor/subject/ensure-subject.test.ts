@@ -20,6 +20,7 @@ import {
 } from "@autumn/shared";
 import { ensureSubject } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubject.js";
 import { readSubject } from "../../../../src/processor/subject/actions/readSubject.js";
+import { createEntityLoads } from "../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
 import {
 	SubjectCatalogEvictedError,
@@ -144,6 +145,7 @@ const createScope = ({
 	const calls: CatalogRowIds[] = [];
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
+		getEntitySubjectRows: async () => [],
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
 		listPooledBalancesWithoutOtherContributions: async () => [],
@@ -206,6 +208,7 @@ const createScope = ({
 			joinCache: createSubjectJoinCache({
 				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
 			}),
+			entityLoads: createEntityLoads({ scopeOf: () => scope }),
 		},
 	};
 	return { scope, calls, catalogCache };
