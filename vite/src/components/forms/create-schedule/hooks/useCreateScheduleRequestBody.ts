@@ -34,6 +34,7 @@ export function buildCreateScheduleRequestBody({
 	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
+	stripeSubscriptionId,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -47,6 +48,7 @@ export function buildCreateScheduleRequestBody({
 	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
+	stripeSubscriptionId?: string | null;
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
@@ -112,6 +114,7 @@ export function buildCreateScheduleRequestBody({
 	};
 
 	if (billingBehavior) body.proration_behavior = billingBehavior;
+	if (stripeSubscriptionId) body.stripe_subscription_id = stripeSubscriptionId;
 	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
 		body.ends_at = endDate;
 	}
@@ -146,6 +149,7 @@ export function useCreateScheduleRequestBody({
 	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
+	stripeSubscriptionId,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -159,6 +163,7 @@ export function useCreateScheduleRequestBody({
 	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
+	stripeSubscriptionId?: string | null;
 }) {
 	return useMemo(
 		() =>
@@ -175,6 +180,7 @@ export function useCreateScheduleRequestBody({
 				billingCycleAnchorDate,
 				endDate,
 				allowFirstPhaseBackdate,
+				stripeSubscriptionId,
 			}),
 		[
 			customerId,
@@ -189,6 +195,7 @@ export function useCreateScheduleRequestBody({
 			billingCycleAnchorDate,
 			endDate,
 			allowFirstPhaseBackdate,
+			stripeSubscriptionId,
 		],
 	);
 }
@@ -205,6 +212,7 @@ export function useBuildCreateScheduleRequestBody({
 	getBillingCycleAnchorAndEndDate,
 	getEnablePlanImmediately,
 	getAllowFirstPhaseBackdate,
+	stripeSubscriptionId,
 }: {
 	customerId: string | undefined;
 	products: ProductV2[];
@@ -220,6 +228,7 @@ export function useBuildCreateScheduleRequestBody({
 	>;
 	getEnablePlanImmediately?: () => boolean;
 	getAllowFirstPhaseBackdate?: () => boolean;
+	stripeSubscriptionId?: string | null;
 }) {
 	return useMemo(
 		() =>
@@ -235,6 +244,7 @@ export function useBuildCreateScheduleRequestBody({
 					resetBillingCycle: getResetBillingCycle?.() ?? false,
 					...getBillingCycleAnchorAndEndDate?.(),
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
+					stripeSubscriptionId,
 				});
 
 				if (!requestBody) return null;
@@ -259,6 +269,7 @@ export function useBuildCreateScheduleRequestBody({
 			getBillingCycleAnchorAndEndDate,
 			getEnablePlanImmediately,
 			getAllowFirstPhaseBackdate,
+			stripeSubscriptionId,
 		],
 	);
 }

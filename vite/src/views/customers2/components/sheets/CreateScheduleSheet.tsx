@@ -5,7 +5,7 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import { ACTIVE_STATUSES, CusProductStatus } from "@autumn/shared";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	CreateScheduleReviewContent,
@@ -15,6 +15,7 @@ import {
 	CreateScheduleFormProvider,
 	useCreateScheduleFormContext,
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
+import type { SetPlansSubscriptionTarget } from "@/components/forms/create-schedule/types/setPlansSubscriptionTarget";
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
 import {
 	customerProductsToCustomerState,
@@ -36,6 +37,12 @@ import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+
+const subscriptionTargetFromSheetData = (
+	sheetData: Record<string, unknown> | null,
+): SetPlansSubscriptionTarget | null =>
+	(sheetData?.subscriptionTarget as SetPlansSubscriptionTarget | undefined) ??
+	null;
 
 const isScheduledCustomerProduct = (customerProduct: FullCusProduct) =>
 	customerProduct.status === CusProductStatus.Scheduled;
@@ -248,6 +255,10 @@ function CreateScheduleSheetBody() {
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
 	const sheetData = useSheetStore((s) => s.data);
+	// Later stages replace the sheet data, so the target is read once on open.
+	const [subscriptionTarget] = useState(() =>
+		subscriptionTargetFromSheetData(sheetData),
+	);
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
 	const onApplied = useSettleApprovalOnApply();
 	const { customer, testClockFrozenTimeMs } = useCusQuery();
@@ -262,12 +273,20 @@ export function CreateScheduleSheet() {
 		const base = buildInitialValues({
 			customer: fullCustomer,
 			products,
+			stripeSubscriptionId: subscriptionTarget?.stripeSubscriptionId,
+			stripeScheduleId: subscriptionTarget?.stripeScheduleId,
 			nowMs: testClockFrozenTimeMs,
 		});
 		// An approval seed is the proposed schedule itself — it replaces the
 		// customer's current schedule as the starting point.
 		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
-	}, [fullCustomer, products, testClockFrozenTimeMs, seedOverrides]);
+	}, [
+		fullCustomer,
+		products,
+		subscriptionTarget,
+		testClockFrozenTimeMs,
+		seedOverrides,
+	]);
 
 	const existingPlans = useMemo(
 		() => getActiveCustomerPlans({ customer: fullCustomer, products }),
@@ -279,6 +298,7 @@ export function CreateScheduleSheet() {
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
 			initialValues={initialValues}
 			existingPlans={existingPlans}
+			subscriptionTarget={subscriptionTarget}
 			nowMs={testClockFrozenTimeMs}
 			onCheckoutRedirect={(checkoutUrl) => {
 				navigator.clipboard.writeText(checkoutUrl);

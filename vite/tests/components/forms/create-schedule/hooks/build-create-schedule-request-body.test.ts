@@ -988,4 +988,29 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
 	});
+
+	const buildBodyForSubscription = (stripeSubscriptionId?: string | null) =>
+		buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: 1_000 })],
+			products: defaultProducts,
+			features,
+			nowMs: 1_000,
+			stripeSubscriptionId,
+		});
+
+	test("sends stripe_subscription_id for the picked subscription", () => {
+		expect(buildBodyForSubscription("sub_picked")?.stripe_subscription_id).toBe(
+			"sub_picked",
+		);
+	});
+
+	test("omits stripe_subscription_id when no subscription was picked", () => {
+		expect(buildBodyForSubscription()).not.toHaveProperty(
+			"stripe_subscription_id",
+		);
+		expect(buildBodyForSubscription(null)).not.toHaveProperty(
+			"stripe_subscription_id",
+		);
+	});
 });

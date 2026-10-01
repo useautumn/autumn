@@ -805,6 +805,72 @@ describe("buildInitialValues", () => {
 		]);
 	});
 
+	test("with a subscription in focus, hides paid plans billed on no subscription", () => {
+		const paidCustomerProduct = (id: string, productId: string) =>
+			makeCusProduct({
+				id,
+				productId,
+				customerPrices: [{ price: makeFixedPrice() }],
+			});
+		const customer = makeCustomer({
+			customerProducts: [
+				{
+					...paidCustomerProduct("cp_picked", "prod_1"),
+					subscription_ids: ["sub_picked"],
+				} as FullCusProduct,
+				paidCustomerProduct("cp_unlinked_paid", "prod_2"),
+			],
+		});
+
+		const result = buildInitialValues({
+			customer,
+			products,
+			stripeSubscriptionId: "sub_picked",
+		});
+
+		expect(result.phases[0].plans.map((plan) => plan.productId)).toEqual([
+			"prod_1",
+		]);
+	});
+
+	test("with a not-started schedule in focus, seeds its scheduled plans", () => {
+		const startsAt = Date.now() + 86_400_000;
+		const scheduledCustomerProduct = {
+			...makeCusProduct({
+				id: "cp_scheduled",
+				productId: "prod_1",
+				status: CusProductStatus.Scheduled,
+				customerPrices: [{ price: makeFixedPrice() }],
+			}),
+			starts_at: startsAt,
+			scheduled_ids: ["sub_sched_1"],
+		} as FullCusProduct;
+		const otherSubscriptionProduct = {
+			...makeCusProduct({
+				id: "cp_other",
+				productId: "prod_2",
+				customerPrices: [{ price: makeFixedPrice() }],
+			}),
+			subscription_ids: ["sub_other"],
+		} as FullCusProduct;
+		const customer = makeCustomer({
+			customerProducts: [scheduledCustomerProduct, otherSubscriptionProduct],
+		});
+
+		const result = buildInitialValues({
+			customer,
+			products,
+			stripeScheduleId: "sub_sched_1",
+		});
+
+		const seededProductIds = [
+			...result.phases.flatMap((phase) => phase.plans),
+			...result.unscheduledPlans,
+		].map((plan) => plan.productId);
+		expect(seededProductIds).toContain("prod_1");
+		expect(seededProductIds).not.toContain("prod_2");
+	});
+
 	test("handles undefined customer gracefully", () => {
 		const result = buildInitialValues({ customer: undefined, products });
 
