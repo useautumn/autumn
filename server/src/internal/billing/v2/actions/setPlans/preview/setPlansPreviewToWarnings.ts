@@ -74,7 +74,17 @@ const replacesExistingSchedule = (processorChanges: ProcessorChange[]) =>
 			SCHEDULE_REPLACING_ACTIONS.includes(processorChange.action),
 	);
 
-/** One warning per feature this request resets, wherever and however often it resets. */
+const USAGE_RESTARTING_BEHAVIORS: SetPlansPreviewBalanceChange["behavior"][] = [
+	"reset",
+	"updated",
+];
+
+const restartsUsage = (balanceChange: SetPlansPreviewBalanceChange) =>
+	USAGE_RESTARTING_BEHAVIORS.includes(balanceChange.behavior) &&
+	Number(balanceChange.previous_attributes.usage ?? 0) > 0 &&
+	balanceChange.balance.usage === 0;
+
+/** One warning per feature whose usage this request restarts, wherever and however often. */
 const requestedResetFeatureIds = (
 	balanceChanges: SetPlansPreviewBalanceChange[],
 ) => [
@@ -82,8 +92,7 @@ const requestedResetFeatureIds = (
 		balanceChanges
 			.filter(
 				(balanceChange) =>
-					balanceChange.behavior === "reset" &&
-					balanceChange.origin === "request",
+					restartsUsage(balanceChange) && balanceChange.origin === "request",
 			)
 			.map((balanceChange) => balanceChange.feature_id),
 	),

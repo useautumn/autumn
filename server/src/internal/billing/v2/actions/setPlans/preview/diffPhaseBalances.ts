@@ -56,6 +56,13 @@ const clearsUsage = ({ before, after }: BalanceTransition) =>
 const keepsUsage = ({ before, after }: BalanceTransition) =>
 	after.usage > 0 && after.usage === before.usage;
 
+const keepsAllowance = ({ before, after }: BalanceTransition) =>
+	before.granted === after.granted && before.unlimited === after.unlimited;
+
+/** The same allowance starts over; a changed allowance is an update even when usage clears. */
+const resetsAllowance = (transition: BalanceTransition) =>
+	clearsUsage(transition) && keepsAllowance(transition);
+
 /** What was left survives as a fresh grant, as a one-off prepaid carry-over does. */
 const keepsRemaining = ({ before, after }: BalanceTransition) =>
 	clearsUsage({ before, after }) &&
@@ -69,7 +76,7 @@ const BEHAVIOR_TABLE: ReadonlyArray<
 	["added", gainsAccess],
 	["removed", losesAccess],
 	["carried", keepsRemaining],
-	["reset", clearsUsage],
+	["reset", resetsAllowance],
 	["carried", keepsUsage],
 	["updated", () => true],
 ];

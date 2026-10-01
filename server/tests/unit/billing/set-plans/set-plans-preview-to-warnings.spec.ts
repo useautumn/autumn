@@ -197,6 +197,26 @@ describe("setPlansPreviewToWarnings", () => {
 		);
 	});
 
+	test("an updated allowance that clears usage warns that usage restarts", () => {
+		const warnings = setPlansPreviewToWarnings({
+			phases: [
+				phase({
+					balance_changes: [
+						{ ...resetMessages({ origin: "request" }), behavior: "updated" },
+					],
+				}),
+			],
+			liveProcessorItems: [],
+			processorChanges: [],
+			deletedCustomerProducts: [],
+			outgoingCustomerProducts: [],
+			features: [],
+			...noSubscriptionState,
+		});
+
+		expect(warnings.map((warning) => warning.type)).toContain("usage_reset");
+	});
+
 	test("a feature the request resets in several phases and scopes warns once", () => {
 		const warnings = setPlansPreviewToWarnings({
 			phases: [

@@ -217,6 +217,8 @@ const expectRowConsistent = (change: SetPlansPreviewBalanceChange) => {
 	if (change.behavior === "reset") {
 		expect(before.usage).toBeGreaterThan(0);
 		expect(after.usage).toBe(0);
+		expect(after.granted).toBe(before.granted);
+		expect(after.unlimited).toBe(before.unlimited);
 	}
 	if (change.behavior === "carried") {
 		const keepsUsage = after.usage > 0 && after.usage === before.usage;

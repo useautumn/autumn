@@ -79,8 +79,14 @@ describe(chalk.yellowBright("diffPhaseBalances"), () => {
 			behaviors: ["updated"],
 		},
 		{
-			name: "usage cleared across a grant change is reset",
+			name: "usage cleared across a grant change is updated",
 			before: credits({ granted: 500, remaining: 260, usage: 240 }),
+			after: credits({ granted: 100, remaining: 100 }),
+			behaviors: ["updated"],
+		},
+		{
+			name: "usage cleared with the same grant is reset",
+			before: credits({ granted: 100, remaining: 40, usage: 60 }),
 			after: credits({ granted: 100, remaining: 100 }),
 			behaviors: ["reset"],
 		},
