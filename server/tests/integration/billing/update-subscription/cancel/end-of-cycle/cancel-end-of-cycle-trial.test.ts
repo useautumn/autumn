@@ -64,7 +64,7 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC: basic cancel, empty zer
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	await expectProductTrialing({
+	const trialEndsAt = await expectProductTrialing({
 		customer: customerAfterAttach,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(7),
@@ -91,7 +91,7 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC: basic cancel, empty zer
 
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: advancedTo + ms.days(7),
+		startsAt: trialEndsAt!,
 		total: 0,
 		toleranceMs: 1000,
 	});
