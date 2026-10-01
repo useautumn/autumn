@@ -1,6 +1,7 @@
 import type { FullCustomer } from "@autumn/shared";
-import { Button, SmallSpinner } from "@autumn/ui";
-import { useEffect, useMemo, useState } from "react";
+import { Alert, AlertDescription, Button } from "@autumn/ui";
+import { InfoIcon } from "@phosphor-icons/react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
 	SheetFooter,
 	SheetHeader,
@@ -13,12 +14,10 @@ import {
 	buildSubscriptionPickerRows,
 	subscriptionPickerRowToTarget,
 } from "./utils/buildSubscriptionPickerRows";
+import { editSubscriptionLabel } from "./utils/editSubscriptionLabel";
 import { findUnlinkedFreePlanNames } from "./utils/findUnlinkedFreePlanNames";
 
 const MAX_ROWS_WITHOUT_CHOICE = 1;
-
-const customerDisplayName = (customer: FullCustomer | undefined) =>
-	customer?.name || customer?.email || customer?.id || "This customer";
 
 export function ChooseSubscriptionSheet() {
 	const { customer } = useCusQuery();
@@ -29,6 +28,7 @@ export function ChooseSubscriptionSheet() {
 	const [pickedKey, setPickedKey] = useState(
 		() => (sheetData?.selectedKey as string | undefined) ?? null,
 	);
+	const openKey = sheetData?.openKey as string | undefined;
 
 	const { proposals, isLoading, error } = useSyncProposalsV2({
 		customerId: fullCustomer?.id ?? "",
@@ -38,11 +38,11 @@ export function ChooseSubscriptionSheet() {
 	const rows = useMemo(
 		() =>
 			buildSubscriptionPickerRows({
-				proposals,
+				proposals: isLoading || error ? undefined : proposals,
 				customerProducts: customerProducts ?? [],
 				entities: fullCustomer?.entities ?? [],
 			}),
-		[proposals, customerProducts, fullCustomer?.entities],
+		[isLoading, error, proposals, customerProducts, fullCustomer?.entities],
 	);
 	const freePlanNames = useMemo(
 		() =>
@@ -59,6 +59,17 @@ export function ChooseSubscriptionSheet() {
 		if (hasNothingToChoose) setSheet({ type: "create-schedule" });
 	}, [hasNothingToChoose, setSheet]);
 
+	const rowToOpen = openKey ? rows.find((row) => row.key === openKey) : null;
+	useLayoutEffect(() => {
+		if (!rowToOpen) return;
+		setSheet({
+			type: "create-schedule",
+			data: {
+				subscriptionTarget: subscriptionPickerRowToTarget({ row: rowToOpen }),
+			},
+		});
+	}, [rowToOpen, setSheet]);
+
 	const editSelectedSubscription = () => {
 		if (!selectedRow) return;
 		setSheet({
@@ -69,43 +80,44 @@ export function ChooseSubscriptionSheet() {
 		});
 	};
 
-	const description = isLoading
-		? "Loading Stripe subscriptions…"
-		: `${customerDisplayName(fullCustomer)} has ${rows.length} Stripe subscriptions. Choose the one to edit.`;
+	const description =
+		"Set Plans edits one Stripe subscription at a time. Plans on the others stay as they are.";
+
+	if (rowToOpen) return null;
 
 	return (
 		<div className="flex h-full flex-col">
-			<SheetHeader title="Set Plans" description={description} />
+			<SheetHeader title="Choose a subscription" description={description} />
 
-			<div className="flex-1 overflow-y-auto p-4">
-				{isLoading && (
-					<div className="flex items-center justify-center py-12">
-						<SmallSpinner size={20} className="text-tertiary-foreground" />
-					</div>
-				)}
-				{Boolean(error) && (
-					<p className="py-4 text-sm text-red-500">
-						Failed to load Stripe subscriptions.
-					</p>
-				)}
-				{!isLoading && !error && rows.length > MAX_ROWS_WITHOUT_CHOICE && (
+			<div className="min-h-0 overflow-y-auto px-4 pt-4">
+				{rows.length > MAX_ROWS_WITHOUT_CHOICE && (
 					<>
+						{freePlanNames.length > 0 && (
+							<Alert className="mb-3">
+								<InfoIcon weight="fill" />
+								<AlertDescription>
+									Free plans ({freePlanNames.join(", ")}) can be updated under
+									any subscription. Changes apply to the whole customer.
+								</AlertDescription>
+							</Alert>
+						)}
 						<SubscriptionPickerTable
 							rows={rows}
+							isLoadingStripe={isLoading}
 							selectedKey={selectedRow?.key ?? null}
 							onSelect={setPickedKey}
 						/>
-						{freePlanNames.length > 0 && (
-							<p className="px-1 pt-2 text-xs text-tertiary-foreground">
-								Free plans ({freePlanNames.join(", ")}) are included with
-								whichever subscription you edit.
+						{Boolean(error) && (
+							<p className="px-1 pt-2 text-xs text-red-500">
+								Couldn't load Stripe statuses. You can still pick a
+								subscription.
 							</p>
 						)}
 					</>
 				)}
 			</div>
 
-			<SheetFooter className="border-t border-border pt-4">
+			<SheetFooter className="pt-4">
 				<Button variant="secondary" onClick={closeSheet} className="w-full">
 					Cancel
 				</Button>
@@ -113,9 +125,11 @@ export function ChooseSubscriptionSheet() {
 					variant="primary"
 					onClick={editSelectedSubscription}
 					disabled={!selectedRow || hasNothingToChoose}
-					className="w-full"
+					className="w-full min-w-0"
 				>
-					Edit subscription
+					<span className="truncate">
+						{editSubscriptionLabel({ planNames: selectedRow?.planNames ?? [] })}
+					</span>
 				</Button>
 			</SheetFooter>
 		</div>

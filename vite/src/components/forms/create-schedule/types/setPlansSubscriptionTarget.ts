@@ -4,6 +4,10 @@ export type SetPlansSubscriptionTarget = {
 	key: string;
 	stripeSubscriptionId: string | null;
 	stripeScheduleId: string | null;
-	label: string;
+	/** The main plan billed on it, which names the subscription. */
+	planName: string | null;
+	stripeObjectId: string;
+	/** e.g. "Monthly · renews Nov 1, 2026"; null until Stripe has loaded. */
+	details: string | null;
 	canChange: boolean;
 };

@@ -120,7 +120,9 @@ describe("decideSetPlansEntry", () => {
 				key: "sub_b",
 				stripeSubscriptionId: "sub_b",
 				stripeScheduleId: "sub_sched_b",
-				label: "sub_b",
+				planName: "Seats",
+				stripeObjectId: "sub_b",
+				details: null,
 				canChange: false,
 			},
 		});

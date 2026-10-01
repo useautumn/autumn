@@ -1,4 +1,5 @@
 import type { FullCusProduct } from "@autumn/shared";
+import { customerProductsToMainPlanName } from "@autumn/shared";
 import type { SetPlansSubscriptionTarget } from "@/components/forms/create-schedule/types/setPlansSubscriptionTarget";
 import {
 	collectLinkedStripeObjectIds,
@@ -50,7 +51,15 @@ const onlyLinkedObjectToTarget = ({
 				customerProducts,
 				stripeSubscriptionId,
 			}),
-			label: formatStripeObjectId(stripeSubscriptionId),
+			planName: customerProductsToMainPlanName({
+				customerProducts: customerProducts.filter(
+					(customerProduct) =>
+						isLiveCustomerProduct(customerProduct) &&
+						customerProduct.subscription_ids?.includes(stripeSubscriptionId),
+				),
+			}),
+			stripeObjectId: formatStripeObjectId(stripeSubscriptionId),
+			details: null,
 			canChange: false,
 		};
 	}
@@ -61,7 +70,15 @@ const onlyLinkedObjectToTarget = ({
 		key: stripeScheduleId,
 		stripeSubscriptionId: null,
 		stripeScheduleId,
-		label: formatStripeObjectId(stripeScheduleId),
+		planName: customerProductsToMainPlanName({
+			customerProducts: customerProducts.filter(
+				(customerProduct) =>
+					isLiveCustomerProduct(customerProduct) &&
+					customerProduct.scheduled_ids?.includes(stripeScheduleId),
+			),
+		}),
+		stripeObjectId: formatStripeObjectId(stripeScheduleId),
+		details: null,
 		canChange: false,
 	};
 };

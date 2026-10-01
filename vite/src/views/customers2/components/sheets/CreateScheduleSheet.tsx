@@ -37,6 +37,7 @@ import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useSubscriptionLinks } from "@/views/customers2/components/sheets/set-plans-subscription/hooks/useSubscriptionLinks";
 
 const subscriptionTargetFromSheetData = (
 	sheetData: Record<string, unknown> | null,
@@ -265,6 +266,9 @@ export function CreateScheduleSheet() {
 	const fullCustomer = customer as FullCustomer | undefined;
 
 	const { products } = useProductsQuery();
+	const subscriptionLinks = useSubscriptionLinks({
+		enabled: Boolean(subscriptionTarget),
+	});
 
 	const seedOverrides = approvalSeed?.defaultOverrides as
 		| Partial<CustomerStateForm>
@@ -299,6 +303,7 @@ export function CreateScheduleSheet() {
 			initialValues={initialValues}
 			existingPlans={existingPlans}
 			subscriptionTarget={subscriptionTarget}
+			subscriptionLinks={subscriptionLinks}
 			nowMs={testClockFrozenTimeMs}
 			onCheckoutRedirect={(checkoutUrl) => {
 				navigator.clipboard.writeText(checkoutUrl);

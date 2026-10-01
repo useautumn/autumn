@@ -28,10 +28,15 @@ import {
 	hasPersistedCreateSchedule,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
+import type { SubscriptionLinks } from "@/components/forms/customer-state/types/subscriptionLinks";
 import {
 	type UseCustomerStateForm,
 	useCustomerStateForm,
 } from "@/components/forms/customer-state/useCustomerStateForm";
+import {
+	type FindSubscriptionConflict,
+	findSubscriptionConflict,
+} from "@/components/forms/customer-state/utils/findSubscriptionConflict";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -84,6 +89,7 @@ interface CreateScheduleFormProviderProps {
 	initialValues?: CustomerStateForm;
 	existingPlans?: CustomerStatePlan[];
 	subscriptionTarget?: SetPlansSubscriptionTarget | null;
+	subscriptionLinks?: SubscriptionLinks | null;
 	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
@@ -98,6 +104,7 @@ export function CreateScheduleFormProvider({
 	initialValues,
 	existingPlans = NO_EXISTING_PLANS,
 	subscriptionTarget = null,
+	subscriptionLinks = null,
 	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
@@ -346,6 +353,19 @@ export function CreateScheduleFormProvider({
 		],
 	);
 
+	const findPlanSubscriptionConflict = useCallback<FindSubscriptionConflict>(
+		({ product, entityId }) =>
+			findSubscriptionConflict({
+				customerProducts: fullCustomer?.customer_products ?? [],
+				entities: fullCustomer?.entities ?? [],
+				stripeSubscriptionId,
+				stripeScheduleId,
+				product,
+				entityId,
+			}),
+		[fullCustomer, stripeSubscriptionId, stripeScheduleId],
+	);
+
 	return (
 		<CreateScheduleFormReactContext.Provider value={value}>
 			<CustomerStateProvider
@@ -354,6 +374,8 @@ export function CreateScheduleFormProvider({
 				existingPlans={existingPlans}
 				// Updating a schedule can't attach new plans, so only a new one can.
 				canMakeUnscheduled={!hasScheduledPlans}
+				findSubscriptionConflict={findPlanSubscriptionConflict}
+				subscriptionLinks={subscriptionLinks}
 			>
 				{children}
 			</CustomerStateProvider>

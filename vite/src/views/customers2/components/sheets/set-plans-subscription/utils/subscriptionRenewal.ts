@@ -82,3 +82,23 @@ export const subscriptionRenewalLabel = ({
 			return date;
 	}
 };
+
+const RENEWAL_PHRASE_VERBS: Record<
+	Exclude<SubscriptionRenewal["kind"], "none">,
+	string
+> = {
+	renews: "renews",
+	cancels: "cancels",
+	payment_failed: "payment failed",
+	starts: "starts",
+};
+
+/** The renewal as it reads mid-sentence, e.g. "renews Nov 1, 2026". */
+export const subscriptionRenewalPhrase = ({
+	renewal,
+}: {
+	renewal: SubscriptionRenewal;
+}): string | null => {
+	if (renewal.kind === "none") return null;
+	return `${RENEWAL_PHRASE_VERBS[renewal.kind]} ${format(renewal.date, RENEWAL_DATE_FORMAT)}`;
+};

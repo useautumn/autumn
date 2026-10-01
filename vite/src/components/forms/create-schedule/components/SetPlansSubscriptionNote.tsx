@@ -1,29 +1,24 @@
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
 export function SetPlansSubscriptionNote() {
 	const { subscriptionTarget } = useCreateScheduleFormContext();
-	const setSheet = useSheetStore((state) => state.setSheet);
 	if (!subscriptionTarget) return null;
 
-	const backToPicker = () =>
-		setSheet({
-			type: "create-schedule-choose-subscription",
-			data: { selectedKey: subscriptionTarget.key },
-		});
+	const { planName, stripeObjectId, details } = subscriptionTarget;
+	const subscriptionName = planName
+		? `${planName} subscription`
+		: `subscription ${stripeObjectId}`;
 
 	return (
-		<p className="mt-1 flex items-center gap-1.5 text-xs text-tertiary-foreground">
-			<span>Editing</span>
-			<code className="truncate font-mono">{subscriptionTarget.label}</code>
-			{subscriptionTarget.canChange && (
-				<button
-					type="button"
-					onClick={backToPicker}
-					className="shrink-0 cursor-pointer text-primary hover:underline"
-				>
-					Change
-				</button>
+		<p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+			<span className="shrink-0">Editing the</span>
+			<StripeIcon size={14} className="shrink-0 text-indigo-500" />
+			<span className="truncate font-medium text-foreground">
+				{subscriptionName}
+			</span>
+			{details && (
+				<span className="shrink-0 text-tertiary-foreground">· {details}</span>
 			)}
 		</p>
 	);

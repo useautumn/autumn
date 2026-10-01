@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type Entity } from "@autumn/shared";
+import { format } from "date-fns";
 import {
 	buildSubscriptionPickerRows,
 	subscriptionPickerRowToTarget,
@@ -47,6 +48,22 @@ const buildRows = (proposals: ReturnType<typeof makeProposal>[]) =>
 	buildSubscriptionPickerRows({ proposals, customerProducts, entities });
 
 describe("buildSubscriptionPickerRows", () => {
+	test("lists every linked subscription and schedule from the plans alone, before Stripe loads", () => {
+		const rows = buildSubscriptionPickerRows({
+			proposals: undefined,
+			customerProducts,
+			entities,
+		});
+
+		expect(
+			rows.map((row) => [row.key, row.scopeName, row.planNames, row.stripe]),
+		).toEqual([
+			["sub_aaaaxxxxxxxxbbbb", "Customer-level", ["Pro", "Addon"], null],
+			["sub_entity", "Acme Workspace", ["Seats"], null],
+			["sub_sched_future", "Customer-level", ["Enterprise"], null],
+		]);
+	});
+
 	test("lists only subscriptions Autumn bills plans on", () => {
 		const rows = buildRows([
 			makeProposal({
@@ -63,6 +80,7 @@ describe("buildSubscriptionPickerRows", () => {
 		expect(rows.map((row) => row.key)).toEqual([
 			"sub_aaaaxxxxxxxxbbbb",
 			"sub_entity",
+			"sub_sched_future",
 		]);
 	});
 
@@ -82,7 +100,7 @@ describe("buildSubscriptionPickerRows", () => {
 			}),
 		]);
 
-		expect(rows).toEqual([]);
+		expect(rows.map((row) => row.key)).toEqual(["sub_sched_future"]);
 	});
 
 	test("names the scope, plans and cadence of each subscription", () => {
@@ -99,31 +117,34 @@ describe("buildSubscriptionPickerRows", () => {
 		]);
 
 		expect(customerRow?.scopeName).toBe("Customer-level");
-		expect(customerRow?.stripeObjectLabel).toBe("sub_aaaa…bbbb · Monthly");
+		expect(customerRow?.stripeObjectId).toBe("sub_aaaa…bbbb");
+		expect(customerRow?.mainPlanName).toBe("Pro");
+		expect(customerRow?.stripe?.cadence).toBe("Monthly");
 		expect(customerRow?.planNames).toEqual(["Pro", "Addon"]);
 		expect(entityRow?.scopeName).toBe("Acme Workspace");
-		expect(entityRow?.stripeObjectLabel).toBe("sub_entity · Yearly");
+		expect(entityRow?.stripeObjectId).toBe("sub_entity");
+		expect(entityRow?.stripe?.cadence).toBe("Yearly");
 		expect(entityRow?.planNames).toEqual(["Seats"]);
 	});
 
 	test("shows a not-started schedule as its own row", () => {
-		const [row] = buildRows([
+		const row = buildRows([
 			makeProposal({
 				schedule: makeStripeSchedule({ id: "sub_sched_future" }),
 			}),
-		]);
+		]).find(({ key }) => key === "sub_sched_future");
 
 		expect(row?.stripeSubscriptionId).toBeNull();
 		expect(row?.stripeScheduleId).toBe("sub_sched_future");
 		expect(row?.planNames).toEqual(["Enterprise"]);
-		expect(row?.status?.label).toBe("Not started");
-		expect(row?.renewal).toEqual({
+		expect(row?.stripe?.status?.label).toBe("Not started");
+		expect(row?.stripe?.renewal).toEqual({
 			kind: "starts",
 			date: PERIOD_END_SECONDS * 1000,
 		});
 	});
 
-	test("leaves out a started or unlinked schedule without a subscription", () => {
+	test("leaves out a schedule Stripe has started, and never lists unlinked ones", () => {
 		const rows = buildRows([
 			makeProposal({
 				schedule: makeStripeSchedule({
@@ -134,35 +155,38 @@ describe("buildSubscriptionPickerRows", () => {
 			makeProposal({ schedule: makeStripeSchedule({ id: "sub_sched_other" }) }),
 		]);
 
-		expect(rows).toEqual([]);
+		expect(rows.map((row) => row.key)).toEqual([
+			"sub_aaaaxxxxxxxxbbbb",
+			"sub_entity",
+		]);
 	});
 
 	test("keeps broken subscriptions with their real status", () => {
-		const [row] = buildRows([
+		const row = buildRows([
 			makeProposal({
 				subscription: makeStripeSubscription({
 					id: "sub_entity",
 					status: "past_due",
 				}),
 			}),
-		]);
+		]).find(({ key }) => key === "sub_entity");
 
-		expect(row?.status).toEqual({ label: "Past due", tone: "bad" });
-		expect(row?.renewal.kind).toBe("payment_failed");
+		expect(row?.stripe?.status).toEqual({ label: "Past due", tone: "bad" });
+		expect(row?.stripe?.renewal.kind).toBe("payment_failed");
 	});
 
 	test("a cancelling subscription keeps its status and cancels in the renew column", () => {
-		const [row] = buildRows([
+		const row = buildRows([
 			makeProposal({
 				subscription: makeStripeSubscription({
 					id: "sub_entity",
 					cancelAtPeriodEnd: true,
 				}),
 			}),
-		]);
+		]).find(({ key }) => key === "sub_entity");
 
-		expect(row?.status?.label).toBe("Active");
-		expect(row?.renewal).toEqual({
+		expect(row?.stripe?.status?.label).toBe("Active");
+		expect(row?.stripe?.renewal).toEqual({
 			kind: "cancels",
 			date: PERIOD_END_SECONDS * 1000,
 		});
@@ -181,7 +205,9 @@ describe("buildSubscriptionPickerRows", () => {
 			key: "sub_aaaaxxxxxxxxbbbb",
 			stripeSubscriptionId: "sub_aaaaxxxxxxxxbbbb",
 			stripeScheduleId: "sub_sched_a",
-			label: "sub_aaaa…bbbb · Monthly",
+			planName: "Pro",
+			stripeObjectId: "sub_aaaa…bbbb",
+			details: `Monthly · renews ${format(PERIOD_END_SECONDS * 1000, "MMM d, yyyy")}`,
 			canChange: true,
 		});
 	});
