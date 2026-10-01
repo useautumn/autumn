@@ -60,14 +60,13 @@ export function resolveTriggerDevBranch({
 		: joined.slice(0, MAX_BRANCH_LEN).replace(/-$/, "");
 }
 
-/** The user and branch name a dev stack's alien deployments: the same on each of one person's machines, apart from anyone else's. */
+/** The git branch alone names a dev stack's alien deployments: short enough for a DNS label, the same on every machine. */
 export function resolveAtomDeploymentPrefix({
 	projectRoot,
 }: {
 	projectRoot: string;
 }): string {
-	const user = sanitizeSegment({ value: currentUsername() }) || "user";
-	const branch =
-		sanitizeSegment({ value: currentGitBranch({ projectRoot }) }) || "detached";
-	return `${user}-${branch}`.slice(0, MAX_BRANCH_LEN).replace(/-$/, "");
+	return (
+		sanitizeSegment({ value: currentGitBranch({ projectRoot }) }) || "detached"
+	);
 }
