@@ -63,6 +63,20 @@ function createApp({ successSampleRate }: { successSampleRate?: number }) {
 		});
 		return c.json({ error: { code: "INTERNAL" } }, 503);
 	});
+	app.post("/batch-with-activation-and-recovery", (c) => {
+		c.get("requestLog").error = new OwnedPartitionNotReadyError({
+			status: "activating",
+		});
+		c.get("requestLog").batch = {
+			route: { partition: 0, routeEpoch: "1" },
+			count: 2,
+			succeeded: 0,
+			failed: 2,
+			errorCodes: { NOT_READY: 1, INTERNAL: 1 },
+			worstStatus: 503,
+		};
+		return c.json({ ok: true });
+	});
 	return { app, lines };
 }
 
@@ -111,5 +125,11 @@ describe("request log sampling", () => {
 		await hit(app, "/not-ready-recovery", 1);
 		await hit(app, "/recovery", 1);
 		expect(lines.map((line) => line.level)).toEqual(["error", "error"]);
+	});
+
+	test("a batch with activation and recovery failures remains an error", async () => {
+		const { app, lines } = createApp({ successSampleRate: 0 });
+		await hit(app, "/batch-with-activation-and-recovery", 1);
+		expect(lines.map((line) => line.level)).toEqual(["error"]);
 	});
 });

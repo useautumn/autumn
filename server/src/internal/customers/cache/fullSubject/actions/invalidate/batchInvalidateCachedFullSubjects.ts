@@ -231,7 +231,6 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 			logger.error(
 				{
 					type: "batch_invalidate_full_subjects_dropped",
-					context: { org_id: first?.orgId, env: first?.env },
 					data: {
 						org_id: first?.orgId,
 						env: first?.env,

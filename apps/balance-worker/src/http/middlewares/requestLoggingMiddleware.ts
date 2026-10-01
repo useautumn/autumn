@@ -88,6 +88,7 @@ function logRequestResult({
 	};
 	const message = `[${statusCode}] ${context.req.method} ${context.req.path} ${durationMs}ms${error ? ` — ${error.name}` : ""}`;
 	const isActivating =
+		!batch &&
 		error instanceof OwnedPartitionNotReadyError &&
 		error.status === "activating";
 	if (severity >= 500 && !isActivating) ctx.logger.error(event, message);
