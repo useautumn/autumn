@@ -53,12 +53,9 @@ describe("reportJobTimeout", () => {
 	test("reports an error with the job's org context on the last delivery", () => {
 		const logger = report({ receiveCount: 5 });
 
-		expect(logger.error).toHaveBeenCalledWith(
-			"track timed out and SQS will not retry it",
-			{
-				error: expect.any(JobTimeoutError),
-				context: { org_id: "org_1", env: "live", customer_id: "cus_1" },
-			},
-		);
+		expect(logger.error).toHaveBeenCalledWith("track timed out on delivery 5", {
+			error: expect.any(JobTimeoutError),
+			context: { org_id: "org_1", env: "live", customer_id: "cus_1" },
+		});
 	});
 });

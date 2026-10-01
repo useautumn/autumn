@@ -49,7 +49,11 @@ export const reportJobTimeout = ({
 	};
 
 	if (shouldReportJobFailure({ willRetry: true, receiveCount, retryBudget })) {
-		jobLogger.error(`${job.name} timed out and SQS will not retry it`, fields);
+		// Not "won't be retried": a queue without a DLQ, or an unread policy, still redelivers.
+		jobLogger.error(
+			`${job.name} timed out on delivery ${receiveCount}`,
+			fields,
+		);
 		return;
 	}
 	jobLogger.warn(
