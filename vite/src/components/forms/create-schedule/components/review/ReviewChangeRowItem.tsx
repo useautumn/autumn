@@ -63,7 +63,12 @@ function PooledChip({ pooled }: { pooled: ReviewPooledBalance }) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<StatusChip tone="fuchsia" glyph="coins" className="shrink-0">
+				<StatusChip
+					tone="fuchsia"
+					glyph="coins"
+					className="shrink-0"
+					title={undefined}
+				>
 					Pooled
 				</StatusChip>
 			</TooltipTrigger>
@@ -88,7 +93,12 @@ function OngoingChip() {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<StatusChip tone="purple" glyph="play" className="shrink-0">
+				<StatusChip
+					tone="purple"
+					glyph="play"
+					className="shrink-0"
+					title={undefined}
+				>
 					Ongoing
 				</StatusChip>
 			</TooltipTrigger>

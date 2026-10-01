@@ -38,12 +38,17 @@ export function ReviewStatusChip({
 	changes?: ReviewChangeLine[];
 }) {
 	const { label, tone, glyph } = REVIEW_STATUSES[status];
+	const hasTooltip = changes.length > 0;
 	const chip = (
-		<StatusChip tone={tone} glyph={glyph}>
-			{changes.length > 1 ? `${label} · ${changes.length}` : label}
+		<StatusChip
+			tone={tone}
+			glyph={glyph}
+			title={hasTooltip ? undefined : label}
+		>
+			{label}
 		</StatusChip>
 	);
-	if (changes.length === 0) return chip;
+	if (!hasTooltip) return chip;
 
 	return (
 		<Tooltip>
