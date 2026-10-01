@@ -13,7 +13,7 @@
  *   quantity 300 → (300-100)/100 * $10 = $20 prepaid + base price
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -24,6 +24,7 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
@@ -126,19 +127,38 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-prepaid 1: sing
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const entityAfter = await autumnV1.entities.get<ApiEntityV0>(
+		customerId,
+		entities[0].id,
+	);
 
 	await expectCustomerProducts({
-		customer: customerAfter,
+		customer: entityAfter,
 		active: [pro.id],
 		notPresent: [premium.id],
 	});
 
 	expectCustomerFeatureCorrect({
-		customer: customerAfter,
+		customer: entityAfter,
 		featureId: TestFeature.Messages,
 		balance: proQuantity,
 		usage: 0,
 	});
+	await expectCustomerProducts({
+		customer: customerAfter,
+		active: isBalanceWorkerRoute() ? [] : [pro.id],
+		notPresent: isBalanceWorkerRoute() ? [pro.id, premium.id] : [premium.id],
+	});
+	if (isBalanceWorkerRoute()) {
+		expect(customerAfter.features[TestFeature.Messages]).toBeUndefined();
+	} else {
+		expectCustomerFeatureCorrect({
+			customer: customerAfter,
+			featureId: TestFeature.Messages,
+			balance: proQuantity,
+			usage: 0,
+		});
+	}
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
 	// Invoices:
