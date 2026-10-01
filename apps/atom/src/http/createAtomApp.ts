@@ -1,16 +1,20 @@
 import { Hono } from "hono";
 import { mountDevRoutes } from "../dev/mountDevRoutes.js";
-import { atomErrorHandler } from "./handlers/atomErrorHandler.js";
+import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
+import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
+import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
 export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
-	const app = new Hono();
-	app.onError(atomErrorHandler({ ctx }));
+	const app = new Hono<AtomHttpEnv>();
+	const handleError = createAtomErrorHandler({ ctx });
+	app.onError(handleError);
+	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth);
 	if (ctx.dev) mountDevRoutes({ app, ctx: ctx.dev });
 

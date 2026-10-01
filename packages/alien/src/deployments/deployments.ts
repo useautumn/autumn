@@ -7,7 +7,10 @@ import {
 	isDeploymentAwaitingSetup,
 	isDeploymentBeingDeleted,
 } from "./classifyDeployments.js";
-import { AlienDeploymentListSchema } from "./deploymentSchemas.js";
+import {
+	AlienDeploymentListSchema,
+	AlienDeploymentSchema,
+} from "./deploymentSchemas.js";
 
 /** The local manager filters by `deploymentGroupId`; the hosted API by `deploymentGroup`, scoped to a project. */
 const deploymentsQuery = ({
@@ -41,11 +44,28 @@ export const findDeployment = async ({
 		path: `/v1/deployments?${query}`,
 		schema: AlienDeploymentListSchema,
 	});
-	return (
-		items.find((deployment) => !isDeploymentBeingDeleted({ deployment })) ??
-		null
+	const live = items.find(
+		(deployment) => !isDeploymentBeingDeleted({ deployment }),
 	);
+	return live ? readDeployment({ ctx, deployment: live }) : null;
 };
+
+/** The hosted list leaves out `stackState`, so the endpoint is read from the record itself. */
+const readDeployment = ({
+	ctx,
+	deployment,
+}: {
+	ctx: { api: AlienApi };
+	deployment: AlienDeployment;
+}): Promise<AlienDeployment> =>
+	ctx.api.config.kind === "local"
+		? Promise.resolve(deployment)
+		: alienRequest({
+				api: ctx.api,
+				method: "GET",
+				path: `/v1/deployments/${encodeURIComponent(deployment.id)}${hostedQuery({ api: ctx.api })}`,
+				schema: AlienDeploymentSchema,
+			});
 
 /** A deployment that never ran is forgotten: cleanup would wait forever on resources that were never made.
  *  One that ran is cleaned up; setup-owned resources stay until the customer removes their stack. */

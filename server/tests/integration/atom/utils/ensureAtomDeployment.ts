@@ -21,10 +21,16 @@ export const ensureAtomDeployment = async ({
 	return { endpointUrl: atom.endpoint_url, token: atom.token };
 };
 
+/** True when the server deploys Atoms through alien: a real machine in a real account, never a test's to delete. */
+export const atomIsHosted = (): boolean =>
+	Boolean(process.env.ALIEN_API_KEY || process.env.ALIEN_MANAGER_URL);
+
 export const deleteAtomDeployment = async ({
 	autumn,
 }: {
 	autumn: AutumnInt;
 }): Promise<void> => {
+	// A hosted Atom is a real machine in a real account: never a test's to delete.
+	if (atomIsHosted()) return;
 	await autumn.post("/byoc.delete_atom", {});
 };

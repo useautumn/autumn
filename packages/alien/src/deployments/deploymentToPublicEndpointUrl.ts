@@ -29,5 +29,10 @@ export const deploymentToPublicEndpointUrl = ({
 	const stackState = StackStateSchema.safeParse(deployment.stackState);
 	if (!stackState.success) return null;
 	const { outputs } = stackState.data.resources[resourceId] ?? {};
-	return outputs?.publicEndpoints?.[endpointName]?.url ?? null;
+	const endpoints = Object.values(outputs?.publicEndpoints ?? {});
+	// The hosted manager keys a container's one endpoint `default`; the local manager keys it by name.
+	const endpoint =
+		outputs?.publicEndpoints?.[endpointName] ??
+		(endpoints.length === 1 ? endpoints[0] : undefined);
+	return endpoint?.url ?? null;
 };
