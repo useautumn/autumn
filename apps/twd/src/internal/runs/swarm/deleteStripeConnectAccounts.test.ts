@@ -2,40 +2,82 @@ import { expect, test } from "bun:test";
 import { deleteStripeConnectAccounts } from "./deleteStripeConnectAccounts.ts";
 
 const logger = { warn: () => {}, info: () => {}, error: () => {} };
+const shardMeta = (runId: string) => ({
+	autumn_tw_shard: "stripe-connect",
+	autumn_tw_run: runId,
+});
 
-test("every dedicated sub-account is deleted, tolerating ones already gone", async () => {
+const fakeStripe = ({
+	listed = [],
+	fail = {},
+}: {
+	listed?: { id: string; metadata: Record<string, string> | null }[];
+	fail?: Record<string, unknown[]>;
+}) => {
 	const deleted: string[] = [];
-	const stripe = {
-		accounts: {
-			del: async (id: string) => {
-				deleted.push(id);
-				if (id === "acct_gone")
-					throw Object.assign(new Error("No such account"), {
-						code: "resource_missing",
-					});
-				return { id, deleted: true };
+	return {
+		deleted,
+		stripe: {
+			accounts: {
+				list: () =>
+					(async function* () {
+						yield* listed;
+					})(),
+				del: async (id: string) => {
+					const error = fail[id]?.shift();
+					if (error) throw error;
+					deleted.push(id);
+					return { id, deleted: true };
+				},
 			},
 		},
 	};
+};
+
+test("deletes the reported accounts plus any the run created but never reported", async () => {
+	const { stripe, deleted } = fakeStripe({
+		listed: [
+			{ id: "acct_unreported", metadata: shardMeta("run_1") },
+			{ id: "acct_reported", metadata: shardMeta("run_1") },
+			{ id: "acct_other_run", metadata: shardMeta("run_2") },
+			{ id: "acct_untagged", metadata: { autumn_tw_run: "run_1" } },
+		],
+	});
 	const failed = await deleteStripeConnectAccounts({
-		accountIds: ["acct_a", "acct_gone", "acct_b"],
+		runId: "run_1",
+		accountIds: ["acct_reported"],
 		stripe,
 		logger: logger as never,
 	});
-	expect(deleted).toEqual(["acct_a", "acct_gone", "acct_b"]);
+	expect(deleted.sort()).toEqual(["acct_reported", "acct_unreported"]);
 	expect(failed).toEqual([]);
 });
 
-test("a failed delete is reported, not thrown, so cleanup carries on", async () => {
-	const stripe = {
-		accounts: {
-			del: async () => {
-				throw new Error("Stripe is down");
-			},
+test("retries rate limits and treats every already-gone error as deleted", async () => {
+	const { stripe, deleted } = fakeStripe({
+		fail: {
+			acct_limited: [{ statusCode: 429, message: "Too many requests" }],
+			acct_gone: [{ message: "No such account: acct_gone" }],
+			acct_lost: [{ code: "account_invalid", message: "lost access" }],
 		},
-	};
+	});
+	const failed = await deleteStripeConnectAccounts({
+		runId: "run_1",
+		accountIds: ["acct_limited", "acct_gone", "acct_lost"],
+		stripe,
+		logger: logger as never,
+	});
+	expect(deleted).toEqual(["acct_limited"]);
+	expect(failed).toEqual([]);
+});
+
+test("a delete that keeps failing is returned, not thrown", async () => {
+	const { stripe } = fakeStripe({
+		fail: { acct_a: [new Error("Stripe is down")] },
+	});
 	expect(
 		await deleteStripeConnectAccounts({
+			runId: "run_1",
 			accountIds: ["acct_a"],
 			stripe,
 			logger: logger as never,

@@ -174,7 +174,9 @@ test("a shard webhook missing events or disabled is repaired in place", async ()
 });
 
 test("an untagged endpoint at the shard URL, left by the first version, is adopted and tagged", async () => {
-	const { stripe, created, updated } = fakeStripe([{ url }]);
+	const { stripe, created, updated } = fakeStripe([
+		{ url, enabled_events: ["account.application.deauthorized"] },
+	]);
 	expect(await ensureStripeConnectWebhook({ stripe, url, events })).toEqual({
 		id: "we_0",
 		created: false,
@@ -184,7 +186,10 @@ test("an untagged endpoint at the shard URL, left by the first version, is adopt
 		{
 			id: "we_0",
 			params: {
-				enabled_events: events,
+				enabled_events: [
+					"account.application.deauthorized",
+					"customer.updated",
+				],
 				disabled: false,
 				metadata: { autumn_tw_shard: "stripe-connect" },
 			},

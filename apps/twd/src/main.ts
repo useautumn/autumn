@@ -10,12 +10,26 @@ import { getTwdEnv } from "./lib/env.ts";
 import { getLogger } from "./lib/logger.ts";
 import { startSweepers } from "./lib/startSweepers.ts";
 
+const SHARD_RETIRE_ATTEMPTS = 5;
 const env = getTwdEnv();
 const logger = getLogger();
 
 await runMigrations();
 const bootCtx = createContext({ actor: SYSTEM_ACTOR });
-await retireShardKey({ ctx: bootCtx });
+// The shard platform must be retired before preload; a crash-looping boot beats a pooled shard key.
+for (let attempt = 1; ; attempt++) {
+	try {
+		await retireShardKey({ ctx: bootCtx });
+		break;
+	} catch (error) {
+		if (attempt >= SHARD_RETIRE_ATTEMPTS) throw error;
+		logger.warn("retiring the stripe-connect shard key failed; retrying", {
+			attempt,
+			error: String(error),
+		});
+		await Bun.sleep(attempt * 2_000);
+	}
+}
 logger.info("key secrets preloaded", {
 	keys: await preloadKeySecrets({ ctx: bootCtx }),
 });

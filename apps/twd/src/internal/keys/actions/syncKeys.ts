@@ -105,7 +105,7 @@ const shardPlatformAccountId = async (secret: string) =>
 		)
 	).id;
 
-/** Retires any stored row for the shard's platform (current or rotated-out secret) and drops its secret. */
+/** Retires any stored row for the shard's platform (current or rotated-out secret) and drops its secret; throws if Stripe can't name the platform. */
 export const retireShardKey = async ({
 	ctx,
 	resolvePlatformAccountId = shardPlatformAccountId,
@@ -115,12 +115,12 @@ export const retireShardKey = async ({
 }) => {
 	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 	if (!secret) return;
+	// Fail closed: without the platform id a row holding a rotated-out shard secret would stay usable.
 	const platformAccountId = await resolvePlatformAccountId(secret).catch(
 		(error: unknown) => {
-			ctx.logger.warn("stripe-connect shard platform lookup failed", {
-				error: String(error),
-			});
-			return undefined;
+			throw new Error(
+				`stripe-connect shard platform lookup failed, so its stored keys can't be retired: ${String(error)}`,
+			);
 		},
 	);
 	const retired = await ctx.db
@@ -135,9 +135,7 @@ export const retireShardKey = async ({
 		.where(
 			or(
 				eq(stripeKeys.keyHash, hashKey({ secret })),
-				platformAccountId
-					? eq(stripeKeys.platformAccountId, platformAccountId)
-					: undefined,
+				eq(stripeKeys.platformAccountId, platformAccountId),
 			),
 		)
 		.returning({ platformAccountId: stripeKeys.platformAccountId });

@@ -105,29 +105,20 @@ test("a shard key stored before it was reserved is retired, its secret dropped",
 	expect(sets).toEqual([]);
 });
 
-test("retiring still matches the current shard key when Stripe can't name its platform", async () => {
-	const conditions: SQL[] = [];
+test("retiring fails closed when Stripe can't name the shard's platform", async () => {
+	const updates: unknown[] = [];
 	const ctx = {
 		env: { SHARD_STRIPE_SANDBOX_KEY: SHARD_KEY },
 		logger: { warn: () => {} },
-		db: {
-			update: () => ({
-				set: () => ({
-					where: (condition: SQL) => {
-						conditions.push(condition);
-						return { returning: async () => [] };
-					},
-				}),
-			}),
-		},
+		db: { update: () => updates.push("update") },
 	} as never;
-	await retireShardKey({
-		ctx,
-		resolvePlatformAccountId: async () => {
-			throw new Error("Stripe is down");
-		},
-	});
-	const { sql, params } = new PgDialect().sqlToQuery(conditions[0]);
-	expect(sql).toContain('"key_hash" = $1');
-	expect(params).toEqual([hashKey({ secret: SHARD_KEY })]);
+	await expect(
+		retireShardKey({
+			ctx,
+			resolvePlatformAccountId: async () => {
+				throw new Error("Stripe is down");
+			},
+		}),
+	).rejects.toThrow("stripe-connect shard platform");
+	expect(updates).toEqual([]);
 });

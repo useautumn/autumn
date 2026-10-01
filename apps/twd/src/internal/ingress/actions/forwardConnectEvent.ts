@@ -1,5 +1,9 @@
 import type { TwdLogger } from "../../../lib/logger.ts";
-import { getIngressRoute, getShardRoute } from "./ingressRoutes.ts";
+import {
+	getIngressRoute,
+	getShardRoute,
+	isIngressAccountDropped,
+} from "./ingressRoutes.ts";
 
 const FORWARDED_HEADERS = ["content-type", "stripe-signature", "user-agent"];
 
@@ -32,6 +36,7 @@ export const forwardConnectEvent = async ({
 		logger.warn("ingress: connect event has no event.account");
 		return 400;
 	}
+	if (isIngressAccountDropped({ accountId })) return 200;
 	const workerUrl =
 		getIngressRoute({ accountId }) ??
 		(shard ? getShardRoute({ shard }) : undefined);
