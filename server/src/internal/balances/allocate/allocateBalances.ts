@@ -137,7 +137,7 @@ export const allocateBalances = async ({
 
 	// Read, check and write under the customer row lock, so concurrent calls can't both pass rule 5.
 	// Counters bypass the worker until plans can set usage_windows; the eviction below drops any stale copy.
-	const { plan, cycle } = await withAllocationLock({
+	const { plan, cycle, changed } = await withAllocationLock({
 		ctx,
 		internalCustomerId: customer.internal_id,
 		fn: async ({ tx, allocations }) => {
@@ -217,7 +217,11 @@ export const allocateBalances = async ({
 					},
 				},
 			});
-			return { plan, cycle };
+			const changed =
+				!existing ||
+				existing.scale !== plan.scale ||
+				JSON.stringify(existing.amounts) !== JSON.stringify(plan.amounts);
+			return { plan, cycle, changed };
 		},
 	});
 	await invalidateCachedFullSubject({
@@ -225,7 +229,8 @@ export const allocateBalances = async ({
 		customerId: params.customer_id,
 		source: "allocateBalances",
 	});
-	void notifyAllocationsAdjusted({ ctx, customerId: params.customer_id });
+	if (changed)
+		void notifyAllocationsAdjusted({ ctx, customerId: params.customer_id });
 
 	const allocated = Object.keys(plan.amounts).reduce(
 		(sum, id) =>

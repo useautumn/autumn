@@ -310,7 +310,11 @@ export const releaseEntityAllocations = async ({
 			});
 		},
 	});
-	if (!released) return;
+	// Nothing held: the delete may still have moved shared credits, so re-fit as any change would.
+	if (!released) {
+		await refreshAllocationScaleAfterWrite({ ctx, customerId });
+		return;
+	}
 	await patchCachedAllocations({
 		ctx,
 		customerId: fullSubject.customerId,

@@ -196,18 +196,24 @@ export const deltasToFreedAllocation = ({
 }): Map<string, Decimal> | undefined => {
 	const state = { allocationConsumed: undefined } as unknown as DeductionState;
 	for (const gate of distinctGates({ context })) {
-		const restored = deltas
-			.filter(
-				(delta) =>
-					gateOf({ context, row: delta }) === gate && delta.balanceDelta > 0,
-			)
-			.reduce((sum, delta) => sum.plus(delta.balanceDelta), new Decimal(0));
-		releaseAllocation({
-			context,
-			deductionState: state,
-			gate,
-			credits: restored,
-		});
+		const gated = deltas.filter(
+			(delta) => gateOf({ context, row: delta }) === gate,
+		);
+		const net = gated.reduce(
+			(sum, delta) => sum.plus(delta.balanceDelta),
+			new Decimal(0),
+		);
+		// Unwinding a draw gives credits back; unwinding a refund takes them again.
+		if (net.gt(0))
+			releaseAllocation({ context, deductionState: state, gate, credits: net });
+		const row = context.rows.find((candidate) => candidate.id === gated[0]?.id);
+		if (net.lt(0) && row)
+			consumeAllocation({
+				context,
+				deductionState: state,
+				row,
+				credits: net.neg(),
+			});
 	}
 	return state.allocationConsumed;
 };

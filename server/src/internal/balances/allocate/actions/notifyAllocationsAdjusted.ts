@@ -1,6 +1,7 @@
+import { fullSubjectToFullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
-import { CusService } from "@/internal/customers/CusService.js";
+import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 
 /** One billing.updated tagged allocations_adjusted, for changes no plan event already carries. */
 export const notifyAllocationsAdjusted = async ({
@@ -11,11 +12,14 @@ export const notifyAllocationsAdjusted = async ({
 	customerId: string;
 }): Promise<void> => {
 	try {
-		const fullCustomer = await CusService.getFull({
+		// Read from primary: this runs right after the allocation write.
+		const fullSubject = await getFullSubject({
 			ctx,
-			idOrInternalId: customerId,
-			withEntities: true,
+			customerId,
+			readFrom: "primary",
 		});
+		if (!fullSubject) return;
+		const fullCustomer = fullSubjectToFullCustomer({ fullSubject });
 		await sendBillingUpdatedWebhook({
 			ctx,
 			autumnBillingPlan: {

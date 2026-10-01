@@ -216,14 +216,22 @@ local function release_allocation_for_unwind(params)
       gate = allocation_gate_of(params.gates, item.customer_entitlement_id)
     end
     local credits = safe_number(iteration.balance_credits)
-    if gate ~= nil and credits > 0 then
-      gate_by_key[gate.key] = gate
+    if gate ~= nil and credits ~= 0 then
+      gate_by_key[gate.key] = { gate = gate, ent_id = item.customer_entitlement_id }
       credits_by_gate[gate.key] = (credits_by_gate[gate.key] or 0) + credits
     end
   end
+  -- Unwinding a draw gives credits back; unwinding a refund takes them again.
   for key, credits in pairs(credits_by_gate) do
     if credits > 0 then
-      release_allocation(context, gate_by_key[key], credits)
+      release_allocation(context, gate_by_key[key].gate, credits)
+    elseif credits < 0 then
+      consume_allocation({
+        context = context,
+        gates = params.gates,
+        ent_id = gate_by_key[key].ent_id,
+        credits = -credits,
+      })
     end
   end
 end

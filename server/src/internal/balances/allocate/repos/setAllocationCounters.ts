@@ -1,4 +1,8 @@
-import { type UsageWindow, usageWindows } from "@autumn/shared";
+import {
+	USAGE_WINDOW_BOUND_TOLERANCE_MS,
+	type UsageWindow,
+	usageWindows,
+} from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -29,8 +33,8 @@ export const setAllocationCounters = async ({
     (COALESCE(internal_entity_id, '')), (COALESCE(filter_key, '')))
    DO UPDATE SET
     usage = CASE
-     WHEN ${usageWindows}.window_start_at = EXCLUDED.window_start_at
-      AND ${usageWindows}.window_end_at = EXCLUDED.window_end_at
+     WHEN ABS(${usageWindows}.window_start_at - EXCLUDED.window_start_at) <= ${USAGE_WINDOW_BOUND_TOLERANCE_MS}
+      AND ABS(${usageWindows}.window_end_at - EXCLUDED.window_end_at) <= ${USAGE_WINDOW_BOUND_TOLERANCE_MS}
      THEN GREATEST(0, ${usageWindows}.usage + (EXCLUDED.usage - ${counter.readUsage}))
      ELSE EXCLUDED.usage
     END,
