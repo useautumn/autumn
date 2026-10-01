@@ -37,9 +37,16 @@ const cycle = getUsageWindowBounds({
 });
 const otherEntity = "ent_internal_b";
 
-const pool = ({ balance }: { balance: number }): WorkerCustomerEntitlement => ({
+const pool = ({
+	balance,
+	usageAllowed = false,
+}: {
+	balance: number;
+	usageAllowed?: boolean;
+}): WorkerCustomerEntitlement => ({
 	...createCustomerEntitlement({ id: "pool", featureId: "credits", balance }),
 	next_reset_at: nextResetAt,
+	usage_allowed: usageAllowed,
 });
 
 const ownOverageRow = ({
@@ -89,6 +96,8 @@ const trackAsEntity = ({
 	scale = 1,
 	scaleCycleEnd = null,
 	includeOwnRow = true,
+	poolUsageAllowed = false,
+	overageBehavior = "cap",
 	value,
 }: {
 	amounts: Record<string, number>;
@@ -98,6 +107,8 @@ const trackAsEntity = ({
 	scale?: number;
 	scaleCycleEnd?: number | null;
 	includeOwnRow?: boolean;
+	poolUsageAllowed?: boolean;
+	overageBehavior?: "cap" | "reject" | "overflow";
 	value: number;
 }) =>
 	deduct({
@@ -126,7 +137,7 @@ const trackAsEntity = ({
 					}),
 				],
 				customerEntitlements: [
-					pool({ balance: poolBalance }),
+					pool({ balance: poolBalance, usageAllowed: poolUsageAllowed }),
 					...(includeOwnRow ? [ownOverageRow({ usageAllowed })] : []),
 				],
 				usageWindows,
@@ -136,7 +147,7 @@ const trackAsEntity = ({
 			org,
 			featureId: "credits",
 			value,
-			overageBehavior: "cap",
+			overageBehavior,
 		}),
 	});
 
@@ -316,4 +327,44 @@ describe("allocation gate", () => {
 			expect(counterUsageAdded(outcome, null)).toBe(-100);
 		},
 	);
+
+	test.concurrent(
+		"a shared row that allows overage still can't give another entity's share",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { ent_internal_x: 500, [otherEntity]: 500 },
+				poolBalance: 1000,
+				poolUsageAllowed: true,
+				includeOwnRow: false,
+				value: 600,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(0);
+		},
+	);
+
+	test.concurrent(
+		"overage below zero on a shared row is allowed once the entity's headroom covers what's left",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 500 },
+				poolBalance: 500,
+				poolUsageAllowed: true,
+				includeOwnRow: false,
+				value: 800,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(800);
+			expect(counterUsageAdded(outcome, entity.internal_id)).toBe(500);
+		},
+	);
+
+	test.concurrent("overflow doesn't skip the allocation gate", () => {
+		const outcome = trackAsEntity({
+			amounts: { ent_internal_x: 500, [otherEntity]: 500 },
+			poolBalance: 1000,
+			includeOwnRow: false,
+			overageBehavior: "overflow",
+			value: 600,
+		});
+		expect(drawnFrom(outcome, "pool")).toBe(0);
+	});
 });

@@ -180,21 +180,24 @@ export const deductFromRows = ({
 			bucket === "overage" && !refund && deductionState.terms.enforcesSpendLimit
 				? deductionRowToSpendLimitHeadroom({ context, deductionState, row })
 				: null;
-		// Shared rows hold an entity to its share plus unallocated credits; overage isn't gated.
-		const allocationHeadroom =
-			bucket === "overage" || refund || allowsNegative({ deductionState })
-				? null
-				: allocationHeadroomOf({ context, deductionState, row });
-		if (allocationHeadroom?.isZero()) continue;
+		const currentBalance = deductionRowToCurrentBalance({
+			row,
+			deltas: deductionState.deltas,
+		});
+		// Shared credits above zero are gated; once an entity's headroom covers them, its overage below zero is free.
+		const allocationHeadroom = refund
+			? null
+			: allocationHeadroomOf({ context, deductionState, row });
+		const gatesThisDraw =
+			allocationHeadroom !== null &&
+			allocationHeadroom.lt(Decimal.max(0, currentBalance));
+		if (gatesThisDraw && allocationHeadroom.isZero()) continue;
 		const drawable = creditsFor({ context, row, units, deductionState });
-		const amount = allocationHeadroom
+		const amount = gatesThisDraw
 			? Decimal.min(drawable, allocationHeadroom)
 			: drawable;
 		const change = clampChange({
-			current: deductionRowToCurrentBalance({
-				row,
-				deltas: deductionState.deltas,
-			}),
+			current: currentBalance,
 			amount: headroom ? Decimal.min(amount, headroom) : amount,
 			floor: headroom ? null : bounds.floor,
 			ceiling: bounds.ceiling,
@@ -203,11 +206,14 @@ export const deductFromRows = ({
 		// A rate card may hand out units for no credits (a free tier); only a draw that moved nothing is skipped.
 		const unitsGiven = unitsFor({ row, units, change, deductionState });
 		if (unitsGiven.abs().lte(CREDIT_RATE_EPSILON)) continue;
+		// Only credits above zero are shared; the counters ignore overage below it.
 		consumeAllocation({
 			context,
 			deductionState,
 			row,
-			credits: change,
+			credits: change.gt(0)
+				? Decimal.min(change, Decimal.max(0, currentBalance))
+				: change,
 		});
 		deductionState.deltas.push(changeToDelta({ row, change, unitsGiven }));
 		deductionState.remaining = deductionState.remaining.minus(unitsGiven);
