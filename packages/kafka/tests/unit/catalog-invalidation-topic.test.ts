@@ -90,6 +90,8 @@ describe("catalog invalidation topic", () => {
 							run: async (runConfig: { eachMessage?: typeof run }) => {
 								run = runConfig.eachMessage;
 							},
+							on: () => () => {},
+							events: { GROUP_JOIN: "consumer.group_join" },
 							disconnect: async () => {},
 						} as never;
 					},
@@ -135,6 +137,126 @@ describe("catalog invalidation topic", () => {
 
 		expect(applied).toEqual(["org_1:live", "org_2:live"]);
 		expect(skipped).toEqual(["1"]);
+	});
+
+	test("a per-process group commits nothing and resumes from what it read after a rejoin; a shared group keeps committing", async () => {
+		type RunConfig = {
+			autoCommit?: boolean;
+			eachMessage?: (payload: {
+				topic: string;
+				partition: number;
+				message: { offset: string; key: Buffer | null; value: Buffer | null };
+			}) => Promise<void>;
+		};
+		function startConsumerIn(
+			group:
+				| { kind: "perProcess"; idPrefix: string }
+				| { kind: "shared"; id: string },
+		) {
+			const seeks: Array<{ topic: string; partition: number; offset: string }> =
+				[];
+			const joinListeners: Array<() => void> = [];
+			let runConfig: RunConfig | undefined;
+			const consumer = createCatalogInvalidationConsumer({
+				ctx: {
+					kafka: {
+						consumer: () =>
+							({
+								connect: async () => {},
+								subscribe: async () => {},
+								run: async (config: RunConfig) => {
+									runConfig = config;
+								},
+								on: (_event: string, listener: () => void) => {
+									joinListeners.push(listener);
+									return () => {};
+								},
+								events: { GROUP_JOIN: "consumer.group_join" },
+								seek: (position: {
+									topic: string;
+									partition: number;
+									offset: string;
+								}) => {
+									seeks.push(position);
+								},
+								disconnect: async () => {},
+							}) as never,
+					},
+					handler: { apply: () => {}, skip: () => {} },
+				},
+				config: { topic: "local-catalog-invalidations", group },
+			});
+			return {
+				consumer,
+				seeks,
+				readRunConfig: () => runConfig,
+				rejoin: () => {
+					for (const listener of joinListeners) listener();
+				},
+			};
+		}
+
+		const perProcess = startConsumerIn({
+			kind: "perProcess",
+			idPrefix: "herald-catalog",
+		});
+		await perProcess.consumer.start();
+		expect(perProcess.readRunConfig()?.autoCommit).toBe(false);
+		perProcess.rejoin();
+		expect(perProcess.seeks).toEqual([]);
+		for (const offset of ["4", "5"])
+			await perProcess.readRunConfig()?.eachMessage?.({
+				topic: "local-catalog-invalidations",
+				partition: 0,
+				message: { offset, ...serializeCatalogInvalidationRecord({ record }) },
+			});
+		perProcess.rejoin();
+		expect(perProcess.seeks).toEqual([
+			{ topic: "local-catalog-invalidations", partition: 0, offset: "6" },
+		]);
+
+		const shared = startConsumerIn({
+			kind: "shared",
+			id: "herald-catalog-push",
+		});
+		await shared.consumer.start();
+		expect(shared.readRunConfig()?.autoCommit ?? true).toBe(true);
+		shared.rejoin();
+		expect(shared.seeks).toEqual([]);
+	});
+
+	test("a per-process consumer that fails to start leaves no rejoin listener behind", async () => {
+		let listeners = 0;
+		const consumer = createCatalogInvalidationConsumer({
+			ctx: {
+				kafka: {
+					consumer: () =>
+						({
+							connect: async () => {},
+							subscribe: async () => {},
+							run: async () => {
+								throw new Error("coordinator unavailable");
+							},
+							on: () => {
+								listeners++;
+								return () => {
+									listeners--;
+								};
+							},
+							events: { GROUP_JOIN: "consumer.group_join" },
+							disconnect: async () => {},
+						}) as never,
+				},
+				handler: { apply: () => {}, skip: () => {} },
+			},
+			config: {
+				topic: "local-catalog-invalidations",
+				group: { kind: "perProcess", idPrefix: "herald-catalog" },
+			},
+		});
+
+		await expect(consumer.start()).rejects.toThrow("coordinator unavailable");
+		expect(listeners).toBe(0);
 	});
 
 	test("a per-process group is new each time, a shared group is the one named", () => {

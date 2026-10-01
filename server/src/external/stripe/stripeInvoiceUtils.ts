@@ -1,3 +1,4 @@
+import { reportError } from "@autumn/errors";
 import {
 	ErrCode,
 	type InvoiceDiscount,
@@ -90,9 +91,11 @@ export const payForInvoice = async ({
 			payment_method: paymentMethod?.id,
 		});
 	} catch (error: any) {
-		logger.error(
-			`❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
-		);
+		reportError({
+			ctx: { logger },
+			error,
+			operation: "Stripe invoice payment",
+		});
 
 		if (voidIfFailed) {
 			try {

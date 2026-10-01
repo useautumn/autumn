@@ -7,6 +7,7 @@ import { PROJECT_ROOT } from "../dw/constants.js";
 import { mergeEnvFile } from "../dw/helpers/env-files.js";
 import {
 	createTestOrg,
+	ensureTestOrgOwner,
 	ensureTestOrgStripeAccount,
 	TEST_ORG_CONFIG,
 	TEST_ORG_PUBLISHABLE_KEY,
@@ -135,7 +136,7 @@ async function runFullSetup({ yes }: { yes: boolean }): Promise<void> {
 	console.log(chalk.whiteBright(`  id:   ${TEST_ORG_CONFIG.id}\n`));
 }
 
-/** Create unit-test-org if missing; if present, only ensure the API key. */
+/** Create unit-test-org if missing; if present, only ensure its owner and API key. */
 async function runEnsure(): Promise<void> {
 	const { db } = await import("@server/db/initDrizzle.js");
 	const { organizations } = await import("@autumn/shared");
@@ -148,6 +149,7 @@ async function runEnsure(): Promise<void> {
 		return;
 	}
 	await ensureTestOrgStripeAccount({ org: existing });
+	await ensureTestOrgOwner({ db });
 	await runEnsureKey();
 }
 

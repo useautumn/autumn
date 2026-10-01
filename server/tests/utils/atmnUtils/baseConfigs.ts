@@ -7,7 +7,7 @@
 /** Every feature type: two metered (one non-consumable), a credit system over
  * them, an AI credit system, and two booleans. */
 export const everyFeatureType = `
-		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false, display: { singular: "seat", plural: "seats" } }),
+		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false }),
 		feature({ featureId: "messages", name: "Messages", type: "metered", consumable: true }),
 		feature({ featureId: "api_calls", name: "API Calls", type: "metered", consumable: true }),
 		feature({

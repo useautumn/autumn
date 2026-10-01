@@ -16,6 +16,7 @@ import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { buildRequestLogContexts } from "@/utils/logging/requestLogContext.js";
 import { resolveCustomerId } from "./utils/resolveCustomerId.js";
 import { resolveEntityId } from "./utils/resolveEntityId.js";
+import { resolveRouteTemplate } from "./utils/resolveRouteTemplate.js";
 
 const SENSITIVE_REQUEST_BODY_KEYS = new Set(["connectionString"]);
 const REDACTED_REQUEST_BODY_VALUE = "[REDACTED]";
@@ -104,6 +105,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		query: c.req.query(),
 		body: redactSensitiveRequestBody({ body }),
 		name: `${c.req.method} ${c.req.path}`,
+		route: `${c.req.method} ${resolveRouteTemplate({ c })}`,
 	};
 	const requestLogContexts = buildRequestLogContexts({
 		requestContext: requestLogContext,

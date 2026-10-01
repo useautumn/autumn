@@ -97,7 +97,9 @@ export const handleVoidInvoiceCron = async ({
 				metadataId: metadata.id,
 			});
 		} catch (error) {
-			logger.error(`Error expiring pending customer products: ${error}`);
+			logger.error(`Error expiring pending customer products: ${error}`, {
+				error,
+			});
 		}
 	};
 
@@ -142,7 +144,7 @@ export const handleVoidInvoiceCron = async ({
 				return;
 			}
 
-			logger.error(`Error voiding invoice: ${error}`);
+			logger.error(`Error voiding invoice: ${error}`, { error });
 			if (
 				error instanceof Error &&
 				error.message.includes("cannot be voided")

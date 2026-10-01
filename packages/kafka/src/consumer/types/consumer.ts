@@ -90,6 +90,7 @@ export type TopicConsumerConfig = {
 	partitionsConsumedConcurrently?: number;
 	/** Slice-mode handlers only: how many records land between one resolve-and-heartbeat and the next. */
 	recordsPerSlice?: number;
+	commitGroupOffsets?: boolean;
 };
 
 export type TopicConsumerDependencies = {

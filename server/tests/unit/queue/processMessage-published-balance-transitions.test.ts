@@ -77,7 +77,11 @@ describe("published balance transition persistence jobs", () => {
 			}),
 		} satisfies Pick<Message, "MessageId" | "Body">;
 
-		await processMessage({ message: message as Message, db: {} as never });
+		await processMessage({
+			message: message as Message,
+			db: {} as never,
+			retryBudget: { kind: "unknown" },
+		});
 
 		expect(mockState.createWorkerContextCalls).toBe(0);
 		expect(mockState.persistenceCalls).toHaveLength(1);
@@ -110,7 +114,11 @@ describe("published balance transition persistence jobs", () => {
 		} satisfies Pick<Message, "MessageId" | "Body">;
 
 		await expect(
-			processMessage({ message: message as Message, db: {} as never }),
+			processMessage({
+				message: message as Message,
+				db: {} as never,
+				retryBudget: { kind: "unknown" },
+			}),
 		).rejects.toThrow("database unavailable");
 	});
 });

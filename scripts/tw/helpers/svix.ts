@@ -11,16 +11,16 @@ import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
 import type { ShardPlan } from "../types.js";
 
-/** Matches `from "@tests/integration/utils/svixWebhookTestUtils"` (optional `.js`). */
+/** Matches imports of the Svix webhook test utils, the server's Svix client, or the atmn CLI test utils (every `atmn pull` lists webhooks). */
 const SVIX_IMPORT_REGEX =
-	/from\s+["']@tests\/integration\/utils\/svixWebhookTestUtils(\.js)?["']/;
+	/from\s+["'][^"']*\/(svixWebhookTestUtils|webhookTestUtils|external\/svix\/svixUtils|atmnUtils\/\w+)(\.js)?["']/;
 
 /** Max number of files read concurrently to keep file-descriptor pressure bounded. */
 const READ_CONCURRENCY = 32;
 
 /**
  * Returns whether a single test file needs the Svix shard by statically scanning
- * its source for the `svixWebhookTestUtils` import. Returns `false` (and does not
+ * its source for a Svix test-utils, Svix client, or atmn CLI test-utils import. Returns `false` (and does not
  * throw) when the file can't be read, so a transient read error never silently
  * promotes a non-Svix file onto the dedicated shard.
  */

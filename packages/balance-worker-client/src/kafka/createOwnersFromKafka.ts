@@ -88,9 +88,11 @@ export function createOwnersFromKafka({
 				await discardFailed();
 				const waitMs =
 					retryDelaysMs[Math.min(attempt, retryDelaysMs.length) - 1] ?? 0;
-				ctx.logger?.error(
+				// A boot-time blip clears on retry; only a consumer still failing is worth reporting.
+				ctx.logger?.[attempt >= 3 ? "error" : "warn"](
 					{
 						error: cause,
+						type: "balance_worker_ownership_start_failed",
 						attempt,
 						retryInMs: waitMs,
 						durationMs: Math.round(performance.now() - startedAt),

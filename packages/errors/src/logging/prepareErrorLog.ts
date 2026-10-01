@@ -1,12 +1,12 @@
 import type pino from "pino";
 import { classifyError } from "../classify/classifyError.js";
 import { captureErrorToSentry } from "../external/sentry/captureErrorToSentry.js";
-import type { ErrorClassification } from "../models/errorClassification.js";
+import { captureLoggedMessageToSentry } from "../external/sentry/captureLoggedMessageToSentry.js";
+import type { ErrorClassifier } from "../models/errorClassifier.js";
 import type { LogContext } from "../models/logContext.js";
 import { kindToReportPolicy } from "../report/reportPolicy.js";
 import { annotateLoggedError } from "./annotateLoggedError.js";
 import { findLoggedError } from "./findLoggedError.js";
-import { LoggedMessageError } from "./loggedMessageError.js";
 
 const ERROR_LEVEL = 50;
 
@@ -40,12 +40,16 @@ export const prepareErrorLog = ({
 	level,
 	service,
 	captureToSentry,
+	loggerFramePaths,
+	classifiers,
 }: {
 	logger: pino.Logger;
 	args: unknown[];
 	level: number;
 	service: string;
 	captureToSentry: boolean;
+	loggerFramePaths: string[];
+	classifiers: ErrorClassifier[];
 }): ErrorLog => {
 	const isErrorLevel = level >= ERROR_LEVEL;
 	const loggedError = findLoggedError({ args });
@@ -53,27 +57,37 @@ export const prepareErrorLog = ({
 	if (!loggedError) {
 		if (!captureToSentry || !isErrorLevel) return { args };
 
-		const error = new LoggedMessageError(messageOf({ args }));
-		const classification: ErrorClassification = { kind: "bug" };
+		// Captured here, synchronously, so the stack still reaches the caller of logger.error.
+		const stack = new Error().stack ?? "";
+		const message = messageOf({ args });
 		const logContext = logContextOf({ logger, args });
 		return {
 			args,
 			capture: () =>
-				captureErrorToSentry({ error, service, logContext, classification }),
+				captureLoggedMessageToSentry({
+					message,
+					stack,
+					service,
+					logContext,
+					loggerFramePaths,
+				}),
 		};
 	}
 
-	const classification = classifyError({ error: loggedError.error });
+	const classification = classifyError({
+		error: loggedError.error,
+		classifiers,
+	});
 	const annotatedArgs = annotateLoggedError({
 		args,
 		loggedError,
 		classification,
 	});
-	const isCapturedBug =
+	const isCaptured =
 		captureToSentry &&
 		isErrorLevel &&
 		kindToReportPolicy({ kind: classification.kind }).captureToSentry;
-	if (!isCapturedBug) return { args: annotatedArgs };
+	if (!isCaptured) return { args: annotatedArgs };
 
 	const logContext = logContextOf({ logger, args });
 	return {

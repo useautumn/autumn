@@ -37,9 +37,10 @@ export async function reconcilePartitionOffset({
 }): Promise<void> {
 	const { topic, partition } = payload.batch;
 	if (!hasCurrentBatchGeneration({ state, payload, generation })) return;
-	await ctx.consumer.commitOffsets([
-		{ topic, partition, offset: nextOffset.toString() },
-	]);
+	if (commitsGroupOffsets({ ctx }))
+		await ctx.consumer.commitOffsets([
+			{ topic, partition, offset: nextOffset.toString() },
+		]);
 	if (!hasCurrentBatchGeneration({ state, payload, generation })) return;
 	ctx.consumer.seek({ topic, partition, offset: nextOffset.toString() });
 	ctx.progress.advance({ topic, partition, nextOffset });
@@ -59,7 +60,7 @@ export async function commitBatchOffsets({
 	)
 		return;
 	const offset = readPendingOffset(payload);
-	if (offset !== null) {
+	if (offset !== null && commitsGroupOffsets({ ctx })) {
 		await payload.commitOffsetsIfNecessary({
 			topics: [{ topic, partitions: [{ partition, offset }] }],
 		});
@@ -82,6 +83,10 @@ export async function commitBatchOffsets({
 				: committedNextOffset,
 	});
 	state.initializedPartitions.add(JSON.stringify([topic, partition]));
+}
+
+function commitsGroupOffsets({ ctx }: { ctx: TopicConsumerContext }): boolean {
+	return ctx.config.commitGroupOffsets ?? true;
 }
 
 function readPendingOffset(payload: EachBatchPayload): string | null {

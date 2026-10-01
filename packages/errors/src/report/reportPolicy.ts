@@ -7,6 +7,7 @@ export type ReportPolicy = {
 
 const reportPolicyByKind: Record<ErrorKind, ReportPolicy> = {
 	expected: { logLevel: "warn", captureToSentry: false },
+	infra: { logLevel: "error", captureToSentry: true },
 	bug: { logLevel: "error", captureToSentry: true },
 };
 

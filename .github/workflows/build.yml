@@ -25,13 +25,9 @@ concurrency:
   group: build-${{ github.event.inputs.sha || github.ref }}
   cancel-in-progress: true
 
-env:
-  # ECR region is selected per-branch in the "Extract metadata" step:
-  #   prod repo (autumn)         -> us-east-2
-  #   staging repo (autumn-staging) -> us-east-1
-  # Branches allowed to deploy to staging via workflow_dispatch with tag=deploy-staging.
-  # Add short-lived PR branches here when you need staging without merging to dev.
-  STAGING_DEPLOY_BRANCH_ALLOWLIST: stack/cleanups stack/check-fail-open main dev feat/past-due-cancel-immediate-void feat/gate-cluster-wide feat/redis-monitor-fix feat/firelens-log-transport-v2 fix/dragonfly-resize-reconnect capy/standby-dragonfly-connection og/balance-worker-observability john/one-record og/balance-64-one-record og/balance-worker-perf og/command-offset-group-commit og/command-consumer-error-boundary og/not-owner-successor-hint og/worker-auth-crash-resilience og/fail-open-error-codes og/activation-hold-for-budget og/evict-deferred-commit
+# ECR region is selected per-branch in the "Extract metadata" step:
+#   prod repo (autumn)         -> us-east-2
+#   staging repo (autumn-staging) -> us-east-1
 
 jobs:
   checks:
@@ -135,18 +131,9 @@ jobs:
           # Sanitize branch name for Docker tag (replace / with -)
           SAFE_BRANCH=$(echo $BRANCH_NAME | sed 's/\//-/g')
 
+          # Any branch can go to staging via workflow_dispatch with tag=deploy-staging.
           if [ "$REQUESTED_STAGING_DEPLOY" = "true" ]; then
-            for ALLOWED_BRANCH in $STAGING_DEPLOY_BRANCH_ALLOWLIST; do
-              if [ "$BRANCH_NAME" = "$ALLOWED_BRANCH" ]; then
-                DEPLOY_STAGING_OVERRIDE="true"
-                break
-              fi
-            done
-
-            if [ "$DEPLOY_STAGING_OVERRIDE" != "true" ]; then
-              echo "::error::Branch '$BRANCH_NAME' is not allowed to deploy to staging. Add it to STAGING_DEPLOY_BRANCH_ALLOWLIST in .github/workflows/build.yml."
-              exit 1
-            fi
+            DEPLOY_STAGING_OVERRIDE="true"
           fi
 
           if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
@@ -160,8 +147,8 @@ jobs:
           echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "deploy_staging_override=$DEPLOY_STAGING_OVERRIDE" >> $GITHUB_OUTPUT
           
-          # Only an explicitly requested and allowlisted staging deploy uses staging ECR.
-          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
+          # Only main builds into production's ECR; every other branch goes to staging's.
+          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ] || [ "$BRANCH_NAME" != "main" ]; then
             echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
             echo "region=us-east-1" >> $GITHUB_OUTPUT
           else
