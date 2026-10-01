@@ -414,21 +414,21 @@ function BarCell({
 	);
 }
 
-/** balances.allocate splits one shared, finite, resetting interval; a row mixing intervals is ambiguous. */
+/** balances.allocate splits the shared rows of one finite, resetting interval; entity-owned rows don't count. */
 const isAllocatableSharedBalance = ({
 	customerEntitlements,
 }: {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 }) => {
-	const intervals = new Set(
-		customerEntitlements.map((ent) => ent.entitlement.interval),
+	const sharedRows = customerEntitlements.filter(
+		(ent) =>
+			!ent.internal_entity_id && !ent.customer_product?.internal_entity_id,
 	);
+	const intervals = new Set(sharedRows.map((ent) => ent.entitlement.interval));
 	return (
 		intervals.size === 1 &&
-		customerEntitlements.every(
+		sharedRows.every(
 			(ent) =>
-				!ent.internal_entity_id &&
-				!ent.customer_product?.internal_entity_id &&
 				!ent.unlimited &&
 				ent.entitlement.allowance_type !== AllowanceType.Unlimited &&
 				ent.entitlement.allowance != null &&
