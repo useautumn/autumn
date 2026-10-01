@@ -105,6 +105,7 @@
 	--table-row-hover: #fafaf9;
 
 	--input: #dddddd;
+	--switch-thumb-on: #ffffff;
 
 	--icon1: #888;
 	--muted: #f2f2f2;
@@ -200,6 +201,7 @@
 
 	--placeholder: #6b6b6b;
 	--input: #2a2a2a;
+	--switch-thumb-on: #161616;
 
 	--overlay: #1a1a1a;
 	--overlay-dialog: #171717;
@@ -535,6 +537,7 @@
 	--color-interactive-secondary-hover: var(--interactive-secondary-hover);
 
 	--color-input: var(--input);
+	--color-switch-thumb-on: var(--switch-thumb-on);
 	--color-icon1: var(--icon1);
 
 	--color-hover-primary: var(--hover-primary);
