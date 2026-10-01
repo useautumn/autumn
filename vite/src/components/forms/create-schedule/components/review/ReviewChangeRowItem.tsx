@@ -15,6 +15,7 @@ import type {
 } from "../../utils/review/types/reviewChange";
 import { ReviewStatusChip } from "./ReviewStatusChip";
 import { useReviewValueColumnWidth } from "./ReviewValueColumnContext";
+import { REVIEW_RICH_TOOLTIP_CLASS } from "./reviewRichTooltip";
 
 /** Status sits in a fixed column and value in a minimum-width one, so chips line up and amounts never clip. */
 export function ReviewChangeRowItem({
@@ -66,14 +67,14 @@ function PooledChip({ pooled }: { pooled: ReviewPooledBalance }) {
 					Pooled
 				</StatusChip>
 			</TooltipTrigger>
-			<TooltipContent side="top">
-				<div className="flex w-[230px] flex-col gap-1">
-					<span className="font-medium">{`Shared ${pooled.featureName} pool`}</span>
-					<div className="flex justify-between gap-3">
+			<TooltipContent side="top" className={REVIEW_RICH_TOOLTIP_CLASS}>
+				<div className="flex w-[250px] flex-col gap-0.5">
+					<span className="font-medium text-foreground">{`Shared ${pooled.featureName} pool`}</span>
+					<div className="flex justify-between gap-3 text-tertiary-foreground">
 						<span>Pool total</span>
 						<span className="tabular-nums">{poolTotalLabel(pooled)}</span>
 					</div>
-					<div className="flex justify-between gap-3">
+					<div className="flex justify-between gap-3 text-tertiary-foreground">
 						<span>Contributing entities</span>
 						<span className="tabular-nums">{pooled.contributors}</span>
 					</div>

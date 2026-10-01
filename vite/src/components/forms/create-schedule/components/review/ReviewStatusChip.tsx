@@ -13,6 +13,7 @@ import type {
 	ReviewChangeLineState,
 } from "../../utils/review/planChangeLines";
 import type { ReviewChangeStatus } from "../../utils/review/types/reviewChange";
+import { REVIEW_RICH_TOOLTIP_CLASS } from "./reviewRichTooltip";
 
 const REVIEW_STATUSES: Record<
 	ReviewChangeStatus,
@@ -47,7 +48,10 @@ export function ReviewStatusChip({
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>{chip}</TooltipTrigger>
-			<TooltipContent side="top" className="flex flex-col gap-1">
+			<TooltipContent
+				side="top"
+				className={cn("flex flex-col gap-1", REVIEW_RICH_TOOLTIP_CLASS)}
+			>
 				{changes.map((change) => (
 					<ReviewChangeLineRow key={change.label} change={change} />
 				))}
