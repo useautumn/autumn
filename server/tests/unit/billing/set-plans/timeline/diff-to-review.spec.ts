@@ -85,6 +85,19 @@ const enterprise = paidProduct({ id: "enterprise" });
 const bonus = paidProduct({ id: "bonus", isAddOn: true });
 const sso = paidProduct({ id: "sso", isAddOn: true });
 
+const versionOf = ({
+	product,
+	version,
+}: {
+	product: FullProduct;
+	version: number;
+}): FullProduct => ({
+	...product,
+	internal_id: `${product.internal_id}_v${version}`,
+	version,
+	prices: [prices.createFixed({ id: `price_${product.id}_v${version}` })],
+});
+
 const scheduled = (input: Parameters<typeof running>[0]) =>
 	running({ ...input, status: CusProductStatus.Scheduled });
 
@@ -128,7 +141,7 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		});
 		expect(phaseRows(review)).toEqual([
 			["pro:kept", "bonus:kept"],
-			["bonus:kept", "premium:kept"],
+			["premium:kept"],
 			["growth:kept"],
 		]);
 		expect(removedRows(review)).toEqual([]);
@@ -225,6 +238,50 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		});
 		expect(phaseRows(review)).toEqual([["pro:updated"]]);
 		expect(review.phases[0]?.planChanges.length).toBeGreaterThan(0);
+	});
+
+	test("an ongoing plan updated now shows its update once, not again in a later saved phase", () => {
+		const bonusV2 = versionOf({ product: bonus, version: 2 });
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [
+					running({ product: enterprise }),
+					running({ product: bonus }),
+					running({ product: sso, endedAt: PHASE_B }),
+				],
+				opening: [
+					{ fullProduct: enterprise },
+					{ fullProduct: bonusV2 },
+					{ fullProduct: sso },
+				],
+				later: [
+					{
+						startsAt: PHASE_B,
+						plans: [{ fullProduct: pro }, { fullProduct: bonusV2 }],
+					},
+				],
+			}),
+		});
+		expect(phaseRows(review)).toEqual([
+			["bonus:updated", "enterprise:kept", "sso:kept"],
+			["pro:starts", "enterprise:ends"],
+		]);
+	});
+
+	test("a plan updated now and updated differently later shows both updates", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [running({ product: pro })],
+				opening: [{ fullProduct: versionOf({ product: pro, version: 2 }) }],
+				later: [
+					{
+						startsAt: PHASE_B,
+						plans: [{ fullProduct: versionOf({ product: pro, version: 3 }) }],
+					},
+				],
+			}),
+		});
+		expect(phaseRows(review)).toEqual([["pro:updated"], ["pro:updated"]]);
 	});
 
 	test("replacing a plan now ends the old plan and creates the new one", () => {

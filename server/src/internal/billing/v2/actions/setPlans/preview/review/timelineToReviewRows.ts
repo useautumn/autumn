@@ -11,6 +11,7 @@ import type {
 	ReviewPhaseMatches,
 	ReviewPlanRow,
 } from "./types/reviewPhase";
+import { withoutCarriedOverRows } from "./withoutCarriedOverRows";
 
 export type ReviewRows = {
 	phases: {
@@ -51,20 +52,22 @@ export const timelineToReviewRows = ({
 	diff: TimelineDiff;
 	matches: ReviewPhaseMatches;
 }): ReviewRows => ({
-	phases: matches.phases.map((phase, phaseIndex) => ({
-		at: phase.at,
-		comparison: phase.comparison,
-		rows: phasePlanRows({
-			contents: resolvedContentsAt({ timeline: diff.timeline, at: phase.at }),
-			comparison: comparisonContents({
-				saved,
-				diff,
-				phase,
-				previousPhase: matches.phases[phaseIndex - 1],
+	phases: withoutCarriedOverRows(
+		matches.phases.map((phase, phaseIndex) => ({
+			at: phase.at,
+			comparison: phase.comparison,
+			rows: phasePlanRows({
+				contents: resolvedContentsAt({ timeline: diff.timeline, at: phase.at }),
+				comparison: comparisonContents({
+					saved,
+					diff,
+					phase,
+					previousPhase: matches.phases[phaseIndex - 1],
+				}),
+				showsEnds: phase.comparison.type === "saved",
 			}),
-			showsEnds: phase.comparison.type === "saved",
-		}),
-	})),
+		})),
+	),
 	removedPhases: matches.removedPhaseStarts.map((at) => ({
 		at,
 		rows: phasePlanRows({

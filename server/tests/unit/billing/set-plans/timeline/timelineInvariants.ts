@@ -322,6 +322,19 @@ export const expectPhaseIndependence = (timelineCase: TimelineCase) => {
 	}
 };
 
+/** R5: no later phase repeats the row the phase before it shows for the same plan. */
+export const expectNoCarriedOverRows = ({ review }: { review: ReviewRows }) => {
+	for (const [phaseIndex, phase] of review.phases.entries()) {
+		const previousRows = new Set(
+			(review.phases[phaseIndex - 1]?.rows ?? []).map(describeReviewRow),
+		);
+		const repeated = phase.rows
+			.map(describeReviewRow)
+			.filter((row) => previousRows.has(row));
+		expect({ at: phase.at, repeated }).toEqual({ at: phase.at, repeated: [] });
+	}
+};
+
 /** R4: a new phase never shows a plan as removed. */
 export const expectNewPhasesHaveNoEnds = ({
 	review,
@@ -423,5 +436,6 @@ export const expectAllInvariants = (timelineCase: TimelineCase) => {
 	expectPhaseIndependence(timelineCase);
 	expectOpeningPhaseOneToOne(result);
 	expectNewPhasesHaveNoEnds(result);
+	expectNoCarriedOverRows(result);
 	return result;
 };
