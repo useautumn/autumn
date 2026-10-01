@@ -44,7 +44,7 @@ test(
 		console.log("attach result:", attachResult);
 
 		// Should return autumn checkout URL (contains /c/)
-		const checkoutUrl = attachResult.checkout_url;
+		const checkoutUrl = attachResult.payment_url;
 		expect(checkoutUrl).toBeDefined();
 		expect(checkoutUrl).toContain("/c/");
 
