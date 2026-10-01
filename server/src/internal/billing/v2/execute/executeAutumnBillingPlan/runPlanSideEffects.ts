@@ -104,7 +104,7 @@ export const runPlanSideEffects = async ({
 	const allocationsAdjusted = await refreshAllocationScale({
 		ctx,
 		customerId: autumnBillingPlan.customerId,
-		notify: !emitsBillingUpdated,
+		notify: true,
 	}).catch((error) => {
 		ctx.logger.error("[refreshAllocationScale] failed", { error });
 		return false;
