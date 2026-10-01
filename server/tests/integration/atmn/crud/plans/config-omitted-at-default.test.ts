@@ -63,7 +63,10 @@ test.concurrent("plan config is omitted at its default", async () => {
 		expect(
 			plans.find((plan) => plan.plan_id === "pro")?.config,
 		).toBeUndefined();
-		expect(await proConfig()).toEqual({ ignorePastDue: false });
+		expect(await proConfig()).toEqual({
+			anchorToMonthStart: false,
+			ignorePastDue: false,
+		});
 
 		// Flipped on elsewhere: pull writes the flag into a fixture that never stated it.
 		await setFlag(true);
@@ -88,7 +91,10 @@ test.concurrent("plan config is omitted at its default", async () => {
 		// And a flag stated on pushes on.
 		rewrite({ config: "{ ignorePastDue: true }" });
 		await scenario.push();
-		expect(await proConfig()).toEqual({ ignorePastDue: true });
+		expect(await proConfig()).toEqual({
+			anchorToMonthStart: false,
+			ignorePastDue: true,
+		});
 	} finally {
 		scenario.cleanup();
 	}
