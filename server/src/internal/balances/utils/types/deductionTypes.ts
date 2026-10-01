@@ -1,3 +1,4 @@
+import type { AllocationLuaGate } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import type {
 	CustomerEntitlementFilters,
 	DbSpendLimit,
@@ -61,6 +62,7 @@ export type PreparedFeatureDeduction = {
 	// `_usage_windows` counter field, so their keys must be declared in KEYS[]
 	// even when no deduction entry references them.
 	usageWindowFeatureIds?: string[];
+	allocationGate?: AllocationLuaGate;
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	lock?: {
