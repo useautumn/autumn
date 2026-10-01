@@ -3,6 +3,7 @@ import type { CustomerCreationRecoveryStage } from "./customerCreationRecoveryTy
 
 const CUSTOMER_CREATION_RECOVERY_STAGE_KEY = "customerCreationRecoveryStage";
 
+/** The worker path reaches the same stages: its plan write is the `pre_commit` → `autumn_committed` step, Stripe linking follows. */
 const RECOVERY_STAGES = new Set<CustomerCreationRecoveryStage>([
 	"lookup",
 	"pre_commit",
