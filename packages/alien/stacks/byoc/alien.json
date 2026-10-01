@@ -51,7 +51,7 @@
 	},
 	"permissions": {
 		"profiles": {
-			"atom": { "pushes": ["queue/data-read", "queue/data-write"] }
+			"atom": { "*": ["queue/data-read", "queue/data-write"] }
 		},
 		"management": "auto"
 	}
