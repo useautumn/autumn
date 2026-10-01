@@ -37,15 +37,14 @@ export const handleGetInvoiceMetadata = createRoute({
 			stripeClient: stripeCli,
 			invoiceId: stripe_invoice_id,
 			expand: [],
-			errorOnNotFound: false,
+			onNotFound: () => {
+				throw new RecaseError({
+					message: `Invoice ${stripe_invoice_id} not found in Stripe`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			},
 		});
-		if (!stripeInvoice) {
-			throw new RecaseError({
-				message: `Invoice ${stripe_invoice_id} not found in Stripe`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
 
 		const vercelInstallationId = await resolveVercelInstallationId({
 			stripeCli,

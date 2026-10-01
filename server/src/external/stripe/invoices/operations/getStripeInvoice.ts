@@ -47,34 +47,28 @@ type UnionToIntersection<U> = (
 export type ExpandedStripeInvoice<T extends InvoiceExpandKey[]> =
 	Stripe.Invoice & UnionToIntersection<InvoiceExpandMap[T[number]]>;
 
-type GetStripeInvoiceParams<T extends InvoiceExpandKey[]> = {
-	stripeClient: Stripe;
-	invoiceId: string;
-	expand: T;
-};
-
-/** Dynamically typed Stripe invoice based on expand params. `errorOnNotFound: false` returns undefined for a missing invoice instead of throwing. */
-export function getStripeInvoice<T extends InvoiceExpandKey[]>(
-	params: GetStripeInvoiceParams<T> & { errorOnNotFound?: true },
-): Promise<ExpandedStripeInvoice<T>>;
-export function getStripeInvoice<T extends InvoiceExpandKey[]>(
-	params: GetStripeInvoiceParams<T> & { errorOnNotFound: false },
-): Promise<ExpandedStripeInvoice<T> | undefined>;
-export async function getStripeInvoice<T extends InvoiceExpandKey[]>({
+/** Dynamically typed Stripe invoice based on expand params. `onNotFound` decides a missing invoice: throw your own error, or return a fallback. */
+export const getStripeInvoice = async <
+	T extends InvoiceExpandKey[],
+	NotFound = never,
+>({
 	stripeClient,
 	invoiceId,
 	expand,
-	errorOnNotFound = true,
-}: GetStripeInvoiceParams<T> & { errorOnNotFound?: boolean }): Promise<
-	ExpandedStripeInvoice<T> | undefined
-> {
+	onNotFound,
+}: {
+	stripeClient: Stripe;
+	invoiceId: string;
+	expand: T;
+	onNotFound?: () => NotFound;
+}): Promise<ExpandedStripeInvoice<T> | NotFound> => {
 	try {
 		const invoice = await stripeClient.invoices.retrieve(invoiceId, {
 			expand: expand as string[],
 		});
 		return invoice as unknown as ExpandedStripeInvoice<T>;
 	} catch (error) {
-		if (!errorOnNotFound && isStripeResourceMissing(error)) return undefined;
+		if (onNotFound && isStripeResourceMissing(error)) return onNotFound();
 		throw error;
 	}
-}
+};

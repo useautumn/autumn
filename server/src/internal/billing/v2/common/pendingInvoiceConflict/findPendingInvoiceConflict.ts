@@ -111,7 +111,7 @@ const listPendingInvoiceCandidates = async ({
 				stripeClient: stripeCli,
 				invoiceId: metadata.stripe_invoice_id,
 				expand: [],
-				errorOnNotFound: false,
+				onNotFound: () => undefined,
 			}),
 		});
 	}
