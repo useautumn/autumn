@@ -14,7 +14,8 @@ import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { fetchActivePlanCusEnt } from "../utils/usage-limit-utils/usageWindowDbTestUtils.js";
+import { sql } from "drizzle-orm";
+import { queryRows } from "../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
@@ -60,13 +61,16 @@ test.concurrent(
 
 		// Delete drops the cache, so let the track reach Postgres first.
 		await pollUntilAsserted({
-			fetch: () =>
-				fetchActivePlanCusEnt({
-					ctx,
-					customerId,
-					featureId: TestFeature.Messages,
-				}),
-			assert: (cusEnt) => expect(Number(cusEnt?.balance)).toBe(8000),
+			fetch: async () =>
+				queryRows(
+					await ctx.db.execute(sql`
+						SELECT ce.balance FROM customer_entitlements ce
+						JOIN customers c ON c.internal_id = ce.internal_customer_id
+						WHERE c.id = ${customerId} AND c.org_id = ${ctx.org.id}
+							AND c.env = ${ctx.env} AND ce.feature_id = ${TestFeature.Messages}
+					`),
+				)[0],
+			assert: (row) => expect(Number(row?.balance)).toBe(8000),
 		});
 		await autumnV2_3.entities.delete(customerId, a);
 
