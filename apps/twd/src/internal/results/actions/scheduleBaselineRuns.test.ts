@@ -17,3 +17,12 @@ test("a baseline is due once the last one is more than 24h old", () => {
 	const lastCreatedAt = new Date(now - 25 * HOUR_MS);
 	expect(baselineIsDue({ lastCreatedAt, now })).toBe(true);
 });
+
+test("a baseline exactly 24h old is not due yet; one just past it is", () => {
+	expect(
+		baselineIsDue({ lastCreatedAt: new Date(now - 24 * HOUR_MS), now }),
+	).toBe(false);
+	expect(
+		baselineIsDue({ lastCreatedAt: new Date(now - 24 * HOUR_MS - 1), now }),
+	).toBe(true);
+});
