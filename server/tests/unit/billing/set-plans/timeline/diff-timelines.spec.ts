@@ -284,6 +284,26 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		]);
 	});
 
+	test("a canceling plan given an explicit later end runs to that end instead", () => {
+		const { diff } = expectAllInvariants({
+			rows: [
+				savedRow({ id: "pro_row", plan: pro, endsAt: B, canceling: true }),
+			],
+			desired: desiredTimeline({
+				segments: [
+					desiredSegment({ plan: pro, endsAt: C }),
+					desiredSegment({ plan: ent, startsAt: C, phaseIndex: 1 }),
+				],
+			}),
+			policies: policiesFor(),
+		});
+
+		expect(describeOperations(diff)).toEqual([
+			"insert:ent:h1:C-never",
+			"retime:pro_row:C",
+		]);
+	});
+
 	test("a canceling plan is recreated when the policy asks for it", () => {
 		const { diff } = expectAllInvariants({
 			rows: [

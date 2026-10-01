@@ -69,7 +69,7 @@ const savedCarriesPlanned = ({
 	);
 };
 
-/** A kept cancellation still ends the plan on its cancel date. */
+/** A plan re-listed with no end of its own keeps its cancel date; an explicit end replaces it. */
 const carriedEndsAt = ({
 	planned,
 	savedSegment,
@@ -81,7 +81,9 @@ const carriedEndsAt = ({
 }): number | null => {
 	const [liveRow] = savedSegment.rows;
 	const keepsCancellation =
-		liveRow?.canceling === true && policies.canceling === "keepCancellation";
+		liveRow?.canceling === true &&
+		policies.canceling === "keepCancellation" &&
+		planned.endsAt === null;
 	if (!keepsCancellation) return planned.endsAt;
 	return earliestEnd([planned.endsAt, savedSegment.endsAt]);
 };

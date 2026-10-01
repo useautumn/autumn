@@ -191,7 +191,7 @@ export const expectOneToOne = ({ diff }: { diff: TimelineDiff }) => {
 	}
 };
 
-/** I4: the resolved timeline holds every declared segment, ends clipped only by a kept cancellation. */
+/** I4: the resolved timeline holds every declared segment; only an open-ended one keeps a cancel date. */
 export const expectProjection = ({
 	saved,
 	desired,
@@ -221,7 +221,7 @@ export const expectProjection = ({
 			resolved?.carriedBy !== undefined &&
 			cancelEndsAt !== undefined &&
 			cancelEndsAt !== null &&
-			(desiredSegment.endsAt === null || cancelEndsAt < desiredSegment.endsAt);
+			desiredSegment.endsAt === null;
 		expect(resolved?.endsAt).toBe(
 			clipped ? cancelEndsAt : desiredSegment.endsAt,
 		);

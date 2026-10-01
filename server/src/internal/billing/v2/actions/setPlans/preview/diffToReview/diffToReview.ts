@@ -1,9 +1,10 @@
-import type {
-	CustomerPlanChange,
-	FullCusProduct,
-	LineItem,
-	SetPlansPreviewPlan,
-	SetPlansPreviewUnlistedPhase,
+import {
+	type CustomerPlanChange,
+	type FullCusProduct,
+	type LineItem,
+	type SetPlansPreviewPlan,
+	type SetPlansPreviewUnlistedPhase,
+	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
 import type {
@@ -31,7 +32,7 @@ export type SetPlansReview = {
 const byKind = (first: TimelineTransition, second: TimelineTransition) =>
 	KIND_ORDER.indexOf(first.kind) - KIND_ORDER.indexOf(second.kind);
 
-/** Phase 0 holds what changes now; a later phase holds what changes at its start. */
+/** Phase 0 holds what changes now; a later phase holds what changes at its start, to the second. */
 const phaseIndexFor = ({
 	transition,
 	phaseStarts,
@@ -44,7 +45,8 @@ const phaseIndexFor = ({
 	transition.at === now
 		? 0
 		: phaseStarts.findIndex(
-				(startsAt, index) => index > 0 && startsAt === transition.at,
+				(startsAt, index) =>
+					index > 0 && truncateMsToSecondPrecision(startsAt) === transition.at,
 			);
 
 const isWithdrawnStart = (transition: TimelineTransition) =>
