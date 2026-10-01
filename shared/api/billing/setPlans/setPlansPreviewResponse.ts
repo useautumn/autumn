@@ -48,6 +48,10 @@ export const SetPlansPreviewPlanSchema = z.object({
 			"How the plan differs from what this phase held before the request; 'kept' is unchanged.",
 	}),
 	custom: z.boolean(),
+	ongoing: z.boolean().meta({
+		description:
+			"Listed in unscheduled_plans: kept across every phase, so later schedule changes don't end it.",
+	}),
 	expires_at: z.number().nullable(),
 	trial_ends_at: z.number().nullable(),
 	credit: z.number().nullable(),

@@ -70,7 +70,11 @@ export const running = ({
 		),
 	});
 
-export type PlanInput = { fullProduct: FullProduct; entity?: Entity };
+export type PlanInput = {
+	fullProduct: FullProduct;
+	entity?: Entity;
+	ongoing?: boolean;
+};
 
 export const buildContext = ({
 	existing,
@@ -91,13 +95,16 @@ export const buildContext = ({
 	});
 	return {
 		...billingContext,
-		productContexts: opening.map(({ fullProduct, entity: planEntity }) => ({
-			fullProduct,
-			customPrices: [],
-			customEnts: [],
-			featureQuantities: [],
-			fullCustomer: { ...billingContext.fullCustomer, entity: planEntity },
-		})),
+		productContexts: opening.map(
+			({ fullProduct, entity: planEntity, ongoing }) => ({
+				fullProduct,
+				unscheduled: ongoing,
+				customPrices: [],
+				customEnts: [],
+				featureQuantities: [],
+				fullCustomer: { ...billingContext.fullCustomer, entity: planEntity },
+			}),
+		),
 		checkoutMode: null,
 		immediatePhase: { starts_at: NOW, plans: [] },
 		futurePhases: later.map(({ startsAt }) => ({

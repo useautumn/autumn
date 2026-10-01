@@ -44,6 +44,11 @@ const replacedPlanCredit = ({
 	return credit.isZero() ? null : credit.toDP(2).toNumber();
 };
 
+const isOngoingRow = (row: ReviewPlanRow) =>
+	row.status !== "ends" &&
+	row.after.source === "resolved" &&
+	row.after.segment.desired?.source.type === "ongoing";
+
 const pricesOf = ({
 	customerProduct,
 	currency,
@@ -84,6 +89,7 @@ export const reviewRowToPreviewPlan = ({
 		name: customerProduct.product.name,
 		status: row.status,
 		custom: customerProduct.is_custom,
+		ongoing: isOngoingRow(row),
 		expires_at:
 			row.status === "ends"
 				? phaseStartsAt

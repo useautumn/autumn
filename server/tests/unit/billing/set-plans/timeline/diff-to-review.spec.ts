@@ -268,6 +268,21 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		]);
 	});
 
+	test("an ongoing plan's rows are flagged ongoing and phase plans are not", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [running({ product: pro }), running({ product: sso })],
+				opening: [{ fullProduct: pro }, { fullProduct: sso, ongoing: true }],
+				later: [{ startsAt: PHASE_B, plans: [{ fullProduct: premium }] }],
+			}),
+		});
+		expect(
+			review.phases.map(({ plans }) =>
+				plans.map((plan) => `${plan.plan_id}:${plan.ongoing}`),
+			),
+		).toEqual([["pro:false", "sso:true"], ["premium:false"]]);
+	});
+
 	test("a plan updated now and updated differently later shows both updates", () => {
 		const review = reviewFor({
 			billingContext: buildContext({
