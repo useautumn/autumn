@@ -417,6 +417,8 @@ export const LiveServerMessage = z.discriminatedUnion("type", [
 export const CostRates = z.object({
 	usdPerCoreSecond: z.number(),
 	usdPerGibSecond: z.number(),
+	/** Modal's region-pin surcharge on base prices (1 = unpinned). */
+	regionMultiplier: z.number(),
 	workerCores: z.number(),
 	workerMemoryGib: z.number(),
 });
