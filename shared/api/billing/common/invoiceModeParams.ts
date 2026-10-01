@@ -7,7 +7,7 @@ export const InvoiceModeParamsSchema = z
 		}),
 		enable_plan_immediately: z.boolean().default(false).meta({
 			description:
-				"If true, enables the plan immediately even though the invoice is not paid yet.",
+				"If true, enables the plan without waiting for payment. A draft invoice (finalize: false) keeps the plan pending until it is finalized.",
 		}),
 		finalize: z.boolean().default(true).meta({
 			description:

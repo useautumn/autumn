@@ -21,6 +21,8 @@ export const getDeferredBillingMetadataExpiresAt = ({
 }) => {
 	if (paymentMethod?.type === "custom") return null;
 
+	if (stripeInvoice?.status === "draft") return null;
+
 	if (deferredInvoiceMode) return finalizedInvoiceDueDateMs(stripeInvoice);
 
 	return addMinutes(now, DEFERRED_METADATA_EXPIRY_MINUTES).getTime();

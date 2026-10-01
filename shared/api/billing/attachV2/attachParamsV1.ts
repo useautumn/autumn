@@ -95,7 +95,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 
 	enable_plan_immediately: z.boolean().optional().meta({
 		description:
-			"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
+			"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. With a draft invoice (`invoice_mode.finalize: false`), the plan stays pending until the invoice is finalized. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
 	}),
 
 	tax_rate_id: z.string().optional().meta({

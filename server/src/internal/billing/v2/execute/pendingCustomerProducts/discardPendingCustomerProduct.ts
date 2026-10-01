@@ -5,6 +5,7 @@ import type {
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock";
+import { retrieveStripeInvoiceIfExists } from "@/external/stripe/invoices/operations/retrieveStripeInvoiceIfExists";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -51,9 +52,10 @@ export const discardPendingCustomerProduct = async ({
 
 		if (metadata?.stripe_invoice_id) {
 			const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-			const stripeInvoice = await stripeCli.invoices.retrieve(
-				metadata.stripe_invoice_id,
-			);
+			const stripeInvoice = await retrieveStripeInvoiceIfExists({
+				stripeCli,
+				stripeInvoiceId: metadata.stripe_invoice_id,
+			});
 
 			await voidStripeInvoiceIfOpen({ ctx, stripeInvoice });
 		}

@@ -16,7 +16,10 @@
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, SuccessCode } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
-import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import {
+	expectCustomerProducts,
+	expectProductActive,
+} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { waitForCustomerInvoiceStatus } from "@tests/integration/billing/utils/waitForCustomerInvoiceStatus";
 import {
 	expectSubCount,
@@ -30,6 +33,7 @@ import {
 } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { stripeCustomerId } from "@tests/utils/stripeUtils/stripeCustomerId";
 import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -241,9 +245,9 @@ test.concurrent(
 /**
  * Scenario:
  * - Attach pro normally
- * - Upgrade to premium with invoice: true → checkout_url
- * - Still on pro until payment completes
- * - Complete checkout → premium active, invoice paid
+ * - Upgrade to premium with a draft invoice and enable_product_immediately
+ * - Still on pro while the invoice is a draft
+ * - Finalize the draft → premium active without payment
  */
 test.concurrent(
 	`${chalk.yellowBright("legacy-inv-mode 3: upgrade")}`,
@@ -283,13 +287,29 @@ test.concurrent(
 
 		expect(res.checkout_url).toBeFalsy();
 
-		const customerAfter =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(
+			customerId,
+			{ skip_cache: "true" },
+		);
 		expectProductAttached({
-			customer: customerAfter as any,
-			product: premium,
+			customer: customerBefore as any,
+			product: pro,
+		});
+		expect(customerBefore.invoices?.[0].status).toBe("draft");
+
+		await ctx.stripeCli.invoices.finalizeInvoice(
+			customerBefore.invoices![0].stripe_id,
+		);
+
+		await expectProductActive({
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+			productId: premium.id,
 		});
 
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer: customerAfter,
 			featureId: TestFeature.Messages,
@@ -297,13 +317,6 @@ test.concurrent(
 			balance: 500,
 			usage: 0,
 		});
-
-		// Invoice should be paid after checkout
-		const nonCachedCustomer = await autumnV1.customers.get<ApiCustomerV3>(
-			customerId,
-			{ skip_cache: "true" },
-		);
-		expect(nonCachedCustomer.invoices?.[0].status).toBe("draft");
 
 		await expectSubToBeCorrect({
 			db: ctx.db,

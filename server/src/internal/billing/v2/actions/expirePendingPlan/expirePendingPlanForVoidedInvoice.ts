@@ -13,7 +13,7 @@ import { releaseExpiredPendingPlan } from "./execute/releaseExpiredPendingPlan";
 // must not delete the metadata, so the cron re-checks shortly instead.
 const RECHECK_DELAY_MINUTES = 10;
 
-/** A voided invoice with no payment can never be paid, so its pending plan expires now. */
+/** A voided or deleted invoice with no payment can never be paid, so its pending plan expires now. */
 export const expirePendingPlanForVoidedInvoice = async ({
 	ctx,
 	stripeInvoice,

@@ -62,7 +62,7 @@ test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_
 			add_items: [itemsV2.dashboard()],
 			remove_items: [{ feature_id: TestFeature.AdminRights }],
 		},
-		invoice_mode: { enabled: true, finalize: false },
+		invoice_mode: { enabled: true, finalize: true },
 		feature_quantities: [{ feature_id: TestFeature.Users, quantity: 3 }],
 		enable_plan_immediately: true,
 	});

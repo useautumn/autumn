@@ -17,6 +17,7 @@ export const MAIN_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"invoice.created",
 	"invoice.finalized",
 	"invoice.updated",
+	"invoice.deleted",
 	"subscription_schedule.canceled",
 	"subscription_schedule.released",
 	"subscription_schedule.updated",
@@ -53,7 +54,6 @@ export const SYNC_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"price.deleted",
 
 	// invoices (extras beyond main)
-	"invoice.deleted",
 	"invoice.payment_failed",
 	"invoice.payment_succeeded",
 	"invoice.voided",
