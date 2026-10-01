@@ -35,6 +35,7 @@ local function process_deduction_pass(params)
   local overage_behavior_is_allow = params.overage_behavior_is_allow or false
   local enforce_spend_limit_gate = params.enforce_spend_limit_gate or false
   local bypass_usage_windows = params.bypass_usage_windows or false
+  local allocation_gate = params.allocation_gate
   local pass_number = params.pass_number
   local skip_if_not_usage_allowed = params.skip_if_not_usage_allowed
   local updates = params.updates or {}
@@ -117,6 +118,24 @@ local function process_deduction_pass(params)
       if ent_amount == 0 then
         should_process = false
         skip_reason = "usage window headroom exhausted"
+      end
+    end
+
+    -- Allocation gate: on shared rows, only the entity's own share plus unallocated credits.
+    if should_process and remaining_amount > 0 and pass_number == 1 then
+      local available_from_allocation = get_available_from_allocation({
+        context = context,
+        gate = allocation_gate,
+        ent_id = ent_id,
+        credit_cost = credit_cost,
+      })
+      if not is_nil(available_from_allocation)
+          and available_from_allocation < ent_amount then
+        ent_amount = available_from_allocation
+      end
+      if ent_amount <= 0 then
+        should_process = false
+        skip_reason = "allocation exhausted"
       end
     end
 
@@ -227,6 +246,15 @@ local function process_deduction_pass(params)
       end
 
       remaining_amount = remaining_amount - deducted_units
+
+      if pass_number == 1 then
+        consume_allocation({
+          context = context,
+          gate = allocation_gate,
+          ent_id = ent_id,
+          credits = deducted,
+        })
+      end
 
       -- Settle the gate: record what this ent actually drained against every
       -- applicable window limit so the next ent sees the reduced headroom.
@@ -365,6 +393,7 @@ local function run_deduction_on_context(params)
   local enforce_spend_limit_gate = overage_behaviour == 'overflow'
       or not (alter_granted_balance or overage_behaviour == 'allow')
   local bypass_usage_windows = overage_behaviour == 'overflow'
+  local allocation_gate = params.allocation_gate
   local updates = {}
 
   -- Unlimited entries arrive sorted first and act as an infinite sink; the
@@ -539,6 +568,7 @@ local function run_deduction_on_context(params)
     overage_behavior_is_allow = overage_behavior_is_allow,
     enforce_spend_limit_gate = enforce_spend_limit_gate,
     bypass_usage_windows = bypass_usage_windows,
+    allocation_gate = allocation_gate,
     pass_number = 1,
     skip_if_not_usage_allowed = false,
     updates = updates,

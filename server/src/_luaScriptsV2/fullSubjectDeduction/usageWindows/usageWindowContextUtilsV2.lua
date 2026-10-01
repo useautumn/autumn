@@ -22,6 +22,17 @@
 -- headroom converts via credit_cost at the gate.
 -- ============================================================================
 
+-- Limit entries the usage-window gate owns; allocation counters are gated separately.
+local function window_gate_entries(feature_windows)
+  local entries = {}
+  for key, entry in pairs(feature_windows.entries or {}) do
+    if entry.allocation_role == nil then
+      entries[key] = entry
+    end
+  end
+  return entries
+end
+
 -- Tolerance for float drift (credit-ratio conversions leave sub-nano noise).
 local USAGE_WINDOW_EPSILON = 1e-9
 
@@ -46,7 +57,7 @@ local function get_available_from_usage_windows(params)
   local allowed = nil
 
   for feature_id, feature_windows in pairs(context.usage_windows or {}) do
-    for _, entry in pairs(feature_windows.entries or {}) do
+    for _, entry in pairs(window_gate_entries(feature_windows)) do
       local headroom = entry.headroom
       if headroom <= USAGE_WINDOW_EPSILON then
         headroom = 0
@@ -93,7 +104,7 @@ local function consume_usage_window_headroom(params)
   end
 
   for feature_id, feature_windows in pairs(context.usage_windows or {}) do
-    for _, entry in pairs(feature_windows.entries or {}) do
+    for _, entry in pairs(window_gate_entries(feature_windows)) do
       local consumed = nil
       if entry.dimension_type ~= 'balance' then
         consumed = units
@@ -232,7 +243,7 @@ local function decrement_usage_windows_for_unwind(params)
   end
 
   for feature_id, feature_windows in pairs(context.usage_windows) do
-    for _, entry in pairs(feature_windows.entries or {}) do
+    for _, entry in pairs(window_gate_entries(feature_windows)) do
       local amount = 0
       if entry.dimension_type == 'balance' then
         amount = credits_by_feature_id[feature_id] or 0

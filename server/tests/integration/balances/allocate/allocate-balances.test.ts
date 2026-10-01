@@ -25,6 +25,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { expectSharedRemaining } from "./utils/expectSharedRemaining.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
@@ -75,13 +76,6 @@ const trackAs = ({
 		value,
 	});
 
-const sharedRemaining = async ({ customerId }: { customerId: string }) => {
-	const customer = await autumnV2_3.customers.get<{
-		balances: Record<string, { remaining: number }>;
-	}>(customerId);
-	return customer.balances[TestFeature.Messages].remaining;
-};
-
 test.concurrent(
 	`${chalk.yellowBright("allocate1: Kyle's split — A is held to its 5k share, B keeps its 5k")}`,
 	async () => {
@@ -107,14 +101,14 @@ test.concurrent(
 		});
 
 		await trackAs({ customerId, entityId: a, value: 8000 });
-		expect(await sharedRemaining({ customerId })).toBe(5000);
+		await expectSharedRemaining({ customerId, autumn: autumnV2_3, remaining: 5000 });
 
 		// C has no share and nothing is unallocated.
 		await trackAs({ customerId, entityId: c, value: 100 });
-		expect(await sharedRemaining({ customerId })).toBe(5000);
+		await expectSharedRemaining({ customerId, autumn: autumnV2_3, remaining: 5000 });
 
 		await trackAs({ customerId, entityId: b, value: 5000 });
-		expect(await sharedRemaining({ customerId })).toBe(0);
+		await expectSharedRemaining({ customerId, autumn: autumnV2_3, remaining: 0 });
 	},
 );
 

@@ -155,6 +155,7 @@ export const executeRedisDeductionV2 = async ({
 			usageBasedCusEntIdsByFeatureId,
 			usageWindowLimits,
 			usageWindowFeatureIds,
+			allocationGate,
 			rollovers,
 			customerEntitlements,
 			lock: preparedLock,
@@ -204,6 +205,7 @@ export const executeRedisDeductionV2 = async ({
 			usage_based_cus_ent_ids_by_feature_id:
 				usageBasedCusEntIdsByFeatureId ?? null,
 			usage_window_limits: usageWindowLimits ?? null,
+			allocation_gate: allocationGate ?? null,
 			usage_window_now: usageWindowNow,
 			usage_window_ttl_seconds: FULL_SUBJECT_CACHE_TTL_SECONDS,
 			is_consumption: isConsumption,

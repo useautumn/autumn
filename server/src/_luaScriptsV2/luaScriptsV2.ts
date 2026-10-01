@@ -38,6 +38,7 @@ import SPEND_LIMIT_UTILS_V2 from "./fullSubjectDeduction/spendLimitUtilsV2.lua";
 import UPDATE_AGGREGATED_BALANCES from "./fullSubjectDeduction/updateAggregatedBalances.lua";
 import READ_USAGE_WINDOWS from "./fullSubjectDeduction/usageWindows/readUsageWindows.lua";
 import USAGE_WINDOW_CONTEXT_UTILS_V2 from "./fullSubjectDeduction/usageWindows/usageWindowContextUtilsV2.lua";
+import ALLOCATION_GATE_V2 from "./fullSubjectDeduction/allocations/allocationGateV2.lua";
 
 // ============================================================================
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)
@@ -90,6 +91,7 @@ ${DEDUCT_FROM_ROLLOVERS_V2}
 ${DEDUCT_FROM_MAIN_BALANCE_V2}
 ${SPEND_LIMIT_UTILS_V2}
 ${USAGE_WINDOW_CONTEXT_UTILS_V2}
+${ALLOCATION_GATE_V2}
 ${RUN_DEDUCTION_ON_CONTEXT_V2}
 ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS_V2}

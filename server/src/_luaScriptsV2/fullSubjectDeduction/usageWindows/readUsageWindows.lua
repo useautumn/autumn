@@ -117,6 +117,10 @@ local function read_usage_windows(params)
         dimension_type = limit.dimension_type,
         headroom = headroom,
         consumed = 0,
+        current_usage = current_usage,
+        allocation_role = not is_nil(limit.allocation_role)
+            and limit.allocation_role
+          or nil,
       }
     end
   end

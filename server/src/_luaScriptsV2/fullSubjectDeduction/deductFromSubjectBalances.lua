@@ -133,6 +133,7 @@ local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = lock_receipt_key_from_keys
 local usage_window_limits = params.usage_window_limits
+local allocation_gate = not is_nil(params.allocation_gate) and params.allocation_gate or nil
 local usage_window_now = params.usage_window_now
 local usage_window_ttl_seconds = params.usage_window_ttl_seconds
 local is_consumption = params.is_consumption
@@ -283,6 +284,7 @@ local deduction_result = run_deduction_on_context({
   target_entity_id = target_entity_id,
   alter_granted_balance = alter_granted_balance,
   overage_behaviour = overage_behaviour,
+  allocation_gate = enforce_usage_windows and allocation_gate or nil,
 })
 
 local updates = deduction_result.updates
