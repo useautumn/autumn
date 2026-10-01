@@ -750,6 +750,11 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	const customerAfterTrack =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
+	console.log("non-worker cancellation balances", JSON.stringify({
+		customer: customerAfterTrack.features[TestFeature.Messages],
+		entity: entityAfterTrack.features[TestFeature.Messages],
+		uncached: (await autumnV1.customers.get<ApiCustomerV3>(customerId, { skip_cache: "true" })).features[TestFeature.Messages],
+	}));
 
 	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
 		isBalanceWorkerRoute() ? -200 : -350,

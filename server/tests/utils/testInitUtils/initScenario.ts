@@ -1640,13 +1640,17 @@ export async function initScenario({
 				entityId = generatedEntities[action.entityIndex].id;
 			}
 
-			await autumnV1.track({
+			const trackResult = await autumnV1.track({
 				customer_id: customerId,
 				feature_id: action.featureId,
 				value: action.value,
 				properties: action.properties,
 				entity_id: entityId,
 			});
+			if (customerId === "cancel-eoc-cons-both") {
+				console.log("non-worker track result", JSON.stringify({ value: action.value, entityId, trackResult }));
+				console.log("non-worker after track", JSON.stringify((await autumnV1.customers.get(customerId)).features));
+			}
 			if (action.timeout) {
 				await new Promise((resolve) => setTimeout(resolve, action.timeout));
 			}
