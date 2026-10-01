@@ -100,6 +100,7 @@ export const buildSetPlansPreview = async ({
 			stripeBillingPlan: billingPlan.stripe,
 			...replacedSubscriptionInputs,
 			liveOpenInvoices,
+			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
 		}),
 	};
 };

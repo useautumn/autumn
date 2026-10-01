@@ -10,9 +10,11 @@ import {
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
+	type StripeSubscriptionScope,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { liveSubscriptionChangeWarnings } from "./liveSubscriptionChangeWarnings";
+import { otherSubscriptionsWarnings } from "./otherSubscriptionsWarnings";
 import {
 	type SubscriptionWarningContext,
 	subscriptionStateToWarnings,
@@ -26,6 +28,7 @@ const INFO_WARNING_TYPES: WarningType[] = [
 	"proration_disabled",
 	"new_stripe_subscription",
 	"past_due_invoice_open",
+	"other_subscriptions_unaffected",
 ];
 
 /** Unmanaged live items that the immediate phase's end state no longer holds. */
@@ -86,6 +89,7 @@ export const setPlansPreviewToWarnings = ({
 	replacedOpenInvoices,
 	liveOpenInvoices,
 	unbilledUsageLineItems = [],
+	stripeSubscriptionScope,
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
@@ -100,6 +104,7 @@ export const setPlansPreviewToWarnings = ({
 	replacedOpenInvoices: Stripe.Invoice[];
 	liveOpenInvoices: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
+	stripeSubscriptionScope?: StripeSubscriptionScope;
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
@@ -166,6 +171,7 @@ export const setPlansPreviewToWarnings = ({
 					},
 				]
 			: []),
+		...otherSubscriptionsWarnings({ stripeSubscriptionScope }),
 	];
 
 	return warnings.map((warning) => ({
