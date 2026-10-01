@@ -1,8 +1,22 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	test,
+} from "bun:test";
 
 // run.ts sizes its Stripe budget at import time and throws without any key.
-process.env.STRIPE_SANDBOX_SECRET_KEY ??= "sk_test_tw_unit_placeholder";
+const originalStripeKey = process.env.STRIPE_SANDBOX_SECRET_KEY;
+process.env.STRIPE_SANDBOX_SECRET_KEY ||= "sk_test_tw_unit_placeholder";
 const { buildWorkerEnv } = await import("./run.ts");
+
+afterAll(() => {
+	if (originalStripeKey === undefined)
+		delete process.env.STRIPE_SANDBOX_SECRET_KEY;
+	else process.env.STRIPE_SANDBOX_SECRET_KEY = originalStripeKey;
+});
 
 const REQUIRED_SECRETS = [
 	"ENCRYPTION_IV",
@@ -40,8 +54,7 @@ describe("buildWorkerEnv app config", () => {
 		const first = buildFor("acct_1").CUSTOMER_JWT_SECRET;
 		const second = buildFor("acct_2").CUSTOMER_JWT_SECRET;
 
-		expect(first).toBeString();
-		expect(first.length).toBeGreaterThanOrEqual(32);
+		expect(first).toMatch(/^[0-9a-f]{64}$/);
 		expect(second).toBe(first);
 	});
 
