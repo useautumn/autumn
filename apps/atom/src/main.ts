@@ -1,4 +1,5 @@
 import { getAtomEnv } from "@autumn/env/atom";
+import { atomProcessRole } from "./init/atomProcessRole.js";
 import { createAtomServer } from "./init/createAtomServer.js";
 import { createAtomSupervisor } from "./init/createAtomSupervisor.js";
 import { ATOM_CHILD_INDEX, spawnAtomChild } from "./init/spawnAtomChild.js";
@@ -12,10 +13,15 @@ const RESTART_DELAY_MS = 1000;
 function createAtom(): AtomServer {
 	const env = getAtomEnv();
 	const logger = getAtomLogger();
-	const isSupervisor =
-		env.ATOM_PROCESSES > 1 && process.env[ATOM_CHILD_INDEX] === undefined;
-	if (!isSupervisor)
-		return createAtomServer({ ctx: { logger }, config: { env } });
+	const childIndex = process.env[ATOM_CHILD_INDEX];
+	const isSupervisor = env.ATOM_PROCESSES > 1 && childIndex === undefined;
+	if (!isSupervisor) {
+		const role = atomProcessRole({
+			env,
+			childIndex: childIndex === undefined ? null : Number(childIndex),
+		});
+		return createAtomServer({ ctx: { logger }, config: { env, role } });
+	}
 	return createAtomSupervisor({
 		ctx: { spawnChild: spawnAtomChild, logger },
 		config: {

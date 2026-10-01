@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { AlienClient } from "@autumn/alien";
 import { getAutumnEnv } from "@autumn/env";
-import { AppEnv, type Organization } from "@autumn/shared";
+import {
+	AppEnv,
+	DEFAULT_BYOC_CACHE_MACHINE,
+	type Organization,
+} from "@autumn/shared";
 import { createAlienAtomDeployer } from "@/internal/byoc/deployers/createAlienAtomDeployer.js";
 
 const org = { id: "org_1", slug: "acme" } as Organization;
@@ -15,6 +19,7 @@ const recordingAlienClient = () => {
 			return { deploymentGroupId: "dg_1", setupUrl: "https://setup" };
 		},
 		findDeployment: async () => null,
+		updateDeploymentCompute: async () => {},
 		deleteDeployment: async () => {},
 		revokeSetupLinks: async () => {},
 	};
@@ -26,7 +31,12 @@ describe("starting an Atom on alien", () => {
 		const { alienClient, started } = recordingAlienClient();
 		const deployer = createAlienAtomDeployer({ alienClient });
 
-		await deployer.start({ org, env: AppEnv.Sandbox, tokenHash: "hash_1" });
+		await deployer.start({
+			org,
+			env: AppEnv.Sandbox,
+			tokenHash: "hash_1",
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+		});
 
 		expect(started).toHaveLength(1);
 		expect(started[0]?.environmentVariables).toEqual([
@@ -43,5 +53,21 @@ describe("starting an Atom on alien", () => {
 				targetResources: null,
 			},
 		]);
+	});
+
+	test("the setup defaults the Atom's pool to the chosen machine", async () => {
+		const { alienClient, started } = recordingAlienClient();
+		const deployer = createAlienAtomDeployer({ alienClient });
+
+		await deployer.start({
+			org,
+			env: AppEnv.Sandbox,
+			tokenHash: "hash_1",
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+		});
+
+		expect(started[0]?.pools).toEqual({
+			stateful: { machine: "t4g.micro", machines: 1 },
+		});
 	});
 });

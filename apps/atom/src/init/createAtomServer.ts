@@ -4,26 +4,38 @@ import type { Auth } from "../auth/types/auth.js";
 import { createDevAuth } from "../dev/createDevAuth.js";
 import type { DevContext } from "../dev/devContext.js";
 import { createAtomApp } from "../http/createAtomApp.js";
+import { createPushReceiver } from "../pushes/createPushReceiver.js";
+import type { PushReceiver } from "../pushes/types/pushReceiver.js";
+import type { AtomProcessRole } from "./types/atomProcessRole.js";
 import type {
 	AtomServer,
 	AtomServerConfig,
 	AtomServerDependencies,
 } from "./types/atomServer.js";
 
-/** A dev stack adds Atoms as orgs deploy; an org's deployment is given its one token hash. */
+/** A dev stack adds Atoms as orgs deploy; an org's deployment is given its one token hash, and its writers lease Autumn's pushes. */
 const openAuth = ({
+	ctx,
 	env,
+	role,
 }: {
+	ctx: AtomServerDependencies;
 	env: AtomEnv;
-}): { auth: Auth; dev?: DevContext } => {
-	if (!env.ATOM_DEV)
-		return {
-			auth: createDeployedAuth({
-				dataDir: env.ATOM_DATA_DIR,
-				tokenHash: env.ATOM_TOKEN_HASH,
-				slotCount: env.ATOM_SLOT_COUNT,
-			}),
-		};
+	role: AtomProcessRole;
+}): { auth: Auth; dev?: DevContext; pushReceiver?: PushReceiver } => {
+	if (!env.ATOM_DEV) {
+		const auth = createDeployedAuth({
+			dataDir: env.ATOM_DATA_DIR,
+			tokenHash: env.ATOM_TOKEN_HASH,
+			slotCount: env.ATOM_SLOT_COUNT,
+		});
+		const pushReceiver = role.receivesPushes
+			? createPushReceiver({
+					ctx: { slots: auth.slots, logger: ctx.logger },
+				})
+			: undefined;
+		return { auth, pushReceiver };
+	}
 	const auth = createDevAuth({
 		dataDir: env.ATOM_DATA_DIR,
 		slotCount: env.ATOM_SLOT_COUNT,
@@ -38,8 +50,8 @@ export const createAtomServer = ({
 	ctx: AtomServerDependencies;
 	config: AtomServerConfig;
 }): AtomServer => {
-	const { env } = config;
-	const { auth, dev } = openAuth({ env });
+	const { env, role } = config;
+	const { auth, dev, pushReceiver } = openAuth({ ctx, env, role });
 	const app = createAtomApp({
 		ctx: {
 			auth,
@@ -49,8 +61,9 @@ export const createAtomServer = ({
 		},
 	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
+	let receiving: Promise<void> | undefined;
 
-	async function start(): Promise<void> {
+	function listen(): void {
 		listener = Bun.serve({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PORT,
@@ -63,9 +76,23 @@ export const createAtomServer = ({
 		);
 	}
 
-	/** In-flight requests finish before the files close. */
+	/** A writer never listens: the port hands connections only to the processes serving checks. */
+	async function start(): Promise<void> {
+		if (role.servesChecks) listen();
+		receiving = pushReceiver?.run().catch((error) => {
+			ctx.logger.error(
+				{ error, type: "atom_push_receiver_stopped" },
+				"Push receiver stopped",
+			);
+			// A process that only writes is useless without its receiver: exiting lets the supervisor replace it.
+			if (!role.servesChecks) throw error;
+		});
+	}
+
+	/** In-flight requests and leased pushes finish before the files close. */
 	async function stop(): Promise<void> {
-		await listener?.stop();
+		pushReceiver?.stop();
+		await Promise.all([listener?.stop(), receiving]);
 		auth.close();
 	}
 

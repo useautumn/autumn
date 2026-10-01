@@ -1,4 +1,5 @@
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
+import { PARTITION_RECOVERY_REASON } from "@autumn/balance-worker-client/protocol";
 import { ErrCode, RecaseError } from "@autumn/shared";
 
 /** A command conflict is the caller reusing an idempotency key; everything else is a request the worker path does not serve. */
@@ -239,6 +240,22 @@ export function rethrowBalanceWorkerError({
 			message:
 				"Too many concurrent requests for this customer; retry with backoff",
 			data: { failure: balanceWorkerFailureOf({ cause }) },
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "INTERNAL" &&
+		cause.workerReason === PARTITION_RECOVERY_REASON
+	) {
+		throw new RecaseError({
+			code: RESULT_UNKNOWN_CODE,
+			statusCode: 503,
+			message:
+				"Balance worker did not confirm the command; it may already have been applied",
+			data: {
+				reason: PARTITION_RECOVERY_REASON,
+				failure: balanceWorkerFailureOf({ cause }),
+			},
 		});
 	}
 	if (

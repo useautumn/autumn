@@ -419,6 +419,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		let offsetReads = 0;
 		let disconnects = 0;
 		let groupConfig: ConsumerConfig | undefined;
+		let commits = 0;
 
 		async function connect(): Promise<void> {}
 		async function subscribe(): Promise<void> {}
@@ -429,7 +430,9 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			disconnects++;
 			running = false;
 		}
-		async function commitOffsets(): Promise<void> {}
+		async function commitOffsets(): Promise<void> {
+			commits++;
+		}
 		function seek(): void {}
 		function pause(): void {}
 		function resume(): void {}
@@ -592,7 +595,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			return { send, commit, abort, sendOffsets: async () => {} };
 		}
 		function readStats() {
-			return { offsetReads, disconnects, groupConfig };
+			return { offsetReads, disconnects, groupConfig, commits };
 		}
 		function raiseTarget(): void {
 			nextOffset++;
@@ -776,6 +779,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			});
 			expect(consumer.findOwner({ partition })).toBeUndefined();
 			expect(fixture.readStats().offsetReads).toBe(reads);
+			expect(fixture.readStats().commits).toBe(0);
 			expect(fixture.readStats().groupConfig).toMatchObject({
 				readUncommitted: false,
 				allowAutoTopicCreation: false,

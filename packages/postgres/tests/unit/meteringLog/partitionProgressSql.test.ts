@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import {
+	claimPartitionProgress,
 	insertPartitionProgress,
 	readNextOffset,
 	readPartitionProgress,
@@ -88,7 +89,36 @@ describe("partitionProgress repo", () => {
 			nextOffset: 0n,
 		});
 		expect(statements.map((statement) => statement.params)).toEqual([
-			["metering", 7, 0n],
+			["metering", 7, 0n, null],
 		]);
+	});
+
+	test("an insert by a claimed owner stamps its claim on the new bookmark", async () => {
+		const { db, statements } = capturingDb({ rows: [] });
+		await insertPartitionProgress({
+			ctx: { db },
+			topic: "metering",
+			partition: 7,
+			nextOffset: 0n,
+			claimToken: "claim_a",
+		});
+		expect(statements[0]?.sql.replace(/\s+/g, " ").trim()).toBe(
+			"INSERT INTO partition_progress (topic, partition_id, next_offset, claim_token) VALUES ($1, $2, $3, $4)",
+		);
+		expect(statements[0]?.params).toEqual(["metering", 7, 0n, "claim_a"]);
+	});
+
+	test("a claim replaces the partition's claim token and nothing else", async () => {
+		const { db, statements } = capturingDb({ rows: [] });
+		await claimPartitionProgress({
+			ctx: { db },
+			topic: "metering",
+			partition: 7,
+			claimToken: "claim_b",
+		});
+		expect(statements[0]?.sql.replace(/\s+/g, " ").trim()).toBe(
+			"UPDATE partition_progress SET claim_token = $1 WHERE topic = $2 AND partition_id = $3",
+		);
+		expect(statements[0]?.params).toEqual(["claim_b", "metering", 7]);
 	});
 });

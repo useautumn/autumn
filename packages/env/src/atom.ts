@@ -13,6 +13,8 @@ const MAX_AUTOMATIC_PROCESSES = 8;
 const MEMORY_PER_PROCESS_BYTES = 250 * 1024 * 1024;
 /** The rest is left for the OS, the files' page cache and a busy moment. */
 const MEMORY_SHARE_FOR_PROCESSES = 0.75;
+/** Checks far outnumber pushes, so most processes serve and the rest apply Autumn's pushes. */
+const WRITER_SHARE_OF_PROCESSES = 0.3;
 
 /** What the machine allows this process: the container's limits where it has them, not the host's totals. */
 type AtomMachine = { availableCpus: number; memoryLimitBytes: number };
@@ -88,6 +90,20 @@ const processesOf = ({
 	return Math.max(1, allowed);
 };
 
+/** One process both serves and receives; past that, at least one of each, about a third writing. */
+const writersOf = ({
+	processes,
+	receivesPushes,
+}: {
+	processes: number;
+	receivesPushes: boolean;
+}): number => {
+	if (!receivesPushes) return 0;
+	if (processes === 1) return 1;
+	const share = Math.round(processes * WRITER_SHARE_OF_PROCESSES);
+	return Math.min(Math.max(share, 1), processes - 1);
+};
+
 /** What Atom reads: where it listens, its data directory, the Autumn API it forwards to, and which tokens it answers to. */
 export function createAtomEnv(
 	runtimeEnv: Record<string, string | undefined>,
@@ -100,6 +116,8 @@ export function createAtomEnv(
 		isDev: modeEnv.ATOM_DEV,
 		machine,
 	});
+	// alien sets this where the `pushes` queue is linked to the container.
+	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
 	return {
 		ATOM_HOSTNAME: hostname,
 		ATOM_PORT: positiveInteger.parse(runtimeEnv.ATOM_PORT ?? LOCAL_ATOM_PORT),
@@ -111,8 +129,10 @@ export function createAtomEnv(
 			runtimeEnv.ATOM_SLOT_COUNT ??
 				(modeEnv.ATOM_DEV ? DEV_SLOT_COUNT : DEPLOYED_SLOT_COUNT),
 		),
-		/** How many processes share the port. */
+		/** How many processes run: those that serve checks share the port. */
 		ATOM_PROCESSES: processes,
+		/** How many of them read Autumn's pushes from the org's queue; 0 where no queue is linked. */
+		ATOM_WRITERS: writersOf({ processes, receivesPushes }),
 		...modeEnv,
 	};
 }

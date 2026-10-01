@@ -183,6 +183,7 @@ export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/agent/agentRules";
 export * from "./models/orgModels/agent/agentRulesTable";
+export * from "./models/orgModels/byocCacheMachines";
 export * from "./models/orgModels/byocConfig";
 // 1. Org Models
 export * from "./models/orgModels/customButton";

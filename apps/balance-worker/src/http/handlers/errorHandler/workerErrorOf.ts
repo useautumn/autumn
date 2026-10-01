@@ -4,6 +4,7 @@ import {
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import {
+	PARTITION_RECOVERY_REASON,
 	type WorkerErrorResponse,
 	WorkerProtocolError,
 } from "@autumn/balance-worker-client/protocol";
@@ -25,7 +26,11 @@ import {
 	PartitionWriterRecordTooLargeError,
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
-import { OwnedPartitionNotReadyError } from "../../../runtime/runtimeErrors.js";
+import {
+	OwnedPartitionNotReadyError,
+	OwnedPartitionProducerFencedError,
+	OwnedPartitionRecoveryRequiredError,
+} from "../../../runtime/runtimeErrors.js";
 import { ConflictingMutationReceiptError } from "../../../state/stateStoreErrors.js";
 import {
 	PartitionRouteMismatchError,
@@ -153,6 +158,28 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 		error = {
 			code: "NOT_READY",
 			message: "Partition cannot accept this request",
+		};
+	} else if (
+		cause instanceof OwnedPartitionRecoveryRequiredError &&
+		!cause.notSubmitted
+	) {
+		error = {
+			code: "INTERNAL",
+			message:
+				"The partition went into recovery with this command in flight; it may have landed",
+			reason: PARTITION_RECOVERY_REASON,
+		};
+	} else if (cause instanceof OwnedPartitionProducerFencedError) {
+		status = 409;
+		error = {
+			code: "NOT_OWNER",
+			message: "A newer owner fenced this partition; the command was not run",
+		};
+	} else if (cause instanceof OwnedPartitionRecoveryRequiredError) {
+		status = 503;
+		error = {
+			code: "NOT_READY",
+			message: "Partition is recovering; the command was not run",
 		};
 	} else if (cause instanceof PartitionWriterRecordTooLargeError) {
 		status = 422;

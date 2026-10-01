@@ -96,7 +96,7 @@ export function createOwnershipConsumer({
 	}
 	const topicConsumer = createTopicConsumer({
 		ctx: { consumer, progress, handler: { readResumeOffset, applyRecord } },
-		config: { topic: config.topic },
+		config: { topic: config.topic, commitGroupOffsets: false },
 	});
 	const ctx = {
 		consumer,

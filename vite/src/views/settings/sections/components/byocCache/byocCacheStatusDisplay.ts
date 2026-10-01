@@ -8,6 +8,8 @@ export type ByocCacheRemovalDisplay = {
 	action: string;
 	description: string;
 	doneMessage: string;
+	/** What the user loses; a removal that loses something is typed out before it runs. */
+	consequences: string[];
 };
 
 type ByocCacheStatusDisplay = {
@@ -22,13 +24,19 @@ const CANCEL_SETUP: ByocCacheRemovalDisplay = {
 	description:
 		"Autumn forgets this setup. Nothing was created in your AWS account yet, and you can deploy again at any time.",
 	doneMessage: "Setup cancelled",
+	consequences: [],
 };
 
 const DELETE_CACHE: ByocCacheRemovalDisplay = {
 	action: "Delete cache",
 	description:
-		"Autumn stops writing to the table and forgets this deployment. The table stays in your AWS account until you delete its CloudFormation stack.",
+		"Tears down the cache in your AWS account. You can deploy a new one later.",
 	doneMessage: "Cache deleted",
+	consequences: [
+		"Every check goes to the Autumn API, so expect slower answers",
+		"The machine and its volume are removed, with every stored balance",
+		"Your CloudFormation stack stays until you delete it in AWS",
+	],
 };
 
 export const BYOC_CACHE_STATUS_DISPLAY: Record<

@@ -46,7 +46,12 @@ export const initializePartition = async ({
 	if (existing !== null) {
 		throw new ConflictingPartitionInitializationError({ topic, partition });
 	}
-	await ctx.db.insertPartitionProgress({ topic, partition, nextOffset });
+	await ctx.db.insertPartitionProgress({
+		topic,
+		partition,
+		nextOffset,
+		claimToken: ctx.claimTokenOf({ topic, partition }),
+	});
 	ctx.progress.setNextOffset({ topic, partition, nextOffset });
 };
 
@@ -54,10 +59,12 @@ export const initializePartition = async ({
 export async function advanceOwnerFence({
 	ctx,
 	fence,
+	claimToken,
 	...position
 }: {
 	ctx: CommitterStateStoreContext;
 	fence: OwnerFence;
+	claimToken?: string;
 } & PartitionPosition): Promise<void> {
 	assertOffset({ offset: fence.offset });
 	if (fence.epoch < 0n)
@@ -70,6 +77,7 @@ export async function advanceOwnerFence({
 	await ctx.committer.apply({
 		...position,
 		expectedOffset,
+		claimToken,
 		records: [],
 		ownerFence: fence,
 	});
@@ -78,9 +86,11 @@ export async function advanceOwnerFence({
 
 export async function advanceCommandNextOffset({
 	ctx,
+	claimToken,
 	...position
 }: {
 	ctx: CommitterStateStoreContext;
+	claimToken?: string;
 } & PartitionPosition & { commandNextOffset: bigint }): Promise<void> {
 	assertOffset({ offset: position.commandNextOffset });
 	const current = ctx.progress.readCommandNextOffset(position);
@@ -88,6 +98,11 @@ export async function advanceCommandNextOffset({
 	const expectedOffset = ctx.progress.readNextOffset(position);
 	if (expectedOffset === null)
 		throw new PartitionProgressNotFoundError(position);
-	await ctx.committer.apply({ ...position, expectedOffset, records: [] });
+	await ctx.committer.apply({
+		...position,
+		expectedOffset,
+		claimToken,
+		records: [],
+	});
 	ctx.progress.setCommandNextOffset(position);
 }

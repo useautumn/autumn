@@ -4,7 +4,15 @@ export type AlienDeployment = {
 	status: string;
 	/** alien's resource outputs; read them with `deploymentToPublicEndpointUrl`. */
 	stackState?: unknown;
+	/** The settings the deployment runs with; read its machines with `deploymentToPoolMachine`. */
+	stackSettings?: unknown;
 };
+
+/** Fixed-size compute pools by name: each runs `machines` of one EC2 `machine` type. */
+export type AlienFixedPools = Record<
+	string,
+	{ machine: string; machines: number }
+>;
 
 /** A value the deployment's containers start with. */
 export type AlienEnvironmentVariable = {
@@ -28,15 +36,21 @@ export type AlienConfig =
 
 /** Everything Autumn asks of alien. A deployment group is one customer, keyed by our external id. */
 export type AlienClient = {
-	/** `label` is shown in alien's dashboard; it is reduced to a valid group name. */
+	/** `label` is shown in alien's dashboard; it is reduced to a valid group name. `pools` are the setup's default machines. */
 	startSetup(params: {
 		externalId: string;
 		label: string;
 		environmentVariables: AlienEnvironmentVariable[];
+		pools: AlienFixedPools;
 	}): Promise<AlienSetup>;
 	findDeployment(params: {
 		deploymentGroupId: string;
 	}): Promise<AlienDeployment | null>;
+	/** alien replaces a pool's machines; a pool's volumes follow its containers. */
+	updateDeploymentCompute(params: {
+		deployment: AlienDeployment;
+		pools: AlienFixedPools;
+	}): Promise<void>;
 	deleteDeployment(params: { deployment: AlienDeployment }): Promise<void>;
 	revokeSetupLinks(params: { deploymentGroupId: string }): Promise<void>;
 };

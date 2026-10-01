@@ -19,11 +19,18 @@ export const refreshCacheDeployment = async ({
 		deployment_id: deployment?.id ?? null,
 		status: deployment?.status ?? ByocCacheStatus.AwaitingSetup,
 		endpoint_url: deployment?.endpointUrl ?? null,
+		// Until setup creates a deployment, the record keeps the machine its setup asked for.
+		cpu: deployment ? (deployment.machine?.cpu ?? null) : cacheDeployment.cpu,
+		memory: deployment
+			? (deployment.machine?.memory ?? null)
+			: cacheDeployment.memory,
 	};
 	const hasMoved =
 		refreshed.status !== cacheDeployment.status ||
 		refreshed.deployment_id !== cacheDeployment.deployment_id ||
-		refreshed.endpoint_url !== cacheDeployment.endpoint_url;
+		refreshed.endpoint_url !== cacheDeployment.endpoint_url ||
+		refreshed.cpu !== cacheDeployment.cpu ||
+		refreshed.memory !== cacheDeployment.memory;
 	if (hasMoved)
 		await updateCacheDeployment({ ctx, cacheDeployment: refreshed });
 	return refreshed;

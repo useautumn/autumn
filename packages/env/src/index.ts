@@ -64,6 +64,7 @@ export const createAutumnEnv = (
 export type AutumnEnv = ReturnType<typeof createAutumnEnv>;
 
 export { isCloudAgent } from "./cloudAgent.js";
+export { isStagingEnv } from "./staging.js";
 
 let autumnEnv: AutumnEnv | undefined;
 
