@@ -18,6 +18,7 @@ import {
 	type InsertInvoice,
 	PriceSchema,
 	ReplaceableSchema,
+	RolloverSchema,
 	SubscriptionSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -47,11 +48,14 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			next_reset_at: z.number().optional(),
 			reset_cycle_anchor: z.number().nullable().optional(),
 			adjustment: z.number().optional(),
-			entities: z.record(z.string(), EntityBalanceSchema).optional(),
+			entities: z.record(z.string(), EntityBalanceSchema).nullish(),
 			balance: z.number().optional(),
+			additional_balance: z.number().optional(),
 			usage_attribution: UsageAttributionSchema.optional(),
 		})
 		.optional(),
+	/** Rollovers a cycle end carries onto the row; its cap is applied against the row's existing rollovers. */
+	insertRollovers: z.array(RolloverSchema).optional(),
 
 	deletedReplaceables: z.array(ReplaceableSchema).optional(),
 	insertReplaceables: z.array(z.custom<InsertReplaceable>()).optional(),
