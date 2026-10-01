@@ -13,6 +13,11 @@ import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fu
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 
+/** Runs after the credit schema change is committed, so a dropped invalidation
+ *  leaves stale deduction rates until TTL; off the request path, it can wait. */
+const INVALIDATE_MAX_ATTEMPTS = 5;
+const INVALIDATE_REDIS_COMMAND_TIMEOUT_MS = 10_000;
+
 export interface ClearCreditSystemCachePayload {
 	orgId: string;
 	env: AppEnv;
@@ -169,6 +174,8 @@ export const runClearCreditSystemCacheTask = async ({
 					getRedisTargetsForCustomer({
 						org: orgWithFeatures.org,
 					}),
+				maxAttempts: INVALIDATE_MAX_ATTEMPTS,
+				commandTimeoutMs: INVALIDATE_REDIS_COMMAND_TIMEOUT_MS,
 			});
 			totalDeleted += deleted;
 		}
