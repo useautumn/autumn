@@ -526,7 +526,12 @@ describe("owned partition runtime", () => {
 			logRange: { logStartOffset: 0n, logEndOffset: 5n },
 		});
 		const runtime = createRuntime({
-			store: fixture.store,
+			store: {
+				...fixture.store,
+				claimPartition: async () => {
+					startup.push("store:claim");
+				},
+			},
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
 			bootstrap: async ({ logRange }) => {
@@ -550,6 +555,7 @@ describe("owned partition runtime", () => {
 				"producer:connect",
 				"producer:fence",
 				"producer:fence-abort",
+				"store:claim",
 				"follower:range",
 				"bootstrap",
 				"follower:start",

@@ -49,6 +49,7 @@ function createGatedDb({
 	const db: CommitterDb = {
 		readPartitionProgress: async () => null,
 		insertPartitionProgress: async () => {},
+		claimPartitionProgress: async () => {},
 		flush: async (request) => {
 			transactions.push({
 				updates: request.changes,

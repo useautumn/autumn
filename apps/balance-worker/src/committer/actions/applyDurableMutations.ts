@@ -73,6 +73,7 @@ export const applyDurableMutations = async ({
 		topic,
 		partition,
 		expectedOffset,
+		claimToken: ctx.claimTokenOf({ topic, partition }),
 		records: pending,
 	});
 	ctx.progress.setNextOffset({

@@ -51,10 +51,10 @@ describe("flushSql", () => {
 		).toBe(true);
 		expect(sql).toContain('"u1" AS ( UPDATE "rollovers"');
 		expect(sql).toContain(
-			"b AS ( UPDATE partition_progress p SET next_offset = v.next_offset::bigint, command_next_offset = GREATEST(v.command_next_offset::bigint, p.command_next_offset), owner_epoch = CASE WHEN v.owner_epoch::bigint > COALESCE(p.owner_epoch, -1) THEN v.owner_epoch::bigint ELSE p.owner_epoch END, owner_fence_offset = CASE WHEN v.owner_epoch::bigint > COALESCE(p.owner_epoch, -1) THEN v.owner_fence_offset::bigint ELSE p.owner_fence_offset END FROM (VALUES ($5, $6, $7, $8, $9, $10, $11), ($12, $13, $14, $15, $16, $17, $18))",
+			"b AS ( UPDATE partition_progress p SET next_offset = v.next_offset::bigint, command_next_offset = GREATEST(v.command_next_offset::bigint, p.command_next_offset), owner_epoch = CASE WHEN v.owner_epoch::bigint > COALESCE(p.owner_epoch, -1) THEN v.owner_epoch::bigint ELSE p.owner_epoch END, owner_fence_offset = CASE WHEN v.owner_epoch::bigint > COALESCE(p.owner_epoch, -1) THEN v.owner_fence_offset::bigint ELSE p.owner_fence_offset END FROM (VALUES ($5, $6, $7, $8, $9, $10, $11, $12), ($13, $14, $15, $16, $17, $18, $19, $20))",
 		);
 		expect(sql).toContain(
-			"AND p.next_offset = v.expected_offset::bigint RETURNING p.topic )",
+			"AND p.next_offset = v.expected_offset::bigint AND (v.claim_token::text IS NULL OR p.claim_token IS NULL OR p.claim_token = v.claim_token::text) RETURNING p.topic )",
 		);
 		expect(
 			sql.endsWith(
@@ -73,10 +73,12 @@ describe("flushSql", () => {
 			null,
 			null,
 			null,
+			null,
 			"metering",
 			7,
 			9n,
 			10n,
+			null,
 			null,
 			null,
 			null,
@@ -101,7 +103,37 @@ describe("flushSql", () => {
 		expect(flatten(query.sql)).toContain(
 			"owner_epoch = CASE WHEN v.owner_epoch::bigint > COALESCE(p.owner_epoch, -1) THEN v.owner_epoch::bigint ELSE p.owner_epoch END",
 		);
-		expect(query.params).toEqual(["metering", 7, 9n, 9n, null, 512n, 8n]);
+		expect(query.params).toEqual(["metering", 7, 9n, 9n, null, 512n, 8n, null]);
+	});
+
+	test("a bookmark carrying a claim token moves only while that token is the partition's claim", () => {
+		const query = dialect.sqlToQuery(
+			flushSql({
+				changes: [],
+				bookmarks: [
+					{
+						topic: "metering",
+						partition: 7,
+						expectedOffset: 9n,
+						nextOffset: 10n,
+						claimToken: "claim_b",
+					},
+				],
+			}),
+		);
+		expect(flatten(query.sql)).toContain(
+			"AND p.next_offset = v.expected_offset::bigint AND (v.claim_token::text IS NULL OR p.claim_token IS NULL OR p.claim_token = v.claim_token::text) RETURNING p.topic",
+		);
+		expect(query.params).toEqual([
+			"metering",
+			7,
+			9n,
+			10n,
+			null,
+			null,
+			null,
+			"claim_b",
+		]);
 	});
 
 	test("an insert and a delete are CTEs like any update", () => {

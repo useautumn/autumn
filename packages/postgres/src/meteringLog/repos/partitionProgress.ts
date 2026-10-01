@@ -74,12 +74,29 @@ export const insertPartitionProgress = async ({
 	topic,
 	partition,
 	nextOffset,
+	claimToken,
 }: {
 	ctx: ProgressContext;
 	nextOffset: bigint;
+	claimToken?: string;
 } & PartitionPosition): Promise<void> => {
 	await ctx.db.execute(sql`
-		INSERT INTO partition_progress (topic, partition_id, next_offset)
-		VALUES (${topic}, ${partition}, ${nextOffset})
+		INSERT INTO partition_progress (topic, partition_id, next_offset, claim_token)
+		VALUES (${topic}, ${partition}, ${nextOffset}, ${claimToken ?? null})
+	`);
+};
+
+export const claimPartitionProgress = async ({
+	ctx,
+	topic,
+	partition,
+	claimToken,
+}: {
+	ctx: ProgressContext;
+	claimToken: string;
+} & PartitionPosition): Promise<void> => {
+	await ctx.db.execute(sql`
+		UPDATE partition_progress SET claim_token = ${claimToken}
+		WHERE topic = ${topic} AND partition_id = ${partition}
 	`);
 };

@@ -41,6 +41,8 @@ export async function completeRuntimeStartup({
 		assertStartupContinues({ state });
 		await ctx.producer.fence();
 		assertStartupContinues({ state });
+		await ctx.stateStore.claimPartition?.({ topic, partition });
+		assertStartupContinues({ state });
 
 		// Activation keeps one status: a command that meets it waits instead of reading each step.
 		if (!prepared) state.status = "bootstrapping";

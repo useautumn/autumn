@@ -1,6 +1,7 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
 	claimCustomerByEmail,
+	claimPartitionProgress,
 	commitFlush,
 	createPostgresClient,
 	getBillingCycleAnchors,
@@ -92,6 +93,8 @@ export const createCommitterDb = ({
 		readPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 	insertPartitionProgress: (params) =>
 		insertPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
+	claimPartitionProgress: (params) =>
+		claimPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 	flush: (request) =>
 		commitFlush({
 			ctx: { db: ctx.postgres.db, timing: timeFlushSection },
