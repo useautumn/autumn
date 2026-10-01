@@ -18,8 +18,8 @@
  *   3. (if NEEDS_SVIX) bind the orchestrator-created Svix app into svix_config (plan §7/§9a).
  *   4. Bind the Stripe sub-account into the localhost DB (plan §6a step 2 / §9a).
  *   5. Start the Autumn server (dev single-process path, NODE_ENV=development)
- *      listening on SERVER_PORT, plus the TW_CAPABILITY shard's service if any.
- *   6. Wait for the server health endpoint (`GET /`, 200 when ready) and the
+ *      listening on SERVER_PORT, plus any TW_CAPABILITIES services (restarted on exit).
+ *   6. Wait for the server health endpoint (`GET /`, 200 when ready) and each
  *      capability service's port.
  *   7. Print `TW_WORKER_READY` to stdout.
  *
@@ -33,7 +33,7 @@
  *   - NEEDS_SVIX        (set/truthy on the single dedicated Svix shard; §7)
  *   - SVIX_API_KEY      (only present on the Svix shard; §7/§11a)
  *   - SVIX_APP_ID       (orchestrator-created Svix app id; only on the Svix shard; §9a)
- *   - TW_CAPABILITY     (capability shard id from helpers/testCapabilities.ts; unset on normal workers)
+ *   - TW_CAPABILITIES   (capability ids from helpers/testCapabilities.ts; unset on normal workers)
  *   - SERVER_PORT       (the only exposed port; defaults to constants.SERVER_PORT)
  *   - plus the baked/localhost service env from §11a.
  */
@@ -55,7 +55,10 @@ import {
 	SERVER_PORT,
 	TW_ENV,
 } from "../constants.js";
-import { findTestCapability } from "../helpers/testCapabilities.js";
+import {
+	type CapabilityService,
+	workerCapabilityServices,
+} from "../helpers/testCapabilities.js";
 import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 
 /** The READY sentinel the orchestrator scans stdout for. Plan §9 step 5. */
@@ -65,6 +68,7 @@ const SERVICE_HEALTH_TIMEOUT_MS = 60_000;
 const SERVER_HEALTH_TIMEOUT_MS = 120_000;
 const BALANCE_WORKER_HEALTH_TIMEOUT_MS = 60_000;
 const POLL_INTERVAL_MS = 500;
+const CAPABILITY_RESTART_DELAY_MS = 1_000;
 const TCP_CONNECT_TIMEOUT_MS = 1_000;
 
 const bootStartedAt = Date.now();
@@ -252,10 +256,11 @@ export const startAtom = (repoRoot: string): Subprocess => {
 	});
 };
 
-/** Starts the service this worker's capability shard needs; normal workers start nothing. */
-const startCapabilityService = (repoRoot: string) => {
-	const service = findTestCapability(process.env.TW_CAPABILITY)?.service;
-	if (!service) return null;
+/** Starts and supervises a capability service; a crash restarts it so the worker keeps serving its shard. */
+const superviseCapabilityService = (
+	repoRoot: string,
+	service: CapabilityService,
+): void => {
 	log(
 		`starting ${service.name} (${service.argv.join(" ")}) on :${service.port}`,
 	);
@@ -269,12 +274,15 @@ const startCapabilityService = (repoRoot: string) => {
 			...service.env,
 		} as Record<string, string>,
 	});
-	void proc.exited.then((code) => {
+	void proc.exited.then(async (code) => {
 		console.error(
-			chalk.red(`[tw-boot] ${service.name} exited early with code ${code}`),
+			chalk.red(
+				`[tw-boot] ${service.name} exited with code ${code} — restarting`,
+			),
 		);
+		await sleep(CAPABILITY_RESTART_DELAY_MS);
+		superviseCapabilityService(repoRoot, service);
 	});
-	return { service, proc };
 };
 
 /**
@@ -541,7 +549,10 @@ const main = async (): Promise<void> => {
 	await waitForTcpPort("Atom", ATOM_PORT, SERVICE_HEALTH_TIMEOUT_MS);
 
 	// 5 + 6. Start the server (and any capability service) and wait for health.
-	const capabilityService = startCapabilityService(repoRoot);
+	const capabilityServices = workerCapabilityServices(process.env);
+	for (const service of capabilityServices) {
+		superviseCapabilityService(repoRoot, service);
+	}
 	const serverProc = startServer(repoRoot, serverPort);
 	let serverExited = false;
 	void serverProc.exited.then((code) => {
@@ -577,10 +588,11 @@ const main = async (): Promise<void> => {
 			"[tw-boot] Autumn server process exited before becoming healthy — aborting worker boot",
 		);
 	}
-	if (capabilityService) {
-		const { service } = capabilityService;
-		await waitForTcpPort(service.name, service.port, SERVICE_HEALTH_TIMEOUT_MS);
-	}
+	await Promise.all(
+		capabilityServices.map((service) =>
+			waitForTcpPort(service.name, service.port, SERVICE_HEALTH_TIMEOUT_MS),
+		),
+	);
 
 	// 7. Signal readiness. The orchestrator scans stdout for this exact line, then
 	//    starts dispatching `bun test <file>` to this worker (plan §8.2).

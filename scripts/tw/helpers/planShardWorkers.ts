@@ -16,22 +16,23 @@ export const planShardWorkers = ({
 		(count) => count > 0,
 	).length;
 	if (totalWorkers < shardCount) {
-		throw new Error(
-			`Mixed capability and normal tests require --max>=${shardCount}`,
-		);
+		throw new Error(`Selected test shards require --max>=${shardCount}`);
 	}
 
-	// Each later non-empty shard keeps one worker in reserve.
+	// Each later non-empty shard keeps one worker in reserve; the last shard takes the rest.
 	let unplannedShards = shardCount;
 	let remainingWorkers = totalWorkers;
 	const capabilityWorkers = capabilityFileCounts.map((fileCount) => {
 		if (fileCount === 0) return 0;
 		unplannedShards--;
-		const share = Math.min(
-			fileCount,
-			remainingWorkers - unplannedShards,
-			Math.max(1, Math.round((totalWorkers * fileCount) / totalFiles)),
-		);
+		const share =
+			unplannedShards === 0
+				? Math.min(fileCount, remainingWorkers)
+				: Math.min(
+						fileCount,
+						remainingWorkers - unplannedShards,
+						Math.max(1, Math.round((totalWorkers * fileCount) / totalFiles)),
+					);
 		remainingWorkers -= share;
 		return share;
 	});

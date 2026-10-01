@@ -60,7 +60,17 @@ test("every selected capability gets at least one worker without starving normal
 			normalFileCount: 1,
 			capabilityFileCounts: [1, 1],
 		}),
-	).toThrow("--max>=3");
+	).toThrow("Selected test shards require --max>=3");
+});
+
+test("capability-only runs use every worker", () => {
+	expect(
+		planShardWorkers({
+			workers: 4,
+			normalFileCount: 0,
+			capabilityFileCounts: [3, 3, 3],
+		}),
+	).toEqual({ totalWorkers: 4, capabilityWorkers: [1, 1, 2] });
 });
 
 test("a busy Svix shard does not block normal tests or overwrite the combined count", async () => {

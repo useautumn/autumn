@@ -554,7 +554,7 @@ let balanceWorkerEnabled = true;
 export const buildWorkerEnv = ({
 	stripeAccountId,
 	stripeSecretKey,
-	capability,
+	capabilities,
 	svixAppId,
 	ingressUrl,
 	ingressToken,
@@ -562,7 +562,7 @@ export const buildWorkerEnv = ({
 	stripeAccountId: string;
 	/** This worker's pool key — MUST match the key its sub-account was created on. */
 	stripeSecretKey: string;
-	capability: TestCapabilityId | null;
+	capabilities: TestCapabilityId[];
 	svixAppId?: string;
 	ingressUrl: string;
 	ingressToken: string;
@@ -671,8 +671,8 @@ export const buildWorkerEnv = ({
 		env.KERNEL_API_KEY = process.env.KERNEL_API_KEY;
 	}
 
-	Object.assign(env, capabilityWorkerEnv(capability));
-	if (capability === "svix") {
+	Object.assign(env, capabilityWorkerEnv(capabilities));
+	if (capabilities.includes("svix")) {
 		env.SVIX_API_KEY = requireSecret("SVIX_API_KEY");
 		// The orchestrator already created + recorded the Svix app (§9a); the worker
 		// only BINDS this id into svix_config (it no longer creates the app itself).
@@ -996,7 +996,7 @@ const provisionWorker = async ({
 	owner,
 	runId,
 	warmName,
-	capability,
+	capabilities,
 	ownerEmail,
 	pooledAccounts,
 	ingress,
@@ -1007,7 +1007,7 @@ const provisionWorker = async ({
 	owner: string;
 	runId: string;
 	warmName: string;
-	capability: TestCapabilityId | null;
+	capabilities: TestCapabilityId[];
 	ownerEmail: string;
 	/** The run's pool claim (encoded `acct_*::keyIndex` per worker idx), if pooled. */
 	pooledAccounts: Promise<string[] | undefined>;
@@ -1037,7 +1037,7 @@ const provisionWorker = async ({
 	const stripeMs = Date.now() - fanoutStart;
 
 	let svixAppId: string | undefined;
-	if (capability === "svix") {
+	if (capabilities.includes("svix")) {
 		svixAppId = await provisionSvixApp(() => orchestratorCreateSvixApp(orgId));
 		await registry.addSvixApp({ runId, svixAppId });
 	}
@@ -1051,7 +1051,7 @@ const provisionWorker = async ({
 		env: buildWorkerEnv({
 			stripeAccountId: accountId,
 			stripeSecretKey,
-			capability,
+			capabilities,
 			svixAppId,
 			ingressUrl,
 			ingressToken,
@@ -1067,7 +1067,9 @@ const provisionWorker = async ({
 	const publicUrl = await getPublicUrl(sandbox, SERVER_PORT);
 	const tunnelMs = Date.now() - fanoutStart;
 
-	log(`worker ${name}: booting${capability ? ` (${capability} shard)` : ""}`);
+	log(
+		`worker ${name}: booting${capabilities.length > 0 ? ` (${capabilities.join("+")} shard)` : ""}`,
+	);
 	await waitForReady({ sandbox, name, signal });
 	log(`worker ${name}: READY`);
 	bumpWorkerReady();
@@ -1087,7 +1089,7 @@ const provisionWorker = async ({
 		sandboxId: sandbox.name,
 		publicUrl,
 		accountId,
-		capability,
+		capabilities,
 		inFlight: 0,
 	};
 
@@ -1481,16 +1483,22 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			normalFileCount: normalFiles.length,
 			capabilityFileCounts: capabilityShards.map(({ files }) => files.length),
 		});
-	if (capabilityShards.some(({ capability }) => capability === "svix"))
+	if (
+		capabilityShards.some(({ capabilities }) => capabilities.includes("svix"))
+	)
 		requireSecret("SVIX_API_KEY");
 	// Capability workers take the lowest indices; the rest serve the normal pool.
-	const workerCapabilities = capabilityShards.flatMap(({ capability }, index) =>
-		Array<TestCapabilityId>(capabilityWorkers[index] ?? 0).fill(capability),
+	const workerCapabilities = capabilityShards.flatMap(
+		({ capabilities }, index) =>
+			Array.from({ length: capabilityWorkers[index] ?? 0 }, () => capabilities),
 	);
 	log(
 		`running ${normalFiles.length} normal and ${
 			capabilityShards
-				.map(({ capability, files }) => `${files.length} ${capability}`)
+				.map(
+					({ capabilities, files }) =>
+						`${files.length} ${capabilities.join("+")}`,
+				)
 				.join(", ") || "no capability"
 		} files on ${effectiveWorkers} isolated workers`,
 	);
@@ -1700,7 +1708,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const fanoutStart = Date.now();
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
-			const capability = workerCapabilities[idx] ?? null;
+			const capabilities = workerCapabilities[idx] ?? [];
 			const workerName = expectedNames[idx];
 			provisionTasks.push(
 				provisionWorker({
@@ -1708,7 +1716,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					owner,
 					runId,
 					warmName,
-					capability,
+					capabilities,
 					ownerEmail,
 					pooledAccounts: pooledAccountsPromise,
 					ingress: ingressPromise,
@@ -1811,22 +1819,24 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const resolveSandbox = (
 			worker: WorkerHandle,
 		): ProviderSandbox | undefined => sandboxByName.get(worker.name);
-		const handlesFor = (capability: TestCapabilityId | null) =>
+		const handlesFor = (capabilities: TestCapabilityId[]) =>
 			provisioned
 				.map(({ handle }) => handle)
-				.filter((handle) => handle.capability === capability);
+				.filter(
+					(handle) => handle.capabilities.join(",") === capabilities.join(","),
+				);
 		// Capability workers run one file at a time; only the normal pool packs --per-worker.
 		const runShards = [
-			...capabilityShards.map(({ capability, files }) => ({
-				label: capability,
+			...capabilityShards.map(({ capabilities, files }) => ({
+				label: capabilities.join("+"),
 				files,
-				handles: handlesFor(capability),
+				handles: handlesFor(capabilities),
 				slots: 1,
 			})),
 			{
 				label: "normal",
 				files: normalFiles,
-				handles: handlesFor(null),
+				handles: handlesFor([]),
 				slots: Math.max(1, args.perWorker),
 			},
 		];

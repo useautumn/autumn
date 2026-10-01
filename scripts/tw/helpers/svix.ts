@@ -8,11 +8,11 @@ import {
 } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
-import { detectCapability } from "./testCapabilities.ts";
+import { detectCapabilities } from "./testCapabilities.ts";
 
 /** Whether a test file belongs on the Svix shard; detection lives in the capability registry. */
 export const needsSvix = async (file: string): Promise<boolean> =>
-	(await detectCapability(file)) === "svix";
+	(await detectCapabilities(file)).includes("svix");
 
 // Record each application before its worker boots so provisioning failures remain cleanable.
 export const createSvixApp = async (orgId: string): Promise<string> => {

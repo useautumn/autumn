@@ -130,8 +130,8 @@ const timeBoxed = (action: () => Promise<unknown>) =>
 	]);
 
 type Shard = {
-	/** Null for the normal pool. */
-	capability: string | null;
+	/** Empty for the normal pool. */
+	capabilities: string[];
 	files: string[];
 	/** Planned share of the run's workers; picks which shard a new account joins. */
 	target: number;
@@ -334,11 +334,11 @@ const main = async (init: SwarmInit) => {
 		}
 	}
 	const makeShard = ({
-		capability,
+		capabilities,
 		files,
 		target,
 	}: {
-		capability: string | null;
+		capabilities: string[];
 		files: string[];
 		target: number;
 	}): Shard => {
@@ -349,7 +349,7 @@ const main = async (init: SwarmInit) => {
 			fail = rejectReady;
 		});
 		const shard: Shard = {
-			capability,
+			capabilities,
 			files,
 			target: Math.max(1, target),
 			started: 0,
@@ -364,12 +364,12 @@ const main = async (init: SwarmInit) => {
 	};
 	const shards = [
 		makeShard({
-			capability: null,
+			capabilities: [],
 			files: normalFiles,
 			target: totalWorkers - capabilityWorkers.reduce((sum, n) => sum + n, 0),
 		}),
-		...capabilityShards.map(({ capability, files }, index) =>
-			makeShard({ capability, files, target: capabilityWorkers[index] ?? 0 }),
+		...capabilityShards.map(({ capabilities, files }, index) =>
+			makeShard({ capabilities, files, target: capabilityWorkers[index] ?? 0 }),
 		),
 	];
 	const [normalShard] = shards;
@@ -413,7 +413,7 @@ const main = async (init: SwarmInit) => {
 		let sandbox: ProviderSandbox | undefined;
 		try {
 			let svixAppId: string | undefined;
-			if (shard.capability === "svix") {
+			if (shard.capabilities.includes("svix")) {
 				svixAppId = await tw.svix.createSvixApp(tw.testOrg.TEST_ORG_CONFIG.id);
 				svixAppIds.push(svixAppId);
 			}
@@ -425,7 +425,7 @@ const main = async (init: SwarmInit) => {
 					...tw.run.buildWorkerEnv({
 						stripeAccountId: account.accountId,
 						stripeSecretKey: account.secretKey,
-						capability: shard.capability,
+						capabilities: shard.capabilities,
 						svixAppId,
 						ingressUrl: init.ingressUrl,
 						ingressToken: init.ingressToken,
@@ -463,7 +463,7 @@ const main = async (init: SwarmInit) => {
 				sandboxId: sandbox.name,
 				publicUrl,
 				accountId: account.accountId,
-				capability: shard.capability,
+				capabilities: shard.capabilities,
 				inFlight: 0,
 			});
 			shard.markReady();
@@ -574,7 +574,7 @@ const main = async (init: SwarmInit) => {
 	const progress = setInterval(() => {
 		const pools = shards.map(
 			(shard) =>
-				`${shard.capability ?? "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
+				`${shard.capabilities.join("+") || "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
 		);
 		const line = `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`;
 		// stdout too: twd forwards child output to its own logs, so this survives any log budget.
@@ -693,8 +693,8 @@ const partitionAtSha = async ({
 		await tw.capabilities.partitionByCapability(init.files.map(toShaPath));
 	return {
 		normalFiles: normalFiles.map(toLocalPath),
-		capabilityShards: capabilityShards.map(({ capability, files }) => ({
-			capability,
+		capabilityShards: capabilityShards.map(({ capabilities, files }) => ({
+			capabilities,
 			files: files.map(toLocalPath),
 		})),
 	};

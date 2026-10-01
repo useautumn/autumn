@@ -12,7 +12,7 @@ export type WorkerHandle = {
 	sandboxId?: string;
 	publicUrl: string;
 	accountId?: string;
-	capability: string | null;
+	capabilities: string[];
 	lastFile?: string;
 	inFlight: number;
 };
@@ -54,7 +54,7 @@ export type TwModules = {
 		buildWorkerEnv(args: {
 			stripeAccountId: string;
 			stripeSecretKey: string;
-			capability: string | null;
+			capabilities: string[];
 			svixAppId?: string;
 			ingressUrl: string;
 			ingressToken: string;
@@ -103,7 +103,7 @@ export type TwModules = {
 	capabilities: {
 		partitionByCapability(files: string[]): Promise<{
 			normalFiles: string[];
-			capabilityShards: { capability: string; files: string[] }[];
+			capabilityShards: { capabilities: string[]; files: string[] }[];
 		}>;
 	};
 	constants: { SERVER_PORT: number; WARM_SANDBOX_PREFIX: string };
