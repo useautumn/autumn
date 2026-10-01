@@ -17,6 +17,7 @@ const expectedCommands = new Set([
 	"upsertInvoiceInFullSubjectV2",
 	"adjustSubjectBalance",
 	"rollUsageWindows",
+	"patchAllocationCounter",
 	"getDelFullSubjectBalanceFields",
 	"deleteOwnedLock",
 	"refreshOwnedLock",

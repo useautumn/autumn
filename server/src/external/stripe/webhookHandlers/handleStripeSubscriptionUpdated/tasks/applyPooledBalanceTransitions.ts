@@ -35,6 +35,7 @@ export const applyPooledBalanceTransitions = async ({
 			now: eventContext.nowMs,
 		});
 
+	if (!eventContext.fullCustomer.balance_allocations) return;
 	// Pools moved after the plans re-fit, so shares re-fit against the final pot; the batch event carries the tag.
 	const { adjusted } = await refreshAllocationScaleAfterWrite({
 		ctx,
