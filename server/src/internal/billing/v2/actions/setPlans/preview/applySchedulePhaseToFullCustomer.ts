@@ -7,6 +7,8 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
+import { applyPooledBalancePlanToFullCustomer } from "@/internal/billing/v2/utils/billingPlan/applyPooledBalancePlanToFullCustomer";
 import { applyExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/applyExistingRollovers";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
@@ -82,9 +84,14 @@ export const applySchedulePhaseToFullCustomer = ({
 }): FullCustomer => {
 	const phaseCustomer = structuredClone(fullCustomer);
 	const startingIds = new Set(phase.customerProductIds);
+	const incomingCustomerProducts: FullCusProduct[] = [];
+	const outgoingCustomerProducts: FullCusProduct[] = [];
 
 	for (const customerProduct of phaseCustomer.customer_products) {
 		if (startingIds.has(customerProduct.id)) {
+			if (!cp(customerProduct).hasActiveStatus().valid) {
+				incomingCustomerProducts.push(customerProduct);
+			}
 			carryExistingStatesIntoStartingProduct({
 				ctx,
 				previousCustomer: fullCustomer,
@@ -96,8 +103,22 @@ export const applySchedulePhaseToFullCustomer = ({
 
 		if (isEndedByPhase({ customerProduct, phase })) {
 			customerProduct.status = CusProductStatus.Expired;
+			outgoingCustomerProducts.push(customerProduct);
 		}
 	}
+
+	// Mirrors activation, which re-sizes pools from the plans leaving and joining at this phase.
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer: phaseCustomer,
+		outgoingCustomerProducts,
+		incomingCustomerProducts,
+		now: phase.startsAt,
+	});
+	applyPooledBalancePlanToFullCustomer({
+		fullCustomer: phaseCustomer,
+		pooledBalancePlan,
+	});
 
 	return phaseCustomer;
 };
