@@ -51,6 +51,8 @@ export type {
 	ClientLifecycle,
 	InitializeParams,
 	ReadSubjectStateParams,
+	StallOwnerParams,
+	StallOwnerReply,
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
 export type {

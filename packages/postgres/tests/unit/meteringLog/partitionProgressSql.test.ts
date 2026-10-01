@@ -58,6 +58,7 @@ describe("partitionProgress repo", () => {
 			nextOffset: 43n,
 			commandNextOffset: null,
 			ownerFence: { epoch: 512n, offset: 40n },
+			claimToken: null,
 		});
 		const unfenced = capturingDb({
 			rows: [{ next_offset: "43", command_next_offset: "2" }],
@@ -68,7 +69,37 @@ describe("partitionProgress repo", () => {
 				topic: "metering",
 				partition: 7,
 			}),
-		).toEqual({ nextOffset: 43n, commandNextOffset: 2n, ownerFence: null });
+		).toEqual({
+			nextOffset: 43n,
+			commandNextOffset: 2n,
+			ownerFence: null,
+			claimToken: null,
+		});
+	});
+
+	test("readPartitionProgress reads the claim token with the bookmark, so a writer can tell its own landing apart", async () => {
+		const { db, statements } = capturingDb({
+			rows: [
+				{
+					next_offset: "43",
+					command_next_offset: null,
+					claim_token: "claim_a",
+				},
+			],
+		});
+		expect(
+			await readPartitionProgress({
+				ctx: { db },
+				topic: "metering",
+				partition: 7,
+			}),
+		).toEqual({
+			nextOffset: 43n,
+			commandNextOffset: null,
+			ownerFence: null,
+			claimToken: "claim_a",
+		});
+		expect(statements[0]?.sql.replace(/\s+/g, " ")).toContain("claim_token");
 	});
 
 	test("readNextOffset refuses a value that is not an offset", async () => {

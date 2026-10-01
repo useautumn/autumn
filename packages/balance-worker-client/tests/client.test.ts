@@ -7,6 +7,7 @@ import {
 	parseInitializeRequest,
 } from "@autumn/balance-engine";
 import {
+	BalanceWorkerClientError,
 	createBalanceWorkerClient,
 	type PartitionOwner,
 	type TrackReply,
@@ -902,3 +903,59 @@ test(
 	"a hinted successor that also answers NOT_OWNER drops the hint and falls back to a refresh",
 	dropsAHintTheSuccessorDeclines,
 );
+
+test("stallOwner posts the stall to the partition's owner and relays the worker's answer", async () => {
+	const requests: HttpRequest[] = [];
+	const client = createBalanceWorkerClient({
+		ctx: {
+			owners: {
+				findOwner: ({ partition }) =>
+					partition === 7
+						? { partition, routeEpoch: "3", endpoint: "http://owner-7" }
+						: undefined,
+				refresh: async () => {},
+			},
+			http: {
+				postJson: async (request) => {
+					requests.push(request);
+					return { status: 202, body: { stallMs: 4000 } };
+				},
+			},
+		},
+		config: { partitionCount: 64, timeoutMs: 1_000 },
+	});
+	const reply = await client.stallOwner({ partition: 7, ms: 4000 });
+	expect(reply).toEqual({ endpoint: "http://owner-7", stallMs: 4000 });
+	expect(requests).toHaveLength(1);
+	expect(requests[0]?.url).toBe("http://owner-7/v1/debug/stall");
+	expect(requests[0]?.body).toEqual({ ms: 4000 });
+
+	const unowned = await client
+		.stallOwner({ partition: 8, ms: 4000 })
+		.catch((cause) => cause);
+	expect(unowned).toBeInstanceOf(BalanceWorkerClientError);
+	expect(unowned.code).toBe("NO_OWNER");
+	expect(requests).toHaveLength(1);
+});
+
+test("stallOwner treats anything but a 202 as an invalid response, so a prod worker's 404 is loud", async () => {
+	const client = createBalanceWorkerClient({
+		ctx: {
+			owners: {
+				findOwner: ({ partition }) => ({
+					partition,
+					routeEpoch: "3",
+					endpoint: "http://owner",
+				}),
+				refresh: async () => {},
+			},
+			http: { postJson: async () => ({ status: 404, body: "Not Found" }) },
+		},
+		config: { partitionCount: 64, timeoutMs: 1_000 },
+	});
+	const failure = await client
+		.stallOwner({ partition: 1, ms: 10 })
+		.catch((cause) => cause);
+	expect(failure).toBeInstanceOf(BalanceWorkerClientError);
+	expect(failure.code).toBe("INVALID_RESPONSE");
+});

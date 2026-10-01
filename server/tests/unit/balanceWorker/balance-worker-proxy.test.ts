@@ -123,6 +123,20 @@ test("a proxied evict reaches the owner through the API's client and returns the
 	expect(api.workerRequests[0]?.body).toMatchObject({ command });
 });
 
+test("a proxied stall reaches the partition's owner through the API's client", async () => {
+	const api = createApi({
+		workerResponse: { status: 202, body: { stallMs: 3000 } },
+	});
+	const reply = await createProxyClient(api).stallOwner({
+		partition: 5,
+		ms: 3000,
+	});
+	expect(reply).toEqual({ endpoint: "http://worker", stallMs: 3000 });
+	expect(api.workerRequests).toHaveLength(1);
+	expect(api.workerRequests[0]?.url).toBe("http://worker/v1/debug/stall");
+	expect(api.workerRequests[0]?.body).toEqual({ ms: 3000 });
+});
+
 test("a proxied queued evict lands on the partition the API's client picks", async () => {
 	const api = createApi();
 	await createProxyClient(api).queue.evict({ commands: [command] });

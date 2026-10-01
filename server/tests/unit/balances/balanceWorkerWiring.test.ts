@@ -141,6 +141,7 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 		updateBalance: track,
 		deleteBalance: track,
 		recalculateBalance: track,
+		stallOwner: track,
 		enqueue: queueNothing,
 		queue: {
 			track: queueNothing,
