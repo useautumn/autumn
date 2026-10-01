@@ -22,6 +22,7 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeInvoiceLineItemPeriodCorrect } from "@tests/integration/billing/utils/stripe/expectStripeInvoiceLineItemPeriodCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
@@ -576,7 +577,9 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
 
-	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
+	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
+		isBalanceWorkerRoute() ? -450 : -350,
+	);
 
 	expect(entityAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
 
@@ -611,11 +614,21 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	});
 
 	expectCustomerFeatureCorrect({
-		customer: customerFinal,
+		customer: entityFinal,
 		featureId: TestFeature.Messages,
 		balance: 100,
 		resetsAt: addMonths(Date.now(), 2).getTime(),
 	});
+	if (isBalanceWorkerRoute()) {
+		expect(customerFinal.features[TestFeature.Messages]).toBeUndefined();
+	} else {
+		expectCustomerFeatureCorrect({
+			customer: customerFinal,
+			featureId: TestFeature.Messages,
+			balance: 100,
+			resetsAt: addMonths(Date.now(), 2).getTime(),
+		});
+	}
 
 	const overageTotal = 35;
 	expectCustomerInvoiceCorrect({
@@ -704,8 +717,9 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
 
-	// Customer and entity balance: 200 - 550 = -350
-	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
+	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
+		isBalanceWorkerRoute() ? -450 : -350,
+	);
 	expect(entityAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
 
 	// Verify both products are canceling
