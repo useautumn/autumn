@@ -1,6 +1,9 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { logger } from "@/external/logtail/logtailUtils.js";
+import {
+	logger as baseLogger,
+	type Logger,
+} from "@/external/logtail/logtailUtils.js";
 import { createRedisPipeline } from "@/external/redis/utils/createRedisPipeline.js";
 import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
@@ -170,6 +173,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	maxAttempts,
 	strict,
 	commandTimeoutMs,
+	logger,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
@@ -177,6 +181,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	maxAttempts: number;
 	strict: boolean;
 	commandTimeoutMs?: number;
+	logger: Logger;
 }): Promise<BatchInvalidateCustomer[]> => {
 	const dropped: BatchInvalidateCustomer[] = [];
 	// No not-ready guard: a dedicated org Redis is created lazily, so its very
@@ -226,6 +231,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 			logger.error(
 				{
 					type: "batch_invalidate_full_subjects_dropped",
+					context: { org_id: first?.orgId, env: first?.env },
 					data: {
 						org_id: first?.orgId,
 						env: first?.env,
@@ -251,6 +257,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 	phases,
 	throwWhenExhausted = false,
 	commandTimeoutMs,
+	logger = baseLogger,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
@@ -270,6 +277,8 @@ export const batchInvalidateCachedFullSubjects = async ({
 	 *  counts as a failed attempt, and spending every attempt rejects. */
 	throwWhenExhausted?: boolean;
 	commandTimeoutMs?: number;
+	/** The caller's logger, so a dropped invalidation names the request or job that asked for it. */
+	logger?: Logger;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
 
@@ -314,6 +323,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 					maxAttempts,
 					strict: throwWhenExhausted,
 					commandTimeoutMs,
+					logger,
 				}),
 			),
 		)

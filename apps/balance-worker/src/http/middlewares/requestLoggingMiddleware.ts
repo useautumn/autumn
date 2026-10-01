@@ -1,6 +1,7 @@
 import { UnsupportedCommandError } from "@autumn/balance-engine";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
+import { OwnedPartitionNotReadyError } from "../../runtime/runtimeErrors.js";
 import type {
 	BalanceWorkerHttpContext,
 	BalanceWorkerHttpEnv,
@@ -86,7 +87,10 @@ function logRequestResult({
 		},
 	};
 	const message = `[${statusCode}] ${context.req.method} ${context.req.path} ${durationMs}ms${error ? ` — ${error.name}` : ""}`;
-	if (severity >= 500) ctx.logger.error(event, message);
+	const isActivating =
+		error instanceof OwnedPartitionNotReadyError &&
+		error.status === "activating";
+	if (severity >= 500 && !isActivating) ctx.logger.error(event, message);
 	else if (severity >= 400) ctx.logger.warn(event, message);
 	else ctx.logger.info(event, message);
 }

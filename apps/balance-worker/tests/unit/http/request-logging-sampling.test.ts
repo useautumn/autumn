@@ -5,6 +5,10 @@ import type {
 	BalanceWorkerHttpContext,
 	BalanceWorkerHttpEnv,
 } from "../../../src/http/types/balanceWorkerHttp.js";
+import {
+	OwnedPartitionNotReadyError,
+	OwnedPartitionRecoveryRequiredError,
+} from "../../../src/runtime/runtimeErrors.js";
 
 function createApp({ successSampleRate }: { successSampleRate?: number }) {
 	const lines: { level: string; message: string }[] = [];
@@ -39,6 +43,26 @@ function createApp({ successSampleRate }: { successSampleRate?: number }) {
 		return c.json({ ok: true });
 	});
 	app.post("/refused", (c) => c.json({ error: { code: "NOT_READY" } }, 503));
+	app.post("/activating", (c) => {
+		c.get("requestLog").error = new OwnedPartitionNotReadyError({
+			status: "activating",
+		});
+		return c.json({ error: { code: "NOT_READY" } }, 503);
+	});
+	app.post("/not-ready-recovery", (c) => {
+		c.get("requestLog").error = new OwnedPartitionNotReadyError({
+			status: "recovery_required",
+		});
+		return c.json({ error: { code: "NOT_READY" } }, 503);
+	});
+	app.post("/recovery", (c) => {
+		c.get("requestLog").error = new OwnedPartitionRecoveryRequiredError({
+			topic: "commands",
+			partition: 0,
+			cause: new Error("Recovery failed"),
+		});
+		return c.json({ error: { code: "INTERNAL" } }, 503);
+	});
 	return { app, lines };
 }
 
@@ -74,5 +98,18 @@ describe("request log sampling", () => {
 		const { app, lines } = createApp({ successSampleRate: 1 });
 		await hit(app, "/ok", 20);
 		expect(lines.filter((line) => line.level === "info")).toHaveLength(20);
+	});
+
+	test("an activating partition answering 503 is still logged as a warning with sampling disabled", async () => {
+		const { app, lines } = createApp({ successSampleRate: 0 });
+		await hit(app, "/activating", 2);
+		expect(lines.map((line) => line.level)).toEqual(["warn", "warn"]);
+	});
+
+	test("partition recovery failures remain errors", async () => {
+		const { app, lines } = createApp({});
+		await hit(app, "/not-ready-recovery", 1);
+		await hit(app, "/recovery", 1);
+		expect(lines.map((line) => line.level)).toEqual(["error", "error"]);
 	});
 });
