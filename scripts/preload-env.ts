@@ -34,3 +34,5 @@ if (process.env.PW_MODE !== "1") {
 		}
 	}
 }
+
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
