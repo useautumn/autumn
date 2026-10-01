@@ -109,15 +109,17 @@ test(
 		const invoices = customerAfter.invoices;
 		console.log(
 			"customer invoices:",
-			invoices?.map((i: { id: string; status: string; total: number }) => ({
-				id: i.id,
-				status: i.status,
-				total: i.total,
-			})),
+			invoices?.map(
+				(i: { stripe_id: string; status: string; total: number }) => ({
+					stripe_id: i.stripe_id,
+					status: i.status,
+					total: i.total,
+				}),
+			),
 		);
 
 		const matchingInvoice = invoices?.find(
-			(i: { id: string }) => i.id === confirmData.invoice_id,
+			(i: { stripe_id: string }) => i.stripe_id === confirmData.invoice_id,
 		);
 		expect(matchingInvoice).toBeDefined();
 	},
