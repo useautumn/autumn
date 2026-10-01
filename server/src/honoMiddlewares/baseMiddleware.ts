@@ -7,6 +7,7 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
+import { routePath } from "hono/route";
 import { db, dbGeneral } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
@@ -57,6 +58,13 @@ const redactSensitiveRequestBody = ({ body }: { body: unknown }): unknown => {
  * Base middleware that sets up the request context
  * Sets up: db, logger, id, timestamp
  */
+
+/** The terminal route's template; an unmatched request (only wildcard middleware) keeps its concrete path. */
+const matchedRoutePath = (c: Context) => {
+	const template = routePath(c, -1);
+	return template.endsWith("*") ? c.req.path : template;
+};
+
 export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	// const env = (c.req.header("app_env") as AppEnv) || AppEnv.Sandbox;
 	const id =
@@ -104,6 +112,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		query: c.req.query(),
 		body: redactSensitiveRequestBody({ body }),
 		name: `${c.req.method} ${c.req.path}`,
+		route: `${c.req.method} ${matchedRoutePath(c)}`,
 	};
 	const requestLogContexts = buildRequestLogContexts({
 		requestContext: requestLogContext,

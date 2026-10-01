@@ -88,6 +88,30 @@ describe("createErrorLogHook", () => {
 		});
 	});
 
+	it("prefers the request's route template over its concrete path", () => {
+		captureException.mockClear();
+		const { logger } = createTestLogger();
+
+		logger
+			.child({
+				req: {
+					id: "req_1",
+					name: "GET /v1/customers/cus_1",
+					route: "GET /v1/customers/:customer_id",
+				},
+			})
+			.error({ error: new Error("boom") }, "failed");
+
+		expect(captureException).toHaveBeenCalledWith(
+			expect.any(Error),
+			expect.objectContaining({
+				tags: expect.objectContaining({
+					operation: "GET /v1/customers/:customer_id",
+				}),
+			}),
+		);
+	});
+
 	it("names background work by the log's type when there is no request or job", () => {
 		captureException.mockClear();
 		const { logger } = createTestLogger();

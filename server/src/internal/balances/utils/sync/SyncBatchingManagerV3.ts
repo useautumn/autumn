@@ -5,6 +5,7 @@ import { currentRegion } from "@/external/redis/initRedis.js";
 import { getRedisV2RoutingTarget } from "@/external/redis/resolveRedisV2.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { SqsBatchShuttingDownError } from "@/queue/SqsBatchAccumulator.js";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { markSyncDirty } from "./dirtyState/markSyncDirty.js";
 import { buildSyncDirtyKeys } from "./dirtyState/syncDirtyKeys.js";
@@ -408,6 +409,13 @@ export class SyncBatchingManagerV3 {
 				await this.queueCoalescedSync({ context });
 				return;
 			} catch (error) {
+				// The dirty state stays in Redis; the customer's next change re-signals it.
+				if (error instanceof SqsBatchShuttingDownError) {
+					logger.warn(
+						`[SyncDirty] Signal for ${context.customerId} dropped at shutdown; next change re-signals`,
+					);
+					return;
+				}
 				logger.error(
 					`[SyncDirty] Failed to mark/signal for ${context.customerId}: ${error}`,
 					{
@@ -457,7 +465,7 @@ export class SyncBatchingManagerV3 {
 				`[SyncV4] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers, ${usageWindowUpdates.length} usage windows`,
 			);
 		} catch (error) {
-			logger.error(
+			logger[error instanceof SqsBatchShuttingDownError ? "warn" : "error"](
 				`[SyncV4] Failed to queue sync for ${context.customerId}: ${error}`,
 				{
 					error,
