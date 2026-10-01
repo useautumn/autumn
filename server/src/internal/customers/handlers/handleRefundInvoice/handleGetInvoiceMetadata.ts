@@ -1,7 +1,7 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { findStripeInvoice } from "@/external/stripe/invoices/operations/findStripeInvoice.js";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
@@ -33,10 +33,11 @@ export const handleGetInvoiceMetadata = createRoute({
 		}
 
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-		const stripeInvoice = await findStripeInvoice({
+		const stripeInvoice = await getStripeInvoice({
 			stripeClient: stripeCli,
 			invoiceId: stripe_invoice_id,
 			expand: [],
+			errorOnNotFound: false,
 		});
 		if (!stripeInvoice) {
 			throw new RecaseError({

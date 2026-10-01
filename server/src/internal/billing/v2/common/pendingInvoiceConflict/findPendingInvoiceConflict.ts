@@ -13,7 +13,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { findStripeInvoice } from "@/external/stripe/invoices/operations/findStripeInvoice.js";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
@@ -107,10 +107,11 @@ const listPendingInvoiceCandidates = async ({
 			metadataId: metadata.id,
 			stripeInvoiceId: metadata.stripe_invoice_id,
 			// Only a confirmed-missing invoice is skipped; any other failure must fail closed.
-			stripeInvoice: await findStripeInvoice({
+			stripeInvoice: await getStripeInvoice({
 				stripeClient: stripeCli,
 				invoiceId: metadata.stripe_invoice_id,
 				expand: [],
+				errorOnNotFound: false,
 			}),
 		});
 	}
