@@ -14,17 +14,6 @@ export const handleRotateResourceSecret = createRoute({
 		const { env, integrationConfigurationId, resourceId } = c.req.param();
 		const { org, db } = c.get("ctx");
 		const body = await c.req.json();
-		const claims = c.get("vercelClaims");
-
-		if (!claims || claims?.user_role !== "admin") {
-			return c.json(
-				{
-					error: "Unauthorized",
-					message: "Unauthorized",
-				},
-				401,
-			);
-		}
 
 		const resource = await VercelResourceService.getByIdAndInstallation({
 			db,

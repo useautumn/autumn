@@ -8,7 +8,10 @@ import {
 	parseCheckCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
-import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
+import {
+	PARTITION_RECOVERY_REASON,
+	type PartitionRoute,
+} from "@autumn/balance-worker-client/protocol";
 import { Hono } from "hono";
 import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
@@ -29,6 +32,7 @@ import {
 } from "../../../src/processor/writer/writerErrors.js";
 import {
 	OwnedPartitionNotReadyError,
+	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
 import {
@@ -615,11 +619,6 @@ describe("Balance worker HTTP", () => {
 	test.each([
 		new Error("secret details"),
 		new SyntaxError("internal decoder failed"),
-		new OwnedPartitionRecoveryRequiredError({
-			topic: "metering",
-			partition: 2,
-			cause: new Error("uncertain commit"),
-		}),
 	])("never reports failed or uncertain writes as success", async (cause) => {
 		const { post } = fixture({ cause });
 		const response = await post();
@@ -627,6 +626,44 @@ describe("Balance worker HTTP", () => {
 		expect(await response.json()).toEqual({
 			error: { code: "INTERNAL", message: "Worker request failed" },
 		});
+	});
+	test("a command caught in flight by recovery is uncertain; one turned away before it ran is retried or rerouted", async () => {
+		const position = { topic: "metering", partition: 2 };
+		const inFlight = await fixture({
+			cause: new OwnedPartitionRecoveryRequiredError({
+				...position,
+				cause: new Error("uncertain commit"),
+			}),
+		}).post();
+		expect(inFlight.status).toBe(500);
+		expect((await inFlight.json()).error).toMatchObject({
+			code: "INTERNAL",
+			reason: PARTITION_RECOVERY_REASON,
+		});
+		for (const { cause, status, code } of [
+			{
+				cause: new OwnedPartitionRecoveryRequiredError({
+					...position,
+					cause: new Error("bookmark moved"),
+					notSubmitted: true,
+				}),
+				status: 503,
+				code: "NOT_READY",
+			},
+			{
+				cause: new OwnedPartitionProducerFencedError({
+					...position,
+					cause: new Error("producer fenced"),
+					notSubmitted: true,
+				}),
+				status: 409,
+				code: "NOT_OWNER",
+			},
+		]) {
+			const response = await fixture({ cause }).post();
+			expect(response.status).toBe(status);
+			expect((await response.json()).error.code).toBe(code);
+		}
 	});
 	test.each([
 		{

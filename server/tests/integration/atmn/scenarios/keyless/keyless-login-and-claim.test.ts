@@ -14,7 +14,7 @@
  *   K5  init --keyless does K2 and then carries on: config, pull, skills
  */
 
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	existsSync,
 	mkdtempSync,
@@ -23,8 +23,12 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { organizations } from "@autumn/shared";
+import {
+	packAtmnCli,
+	writeBunLockfile,
+} from "@tests/utils/atmnUtils/bunRepo.js";
 import {
 	CLI_PACKAGE_DIR,
 	TMP_ROOT,
@@ -36,6 +40,14 @@ import { initDrizzle } from "@/db/initDrizzle.js";
 const { db } = initDrizzle();
 const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
 const baseUrl = process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080";
+
+let cliTarball = "";
+beforeAll(() => {
+	cliTarball = packAtmnCli();
+});
+afterAll(() => {
+	if (cliTarball) rmSync(dirname(cliTarball), { recursive: true, force: true });
+});
 
 const createdOrgIds: string[] = [];
 afterAll(async () => {
@@ -60,7 +72,7 @@ const runCliHeadless = ({
 			HOME: process.env.HOME ?? "",
 			GIT_CEILING_DIRECTORIES: TMP_ROOT,
 			AUTUMN_BASE_URL: baseUrl,
-			ATMN_INIT_DEPENDENCY: `file:${CLI_PACKAGE_DIR}`,
+			ATMN_INIT_DEPENDENCY: `file:${cliTarball}`,
 			NO_COLOR: "1",
 			FORCE_COLOR: "0",
 		},
@@ -77,15 +89,7 @@ const makeRepo = ({ name }: { name: string }): string => {
 	const root = mkdtempSync(join(tmpdir(), "atmn-keyless-"));
 	Bun.spawnSync(["git", "init", "-q"], { cwd: root });
 	writeFileSync(join(root, "package.json"), JSON.stringify({ name }));
-	const locked = Bun.spawnSync(["bun", "install", "--lockfile-only"], {
-		cwd: root,
-		stdout: "pipe",
-		stderr: "pipe",
-	});
-	if (locked.exitCode !== 0)
-		throw new Error(
-			`${locked.stdout.toString()}${locked.stderr.toString()}`.trim(),
-		);
+	writeBunLockfile({ root, name });
 	return root;
 };
 
@@ -108,7 +112,7 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 		expect(asked.output).toContain("--login    ");
 		expect(asked.output).toContain("--keyless  ");
 		expect(existsSync(join(root, ".env"))).toBe(false);
-		expect(existsSync(join(root, "autumn.config.ts"))).toBe(false);
+		expect(existsSync(join(root, "autumn/autumn.config.ts"))).toBe(false);
 
 		// K2
 		const keyless = runCliHeadless({ cwd: root, args: ["login", "--keyless"] });
@@ -161,8 +165,10 @@ test(`${chalk.yellowBright("atmn init --keyless: provisions, then sets the repo 
 		expect(envValue({ cwd: root, key: "AUTUMN_SECRET_KEY" })).toMatch(
 			/^am_sk_test_/,
 		);
-		expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
-		expect(existsSync(join(root, "skills/autumn-setup/SKILL.md"))).toBe(true);
+		expect(existsSync(join(root, "autumn/autumn.config.ts"))).toBe(true);
+		expect(existsSync(join(root, "autumn/skills/autumn-setup/SKILL.md"))).toBe(
+			true,
+		);
 
 		const env = JSON.parse(
 			runCliHeadless({ cwd: root, args: ["env", "--json"] }).output,

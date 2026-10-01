@@ -203,32 +203,46 @@ const createFakeKafka = ({
 	return { kafka, events, deliver, crash };
 };
 
-const logger = {
-	info: () => {},
-	warn: () => {},
-	error: (payload: unknown) => {
-		if (typeof payload === "object" && payload && "type" in payload)
-			logged.push(String(payload.type));
-	},
+const recordType = (payload: unknown) => {
+	if (typeof payload === "object" && payload && "type" in payload)
+		logged.push(String(payload.type));
 };
+const logger = { info: () => {}, warn: recordType, error: recordType };
 const logged: string[] = [];
 
 const startConsumer = async ({
 	job,
 	recordsPerSlice = 2,
+	storedFence,
 	...options
 }: {
 	job: StreamConsumer;
 	recordsPerSlice?: number;
 	heartbeatFailsAfter?: number;
 	committed?: Record<number, string>;
+	/** What partition_progress holds for the partition; undefined leaves the store out entirely. */
+	storedFence?: { epoch: bigint; offset: bigint } | null;
 }) => {
 	const fake = createFakeKafka(options);
 	const crashes: string[] = [];
+	const db =
+		storedFence === undefined
+			? undefined
+			: {
+					execute: async () => [
+						{
+							next_offset: "50",
+							command_next_offset: null,
+							owner_epoch: storedFence?.epoch ?? null,
+							owner_fence_offset: storedFence?.offset ?? null,
+						},
+					],
+				};
 	const consumer = createStreamConsumer({
 		ctx: {
 			kafka: fake.kafka,
 			logger: logger as never,
+			db: db as never,
 			onCrashed: ({ job: name }) => {
 				crashes.push(name);
 			},
@@ -331,6 +345,36 @@ test("stopping herald while the store is down leaves the slice unresolved, so th
 	expect(attempts).toEqual(["0,1"]);
 	expect(events.filter((event) => event.startsWith("resolve"))).toEqual([]);
 	expect(events).toContain("stop");
+});
+
+const stampedTrackMessage = ({
+	offset,
+	epoch,
+}: {
+	offset: string;
+	epoch: string;
+}) => ({ ...trackMessage({ offset }), headers: { ownerEpoch: epoch } });
+
+test("a fence stored in partition_progress is honoured from the first batch after a restart", async () => {
+	const handled: StreamRecord[][] = [];
+	const { deliver } = await startConsumer({
+		job: {
+			name: "usage-events",
+			handle: async ({ records }) => {
+				handled.push(records);
+			},
+		},
+		committed: { 0: "40" },
+		storedFence: { epoch: 30n, offset: 12n },
+	});
+	await deliver({
+		records: [
+			stampedTrackMessage({ offset: "40", epoch: "20" }),
+			stampedTrackMessage({ offset: "41", epoch: "30" }),
+		],
+	});
+	expect(handled.map(offsetsOf)).toEqual(["41"]);
+	expect(logged).toContain("herald_record_stale");
 });
 
 test("a record that cannot be read is skipped loudly and the rest of the slice lands", async () => {

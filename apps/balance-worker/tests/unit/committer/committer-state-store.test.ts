@@ -25,15 +25,18 @@ function createFakeCommitterDb({
 	storedNextOffset = null,
 	staleIds = new Set<string>(),
 	conflictIds = new Set<string>(),
+	flushGate,
 }: {
 	storedNextOffset?: bigint | null;
 	staleIds?: Set<string>;
+	flushGate?: Promise<void>;
 	/** Rows whose flush finds the bookmark moved by another worker. */
 	conflictIds?: Set<string>;
 } = {}) {
 	const progress = new Map<string, bigint>();
 	const commandProgress = new Map<string, bigint>();
 	const fences = new Map<string, { epoch: bigint; offset: bigint }>();
+	const claims = new Map<string, string>();
 	if (storedNextOffset !== null)
 		progress.set(`${topic}[${partition}]`, storedNextOffset);
 	const updates: SubjectRowChange[] = [];
@@ -47,21 +50,39 @@ function createFakeCommitterDb({
 				nextOffset,
 				commandNextOffset: commandProgress.get(key) ?? null,
 				ownerFence: fences.get(key) ?? null,
+				claimToken: claims.get(key) ?? null,
 			};
 		},
-		insertPartitionProgress: async ({ topic, partition, nextOffset }) => {
+		insertPartitionProgress: async ({
+			topic,
+			partition,
+			nextOffset,
+			claimToken,
+		}) => {
 			progress.set(`${topic}[${partition}]`, nextOffset);
+			if (claimToken !== undefined)
+				claims.set(`${topic}[${partition}]`, claimToken);
+		},
+		claimPartitionProgress: async ({ topic, partition, claimToken }) => {
+			const key = `${topic}[${partition}]`;
+			if (progress.has(key)) claims.set(key, claimToken);
 		},
 		// Rolls back like Postgres would: nothing lands unless every bookmark moved.
 		flush: async (request) => {
+			await flushGate;
 			const applied = request.changes.map(
 				(change) => !staleIds.has(subjectRowIdOf(change)),
 			);
-			const moved = request.bookmarks.filter(
-				(bookmark) =>
-					progress.get(`${bookmark.topic}[${bookmark.partition}]`) ===
-					bookmark.expectedOffset,
-			);
+			const moved = request.bookmarks.filter((bookmark) => {
+				const key = `${bookmark.topic}[${bookmark.partition}]`;
+				const claim = claims.get(key);
+				return (
+					progress.get(key) === bookmark.expectedOffset &&
+					(bookmark.claimToken === undefined ||
+						claim === undefined ||
+						claim === bookmark.claimToken)
+				);
+			});
 			const conflicted = request.changes.some((change) =>
 				conflictIds.has(subjectRowIdOf(change)),
 			);
@@ -90,7 +111,15 @@ function createFakeCommitterDb({
 			return { applied };
 		},
 	};
-	return { db, progress, commandProgress, fences, updates, transactions };
+	return {
+		db,
+		progress,
+		commandProgress,
+		fences,
+		claims,
+		updates,
+		transactions,
+	};
 }
 
 function createStore(fake: ReturnType<typeof createFakeCommitterDb>) {
@@ -341,6 +370,78 @@ describe("committer state store", () => {
 			"Log record refused by Postgres and skipped: init_1 (Row change not supported by the postgres backend: insert customer)",
 		);
 		expect(store.readNextOffset({ topic, partition })).toBe(101n);
+	});
+
+	test("once a new owner claims the partition, the old owner's late flush is refused and the new owner lands on the bookmark it read", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
+		const oldOwner = createStore(fake);
+		await oldOwner.claimPartition({ topic, partition });
+		await oldOwner.loadProgress({ topic, partition });
+		const newOwner = createStore(fake);
+		await newOwner.claimPartition({ topic, partition });
+		await newOwner.loadProgress({ topic, partition });
+
+		const state = createState({ balance: 100 });
+		const mutation = createTrackMutation({ state, value: 5 });
+		const record = { position: { topic, partition, offset: 43n }, mutation };
+
+		const late = await oldOwner.applyDurableMutations({ records: [record] });
+		expect(late.map((result) => result.kind)).toEqual(["failed"]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
+
+		const landed = await newOwner.applyDurableMutations({ records: [record] });
+		expect(landed).toEqual([{ kind: "applied", mutation, nextOffset: 44n }]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(44n);
+		expect(fake.updates).toHaveLength(1);
+	});
+
+	test("work queued before a re-claim keeps the claim it was submitted under, so it cannot land after it", async () => {
+		const gate = Promise.withResolvers<void>();
+		const fake = createFakeCommitterDb({
+			storedNextOffset: 43n,
+			flushGate: gate.promise,
+		});
+		const store = createStore(fake);
+		await store.claimPartition({ topic, partition });
+		await store.loadProgress({ topic, partition });
+		const state = createState({ balance: 100 });
+		const mutation = createTrackMutation({ state, value: 5 });
+
+		const ahead = Promise.resolve(
+			store.advanceCommandNextOffset({
+				topic,
+				partition,
+				commandNextOffset: 5n,
+			}),
+		).catch((cause: unknown) => cause);
+		const queued = store.applyDurableMutations({
+			records: [{ position: { topic, partition, offset: 43n }, mutation }],
+		});
+		await store.claimPartition({ topic, partition });
+		gate.resolve();
+
+		expect(await ahead).toBeInstanceOf(FlushBookmarkConflictError);
+		expect((await queued).map((result) => result.kind)).toEqual(["failed"]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
+	});
+
+	test("a partition bookmarked for the first time carries its owner's claim", async () => {
+		const fake = createFakeCommitterDb();
+		const store = createStore(fake);
+		await store.claimPartition({ topic, partition });
+		await store.initializePartition({ topic, partition, nextOffset: 0n });
+		const claim = fake.claims.get(`${topic}[${partition}]`);
+		expect(claim).toBeString();
+		const intruder = createStore(fake);
+		await intruder.loadProgress({ topic, partition });
+		const state = createState({ balance: 100 });
+		const mutation = createTrackMutation({ state, value: 5 });
+		await intruder.claimPartition({ topic, partition });
+		expect(fake.claims.get(`${topic}[${partition}]`)).not.toBe(claim);
+		const refused = await store.applyDurableMutations({
+			records: [{ position: { topic, partition, offset: 0n }, mutation }],
+		});
+		expect(refused.map((result) => result.kind)).toEqual(["failed"]);
 	});
 
 	test("a record whose bookmark was moved by another worker: earlier ones apply, it fails, later ones are blocked, the bookmark stops at it", async () => {

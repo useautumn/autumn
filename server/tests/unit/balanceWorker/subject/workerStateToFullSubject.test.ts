@@ -453,8 +453,16 @@ describe("workerStateToFullSubject: flags", () => {
 
 describe("workerStateToFullSubject: free trials", () => {
 	test("a product renders its free trial from the catalog; one the catalog lacks renders none", () => {
-		const trialing = { ...product({ id: "cp_trial" }), free_trial_id: "ft_1" };
-		const gone = { ...product({ id: "cp_gone" }), free_trial_id: "ft_gone" };
+		const trialing = {
+			...product({ id: "cp_trial" }),
+			free_trial_id: "ft_1",
+			created_at: 2,
+		};
+		const gone = {
+			...product({ id: "cp_gone" }),
+			free_trial_id: "ft_gone",
+			created_at: 1,
+		};
 		const state = customerMemory({ customerProducts: [trialing, gone] });
 		const freeTrial = {
 			id: "ft_1",

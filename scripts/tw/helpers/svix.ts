@@ -1,7 +1,6 @@
 // Svix files run on a separate pool with an application per worker.
 // Normal workers never receive Svix credentials or application bindings.
 
-import { readFile } from "node:fs/promises";
 import { AppEnv } from "@autumn/shared";
 import {
 	createSvixApp as serverCreateSvixApp,
@@ -9,61 +8,11 @@ import {
 } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
-import type { ShardPlan } from "../types.js";
+import { detectCapabilities } from "./testCapabilities.ts";
 
-/** Matches imports of the Svix webhook test utils, the server's Svix client, or the atmn CLI test utils (every `atmn pull` lists webhooks). */
-const SVIX_IMPORT_REGEX =
-	/from\s+["'][^"']*\/(svixWebhookTestUtils|webhookTestUtils|external\/svix\/svixUtils|atmnUtils\/\w+)(\.js)?["']/;
-
-/** Max number of files read concurrently to keep file-descriptor pressure bounded. */
-const READ_CONCURRENCY = 32;
-
-/**
- * Returns whether a single test file needs the Svix shard by statically scanning
- * its source for a Svix test-utils, Svix client, or atmn CLI test-utils import. Returns `false` (and does not
- * throw) when the file can't be read, so a transient read error never silently
- * promotes a non-Svix file onto the dedicated shard.
- */
-export const needsSvix = async (file: string): Promise<boolean> => {
-	try {
-		const source = await readFile(file, "utf8");
-		return SVIX_IMPORT_REGEX.test(source);
-	} catch {
-		return false;
-	}
-};
-
-/**
- * Partitions the selected test files into the dedicated Svix shard
- * (`svixFiles`) vs. the general pool (`normalFiles`) by scanning each file's
- * imports. Files are read concurrently with a bounded window; the input order is
- * preserved within each bucket.
- */
-export const partitionShards = async (
-	testFiles: string[],
-): Promise<ShardPlan> => {
-	const flags = new Array<boolean>(testFiles.length);
-
-	for (let start = 0; start < testFiles.length; start += READ_CONCURRENCY) {
-		const window = testFiles.slice(start, start + READ_CONCURRENCY);
-		const results = await Promise.all(window.map((file) => needsSvix(file)));
-		for (const [offset, isSvix] of results.entries()) {
-			flags[start + offset] = isSvix;
-		}
-	}
-
-	const svixFiles: string[] = [];
-	const normalFiles: string[] = [];
-	for (const [index, file] of testFiles.entries()) {
-		if (flags[index]) {
-			svixFiles.push(file);
-		} else {
-			normalFiles.push(file);
-		}
-	}
-
-	return { svixFiles, normalFiles };
-};
+/** Whether a test file belongs on the Svix shard; detection lives in the capability registry. */
+export const needsSvix = async (file: string): Promise<boolean> =>
+	(await detectCapabilities(file)).includes("svix");
 
 // Record each application before its worker boots so provisioning failures remain cleanable.
 export const createSvixApp = async (orgId: string): Promise<string> => {

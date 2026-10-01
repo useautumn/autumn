@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { isStripeResourceMissing } from "../../common/utils/isStripeResourceMissing.js";
 
 // Helper type for InvoicePayment with expanded payment intent
 type InvoicePaymentWithExpandedPaymentIntent = Omit<
@@ -46,18 +47,28 @@ type UnionToIntersection<U> = (
 export type ExpandedStripeInvoice<T extends InvoiceExpandKey[]> =
 	Stripe.Invoice & UnionToIntersection<InvoiceExpandMap[T[number]]>;
 
-/** Dynamically typed Stripe invoice based on expand params */
-export const getStripeInvoice = async <T extends InvoiceExpandKey[]>({
+/** Dynamically typed Stripe invoice based on expand params. `onNotFound` decides a missing invoice: throw your own error, or return a fallback. */
+export const getStripeInvoice = async <
+	T extends InvoiceExpandKey[],
+	NotFound = never,
+>({
 	stripeClient,
 	invoiceId,
 	expand,
+	onNotFound,
 }: {
 	stripeClient: Stripe;
 	invoiceId: string;
 	expand: T;
-}): Promise<ExpandedStripeInvoice<T>> => {
-	const invoice = await stripeClient.invoices.retrieve(invoiceId, {
-		expand: expand as string[],
-	});
-	return invoice as unknown as ExpandedStripeInvoice<T>;
+	onNotFound?: () => NotFound;
+}): Promise<ExpandedStripeInvoice<T> | NotFound> => {
+	try {
+		const invoice = await stripeClient.invoices.retrieve(invoiceId, {
+			expand: expand as string[],
+		});
+		return invoice as unknown as ExpandedStripeInvoice<T>;
+	} catch (error) {
+		if (onNotFound && isStripeResourceMissing(error)) return onNotFound();
+		throw error;
+	}
 };

@@ -109,7 +109,12 @@ export function createHerald({
 	function buildJobs(): RunningStreamConsumer[] {
 		return createHeraldConsumers({ ctx: consumersCtx }).map((streamConsumer) =>
 			createStreamConsumer({
-				ctx: { kafka, logger: ctx.logger, onCrashed: ctx.onConsumerCrashed },
+				ctx: {
+					kafka,
+					logger: ctx.logger,
+					db: ctx.postgres.db,
+					onCrashed: ctx.onConsumerCrashed,
+				},
 				config: {
 					topic: env.HERALD_METERING_TOPIC,
 					groupIdPrefix: env.HERALD_GROUP_ID,

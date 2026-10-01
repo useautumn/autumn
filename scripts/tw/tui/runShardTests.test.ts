@@ -10,17 +10,103 @@ beforeEach(resetTui);
 
 test("Svix workers exist only for selected Svix files", () => {
 	expect(
-		planShardWorkers({ workers: 200, normalFileCount: 689, svixFileCount: 0 }),
-	).toEqual({ totalWorkers: 200, svixWorkers: 0 });
+		planShardWorkers({
+			workers: 200,
+			normalFileCount: 689,
+			capabilityFileCounts: [],
+		}),
+	).toEqual({ totalWorkers: 200, capabilityWorkers: [] });
 	expect(
-		planShardWorkers({ workers: 200, normalFileCount: 689, svixFileCount: 26 }),
-	).toEqual({ totalWorkers: 200, svixWorkers: 7 });
+		planShardWorkers({
+			workers: 200,
+			normalFileCount: 689,
+			capabilityFileCounts: [26],
+		}),
+	).toEqual({ totalWorkers: 200, capabilityWorkers: [7] });
 	expect(
-		planShardWorkers({ workers: 200, normalFileCount: 0, svixFileCount: 1 }),
-	).toEqual({ totalWorkers: 1, svixWorkers: 1 });
+		planShardWorkers({
+			workers: 200,
+			normalFileCount: 0,
+			capabilityFileCounts: [1],
+		}),
+	).toEqual({ totalWorkers: 1, capabilityWorkers: [1] });
 	expect(() =>
-		planShardWorkers({ workers: 1, normalFileCount: 1, svixFileCount: 1 }),
+		planShardWorkers({
+			workers: 1,
+			normalFileCount: 1,
+			capabilityFileCounts: [1],
+		}),
 	).toThrow("--max>=2");
+});
+
+test("every selected capability gets at least one worker without starving normal tests", () => {
+	expect(
+		planShardWorkers({
+			workers: 200,
+			normalFileCount: 689,
+			capabilityFileCounts: [26, 1, 1],
+		}),
+	).toEqual({ totalWorkers: 200, capabilityWorkers: [7, 1, 1] });
+	expect(
+		planShardWorkers({
+			workers: 3,
+			normalFileCount: 10,
+			capabilityFileCounts: [26, 1],
+		}),
+	).toEqual({ totalWorkers: 3, capabilityWorkers: [1, 1] });
+	expect(() =>
+		planShardWorkers({
+			workers: 2,
+			normalFileCount: 1,
+			capabilityFileCounts: [1, 1],
+		}),
+	).toThrow("Selected test shards require --max>=3");
+});
+
+test("a mixed run always keeps a worker for normal tests", () => {
+	expect(
+		planShardWorkers({
+			workers: 4,
+			normalFileCount: 10,
+			capabilityFileCounts: [10],
+		}),
+	).toEqual({ totalWorkers: 4, capabilityWorkers: [2] });
+	expect(
+		planShardWorkers({
+			workers: 3,
+			normalFileCount: 1,
+			capabilityFileCounts: [100, 100],
+		}),
+	).toEqual({ totalWorkers: 3, capabilityWorkers: [1, 1] });
+});
+
+test("capability-only runs use every worker", () => {
+	expect(
+		planShardWorkers({
+			workers: 4,
+			normalFileCount: 0,
+			capabilityFileCounts: [3, 3, 3],
+		}),
+	).toEqual({ totalWorkers: 4, capabilityWorkers: [1, 1, 2] });
+});
+
+test("a capped capability shard never gets more workers than its cap", () => {
+	expect(
+		planShardWorkers({
+			workers: 200,
+			normalFileCount: 689,
+			capabilityFileCounts: [26, 3],
+			capabilityMaxWorkers: [undefined, 1],
+		}),
+	).toEqual({ totalWorkers: 200, capabilityWorkers: [7, 1] });
+	expect(
+		planShardWorkers({
+			workers: 10,
+			normalFileCount: 0,
+			capabilityFileCounts: [3],
+			capabilityMaxWorkers: [1],
+		}),
+	).toEqual({ totalWorkers: 1, capabilityWorkers: [1] });
 });
 
 test("a busy Svix shard does not block normal tests or overwrite the combined count", async () => {

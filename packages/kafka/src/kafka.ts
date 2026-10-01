@@ -167,6 +167,7 @@ export type {
 	MeteringRecordHandler,
 	MeteringRecordSlice,
 	MeteringRecordsHandler,
+	MeteringStaleRecord,
 } from "./topics/metering/consumer/types/meteringConsumer.js";
 export type {
 	MeteringLogEntry,

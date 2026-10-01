@@ -134,6 +134,30 @@ export type NotOwnerAnswer = {
 	notReady?: true;
 };
 
+/** One send, then up to three more after an ownership refresh each; the deadline cuts it short.
+ *  Attempts that end at an owner still activating are counted apart, so a redirect followed
+ *  by a NOT_READY still has its retries. */
+export const MAX_ROUTE_ATTEMPTS = 4;
+
+const CONNECTION_REFUSED_CODES = new Set(["ConnectionRefused", "ECONNREFUSED"]);
+
+export function isConnectionRefused({ cause }: { cause: unknown }): boolean {
+	const visited = new Set<unknown>();
+	let current = cause;
+	while (
+		current !== null &&
+		typeof current === "object" &&
+		!visited.has(current)
+	) {
+		visited.add(current);
+		const { code } = current as { code?: unknown };
+		if (typeof code === "string" && CONNECTION_REFUSED_CODES.has(code))
+			return true;
+		current = (current as { cause?: unknown }).cause;
+	}
+	return false;
+}
+
 /** How many attempts in a row may end at a NOT_READY owner before the request gives up on it. */
 export const MAX_NOT_READY_RETRIES = 3;
 

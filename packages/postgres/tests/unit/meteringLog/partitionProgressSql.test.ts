@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import {
+	claimPartitionProgress,
 	insertPartitionProgress,
 	readNextOffset,
 	readPartitionProgress,
@@ -57,6 +58,7 @@ describe("partitionProgress repo", () => {
 			nextOffset: 43n,
 			commandNextOffset: null,
 			ownerFence: { epoch: 512n, offset: 40n },
+			claimToken: null,
 		});
 		const unfenced = capturingDb({
 			rows: [{ next_offset: "43", command_next_offset: "2" }],
@@ -67,7 +69,37 @@ describe("partitionProgress repo", () => {
 				topic: "metering",
 				partition: 7,
 			}),
-		).toEqual({ nextOffset: 43n, commandNextOffset: 2n, ownerFence: null });
+		).toEqual({
+			nextOffset: 43n,
+			commandNextOffset: 2n,
+			ownerFence: null,
+			claimToken: null,
+		});
+	});
+
+	test("readPartitionProgress reads the claim token with the bookmark, so a writer can tell its own landing apart", async () => {
+		const { db, statements } = capturingDb({
+			rows: [
+				{
+					next_offset: "43",
+					command_next_offset: null,
+					claim_token: "claim_a",
+				},
+			],
+		});
+		expect(
+			await readPartitionProgress({
+				ctx: { db },
+				topic: "metering",
+				partition: 7,
+			}),
+		).toEqual({
+			nextOffset: 43n,
+			commandNextOffset: null,
+			ownerFence: null,
+			claimToken: "claim_a",
+		});
+		expect(statements[0]?.sql.replace(/\s+/g, " ")).toContain("claim_token");
 	});
 
 	test("readNextOffset refuses a value that is not an offset", async () => {
@@ -88,7 +120,36 @@ describe("partitionProgress repo", () => {
 			nextOffset: 0n,
 		});
 		expect(statements.map((statement) => statement.params)).toEqual([
-			["metering", 7, 0n],
+			["metering", 7, 0n, null],
 		]);
+	});
+
+	test("an insert by a claimed owner stamps its claim on the new bookmark", async () => {
+		const { db, statements } = capturingDb({ rows: [] });
+		await insertPartitionProgress({
+			ctx: { db },
+			topic: "metering",
+			partition: 7,
+			nextOffset: 0n,
+			claimToken: "claim_a",
+		});
+		expect(statements[0]?.sql.replace(/\s+/g, " ").trim()).toBe(
+			"INSERT INTO partition_progress (topic, partition_id, next_offset, claim_token) VALUES ($1, $2, $3, $4)",
+		);
+		expect(statements[0]?.params).toEqual(["metering", 7, 0n, "claim_a"]);
+	});
+
+	test("a claim replaces the partition's claim token and nothing else", async () => {
+		const { db, statements } = capturingDb({ rows: [] });
+		await claimPartitionProgress({
+			ctx: { db },
+			topic: "metering",
+			partition: 7,
+			claimToken: "claim_b",
+		});
+		expect(statements[0]?.sql.replace(/\s+/g, " ").trim()).toBe(
+			"UPDATE partition_progress SET claim_token = $1 WHERE topic = $2 AND partition_id = $3",
+		);
+		expect(statements[0]?.params).toEqual(["claim_b", "metering", 7]);
 	});
 });

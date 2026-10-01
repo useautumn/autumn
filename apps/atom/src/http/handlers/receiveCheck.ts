@@ -5,18 +5,9 @@ import type { AtomHttpEnv } from "../types/atomHttp.js";
 
 const API_VERSION_HEADER = "x-api-version";
 
-/** A body that is not JSON is read as none, so the API is the one to refuse it. */
-const parseJson = ({ text }: { text: string }): unknown => {
-	try {
-		return JSON.parse(text);
-	} catch {
-		return undefined;
-	}
-};
-
-export async function receiveCheck(context: Context<AtomHttpEnv>) {
+export function receiveCheck(context: Context<AtomHttpEnv>) {
 	const request = checkCallToRequest({
-		body: parseJson({ text: await context.req.text() }),
+		body: context.get("body"),
 		query: context.req.query(),
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
 		requestId: `atom_req_${crypto.randomUUID()}`,

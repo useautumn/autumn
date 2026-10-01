@@ -27,6 +27,16 @@ const storedSubjectFromRow = ({
 	readAt: Number(row.readAt),
 });
 
+/** How many subjects the file holds: what a restart finds, or does not. */
+export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
+	const row = ctx.sqliteDb
+		.query<{ count: bigint }, []>(
+			"SELECT count(*) AS count FROM subject_states",
+		)
+		.get();
+	return Number(row?.count ?? 0);
+};
+
 export const readSubject = ({
 	ctx,
 	customerId,

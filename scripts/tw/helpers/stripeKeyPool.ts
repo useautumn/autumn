@@ -29,6 +29,8 @@
 // `stripe` dep, so we re-export it rather than `import Stripe from "stripe"` here.
 export { stripeClientForKey } from "@server/external/connect/stripeFromKey.js";
 
+import { isStripeConnectShardKey } from "./stripeConnectShard.ts";
+
 /**
  * Env vars the pool is assembled from, in order. `_OLD` holds an earlier
  * generation of platform keys that was retired when the swarm kept hitting
@@ -63,7 +65,7 @@ export const collectPoolKeys = (): string[] => {
 
 	for (const envVar of STRIPE_POOL_ENV_VARS) {
 		for (const key of splitKeys(process.env[envVar])) {
-			if (seen.has(key)) continue;
+			if (seen.has(key) || isStripeConnectShardKey(key)) continue;
 			seen.add(key);
 			keys.push(key);
 		}

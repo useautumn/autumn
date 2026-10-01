@@ -12,6 +12,7 @@
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@alienplatform/bindings": "3.3.25",
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/logging": "workspace:*",

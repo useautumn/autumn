@@ -11,5 +11,6 @@ export type SqliteStore = {
 	setSubject(params: { subject: StoredSubject }): boolean;
 	/** All in one write, so a reader never sees one without the others. One answer per subject, in order. */
 	setSubjects(params: { subjects: StoredSubject[] }): boolean[];
+	countSubjects(): number;
 	close(): void;
 };

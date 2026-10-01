@@ -556,24 +556,70 @@ test("a batch answered NOT_READY with less than the retry budget left is not res
 	expect(fixture.requests).toHaveLength(1);
 });
 
-test("a route still stale after one refresh rejects not_submitted", async () => {
+test("a batch gets the same route attempts as a single request, then rejects not_submitted", async () => {
 	const fixture = createFixture();
 	const pending = fixture.client.track({ command: commandFor("a") });
-	fixture.requests[0].respond(notOwner);
-	await fixture.sent(2);
-	fixture.requests[1].respond(notOwner);
+	for (let send = 0; send < 4; send++) {
+		await fixture.sent(send + 1);
+		fixture.requests[send].respond(notOwner);
+	}
 	await expect(pending).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 		outcome: "not_submitted",
 		routing: {
-			sends: 2,
-			refreshes: 1,
+			sends: 4,
+			refreshes: 3,
 			followedHint: false,
 			notReadyAnswers: 0,
 		},
 	});
+	expect(fixture.refreshes()).toBe(3);
+	expect(fixture.requests).toHaveLength(4);
+});
+
+test("a batch whose route settles on the third refresh still lands", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	for (let send = 0; send < 3; send++) {
+		await fixture.sent(send + 1);
+		fixture.requests[send].respond(notOwner);
+	}
+	await fixture.sent(4);
+	fixture.requests[3].respond(okResults(["a"]));
+	expect(await pending).toEqual(replyFor("a"));
+});
+
+test("a batch refused on every attempt is an unsent transport failure with no sends", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	const refusal = Object.assign(new Error("Unable to connect"), {
+		code: "ConnectionRefused",
+	});
+	for (let send = 0; send < 4; send++) {
+		await fixture.sent(send + 1);
+		fixture.requests[send].fail(refusal);
+	}
+	await expect(pending).rejects.toMatchObject({
+		code: "TRANSPORT",
+		outcome: "not_submitted",
+		cause: refusal,
+		routing: { sends: 0, refreshes: 3 },
+	});
+});
+
+test("a batch whose worker refused the connection never reached it, so it refreshes and resends", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	fixture.requests[0].fail(
+		Object.assign(new Error("Unable to connect"), {
+			code: "ConnectionRefused",
+		}),
+	);
+	await fixture.sent(2);
 	expect(fixture.refreshes()).toBe(1);
-	expect(fixture.requests).toHaveLength(2);
+	expect(fixture.requests[1].url).toBe("http://worker-b:8080/v1/track-batch");
+	fixture.requests[1].respond(okResults(["a"]));
+	expect(await pending).toEqual(replyFor("a"));
 });
 
 test("a partition with no owner refreshes once, then fails NO_OWNER unsent", async () => {

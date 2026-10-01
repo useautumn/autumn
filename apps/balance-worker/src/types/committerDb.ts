@@ -12,7 +12,10 @@ export type CommitterDb = {
 		params: PartitionPosition,
 	): Promise<PartitionProgressRow | null>;
 	insertPartitionProgress(
-		params: PartitionPosition & { nextOffset: bigint },
+		params: PartitionPosition & { nextOffset: bigint; claimToken?: string },
+	): Promise<void>;
+	claimPartitionProgress(
+		params: PartitionPosition & { claimToken: string },
 	): Promise<void>;
 	/** One transaction: every row update, then every bookmark; rolls back when a bookmark did not move. */
 	flush(request: FlushRequest): Promise<FlushResult>;
