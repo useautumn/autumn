@@ -8,10 +8,12 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 
+/** Keeps the webhook from linking the subscription, leaving it for a first import. */
+const SKIPS_AUTO_SYNC = { autumn_managed: "true" };
+
 const qaProducts = () => ({
 	free: products.base({
 		id: "free",
-		isDefault: true,
 		group: "main",
 		items: [items.monthlyMessages({ includedUsage: 10 })],
 	}),
@@ -74,6 +76,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: pro.id,
+			metadata: SKIPS_AUTO_SYNC,
 		});
 	},
 );
@@ -196,6 +199,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: seats.id,
+			metadata: SKIPS_AUTO_SYNC,
 		});
 	},
 );
