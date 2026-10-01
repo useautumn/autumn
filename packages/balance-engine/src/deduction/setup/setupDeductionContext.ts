@@ -1,3 +1,4 @@
+import { resolveAllocationGate } from "../../allocations/resolveAllocationGate.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import type { DeductionContext } from "../types/deductionContext.js";
 import type { DeductionSelection } from "../types/deductionRequest.js";
@@ -66,6 +67,12 @@ export const setupDeductionContext = ({
 		spendLimitByFeatureId,
 		usageWindowLimits,
 		usageWindows: fullSubject.usage_windows,
+		allocationGate: resolveAllocationGate({
+			fullSubject,
+			selection,
+			customerEntitlements,
+			rows,
+		}),
 		overdueBlocked,
 	};
 };

@@ -18,6 +18,10 @@ import {
 	consumeUsageWindows,
 	deductionRowToUsageWindowHeadroom,
 } from "../limits/usageWindows.js";
+import {
+	allocationHeadroomOf,
+	consumeAllocation,
+} from "../../../allocations/allocationDraw.js";
 import { clampChange } from "./clampChange.js";
 
 export type DeductionBucket =
@@ -176,7 +180,16 @@ export const deductFromRows = ({
 			bucket === "overage" && !refund && deductionState.terms.enforcesSpendLimit
 				? deductionRowToSpendLimitHeadroom({ context, deductionState, row })
 				: null;
-		const amount = creditsFor({ context, row, units, deductionState });
+		// Shared rows hold an entity to its share plus unallocated credits; overage isn't gated.
+		const allocationHeadroom =
+			bucket === "overage" || refund || allowsNegative({ deductionState })
+				? null
+				: allocationHeadroomOf({ context, deductionState, row });
+		if (allocationHeadroom?.isZero()) continue;
+		const drawable = creditsFor({ context, row, units, deductionState });
+		const amount = allocationHeadroom
+			? Decimal.min(drawable, allocationHeadroom)
+			: drawable;
 		const change = clampChange({
 			current: deductionRowToCurrentBalance({
 				row,
@@ -190,6 +203,12 @@ export const deductFromRows = ({
 		// A rate card may hand out units for no credits (a free tier); only a draw that moved nothing is skipped.
 		const unitsGiven = unitsFor({ row, units, change, deductionState });
 		if (unitsGiven.abs().lte(CREDIT_RATE_EPSILON)) continue;
+		consumeAllocation({
+			context,
+			deductionState,
+			row,
+			credits: change,
+		});
 		deductionState.deltas.push(changeToDelta({ row, change, unitsGiven }));
 		deductionState.remaining = deductionState.remaining.minus(unitsGiven);
 		consumeUsageWindows({

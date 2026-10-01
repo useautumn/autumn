@@ -35,7 +35,7 @@ const liveWindowOf = ({
 };
 
 /** A counter only counts inside its stamped window; expired or re-derived bounds read as zero. */
-const storedUsageOf = ({
+export const storedUsageOf = ({
 	context,
 	limit,
 }: {
