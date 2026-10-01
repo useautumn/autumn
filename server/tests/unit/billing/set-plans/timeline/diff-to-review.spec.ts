@@ -283,6 +283,23 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		).toEqual([["pro:false", "sso:true"], ["premium:false"]]);
 	});
 
+	test("an ongoing entity plan removed by a customer-level request shows removed in the first phase only", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [
+					running({ product: pro }),
+					running({ product: enterprise, internalEntityId: "ent_2" }),
+				],
+				opening: [{ fullProduct: pro }],
+				later: [{ startsAt: PHASE_B, plans: [{ fullProduct: premium }] }],
+			}),
+		});
+		expect(phaseRows(review)).toEqual([
+			["enterprise:ends", "pro:kept"],
+			["premium:starts"],
+		]);
+	});
+
 	test("a plan updated now and updated differently later shows both updates", () => {
 		const review = reviewFor({
 			billingContext: buildContext({

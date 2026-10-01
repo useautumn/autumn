@@ -1,19 +1,22 @@
+/** Every entity, or only the listed scopes (null is the customer level). */
+export type RequestEntityScope = "allEntities" | Set<string | null>;
+
 /**
- * Only rows on the targeted subscription and in a scope the request names enter
+ * Only rows on the targeted subscription and in the request's entity scope enter
  * the timeline; everything else is never ended, re-timed or shown.
  */
 export const isInRequestScope = ({
 	customerProductId,
 	internalEntityId,
 	stripeScopeCustomerProductIds,
-	representedScopes,
+	entityScope,
 }: {
 	customerProductId: string;
 	internalEntityId: string | null;
 	/** Absent when the request targets no subscription, so every subscription is in scope. */
 	stripeScopeCustomerProductIds?: Set<string>;
-	representedScopes: Set<string | null>;
+	entityScope: RequestEntityScope;
 }) =>
 	(stripeScopeCustomerProductIds === undefined ||
 		stripeScopeCustomerProductIds.has(customerProductId)) &&
-	representedScopes.has(internalEntityId);
+	(entityScope === "allEntities" || entityScope.has(internalEntityId));

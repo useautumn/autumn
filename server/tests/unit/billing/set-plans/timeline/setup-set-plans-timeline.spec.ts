@@ -131,7 +131,7 @@ describe(chalk.yellowBright("setupSetPlansTimeline"), () => {
 		]);
 	});
 
-	test("plans on an entity the request never names are out of scope", () => {
+	test("a customer-level request ends an entity plan it leaves out", () => {
 		const entityPro = running({ product: pro, internalEntityId: "ent_1" });
 		const billingContext = buildContext({
 			existing: [entityPro],
@@ -143,9 +143,31 @@ describe(chalk.yellowBright("setupSetPlansTimeline"), () => {
 			params: { undeclared_plans: "end" },
 		});
 		expect(describeOperations(timeline.diff)).toEqual([
+			"expire:cus_prod_pro",
 			"insert:enterprise@now",
 		]);
-		expect(timeline.outOfScopeCustomerProductIds).toEqual([entityPro.id]);
+		expect(timeline.outOfScopeCustomerProductIds).toEqual([]);
+	});
+
+	test("an entity-level request leaves other entities' plans alone", () => {
+		const otherEntityPro = running({ product: pro, internalEntityId: "ent_2" });
+		const context = buildContext({
+			existing: [otherEntityPro],
+			opening: [{ fullProduct: enterprise, entity: entity("ent_1") }],
+		});
+		const billingContext = {
+			...context,
+			fullCustomer: { ...context.fullCustomer, entity: entity("ent_1") },
+		};
+		const timeline = setupSetPlansTimeline({
+			ctx,
+			billingContext,
+			params: { undeclared_plans: "end" },
+		});
+		expect(describeOperations(timeline.diff)).toEqual([
+			"insert:enterprise@now",
+		]);
+		expect(timeline.outOfScopeCustomerProductIds).toEqual([otherEntityPro.id]);
 	});
 
 	test("an entity plan the request names is in scope and ends when left out", () => {

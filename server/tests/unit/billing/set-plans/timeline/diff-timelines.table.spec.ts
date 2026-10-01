@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import chalk from "chalk";
-import { isInRequestScope } from "@/internal/billing/v2/actions/setPlans/timeline/savedTimeline/isInRequestScope";
+import {
+	isInRequestScope,
+	type RequestEntityScope,
+} from "@/internal/billing/v2/actions/setPlans/timeline/savedTimeline/isInRequestScope";
 import type { UndeclaredPlansPolicy } from "@/internal/billing/v2/actions/setPlans/timeline/types/setPlansPolicies";
 import type { TimelineRow } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineRow";
 import type { DesiredSegment } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineSegment";
@@ -236,20 +239,18 @@ const SCOPE_ENTITIES: Record<Scope, string | null> = {
 	unrepresentedEntity: "entity_2",
 };
 
-/** Setup's scope filter: rows on another subscription or an entity the request never names stay out. */
+/** Setup's scope filter: rows on another subscription, or on another entity of an entity-level request, stay out. */
 const inRequestScope = ({
 	tableCase,
 	rows,
-	desired,
 }: {
 	tableCase: TableCase;
 	rows: TimelineRow[];
-	desired: DesiredSegment[];
 }) => {
-	const representedScopes = new Set<string | null>([
-		null,
-		...desired.map(({ internalEntityId }) => internalEntityId),
-	]);
+	const entityScope: RequestEntityScope =
+		tableCase.scope === "unrepresentedEntity"
+			? new Set<string | null>([SCOPE_ENTITIES.entity, null])
+			: "allEntities";
 	const stripeScopeCustomerProductIds =
 		tableCase.scope === "otherSubscription"
 			? new Set(
@@ -263,7 +264,7 @@ const inRequestScope = ({
 			customerProductId: row.customerProductId,
 			internalEntityId: row.internalEntityId,
 			stripeScopeCustomerProductIds,
-			representedScopes,
+			entityScope,
 		}),
 	);
 };
@@ -299,7 +300,6 @@ const buildCase = (tableCase: TableCase): TimelineCase => {
 				savedRow({ id: "background_row", plan: background }),
 				...subjectRows({ tableCase, subject, entity }),
 			],
-			desired: desiredSegments,
 		}),
 		desired: desiredTimeline({ segments: desiredSegments }),
 		policies: policiesFor({ undeclared: tableCase.policy }),

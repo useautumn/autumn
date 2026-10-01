@@ -14,25 +14,31 @@ import { diffTimelines } from "../timeline/diffTimelines/diffTimelines";
 import { createConfigInterner } from "../timeline/instanceConfig/createConfigInterner";
 import { customerProductToGrantedLicenses } from "../timeline/instanceConfig/instanceConfigs";
 import { customerProductsToTimelineRows } from "../timeline/savedTimeline/customerProductsToTimelineRows";
-import { isInRequestScope } from "../timeline/savedTimeline/isInRequestScope";
+import {
+	isInRequestScope,
+	type RequestEntityScope,
+} from "../timeline/savedTimeline/isInRequestScope";
 import { rowsToSavedTimeline } from "../timeline/savedTimeline/rowsToSavedTimeline";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { setupSetPlansPolicies } from "./setupSetPlansPolicies";
 
-/** The request's scope: the request's own entity or customer, plus every scope a plan names. */
-const representedScopesOf = ({
+/** A customer-level request declares every entity's plans; an entity request only its own and those it names. */
+const requestEntityScopeOf = ({
 	billingContext,
 	requestedPhases,
 }: {
 	billingContext: CreateScheduleBillingContext;
 	requestedPhases: RequestedPhase[];
-}) =>
-	new Set<string | null>([
-		billingContext.fullCustomer.entity?.internal_id ?? null,
+}): RequestEntityScope => {
+	const requestEntity = billingContext.fullCustomer.entity;
+	if (!requestEntity) return "allEntities";
+	return new Set<string | null>([
+		requestEntity.internal_id,
 		...requestedPhases.flatMap(({ plans }) =>
 			plans.map(({ internalEntityId }) => internalEntityId),
 		),
 	]);
+};
 
 const scopedCustomerProducts = ({
 	billingContext,
@@ -41,10 +47,7 @@ const scopedCustomerProducts = ({
 	billingContext: CreateScheduleBillingContext;
 	requestedPhases: RequestedPhase[];
 }): FullCusProduct[] => {
-	const representedScopes = representedScopesOf({
-		billingContext,
-		requestedPhases,
-	});
+	const entityScope = requestEntityScopeOf({ billingContext, requestedPhases });
 	const stripeScopeIds = billingContext.stripeSubscriptionScope
 		? new Set(billingContext.stripeSubscriptionScope.customerProductIds)
 		: undefined;
@@ -54,7 +57,7 @@ const scopedCustomerProducts = ({
 				customerProductId: customerProduct.id,
 				internalEntityId: customerProduct.internal_entity_id ?? null,
 				stripeScopeCustomerProductIds: stripeScopeIds,
-				representedScopes,
+				entityScope,
 			}),
 	);
 };
