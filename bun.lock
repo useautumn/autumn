@@ -389,7 +389,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "2.0.58",
+      "version": "2.0.59",
       "bin": {
         "atmn": "dist/bin.js",
       },
@@ -519,7 +519,7 @@
     },
     "packages/autumn-js": {
       "name": "autumn-js",
-      "version": "1.3.41",
+      "version": "1.3.42",
       "dependencies": {
         "query-string": "^9.2.2",
         "rou3": "^0.6.1",
@@ -798,7 +798,7 @@
     },
     "packages/gateway": {
       "name": "@useautumn/gateway",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@ai-sdk/provider": "^4.0.7",
       },
