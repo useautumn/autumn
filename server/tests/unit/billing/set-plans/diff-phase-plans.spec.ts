@@ -103,6 +103,42 @@ const previewStatuses = ({
 		currency: "usd",
 	}).map((phasePlans) => phasePlans.map((plan) => [plan.status, plan.plan_id]));
 
+const proThenPremium = ({
+	free,
+	proContinues = false,
+}: {
+	free: FullCusProduct;
+	proContinues?: boolean;
+}) => {
+	const pro = planRow({
+		id: "cp_pro",
+		planId: "pro",
+		startsAt: NOW,
+		endedAt: proContinues ? null : PHASE_TWO,
+	});
+	const premium = planRow({
+		id: "cp_premium",
+		planId: "premium",
+		status: CusProductStatus.Scheduled,
+		startsAt: PHASE_TWO,
+	});
+	return {
+		autumnBillingPlan: makeAutumnBillingPlan({
+			inserts: [pro, premium],
+			updates: [
+				makeUpdate({
+					customerProduct: free,
+					updates: { status: CusProductStatus.Expired, ended_at: NOW },
+				}),
+			],
+		}),
+		phases: [
+			{ startsAt: NOW, customerProductIds: [pro.id] },
+			{ startsAt: PHASE_TWO, customerProductIds: [premium.id] },
+		],
+	};
+};
+
 describe("diffPhasePlans", () => {
 	test("a plan added to the first phase only starts there and is absent later", () => {
 		const free = planRow({
@@ -290,7 +326,7 @@ describe("diffPhasePlans", () => {
 		]);
 	});
 
-	test("a free plan left out of a later phase ends there", () => {
+	test("a free plan left out of a newly added phase is not listed as ending", () => {
 		const free = planRow({ id: "cp_free", planId: "free", amount: 0 });
 		const pro = planRow({
 			id: "cp_pro",
@@ -316,11 +352,49 @@ describe("diffPhasePlans", () => {
 					{ startsAt: PHASE_TWO, customerProductIds: [pro.id] },
 				],
 			}),
+		).toEqual([[["kept", "free"]], [["starts", "pro"]]]);
+	});
+
+	test("a newly added phase only lists the plans it starts", () => {
+		const free = planRow({ id: "cp_free", planId: "free", amount: 0 });
+		const { autumnBillingPlan, phases } = proThenPremium({ free });
+
+		expect(
+			previewStatuses({
+				originalFullCustomer: makeFullCustomer({ customerProducts: [free] }),
+				autumnBillingPlan,
+				phases,
+			}),
 		).toEqual([
-			[["kept", "free"]],
 			[
 				["starts", "pro"],
 				["ends", "free"],
+			],
+			[["starts", "premium"]],
+		]);
+	});
+
+	test("a newly added phase re-listing a plan keeps it", () => {
+		const free = planRow({ id: "cp_free", planId: "free", amount: 0 });
+		const { autumnBillingPlan, phases } = proThenPremium({
+			free,
+			proContinues: true,
+		});
+
+		expect(
+			previewStatuses({
+				originalFullCustomer: makeFullCustomer({ customerProducts: [free] }),
+				autumnBillingPlan,
+				phases,
+			}),
+		).toEqual([
+			[
+				["starts", "pro"],
+				["ends", "free"],
+			],
+			[
+				["starts", "premium"],
+				["kept", "pro"],
 			],
 		]);
 	});

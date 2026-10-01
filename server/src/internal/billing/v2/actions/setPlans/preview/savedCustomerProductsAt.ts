@@ -47,3 +47,25 @@ export const savedCustomerProductsAt = ({
 		(customerProduct) =>
 			startsBy({ customerProduct, at }) && !endsBy({ customerProduct, at }),
 	);
+
+/** The saved state changes plans at this moment: a saved scheduled plan starts or a saved plan ends here. */
+export const isSavedPhaseStart = ({
+	fullCustomer,
+	at,
+}: {
+	fullCustomer: FullCustomer;
+	at: number;
+}) =>
+	fullCustomer.customer_products.some(
+		(customerProduct) =>
+			(customerProduct.status === CusProductStatus.Scheduled &&
+				phaseStartsMatch({
+					startsAt: customerProduct.starts_at,
+					otherStartsAt: at,
+				})) ||
+			(customerProduct.ended_at != null &&
+				phaseStartsMatch({
+					startsAt: customerProduct.ended_at,
+					otherStartsAt: at,
+				})),
+	);

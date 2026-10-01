@@ -150,10 +150,7 @@ describe("setPlansPhaseTransitions", () => {
 				["starts", "pro"],
 				["ends", "free"],
 			],
-			[
-				["starts", "premium"],
-				["ends", "free"],
-			],
+			[["starts", "premium"]],
 		]);
 	});
 
@@ -281,7 +278,7 @@ describe("setPlansPhaseTransitions", () => {
 		]);
 	});
 
-	test("a newly added phase ends the plans the saved state still holds there", () => {
+	test("a newly added phase does not list the previous phase's plans as ending", () => {
 		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
 		const premium = makeFullCusProduct({
 			planId: "premium",
@@ -309,13 +306,7 @@ describe("setPlansPhaseTransitions", () => {
 			plans.map((phasePlans) =>
 				phasePlans.map((plan) => [plan.status, plan.plan_id]),
 			),
-		).toEqual([
-			[["kept", "pro"]],
-			[
-				["starts", "premium"],
-				["ends", "pro"],
-			],
-		]);
+		).toEqual([[["kept", "pro"]], [["starts", "premium"]]]);
 		expect(
 			planChanges[1].map((change) => [
 				change.action,

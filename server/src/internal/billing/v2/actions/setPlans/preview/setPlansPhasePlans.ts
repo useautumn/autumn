@@ -14,7 +14,10 @@ import { customerProductToEntityId } from "@/internal/billing/v2/actions/buildBi
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import { diffPhasePlans, type PhasePlanDiff } from "./diffPhasePlans";
 import { autumnPriceToProcessorItemPrice } from "./processorItems/price/autumnPriceToProcessorItemPrice";
-import { savedCustomerProductsAt } from "./savedCustomerProductsAt";
+import {
+	isSavedPhaseStart,
+	savedCustomerProductsAt,
+} from "./savedCustomerProductsAt";
 
 const IMMEDIATE_PHASE_INDEX = 0;
 
@@ -94,7 +97,50 @@ const toPreviewPlan = ({
 	})),
 });
 
-/** Every plan in each phase, classified against what the customer's saved state holds at that phase's start. */
+const activeCustomerProducts = (fullCustomer: FullCustomer) =>
+	fullCustomer.customer_products.filter(customerProductHasActiveStatus);
+
+/** A saved phase diffs against the saved state; a new phase only against the previous request phase, without removals. */
+const phaseDiffs = ({
+	phase,
+	phaseIndex,
+	phaseCustomers,
+	originalFullCustomer,
+	features,
+}: {
+	phase: SchedulePhasePlan;
+	phaseIndex: number;
+	phaseCustomers: FullCustomer[];
+	originalFullCustomer: FullCustomer;
+	features: Feature[];
+}): PhasePlanDiff[] => {
+	const after = activeCustomerProducts(phaseCustomers[phaseIndex]);
+	const isSavedPhase =
+		phaseIndex === IMMEDIATE_PHASE_INDEX ||
+		isSavedPhaseStart({
+			fullCustomer: originalFullCustomer,
+			at: phase.startsAt,
+		});
+
+	if (isSavedPhase) {
+		return diffPhasePlans({
+			features,
+			before: savedCustomerProductsAt({
+				fullCustomer: originalFullCustomer,
+				at: phase.startsAt,
+			}),
+			after,
+		});
+	}
+
+	return diffPhasePlans({
+		features,
+		before: activeCustomerProducts(phaseCustomers[phaseIndex - 1]),
+		after,
+	}).filter((diff) => diff.status !== "ends");
+};
+
+/** Every plan in each phase, classified against the saved state, or the previous phase for a newly added one. */
 export const setPlansPhasePlans = ({
 	phases,
 	phaseCustomers,
@@ -112,15 +158,12 @@ export const setPlansPhasePlans = ({
 }): SetPlansPreviewPlan[][] =>
 	phases.map((phase, phaseIndex) => {
 		const phaseCustomer = phaseCustomers[phaseIndex];
-		const diffs = diffPhasePlans({
+		const diffs = phaseDiffs({
+			phase,
+			phaseIndex,
+			phaseCustomers,
+			originalFullCustomer,
 			features,
-			before: savedCustomerProductsAt({
-				fullCustomer: originalFullCustomer,
-				at: phase.startsAt,
-			}),
-			after: phaseCustomer.customer_products.filter(
-				customerProductHasActiveStatus,
-			),
 		});
 
 		return diffs.map((diff) =>
