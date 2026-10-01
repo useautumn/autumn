@@ -253,6 +253,36 @@ const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 	};
 };
 
+/** An earlier attempt landed when every bookmark sits exactly where this flush would leave it, under this writer's claim. */
+export const flushLandedEarlier = async ({
+	ctx,
+	flush,
+}: {
+	ctx: CommitterContext;
+	flush: Flush;
+}): Promise<Map<FlushCall, FlushOutcome> | null> => {
+	const outcomes = new Map<FlushCall, FlushOutcome>();
+	for (const call of flush.calls) {
+		const bookmark = bookmarkOf({ call });
+		if (!bookmark) {
+			outcomes.set(call, { nextOffset: call.expectedOffset });
+			continue;
+		}
+		const stored = await ctx.db
+			.readPartitionProgress({ topic: call.topic, partition: call.partition })
+			.catch(() => null);
+		if (!stored || stored.nextOffset !== bookmark.nextOffset) return null;
+		if (call.claimToken !== undefined && stored.claimToken !== call.claimToken)
+			return null;
+		outcomes.set(call, {
+			nextOffset: bookmark.nextOffset,
+			commandNextOffset: bookmark.commandNextOffset,
+			ownerFence: bookmark.ownerFence,
+		});
+	}
+	return outcomes;
+};
+
 /** One transaction for the whole flush: every call's row updates, then every call's bookmark. */
 export const runFlush = async ({
 	ctx,
