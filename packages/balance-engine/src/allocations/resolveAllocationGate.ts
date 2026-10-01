@@ -9,6 +9,7 @@ import type { WorkerFullCustomerEntitlementWithProduct } from "../models/subject
 import type { WorkerFullSubject } from "../models/subject/workerFullSubject.js";
 import type { DeductionRow } from "../deduction/types/deductionRow.js";
 import type { DeductionSelection } from "../deduction/types/deductionRequest.js";
+import { pickAllocationParent } from "./allocationMath.js";
 
 /** Everything the draw needs to hold an entity to its share of the customer's shared credits. */
 export type AllocationGate = {
@@ -95,7 +96,12 @@ export const resolveAllocationGate = ({
 		const shared = customerEntitlements.filter((customerEntitlement) =>
 			isSharedRow({ customerEntitlement, allocation }),
 		);
-		const parent = shared[0];
+		const parent = pickAllocationParent({
+			sharedRows: shared.map((row) => ({
+				...row,
+				is_pooled_balance: Boolean(row.pooled_balance),
+			})),
+		});
 		if (!parent?.next_reset_at) continue;
 
 		const bounds = getUsageWindowBounds({

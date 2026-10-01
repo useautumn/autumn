@@ -105,6 +105,7 @@ export const CustomerUpdateSchema = z.object({
 		email: true,
 		send_email_receipts: true,
 		processor: true,
+		balance_allocations: true,
 	}).partial(),
 });
 

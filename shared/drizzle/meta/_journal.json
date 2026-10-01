@@ -638,6 +638,13 @@
       "when": 1790694602925,
       "tag": "0090_fluffy_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1790864562801,
+      "tag": "0091_customer_balance_allocations",
+      "breakpoints": true
     }
   ]
 }

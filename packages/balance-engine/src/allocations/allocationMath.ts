@@ -95,3 +95,24 @@ export const packAllocationGap = ({
 		entries.map((entry) => [entry.entityId, usage[entry.entityId] ?? 0]),
 	);
 };
+
+/** The shared row whose cycle allocations follow: the pool when there is one, else the soonest to reset. */
+export const pickAllocationParent = <
+	T extends {
+		id: string;
+		next_reset_at: number | null;
+		is_pooled_balance?: boolean | null;
+	},
+>({
+	sharedRows,
+}: {
+	sharedRows: T[];
+}): T | undefined => {
+	const resetting = sharedRows.filter((row) => row.next_reset_at !== null);
+	const pooled = resetting.find((row) => row.is_pooled_balance);
+	if (pooled) return pooled;
+	return [...resetting].sort(
+		(a, b) =>
+			(a.next_reset_at ?? 0) - (b.next_reset_at ?? 0) || a.id.localeCompare(b.id),
+	)[0];
+};

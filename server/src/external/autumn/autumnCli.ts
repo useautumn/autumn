@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
+	type AllocateBalancesParamsV0,
+	type AllocateBalancesResponse,
 	type ApiBaseEntity,
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
@@ -1327,6 +1329,10 @@ export class AutumnInt {
 	};
 
 	balances = {
+		allocate: async (
+			params: AllocateBalancesParamsV0,
+		): Promise<AllocateBalancesResponse> =>
+			this.post(`/balances.allocate`, params),
 		create: async (params: CreateBalanceParamsV0) => {
 			const data = await this.post(`/balances/create`, params);
 			return data;
