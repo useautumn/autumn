@@ -2,7 +2,29 @@ import { describe, expect, it, mock } from "bun:test";
 import { Writable } from "node:stream";
 
 const captureException = mock(() => "event_123");
-mock.module("@sentry/bun", () => ({ captureException }));
+const captureEvent = mock(() => "event_456");
+const loggedFrames = [
+	{
+		filename: "/app/server/src/sync/syncBatching.ts",
+		function: "queueSyncJob",
+	},
+	{
+		filename: "/app/server/src/external/logtail/logtailUtils.ts",
+		function: "log",
+	},
+	{ filename: "/app/node_modules/pino/pino.js", function: "LOG" },
+	{
+		filename: "/app/packages/errors/src/logging/prepareErrorLog.ts",
+		function: "prepareErrorLog",
+	},
+];
+mock.module("@sentry/bun", () => ({
+	captureException,
+	captureEvent,
+	getClient: () => ({
+		getOptions: () => ({ stackParser: () => loggedFrames }),
+	}),
+}));
 
 const pino = (await import("pino")).default;
 const { RecaseError } = await import("@autumn/shared");
@@ -21,7 +43,11 @@ const createTestLogger = ({ captureToSentry = true } = {}) => {
 	const logger = pino(
 		{
 			hooks: {
-				logMethod: createErrorLogHook({ service: "server", captureToSentry }),
+				logMethod: createErrorLogHook({
+					service: "server",
+					captureToSentry,
+					loggerFramePaths: ["/external/logtail/"],
+				}),
 			},
 		},
 		stream,
@@ -29,7 +55,7 @@ const createTestLogger = ({ captureToSentry = true } = {}) => {
 	const jobLogger = logger
 		.child({ context: { org_id: "org_1", org_slug: "acme", env: "live" } })
 		.child({ workflow: { id: "job_1", name: "track" } });
-	return { jobLogger, lines };
+	return { logger, jobLogger, lines };
 };
 
 describe("createErrorLogHook", () => {
@@ -62,6 +88,28 @@ describe("createErrorLogHook", () => {
 		});
 	});
 
+	it("names background work by the log's type when there is no request or job", () => {
+		captureException.mockClear();
+		const { logger } = createTestLogger();
+
+		logger.error(
+			{
+				error: new Error("deadline"),
+				type: "balance_worker_evict_queue_failed",
+			},
+			"evict failed",
+		);
+
+		expect(captureException).toHaveBeenCalledWith(
+			expect.any(Error),
+			expect.objectContaining({
+				tags: expect.objectContaining({
+					operation: "balance_worker_evict_queue_failed",
+				}),
+			}),
+		);
+	});
+
 	it("annotates the logged error with its kind and code inside the error field", () => {
 		const { jobLogger, lines } = createTestLogger();
 
@@ -89,18 +137,34 @@ describe("createErrorLogHook", () => {
 		expect(captureException).not.toHaveBeenCalled();
 	});
 
-	it("sends a text-only error line as a LoggedMessageError, logging it unchanged", () => {
-		captureException.mockClear();
+	it("sends a text-only error line titled by its message and grouped by its call site", () => {
+		captureEvent.mockClear();
 		const { jobLogger, lines } = createTestLogger();
 
 		jobLogger.error("sync failed: connection reset");
 
-		const [error, event] = captureException.mock.calls[0] as unknown as [
-			Error,
-			{ tags: Record<string, unknown> },
+		const [event] = captureEvent.mock.calls[0] as unknown as [
+			{
+				message: string;
+				level: string;
+				fingerprint: string[];
+				tags: Record<string, unknown>;
+				exception: {
+					values: { stacktrace: { frames: { function: string }[] } }[];
+				};
+			},
 		];
-		expect(error.name).toBe("LoggedMessageError");
-		expect(error.message).toBe("sync failed: connection reset");
+		expect(event.message).toBe("sync failed: connection reset");
+		expect(event.level).toBe("error");
+		expect(event.fingerprint).toEqual([
+			"logged-message",
+			"/app/server/src/sync/syncBatching.ts:queueSyncJob",
+		]);
+		expect(
+			event.exception.values[0].stacktrace.frames.map(
+				(frame) => frame.function,
+			),
+		).toEqual(["queueSyncJob"]);
 		expect(event.tags).toMatchObject({ error_kind: "bug", org_slug: "acme" });
 		expect(lines[0].msg).toBe("sync failed: connection reset");
 		expect(lines[0].error).toBeUndefined();

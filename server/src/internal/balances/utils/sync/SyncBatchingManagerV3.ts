@@ -410,6 +410,14 @@ export class SyncBatchingManagerV3 {
 			} catch (error) {
 				logger.error(
 					`[SyncDirty] Failed to mark/signal for ${context.customerId}: ${error}`,
+					{
+						error,
+						context: {
+							org_id: context.orgId,
+							env: context.env,
+							customer_id: context.customerId,
+						},
+					},
 				);
 			}
 		}
@@ -451,6 +459,14 @@ export class SyncBatchingManagerV3 {
 		} catch (error) {
 			logger.error(
 				`[SyncV4] Failed to queue sync for ${context.customerId}: ${error}`,
+				{
+					error,
+					context: {
+						org_id: context.orgId,
+						env: context.env,
+						customer_id: context.customerId,
+					},
+				},
 			);
 		}
 	}

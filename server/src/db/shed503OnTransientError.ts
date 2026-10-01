@@ -69,6 +69,7 @@ export const shed503OnTransientError = async <T>({
 			data: {
 				reason: isDbTransient ? "critical_db_saturated" : "cache_unavailable",
 			},
+			cause: error,
 		});
 	}
 };

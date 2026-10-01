@@ -43,6 +43,8 @@ import { logContextExtras } from "@/utils/logging/logContextExtras.js";
 import { withWorkerSpan } from "@/utils/otel/withWorkerSpan.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { JobName } from "./JobName.js";
+import { shouldReportJobFailure } from "./retryBudget/shouldReportJobFailure.js";
+import type { RetryBudget } from "./retryBudget/types/retryBudget.js";
 
 const actionHandlers = [
 	JobName.HandleProductsUpdated,
@@ -115,9 +117,11 @@ export const shouldRetrySqsJobError = ({
 export const processMessage = async ({
 	message,
 	db,
+	retryBudget,
 }: {
 	message: Message;
 	db: DrizzleCli;
+	retryBudget: RetryBudget;
 }) => {
 	if (!message.Body) {
 		console.warn("Received message without body");
@@ -466,15 +470,21 @@ export const processMessage = async ({
 			fn: executeJob,
 		});
 	} catch (error) {
-		reportError({
-			ctx: workerCtx ?? { logger: workerLogger },
-			error,
-			operation: job.name,
-		});
+		const ctx = workerCtx ?? { logger: workerLogger };
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
 		// Application errors (RecaseError, InternalError) are swallowed — they
 		// won't fix on retry. DB errors (connection, timeout) will.
-		if (shouldRetrySqsJobError({ jobName: job.name, error })) throw error;
+		const willRetry = shouldRetrySqsJobError({ jobName: job.name, error });
+
+		if (shouldReportJobFailure({ willRetry, receiveCount, retryBudget })) {
+			reportError({ ctx, error, operation: job.name });
+		} else {
+			ctx.logger.warn(
+				`${job.name} failed on delivery ${receiveCount}, SQS will retry`,
+				{ error },
+			);
+		}
+		if (willRetry) throw error;
 	} finally {
 		if (workerCtx) {
 			logContextExtras({ ctx: workerCtx, message: `[${job.name}] Finished` });

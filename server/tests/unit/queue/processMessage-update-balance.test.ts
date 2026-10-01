@@ -146,7 +146,11 @@ describe("processMessage update-balance jobs", () => {
 			}),
 		} satisfies Pick<Message, "MessageId" | "Body">;
 
-		await processMessage({ message: message as Message, db: {} as never });
+		await processMessage({
+			message: message as Message,
+			db: {} as never,
+			retryBudget: { kind: "unknown" },
+		});
 
 		expect(state.createWorkerContextCalls).toHaveLength(1);
 		expect(state.createWorkerContextCalls[0]).toMatchObject({

@@ -1,4 +1,5 @@
 import "../sentry.js";
+import { flushErrorReports } from "@autumn/errors";
 
 import { ms, seconds, withTimeout } from "@autumn/shared";
 import {
@@ -35,6 +36,8 @@ import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
 import { shutdownSqsSendBatchers } from "./queueUtils.js";
+import { getQueueRetryBudget } from "./retryBudget/getQueueRetryBudget.js";
+import type { RetryBudget } from "./retryBudget/types/retryBudget.js";
 import { getTrackAndUpdateBalanceWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
 	createWorkerActivityTracker,
@@ -206,6 +209,14 @@ export const startPollingLoop = async ({
 	let consecutiveZeroMessageIntervals = 0;
 
 	const prefix = logPrefix({ queueUrl });
+	// Never awaited per message: until the read lands (or if it fails) every failure is reported.
+	let retryBudget: RetryBudget = { kind: "unknown" };
+	void getQueueRetryBudget({ sqs: getSqsClientFn(), queueUrl }).then(
+		(budget) => {
+			retryBudget = budget;
+		},
+		() => {},
+	);
 	let abortController = new AbortController();
 	abortControllers.add(abortController);
 	const replaceAbortController = () => {
@@ -349,18 +360,19 @@ export const startPollingLoop = async ({
 
 		try {
 			if (timeoutMs === null) {
-				await processMessage({ message, db });
+				await processMessage({ message, db, retryBudget });
 			} else {
 				await withTimeout({
 					timeoutMs,
 					timeoutMessage: `Processing timed out after ${timeoutMs}ms`,
-					fn: () => processMessage({ message, db }),
+					fn: () => processMessage({ message, db, retryBudget }),
 				});
 			}
 		} catch (error) {
 			if (override?.ack !== "always-after-processing") throw error;
 
-			logger.error(
+			// The next scan rediscovers the work, so this attempt's failure is absorbed.
+			logger.warn(
 				`${prefix} ${job.name} failed; ACKing after processing so the next scan can retry it`,
 				{ error },
 			);
@@ -625,6 +637,7 @@ export const initWorkers = async ({
 		await stopBalanceShadow();
 		await shutdownSqsSendBatchers();
 		await getSqsJobs().shutdown();
+		await flushErrorReports({ timeoutMs: 2_000 });
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {

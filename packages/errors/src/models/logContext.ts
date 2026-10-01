@@ -9,4 +9,6 @@ export type LogContext = {
 	};
 	req?: { id?: string; name?: string };
 	workflow?: { id?: string; name?: string };
+	/** The log line's own `type`, naming background work that has no request or job. */
+	type?: string;
 };
