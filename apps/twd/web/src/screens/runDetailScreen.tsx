@@ -634,7 +634,7 @@ export const RunDetailScreen = () => {
 							repeats={repeats}
 							onOpenFile={(file) => {
 								setFilter("all");
-								setQuery(file);
+								setQuery(`${file}#`);
 							}}
 						/>
 					)}

@@ -20,8 +20,10 @@ import type {
 	StripeKey,
 	WorkerState,
 } from "../../../src/api/contract.ts";
+import { TwdError } from "../../../src/http/apiError.ts";
 import {
 	planWorkItems,
+	splitRepetitionId,
 	summariseRepeats,
 } from "../../../src/internal/runs/repeat/repetitions.ts";
 import type { Method } from "../api/client.ts";
@@ -431,7 +433,7 @@ const finishedFile = (
 	worker: string,
 	failRate: number,
 ): RunFile => {
-	const base = p90.get(file) ?? 30_000;
+	const base = p90.get(splitRepetitionId({ id: file }).file) ?? 30_000;
 	const failed = r() < failRate;
 	const slow = r() < 0.02;
 	const tests = 2 + Math.floor(r() * 14);
@@ -814,6 +816,16 @@ const startLiveRun = ({
 				passedTests: 0,
 				failedTests: 0,
 				worker: workerName(w),
+				failureSummary: null,
+			})),
+			...list.slice(done + running.length).map((file) => ({
+				file,
+				status: "queued" as const,
+				durationMs: null,
+				attempt: 0,
+				passedTests: 0,
+				failedTests: 0,
+				worker: null,
 				failureSummary: null,
 			})),
 		],
@@ -1339,18 +1351,24 @@ export const handle = ({
 				"The selection matched no test files.",
 				"Pick at least one group or file, or loosen the grep.",
 			);
-		const run = startLiveRun({
-			branch: branch.name,
-			sha: b.sha ?? branch.sha,
-			pinnedSha: b.sha !== undefined,
-			selection: b.selection,
-			createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
-			purpose: b.purpose,
-			repeat: b.repeat,
-			workerCap: 120,
-			startWorkers: 10,
-			queuedForMs: capacity().accounts.clean === 0 ? 30_000 : 0,
-		});
+		let run: RunDetail;
+		try {
+			run = startLiveRun({
+				branch: branch.name,
+				sha: b.sha ?? branch.sha,
+				pinnedSha: b.sha !== undefined,
+				selection: b.selection,
+				createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
+				purpose: b.purpose,
+				repeat: b.repeat,
+				workerCap: 120,
+				startWorkers: 10,
+				queuedForMs: capacity().accounts.clean === 0 ? 30_000 : 0,
+			});
+		} catch (error) {
+			if (!(error instanceof TwdError)) throw error;
+			return err(error.status, error.code, error.message, error.next);
+		}
 		return ok(summary(run));
 	}
 
@@ -1418,9 +1436,13 @@ export const handle = ({
 			return ok(summary(run));
 		}
 		if (method === "POST" && seg[2] === "rerun-failed") {
-			const failed = run.files
-				.filter((f) => f.status === "failed" || f.status === "crashed")
-				.map((f) => f.file);
+			const failed = [
+				...new Set(
+					run.files
+						.filter((f) => f.status === "failed" || f.status === "crashed")
+						.map((f) => splitRepetitionId({ id: f.file }).file),
+				),
+			];
 			if (!failed.length)
 				return err(
 					422,
@@ -1434,6 +1456,7 @@ export const handle = ({
 				pinnedSha: run.pinnedSha,
 				selection: { files: failed },
 				createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
+				repeat: run.repeat,
 			});
 			return ok(summary(next));
 		}

@@ -11,6 +11,7 @@ import {
 	Capacity,
 	CreateApiKeyResponse,
 	EnqueueResponse,
+	MAX_REPEAT,
 	Me,
 	RunEvent,
 	RunSummary,
@@ -208,6 +209,15 @@ const commands: Record<
 			throw new CliError(
 				"nothing selected.\n  next: twd run <group|file…> [--grep=]",
 			);
+		const repeat =
+			values.repeat === undefined ? undefined : Number(values.repeat);
+		if (
+			repeat !== undefined &&
+			!(Number.isInteger(repeat) && repeat >= 1 && repeat <= MAX_REPEAT)
+		)
+			throw new CliError(
+				`--repeat must be a whole number from 1 to ${MAX_REPEAT}.\n  next: twd run <file> --repeat=10 (flaky checks only)`,
+			);
 		const isFile = (s: string) => s.includes("/") || s.endsWith(".ts");
 		const files = positionals.filter(isFile);
 		const groups = positionals.filter((s) => !isFile(s));
@@ -221,7 +231,7 @@ const commands: Record<
 			body: {
 				branch: values.branch ?? gitBranch(),
 				...(values.workers && { maxWorkers: Number(values.workers) }),
-				...(values.repeat && { repeat: Number(values.repeat) }),
+				...(repeat !== undefined && { repeat }),
 				selection: {
 					...(groups.length && { groups }),
 					...(files.length && { files }),

@@ -121,6 +121,7 @@ describe("summariseRepeats", () => {
 				file({ file: "a.test.ts#4", status: "crashed", attempt: 2 }),
 				file({ file: "b.test.ts#1" }),
 				file({ file: "b.test.ts#2", status: "running", durationMs: null }),
+				file({ file: "b.test.ts#3", status: "queued", durationMs: null }),
 			],
 		});
 		expect(stats).toEqual([
@@ -134,7 +135,7 @@ describe("summariseRepeats", () => {
 			},
 			{
 				file: "b.test.ts",
-				total: 2,
+				total: 3,
 				done: 1,
 				firstAttemptPassed: 1,
 				passedOnRetry: 0,

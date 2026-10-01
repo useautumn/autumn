@@ -47,6 +47,20 @@ export const getRunLogs = async ({
 	const {
 		run: { repeat },
 	} = await getRunWithEmail({ ctx, runId });
+	if (repetition !== undefined && (repeat === 1 || repetition > repeat)) {
+		throw new TwdError({
+			status: 400,
+			code: "invalid_repetition",
+			message:
+				repeat === 1
+					? `Run ${runId} is not a repeat run; it has no repetitions.`
+					: `Run ${runId} repeats each file ${repeat} times; repetition ${repetition} does not exist.`,
+			next:
+				repeat === 1
+					? "Drop repetition and pass just file."
+					: `Pass repetition between 1 and ${repeat}.`,
+		});
+	}
 	const file =
 		requestedFile && repetition !== undefined
 			? toRepetitionId({ file: requestedFile, repetition })

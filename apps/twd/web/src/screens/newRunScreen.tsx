@@ -94,10 +94,12 @@ export const NewRunScreen = () => {
 	const [maxWorkers, setMaxWorkers] = useState("");
 	const workerCap = Number.parseInt(maxWorkers, 10);
 	const [repeatInput, setRepeatInput] = useState("");
-	const repeat = Math.min(
-		Math.max(Number.parseInt(repeatInput, 10) || 1, 1),
-		MAX_REPEAT,
-	);
+	const repeatValue = repeatInput.trim() === "" ? 1 : Number(repeatInput);
+	const repeatValid =
+		Number.isInteger(repeatValue) &&
+		repeatValue >= 1 &&
+		repeatValue <= MAX_REPEAT;
+	const repeat = repeatValid ? repeatValue : 1;
 	const fileCount = sel.effective.length * repeat;
 	const autoWorkers = capacity.data
 		? Math.min(fileCount, capacity.data.poolCap)
@@ -119,7 +121,11 @@ export const NewRunScreen = () => {
 			? capacityCheck({ capacity: capacity.data, files: fileCount, repeat })
 			: null;
 	const canStart =
-		!!branch && fileCount > 0 && check?.tone !== "bad" && !createRun.isPending;
+		!!branch &&
+		fileCount > 0 &&
+		repeatValid &&
+		check?.tone !== "bad" &&
+		!createRun.isPending;
 
 	const start = () => {
 		if (!branch) return;
@@ -331,6 +337,11 @@ export const NewRunScreen = () => {
 						{!branch && (
 							<p className="-mt-1 text-center text-xs text-subtle">
 								Choose a branch to start.
+							</p>
+						)}
+						{!repeatValid && (
+							<p className="-mt-1 text-center text-xs text-red-600 dark:text-red-400">
+								Repeat must be a whole number from 1 to {MAX_REPEAT}.
 							</p>
 						)}
 						{branch && fileCount === 0 && (
