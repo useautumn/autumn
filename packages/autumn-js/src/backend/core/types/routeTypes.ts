@@ -1,4 +1,4 @@
-import type { Autumn } from "@useautumn/sdk";
+import type { AutumnCore } from "@useautumn/sdk/core.js";
 import type { z } from "zod/v4";
 import type { ProtectedBodyField } from "../utils/sanitizeBody";
 import type { ResolvedIdentity } from "./authTypes";
@@ -28,7 +28,7 @@ export type RouteName = keyof typeof ROUTE_NAMES;
 
 /** Arguments passed to custom handler functions */
 export type CustomHandlerArgs = {
-	autumn: Autumn;
+	core: AutumnCore;
 	identity: ResolvedIdentity | null;
 	body: unknown;
 };
@@ -42,9 +42,9 @@ export type CustomHandlerFn = (
 export type RouteDefinition<T extends RouteName = RouteName> = {
 	/** RPC-style route name (e.g., "getOrCreateCustomer", "attach") */
 	route: T;
-	/** SDK method to call - uses any for dynamic args */
+	/** SDK function to call - uses any for dynamic args */
 	// biome-ignore lint/suspicious/noExplicitAny: dynamic SDK method args
-	sdkMethod: (autumn: Autumn, args: any) => Promise<any>;
+	sdkMethod: (core: AutumnCore, args: any) => Promise<any>;
 	/** Custom handler for special cases (bypasses standard flow) */
 	customHandler?: CustomHandlerFn;
 	/** Whether customer ID is required (default: true) */

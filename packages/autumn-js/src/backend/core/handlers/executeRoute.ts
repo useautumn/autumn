@@ -1,4 +1,4 @@
-import type { Autumn } from "@useautumn/sdk";
+import type { AutumnCore } from "@useautumn/sdk/core.js";
 import type {
 	AuthResult,
 	BackendResult,
@@ -30,12 +30,12 @@ const buildSdkArgs = ({
 
 /** Execute a route and return BackendResult */
 export const executeRoute = async ({
-	autumn,
+	core,
 	route,
 	body,
 	getCustomer,
 }: {
-	autumn: Autumn;
+	core: AutumnCore;
 	route: RouteDefinition;
 	body: unknown;
 	getCustomer: () => AuthResult;
@@ -57,7 +57,7 @@ export const executeRoute = async ({
 	// 2. If customHandler exists, use it (handles special cases)
 	if (route.customHandler) {
 		try {
-			const result = await route.customHandler({ autumn, identity, body });
+			const result = await route.customHandler({ core, identity, body });
 
 			// If customHandler returns BackendResult, use it directly
 			if (isBackendResult(result)) {
@@ -76,7 +76,7 @@ export const executeRoute = async ({
 	const sdkArgs = buildSdkArgs({ body, identity, route });
 
 	try {
-		const result = await route.sdkMethod(autumn, sdkArgs);
+		const result = await route.sdkMethod(core, sdkArgs);
 		return backendSuccess({ body: result });
 	} catch (error) {
 		console.error(`[Autumn] SDK call failed: ${route.route}`, error);

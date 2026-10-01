@@ -1,4 +1,4 @@
-import { AutumnError } from "@useautumn/sdk";
+import { AutumnError } from "@useautumn/sdk/models/autumn-error.js";
 import type { BackendResult } from "../types";
 import { backendError } from "../utils/backendRes";
 
