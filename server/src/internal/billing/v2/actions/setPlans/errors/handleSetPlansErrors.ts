@@ -27,6 +27,8 @@ import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
 import { handleStripeSchedulePhaseLimitErrors } from "./handleStripeSchedulePhaseLimitErrors";
+import { assertNoBillingIntervalMix } from "./subscriptionScope/assertNoBillingIntervalMix";
+import { handleStripeSubscriptionScopeErrors } from "./subscriptionScope/handleStripeSubscriptionScopeErrors";
 import { validateSetPlansPhasePlans } from "./validateSetPlansPhasePlans";
 import { validateUnscheduledPlanScopes } from "./validateUnscheduledPlanScopes";
 
@@ -53,6 +55,7 @@ export const handleSetPlansErrors = async ({
 		}),
 		scheduledPhaseContexts: billingContext.scheduledPhaseContexts,
 	});
+	handleStripeSubscriptionScopeErrors({ billingContext });
 
 	if (
 		billingContext.checkoutMode === "stripe_checkout" &&
@@ -115,6 +118,12 @@ export const handleSetPlansComputeErrors = async ({
 		autumnBillingPlan,
 	});
 	handleLicenseTransitionErrors({ autumnBillingPlan });
+	assertNoBillingIntervalMix({
+		stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
+		currentCustomerProducts: billingContext.fullCustomer.customer_products,
+		outgoingCustomerProducts: immediatePhaseTransition.outgoingCustomerProducts,
+		incomingCustomerProducts: immediatePhaseTransition.incomingCustomerProducts,
+	});
 
 	const customerProductPairs = pairCustomerProducts(immediatePhaseTransition);
 	for (const {
