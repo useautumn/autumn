@@ -19,6 +19,12 @@ export const invoiceCheckout = async ({
 		if (!/stripe\.com|stripe\.network|link\.com/.test(reqUrl)) return;
 		if (/\.(js|css|woff2?|png|svg|ico)(\?|$)/.test(reqUrl)) return;
 		const method = response.request().method();
+		if (/r\.stripe\.com\/b/.test(reqUrl)) {
+			const post = response.request().postData() ?? "";
+			const events = [...post.matchAll(/event_name(?:%22|")?(?:%3A|:|=)(?:%22|")?([a-zA-Z0-9_.%-]+)/g)].map((m) => decodeURIComponent(m[1]));
+			diagNet.push(`${Date.now() - diagStart}ms rstripe ${events.join(",") || post.slice(0, 200)}`);
+			return;
+		}
 		if (method === "GET" && !/api\.stripe\.com|merchant-ui|invoice/.test(reqUrl)) return;
 		let body = "";
 		if (method !== "GET" || response.status() >= 400) {
@@ -120,13 +126,42 @@ export const invoiceCheckout = async ({
 	}
 
 	await diagDump("before-submit");
-	await page
+	const diagSubmit = page
 		.locator(
 			'button[type="submit"], button.SubmitButton, [data-testid="hosted-payment-submit-button"]',
 		)
-		.first()
-		.click();
+		.first();
+	const diagFrameEl = page.locator('iframe[title="Secure payment input frame"]').first();
+	const diagBoxes = async (stage: string) => {
+		const b = await diagSubmit.boundingBox().catch(() => null);
+		const f = await diagFrameEl.boundingBox().catch(() => null);
+		const scrollY = await page.evaluate(() => window.scrollY).catch(() => -1);
+		console.log(`[DIAG ${label}] boxes ${stage} t=${Date.now() - diagStart}ms scrollY=${scrollY} submit=${JSON.stringify(b)} frame=${JSON.stringify(f)}`);
+	};
+	await page.evaluate(() => {
+		(window as unknown as { __diagClicks: string[] }).__diagClicks = [];
+		for (const type of ["pointerdown", "mousedown", "click"]) {
+			window.addEventListener(type, (e) => {
+				const t = e.target as HTMLElement;
+				const me = e as MouseEvent;
+				(window as unknown as { __diagClicks: string[] }).__diagClicks.push(`${type}@${me.clientX},${me.clientY}->${t.tagName}.${t.className?.toString().slice(0, 40)}|${(t.innerText || "").slice(0, 20)}`);
+			}, true);
+		}
+		window.addEventListener("blur", () => (window as unknown as { __diagClicks: string[] }).__diagClicks.push(`window-blur active=${document.activeElement?.tagName}.${(document.activeElement as HTMLElement)?.title}`));
+	});
+	await diagBoxes("pre-click");
+	const diagShotPre = await page.screenshot({ fullPage: true, type: "jpeg", quality: 25 }).catch(() => null);
+	await diagSubmit.click({ trial: true });
+	await diagBoxes("post-trial");
+	await diagSubmit.click();
 	console.log(`[DIAG ${label}] clicked submit t=${Date.now() - diagStart}ms`);
+	await diagBoxes("post-click");
+	for (const ms of [100, 300, 700, 1500]) {
+		await page.waitForTimeout(ms);
+		await diagBoxes(`+${ms}`);
+	}
+	console.log(`[DIAG ${label}] mainClicks=${JSON.stringify(await page.evaluate(() => (window as unknown as { __diagClicks: string[] }).__diagClicks).catch(() => []))}`);
+	if (diagShotPre) console.log(`[DIAG ${label}] PRESHOT_BEGIN${diagShotPre.toString("base64")}PRESHOT_END`);
 	// Watches for errors and a CAPTCHA; the caller asks Stripe whether the payment went through.
 	const deadline = performance.now() + 10_000;
 	while (performance.now() < deadline) {
