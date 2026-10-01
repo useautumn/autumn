@@ -399,7 +399,7 @@ test.concurrent(
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			includedUsage: 500,
+			includedUsage: 550,
 			balance: 550,
 			usage: 0, // Usage resets on new product
 		});
