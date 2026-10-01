@@ -1,4 +1,9 @@
-import { StatusChip } from "@autumn/ui";
+import {
+	StatusChip,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { format } from "date-fns";
 import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
@@ -43,6 +48,21 @@ export function ReviewChangeRowItem({
 	);
 }
 
+function OngoingChip() {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<StatusChip tone="purple" glyph="play" className="shrink-0">
+					Ongoing
+				</StatusChip>
+			</TooltipTrigger>
+			<TooltipContent side="top">
+				Kept across every phase; later schedule changes won't remove it
+			</TooltipContent>
+		</Tooltip>
+	);
+}
+
 /** Trial, status and value columns, shared by plain and grouped rows so they align. */
 export function ReviewChangeRowTrailing({
 	row,
@@ -57,6 +77,7 @@ export function ReviewChangeRowTrailing({
 }) {
 	return (
 		<>
+			{row.ongoing && <OngoingChip />}
 			{row.trialEndsAt !== undefined && (
 				<StatusChip tone="blue" glyph="clock" className="shrink-0">
 					{`Trial · ends ${format(row.trialEndsAt, "MMM d")}`}

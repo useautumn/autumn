@@ -88,6 +88,7 @@ const planToRow = ({
 	]),
 	entityId: plan.entity_id ?? null,
 	status: plan.status,
+	ongoing: plan.ongoing,
 	changes: updatedChanges({ plan, planChanges, features }),
 	trialEndsAt:
 		plan.status !== "ends" &&

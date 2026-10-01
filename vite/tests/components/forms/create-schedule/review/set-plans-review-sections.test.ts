@@ -47,6 +47,7 @@ const plan = (
 	name,
 	status: "starts",
 	custom: false,
+	ongoing: false,
 	expires_at: null,
 	trial_ends_at: null,
 	credit: null,
@@ -122,6 +123,29 @@ test("plan rows present each phase's plans as the server returns them", () => {
 		],
 	]);
 	expect(section.summary).toBe("2 now · 1 on Nov 1, 2026");
+});
+
+test("an ongoing plan's row is marked ongoing; phase plans are not", () => {
+	const section = plansToReviewSection({
+		currency: "usd",
+		features,
+		nowMs: NOW,
+		phases: [
+			phase(NOW, {
+				plans: [
+					plan("Pro", { status: "kept" }),
+					plan("Growth", { status: "updated", ongoing: true }),
+				],
+			}),
+		],
+	});
+
+	expect(
+		section.phases[0]?.rows.map((row) => [row.title, row.ongoing]),
+	).toEqual([
+		["Pro", false],
+		["Growth", true],
+	]);
 });
 
 test("an updated plan that ends later says when", () => {

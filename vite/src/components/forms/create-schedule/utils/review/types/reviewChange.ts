@@ -31,6 +31,8 @@ export type ReviewChangeRow = {
 	/** What changed on an updated row, shown in the status chip's tooltip. */
 	changes?: ReviewChangeLine[];
 	trialEndsAt?: number;
+	/** Kept across every phase, so a later schedule change won't end it. */
+	ongoing?: boolean;
 	value?: ReviewChangeValue;
 	/** Quantity column of a pricing table row. */
 	quantity?: string;
