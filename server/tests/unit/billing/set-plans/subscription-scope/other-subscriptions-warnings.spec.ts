@@ -28,6 +28,11 @@ describe(chalk.yellowBright("other_subscriptions_unaffected warning"), () => {
 				type: "other_subscriptions_unaffected",
 				severity: "info",
 				message: "Plans on 2 other subscriptions aren't affected.",
+				parts: [
+					{ text: "Plans on" },
+					{ text: "2 other subscriptions", bold: true },
+					{ text: "aren't affected." },
+				],
 			},
 		]);
 		expect(warningsFor(["sub_b"])[0]?.message).toBe(

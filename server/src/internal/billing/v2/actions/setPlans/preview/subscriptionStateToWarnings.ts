@@ -1,7 +1,9 @@
 import {
 	type BillingContext,
+	boldText,
 	formatAmount,
 	formatMsToDate,
+	plainText,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
 	secondsToMs,
@@ -9,6 +11,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
+import { warningText } from "./warningText";
 
 export type SubscriptionWarningContext = Pick<
 	BillingContext,
@@ -47,7 +50,13 @@ const replacedSubscriptionWarning = ({
 			: "Its unpaid invoices stay open.";
 		return {
 			type: warning,
-			message: `The ${replacedStripeSubscription.status} subscription ${replacedStripeSubscription.id} will be cancelled${whenCancelled} and a new one created. ${invoiceOutcome}`,
+			...warningText([
+				plainText(`The ${replacedStripeSubscription.status} subscription`),
+				boldText(replacedStripeSubscription.id),
+				plainText(
+					`will be cancelled${whenCancelled} and a new one created. ${invoiceOutcome}`,
+				),
+			]),
 		};
 	}
 
@@ -78,23 +87,39 @@ const newSubscriptionWarning = ({
 		billingCycleAnchorMs === "now" ? currentEpochMs : billingCycleAnchorMs;
 	return {
 		type: warning,
-		message: `A new Stripe subscription will be created, starting ${formatMsToDate(subscriptionBackdateStartMs ?? currentEpochMs)} and first invoiced on ${formatMsToDate(firstInvoiceMs)}.`,
+		...warningText([
+			plainText("A new Stripe subscription will be created, starting"),
+			boldText(formatMsToDate(subscriptionBackdateStartMs ?? currentEpochMs)),
+			plainText("and first invoiced on"),
+			boldText(`${formatMsToDate(firstInvoiceMs)}.`),
+		]),
 	};
 };
 
-const describeInvoice = (invoice: Stripe.Invoice) =>
-	`Invoice ${invoice.number ?? invoice.id} for ${formatAmount({
-		currency: invoice.currency,
-		amount: stripeToAtmnAmount({
-			amount: invoice.amount_remaining,
+const describeInvoice = (invoice: Stripe.Invoice) => [
+	plainText("Invoice"),
+	boldText(invoice.number ?? invoice.id ?? ""),
+	plainText("for"),
+	boldText(
+		formatAmount({
 			currency: invoice.currency,
+			amount: stripeToAtmnAmount({
+				amount: invoice.amount_remaining,
+				currency: invoice.currency,
+			}),
 		}),
-	})}`;
+	),
+];
 
 const openInvoiceWarnings = (openInvoices: Stripe.Invoice[]): Warning[] =>
 	openInvoices.map((invoice) => ({
 		type: "open_invoice_not_collected",
-		message: `${describeInvoice(invoice)} is still open on the cancelled subscription and is not collected by this change.`,
+		...warningText([
+			...describeInvoice(invoice),
+			plainText(
+				"is still open on the cancelled subscription and is not collected by this change.",
+			),
+		]),
 	}));
 
 const pastDueInvoiceWarnings = ({
@@ -107,7 +132,10 @@ const pastDueInvoiceWarnings = ({
 	stripeSubscription?.status === "past_due"
 		? liveOpenInvoices.map((invoice) => ({
 				type: "past_due_invoice_open",
-				message: `${describeInvoice(invoice)} is open; Stripe keeps retrying it.`,
+				...warningText([
+					...describeInvoice(invoice),
+					plainText("is open; Stripe keeps retrying it."),
+				]),
 			}))
 		: [];
 
@@ -132,7 +160,11 @@ const droppedDiscountWarnings = ({
 		.filter((coupon) => coupon && !carriedCouponIds.has(coupon.id))
 		.map((coupon) => ({
 			type: "discount_not_carried",
-			message: `Discount ${coupon?.name ?? coupon?.id} from the cancelled subscription is not carried over.`,
+			...warningText([
+				plainText("Discount"),
+				boldText(coupon?.name ?? coupon?.id ?? ""),
+				plainText("from the cancelled subscription is not carried over."),
+			]),
 		}));
 };
 
@@ -146,7 +178,13 @@ const trialEndedWarning = ({
 
 	return {
 		type: "trial_ended",
-		message: `The trial ending ${formatMsToDate(secondsToMs(stripeSubscription.trial_end ?? undefined))} ends now and the subscription is billed immediately.`,
+		...warningText([
+			plainText("The trial ending"),
+			boldText(
+				formatMsToDate(secondsToMs(stripeSubscription.trial_end ?? undefined)),
+			),
+			plainText("ends now and the subscription is billed immediately."),
+		]),
 	};
 };
 

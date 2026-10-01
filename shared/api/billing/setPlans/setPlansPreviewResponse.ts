@@ -2,6 +2,7 @@ import { AttachPreviewResponseSchema } from "@api/billing/common/attachPreviewRe
 import { CustomerPlanChangeSchema } from "@api/billing/common/customerPlanChange";
 import { PreviewBalanceChangeSchema } from "@api/billing/components/billingChanges/previewBalanceChange";
 import { z } from "zod/v4";
+import { SetPlansTextPartSchema } from "./setPlansTextParts";
 
 export const ProcessorChangeSchema = z.object({
 	type: z.enum(["subscription", "subscription_schedule"]),
@@ -92,6 +93,10 @@ export const SetPlansPreviewWarningSchema = z.object({
 	type: SetPlansPreviewWarningTypeSchema,
 	severity: z.enum(["warning", "info"]),
 	message: z.string(),
+	parts: z.array(SetPlansTextPartSchema).optional().meta({
+		description:
+			"The message split into parts, with names, amounts and dates marked bold.",
+	}),
 });
 
 export const SetPlansPreviewChangesSchema = z.object({

@@ -6,9 +6,16 @@ import type {
 	SetPlansPreviewPhase,
 	StripeBillingPlan,
 } from "@autumn/shared";
+import { textPartsToText } from "@autumn/shared";
 import type Stripe from "stripe";
 import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPreviewToWarnings";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
+
+/** Wording is asserted on the message; the bold parts have their own test. */
+const withoutParts = <Warning extends { parts?: unknown }>({
+	parts: _parts,
+	...warning
+}: Warning) => warning;
 
 const processorItem = (overrides: Partial<ProcessorItem>): ProcessorItem => ({
 	price_id: "price_1",
@@ -151,6 +158,14 @@ describe("setPlansPreviewToWarnings", () => {
 		]);
 		expect(warnings[0].message).toContain("Support add-on");
 		expect(warnings[4].message).toContain("enterprise");
+		expect(
+			warnings[4].parts?.filter((part) => part.bold).map((part) => part.text),
+		).toEqual([scheduledEnterprise.product.name]);
+		for (const warning of warnings) {
+			if (warning.parts) {
+				expect(textPartsToText(warning.parts)).toBe(warning.message);
+			}
+		}
 	});
 
 	test("updating a standalone schedule in place doesn't warn about replacing it", () => {
@@ -223,7 +238,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 			stripeBillingPlan: {},
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "subscription_replaced",
 				severity: "warning",
@@ -254,7 +269,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 			],
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "subscription_replaced",
 				severity: "warning",
@@ -312,7 +327,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 			],
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "new_stripe_subscription",
 				severity: "info",
@@ -343,7 +358,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 			stripeBillingPlan: createsSubscription,
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "new_stripe_subscription",
 				severity: "info",
@@ -408,7 +423,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 			stripeBillingPlan: {},
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "trial_ended",
 				severity: "warning",
@@ -465,7 +480,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 			},
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "scheduled_cancel_changed",
 				severity: "warning",
@@ -492,7 +507,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 			},
 		});
 
-		expect(warning).toEqual({
+		expect(warning && withoutParts(warning)).toEqual({
 			type: "scheduled_cancel_changed",
 			severity: "warning",
 			message: "The plans end on 29 Oct 2026.",
@@ -540,7 +555,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 			},
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "cycle_reset",
 				severity: "warning",
@@ -587,7 +602,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 			stripeBillingPlan: {},
 		});
 
-		expect(warnings).toEqual([
+		expect(warnings.map(withoutParts)).toEqual([
 			{
 				type: "interval_change_invoices_now",
 				severity: "warning",
@@ -615,7 +630,7 @@ describe("setPlansPreviewToWarnings: unbilled usage", () => {
 					usageLineItem({ amount: 12.5 }),
 					usageLineItem({ amount: 7.5 }),
 				],
-			}),
+			}).map(withoutParts),
 		).toEqual([
 			{
 				type: "usage_not_billed",
@@ -652,7 +667,7 @@ describe("setPlansPreviewToWarnings: past_due subscription", () => {
 				},
 				stripeBillingPlan: {},
 				liveOpenInvoices: [openInvoice],
-			}),
+			}).map(withoutParts),
 		).toEqual([
 			{
 				type: "past_due_invoice_open",

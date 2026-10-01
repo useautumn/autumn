@@ -1,7 +1,13 @@
 import { formatMsToDate } from "../../../utils/common/formatUtils/formatUnix";
 import type { SetPlansErrorDetails } from "./setPlansErrorDetails";
+import {
+	boldText,
+	plainText,
+	type SetPlansTextPart,
+	textPartsToText,
+} from "./setPlansTextParts";
 
-export type SetPlansErrorTextPart = { text: string; bold?: boolean };
+export type SetPlansErrorTextPart = SetPlansTextPart;
 
 export type SetPlansErrorAction =
 	| { type: "open_subscription"; stripeSubscriptionId: string }
@@ -16,8 +22,8 @@ export type SetPlansErrorCopy = {
 	};
 };
 
-const plain = (text: string): SetPlansErrorTextPart => ({ text });
-const bold = (text: string): SetPlansErrorTextPart => ({ text, bold: true });
+const plain = plainText;
+const bold = boldText;
 
 const DATE_LABELS: Record<
 	Extract<SetPlansErrorDetails, { type: "date_order" }>["date"],
@@ -171,7 +177,7 @@ export const setPlansErrorCopy = (
 /** The copy as one plain sentence, for API error messages. */
 export const setPlansErrorCopyToText = ({ line, hint }: SetPlansErrorCopy) =>
 	[
-		line.map(({ text }) => text).join(" "),
+		textPartsToText(line),
 		hint && [hint.link?.label, hint.text].filter(Boolean).join(" "),
 	]
 		.filter(Boolean)

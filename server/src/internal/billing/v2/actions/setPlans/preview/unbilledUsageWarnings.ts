@@ -1,10 +1,13 @@
 import {
+	boldText,
 	formatAmount,
 	formatMsToDate,
 	type LineItem,
+	plainText,
 	type SetPlansPreviewWarning,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { warningText } from "./warningText";
 
 /** Arrear usage on the cancelled subscription is dropped, so the preview shows what is lost. */
 export const unbilledUsageWarnings = (
@@ -28,7 +31,14 @@ export const unbilledUsageWarnings = (
 	return [
 		{
 			type: "usage_not_billed",
-			message: `${formatAmount({ currency: first.context.currency, amount: total })} of usage since ${formatMsToDate(sinceMs)} is not billed.`,
+			...warningText([
+				boldText(
+					formatAmount({ currency: first.context.currency, amount: total }),
+				),
+				plainText("of usage since"),
+				boldText(formatMsToDate(sinceMs)),
+				plainText("is not billed."),
+			]),
 		},
 	];
 };

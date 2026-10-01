@@ -1,12 +1,15 @@
 import {
+	boldText,
 	formatMsToDate,
 	notNullish,
 	type ProcessorItem,
+	plainText,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
 	secondsToMs,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { warningText } from "./warningText";
 
 type Warning = Omit<SetPlansPreviewWarning, "severity">;
 
@@ -50,7 +53,10 @@ const scheduledCancelWarning = ({
 	if (endsAtSeconds !== undefined) {
 		return {
 			type: "scheduled_cancel_changed",
-			message: `The plans end on ${formatMsToDate(secondsToMs(endsAtSeconds))}.`,
+			...warningText([
+				plainText("The plans end on"),
+				boldText(`${formatMsToDate(secondsToMs(endsAtSeconds))}.`),
+			]),
 		};
 	}
 
@@ -58,7 +64,11 @@ const scheduledCancelWarning = ({
 	if (requestedCancelAt === null && liveCancelAt) {
 		return {
 			type: "scheduled_cancel_changed",
-			message: `The scheduled cancellation on ${formatMsToDate(secondsToMs(liveCancelAt))} is removed.`,
+			...warningText([
+				plainText("The scheduled cancellation on"),
+				boldText(formatMsToDate(secondsToMs(liveCancelAt))),
+				plainText("is removed."),
+			]),
 		};
 	}
 
@@ -89,7 +99,10 @@ const cycleResetWarning = ({
 		? undefined
 		: {
 				type: "cycle_reset",
-				message: `The billing cycle resets on ${formatMsToDate(requestedAnchorResetMs)}.`,
+				...warningText([
+					plainText("The billing cycle resets on"),
+					boldText(`${formatMsToDate(requestedAnchorResetMs)}.`),
+				]),
 			};
 
 const billingIntervals = (items: ProcessorItem[]) =>

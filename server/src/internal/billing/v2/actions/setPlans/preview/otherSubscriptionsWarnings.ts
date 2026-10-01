@@ -2,6 +2,8 @@ import type {
 	SetPlansPreviewWarning,
 	StripeSubscriptionScope,
 } from "@autumn/shared";
+import { boldText, plainText } from "@autumn/shared";
+import { warningText } from "./warningText";
 
 export const otherSubscriptionsWarnings = ({
 	stripeSubscriptionScope,
@@ -16,7 +18,11 @@ export const otherSubscriptionsWarnings = ({
 	return [
 		{
 			type: "other_subscriptions_unaffected",
-			message: `Plans on ${otherCount} other ${subscriptions} aren't affected.`,
+			...warningText([
+				plainText("Plans on"),
+				boldText(`${otherCount} other ${subscriptions}`),
+				plainText("aren't affected."),
+			]),
 		},
 	];
 };

@@ -1,5 +1,6 @@
 import {
 	type BillingBehavior,
+	boldText,
 	type Feature,
 	type FullCusProduct,
 	findFeatureById,
@@ -7,6 +8,7 @@ import {
 	notNullish,
 	type ProcessorChange,
 	type ProcessorItem,
+	plainText,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
@@ -20,6 +22,7 @@ import {
 	subscriptionStateToWarnings,
 } from "./subscriptionStateToWarnings";
 import { unbilledUsageWarnings } from "./unbilledUsageWarnings";
+import { warningText } from "./warningText";
 
 type WarningType = SetPlansPreviewWarning["type"];
 
@@ -129,20 +132,30 @@ export const setPlansPreviewToWarnings = ({
 			immediateItems: phases[0]?.processor_items ?? [],
 		}).map((item) => ({
 			type: "unmanaged_stripe_item_removed" as const,
-			message: `${item.display_name} isn't managed by Autumn and will be removed from Stripe.`,
+			...warningText([
+				boldText(item.display_name),
+				plainText("isn't managed by Autumn and will be removed from Stripe."),
+			]),
 		})),
 		...priceCreatingItems(processorItems).map((item) => ({
 			type: "new_stripe_price_created" as const,
-			message: `A new Stripe price will be created for ${item.display_name}.`,
+			...warningText([
+				plainText("A new Stripe price will be created for"),
+				boldText(`${item.display_name}.`),
+			]),
 		})),
 		...balanceChanges
 			.filter((balanceChange) => balanceChange.behavior === "reset")
 			.map((balanceChange) => ({
 				type: "usage_reset" as const,
-				message: `Usage for ${
-					findFeatureById({ features, featureId: balanceChange.feature_id })
-						?.name ?? balanceChange.feature_id
-				} restarts from zero.`,
+				...warningText([
+					plainText("Usage for"),
+					boldText(
+						findFeatureById({ features, featureId: balanceChange.feature_id })
+							?.name ?? balanceChange.feature_id,
+					),
+					plainText("restarts from zero."),
+				]),
 			})),
 		...(replacesExistingSchedule(processorChanges)
 			? [
@@ -155,13 +168,21 @@ export const setPlansPreviewToWarnings = ({
 			: []),
 		...deletedCustomerProducts.map((customerProduct) => ({
 			type: "future_phase_removed" as const,
-			message: `The scheduled ${customerProduct.product.name} plan will be removed.`,
+			...warningText([
+				plainText("The scheduled"),
+				boldText(customerProduct.product.name),
+				plainText("plan will be removed."),
+			]),
 		})),
 		...outgoingCustomerProducts
 			.filter(hasPendingQuantityChange)
 			.map((customerProduct) => ({
 				type: "pending_quantity_change_dropped" as const,
-				message: `The pending quantity change on ${customerProduct.product.name} won't happen.`,
+				...warningText([
+					plainText("The pending quantity change on"),
+					boldText(customerProduct.product.name),
+					plainText("won't happen."),
+				]),
 			})),
 		...(requestedProrationBehavior === "none"
 			? [
