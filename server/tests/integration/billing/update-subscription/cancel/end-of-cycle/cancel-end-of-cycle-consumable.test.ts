@@ -743,7 +743,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	});
 
 	// Verify final state - both products should be removed
-	const customerFinal = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerFinal = await expectCustomerInvoiceCorrect({
+		customerId,
+		autumn: autumnV1,
+		count: 3,
+		latestTotal: 35,
+		latestStatus: "paid",
+	});
 	await expectProductNotPresent({
 		customer: customerFinal,
 		productId: customerPro.id,
@@ -753,12 +759,6 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	await expectProductNotPresent({
 		customer: entityFinal,
 		productId: entityPro.id,
-	});
-
-	expectCustomerInvoiceCorrect({
-		customer: customerFinal,
-		count: 3, // 2 initial attaches + 1 overage invoice
-		latestTotal: 35,
 	});
 
 	// Verify line item billing periods are correct (now -> now + 1 month)
