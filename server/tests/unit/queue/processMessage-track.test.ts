@@ -64,7 +64,11 @@ describe("processMessage track jobs", () => {
 			}),
 		} satisfies Pick<Message, "MessageId" | "Body">;
 
-		await processMessage({ message: message as Message, db: {} as never });
+		await processMessage({
+			message: message as Message,
+			db: {} as never,
+			retryBudget: { kind: "unknown" },
+		});
 
 		expect(mockState.createWorkerContextCalls).toHaveLength(1);
 		expect(mockState.createWorkerContextCalls[0]).toMatchObject({

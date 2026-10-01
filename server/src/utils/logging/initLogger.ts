@@ -4,6 +4,7 @@ import { createErrorLogHook } from "@autumn/errors";
 import { normalizeErrorValues, resolveDeployment } from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
+import { classifyInfraError } from "./classifyInfraError.js";
 
 /**
  * Fields that don't render in the formatted dev/local console output
@@ -261,6 +262,8 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 				logMethod: createErrorLogHook({
 					service: "server",
 					captureToSentry: process.env.SENTRY_CAPTURE_LOGGED_ERRORS !== "false",
+					loggerFramePaths: ["/external/logtail/", "/utils/logging/"],
+					classifiers: [classifyInfraError],
 				}),
 			},
 			// Tag every log line with this process's AWS task identity so Axiom

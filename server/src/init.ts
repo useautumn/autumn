@@ -4,6 +4,7 @@ await import("./sentry.js");
 import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
+import { flushErrorReports } from "@autumn/errors";
 import { getRequestListener } from "@hono/node-server";
 import {
 	client,
@@ -303,12 +304,7 @@ if (process.env.NODE_ENV === "development") {
 function registerFatalErrorHandlers() {
 	const exitAfterLog = () => setTimeout(() => process.exit(1), 100);
 	const logFatal = (event: string, error: unknown) => {
-		logger.error(event, {
-			error:
-				error instanceof Error
-					? { name: error.name, message: error.message, stack: error.stack }
-					: error,
-		});
+		logger.error(event, { error });
 	};
 
 	process.on("uncaughtException", (error) => {
@@ -373,6 +369,7 @@ async function gracefulShutdown() {
 		if (otelSdk) {
 			await otelSdk.shutdown();
 		}
+		await flushErrorReports({ timeoutMs: 2_000 });
 		shutdownPgHealthMonitor();
 		stopPgPoolMonitor();
 		stopReplicaRoutingProber();

@@ -20,4 +20,16 @@ describe("classifyError", () => {
 		});
 		expect(classifyError({ error: "thrown string" }).kind).toBe("bug");
 	});
+
+	it("tries app classifiers before the built-in ones", () => {
+		const error = new RecaseError({
+			message: "Service unavailable",
+			code: "service_unavailable",
+			statusCode: 503,
+		});
+		const classifyAsInfra = () => ({ kind: "infra" as const });
+		expect(classifyError({ error, classifiers: [classifyAsInfra] }).kind).toBe(
+			"infra",
+		);
+	});
 });

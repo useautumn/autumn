@@ -1,3 +1,4 @@
+import { reportError } from "@autumn/errors";
 import type {
 	Webhook,
 	WebhookBillingIssue,
@@ -102,7 +103,7 @@ revenuecatWebhookRouter.post(
 
 			return c.json({ success: true }, 200);
 		} catch (error) {
-			logger.error(`error handling revenuecat webhook ${error}`);
+			reportError({ ctx: { logger }, error, operation: "revenuecat webhook" });
 			return c.json({ error: `Internal server error: ${error}` }, 500);
 		}
 	},

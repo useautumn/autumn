@@ -110,12 +110,13 @@ export const stripeConnectSeederMiddleware = async (
 		if (!isOrgNotFound) {
 			logger.error(
 				`Failed to resolve org for Stripe account ${accountId}, returning 500 for Stripe to retry: ${error}`,
+				{ error },
 			);
 			return c.json({ error: "Failed to resolve org for Stripe webhook" }, 500);
 		}
 
 		if (process.env.NODE_ENV !== "development") {
-			logger.error(
+			logger.warn(
 				`Account ID ${accountId} not linked to any org, skipping Stripe webhook`,
 			);
 		}
