@@ -28,7 +28,9 @@ import {
 	canRetryNotReady,
 	createRequestDeadline,
 	followNotOwnerAnswer,
+	isConnectionRefused,
 	MAX_NOT_READY_RETRIES,
+	MAX_ROUTE_ATTEMPTS,
 	ownerStillNotReadyError,
 	readNotOwnerResponse,
 	refreshCommandRoute,
@@ -151,7 +153,7 @@ export function createTrackBatcher({
 			notReadyAnswers: 0,
 		};
 		try {
-			for (let attempt = 0; attempt < 2; ) {
+			for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; ) {
 				pending = pending.filter(isLive);
 				if (pending.length === 0) return;
 				const batchAttempt = startAttempt({ items: pending, routing });
@@ -277,6 +279,19 @@ export function createTrackBatcher({
 				signal: batchAttempt.controller.signal,
 			});
 		} catch (cause) {
+			if (isConnectionRefused({ cause })) {
+				batchAttempt.live.clear();
+				ctx.hints?.drop({
+					partition: resolved.route.partition,
+					endpoint: resolved.endpoint,
+				});
+				for (const item of items) if (isLive(item)) item.phase = "routing";
+				return {
+					reroute: items.filter(isLive),
+					followingHint: false,
+					notReady: false,
+				};
+			}
 			rejectAll({
 				items,
 				error: new BalanceWorkerClientError({

@@ -2,7 +2,10 @@ import {
 	requestBudgetHeaderValue,
 	WORKER_REQUEST_BUDGET_HEADER,
 } from "../contracts/worker.js";
-import { HttpResponseError } from "../http/types/httpClient.js";
+import {
+	type HttpResponse,
+	HttpResponseError,
+} from "../http/types/httpClient.js";
 import {
 	BalanceWorkerClientError,
 	type BalanceWorkerClientErrorCode,
@@ -17,16 +20,13 @@ import {
 	canRetryNotReady,
 	createRequestDeadline,
 	followNotOwnerAnswer,
+	isConnectionRefused,
 	MAX_NOT_READY_RETRIES,
+	MAX_ROUTE_ATTEMPTS,
 	ownerStillNotReadyError,
 	readNotOwnerResponse,
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
-
-/** One send, then up to three more after an ownership refresh each; the deadline cuts it short.
- *  Attempts that end at an owner still activating are counted apart, so a redirect followed
- *  by a NOT_READY still has its retries. */
-const MAX_ROUTE_ATTEMPTS = 4;
 
 /** The command picks the owner; `payload` rides beside it in the envelope. */
 export async function sendToOwner<Response>({
@@ -93,22 +93,34 @@ export async function sendToOwner<Response>({
 			outcome = "unknown";
 			failureCode = "TRANSPORT";
 			routing.sends += 1;
-			const response = await ctx.http.postJson({
-				url: `${resolved.endpoint}${path}`,
-				body: {
-					route: resolved.route,
-					command: snapshot,
-					...(payloadSnapshot === undefined
-						? {}
-						: { payload: payloadSnapshot }),
-				},
-				headers: {
-					[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
-						expiresAt: deadline.expiresAt,
-					}),
-				},
-				signal: deadline.signal,
-			});
+			let response: HttpResponse;
+			try {
+				response = await ctx.http.postJson({
+					url: `${resolved.endpoint}${path}`,
+					body: {
+						route: resolved.route,
+						command: snapshot,
+						...(payloadSnapshot === undefined
+							? {}
+							: { payload: payloadSnapshot }),
+					},
+					headers: {
+						[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
+							expiresAt: deadline.expiresAt,
+						}),
+					},
+					signal: deadline.signal,
+				});
+			} catch (cause) {
+				if (!isConnectionRefused({ cause })) throw cause;
+				outcome = "not_submitted";
+				ctx.hints?.drop({
+					partition: resolved.route.partition,
+					endpoint: resolved.endpoint,
+				});
+				attempt += 1;
+				continue;
+			}
 			assertRequestDeadline({ deadline, outcome });
 			failureCode = "INVALID_RESPONSE";
 			const notOwner = readNotOwnerResponse({ response });

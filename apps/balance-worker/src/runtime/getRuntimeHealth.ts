@@ -2,7 +2,10 @@ import {
 	type OwnedPartitionHealth,
 	ownedPartitionHealthOf,
 } from "../health/ownedPartitionHealth.js";
-import { OwnedPartitionNotReadyError } from "./runtimeErrors.js";
+import {
+	OwnedPartitionNotReadyError,
+	refusedBeforeRunning,
+} from "./runtimeErrors.js";
 import type {
 	PartitionRuntimeScope,
 	PartitionRuntimeState,
@@ -31,7 +34,8 @@ export function assertRuntimeReady({
 }: {
 	state: PartitionRuntimeState;
 }): void {
-	if (state.terminalError) throw state.terminalError;
+	if (state.terminalError)
+		throw refusedBeforeRunning({ error: state.terminalError });
 	if (state.status !== "ready")
 		throw new OwnedPartitionNotReadyError({ status: state.status });
 }

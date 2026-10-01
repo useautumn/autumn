@@ -129,6 +129,7 @@ function createFixture({
 	refreshGate,
 	refreshFailure,
 	transportFailure,
+	transportFailures = [],
 }: {
 	responses?: HttpResponse[];
 	owner?: PartitionOwner | null;
@@ -138,6 +139,7 @@ function createFixture({
 	refreshGate?: Promise<void>;
 	refreshFailure?: Error;
 	transportFailure?: Error;
+	transportFailures?: Array<Error | undefined>;
 } = {}) {
 	let currentOwner = owner;
 	let refreshes = 0;
@@ -159,6 +161,8 @@ function createFixture({
 		requests.push({ url: request.url, body: structuredClone(request.body) });
 		budgets.push(request.headers?.[WORKER_REQUEST_BUDGET_HEADER] ?? "");
 		if (transportFailure) throw transportFailure;
+		const failure = transportFailures[requests.length - 1];
+		if (failure) throw failure;
 		return responses[requests.length - 1] ?? success;
 	}
 	function stats() {
@@ -325,6 +329,27 @@ async function preservesUncertainTransportFailure(): Promise<void> {
 	expect(fixture.stats().refreshes).toBe(0);
 }
 
+async function resendsAfterRefusedConnection(): Promise<void> {
+	for (const refusal of [
+		Object.assign(new Error("Unable to connect"), {
+			code: "ConnectionRefused",
+		}),
+		new TypeError("fetch failed", {
+			cause: Object.assign(new Error("connect ECONNREFUSED"), {
+				code: "ECONNREFUSED",
+			}),
+		}),
+	]) {
+		const fixture = createFixture({ transportFailures: [refusal] });
+		expect(await fixture.client.track({ command })).toEqual(trackReply);
+		expect(fixture.stats().refreshes).toBe(1);
+		expect(fixture.stats().requests.map(({ url }) => url)).toEqual([
+			"http://worker-a:8080/v1/track",
+			"http://worker-b:8080/v1/track",
+		]);
+	}
+}
+
 async function boundsOwnershipWait(): Promise<void> {
 	const gate = Promise.withResolvers<void>();
 	const fixture = createFixture({
@@ -383,6 +408,10 @@ test(
 	preservesUncertainTransportFailure,
 );
 test("the operation deadline includes ownership refresh", boundsOwnershipWait);
+test(
+	"a refused connection never reached the worker, so the request refreshes and resends",
+	resendsAfterRefusedConnection,
+);
 test(
 	"reports ownership refresh failures before sending",
 	preservesOwnershipFailures,

@@ -9,7 +9,10 @@ import {
 	parseTrackCommand,
 	type TrackCommand,
 } from "@autumn/balance-engine";
-import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import {
+	PARTITION_RECOVERY_REASON,
+	type TrackReply,
+} from "@autumn/balance-worker-client/protocol";
 import {
 	createProducerSession,
 	type KafkaTransaction as KafkaMutationTransactionPort,
@@ -18,6 +21,7 @@ import {
 import { Glob } from "bun";
 import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import ts from "typescript";
+import { workerErrorOf } from "../../../src/http/handlers/errorHandler/workerErrorOf.js";
 import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import {
 	createWorkerProducer,
@@ -801,16 +805,26 @@ describe("owned partition runtime", () => {
 				});
 				commit.resolve(undefined);
 
-				expect(await track).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				const inFlight = await track;
+				expect(inFlight).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(workerErrorOf({ cause: inFlight })).toMatchObject({
+					status: 500,
+					error: { code: "INTERNAL", reason: PARTITION_RECOVERY_REASON },
+				});
 				expect(runtime.getStatus()).toBe("recovery_required");
 				expect(fixture.store.readState({ identity })?.revision).toBe(0);
-				await expect(
-					runtime.process((processor) =>
+				const turnedAway = await runtime
+					.process((processor) =>
 						processor.check({
 							command: createCheckCommand({ requestId: "req_after_ambiguity" }),
 						}),
-					),
-				).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+					)
+					.catch((cause: unknown) => cause);
+				expect(turnedAway).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(workerErrorOf({ cause: turnedAway })).toMatchObject({
+					status: 503,
+					error: { code: "NOT_READY" },
+				});
 			} finally {
 				commit.resolve(undefined);
 				await runtime.stop();
@@ -1191,13 +1205,18 @@ describe("owned partition runtime", () => {
 
 		try {
 			await runtime.start();
-			await expect(
-				runtime.process((processor) =>
+			const inFlight = await runtime
+				.process((processor) =>
 					processor.track({
 						command: createTrackCommand({ commandId: "cmd_1" }),
 					}),
-				),
-			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
+				)
+				.catch((cause: unknown) => cause);
+			expect(inFlight).toBeInstanceOf(OwnedPartitionProducerFencedError);
+			expect(workerErrorOf({ cause: inFlight })).toMatchObject({
+				status: 500,
+				error: { code: "INTERNAL", reason: PARTITION_RECOVERY_REASON },
+			});
 
 			expect(runtime.getStatus()).toBe("recovery_required");
 			await runtime.stop();
@@ -1207,13 +1226,18 @@ describe("owned partition runtime", () => {
 					(stage) => stage === "producer:disconnect",
 				),
 			).toHaveLength(1);
-			await expect(
-				runtime.process((processor) =>
+			const turnedAway = await runtime
+				.process((processor) =>
 					processor.check({
 						command: createCheckCommand({ requestId: "req_late" }),
 					}),
-				),
-			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
+				)
+				.catch((cause: unknown) => cause);
+			expect(turnedAway).toBeInstanceOf(OwnedPartitionProducerFencedError);
+			expect(workerErrorOf({ cause: turnedAway })).toMatchObject({
+				status: 409,
+				error: { code: "NOT_OWNER" },
+			});
 		} finally {
 			await runtime.stop();
 			closeStoreFixture(fixture);
