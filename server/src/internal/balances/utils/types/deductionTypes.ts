@@ -1,4 +1,3 @@
-import type { AllocationLuaGate } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import type {
 	CustomerEntitlementFilters,
 	DbSpendLimit,
@@ -6,6 +5,7 @@ import type {
 	FullCusEntWithFullCusProduct,
 	UsageWindowLimit,
 } from "@autumn/shared";
+import type { AllocationLuaGate } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import type { CreditRateCard } from "@/internal/features/creditSystemUtils.js";
 
 /** Behavior options for deduction */

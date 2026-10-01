@@ -1,17 +1,17 @@
 import {
 	type BalanceAllocations,
 	type Customer,
-	customers,
 	cusEntsToBalance,
+	customers,
 	fullSubjectToCustomerEntitlements,
 	solveAllocationScale,
 } from "@autumn/shared";
 import { and, eq, or } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
-import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
 import { generateId } from "@/utils/genUtils.js";
 import { setAllocationCounters } from "../repos/setAllocationCounters.js";
 import {
@@ -42,7 +42,9 @@ const loadStoredAllocations = async ({
 		)
 		.limit(1);
 	const allocations = row?.balanceAllocations;
-	return allocations && Object.keys(allocations).length > 0 ? allocations : null;
+	return allocations && Object.keys(allocations).length > 0
+		? allocations
+		: null;
 };
 
 /** Re-solves each allocated feature's scale against the shared credits left now; writes and notifies only on change. */
@@ -69,7 +71,9 @@ export const refreshAllocationScale = async ({
 	});
 	if (!fullSubject) return false;
 
-	const customerEntitlements = fullSubjectToCustomerEntitlements({ fullSubject });
+	const customerEntitlements = fullSubjectToCustomerEntitlements({
+		fullSubject,
+	});
 	const now = Date.now();
 	const next: BalanceAllocations = { ...stored };
 	let changed = false;
@@ -116,9 +120,16 @@ export const refreshAllocationScale = async ({
 			})),
 		});
 		const cycleEnd = cycle?.windowEndAt ?? null;
-		if (scale === allocation.scale && cycleEnd === (allocation.scale_cycle_end ?? null))
+		if (
+			scale === allocation.scale &&
+			cycleEnd === (allocation.scale_cycle_end ?? null)
+		)
 			continue;
-		next[internalFeatureId] = { ...allocation, scale, scale_cycle_end: cycleEnd };
+		next[internalFeatureId] = {
+			...allocation,
+			scale,
+			scale_cycle_end: cycleEnd,
+		};
 		changed = true;
 	}
 	if (!changed) {
@@ -172,7 +183,9 @@ export const planOnlyUpdatesAllocations = ({
 		autumnBillingPlan;
 	const updatedKeys = Object.keys(updateCustomer?.updates ?? {});
 	const otherWork = Object.values(rest).some((value) =>
-		Array.isArray(value) ? value.length > 0 : value !== undefined && value !== null,
+		Array.isArray(value)
+			? value.length > 0
+			: value !== undefined && value !== null,
 	);
 	return (
 		updatedKeys.length === 1 &&

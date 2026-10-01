@@ -1,4 +1,8 @@
-import { AllocateBalancesParamsV0Schema, RouteGroup, Scopes } from "@autumn/shared";
+import {
+	AllocateBalancesParamsV0Schema,
+	RouteGroup,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { allocateBalances } from "../allocate/allocateBalances.js";
 

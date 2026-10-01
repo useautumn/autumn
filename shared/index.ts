@@ -269,6 +269,7 @@ export * from "./utils/agentTypes";
 export * from "./utils/auth/autumnOAuthScopes";
 export * from "./utils/auth/oauthScopeUtils";
 export * from "./utils/authAccessControl";
+export * from "./utils/balanceAllocationUtils/allocationMath";
 export * from "./utils/billingControlUtils/index";
 export * from "./utils/billingUtils/index";
 // Checkout Utils
@@ -327,4 +328,3 @@ export * from "./utils/usageWindowUtils/findUsageWindowAnchor/pickAnchorCustomer
 export * from "./utils/usageWindowUtils/getCurrentUsageWindowUsage";
 export * from "./utils/usageWindowUtils/getUsageWindowAnchorTimestamp";
 export * from "./utils/usageWindowUtils/getUsageWindowBounds";
-export * from "./utils/balanceAllocationUtils/allocationMath";

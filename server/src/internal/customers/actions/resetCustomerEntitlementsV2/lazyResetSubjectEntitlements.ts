@@ -101,7 +101,10 @@ export const lazyResetSubjectEntitlements = async ({
 		}
 
 		// A new cycle may let reduced shares grow back; re-fit off the read path.
-		if (Object.keys(applied).length > 0 && fullSubject.customer.balance_allocations)
+		if (
+			Object.keys(applied).length > 0 &&
+			fullSubject.customer.balance_allocations
+		)
 			void refreshAllocationScale({ ctx, customerId }).catch((error) =>
 				logger.error("[refreshAllocationScale] after reset failed", { error }),
 			);

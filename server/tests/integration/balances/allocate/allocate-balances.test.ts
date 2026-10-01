@@ -112,14 +112,26 @@ test.concurrent(
 		});
 
 		await trackAs({ customerId, entityId: a, value: 8000 });
-		await expectSharedRemaining({ customerId, autumn: autumnV2_3, remaining: 5000 });
+		await expectSharedRemaining({
+			customerId,
+			autumn: autumnV2_3,
+			remaining: 5000,
+		});
 
 		// C has no share and nothing is unallocated.
 		await trackAs({ customerId, entityId: c, value: 100 });
-		await expectSharedRemaining({ customerId, autumn: autumnV2_3, remaining: 5000 });
+		await expectSharedRemaining({
+			customerId,
+			autumn: autumnV2_3,
+			remaining: 5000,
+		});
 
 		await trackAs({ customerId, entityId: b, value: 5000 });
-		await expectSharedRemaining({ customerId, autumn: autumnV2_3, remaining: 0 });
+		await expectSharedRemaining({
+			customerId,
+			autumn: autumnV2_3,
+			remaining: 0,
+		});
 	},
 );
 

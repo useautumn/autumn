@@ -18,10 +18,10 @@ import {
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { resolveAllocationLuaGate } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
-import { resolveAllocationLuaGate } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import { generateId } from "@/utils/genUtils.js";
 import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
 import type {
@@ -296,10 +296,7 @@ export const prepareFeatureDeductionV2 = ({
 				customerEntitlements,
 				now: Date.now(),
 			});
-	const luaWindowLimits = [
-		...usageWindowLimits,
-		...(allocation?.limits ?? []),
-	];
+	const luaWindowLimits = [...usageWindowLimits, ...(allocation?.limits ?? [])];
 
 	return {
 		customerEntitlements,
@@ -313,8 +310,7 @@ export const prepareFeatureDeductionV2 = ({
 			Object.keys(usageBasedCusEntIdsByFeatureId).length > 0
 				? usageBasedCusEntIdsByFeatureId
 				: undefined,
-		usageWindowLimits:
-			luaWindowLimits.length > 0 ? luaWindowLimits : undefined,
+		usageWindowLimits: luaWindowLimits.length > 0 ? luaWindowLimits : undefined,
 		usageWindowFeatureIds:
 			luaWindowLimits.length > 0
 				? [...new Set(luaWindowLimits.map((limit) => limit.feature_id))]

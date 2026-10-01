@@ -1,7 +1,7 @@
-import { handleAllocateBalances } from "./handlers/handleAllocateBalances.js";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCheck } from "../api/check/handleCheck.js";
+import { handleAllocateBalances } from "./handlers/handleAllocateBalances.js";
 import { handleBatchTrack } from "./handlers/handleBatchTrack.js";
 import { handleBatchTrackTokens } from "./handlers/handleBatchTrackTokens.js";
 import { handleCreateBalance } from "./handlers/handleCreateBalance.js";

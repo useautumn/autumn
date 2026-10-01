@@ -27,6 +27,7 @@ import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 // FULL SUBJECT DEDUCTION HELPERS (V2 cache — per-feature hash balances)
 // ============================================================================
 
+import ALLOCATION_GATE_V2 from "./fullSubjectDeduction/allocations/allocationGateV2.lua";
 import CONTEXT_UTILS_V2 from "./fullSubjectDeduction/contextUtilsV2.lua";
 import CREDIT_RATE_UTILS from "./fullSubjectDeduction/creditRateUtils.lua";
 import DEDUCT_FROM_MAIN_BALANCE_V2 from "./fullSubjectDeduction/deductFromMainBalanceV2.lua";
@@ -38,7 +39,6 @@ import SPEND_LIMIT_UTILS_V2 from "./fullSubjectDeduction/spendLimitUtilsV2.lua";
 import UPDATE_AGGREGATED_BALANCES from "./fullSubjectDeduction/updateAggregatedBalances.lua";
 import READ_USAGE_WINDOWS from "./fullSubjectDeduction/usageWindows/readUsageWindows.lua";
 import USAGE_WINDOW_CONTEXT_UTILS_V2 from "./fullSubjectDeduction/usageWindows/usageWindowContextUtilsV2.lua";
-import ALLOCATION_GATE_V2 from "./fullSubjectDeduction/allocations/allocationGateV2.lua";
 
 // ============================================================================
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)

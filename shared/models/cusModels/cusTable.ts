@@ -46,7 +46,9 @@ export const customers = pgTable(
 		// null = not yet locked; resolves to org.default_currency at use-time
 		currency: text(),
 		...billingControlColumns(),
-		balance_allocations: jsonb("balance_allocations").$type<BalanceAllocations>(),
+		balance_allocations: jsonb(
+			"balance_allocations",
+		).$type<BalanceAllocations>(),
 		config: jsonb().$type<CustomerConfig>().default({}),
 	},
 	(table) => [

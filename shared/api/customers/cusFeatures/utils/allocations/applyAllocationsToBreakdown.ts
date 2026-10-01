@@ -1,18 +1,18 @@
 import { Decimal } from "decimal.js";
-import type { ApiBalanceBreakdownV1 } from "../../apiBalanceV1.js";
 import type { BalanceAllocations } from "../../../../../models/cusModels/balanceAllocations/balanceAllocationModels.js";
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
 	effectiveAllocationScale,
 } from "../../../../../models/cusModels/balanceAllocations/balanceAllocationModels.js";
-import type { Feature } from "../../../../../models/featureModels/featureModels.js";
 import type { CustomerEntitlementWithPricesView } from "../../../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
+import type { Feature } from "../../../../../models/featureModels/featureModels.js";
 import {
 	allocationGranted,
 	pickAllocationParent,
 } from "../../../../../utils/balanceAllocationUtils/allocationMath.js";
-import { getUsageWindowBounds } from "../../../../../utils/usageWindowUtils/getUsageWindowBounds.js";
 import { isSameUsageWindow } from "../../../../../utils/usageWindowUtils/classifyUsageWindow/isSameUsageWindow.js";
+import { getUsageWindowBounds } from "../../../../../utils/usageWindowUtils/getUsageWindowBounds.js";
+import type { ApiBalanceBreakdownV1 } from "../../apiBalanceV1.js";
 
 type AllocationCounterView = {
 	feature_id: string;
@@ -30,7 +30,9 @@ export type AllocationSubjectView = {
 	usage_windows?: AllocationCounterView[] | null;
 };
 
-const isEntityOwned = (customerEntitlement: CustomerEntitlementWithPricesView) =>
+const isEntityOwned = (
+	customerEntitlement: CustomerEntitlementWithPricesView,
+) =>
 	Boolean(
 		customerEntitlement.internal_entity_id ||
 			customerEntitlement.customer_product?.internal_entity_id,
@@ -106,25 +108,35 @@ export const applyAllocationsToBreakdown = ({
 			: ("customer" as const),
 	}));
 
-	const allocation = subject.customer?.balance_allocations?.[feature.internal_id];
+	const allocation =
+		subject.customer?.balance_allocations?.[feature.internal_id];
 	if (!allocation)
-		return { breakdownItems: sourced, totals: null, checkRemainingOffset: null };
+		return {
+			breakdownItems: sourced,
+			totals: null,
+			checkRemainingOffset: null,
+		};
 	const withSource: ApiBalanceBreakdownV1[] = sourced.map((item) => ({
 		...item,
 		allocation: null,
 	}));
 
-	const sharedIndexes = customerEntitlements.flatMap((customerEntitlement, index) =>
-		!isEntityOwned(customerEntitlement) &&
-		customerEntitlement.entitlement.interval === allocation.interval
-			? [index]
-			: [],
+	const sharedIndexes = customerEntitlements.flatMap(
+		(customerEntitlement, index) =>
+			!isEntityOwned(customerEntitlement) &&
+			customerEntitlement.entitlement.interval === allocation.interval
+				? [index]
+				: [],
 	);
 	const parent = pickAllocationParent({
 		sharedRows: sharedIndexes.map((index) => customerEntitlements[index]),
 	});
 	if (!parent?.next_reset_at)
-		return { breakdownItems: withSource, totals: null, checkRemainingOffset: null };
+		return {
+			breakdownItems: withSource,
+			totals: null,
+			checkRemainingOffset: null,
+		};
 	const bounds = getUsageWindowBounds({
 		interval: allocation.interval,
 		now,
@@ -152,9 +164,7 @@ export const applyAllocationsToBreakdown = ({
 	});
 	const covered = sharedRemaining.plus(claimed);
 	const unallocated =
-		scale < 1
-			? new Decimal(0)
-			: Decimal.max(0, covered.minus(requestedTotal));
+		scale < 1 ? new Decimal(0) : Decimal.max(0, covered.minus(requestedTotal));
 
 	const internalEntityId = subject.entity?.internal_id ?? null;
 	if (!internalEntityId) {

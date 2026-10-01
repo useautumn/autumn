@@ -13,8 +13,8 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { sql } from "drizzle-orm";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { queryRows } from "../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });

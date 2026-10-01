@@ -47,7 +47,11 @@ const ownOverageRow = ({
 }: {
 	usageAllowed: boolean;
 }): WorkerCustomerEntitlement => ({
-	...createCustomerEntitlement({ id: "a_overage", featureId: "credits", balance: 0 }),
+	...createCustomerEntitlement({
+		id: "a_overage",
+		featureId: "credits",
+		balance: 0,
+	}),
 	customer_product_id: "cp_a",
 	internal_entity_id: entity.internal_id,
 	usage_allowed: usageAllowed,
@@ -114,7 +118,10 @@ const trackAsEntity = ({
 				},
 				customerProducts: [
 					createCustomerProduct(),
-					createCustomerProduct({ id: "cp_a", internalEntityId: entity.internal_id }),
+					createCustomerProduct({
+						id: "cp_a",
+						internalEntityId: entity.internal_id,
+					}),
 				],
 				customerEntitlements: [
 					pool({ balance: poolBalance }),
@@ -236,7 +243,11 @@ describe("allocation gate", () => {
 				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
 				usageAllowed: false,
 				usageWindows: [
-					counter({ internalEntityId: entity.internal_id, usage: 5000, ...lastCycle }),
+					counter({
+						internalEntityId: entity.internal_id,
+						usage: 5000,
+						...lastCycle,
+					}),
 				],
 				value: 5000,
 			});

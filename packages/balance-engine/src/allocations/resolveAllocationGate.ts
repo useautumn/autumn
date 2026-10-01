@@ -1,15 +1,17 @@
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
-	effectiveAllocationScale,
 	type BalanceAllocation,
+	effectiveAllocationScale,
 	getUsageWindowBounds,
 	type UsageWindowLimit,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import type { WorkerFullCustomerEntitlementWithProduct } from "../models/subject/workerFullSubject.js";
-import type { WorkerFullSubject } from "../models/subject/workerFullSubject.js";
-import type { DeductionRow } from "../deduction/types/deductionRow.js";
 import type { DeductionSelection } from "../deduction/types/deductionRequest.js";
+import type { DeductionRow } from "../deduction/types/deductionRow.js";
+import type {
+	WorkerFullCustomerEntitlementWithProduct,
+	WorkerFullSubject,
+} from "../models/subject/workerFullSubject.js";
 import { pickAllocationParent } from "./allocationMath.js";
 
 /** Everything the draw needs to hold an entity to its share of the customer's shared credits. */
@@ -114,7 +116,10 @@ export const resolveAllocationGate = ({
 		const sharedRowIds = new Set(shared.map((row) => row.id));
 		const sharedRemaining = rows
 			.filter((row) => sharedRowIds.has(row.id) && row.entityKey === null)
-			.reduce((sum, row) => sum.plus(Decimal.max(0, row.balance)), new Decimal(0));
+			.reduce(
+				(sum, row) => sum.plus(Decimal.max(0, row.balance)),
+				new Decimal(0),
+			);
 		const requestedTotal = Object.values(allocation.amounts).reduce(
 			(sum, amount) => sum.plus(amount),
 			new Decimal(0),

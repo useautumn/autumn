@@ -71,7 +71,8 @@ const loadEntityInternalIds = async ({
 		);
 	const internalIdById = new Map(rows.map((row) => [row.id, row.internalId]));
 	for (const entityId of entityIds)
-		if (!internalIdById.has(entityId)) throw new EntityNotFoundError({ entityId });
+		if (!internalIdById.has(entityId))
+			throw new EntityNotFoundError({ entityId });
 	return internalIdById;
 };
 
@@ -127,7 +128,11 @@ export const allocateBalances = async ({
 			featureId: feature.id,
 			interval: params.interval,
 		});
-	if (sharedRows.some((row) => row.unlimited || row.entitlement.allowance === null))
+	if (
+		sharedRows.some(
+			(row) => row.unlimited || row.entitlement.allowance === null,
+		)
+	)
 		throw allocationsNotSupportedForUnlimitedError({ featureId: feature.id });
 
 	const internalIdById = await loadEntityInternalIds({
@@ -170,7 +175,9 @@ export const allocateBalances = async ({
 	await setAllocationCounters({
 		db: ctx.db,
 		counters: [
-			...plan.seededEntityIds.map((id) => counterOf(id, plan.entityUsage[id] ?? 0)),
+			...plan.seededEntityIds.map((id) =>
+				counterOf(id, plan.entityUsage[id] ?? 0),
+			),
 			counterOf(null, plan.claimed),
 		],
 	});
@@ -204,7 +211,8 @@ export const allocateBalances = async ({
 
 	const allocated = Object.keys(plan.amounts).reduce(
 		(sum, id) =>
-			sum + allocationPlanToEntityNumbers({ plan, internalEntityId: id }).granted,
+			sum +
+			allocationPlanToEntityNumbers({ plan, internalEntityId: id }).granted,
 		0,
 	);
 	const heldUnused = Object.keys(plan.amounts).reduce(

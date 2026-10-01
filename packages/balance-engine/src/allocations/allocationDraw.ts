@@ -1,5 +1,4 @@
 import { Decimal } from "decimal.js";
-import type { RowChange } from "../models/mutation/rowChange.js";
 import type { DeductionContext } from "../deduction/types/deductionContext.js";
 import type { DeductionRow } from "../deduction/types/deductionRow.js";
 import type { DeductionState } from "../deduction/types/deductionState.js";
@@ -7,6 +6,7 @@ import {
 	storedUsageOf,
 	usageWindowsToRowChanges,
 } from "../deduction/utils/limits/usageWindows.js";
+import type { RowChange } from "../models/mutation/rowChange.js";
 import { allocationGate } from "./allocationMath.js";
 import type { AllocationGate } from "./resolveAllocationGate.js";
 
@@ -75,7 +75,13 @@ const gateNow = ({
 			.toNumber(),
 	});
 
-const gates = ({ context, row }: { context: DeductionContext; row: DeductionRow }) =>
+const gates = ({
+	context,
+	row,
+}: {
+	context: DeductionContext;
+	row: DeductionRow;
+}) =>
 	context.allocationGate?.sharedRowIds.has(row.id) && row.entityKey === null
 		? context.allocationGate
 		: null;
@@ -111,7 +117,8 @@ export const consumeAllocation = ({
 	const gate = gates({ context, row });
 	if (!gate || credits.lte(0) || !gate.entityCounter) return;
 	const { ownUnused } = gateNow({ context, deductionState, gate });
-	const consumed = (deductionState.allocationConsumed ??= new Map());
+	deductionState.allocationConsumed ??= new Map();
+	const consumed = deductionState.allocationConsumed;
 	const add = (key: string, amount: Decimal) =>
 		consumed.set(key, (consumed.get(key) ?? new Decimal(0)).plus(amount));
 	add(gate.entityCounter.key, credits);

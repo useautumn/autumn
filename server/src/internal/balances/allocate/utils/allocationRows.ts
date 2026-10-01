@@ -6,9 +6,9 @@ import {
 	type FullSubject,
 	getUsageWindowBounds,
 	isSameUsageWindow,
+	pickAllocationParent,
 	type UsageWindow,
 } from "@autumn/shared";
-import { pickAllocationParent } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
 const isCustomerLevel = (customerEntitlement: FullCusEntWithFullCusProduct) =>
@@ -76,7 +76,9 @@ export const allocationCounterUsage = ({
 			})
 		)
 			continue;
-		usage[window.internal_entity_id ?? ""] = new Decimal(window.usage).toNumber();
+		usage[window.internal_entity_id ?? ""] = new Decimal(
+			window.usage,
+		).toNumber();
 	}
 	return usage;
 };

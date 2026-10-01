@@ -1,5 +1,9 @@
 import { creditRateToCost } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import {
+	allocationHeadroomOf,
+	consumeAllocation,
+} from "../../../allocations/allocationDraw.js";
 import type { DeductionContext } from "../../types/deductionContext.js";
 import type { DeductionDelta } from "../../types/deductionDelta.js";
 import type { DeductionRow } from "../../types/deductionRow.js";
@@ -18,10 +22,6 @@ import {
 	consumeUsageWindows,
 	deductionRowToUsageWindowHeadroom,
 } from "../limits/usageWindows.js";
-import {
-	allocationHeadroomOf,
-	consumeAllocation,
-} from "../../../allocations/allocationDraw.js";
 import { clampChange } from "./clampChange.js";
 
 export type DeductionBucket =

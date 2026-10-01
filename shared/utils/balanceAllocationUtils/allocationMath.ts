@@ -16,7 +16,8 @@ export const solveAllocationScale = ({
 	const live = entries.filter((entry) => entry.requested > 0);
 	const remaining = Decimal.max(0, sharedRemaining);
 	const unusedAtFullScale = live.reduce(
-		(sum, entry) => sum.plus(new Decimal(entry.requested).minus(claimedOf(entry))),
+		(sum, entry) =>
+			sum.plus(new Decimal(entry.requested).minus(claimedOf(entry))),
 		new Decimal(0),
 	);
 	if (unusedAtFullScale.lte(remaining)) return 1;
@@ -37,7 +38,8 @@ export const solveAllocationScale = ({
 		activeClaimed = activeClaimed.plus(entry.claimed);
 		const nextThreshold = byThreshold[index + 1]?.threshold ?? new Decimal(1);
 		const scale = remaining.plus(activeClaimed).div(activeRequested);
-		if (scale.lte(nextThreshold)) return Decimal.max(scale, entry.threshold).toNumber();
+		if (scale.lte(nextThreshold))
+			return Decimal.max(scale, entry.threshold).toNumber();
 	}
 	return 1;
 };
@@ -66,14 +68,20 @@ export const allocationGate = ({
 	sharedRemaining: number;
 }): { ownUnused: number; unallocated: number } => {
 	const ownUnused = own
-		? Decimal.max(0, new Decimal(allocationGranted({ ...own, scale })).minus(own.usage))
+		? Decimal.max(
+				0,
+				new Decimal(allocationGranted({ ...own, scale })).minus(own.usage),
+			)
 		: new Decimal(0);
 	if (scale < 1) return { ownUnused: ownUnused.toNumber(), unallocated: 0 };
 	const unallocated = Decimal.max(
 		0,
 		new Decimal(sharedRemaining).minus(heldUnused),
 	);
-	return { ownUnused: ownUnused.toNumber(), unallocated: unallocated.toNumber() };
+	return {
+		ownUnused: ownUnused.toNumber(),
+		unallocated: unallocated.toNumber(),
+	};
 };
 
 /** First-call usage nobody was counting: absorbed from the end of the list so the first entries stay whole. */
@@ -113,6 +121,7 @@ export const pickAllocationParent = <
 	if (pooled) return pooled;
 	return [...resetting].sort(
 		(a, b) =>
-			(a.next_reset_at ?? 0) - (b.next_reset_at ?? 0) || a.id.localeCompare(b.id),
+			(a.next_reset_at ?? 0) - (b.next_reset_at ?? 0) ||
+			a.id.localeCompare(b.id),
 	)[0];
 };

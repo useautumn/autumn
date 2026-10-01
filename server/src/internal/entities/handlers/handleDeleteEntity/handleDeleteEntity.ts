@@ -6,8 +6,8 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import {
-	releaseEntityAllocations,
 	refreshAllocationScale,
+	releaseEntityAllocations,
 } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance.js";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";

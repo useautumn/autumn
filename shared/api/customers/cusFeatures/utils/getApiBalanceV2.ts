@@ -33,15 +33,15 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import {
+	type AllocationSubjectView,
+	applyAllocationsToBreakdown,
+} from "./allocations/applyAllocationsToBreakdown.js";
 import { getUnlimitedApiBalance } from "./apiBalanceUtils.js";
 import {
 	getEmptyApiBalanceV2,
 	mergeAggregatedBalanceIntoApiBalanceV2,
 } from "./apiBalanceV2Utils.js";
-import {
-	type AllocationSubjectView,
-	applyAllocationsToBreakdown,
-} from "./allocations/applyAllocationsToBreakdown.js";
 import { roundApiBalance } from "./roundApiBalance.js";
 
 export const getApiBalanceBreakdownItemV2 = ({
@@ -177,18 +177,17 @@ export const customerEntitlementsToApiBalance = ({
 		breakdownItems,
 		totals: allocationTotals,
 		checkRemainingOffset,
-	} =
-		applyAllocationsToBreakdown({
-			subject: fullSubject,
-			feature,
-			customerEntitlements,
-			breakdownItems: customerEntitlements.map((customerEntitlement) =>
-				getApiBalanceBreakdownItemV2({
-					fullSubject,
-					customerEntitlement,
-				}),
-			),
-		});
+	} = applyAllocationsToBreakdown({
+		subject: fullSubject,
+		feature,
+		customerEntitlements,
+		breakdownItems: customerEntitlements.map((customerEntitlement) =>
+			getApiBalanceBreakdownItemV2({
+				fullSubject,
+				customerEntitlement,
+			}),
+		),
+	});
 	const totalGranted = sumValues(
 		breakdownItems.map((breakdownItem) =>
 			new Decimal(breakdownItem.included_grant)
