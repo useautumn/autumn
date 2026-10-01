@@ -155,7 +155,7 @@ export function AllocateBalancesSheet() {
 			<div className="flex h-full flex-col overflow-hidden">
 				<SheetHeader
 					title="Allocate to entities"
-					description={`Hold part of the shared ${interval ?? ""} ${featureName} credits for each entity. Leave a row empty to release its share.`}
+					description={`Hold part of the shared ${featureName} credits that reset every ${interval ?? "cycle"} for each entity. Leave a row empty to release its share.`}
 				/>
 
 				<SheetSection withSeparator>
