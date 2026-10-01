@@ -1,5 +1,6 @@
 import type { FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { refreshAllocationScale } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
@@ -74,6 +75,12 @@ export const resetCustomerEntitlements = async ({
 			computed,
 			skipped,
 		});
+
+		// A new cycle may let reduced shares grow back; re-fit off the read path.
+		if (Object.keys(applied).length > 0 && fullCus.balance_allocations)
+			void refreshAllocationScale({ ctx, customerId }).catch((error) =>
+				logger.error("[refreshAllocationScale] after reset failed", { error }),
+			);
 
 		// 4. Update Redis cache atomically (fire-and-forget)
 		// Only needed when we actually wrote to DB — skipped means cache was

@@ -56,9 +56,13 @@ const ownOverageRow = ({
 const counter = ({
 	internalEntityId,
 	usage,
+	windowStartAt = cycle.windowStartAt,
+	windowEndAt = cycle.windowEndAt,
 }: {
 	internalEntityId: string | null;
 	usage: number;
+	windowStartAt?: number;
+	windowEndAt?: number;
 }): WorkerUsageWindow => ({
 	id: `uw_${internalEntityId ?? "total"}`,
 	internal_customer_id: "cus_1",
@@ -67,8 +71,8 @@ const counter = ({
 	internal_feature_id: "feat_credits",
 	filter_key: ALLOCATION_USAGE_WINDOW_FILTER_KEY,
 	anchor_customer_entitlement_id: "pool",
-	window_start_at: cycle.windowStartAt,
-	window_end_at: cycle.windowEndAt,
+	window_start_at: windowStartAt,
+	window_end_at: windowEndAt,
 	usage,
 	updated_at: occurredAt - 1,
 });
@@ -78,12 +82,16 @@ const trackAsEntity = ({
 	poolBalance = 10000,
 	usageAllowed = true,
 	usageWindows = [],
+	scale = 1,
+	scaleCycleEnd = null,
 	value,
 }: {
 	amounts: Record<string, number>;
 	poolBalance?: number;
 	usageAllowed?: boolean;
 	usageWindows?: WorkerUsageWindow[];
+	scale?: number;
+	scaleCycleEnd?: number | null;
 	value: number;
 }) =>
 	deduct({
@@ -98,7 +106,8 @@ const trackAsEntity = ({
 						feat_credits: {
 							feature_id: "credits",
 							interval: EntInterval.Month,
-							scale: 1,
+							scale,
+							scale_cycle_end: scaleCycleEnd,
 							amounts,
 						},
 					},
@@ -213,6 +222,48 @@ describe("allocation gate", () => {
 				value: 3000,
 			});
 			expect(drawnFrom(outcome, "pool")).toBe(1000);
+		},
+	);
+
+	test.concurrent(
+		"after a reset, last cycle's counters no longer count against the share",
+		() => {
+			const lastCycle = {
+				windowStartAt: cycle.windowStartAt - 31 * 24 * 60 * 60 * 1000,
+				windowEndAt: cycle.windowStartAt,
+			};
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				usageAllowed: false,
+				usageWindows: [
+					counter({ internalEntityId: entity.internal_id, usage: 5000, ...lastCycle }),
+				],
+				value: 5000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(5000);
+		},
+	);
+
+	test.concurrent(
+		"a scale solved for last cycle reads as 1 after a reset",
+		() => {
+			const stale = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: cycle.windowStartAt,
+				value: 5000,
+			});
+			expect(drawnFrom(stale, "pool")).toBe(5000);
+
+			const current = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: cycle.windowEndAt,
+				value: 5000,
+			});
+			expect(drawnFrom(current, "pool")).toBe(2500);
 		},
 	);
 });

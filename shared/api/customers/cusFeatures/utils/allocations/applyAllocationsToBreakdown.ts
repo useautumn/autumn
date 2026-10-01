@@ -1,7 +1,10 @@
 import { Decimal } from "decimal.js";
 import type { ApiBalanceBreakdownV1 } from "../../apiBalanceV1.js";
 import type { BalanceAllocations } from "../../../../../models/cusModels/balanceAllocations/balanceAllocationModels.js";
-import { ALLOCATION_USAGE_WINDOW_FILTER_KEY } from "../../../../../models/cusModels/balanceAllocations/balanceAllocationModels.js";
+import {
+	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
+	effectiveAllocationScale,
+} from "../../../../../models/cusModels/balanceAllocations/balanceAllocationModels.js";
 import type { Feature } from "../../../../../models/featureModels/featureModels.js";
 import type { CustomerEntitlementWithPricesView } from "../../../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import {
@@ -128,6 +131,10 @@ export const applyAllocationsToBreakdown = ({
 		anchor: parent.next_reset_at,
 	});
 
+	const scale = effectiveAllocationScale({
+		allocation,
+		cycleEnd: bounds.windowEndAt,
+	});
 	const requestedTotal = Object.values(allocation.amounts).reduce(
 		(sum, amount) => sum.plus(amount),
 		new Decimal(0),
@@ -145,7 +152,7 @@ export const applyAllocationsToBreakdown = ({
 	});
 	const covered = sharedRemaining.plus(claimed);
 	const unallocated =
-		allocation.scale < 1
+		scale < 1
 			? new Decimal(0)
 			: Decimal.max(0, covered.minus(requestedTotal));
 
@@ -178,7 +185,7 @@ export const applyAllocationsToBreakdown = ({
 	const granted = allocationGranted({
 		requested,
 		usage,
-		scale: allocation.scale,
+		scale,
 	});
 	const capacities = sharedIndexes.map((index) =>
 		new Decimal(withSource[index].included_grant)

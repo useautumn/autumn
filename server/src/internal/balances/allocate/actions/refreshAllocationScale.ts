@@ -90,8 +90,10 @@ export const refreshAllocationScale = async ({
 				usage: usage[id] ?? 0,
 			})),
 		});
-		if (scale === allocation.scale) continue;
-		next[internalFeatureId] = { ...allocation, scale };
+		const cycleEnd = cycle?.windowEndAt ?? null;
+		if (scale === allocation.scale && cycleEnd === (allocation.scale_cycle_end ?? null))
+			continue;
+		next[internalFeatureId] = { ...allocation, scale, scale_cycle_end: cycleEnd };
 		changed = true;
 	}
 	if (!changed) return false;

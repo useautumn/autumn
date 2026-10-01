@@ -1,5 +1,6 @@
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
+	effectiveAllocationScale,
 	type BalanceAllocation,
 	getUsageWindowBounds,
 	type UsageWindowLimit,
@@ -130,7 +131,10 @@ export const resolveAllocationGate = ({
 
 		return {
 			sharedRowIds,
-			scale: allocation.scale,
+			scale: effectiveAllocationScale({
+				allocation,
+				cycleEnd: bounds.windowEndAt,
+			}),
 			ownRequested: internalEntityId
 				? (allocation.amounts[internalEntityId] ?? null)
 				: null,

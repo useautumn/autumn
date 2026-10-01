@@ -1,5 +1,6 @@
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
+	effectiveAllocationScale,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	type UsageWindowLimit,
@@ -84,7 +85,10 @@ export const resolveAllocationLuaGate = ({
 					(sum, amount) => sum + amount,
 					0,
 				),
-				scale: allocation.scale,
+				scale: effectiveAllocationScale({
+					allocation,
+					cycleEnd: cycle.windowEndAt,
+				}),
 			},
 			limits: internalEntityId
 				? [limitOf("entity"), limitOf("claimed")]

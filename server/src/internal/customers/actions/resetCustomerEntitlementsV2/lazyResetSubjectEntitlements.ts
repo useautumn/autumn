@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { refreshAllocationScale } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
 import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
@@ -98,6 +99,12 @@ export const lazyResetSubjectEntitlements = async ({
 		if (normalized) {
 			applyResetResultsToNormalized({ normalized, computed });
 		}
+
+		// A new cycle may let reduced shares grow back; re-fit off the read path.
+		if (Object.keys(applied).length > 0 && fullSubject.customer.balance_allocations)
+			void refreshAllocationScale({ ctx, customerId }).catch((error) =>
+				logger.error("[refreshAllocationScale] after reset failed", { error }),
+			);
 
 		if (Object.keys(applied).length > 0) {
 			const oldNextResetAts: Record<string, number> = {};

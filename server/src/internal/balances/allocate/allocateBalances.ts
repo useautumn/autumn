@@ -181,6 +181,7 @@ export const allocateBalances = async ({
 			feature_id: feature.id,
 			interval,
 			scale: plan.scale,
+			scale_cycle_end: cycle.windowEndAt,
 			amounts: plan.amounts,
 		},
 	};
