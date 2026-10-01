@@ -1,11 +1,12 @@
 /**
- * TDD contract for durable customer get-or-create failure capture.
+ * TDD contract for durable entities.create failure capture.
  *
  * Contract under test:
- * - Transient failures are written to a dedicated FIFO queue without API credentials.
- * - Payloads preserve org, environment, API version, normalized request, stage, and request ID.
+ * - Transient failures ride the customer creation recovery FIFO queue under their own job name.
+ * - Payloads preserve org, environment, API version, the validated create params, stage, and request ID.
  * - Identical recovery requests share a deterministic deduplication ID.
- * - Every message uses one global message group so replay has a hard concurrency ceiling of one.
+ * - The one global message group keeps replay at a concurrency ceiling of one, after any
+ *   customer creation queued before it.
  * - Missing or unavailable recovery infrastructure never replaces the original API failure.
  */
 
@@ -14,7 +15,7 @@ import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID } from "@/internal/customers/recovery/queueCreationRecovery.js";
-import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
+import { queueFailedEntityCreation } from "@/internal/entities/recovery/queueFailedEntityCreation.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 
 const recoveryQueueUrl =
@@ -28,7 +29,7 @@ const mockState = {
 
 const buildContext = () =>
 	({
-		id: "req_customer_123",
+		id: "req_entity_123",
 		org: { id: "org_123" },
 		env: AppEnv.Live,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
@@ -40,19 +41,13 @@ const buildContext = () =>
 	}) as unknown as AutumnContext;
 
 const params = {
-	customer_id: "customer_123",
-	customer_data: {
-		email: "customer@example.com",
-		name: "Customer",
-	},
-	entity_id: "entity_123",
-	entity_data: {
-		name: "Entity",
-		feature_id: "seats",
-	},
+	customerId: "customer_123",
+	customerData: { email: "customer@example.com", name: "Customer" },
+	createEntityData: [{ id: "entity_123", name: "Entity", feature_id: "seats" }],
+	withAutumnId: true,
 };
 
-describe("queueFailedCustomerCreation", () => {
+describe("queueFailedEntityCreation", () => {
 	const originalQueueUrl = process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL;
 
 	beforeEach(() => {
@@ -77,23 +72,16 @@ describe("queueFailedCustomerCreation", () => {
 		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL = originalQueueUrl;
 	});
 
-	test("stores a replayable, serialized request with deterministic ordering and deduplication", async () => {
-		const firstContext = buildContext();
-		const secondContext = buildContext();
-
-		const firstQueued = await queueFailedCustomerCreation({
-			ctx: firstContext,
+	test("stores a replayable, serialized request with deterministic deduplication", async () => {
+		const firstQueued = await queueFailedEntityCreation({
+			ctx: buildContext(),
 			params,
-			source: "handleGetOrCreateCustomerV2",
-			withAutumnId: true,
-			failureStage: "lookup",
+			failureStage: "pre_commit",
 		});
-		const secondQueued = await queueFailedCustomerCreation({
-			ctx: secondContext,
+		const secondQueued = await queueFailedEntityCreation({
+			ctx: buildContext(),
 			params,
-			source: "handleGetOrCreateCustomerV2",
-			withAutumnId: true,
-			failureStage: "lookup",
+			failureStage: "pre_commit",
 		});
 
 		expect(firstQueued).toBe(true);
@@ -111,17 +99,15 @@ describe("queueFailedCustomerCreation", () => {
 			mockState.queueCommands[0]?.MessageBody as string,
 		);
 		expect(queuedMessage).toMatchObject({
-			name: "customer-creation-recovery",
+			name: "entity-creation-recovery",
 			data: {
 				orgId: "org_123",
 				env: AppEnv.Live,
 				customerId: "customer_123",
-				requestId: "req_customer_123",
+				requestId: "req_entity_123",
 				apiVersion: ApiVersion.V2_1,
 				params,
-				source: "handleGetOrCreateCustomerV2",
-				withAutumnId: true,
-				failureStage: "lookup",
+				failureStage: "pre_commit",
 			},
 		});
 		expect(JSON.stringify(queuedMessage)).not.toContain("apiKey");
@@ -132,11 +118,10 @@ describe("queueFailedCustomerCreation", () => {
 		delete process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL;
 		const ctx = buildContext();
 
-		const queued = await queueFailedCustomerCreation({
+		const queued = await queueFailedEntityCreation({
 			ctx,
 			params,
-			source: "handleGetOrCreateCustomerV2",
-			failureStage: "lookup",
+			failureStage: "pre_commit",
 		});
 
 		expect(queued).toBe(false);
@@ -148,11 +133,10 @@ describe("queueFailedCustomerCreation", () => {
 		mockState.shouldFailSend = true;
 		const ctx = buildContext();
 
-		const queued = await queueFailedCustomerCreation({
+		const queued = await queueFailedEntityCreation({
 			ctx,
 			params,
-			source: "handleGetOrCreateCustomerV2",
-			failureStage: "lookup",
+			failureStage: "pre_commit",
 		});
 
 		expect(queued).toBe(false);
