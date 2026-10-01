@@ -6,11 +6,7 @@ import type {
 	LogArgs,
 } from "../types.js";
 import { createLogger } from "./createLogger.js";
-import {
-	errorToObject,
-	normalizeErrorValues,
-	rewriteAppPath,
-} from "./normalizeErrors.js";
+import { rewriteAppPath } from "./normalizeErrors.js";
 
 const normalizeLogArgs = ({ args }: { args: LogArgs }) => {
 	const strings = args
@@ -20,11 +16,7 @@ const normalizeLogArgs = ({ args }: { args: LogArgs }) => {
 		.filter(
 			(arg) => typeof arg !== "string" && arg !== null && arg !== undefined,
 		)
-		.map((arg) =>
-			arg instanceof Error
-				? { error: errorToObject(arg) }
-				: normalizeErrorValues(arg),
-		);
+		.map((arg) => (arg instanceof Error ? { error: arg } : arg));
 	const error = args.find((arg): arg is Error => arg instanceof Error);
 	const message =
 		strings[strings.length - 1] ??

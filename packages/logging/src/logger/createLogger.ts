@@ -5,6 +5,7 @@ import {
 } from "../streams/consoleJsonStream.js";
 import { createPrettyLogStream } from "../streams/prettyLogStream.js";
 import type { CreateLoggerParams } from "../types.js";
+import { normalizeErrorValues } from "./normalizeErrors.js";
 import {
 	resolveDeployment,
 	resolveLoggerOptions,
@@ -78,8 +79,13 @@ export const createLogger = (
 				...(params.context ?? {}),
 			},
 			mixin: params.mixin,
+			// pino breaks on an explicit `hooks: undefined`.
+			...(params.hooks && { hooks: params.hooks }),
 			formatters: {
 				level: (label: string) => ({ level: label.toUpperCase() }),
+				// Errors stay raw until here so hooks can read them; this is where they become JSON.
+				log: (object: Record<string, unknown>) =>
+					normalizeErrorValues(object) as Record<string, unknown>,
 			},
 		},
 		pino.multistream(streams),

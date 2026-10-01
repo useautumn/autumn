@@ -1,7 +1,10 @@
 export { classifyError } from "./classify/classifyError.js";
 export { stripeErrorToRecaseError } from "./classify/stripe/stripeErrorToRecaseError.js";
+export { flushErrorReports } from "./external/sentry/flushErrorReports.js";
+export { initErrorReporting } from "./external/sentry/initErrorReporting.js";
 export { formatZodError } from "./format/formatZodError.js";
 export { createErrorLogHook } from "./logging/createErrorLogHook.js";
 export type { ErrorClassification } from "./models/errorClassification.js";
+export type { ErrorClassifier } from "./models/errorClassifier.js";
 export type { ErrorKind } from "./models/errorKind.js";
 export { reportError } from "./report/reportError.js";

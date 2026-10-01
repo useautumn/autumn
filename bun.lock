@@ -64,6 +64,7 @@
         "@autumn/dynamodb": "workspace:*",
         "@autumn/edge-config": "workspace:*",
         "@autumn/env": "workspace:*",
+        "@autumn/errors": "workspace:*",
         "@autumn/kafka": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/postgres": "workspace:*",
@@ -147,6 +148,7 @@
         "@autumn/edge-config": "workspace:*",
         "@autumn/encryption": "workspace:*",
         "@autumn/env": "workspace:*",
+        "@autumn/errors": "workspace:*",
         "@autumn/kafka": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/postgres": "workspace:*",
@@ -387,7 +389,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "2.0.57",
+      "version": "2.0.58",
       "bin": {
         "atmn": "dist/bin.js",
       },
@@ -517,7 +519,7 @@
     },
     "packages/autumn-js": {
       "name": "autumn-js",
-      "version": "1.3.40",
+      "version": "1.3.41",
       "dependencies": {
         "query-string": "^9.2.2",
         "rou3": "^0.6.1",
@@ -796,7 +798,7 @@
     },
     "packages/gateway": {
       "name": "@useautumn/gateway",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "dependencies": {
         "@ai-sdk/provider": "^4.0.7",
       },

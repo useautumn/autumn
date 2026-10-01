@@ -1,3 +1,4 @@
+import { flushErrorReports } from "@autumn/errors";
 import "../sentry.ts";
 import { CronJob } from "cron";
 import { initDrizzle } from "../db/initDrizzle.js";
@@ -181,6 +182,7 @@ const shutdown = async (signal: string) => {
 	await shutdownSqsSendBatchers();
 	await client.end();
 	await probeClient.end();
+	await flushErrorReports({ timeoutMs: 2_000 });
 	process.exit(0);
 };
 

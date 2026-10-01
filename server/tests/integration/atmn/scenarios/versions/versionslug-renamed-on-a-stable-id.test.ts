@@ -59,7 +59,8 @@ test.concurrent(
 					body: `{ plans: [${paidMonthly({
 						planId: "pro",
 						amount: 20,
-						extra: `\n\t\t\t\tinternalId: "${internalId}",\n\t\t\t\tnewVersionSlug: "2024-pricing",`,
+						versionSlug: "2024-pricing",
+						extra: `\n\t\t\t\tinternalId: "${internalId}",`,
 					})}] }`,
 				}),
 			);

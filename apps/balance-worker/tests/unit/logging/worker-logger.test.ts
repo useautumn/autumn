@@ -23,6 +23,7 @@ test.concurrent(
 				preset: "dual",
 				context: { workerDeployment: "tf-balance-staging-v1" },
 				mixin: expect.any(Function),
+				hooks: { logMethod: expect.any(Function) },
 			});
 		} finally {
 			factory.mockRestore();

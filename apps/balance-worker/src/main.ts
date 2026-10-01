@@ -1,4 +1,5 @@
 import { getBalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import { flushErrorReports, initErrorReporting } from "@autumn/errors";
 import { initInfisical } from "@autumn/shared/utils/infisical";
 import { createBalanceWorker } from "./init/createBalanceWorker.js";
 import type { BalanceWorker } from "./init/types/balanceWorker.js";
@@ -13,6 +14,7 @@ import type { PartitionServiceStopReason } from "./partitions/types/partitions.j
 async function main(): Promise<void> {
 	try {
 		await initInfisical();
+		initErrorReporting();
 		const env = getBalanceWorkerEnv();
 		const worker = await createBalanceWorker({
 			ctx: {
@@ -28,7 +30,7 @@ async function main(): Promise<void> {
 	} catch (cause) {
 		reportError({ cause });
 		process.exitCode = 1;
-		await getBalanceWorkerLogger().flush?.();
+		await flushLogsAndErrorReports();
 	}
 }
 
@@ -41,7 +43,7 @@ function registerShutdownSignals({ worker }: { worker: BalanceWorker }): void {
 			reportError({ cause });
 			process.exitCode = 1;
 		} finally {
-			await getBalanceWorkerLogger().flush?.();
+			await flushLogsAndErrorReports();
 		}
 	}
 
@@ -67,12 +69,19 @@ function exitAfterServiceStopped({
 	process.exitCode = 1;
 	async function endProcess(): Promise<void> {
 		try {
-			await getBalanceWorkerLogger().flush?.();
+			await flushLogsAndErrorReports();
 		} finally {
 			process.exit(1);
 		}
 	}
 	void endProcess();
+}
+
+async function flushLogsAndErrorReports(): Promise<void> {
+	await Promise.all([
+		getBalanceWorkerLogger().flush?.(),
+		flushErrorReports({ timeoutMs: 2_000 }),
+	]);
 }
 
 function causeToLine({ name, message }: { name: string; message: string }) {

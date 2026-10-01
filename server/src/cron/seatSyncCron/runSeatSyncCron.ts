@@ -218,6 +218,6 @@ export const runSeatSyncCron = async ({ ctx }: { ctx: CronContext }) => {
 			);
 		}
 	} catch (error) {
-		logger.error(`[seat-sync] failed: ${error}`);
+		logger.error(`[seat-sync] failed: ${error}`, { error });
 	}
 };
