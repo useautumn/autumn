@@ -20,6 +20,7 @@
 		"benchmark:track": "bun --config=./bunfig.toml tests/benchmarks/track-throughput/run.ts",
 		"benchmark:warm-track": "bun --config=./bunfig.toml tests/benchmarks/warm-track/run.ts",
 		"benchmark:warm-track:steps": "bun --config=./bunfig.toml tests/benchmarks/warm-track/steps.ts",
+		"benchmark:warm-track:decide-steps": "bun --config=./bunfig.toml tests/benchmarks/warm-track/decideSteps.ts",
 		"benchmark:warm-track:heap-ratio": "bun --config=./bunfig.toml tests/benchmarks/warm-track/residentHeapRatio.ts",
 		"benchmark:slots": "bun --config=./bunfig.toml tests/benchmarks/slot-contention/run.ts",
 		"benchmark:slots:worker": "bun --config=./bunfig.toml tests/benchmarks/slot-contention/worker.ts",

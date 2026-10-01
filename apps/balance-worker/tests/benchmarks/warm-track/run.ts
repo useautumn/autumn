@@ -6,6 +6,7 @@ import {
 	type SubjectState,
 	type TrackCommand,
 } from "@autumn/balance-engine";
+import { fullSubjectRowsMemoStats } from "@autumn/shared";
 import { syncSections } from "../../../src/logging/eventLoopStalls/syncSections.js";
 import {
 	createCustomerEntitlement,
@@ -167,6 +168,7 @@ const run = async ({ count }: { count: number }) => {
 	Bun.gc(true);
 	syncSections.drainTotals();
 	const heapBefore = heapStats();
+	const memoBefore = { ...fullSubjectRowsMemoStats };
 	console.error("BENCH_MARK timed_start");
 	const cpuBefore = process.cpuUsage();
 	const started = performance.now();
@@ -209,6 +211,16 @@ const run = async ({ count }: { count: number }) => {
 		retainedAfterGcKBPerTrack: Number(
 			((heapAfter.heapSize - heapBefore.heapSize) / 1024 / count).toFixed(2),
 		),
+		rowFlattensPerTrack: {
+			built: Number(
+				((fullSubjectRowsMemoStats.builds - memoBefore.builds) / count).toFixed(
+					2,
+				),
+			),
+			served: Number(
+				((fullSubjectRowsMemoStats.hits - memoBefore.hits) / count).toFixed(2),
+			),
+		},
 		slowSections,
 		sections,
 	};

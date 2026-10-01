@@ -1,5 +1,6 @@
 import { subjectStateToFullSubject } from "@autumn/balance-engine";
 import { BALANCE_WORKER_CATALOG_RECHECK_MS } from "@autumn/env/balanceWorkerConstants";
+import { markFullSubjectImmutable } from "@autumn/shared";
 import { ensureSubject } from "./actions/ensureSubject/ensureSubject.js";
 import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatalog.js";
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
@@ -40,10 +41,12 @@ export const createSubjectHydrator = ({
 				state,
 				entityId: identity.entityId,
 				join: () =>
-					subjectStateToFullSubject({
-						state,
-						catalog,
-						entityId: identity.entityId,
+					markFullSubjectImmutable({
+						fullSubject: subjectStateToFullSubject({
+							state,
+							catalog,
+							entityId: identity.entityId,
+						}),
 					}),
 			}),
 		overtakeInFlightLoads: ({ customerKey }) =>

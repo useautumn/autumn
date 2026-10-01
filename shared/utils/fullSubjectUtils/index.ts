@@ -2,10 +2,18 @@ export * from "./aggregatedUtils/index.js";
 export { buildNormalizeSpendLimitForCompare } from "./buildNormalizeSpendLimitForCompare.js";
 export { fullSubjectHasUsageBasedAllocated } from "./classifyFullSubject.js";
 export { fullCustomerToFullSubject } from "./fullCustomerToFullSubject.js";
+export {
+	fullSubjectRowsMemoStats,
+	markFullSubjectImmutable,
+	memoOnFullSubject,
+} from "./fullSubjectRowsMemo.js";
 export { fullSubjectToApiCustomerProducts } from "./fullSubjectToApiCustomerProducts.js";
 export { fullSubjectToApiUsageLimits } from "./fullSubjectToApiUsageLimits.js";
 export { fullSubjectToCreditSystems } from "./fullSubjectToCreditSystems.js";
-export { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
+export {
+	fullSubjectToCustomerEntitlements,
+	fullSubjectToRowsWithProduct,
+} from "./fullSubjectToCustomerEntitlements.js";
 export { fullSubjectToFullCustomer } from "./fullSubjectToFullCustomer.js";
 export { fullSubjectToOverageAllowedByFeatureId } from "./fullSubjectToOverageAllowed.js";
 export { fullSubjectToRelevantFeatures } from "./fullSubjectToRelevantFeatures.js";
