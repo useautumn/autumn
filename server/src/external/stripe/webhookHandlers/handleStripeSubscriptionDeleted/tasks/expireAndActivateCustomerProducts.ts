@@ -1,4 +1,5 @@
 import {
+	CusProductStatus,
 	type FullCusProduct,
 	findMainScheduledCustomerProductByGroup,
 	isCustomerProductOnStripeSubscription,
@@ -30,12 +31,19 @@ export const expireAndActivateCustomerProducts = async ({
 		`[sub.deleted] Processing ${customerProducts.length} customer products for subscription ${stripeSubscription.id}`,
 	);
 
-	const expiredCustomerProducts: FullCusProduct[] = [];
 	const outgoingCustomerProducts: FullCusProduct[] = [];
 	const incomingCustomerProducts: FullCusProduct[] = [];
 	const liveCustomerProducts = customerProducts.filter(
 		(customerProduct) => !isCustomerProductScheduled(customerProduct),
 	);
+	await customerProductActions.expiredCache.set({
+		ctx,
+		stripeSubscriptionId: stripeSubscription.id,
+		customerProducts: liveCustomerProducts.map((customerProduct) => ({
+			...customerProduct,
+			status: CusProductStatus.Expired,
+		})),
+	});
 	for (const customerProduct of liveCustomerProducts) {
 		// 1. If not on stripe subscription, skip
 		const onStripeSubscription = isCustomerProductOnStripeSubscription({
@@ -46,14 +54,13 @@ export const expireAndActivateCustomerProducts = async ({
 		if (!onStripeSubscription) continue;
 
 		// 2. Expire and activate free successor (with tracking)
-		const { expiredCustomerProduct, activation, insertedCustomerProduct } =
+		const { activation, insertedCustomerProduct } =
 			await expireAndActivateWithTracking({
 				ctx,
 				eventContext,
 				customerProduct,
 			});
 
-		expiredCustomerProducts.push(expiredCustomerProduct);
 		outgoingCustomerProducts.push(customerProduct);
 		if (activation) {
 			incomingCustomerProducts.push(activation.after);
@@ -92,12 +99,5 @@ export const expireAndActivateCustomerProducts = async ({
 		outgoingCustomerProducts,
 		incomingCustomerProducts,
 		now: eventContext.nowMs,
-	});
-
-	// invoice.created needs the expired snapshots for final usage billing.
-	await customerProductActions.expiredCache.set({
-		ctx,
-		stripeSubscriptionId: stripeSubscription.id,
-		customerProducts: expiredCustomerProducts,
 	});
 };
