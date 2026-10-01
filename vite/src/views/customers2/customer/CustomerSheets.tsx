@@ -33,12 +33,14 @@ import { LicensePoolDetailSheet } from "../components/sheets/LicensePoolDetailSh
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { ReissueInvoiceSheet } from "../components/sheets/ReissueInvoiceSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
+import { ChooseSubscriptionSheet } from "../components/sheets/set-plans-subscription/ChooseSubscriptionSheet";
 import { UpcomingInvoiceSheet } from "../components/sheets/UpcomingInvoiceSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SyncStripeSheetV2 } from "../components/sync-stripe-v2/SyncStripeSheetV2";
 import { VerifyStripeSheet } from "../components/verify-stripe/VerifyStripeSheet";
 
 const WIDE_SHEET_TYPES = new Set<SheetType>([
+	"create-schedule-choose-subscription",
 	"create-schedule",
 	"create-schedule-review",
 	"create-schedule-send-invoice",
@@ -140,6 +142,8 @@ export function CustomerSheets() {
 				return <RecordUsageSheet />;
 			case "check-balance":
 				return <CheckBalanceSheet />;
+			case "create-schedule-choose-subscription":
+				return <ChooseSubscriptionSheet />;
 			case "create-schedule":
 			case "create-schedule-review":
 			case "create-schedule-send-invoice":

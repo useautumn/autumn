@@ -17,6 +17,7 @@ import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
 import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
 import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePreview } from "./SchedulePreview";
+import { SetPlansSubscriptionNote } from "./SetPlansSubscriptionNote";
 
 const IS_PER_PHASE_REVIEW_READY = true;
 
@@ -36,7 +37,9 @@ export function CreateScheduleSheetContent() {
 				title="Set Plans"
 				description="Declare the customer's plans now and in future phases"
 				action={<BillingPromptToggle />}
-			/>
+			>
+				<SetPlansSubscriptionNote />
+			</SheetHeader>
 
 			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
 				<SheetSection withSeparator={false} className="pb-0">

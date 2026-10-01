@@ -46,6 +46,7 @@ export type SheetType =
 	| "billing-control-plan-managed"
 	| "record-usage"
 	| "check-balance"
+	| "create-schedule-choose-subscription"
 	| "create-schedule"
 	| "create-schedule-review"
 	| "create-schedule-send-invoice"
