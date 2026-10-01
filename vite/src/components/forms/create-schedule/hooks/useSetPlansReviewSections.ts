@@ -21,7 +21,7 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 
 		const plans = plansToReviewSection({
 			phases: preview.phases,
-			unlistedPhases: preview.unlisted_phases,
+			removedPhases: preview.removed_phases,
 			features,
 			currency: preview.currency,
 			nowMs,

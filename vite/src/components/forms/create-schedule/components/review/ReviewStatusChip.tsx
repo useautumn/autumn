@@ -8,10 +8,7 @@ import {
 } from "@autumn/ui";
 import { ChangeDot } from "@/components/v2/ItemStatusDot";
 import type { ReviewChangeLine } from "../../utils/review/planChangeLines";
-import type {
-	ReviewChangeOrigin,
-	ReviewChangeStatus,
-} from "../../utils/review/types/reviewChange";
+import type { ReviewChangeStatus } from "../../utils/review/types/reviewChange";
 
 const REVIEW_STATUSES: Record<
 	ReviewChangeStatus,
@@ -28,57 +25,14 @@ const REVIEW_STATUSES: Record<
 	unmanaged: { label: "Not in Autumn", tone: "amber", glyph: "alert" },
 };
 
-type PlanStatus = Extract<
-	ReviewChangeStatus,
-	"starts" | "ends" | "kept" | "updated"
->;
-
-/** Already-scheduled changes read muted; withdrawn ones say what no longer happens. */
-const SCHEDULED_PLAN_STATUSES: Record<
-	Exclude<ReviewChangeOrigin, "request">,
-	Record<PlanStatus, { label: string; tone: StatusTone; glyph: StatusGlyph }>
-> = {
-	saved: {
-		starts: { label: "Starts", tone: "neutral", glyph: "clock" },
-		ends: { label: "Ends", tone: "neutral", glyph: "clock" },
-		kept: { label: "Unchanged", tone: "neutral", glyph: "check" },
-		updated: { label: "Updates", tone: "neutral", glyph: "clock" },
-	},
-	withdrawn: {
-		starts: { label: "Won't start", tone: "amber", glyph: "x" },
-		ends: { label: "No longer ends", tone: "amber", glyph: "minus" },
-		kept: { label: "Unchanged", tone: "neutral", glyph: "check" },
-		updated: { label: "Won't update", tone: "amber", glyph: "x" },
-	},
-};
-
-const isPlanStatus = (status: ReviewChangeStatus): status is PlanStatus =>
-	status === "starts" ||
-	status === "ends" ||
-	status === "kept" ||
-	status === "updated";
-
-const statusStyle = ({
-	status,
-	origin,
-}: {
-	status: ReviewChangeStatus;
-	origin: ReviewChangeOrigin;
-}) =>
-	origin !== "request" && isPlanStatus(status)
-		? SCHEDULED_PLAN_STATUSES[origin][status]
-		: REVIEW_STATUSES[status];
-
 export function ReviewStatusChip({
 	status,
-	origin = "request",
 	changes = [],
 }: {
 	status: ReviewChangeStatus;
-	origin?: ReviewChangeOrigin;
 	changes?: ReviewChangeLine[];
 }) {
-	const { label, tone, glyph } = statusStyle({ status, origin });
+	const { label, tone, glyph } = REVIEW_STATUSES[status];
 	const chip = (
 		<StatusChip tone={tone} glyph={glyph}>
 			{changes.length > 1 ? `${label} · ${changes.length}` : label}

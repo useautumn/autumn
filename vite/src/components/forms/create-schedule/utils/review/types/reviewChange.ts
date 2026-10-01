@@ -16,9 +16,6 @@ export type ReviewChangeStatus =
 	| "carried"
 	| "unmanaged";
 
-/** request: this request causes it. saved: already scheduled. withdrawn: already scheduled, and cancelled by this request. */
-export type ReviewChangeOrigin = "request" | "saved" | "withdrawn";
-
 export type ReviewChangeValue = {
 	amount: string;
 	suffix?: string;
@@ -31,8 +28,6 @@ export type ReviewChangeRow = {
 	title: string;
 	description?: string;
 	status?: ReviewChangeStatus;
-	/** Who causes a plan row's change; absent rows read as this request's. */
-	origin?: ReviewChangeOrigin;
 	/** What changed on an updated row, shown in the status chip's tooltip. */
 	changes?: ReviewChangeLine[];
 	trialEndsAt?: number;

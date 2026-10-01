@@ -25,9 +25,7 @@ export function ReviewChangeRowItem({
 				<span
 					className={cn(
 						"truncate text-sm font-medium",
-						row.status === "ends" ||
-							row.status === "removed" ||
-							(row.origin !== undefined && row.origin !== "request")
+						row.status === "ends" || row.status === "removed"
 							? "text-muted-foreground"
 							: "text-foreground",
 					)}
@@ -67,11 +65,7 @@ export function ReviewChangeRowTrailing({
 			{showsStatus && (
 				<div className="w-[108px] shrink-0">
 					{row.status && (
-						<ReviewStatusChip
-							status={row.status}
-							origin={row.origin}
-							changes={row.changes}
-						/>
+						<ReviewStatusChip status={row.status} changes={row.changes} />
 					)}
 				</div>
 			)}

@@ -3,7 +3,7 @@ import type {
 	Feature,
 	SetPlansPreviewPhase,
 	SetPlansPreviewPlan,
-	SetPlansPreviewUnlistedPhase,
+	SetPlansPreviewRemovedPhase,
 } from "@autumn/shared";
 import { formatPhaseDate } from "../schedulePhaseTiming";
 import { formatMoney } from "./formatMoney";
@@ -54,15 +54,11 @@ const updatedChanges = ({
 	return change ? planChangeLines({ change, features }) : undefined;
 };
 
-/** A plan this request creates or changes says when it ends, instead of a separate removal row. */
 const endsLater = (plan: SetPlansPreviewPlan) =>
-	plan.origin === "request" &&
 	(plan.status === "starts" || plan.status === "updated") &&
 	plan.expires_at !== null;
 
-/** A change the reviewer is asked to confirm: anything this request causes or withdraws. */
-const isRequestedChange = (plan: SetPlansPreviewPlan) =>
-	plan.status !== "kept" && plan.origin !== "saved";
+const isChanged = (plan: SetPlansPreviewPlan) => plan.status !== "kept";
 
 const planToRow = ({
 	plan,
@@ -92,7 +88,6 @@ const planToRow = ({
 	]),
 	entityId: plan.entity_id ?? null,
 	status: plan.status,
-	origin: plan.origin,
 	changes: updatedChanges({ plan, planChanges, features }),
 	trialEndsAt:
 		plan.status !== "ends" &&
@@ -106,23 +101,22 @@ const planToRow = ({
 			: reviewPlanPrice({ prices: plan.prices, features }),
 });
 
-/** A date the request has no phase for; withdrawn-only dates are saved phases it removes. */
-const unlistedPhaseToReviewPhase = ({
-	unlistedPhase,
+const removedPhaseToReviewPhase = ({
+	removedPhase,
 	features,
 	currency,
 	nowMs,
 }: {
-	unlistedPhase: SetPlansPreviewUnlistedPhase;
+	removedPhase: SetPlansPreviewRemovedPhase;
 	features: Feature[];
 	currency: string;
 	nowMs: number;
 }): ReviewChangePhase => ({
-	key: `unlisted-${unlistedPhase.starts_at}`,
-	label: formatPhaseDate({ startsAt: unlistedPhase.starts_at }),
-	startsAt: unlistedPhase.starts_at,
-	removed: unlistedPhase.plans.every((plan) => plan.origin === "withdrawn"),
-	rows: unlistedPhase.plans.map((plan, planIndex) =>
+	key: `removed-${removedPhase.starts_at}`,
+	label: formatPhaseDate({ startsAt: removedPhase.starts_at }),
+	startsAt: removedPhase.starts_at,
+	removed: true,
+	rows: removedPhase.plans.map((plan, planIndex) =>
 		planToRow({
 			plan,
 			phaseIndex: -1 - planIndex,
@@ -135,18 +129,15 @@ const unlistedPhaseToReviewPhase = ({
 	),
 });
 
-const removedPhaseCount = (phases: ReviewChangePhase[]) =>
-	phases.filter((phase) => phase.removed).length;
-
 export const plansToReviewSection = ({
 	phases,
-	unlistedPhases = [],
+	removedPhases = [],
 	features,
 	currency,
 	nowMs,
 }: {
 	phases: SetPlansPreviewPhase[];
-	unlistedPhases?: SetPlansPreviewUnlistedPhase[];
+	removedPhases?: SetPlansPreviewRemovedPhase[];
 	features: Feature[];
 	currency: string;
 	nowMs: number;
@@ -167,14 +158,14 @@ export const plansToReviewSection = ({
 			}),
 		),
 	}));
-	const otherPhases = unlistedPhases.map((unlistedPhase) =>
-		unlistedPhaseToReviewPhase({ unlistedPhase, features, currency, nowMs }),
+	const removedReviewPhases = removedPhases.map((removedPhase) =>
+		removedPhaseToReviewPhase({ removedPhase, features, currency, nowMs }),
 	);
-	const removedCount = removedPhaseCount(otherPhases);
+	const removedCount = removedReviewPhases.length;
 
 	return {
 		phases: withoutEmptyPhases(
-			[...requestPhases, ...otherPhases].sort(
+			[...requestPhases, ...removedReviewPhases].sort(
 				(first, second) => (first.startsAt ?? 0) - (second.startsAt ?? 0),
 			),
 		),
@@ -182,7 +173,7 @@ export const plansToReviewSection = ({
 			counts: [
 				...phases.map((phase): [string, number] => [
 					phaseSummaryLabel({ phase }),
-					phase.plans.filter(isRequestedChange).length,
+					phase.plans.filter(isChanged).length,
 				]),
 				[`phase${removedCount === 1 ? "" : "s"} removed`, removedCount],
 			],

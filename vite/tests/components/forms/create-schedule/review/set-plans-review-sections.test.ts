@@ -46,7 +46,6 @@ const plan = (
 	entity_id: null,
 	name,
 	status: "starts",
-	origin: "request",
 	custom: false,
 	expires_at: null,
 	trial_ends_at: null,
@@ -140,7 +139,7 @@ test("an updated plan that ends later says when", () => {
 	expect(section.phases[0]?.rows[0]?.description).toBe("Ends Nov 1, 2026");
 });
 
-test("saved changes read muted, and a withdrawn saved phase sorts in as removed", () => {
+test("a removed saved phase sorts in among the others with every plan removed", () => {
 	const DEC_1 = Date.UTC(2026, 11, 1);
 	const section = plansToReviewSection({
 		currency: "usd",
@@ -148,21 +147,18 @@ test("saved changes read muted, and a withdrawn saved phase sorts in as removed"
 		nowMs: NOW,
 		phases: [
 			phase(NOW, {
-				plans: [plan("Pro", { status: "kept", expires_at: NOV_1 })],
+				plans: [plan("Pro", { status: "kept", expires_at: DEC_1 })],
 			}),
 			phase(DEC_1, {
-				plans: [
-					plan("Enterprise", { origin: "saved" }),
-					plan("Pro", { status: "ends", origin: "saved", expires_at: DEC_1 }),
-				],
+				plans: [plan("Growth", { status: "kept" })],
 			}),
 		],
-		unlistedPhases: [
+		removedPhases: [
 			{
 				starts_at: NOV_1,
 				plans: [
-					plan("Premium", { origin: "withdrawn" }),
-					plan("Pro", { status: "ends", origin: "withdrawn" }),
+					plan("Premium", { status: "ends", expires_at: NOV_1 }),
+					plan("Bonus", { status: "ends", expires_at: NOV_1 }),
 				],
 			},
 		],
@@ -172,26 +168,19 @@ test("saved changes read muted, and a withdrawn saved phase sorts in as removed"
 		section.phases.map((reviewPhase) => [
 			reviewPhase.label,
 			reviewPhase.removed ?? false,
-			reviewPhase.rows.map((row) => [row.title, row.status, row.origin]),
+			reviewPhase.rows.map((row) => [row.title, row.status]),
 		]),
 	).toEqual([
-		["Now", false, [["Pro", "kept", "request"]]],
+		["Now", false, [["Pro", "kept"]]],
 		[
 			"Nov 1, 2026",
 			true,
 			[
-				["Premium", "starts", "withdrawn"],
-				["Pro", "ends", "withdrawn"],
+				["Premium", "ends"],
+				["Bonus", "ends"],
 			],
 		],
-		[
-			"Dec 1, 2026",
-			false,
-			[
-				["Enterprise", "starts", "saved"],
-				["Pro", "ends", "saved"],
-			],
-		],
+		["Dec 1, 2026", false, [["Growth", "kept"]]],
 	]);
 	expect(section.summary).toBe("1 phase removed");
 });
