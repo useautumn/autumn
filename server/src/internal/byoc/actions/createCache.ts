@@ -9,7 +9,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
-import { insertCacheDeployment } from "../repos/cacheDeployments.js";
+import {
+	insertCacheDeployment,
+	updateCacheDeployment,
+} from "../repos/cacheDeployments.js";
 import {
 	atomTokenToHash,
 	cacheDeploymentToAtomToken,
@@ -47,6 +50,32 @@ const claimCacheDeployment = async ({
 		(winner && orgToCacheDeployment({ org: winner, env: ctx.env })) ??
 		cacheDeployment
 	);
+};
+
+/** A setup that landed in another group (the org's external id changed) moves the record there, token kept. */
+const followSetupGroup = async ({
+	ctx,
+	existing,
+	deploymentGroupId,
+}: {
+	ctx: AutumnContext;
+	existing: ByocCacheDeployment;
+	deploymentGroupId: string;
+}): Promise<ByocCacheDeployment> => {
+	if (existing.deployment_group_id === deploymentGroupId) return existing;
+	const moved: ByocCacheDeployment = {
+		...existing,
+		deployment_group_id: deploymentGroupId,
+		deployment_id: null,
+		status: ByocCacheStatus.AwaitingSetup,
+		endpoint_url: null,
+	};
+	await updateCacheDeployment({
+		ctx,
+		cacheDeployment: moved,
+		fromDeploymentGroupId: existing.deployment_group_id,
+	});
+	return moved;
 };
 
 /** Starts the env's cache setup, or hands back a fresh setup link while it still waits on the org. */
@@ -88,13 +117,17 @@ const startCacheSetup = async ({
 		env,
 		tokenHash: atomTokenToHash({ token }),
 	});
-	const claimed =
-		existing ??
-		(await claimCacheDeployment({
-			ctx,
-			deploymentGroupId: setup.deploymentGroupId,
-			token,
-		}));
+	const claimed = existing
+		? await followSetupGroup({
+				ctx,
+				existing,
+				deploymentGroupId: setup.deploymentGroupId,
+			})
+		: await claimCacheDeployment({
+				ctx,
+				deploymentGroupId: setup.deploymentGroupId,
+				token,
+			});
 	const cacheDeployment = await refreshCacheDeployment({
 		ctx,
 		cacheDeployment: claimed,

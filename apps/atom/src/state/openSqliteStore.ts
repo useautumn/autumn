@@ -1,5 +1,6 @@
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
+	countSubjects,
 	readSubject,
 	upsertSubject,
 	upsertSubjects,
@@ -17,6 +18,7 @@ export const openSqliteStore = ({
 		readSubject: (params) => readSubject({ ctx, ...params }),
 		setSubject: (params) => upsertSubject({ ctx, ...params }),
 		setSubjects: (params) => upsertSubjects({ ctx, ...params }),
+		countSubjects: () => countSubjects({ ctx }),
 		close: () => ctx.sqliteDb.close(true),
 	};
 };

@@ -57,18 +57,21 @@ export const insertCacheDeployment = ({
 		condition: sql`${envCache({ ctx })} IS NULL`,
 	});
 
-/** Only lands on the same deployment group, so a refresh racing a delete cannot bring it back. */
+/** Only lands on the group the record holds, so a refresh racing a delete cannot bring it back. */
 export const updateCacheDeployment = ({
 	ctx,
 	cacheDeployment,
+	fromDeploymentGroupId = cacheDeployment.deployment_group_id,
 }: {
 	ctx: AutumnContext;
 	cacheDeployment: ByocCacheDeployment;
+	/** The group the record is moving from, when a new setup landed it elsewhere. */
+	fromDeploymentGroupId?: string;
 }) =>
 	writeByocConfig({
 		ctx,
 		value: withCache({ ctx, cacheDeployment }),
-		condition: sql`${envCache({ ctx })}->>'deployment_group_id' = ${cacheDeployment.deployment_group_id}`,
+		condition: sql`${envCache({ ctx })}->>'deployment_group_id' = ${fromDeploymentGroupId}`,
 	});
 
 /** Only forgets the cache this delete began with: a replacement reuses its group, so `created_at` tells them apart. */

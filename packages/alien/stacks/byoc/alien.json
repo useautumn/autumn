@@ -37,7 +37,8 @@
 						"wildcardSubdomains": false
 					}
 				],
-				"stateful": true
+				"stateful": true,
+				"replicas": 1
 			},
 			"lifecycle": "live",
 			"dependencies": []

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { ForwardReason } from "../../lib/forward/cannotAnswerError.js";
-import type { AtomHttpContext } from "../types/atomHttp.js";
+import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
 /** Long enough for the API's own slowest check; past it the caller gets an error, not a hung request. */
 const FORWARD_TIMEOUT_MS = 30_000;
@@ -16,7 +16,11 @@ const HELD_BACK_HEADERS = [
 	"x-atom-token",
 ];
 
-const headersToForward = ({ context }: { context: Context }): Headers => {
+const headersToForward = ({
+	context,
+}: {
+	context: Context<AtomHttpEnv>;
+}): Headers => {
 	const headers = new Headers(context.req.raw.headers);
 	for (const name of HELD_BACK_HEADERS) headers.delete(name);
 	return headers;
@@ -32,14 +36,15 @@ export const forwardToAutumn = async ({
 	reason,
 }: {
 	ctx: AtomHttpContext;
-	context: Context;
+	context: Context<AtomHttpEnv>;
 	reason: ForwardReason;
 }): Promise<Response> => {
 	const { pathname, search } = new URL(context.req.url);
+	const target = `${ctx.autumnApiUrl}${pathname}${search}`;
 	try {
 		// The route already read the body; the request keeps it, so it is sent as it arrived.
 		const body = await context.req.text();
-		const reply = await fetch(`${ctx.autumnApiUrl}${pathname}${search}`, {
+		const reply = await fetch(target, {
 			method: context.req.method,
 			headers: headersToForward({ context }),
 			body,
@@ -49,16 +54,12 @@ export const forwardToAutumn = async ({
 		const contentType = reply.headers.get("content-type");
 		if (contentType) headers.set("content-type", contentType);
 		return new Response(reply.body, { status: reply.status, headers });
-	} catch (error) {
-		ctx.logger.error(
-			{ error, type: "atom_forward_failed", data: { reason } },
-			"Atom could not reach the Autumn API for a request it does not answer itself",
-		);
+	} catch (cause) {
+		const error = cause instanceof Error ? cause : new Error(String(cause));
+		const code = "atom_upstream_unreachable";
+		context.set("failure", { code, error, target });
 		return context.json(
-			{
-				message: "Atom could not reach the Autumn API",
-				code: "atom_upstream_unreachable",
-			},
+			{ message: "Atom could not reach the Autumn API", code },
 			502,
 			{ [FORWARDED_HEADER]: reason },
 		);
