@@ -61,14 +61,14 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ active: true, planId: "seatNew", internalId: "${seat.internal_id}", name: "Seat", versionSlug: "v1", }),
+		plan({ active: true, planId: "seatNew", internalId: "${seat.internal_id}", name: "Seat", versionSlug: "v1", price: { amount: 15, interval: "month" } }),
 		plan({
 			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
 			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
-			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: 25 }],
+			licenses: [{ licensePlanId: "seatNew", versionSlug: "v1", included: 25 }],
 		}),
 	],
 }`,

@@ -39,6 +39,8 @@ type CatalogPlanRow = {
 
 for (const interval of RESET_INTERVALS) {
 	for (const intervalCount of INTERVAL_COUNTS) {
+		// A lifetime (one_off) entitlement has no interval count to round-trip.
+		if (interval === "one_off" && intervalCount !== 1) continue;
 		test.concurrent(
 			`paid [monthly] [item reset: ${interval}] [interval_count ${intervalCount}]`,
 			async () => {

@@ -108,7 +108,7 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 		expect(asked.output).toContain("--login    ");
 		expect(asked.output).toContain("--keyless  ");
 		expect(existsSync(join(root, ".env"))).toBe(false);
-		expect(existsSync(join(root, "autumn.config.ts"))).toBe(false);
+		expect(existsSync(join(root, "autumn/autumn.config.ts"))).toBe(false);
 
 		// K2
 		const keyless = runCliHeadless({ cwd: root, args: ["login", "--keyless"] });
@@ -161,8 +161,10 @@ test(`${chalk.yellowBright("atmn init --keyless: provisions, then sets the repo 
 		expect(envValue({ cwd: root, key: "AUTUMN_SECRET_KEY" })).toMatch(
 			/^am_sk_test_/,
 		);
-		expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
-		expect(existsSync(join(root, "skills/autumn-setup/SKILL.md"))).toBe(true);
+		expect(existsSync(join(root, "autumn/autumn.config.ts"))).toBe(true);
+		expect(existsSync(join(root, "autumn/skills/autumn-setup/SKILL.md"))).toBe(
+			true,
+		);
 
 		const env = JSON.parse(
 			runCliHeadless({ cwd: root, args: ["env", "--json"] }).output,

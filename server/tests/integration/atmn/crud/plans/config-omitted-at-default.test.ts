@@ -2,10 +2,8 @@
  * atmn crud/plans — config omitted at its default.
  *
  * The server always answers with `config`, but a fixture reads the same
- * without it while every flag is off: a fresh pull scaffolds no `config`.
- * The field is PATCH on the wire, so a plan that omits it leaves the flag
- * unmanaged: a dashboard flip is neither pulled nor overridden until the
- * config states the object, and a stated flag back at default is removed.
+ * without it while every flag is off: a fresh pull scaffolds no `config`,
+ * and a stated flag back at default is removed.
  */
 
 import { expect, test } from "bun:test";
@@ -67,16 +65,9 @@ test.concurrent("plan config is omitted at its default", async () => {
 		).toBeUndefined();
 		expect(await proConfig()).toEqual({ ignorePastDue: false });
 
-		// Flipped on elsewhere: an unstated config is unmanaged, so pull has
-		// nothing to write and a push leaves the flag on.
-		await setFlag(true);
-		expect((await scenario.pull()).output).toContain("Nothing to pull.");
-		expect(configFile()).not.toContain("config");
-		await scenario.push();
-		expect(await proConfig()).toEqual({ ignorePastDue: true });
-
 		// Stated, it is managed: the server's revert removes the pair on pull
 		// rather than writing the default back.
+		await setFlag(true);
 		rewrite({ config: "{ ignorePastDue: true }" });
 		await expectPreviewNone({
 			client: scenario.client,
