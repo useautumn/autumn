@@ -2,7 +2,7 @@ import {
 	STRIPE_REQUEST_OPTIONS,
 	withStripeRequestSlot,
 } from "@tw/helpers/stripeRequestBudget.ts";
-import { and, eq, isNotNull, like, sql } from "drizzle-orm";
+import { and, eq, isNotNull, like, or, sql } from "drizzle-orm";
 import pLimit from "p-limit";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import { openSecret, sealSecret } from "../../../lib/secretBox.ts";
@@ -95,10 +95,34 @@ export const isShardKey = ({
 	secret: string;
 }) => secret === ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 
-/** A shard key imported before it was reserved keeps its row; retire it and drop its secret so nothing allocates, reinits or nukes under it. */
-export const retireShardKey = async ({ ctx }: { ctx: TwdContext }) => {
+const shardPlatformAccountId = async (secret: string) =>
+	(
+		await withStripeRequestSlot(() =>
+			stripeForKey({ secret }).accounts.retrieve(
+				undefined,
+				STRIPE_REQUEST_OPTIONS,
+			),
+		)
+	).id;
+
+/** Retires any stored row for the shard's platform (current or rotated-out secret) and drops its secret. */
+export const retireShardKey = async ({
+	ctx,
+	resolvePlatformAccountId = shardPlatformAccountId,
+}: {
+	ctx: TwdContext;
+	resolvePlatformAccountId?: (secret: string) => Promise<string>;
+}) => {
 	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 	if (!secret) return;
+	const platformAccountId = await resolvePlatformAccountId(secret).catch(
+		(error: unknown) => {
+			ctx.logger.warn("stripe-connect shard platform lookup failed", {
+				error: String(error),
+			});
+			return undefined;
+		},
+	);
 	const retired = await ctx.db
 		.update(stripeKeys)
 		.set({
@@ -108,10 +132,17 @@ export const retireShardKey = async ({ ctx }: { ctx: TwdContext }) => {
 			unusableReason: SHARD_KEY_REASON,
 			updatedAt: new Date(),
 		})
-		.where(eq(stripeKeys.keyHash, hashKey({ secret })))
+		.where(
+			or(
+				eq(stripeKeys.keyHash, hashKey({ secret })),
+				platformAccountId
+					? eq(stripeKeys.platformAccountId, platformAccountId)
+					: undefined,
+			),
+		)
 		.returning({ platformAccountId: stripeKeys.platformAccountId });
-	for (const { platformAccountId } of retired)
-		forgetKeySecret({ platformAccountId });
+	for (const row of retired)
+		forgetKeySecret({ platformAccountId: row.platformAccountId });
 };
 
 /** Any separator (commas, whitespace, newlines); only `sk_`/`rk_` tokens, deduped. */

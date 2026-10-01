@@ -57,6 +57,7 @@ test("a shard key stored before it was reserved is retired, its secret dropped",
 	rememberKeySecret({ platformAccountId: "acct_pool", secret: POOL_KEY });
 	const ctx = {
 		env: { SHARD_STRIPE_SANDBOX_KEY: SHARD_KEY },
+		logger: { warn: () => {} },
 		db: {
 			update: () => ({
 				set: (values: Record<string, unknown>) => {
@@ -73,7 +74,10 @@ test("a shard key stored before it was reserved is retired, its secret dropped",
 			}),
 		},
 	} as never;
-	await retireShardKey({ ctx });
+	await retireShardKey({
+		ctx,
+		resolvePlatformAccountId: async () => "acct_shard_platform",
+	});
 
 	expect(sets).toEqual([
 		expect.objectContaining({
@@ -84,8 +88,13 @@ test("a shard key stored before it was reserved is retired, its secret dropped",
 		}),
 	]);
 	const { sql, params } = new PgDialect().sqlToQuery(conditions[0]);
+	// The platform match also retires a row still holding a rotated-out shard secret.
 	expect(sql).toContain('"key_hash" = $1');
-	expect(params).toEqual([hashKey({ secret: SHARD_KEY })]);
+	expect(sql).toContain('"platform_account_id" = $2');
+	expect(params).toEqual([
+		hashKey({ secret: SHARD_KEY }),
+		"acct_shard_platform",
+	]);
 	expect(peekKeySecret({ platformAccountId: "acct_shard" })).toBeUndefined();
 	expect(peekKeySecret({ platformAccountId: "acct_pool" })).toBe(POOL_KEY);
 
@@ -94,4 +103,31 @@ test("a shard key stored before it was reserved is retired, its secret dropped",
 		ctx: { env: { SHARD_STRIPE_SANDBOX_KEY: "" }, db: {} } as never,
 	});
 	expect(sets).toEqual([]);
+});
+
+test("retiring still matches the current shard key when Stripe can't name its platform", async () => {
+	const conditions: SQL[] = [];
+	const ctx = {
+		env: { SHARD_STRIPE_SANDBOX_KEY: SHARD_KEY },
+		logger: { warn: () => {} },
+		db: {
+			update: () => ({
+				set: () => ({
+					where: (condition: SQL) => {
+						conditions.push(condition);
+						return { returning: async () => [] };
+					},
+				}),
+			}),
+		},
+	} as never;
+	await retireShardKey({
+		ctx,
+		resolvePlatformAccountId: async () => {
+			throw new Error("Stripe is down");
+		},
+	});
+	const { sql, params } = new PgDialect().sqlToQuery(conditions[0]);
+	expect(sql).toContain('"key_hash" = $1');
+	expect(params).toEqual([hashKey({ secret: SHARD_KEY })]);
 });
