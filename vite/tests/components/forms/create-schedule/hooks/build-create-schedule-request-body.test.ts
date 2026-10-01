@@ -142,6 +142,28 @@ describe("buildCustomizeBasePrice", () => {
 		expect(result).toBeNull();
 	});
 
+	test("keeps a stored $0 base price the user left untouched", () => {
+		const storedZeroPriceItem = {
+			...basePriceItem,
+			price: 0,
+			price_id: "pr_zero",
+			price_config: {
+				type: "fixed",
+				amount: 0,
+				interval: "month",
+				interval_count: 1,
+			},
+		} as unknown as ProductItem;
+		const result = buildCustomizeBasePrice({ items: [storedZeroPriceItem] });
+
+		expect(result).toEqual({
+			amount: 0,
+			interval: ProductItemInterval.Month,
+			interval_count: 1,
+			price_id: "pr_zero",
+		});
+	});
+
 	test("returns undefined when price item has no interval", () => {
 		const noIntervalItem = {
 			...basePriceItem,
