@@ -45,6 +45,8 @@ export const runs = pgTable(
 		workersWanted: integer("workers_wanted"),
 		/** Caller-chosen worker cap; null = one per file. */
 		maxWorkers: integer("max_workers"),
+		/** Times each selected file runs (flake checks); repeat runs never feed baselines or drift. */
+		repeat: integer("repeat").notNull().default(1),
 		costUsd: real("cost_usd").notNull().default(0),
 		workerSeconds: real("worker_seconds").notNull().default(0),
 		jobId: text("job_id"),

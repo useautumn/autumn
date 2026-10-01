@@ -19,6 +19,10 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Drift, RunDetail, RunFile } from "../../../src/api/contract.ts";
 import {
+	splitRepetitionId,
+	summariseRepeats,
+} from "../../../src/internal/runs/repeat/repetitions.ts";
+import {
 	fetchRunLogs,
 	useCancelRun,
 	useCatalog,
@@ -59,6 +63,7 @@ import { cn, elapsed, formatDate, formatMs, num, sha7 } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
 import { BootBreakdown } from "./runDetail/bootBreakdown.tsx";
 import { FileHistoryChart } from "./runDetail/fileHistoryChart.tsx";
+import { RepeatsPanel } from "./runDetail/repeatsPanel.tsx";
 import { RunTimingPanel } from "./runDetail/runTiming.tsx";
 
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
@@ -67,6 +72,7 @@ type Filter = (typeof FILTERS)[number];
 
 const isFailure = (f: RunFile) =>
 	f.status === "failed" || f.status === "crashed";
+const baseFile = (id: string) => splitRepetitionId({ id }).file;
 
 const WORKER_COLOR: Record<RunDetail["workers"][number]["status"], string> = {
 	provisioning: "bg-subtle/40",
@@ -339,6 +345,7 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 				</h3>
 				<RunStatusBadge status={run.status} />
 				{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}
+				{run.repeat > 1 && <Pill tone="info">repeat ×{run.repeat}</Pill>}
 			</div>
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tertiary-foreground">
 				<span className="flex items-center gap-1 text-tiny-id">
@@ -415,6 +422,7 @@ export const RunDetailScreen = () => {
 		catalog.data?.files.map((f) => [f.path, f.baselineP90Ms]),
 	);
 	const driftByFile = new Map(r.drift.map((d) => [d.file, d]));
+	const repeats = r.repeat > 1 ? summariseRepeats({ files: r.files }) : [];
 	const failures = r.files.filter(isFailure);
 	const running = r.files.filter((f) => f.status === "running").length;
 	const total = r.fileCount ?? r.files.length;
@@ -494,7 +502,10 @@ export const RunDetailScreen = () => {
 			header: "Duration vs p90",
 			size: 140,
 			cell: ({ row: { original: f } }) => (
-				<DurationCell ms={f.durationMs} p90={p90.get(f.file) ?? null} />
+				<DurationCell
+					ms={f.durationMs}
+					p90={p90.get(baseFile(f.file)) ?? null}
+				/>
 			),
 		},
 		{
@@ -617,6 +628,16 @@ export const RunDetailScreen = () => {
 
 			<div className="flex flex-col gap-6">
 				<div className="flex min-w-0 flex-col gap-6">
+					{repeats.length > 0 && (
+						<RepeatsPanel
+							repeat={r.repeat}
+							repeats={repeats}
+							onOpenFile={(file) => {
+								setFilter("all");
+								setQuery(file);
+							}}
+						/>
+					)}
 					{attention.length > 0 && (
 						<section>
 							<SectionTag>
@@ -739,7 +760,7 @@ export const RunDetailScreen = () => {
 								{formatMs(opened.durationMs)}
 							</span>
 							<span className="tabular-nums">
-								p90 {formatMs(p90.get(opened.file))}
+								p90 {formatMs(p90.get(baseFile(opened.file)))}
 							</span>
 							{opened.worker && (
 								<span className="text-tiny-id">{opened.worker}</span>
@@ -754,7 +775,7 @@ export const RunDetailScreen = () => {
 					)
 				}
 			>
-				{openFile && <FileHistoryChart file={openFile} runId={id} />}
+				{openFile && <FileHistoryChart file={baseFile(openFile)} runId={id} />}
 				<div className="p-4">
 					{fileLog.error ? (
 						<ErrorCallout error={fileLog.error} />

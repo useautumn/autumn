@@ -20,6 +20,10 @@ import type {
 	StripeKey,
 	WorkerState,
 } from "../../../src/api/contract.ts";
+import {
+	planWorkItems,
+	summariseRepeats,
+} from "../../../src/internal/runs/repeat/repetitions.ts";
 import type { Method } from "../api/client.ts";
 import fixture from "./catalogFixture.json";
 
@@ -474,11 +478,19 @@ const summarize = (run: RunDetail) => {
 	run.failed = run.files.filter(
 		(f) => f.status === "failed" || f.status === "crashed",
 	).length;
-	run.drift = computeDrift(run.files);
+	run.drift = run.repeat > 1 ? [] : computeDrift(run.files);
+	run.repeats = run.repeat > 1 ? summariseRepeats({ files: run.files }) : [];
 };
 
 const summary = (run: RunDetail): RunSummary => {
-	const { phase: _p, workers: _w, files: _f, drift: _d, ...rest } = run;
+	const {
+		phase: _p,
+		workers: _w,
+		files: _f,
+		drift: _d,
+		repeats: _r,
+		...rest
+	} = run;
 	return rest;
 };
 
@@ -590,6 +602,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		status: cancelled ? "cancelled" : "passed",
 		purpose: baseline ? "baseline" : "adhoc",
 		selection,
+		repeat: 1,
 		fileCount: list.length,
 		workerCount,
 		workersWanted: workerCount,
@@ -609,6 +622,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 			workerFree.set(f.worker ?? "", cursor);
 			return { ...f, finishedAt: iso(cursor) };
 		}),
+		repeats: [],
 		drift: [],
 		milestones: {
 			warmReadyAt: iso(createdAt + (startedAt - createdAt) * 0.6),
@@ -726,6 +740,7 @@ const startLiveRun = ({
 	queuedForMs = 0,
 	purpose = "adhoc",
 	pinnedSha = false,
+	repeat = 1,
 }: {
 	branch: string;
 	sha: string;
@@ -739,8 +754,9 @@ const startLiveRun = ({
 	/** Wait in the FIFO account queue before anything starts. */
 	queuedForMs?: number;
 	purpose?: RunSummary["purpose"];
+	repeat?: number;
 }) => {
-	const list = filesForSelection(selection);
+	const list = planWorkItems({ files: filesForSelection(selection), repeat });
 	const wanted = Math.min(list.length, workerCap);
 	const attached = queuedForMs ? 0 : Math.min(wanted, startWorkers);
 	const runId = `run_${hex(10)}`;
@@ -761,6 +777,7 @@ const startLiveRun = ({
 		status: progress > 0 ? "running" : "queued",
 		purpose,
 		selection,
+		repeat,
 		fileCount: list.length,
 		workerCount: attached,
 		workersWanted: wanted,
@@ -800,6 +817,7 @@ const startLiveRun = ({
 				failureSummary: null,
 			})),
 		],
+		repeats: [],
 		drift: [],
 	};
 	summarize(run);
@@ -1225,6 +1243,7 @@ export const handle = ({
 				status: failed ? ("failed" as const) : ("passed" as const),
 				durationMs: Math.round(base * slow * (0.8 + r() * 0.4)),
 				attempt: 1,
+				repetition: null,
 				passedTests: 5,
 				failedTests: failed ? 1 : 0,
 				worker: null,
@@ -1293,6 +1312,7 @@ export const handle = ({
 			sha?: string;
 			selection: RunSummary["selection"];
 			purpose?: RunSummary["purpose"];
+			repeat?: number;
 		};
 		const branch = branches.find((x) => x.name === b.branch);
 		if (!branch)
@@ -1326,6 +1346,7 @@ export const handle = ({
 			selection: b.selection,
 			createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
 			purpose: b.purpose,
+			repeat: b.repeat,
 			workerCap: 120,
 			startWorkers: 10,
 			queuedForMs: capacity().accounts.clean === 0 ? 30_000 : 0,

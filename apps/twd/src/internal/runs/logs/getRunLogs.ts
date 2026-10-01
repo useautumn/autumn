@@ -1,7 +1,9 @@
 import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import { runLogs } from "../../../db/schema/runs.ts";
+import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getLiveRun } from "../live/liveRuns.ts";
+import { splitRepetitionId, toRepetitionId } from "../repeat/repetitions.ts";
 import { getRunWithEmail } from "../repos/runsRepo.ts";
 import { readRunProgress } from "../types/runProgress.ts";
 import { listFailedFiles } from "./listFailedFiles.ts";
@@ -26,21 +28,41 @@ const readChunks = async ({
 		.map((row) => row.chunk)
 		.join("");
 
-/** Whole run, or one file / one worker / orchestrator-only (`scope: "run"`). */
+/** Whole run, or one file (one repetition of it in a repeat run) / one worker / orchestrator-only. */
 export const getRunLogs = async ({
 	ctx,
 	runId,
-	file,
+	file: requestedFile,
+	repetition,
 	worker,
 	scope,
 }: {
 	ctx: TwdContext;
 	runId: string;
 	file?: string;
+	repetition?: number;
 	worker?: string;
 	scope?: "run";
 }): Promise<string> => {
-	await getRunWithEmail({ ctx, runId });
+	const {
+		run: { repeat },
+	} = await getRunWithEmail({ ctx, runId });
+	const file =
+		requestedFile && repetition !== undefined
+			? toRepetitionId({ file: requestedFile, repetition })
+			: requestedFile;
+	if (
+		file &&
+		repeat > 1 &&
+		splitRepetitionId({ id: file }).repetition === null
+	) {
+		throw new TwdError({
+			status: 400,
+			code: "repetition_required",
+			message: `Run ${runId} repeats each file ${repeat} times; say which repetition's log you want.`,
+			next: `Pass repetition (1-${repeat}) with file, or use the failed-files log.`,
+		});
+	}
 	const filters = [eq(runLogs.runId, runId)];
 	if (file) filters.push(eq(runLogs.file, file));
 	if (worker) filters.push(eq(runLogs.worker, worker));

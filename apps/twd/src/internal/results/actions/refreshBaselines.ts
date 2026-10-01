@@ -16,6 +16,7 @@ export const refreshBaselines = async ({
 			select id from runs
 			where purpose = 'baseline'
 				and branch = ${BASELINE_BRANCH}
+				and repeat = 1
 				and status in ('passed', 'failed')
 				and finished_at is not null
 			order by finished_at desc
@@ -50,6 +51,17 @@ export const refreshBaselines = async ({
 	return { files: upserted.length };
 };
 
+/** Only plain dev baseline runs; a repeat run's samples of one file would skew its p90 and pass rate. */
+export const feedsBaseline = ({
+	purpose,
+	branch,
+	repeat,
+}: {
+	purpose: string;
+	branch: string;
+	repeat: number;
+}) => purpose === "baseline" && branch === BASELINE_BRANCH && repeat === 1;
+
 /** Hook for the runs task: call once a run reaches a terminal status. */
 export const onRunFinished = async ({
 	ctx,
@@ -59,9 +71,9 @@ export const onRunFinished = async ({
 	runId: string;
 }): Promise<void> => {
 	const [run] = await ctx.db
-		.select({ purpose: runs.purpose, branch: runs.branch })
+		.select({ purpose: runs.purpose, branch: runs.branch, repeat: runs.repeat })
 		.from(runs)
 		.where(eq(runs.id, runId));
-	if (run?.purpose !== "baseline" || run.branch !== BASELINE_BRANCH) return;
+	if (!run || !feedsBaseline(run)) return;
 	await refreshBaselines({ ctx });
 };

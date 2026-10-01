@@ -35,6 +35,7 @@ import {
 	CONNECT_WEBHOOK_EVENTS,
 	stripeForKey,
 } from "../../../keys/stripeForKey.ts";
+import { splitRepetitionId } from "../../repeat/repetitions.ts";
 import type {
 	SwarmAccount,
 	SwarmChildMessage,
@@ -617,7 +618,8 @@ const main = async (init: SwarmInit) => {
 							new tw.remoteExecutor.RemoteExecutor({
 								pool: shard.pool,
 								resolveSandbox,
-								toWorkerPath: tw.run.toSandboxPath,
+								toWorkerPath: (file) =>
+									tw.run.toSandboxPath(splitRepetitionId({ id: file }).file),
 							}),
 						),
 					),
@@ -799,7 +801,7 @@ process.once("message", (init: SwarmInit) => {
 });
 process.send?.({ type: "ready" });
 
-/** Capability detection reads file contents, so read them at the run's sha, then hand back twd-local paths. */
+/** Capability detection reads file contents at the run's sha; each work item (repetitions too) joins its file's shard. */
 const partitionAtSha = async ({
 	tw,
 	init,
@@ -808,16 +810,24 @@ const partitionAtSha = async ({
 	init: SwarmInit;
 }) => {
 	const toShaPath = (file: string) =>
-		file.replace(TESTS_DIR, init.testsDirAtSha);
-	const toLocalPath = (file: string) =>
-		file.replace(init.testsDirAtSha, TESTS_DIR);
+		splitRepetitionId({ id: file }).file.replace(TESTS_DIR, init.testsDirAtSha);
 	const { normalFiles, capabilityShards } =
-		await tw.capabilities.partitionByCapability(init.files.map(toShaPath));
+		await tw.capabilities.partitionByCapability([
+			...new Set(init.files.map(toShaPath)),
+		]);
+	const normal = new Set(normalFiles);
+	const shardIndexOf = new Map(
+		capabilityShards.flatMap(({ files }, index) =>
+			files.map((file) => [file, index] as const),
+		),
+	);
 	return {
-		normalFiles: normalFiles.map(toLocalPath),
-		capabilityShards: capabilityShards.map(({ capabilities, files }) => ({
+		normalFiles: init.files.filter((file) => normal.has(toShaPath(file))),
+		capabilityShards: capabilityShards.map(({ capabilities }, index) => ({
 			capabilities,
-			files: files.map(toLocalPath),
+			files: init.files.filter(
+				(file) => shardIndexOf.get(toShaPath(file)) === index,
+			),
 		})),
 	};
 };

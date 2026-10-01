@@ -77,6 +77,7 @@ export const toRunSummary = ({
 	status: run.status,
 	purpose: run.purpose,
 	selection: run.selection,
+	repeat: run.repeat,
 	fileCount: run.fileCount,
 	workerCount:
 		isTerminalRunStatus({ status: run.status }) && workersUsed !== undefined

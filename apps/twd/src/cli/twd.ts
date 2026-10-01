@@ -26,7 +26,7 @@ const TERMINAL = ["passed", "failed", "cancelled", "errored"];
 const USAGE = `twd — test worker daemon client (TWD_URL=${BASE_URL})
 
   twd login [key]                         store an API key (mint one in the dashboard)
-  twd run <groups|files…> [--branch=] [--grep=] [--workers=N] [--wait]
+  twd run <groups|files…> [--branch=] [--grep=] [--workers=N] [--repeat=N] [--wait]
                                           starts as soon as one account is free, grows from there
   twd runs [--all] [--branch=]
   twd run-status <id>                     follow a run's events until it finishes
@@ -200,6 +200,7 @@ const commands: Record<
 				branch: { type: "string" },
 				grep: { type: "string" },
 				workers: { type: "string" },
+				repeat: { type: "string" },
 				wait: { type: "boolean" },
 			},
 		});
@@ -220,6 +221,7 @@ const commands: Record<
 			body: {
 				branch: values.branch ?? gitBranch(),
 				...(values.workers && { maxWorkers: Number(values.workers) }),
+				...(values.repeat && { repeat: Number(values.repeat) }),
 				selection: {
 					...(groups.length && { groups }),
 					...(files.length && { files }),

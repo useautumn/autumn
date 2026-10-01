@@ -78,6 +78,12 @@ pass-rate. A branch run flags: fails-on-branch-passes-on-dev, or
 duration > 1.5× dev p90. Scheduling is longest-first by dev p90; unseen files
 first.
 
+**Repeat (flake checks)** — `repeat: N` (1–50, files × N ≤ 200) plans each
+file as N work items `<file>#1…#N`, so every repetition gets its own worker when
+accounts allow, its own result row (`test_results.repetition`) and its own logs.
+Retries are unchanged; the run reports first-attempt passes X/N per file. Repeat
+runs never feed baselines (baseline runs can't repeat) and skip drift.
+
 ## Layout
 
 ```
