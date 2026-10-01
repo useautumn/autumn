@@ -554,7 +554,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 			s.attach({ productId: customerPro.id }), // Customer-level
 			s.attach({ productId: entityPro.id, entityIndex: 0, timeout: 4000 }), // Entity-level
 			s.track({ featureId: TestFeature.Messages, value: 300 }),
-			s.track({ featureId: TestFeature.Messages, value: 250 }),
+			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }),
 			s.updateSubscription({
 				productId: customerPro.id,
 				cancelAction: "cancel_end_of_cycle",
@@ -578,7 +578,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
 
 	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
-		isBalanceWorkerRoute() ? -450 : -350,
+		isBalanceWorkerRoute() ? -200 : -350,
 	);
 
 	expect(entityAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
@@ -698,7 +698,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 			s.attach({ productId: customerPro.id }), // Customer-level
 			s.attach({ productId: entityPro.id, entityIndex: 0, timeout: 4000 }), // Entity-level
 			s.track({ featureId: TestFeature.Messages, value: 300 }),
-			s.track({ featureId: TestFeature.Messages, value: 250 }),
+			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }),
 			s.updateSubscription({
 				productId: customerPro.id,
 				cancelAction: "cancel_end_of_cycle",
@@ -718,7 +718,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
 
 	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
-		isBalanceWorkerRoute() ? -450 : -350,
+		isBalanceWorkerRoute() ? -200 : -350,
 	);
 	expect(entityAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
 
