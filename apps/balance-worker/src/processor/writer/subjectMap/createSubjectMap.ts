@@ -24,9 +24,12 @@ type Entry = {
 export const createSubjectMap = ({
 	maxBytes = SUBJECT_MAP_MAX_BYTES,
 }: {
-	maxBytes?: number;
+	maxBytes?: number | (() => number);
 } = {}): SubjectMap => {
-	if (!(maxBytes > 0)) throw new RangeError("maxBytes must be positive");
+	if (typeof maxBytes === "number" && !(maxBytes > 0))
+		throw new RangeError("maxBytes must be positive");
+	const boundBytes = () =>
+		typeof maxBytes === "number" ? maxBytes : maxBytes();
 	// Insertion order is recency: a read re-inserts, eviction walks from the front.
 	const entries = new Map<string, Entry>();
 	// A customer's subject keys (its own and its entities'), so an evict never walks the partition.
@@ -60,8 +63,9 @@ export const createSubjectMap = ({
 
 	/** Best effort: pinned subjects and the one just written stay even if the bound is exceeded. */
 	const evictUntilWithinBound = ({ except }: { except: string }) => {
+		const bound = boundBytes();
 		for (const [subjectKey, entry] of entries) {
-			if (totalBytes <= maxBytes) return;
+			if (totalBytes <= bound) return;
 			if (entry.pins > 0 || subjectKey === except) continue;
 			dropState({ subjectKey, entry });
 		}

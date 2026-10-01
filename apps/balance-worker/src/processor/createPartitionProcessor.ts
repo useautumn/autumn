@@ -240,6 +240,7 @@ function createProcessor({
 
 	return {
 		execute,
+		dispose: () => scope.ctx.writer.dispose(),
 		track,
 		check,
 		applyBillingPlan,

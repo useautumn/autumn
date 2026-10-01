@@ -70,14 +70,7 @@ export const BALANCE_WORKER_CATALOG_RECHECK_MS = BALANCE_WORKER_CATALOG_TTL_MS;
  *  the caller cannot do anything useful with. */
 export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
 
-/** Resident customer state per partition. 32 MiB thrashes on a partition whose
- *  hot working set is larger (run 36: hydrations 10 -> 180 per ten seconds after
- *  each billing plan on a multi-entity customer), but raising it to 256 MiB kept
- *  a single oversized customer resident and each track on it re-measured the
- *  whole state: seconds of stall, an expired transaction, a fenced worker and an
- *  OOM (run 37). Held at 32 MiB until a state that large is refused or trimmed
- *  at hydration; the budget then belongs per worker, split across its partitions. */
-export const BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES = 33_554_432;
+export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.1;
 
 /** How a partition's writer commits a batch to the log. Transactional is three
  *  broker round trips per commit (register the partition, produce, end the
