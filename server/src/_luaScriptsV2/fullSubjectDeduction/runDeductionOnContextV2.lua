@@ -588,6 +588,8 @@ local function run_deduction_on_context(params)
       overage_behavior_is_allow = overage_behavior_is_allow,
       enforce_spend_limit_gate = enforce_spend_limit_gate,
       bypass_usage_windows = bypass_usage_windows,
+      -- Pass 2 never gates a draw; it only gives refunds back to the entity's share.
+      allocation_gate = allocation_gate,
       pass_number = 2,
       skip_if_not_usage_allowed = not is_refund,
       updates = updates,
