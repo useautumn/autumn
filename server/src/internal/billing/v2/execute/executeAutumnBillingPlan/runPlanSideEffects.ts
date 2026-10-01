@@ -5,6 +5,10 @@ import {
 	type PendingBatchTransition,
 	startBatchTransitions,
 } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
+import {
+	planOnlyUpdatesAllocations,
+	refreshAllocationScale,
+} from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { SubService } from "@/internal/subscriptions/SubService";
@@ -87,5 +91,18 @@ export const runPlanSideEffects = async ({
 			idOrInternalId: autumnBillingPlan.customerId,
 			deleteCache: true,
 		});
+	}
+
+	// Shared credits may have moved: re-fit any allocations to what's left.
+	if (
+		autumnBillingPlan.customerId &&
+		!planOnlyUpdatesAllocations({ autumnBillingPlan })
+	) {
+		await refreshAllocationScale({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
+		}).catch((error) =>
+			ctx.logger.error("[refreshAllocationScale] failed", { error }),
+		);
 	}
 };
