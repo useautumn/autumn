@@ -2,7 +2,7 @@ import {
 	allocationGranted,
 	packAllocationGap,
 	solveAllocationScale,
-} from "@autumn/balance-engine/allocations";
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { allocationExceedsAvailableError } from "../allocateBalancesErrors.js";
 

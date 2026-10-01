@@ -38,6 +38,10 @@ import {
 	getEmptyApiBalanceV2,
 	mergeAggregatedBalanceIntoApiBalanceV2,
 } from "./apiBalanceV2Utils.js";
+import {
+	type AllocationSubjectView,
+	applyAllocationsToBreakdown,
+} from "./allocations/applyAllocationsToBreakdown.js";
 import { roundApiBalance } from "./roundApiBalance.js";
 
 export const getApiBalanceBreakdownItemV2 = ({
@@ -113,7 +117,7 @@ export const customerEntitlementsToApiBalance = ({
 	aggregatedFeatureBalance,
 	apiFeature,
 }: {
-	fullSubject: Pick<FullSubjectView, "entity">;
+	fullSubject: Pick<FullSubjectView, "entity"> & AllocationSubjectView;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
@@ -169,12 +173,18 @@ export const customerEntitlementsToApiBalance = ({
 			return unused;
 		}),
 	);
-	const breakdownItems = customerEntitlements.map((customerEntitlement) =>
-		getApiBalanceBreakdownItemV2({
-			fullSubject,
-			customerEntitlement,
-		}),
-	);
+	const { breakdownItems, totals: allocationTotals } =
+		applyAllocationsToBreakdown({
+			subject: fullSubject,
+			feature,
+			customerEntitlements,
+			breakdownItems: customerEntitlements.map((customerEntitlement) =>
+				getApiBalanceBreakdownItemV2({
+					fullSubject,
+					customerEntitlement,
+				}),
+			),
+		});
 	const totalGranted = sumValues(
 		breakdownItems.map((breakdownItem) =>
 			new Decimal(breakdownItem.included_grant)
@@ -232,6 +242,7 @@ export const customerEntitlementsToApiBalance = ({
 			next_reset_at: nextResetAt,
 			breakdown: breakdownItems,
 			rollovers: totalRollovers,
+			...(allocationTotals ?? {}),
 		},
 		aggregatedFeatureBalance,
 	});
@@ -247,7 +258,7 @@ export const getApiBalanceV2 = ({
 	aggregatedFeatureBalance,
 }: {
 	ctx: SharedContext;
-	fullSubject: Pick<FullSubjectView, "entity">;
+	fullSubject: Pick<FullSubjectView, "entity"> & AllocationSubjectView;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;

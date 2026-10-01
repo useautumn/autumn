@@ -8,7 +8,7 @@ import {
 	isSameUsageWindow,
 	type UsageWindow,
 } from "@autumn/shared";
-import { pickAllocationParent } from "@autumn/balance-engine/allocations";
+import { pickAllocationParent } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
 const isCustomerLevel = (customerEntitlement: FullCusEntWithFullCusProduct) =>

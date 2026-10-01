@@ -14,11 +14,6 @@
 			"types": "./src/apiRenderer/apiRenderer.ts",
 			"import": "./src/apiRenderer/apiRenderer.ts",
 			"default": "./src/apiRenderer/apiRenderer.ts"
-		},
-		"./allocations": {
-			"types": "./src/allocations/allocationMath.ts",
-			"import": "./src/allocations/allocationMath.ts",
-			"default": "./src/allocations/allocationMath.ts"
 		}
 	},
 	"scripts": {
