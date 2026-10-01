@@ -1,15 +1,14 @@
 import type {
 	BillingPlan,
 	CreateScheduleBillingContext,
-	FullCusProduct,
 	SetPlansPreviewPhase,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
-import { findOutOfScopeCustomerProductIds } from "../subscriptionScope/findOutOfScopeCustomerProductIds";
+import type { TimelineDiff } from "../timeline/types/timelineDiff";
 import { buildSavedPhaseCustomers } from "./balances/buildSavedPhaseCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
+import { diffToReview, type SetPlansReview } from "./diffToReview/diffToReview";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
 import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
 import {
@@ -19,8 +18,6 @@ import {
 import { subscriptionActionToProcessorItems } from "./processorItems/subscriptionActionToProcessorItems";
 import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
 import { setPlansPhaseBalanceChanges } from "./setPlansPhaseBalanceChanges";
-import { setPlansPhasePlans } from "./setPlansPhasePlans";
-import { setPlansPhaseTransitions } from "./setPlansPhaseTransitions";
 
 /** Credits on the immediate invoice, unless custom line items replace the computed ones. */
 const immediateCreditLineItems = (billingPlan: BillingPlan) =>
@@ -36,16 +33,21 @@ export const buildSetPlansPreviewPhases = async ({
 	billingContext,
 	billingPlan,
 	phases,
-	keptCustomerProducts,
+	diff,
+	customerProductIdBySegmentId,
 	processorItemContext,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	phases: SchedulePhasePlan[];
-	keptCustomerProducts: FullCusProduct[];
+	diff: TimelineDiff;
+	customerProductIdBySegmentId: Map<string, string>;
 	processorItemContext: ProcessorItemContext;
-}): Promise<SetPlansPreviewPhase[]> => {
+}): Promise<{
+	phases: SetPlansPreviewPhase[];
+	review: Pick<SetPlansReview, "unlistedPhases" | "withdrawnStarts">;
+}> => {
 	const { fullCustomer, stripeSubscription } = billingContext;
 	const { autumn: autumnBillingPlan, stripe: stripeBillingPlan } = billingPlan;
 
@@ -66,23 +68,14 @@ export const buildSetPlansPreviewPhases = async ({
 			phases,
 		}),
 	});
-	const phaseTransitions = setPlansPhaseTransitions({
-		autumnBillingPlan,
-		originalFullCustomer: fullCustomer,
-		phases,
-		phaseCustomers,
-		keptCustomerProductIds: new Set(
-			keptCustomerProducts.map((customerProduct) => customerProduct.id),
-		),
-	});
-	const phasePlans = setPlansPhasePlans({
-		phases,
-		outOfScopeCustomerProductIds: new Set(
-			findOutOfScopeCustomerProductIds({ billingContext }),
-		),
-		phaseCustomers,
-		originalFullCustomer: fullCustomer,
-		features: ctx.features,
+	const review = diffToReview({
+		diff,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
+		lookup: {
+			originalFullCustomer: fullCustomer,
+			finalFullCustomer: phaseCustomers[0] ?? fullCustomer,
+			customerProductIdBySegmentId,
+		},
 		creditLineItems: immediateCreditLineItems(billingPlan),
 		currency: processorItemContext.currency,
 	});
@@ -117,18 +110,21 @@ export const buildSetPlansPreviewPhases = async ({
 		}),
 	];
 
-	return phases.map((phase, phaseIndex) => ({
-		starts_at: phase.startsAt,
-		starts_now:
-			phaseIndex === 0 &&
-			billingContext.subscriptionBackdateStartMs === undefined,
-		ends_subscription: endsSubscription[phaseIndex],
-		plans: phasePlans[phaseIndex],
-		plan_changes: transitionsToCustomerPlanChanges({
-			transitions: phaseTransitions[phaseIndex],
-			entities: fullCustomer.entities,
-		}),
-		balance_changes: phaseBalanceChanges[phaseIndex],
-		processor_items: processorItemsByPhase[phaseIndex],
-	}));
+	return {
+		phases: phases.map((phase, phaseIndex) => ({
+			starts_at: phase.startsAt,
+			starts_now:
+				phaseIndex === 0 &&
+				billingContext.subscriptionBackdateStartMs === undefined,
+			ends_subscription: endsSubscription[phaseIndex],
+			plans: review.phases[phaseIndex]?.plans ?? [],
+			plan_changes: review.phases[phaseIndex]?.planChanges ?? [],
+			balance_changes: phaseBalanceChanges[phaseIndex],
+			processor_items: processorItemsByPhase[phaseIndex],
+		})),
+		review: {
+			unlistedPhases: review.unlistedPhases,
+			withdrawnStarts: review.withdrawnStarts,
+		},
+	};
 };

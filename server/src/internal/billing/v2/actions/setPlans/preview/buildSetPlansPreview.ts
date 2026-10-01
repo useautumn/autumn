@@ -2,7 +2,6 @@ import type { SetPlansPreviewResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
-import { getDeleteCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import type { SetPlansResult } from "../types/setPlansResult";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
 import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
@@ -24,7 +23,8 @@ export const buildSetPlansPreview = async ({
 	const {
 		billingContext,
 		billingPlan,
-		schedulePlan: { phases, immediatePhaseTransition },
+		timeline,
+		schedulePlan: { phases, immediatePhaseTransition, customerProductChanges },
 	} = result;
 
 	const [
@@ -59,12 +59,14 @@ export const buildSetPlansPreview = async ({
 		currency: attachPreview.currency,
 	};
 
-	const previewPhases = await buildSetPlansPreviewPhases({
+	const { phases: previewPhases, review } = await buildSetPlansPreviewPhases({
 		ctx,
 		billingContext,
 		billingPlan,
 		phases,
-		keptCustomerProducts: immediatePhaseTransition.keptCustomerProducts,
+		diff: timeline.diff,
+		customerProductIdBySegmentId:
+			customerProductChanges.customerProductIdBySegmentId,
 		processorItemContext,
 	});
 	const processorChanges = stripeBillingPlanToProcessorChanges({
@@ -75,6 +77,7 @@ export const buildSetPlansPreview = async ({
 	return {
 		...attachPreview,
 		phases: previewPhases,
+		unlisted_phases: review.unlistedPhases,
 		processor_changes: processorChanges,
 		warnings: setPlansPreviewToWarnings({
 			phases: previewPhases,
@@ -83,9 +86,7 @@ export const buildSetPlansPreview = async ({
 				context: processorItemContext,
 			}),
 			processorChanges,
-			deletedCustomerProducts: getDeleteCustomerProducts({
-				autumnBillingPlan: billingPlan.autumn,
-			}),
+			withdrawnCustomerProducts: review.withdrawnStarts,
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
 			requestedProrationBehavior: billingContext.requestedProrationBehavior,

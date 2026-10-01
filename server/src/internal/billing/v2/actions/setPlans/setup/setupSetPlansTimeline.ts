@@ -4,7 +4,6 @@ import type {
 	SetPlansParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { filterCustomerProductsInStripeSubscriptionScope } from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
 import {
 	billingContextToRequestedPhases,
 	requestedEndsAt,
@@ -15,12 +14,13 @@ import { diffTimelines } from "../timeline/diffTimelines/diffTimelines";
 import { createConfigInterner } from "../timeline/instanceConfig/createConfigInterner";
 import { customerProductToGrantedLicenses } from "../timeline/instanceConfig/instanceConfigs";
 import { customerProductsToTimelineRows } from "../timeline/savedTimeline/customerProductsToTimelineRows";
+import { isInRequestScope } from "../timeline/savedTimeline/isInRequestScope";
 import { rowsToSavedTimeline } from "../timeline/savedTimeline/rowsToSavedTimeline";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { setupSetPlansPolicies } from "./setupSetPlansPolicies";
 
 /** The request's scope: the request's own entity or customer, plus every scope a plan names. */
-const representedScopes = ({
+const representedScopesOf = ({
 	billingContext,
 	requestedPhases,
 }: {
@@ -41,12 +41,21 @@ const scopedCustomerProducts = ({
 	billingContext: CreateScheduleBillingContext;
 	requestedPhases: RequestedPhase[];
 }): FullCusProduct[] => {
-	const scopes = representedScopes({ billingContext, requestedPhases });
-	return filterCustomerProductsInStripeSubscriptionScope({
-		stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
-		customerProducts: billingContext.fullCustomer.customer_products,
-	}).filter((customerProduct) =>
-		scopes.has(customerProduct.internal_entity_id ?? null),
+	const representedScopes = representedScopesOf({
+		billingContext,
+		requestedPhases,
+	});
+	const stripeScopeIds = billingContext.stripeSubscriptionScope
+		? new Set(billingContext.stripeSubscriptionScope.customerProductIds)
+		: undefined;
+	return billingContext.fullCustomer.customer_products.filter(
+		(customerProduct) =>
+			isInRequestScope({
+				customerProductId: customerProduct.id,
+				internalEntityId: customerProduct.internal_entity_id ?? null,
+				stripeScopeCustomerProductIds: stripeScopeIds,
+				representedScopes,
+			}),
 	);
 };
 

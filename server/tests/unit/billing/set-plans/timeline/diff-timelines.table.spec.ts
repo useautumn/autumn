@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import chalk from "chalk";
+import { isInRequestScope } from "@/internal/billing/v2/actions/setPlans/timeline/savedTimeline/isInRequestScope";
 import type { UndeclaredPlansPolicy } from "@/internal/billing/v2/actions/setPlans/timeline/types/setPlansPolicies";
 import type { TimelineRow } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineRow";
 import type { DesiredSegment } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineSegment";
@@ -42,7 +43,13 @@ const OPERATIONS = [
 	"deletePhase",
 	"toOngoing",
 ] as const;
-const SCOPES = ["customer", "entity"] as const;
+const SCOPES = [
+	"customer",
+	"entity",
+	"otherSubscription",
+	"unrepresentedEntity",
+] as const;
+const OUT_OF_SCOPE: Scope[] = ["otherSubscription", "unrepresentedEntity"];
 const POLICIES: UndeclaredPlansPolicy[] = ["end", "retain"];
 
 type PriorState = (typeof PRIOR_STATES)[number];
@@ -185,7 +192,17 @@ const requestedSubjectSegments = ({
 	}
 };
 
+const isOutOfScope = (tableCase: TableCase) =>
+	OUT_OF_SCOPE.includes(tableCase.scope);
+
 const isMeaningful = (tableCase: TableCase) => {
+	if (isOutOfScope(tableCase)) {
+		return (
+			tableCase.prior !== "none" &&
+			tableCase.howAdded === "attach" &&
+			tableCase.operation === "remove"
+		);
+	}
 	const lifetimeMisfit =
 		tableCase.kind === "oneOff" &&
 		(tableCase.prior === "canceling" ||
@@ -212,12 +229,51 @@ const isSecondPurchase = ({
 	hash !== "h1" &&
 	SAVED_INTERVALS[tableCase.prior] !== null;
 
+const SCOPE_ENTITIES: Record<Scope, string | null> = {
+	customer: null,
+	entity: "entity_1",
+	otherSubscription: null,
+	unrepresentedEntity: "entity_2",
+};
+
+/** Setup's scope filter: rows on another subscription or an entity the request never names stay out. */
+const inRequestScope = ({
+	tableCase,
+	rows,
+	desired,
+}: {
+	tableCase: TableCase;
+	rows: TimelineRow[];
+	desired: DesiredSegment[];
+}) => {
+	const representedScopes = new Set<string | null>([
+		null,
+		...desired.map(({ internalEntityId }) => internalEntityId),
+	]);
+	const stripeScopeCustomerProductIds =
+		tableCase.scope === "otherSubscription"
+			? new Set(
+					rows
+						.filter(({ planId }) => planId !== SUBJECT_IDS[tableCase.kind])
+						.map(({ customerProductId }) => customerProductId),
+				)
+			: undefined;
+	return rows.filter((row) =>
+		isInRequestScope({
+			customerProductId: row.customerProductId,
+			internalEntityId: row.internalEntityId,
+			stripeScopeCustomerProductIds,
+			representedScopes,
+		}),
+	);
+};
+
 const buildCase = (tableCase: TableCase): TimelineCase => {
 	const subject = plan({
 		planId: SUBJECT_IDS[tableCase.kind],
 		kind: tableCase.kind,
 	});
-	const entity = tableCase.scope === "entity" ? "entity_1" : null;
+	const entity = SCOPE_ENTITIES[tableCase.scope];
 	const subjectSegments = (requestedSubjectSegments({ tableCase }) ?? []).map(
 		(segment, index): DesiredSegment =>
 			desiredSegment({
@@ -232,14 +288,20 @@ const buildCase = (tableCase: TableCase): TimelineCase => {
 			}),
 	);
 
+	const desiredSegments = [
+		desiredSegment({ plan: background }),
+		...subjectSegments,
+	];
 	return {
-		rows: [
-			savedRow({ id: "background_row", plan: background }),
-			...subjectRows({ tableCase, subject, entity }),
-		],
-		desired: desiredTimeline({
-			segments: [desiredSegment({ plan: background }), ...subjectSegments],
+		rows: inRequestScope({
+			tableCase,
+			rows: [
+				savedRow({ id: "background_row", plan: background }),
+				...subjectRows({ tableCase, subject, entity }),
+			],
+			desired: desiredSegments,
 		}),
+		desired: desiredTimeline({ segments: desiredSegments }),
 		policies: policiesFor({ undeclared: tableCase.policy }),
 	};
 };
@@ -278,7 +340,16 @@ describe(chalk.yellowBright("diffTimelines: generated table"), () => {
 			const timelineCase = buildCase(tableCase);
 			const { diff } = expectAllInvariants(timelineCase);
 
-			if (tableCase.operation === "keep") expectIdempotent({ diff });
+			if (tableCase.operation === "keep" || isOutOfScope(tableCase)) {
+				expectIdempotent({ diff });
+			}
+			if (isOutOfScope(tableCase)) {
+				const subjectId = SUBJECT_IDS[tableCase.kind];
+				expect(
+					diff.timeline.filter(({ planId }) => planId === subjectId),
+				).toEqual([]);
+				expect(describeTransitions(diff).join()).not.toContain(subjectId);
+			}
 
 			const attachTwin = buildCase({ ...tableCase, howAdded: "attach" });
 			const { diff: attachDiff } = expectAllInvariants(attachTwin);

@@ -43,7 +43,17 @@ export const SetPlansPreviewPlanSchema = z.object({
 	plan_id: z.string(),
 	entity_id: z.string().nullable(),
 	name: z.string(),
-	status: z.enum(["starts", "ends", "updated", "kept"]),
+	status: z.enum(["starts", "ends", "updated", "switches", "kept"]).meta({
+		description:
+			"What happens to the plan at this date. 'switches' replaces previous_plan_id in the same group; 'kept' runs on unchanged.",
+	}),
+	origin: z.enum(["request", "saved", "withdrawn"]).meta({
+		description:
+			"'request': this request causes the change. 'saved': already scheduled, and kept. 'withdrawn': already scheduled, and this request cancels it.",
+	}),
+	previous_plan_id: z.string().nullable().meta({
+		description: "The plan this one replaces or updates at this date.",
+	}),
 	custom: z.boolean(),
 	expires_at: z.number().nullable(),
 	trial_ends_at: z.number().nullable(),
@@ -84,6 +94,12 @@ export const SetPlansPreviewPhaseSchema = z.object({
 	processor_items: z.array(ProcessorItemSchema),
 });
 
+/** A date outside the request's phases where plans still change. */
+export const SetPlansPreviewUnlistedPhaseSchema = z.object({
+	starts_at: z.number(),
+	plans: z.array(SetPlansPreviewPlanSchema),
+});
+
 export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"unmanaged_stripe_item_removed",
 	"usage_reset",
@@ -120,6 +136,10 @@ export const SetPlansPreviewChangesSchema = z.object({
 		description:
 			"Each phase in start order, with the plans, balances and Stripe items it would hold.",
 	}),
+	unlisted_phases: z.array(SetPlansPreviewUnlistedPhaseSchema).meta({
+		description:
+			"Dates the request has no phase for where plans still change: saved changes that stay, or saved changes the request withdraws, such as a removed phase.",
+	}),
 	processor_changes: z.array(ProcessorChangeSchema).meta({
 		description:
 			"The Stripe subscriptions and subscription schedules the request would create, update, release or cancel.",
@@ -145,6 +165,9 @@ export type SetPlansPreviewBalanceChange = z.infer<
 	typeof SetPlansPreviewBalanceChangeSchema
 >;
 export type SetPlansPreviewPhase = z.infer<typeof SetPlansPreviewPhaseSchema>;
+export type SetPlansPreviewUnlistedPhase = z.infer<
+	typeof SetPlansPreviewUnlistedPhaseSchema
+>;
 export type SetPlansPreviewWarning = z.infer<
 	typeof SetPlansPreviewWarningSchema
 >;

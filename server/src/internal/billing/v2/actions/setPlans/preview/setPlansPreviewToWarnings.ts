@@ -107,7 +107,7 @@ export const setPlansPreviewToWarnings = ({
 	phases,
 	liveProcessorItems,
 	processorChanges,
-	deletedCustomerProducts,
+	withdrawnCustomerProducts,
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
 	requestedAnchorResetMs,
@@ -122,7 +122,8 @@ export const setPlansPreviewToWarnings = ({
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
 	processorChanges: ProcessorChange[];
-	deletedCustomerProducts: FullCusProduct[];
+	/** Saved scheduled plans the request withdraws; a re-timed or updated plan isn't one. */
+	withdrawnCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
 	requestedAnchorResetMs: number | undefined;
@@ -186,7 +187,7 @@ export const setPlansPreviewToWarnings = ({
 					},
 				]
 			: []),
-		...deletedCustomerProducts.map((customerProduct) => ({
+		...withdrawnCustomerProducts.map((customerProduct) => ({
 			type: "future_phase_removed" as const,
 			...warningText([
 				plainText("The scheduled"),

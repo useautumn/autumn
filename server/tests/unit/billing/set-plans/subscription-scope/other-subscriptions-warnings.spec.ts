@@ -8,7 +8,7 @@ const warningsFor = (otherStripeSubscriptionIds?: string[]) =>
 		phases: [],
 		liveProcessorItems: [],
 		processorChanges: [],
-		deletedCustomerProducts: [],
+		withdrawnCustomerProducts: [],
 		outgoingCustomerProducts: [],
 		features: [],
 		billingContext: { currentEpochMs: 0, billingCycleAnchorMs: "now" },
