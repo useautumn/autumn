@@ -42,7 +42,7 @@ import chalk from "chalk";
  * - ONE multiUpdate: cancel Premium EOC on entity 1 + entity 2
  *
  * Expected Result:
- * - Preview: total EXACTLY 0 (nothing due today), no next cycle
+ * - Preview: total EXACTLY 0 (nothing due today), next cycle bills nothing
  * - Entity 1's scheduled Pro deleted; both Premiums canceling; sub canceling
  * - After advance: everything gone, no invoice beyond the 2 attach invoices
  */
@@ -78,9 +78,7 @@ test.concurrent(
 			autumn: autumnV2_3,
 			params: multiUpdateParams,
 			total: 0,
-			subscriptions: [
-				{ planIds: [premium.id], total: 0, nextCycleTotal: null },
-			],
+			subscriptions: [{ planIds: [premium.id], total: 0, nextCycleTotal: 0 }],
 		});
 
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>(
