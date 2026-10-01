@@ -14,6 +14,7 @@ import type {
 	KafkaConsumerClient,
 	TopicRecord,
 	TopicRecordResult,
+	TopicResumePosition,
 } from "../../src/consumer/types/consumer.js";
 import { InvalidRecordError } from "../../src/lib/recordErrors.js";
 import { OWNER_EPOCH_HEADER } from "../../src/producer/sendIdempotentBatch.js";
@@ -493,6 +494,43 @@ async function reconcilesAdvancedApplicationOffset(): Promise<void> {
 	await consumer.stop();
 }
 
+async function keepsOffsetsInMemoryAcrossRejoin(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	const applied: string[] = [];
+	function readResumeOffset({ topic, partition }: TopicResumePosition) {
+		return progress.read({ topic, partition });
+	}
+	function applyRecord({ message }: TopicRecord): undefined {
+		applied.push(message.offset);
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic, commitGroupOffsets: false },
+	});
+	await consumer.start();
+	try {
+		await fixture.deliverBatch({
+			records: [createRecord("0"), createRecord("1"), createRecord("2")],
+		});
+		expect(progress.read({ topic, partition })).toBe(3n);
+		fixture.emitGroupJoin();
+		await fixture.deliverBatch({ records: [createRecord("0")] });
+		expect(fixture.seeks).toEqual([{ topic, partition, offset: "3" }]);
+		await fixture.deliverBatch({ records: [createRecord("3")] });
+		expect(applied).toEqual(["0", "1", "2", "3"]);
+		expect(progress.read({ topic, partition })).toBe(4n);
+		expect(fixture.commits).toEqual([]);
+		expect(fixture.events).not.toContain("commit");
+	} finally {
+		await consumer.stop();
+	}
+}
+
 async function withdrawalSettlesPendingResume(): Promise<void> {
 	const fixture = createConsumerFixture();
 	const progress = createProgressTracker();
@@ -710,6 +748,10 @@ function topicConsumerTests(): void {
 	test(
 		"seeks beyond already applied records without folding the rest of the batch",
 		reconcilesAdvancedApplicationOffset,
+	);
+	test(
+		"a group whose offsets live in memory never commits and resumes from memory after a rejoin",
+		keepsOffsetsInMemoryAcrossRejoin,
 	);
 	test(
 		"withdrawal settles pending offset reads without publishing stale progress",
