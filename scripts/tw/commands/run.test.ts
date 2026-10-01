@@ -29,7 +29,7 @@ const buildFor = (stripeAccountId: string) =>
 	buildWorkerEnv({
 		stripeAccountId,
 		stripeSecretKey: "sk_test_worker",
-		isSvixShard: false,
+		capabilities: [],
 		ingressUrl: "https://ingress.example.com",
 		ingressToken: "ingress-token",
 	});
