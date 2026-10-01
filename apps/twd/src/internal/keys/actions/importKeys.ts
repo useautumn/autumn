@@ -5,7 +5,12 @@ import { TwdError } from "../../../http/apiError.ts";
 import { sealSecret } from "../../../lib/secretBox.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { hashKey } from "../keySecrets.ts";
-import { parseKeyList, probeAndStoreKeys } from "./syncKeys.ts";
+import {
+	isShardKey,
+	parseKeyList,
+	probeAndStoreKeys,
+	SHARD_KEY_REASON,
+} from "./syncKeys.ts";
 
 /** Additive: new keys are probed + stored encrypted; keys twd already has are skipped. */
 export const importKeys = async ({
@@ -15,7 +20,6 @@ export const importKeys = async ({
 	ctx: TwdContext;
 	text: string;
 }): Promise<ImportKeysResponse> => {
-	sealSecret({ plaintext: "probe" });
 	const parsed = parseKeyList({ text });
 	if (parsed.length === 0)
 		throw new TwdError({
@@ -25,7 +29,10 @@ export const importKeys = async ({
 				"No Stripe secret keys (sk_test_… / rk_test_…) found in the pasted text.",
 			next: "Paste keys separated by commas, spaces, or new lines.",
 		});
-	const hashes = parsed.map((secret) => hashKey({ secret }));
+	const shardKeys = parsed.filter((secret) => isShardKey({ ctx, secret }));
+	const poolKeys = parsed.filter((secret) => !isShardKey({ ctx, secret }));
+	if (poolKeys.length > 0) sealSecret({ plaintext: "probe" });
+	const hashes = poolKeys.map((secret) => hashKey({ secret }));
 	const stored = await ctx.db
 		.select({
 			keyHash: stripeKeys.keyHash,
@@ -36,7 +43,7 @@ export const importKeys = async ({
 	const alreadyStored = new Set(
 		stored.filter((row) => row.sealed !== null).map((row) => row.keyHash),
 	);
-	const fresh = parsed.filter(
+	const fresh = poolKeys.filter(
 		(secret) => !alreadyStored.has(hashKey({ secret })),
 	);
 	const { probed } = await probeAndStoreKeys({
@@ -48,11 +55,17 @@ export const importKeys = async ({
 	return {
 		parsed: parsed.length,
 		added: probed.filter((result) => result.platformAccountId).length,
-		alreadyPresent: parsed.length - fresh.length,
+		alreadyPresent: poolKeys.length - fresh.length,
 		usable: probed.length - unusable.length,
-		unusable: unusable.map((result) => ({
-			keyHint: `${result.secret.slice(0, 8)}…${result.secret.slice(-4)}`,
-			reason: result.unusableReason ?? "unknown",
-		})),
+		unusable: [
+			...shardKeys.map((secret) => ({
+				keyHint: `${secret.slice(0, 8)}…${secret.slice(-4)}`,
+				reason: SHARD_KEY_REASON,
+			})),
+			...unusable.map((result) => ({
+				keyHint: `${result.secret.slice(0, 8)}…${result.secret.slice(-4)}`,
+				reason: result.unusableReason ?? "unknown",
+			})),
+		],
 	};
 };

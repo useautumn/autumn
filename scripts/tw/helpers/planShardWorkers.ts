@@ -3,15 +3,26 @@ export const planShardWorkers = ({
 	workers,
 	normalFileCount,
 	capabilityFileCounts,
+	capabilityMaxWorkers = [],
 }: {
 	workers: number;
 	normalFileCount: number;
 	capabilityFileCounts: number[];
+	/** Per-shard cap, aligned with `capabilityFileCounts`; undefined is uncapped. */
+	capabilityMaxWorkers?: (number | undefined)[];
 }) => {
 	const totalFiles =
 		normalFileCount + capabilityFileCounts.reduce((sum, n) => sum + n, 0);
 	if (totalFiles === 0) throw new Error("No test files to run");
-	const totalWorkers = Math.min(Math.max(1, workers), totalFiles);
+	const capOf = (index: number) =>
+		Math.min(
+			capabilityFileCounts[index],
+			capabilityMaxWorkers[index] ?? Number.POSITIVE_INFINITY,
+		);
+	const usefulWorkers =
+		normalFileCount +
+		capabilityFileCounts.reduce((sum, _, index) => sum + capOf(index), 0);
+	const totalWorkers = Math.min(Math.max(1, workers), usefulWorkers);
 	const shardCount = [normalFileCount, ...capabilityFileCounts].filter(
 		(count) => count > 0,
 	).length;
@@ -22,15 +33,15 @@ export const planShardWorkers = ({
 	// Every later non-empty shard, the normal pool included, keeps one worker in reserve.
 	let unplannedShards = shardCount;
 	let remainingWorkers = totalWorkers;
-	const capabilityWorkers = capabilityFileCounts.map((fileCount) => {
+	const capabilityWorkers = capabilityFileCounts.map((fileCount, index) => {
 		if (fileCount === 0) return 0;
 		unplannedShards--;
 		// Only without normal files can a capability shard be last and take the leftovers.
 		const takesLeftovers = normalFileCount === 0 && unplannedShards === 0;
 		const share = takesLeftovers
-			? Math.min(fileCount, remainingWorkers)
+			? Math.min(capOf(index), remainingWorkers)
 			: Math.min(
-					fileCount,
+					capOf(index),
 					remainingWorkers - unplannedShards,
 					Math.max(1, Math.round((totalWorkers * fileCount) / totalFiles)),
 				);

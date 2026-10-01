@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
 	capabilityWorkerEnv,
 	detectCapabilities,
+	maxWorkersFor,
 	partitionByCapability,
 	workerCapabilityServices,
 } from "./testCapabilities.ts";
@@ -59,6 +60,43 @@ test("detects /mcp requests built by template or concatenation", async () => {
 			await writeFixture("concat.test.ts", 'await fetch(baseUrl + "/mcp");'),
 		),
 	).toEqual(["leaf"]);
+});
+
+test("routes real Stripe Connect OAuth deauthorization to the stripe-connect shard", async () => {
+	for (const file of [
+		"integration/platform/platform-stripe-rpc.test.ts",
+		"integration/stripe/oauth-callback.test.ts",
+		"integration/stripe/oauth-deauthorization.test.ts",
+	]) {
+		expect({ file, capabilities: await detectCapabilities(at(file)) }).toEqual({
+			file,
+			capabilities: ["stripe-connect"],
+		});
+	}
+});
+
+test("keeps files that only override the client id in-process on the normal pool", async () => {
+	for (const file of [
+		"integration/billing/update-subscription/errors/update-foreign-stripe-subscription.test.ts",
+		"integration/stripe/dual-auth-ownership.test.ts",
+	]) {
+		expect({ file, capabilities: await detectCapabilities(at(file)) }).toEqual({
+			file,
+			capabilities: [],
+		});
+	}
+});
+
+test("the stripe-connect shard is capped at one worker and boots no service", () => {
+	expect(maxWorkersFor(["stripe-connect"])).toBe(1);
+	expect(maxWorkersFor(["svix", "stripe-connect"])).toBe(1);
+	expect(maxWorkersFor(["svix"])).toBeUndefined();
+	expect(capabilityWorkerEnv(["stripe-connect"])).toEqual({
+		TW_CAPABILITIES: "stripe-connect",
+	});
+	expect(
+		workerCapabilityServices({ TW_CAPABILITIES: "stripe-connect" }),
+	).toEqual([]);
 });
 
 test("keeps files that only mention the IdP or MCP hosts on the normal pool", async () => {

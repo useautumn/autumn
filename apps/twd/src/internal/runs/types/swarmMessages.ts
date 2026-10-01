@@ -19,6 +19,8 @@ export type SwarmInit = {
 	usableKeys: number;
 	ingressUrl: string;
 	ingressToken: string;
+	/** The stripe-connect shard's dedicated platform; absent when SHARD_STRIPE_* is unset. */
+	stripeConnectShard?: { secretKey: string; clientId: string };
 };
 
 /** Parent → swarm child after init. */
@@ -40,6 +42,8 @@ export type SwarmChildMessage =
 	| { type: "worker_ended"; name: string; accountId: string }
 	/** Accounts the child will not use (no sandbox touched them). */
 	| { type: "release_accounts"; accountIds: string[] }
+	/** Route a dedicated shard's unregistered accounts to its worker; null drops the route. */
+	| { type: "shard_route"; shard: string; workerUrl: string | null }
 	/** More accounts the child can use right now. */
 	| { type: "demand"; workers: number }
 	| { type: "worker"; worker: WorkerState }
