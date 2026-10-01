@@ -25,9 +25,11 @@ function createFakeCommitterDb({
 	storedNextOffset = null,
 	staleIds = new Set<string>(),
 	conflictIds = new Set<string>(),
+	flushGate,
 }: {
 	storedNextOffset?: bigint | null;
 	staleIds?: Set<string>;
+	flushGate?: Promise<void>;
 	/** Rows whose flush finds the bookmark moved by another worker. */
 	conflictIds?: Set<string>;
 } = {}) {
@@ -66,6 +68,7 @@ function createFakeCommitterDb({
 		},
 		// Rolls back like Postgres would: nothing lands unless every bookmark moved.
 		flush: async (request) => {
+			await flushGate;
 			const applied = request.changes.map(
 				(change) => !staleIds.has(subjectRowIdOf(change)),
 			);
@@ -389,6 +392,36 @@ describe("committer state store", () => {
 		expect(landed).toEqual([{ kind: "applied", mutation, nextOffset: 44n }]);
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(44n);
 		expect(fake.updates).toHaveLength(1);
+	});
+
+	test("work queued before a re-claim keeps the claim it was submitted under, so it cannot land after it", async () => {
+		const gate = Promise.withResolvers<void>();
+		const fake = createFakeCommitterDb({
+			storedNextOffset: 43n,
+			flushGate: gate.promise,
+		});
+		const store = createStore(fake);
+		await store.claimPartition({ topic, partition });
+		await store.loadProgress({ topic, partition });
+		const state = createState({ balance: 100 });
+		const mutation = createTrackMutation({ state, value: 5 });
+
+		const ahead = Promise.resolve(
+			store.advanceCommandNextOffset({
+				topic,
+				partition,
+				commandNextOffset: 5n,
+			}),
+		).catch((cause: unknown) => cause);
+		const queued = store.applyDurableMutations({
+			records: [{ position: { topic, partition, offset: 43n }, mutation }],
+		});
+		await store.claimPartition({ topic, partition });
+		gate.resolve();
+
+		expect(await ahead).toBeInstanceOf(FlushBookmarkConflictError);
+		expect((await queued).map((result) => result.kind)).toEqual(["failed"]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
 	});
 
 	test("a partition bookmarked for the first time carries its owner's claim", async () => {

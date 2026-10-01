@@ -58,18 +58,20 @@ export const createCommitterStateStore = ({
 	}) => {
 		const first = records[0];
 		if (!first) return Promise.resolve([]);
+		const claimToken = claimTokenOf(first.position);
 		return runInLane({
 			position: first.position,
-			run: () => applyDurableMutations({ ctx, records }),
+			run: () => applyDurableMutations({ ctx, records, claimToken }),
 		});
 	};
 
 	function advanceCommandNextOffset(
 		params: Parameters<CommitterStateStore["advanceCommandNextOffset"]>[0],
 	): Promise<void> {
+		const claimToken = claimTokenOf(params);
 		return runInLane({
 			position: params,
-			run: () => advanceCommandProgress({ ctx, ...params }),
+			run: () => advanceCommandProgress({ ctx, ...params, claimToken }),
 		});
 	}
 	function advanceOwnerFence(
@@ -77,9 +79,10 @@ export const createCommitterStateStore = ({
 			NonNullable<CommitterStateStore["advanceOwnerFence"]>
 		>[0],
 	): Promise<void> {
+		const claimToken = claimTokenOf(params);
 		return runInLane({
 			position: params,
-			run: () => advanceOwnerFenceProgress({ ctx, ...params }),
+			run: () => advanceOwnerFenceProgress({ ctx, ...params, claimToken }),
 		});
 	}
 	async function claimPartition(position: PartitionPosition): Promise<void> {

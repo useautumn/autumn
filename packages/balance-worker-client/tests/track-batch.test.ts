@@ -589,6 +589,24 @@ test("a batch whose route settles on the third refresh still lands", async () =>
 	expect(await pending).toEqual(replyFor("a"));
 });
 
+test("a batch refused on every attempt is an unsent transport failure with no sends", async () => {
+	const fixture = createFixture();
+	const pending = fixture.client.track({ command: commandFor("a") });
+	const refusal = Object.assign(new Error("Unable to connect"), {
+		code: "ConnectionRefused",
+	});
+	for (let send = 0; send < 4; send++) {
+		await fixture.sent(send + 1);
+		fixture.requests[send].fail(refusal);
+	}
+	await expect(pending).rejects.toMatchObject({
+		code: "TRANSPORT",
+		outcome: "not_submitted",
+		cause: refusal,
+		routing: { sends: 0, refreshes: 3 },
+	});
+});
+
 test("a batch whose worker refused the connection never reached it, so it refreshes and resends", async () => {
 	const fixture = createFixture();
 	const pending = fixture.client.track({ command: commandFor("a") });

@@ -350,6 +350,22 @@ async function resendsAfterRefusedConnection(): Promise<void> {
 	}
 }
 
+async function reportsExhaustedRefusalsAsUnsent(): Promise<void> {
+	const refusal = Object.assign(new Error("Unable to connect"), {
+		code: "ConnectionRefused",
+	});
+	const fixture = createFixture({
+		transportFailures: [refusal, refusal, refusal, refusal],
+	});
+	await expect(fixture.client.track({ command })).rejects.toMatchObject({
+		code: "TRANSPORT",
+		outcome: "not_submitted",
+		cause: refusal,
+		routing: { sends: 0, refreshes: 3 },
+	});
+	expect(fixture.stats().requests).toHaveLength(4);
+}
+
 async function boundsOwnershipWait(): Promise<void> {
 	const gate = Promise.withResolvers<void>();
 	const fixture = createFixture({
@@ -411,6 +427,10 @@ test("the operation deadline includes ownership refresh", boundsOwnershipWait);
 test(
 	"a refused connection never reached the worker, so the request refreshes and resends",
 	resendsAfterRefusedConnection,
+);
+test(
+	"a worker that refuses every attempt is reported as an unsent transport failure with no sends",
+	reportsExhaustedRefusalsAsUnsent,
 );
 test(
 	"reports ownership refresh failures before sending",

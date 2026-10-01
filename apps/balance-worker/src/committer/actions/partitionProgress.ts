@@ -59,10 +59,12 @@ export const initializePartition = async ({
 export async function advanceOwnerFence({
 	ctx,
 	fence,
+	claimToken,
 	...position
 }: {
 	ctx: CommitterStateStoreContext;
 	fence: OwnerFence;
+	claimToken?: string;
 } & PartitionPosition): Promise<void> {
 	assertOffset({ offset: fence.offset });
 	if (fence.epoch < 0n)
@@ -75,7 +77,7 @@ export async function advanceOwnerFence({
 	await ctx.committer.apply({
 		...position,
 		expectedOffset,
-		claimToken: ctx.claimTokenOf(position),
+		claimToken,
 		records: [],
 		ownerFence: fence,
 	});
@@ -84,9 +86,11 @@ export async function advanceOwnerFence({
 
 export async function advanceCommandNextOffset({
 	ctx,
+	claimToken,
 	...position
 }: {
 	ctx: CommitterStateStoreContext;
+	claimToken?: string;
 } & PartitionPosition & { commandNextOffset: bigint }): Promise<void> {
 	assertOffset({ offset: position.commandNextOffset });
 	const current = ctx.progress.readCommandNextOffset(position);
@@ -97,7 +101,7 @@ export async function advanceCommandNextOffset({
 	await ctx.committer.apply({
 		...position,
 		expectedOffset,
-		claimToken: ctx.claimTokenOf(position),
+		claimToken,
 		records: [],
 	});
 	ctx.progress.setCommandNextOffset(position);

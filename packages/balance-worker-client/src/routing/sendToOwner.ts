@@ -65,6 +65,7 @@ export async function sendToOwner<Response>({
 		// names the successor skips the refresh: the old owner wrote that claim itself.
 		let followingHint = false;
 		let notReadyRetries = 0;
+		let lastRefusal: unknown;
 		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; ) {
 			failureCode = "OWNERSHIP_UNAVAILABLE";
 			assertRequestDeadline({ deadline, outcome });
@@ -113,6 +114,8 @@ export async function sendToOwner<Response>({
 				});
 			} catch (cause) {
 				if (!isConnectionRefused({ cause })) throw cause;
+				routing.sends -= 1;
+				lastRefusal = cause;
 				outcome = "not_submitted";
 				ctx.hints?.drop({
 					partition: resolved.route.partition,
@@ -121,6 +124,7 @@ export async function sendToOwner<Response>({
 				attempt += 1;
 				continue;
 			}
+			lastRefusal = undefined;
 			assertRequestDeadline({ deadline, outcome });
 			failureCode = "INVALID_RESPONSE";
 			const notOwner = readNotOwnerResponse({ response });
@@ -140,6 +144,13 @@ export async function sendToOwner<Response>({
 			if (followingHint) routing.followedHint = true;
 			attempt += 1;
 		}
+		if (lastRefusal !== undefined)
+			throw new BalanceWorkerClientError({
+				code: "TRANSPORT",
+				outcome: "not_submitted",
+				message: "Worker refused every connection",
+				cause: lastRefusal,
+			});
 		throw new BalanceWorkerClientError({
 			code: "ROUTE_STILL_STALE",
 			outcome,

@@ -146,6 +146,7 @@ export function createTrackBatcher({
 		let followingHint = false;
 		// A NOT_READY from the owner is retried apart from the route attempts: the route was right.
 		let notReadyRetries = 0;
+		let lastRefusal: unknown;
 		const routing: WorkerRequestRouting = {
 			sends: 0,
 			refreshes: 0,
@@ -194,6 +195,7 @@ export function createTrackBatcher({
 				});
 				pending = posted.reroute;
 				followingHint = posted.followingHint;
+				lastRefusal = posted.refused;
 				if (posted.notReady) {
 					notReadyRetries += 1;
 					routing.notReadyAnswers = notReadyRetries;
@@ -216,11 +218,20 @@ export function createTrackBatcher({
 			}
 			rejectAll({
 				items: pending,
-				error: new BalanceWorkerClientError({
-					code: "ROUTE_STILL_STALE",
-					outcome: "not_submitted",
-					message: "Worker route is still stale after refreshing ownership",
-				}),
+				error:
+					lastRefusal === undefined
+						? new BalanceWorkerClientError({
+								code: "ROUTE_STILL_STALE",
+								outcome: "not_submitted",
+								message:
+									"Worker route is still stale after refreshing ownership",
+							})
+						: new BalanceWorkerClientError({
+								code: "TRANSPORT",
+								outcome: "not_submitted",
+								message: "Worker refused every connection",
+								cause: lastRefusal,
+							}),
 				routing,
 			});
 		} catch (cause) {
@@ -246,6 +257,7 @@ export function createTrackBatcher({
 		reroute: TrackItem[];
 		followingHint: boolean;
 		notReady: boolean;
+		refused?: unknown;
 	};
 
 	/** Sends the live items and settles what the worker answered; returns the items to reroute. */
@@ -280,6 +292,7 @@ export function createTrackBatcher({
 			});
 		} catch (cause) {
 			if (isConnectionRefused({ cause })) {
+				routing.sends -= 1;
 				batchAttempt.live.clear();
 				ctx.hints?.drop({
 					partition: resolved.route.partition,
@@ -290,6 +303,7 @@ export function createTrackBatcher({
 					reroute: items.filter(isLive),
 					followingHint: false,
 					notReady: false,
+					refused: cause,
 				};
 			}
 			rejectAll({
