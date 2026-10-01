@@ -144,6 +144,11 @@ import {
 } from "../helpers/stripe.ts";
 import { stripeBudgetForRun } from "../helpers/stripeBudget.ts";
 import {
+	STRIPE_CONNECT_SHARD,
+	splitStripeConnectShard,
+	unavailableShardExecutor,
+} from "../helpers/stripeConnectShard.ts";
+import {
 	allPoolKeys,
 	decodeSubAccount,
 	encodeSubAccount,
@@ -157,6 +162,7 @@ import { claimPoolAccounts } from "../helpers/stripePool.ts";
 import { createSvixApp as orchestratorCreateSvixApp } from "../helpers/svix.ts";
 import {
 	capabilityWorkerEnv,
+	maxWorkersFor,
 	partitionByCapability,
 	type TestCapabilityId,
 } from "../helpers/testCapabilities.ts";
@@ -559,6 +565,7 @@ export const buildWorkerEnv = ({
 	stripeSecretKey,
 	capabilities,
 	svixAppId,
+	stripeClientId,
 	ingressUrl,
 	ingressToken,
 }: {
@@ -567,6 +574,8 @@ export const buildWorkerEnv = ({
 	stripeSecretKey: string;
 	capabilities: TestCapabilityId[];
 	svixAppId?: string;
+	/** Connect client_id of the platform owning `stripeSecretKey`; stripe-connect workers only. */
+	stripeClientId?: string;
 	ingressUrl: string;
 	ingressToken: string;
 }): Record<string, string> => {
@@ -694,6 +703,14 @@ export const buildWorkerEnv = ({
 			);
 		}
 		env.SVIX_APP_ID = svixAppId;
+	}
+	if (capabilities.includes(STRIPE_CONNECT_SHARD)) {
+		if (!stripeClientId) {
+			throw new Error(
+				"[tw] stripe-connect shard worker requires its platform's Connect client_id",
+			);
+		}
+		env.STRIPE_SANDBOX_CLIENT_ID = stripeClientId;
 	}
 
 	return env;
@@ -1485,8 +1502,25 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		);
 	}
 
-	const { normalFiles, capabilityShards } =
-		await partitionByCapability(allFiles);
+	const partition = await partitionByCapability(allFiles);
+	const { normalFiles } = partition;
+	// The dedicated stripe-connect account lives on twd; bun tw reports those files instead of running them.
+	const { pooledShards: capabilityShards, stripeConnectShard } =
+		splitStripeConnectShard(partition.capabilityShards);
+	const stripeConnectFiles = stripeConnectShard?.files ?? [];
+	const stripeConnectUnavailable = unavailableShardExecutor({
+		reason:
+			"bun tw has no dedicated stripe-connect account; run these files on twd",
+	});
+	if (
+		stripeConnectFiles.length > 0 &&
+		normalFiles.length === 0 &&
+		capabilityShards.length === 0
+	) {
+		throw new Error(
+			"stripe-connect shard not configured: bun tw has no dedicated stripe-connect account; run these files on twd",
+		);
+	}
 
 	const requestedWorkers = Math.max(1, args.workers);
 	const { totalWorkers: effectiveWorkers, capabilityWorkers } =
@@ -1494,6 +1528,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			workers: requestedWorkers,
 			normalFileCount: normalFiles.length,
 			capabilityFileCounts: capabilityShards.map(({ files }) => files.length),
+			capabilityMaxWorkers: capabilityShards.map(({ capabilities }) =>
+				maxWorkersFor(capabilities),
+			),
 		});
 	if (
 		capabilityShards.some(({ capabilities }) => capabilities.includes("svix"))
@@ -1873,15 +1910,22 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const runPhaseStart = Date.now();
 		try {
 			await runShardTests({
-				shards: runShards.map(({ files, handles, slots }, index) => ({
-					files,
-					executor: new RemoteExecutor({
-						pool: pools[index],
-						resolveSandbox,
-						toWorkerPath: toSandboxPath,
-					}),
-					maxParallel: Math.max(1, handles.length * slots),
-				})),
+				shards: [
+					...runShards.map(({ files, handles, slots }, index) => ({
+						files,
+						executor: new RemoteExecutor({
+							pool: pools[index],
+							resolveSandbox,
+							toWorkerPath: toSandboxPath,
+						}),
+						maxParallel: Math.max(1, handles.length * slots),
+					})),
+					{
+						files: stripeConnectFiles,
+						executor: stripeConnectUnavailable,
+						maxParallel: 1,
+					},
+				],
 			});
 		} finally {
 			stopCulling();

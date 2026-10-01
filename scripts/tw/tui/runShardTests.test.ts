@@ -90,6 +90,25 @@ test("capability-only runs use every worker", () => {
 	).toEqual({ totalWorkers: 4, capabilityWorkers: [1, 1, 2] });
 });
 
+test("a capped capability shard never gets more workers than its cap", () => {
+	expect(
+		planShardWorkers({
+			workers: 200,
+			normalFileCount: 689,
+			capabilityFileCounts: [26, 3],
+			capabilityMaxWorkers: [undefined, 1],
+		}),
+	).toEqual({ totalWorkers: 200, capabilityWorkers: [7, 1] });
+	expect(
+		planShardWorkers({
+			workers: 10,
+			normalFileCount: 0,
+			capabilityFileCounts: [3],
+			capabilityMaxWorkers: [1],
+		}),
+	).toEqual({ totalWorkers: 1, capabilityWorkers: [1] });
+});
+
 test("a busy Svix shard does not block normal tests or overwrite the combined count", async () => {
 	const releaseSvix = Promise.withResolvers<void>();
 	const normalFinished = Promise.withResolvers<void>();

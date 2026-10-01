@@ -3,7 +3,7 @@
 
 import { readFile } from "node:fs/promises";
 
-export type TestCapabilityId = "svix" | "ssoIdp" | "leaf";
+export type TestCapabilityId = "svix" | "ssoIdp" | "leaf" | "stripe-connect";
 
 export type CapabilityService = {
 	name: string;
@@ -23,6 +23,8 @@ export type TestCapability = {
 	workerEnv: Record<string, string>;
 	/** Started by worker/boot.ts on this capability's workers only. */
 	service?: CapabilityService;
+	/** Upper bound on this shard's workers, whatever the run size. */
+	maxWorkers?: number;
 };
 
 const SSO_IDP_DNS = "127.0.0.1:53535";
@@ -66,6 +68,14 @@ export const TEST_CAPABILITIES: TestCapability[] = [
 				SLACK_SIGNING_SECRET: "tw",
 			},
 		},
+	},
+	{
+		id: "stripe-connect",
+		// Real OAuth revocation needs the client_id of the platform that owns the worker's Stripe key.
+		matches: /\.oauth\.deauthorize\(/,
+		workerEnv: {},
+		// One dedicated platform account, so its tests never run concurrently.
+		maxWorkers: 1,
 	},
 ];
 
@@ -136,6 +146,17 @@ export const capabilityWorkerEnv = (
 		{ [CAPABILITIES_ENV]: entries.map(({ id }) => id).join(",") },
 		...entries.map(({ workerEnv }) => workerEnv),
 	);
+};
+
+/** The tightest worker cap among `capabilities`; undefined when none is capped. */
+export const maxWorkersFor = (
+	capabilities: readonly string[],
+): number | undefined => {
+	const caps = TEST_CAPABILITIES.filter(
+		({ id, maxWorkers }) =>
+			capabilities.includes(id) && maxWorkers !== undefined,
+	).map(({ maxWorkers }) => maxWorkers as number);
+	return caps.length > 0 ? Math.min(...caps) : undefined;
 };
 
 /** Services boot.ts starts for the capabilities in this worker's env. */

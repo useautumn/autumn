@@ -91,6 +91,7 @@ export const ingressRoutes = new Hono<TwdHono>()
 			rawBody: await c.req.text(),
 			headers: c.req.raw.headers,
 			env: c.req.param("env"),
+			shard: c.req.query("shard"),
 			logger: getLogger(),
 		});
 		return c.text(

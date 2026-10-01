@@ -11,6 +11,10 @@ const TwdEnvSchema = z.object({
 	/** Comma-separated Stripe platform secret keys. The ONLY key source. */
 	/** Optional bootstrap: keys here are imported into the DB on boot (additive). */
 	TW_V3_KEYS: z.string().default(""),
+	/** stripe-connect shard's dedicated platform key; never pooled, farmed or nuked. */
+	SHARD_STRIPE_SANDBOX_KEY: z.string().default(""),
+	/** Connect client_id of the SHARD_STRIPE_SANDBOX_KEY platform. */
+	SHARD_STRIPE_CLIENT_ID: z.string().default(""),
 	/** Encrypts Stripe keys stored in the DB. Changing it makes stored keys unreadable. */
 	TWD_KEY_ENCRYPTION_SECRET: z.string().min(32).optional(),
 	GOOGLE_CLIENT_ID: z.string().default(""),
