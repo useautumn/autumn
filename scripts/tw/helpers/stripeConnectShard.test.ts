@@ -14,7 +14,7 @@ mock.module("@server/external/connect/stripeFromKey.js", () => ({
 		throw new Error("unused");
 	},
 }));
-const { collectPoolKeys } = await import("./stripeKeyPool.ts");
+const { collectPoolKeys, resolvePoolKeys } = await import("./stripeKeyPool.ts");
 
 const SHARD_KEY = "sk_test_shard_only";
 const events = ["account.application.deauthorized"];
@@ -26,6 +26,7 @@ afterEach(() => {
 		...STRIPE_CONNECT_SHARD_ENV_VARS,
 		"STRIPE_TEST_KEY_POOL",
 		"STRIPE_TEST_KEY_POOL_OLD",
+		"STRIPE_SANDBOX_SECRET_KEY",
 	]) {
 		if (savedEnv[name] === undefined) delete process.env[name];
 		else process.env[name] = savedEnv[name];
@@ -126,6 +127,18 @@ test("the shard key never enters the Stripe key pool", () => {
 	process.env.STRIPE_TEST_KEY_POOL = `${POOL_KEY},${SHARD_KEY}`;
 	process.env.STRIPE_TEST_KEY_POOL_OLD = SHARD_KEY;
 	expect(collectPoolKeys()).toEqual([POOL_KEY]);
+});
+
+test("the single-key fallback never hands out the shard key", () => {
+	process.env.SHARD_STRIPE_SANDBOX_KEY = SHARD_KEY;
+	process.env.STRIPE_TEST_KEY_POOL = "";
+	process.env.STRIPE_TEST_KEY_POOL_OLD = "";
+	process.env.STRIPE_SANDBOX_SECRET_KEY = SHARD_KEY;
+	expect(() => resolvePoolKeys()).toThrow(
+		"reserved for the stripe-connect shard",
+	);
+	process.env.STRIPE_SANDBOX_SECRET_KEY = POOL_KEY;
+	expect(resolvePoolKeys()).toEqual([POOL_KEY]);
 });
 
 test("every stripe-connect file lands on one dedicated shard, whatever else it needs", () => {
