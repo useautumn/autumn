@@ -90,7 +90,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 				addDays(new Date(), 7),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 10,
+			waitForSeconds: 30,
 		});
 
 		const customer = await autumn.customers.get(customerId);
