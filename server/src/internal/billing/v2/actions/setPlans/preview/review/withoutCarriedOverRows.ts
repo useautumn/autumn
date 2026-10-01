@@ -1,3 +1,4 @@
+import { withoutRepeatsOfPreviousPhase } from "../withoutRepeatsOfPreviousPhase";
 import type { ReviewPlanRow } from "./types/reviewPhase";
 
 const rowSignature = (row: ReviewPlanRow) => {
@@ -10,16 +11,13 @@ const rowSignature = (row: ReviewPlanRow) => {
 /** A later phase drops a row the phase before it already shows: that change carries over, it isn't new. */
 export const withoutCarriedOverRows = <Phase extends { rows: ReviewPlanRow[] }>(
 	phases: Phase[],
-): Phase[] =>
-	phases.map((phase, phaseIndex) => {
-		const previousPhase = phases[phaseIndex - 1];
-		if (!previousPhase) return phase;
-
-		const previousSignatures = new Set(previousPhase.rows.map(rowSignature));
-		return {
-			...phase,
-			rows: phase.rows.filter(
-				(row) => !previousSignatures.has(rowSignature(row)),
-			),
-		};
+): Phase[] => {
+	const phaseRows = withoutRepeatsOfPreviousPhase({
+		phases: phases.map(({ rows }) => rows),
+		signature: rowSignature,
 	});
+	return phases.map((phase, phaseIndex) => ({
+		...phase,
+		rows: phaseRows[phaseIndex],
+	}));
+};

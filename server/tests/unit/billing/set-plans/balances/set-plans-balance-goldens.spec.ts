@@ -286,3 +286,94 @@ describe(chalk.yellowBright("set_plans balance preview: projection"), () => {
 		expect(describeBalancePhases(phaseChanges)).toEqual([[], []]);
 	});
 });
+
+describe(chalk.yellowBright("set_plans balance preview: carried over"), () => {
+	const entityB = entities.create({ id: "ent_b", featureId: "users" });
+
+	const savedEntitySwitch = () => {
+		const pro = planRow({
+			planId: "pro",
+			balances: [included({ featureId: "words", allowance: 1000 })],
+		});
+		const teamOnB = planRow({
+			planId: "team",
+			rowId: "cp_team_b",
+			endedAt: PHASE_TWO,
+			internalEntityId: entityB.internal_id,
+			balances: [included({ featureId: "seats", allowance: 5 })],
+		});
+		const enterpriseOnB = scheduledRow({
+			planId: "enterprise",
+			rowId: "cp_enterprise_b",
+			startsAt: PHASE_TWO,
+			internalEntityId: entityB.internal_id,
+			balances: [included({ featureId: "seats", allowance: 5 })],
+		});
+		return { pro, teamOnB, enterpriseOnB };
+	};
+
+	test("a balance changed now and unchanged later is listed only in the phase it changes", async () => {
+		const { pro, teamOnB, enterpriseOnB } = savedEntitySwitch();
+		const customPro = planRow({
+			planId: "pro",
+			rowId: "cp_pro_custom",
+			startsAt: NOW,
+			balances: [included({ featureId: "words", allowance: 2000 })],
+		});
+
+		const phaseChanges = await previewBalanceChanges({
+			current: [pro, teamOnB, enterpriseOnB],
+			inserts: [customPro],
+			expirations: [pro],
+			phases: [
+				{ startsAt: NOW, customerProductIds: [customPro.id, teamOnB.id] },
+				{
+					startsAt: PHASE_TWO,
+					customerProductIds: [customPro.id, enterpriseOnB.id],
+				},
+			],
+			customerEntities: [entityB],
+		});
+
+		expect(describeBalancePhases(phaseChanges)).toEqual([
+			["words updated: 1000 -> 2000 granted, 2000 left"],
+			[],
+		]);
+	});
+
+	test("a later phase changing the same balance again is still listed", async () => {
+		const { pro, teamOnB, enterpriseOnB } = savedEntitySwitch();
+		const customPro = planRow({
+			planId: "pro",
+			rowId: "cp_pro_custom",
+			startsAt: NOW,
+			endedAt: PHASE_TWO,
+			balances: [included({ featureId: "words", allowance: 2000 })],
+		});
+		const largerPro = scheduledRow({
+			planId: "pro",
+			rowId: "cp_pro_larger",
+			startsAt: PHASE_TWO,
+			balances: [included({ featureId: "words", allowance: 3000 })],
+		});
+
+		const phaseChanges = await previewBalanceChanges({
+			current: [pro, teamOnB, enterpriseOnB],
+			inserts: [customPro, largerPro],
+			expirations: [pro],
+			phases: [
+				{ startsAt: NOW, customerProductIds: [customPro.id, teamOnB.id] },
+				{
+					startsAt: PHASE_TWO,
+					customerProductIds: [largerPro.id, enterpriseOnB.id],
+				},
+			],
+			customerEntities: [entityB],
+		});
+
+		expect(describeBalancePhases(phaseChanges)).toEqual([
+			["words updated: 1000 -> 2000 granted, 2000 left"],
+			["words updated: 1000 -> 3000 granted, 3000 left"],
+		]);
+	});
+});

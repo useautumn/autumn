@@ -6,6 +6,22 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerToScopedBalances } from "./balances/customerToScopedBalances";
 import { diffScopedBalances } from "./balances/diffScopedBalances";
 import { withOneOffPrepaidCarryOvers } from "./balances/withOneOffPrepaidCarryOvers";
+import { withoutRepeatsOfPreviousPhase } from "./withoutRepeatsOfPreviousPhase";
+
+const balanceChangeSignature = ({
+	entity_id,
+	feature_id,
+	behavior,
+	previous_attributes,
+	balance,
+}: SetPlansPreviewBalanceChange) =>
+	JSON.stringify([
+		entity_id,
+		feature_id,
+		behavior,
+		previous_attributes,
+		balance,
+	]);
 
 /**
  * Each phase's balances against what it is compared with: its saved self when given,
@@ -38,13 +54,16 @@ export const setPlansPhaseBalanceChanges = async ({
 		),
 	]);
 
-	return phaseBalances.map((after, phaseIndex) =>
-		diffScopedBalances({
-			before:
-				savedBalances[phaseIndex] ??
-				phaseBalances[phaseIndex - 1] ??
-				previousBalances,
-			after,
-		}),
-	);
+	return withoutRepeatsOfPreviousPhase({
+		phases: phaseBalances.map((after, phaseIndex) =>
+			diffScopedBalances({
+				before:
+					savedBalances[phaseIndex] ??
+					phaseBalances[phaseIndex - 1] ??
+					previousBalances,
+				after,
+			}),
+		),
+		signature: balanceChangeSignature,
+	});
 };
