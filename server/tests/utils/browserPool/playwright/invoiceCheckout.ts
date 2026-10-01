@@ -170,7 +170,7 @@ export const invoiceCheckout = async ({
 		window.addEventListener("blur", () => (window as unknown as { __diagClicks: string[] }).__diagClicks.push(`window-blur active=${document.activeElement?.tagName}.${(document.activeElement as HTMLElement)?.title}`));
 	});
 	await diagBoxes("pre-click");
-	await diagSubmit.click();
+	await diagSubmit.press("Enter");
 	console.log(`[DIAG ${label}] clicked submit t=${Date.now() - diagStart}ms perf=${await page.evaluate(() => Math.round(performance.now())).catch(() => -1)}`);
 	await diagBoxes("post-click");
 	for (const ms of [100, 300, 700, 1500]) {
