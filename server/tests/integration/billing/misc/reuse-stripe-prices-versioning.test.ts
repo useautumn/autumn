@@ -27,6 +27,7 @@ import {
 	type CreatePlanItemParamsV1,
 	BillingInterval,
 	BillingMethod,
+	type FullProduct,
 	type Price,
 	priceStripeObjectsMatch,
 	TierInfinite,
@@ -37,18 +38,20 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { v2BillingStripePriceId } from "@tests/integration/utils/expectStripePriceResources";
 import { ProductService } from "@/internal/products/ProductService";
 
 const collectStripeIdsByFeatureKey = (
-	prices: Price[],
+	product: FullProduct,
 ): Map<string, Record<string, string | null>> => {
 	const map = new Map<string, Record<string, string | null>>();
-	for (const price of prices) {
+	for (const price of product.prices) {
 		const config = price.config as Record<string, unknown>;
 		const featureId = (config.feature_id as string | undefined) ?? "__fixed__";
 		const billWhen = (config.bill_when as string | undefined) ?? "__none__";
 		const key = `${featureId}|${billWhen}`;
 		map.set(key, {
+			v2_billing_price_id: v2BillingStripePriceId({ price, product }),
 			stripe_product_id: (config.stripe_product_id as string | null) ?? null,
 			stripe_price_id: (config.stripe_price_id as string | null) ?? null,
 			stripe_empty_price_id:
@@ -104,7 +107,7 @@ test.concurrent(`${chalk.yellowBright("versioning: add boolean entitlement → a
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	const beforeIds = collectStripeIdsByFeatureKey(beforeProduct.prices);
+	const beforeIds = collectStripeIdsByFeatureKey(beforeProduct);
 
 	const updatedItems = [
 		items.monthlyPrice({ price: 20 }),
@@ -126,13 +129,13 @@ test.concurrent(`${chalk.yellowBright("versioning: add boolean entitlement → a
 
 	expect(afterProduct.version).toBe(beforeProduct.version + 1);
 
-	const afterIds = collectStripeIdsByFeatureKey(afterProduct.prices);
+	const afterIds = collectStripeIdsByFeatureKey(afterProduct);
 
 	for (const [key, before] of beforeIds.entries()) {
 		const after = afterIds.get(key);
 		expect(after).toBeDefined();
 		if (!after) continue;
-		expect(before.stripe_price_id).not.toBeNull();
+		expect(before.v2_billing_price_id).not.toBeNull();
 		expect(after.stripe_product_id).toBe(before.stripe_product_id);
 		expect(after.stripe_price_id).toBe(before.stripe_price_id);
 		expect(after.stripe_empty_price_id).toBe(before.stripe_empty_price_id);
@@ -201,11 +204,17 @@ test.concurrent(`${chalk.yellowBright("versioning: prepaid amount change → str
 	expect(afterMessages).toBeDefined();
 	if (!afterMessages || !beforeMessages) return;
 
-	const beforeConfig = beforeMessages.config as Record<string, unknown>;
-	const afterConfig = afterMessages.config as Record<string, unknown>;
-	expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
+	const beforeStripePriceId = v2BillingStripePriceId({
+		price: beforeMessages,
+		product: beforeProduct,
+	});
+	const afterStripePriceId = v2BillingStripePriceId({
+		price: afterMessages,
+		product: afterProduct,
+	});
+	expect(beforeStripePriceId).not.toBeNull();
+	expect(afterStripePriceId).not.toBeNull();
+	expect(afterStripePriceId).not.toBe(beforeStripePriceId);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -262,9 +271,15 @@ test.concurrent(`${chalk.yellowBright("versioning: graduated → volume tier_beh
 	expect(afterMessages).toBeDefined();
 	if (!afterMessages || !beforeMessages) return;
 
-	const beforeConfig = beforeMessages.config as Record<string, unknown>;
-	const afterConfig = afterMessages.config as Record<string, unknown>;
-	expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
+	const beforeStripePriceId = v2BillingStripePriceId({
+		price: beforeMessages,
+		product: beforeProduct,
+	});
+	const afterStripePriceId = v2BillingStripePriceId({
+		price: afterMessages,
+		product: afterProduct,
+	});
+	expect(beforeStripePriceId).not.toBeNull();
+	expect(afterStripePriceId).not.toBeNull();
+	expect(afterStripePriceId).not.toBe(beforeStripePriceId);
 });

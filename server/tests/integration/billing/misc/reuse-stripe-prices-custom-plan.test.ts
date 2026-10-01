@@ -87,13 +87,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: add boolean entitlement → 
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectAllStripeIdsReused({ pairs });
+	expectAllStripeIdsReused({ pairs, catalogProduct });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -140,13 +140,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: paid feature shapes unchange
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectAllStripeIdsReused({ pairs });
+	expectAllStripeIdsReused({ pairs, catalogProduct });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -181,7 +181,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on sa
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs, catalogPrices, customerPrices } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct, catalogPrices, customerPrices } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
@@ -189,6 +189,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on sa
 
 	expectStripePriceIdNotReused({
 		pairs,
+		catalogProduct,
 		featureId: TestFeature.Messages,
 		catalogPrices,
 		customerPrices,
@@ -227,13 +228,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid amount change → st
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectStripePriceIdNotReused({ pairs, featureId: TestFeature.Messages });
+	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -275,13 +276,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: tier amount change → strip
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectStripePriceIdNotReused({ pairs, featureId: TestFeature.Messages });
+	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -331,13 +332,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: graduated → volume tier_be
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectStripePriceIdNotReused({ pairs, featureId: TestFeature.Messages });
+	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -387,13 +388,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → 
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectStripePriceIdNotReused({ pairs, featureId: TestFeature.Messages });
+	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -430,13 +431,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: prorated allocated → arrea
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectStripePriceIdNotReused({ pairs, featureId: TestFeature.Workflows });
+	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Workflows });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -471,13 +472,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: change prepaid billing_units
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectStripePriceIdNotReused({ pairs, featureId: TestFeature.Messages });
+	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -535,13 +536,13 @@ test.concurrent(`${chalk.yellowBright("custom plan: change rollover config → b
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectAllStripeIdsReused({ pairs });
+	expectAllStripeIdsReused({ pairs, catalogProduct });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -583,11 +584,11 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid + consumable pair on
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs } = await loadCustomerAndCatalogPrices({
+	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
 		ctx,
 		customerId,
 		catalogProductId: proPlan.id,
 	});
 
-	expectAllStripeIdsReused({ pairs });
+	expectAllStripeIdsReused({ pairs, catalogProduct });
 });
