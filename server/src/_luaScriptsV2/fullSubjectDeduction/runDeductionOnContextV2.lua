@@ -121,8 +121,13 @@ local function process_deduction_pass(params)
       end
     end
 
-    -- Allocation gate: on shared rows, only the entity's own share plus unallocated credits.
-    if should_process and remaining_amount > 0 and pass_number == 1 then
+    -- Allocation gate: shared credits above zero go only to the entity's own share plus
+    -- unallocated credits; once its headroom covers them, overage below zero is free.
+    local shared_balance_before = 0
+    if context.customer_entitlements[ent_id] then
+      shared_balance_before = math.max(0, safe_number(context.customer_entitlements[ent_id].balance))
+    end
+    if should_process and remaining_amount > 0 then
       local available_from_allocation = get_available_from_allocation({
         context = context,
         gate = allocation_gate,
@@ -130,6 +135,7 @@ local function process_deduction_pass(params)
         credit_cost = credit_cost,
       })
       if not is_nil(available_from_allocation)
+          and available_from_allocation * credit_cost < shared_balance_before
           and available_from_allocation < ent_amount then
         ent_amount = available_from_allocation
       end
@@ -247,14 +253,17 @@ local function process_deduction_pass(params)
 
       remaining_amount = remaining_amount - deducted_units
 
-      if pass_number == 1 or deducted < 0 then
-        consume_allocation({
-          context = context,
-          gate = allocation_gate,
-          ent_id = ent_id,
-          credits = deducted,
-        })
+      -- Only credits above zero are shared; the counters ignore overage below it.
+      local shared_deducted = deducted
+      if deducted > 0 then
+        shared_deducted = math.min(deducted, shared_balance_before)
       end
+      consume_allocation({
+        context = context,
+        gate = allocation_gate,
+        ent_id = ent_id,
+        credits = shared_deducted,
+      })
 
       -- Settle the gate: record what this ent actually drained against every
       -- applicable window limit so the next ent sees the reduced headroom.
@@ -588,7 +597,6 @@ local function run_deduction_on_context(params)
       overage_behavior_is_allow = overage_behavior_is_allow,
       enforce_spend_limit_gate = enforce_spend_limit_gate,
       bypass_usage_windows = bypass_usage_windows,
-      -- Pass 2 never gates a draw; it only gives refunds back to the entity's share.
       allocation_gate = allocation_gate,
       pass_number = 2,
       skip_if_not_usage_allowed = not is_refund,

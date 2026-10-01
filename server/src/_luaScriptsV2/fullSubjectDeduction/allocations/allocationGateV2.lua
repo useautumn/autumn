@@ -123,3 +123,24 @@ local function consume_allocation(params)
     claimed_entry.consumed = claimed_entry.consumed + math.min(credits, own_unused)
   end
 end
+
+-- A lock unwind gives shared credits back the same way a refund does.
+local function release_allocation_for_unwind(params)
+  local gate = params.gate
+  local context = params.context
+  local entity_entry = allocation_entry(context, 'entity')
+  if is_nil(gate) or entity_entry == nil then
+    return
+  end
+  local credits = 0
+  for _, iteration in ipairs(safe_table(params.iterations)) do
+    local item = iteration.item or {}
+    if is_allocation_gated(gate, item.customer_entitlement_id) then
+      credits = credits
+        + safe_number(iteration.unwind_iteration_value) * safe_number(item.credit_cost or 1)
+    end
+  end
+  if credits > 0 then
+    release_allocation(gate, entity_entry, allocation_entry(context, 'claimed'), credits)
+  end
+end
