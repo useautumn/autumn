@@ -21,6 +21,65 @@ type Entry = {
 	evictOnUnpin: boolean;
 };
 
+const weigh = ({ value }: { value: unknown }): number =>
+	JSON.stringify(value)?.length ?? 0;
+
+const sameKeys = ({
+	previous,
+	next,
+}: {
+	previous: object;
+	next: object;
+}): boolean => {
+	const previousKeys = Object.keys(previous);
+	const nextKeys = Object.keys(next);
+	return (
+		previousKeys.length === nextKeys.length &&
+		previousKeys.every((key, index) => nextKeys[index] === key)
+	);
+};
+
+/**
+ * The serialised size of `next`, from the size `previous` was known to have
+ * and only the parts that changed. A state is replaced, never edited, so a row
+ * the mutation left alone is the same object in both, and the serialised text
+ * differs by exactly the rows and fields that were replaced.
+ */
+export const reweighSubjectState = ({
+	previous,
+	previousBytes,
+	next,
+}: {
+	previous: SubjectState;
+	previousBytes: number;
+	next: SubjectState;
+}): number => {
+	if (previous === next) return previousBytes;
+	if (!sameKeys({ previous, next })) return weigh({ value: next });
+	let bytes = previousBytes;
+	for (const key of Object.keys(next) as (keyof SubjectState)[]) {
+		const before = previous[key];
+		const after = next[key];
+		if (before === after) continue;
+		if (before === undefined || after === undefined)
+			return weigh({ value: next });
+		if (
+			Array.isArray(before) &&
+			Array.isArray(after) &&
+			before.length === after.length
+		) {
+			for (const [index, row] of after.entries()) {
+				const previousRow = before[index];
+				if (previousRow === row) continue;
+				bytes += weigh({ value: row }) - weigh({ value: previousRow });
+			}
+			continue;
+		}
+		bytes += weigh({ value: after }) - weigh({ value: before });
+	}
+	return bytes;
+};
+
 export const createSubjectMap = ({
 	maxBytes = SUBJECT_MAP_MAX_BYTES,
 }: {
@@ -115,12 +174,18 @@ export const createSubjectMap = ({
 		const entry = entryOf({ subjectKey });
 		entry.customerKey = customerKey;
 		index({ subjectKey, customerKey });
+		const previous = entry.bytes > 0 ? entry.state : null;
 		totalBytes -= entry.bytes;
-		entry.state = state;
-		entry.bytes = timeSync(
-			{ label: "subject.weigh" },
-			() => JSON.stringify(state).length,
+		entry.bytes = timeSync({ label: "subject.weigh" }, () =>
+			previous
+				? reweighSubjectState({
+						previous,
+						previousBytes: entry.bytes,
+						next: state,
+					})
+				: weigh({ value: state }),
 		);
+		entry.state = state;
 		totalBytes += entry.bytes;
 		touch({ subjectKey, entry });
 		evictUntilWithinBound({ except: subjectKey });

@@ -36,10 +36,15 @@ export const createSubjectHydrator = ({
 			readSubject({ scope, state, identity }),
 		readCatalog: ({ state }) => readSubjectCatalog({ scope, state }),
 		readSubjectWith: ({ state, catalog, identity }) =>
-			subjectStateToFullSubject({
+			scope.state.joinCache.readFullSubject({
 				state,
-				catalog,
 				entityId: identity.entityId,
+				join: () =>
+					subjectStateToFullSubject({
+						state,
+						catalog,
+						entityId: identity.entityId,
+					}),
 			}),
 		overtakeInFlightLoads: ({ customerKey }) =>
 			scope.state.inFlightLoads.overtakeCustomer({ customerKey }),

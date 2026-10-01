@@ -176,6 +176,31 @@ describe("inheritCatalog", () => {
 		expect(joinCache.peekCatalog({ state: to })).toBe(catalog);
 	});
 
+	test("the view the decision joined for the next state is kept when the state advances", () => {
+		const { joinCache, joinFor, joins } = createFixture();
+		const state = createState();
+		const next = { ...state, revision: state.revision + 1 };
+		const catalog = catalogRowsToCatalog({ rows: [] });
+		joinCache.readCatalog({ state, join: () => catalog });
+		const joined = joinCache.readFullSubject({
+			state: next,
+			entityId: null,
+			join: joinFor({ state: next }),
+		});
+
+		joinCache.inheritCatalog({ from: state, to: next, changes: [] });
+
+		expect(
+			joinCache.readFullSubject({
+				state: next,
+				entityId: null,
+				join: joinFor({ state: next }),
+			}),
+		).toBe(joined);
+		expect(joins()).toBe(1);
+		expect(joinCache.peekCatalog({ state: next })).toBe(catalog);
+	});
+
 	test("a mutation that inserts a catalog-referencing row hands nothing on", () => {
 		const { joinCache } = createClockedFixture({ recheckMs: 60_000 });
 		const from = createState();
