@@ -105,6 +105,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: customer 
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1Beta,
+				count: 2,
+				latestTotal: 40,
+			}),
 	});
 
 	// Calculate expected overage amount
@@ -207,6 +214,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity - 
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 2,
+				latestTotal: 40,
+			}),
 	});
 
 	// Verify final state
@@ -331,6 +345,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: two entit
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 70,
+			}),
 	});
 
 	// Verify both products removed
@@ -461,7 +482,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: two entit
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		withPause: true,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 60,
+			}),
 	});
 
 	// Verify entity 1 product removed, entity 2 still active
@@ -592,9 +619,16 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	});
 
 	// Advance to next invoice
-	const advancedTo = await advanceToNextInvoice({
+	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 55,
+			}),
 	});
 
 	// Verify final state
@@ -737,9 +771,16 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	});
 
 	// Advance to next invoice
-	const advancedTo = await advanceToNextInvoice({
+	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 35,
+			}),
 	});
 
 	// Verify final state - both products should be removed
