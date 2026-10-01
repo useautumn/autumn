@@ -1,0 +1,1 @@
+ALTER TABLE "partition_progress" ADD COLUMN "claim_token" text;

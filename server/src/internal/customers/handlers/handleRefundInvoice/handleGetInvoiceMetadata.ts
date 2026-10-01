@@ -1,6 +1,7 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
@@ -32,7 +33,19 @@ export const handleGetInvoiceMetadata = createRoute({
 		}
 
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-		const stripeInvoice = await stripeCli.invoices.retrieve(stripe_invoice_id);
+		const stripeInvoice = await getStripeInvoice({
+			stripeClient: stripeCli,
+			invoiceId: stripe_invoice_id,
+			expand: [],
+			onNotFound: () => {
+				throw new RecaseError({
+					message: `Invoice ${stripe_invoice_id} not found in Stripe`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			},
+		});
+
 		const vercelInstallationId = await resolveVercelInstallationId({
 			stripeCli,
 			invoice: stripeInvoice,

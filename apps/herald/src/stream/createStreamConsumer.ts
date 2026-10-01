@@ -5,8 +5,10 @@ import {
 	type KafkaConsumerGroupTimings,
 	type MeteringRecordFailure,
 	type MeteringRecordSlice,
+	type MeteringStaleRecord,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
+import { type PostgresExecutor, readPartitionProgress } from "@autumn/postgres";
 import type {
 	ConsumerCrashEvent,
 	ConsumerGroupJoinEvent,
@@ -44,6 +46,8 @@ export function createStreamConsumer({
 	ctx: {
 		kafka: Pick<Kafka, "consumer" | "admin">;
 		logger: AutumnLogger;
+		/** Where partition_progress lives; without it a fence is known only once read from the log. */
+		db?: PostgresExecutor;
 		/** The consumer died and kafkajs will not restart it: the process must end so the task is replaced. */
 		onCrashed: (params: { job: string; cause: unknown }) => void;
 	};
@@ -86,6 +90,28 @@ export function createStreamConsumer({
 		);
 	}
 
+	function onStaleRecord({
+		position,
+		ownerEpoch,
+		fence,
+	}: MeteringStaleRecord): void {
+		ctx.logger.warn(
+			{
+				type: "herald_record_stale",
+				data: {
+					job,
+					topic: position.topic,
+					partition: position.partition,
+					offset: position.offset.toString(),
+					ownerEpoch: ownerEpoch.toString(),
+					fenceEpoch: fence.epoch.toString(),
+					fenceOffset: fence.offset.toString(),
+				},
+			},
+			"Herald dropped a stale owner's record",
+		);
+	}
+
 	// Stopped mid-slice: thrown so nothing of the slice is resolved; the runner is already stopping, so it ends there.
 	async function applyRecords(slice: MeteringRecordSlice): Promise<void> {
 		const settled = await landRecords({
@@ -104,11 +130,24 @@ export function createStreamConsumer({
 		return null;
 	}
 
+	const { db } = ctx;
+	const readOwnerFence = db
+		? async (position: { topic: string; partition: number }) =>
+				(await readPartitionProgress({ ctx: { db }, ...position }))
+					?.ownerFence ?? null
+		: undefined;
+
 	const topicConsumer = createMeteringConsumer({
 		ctx: {
 			consumer,
 			progress,
-			handler: { readResumeOffset, applyRecords, onRecordError },
+			handler: {
+				readResumeOffset,
+				applyRecords,
+				onRecordError,
+				onStaleRecord,
+				readOwnerFence,
+			},
 		},
 		config: {
 			topic: config.topic,

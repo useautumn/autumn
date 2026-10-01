@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { resolveStripeConnectShard } from "@tw/helpers/stripeConnectShard.ts";
 import { count, eq } from "drizzle-orm";
 import type { RunEvent, RunMilestones } from "../../../api/contract.ts";
 import { jobs } from "../../../db/schema/jobs.ts";
@@ -24,6 +25,10 @@ import { usableKey } from "../../accounts/repos/cleanAccountsRepo.ts";
 import { getTestTreeAtSha } from "../../catalog/actions/getTestTreeAtSha.ts";
 import { toAbsoluteTestPath } from "../../catalog/repoPaths.ts";
 import { accrueRunCost } from "../../costs/actions/accrueRunCost.ts";
+import {
+	clearShardRoutesForRun,
+	setShardRoute,
+} from "../../ingress/actions/ingressRoutes.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
 import { onRunFinished } from "../../results/actions/refreshBaselines.ts";
@@ -361,6 +366,7 @@ export const handleSwarmJob: JobHandler = async ({
 			usableKeys,
 			ingressUrl: ctx.env.TWD_PUBLIC_URL,
 			ingressToken: ctx.env.TWD_INGRESS_TOKEN,
+			stripeConnectShard: resolveStripeConnectShard(ctx.env) ?? undefined,
 		};
 		({ exitCode } = await spawnTwChild<SwarmChildMessage, SwarmParentMessage>({
 			entry: SWARM_ENTRY,
@@ -416,6 +422,14 @@ export const handleSwarmJob: JobHandler = async ({
 						});
 						kickAllocator();
 					});
+				} else if (message.type === "shard_route") {
+					if (message.workerUrl)
+						setShardRoute({
+							shard: message.shard,
+							workerUrl: message.workerUrl,
+							runId,
+						});
+					else clearShardRoutesForRun({ runId });
 				} else if (message.type === "demand") {
 					const grew = message.workers > demand.wants;
 					demand.wants = abort.signal.aborted ? 0 : message.workers;
@@ -482,6 +496,7 @@ export const handleSwarmJob: JobHandler = async ({
 		closed = true;
 		sendToChild = undefined;
 		unregister();
+		clearShardRoutesForRun({ runId });
 		clearInterval(flushTimer);
 		await logWriter.close();
 		clearInterval(accrueTimer);

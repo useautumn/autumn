@@ -15,8 +15,10 @@ import { OWNER_EPOCH_HEADER } from "../../src/producer/sendIdempotentBatch.js";
 import { OWNER_FENCE_HEADER } from "../../src/producer/sendOwnerFence.js";
 import { createMeteringConsumer } from "../../src/topics/metering/consumer/createMeteringConsumer.js";
 import type {
+	MeteringRecordApplication,
 	MeteringRecordFailure,
 	MeteringRecordSlice,
+	MeteringStaleRecord,
 } from "../../src/topics/metering/consumer/types/meteringConsumer.js";
 import { serializeMeteringRecord } from "../../src/topics/metering/meteringTopic.js";
 import { createState, createTrackMutation } from "../meteringFixtures.js";
@@ -345,6 +347,171 @@ test("a metering slice arrives decoded, fence markers gone, and an undecodable r
 		"heartbeat",
 		`commit:${partition}:4`,
 	]);
+});
+
+function fenceAt({ offset, epoch }: { offset: string; epoch: string }) {
+	return {
+		offset,
+		key: Buffer.from("owner-fence"),
+		value: Buffer.from("{}"),
+		headers: { [OWNER_EPOCH_HEADER]: epoch, [OWNER_FENCE_HEADER]: "1" },
+	};
+}
+
+test("a slice drops what a stale owner wrote after a higher fence, and keeps the fence owner's and unstamped records", async () => {
+	const fixture = createConsumerFixture();
+	const outcome = createTrackMutation({
+		state: createState(),
+		commandId: "command",
+	});
+	const slices: MeteringRecordSlice[] = [];
+	const stale: MeteringStaleRecord[] = [];
+	async function applyRecords(slice: MeteringRecordSlice): Promise<void> {
+		slices.push(slice);
+	}
+	function onStaleRecord(record: MeteringStaleRecord): void {
+		stale.push(record);
+	}
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecords, onStaleRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic, recordsPerSlice: 10 },
+	});
+	await consumer.start();
+	const stamped = (offset: string, epoch: string) => ({
+		offset,
+		...serializeMeteringRecord({ record: outcome }),
+		headers: { [OWNER_EPOCH_HEADER]: epoch },
+	});
+	await fixture.deliverBatch({
+		records: [
+			stamped("0", "2"),
+			fenceAt({ offset: "1", epoch: "3" }),
+			stamped("2", "2"),
+			stamped("3", "3"),
+			{ offset: "4", ...serializeMeteringRecord({ record: outcome }) },
+			fenceAt({ offset: "5", epoch: "2" }),
+			stamped("6", "2"),
+		],
+	});
+	expect(
+		slices.flatMap((slice) =>
+			slice.applications.map(({ position }) => position.offset),
+		),
+	).toEqual([0n, 3n, 4n]);
+	expect(
+		stale.map(({ position, ownerEpoch, fence }) => ({
+			offset: position.offset,
+			ownerEpoch,
+			fence,
+		})),
+	).toEqual([
+		{ offset: 2n, ownerEpoch: 2n, fence: { epoch: 3n, offset: 1n } },
+		{ offset: 6n, ownerEpoch: 2n, fence: { epoch: 3n, offset: 1n } },
+	]);
+	expect(fixture.events).toEqual([
+		"resolve:6",
+		"heartbeat",
+		`commit:${partition}:7`,
+	]);
+});
+
+test("a stored fence is read when a partition is first seen, so a restart resuming past the marker still drops the stale owner's records", async () => {
+	const fixture = createConsumerFixture();
+	const outcome = createTrackMutation({
+		state: createState(),
+		commandId: "command",
+	});
+	const slices: MeteringRecordSlice[] = [];
+	const stale: MeteringStaleRecord[] = [];
+	const fenceReads: string[] = [];
+	async function applyRecords(slice: MeteringRecordSlice): Promise<void> {
+		slices.push(slice);
+	}
+	function onStaleRecord(record: MeteringStaleRecord): void {
+		stale.push(record);
+	}
+	async function readOwnerFence(position: {
+		topic: string;
+		partition: number;
+	}) {
+		fenceReads.push(`${position.topic}[${position.partition}]`);
+		return { epoch: 3n, offset: 1n };
+	}
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: {
+				readResumeOffset,
+				applyRecords,
+				onStaleRecord,
+				readOwnerFence,
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic, recordsPerSlice: 10 },
+	});
+	await consumer.start();
+	const stamped = (offset: string, epoch: string) => ({
+		offset,
+		...serializeMeteringRecord({ record: outcome }),
+		headers: { [OWNER_EPOCH_HEADER]: epoch },
+	});
+	await fixture.deliverBatch({
+		records: [stamped("7", "2"), stamped("8", "3")],
+	});
+	await fixture.deliverBatch({ records: [stamped("9", "2")] });
+	expect(fenceReads).toEqual([`${topic}[${partition}]`]);
+	expect(
+		slices.flatMap((slice) =>
+			slice.applications.map(({ position }) => position.offset),
+		),
+	).toEqual([8n]);
+	expect(stale.map(({ position }) => position.offset)).toEqual([7n, 9n]);
+});
+
+test("a record handler without its own fence handling gets the same rule", async () => {
+	const fixture = createConsumerFixture();
+	const outcome = createTrackMutation({
+		state: createState(),
+		commandId: "command",
+	});
+	const applied: bigint[] = [];
+	const stale: bigint[] = [];
+	function applyRecord({ position }: MeteringRecordApplication): undefined {
+		applied.push(position.offset);
+		return undefined;
+	}
+	function onStaleRecord({ position }: MeteringStaleRecord): void {
+		stale.push(position.offset);
+	}
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord, onStaleRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	const stamped = (offset: string, epoch: string) => ({
+		offset,
+		...serializeMeteringRecord({ record: outcome }),
+		headers: { [OWNER_EPOCH_HEADER]: epoch },
+	});
+	await fixture.deliverBatch({
+		records: [
+			stamped("0", "2"),
+			fenceAt({ offset: "1", epoch: "3" }),
+			stamped("2", "2"),
+			stamped("3", "3"),
+		],
+	});
+	expect(applied).toEqual([0n, 3n]);
+	expect(stale).toEqual([2n]);
 });
 
 test("a metering slice handler without onRecordError fails the batch on an undecodable record", async () => {

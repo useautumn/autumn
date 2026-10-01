@@ -16,6 +16,9 @@ export type ByocCacheDeployment = {
 	status: ByocCacheStatus;
 	/** Where the env's Atom answers; null until its deployment reports one. */
 	endpoint_url: string | null;
+	/** The machine's vCPUs and GiB: the one its setup asked for, then the one its deployment reports; null for a machine not in `BYOC_CACHE_MACHINES`. */
+	cpu: number | null;
+	memory: number | null;
 	/** The Atom's token, encrypted at rest. The Atom itself holds only its hash. */
 	encrypted_token: string;
 	created_at: number;

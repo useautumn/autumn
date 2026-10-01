@@ -33,6 +33,7 @@ export type {
 	FlushResult,
 } from "./flush/types/flush.js";
 export {
+	claimPartitionProgress,
 	insertPartitionProgress,
 	type PartitionProgressRow,
 	readNextOffset,

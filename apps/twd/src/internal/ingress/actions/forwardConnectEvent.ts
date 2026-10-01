@@ -1,5 +1,5 @@
 import type { TwdLogger } from "../../../lib/logger.ts";
-import { getIngressRoute } from "./ingressRoutes.ts";
+import { getIngressRoute, getShardRoute } from "./ingressRoutes.ts";
 
 const FORWARDED_HEADERS = ["content-type", "stripe-signature", "user-agent"];
 
@@ -8,11 +8,14 @@ export const forwardConnectEvent = async ({
 	rawBody,
 	headers,
 	env,
+	shard,
 	logger,
 }: {
 	rawBody: string;
 	headers: Headers;
 	env: string;
+	/** Set on a dedicated shard's webhook; its unregistered accounts go to that shard's worker. */
+	shard?: string;
 	logger: TwdLogger;
 }): Promise<number> => {
 	let event: { id?: string; type?: string; account?: string };
@@ -29,7 +32,9 @@ export const forwardConnectEvent = async ({
 		logger.warn("ingress: connect event has no event.account");
 		return 400;
 	}
-	const workerUrl = getIngressRoute({ accountId });
+	const workerUrl =
+		getIngressRoute({ accountId }) ??
+		(shard ? getShardRoute({ shard }) : undefined);
 	// Stripe keeps retrying events for released accounts; ack silently.
 	if (!workerUrl) return 200;
 

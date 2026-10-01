@@ -24,7 +24,7 @@ import type {
 	FlushOutcome,
 	FlushRejection,
 } from "../types/committer.js";
-import { runFlush } from "./runFlush.js";
+import { flushLandedEarlier, runFlush } from "./runFlush.js";
 
 /** Another writer moved this partition's bookmark: the record is fine, this worker no longer owns it. */
 const isOwnershipLost = (cause: unknown): boolean =>
@@ -141,7 +141,7 @@ const reportStoreRecovered = ({
 	);
 };
 
-/** The same flush again for as long as the failure is the store's, with capped backoff, until the committer stops. */
+/** The same flush again while the failure is the store's, with capped backoff; a retry's conflict is checked against the stored bookmark first. */
 const runWithRetries = async ({
 	scope,
 	flush,
@@ -159,6 +159,16 @@ const runWithRetries = async ({
 			reportStoreRecovered({ scope, attempt });
 			return outcomes;
 		} catch (cause) {
+			if (attempt > 1 && isOwnershipLost(cause)) {
+				const landed = await flushLandedEarlier({ ctx, flush });
+				if (landed) {
+					ctx.logger?.info(
+						`[committer] a flush landed on an earlier attempt whose answer was lost; attempt ${attempt} found its bookmark already moved`,
+					);
+					reportStoreRecovered({ scope, attempt });
+					return landed;
+				}
+			}
 			if (!isTransientPostgresError({ error: cause })) throw cause;
 			reportStoreWaiting({ scope, attempt, cause });
 			await sleep({ delayMs, signal });

@@ -1,5 +1,5 @@
 {
-  "id": "89307b2f-d6e1-4a1a-b27c-88053a21a8c2",
+  "id": "3b617d78-ae79-42f1-acfe-71e77715b153",
   "prevId": "6f39e124-522d-4bf2-910d-07f7ed02ce4d",
   "version": "7",
   "dialect": "postgresql",
@@ -3762,12 +3762,6 @@
         },
         "overage_allowed": {
           "name": "overage_allowed",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "balance_allocations": {
-          "name": "balance_allocations",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -8195,6 +8189,12 @@
         "owner_fence_offset": {
           "name": "owner_fence_offset",
           "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "claim_token": {
+          "name": "claim_token",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }

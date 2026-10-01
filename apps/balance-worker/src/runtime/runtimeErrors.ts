@@ -11,19 +11,28 @@ export class OwnedPartitionNotReadyError extends Error {
 }
 
 export class OwnedPartitionRecoveryRequiredError extends Error {
+	readonly topic: string;
+	readonly partition: number;
+	readonly notSubmitted: boolean;
+
 	constructor({
 		topic,
 		partition,
 		cause,
+		notSubmitted = false,
 	}: {
 		topic: string;
 		partition: number;
 		cause: unknown;
+		notSubmitted?: boolean;
 	}) {
 		super(`Owned partition ${topic}[${partition}] requires recovery`, {
 			cause,
 		});
 		this.name = "OwnedPartitionRecoveryRequiredError";
+		this.topic = topic;
+		this.partition = partition;
+		this.notSubmitted = notSubmitted;
 	}
 }
 
@@ -32,14 +41,47 @@ export class OwnedPartitionProducerFencedError extends OwnedPartitionRecoveryReq
 		topic,
 		partition,
 		cause,
+		notSubmitted = false,
 	}: {
 		topic: string;
 		partition: number;
 		cause: unknown;
+		notSubmitted?: boolean;
 	}) {
-		super({ topic, partition, cause });
+		super({ topic, partition, cause, notSubmitted });
 		this.name = "OwnedPartitionProducerFencedError";
 		this.message = `Owned partition producer ${topic}[${partition}] was fenced`;
+	}
+}
+
+export class OwnedPartitionLogDivergedError extends OwnedPartitionProducerFencedError {
+	readonly expectedOffset: bigint;
+	readonly actualOffset: bigint;
+
+	constructor({
+		topic,
+		partition,
+		expectedOffset,
+		actualOffset,
+	}: {
+		topic: string;
+		partition: number;
+		expectedOffset: bigint;
+		actualOffset: bigint;
+	}) {
+		super({ topic, partition, cause: undefined });
+		this.name = "OwnedPartitionLogDivergedError";
+		this.message = `Owned partition ${topic}[${partition}] log diverged: expected its batch at offset ${expectedOffset}, it landed at ${actualOffset}`;
+		this.expectedOffset = expectedOffset;
+		this.actualOffset = actualOffset;
+	}
+}
+
+export class OwnedPartitionUnfencedError extends OwnedPartitionRecoveryRequiredError {
+	constructor({ topic, partition }: { topic: string; partition: number }) {
+		super({ topic, partition, cause: undefined });
+		this.name = "OwnedPartitionUnfencedError";
+		this.message = `Owned partition ${topic}[${partition}] has no fence marker under its epoch; idempotent commits are refused`;
 	}
 }
 
@@ -121,4 +163,25 @@ export function createOwnedPartitionRecoveryError({
 	return fencedCause
 		? new OwnedPartitionProducerFencedError({ topic, partition, cause })
 		: new OwnedPartitionRecoveryRequiredError({ topic, partition, cause });
+}
+
+export function refusedBeforeRunning({
+	error,
+}: {
+	error: OwnedPartitionRecoveryRequiredError;
+}): OwnedPartitionRecoveryRequiredError {
+	const { topic, partition } = error;
+	return error instanceof OwnedPartitionProducerFencedError
+		? new OwnedPartitionProducerFencedError({
+				topic,
+				partition,
+				cause: error,
+				notSubmitted: true,
+			})
+		: new OwnedPartitionRecoveryRequiredError({
+				topic,
+				partition,
+				cause: error,
+				notSubmitted: true,
+			});
 }

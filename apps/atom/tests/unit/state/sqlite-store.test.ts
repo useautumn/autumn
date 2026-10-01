@@ -146,6 +146,15 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
+	test("counts the subjects it holds", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		expect(sqliteStore.countSubjects()).toBe(0);
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+
+		expect(sqliteStore.countSubjects()).toBe(1);
+		sqliteStore.close();
+	});
+
 	test("the file keeps its subjects across a restart", () => {
 		const databasePath = slotPath();
 		const first = openSqliteStore({ databasePath });

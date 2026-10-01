@@ -20,6 +20,12 @@ export type MeteringFenceApplication = {
 	ownerEpoch: bigint;
 };
 
+export type MeteringStaleRecord = {
+	position: { topic: string; partition: number; offset: bigint };
+	ownerEpoch: bigint;
+	fence: { epoch: bigint; offset: bigint };
+};
+
 export type MeteringRecordFailure = {
 	topic: string;
 	partition: number;
@@ -37,10 +43,19 @@ export type MeteringRecordHandler = {
 		partition: number;
 		offset: bigint;
 	}): boolean;
-	/** A fence marker in the log; absent, markers pass unread. */
+	/** A fence marker in the log. Absent, the consumer keeps the partition's highest fence itself and drops what a lower epoch writes after it. */
 	applyFence?(
 		fence: MeteringFenceApplication,
 	): TopicRecordResult | Promise<TopicRecordResult>;
+	onStaleRecord?(record: MeteringStaleRecord): void;
+	/** The fence the store already holds for a partition, read when the consumer first sees it; only without `applyFence`. */
+	readOwnerFence?(position: {
+		topic: string;
+		partition: number;
+	}):
+		| MeteringStaleRecord["fence"]
+		| null
+		| Promise<MeteringStaleRecord["fence"] | null>;
 	applyRecord(
 		application: MeteringRecordApplication,
 	): TopicRecordResult | Promise<TopicRecordResult>;
@@ -69,6 +84,15 @@ export type MeteringRecordsHandler = {
 	applyRecords(slice: MeteringRecordSlice): void | Promise<void>;
 	/** A record that will not decode: throw to fail the slice, or return to drop that one record. */
 	onRecordError?(failure: MeteringRecordFailure): void;
+	onStaleRecord?(record: MeteringStaleRecord): void;
+	/** The fence the store already holds for a partition, read when the consumer first sees it. */
+	readOwnerFence?(position: {
+		topic: string;
+		partition: number;
+	}):
+		| MeteringStaleRecord["fence"]
+		| null
+		| Promise<MeteringStaleRecord["fence"] | null>;
 };
 
 export type MeteringConsumerHandler =

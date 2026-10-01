@@ -62,6 +62,32 @@ const getResetUsage = ({
 	}
 	return item.reset_usage_when_enabled;
 };
+
+const currencyCodes = (price: Price): string =>
+	Object.keys(price.config.currencies ?? {})
+		.map((code) => code.toLowerCase())
+		.sort()
+		.join(",");
+
+/**
+ * pricesAreSame treats adding/removing a currency as compatible so catalog
+ * edits don't force a new version. A custom price must own its currency set,
+ * though — reusing the catalog row would drop currencies added for this customer.
+ */
+const itemPriceIsSame = ({
+	curPrice,
+	price,
+	isCustom,
+	logDifferences,
+}: {
+	curPrice: Price;
+	price: Price;
+	isCustom: boolean;
+	logDifferences: boolean;
+}): boolean =>
+	pricesAreSame(curPrice, price, logDifferences) &&
+	(!isCustom || currencyCodes(curPrice) === currencyCodes(price));
+
 // ITEM TO PRICE AND ENTITLEMENT
 const toPrice = ({
 	item,
@@ -359,7 +385,8 @@ const toFeatureAndPrice = ({
 	}
 
 	const priceOrEntDifferent =
-		(curPrice && !pricesAreSame(curPrice, price, true)) ||
+		(curPrice &&
+			!itemPriceIsSame({ curPrice, price, isCustom, logDifferences: true })) ||
 		(curEnt && !entsAreSame(curEnt, ent));
 
 	if (curPrice && (priceOrEntDifferent || newVersion)) {
@@ -429,7 +456,9 @@ export const itemToPriceAndEnt = ({
 
 		if (!curPrice || newVersion) {
 			newPrice = price;
-		} else if (!pricesAreSame(curPrice, price, true)) {
+		} else if (
+			!itemPriceIsSame({ curPrice, price, isCustom, logDifferences: true })
+		) {
 			updatedPrice = price;
 		} else {
 			samePrice = curPrice;
@@ -492,7 +521,10 @@ export const itemToPriceAndEnt = ({
 		}
 
 		// 2. If ent or price aren't same, price is updated
-		else if (!entSame || !pricesAreSame(curPrice, price, false)) {
+		else if (
+			!entSame ||
+			!itemPriceIsSame({ curPrice, price, isCustom, logDifferences: false })
+		) {
 			updatedPrice = price;
 		}
 

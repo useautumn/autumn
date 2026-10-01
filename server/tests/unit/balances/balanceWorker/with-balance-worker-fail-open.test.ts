@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
+import { PARTITION_RECOVERY_REASON } from "@autumn/balance-worker-client/protocol";
 import { contexts } from "@tests/utils/fixtures/db/contexts.js";
 import {
 	describeBalanceWorkerFailure,
@@ -173,6 +174,40 @@ describe("withBalanceWorkerFailOpen", () => {
 		expect(
 			describeBalanceWorkerFailure({ error: new Error("unrelated") }),
 		).toBeUndefined();
+	});
+
+	test("a command caught in flight by partition recovery falls back as possibly applied, not a 500", async () => {
+		const caughtInRecovery = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			outcome: "unknown",
+			message: "partition went into recovery",
+			workerCode: "INTERNAL",
+			workerReason: PARTITION_RECOVERY_REASON,
+		});
+		const reasons: string[] = [];
+		const outcome = await withBalanceWorkerFailOpen({
+			ctx: contexts.create({}),
+			source: "test",
+			run: failingWith(caughtInRecovery),
+			fallback: async ({ reason }) => {
+				reasons.push(reason);
+				return "fallback";
+			},
+		});
+		expect(outcome).toEqual({ result: "fallback", failedOpen: true });
+		expect(reasons).toEqual(["balance_worker_result_unknown"]);
+	});
+
+	test("any other internal worker failure still propagates", async () => {
+		const internal = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			outcome: "unknown",
+			message: "worker request failed",
+			workerCode: "INTERNAL",
+		});
+		await expect(failOpen({ run: failingWith(internal) })).rejects.toBe(
+			internal,
+		);
 	});
 
 	test("a worker verdict propagates", async () => {

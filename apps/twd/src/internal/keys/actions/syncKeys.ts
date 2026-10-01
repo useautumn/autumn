@@ -78,8 +78,21 @@ export const loadKnownSecrets = async ({ ctx }: { ctx: TwdContext }) => {
 	const stored = rows.flatMap(({ sealed }) =>
 		sealed ? [openSecret({ sealed })] : [],
 	);
-	return parseKeyList({ text: [ctx.env.TW_V3_KEYS, ...stored].join(",") });
+	return parseKeyList({
+		text: [ctx.env.TW_V3_KEYS, ...stored].join(","),
+	}).filter((secret) => !isShardKey({ ctx, secret }));
 };
+
+export const SHARD_KEY_REASON =
+	"reserved for the stripe-connect shard (SHARD_STRIPE_SANDBOX_KEY); never pooled";
+
+export const isShardKey = ({
+	ctx,
+	secret,
+}: {
+	ctx: TwdContext;
+	secret: string;
+}) => secret === ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 
 /** Any separator (commas, whitespace, newlines); only `sk_`/`rk_` tokens, deduped. */
 export const parseKeyList = ({ text }: { text: string }) => [

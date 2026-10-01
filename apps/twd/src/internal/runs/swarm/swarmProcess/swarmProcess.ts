@@ -13,6 +13,14 @@ import {
 import { setLogSubscriber } from "@tw/helpers/logSink.ts";
 import { planShardWorkers } from "@tw/helpers/planShardWorkers.ts";
 import { stripeBudgetForRun } from "@tw/helpers/stripeBudget.ts";
+import {
+	ensureStripeConnectWebhook,
+	STRIPE_CONNECT_SHARD,
+	splitStripeConnectShard,
+	stripeConnectWebhookUrl,
+	unavailableShardExecutor,
+} from "@tw/helpers/stripeConnectShard.ts";
+import { maxWorkersFor } from "@tw/helpers/testCapabilities.ts";
 import { runSwarmTests } from "@tw/tui/runnerCore.ts";
 import { getTuiState, type TuiTestFile } from "@tw/tui/store.ts";
 import pLimit from "p-limit";
@@ -23,6 +31,10 @@ import type {
 } from "../../../../api/contract.ts";
 import { ACCOUNTS_PER_KEY_CAP } from "../../../accounts/allocator/poolLimits.ts";
 import { TESTS_DIR, toTestId } from "../../../catalog/repoPaths.ts";
+import {
+	CONNECT_WEBHOOK_EVENTS,
+	stripeForKey,
+} from "../../../keys/stripeForKey.ts";
 import type {
 	SwarmAccount,
 	SwarmChildMessage,
@@ -32,6 +44,7 @@ import type {
 import { createBootTimeline } from "./bootTimeline.ts";
 import { coalesceChunks } from "./coalesceChunks.ts";
 import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
+import { pickShard } from "./pickShard.ts";
 import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import {
 	loadTwModules,
@@ -130,10 +143,13 @@ const timeBoxed = (action: () => Promise<unknown>) =>
 	]);
 
 type Shard = {
-	isSvix: boolean;
+	/** Empty for the normal pool. */
+	capabilities: string[];
 	files: string[];
 	/** Planned share of the run's workers; picks which shard a new account joins. */
 	target: number;
+	/** The stripe-connect shard: its own platform account, never pool accounts. */
+	dedicated: boolean;
 	started: number;
 	provisioning: number;
 	pool: WorkerPool;
@@ -231,6 +247,7 @@ const main = async (init: SwarmInit) => {
 	const signal = abort.signal;
 	const sandboxes = new Map<string, ProviderSandbox>();
 	const svixAppIds: string[] = [];
+	const shardAccountIds: string[] = [];
 	let teardownPromise: Promise<void> | undefined;
 
 	teardown = () => {
@@ -243,6 +260,9 @@ const main = async (init: SwarmInit) => {
 				),
 				...svixAppIds.map((appId) =>
 					limit(() => timeBoxed(() => tw.run.deleteSvixApp(appId))),
+				),
+				...shardAccountIds.map((accountId) =>
+					limit(() => timeBoxed(() => deleteShardAccount({ init, accountId }))),
 				),
 			]);
 		})();
@@ -299,12 +319,29 @@ const main = async (init: SwarmInit) => {
 		);
 	}
 
-	const { svixFiles, normalFiles } = await partitionAtSha({ tw, init });
-	const { totalWorkers, svixWorkers } = planShardWorkers({
-		workers: init.workersWanted,
-		normalFileCount: normalFiles.length,
-		svixFileCount: svixFiles.length,
-	});
+	const partition = await partitionAtSha({ tw, init });
+	const { normalFiles } = partition;
+	// Pool accounts serve these shards; the stripe-connect shard brings its own account.
+	const {
+		pooledShards: capabilityShards,
+		stripeConnectShard: stripeConnectPlan,
+	} = splitStripeConnectShard(partition.capabilityShards);
+	const pooledFileCount =
+		normalFiles.length +
+		capabilityShards.reduce((sum, { files }) => sum + files.length, 0);
+	const { totalWorkers, capabilityWorkers } =
+		pooledFileCount > 0
+			? planShardWorkers({
+					workers: init.workersWanted,
+					normalFileCount: normalFiles.length,
+					capabilityFileCounts: capabilityShards.map(
+						({ files }) => files.length,
+					),
+					capabilityMaxWorkers: capabilityShards.map(({ capabilities }) =>
+						maxWorkersFor(capabilities),
+					),
+				})
+			: { totalWorkers: 0, capabilityWorkers: [] };
 	// Sized as if every key ran its full cap, so growing never pushes a key over budget.
 	const budget = stripeBudgetForRun({
 		workers: init.usableKeys * ACCOUNTS_PER_KEY_CAP,
@@ -333,13 +370,15 @@ const main = async (init: SwarmInit) => {
 		}
 	}
 	const makeShard = ({
-		isSvix,
+		capabilities,
 		files,
 		target,
+		dedicated = false,
 	}: {
-		isSvix: boolean;
+		capabilities: string[];
 		files: string[];
 		target: number;
+		dedicated?: boolean;
 	}): Shard => {
 		let markReady = () => {};
 		let fail: (error: Error) => void = () => {};
@@ -348,9 +387,10 @@ const main = async (init: SwarmInit) => {
 			fail = rejectReady;
 		});
 		const shard: Shard = {
-			isSvix,
+			capabilities,
 			files,
 			target: Math.max(1, target),
+			dedicated,
 			started: 0,
 			provisioning: 0,
 			pool: new ElasticPool([], 1),
@@ -363,16 +403,24 @@ const main = async (init: SwarmInit) => {
 	};
 	const shards = [
 		makeShard({
-			isSvix: false,
+			capabilities: [],
 			files: normalFiles,
-			target: totalWorkers - svixWorkers,
+			target: totalWorkers - capabilityWorkers.reduce((sum, n) => sum + n, 0),
 		}),
-		makeShard({ isSvix: true, files: svixFiles, target: svixWorkers }),
+		...capabilityShards.map(({ capabilities, files }, index) =>
+			makeShard({ capabilities, files, target: capabilityWorkers[index] ?? 0 }),
+		),
 	];
 	const [normalShard] = shards;
+	const stripeConnectShard = stripeConnectPlan
+		? makeShard({ ...stripeConnectPlan, target: 1, dedicated: true })
+		: undefined;
+	if (stripeConnectShard) shards.push(stripeConnectShard);
 	const workersOf = (shard: Shard) => shard.pool.size + shard.provisioning;
 	const shortfall = (shard: Shard) =>
-		Math.max(0, shard.files.length - shard.started - workersOf(shard));
+		shard.dedicated
+			? 0
+			: Math.max(0, shard.files.length - shard.started - workersOf(shard));
 
 	let provisionFailures = 0;
 	const breaker = createFailureBreaker({ limit: MAX_PROVISION_FAILURES });
@@ -399,9 +447,11 @@ const main = async (init: SwarmInit) => {
 	const provision = async ({
 		account,
 		shard,
+		stripeClientId,
 	}: {
 		account: SwarmAccount;
 		shard: Shard;
+		stripeClientId?: string;
 	}) => {
 		const name = `tw-twd-${init.runId}-${nextWorkerIdx++}`;
 		shard.provisioning++;
@@ -410,7 +460,7 @@ const main = async (init: SwarmInit) => {
 		let sandbox: ProviderSandbox | undefined;
 		try {
 			let svixAppId: string | undefined;
-			if (shard.isSvix) {
+			if (shard.capabilities.includes("svix")) {
 				svixAppId = await tw.svix.createSvixApp(tw.testOrg.TEST_ORG_CONFIG.id);
 				svixAppIds.push(svixAppId);
 			}
@@ -422,8 +472,9 @@ const main = async (init: SwarmInit) => {
 					...tw.run.buildWorkerEnv({
 						stripeAccountId: account.accountId,
 						stripeSecretKey: account.secretKey,
-						isSvixShard: shard.isSvix,
+						capabilities: shard.capabilities,
 						svixAppId,
+						stripeClientId,
 						ingressUrl: init.ingressUrl,
 						ingressToken: init.ingressToken,
 					}),
@@ -448,6 +499,12 @@ const main = async (init: SwarmInit) => {
 				accountId: account.accountId,
 				workerUrl: publicUrl,
 			});
+			if (shard.dedicated)
+				send({
+					type: "shard_route",
+					shard: STRIPE_CONNECT_SHARD,
+					workerUrl: publicUrl,
+				});
 			boot.mark(name, "mapped");
 			outputGate.markServing(name);
 			const timeline = boot.finish(name);
@@ -460,7 +517,7 @@ const main = async (init: SwarmInit) => {
 				sandboxId: sandbox.name,
 				publicUrl,
 				accountId: account.accountId,
-				isSvixShard: shard.isSvix,
+				capabilities: shard.capabilities,
 				inFlight: 0,
 			});
 			shard.markReady();
@@ -473,12 +530,23 @@ const main = async (init: SwarmInit) => {
 			firstFailure ??= reason;
 			setWorkerStatus(name, "failed", reason.slice(0, 300));
 			if (sandbox) void retire({ name, accountId: account.accountId });
-			else send({ type: "release_accounts", accountIds: [account.accountId] });
+			else if (!shard.dedicated)
+				send({ type: "release_accounts", accountIds: [account.accountId] });
+			// No pool account can replace it, so its files fail now instead of waiting.
+			if (shard.dedicated)
+				shard.fail(
+					new Error(`${STRIPE_CONNECT_SHARD} shard worker failed: ${reason}`),
+				);
 			// Only once nothing is in flight: a slower provision may still succeed and reset the breaker.
 			const inFlight = shards.some((s) => s.provisioning > 0);
 			if (breaker.tripped() && !inFlight) {
 				for (const stuck of shards) {
-					if (stuck.files.length === 0 || workersOf(stuck) > 0) continue;
+					if (
+						stuck.dedicated ||
+						stuck.files.length === 0 ||
+						workersOf(stuck) > 0
+					)
+						continue;
 					stuck.fail(
 						new Error(
 							`${provisionFailures} worker(s) failed to provision and none are up (first: ${firstFailure})`,
@@ -512,28 +580,67 @@ const main = async (init: SwarmInit) => {
 		},
 	});
 	let running = false;
-	const totalFiles = svixFiles.length + normalFiles.length;
+	const totalFiles = shards.reduce((sum, shard) => sum + shard.files.length, 0);
 	// pool.acquire gates on idle workers, so the window is every file and grows with the pool.
 	const runShard = async (shard: Shard) => {
 		if (shard.files.length === 0) return;
-		await shard.ready;
+		const unconfigured = shard.dedicated && !init.stripeConnectShard;
+		if (!unconfigured) await shard.ready;
 		if (!running) {
 			running = true;
 			send({ type: "phase", phase: "running" });
 		}
 		await runSwarmTests(
 			shard.files,
-			batchedOutput(
-				withGrep(
-					new tw.remoteExecutor.RemoteExecutor({
-						pool: shard.pool,
-						resolveSandbox,
-						toWorkerPath: tw.run.toSandboxPath,
-					}),
-				),
-			),
+			unconfigured
+				? unavailableShardExecutor({
+						reason:
+							"SHARD_STRIPE_SANDBOX_KEY and SHARD_STRIPE_CLIENT_ID must both be set on twd",
+					})
+				: batchedOutput(
+						withGrep(
+							new tw.remoteExecutor.RemoteExecutor({
+								pool: shard.pool,
+								resolveSandbox,
+								toWorkerPath: tw.run.toSandboxPath,
+							}),
+						),
+					),
 			{ maxParallel: shard.files.length, totalFiles },
 		);
+	};
+
+	/** One worker on the shard's own platform account: lazy webhook, a run-scoped sub-account, its client_id. */
+	const provisionStripeConnectWorker = async (shard: Shard) => {
+		const config = init.stripeConnectShard;
+		if (!config) return;
+		let accountId: string;
+		try {
+			await ensureStripeConnectWebhook({
+				stripe: stripeForKey({ secret: config.secretKey }),
+				url: stripeConnectWebhookUrl({ ingressUrl: init.ingressUrl }),
+				events: CONNECT_WEBHOOK_EVENTS,
+			});
+			accountId = await tw.stripe.createSandboxSubAccount({
+				orgName: `tw stripe-connect ${init.runId}`,
+				ownerEmail: "system@useautumn.com",
+				owner: "twd",
+				runId: init.runId,
+				orgId: tw.testOrg.TEST_ORG_CONFIG.id,
+				secretKey: config.secretKey,
+				extraMetadata: { autumn_tw_shard: STRIPE_CONNECT_SHARD },
+			});
+		} catch (error) {
+			const reason = error instanceof Error ? error.message : String(error);
+			shard.fail(new Error(`stripe-connect shard setup failed: ${reason}`));
+			return;
+		}
+		shardAccountIds.push(accountId);
+		await provision({
+			account: { accountId, secretKey: config.secretKey },
+			shard,
+			stripeClientId: config.clientId,
+		});
 	};
 
 	const lastSent = new Map<string, string>();
@@ -571,7 +678,7 @@ const main = async (init: SwarmInit) => {
 	const progress = setInterval(() => {
 		const pools = shards.map(
 			(shard) =>
-				`${shard.isSvix ? "svix" : "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
+				`${shard.capabilities.join("+") || "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
 		);
 		const line = `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`;
 		// stdout too: twd forwards child output to its own logs, so this survives any log budget.
@@ -596,6 +703,7 @@ const main = async (init: SwarmInit) => {
 		reportDemand();
 	};
 	grow(inbox.splice(0));
+	if (stripeConnectShard) void provisionStripeConnectWorker(stripeConnectShard);
 
 	try {
 		const settled = await Promise.allSettled(runs);
@@ -618,24 +726,6 @@ const main = async (init: SwarmInit) => {
 		for (const shard of shards) shard.pool.close();
 	}
 };
-
-/** The shard that can still use a worker and is furthest below its planned share. */
-const pickShard = (shards: Shard[]): Shard | undefined =>
-	shards
-		.filter(
-			(shard) =>
-				shard.files.length - shard.started >
-				shard.pool.size + shard.provisioning,
-		)
-		.reduce<Shard | undefined>(
-			(best, shard) =>
-				!best ||
-				(shard.pool.size + shard.provisioning) / shard.target <
-					(best.pool.size + best.provisioning) / best.target
-					? shard
-					: best,
-			undefined,
-		);
 
 process.once("message", (init: SwarmInit) => {
 	process.on("message", (message: SwarmParentMessage) => {
@@ -674,7 +764,7 @@ process.once("message", (init: SwarmInit) => {
 });
 process.send?.({ type: "ready" });
 
-/** Svix detection reads file contents, so read them at the run's sha, then hand back twd-local paths. */
+/** Capability detection reads file contents, so read them at the run's sha, then hand back twd-local paths. */
 const partitionAtSha = async ({
 	tw,
 	init,
@@ -686,11 +776,27 @@ const partitionAtSha = async ({
 		file.replace(TESTS_DIR, init.testsDirAtSha);
 	const toLocalPath = (file: string) =>
 		file.replace(init.testsDirAtSha, TESTS_DIR);
-	const { svixFiles, normalFiles } = await tw.svix.partitionShards(
-		init.files.map(toShaPath),
-	);
+	const { normalFiles, capabilityShards } =
+		await tw.capabilities.partitionByCapability(init.files.map(toShaPath));
 	return {
-		svixFiles: svixFiles.map(toLocalPath),
 		normalFiles: normalFiles.map(toLocalPath),
+		capabilityShards: capabilityShards.map(({ capabilities, files }) => ({
+			capabilities,
+			files: files.map(toLocalPath),
+		})),
 	};
+};
+
+/** Run-scoped, so closing it never touches the shard's platform account or webhook. */
+const deleteShardAccount = async ({
+	init,
+	accountId,
+}: {
+	init: SwarmInit;
+	accountId: string;
+}) => {
+	if (!init.stripeConnectShard) return;
+	await stripeForKey({
+		secret: init.stripeConnectShard.secretKey,
+	}).accounts.del(accountId);
 };
