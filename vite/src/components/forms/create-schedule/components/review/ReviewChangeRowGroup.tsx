@@ -1,4 +1,3 @@
-import { StatusChipIcon } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
@@ -63,18 +62,10 @@ export function ReviewChangeRowGroup({
 					{items.map((item) => (
 						<div
 							key={item.key}
-							className="flex min-h-9 items-center gap-3 pr-3 pl-[30px]"
+							className="flex min-h-9 items-center gap-3 pr-3 pl-[34px]"
 						>
-							<span className="flex min-w-0 flex-1 items-center gap-2">
-								{item.icon && (
-									<StatusChipIcon
-										tone={item.icon.tone}
-										glyph={item.icon.glyph}
-									/>
-								)}
-								<span className="truncate text-sm text-tertiary-foreground">
-									{joinDetail([item.title, item.description])}
-								</span>
+							<span className="min-w-0 flex-1 truncate text-sm text-tertiary-foreground">
+								{joinDetail([item.title, item.description])}
 							</span>
 							<ReviewChangeRowTrailing
 								row={item}

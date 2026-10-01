@@ -243,7 +243,7 @@ test("balance rows show the server's behaviour with labelled numbers", () => {
 	expect(section.summary).toBe("1 reset · 1 carried over");
 });
 
-test("Stripe rows group each phase's items under the plan that bills them, iconed by type", () => {
+test("Stripe rows group each phase's items under the plan that bills them", () => {
 	const seats = processorItem({
 		price_id: "price_seats",
 		feature_id: "seats",
@@ -254,7 +254,6 @@ test("Stripe rows group each phase's items under the plan that bills them, icone
 	});
 
 	const section = processorItemsToReviewSection({
-		features,
 		preview: preview({
 			processor_changes: [
 				{ type: "subscription", id: "sub_1", action: "updated" },
@@ -288,7 +287,6 @@ test("Stripe rows group each phase's items under the plan that bills them, icone
 				items: row.items?.map((item) => [
 					item.title,
 					item.description,
-					item.icon,
 					item.status,
 					item.value,
 				]),
@@ -306,7 +304,6 @@ test("Stripe rows group each phase's items under the plan that bills them, icone
 						[
 							"Base price",
 							undefined,
-							{ tone: "neutral", glyph: "tag" },
 							undefined,
 							{ amount: "$50", suffix: "/mo" },
 						],
@@ -316,9 +313,7 @@ test("Stripe rows group each phase's items under the plan that bills them, icone
 					title: "Legacy Support",
 					status: "unmanaged",
 					value: undefined,
-					items: [
-						["Legacy Support", undefined, undefined, undefined, undefined],
-					],
+					items: [["Legacy Support", undefined, undefined, undefined]],
 				},
 			],
 		],
@@ -333,17 +328,10 @@ test("Stripe rows group each phase's items under the plan that bills them, icone
 						[
 							"Base price",
 							undefined,
-							{ tone: "neutral", glyph: "tag" },
 							undefined,
 							{ amount: "$50", suffix: "/mo" },
 						],
-						[
-							"Seats",
-							"4 × $10",
-							{ tone: "blue", glyph: "ticket" },
-							undefined,
-							{ amount: "$40", suffix: "/mo" },
-						],
+						["Seats", "4 × $10", undefined, { amount: "$40", suffix: "/mo" }],
 					],
 				},
 			],
@@ -360,7 +348,6 @@ test("Stripe rows group each phase's items under the plan that bills them, icone
 
 test("a phase the server says ends the subscription shows it ending", () => {
 	const section = processorItemsToReviewSection({
-		features,
 		preview: preview({
 			phases: [
 				phase(NOW, { processor_items: [processorItem()] }),
@@ -379,7 +366,6 @@ test("a phase the server says ends the subscription shows it ending", () => {
 
 test("canceling now reads as Canceled", () => {
 	const section = processorItemsToReviewSection({
-		features,
 		preview: preview({ phases: [phase(NOW, { ends_subscription: true })] }),
 	});
 

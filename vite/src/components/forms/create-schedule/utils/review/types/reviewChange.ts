@@ -1,4 +1,3 @@
-import type { StatusGlyph, StatusTone } from "@autumn/ui";
 import type { ReviewChangeLine } from "../planChangeLines";
 
 export type ReviewChangeSystem = "autumn" | "stripe";
@@ -32,8 +31,6 @@ export type ReviewChangeRow = {
 	value?: ReviewChangeValue;
 	/** The plan's scope: null when customer-level, absent on rows that have no scope. */
 	entityId?: string | null;
-	/** Type icon shown before the title, e.g. a Stripe item's feature type. */
-	icon?: { tone: StatusTone; glyph: StatusGlyph };
 	/** Rows grouped under this one, e.g. the Stripe items billed for a plan. */
 	items?: ReviewChangeRow[];
 };
