@@ -38,6 +38,7 @@ export const removedPhasesToReviewPhases = ({
 			return {
 				key: `removed-${startsAt}`,
 				label: formatPhaseDate({ startsAt }),
+				startsAt,
 				removed: true,
 				rows: initialPhase.plans
 					.filter((plan) => plan.productId)

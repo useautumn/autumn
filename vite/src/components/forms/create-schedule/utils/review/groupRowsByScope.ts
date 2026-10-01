@@ -1,17 +1,19 @@
 import type { ReviewChangeRow } from "./types/reviewChange";
 
-export type ReviewScopeGroup = {
+type ScopedRow = { entityId?: string | null };
+
+export type ReviewScopeGroup<Row extends ScopedRow = ReviewChangeRow> = {
 	entityId: string | null;
-	rows: ReviewChangeRow[];
+	rows: Row[];
 };
 
 /** Rows grouped by plan scope, in the order each scope first appears. */
-export const groupRowsByScope = ({
+export const groupRowsByScope = <Row extends ScopedRow>({
 	rows,
 }: {
-	rows: ReviewChangeRow[];
-}): ReviewScopeGroup[] => {
-	const groups = new Map<string | null, ReviewChangeRow[]>();
+	rows: Row[];
+}): ReviewScopeGroup<Row>[] => {
+	const groups = new Map<string | null, Row[]>();
 	for (const row of rows) {
 		const entityId = row.entityId ?? null;
 		const scopeRows = groups.get(entityId);
@@ -27,5 +29,5 @@ export const groupRowsByScope = ({
 	}));
 };
 
-export const hasScopedRows = ({ rows }: { rows: ReviewChangeRow[] }) =>
+export const hasScopedRows = ({ rows }: { rows: ScopedRow[] }) =>
 	rows.some((row) => Boolean(row.entityId));

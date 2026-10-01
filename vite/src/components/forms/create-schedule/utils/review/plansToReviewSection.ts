@@ -103,29 +103,32 @@ export const plansToReviewSection = ({
 	features: Feature[];
 	currency: string;
 	nowMs: number;
-}): ReviewChangeSection => ({
-	phases: withoutEmptyPhases(
-		phases.map((phase, phaseIndex) => ({
-			key: `plans-${phaseIndex}`,
-			label: phaseLabel({ phase }),
-			rows: phase.plans.map((plan, planIndex) =>
-				planToRow({
-					plan,
-					phaseIndex,
-					planIndex,
-					planChanges: phase.plan_changes,
-					features,
-					currency,
-					nowMs,
-				}),
-			),
-		})),
-	),
-	summary: summarizeCounts({
-		counts: phases.map((phase) => [
-			phaseSummaryLabel({ phase }),
-			phase.plans.filter((plan) => plan.status !== "kept").length,
-		]),
-		emptyLabel: "No changes",
-	}),
-});
+}): ReviewChangeSection => {
+	return {
+		phases: withoutEmptyPhases(
+			phases.map((phase, phaseIndex) => ({
+				key: `plans-${phaseIndex}`,
+				label: phaseLabel({ phase }),
+				startsAt: phase.starts_at,
+				rows: phase.plans.map((plan, planIndex) =>
+					planToRow({
+						plan,
+						phaseIndex,
+						planIndex,
+						planChanges: phase.plan_changes,
+						features,
+						currency,
+						nowMs,
+					}),
+				),
+			})),
+		),
+		summary: summarizeCounts({
+			counts: phases.map((phase) => [
+				phaseSummaryLabel({ phase }),
+				phase.plans.filter((plan) => plan.status !== "kept").length,
+			]),
+			emptyLabel: "No changes",
+		}),
+	};
+};

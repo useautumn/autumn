@@ -243,7 +243,21 @@ test("balance rows show the server's behaviour with labelled numbers", () => {
 	expect(section.summary).toBe("1 reset · 1 carried over");
 });
 
-test("Stripe rows group each phase's items under the plan that bills them", () => {
+const pricingRows = (
+	section: ReturnType<typeof processorItemsToReviewSection>,
+) =>
+	section.phases.map((reviewPhase) => ({
+		range: reviewPhase.range,
+		badge: reviewPhase.badge,
+		rows: reviewPhase.rows.map((row) => [
+			row.title,
+			row.description,
+			row.quantity,
+			row.value?.amount,
+		]),
+	}));
+
+test("Stripe phases read as pricing tables: product, price line, qty and total", () => {
 	const seats = processorItem({
 		price_id: "price_seats",
 		feature_id: "seats",
@@ -252,8 +266,17 @@ test("Stripe rows group each phase's items under the plan that bills them", () =
 		price: monthlyPrice(10),
 		amount: 40,
 	});
+	const credits = processorItem({
+		price_id: "price_credits",
+		feature_id: "credits",
+		feature_name: "AI Credits",
+		quantity: null,
+		price: { ...monthlyPrice(0.01), usage_type: "metered" },
+		amount: null,
+	});
 
 	const section = processorItemsToReviewSection({
+		nowMs: NOW,
 		preview: preview({
 			processor_changes: [
 				{ type: "subscription", id: "sub_1", action: "updated" },
@@ -272,82 +295,43 @@ test("Stripe rows group each phase's items under the plan that bills them", () =
 						}),
 					],
 				}),
-				phase(NOV_1, { processor_items: [processorItem(), seats] }),
+				phase(NOV_1, { processor_items: [processorItem(), seats, credits] }),
 			],
 		}),
 	});
 
-	expect(
-		section.phases.map((reviewPhase) => [
-			reviewPhase.label,
-			reviewPhase.rows.map((row) => ({
-				title: row.title,
-				status: row.status,
-				value: row.value,
-				items: row.items?.map((item) => [
-					item.title,
-					item.description,
-					item.status,
-					item.value,
-				]),
-			})),
-		]),
-	).toEqual([
-		[
-			"Now",
-			[
-				{
-					title: "Premium",
-					status: undefined,
-					value: { amount: "$50", suffix: "/mo" },
-					items: [
-						[
-							"Base price",
-							undefined,
-							undefined,
-							{ amount: "$50", suffix: "/mo" },
-						],
-					],
-				},
-				{
-					title: "Legacy Support",
-					status: "unmanaged",
-					value: undefined,
-					items: [["Legacy Support", undefined, undefined, undefined]],
-				},
+	expect(pricingRows(section)).toEqual([
+		{
+			range: "Sep 25, 2026 – Nov 1, 2026",
+			badge: "active",
+			rows: [
+				["Premium", "US$50.00 / month", "1", "US$50.00 / month"],
+				["Legacy Support", "Not managed by Autumn", "1", undefined],
 			],
-		],
-		[
-			"Nov 1, 2026",
-			[
-				{
-					title: "Premium",
-					status: undefined,
-					value: undefined,
-					items: [
-						[
-							"Base price",
-							undefined,
-							undefined,
-							{ amount: "$50", suffix: "/mo" },
-						],
-						["Seats", "4 × $10", undefined, { amount: "$40", suffix: "/mo" }],
-					],
-				},
+		},
+		{
+			range: "Nov 1, 2026 – Forever",
+			badge: "scheduled",
+			rows: [
+				["Premium", "US$50.00 / month", "1", "US$50.00 / month"],
+				["Seats", "US$10.00 / month", "4", "US$40.00 / month"],
+				["AI Credits", "US$0.01 per unit / month", "—", "Varies with usage"],
 			],
-		],
+		},
 	]);
-	expect(section.summary).toBe("2 items now · 2 items on Nov 1, 2026");
+	expect(section.summary).toBe("2 items now · 3 items on Nov 1, 2026");
 	expect(section.stripeIds?.map((stripeId) => stripeId.id)).toEqual([
 		"sub_1",
 		"price_premium",
 		"price_legacy",
 		"price_seats",
+		"price_credits",
 	]);
 });
 
 test("a phase the server says ends the subscription shows it ending", () => {
 	const section = processorItemsToReviewSection({
+		nowMs: NOW,
 		preview: preview({
 			phases: [
 				phase(NOW, { processor_items: [processorItem()] }),
@@ -357,17 +341,41 @@ test("a phase the server says ends the subscription shows it ending", () => {
 	});
 
 	expect(
-		section.phases.map((reviewPhase) =>
-			reviewPhase.rows.map((row) => [row.title, row.status]),
-		),
-	).toEqual([[["Premium", undefined]], [["Subscription", "ends"]]]);
+		section.phases.map((reviewPhase) => [
+			reviewPhase.range,
+			reviewPhase.badge,
+			reviewPhase.rows.map((row) => row.title),
+		]),
+	).toEqual([
+		["Sep 25, 2026 – Nov 1, 2026", "active", ["Premium"]],
+		["Nov 1, 2026", "canceled", ["Subscription canceled"]],
+	]);
 	expect(section.summary).toBe("1 item now · Canceled on Nov 1, 2026");
 });
 
 test("canceling now reads as Canceled", () => {
 	const section = processorItemsToReviewSection({
+		nowMs: NOW,
 		preview: preview({ phases: [phase(NOW, { ends_subscription: true })] }),
 	});
 
 	expect(section.summary).toBe("Canceled");
+});
+
+test("a phase that began before now reads as active, not scheduled", () => {
+	const SEP_20 = Date.UTC(2026, 8, 20);
+	const section = processorItemsToReviewSection({
+		nowMs: NOW,
+		preview: preview({
+			phases: [
+				phase(SEP_20, { processor_items: [processorItem()] }),
+				phase(NOV_1, { processor_items: [processorItem()] }),
+			],
+		}),
+	});
+
+	expect(section.phases.map((reviewPhase) => reviewPhase.badge)).toEqual([
+		"active",
+		"scheduled",
+	]);
 });

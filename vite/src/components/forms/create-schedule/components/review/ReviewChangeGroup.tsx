@@ -8,13 +8,18 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { cn } from "@/lib/utils";
+import type { SkeletonScope } from "../../utils/review/formPhasesToSkeletonPhases";
 import { hasScopedRows } from "../../utils/review/groupRowsByScope";
 import type {
+	ReviewChangeLayout,
 	ReviewChangeSection,
 	ReviewChangeSystem,
 } from "../../utils/review/types/reviewChange";
 import { ReviewChangePhaseBlock } from "./ReviewChangePhaseBlock";
 import { ReviewChangeSkeletonPhases } from "./ReviewChangeSkeletonPhases";
+import { ReviewPhaseTimeline } from "./ReviewPhaseTimeline";
+import { ReviewPricingTable } from "./ReviewPricingTable";
+import { ReviewPricingTableSkeleton } from "./ReviewPricingTableSkeleton";
 import { ReviewStripeIdsPopover } from "./ReviewStripeIdsPopover";
 import { ReviewSystemMark } from "./ReviewSystemMark";
 
@@ -26,14 +31,16 @@ export function ReviewChangeGroup({
 	value,
 	system,
 	title,
+	layout = "plan_rows",
 	section,
-	placeholderRowCounts = [],
+	placeholderPhases = [],
 }: {
 	value: string;
 	system: ReviewChangeSystem;
 	title: string;
+	layout?: ReviewChangeLayout;
 	section?: ReviewChangeSection;
-	placeholderRowCounts?: number[];
+	placeholderPhases?: SkeletonScope[][];
 }) {
 	const showsStatus = Boolean(
 		section?.phases.some((phase) =>
@@ -52,16 +59,20 @@ export function ReviewChangeGroup({
 		<AccordionItem value={value} disabled={isEmpty} className="border-none">
 			<AccordionTrigger
 				className={cn(
-					"h-[42px] items-center gap-[9px] rounded-none py-0 hover:no-underline [&>svg]:translate-y-0",
+					"h-[42px] min-w-0 items-center gap-[9px] rounded-none py-0 hover:no-underline [&>svg]:translate-y-0",
 					isEmpty &&
 						"disabled:opacity-100 data-disabled:opacity-100 [&>svg]:invisible",
 				)}
 			>
 				<ReviewSystemMark system={system} />
-				<span className="text-sm font-medium text-foreground">{title}</span>
+				<span className="shrink-0 text-sm font-medium text-foreground">
+					{title}
+				</span>
 				<ReviewStripeIdsPopover stripeIds={section?.stripeIds ?? []} />
 				<span className="flex-1" />
-				{section ? (
+				{section && section.phases.length > 1 ? (
+					<ReviewPhaseTimeline phases={section.phases} system={system} />
+				) : section ? (
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<span className="min-w-0 truncate text-xs font-normal text-tertiary-foreground">
@@ -75,21 +86,50 @@ export function ReviewChangeGroup({
 				)}
 			</AccordionTrigger>
 			<AccordionContent className="pb-4">
-				{section ? (
-					<div className="flex flex-col gap-4">
-						{section.phases.map((phase) => (
-							<ReviewChangePhaseBlock
-								key={phase.key}
-								phase={phase}
-								showsStatus={showsStatus}
-								showsScopes={showsScopes}
-							/>
-						))}
-					</div>
-				) : (
-					<ReviewChangeSkeletonPhases rowCounts={placeholderRowCounts} />
-				)}
+				<ReviewChangeGroupBody
+					layout={layout}
+					section={section}
+					placeholderPhases={placeholderPhases}
+					showsStatus={showsStatus}
+					showsScopes={showsScopes}
+				/>
 			</AccordionContent>
 		</AccordionItem>
+	);
+}
+
+function ReviewChangeGroupBody({
+	layout,
+	section,
+	placeholderPhases,
+	showsStatus,
+	showsScopes,
+}: {
+	layout: ReviewChangeLayout;
+	section?: ReviewChangeSection;
+	placeholderPhases: SkeletonScope[][];
+	showsStatus: boolean;
+	showsScopes: boolean;
+}) {
+	if (layout === "pricing_table") {
+		return section ? (
+			<ReviewPricingTable phases={section.phases} />
+		) : (
+			<ReviewPricingTableSkeleton phases={placeholderPhases} />
+		);
+	}
+	if (!section)
+		return <ReviewChangeSkeletonPhases phases={placeholderPhases} />;
+	return (
+		<div className="flex flex-col gap-4">
+			{section.phases.map((phase) => (
+				<ReviewChangePhaseBlock
+					key={phase.key}
+					phase={phase}
+					showsStatus={showsStatus}
+					showsScopes={showsScopes}
+				/>
+			))}
+		</div>
 	);
 }

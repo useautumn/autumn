@@ -4,17 +4,20 @@ import type {
 	SetPlansPreviewPhase,
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
-import { groupBy, uniqBy } from "lodash";
+import { uniqBy } from "lodash";
+import { formatPhaseDate } from "../schedulePhaseTiming";
 import { phaseLabel, phaseSummaryLabel } from "./phaseTiming";
 import {
-	processorItemValue,
-	unitPriceDetail,
+	pricingTableQuantity,
+	pricingTableTotal,
+	pricingTableUnitPrice,
 } from "./processorItemPriceLabels";
 import { joinDetail, withoutEmptyPhases } from "./reviewSectionText";
 import type {
 	ReviewChangePhase,
 	ReviewChangeRow,
 	ReviewChangeSection,
+	ReviewPhaseBadge,
 	ReviewStripeId,
 } from "./types/reviewChange";
 
@@ -23,71 +26,61 @@ const PROCESSOR_TITLE: Record<ProcessorChange["type"], string> = {
 	subscription_schedule: "Schedule",
 };
 
-const BASE_PRICE_LABEL = "Base price";
 const CANCELED_LABEL = "Canceled";
+const OPEN_ENDED_LABEL = "Forever";
 
-const itemTitle = (item: ProcessorItem) =>
-	item.feature_name ??
-	(item.managed_by_autumn ? BASE_PRICE_LABEL : item.display_name);
+const itemProduct = (item: ProcessorItem) =>
+	(item.managed_by_autumn ? item.feature_name : null) ?? item.display_name;
 
-const itemDetail = (item: ProcessorItem) =>
+const itemPriceLine = (item: ProcessorItem) =>
 	joinDetail([
-		item.feature_id && item.price
-			? unitPriceDetail({ price: item.price, quantity: item.quantity })
-			: undefined,
+		item.price ? pricingTableUnitPrice(item.price) : undefined,
 		item.creates_price ? "New price" : undefined,
+		item.managed_by_autumn ? undefined : "Not managed by Autumn",
 	]);
 
 const processorItemToRow = ({
 	item,
-	rowKey,
-	showsUnmanaged,
+	phaseIndex,
+	itemIndex,
 }: {
 	item: ProcessorItem;
-	rowKey: string;
-	showsUnmanaged: boolean;
+	phaseIndex: number;
+	itemIndex: number;
 }): ReviewChangeRow => ({
-	key: `${rowKey}-${item.price_id ?? item.display_name}`,
-	title: itemTitle(item),
-	description: itemDetail(item),
-	status: showsUnmanaged && !item.managed_by_autumn ? "unmanaged" : undefined,
-	value: processorItemValue(item),
+	key: `item-${phaseIndex}-${itemIndex}-${item.price_id ?? item.display_name}`,
+	title: itemProduct(item),
+	description: itemPriceLine(item),
+	quantity: pricingTableQuantity(item),
+	value: pricingTableTotal(item),
 });
 
-const processorItemPlanKey = (item: ProcessorItem) =>
-	item.plan_id ?? item.display_name;
-
-/** One row per plan, with the Stripe items it bills nested under it. */
-const processorItemsToPlanRows = ({
-	items,
-	phaseIndex,
+const phaseRange = ({
+	phase,
+	nextPhase,
 }: {
-	items: ProcessorItem[];
-	phaseIndex: number;
-}): ReviewChangeRow[] =>
-	Object.values(groupBy(items, processorItemPlanKey)).map(
-		(planItems, planIndex): ReviewChangeRow => {
-			const [firstItem] = planItems;
-			const rowKey = `plan-${phaseIndex}-${planIndex}-${processorItemPlanKey(firstItem)}`;
-			const isUnmanagedPlan = planItems.every(
-				(item) => !item.managed_by_autumn,
-			);
-			const itemRows = planItems.map((item) =>
-				processorItemToRow({
-					item,
-					rowKey,
-					showsUnmanaged: !isUnmanagedPlan,
-				}),
-			);
-			return {
-				key: rowKey,
-				title: firstItem.display_name,
-				status: isUnmanagedPlan ? "unmanaged" : undefined,
-				value: itemRows.length === 1 ? itemRows[0].value : undefined,
-				items: itemRows,
-			};
-		},
-	);
+	phase: SetPlansPreviewPhase;
+	nextPhase?: SetPlansPreviewPhase;
+}) => {
+	const start = formatPhaseDate({ startsAt: phase.starts_at });
+	if (phase.ends_subscription) return start;
+	const end = nextPhase
+		? formatPhaseDate({ startsAt: nextPhase.starts_at })
+		: OPEN_ENDED_LABEL;
+	return `${start} – ${end}`;
+};
+
+const phaseBadge = ({
+	phase,
+	nowMs,
+}: {
+	phase: SetPlansPreviewPhase;
+	nowMs: number;
+}): ReviewPhaseBadge => {
+	if (phase.ends_subscription) return "canceled";
+	const hasStarted = phase.starts_now || phase.starts_at <= nowMs;
+	return hasStarted ? "active" : "scheduled";
+};
 
 const pluralizeItems = (count: number) =>
 	count === 1 ? "1 item" : `${count} items`;
@@ -107,9 +100,9 @@ const subscriptionEndRow = ({
 	phaseIndex: number;
 }): ReviewChangeRow => ({
 	key: `subscription-ends-${phaseIndex}`,
-	title: PROCESSOR_TITLE.subscription,
+	title: "Subscription canceled",
 	description: "No items left to bill",
-	status: "ends",
+	quantity: "—",
 });
 
 const processorStripeIds = (
@@ -145,19 +138,22 @@ const priceStripeIds = (items: ProcessorItem[]): ReviewStripeId[] =>
 /** What Stripe will hold in each phase: the end state, not a diff. */
 export const processorItemsToReviewSection = ({
 	preview,
+	nowMs,
 }: {
 	preview: SetPlansPreviewResponse;
+	nowMs: number;
 }): ReviewChangeSection => {
 	const phases: ReviewChangePhase[] = preview.phases.map(
 		(phase: SetPlansPreviewPhase, phaseIndex: number) => ({
 			key: `processor-${phaseIndex}`,
 			label: phaseLabel({ phase }),
+			range: phaseRange({ phase, nextPhase: preview.phases[phaseIndex + 1] }),
+			badge: phaseBadge({ phase, nowMs }),
 			rows: phase.ends_subscription
 				? [subscriptionEndRow({ phaseIndex })]
-				: processorItemsToPlanRows({
-						items: phase.processor_items,
-						phaseIndex,
-					}),
+				: phase.processor_items.map((item, itemIndex) =>
+						processorItemToRow({ item, phaseIndex, itemIndex }),
+					),
 		}),
 	);
 

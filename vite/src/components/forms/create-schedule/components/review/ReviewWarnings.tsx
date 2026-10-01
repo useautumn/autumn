@@ -1,6 +1,7 @@
-import type { SetPlansPreviewWarning } from "@autumn/shared";
-import { Alert, AlertDescription } from "@autumn/ui";
+import type { SetPlansPreviewWarning, SetPlansTextPart } from "@autumn/shared";
+import { Alert, AlertDescription, cn } from "@autumn/ui";
 import { InfoIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { SetPlansTextLine } from "@/components/forms/shared/errors/SetPlansTextLine";
 
 /** Changes that remove or lose something, or charge now, get a banner; the review sections already show the rest. */
 const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
@@ -17,15 +18,24 @@ const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"past_due_invoice_open",
 ]);
 
-type BannerLine = { message: string; count: number };
+type BannerLine = {
+	message: string;
+	parts: SetPlansTextPart[];
+	count: number;
+};
 
 /** Identical messages (e.g. one per entity) collapse into a single counted line. */
 const toBannerLines = (warnings: SetPlansPreviewWarning[]): BannerLine[] => {
-	const countByMessage = new Map<string, number>();
-	for (const { message } of warnings) {
-		countByMessage.set(message, (countByMessage.get(message) ?? 0) + 1);
+	const linesByMessage = new Map<string, BannerLine>();
+	for (const { message, parts } of warnings) {
+		const line = linesByMessage.get(message);
+		linesByMessage.set(message, {
+			message,
+			parts: parts ?? [{ text: message }],
+			count: (line?.count ?? 0) + 1,
+		});
 	}
-	return [...countByMessage].map(([message, count]) => ({ message, count }));
+	return [...linesByMessage.values()];
 };
 
 export function ReviewWarnings({
@@ -46,20 +56,19 @@ export function ReviewWarnings({
 
 	return (
 		<div className="px-4 pt-4">
-			<Alert variant={isInfoOnly ? "default" : "warning"}>
-				<Icon weight="fill" />
-				<AlertDescription>
-					{lines.length === 1 ? (
-						<BannerLineText line={lines[0]} />
-					) : (
-						<ul className="flex list-disc flex-col gap-1 pl-4">
-							{lines.map((line) => (
-								<li key={line.message}>
-									<BannerLineText line={line} />
-								</li>
-							))}
-						</ul>
+			<Alert variant={isInfoOnly ? "default" : "warning"} className="py-1">
+				<Icon weight="fill" className="mt-1.5" />
+				<AlertDescription
+					className={cn(
+						"flex flex-col divide-y *:py-1.5",
+						isInfoOnly ? "divide-zinc-500/10" : "divide-amber-500/10",
 					)}
+				>
+					{lines.map((line) => (
+						<div key={line.message}>
+							<BannerLineText line={line} />
+						</div>
+					))}
 				</AlertDescription>
 			</Alert>
 		</div>
@@ -69,7 +78,7 @@ export function ReviewWarnings({
 function BannerLineText({ line }: { line: BannerLine }) {
 	return (
 		<>
-			{line.message}
+			<SetPlansTextLine parts={line.parts} />
 			{line.count > 1 && (
 				<span className="text-tertiary-foreground"> ×{line.count}</span>
 			)}

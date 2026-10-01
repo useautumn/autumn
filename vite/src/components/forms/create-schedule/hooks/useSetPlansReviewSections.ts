@@ -25,7 +25,9 @@ const withRemovedPhases = ({
 	const removedLabel = `${removedPhases.length} phase${removedPhases.length === 1 ? "" : "s"} removed`;
 	return {
 		...section,
-		phases: [...section.phases, ...removedPhases],
+		phases: [...section.phases, ...removedPhases].sort(
+			(first, second) => (first.startsAt ?? 0) - (second.startsAt ?? 0),
+		),
 		summary:
 			section.summary === "No changes"
 				? removedLabel
@@ -61,7 +63,7 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 				phases: preview.phases,
 				features,
 			}),
-			processor: processorItemsToReviewSection({ preview }),
+			processor: processorItemsToReviewSection({ preview, nowMs }),
 		};
 	}, [
 		preview,

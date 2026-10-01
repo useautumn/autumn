@@ -5,22 +5,66 @@ import {
 } from "@/components/forms/customer-state/components/tray/PlanSection";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import type { SkeletonScope } from "../../utils/review/formPhasesToSkeletonPhases";
+import { ReviewScopeHeader } from "./ReviewScopeHeader";
 
 const NAME_WIDTHS = ["w-2/5", "w-1/2", "w-1/3", "w-[45%]"];
-const PRICE_WIDTHS = ["w-16", "w-12", "w-14", "w-16"];
+const CHIP_WIDTHS = ["w-[68px]", "w-[84px]", "w-[60px]"];
+const VALUE_WIDTHS = ["w-16", "w-12", "w-14"];
 
 const pickWidth = ({ widths, index }: { widths: string[]; index: number }) =>
 	widths[index % widths.length];
 
-/** Phase blocks shaped like the form's phases, held until the first preview resolves. */
+/** One plan row's columns, matching ReviewChangeRowItem: name, status chip, value. */
+function SkeletonPlanRow({ index }: { index: number }) {
+	return (
+		<div
+			className={cn(
+				"flex min-h-11 items-center gap-3 px-3 py-[7px]",
+				TABLE_TRAY_SURFACE_DIVIDER_CLASS,
+			)}
+		>
+			<span className="flex min-w-0 flex-1">
+				<Skeleton
+					className={cn(
+						"h-3.5 rounded-sm",
+						pickWidth({ widths: NAME_WIDTHS, index }),
+					)}
+				/>
+			</span>
+			<span className="w-[108px] shrink-0">
+				<Skeleton
+					className={cn(
+						"h-[22px] rounded-md",
+						pickWidth({ widths: CHIP_WIDTHS, index }),
+					)}
+				/>
+			</span>
+			<span className="flex min-w-[104px] shrink-0 justify-end">
+				<Skeleton
+					className={cn(
+						"h-3.5 rounded-sm",
+						pickWidth({ widths: VALUE_WIDTHS, index }),
+					)}
+				/>
+			</span>
+		</div>
+	);
+}
+
+/** Phase blocks shaped like the form's phases and scopes, held while a preview loads. */
 export function ReviewChangeSkeletonPhases({
-	rowCounts,
+	phases,
 }: {
-	rowCounts: number[];
+	phases: SkeletonScope[][];
 }) {
+	const showsScopes = phases.some((scopes) =>
+		scopes.some(({ entityId }) => entityId !== null),
+	);
+
 	return (
 		<div className="flex flex-col gap-4">
-			{rowCounts.map((rowCount, phaseIndex) => (
+			{phases.map((scopes, phaseIndex) => (
 				<PlanSection
 					key={phaseIndex}
 					header={
@@ -29,28 +73,12 @@ export function ReviewChangeSkeletonPhases({
 						</div>
 					}
 				>
-					{Array.from({ length: rowCount }, (_, rowIndex) => (
-						<div
-							key={rowIndex}
-							className={cn(
-								"flex min-h-11 items-center gap-3 px-3",
-								TABLE_TRAY_SURFACE_DIVIDER_CLASS,
-							)}
-						>
-							<span className="flex min-w-0 flex-1">
-								<Skeleton
-									className={cn(
-										"h-3.5 rounded-sm",
-										pickWidth({ widths: NAME_WIDTHS, index: rowIndex }),
-									)}
-								/>
-							</span>
-							<Skeleton
-								className={cn(
-									"h-3.5 shrink-0 rounded-sm",
-									pickWidth({ widths: PRICE_WIDTHS, index: rowIndex }),
-								)}
-							/>
+					{scopes.map(({ entityId, rowCount }, scopeIndex) => (
+						<div key={entityId ?? `customer-${scopeIndex}`}>
+							{showsScopes && <ReviewScopeHeader entityId={entityId} />}
+							{Array.from({ length: rowCount }, (_, rowIndex) => (
+								<SkeletonPlanRow key={rowIndex} index={scopeIndex + rowIndex} />
+							))}
 						</div>
 					))}
 				</PlanSection>

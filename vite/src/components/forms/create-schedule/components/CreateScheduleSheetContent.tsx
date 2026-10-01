@@ -22,8 +22,14 @@ import { SetPlansSubscriptionNote } from "./SetPlansSubscriptionNote";
 const IS_PER_PHASE_REVIEW_READY = true;
 
 export function CreateScheduleSheetContent() {
-	const { form } = useCreateScheduleFormContext();
+	const { form, subscriptionTarget } = useCreateScheduleFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
+	const canChangeSubscription = Boolean(subscriptionTarget?.canChange);
+	const backToSubscriptionPicker = () =>
+		setSheet({
+			type: "create-schedule-choose-subscription",
+			data: { selectedKey: subscriptionTarget?.key },
+		});
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
 	const isDisabled = !canSubmit;
@@ -45,7 +51,7 @@ export function CreateScheduleSheetContent() {
 				<SheetSection withSeparator={false} className="pb-0">
 					<CreateScheduleGenerationBar />
 				</SheetSection>
-				<SheetSection title="Phases" withSeparator>
+				<SheetSection title="Phases" withSeparator className="pt-2">
 					<PhaseTimeline />
 				</SheetSection>
 
@@ -55,8 +61,14 @@ export function CreateScheduleSheetContent() {
 			</div>
 
 			<SheetFooter className="border-t border-border pt-4">
-				<Button variant="secondary" onClick={closeSheet} className="w-full">
-					Cancel
+				<Button
+					variant="secondary"
+					onClick={
+						canChangeSubscription ? backToSubscriptionPicker : closeSheet
+					}
+					className="w-full"
+				>
+					{canChangeSubscription ? "Select subscription" : "Cancel"}
 				</Button>
 				<DisabledTooltipButton
 					variant="primary"

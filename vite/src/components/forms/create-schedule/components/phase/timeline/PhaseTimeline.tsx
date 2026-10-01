@@ -23,7 +23,7 @@ export function PhaseTimeline() {
 			<InlineAction
 				icon={<PlusIcon size={11} />}
 				onClick={handleAddPhase}
-				className="mt-3"
+				className="mt-1"
 			>
 				Add phase
 			</InlineAction>
