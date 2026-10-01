@@ -71,33 +71,38 @@ const outgoingPlansRunToBoundary = ({
 			timestampsMatch(customerProduct.ended_at, renewalBoundaryMs),
 	);
 
-/** Cancelling some plans on a shared subscription at renewal only shrinks it,
- * so the plans left on that subscription still renew at the boundary. */
-const getPlansRenewingThroughCancellation = ({
+/** A change on a shared subscription at renewal doesn't end it, so the plans
+ * that stay on that subscription still renew at the boundary. */
+const getPlansRenewingThroughChange = ({
 	event,
 	customerProducts,
 }: {
 	event: Extract<NextCycleEvent, { kind: "scheduled_change" }>;
 	customerProducts: FullCusProduct[];
 }): FullCusProduct[] => {
-	const isCancellationAtRenewal =
-		event.incomingCustomerProducts.length === 0 &&
-		timestampsMatch(event.startsAtMs, event.renewalBoundaryMs);
-	if (!isCancellationAtRenewal) return [];
+	if (!timestampsMatch(event.startsAtMs, event.renewalBoundaryMs)) return [];
 
-	const cancelledSubscriptionIds = customerProductsToStripeSubscriptionIds({
-		customerProducts: event.outgoingCustomerProducts,
+	const changedSubscriptionIds = customerProductsToStripeSubscriptionIds({
+		customerProducts: [
+			...event.outgoingCustomerProducts,
+			...event.incomingCustomerProducts,
+		],
 	});
+	const incomingIds = new Set(
+		event.incomingCustomerProducts.map((customerProduct) => customerProduct.id),
+	);
 	return getActiveCustomerProductsAt({
 		customerProducts,
 		startsAtMs: event.startsAtMs,
-	}).filter((customerProduct) =>
-		cancelledSubscriptionIds.some((stripeSubscriptionId) =>
-			isCustomerProductOnStripeSubscription({
-				customerProduct,
-				stripeSubscriptionId,
-			}),
-		),
+	}).filter(
+		(customerProduct) =>
+			!incomingIds.has(customerProduct.id) &&
+			changedSubscriptionIds.some((stripeSubscriptionId) =>
+				isCustomerProductOnStripeSubscription({
+					customerProduct,
+					stripeSubscriptionId,
+				}),
+			),
 	);
 };
 
@@ -239,7 +244,7 @@ export const billingPlanToNextCyclePreview = ({
 				transitionMs: event.startsAtMs,
 				renewalBoundaryMs: event.renewalBoundaryMs,
 			});
-		const renewingCustomerProducts = getPlansRenewingThroughCancellation({
+		const renewingCustomerProducts = getPlansRenewingThroughChange({
 			event,
 			customerProducts,
 		});
@@ -250,9 +255,11 @@ export const billingPlanToNextCyclePreview = ({
 			billingCycleAnchorMs: anchorMs,
 			priceFilters: { excludeOneOffPrices: true },
 		};
-		const lineItemSpecs = keepsOldPlanCredit
-			? [chargeNewPlan, creditOldPlanUnusedTime, renewRemainingPlans]
-			: [chargeNewPlan, renewRemainingPlans];
+		const lineItemSpecs = [
+			chargeNewPlan,
+			...(keepsOldPlanCredit ? [creditOldPlanUnusedTime] : []),
+			renewRemainingPlans,
+		];
 
 		const lineItemsResult = billingPlanToNextCycleLineItems({
 			ctx,

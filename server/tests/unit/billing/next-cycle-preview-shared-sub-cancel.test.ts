@@ -26,6 +26,7 @@ const plan = ({
 	interval = BillingInterval.Month,
 	group,
 	subscriptionId = "sub_shared",
+	oneOffAmount,
 }: {
 	id: string;
 	amount: number;
@@ -35,13 +36,24 @@ const plan = ({
 	interval?: BillingInterval;
 	group?: string;
 	subscriptionId?: string;
+	oneOffAmount?: number;
 }): FullCusProduct => {
 	const fixedPrice = prices.createFixed({ id: `price_${id}` });
 	const price = {
 		...fixedPrice,
 		config: { ...fixedPrice.config, amount, interval },
 	} as Price;
-	const product = products.createFull({ id, prices: [price] });
+	const planPrices =
+		oneOffAmount === undefined
+			? [price]
+			: [
+					price,
+					prices.createOneOff({
+						id: `price_${id}_setup`,
+						amount: oneOffAmount,
+					}),
+				];
+	const product = products.createFull({ id, prices: planPrices });
 
 	return customerProducts.create({
 		id,
@@ -50,7 +62,9 @@ const plan = ({
 		startsAt,
 		endedAt,
 		subscriptionIds: [subscriptionId],
-		customerPrices: [prices.createCustomer({ price, customerProductId: id })],
+		customerPrices: planPrices.map((planPrice) =>
+			prices.createCustomer({ price: planPrice, customerProductId: id }),
+		),
 		product: group ? { ...product, group } : product,
 	});
 };
@@ -176,6 +190,51 @@ describe("next cycle preview on a shared subscription", () => {
 		expect(nextCycle?.total).toBe(50);
 		expect(nextCycle?.line_items.map((lineItem) => lineItem.plan_id)).toEqual([
 			"premium",
+		]);
+	});
+
+	test("still bills the continuing plan when another plan switches at renewal", () => {
+		const nextCycle = previewNextCycle({
+			customerProducts: [
+				plan({ id: "pro-a", amount: 20 }),
+				plan({
+					id: "premium-b",
+					amount: 50,
+					endedAt: renewalBoundaryMs,
+					group: "b",
+				}),
+				plan({
+					id: "premium-c",
+					amount: 80,
+					startsAt: renewalBoundaryMs,
+					status: CusProductStatus.Scheduled,
+					group: "b",
+				}),
+			],
+		});
+
+		expect(nextCycle?.starts_at).toBe(renewalBoundaryMs);
+		expect(nextCycle?.total).toBe(100);
+		expect(
+			nextCycle?.line_items.map((lineItem) => lineItem.plan_id).sort(),
+		).toEqual(["premium-c", "pro-a"]);
+	});
+
+	test("does not re-bill a continuing plan's one-off price at renewal", () => {
+		const nextCycle = previewNextCycle({
+			customerProducts: [
+				plan({ id: "pro-a", amount: 20, oneOffAmount: 99 }),
+				plan({
+					id: "premium-b",
+					amount: 50,
+					endedAt: renewalBoundaryMs,
+				}),
+			],
+		});
+
+		expect(nextCycle?.total).toBe(20);
+		expect(nextCycle?.line_items.map((lineItem) => lineItem.total)).toEqual([
+			20,
 		]);
 	});
 
