@@ -228,7 +228,7 @@ export const seedMigrationCast = async (params: SeedMigrationCastParams) => {
 		if (!divergence) continue;
 
 		if (divergence.kind === "custom_patch") {
-			await autumnV2_2.post("/subscriptions.update", {
+			await autumnV2_2.post("/billing.update", {
 				customer_id: member.customerId,
 				plan_id: parent.id,
 				customize: { add_items: divergence.addItems },

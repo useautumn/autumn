@@ -35,7 +35,6 @@ const defaultTrialPro = constructProduct({
 	isDefault: true,
 	forcePaidDefault: true,
 	id: "defaultTrial_pro",
-	group: "defaultTrial",
 	type: "pro",
 	freeTrial: {
 		length: 7,
@@ -67,6 +66,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 			customerId,
 			attachPm: "success",
 			withTestClock: true,
+			withDefault: true,
 		});
 
 		testClockID = res.testClockId;
