@@ -1,11 +1,12 @@
 // Manual customer creation - not using initCustomer to control test clock properly
 import { beforeAll, describe, it } from "bun:test";
 import {
-	CusProductStatus,
 	FreeTrialDuration,
 	LegacyVersion,
 	ProductItemInterval,
 } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectProductNotTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
@@ -83,14 +84,15 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 	});
 
 	it("should be active after 7 days", async () => {
+		const advancedTo = addHours(
+			addDays(new Date(), 7),
+			hoursToFinalizeInvoice,
+		).getTime();
 		await advanceTestClock({
 			stripeCli,
 			testClockId: testClockID,
-			advanceTo: addHours(
-				addDays(new Date(), 7),
-				hoursToFinalizeInvoice,
-			).getTime(),
-			waitForSeconds: 30,
+			advanceTo: advancedTo,
+			waitForSeconds: 10,
 		});
 
 		const customer = await autumn.customers.get(customerId);
@@ -98,7 +100,20 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 		expectProductAttached({
 			customer,
 			product: defaultTrialPro,
-			status: CusProductStatus.Active,
+		});
+
+		// Legacy status reads "trialing" until wall-clock passes trial_ends_at, so judge by test-clock time.
+		await expectProductNotTrialing({
+			customer,
+			productId: defaultTrialPro.id,
+			nowMs: advancedTo,
+		});
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: 20,
+			latestStatus: "paid",
 		});
 	});
 });
