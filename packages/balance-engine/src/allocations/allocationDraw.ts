@@ -1,5 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { DeductionContext } from "../deduction/types/deductionContext.js";
+import type { DeductionDelta } from "../deduction/types/deductionDelta.js";
 import type { DeductionRow } from "../deduction/types/deductionRow.js";
 import type { DeductionState } from "../deduction/types/deductionState.js";
 import {
@@ -102,7 +103,52 @@ export const allocationHeadroomOf = ({
 	return Decimal.max(0, new Decimal(ownUnused).plus(unallocated));
 };
 
-/** Records a shared draw: all of it against the entity, only the part from its own share as claimed. */
+const addConsumed = ({
+	deductionState,
+	key,
+	amount,
+}: {
+	deductionState: DeductionState;
+	key: string;
+	amount: Decimal;
+}) => {
+	deductionState.allocationConsumed ??= new Map();
+	const consumed = deductionState.allocationConsumed;
+	consumed.set(key, (consumed.get(key) ?? new Decimal(0)).plus(amount));
+};
+
+/** Gives `credits` back: the entity's counter drops, and claimed drops only by what falls back under its share. */
+const releaseAllocation = ({
+	context,
+	deductionState,
+	gate,
+	credits,
+}: {
+	context: DeductionContext;
+	deductionState: DeductionState;
+	gate: AllocationGate;
+	credits: Decimal;
+}) => {
+	if (!gate.entityCounter) return;
+	const usage = counterUsage({
+		context,
+		deductionState,
+		counter: gate.entityCounter,
+	});
+	const restored = Decimal.min(credits, Decimal.max(0, usage));
+	if (restored.lte(0)) return;
+	addConsumed({ deductionState, key: gate.entityCounter.key, amount: restored.neg() });
+	if (gate.ownRequested === null) return;
+	const claimedBefore = Decimal.min(usage, gate.ownRequested);
+	const claimedAfter = Decimal.min(usage.minus(restored), gate.ownRequested);
+	addConsumed({
+		deductionState,
+		key: gate.claimedCounter.key,
+		amount: claimedAfter.minus(claimedBefore),
+	});
+};
+
+/** Records a shared draw (all of it against the entity, its own-share part as claimed); a negative draw is a refund. */
 export const consumeAllocation = ({
 	context,
 	deductionState,
@@ -115,14 +161,41 @@ export const consumeAllocation = ({
 	credits: Decimal;
 }): void => {
 	const gate = gates({ context, row });
-	if (!gate || credits.lte(0) || !gate.entityCounter) return;
+	if (!gate || !gate.entityCounter || credits.isZero()) return;
+	if (credits.lt(0)) {
+		releaseAllocation({ context, deductionState, gate, credits: credits.neg() });
+		return;
+	}
 	const { ownUnused } = gateNow({ context, deductionState, gate });
-	deductionState.allocationConsumed ??= new Map();
-	const consumed = deductionState.allocationConsumed;
-	const add = (key: string, amount: Decimal) =>
-		consumed.set(key, (consumed.get(key) ?? new Decimal(0)).plus(amount));
-	add(gate.entityCounter.key, credits);
-	add(gate.claimedCounter.key, Decimal.min(credits, ownUnused));
+	addConsumed({ deductionState, key: gate.entityCounter.key, amount: credits });
+	addConsumed({
+		deductionState,
+		key: gate.claimedCounter.key,
+		amount: Decimal.min(credits, ownUnused),
+	});
+};
+
+/** What a lock unwind frees on the allocation counters, in the shape a forward draw starts from. */
+export const deltasToFreedAllocation = ({
+	context,
+	deltas,
+}: {
+	context: DeductionContext;
+	deltas: DeductionDelta[];
+}): Map<string, Decimal> | undefined => {
+	const gate = context.allocationGate;
+	if (!gate) return undefined;
+	const restored = deltas
+		.filter(
+			(delta) =>
+				gate.sharedRowIds.has(delta.id) &&
+				delta.entityKey === null &&
+				delta.balanceDelta > 0,
+		)
+		.reduce((sum, delta) => sum.plus(delta.balanceDelta), new Decimal(0));
+	const state = { allocationConsumed: undefined } as unknown as DeductionState;
+	releaseAllocation({ context, deductionState: state, gate, credits: restored });
+	return state.allocationConsumed;
 };
 
 /** Counter rows the draw moved, created on first use and restarted when their cycle rolled. */

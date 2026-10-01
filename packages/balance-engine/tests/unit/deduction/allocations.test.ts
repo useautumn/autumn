@@ -88,6 +88,7 @@ const trackAsEntity = ({
 	usageWindows = [],
 	scale = 1,
 	scaleCycleEnd = null,
+	includeOwnRow = true,
 	value,
 }: {
 	amounts: Record<string, number>;
@@ -96,6 +97,7 @@ const trackAsEntity = ({
 	usageWindows?: WorkerUsageWindow[];
 	scale?: number;
 	scaleCycleEnd?: number | null;
+	includeOwnRow?: boolean;
 	value: number;
 }) =>
 	deduct({
@@ -125,7 +127,7 @@ const trackAsEntity = ({
 				],
 				customerEntitlements: [
 					pool({ balance: poolBalance }),
-					ownOverageRow({ usageAllowed }),
+					...(includeOwnRow ? [ownOverageRow({ usageAllowed })] : []),
 				],
 				usageWindows,
 			}),
@@ -275,6 +277,43 @@ describe("allocation gate", () => {
 				value: 5000,
 			});
 			expect(drawnFrom(current, "pool")).toBe(2500);
+		},
+	);
+
+	test.concurrent(
+		"a refund gives back to the entity's own share first (PRD §8.3 step 5)",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 500, [otherEntity]: 500 },
+				poolBalance: 600,
+				includeOwnRow: false,
+				usageWindows: [
+					counter({ internalEntityId: entity.internal_id, usage: 400 }),
+					counter({ internalEntityId: null, usage: 400 }),
+				],
+				value: -200,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(-200);
+			expect(counterUsageAdded(outcome, entity.internal_id)).toBe(-200);
+			expect(counterUsageAdded(outcome, null)).toBe(-200);
+		},
+	);
+
+	test.concurrent(
+		"a refund of usage beyond the share only frees claimed credits up to the share",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 500 },
+				poolBalance: 400,
+				includeOwnRow: false,
+				usageWindows: [
+					counter({ internalEntityId: entity.internal_id, usage: 600 }),
+					counter({ internalEntityId: null, usage: 500 }),
+				],
+				value: -200,
+			});
+			expect(counterUsageAdded(outcome, entity.internal_id)).toBe(-200);
+			expect(counterUsageAdded(outcome, null)).toBe(-100);
 		},
 	);
 });

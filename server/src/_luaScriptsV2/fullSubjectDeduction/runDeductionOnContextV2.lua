@@ -247,7 +247,7 @@ local function process_deduction_pass(params)
 
       remaining_amount = remaining_amount - deducted_units
 
-      if pass_number == 1 then
+      if pass_number == 1 or deducted < 0 then
         consume_allocation({
           context = context,
           gate = allocation_gate,

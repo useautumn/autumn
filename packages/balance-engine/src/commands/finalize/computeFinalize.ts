@@ -86,6 +86,7 @@ export const computeFinalizeDecision = ({
 		terms: request.terms,
 		deltas: unwound.deltas,
 		usageWindowConsumed: unwound.usageWindowConsumed,
+		allocationConsumed: unwound.allocationConsumed,
 	};
 	deductFromBuckets({ context, deductionState });
 	const outcome = deductionStateToOutcome({ context, deductionState, request });

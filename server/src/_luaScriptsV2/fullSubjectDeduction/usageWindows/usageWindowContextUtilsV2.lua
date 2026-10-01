@@ -156,8 +156,16 @@ local function update_in_memory_usage_window(params)
     return
   end
 
-  if entry.consumed > USAGE_WINDOW_EPSILON then
+  local releases_allocation = entry.allocation_role ~= nil
+      and entry.consumed < -USAGE_WINDOW_EPSILON
+  if entry.consumed > USAGE_WINDOW_EPSILON or releases_allocation then
     local existing = find_usage_window(feature_windows.windows, limit)
+    -- A give-back only lowers a live counter; there is nothing to lower otherwise.
+    if releases_allocation and (is_nil(existing)
+        or safe_number(existing.window_end_at) <= now
+        or not is_same_usage_window(existing, limit)) then
+      return
+    end
     if is_nil(existing) then
       -- The TS-minted candidate id is used ONLY at creation; under concurrency
       -- the second request finds the first one's row and its id is discarded.
@@ -183,7 +191,7 @@ local function update_in_memory_usage_window(params)
     existing.window_end_at = limit.window_end_at
     existing.anchor_customer_entitlement_id =
       limit.anchor_customer_entitlement_id
-    existing.usage = safe_number(existing.usage) + entry.consumed
+    existing.usage = math.max(0, safe_number(existing.usage) + entry.consumed)
     existing.updated_at = now
     feature_windows.dirty = true
 

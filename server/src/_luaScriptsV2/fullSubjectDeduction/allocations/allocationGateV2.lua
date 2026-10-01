@@ -75,15 +75,35 @@ local function get_available_from_allocation(params)
   return math.max(0, own_unused + unallocated) / (params.credit_cost or 1)
 end
 
--- Counts a shared draw: all of it against the entity, its own-share part as claimed.
+-- Gives credits back: the entity's counter drops, claimed only by what falls back under its share.
+local function release_allocation(gate, entity_entry, claimed_entry, credits)
+  local usage = allocation_usage(entity_entry)
+  local restored = math.min(credits, math.max(0, usage))
+  if restored <= 0 then
+    return
+  end
+  entity_entry.consumed = entity_entry.consumed - restored
+  if claimed_entry ~= nil and not is_nil(gate.requested) then
+    local requested = safe_number(gate.requested)
+    local claimed_before = math.min(usage, requested)
+    local claimed_after = math.min(usage - restored, requested)
+    claimed_entry.consumed = claimed_entry.consumed + (claimed_after - claimed_before)
+  end
+end
+
+-- Counts a shared draw (all of it against the entity, its own-share part as claimed); negative is a refund.
 local function consume_allocation(params)
   local gate = params.gate
   local credits = params.credits or 0
-  if not is_allocation_gated(gate, params.ent_id) or credits <= 0 then
+  if not is_allocation_gated(gate, params.ent_id) or credits == 0 then
     return
   end
   local entity_entry = allocation_entry(params.context, 'entity')
   if entity_entry == nil then
+    return
+  end
+  if credits < 0 then
+    release_allocation(gate, entity_entry, allocation_entry(params.context, 'claimed'), -credits)
     return
   end
   -- credits already left the shared row, so own_unused is read before counting them.

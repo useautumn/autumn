@@ -197,13 +197,20 @@ local enforce_usage_windows = is_consumption
     and not has_unwind
     and has_usage_window_limits
 local unwind_usage_windows = has_unwind and has_usage_window_limits
+-- A plain refund gives credits back to the entity's own share (allocation counters only).
+local refund_allocation = not is_nil(allocation_gate)
+    and has_usage_window_limits
+    and not has_unwind
+    and is_nil(target_balance)
+    and not alter_granted_balance
+    and safe_number(amount_to_deduct) < 0
 
 local context = init_context({
   org_id = org_id,
   env = env,
   customer_id = customer_id,
   customer_entitlement_deductions = customer_entitlement_deductions,
-  usage_window_limits = (enforce_usage_windows or unwind_usage_windows)
+  usage_window_limits = (enforce_usage_windows or unwind_usage_windows or refund_allocation)
       and usage_window_limits
     or nil,
   usage_window_now = usage_window_now,
@@ -284,7 +291,7 @@ local deduction_result = run_deduction_on_context({
   target_entity_id = target_entity_id,
   alter_granted_balance = alter_granted_balance,
   overage_behaviour = overage_behaviour,
-  allocation_gate = enforce_usage_windows and allocation_gate or nil,
+  allocation_gate = (enforce_usage_windows or refund_allocation) and allocation_gate or nil,
 })
 
 local updates = deduction_result.updates
@@ -336,7 +343,7 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
   })
 end
 
-if enforce_usage_windows then
+if enforce_usage_windows or refund_allocation then
   increment_usage_window_counters({
     context = context,
     usage_window_limits = usage_window_limits,
@@ -400,7 +407,7 @@ update_aggregated_balances({
   mutation_logs = mutation_logs,
 })
 
-if enforce_usage_windows or unwind_usage_windows then
+if enforce_usage_windows or unwind_usage_windows or refund_allocation then
   apply_usage_window_writes(context, usage_window_ttl_seconds)
 end
 
