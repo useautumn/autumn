@@ -82,9 +82,10 @@ export const invoiceCheckout = async ({
 				'input[name="number"]:visible, input[data-elements-stable-field-name="cardNumber"]:visible, [role="button"][data-value="card"]:visible',
 			)
 			.first();
+		process.env.TW_STRIPE_TRACE = "1";
 		const initialState = await Promise.race([
-			paid.waitFor().then(() => "paid"),
-			readyForm.waitFor().then(() => "form"),
+			paid.waitFor({ timeout: 60_000 }).then(() => "paid"),
+			readyForm.waitFor({ timeout: 60_000 }).then(() => "form"),
 		]);
 		console.log(`${tag} initial=${initialState} ${dt()}ms`);
 		for (const fr of page
@@ -138,6 +139,9 @@ export const invoiceCheckout = async ({
 			.first();
 		if (await postalCode.count()) await postalCode.fill("10001");
 		const saveWithLink = paymentFrame.locator('input[name="linkOptIn"]');
+		await saveWithLink
+			.waitFor({ state: "attached", timeout: 5_000 })
+			.catch(() => {});
 		console.log(
 			`${tag} link check ${dt()}ms visible=${await saveWithLink.isVisible()} checked=${await saveWithLink.isChecked().catch(() => "n/a")} framePerf=${await page
 				.frames()
