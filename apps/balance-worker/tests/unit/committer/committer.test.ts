@@ -30,6 +30,7 @@ function createGatedDb({
 	transientFailures = 0,
 	transientError = () =>
 		Object.assign(new Error("connection reset"), { errno: "08006" }),
+	progress = async () => null,
 }: {
 	failWhen?: (updates: readonly SubjectRowChange[]) => Error | null;
 	/** Rows whose guard no longer matches: the flush rolls back and reports them unapplied. */
@@ -38,6 +39,8 @@ function createGatedDb({
 	transientFailures?: number;
 	/** What each of those leading failures throws. */
 	transientError?: () => Error;
+	/** What the stored bookmark says when the committer reads it back. */
+	progress?: CommitterDb["readPartitionProgress"];
 } = {}) {
 	let remainingTransient = transientFailures;
 	const transactions: {
@@ -47,7 +50,7 @@ function createGatedDb({
 	let gate = Promise.withResolvers<void>();
 	let open = false;
 	const db: CommitterDb = {
-		readPartitionProgress: async () => null,
+		readPartitionProgress: progress,
 		insertPartitionProgress: async () => {},
 		claimPartitionProgress: async () => {},
 		flush: async (request) => {
@@ -512,6 +515,121 @@ describe("committer", () => {
 			fake.transactions[0]?.updates,
 		);
 		expect(fake.transactions[1]?.updates.length).toBeGreaterThan(0);
+	});
+
+	test("a retry that finds the bookmark where this flush would leave it is the earlier attempt having landed: nothing is skipped or recovered", async () => {
+		const fake = createGatedDb({
+			transientFailures: 1,
+			transientError: () =>
+				Object.assign(new Error("Max lifetime timeout reached after 30m"), {
+					code: "ERR_POSTGRES_LIFETIME_TIMEOUT",
+				}),
+			failWhen: () =>
+				new FlushBookmarkConflictError({ expected: 1, advanced: 0 }),
+			progress: async () => ({
+				nextOffset: 1n,
+				commandNextOffset: null,
+				ownerFence: null,
+				claimToken: "claim_a",
+			}),
+		});
+		fake.openGate();
+		const infos: string[] = [];
+		const committer = createCommitter({
+			ctx: {
+				db: fake.db,
+				sleep: async () => {},
+				logger: {
+					info: (message) => infos.push(message),
+					warn() {},
+					error() {},
+				},
+			},
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+
+		const landed = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			claimToken: "claim_a",
+			records: [record({ partition: 0, offset: 0n, commandId: "a" })],
+		});
+
+		expect(landed).toEqual({ nextOffset: 1n });
+		expect(fake.transactions).toHaveLength(2);
+		expect(infos.some((message) => message.includes("earlier attempt"))).toBe(
+			true,
+		);
+	});
+
+	test("a retry's bookmark conflict is still ownership lost when the bookmark is elsewhere or under another claim", async () => {
+		for (const stored of [
+			{ nextOffset: 5n, claimToken: "claim_a" },
+			{ nextOffset: 1n, claimToken: "claim_b" },
+			null,
+		]) {
+			const fake = createGatedDb({
+				transientFailures: 1,
+				transientError: () =>
+					Object.assign(new Error("Connection closed"), {
+						code: "ERR_POSTGRES_CONNECTION_CLOSED",
+					}),
+				failWhen: () =>
+					new FlushBookmarkConflictError({ expected: 1, advanced: 0 }),
+				progress: async () =>
+					stored && { ...stored, commandNextOffset: null, ownerFence: null },
+			});
+			fake.openGate();
+			const committer = createCommitter({
+				ctx: { db: fake.db, sleep: async () => {} },
+				config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+			});
+
+			const landed = await committer.apply({
+				topic,
+				partition: 0,
+				expectedOffset: 0n,
+				claimToken: "claim_a",
+				records: [record({ partition: 0, offset: 0n, commandId: "a" })],
+			});
+
+			expect(landed.nextOffset).toBe(0n);
+			expect(landed.failure?.cause).toBeInstanceOf(FlushBookmarkConflictError);
+		}
+	});
+
+	test("a first attempt's bookmark conflict never consults the stored bookmark: another writer owns the partition", async () => {
+		let reads = 0;
+		const fake = createGatedDb({
+			failWhen: () =>
+				new FlushBookmarkConflictError({ expected: 1, advanced: 0 }),
+			progress: async () => {
+				reads += 1;
+				return {
+					nextOffset: 1n,
+					commandNextOffset: null,
+					ownerFence: null,
+					claimToken: "claim_a",
+				};
+			},
+		});
+		fake.openGate();
+		const committer = createCommitter({
+			ctx: { db: fake.db, sleep: async () => {} },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+
+		const landed = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			claimToken: "claim_a",
+			records: [record({ partition: 0, offset: 0n, commandId: "a" })],
+		});
+
+		expect(landed.failure?.cause).toBeInstanceOf(FlushBookmarkConflictError);
+		expect(reads).toBe(0);
 	});
 
 	test("a Postgres server error is still judged by its SQLSTATE: a refusal is skipped, not retried forever", async () => {

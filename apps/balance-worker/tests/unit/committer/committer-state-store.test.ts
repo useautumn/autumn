@@ -50,6 +50,7 @@ function createFakeCommitterDb({
 				nextOffset,
 				commandNextOffset: commandProgress.get(key) ?? null,
 				ownerFence: fences.get(key) ?? null,
+				claimToken: claims.get(key) ?? null,
 			};
 		},
 		insertPartitionProgress: async ({
