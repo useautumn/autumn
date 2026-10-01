@@ -14,10 +14,10 @@ import {
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import { generateId } from "@/utils/genUtils.js";
+import { notifyAllocationsAdjusted } from "./actions/notifyAllocationsAdjusted.js";
 import {
 	allocationIntervalMismatchError,
 	allocationsNotSupportedForUnlimitedError,
@@ -28,6 +28,11 @@ import {
 	allocationPlanToEntityNumbers,
 	computeAllocationPlan,
 } from "./compute/computeAllocationPlan.js";
+import {
+	readAllocationCounters,
+	withAllocationLock,
+	writeAllocations,
+} from "./repos/allocationStore.js";
 import { setAllocationCounters } from "./repos/setAllocationCounters.js";
 import {
 	allocationCounterUsage,
@@ -109,25 +114,11 @@ export const allocateBalances = async ({
 		throw new CustomerNotFoundError({ customerId: params.customer_id });
 	const { customer } = fullSubject;
 
-	const existing = customer.balance_allocations?.[feature.internal_id];
-	if (existing && existing.interval !== interval)
-		throw allocationIntervalMismatchError({
-			featureId: feature.id,
-			interval: existing.interval,
-		});
-
 	const sharedRows = sharedRowsOf({
 		customerEntitlements: fullSubjectToCustomerEntitlements({ fullSubject }),
 		featureId: feature.id,
 		interval,
 	});
-	const now = Date.now();
-	const cycle = allocationCycleOf({ sharedRows, interval, now });
-	if (!cycle)
-		throw noSharedBalanceForIntervalError({
-			featureId: feature.id,
-			interval: params.interval,
-		});
 	if (
 		sharedRows.some(
 			(row) => row.unlimited || row.entitlement.allowance === null,
@@ -140,67 +131,90 @@ export const allocateBalances = async ({
 		internalCustomerId: customer.internal_id,
 		entityIds: params.allocations.map((entry) => entry.entity_id),
 	});
-
 	const sharedGranted = cusEntsToGrantedBalance({ cusEnts: sharedRows });
 	const sharedRemaining = cusEntsToBalance({ cusEnts: sharedRows });
-	const counterUsage = allocationCounterUsage({
-		fullSubject,
-		allocation: { feature_id: feature.id },
-		cycle,
-	});
-	const plan = computeAllocationPlan({
-		isFirstCall: !existing,
-		sharedGranted,
-		sharedRemaining,
-		currentAmounts: existing?.amounts ?? {},
-		currentUsage: counterUsage,
-		entries: params.allocations.map((entry) => ({
-			internalEntityId: internalIdById.get(entry.entity_id) as string,
-			amount: entry.amount,
-		})),
-	});
+	const now = Date.now();
 
-	const counterOf = (internalEntityId: string | null, usage: number) =>
-		toAllocationCounter({
-			id: generateId("uw"),
-			internalCustomerId: customer.internal_id,
-			internalFeatureId: feature.internal_id,
-			featureId: feature.id,
-			internalEntityId,
-			cycle,
-			usage,
-			now,
-		});
+	// Read, check and write under the customer row lock, so concurrent calls can't both pass rule 5.
 	// Counters bypass the worker until plans can set usage_windows; the eviction below drops any stale copy.
-	await setAllocationCounters({
-		db: ctx.db,
-		counters: [
-			...plan.seededEntityIds.map((id) =>
-				counterOf(id, plan.entityUsage[id] ?? 0),
-			),
-			counterOf(null, plan.claimed),
-		],
-	});
-
-	const balanceAllocations: BalanceAllocations = {
-		...(customer.balance_allocations ?? {}),
-		[feature.internal_id]: {
-			feature_id: feature.id,
-			interval,
-			scale: plan.scale,
-			scale_cycle_end: cycle.windowEndAt,
-			amounts: plan.amounts,
-		},
-	};
-	await executeAutumnBillingPlan({
+	const { plan, cycle } = await withAllocationLock({
 		ctx,
-		autumnBillingPlan: {
-			customerId: customer.id ?? customer.internal_id,
-			insertCustomerProducts: [],
-			updateCustomer: {
-				customer,
-				updates: { balance_allocations: balanceAllocations },
-			},
+		internalCustomerId: customer.internal_id,
+		fn: async ({ tx, allocations }) => {
+			const stored = allocations?.[feature.internal_id];
+			const existing =
+				stored && Object.keys(stored.amounts).length > 0 ? stored : undefined;
+			if (existing && existing.interval !== interval)
+				throw allocationIntervalMismatchError({
+					featureId: feature.id,
+					interval: existing.interval,
+				});
+			const cycle = allocationCycleOf({
+				sharedRows,
+				interval,
+				now,
+				pinnedId: existing?.parent_customer_entitlement_id,
+			});
+			if (!cycle)
+				throw noSharedBalanceForIntervalError({
+					featureId: feature.id,
+					interval: params.interval,
+				});
+
+			const plan = computeAllocationPlan({
+				isFirstCall: !existing,
+				sharedGranted,
+				sharedRemaining,
+				currentAmounts: existing?.amounts ?? {},
+				currentUsage: await readAllocationCounters({
+					tx,
+					internalCustomerId: customer.internal_id,
+					internalFeatureId: feature.internal_id,
+					cycle,
+				}),
+				entries: params.allocations.map((entry) => ({
+					internalEntityId: internalIdById.get(entry.entity_id) as string,
+					amount: entry.amount,
+				})),
+			});
+
+			const counterOf = (internalEntityId: string | null, usage: number) =>
+				toAllocationCounter({
+					id: generateId("uw"),
+					internalCustomerId: customer.internal_id,
+					internalFeatureId: feature.internal_id,
+					featureId: feature.id,
+					internalEntityId,
+					cycle,
+					usage,
+					now,
+				});
+			await setAllocationCounters({
+				db: tx,
+				counters: [
+					...plan.seededEntityIds.map((id) =>
+						counterOf(id, plan.entityUsage[id] ?? 0),
+					),
+					counterOf(null, plan.claimed),
+				],
+			});
+			await writeAllocations({
+				ctx,
+				tx,
+				internalCustomerId: customer.internal_id,
+				allocations: {
+					...(allocations ?? {}),
+					[feature.internal_id]: {
+						feature_id: feature.id,
+						interval,
+						scale: plan.scale,
+						scale_cycle_end: cycle.windowEndAt,
+						parent_customer_entitlement_id: cycle.parentId,
+						amounts: plan.amounts,
+					},
+				},
+			});
+			return { plan, cycle };
 		},
 	});
 	await invalidateCachedFullSubject({
@@ -208,6 +222,7 @@ export const allocateBalances = async ({
 		customerId: params.customer_id,
 		source: "allocateBalances",
 	});
+	void notifyAllocationsAdjusted({ ctx, customerId: params.customer_id });
 
 	const allocated = Object.keys(plan.amounts).reduce(
 		(sum, id) =>

@@ -1,5 +1,8 @@
 import type { ApiSubjectV0 } from "@api/customers/apiSubjectV0";
-import type { ApiBalanceV1 } from "@api/customers/cusFeatures/apiBalanceV1";
+import type {
+	ApiBalanceV1,
+	ApiBalanceWithAllocationCheck,
+} from "@api/customers/cusFeatures/apiBalanceV1";
 import { apiBalanceV1ToAvailableOverage } from "@api/customers/cusFeatures/utils/convert/apiBalanceV1ToAvailableOverage";
 import { apiSubjectToOverageAllowedControl } from "@api/customers/utils/apiSubjectToOverageAllowed";
 import { apiSubjectToUsageLimitHeadroom } from "@api/customers/utils/apiSubjectToUsageLimitHeadroom";
@@ -33,14 +36,14 @@ export const apiBalanceToAllowed = ({
 	properties,
 }: ApiBalanceInput): AllowedResult => {
 	if (!displayedBalance) return { allowed: false };
+	const allocationCheckRemaining = (
+		displayedBalance as ApiBalanceWithAllocationCheck
+	).allocation_check_remaining;
 	// An allocated customer's entity may draw own unused + unallocated, not the shown rows' remaining.
 	const apiBalance =
-		displayedBalance.allocation_check_remaining === undefined
+		allocationCheckRemaining === undefined
 			? displayedBalance
-			: {
-					...displayedBalance,
-					remaining: displayedBalance.allocation_check_remaining,
-				};
+			: { ...displayedBalance, remaining: allocationCheckRemaining };
 
 	if (isBooleanFeature({ feature })) return { allowed: true };
 

@@ -45,6 +45,7 @@ export const resolveAllocationLuaGate = ({
 			sharedRows,
 			interval: allocation.interval,
 			now,
+			pinnedId: allocation.parent_customer_entitlement_id,
 		});
 		if (!cycle) continue;
 

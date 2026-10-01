@@ -104,7 +104,7 @@ export const packAllocationGap = ({
 	);
 };
 
-/** The shared row whose cycle allocations follow: the pool when there is one, else the soonest to reset. */
+/** The shared row whose cycle allocations follow: the pinned row while it exists, else the pool, else the soonest to reset. */
 export const pickAllocationParent = <
 	T extends {
 		id: string;
@@ -113,10 +113,16 @@ export const pickAllocationParent = <
 	},
 >({
 	sharedRows,
+	pinnedId,
 }: {
 	sharedRows: T[];
+	pinnedId?: string | null;
 }): T | undefined => {
 	const resetting = sharedRows.filter((row) => row.next_reset_at !== null);
+	const pinned = pinnedId
+		? resetting.find((row) => row.id === pinnedId)
+		: undefined;
+	if (pinned) return pinned;
 	const pooled = resetting.find((row) => row.is_pooled_balance);
 	if (pooled) return pooled;
 	return [...resetting].sort(

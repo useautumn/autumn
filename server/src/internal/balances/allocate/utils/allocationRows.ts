@@ -37,12 +37,14 @@ export const allocationCycleOf = ({
 	sharedRows,
 	interval,
 	now,
+	pinnedId,
 }: {
 	sharedRows: FullCusEntWithFullCusProduct[];
 	interval: EntInterval;
 	now: number;
+	pinnedId?: string | null;
 }) => {
-	const parent = pickAllocationParent({ sharedRows });
+	const parent = pickAllocationParent({ sharedRows, pinnedId });
 	if (!parent?.next_reset_at) return null;
 	const bounds = getUsageWindowBounds({
 		interval,

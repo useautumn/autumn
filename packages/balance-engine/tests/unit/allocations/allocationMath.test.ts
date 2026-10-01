@@ -8,6 +8,7 @@ import {
 	allocationGate,
 	allocationGranted,
 	packAllocationGap,
+	pickAllocationParent,
 	solveAllocationScale,
 } from "../../../src/allocations/allocationMath.js";
 
@@ -148,5 +149,20 @@ describe("packAllocationGap", () => {
 				],
 			}),
 		).toEqual({ a: 5000, b: 1000 });
+	});
+});
+
+describe("pickAllocationParent", () => {
+	const base = { id: "base", next_reset_at: 15 };
+	const addOn = { id: "addon", next_reset_at: 3 };
+	test("keeps the pinned row while it exists, whichever resets sooner", () => {
+		expect(
+			pickAllocationParent({ sharedRows: [base, addOn], pinnedId: "base" })?.id,
+		).toBe("base");
+	});
+	test("re-picks when the pinned row is gone", () => {
+		expect(
+			pickAllocationParent({ sharedRows: [addOn], pinnedId: "base" })?.id,
+		).toBe("addon");
 	});
 });

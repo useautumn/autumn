@@ -104,6 +104,7 @@ export const resolveAllocationGate = ({
 				...row,
 				is_pooled_balance: Boolean(row.pooled_balance),
 			})),
+			pinnedId: allocation.parent_customer_entitlement_id,
 		});
 		if (!parent?.next_reset_at) continue;
 

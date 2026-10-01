@@ -1,34 +1,37 @@
 import {
 	type BalanceAllocations,
-	type Customer,
 	cusEntsToBalance,
 	customers,
+	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	solveAllocationScale,
 } from "@autumn/shared";
 import { and, eq, or } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import { generateId } from "@/utils/genUtils.js";
+import {
+	readAllocationCounters,
+	withAllocationLock,
+	writeAllocations,
+} from "../repos/allocationStore.js";
 import { setAllocationCounters } from "../repos/setAllocationCounters.js";
 import {
-	allocationCounterUsage,
 	allocationCycleOf,
 	sharedRowsOf,
 	toAllocationCounter,
 } from "../utils/allocationRows.js";
+import { notifyAllocationsAdjusted } from "./notifyAllocationsAdjusted.js";
 
-
-const loadStoredAllocations = async ({
+const hasStoredAllocations = async ({
 	ctx,
 	customerId,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-}): Promise<BalanceAllocations | null> => {
+}): Promise<boolean> => {
 	const [row] = await ctx.db
 		.select({ balanceAllocations: customers.balance_allocations })
 		.from(customers)
@@ -40,46 +43,31 @@ const loadStoredAllocations = async ({
 			),
 		)
 		.limit(1);
-	const allocations = row?.balanceAllocations;
-	return allocations && Object.keys(allocations).length > 0
-		? allocations
-		: null;
+	return Object.keys(row?.balanceAllocations ?? {}).length > 0;
 };
 
-/** Re-solves each allocated feature's scale against the shared credits left now; writes and notifies only on change. */
-export const refreshAllocationScale = async ({
+/** Re-fits every allocated feature to the shared credits left now, under the allocation lock. Only scale and the claimed counter change. */
+const refitAllocations = async ({
 	ctx,
-	customerId,
-	notify = true,
+	tx,
+	fullSubject,
+	allocations,
+	now,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
-	/** False when the caller sends its own billing.updated and adds the tag there. */
-	notify?: boolean;
-}): Promise<boolean> => {
-	const stored = await loadStoredAllocations({ ctx, customerId });
-	if (!stored) return false;
-
-	await invalidateCachedFullSubject({
-		ctx,
-		customerId,
-		source: "refreshAllocationScale",
-		flushBalances: true,
-	});
-	const fullSubject = await getFullSubject({
-		ctx,
-		customerId,
-		readFrom: "primary",
-	});
-	if (!fullSubject) return false;
-
+	tx: DrizzleCli;
+	fullSubject: FullSubject;
+	allocations: BalanceAllocations;
+	now: number;
+}): Promise<{ next: BalanceAllocations; changed: boolean }> => {
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
 	});
-	const now = Date.now();
-	const next: BalanceAllocations = { ...stored };
+	const internalCustomerId = fullSubject.customer.internal_id;
+	const next: BalanceAllocations = { ...allocations };
 	let changed = false;
-	for (const [internalFeatureId, allocation] of Object.entries(stored)) {
+	let dirty = false;
+	for (const [internalFeatureId, allocation] of Object.entries(allocations)) {
 		const sharedRows = sharedRowsOf({
 			customerEntitlements,
 			featureId: allocation.feature_id,
@@ -89,22 +77,27 @@ export const refreshAllocationScale = async ({
 			sharedRows,
 			interval: allocation.interval,
 			now,
+			pinnedId: allocation.parent_customer_entitlement_id,
 		});
-		const usage = cycle
-			? allocationCounterUsage({ fullSubject, allocation, cycle })
-			: {};
-		// The claimed total is derivable from entity counters; re-derive it so deleted or released entities drop out.
+		if (!cycle) continue;
+		const usage = await readAllocationCounters({
+			tx,
+			internalCustomerId,
+			internalFeatureId,
+			cycle,
+		});
+		// Claimed derives from entity counters; re-deriving it drops released or deleted entities.
 		const claimed = Object.entries(allocation.amounts).reduce(
 			(sum, [id, requested]) => sum + Math.min(usage[id] ?? 0, requested),
 			0,
 		);
-		if (cycle && claimed !== (usage[""] ?? 0))
+		if (claimed !== (usage[""] ?? 0))
 			await setAllocationCounters({
-				db: ctx.db,
+				db: tx,
 				counters: [
 					toAllocationCounter({
 						id: generateId("uw"),
-						internalCustomerId: fullSubject.customer.internal_id,
+						internalCustomerId,
 						internalFeatureId,
 						featureId: allocation.feature_id,
 						internalEntityId: null,
@@ -121,118 +114,132 @@ export const refreshAllocationScale = async ({
 				usage: usage[id] ?? 0,
 			})),
 		});
-		const cycleEnd = cycle?.windowEndAt ?? null;
-		if (
+		const unchanged =
 			scale === allocation.scale &&
-			cycleEnd === (allocation.scale_cycle_end ?? null)
-		)
-			continue;
+			cycle.windowEndAt === allocation.scale_cycle_end &&
+			cycle.parentId === allocation.parent_customer_entitlement_id;
+		if (unchanged) continue;
 		next[internalFeatureId] = {
 			...allocation,
 			scale,
-			scale_cycle_end: cycleEnd,
+			scale_cycle_end: cycle.windowEndAt,
+			parent_customer_entitlement_id: cycle.parentId,
 		};
-		changed = true;
+		changed ||= scale !== allocation.scale;
+		dirty = true;
 	}
-	if (!changed) {
-		await invalidateCachedFullSubject({
-			ctx,
-			customerId,
-			source: "refreshAllocationScale",
-		});
-		return false;
-	}
+	if (dirty)
+		await writeAllocations({ ctx, tx, internalCustomerId, allocations: next });
+	return { next, changed };
+};
 
-	const { customer } = fullSubject;
-	const originalFullCustomer = notify
-		? await CusService.getFull({
-				ctx,
-				idOrInternalId: customerId,
-				withEntities: true,
-			})
-		: null;
-	const autumnBillingPlan = {
-		customerId: customer.id ?? customer.internal_id,
-		insertCustomerProducts: [],
-		updateCustomer: { customer, updates: { balance_allocations: next } },
-	};
-	const { executeAutumnBillingPlan } = await import(
-		"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js"
-	);
-	await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
+const loadFreshSubject = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+}) => {
+	await invalidateCachedFullSubject({
+		ctx,
+		customerId,
+		source: "refreshAllocationScale",
+		flushBalances: true,
+	});
+	return getFullSubject({ ctx, customerId, readFrom: "primary" });
+};
+
+/** Re-solves each allocated feature's scale against the shared credits left now; reports whether any share moved. */
+export const refreshAllocationScale = async ({
+	ctx,
+	customerId,
+	notify = true,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	/** False when the caller sends its own billing.updated and adds the tag there. */
+	notify?: boolean;
+}): Promise<boolean> => {
+	if (!(await hasStoredAllocations({ ctx, customerId }))) return false;
+	const fullSubject = await loadFreshSubject({ ctx, customerId });
+	if (!fullSubject) return false;
+
+	const changed = await withAllocationLock({
+		ctx,
+		internalCustomerId: fullSubject.customer.internal_id,
+		fn: async ({ tx, allocations }) =>
+			allocations
+				? (
+						await refitAllocations({
+							ctx,
+							tx,
+							fullSubject,
+							allocations,
+							now: Date.now(),
+						})
+					).changed
+				: false,
+	});
 	await invalidateCachedFullSubject({
 		ctx,
 		customerId,
 		source: "refreshAllocationScale",
 	});
-	if (originalFullCustomer)
-		void sendBillingUpdatedWebhook({
-			ctx,
-			autumnBillingPlan,
-			originalFullCustomer,
-			allocationsAdjusted: true,
-		});
-	return true;
+	if (changed && notify) void notifyAllocationsAdjusted({ ctx, customerId });
+	return changed;
 };
 
-/** A plan that only rewrites allocations never moves shared credits, so it needs no refresh. */
-export const planOnlyUpdatesAllocations = ({
-	autumnBillingPlan,
-}: {
-	autumnBillingPlan: {
-		updateCustomer?: { updates: object };
-		insertCustomerProducts?: unknown[];
-	} & Record<string, unknown>;
-}) => {
-	const { updateCustomer, insertCustomerProducts, customerId, ...rest } =
-		autumnBillingPlan;
-	const updatedKeys = Object.keys(updateCustomer?.updates ?? {});
-	const otherWork = Object.values(rest).some((value) =>
-		Array.isArray(value)
-			? value.length > 0
-			: value !== undefined && value !== null,
-	);
-	return (
-		updatedKeys.length === 1 &&
-		updatedKeys[0] === "balance_allocations" &&
-		(insertCustomerProducts?.length ?? 0) === 0 &&
-		!otherWork &&
-		customerId !== undefined
-	);
-};
-
-/** Drops a deleted entity's share and re-fits what's left; its counter goes with the entity row. */
+/** Drops a deleted entity's share and re-fits what's left in one locked write. */
 export const releaseEntityAllocations = async ({
 	ctx,
-	customer,
+	customerId,
 	internalEntityId,
 }: {
 	ctx: AutumnContext;
-	customer: Customer;
+	customerId: string;
 	internalEntityId: string;
 }): Promise<void> => {
-	const allocations = customer.balance_allocations;
-	if (!allocations) return;
-	const held = Object.values(allocations).some(
-		(allocation) => allocation.amounts[internalEntityId] !== undefined,
-	);
-	if (!held) return;
+	if (!(await hasStoredAllocations({ ctx, customerId }))) return;
+	const fullSubject = await loadFreshSubject({ ctx, customerId });
+	if (!fullSubject) return;
 
-	const next: BalanceAllocations = Object.fromEntries(
-		Object.entries(allocations).map(([internalFeatureId, allocation]) => {
-			const { [internalEntityId]: _released, ...amounts } = allocation.amounts;
-			return [internalFeatureId, { ...allocation, amounts }];
-		}),
-	);
-	const { executeAutumnBillingPlan } = await import(
-		"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js"
-	);
-	await executeAutumnBillingPlan({
+	const released = await withAllocationLock({
 		ctx,
-		autumnBillingPlan: {
-			customerId: customer.id ?? customer.internal_id,
-			insertCustomerProducts: [],
-			updateCustomer: { customer, updates: { balance_allocations: next } },
+		internalCustomerId: fullSubject.customer.internal_id,
+		fn: async ({ tx, allocations }) => {
+			if (!allocations) return false;
+			const held = Object.values(allocations).some(
+				(allocation) => allocation.amounts[internalEntityId] !== undefined,
+			);
+			if (!held) return false;
+			const withoutEntity: BalanceAllocations = Object.fromEntries(
+				Object.entries(allocations).map(([internalFeatureId, allocation]) => {
+					const { [internalEntityId]: _released, ...amounts } =
+						allocation.amounts;
+					return [internalFeatureId, { ...allocation, amounts }];
+				}),
+			);
+			await writeAllocations({
+				ctx,
+				tx,
+				internalCustomerId: fullSubject.customer.internal_id,
+				allocations: withoutEntity,
+			});
+			await refitAllocations({
+				ctx,
+				tx,
+				fullSubject,
+				allocations: withoutEntity,
+				now: Date.now(),
+			});
+			return true;
 		},
 	});
+	if (!released) return;
+	await invalidateCachedFullSubject({
+		ctx,
+		customerId,
+		source: "releaseEntityAllocations",
+	});
+	void notifyAllocationsAdjusted({ ctx, customerId });
 };

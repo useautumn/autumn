@@ -130,6 +130,7 @@ export const applyAllocationsToBreakdown = ({
 	);
 	const parent = pickAllocationParent({
 		sharedRows: sharedIndexes.map((index) => customerEntitlements[index]),
+		pinnedId: allocation.parent_customer_entitlement_id,
 	});
 	if (!parent?.next_reset_at)
 		return {
@@ -174,7 +175,8 @@ export const applyAllocationsToBreakdown = ({
 				allocated: Decimal.min(requestedTotal, covered).toNumber(),
 				unallocated: unallocated.toNumber(),
 			},
-			checkRemainingOffset: null,
+			// A customer-level draw may only take unallocated credits from the shared rows.
+			checkRemainingOffset: unallocated.minus(sharedRemaining).toNumber(),
 		};
 	}
 

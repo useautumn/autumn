@@ -1,6 +1,7 @@
 import {
 	type ApiBalanceBreakdownV1,
 	type ApiBalanceV1,
+	type ApiBalanceWithAllocationCheck,
 	CheckExpand,
 	type CustomerEntitlementWithPricesView,
 	CustomerExpand,
@@ -122,7 +123,7 @@ export const customerEntitlementsToApiBalance = ({
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
 	apiFeature?: ReturnType<typeof dbToApiFeatureV1>;
-}): { data: ApiBalanceV1 } => {
+}): { data: ApiBalanceWithAllocationCheck } => {
 	const entityId = fullSubject.entity?.id ?? fullSubject.entity?.internal_id;
 
 	// console.log("customerEntitlements", customerEntitlements);
@@ -250,7 +251,9 @@ export const customerEntitlementsToApiBalance = ({
 		aggregatedFeatureBalance,
 	});
 
-	const rounded = roundApiBalance({ apiBalance: merged });
+	const rounded: ApiBalanceWithAllocationCheck = roundApiBalance({
+		apiBalance: merged,
+	});
 	if (checkRemainingOffset === null) return { data: rounded };
 	return {
 		data: {
@@ -275,7 +278,7 @@ export const getApiBalanceV2 = ({
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
-}): { data: ApiBalanceV1 } => {
+}): { data: ApiBalanceWithAllocationCheck } => {
 	const apiFeature = expandIncludes({
 		expand: ctx.expand,
 		includes: [

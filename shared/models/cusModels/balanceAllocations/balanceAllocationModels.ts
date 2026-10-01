@@ -9,6 +9,8 @@ export const BalanceAllocationSchema = z.object({
 	scale: z.number(),
 	/** End of the cycle the scale was solved for; a scale from an earlier cycle reads as 1. */
 	scale_cycle_end: z.number().nullish(),
+	/** The shared row whose reset the cycle follows; pinned so the window never flips mid-cycle. */
+	parent_customer_entitlement_id: z.string().nullish(),
 	amounts: z.record(z.string(), z.number()),
 });
 

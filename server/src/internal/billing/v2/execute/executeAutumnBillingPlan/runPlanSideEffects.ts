@@ -1,10 +1,7 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import {
-	planOnlyUpdatesAllocations,
-	refreshAllocationScale,
-} from "@/internal/balances/allocate/actions/refreshAllocationScale";
+import { refreshAllocationScale } from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import {
 	type PendingBatchTransition,
 	startBatchTransitions,
@@ -96,11 +93,7 @@ export const runPlanSideEffects = async ({
 	}
 
 	// Shared credits may have moved: re-fit any allocations to what's left.
-	if (
-		!autumnBillingPlan.customerId ||
-		planOnlyUpdatesAllocations({ autumnBillingPlan })
-	)
-		return { allocationsAdjusted: false };
+	if (!autumnBillingPlan.customerId) return { allocationsAdjusted: false };
 	const allocationsAdjusted = await refreshAllocationScale({
 		ctx,
 		customerId: autumnBillingPlan.customerId,
