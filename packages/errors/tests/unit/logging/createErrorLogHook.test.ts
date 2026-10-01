@@ -227,6 +227,35 @@ describe("createErrorLogHook", () => {
 		expect(lines[0].error).toBeUndefined();
 	});
 
+	it("retains caller context on text-only invalidation errors with batch data", () => {
+		captureEvent.mockClear();
+		const { jobLogger, lines } = createTestLogger();
+
+		jobLogger.error(
+			{
+				type: "batch_invalidate_full_subjects_dropped",
+				data: { org_id: "org_1", env: "live", customer_count: 2 },
+			},
+			"FullSubject batch invalidation exhausted its attempts",
+		);
+
+		expect(captureEvent).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tags: expect.objectContaining({
+					org_id: "org_1",
+					org_slug: "acme",
+					env: "live",
+					operation: "track",
+				}),
+			}),
+		);
+		expect(lines[0].context).toEqual({
+			org_id: "org_1",
+			org_slug: "acme",
+			env: "live",
+		});
+	});
+
 	it("finds a bare Error passed as the first argument", () => {
 		captureException.mockClear();
 		const { jobLogger, lines } = createTestLogger();

@@ -25,9 +25,12 @@ export async function evictBalanceWorkerCustomer({
 			},
 		});
 	} catch (error) {
-		ctx.logger.warn("[balance-worker] evict failed; worker rows may be stale", {
-			error,
-			data: { customerId },
-		});
+		ctx.logger.error(
+			"[balance-worker] evict failed; worker rows may be stale",
+			{
+				error,
+				data: { customerId },
+			},
+		);
 	}
 }
