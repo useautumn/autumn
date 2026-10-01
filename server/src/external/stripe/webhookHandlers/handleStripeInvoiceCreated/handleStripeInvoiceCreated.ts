@@ -6,13 +6,20 @@ import {
 	upsertAutumnInvoice,
 } from "@/external/stripe/webhookHandlers/common";
 import { consumeBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/consumeBillingCycleAnchorReset";
+import { planScheduledPooledAnchorReset } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/planScheduledPooledAnchorReset";
 import { processAllocatedPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated";
 import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
+import { createAutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceCreatedContext } from "./setupInvoiceCreatedContext";
 import { processConsumablePricesForInvoiceCreated } from "./tasks/processConsumablePricesForInvoiceCreated";
-import { resetSubscriptionPooledBalances } from "./tasks/resetSubscriptionPooledBalances.js";
 
+/**
+ * A cycle invoice ends one period and starts the next. Each task plans its part of the customer's new
+ * period from the snapshot; the plan then lands as one step, so a track in flight sees either the old
+ * period or the new one, never a half of each.
+ */
 export const handleStripeInvoiceCreated = async ({
 	ctx,
 	event,
@@ -31,16 +38,32 @@ export const handleStripeInvoiceCreated = async ({
 		`[invoice.created] Processing for invoice ${eventContext.stripeInvoice.id}`,
 	);
 
-	// Capture arrear line items before balance resets
+	const { fullCustomer } = eventContext;
+	const plan = createAutumnBillingPlanBuilder({
+		customerId: fullCustomer.id ?? fullCustomer.internal_id,
+	});
+
+	// 1. Plan the new period. Usage lines go on the invoice first: a line that fails to land means no reset.
 	const arrearLineItems = await processConsumablePricesForInvoiceCreated({
 		ctx,
 		eventContext,
+		plan,
 	});
-	await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
-	await processAllocatedPricesForInvoiceCreated({ ctx, eventContext });
-	await resetSubscriptionPooledBalances({ ctx, eventContext });
-	await consumeBillingCycleAnchorReset({ ctx, eventContext });
+	processPrepaidPricesForInvoiceCreated({ ctx, eventContext, plan });
+	processAllocatedPricesForInvoiceCreated({ ctx, eventContext, plan });
+	planScheduledPooledAnchorReset({ ctx, eventContext, plan });
+	consumeBillingCycleAnchorReset({ eventContext, plan });
 
+	// 2. Land it as one step
+	if (plan.hasChanges()) {
+		await executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: plan.build(),
+		});
+		eventContext.results.customerStateChanged = true;
+	}
+
+	// 3. Mirror the invoice
 	const shouldStoreScheduleProrationInvoice =
 		eventContext.stripeInvoice.billing_reason === "subscription_update" &&
 		!!eventContext.stripeSubscription.schedule;
@@ -50,7 +73,6 @@ export const handleStripeInvoiceCreated = async ({
 		expand: ["discounts.source.coupon", "total_discount_amounts"],
 	});
 
-	// Upsert Autumn invoice record
 	const invoiceResult = await upsertAutumnInvoice({
 		ctx,
 		stripeInvoice: updatedStripeInvoice,

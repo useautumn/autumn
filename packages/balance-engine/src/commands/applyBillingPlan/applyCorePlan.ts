@@ -7,7 +7,7 @@ import { toPlanMutation } from "./toPlanMutation.js";
 import type { AppliedPlanStep } from "./types/appliedPlanStep.js";
 import type { ApplyBillingPlanCommand } from "./types/applyBillingPlanCommand.js";
 
-/** The core plan: every op but a rebalance, against the rows as found before the plan, then the pools it leaves empty. */
+/** The core plan: every op but a rebalance or new rollovers, against the rows as found before the plan, then the pools it leaves empty. */
 export const applyCorePlan = ({
 	command,
 	state,
@@ -18,7 +18,9 @@ export const applyCorePlan = ({
 	const context = createPlanRowChangeContext({ state });
 	const changes = [
 		...command.ops.flatMap((op) =>
-			op.op === "rebalance" ? [] : opToRowChanges({ op, context }),
+			op.op === "rebalance" || op.op === "addRollovers"
+				? []
+				: opToRowChanges({ op, context }),
 		),
 		...expiringPooledBalancesToRowChanges({ command, context }),
 	];

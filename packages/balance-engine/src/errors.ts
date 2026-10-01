@@ -47,6 +47,7 @@ export type UnsupportedCommandReason =
 	| "balance_not_found"
 	| "billing_plan_needs_postgres_store"
 	| "billing_plan_rebalance_needs_catalog"
+	| "billing_plan_rollovers_need_catalog"
 	| "billing_plan_row_owner_not_named"
 	| "credit_rate_invalid"
 	| "entity_not_found"

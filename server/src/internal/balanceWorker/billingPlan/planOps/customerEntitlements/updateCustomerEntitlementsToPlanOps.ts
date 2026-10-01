@@ -1,5 +1,6 @@
 import {
 	type BillingPlanOp,
+	toBillingPlanAddRolloversOp,
 	toBillingPlanIncrementOp,
 	toBillingPlanMoveEntriesOp,
 	toBillingPlanUpdateOp,
@@ -11,7 +12,7 @@ import type {
 import { withDefinedColumns } from "../utils/withDefinedColumns.js";
 
 /** Field updates replace columns; otherwise moves re-key entries, then balance and entry deltas apply, as `updateCustomerEntitlements` orders them. */
-const updateToPlanOps = ({
+const updateToBalanceOps = ({
 	update,
 }: {
 	update: UpdateCustomerEntitlement;
@@ -65,6 +66,19 @@ const updateToPlanOps = ({
 		}),
 	];
 };
+
+/** The grant's columns or deltas, then the rollovers carried onto it, as the Postgres lane orders them. */
+const updateToPlanOps = ({
+	update,
+}: {
+	update: UpdateCustomerEntitlement;
+}): BillingPlanOp[] => [
+	...updateToBalanceOps({ update }),
+	...toBillingPlanAddRolloversOp({
+		id: update.customerEntitlement.id,
+		rows: update.insertRollovers ?? [],
+	}),
+];
 
 export const updateCustomerEntitlementsToPlanOps = ({
 	autumnBillingPlan,
