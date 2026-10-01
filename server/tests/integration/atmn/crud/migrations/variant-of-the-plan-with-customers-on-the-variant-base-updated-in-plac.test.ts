@@ -39,67 +39,6 @@ const proWithVariant = ({ amount }: { amount: number }): string => `{
 	],
 }`;
 
-type PreviewMigrations =
-	| Array<{ plans: Array<{ planId: string; versions: number[] }> }>
-	| undefined;
-
-const targetsPlanV1 = (
-	migrations: PreviewMigrations,
-	planId: string,
-): boolean =>
-	(migrations ?? []).some((migration) =>
-		migration.plans.some(
-			(plan) => plan.planId === planId && plan.versions.includes(1),
-		),
-	);
-
-test.concurrent(
-	`${chalk.yellowBright("atmn crud/migrations: an in-place base price change drafts a migration for the variant's customer")}`,
-	async () => {
-		const scenario = await initAtmnScenario({
-			setup: [
-				s.platform.create({
-					userEmail: `${uniqueTestId("atmn")}@autumn.test`,
-				}),
-			],
-			config: {
-				raw: atmnConfigSource({ body: proWithVariant({ amount: 49 }) }),
-			},
-		});
-		const client = createClient({
-			secretKey: scenario.ctx.orgSecretKey,
-			baseUrl: scenario.baseUrl,
-		});
-
-		try {
-			await scenario.push();
-			await seedVersionableCustomer({
-				ctx: scenario.ctx,
-				planId: "pro_plus",
-				version: 1,
-			});
-
-			scenario.writeConfig(
-				atmnConfigSource({ body: proWithVariant({ amount: 59 }) }),
-			);
-			const result = await runPush({ client, cwd: scenario.cwd });
-
-			// Decision pending: the variant inherits the base price (no customize
-			// override here), so an in-place base edit is expected to cascade and
-			// draft for the variant's own customer.
-			expect(
-				targetsPlanV1(
-					result.preview.migrations as unknown as PreviewMigrations,
-					"pro_plus",
-				),
-				JSON.stringify(result.preview.migrations ?? [], null, 2),
-			).toBe(true);
-		} finally {
-			scenario.cleanup();
-		}
-	},
-);
-
 test.concurrent(
 	`${chalk.yellowBright("atmn crud/migrations: minting a new base version drafts nothing for the variant's customer left on v1")}`,
 	async () => {

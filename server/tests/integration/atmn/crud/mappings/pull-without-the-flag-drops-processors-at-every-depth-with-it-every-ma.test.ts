@@ -67,7 +67,13 @@ const pullIntoFreshDir = async ({
 }): Promise<string> => {
 	const dir = join(TMP_ROOT, uniqueTestId("atmn_mappings_depth"));
 	mkdirSync(dir, { recursive: true });
-	await runPull({ client, cwd: dir, includeMappings, write: () => {} });
+	await runPull({
+		client,
+		cwd: dir,
+		configPath: join(dir, "autumn.config.ts"),
+		includeMappings,
+		write: () => {},
+	});
 	return dir;
 };
 
