@@ -1,4 +1,4 @@
-import type { FullCusProduct } from "@models/cusProductModels/cusProductModels";
+import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels.js";
 import {
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
