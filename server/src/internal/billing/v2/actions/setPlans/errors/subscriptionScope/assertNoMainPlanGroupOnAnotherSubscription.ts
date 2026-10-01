@@ -1,13 +1,11 @@
 import {
 	type CreateScheduleBillingContext,
-	ErrCode,
 	isCustomerProductMain,
 	isOneOffProduct,
-	RecaseError,
 } from "@autumn/shared";
 import {
-	describeCustomerProductBilling,
 	outOfScopeLiveCustomerProducts,
+	subscriptionConflictError,
 } from "./outOfScopeLiveCustomerProducts";
 import { requestedPlans } from "./requestedPlans";
 
@@ -37,10 +35,11 @@ export const assertNoMainPlanGroupOnAnotherSubscription = ({
 		);
 		if (!groupPlanElsewhere) continue;
 
-		throw new RecaseError({
-			code: ErrCode.InvalidRequest,
-			message: `${fullProduct.name} would replace ${groupPlanElsewhere.product.name}, which is billed ${describeCustomerProductBilling(groupPlanElsewhere)}. Plans can't move between subscriptions.`,
-			statusCode: 400,
+		throw subscriptionConflictError({
+			billingContext,
+			conflict: "replaces",
+			requestedPlanName: fullProduct.name,
+			conflictingCustomerProduct: groupPlanElsewhere,
 		});
 	}
 };

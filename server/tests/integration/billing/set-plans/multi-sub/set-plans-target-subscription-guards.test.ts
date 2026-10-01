@@ -45,7 +45,7 @@ test.concurrent(
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: `is already billed on subscription ${subscriptionB}, so it can't be edited from subscription ${subscriptionA}.`,
+			errMessage: "is already on the ",
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,

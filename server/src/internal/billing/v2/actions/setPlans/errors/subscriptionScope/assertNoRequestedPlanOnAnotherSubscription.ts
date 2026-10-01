@@ -1,12 +1,10 @@
 import {
 	type CreateScheduleBillingContext,
-	ErrCode,
 	isOneOffProduct,
-	RecaseError,
 } from "@autumn/shared";
 import {
-	describeCustomerProductBilling,
 	outOfScopeLiveCustomerProducts,
+	subscriptionConflictError,
 } from "./outOfScopeLiveCustomerProducts";
 import { requestedPlans } from "./requestedPlans";
 
@@ -30,10 +28,11 @@ export const assertNoRequestedPlanOnAnotherSubscription = ({
 		}).find(({ product }) => product.id === fullProduct.id);
 		if (!billedElsewhere) continue;
 
-		throw new RecaseError({
-			code: ErrCode.InvalidRequest,
-			message: `${fullProduct.name} is already billed ${describeCustomerProductBilling(billedElsewhere)}, so it can't be edited from subscription ${stripeSubscriptionScope.stripeSubscriptionId}.`,
-			statusCode: 400,
+		throw subscriptionConflictError({
+			billingContext,
+			conflict: "already_billed",
+			requestedPlanName: fullProduct.name,
+			conflictingCustomerProduct: billedElsewhere,
 		});
 	}
 };

@@ -30,6 +30,7 @@ export * from "./restore/restoreParamsV1";
 // Set Plans
 export * from "./setPlans/setPlansParamsV0";
 export * from "./setPlans/setPlansPreviewResponse";
+export * from "./setPlans/setPlansSubscriptionConflict";
 // Setup Payment
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";

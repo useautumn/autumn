@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { ErrCode, type FullCusProduct, type FullProduct } from "@autumn/shared";
+import {
+	ErrCode,
+	type FullCusProduct,
+	type FullProduct,
+	type RecaseError,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { assertStripeSubscriptionLinkedToCustomer } from "@/internal/billing/v2/actions/setPlans/errors/subscriptionScope/assertStripeSubscriptionLinkedToCustomer";
 import { handleStripeSubscriptionScopeErrors } from "@/internal/billing/v2/actions/setPlans/errors/subscriptionScope/handleStripeSubscriptionScopeErrors";
@@ -77,7 +82,7 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 				requestedProducts: [pro, seats],
 			}),
 		).toThrow(
-			"seats is already billed on subscription sub_b, so it can't be edited from subscription sub_a.",
+			"seats is already on the seats subscription. Open that subscription to change it.",
 		);
 	});
 
@@ -88,7 +93,7 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 				requestedProducts: [pro, credits],
 			}),
 		).toThrow(
-			"credits is already billed outside any Stripe subscription, so it can't be edited from subscription sub_a.",
+			"credits is already billed outside any Stripe subscription, so it can't be edited here.",
 		);
 	});
 
@@ -99,8 +104,30 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 				requestedProducts: [premium],
 			}),
 		).toThrow(
-			"premium would replace pro, which is billed on subscription sub_b. Plans can't move between subscriptions.",
+			"Adding premium would replace pro on the pro subscription. Open that subscription to change it.",
 		);
+	});
+
+	test("the conflict error names the subscription to switch to for the dashboard", () => {
+		const thrown = (() => {
+			try {
+				checkScope({
+					existingCustomerProducts: [proOnB, seatsOnB],
+					requestedProducts: [premium],
+				})();
+			} catch (error) {
+				return error as RecaseError;
+			}
+		})();
+
+		expect(thrown?.details).toEqual({
+			type: "plan_on_another_subscription",
+			conflict: "replaces",
+			requested_plan_name: "premium",
+			conflicting_plan_name: "pro",
+			stripe_subscription_id: SUBSCRIPTION_B,
+			subscription_plan_name: "pro",
+		});
 	});
 
 	test("lets add-ons sit beside another subscription's main plan", () => {
