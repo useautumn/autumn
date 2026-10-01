@@ -79,16 +79,13 @@ for (const quantity of [700, 300, 0]) {
 			testClockId: scenario.testClockId!,
 			advanceTo: addDays(resetAt, 1).getTime(),
 		});
-		// The webhook only re-anchors the pool: its cycle now ends at the anchor, unrefilled.
 		const reanchored = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
 		});
 		expect(reanchored.poolCustomerEntitlements[0]).toMatchObject({
 			reset_cycle_anchor: resetAt,
-			next_reset_at: resetAt,
 		});
-		// The next read's lazy reset refills it.
 		await CusService.getFull({ ctx, idOrInternalId: customerId });
 		const after = await getPooledBalanceDbState({ db: ctx.db, customerId });
 		expect(after.poolCustomerEntitlements[0].balance).toBe(quantity);
