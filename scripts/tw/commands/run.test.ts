@@ -1,13 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { buildWorkerEnv } from "./run.ts";
+
+// run.ts sizes its Stripe budget at import time and throws without any key.
+process.env.STRIPE_SANDBOX_SECRET_KEY ??= "sk_test_tw_unit_placeholder";
+const { buildWorkerEnv } = await import("./run.ts");
 
 const REQUIRED_SECRETS = [
 	"ENCRYPTION_IV",
 	"ENCRYPTION_PASSWORD",
 	"BETTER_AUTH_SECRET",
 ];
-const PASS_THROUGH_KEYS = ["ANTHROPIC_API_KEY", "STRIPE_SANDBOX_CLIENT_ID"];
-const TOUCHED_KEYS = [...REQUIRED_SECRETS, ...PASS_THROUGH_KEYS];
+const TOUCHED_KEYS = [...REQUIRED_SECRETS, "ANTHROPIC_API_KEY"];
 
 const buildFor = (stripeAccountId: string) =>
 	buildWorkerEnv({
@@ -24,7 +26,7 @@ describe("buildWorkerEnv app config", () => {
 	beforeEach(() => {
 		for (const key of TOUCHED_KEYS) saved[key] = process.env[key];
 		for (const key of REQUIRED_SECRETS) process.env[key] = `test-${key}`;
-		for (const key of PASS_THROUGH_KEYS) delete process.env[key];
+		delete process.env.ANTHROPIC_API_KEY;
 	});
 
 	afterEach(() => {
@@ -54,20 +56,15 @@ describe("buildWorkerEnv app config", () => {
 		expect(env.REVENUECAT_OAUTH_CLIENT_SECRET).toBeTruthy();
 	});
 
-	test("passes through orchestrator-only keys when present", () => {
+	test("passes ANTHROPIC_API_KEY through when the orchestrator has it", () => {
 		process.env.ANTHROPIC_API_KEY = "anthropic-from-orchestrator";
-		process.env.STRIPE_SANDBOX_CLIENT_ID = "ca_from_orchestrator";
 
-		const env = buildFor("acct_1");
-
-		expect(env.ANTHROPIC_API_KEY).toBe("anthropic-from-orchestrator");
-		expect(env.STRIPE_SANDBOX_CLIENT_ID).toBe("ca_from_orchestrator");
+		expect(buildFor("acct_1").ANTHROPIC_API_KEY).toBe(
+			"anthropic-from-orchestrator",
+		);
 	});
 
-	test("omits pass-through keys when the orchestrator lacks them", () => {
-		const env = buildFor("acct_1");
-
-		expect(env).not.toHaveProperty("ANTHROPIC_API_KEY");
-		expect(env).not.toHaveProperty("STRIPE_SANDBOX_CLIENT_ID");
+	test("omits ANTHROPIC_API_KEY when the orchestrator lacks it", () => {
+		expect(buildFor("acct_1")).not.toHaveProperty("ANTHROPIC_API_KEY");
 	});
 });

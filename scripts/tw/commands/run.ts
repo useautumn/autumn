@@ -552,9 +552,6 @@ let balanceWorkerEnabled = true;
 /** One per run (module state is per orchestrator / twd swarm child), shared by every worker. */
 const customerJwtSecret = randomBytes(32).toString("hex");
 
-/** Real ids only the orchestrator holds; forwarded when set, omitted otherwise. */
-const PASS_THROUGH_ENV_KEYS = ["ANTHROPIC_API_KEY", "STRIPE_SANDBOX_CLIENT_ID"];
-
 export const buildWorkerEnv = ({
 	stripeAccountId,
 	stripeSecretKey,
@@ -653,9 +650,8 @@ export const buildWorkerEnv = ({
 		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: EDGE_CONFIG_OVERRIDE_B64,
 	};
 
-	for (const key of PASS_THROUGH_ENV_KEYS) {
-		const value = process.env[key];
-		if (value) env[key] = value;
+	if (process.env.ANTHROPIC_API_KEY) {
+		env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 	}
 
 	// Shared dev Tinybird (no in-µVM instance — gVisor blocks it). Flows per-run

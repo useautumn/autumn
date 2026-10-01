@@ -28,5 +28,5 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run tw helper tests
-        run: bun test tw/helpers
+        run: bun test tw/helpers tw/commands
         working-directory: scripts
