@@ -249,7 +249,7 @@ const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 		nextOffset: last ? last.position.offset + 1n : call.expectedOffset,
 		commandNextOffset: commandNextOffsetOf({ call }),
 		ownerFence: call.ownerFence,
-		writerEpoch: call.writerEpoch,
+		claimToken: call.claimToken,
 	};
 };
 

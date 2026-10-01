@@ -1,9 +1,13 @@
-import type {
-	ApiByocCache,
-	AppEnv,
-	ByocCacheDeployment,
-	CreateByocCacheResponse,
-	Organization,
+import {
+	type ApiByocCache,
+	type AppEnv,
+	type ByocCacheDeployment,
+	type ByocCacheMachine,
+	type CreateByocCacheResponse,
+	ErrCode,
+	findByocCacheMachine,
+	type Organization,
+	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
@@ -34,6 +38,41 @@ export const cacheGroupLabel = ({
 /** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
 export const CACHE_LOCK_TTL_MS = 30_000;
 
+/** The request schemas only let offered pairs through, so a miss here is a contract bug. */
+export const resourcesToMachine = ({
+	cpu,
+	memory,
+}: {
+	cpu: number;
+	memory: number;
+}): ByocCacheMachine => {
+	const machine = findByocCacheMachine({ cpu, memory });
+	if (machine) return machine;
+	throw new RecaseError({
+		message: `No cache machine has ${cpu} vCPU / ${memory} GiB`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
+
+export const cacheDeploymentToMachine = ({
+	cacheDeployment,
+}: {
+	cacheDeployment: ByocCacheDeployment;
+}): ByocCacheMachine | null => {
+	const { cpu, memory } = cacheDeployment;
+	if (cpu === null || memory === null) return null;
+	return findByocCacheMachine({ cpu, memory }) ?? null;
+};
+
+/** A resize moves a running cache; one still being set up takes its machine from `create_atom`. */
+export const cacheNotRunning = () =>
+	new RecaseError({
+		message: "The cache is not running yet, so it cannot be resized.",
+		code: ErrCode.ByocCacheNotReady,
+		statusCode: 409,
+	});
+
 /** One cache change per env at a time. */
 export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
 	`lock:byoc-cache:${ctx.org.id}:${ctx.env}`;
@@ -50,6 +89,8 @@ export const cacheDeploymentToApiCache = ({
 	deployment_id: cacheDeployment.deployment_id,
 	endpoint_url: cacheDeployment.endpoint_url,
 	created_at: cacheDeployment.created_at,
+	cpu: cacheDeployment.cpu,
+	memory: cacheDeployment.memory,
 });
 
 /** Only a create hands out the token, so reading a cache never reveals it. */

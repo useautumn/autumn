@@ -20,24 +20,22 @@ export const createCommitterStateStore = ({
 }: {
 	ctx: {
 		committer: Committer;
-		db: Pick<CommitterDb, "readPartitionProgress" | "insertPartitionProgress">;
+		db: Pick<
+			CommitterDb,
+			| "readPartitionProgress"
+			| "insertPartitionProgress"
+			| "claimPartitionProgress"
+		>;
 	};
 }): CommitterStateStore => {
-	const epochReaders = new Map<string, () => string | undefined>();
-	function ownerEpochOf(position: PartitionPosition): bigint | undefined {
-		const epoch = epochReaders.get(keyOf(position))?.();
-		return epoch === undefined ? undefined : BigInt(epoch);
-	}
-	function bindOwnerEpoch({
-		read,
-		...position
-	}: PartitionPosition & { read(): string | undefined }): void {
-		epochReaders.set(keyOf(position), read);
+	const claimTokens = new Map<string, string>();
+	function claimTokenOf(position: PartitionPosition): string | undefined {
+		return claimTokens.get(keyOf(position));
 	}
 	const ctx: CommitterStateStoreContext = {
 		...dependencies,
 		progress: createProgressMirror(),
-		ownerEpochOf,
+		claimTokenOf,
 	};
 	// Replay, writer applies and command-only bookmarks share one lane per partition.
 	const laneByPartition = new Map<string, Promise<unknown>>();
@@ -60,18 +58,20 @@ export const createCommitterStateStore = ({
 	}) => {
 		const first = records[0];
 		if (!first) return Promise.resolve([]);
+		const claimToken = claimTokenOf(first.position);
 		return runInLane({
 			position: first.position,
-			run: () => applyDurableMutations({ ctx, records }),
+			run: () => applyDurableMutations({ ctx, records, claimToken }),
 		});
 	};
 
 	function advanceCommandNextOffset(
 		params: Parameters<CommitterStateStore["advanceCommandNextOffset"]>[0],
 	): Promise<void> {
+		const claimToken = claimTokenOf(params);
 		return runInLane({
 			position: params,
-			run: () => advanceCommandProgress({ ctx, ...params }),
+			run: () => advanceCommandProgress({ ctx, ...params, claimToken }),
 		});
 	}
 	function advanceOwnerFence(
@@ -79,10 +79,16 @@ export const createCommitterStateStore = ({
 			NonNullable<CommitterStateStore["advanceOwnerFence"]>
 		>[0],
 	): Promise<void> {
+		const claimToken = claimTokenOf(params);
 		return runInLane({
 			position: params,
-			run: () => advanceOwnerFenceProgress({ ctx, ...params }),
+			run: () => advanceOwnerFenceProgress({ ctx, ...params, claimToken }),
 		});
+	}
+	async function claimPartition(position: PartitionPosition): Promise<void> {
+		const claimToken = crypto.randomUUID();
+		await ctx.db.claimPartitionProgress({ ...position, claimToken });
+		claimTokens.set(keyOf(position), claimToken);
 	}
 	function readOwnerFence(params: PartitionPosition) {
 		return ctx.progress.readOwnerFence(params);
@@ -110,7 +116,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
-		bindOwnerEpoch,
+		claimPartition,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,
 		initializePartition: initialize,

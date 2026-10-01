@@ -48,7 +48,7 @@ const withLongerTrial = (): string =>
 const withLicense = ({ included }: { included: number }): string =>
 	versionedPro({ versionSlug: "v1" }).replace(
 		"billingControls: {",
-		`licenses: [{ licensePlanId: "seat", included: ${included} }],\n\t\t\tbillingControls: {`,
+		`licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: ${included} }],\n\t\t\tbillingControls: {`,
 	);
 
 const EXTRA_ITEM = '\n\t\t\t\t\t{ featureId: "audit_log" },';

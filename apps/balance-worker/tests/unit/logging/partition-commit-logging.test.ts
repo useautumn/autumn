@@ -39,6 +39,33 @@ test.concurrent("keeps the original ports when no logger is supplied", () => {
 });
 
 test.concurrent(
+	"a logged store still claims the partition through the store it wraps",
+	async () => {
+		const fixture = createStoreFixture();
+		const claimed: unknown[] = [];
+		try {
+			const { stateStore } = createPartitionCommitLogging({
+				ctx: {
+					appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
+					stateStore: {
+						...fixture.store,
+						claimPartition: async (position) => {
+							claimed.push(position);
+						},
+					},
+					logger: { debug: () => {} },
+				},
+				config,
+			});
+			await stateStore.claimPartition?.({ topic, partition });
+			expect(claimed).toEqual([{ topic, partition }]);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	},
+);
+
+test.concurrent(
 	"measures the full committed append and preserves large offsets",
 	async () => {
 		const fixture = createStoreFixture();

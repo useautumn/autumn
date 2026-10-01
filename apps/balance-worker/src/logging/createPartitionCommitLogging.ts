@@ -187,6 +187,9 @@ export function createPartitionCommitLogging({
 			readOwnState: ctx.stateStore.readOwnState.bind(ctx.stateStore),
 			readReceipt: ctx.stateStore.readReceipt.bind(ctx.stateStore),
 			readNextOffset: ctx.stateStore.readNextOffset.bind(ctx.stateStore),
+			...(ctx.stateStore.claimPartition
+				? { claimPartition: ctx.stateStore.claimPartition.bind(ctx.stateStore) }
+				: {}),
 			applyDurableMutations,
 		},
 	};

@@ -65,7 +65,10 @@ test.concurrent("plan config is omitted at its default", async () => {
 		expect(
 			plans.find((plan) => plan.plan_id === "pro")?.config,
 		).toBeUndefined();
-		expect(await proConfig()).toEqual({ ignorePastDue: false });
+		expect(await proConfig()).toEqual({
+			anchorToMonthStart: false,
+			ignorePastDue: false,
+		});
 
 		// Flipped on elsewhere: an unstated config is unmanaged, so pull has
 		// nothing to write and a push leaves the flag on.
@@ -73,7 +76,10 @@ test.concurrent("plan config is omitted at its default", async () => {
 		expect((await scenario.pull()).output).toContain("Nothing to pull.");
 		expect(configFile()).not.toContain("config");
 		await scenario.push();
-		expect(await proConfig()).toEqual({ ignorePastDue: true });
+		expect(await proConfig()).toEqual({
+			anchorToMonthStart: false,
+			ignorePastDue: true,
+		});
 
 		// Stated, it is managed: the server's revert removes the pair on pull
 		// rather than writing the default back.
@@ -93,7 +99,10 @@ test.concurrent("plan config is omitted at its default", async () => {
 		// And a flag stated on pushes on.
 		rewrite({ config: "{ ignorePastDue: true }" });
 		await scenario.push();
-		expect(await proConfig()).toEqual({ ignorePastDue: true });
+		expect(await proConfig()).toEqual({
+			anchorToMonthStart: false,
+			ignorePastDue: true,
+		});
 	} finally {
 		scenario.cleanup();
 	}

@@ -55,7 +55,7 @@ export type FlushCall = PartitionPosition & {
 	expectedOffset: bigint;
 	commandNextOffset?: bigint;
 	ownerFence?: OwnerFence;
-	writerEpoch?: bigint;
+	claimToken?: string;
 	records: readonly DurableMutationRecord[];
 	rows: number;
 	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
@@ -85,7 +85,7 @@ export type Committer = {
 			expectedOffset: bigint;
 			commandNextOffset?: bigint;
 			ownerFence?: OwnerFence;
-			writerEpoch?: bigint;
+			claimToken?: string;
 			records: readonly DurableMutationRecord[];
 		},
 	): Promise<FlushOutcome>;
@@ -99,4 +99,5 @@ export type Committer = {
 export type CommitterStateStore = StateStore & {
 	/** Fills the progress mirror from Postgres; must run before bootstrap reads `readNextOffset`. */
 	loadProgress(params: PartitionPosition): Promise<void>;
+	claimPartition(params: PartitionPosition): Promise<void>;
 };

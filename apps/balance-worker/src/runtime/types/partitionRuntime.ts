@@ -70,6 +70,7 @@ export type PartitionRuntimeDependencies = {
 			| "baseline"
 			| "readCommandNextOffset"
 			| "advanceCommandNextOffset"
+			| "claimPartition"
 		>;
 	producer: OwnedPartitionProducer;
 	appender: CommittedOutcomeAppender;

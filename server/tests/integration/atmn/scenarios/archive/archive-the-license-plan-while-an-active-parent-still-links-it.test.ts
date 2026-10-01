@@ -58,7 +58,7 @@ test.concurrent(
 			);
 
 			await expect(scenario.push()).rejects.toThrow(
-				/seat.*archived.*(cannot be linked|links)/i,
+				/Cannot (anchor license seat to archived version v1|archive or remove seat version 1 while enterprise still links to it)/,
 			);
 		} finally {
 			scenario.cleanup();

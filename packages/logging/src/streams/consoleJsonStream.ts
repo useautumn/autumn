@@ -3,6 +3,7 @@ import pino from "pino";
 const DEFAULT_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const DEFAULT_MIN_WRITE_BYTES = 4096;
 const DEFAULT_DROP_REPORT_INTERVAL_MS = 5_000;
+const DEFAULT_FLUSH_INTERVAL_MS = 1_000;
 const STDOUT_FD = 1;
 
 export type ConsoleJsonStream = pino.DestinationStream & {
@@ -28,11 +29,14 @@ export const createConsoleJsonStream = ({
 	maxBufferBytes = DEFAULT_MAX_BUFFER_BYTES,
 	minWriteBytes = DEFAULT_MIN_WRITE_BYTES,
 	dropReportIntervalMs = DEFAULT_DROP_REPORT_INTERVAL_MS,
+	flushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS,
 }: {
 	fd?: number;
 	maxBufferBytes?: number;
 	minWriteBytes?: number;
 	dropReportIntervalMs?: number;
+	/** How long a line may wait below `minWriteBytes` before it is written anyway. */
+	flushIntervalMs?: number;
 } = {}): ConsoleJsonStream => {
 	const destination = pino.destination({
 		dest: fd,
@@ -69,6 +73,9 @@ export const createConsoleJsonStream = ({
 	});
 	// A closed stdout must not take the process with it; there is nowhere left to report to.
 	destination.on("error", () => undefined);
+	// A quiet service never fills the buffer; without this its few lines would wait until it exits.
+	const flushTimer = setInterval(() => destination.flush(), flushIntervalMs);
+	flushTimer.unref?.();
 	function flushSync(): void {
 		try {
 			destination.flushSync();

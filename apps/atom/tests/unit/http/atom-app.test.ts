@@ -26,14 +26,24 @@ const newDataDir = () => {
 	directories.push(dataDir);
 	return dataDir;
 };
+type LogLine = {
+	level: "info" | "warn" | "error";
+	fields: unknown;
+	message: unknown;
+};
+
+/** Every line the app logs, in order, so a test can read what an operator would. */
 const createLogger = () => {
-	const logged: unknown[] = [];
+	const logged: LogLine[] = [];
+	const record =
+		(level: LogLine["level"]) => (fields: unknown, message: unknown) =>
+			void logged.push({ level, fields, message });
 	return {
 		logged,
 		logger: {
-			info: () => undefined,
-			warn: () => undefined,
-			error: (...args: unknown[]) => void logged.push(args),
+			info: record("info"),
+			warn: record("warn"),
+			error: record("error"),
 		},
 	};
 };
@@ -245,7 +255,7 @@ describe("an Atom in an org's cloud", () => {
 		);
 
 		expect(subject.status).toBe(400);
-		expect(logged).toEqual([]);
+		expect(logged.map((line) => line.level)).toEqual(["warn"]);
 	});
 
 	test("the routes that add and remove Atoms do not exist", async () => {
@@ -364,7 +374,122 @@ describe("a check Atom does not answer itself", () => {
 			message: "Atom could not reach the Autumn API",
 			code: "atom_upstream_unreachable",
 		});
+		// One warning: the request line carries where the forward was going and why it failed, without a stack.
+		expect(logged.map((line) => line.level)).toEqual(["warn"]);
+		expect(logged[0]?.fields).toMatchObject({
+			statusCode: 502,
+			forwarded: "customer_not_stored",
+			errorCode: "atom_upstream_unreachable",
+			error: { name: "Error", message: "connect refused" },
+			data: { target: `${AUTUMN_API_URL}/v1/balances.check` },
+		});
+		expect(logged[0]?.message).toBe(
+			`[502] POST /v1/balances.check ${(logged[0]?.fields as { durationMs: number }).durationMs}ms → Autumn API (customer_not_stored) — atom_upstream_unreachable: connect refused`,
+		);
+	});
+});
+
+describe("the request line", () => {
+	const notSampled = () => spyOn(Math, "random").mockReturnValue(0.5);
+	const sampled = () => spyOn(Math, "random").mockReturnValue(0);
+	afterEach(() => spyOn(Math, "random").mockRestore());
+
+	test("every request leaves one line: status, method, path, duration and who it was about", async () => {
+		const { app, logged } = createDeployedApp();
+		notSampled();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await app.request("/v1/balances.check", checkMessages());
+
+		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
+		expect(logged[0]?.fields).toEqual({
+			statusCode: 200,
+			durationMs: expect.any(Number),
+			req: {
+				method: "POST",
+				path: "/v1/subjects.set",
+				customer_id: "cus_1",
+				entity_id: null,
+				log_offset: "41",
+			},
+			res: null,
+		});
+		expect(logged[1]?.fields).toMatchObject({
+			statusCode: 200,
+			req: {
+				method: "POST",
+				path: "/v1/balances.check",
+				customer_id: "cus_1",
+				feature_id: "messages",
+			},
+			res: null,
+		});
+		expect(logged[1]?.message).toMatch(
+			/^\[200\] POST \/v1\/balances\.check \d+ms$/,
+		);
+	});
+
+	test("one in a hundred successful answers carries its body, without the balance's breakdown", async () => {
+		const { app, logged } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		sampled();
+
+		await app.request("/v1/balances.check", checkMessages());
+
+		const line = logged.at(-1)?.fields as {
+			res: { allowed: boolean; balance: object };
+		};
+		expect(line.res.allowed).toBe(true);
+		expect(line.res.balance).not.toHaveProperty("breakdown");
+	});
+
+	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {
+		const { app, logged } = createDeployedApp();
+
+		await app.request("/v1/balances.check", checkMessages({ token: null }));
+		await app.request(
+			"/v1/subjects.set",
+			post({ headers: withToken(ATOM_TOKEN), body: { state: {} } }),
+		);
+
+		expect(logged.map((line) => line.level)).toEqual(["warn", "warn"]);
+		expect(logged[0]?.fields).toMatchObject({
+			statusCode: 401,
+			req: { method: "POST", path: "/v1/balances.check" },
+			res: { code: "atom_token_required" },
+		});
+		expect(logged[1]?.fields).toMatchObject({
+			statusCode: 400,
+			errorCode: "invalid_request",
+			error: { name: "ZodError" },
+			res: { code: "invalid_request" },
+		});
+		expect(logged[1]?.fields).not.toHaveProperty("error.stack");
+	});
+
+	test("a request the API answered names the reason and carries no body of its own", async () => {
+		const { app, logged } = createDeployedApp();
+		autumnAnswering({ status: 200, body: { allowed: true } });
+
+		await app.request(
+			"/v1/balances.check",
+			checkMessages({ customer_id: "cus_2" }),
+		);
+
 		expect(logged).toHaveLength(1);
+		expect(logged[0]?.fields).toMatchObject({
+			statusCode: 200,
+			forwarded: "customer_not_stored",
+			res: null,
+		});
+		expect(logged[0]?.message).toMatch(/→ Autumn API \(customer_not_stored\)$/);
+	});
+
+	test("the health probe is not logged", async () => {
+		const { app, logged } = createDeployedApp();
+
+		await app.request("/health");
+
+		expect(logged).toEqual([]);
 	});
 });
 

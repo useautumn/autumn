@@ -47,9 +47,11 @@ const splitAtBookmark = ({
 export const applyDurableMutations = async ({
 	ctx,
 	records,
+	claimToken,
 }: {
 	ctx: CommitterStateStoreContext;
 	records: readonly DurableMutationRecord[];
+	claimToken?: string;
 }): Promise<DurableMutationApplyResult[]> => {
 	const first = records[0];
 	if (!first) return [];
@@ -73,7 +75,7 @@ export const applyDurableMutations = async ({
 		topic,
 		partition,
 		expectedOffset,
-		writerEpoch: ctx.ownerEpochOf?.({ topic, partition }),
+		claimToken,
 		records: pending,
 	});
 	ctx.progress.setNextOffset({

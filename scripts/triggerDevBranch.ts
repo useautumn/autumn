@@ -59,3 +59,17 @@ export function resolveTriggerDevBranch({
 		? joined
 		: joined.slice(0, MAX_BRANCH_LEN).replace(/-$/, "");
 }
+
+/**
+ * The git branch alone names a dev stack's alien deployments: short enough for a DNS label, the same on every machine.
+ * Deliberately no user or worktree: two people on one branch share a deployment, so the same Atom is reachable from any stack.
+ */
+export function resolveAtomDeploymentPrefix({
+	projectRoot,
+}: {
+	projectRoot: string;
+}): string {
+	return (
+		sanitizeSegment({ value: currentGitBranch({ projectRoot }) }) || "detached"
+	);
+}

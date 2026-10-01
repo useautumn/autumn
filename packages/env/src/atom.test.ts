@@ -95,4 +95,28 @@ describe("atom env", () => {
 			createAtomEnv({ ATOM_DEV: "true", ATOM_PROCESSES: "2" }),
 		).toThrow("one process");
 	});
+
+	test("about 30% of the processes receive pushes when the push queue is linked, at least one of each", () => {
+		const writers = ({ processes }: { processes: string }) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PROCESSES: processes,
+				ALIEN_PUSHES_BINDING: "{}",
+			}).ATOM_WRITERS;
+
+		// A lone process serves and receives.
+		expect(writers({ processes: "1" })).toBe(1);
+		expect(writers({ processes: "2" })).toBe(1);
+		expect(writers({ processes: "4" })).toBe(1);
+		expect(writers({ processes: "8" })).toBe(2);
+	});
+
+	test("no process receives pushes when no push queue is linked", () => {
+		const env = createAtomEnv({
+			ATOM_TOKEN_HASH: TOKEN_HASH,
+			ATOM_PROCESSES: "8",
+		});
+
+		expect(env.ATOM_WRITERS).toBe(0);
+	});
 });

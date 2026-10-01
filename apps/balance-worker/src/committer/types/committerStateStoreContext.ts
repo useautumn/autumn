@@ -4,7 +4,12 @@ import type { Committer, PartitionPosition } from "./committer.js";
 
 export type CommitterStateStoreContext = {
 	committer: Committer;
-	db: Pick<CommitterDb, "readPartitionProgress" | "insertPartitionProgress">;
+	db: Pick<
+		CommitterDb,
+		| "readPartitionProgress"
+		| "insertPartitionProgress"
+		| "claimPartitionProgress"
+	>;
 	progress: ProgressMirror;
-	ownerEpochOf?(position: PartitionPosition): bigint | undefined;
+	claimTokenOf(position: PartitionPosition): string | undefined;
 };

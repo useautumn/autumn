@@ -19,6 +19,7 @@ export const partitionProgress = pgTable(
 		owner_epoch: bigint("owner_epoch", { mode: "bigint" }),
 		/** Where that fence sits in the log; records above it from a lower epoch are dropped. */
 		owner_fence_offset: bigint("owner_fence_offset", { mode: "bigint" }),
+		claim_token: text("claim_token"),
 	},
 	(table) => [
 		primaryKey({
