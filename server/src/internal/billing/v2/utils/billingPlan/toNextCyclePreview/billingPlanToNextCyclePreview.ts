@@ -3,9 +3,11 @@ import {
 	type BillingPlan,
 	type BillingPreviewResponse,
 	cp,
+	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
 	hasCustomerProductEnded,
 	hasCustomerProductStarted,
+	isCustomerProductOnStripeSubscription,
 	timestampsMatch,
 } from "@autumn/shared";
 import type { Decimal } from "decimal.js";
@@ -70,7 +72,7 @@ const outgoingPlansRunToBoundary = ({
 	);
 
 /** Cancelling some plans on a shared subscription at renewal only shrinks it,
- * so the plans left on it still renew at the boundary. */
+ * so the plans left on that subscription still renew at the boundary. */
 const getPlansRenewingThroughCancellation = ({
 	event,
 	customerProducts,
@@ -83,10 +85,20 @@ const getPlansRenewingThroughCancellation = ({
 		timestampsMatch(event.startsAtMs, event.renewalBoundaryMs);
 	if (!isCancellationAtRenewal) return [];
 
+	const cancelledSubscriptionIds = customerProductsToStripeSubscriptionIds({
+		customerProducts: event.outgoingCustomerProducts,
+	});
 	return getActiveCustomerProductsAt({
 		customerProducts,
 		startsAtMs: event.startsAtMs,
-	});
+	}).filter((customerProduct) =>
+		cancelledSubscriptionIds.some((stripeSubscriptionId) =>
+			isCustomerProductOnStripeSubscription({
+				customerProduct,
+				stripeSubscriptionId,
+			}),
+		),
+	);
 };
 
 const scaleNextCycleAmounts = ({

@@ -25,6 +25,7 @@ const plan = ({
 	status = CusProductStatus.Active,
 	interval = BillingInterval.Month,
 	group,
+	subscriptionId = "sub_shared",
 }: {
 	id: string;
 	amount: number;
@@ -33,6 +34,7 @@ const plan = ({
 	status?: CusProductStatus;
 	interval?: BillingInterval;
 	group?: string;
+	subscriptionId?: string;
 }): FullCusProduct => {
 	const fixedPrice = prices.createFixed({ id: `price_${id}` });
 	const price = {
@@ -47,7 +49,7 @@ const plan = ({
 		status,
 		startsAt,
 		endedAt,
-		subscriptionIds: ["sub_shared"],
+		subscriptionIds: [subscriptionId],
 		customerPrices: [prices.createCustomer({ price, customerProductId: id })],
 		product: group ? { ...product, group } : product,
 	});
@@ -118,6 +120,25 @@ describe("next cycle preview on a shared subscription", () => {
 					amount: 200,
 					interval: BillingInterval.Year,
 				}),
+				plan({
+					id: "premium-b",
+					amount: 50,
+					endedAt: renewalBoundaryMs,
+				}),
+			],
+		});
+
+		expect(nextCycle?.total).toBe(20);
+		expect(nextCycle?.line_items.map((lineItem) => lineItem.plan_id)).toEqual([
+			"pro-a",
+		]);
+	});
+
+	test("does not bill a plan on another subscription renewing at the same boundary", () => {
+		const nextCycle = previewNextCycle({
+			customerProducts: [
+				plan({ id: "pro-a", amount: 20 }),
+				plan({ id: "addon-x", amount: 30, subscriptionId: "sub_other" }),
 				plan({
 					id: "premium-b",
 					amount: 50,
