@@ -43,22 +43,33 @@ const setupSharedPool = async ({ customerId }: { customerId: string }) => {
 		],
 		actions: [s.billing.attach({ productId: shared.id })],
 	});
+	await warmCaches({ customerId });
 	return { a: entities[0].id, b: entities[1].id, c: entities[2].id };
 };
 
-const allocate = ({
+// Warms the customer and entity caches so an entity track isn't lost to a cold customer refill.
+const warmCaches = async ({ customerId }: { customerId: string }) => {
+	await autumnV2_3.customers.get(customerId);
+	for (const entityId of ["ent-1", "ent-2", "ent-3"])
+		await autumnV2_3.entities.get(customerId, entityId);
+};
+
+const allocate = async ({
 	customerId,
 	allocations,
 }: {
 	customerId: string;
 	allocations: AllocateBalancesParamsV0["allocations"];
-}) =>
-	autumnV2_3.balances.allocate({
+}) => {
+	const response = await autumnV2_3.balances.allocate({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		interval: ResetInterval.Month,
 		allocations,
 	});
+	await warmCaches({ customerId });
+	return response;
+};
 
 const trackAs = ({
 	customerId,
