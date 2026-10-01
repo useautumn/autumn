@@ -111,7 +111,8 @@ const refitAllocations = async ({
 				internalEntityId: null,
 				cycle,
 				usage: claimed,
-				now,
+				// Wall clock, not event time: syncs only overwrite a counter row with a newer updated_at.
+				now: Date.now(),
 			});
 			await setAllocationCounters({
 				db: tx,
@@ -220,6 +221,7 @@ export const refreshAllocationScale = async ({
 			customerId: fullSubject.customerId,
 			allocations: refit.next,
 			counterPatches: refit.counterPatches,
+			flushBalances,
 		});
 	const { changed } = refit;
 	const written = refit.dirty ? refit.next : null;
@@ -327,6 +329,7 @@ export const releaseEntityAllocations = async ({
 		customerId: fullSubject.customerId,
 		allocations: released.next,
 		counterPatches: released.counterPatches,
+		flushBalances: false,
 	});
 	void notifyAllocationsAdjusted({ ctx, customerId });
 };

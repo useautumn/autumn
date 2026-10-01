@@ -18,11 +18,14 @@ export const patchCachedAllocations = async ({
 	customerId,
 	allocations,
 	counterPatches,
+	flushBalances,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	allocations: BalanceAllocations;
 	counterPatches: AllocationCounterPatch[];
+	/** Whether the refit started with a flush; only then are cached balances still safe to flush. */
+	flushBalances: boolean;
 }): Promise<void> => {
 	try {
 		await evictBalanceWorkerCustomer({ ctx, customerId });
@@ -41,13 +44,19 @@ export const patchCachedAllocations = async ({
 						JSON.stringify({ now, counter, usage_delta: usageDelta }),
 					),
 				ctx.redisV2,
-			);
+			).catch((error) => {
+				ctx.logger.error("[patchCachedAllocations] counter patch failed", {
+					error,
+				});
+				return null;
+			});
 			// New shares over a stale counter would misgate draws; a cold cache reloads both from Postgres.
 			if (patched === null) {
 				await invalidateCachedFullSubject({
 					ctx,
 					customerId,
 					source: "patchCachedAllocations",
+					flushBalances,
 				});
 				return;
 			}
