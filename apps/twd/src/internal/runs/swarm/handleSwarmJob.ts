@@ -438,7 +438,7 @@ export const handleSwarmJob: JobHandler = async ({
 				} else if (message.type === "shard_lease_request") {
 					void acquireStripeConnectLease().then((release) => {
 						releaseShardLease = release;
-						if (closed) release();
+						if (closed || abort.signal.aborted) release();
 						else sendToChild?.({ type: "shard_lease_granted" });
 					});
 				} else if (message.type === "shard_route") {

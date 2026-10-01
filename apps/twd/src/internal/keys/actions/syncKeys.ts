@@ -8,6 +8,7 @@ import { stripeKeys } from "../../../db/schema/keys.ts";
 import { openSecret, sealSecret } from "../../../lib/secretBox.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import {
+	forgetKeySecret,
 	forgetKeySecretsExcept,
 	hashKey,
 	keyHint,
@@ -94,19 +95,23 @@ export const isShardKey = ({
 	secret: string;
 }) => secret === ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 
-/** A shard key imported before it was reserved keeps its row; mark it out so nothing allocates or nukes under it. */
+/** A shard key imported before it was reserved keeps its row; retire it and drop its secret so nothing allocates, reinits or nukes under it. */
 export const retireShardKey = async ({ ctx }: { ctx: TwdContext }) => {
 	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 	if (!secret) return;
-	await ctx.db
+	const retired = await ctx.db
 		.update(stripeKeys)
 		.set({
 			usable: false,
 			present: false,
+			secretCiphertext: null,
 			unusableReason: SHARD_KEY_REASON,
 			updatedAt: new Date(),
 		})
-		.where(eq(stripeKeys.keyHash, hashKey({ secret })));
+		.where(eq(stripeKeys.keyHash, hashKey({ secret })))
+		.returning({ platformAccountId: stripeKeys.platformAccountId });
+	for (const { platformAccountId } of retired)
+		forgetKeySecret({ platformAccountId });
 };
 
 /** Any separator (commas, whitespace, newlines); only `sk_`/`rk_` tokens, deduped. */

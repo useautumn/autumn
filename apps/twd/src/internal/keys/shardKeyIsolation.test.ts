@@ -1,4 +1,7 @@
 import { expect, mock, test } from "bun:test";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { hashKey, peekKeySecret, rememberKeySecret } from "./keySecrets.ts";
 
 process.env.TWD_DATABASE_URL ??= "postgres://unused@localhost:1/unused";
 
@@ -47,27 +50,44 @@ test("importing the shard key is refused before it is probed or stored", async (
 	expect(writes).not.toHaveBeenCalled();
 });
 
-test("a shard key stored before it was reserved is retired from the pool", async () => {
-	const sets: unknown[] = [];
+test("a shard key stored before it was reserved is retired, its secret dropped", async () => {
+	const sets: Record<string, unknown>[] = [];
+	const conditions: SQL[] = [];
+	rememberKeySecret({ platformAccountId: "acct_shard", secret: SHARD_KEY });
+	rememberKeySecret({ platformAccountId: "acct_pool", secret: POOL_KEY });
 	const ctx = {
 		env: { SHARD_STRIPE_SANDBOX_KEY: SHARD_KEY },
 		db: {
 			update: () => ({
-				set: (values: unknown) => {
+				set: (values: Record<string, unknown>) => {
 					sets.push(values);
-					return { where: async () => [] };
+					return {
+						where: (condition: SQL) => {
+							conditions.push(condition);
+							return {
+								returning: async () => [{ platformAccountId: "acct_shard" }],
+							};
+						},
+					};
 				},
 			}),
 		},
 	} as never;
 	await retireShardKey({ ctx });
+
 	expect(sets).toEqual([
 		expect.objectContaining({
 			usable: false,
 			present: false,
+			secretCiphertext: null,
 			unusableReason: expect.stringContaining("stripe-connect shard"),
 		}),
 	]);
+	const { sql, params } = new PgDialect().sqlToQuery(conditions[0]);
+	expect(sql).toContain('"key_hash" = $1');
+	expect(params).toEqual([hashKey({ secret: SHARD_KEY })]);
+	expect(peekKeySecret({ platformAccountId: "acct_shard" })).toBeUndefined();
+	expect(peekKeySecret({ platformAccountId: "acct_pool" })).toBe(POOL_KEY);
 
 	sets.length = 0;
 	await retireShardKey({

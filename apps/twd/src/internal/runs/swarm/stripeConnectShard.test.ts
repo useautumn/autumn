@@ -29,14 +29,19 @@ test("only one run holds the stripe-connect shard at a time", async () => {
 		order.push("b");
 		return release;
 	});
-	await Bun.sleep(5);
-	expect(order).toEqual([]);
-	order.push("a done");
-	releaseA();
-	const releaseB = await waitingB;
-	expect(order).toEqual(["a done", "b"]);
-	releaseB();
-	releaseB();
-	const releaseC = await acquireStripeConnectLease();
-	releaseC();
+	try {
+		await Bun.sleep(5);
+		expect(order).toEqual([]);
+		order.push("a done");
+		releaseA();
+		const releaseB = await waitingB;
+		expect(order).toEqual(["a done", "b"]);
+		releaseB();
+		releaseB();
+		const releaseC = await acquireStripeConnectLease();
+		releaseC();
+	} finally {
+		releaseA();
+		void waitingB.then((release) => release());
+	}
 });
