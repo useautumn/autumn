@@ -1,5 +1,9 @@
 /** Duck-typed so the package needn't depend on the stripe SDK: every Stripe error's `type` starts with "Stripe". */
-export type StripeLikeError = Error & { type: string; statusCode?: number };
+export type StripeLikeError = Error & {
+	type: string;
+	statusCode?: number;
+	code?: string;
+};
 
 export const isStripeError = (error: unknown): error is StripeLikeError =>
 	error instanceof Error &&

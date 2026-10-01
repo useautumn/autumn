@@ -1,4 +1,5 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import Stripe from "stripe";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
@@ -32,7 +33,22 @@ export const handleGetInvoiceMetadata = createRoute({
 		}
 
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-		const stripeInvoice = await stripeCli.invoices.retrieve(stripe_invoice_id);
+		const stripeInvoice = await stripeCli.invoices
+			.retrieve(stripe_invoice_id)
+			.catch((error: unknown) => {
+				// Our row outlived the Stripe invoice, e.g. the org reconnected another Stripe account.
+				if (
+					error instanceof Stripe.errors.StripeError &&
+					error.code === "resource_missing"
+				) {
+					throw new RecaseError({
+						message: `Invoice ${stripe_invoice_id} not found in Stripe`,
+						code: ErrCode.InvalidRequest,
+						statusCode: 400,
+					});
+				}
+				throw error;
+			});
 		const vercelInstallationId = await resolveVercelInstallationId({
 			stripeCli,
 			invoice: stripeInvoice,
