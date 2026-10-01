@@ -23,6 +23,14 @@ export type ReviewChangeValue = {
 	isBasis?: boolean;
 };
 
+/** The customer's shared balance a contributor's change feeds. */
+export type ReviewPooledBalance = {
+	featureName: string;
+	previousTotal: number | null;
+	total: number;
+	contributors: number;
+};
+
 export type ReviewChangeRow = {
 	key: string;
 	title: string;
@@ -33,6 +41,7 @@ export type ReviewChangeRow = {
 	trialEndsAt?: number;
 	/** Kept across every phase, so a later schedule change won't end it. */
 	ongoing?: boolean;
+	pooled?: ReviewPooledBalance;
 	value?: ReviewChangeValue;
 	/** Quantity column of a pricing table row. */
 	quantity?: string;

@@ -1,3 +1,4 @@
+import { numberWithCommas } from "@autumn/shared";
 import {
 	StatusChip,
 	Tooltip,
@@ -8,7 +9,10 @@ import { format } from "date-fns";
 import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
-import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
+import type {
+	ReviewChangeRow,
+	ReviewPooledBalance,
+} from "../../utils/review/types/reviewChange";
 import { ReviewStatusChip } from "./ReviewStatusChip";
 import { useReviewValueColumnWidth } from "./ReviewValueColumnContext";
 
@@ -49,6 +53,36 @@ export function ReviewChangeRowItem({
 	);
 }
 
+const poolTotalLabel = ({ previousTotal, total }: ReviewPooledBalance) =>
+	previousTotal === null || previousTotal === total
+		? numberWithCommas(total)
+		: `${numberWithCommas(previousTotal)} → ${numberWithCommas(total)}`;
+
+function PooledChip({ pooled }: { pooled: ReviewPooledBalance }) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<StatusChip tone="fuchsia" glyph="coins" className="shrink-0">
+					Pooled
+				</StatusChip>
+			</TooltipTrigger>
+			<TooltipContent side="top">
+				<div className="flex w-[230px] flex-col gap-1">
+					<span className="font-medium">{`Shared ${pooled.featureName} pool`}</span>
+					<div className="flex justify-between gap-3">
+						<span>Pool total</span>
+						<span className="tabular-nums">{poolTotalLabel(pooled)}</span>
+					</div>
+					<div className="flex justify-between gap-3">
+						<span>Contributing entities</span>
+						<span className="tabular-nums">{pooled.contributors}</span>
+					</div>
+				</div>
+			</TooltipContent>
+		</Tooltip>
+	);
+}
+
 function OngoingChip() {
 	return (
 		<Tooltip>
@@ -80,6 +114,7 @@ export function ReviewChangeRowTrailing({
 	return (
 		<>
 			{row.ongoing && <OngoingChip />}
+			{row.pooled && <PooledChip pooled={row.pooled} />}
 			{row.trialEndsAt !== undefined && (
 				<StatusChip tone="blue" glyph="clock" className="shrink-0">
 					{`Trial · ends ${format(row.trialEndsAt, "MMM d")}`}

@@ -88,12 +88,21 @@ const balanceChangeToRow = ({
 	const before = balanceBefore(change);
 	const after = change.balance;
 	const feature = findFeatureById({ features, featureId: change.feature_id });
+	const featureName = feature?.name ?? change.feature_id;
 
 	return {
 		key: `balance-${phaseIndex}-${change.entity_id ?? "customer"}-${change.feature_id}`,
-		title: feature?.name ?? change.feature_id,
+		title: featureName,
 		description: describeBalance({ before, after }),
 		status: change.behavior,
+		...(change.pooled && {
+			pooled: {
+				featureName,
+				previousTotal: change.pooled.previous_total,
+				total: change.pooled.total,
+				contributors: change.pooled.contributors,
+			},
+		}),
 		value: balanceValue(after),
 		entityId: change.entity_id ?? null,
 	};
