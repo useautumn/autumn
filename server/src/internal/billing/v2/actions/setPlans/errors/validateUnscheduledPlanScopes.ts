@@ -6,7 +6,7 @@ import type {
 import { isOneOffProduct, productToReplacementKey } from "@autumn/shared";
 import { setPlansError } from "./setPlansError";
 
-/** Identifies the group a plan replaces within one entity scope. */
+/** Identifies the group a plan replaces within one entity scope; an add-on is its own group. */
 const groupAndScopeKey = ({
 	fullProduct,
 	internalEntityId,
@@ -20,22 +20,32 @@ const groupAndScopeKey = ({
 	]);
 
 /**
- * An unscheduled plan never expires, so a phase claiming its group and scope
- * would replace it — a contradiction rather than a precedence question.
+ * An unscheduled plan runs for the whole schedule, so a phase listing a plan in
+ * its group and scope — or the same add-on — would overlap or replace it.
  */
 export const validateUnscheduledPlanScopes = ({
 	unscheduledProductContexts,
+	openingPhaseProductContexts,
 	scheduledPhaseContexts,
 }: {
 	unscheduledProductContexts: MultiAttachProductContext[];
+	openingPhaseProductContexts: MultiAttachProductContext[];
 	scheduledPhaseContexts: ScheduledPhaseContext[];
 }) => {
 	if (unscheduledProductContexts.length === 0) return;
 
-	const scheduledGroupAndScopeKeys = new Set(
-		scheduledPhaseContexts.flatMap(({ productContexts }) =>
+	const phaseGroupAndScopeKeys = new Set([
+		...openingPhaseProductContexts
+			.filter(({ fullProduct }) => fullProduct.is_add_on)
+			.map(({ fullProduct, fullCustomer }) =>
+				groupAndScopeKey({
+					fullProduct,
+					internalEntityId: fullCustomer.entity?.internal_id,
+				}),
+			),
+		...scheduledPhaseContexts.flatMap(({ productContexts }) =>
 			productContexts.flatMap(({ fullProduct, entity }) =>
-				fullProduct.is_add_on || isOneOffProduct({ product: fullProduct })
+				isOneOffProduct({ product: fullProduct })
 					? []
 					: [
 							groupAndScopeKey({
@@ -45,14 +55,12 @@ export const validateUnscheduledPlanScopes = ({
 						],
 			),
 		),
-	);
+	]);
 
 	for (const { fullProduct, fullCustomer } of unscheduledProductContexts) {
-		if (fullProduct.is_add_on || isOneOffProduct({ product: fullProduct })) {
-			continue;
-		}
+		if (isOneOffProduct({ product: fullProduct })) continue;
 
-		const isClaimedByPhase = scheduledGroupAndScopeKeys.has(
+		const isClaimedByPhase = phaseGroupAndScopeKeys.has(
 			groupAndScopeKey({
 				fullProduct,
 				internalEntityId: fullCustomer.entity?.internal_id,

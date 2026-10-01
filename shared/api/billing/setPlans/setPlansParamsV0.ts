@@ -25,6 +25,11 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 				"The Stripe subscription to edit when the customer has several. Only plans billed on it, and free plans, are changed; new paid plans bill on it.",
 			internal: true,
 		}),
+		undeclared_plans: z.enum(["end", "retain"]).optional().meta({
+			description:
+				"What happens to a current plan in the request's scope that no phase or unscheduled plan lists: 'end' (default) ends it now, 'retain' keeps it running until a listed plan claims its group.",
+			internal: true,
+		}),
 		ends_at: UnixMsTimestampSchema.optional().meta({
 			description:
 				"Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.",

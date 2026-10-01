@@ -17,11 +17,9 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleSetPlansEndDateErrors } from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansEndDateErrors";
-import {
-	handleSetPlansComputeErrors,
-	handleSetPlansErrors,
-} from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansErrors";
+import { handleSetPlansComputeErrors } from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansErrors";
 import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
+import { handleSetPlansErrorsFromContext } from "./setPlansTimelineHelpers";
 
 const buildContext = ({
 	immediateStartsAt,
@@ -62,7 +60,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		const now = Date.now();
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				billingContext: buildContext({
@@ -77,7 +75,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		const now = Date.now();
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				billingContext: buildContext({
@@ -98,7 +96,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		});
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				billingContext: buildContext({
@@ -123,7 +121,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		});
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				billingContext: buildContext({
@@ -143,7 +141,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		});
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				billingContext: buildContext({
@@ -166,7 +164,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		});
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				preview: true,
@@ -184,7 +182,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		const now = Date.now();
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				billingContext: buildContext({
@@ -203,7 +201,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		const now = Date.now();
 
 		await expect(
-			handleSetPlansErrors({
+			handleSetPlansErrorsFromContext({
 				ctx,
 				params: {},
 				billingContext: buildContext({

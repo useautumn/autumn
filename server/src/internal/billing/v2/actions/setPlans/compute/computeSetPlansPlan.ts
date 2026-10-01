@@ -12,11 +12,13 @@ import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finali
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
-import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
-import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
-import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
-import { endRetainedSubscriptionCustomerProducts } from "./endRetainedSubscriptionCustomerProducts";
+import {
+	diffToCustomerProducts,
+	type SetPlansCustomerProductChanges,
+} from "./diffToCustomerProducts/diffToCustomerProducts";
+import { diffToSchedule } from "./diffToSchedule";
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -30,37 +32,29 @@ export type SetPlansPlanResult = {
 	autumnBillingPlan: AutumnBillingPlan;
 	phases: SchedulePhasePlan[];
 	immediatePhaseTransition: ImmediatePhaseTransition;
+	customerProductChanges: SetPlansCustomerProductChanges;
 };
 
 /** Compute the full create_schedule billing plan (immediate + scheduled phases). */
 export const computeSetPlansPlan = ({
 	ctx,
 	billingContext,
+	timeline,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
+	timeline: SetPlansTimeline;
 }): SetPlansPlanResult => {
-	const nextPhaseStartsAt = billingContext.futurePhases[0]?.starts_at;
+	const customerProductChanges = diffToCustomerProducts({
+		ctx,
+		billingContext,
+		diff: timeline.diff,
+	});
 	const {
-		recurringOutgoing,
-		recurringEndingAtPhase,
-		recurringScheduled: existingScheduledCustomerProducts,
-	} = resolveSetPlansRecurringProducts({ billingContext });
-
-	const immediate = computeImmediatePhaseCustomerProducts({
-		ctx,
-		billingContext,
-		currentRecurringCustomerProducts: recurringOutgoing,
-		nextPhaseStartsAt,
-	});
-	const { outgoingCustomerProducts, keptCustomerProducts } = immediate;
-
-	const scheduled = computeScheduledCustomerProducts({
-		ctx,
-		billingContext,
-		existingScheduledCustomerProducts,
-	});
-	const immediateCustomerProducts = immediate.insertCustomerProducts;
+		outgoingCustomerProducts,
+		keptCustomerProducts,
+		immediateInsertCustomerProducts: immediateCustomerProducts,
+	} = customerProductChanges;
 
 	// The immediate phase expires the changed rows and inserts fresh ones, so
 	// pools must re-parent now; future phases carry theirs at activation.
@@ -83,7 +77,7 @@ export const computeSetPlansPlan = ({
 
 	const allInsertCustomerProducts = [
 		...immediateCustomerProducts,
-		...scheduled.insertCustomerProducts,
+		...customerProductChanges.scheduledInsertCustomerProducts,
 	];
 
 	const insertPlanLicenses = [
@@ -122,11 +116,15 @@ export const computeSetPlansPlan = ({
 				}
 			: undefined;
 
-	const immediatePhase: SchedulePhasePlan = {
-		startsAt: billingContext.immediatePhase.starts_at,
-		customerProductIds: immediate.phaseCustomerProductIds,
-	};
-	const phases = [immediatePhase, ...scheduled.scheduledPhases];
+	const phases = diffToSchedule({
+		diff: timeline.diff,
+		phaseStarts: [
+			billingContext.immediatePhase.starts_at,
+			...timeline.requestedPhases.slice(1).map(({ startsAt }) => startsAt),
+		],
+		customerProductIdBySegmentId:
+			customerProductChanges.customerProductIdBySegmentId,
+	});
 
 	const baseAutumnBillingPlan: AutumnBillingPlan = {
 		customerId:
@@ -135,28 +133,11 @@ export const computeSetPlansPlan = ({
 		ownsSchedulePersistence: true,
 		schedulePhases: phases,
 		insertCustomerProducts: allInsertCustomerProducts,
-		updateCustomerProducts: [
-			...immediate.updateCustomerProducts,
-			...recurringEndingAtPhase.map(({ customerProduct, endsAt }) => ({
-				customerProduct,
-				updates: { ended_at: endsAt },
-			})),
-			...endRetainedSubscriptionCustomerProducts({
-				billingContext,
-				handledCustomerProductIds: new Set(
-					[
-						...recurringOutgoing,
-						...recurringEndingAtPhase.map(
-							({ customerProduct }) => customerProduct,
-						),
-					].map((customerProduct) => customerProduct.id),
-				),
-			}),
-		],
-		patchCustomerProducts: immediate.patchCustomerProducts.length
-			? immediate.patchCustomerProducts
+		updateCustomerProducts: customerProductChanges.updateCustomerProducts,
+		patchCustomerProducts: customerProductChanges.patchCustomerProducts.length
+			? customerProductChanges.patchCustomerProducts
 			: undefined,
-		deleteCustomerProducts: scheduled.deleteCustomerProducts,
+		deleteCustomerProducts: customerProductChanges.deleteCustomerProducts,
 		customPrices: billingContext.customPrices,
 		customEntitlements: [
 			...(billingContext.customEnts ?? []),
@@ -196,5 +177,6 @@ export const computeSetPlansPlan = ({
 			incomingCustomerProducts: immediateCustomerProducts,
 			keptCustomerProducts,
 		},
+		customerProductChanges,
 	};
 };

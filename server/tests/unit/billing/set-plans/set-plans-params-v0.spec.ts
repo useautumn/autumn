@@ -72,7 +72,7 @@ describe(chalk.yellowBright("SetPlansParamsV0Schema"), () => {
 });
 
 describe(chalk.yellowBright("createScheduleParamsToSetPlansParams"), () => {
-	test("renames legacy billing_behavior to proration_behavior", () => {
+	test("renames legacy billing_behavior and retains plans create_schedule doesn't list", () => {
 		const legacy: CreateScheduleParamsV0 = CreateScheduleParamsV0Schema.parse({
 			customer_id: "cus_123",
 			billing_behavior: "none",
@@ -85,12 +85,16 @@ describe(chalk.yellowBright("createScheduleParamsToSetPlansParams"), () => {
 			proration_behavior: "none",
 			billing_cycle_anchor: "now",
 			redirect_mode: "if_required",
+			undeclared_plans: "retain",
 			phases: [{ starts_at: OLD_START_MS, plans: [{ plan_id: "pro" }] }],
 		});
 	});
 
-	test("passes set_plans params through unchanged", () => {
-		const params = SetPlansParamsV0Schema.parse(resyncRequest);
+	test("passes set_plans params through unchanged, policy included", () => {
+		const params = SetPlansParamsV0Schema.parse({
+			...resyncRequest,
+			undeclared_plans: "end",
+		});
 
 		expect(createScheduleParamsToSetPlansParams({ params })).toEqual({
 			customer_id: "cus_123",
@@ -98,6 +102,7 @@ describe(chalk.yellowBright("createScheduleParamsToSetPlansParams"), () => {
 			proration_behavior: "none",
 			ends_at: 1_790_000_000_000,
 			redirect_mode: "if_required",
+			undeclared_plans: "end",
 			phases: [{ starts_at: OLD_START_MS, plans: [{ plan_id: "pro" }] }],
 		});
 	});

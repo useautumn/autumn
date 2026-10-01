@@ -5,9 +5,7 @@ import {
 	secondsToMs,
 } from "@autumn/shared";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { partitionUnchangedCustomerProducts } from "../compute/partitionUnchangedCustomerProducts";
-import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
 
 type KeptSubscriptionCycle = Partial<
 	Pick<
@@ -18,30 +16,36 @@ type KeptSubscriptionCycle = Partial<
 
 /** A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it. */
 export const setupKeptSubscriptionCycle = ({
-	ctx,
 	billingContext,
+	timeline,
 	requestedProrationBehavior,
 }: {
-	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
+	timeline: SetPlansTimeline;
 	requestedProrationBehavior?: BillingBehavior;
 }): KeptSubscriptionCycle => {
 	const { replacedStripeSubscription, currentEpochMs } = billingContext;
 	if (!replacedStripeSubscription?.items.data.length) return {};
 
-	const { recurringOutgoing } = resolveSetPlansRecurringProducts({
-		billingContext,
-	});
-	const { keptCustomerProducts } = partitionUnchangedCustomerProducts({
-		ctx,
-		billingContext,
-		currentRecurringCustomerProducts: recurringOutgoing,
-	});
-	const keepsReplacedPlan = keptCustomerProducts.some(({ customerProduct }) =>
-		isCustomerProductOnStripeSubscription({
-			customerProduct,
-			stripeSubscriptionId: replacedStripeSubscription.id,
-		}),
+	const declaredSegmentIds = new Set(
+		timeline.diff.timeline
+			.filter(({ origin }) => origin === "declared")
+			.map(({ id }) => id),
+	);
+	const keptCustomerProductIds = new Set(
+		timeline.diff.operations.flatMap((operation) =>
+			operation.type === "keep" && declaredSegmentIds.has(operation.segmentId)
+				? [operation.customerProductId]
+				: [],
+		),
+	);
+	const keepsReplacedPlan = billingContext.fullCustomer.customer_products.some(
+		(customerProduct) =>
+			keptCustomerProductIds.has(customerProduct.id) &&
+			isCustomerProductOnStripeSubscription({
+				customerProduct,
+				stripeSubscriptionId: replacedStripeSubscription.id,
+			}),
 	);
 	if (!keepsReplacedPlan) return {};
 

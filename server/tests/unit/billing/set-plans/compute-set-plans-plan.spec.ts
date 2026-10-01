@@ -14,8 +14,8 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { computeSetPlansPlan } from "@/internal/billing/v2/actions/setPlans/compute/computeSetPlansPlan";
 import { deferredSetPlansSchedulePhases } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
+import { computeSetPlansPlanFromContext } from "./setPlansTimelineHelpers";
 
 const createBillingContext = ({
 	productContexts,
@@ -67,7 +67,6 @@ const createBillingContext = ({
 	return {
 		...billingContext,
 		productContexts: scopedProductContexts,
-		replacedScheduleCustomerProductIds: [],
 		featureQuantities: [],
 		checkoutMode: null,
 		customPrices: [],
@@ -117,7 +116,7 @@ describe(chalk.yellowBright("computeSetPlansPlan"), () => {
 			},
 		});
 
-		const result = computeSetPlansPlan({
+		const result = computeSetPlansPlanFromContext({
 			ctx,
 			billingContext,
 		});
@@ -163,7 +162,7 @@ describe(chalk.yellowBright("computeSetPlansPlan"), () => {
 			},
 		});
 
-		const result = computeSetPlansPlan({
+		const result = computeSetPlansPlanFromContext({
 			ctx,
 			billingContext,
 		});
@@ -232,7 +231,7 @@ describe(chalk.yellowBright("computeSetPlansPlan"), () => {
 			},
 		});
 
-		const result = computeSetPlansPlan({
+		const result = computeSetPlansPlanFromContext({
 			ctx,
 			billingContext,
 		});
@@ -325,7 +324,7 @@ describe(chalk.yellowBright("computeSetPlansPlan"), () => {
 			],
 		});
 
-		const result = computeSetPlansPlan({ ctx, billingContext });
+		const result = computeSetPlansPlanFromContext({ ctx, billingContext });
 		const scheduledCustomerProduct =
 			result.autumnBillingPlan.insertCustomerProducts.find(
 				(customerProduct) => customerProduct.product_id === scheduledProduct.id,
@@ -390,7 +389,7 @@ describe(
 				replacedStripeSubscription: pausedSubscription,
 			};
 
-			const { autumnBillingPlan } = computeSetPlansPlan({
+			const { autumnBillingPlan } = computeSetPlansPlanFromContext({
 				ctx,
 				billingContext,
 			});
@@ -477,7 +476,7 @@ describe(chalk.yellowBright("computeSetPlansPlan: unchanged plans"), () => {
 		});
 
 		const { autumnBillingPlan, phases, immediatePhaseTransition } =
-			computeSetPlansPlan({ ctx, billingContext });
+			computeSetPlansPlanFromContext({ ctx, billingContext });
 
 		expect(autumnBillingPlan.insertCustomerProducts).toEqual([]);
 		expect(autumnBillingPlan.updateCustomerProducts).toEqual([]);
@@ -513,7 +512,7 @@ describe(chalk.yellowBright("computeSetPlansPlan: unchanged plans"), () => {
 			replacedStripeSubscription: cancelledSubscription,
 		};
 
-		const { autumnBillingPlan, phases } = computeSetPlansPlan({
+		const { autumnBillingPlan, phases } = computeSetPlansPlanFromContext({
 			ctx,
 			billingContext,
 		});
@@ -562,7 +561,10 @@ describe(chalk.yellowBright("computeSetPlansPlan: unchanged plans"), () => {
 			replacedStripeSubscription: cancelledSubscription,
 		};
 
-		const { autumnBillingPlan } = computeSetPlansPlan({ ctx, billingContext });
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext,
+		});
 
 		expect(
 			autumnBillingPlan.insertCustomerProducts.map(
@@ -602,7 +604,10 @@ describe(chalk.yellowBright("computeSetPlansPlan: unchanged plans"), () => {
 			replacedStripeSubscription: pausedSubscription,
 		};
 
-		const { autumnBillingPlan } = computeSetPlansPlan({ ctx, billingContext });
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext,
+		});
 
 		expect(
 			autumnBillingPlan.insertCustomerProducts.map(
@@ -645,7 +650,7 @@ describe(
 				},
 			});
 
-			const { autumnBillingPlan, phases } = computeSetPlansPlan({
+			const { autumnBillingPlan, phases } = computeSetPlansPlanFromContext({
 				ctx,
 				billingContext,
 			});

@@ -6,85 +6,81 @@ import {
 	throwSubscriptionIdInUse,
 } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
-import { resolveSetPlansRecurringProducts } from "../utils/resolveSetPlansRecurringProducts";
+import type { RequestedPhase } from "../timeline/desiredTimeline/types/requestedPhase";
+import type { ResolvedSegment } from "../timeline/types/timelineDiff";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
 
-type RequestedPhase = {
-	startsAt: number | undefined;
-	subscriptionIds: string[];
+type Interval = { startsAt: number; endsAt: number | null };
+
+const overlaps = ({ first, second }: { first: Interval; second: Interval }) =>
+	(first.endsAt === null || first.endsAt > second.startsAt) &&
+	(second.endsAt === null || second.endsAt > first.startsAt);
+
+const segmentExternalId = ({
+	segment,
+	requestedPhases,
+}: {
+	segment: ResolvedSegment;
+	requestedPhases: RequestedPhase[];
+}) => {
+	const source = segment.desired?.source;
+	if (!source) return undefined;
+	const phaseIndex = source.type === "ongoing" ? 0 : source.phaseIndex;
+	return requestedPhases[phaseIndex]?.plans[source.planIndex]?.externalId;
 };
 
-const customerProductEndsByRequest = ({
-	billingContext,
+/** An existing row keeps its subscription id while it runs; another instance may only claim it once it ends. */
+const claimsRunningSubscriptionId = ({
+	customerProductId,
+	externalId,
+	timeline,
 }: {
-	billingContext: CreateScheduleBillingContext;
+	customerProductId: string;
+	externalId: string;
+	timeline: SetPlansTimeline;
 }) => {
-	const { recurringOutgoing, recurringEndingAtPhase } =
-		resolveSetPlansRecurringProducts({ billingContext });
-
-	const endsNowIds = new Set([
-		...billingContext.replacedScheduleCustomerProductIds,
-		...billingContext.productContexts.flatMap(({ currentCustomerProduct }) =>
-			currentCustomerProduct ? [currentCustomerProduct.id] : [],
+	const { timeline: segments } = timeline.diff;
+	const carrying = segments.find((segment) =>
+		segment.carriedBy?.rows.some(
+			(row) => row.customerProductId === customerProductId,
 		),
-		...recurringOutgoing.map(({ id }) => id),
-	]);
-	const endsAtById = new Map(
-		recurringEndingAtPhase.map(({ customerProduct, endsAt }) => [
-			customerProduct.id,
-			endsAt,
-		]),
 	);
+	const inScope =
+		!timeline.outOfScopeCustomerProductIds.includes(customerProductId);
+	if (inScope && !carrying) return false;
 
-	return ({
-		customerProductId,
-		phase,
-	}: {
-		customerProductId: string;
-		phase: RequestedPhase;
-	}) => {
-		if (endsNowIds.has(customerProductId)) return true;
-		const endsAt = endsAtById.get(customerProductId);
-		if (endsAt === undefined || phase.startsAt === undefined) return false;
-		return endsAt <= phase.startsAt;
-	};
+	return segments.some(
+		(segment) =>
+			segment.key !== carrying?.key &&
+			segmentExternalId({
+				segment,
+				requestedPhases: timeline.requestedPhases,
+			}) === externalId &&
+			(!carrying || overlaps({ first: segment, second: carrying })),
+	);
 };
 
 /**
  * subscription_id is unique within a phase; later phases may reuse it. An id on an
- * existing row conflicts unless this request ends that row by the claiming phase's start.
+ * existing row conflicts unless this request ends that row before another plan claims it.
  */
 export const handleSetPlansSubscriptionIdErrors = async ({
 	ctx,
 	billingContext,
+	timeline,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
+	timeline: SetPlansTimeline;
 }) => {
-	const requestedPhases: RequestedPhase[] = [
-		{
-			startsAt: undefined,
-			subscriptionIds: presentSubscriptionIds(
-				billingContext.productContexts.map(({ externalId }) => externalId),
-			),
-		},
-		...billingContext.scheduledPhaseContexts.map(
-			({ startsAt, productContexts }) => ({
-				startsAt,
-				subscriptionIds: presentSubscriptionIds(
-					productContexts.map(({ externalId }) => externalId),
-				),
-			}),
-		),
-	];
-	for (const { subscriptionIds } of requestedPhases) {
+	const phaseSubscriptionIds = timeline.requestedPhases.map(({ plans }) =>
+		presentSubscriptionIds(plans.map(({ externalId }) => externalId)),
+	);
+	for (const subscriptionIds of phaseSubscriptionIds) {
 		assertNoDuplicateSubscriptionIds({ subscriptionIds });
 	}
 
-	const requestedSubscriptionIds = [
-		...new Set(
-			requestedPhases.flatMap(({ subscriptionIds }) => subscriptionIds),
-		),
-	];
+	const requestedSubscriptionIds = [...new Set(phaseSubscriptionIds.flat())];
 	if (requestedSubscriptionIds.length === 0) return;
 
 	const existing = await customerProductRepo.getByExternalIds({
@@ -92,14 +88,14 @@ export const handleSetPlansSubscriptionIdErrors = async ({
 		internalCustomerId: billingContext.fullCustomer.internal_id,
 		externalIds: requestedSubscriptionIds,
 	});
-	const endsByPhase = customerProductEndsByRequest({ billingContext });
-	const conflict = existing.find(({ id, external_id }) =>
-		requestedPhases.some(
-			(phase) =>
-				external_id !== null &&
-				phase.subscriptionIds.includes(external_id) &&
-				!endsByPhase({ customerProductId: id, phase }),
-		),
+	const conflict = existing.find(
+		({ id, external_id }) =>
+			external_id !== null &&
+			claimsRunningSubscriptionId({
+				customerProductId: id,
+				externalId: external_id,
+				timeline,
+			}),
 	);
 
 	if (conflict) {

@@ -62,6 +62,7 @@ export const syncV2 = async ({
 			currentEpochMs: syncContext.currentEpochMs,
 			fullCustomer: syncContext.fullCustomer,
 			phases,
+			deleteDroppedScheduledRows: true,
 		});
 		scheduleId = persisted.scheduleId;
 		scheduledPhases = persisted.insertedPhases;

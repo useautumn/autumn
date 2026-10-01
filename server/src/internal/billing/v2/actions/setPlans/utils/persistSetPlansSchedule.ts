@@ -57,38 +57,32 @@ export const getExistingScheduleState = async ({
 	};
 };
 
-/** Remove an existing schedule and the scheduled products it owns that the new schedule no longer keeps. */
-const deleteExistingSchedules = async ({
+/** Sync still owns its scheduled rows here; set_plans deletes them in its billing plan. */
+const deleteDroppedScheduledCustomerProducts = async ({
 	ctx,
-	scheduleIds,
 	existingCustomerProductIds,
 	keptCustomerProductIds,
 }: {
 	ctx: AutumnContext;
-	scheduleIds: string[];
 	existingCustomerProductIds: string[];
 	keptCustomerProductIds: Set<string>;
 }) => {
-	if (scheduleIds.length === 0) return;
-
 	const droppedCustomerProductIds = existingCustomerProductIds.filter(
 		(customerProductId) => !keptCustomerProductIds.has(customerProductId),
 	);
-	if (droppedCustomerProductIds.length > 0) {
-		await ctx.db
-			.delete(customerProducts)
-			.where(
-				and(
-					inArray(customerProducts.id, droppedCustomerProductIds),
-					eq(customerProducts.status, CusProductStatus.Scheduled),
-				),
-			);
-	}
+	if (droppedCustomerProductIds.length === 0) return;
 
-	await ctx.db.delete(schedules).where(inArray(schedules.id, scheduleIds));
+	await ctx.db
+		.delete(customerProducts)
+		.where(
+			and(
+				inArray(customerProducts.id, droppedCustomerProductIds),
+				eq(customerProducts.status, CusProductStatus.Scheduled),
+			),
+		);
 };
 
-/** Persist the schedule rows and scheduled customer products. */
+/** Replace the customer's schedule rows with these phases, keeping out-of-scope plans' phases. */
 export const persistSetPlansSchedule = async ({
 	ctx,
 	customerId,
@@ -96,6 +90,7 @@ export const persistSetPlansSchedule = async ({
 	fullCustomer,
 	phases,
 	preservedCustomerProductIds = [],
+	deleteDroppedScheduledRows = false,
 }: {
 	ctx: AutumnContext;
 	customerId: CreateScheduleParamsV0["customer_id"];
@@ -103,6 +98,7 @@ export const persistSetPlansSchedule = async ({
 	fullCustomer: FullCustomer;
 	phases: { startsAt: number; customerProductIds: string[] }[];
 	preservedCustomerProductIds?: string[];
+	deleteDroppedScheduledRows?: boolean;
 }) => {
 	return await ctx.db.transaction(async (tx) => {
 		const txDb = tx as unknown as DrizzleCli;
@@ -119,13 +115,21 @@ export const persistSetPlansSchedule = async ({
 			preservedCustomerProductIds: new Set(preservedCustomerProductIds),
 		});
 
-		await deleteExistingSchedules({
-			ctx: txCtx,
-			...existingScheduleState,
-			keptCustomerProductIds: new Set(
-				persistedPhases.flatMap((phase) => phase.customerProductIds),
-			),
-		});
+		if (deleteDroppedScheduledRows) {
+			await deleteDroppedScheduledCustomerProducts({
+				ctx: txCtx,
+				existingCustomerProductIds:
+					existingScheduleState.existingCustomerProductIds,
+				keptCustomerProductIds: new Set(
+					persistedPhases.flatMap((phase) => phase.customerProductIds),
+				),
+			});
+		}
+		if (existingScheduleState.scheduleIds.length > 0) {
+			await txDb
+				.delete(schedules)
+				.where(inArray(schedules.id, existingScheduleState.scheduleIds));
+		}
 
 		const scheduleId = generateId("sched");
 		await txDb.insert(schedules).values({

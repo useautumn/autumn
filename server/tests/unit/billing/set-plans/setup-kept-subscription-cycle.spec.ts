@@ -14,6 +14,7 @@ import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { setupKeptSubscriptionCycle } from "@/internal/billing/v2/actions/setPlans/setup/setupKeptSubscriptionCycle";
+import { setupSetPlansTimeline } from "@/internal/billing/v2/actions/setPlans/setup/setupSetPlansTimeline";
 
 const ctx = contexts.create({});
 const NOW = 1_800_000_000_000;
@@ -67,7 +68,6 @@ const proRequestedAgain = ({
 				currentCustomerProduct: customerProduct,
 			},
 		],
-		replacedScheduleCustomerProductIds: [],
 		checkoutMode: null,
 		immediatePhase: { starts_at: NOW, plans: [{ plan_id: pro.id }] },
 		futurePhases: [],
@@ -75,17 +75,26 @@ const proRequestedAgain = ({
 	};
 };
 
+const keptCycle = (billingContext: CreateScheduleBillingContext) =>
+	setupKeptSubscriptionCycle({
+		billingContext,
+		timeline: setupSetPlansTimeline({
+			ctx,
+			billingContext,
+			params: { undeclared_plans: "end" },
+		}),
+	});
+
 describe(chalk.yellowBright("setupKeptSubscriptionCycle"), () => {
 	test("anchors the new subscription on the cancelled one's period end with no proration", () => {
 		expect(
-			setupKeptSubscriptionCycle({
-				ctx,
-				billingContext: proRequestedAgain({
+			keptCycle(
+				proRequestedAgain({
 					replacedStripeSubscription: cancelledSubscription({
 						periodEndMs: PERIOD_END,
 					}),
 				}),
-			}),
+			),
 		).toEqual({
 			billingCycleAnchorMs: PERIOD_END,
 			requestedProrationBehavior: "none",
@@ -93,24 +102,18 @@ describe(chalk.yellowBright("setupKeptSubscriptionCycle"), () => {
 	});
 
 	test("a live subscription keeps its own cycle", () => {
-		expect(
-			setupKeptSubscriptionCycle({
-				ctx,
-				billingContext: proRequestedAgain({}),
-			}),
-		).toEqual({});
+		expect(keptCycle(proRequestedAgain({}))).toEqual({});
 	});
 
 	test("a period that already ended starts a fresh cycle", () => {
 		expect(
-			setupKeptSubscriptionCycle({
-				ctx,
-				billingContext: proRequestedAgain({
+			keptCycle(
+				proRequestedAgain({
 					replacedStripeSubscription: cancelledSubscription({
 						periodEndMs: NOW - ms.days(1),
 					}),
 				}),
-			}),
+			),
 		).toEqual({});
 	});
 });

@@ -1,74 +1,22 @@
 import {
-	cusProductToProduct,
-	type Feature,
 	type FullCusProduct,
-	featureOptionsAreSame,
 	isCusProductOnEntity,
 	type MultiAttachProductContext,
-	productsAreSame,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
+import {
+	customerProductToGrantedLicenses,
+	customerProductToInstanceConfig,
+	requestedPlanToInstanceConfig,
+} from "../timeline/instanceConfig/instanceConfigs";
+import { instanceConfigsMatch } from "../timeline/instanceConfig/instanceConfigsMatch";
 
-const INSERTED_PLAN_QUANTITY = 1;
-
-export type RequestedPlan = Pick<
+type RequestedPlan = Pick<
 	MultiAttachProductContext,
 	"fullProduct" | "featureQuantities" | "customerLicenseQuantities"
 >;
 
-/** The customer product is exactly this plan: same plan version, scope, quantities and items. */
-export const customerProductMatchesPlan = ({
-	features,
-	customerProduct,
-	requestedPlan,
-	internalEntityId,
-	planQuantity,
-}: {
-	features: Feature[];
-	customerProduct: FullCusProduct;
-	requestedPlan: RequestedPlan;
-	internalEntityId: string | undefined;
-	planQuantity: number;
-}) => {
-	const { fullProduct, featureQuantities, customerLicenseQuantities } =
-		requestedPlan;
-
-	const samePlanVersion =
-		customerProduct.internal_product_id === fullProduct.internal_id;
-	const sameScope = isCusProductOnEntity({
-		cusProduct: customerProduct,
-		internalEntityId,
-	});
-	const samePlanQuantity =
-		(customerProduct.quantity ?? INSERTED_PLAN_QUANTITY) === planQuantity;
-	const sameLicenseQuantities =
-		computeCustomerLicenseQuantityChanges({
-			customerProduct,
-			customerLicenseQuantities,
-		}).length === 0;
-	const sameFeatureQuantities = featureOptionsAreSame({
-		curFeatureOptions: customerProduct.options ?? [],
-		newFeatureOptions: featureQuantities,
-	});
-	const { itemsSame, freeTrialsSame } = productsAreSame({
-		newProductV1: fullProduct,
-		curProductV1: cusProductToProduct({ cusProduct: customerProduct }),
-		features,
-	});
-
-	return (
-		samePlanVersion &&
-		sameScope &&
-		samePlanQuantity &&
-		sameLicenseQuantities &&
-		sameFeatureQuantities &&
-		itemsSame &&
-		freeTrialsSame
-	);
-};
-
-/** The requested plan is exactly this customer product: same plan version, scope, quantities and items. */
+/** The requested plan is exactly this customer product: same scope, and the one config equality set_plans uses. */
 export const isUnchangedCustomerProduct = ({
 	ctx,
 	customerProduct,
@@ -80,10 +28,21 @@ export const isUnchangedCustomerProduct = ({
 	productContext: RequestedPlan;
 	internalEntityId: string | undefined;
 }) =>
-	customerProductMatchesPlan({
+	isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId }) &&
+	instanceConfigsMatch({
 		features: ctx.features,
-		customerProduct,
-		requestedPlan: productContext,
-		internalEntityId,
-		planQuantity: INSERTED_PLAN_QUANTITY,
+		first: customerProductToInstanceConfig({
+			customerProduct,
+			now: customerProduct.starts_at,
+		}),
+		second: requestedPlanToInstanceConfig({
+			fullProduct: productContext.fullProduct,
+			featureQuantities: productContext.featureQuantities,
+			customerLicenseQuantities: productContext.customerLicenseQuantities,
+			omittedLicenses: {
+				type: "granted",
+				licenses: customerProductToGrantedLicenses(customerProduct),
+			},
+			resetsBillingCycle: false,
+		}),
 	});

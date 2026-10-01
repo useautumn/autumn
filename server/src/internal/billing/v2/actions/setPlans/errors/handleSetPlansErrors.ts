@@ -19,7 +19,11 @@ import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomer
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
-import { resolveUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import {
+	resolvePhaseProductContexts,
+	resolveUnscheduledProductContexts,
+} from "../utils/unscheduledProductContexts";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleFreePhaseStripeConnectionErrors } from "./handleFreePhaseStripeConnectionErrors";
 import { handleSetPlansBillingCycleAnchorErrors } from "./handleSetPlansBillingCycleAnchorErrors";
@@ -35,11 +39,13 @@ import { validateUnscheduledPlanScopes } from "./validateUnscheduledPlanScopes";
 export const handleSetPlansErrors = async ({
 	ctx,
 	billingContext,
+	timeline,
 	params,
 	preview = false,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
+	timeline: SetPlansTimeline;
 	params: Pick<SetPlansParamsV0, "currency" | "ends_at">;
 	preview?: boolean;
 }) => {
@@ -51,6 +57,9 @@ export const handleSetPlansErrors = async ({
 	});
 	validateUnscheduledPlanScopes({
 		unscheduledProductContexts: resolveUnscheduledProductContexts({
+			productContexts: billingContext.productContexts,
+		}),
+		openingPhaseProductContexts: resolvePhaseProductContexts({
 			productContexts: billingContext.productContexts,
 		}),
 		scheduledPhaseContexts: billingContext.scheduledPhaseContexts,
@@ -98,7 +107,7 @@ export const handleSetPlansErrors = async ({
 			),
 		],
 	});
-	await handleSetPlansSubscriptionIdErrors({ ctx, billingContext });
+	await handleSetPlansSubscriptionIdErrors({ ctx, billingContext, timeline });
 };
 
 export const handleSetPlansComputeErrors = async ({

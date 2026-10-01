@@ -1,13 +1,20 @@
 import type { CreateScheduleParamsV0, SetPlansParamsV0 } from "@autumn/shared";
 
-/** Renames the legacy billing_behavior param to proration_behavior. */
+/** create_schedule retains plans it doesn't list, and calls proration billing_behavior. */
 export const createScheduleParamsToSetPlansParams = ({
 	params,
 }: {
 	params: CreateScheduleParamsV0 | SetPlansParamsV0;
 }): SetPlansParamsV0 => {
 	const { billing_behavior: billingBehavior, ...rest } = params;
-	if (billingBehavior === undefined) return rest;
+	const setPlansParams: SetPlansParamsV0 = {
+		...rest,
+		undeclared_plans:
+			"undeclared_plans" in rest && rest.undeclared_plans
+				? rest.undeclared_plans
+				: "retain",
+	};
+	if (billingBehavior === undefined) return setPlansParams;
 
-	return { ...rest, proration_behavior: billingBehavior };
+	return { ...setPlansParams, proration_behavior: billingBehavior };
 };

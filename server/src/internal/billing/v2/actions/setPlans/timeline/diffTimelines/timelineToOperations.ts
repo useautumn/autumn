@@ -59,13 +59,11 @@ const carriedSegmentOperations = ({
 const uncarriedRowOperation = ({
 	key,
 	row,
-	now,
 }: {
 	key: string;
 	row: SavedRow;
-	now: number;
 }): TimelineOperation =>
-	row.scheduled || startsInFuture({ segment: row, now })
+	row.scheduled
 		? { type: "delete", key, customerProductId: row.customerProductId }
 		: { type: "expire", key, customerProductId: row.customerProductId };
 
@@ -108,7 +106,7 @@ export const timelineToOperations = ({
 	const removedOperations = saved.segments.flatMap((savedSegment) =>
 		savedSegment.rows
 			.filter((row) => !carriedRowIds.has(row.customerProductId))
-			.map((row) => uncarriedRowOperation({ key: savedSegment.key, row, now })),
+			.map((row) => uncarriedRowOperation({ key: savedSegment.key, row })),
 	);
 
 	return [...resolvedOperations, ...removedOperations];

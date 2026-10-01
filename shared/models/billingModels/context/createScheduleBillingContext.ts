@@ -47,11 +47,6 @@ export interface StripeSubscriptionScope {
 
 export interface CreateScheduleBillingContext
 	extends MultiAttachBillingContext {
-	/**
-	 * Customer products the replaced schedule put in place. Dropping one from the
-	 * new phases expires it; products no schedule ever placed are left alone.
-	 */
-	replacedScheduleCustomerProductIds: string[];
 	immediatePhase: ResolvedCreateSchedulePhaseV0;
 	futurePhases: ResolvedCreateSchedulePhaseV0[];
 	scheduledPhaseContexts: ScheduledPhaseContext[];

@@ -4,7 +4,6 @@ import {
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { setupReplacedScheduleCustomerProductIds } from "@/internal/customers/schedules/setup/setupReplacedScheduleCustomerProductIds";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
@@ -12,12 +11,10 @@ import {
 	normalizeSetPlansPhases,
 	phaseHasNumericStart,
 } from "../errors/normalizeSetPlansPhases";
-import {
-	filterCustomerProductsInStripeSubscriptionScope,
-	isCustomerProductInStripeSubscriptionScope,
-} from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
+import { filterCustomerProductsInStripeSubscriptionScope } from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
 import { setupStripeSubscriptionScope } from "../subscriptionScope/setupStripeSubscriptionScope";
-import { alignPhasesToScheduledStarts } from "./alignPhasesToScheduledStarts";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
@@ -29,6 +26,7 @@ import {
 	SET_PLANS_IMMEDIATE_SETUP_OPTIONS,
 	setupSetPlansImmediatePhase,
 } from "./setupSetPlansImmediatePhase";
+import { setupSetPlansTimeline } from "./setupSetPlansTimeline";
 
 export const setupSetPlansBillingContext = async ({
 	ctx,
@@ -38,7 +36,10 @@ export const setupSetPlansBillingContext = async ({
 	ctx: AutumnContext;
 	params: SetPlansParamsV0;
 	preview?: boolean;
-}): Promise<CreateScheduleBillingContext> => {
+}): Promise<{
+	billingContext: CreateScheduleBillingContext;
+	timeline: SetPlansTimeline;
+}> => {
 	const initialPhase = getInitialSetPlansPhase({ phases: params.phases });
 
 	const initialBillingContext = await setupImmediateMultiProductBillingContext({
@@ -57,7 +58,7 @@ export const setupSetPlansBillingContext = async ({
 		stripeScheduleId: initialBillingContext.stripeSubscriptionSchedule?.id,
 	});
 
-	const normalizedPhases = alignPhasesToScheduledStarts({
+	const normalizedPhases = alignPhasesToSavedBoundaries({
 		phases: normalizeSetPlansPhases({
 			phases: params.phases,
 			currentEpochMs: initialBillingContext.currentEpochMs,
@@ -70,6 +71,7 @@ export const setupSetPlansBillingContext = async ({
 			stripeSubscriptionScope,
 			customerProducts: initialBillingContext.fullCustomer.customer_products,
 		}),
+		currentEpochMs: initialBillingContext.currentEpochMs,
 	});
 
 	const { billingContext, immediatePhase, futurePhases } =
@@ -91,26 +93,12 @@ export const setupSetPlansBillingContext = async ({
 		endsAt: params.ends_at,
 	});
 
-	const scheduledCustomerProductIds =
-		await setupReplacedScheduleCustomerProductIds({
-			ctx,
-			internalCustomerId: billingContext.fullCustomer.internal_id,
-		});
-	const replacedScheduleCustomerProductIds = scheduledCustomerProductIds.filter(
-		(id) =>
-			isCustomerProductInStripeSubscriptionScope({
-				stripeSubscriptionScope,
-				customerProduct: { id },
-			}),
-	);
-
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
 		...mergeScheduledPhaseCustomizations({
 			billingContext,
 			scheduledPhaseContexts,
 		}),
-		replacedScheduleCustomerProductIds,
 		checkoutMode: setupSetPlansCheckoutMode({
 			billingContext,
 			redirectMode: params.redirect_mode,
@@ -132,20 +120,30 @@ export const setupSetPlansBillingContext = async ({
 		stripeSubscriptionScope,
 	};
 
+	const timeline = setupSetPlansTimeline({
+		ctx,
+		billingContext: scheduleBillingContext,
+		params,
+	});
+
 	const keptCycleBillingContext: CreateScheduleBillingContext = {
 		...scheduleBillingContext,
 		...setupKeptSubscriptionCycle({
-			ctx,
 			billingContext: scheduleBillingContext,
+			timeline,
 			requestedProrationBehavior: params.proration_behavior,
 		}),
 	};
 
 	return {
-		...keptCycleBillingContext,
-		...setupSetPlansBillingCycleAnchor({
-			billingContext: keptCycleBillingContext,
-			params,
-		}),
+		billingContext: {
+			...keptCycleBillingContext,
+			...setupSetPlansBillingCycleAnchor({
+				billingContext: keptCycleBillingContext,
+				timeline,
+				params,
+			}),
+		},
+		timeline,
 	};
 };

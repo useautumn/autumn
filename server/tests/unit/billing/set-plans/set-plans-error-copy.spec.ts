@@ -60,7 +60,7 @@ const EVERY_ERROR: [SetPlansErrorDetails, string][] = [
 	],
 	[
 		{ type: "ongoing_plan_clash", plan_name: "Pro" },
-		"Pro is an ongoing plan, but a later phase also schedules a plan in its group. Move it into the phases, or remove it from the phase that claims it.",
+		"Pro is an ongoing plan, but a phase also lists it or another plan in its group. Move it into the phases, or remove it from the phase that claims it.",
 	],
 	[
 		{ type: "too_many_phases", phase_count: 12, max_phases: 10 },

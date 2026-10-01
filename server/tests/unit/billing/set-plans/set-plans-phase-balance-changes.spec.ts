@@ -28,7 +28,6 @@ import { products } from "@tests/utils/fixtures/db/products";
 import { rollovers } from "@tests/utils/fixtures/db/rollovers";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeSetPlansPlan } from "@/internal/billing/v2/actions/setPlans/compute/computeSetPlansPlan";
 import { buildSetPlansPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPhaseCustomers";
 import { setPlansPhaseBalanceChanges } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPhaseBalanceChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
@@ -36,6 +35,7 @@ import {
 	makeAutumnBillingPlan,
 	makeUpdate,
 } from "../billing-change-response/helpers/makeAutumnBillingPlan";
+import { computeSetPlansPlanFromContext } from "./setPlansTimelineHelpers";
 
 const NOW = 1_800_000_000_000;
 const PHASE_TWO = NOW + ms.days(30);
@@ -257,7 +257,6 @@ const computeSetPlansBalanceChanges = async ({
 				fullCustomer: billing.fullCustomer,
 			},
 		],
-		replacedScheduleCustomerProductIds: [],
 		checkoutMode: null,
 		billingStartsAt: NOW,
 		immediatePhase: {
@@ -285,7 +284,7 @@ const computeSetPlansBalanceChanges = async ({
 			: [],
 	} as unknown as CreateScheduleBillingContext;
 
-	const { autumnBillingPlan, phases } = computeSetPlansPlan({
+	const { autumnBillingPlan, phases } = computeSetPlansPlanFromContext({
 		ctx,
 		billingContext,
 	});

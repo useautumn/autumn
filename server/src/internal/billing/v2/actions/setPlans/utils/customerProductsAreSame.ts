@@ -1,26 +1,6 @@
-import {
-	type CustomerLicenseQuantity,
-	cusProductToProduct,
-	type Feature,
-	type FullCusProduct,
-} from "@autumn/shared";
-import { customerProductMatchesPlan } from "./isUnchangedCustomerProduct";
-
-const DEFAULT_PLAN_QUANTITY = 1;
-
-const customerProductToLicenseQuantities = (
-	customerProduct: FullCusProduct,
-): CustomerLicenseQuantity[] =>
-	(customerProduct.customer_licenses ?? []).flatMap((customerLicense) =>
-		customerLicense.planLicense
-			? [
-					{
-						licensePlanId: customerLicense.planLicense.product.id,
-						totalQuantity: customerLicense.granted,
-					},
-				]
-			: [],
-	);
+import type { Feature, FullCusProduct } from "@autumn/shared";
+import { customerProductToInstanceConfig } from "../timeline/instanceConfig/instanceConfigs";
+import { instanceConfigsMatch } from "../timeline/instanceConfig/instanceConfigsMatch";
 
 /** Two customer products grant the same plan, using the equality billing uses to keep a plan untouched. */
 export const customerProductsAreSame = ({
@@ -32,17 +12,15 @@ export const customerProductsAreSame = ({
 	before: FullCusProduct;
 	after: FullCusProduct;
 }) =>
-	customerProductMatchesPlan({
+	(before.internal_entity_id ?? null) === (after.internal_entity_id ?? null) &&
+	instanceConfigsMatch({
 		features,
-		customerProduct: before,
-		requestedPlan: {
-			fullProduct: {
-				...cusProductToProduct({ cusProduct: after }),
-				internal_id: after.internal_product_id,
-			},
-			featureQuantities: after.options ?? [],
-			customerLicenseQuantities: customerProductToLicenseQuantities(after),
-		},
-		internalEntityId: after.internal_entity_id ?? undefined,
-		planQuantity: after.quantity ?? DEFAULT_PLAN_QUANTITY,
+		first: customerProductToInstanceConfig({
+			customerProduct: before,
+			now: before.starts_at,
+		}),
+		second: customerProductToInstanceConfig({
+			customerProduct: after,
+			now: after.starts_at,
+		}),
 	});

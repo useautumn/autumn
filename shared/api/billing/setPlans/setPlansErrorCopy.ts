@@ -134,7 +134,7 @@ export const setPlansErrorCopy = (
 				line: [
 					bold(details.plan_name),
 					plain(
-						"is an ongoing plan, but a later phase also schedules a plan in its group.",
+						"is an ongoing plan, but a phase also lists it or another plan in its group.",
 					),
 				],
 				hint: {

@@ -22,7 +22,6 @@ import {
 } from "./errors/handleSetPlansErrors";
 import { logSetPlansContext } from "./logs/logSetPlansContext";
 import { setupSetPlansBillingContext } from "./setup/setupSetPlansBillingContext";
-import { findOutOfScopeCustomerProductIds } from "./subscriptionScope/findOutOfScopeCustomerProductIds";
 import type { SetPlansResult } from "./types/setPlansResult";
 import { buildReplacedSubscriptionAction } from "./utils/buildReplacedSubscriptionAction";
 import { ensureFreePhaseStripeProducts } from "./utils/ensureFreePhaseStripeProducts";
@@ -40,21 +39,36 @@ export const setPlans = async ({
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
 }): Promise<SetPlansResult> => {
+	// Explicit, so a checkout that resumes these params keeps the same policy.
+	const resolvedParams: SetPlansParamsV0 = {
+		...params,
+		undeclared_plans: params.undeclared_plans ?? "end",
+	};
 	const checkoutReservation =
 		!preview && !skipAutumnCheckout
 			? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
 			: undefined;
 
-	const billingContext = await setupSetPlansBillingContext({
+	const { billingContext, timeline } = await setupSetPlansBillingContext({
 		ctx,
-		params,
+		params: resolvedParams,
 		preview,
 	});
-	logSetPlansContext({ ctx, billingContext });
-	await handleSetPlansErrors({ ctx, billingContext, params, preview });
+	logSetPlansContext({ ctx, billingContext, timeline });
+	await handleSetPlansErrors({
+		ctx,
+		billingContext,
+		timeline,
+		params: resolvedParams,
+		preview,
+	});
 
-	const { autumnBillingPlan, phases, immediatePhaseTransition } =
-		computeSetPlansPlan({ ctx, billingContext });
+	const {
+		autumnBillingPlan,
+		phases,
+		immediatePhaseTransition,
+		customerProductChanges,
+	} = computeSetPlansPlan({ ctx, billingContext, timeline });
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 	await handleSetPlansComputeErrors({
 		ctx,
@@ -96,7 +110,8 @@ export const setPlans = async ({
 	const result: SetPlansResult = {
 		billingContext,
 		billingPlan,
-		schedulePlan: { phases, immediatePhaseTransition },
+		timeline,
+		schedulePlan: { phases, immediatePhaseTransition, customerProductChanges },
 	};
 
 	if (preview) {
@@ -111,7 +126,7 @@ export const setPlans = async ({
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({
 			ctx,
-			params,
+			params: resolvedParams,
 			billingContext,
 			billingPlan,
 			existingLock: checkoutReservation,
@@ -129,7 +144,7 @@ export const setPlans = async ({
 		const { billingResult } = await createAutumnCheckout({
 			ctx,
 			action: CheckoutAction.CreateSchedule,
-			params,
+			params: resolvedParams,
 			billingContext,
 			billingPlan,
 		});
@@ -146,7 +161,7 @@ export const setPlans = async ({
 		billingContext,
 		billingPlan,
 		checkoutLockParamsHash: !skipAutumnCheckout
-			? hashJson({ value: params })
+			? hashJson({ value: resolvedParams })
 			: undefined,
 	});
 	logStripeBillingResult({ ctx, result: billingResult.stripe });
@@ -168,9 +183,7 @@ export const setPlans = async ({
 		currentEpochMs: billingContext.currentEpochMs,
 		fullCustomer: billingContext.fullCustomer,
 		phases,
-		preservedCustomerProductIds: findOutOfScopeCustomerProductIds({
-			billingContext,
-		}),
+		preservedCustomerProductIds: timeline.outOfScopeCustomerProductIds,
 	});
 
 	return { ...result, billingResult, persistedSchedule };
