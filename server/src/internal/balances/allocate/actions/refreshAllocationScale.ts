@@ -1,5 +1,6 @@
 import {
 	type BalanceAllocations,
+	type Customer,
 	customers,
 	cusEntsToBalance,
 	fullSubjectToCustomerEntitlements,
@@ -11,10 +12,13 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
+import { generateId } from "@/utils/genUtils.js";
+import { setAllocationCounters } from "../repos/setAllocationCounters.js";
 import {
 	allocationCounterUsage,
 	allocationCycleOf,
 	sharedRowsOf,
+	toAllocationCounter,
 } from "../utils/allocationRows.js";
 
 export const ALLOCATIONS_ADJUSTED_TAG = "allocations_adjusted";
@@ -83,6 +87,27 @@ export const refreshAllocationScale = async ({
 		const usage = cycle
 			? allocationCounterUsage({ fullSubject, allocation, cycle })
 			: {};
+		// The claimed total is derivable from entity counters; re-derive it so deleted or released entities drop out.
+		const claimed = Object.entries(allocation.amounts).reduce(
+			(sum, [id, requested]) => sum + Math.min(usage[id] ?? 0, requested),
+			0,
+		);
+		if (cycle && claimed !== (usage[""] ?? 0))
+			await setAllocationCounters({
+				db: ctx.db,
+				counters: [
+					toAllocationCounter({
+						id: generateId("uw"),
+						internalCustomerId: fullSubject.customer.internal_id,
+						internalFeatureId,
+						featureId: allocation.feature_id,
+						internalEntityId: null,
+						cycle,
+						usage: claimed,
+						now,
+					}),
+				],
+			});
 		const scale = solveAllocationScale({
 			sharedRemaining: cusEntsToBalance({ cusEnts: sharedRows }),
 			entries: Object.entries(allocation.amounts).map(([id, requested]) => ({
@@ -96,7 +121,14 @@ export const refreshAllocationScale = async ({
 		next[internalFeatureId] = { ...allocation, scale, scale_cycle_end: cycleEnd };
 		changed = true;
 	}
-	if (!changed) return false;
+	if (!changed) {
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			source: "refreshAllocationScale",
+		});
+		return false;
+	}
 
 	const { customer } = fullSubject;
 	const originalFullCustomer = await CusService.getFull({
@@ -149,4 +181,40 @@ export const planOnlyUpdatesAllocations = ({
 		!otherWork &&
 		customerId !== undefined
 	);
+};
+
+/** Drops a deleted entity's share and re-fits what's left; its counter goes with the entity row. */
+export const releaseEntityAllocations = async ({
+	ctx,
+	customer,
+	internalEntityId,
+}: {
+	ctx: AutumnContext;
+	customer: Customer;
+	internalEntityId: string;
+}): Promise<void> => {
+	const allocations = customer.balance_allocations;
+	if (!allocations) return;
+	const held = Object.values(allocations).some(
+		(allocation) => allocation.amounts[internalEntityId] !== undefined,
+	);
+	if (!held) return;
+
+	const next: BalanceAllocations = Object.fromEntries(
+		Object.entries(allocations).map(([internalFeatureId, allocation]) => {
+			const { [internalEntityId]: _released, ...amounts } = allocation.amounts;
+			return [internalFeatureId, { ...allocation, amounts }];
+		}),
+	);
+	const { executeAutumnBillingPlan } = await import(
+		"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js"
+	);
+	await executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan: {
+			customerId: customer.id ?? customer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomer: { customer, updates: { balance_allocations: next } },
+		},
+	});
 };
