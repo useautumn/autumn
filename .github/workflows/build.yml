@@ -1,239 +1,239 @@
-name: Build and Push to ECR
-
-on:
-  push:
-    branches:
-      - main
-      - staging
-      - dev
-      
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Manual deploy'
-        required: false
-        default: 'manual'
-      sha:
-        description: 'Rebuild this commit (full SHA, must be on main; run from main). Pushes the image without deploying.'
-        required: false
-        default: ''
-
-# Cancel an older in-progress build on the same branch when a newer commit
-# lands, so the latest commit is the one that builds + deploys. A rebuild of a
-# chosen commit gets its own group, so it never cancels (or is cancelled by) a branch build.
-concurrency:
-  group: build-${{ github.event.inputs.sha || github.ref }}
-  cancel-in-progress: true
-
-# ECR region is selected per-branch in the "Extract metadata" step:
-#   prod repo (autumn)         -> us-east-2
-#   staging repo (autumn-staging) -> us-east-1
-
-jobs:
-  checks:
-    name: Type Check
-    runs-on: blacksmith-8vcpu-ubuntu-2404
-
-    permissions:
-      contents: read
-      actions: read
-
-    outputs:
-      deploy: ${{ steps.deploy-gate.outputs.deploy }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.inputs.sha || github.sha }}
-
-      # The image is tagged main-<sha> and is deployable to production, so a rebuild
-      # may only target a commit that is already on main.
-      - name: Verify rebuild commit is on main
-        if: ${{ github.event.inputs.sha }}
-        env:
-          REBUILD_SHA: ${{ github.event.inputs.sha }}
-          REQUESTED_TAG: ${{ github.event.inputs.tag }}
-        run: |
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo "::error::Rebuilding a commit is only allowed when the workflow runs from main."
-            exit 1
-          fi
-          if [ "$REQUESTED_TAG" = "deploy-staging" ]; then
-            echo "::error::A commit rebuild can't be combined with tag=deploy-staging."
-            exit 1
-          fi
-          if ! echo "$REBUILD_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo "::error::sha must be a full 40-character commit SHA."
-            exit 1
-          fi
-          git fetch origin main
-          if ! git merge-base --is-ancestor "$REBUILD_SHA" origin/main; then
-            echo "::error::$REBUILD_SHA is not on main."
-            exit 1
-          fi
-      
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-      
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-      
-      - name: Run TypeScript type check
-        run: |
-          bun ts
-
-      # Merges that only touch frontends, docs, the CLI, etc. skip the prod deploy.
-      - name: Decide production deploy
-        id: deploy-gate
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        working-directory: .github/scripts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Filter conclusions client-side; the API's status filter returns stale runs.
-          BASE_SHA=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main \
-            --event push --limit 50 --json headSha,conclusion \
-            --jq 'map(select(.conclusion == "success"))[0].headSha // ""')
-          BASE_SHA="$BASE_SHA" bun deploy-gate.ts
-
-  build-and-push:
-    name: Build and Push Docker Image
-    needs: checks
-    runs-on: blacksmith-16vcpu-ubuntu-2404
-    
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: read
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.sha || github.sha }}
-      
-      - name: Extract metadata for Docker
-        id: meta
-        env:
-          REQUESTED_STAGING_DEPLOY: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag == 'deploy-staging' }}
-          REBUILD_SHA: ${{ github.event.inputs.sha }}
-        run: |
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          # A rebuild tags the image with the commit it built, not the branch head it ran from.
-          TARGET_SHA=${REBUILD_SHA:-$GITHUB_SHA}
-          COMMIT_SHA=${TARGET_SHA::8}
-          DEPLOY_STAGING_OVERRIDE="false"
-          
-          # Sanitize branch name for Docker tag (replace / with -)
-          SAFE_BRANCH=$(echo $BRANCH_NAME | sed 's/\//-/g')
-
-          # Any branch can go to staging via workflow_dispatch with tag=deploy-staging.
-          if [ "$REQUESTED_STAGING_DEPLOY" = "true" ]; then
-            DEPLOY_STAGING_OVERRIDE="true"
-          fi
-
-          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
-            # deployStaging expects the staging ECR image tag to be dev-<sha>.
-            IMAGE_BRANCH="dev"
-          else
-            IMAGE_BRANCH="$SAFE_BRANCH"
-          fi
-          
-          echo "branch=$IMAGE_BRANCH" >> $GITHUB_OUTPUT
-          echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
-          echo "deploy_staging_override=$DEPLOY_STAGING_OVERRIDE" >> $GITHUB_OUTPUT
-          
-          # Only main builds into production's ECR; every other branch goes to staging's.
-          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ] || [ "$BRANCH_NAME" != "main" ]; then
-            echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
-            echo "region=us-east-1" >> $GITHUB_OUTPUT
-          else
-            echo "ecr_repo=autumn" >> $GITHUB_OUTPUT
-            echo "region=us-east-2" >> $GITHUB_OUTPUT
-          fi
-          
-          # Set custom tag if provided
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
-            echo "custom_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ steps.meta.outputs.region }}
-      
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-      
-      - name: Set up Blacksmith Docker builder
-        uses: useblacksmith/setup-docker-builder@v1
-      
-      - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ steps.meta.outputs.ecr_repo }}
-          IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }}
-          IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }}
-        run: |
-          # Build single combined tag: branch-sha
-          COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}"
-          TAGS="${ECR_REGISTRY}/${ECR_REPOSITORY}:${COMBINED_TAG}"
-          
-          # Layer + cache-mount persistence is handled by the Blacksmith sticky
-          # disk mounted at /var/lib/buildkit, so no registry cache-from/to.
-          docker buildx build \
-            --platform linux/amd64 \
-            --push \
-            --provenance=false \
-            --sbom=false \
-            --tag ${TAGS//,/ --tag } \
-            -f docker/Dockerfile \
-            .
-      
-      - name: Output image details
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ steps.meta.outputs.ecr_repo }}
-          IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }}
-          IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }}
-        run: |
-          COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}"
-          echo "Image pushed successfully!"
-          echo "Repository: ${ECR_REGISTRY}/${ECR_REPOSITORY}"
-          echo "Tag: ${COMBINED_TAG}"
-
-      - name: Auto-deploy production
-        # A rebuild only pushes the image; deploying an older commit is a separate, guarded step.
-        if: github.ref == 'refs/heads/main' && !github.event.inputs.sha && steps.meta.outputs.deploy_staging_override != 'true' && (github.event_name != 'push' || needs.checks.outputs.deploy == 'true')
-        env:
-          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
-          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
-          COMMIT_SHA: ${{ github.sha }}
-        run: |
-          echo "Triggering production auto-deploy for $COMMIT_SHA..."
-          curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github" \
-            -H "Content-Type: application/json" \
-            -H "x-deploy-secret: $DEPLOY_SECRET" \
-            -d "{\"commitSha\": \"$COMMIT_SHA\"}"
-          echo "Auto-deploy triggered!"
-
-      - name: Auto-deploy staging
-        if: steps.meta.outputs.deploy_staging_override == 'true'
-        env:
-          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
-          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
-          COMMIT_SHA: ${{ github.sha }}
-        run: |
-          echo "Deploying to staging..."
-          curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github/staging" \
-            -H "Content-Type: application/json" \
-            -H "x-deploy-secret: $DEPLOY_SECRET" \
-            -d "{\"commitSha\": \"$COMMIT_SHA\"}"
-          echo "Staging deploy triggered!"
+name: Build and Push to ECR og/worker-stall-hook
+ og/worker-stall-hook
+on: og/worker-stall-hook
+  push: og/worker-stall-hook
+    branches: og/worker-stall-hook
+      - main og/worker-stall-hook
+      - staging og/worker-stall-hook
+      - dev og/worker-stall-hook
+       og/worker-stall-hook
+  workflow_dispatch: og/worker-stall-hook
+    inputs: og/worker-stall-hook
+      tag: og/worker-stall-hook
+        description: 'Manual deploy' og/worker-stall-hook
+        required: false og/worker-stall-hook
+        default: 'manual' og/worker-stall-hook
+      sha: og/worker-stall-hook
+        description: 'Rebuild this commit (full SHA, must be on main; run from main). Pushes the image without deploying.' og/worker-stall-hook
+        required: false og/worker-stall-hook
+        default: '' og/worker-stall-hook
+ og/worker-stall-hook
+# Cancel an older in-progress build on the same branch when a newer commit og/worker-stall-hook
+# lands, so the latest commit is the one that builds + deploys. A rebuild of a og/worker-stall-hook
+# chosen commit gets its own group, so it never cancels (or is cancelled by) a branch build. og/worker-stall-hook
+concurrency: og/worker-stall-hook
+  group: build-${{ github.event.inputs.sha || github.ref }} og/worker-stall-hook
+  cancel-in-progress: true og/worker-stall-hook
+ og/worker-stall-hook
+# ECR region is selected per-branch in the "Extract metadata" step: og/worker-stall-hook
+#   prod repo (autumn)         -> us-east-2 og/worker-stall-hook
+#   staging repo (autumn-staging) -> us-east-1 og/worker-stall-hook
+ og/worker-stall-hook
+jobs: og/worker-stall-hook
+  checks: og/worker-stall-hook
+    name: Type Check og/worker-stall-hook
+    runs-on: blacksmith-8vcpu-ubuntu-2404 og/worker-stall-hook
+ og/worker-stall-hook
+    permissions: og/worker-stall-hook
+      contents: read og/worker-stall-hook
+      actions: read og/worker-stall-hook
+ og/worker-stall-hook
+    outputs: og/worker-stall-hook
+      deploy: ${{ steps.deploy-gate.outputs.deploy }} og/worker-stall-hook
+     og/worker-stall-hook
+    steps: og/worker-stall-hook
+      - name: Checkout code og/worker-stall-hook
+        uses: actions/checkout@v4 og/worker-stall-hook
+        with: og/worker-stall-hook
+          fetch-depth: 0 og/worker-stall-hook
+          ref: ${{ github.event.inputs.sha || github.sha }} og/worker-stall-hook
+ og/worker-stall-hook
+      # The image is tagged main-<sha> and is deployable to production, so a rebuild og/worker-stall-hook
+      # may only target a commit that is already on main. og/worker-stall-hook
+      - name: Verify rebuild commit is on main og/worker-stall-hook
+        if: ${{ github.event.inputs.sha }} og/worker-stall-hook
+        env: og/worker-stall-hook
+          REBUILD_SHA: ${{ github.event.inputs.sha }} og/worker-stall-hook
+          REQUESTED_TAG: ${{ github.event.inputs.tag }} og/worker-stall-hook
+        run: | og/worker-stall-hook
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then og/worker-stall-hook
+            echo "::error::Rebuilding a commit is only allowed when the workflow runs from main." og/worker-stall-hook
+            exit 1 og/worker-stall-hook
+          fi og/worker-stall-hook
+          if [ "$REQUESTED_TAG" = "deploy-staging" ]; then og/worker-stall-hook
+            echo "::error::A commit rebuild can't be combined with tag=deploy-staging." og/worker-stall-hook
+            exit 1 og/worker-stall-hook
+          fi og/worker-stall-hook
+          if ! echo "$REBUILD_SHA" | grep -Eq '^[0-9a-f]{40}$'; then og/worker-stall-hook
+            echo "::error::sha must be a full 40-character commit SHA." og/worker-stall-hook
+            exit 1 og/worker-stall-hook
+          fi og/worker-stall-hook
+          git fetch origin main og/worker-stall-hook
+          if ! git merge-base --is-ancestor "$REBUILD_SHA" origin/main; then og/worker-stall-hook
+            echo "::error::$REBUILD_SHA is not on main." og/worker-stall-hook
+            exit 1 og/worker-stall-hook
+          fi og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Set up Bun og/worker-stall-hook
+        uses: oven-sh/setup-bun@v2 og/worker-stall-hook
+        with: og/worker-stall-hook
+          bun-version: 1.4.2 og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Install dependencies og/worker-stall-hook
+        run: bun install --frozen-lockfile og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Run TypeScript type check og/worker-stall-hook
+        run: | og/worker-stall-hook
+          bun ts og/worker-stall-hook
+ og/worker-stall-hook
+      # Merges that only touch frontends, docs, the CLI, etc. skip the prod deploy. og/worker-stall-hook
+      - name: Decide production deploy og/worker-stall-hook
+        id: deploy-gate og/worker-stall-hook
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' og/worker-stall-hook
+        working-directory: .github/scripts og/worker-stall-hook
+        env: og/worker-stall-hook
+          GH_TOKEN: ${{ github.token }} og/worker-stall-hook
+        run: | og/worker-stall-hook
+          # Filter conclusions client-side; the API's status filter returns stale runs. og/worker-stall-hook
+          BASE_SHA=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main \ og/worker-stall-hook
+            --event push --limit 50 --json headSha,conclusion \ og/worker-stall-hook
+            --jq 'map(select(.conclusion == "success"))[0].headSha // ""') og/worker-stall-hook
+          BASE_SHA="$BASE_SHA" bun deploy-gate.ts og/worker-stall-hook
+ og/worker-stall-hook
+  build-and-push: og/worker-stall-hook
+    name: Build and Push Docker Image og/worker-stall-hook
+    needs: checks og/worker-stall-hook
+    runs-on: blacksmith-16vcpu-ubuntu-2404 og/worker-stall-hook
+     og/worker-stall-hook
+    permissions: og/worker-stall-hook
+      id-token: write og/worker-stall-hook
+      contents: read og/worker-stall-hook
+      pull-requests: read og/worker-stall-hook
+     og/worker-stall-hook
+    steps: og/worker-stall-hook
+      - name: Checkout code og/worker-stall-hook
+        uses: actions/checkout@v4 og/worker-stall-hook
+        with: og/worker-stall-hook
+          ref: ${{ github.event.inputs.sha || github.sha }} og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Extract metadata for Docker og/worker-stall-hook
+        id: meta og/worker-stall-hook
+        env: og/worker-stall-hook
+          REQUESTED_STAGING_DEPLOY: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag == 'deploy-staging' }} og/worker-stall-hook
+          REBUILD_SHA: ${{ github.event.inputs.sha }} og/worker-stall-hook
+        run: | og/worker-stall-hook
+          BRANCH_NAME=${GITHUB_REF#refs/heads/} og/worker-stall-hook
+          # A rebuild tags the image with the commit it built, not the branch head it ran from. og/worker-stall-hook
+          TARGET_SHA=${REBUILD_SHA:-$GITHUB_SHA} og/worker-stall-hook
+          COMMIT_SHA=${TARGET_SHA::8} og/worker-stall-hook
+          DEPLOY_STAGING_OVERRIDE="false" og/worker-stall-hook
+           og/worker-stall-hook
+          # Sanitize branch name for Docker tag (replace / with -) og/worker-stall-hook
+          SAFE_BRANCH=$(echo $BRANCH_NAME | sed 's/\//-/g') og/worker-stall-hook
+ og/worker-stall-hook
+          # Any branch can go to staging via workflow_dispatch with tag=deploy-staging. og/worker-stall-hook
+          if [ "$REQUESTED_STAGING_DEPLOY" = "true" ]; then og/worker-stall-hook
+            DEPLOY_STAGING_OVERRIDE="true" og/worker-stall-hook
+          fi og/worker-stall-hook
+ og/worker-stall-hook
+          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then og/worker-stall-hook
+            # deployStaging expects the staging ECR image tag to be dev-<sha>. og/worker-stall-hook
+            IMAGE_BRANCH="dev" og/worker-stall-hook
+          else og/worker-stall-hook
+            IMAGE_BRANCH="$SAFE_BRANCH" og/worker-stall-hook
+          fi og/worker-stall-hook
+           og/worker-stall-hook
+          echo "branch=$IMAGE_BRANCH" >> $GITHUB_OUTPUT og/worker-stall-hook
+          echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT og/worker-stall-hook
+          echo "deploy_staging_override=$DEPLOY_STAGING_OVERRIDE" >> $GITHUB_OUTPUT og/worker-stall-hook
+           og/worker-stall-hook
+          # Only main builds into production's ECR; every other branch goes to staging's. og/worker-stall-hook
+          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ] || [ "$BRANCH_NAME" != "main" ]; then og/worker-stall-hook
+            echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT og/worker-stall-hook
+            echo "region=us-east-1" >> $GITHUB_OUTPUT og/worker-stall-hook
+          else og/worker-stall-hook
+            echo "ecr_repo=autumn" >> $GITHUB_OUTPUT og/worker-stall-hook
+            echo "region=us-east-2" >> $GITHUB_OUTPUT og/worker-stall-hook
+          fi og/worker-stall-hook
+           og/worker-stall-hook
+          # Set custom tag if provided og/worker-stall-hook
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then og/worker-stall-hook
+            echo "custom_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT og/worker-stall-hook
+          fi og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Configure AWS credentials og/worker-stall-hook
+        uses: aws-actions/configure-aws-credentials@v4 og/worker-stall-hook
+        with: og/worker-stall-hook
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} og/worker-stall-hook
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} og/worker-stall-hook
+          aws-region: ${{ steps.meta.outputs.region }} og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Login to Amazon ECR og/worker-stall-hook
+        id: login-ecr og/worker-stall-hook
+        uses: aws-actions/amazon-ecr-login@v2 og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Set up Blacksmith Docker builder og/worker-stall-hook
+        uses: useblacksmith/setup-docker-builder@v1 og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Build and push Docker image og/worker-stall-hook
+        env: og/worker-stall-hook
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} og/worker-stall-hook
+          ECR_REPOSITORY: ${{ steps.meta.outputs.ecr_repo }} og/worker-stall-hook
+          IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }} og/worker-stall-hook
+          IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }} og/worker-stall-hook
+        run: | og/worker-stall-hook
+          # Build single combined tag: branch-sha og/worker-stall-hook
+          COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}" og/worker-stall-hook
+          TAGS="${ECR_REGISTRY}/${ECR_REPOSITORY}:${COMBINED_TAG}" og/worker-stall-hook
+           og/worker-stall-hook
+          # Layer + cache-mount persistence is handled by the Blacksmith sticky og/worker-stall-hook
+          # disk mounted at /var/lib/buildkit, so no registry cache-from/to. og/worker-stall-hook
+          docker buildx build \ og/worker-stall-hook
+            --platform linux/amd64 \ og/worker-stall-hook
+            --push \ og/worker-stall-hook
+            --provenance=false \ og/worker-stall-hook
+            --sbom=false \ og/worker-stall-hook
+            --tag ${TAGS//,/ --tag } \ og/worker-stall-hook
+            -f docker/Dockerfile \ og/worker-stall-hook
+            . og/worker-stall-hook
+       og/worker-stall-hook
+      - name: Output image details og/worker-stall-hook
+        env: og/worker-stall-hook
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} og/worker-stall-hook
+          ECR_REPOSITORY: ${{ steps.meta.outputs.ecr_repo }} og/worker-stall-hook
+          IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }} og/worker-stall-hook
+          IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }} og/worker-stall-hook
+        run: | og/worker-stall-hook
+          COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}" og/worker-stall-hook
+          echo "Image pushed successfully!" og/worker-stall-hook
+          echo "Repository: ${ECR_REGISTRY}/${ECR_REPOSITORY}" og/worker-stall-hook
+          echo "Tag: ${COMBINED_TAG}" og/worker-stall-hook
+ og/worker-stall-hook
+      - name: Auto-deploy production og/worker-stall-hook
+        # A rebuild only pushes the image; deploying an older commit is a separate, guarded step. og/worker-stall-hook
+        if: github.ref == 'refs/heads/main' && !github.event.inputs.sha && steps.meta.outputs.deploy_staging_override != 'true' && (github.event_name != 'push' || needs.checks.outputs.deploy == 'true') og/worker-stall-hook
+        env: og/worker-stall-hook
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }} og/worker-stall-hook
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }} og/worker-stall-hook
+          COMMIT_SHA: ${{ github.sha }} og/worker-stall-hook
+        run: | og/worker-stall-hook
+          echo "Triggering production auto-deploy for $COMMIT_SHA..." og/worker-stall-hook
+          curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github" \ og/worker-stall-hook
+            -H "Content-Type: application/json" \ og/worker-stall-hook
+            -H "x-deploy-secret: $DEPLOY_SECRET" \ og/worker-stall-hook
+            -d "{\"commitSha\": \"$COMMIT_SHA\"}" og/worker-stall-hook
+          echo "Auto-deploy triggered!" og/worker-stall-hook
+ og/worker-stall-hook
+      - name: Auto-deploy staging og/worker-stall-hook
+        if: steps.meta.outputs.deploy_staging_override == 'true' og/worker-stall-hook
+        env: og/worker-stall-hook
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }} og/worker-stall-hook
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }} og/worker-stall-hook
+          COMMIT_SHA: ${{ github.sha }} og/worker-stall-hook
+        run: | og/worker-stall-hook
+          echo "Deploying to staging..." og/worker-stall-hook
+          curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github/staging" \ og/worker-stall-hook
+            -H "Content-Type: application/json" \ og/worker-stall-hook
+            -H "x-deploy-secret: $DEPLOY_SECRET" \ og/worker-stall-hook
+            -d "{\"commitSha\": \"$COMMIT_SHA\"}" og/worker-stall-hook
+          echo "Staging deploy triggered!" og/worker-stall-hook
