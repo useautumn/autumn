@@ -999,7 +999,7 @@ const createAndRedeemReferralCode = ({
  *
  * @param slug - Sub-org slug; defaults to randomized "tax-XXXXXX".
  * @param name - Display name; defaults to slug.
- * @param userEmail - Owner email; defaults to "platform-tests@autumn.test".
+ * @param userEmail - Owner email; defaults to `${slug}@autumn.test` (unique per sub-org).
  * @param configOverrides - Merged into the sub-org's config jsonb.
  * @param taxRegistrations - Countries to register Stripe Tax for.
  * @param setupDefaultFeatures - Inserts standard test features on the sub-org.
@@ -1202,8 +1202,9 @@ export async function initScenario({
 		const slug =
 			config.platformConfig.slug ??
 			`tax-${Math.random().toString(36).slice(2, 8)}`;
-		const userEmail =
-			config.platformConfig.userEmail ?? "platform-tests@autumn.test";
+		// Per-sub-org email avoids the users.email race in handleCreatePlatformOrg's
+		// find-or-create; slug-derived so same-slug re-provisioning reuses the user.
+		const userEmail = config.platformConfig.userEmail ?? `${slug}@autumn.test`;
 		const name = config.platformConfig.name ?? slug;
 
 		const response = (await masterAutumn.post("/platform/organizations", {
