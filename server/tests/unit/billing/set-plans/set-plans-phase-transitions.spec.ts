@@ -59,6 +59,7 @@ const previewPhases = ({
 		),
 		plans: setPlansPhasePlans({
 			phases,
+			outOfScopeCustomerProductIds: new Set(),
 			phaseCustomers,
 			originalFullCustomer,
 			features: [],

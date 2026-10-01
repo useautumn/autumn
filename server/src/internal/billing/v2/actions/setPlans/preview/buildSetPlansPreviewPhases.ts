@@ -7,6 +7,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import { findOutOfScopeCustomerProductIds } from "../subscriptionScope/findOutOfScopeCustomerProductIds";
 import { buildSavedPhaseCustomers } from "./balances/buildSavedPhaseCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
@@ -76,6 +77,9 @@ export const buildSetPlansPreviewPhases = async ({
 	});
 	const phasePlans = setPlansPhasePlans({
 		phases,
+		outOfScopeCustomerProductIds: new Set(
+			findOutOfScopeCustomerProductIds({ billingContext }),
+		),
 		phaseCustomers,
 		originalFullCustomer: fullCustomer,
 		features: ctx.features,

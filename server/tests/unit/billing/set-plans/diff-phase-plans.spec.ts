@@ -84,13 +84,16 @@ const previewStatuses = ({
 	originalFullCustomer,
 	autumnBillingPlan,
 	phases,
+	outOfScopeCustomerProductIds = [],
 }: {
 	originalFullCustomer: FullCustomer;
 	autumnBillingPlan: AutumnBillingPlan;
 	phases: SchedulePhasePlan[];
+	outOfScopeCustomerProductIds?: string[];
 }) =>
 	setPlansPhasePlans({
 		phases,
+		outOfScopeCustomerProductIds: new Set(outOfScopeCustomerProductIds),
 		phaseCustomers: buildSetPlansPhaseCustomers({
 			ctx,
 			fullCustomer: originalFullCustomer,
@@ -277,6 +280,22 @@ describe("diffPhasePlans", () => {
 		expect(
 			statuses(diffPhasePlans({ features: [], before: [pro], after: [pro] })),
 		).toEqual([["kept", "pro", null]]);
+	});
+
+	test("a plan billed on another subscription is left out of the preview", () => {
+		const pro = planRow({ id: "cp_pro", planId: "pro" });
+		const seats = planRow({ id: "cp_seats", planId: "seats" });
+
+		expect(
+			previewStatuses({
+				originalFullCustomer: makeFullCustomer({
+					customerProducts: [pro, seats],
+				}),
+				autumnBillingPlan: makeAutumnBillingPlan({}),
+				phases: [{ startsAt: NOW, customerProductIds: ["cp_pro", "cp_seats"] }],
+				outOfScopeCustomerProductIds: ["cp_seats"],
+			}),
+		).toEqual([[["kept", "pro"]]]);
 	});
 
 	test("the same plan on two entities gets a status per entity", () => {

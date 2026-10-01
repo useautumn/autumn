@@ -149,9 +149,22 @@ const phaseDiffs = ({
 	}).flatMap(newPhaseDiff);
 };
 
-/** Every plan in each phase, classified against the saved state, or the previous phase for a newly added one. */
+const isOutOfScope = ({
+	diff,
+	outOfScopeCustomerProductIds,
+}: {
+	diff: PhasePlanDiff;
+	outOfScopeCustomerProductIds: Set<string>;
+}) =>
+	[diff.before, diff.after].some(
+		(customerProduct) =>
+			customerProduct && outOfScopeCustomerProductIds.has(customerProduct.id),
+	);
+
+/** Every in-scope plan in each phase, classified against the saved state, or the previous phase for a newly added one. */
 export const setPlansPhasePlans = ({
 	phases,
+	outOfScopeCustomerProductIds,
 	phaseCustomers,
 	originalFullCustomer,
 	features,
@@ -159,6 +172,7 @@ export const setPlansPhasePlans = ({
 	currency,
 }: {
 	phases: SchedulePhasePlan[];
+	outOfScopeCustomerProductIds: Set<string>;
 	phaseCustomers: FullCustomer[];
 	originalFullCustomer: FullCustomer;
 	features: Feature[];
@@ -175,13 +189,15 @@ export const setPlansPhasePlans = ({
 			features,
 		});
 
-		return diffs.map((diff) =>
-			toPreviewPlan({
-				customerProduct: diffToCustomerProduct({ diff, phaseCustomer }),
-				status: diff.status,
-				credit: replacedPlanCredit({ diff, phaseIndex, creditLineItems }),
-				entities: originalFullCustomer.entities,
-				currency,
-			}),
-		);
+		return diffs
+			.filter((diff) => !isOutOfScope({ diff, outOfScopeCustomerProductIds }))
+			.map((diff) =>
+				toPreviewPlan({
+					customerProduct: diffToCustomerProduct({ diff, phaseCustomer }),
+					status: diff.status,
+					credit: replacedPlanCredit({ diff, phaseIndex, creditLineItems }),
+					entities: originalFullCustomer.entities,
+					currency,
+				}),
+			);
 	});
