@@ -256,6 +256,15 @@ export const startAtom = (repoRoot: string): Subprocess => {
 	});
 };
 
+const capabilityProcs = new Set<Subprocess>();
+let capabilityServicesStopped = false;
+
+/** Stops supervision and kills capability services once the worker itself is going down. */
+const stopCapabilityServices = (): void => {
+	capabilityServicesStopped = true;
+	for (const proc of capabilityProcs) proc.kill();
+};
+
 /** Starts and supervises a capability service; a crash restarts it so the worker keeps serving its shard. */
 const superviseCapabilityService = (
 	repoRoot: string,
@@ -274,14 +283,18 @@ const superviseCapabilityService = (
 			...service.env,
 		} as Record<string, string>,
 	});
+	capabilityProcs.add(proc);
 	void proc.exited.then(async (code) => {
+		capabilityProcs.delete(proc);
+		if (capabilityServicesStopped) return;
 		console.error(
 			chalk.red(
 				`[tw-boot] ${service.name} exited with code ${code} — restarting`,
 			),
 		);
 		await sleep(CAPABILITY_RESTART_DELAY_MS);
-		superviseCapabilityService(repoRoot, service);
+		if (!capabilityServicesStopped)
+			superviseCapabilityService(repoRoot, service);
 	});
 };
 
@@ -606,11 +619,13 @@ const main = async (): Promise<void> => {
 		cronProc.exited,
 		...(balanceWorkerProc ? [balanceWorkerProc.exited] : []),
 	]);
+	stopCapabilityServices();
 };
 
 if (import.meta.main) {
 	main().catch((error) => {
 		console.error(chalk.red(`[tw-boot] FATAL: ${(error as Error).message}`));
+		stopCapabilityServices();
 		process.exit(1);
 	});
 }

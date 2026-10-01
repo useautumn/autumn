@@ -109,7 +109,7 @@ export type Registry = Record<string, RegistryEntry>;
  * Live, in-memory handle to one provisioned worker the dispatcher schedules
  * against. `publicUrl` is `sandbox.domain(SERVER_PORT)` (the inbound Stripe
  * webhook target, plan §6a). `capabilities` are the test capabilities it serves
- * (empty on the normal pool). `lastFile`/`busy` drive the sliding-window scheduling and
+ * (empty on the normal pool). `lastFile`/`inFlight` drive the sliding-window scheduling and
  * the "retry on a different worker" rule (plan §8.7).
  */
 export type WorkerHandle = {
