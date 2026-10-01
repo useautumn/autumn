@@ -63,6 +63,23 @@ test("every selected capability gets at least one worker without starving normal
 	).toThrow("Selected test shards require --max>=3");
 });
 
+test("a mixed run always keeps a worker for normal tests", () => {
+	expect(
+		planShardWorkers({
+			workers: 4,
+			normalFileCount: 10,
+			capabilityFileCounts: [10],
+		}),
+	).toEqual({ totalWorkers: 4, capabilityWorkers: [2] });
+	expect(
+		planShardWorkers({
+			workers: 3,
+			normalFileCount: 1,
+			capabilityFileCounts: [100, 100],
+		}),
+	).toEqual({ totalWorkers: 3, capabilityWorkers: [1, 1] });
+});
+
 test("capability-only runs use every worker", () => {
 	expect(
 		planShardWorkers({

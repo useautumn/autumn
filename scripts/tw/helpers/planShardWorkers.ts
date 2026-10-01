@@ -19,20 +19,21 @@ export const planShardWorkers = ({
 		throw new Error(`Selected test shards require --max>=${shardCount}`);
 	}
 
-	// Each later non-empty shard keeps one worker in reserve; the last shard takes the rest.
+	// Every later non-empty shard, the normal pool included, keeps one worker in reserve.
 	let unplannedShards = shardCount;
 	let remainingWorkers = totalWorkers;
 	const capabilityWorkers = capabilityFileCounts.map((fileCount) => {
 		if (fileCount === 0) return 0;
 		unplannedShards--;
-		const share =
-			unplannedShards === 0
-				? Math.min(fileCount, remainingWorkers)
-				: Math.min(
-						fileCount,
-						remainingWorkers - unplannedShards,
-						Math.max(1, Math.round((totalWorkers * fileCount) / totalFiles)),
-					);
+		// Only without normal files can a capability shard be last and take the leftovers.
+		const takesLeftovers = normalFileCount === 0 && unplannedShards === 0;
+		const share = takesLeftovers
+			? Math.min(fileCount, remainingWorkers)
+			: Math.min(
+					fileCount,
+					remainingWorkers - unplannedShards,
+					Math.max(1, Math.round((totalWorkers * fileCount) / totalFiles)),
+				);
 		remainingWorkers -= share;
 		return share;
 	});
