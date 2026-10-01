@@ -11,6 +11,7 @@
  */
 
 import type { ProviderName } from "./helpers/provider.ts";
+import type { TestCapabilityId } from "./helpers/testCapabilities.ts";
 
 /** The Stripe/Svix env the swarm runs against. Workers run in `sandbox` env. */
 export type TwEnv = "sandbox";
@@ -107,8 +108,8 @@ export type Registry = Record<string, RegistryEntry>;
 /**
  * Live, in-memory handle to one provisioned worker the dispatcher schedules
  * against. `publicUrl` is `sandbox.domain(SERVER_PORT)` (the inbound Stripe
- * webhook target, plan §6a). `isSvixShard` marks the single dedicated Svix
- * worker (plan §7). `lastFile`/`busy` drive the sliding-window scheduling and
+ * webhook target, plan §6a). `capability` names the capability shard it serves
+ * (null on the normal pool). `lastFile`/`busy` drive the sliding-window scheduling and
  * the "retry on a different worker" rule (plan §8.7).
  */
 export type WorkerHandle = {
@@ -116,7 +117,7 @@ export type WorkerHandle = {
 	sandboxId?: string;
 	publicUrl: string;
 	accountId?: string;
-	isSvixShard: boolean;
+	capability: TestCapabilityId | null;
 	lastFile?: string;
 	/**
 	 * Number of test files currently running ON this worker. The pool admits up to
@@ -124,14 +125,4 @@ export type WorkerHandle = {
 	 * available while `inFlight < slotsPerWorker` (replaces the old binary `busy`).
 	 */
 	inFlight: number;
-};
-
-/**
- * Build-time partition of the selected test files: the Svix files routed onto
- * the single dedicated Svix shard vs. everything else on the general pool
- * (plan §7 detection + recommendation).
- */
-export type ShardPlan = {
-	svixFiles: string[];
-	normalFiles: string[];
 };

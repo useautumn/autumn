@@ -18,8 +18,9 @@
  *   3. (if NEEDS_SVIX) bind the orchestrator-created Svix app into svix_config (plan §7/§9a).
  *   4. Bind the Stripe sub-account into the localhost DB (plan §6a step 2 / §9a).
  *   5. Start the Autumn server (dev single-process path, NODE_ENV=development)
- *      listening on SERVER_PORT.
- *   6. Wait for the server health endpoint (`GET /`, 200 when ready).
+ *      listening on SERVER_PORT, plus the TW_CAPABILITY shard's service if any.
+ *   6. Wait for the server health endpoint (`GET /`, 200 when ready) and the
+ *      capability service's port.
  *   7. Print `TW_WORKER_READY` to stdout.
  *
  * Fails loud: any service that doesn't come up within its budget throws with a
@@ -32,6 +33,7 @@
  *   - NEEDS_SVIX        (set/truthy on the single dedicated Svix shard; §7)
  *   - SVIX_API_KEY      (only present on the Svix shard; §7/§11a)
  *   - SVIX_APP_ID       (orchestrator-created Svix app id; only on the Svix shard; §9a)
+ *   - TW_CAPABILITY     (capability shard id from helpers/testCapabilities.ts; unset on normal workers)
  *   - SERVER_PORT       (the only exposed port; defaults to constants.SERVER_PORT)
  *   - plus the baked/localhost service env from §11a.
  */
@@ -53,6 +55,7 @@ import {
 	SERVER_PORT,
 	TW_ENV,
 } from "../constants.js";
+import { findTestCapability } from "../helpers/testCapabilities.js";
 import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 
 /** The READY sentinel the orchestrator scans stdout for. Plan §9 step 5. */
@@ -247,6 +250,31 @@ export const startAtom = (repoRoot: string): Subprocess => {
 			ATOM_DATA_DIR: join(repoRoot, ".data", "atom"),
 		} as Record<string, string>,
 	});
+};
+
+/** Starts the service this worker's capability shard needs; normal workers start nothing. */
+const startCapabilityService = (repoRoot: string) => {
+	const service = findTestCapability(process.env.TW_CAPABILITY)?.service;
+	if (!service) return null;
+	log(
+		`starting ${service.name} (${service.argv.join(" ")}) on :${service.port}`,
+	);
+	const proc = spawn(service.argv, {
+		cwd: join(repoRoot, service.cwd),
+		stdout: "inherit",
+		stderr: "inherit",
+		env: {
+			...process.env,
+			NODE_ENV: "development",
+			...service.env,
+		} as Record<string, string>,
+	});
+	void proc.exited.then((code) => {
+		console.error(
+			chalk.red(`[tw-boot] ${service.name} exited early with code ${code}`),
+		);
+	});
+	return { service, proc };
 };
 
 /**
@@ -512,7 +540,8 @@ const main = async (): Promise<void> => {
 	});
 	await waitForTcpPort("Atom", ATOM_PORT, SERVICE_HEALTH_TIMEOUT_MS);
 
-	// 5 + 6. Start the server and wait for health.
+	// 5 + 6. Start the server (and any capability service) and wait for health.
+	const capabilityService = startCapabilityService(repoRoot);
 	const serverProc = startServer(repoRoot, serverPort);
 	let serverExited = false;
 	void serverProc.exited.then((code) => {
@@ -547,6 +576,10 @@ const main = async (): Promise<void> => {
 		throw new Error(
 			"[tw-boot] Autumn server process exited before becoming healthy — aborting worker boot",
 		);
+	}
+	if (capabilityService) {
+		const { service } = capabilityService;
+		await waitForTcpPort(service.name, service.port, SERVICE_HEALTH_TIMEOUT_MS);
 	}
 
 	// 7. Signal readiness. The orchestrator scans stdout for this exact line, then

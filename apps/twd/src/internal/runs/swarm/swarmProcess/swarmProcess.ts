@@ -130,7 +130,8 @@ const timeBoxed = (action: () => Promise<unknown>) =>
 	]);
 
 type Shard = {
-	isSvix: boolean;
+	/** Null for the normal pool. */
+	capability: string | null;
 	files: string[];
 	/** Planned share of the run's workers; picks which shard a new account joins. */
 	target: number;
@@ -299,11 +300,11 @@ const main = async (init: SwarmInit) => {
 		);
 	}
 
-	const { svixFiles, normalFiles } = await partitionAtSha({ tw, init });
-	const { totalWorkers, svixWorkers } = planShardWorkers({
+	const { normalFiles, capabilityShards } = await partitionAtSha({ tw, init });
+	const { totalWorkers, capabilityWorkers } = planShardWorkers({
 		workers: init.workersWanted,
 		normalFileCount: normalFiles.length,
-		svixFileCount: svixFiles.length,
+		capabilityFileCounts: capabilityShards.map(({ files }) => files.length),
 	});
 	// Sized as if every key ran its full cap, so growing never pushes a key over budget.
 	const budget = stripeBudgetForRun({
@@ -333,11 +334,11 @@ const main = async (init: SwarmInit) => {
 		}
 	}
 	const makeShard = ({
-		isSvix,
+		capability,
 		files,
 		target,
 	}: {
-		isSvix: boolean;
+		capability: string | null;
 		files: string[];
 		target: number;
 	}): Shard => {
@@ -348,7 +349,7 @@ const main = async (init: SwarmInit) => {
 			fail = rejectReady;
 		});
 		const shard: Shard = {
-			isSvix,
+			capability,
 			files,
 			target: Math.max(1, target),
 			started: 0,
@@ -363,11 +364,13 @@ const main = async (init: SwarmInit) => {
 	};
 	const shards = [
 		makeShard({
-			isSvix: false,
+			capability: null,
 			files: normalFiles,
-			target: totalWorkers - svixWorkers,
+			target: totalWorkers - capabilityWorkers.reduce((sum, n) => sum + n, 0),
 		}),
-		makeShard({ isSvix: true, files: svixFiles, target: svixWorkers }),
+		...capabilityShards.map(({ capability, files }, index) =>
+			makeShard({ capability, files, target: capabilityWorkers[index] ?? 0 }),
+		),
 	];
 	const [normalShard] = shards;
 	const workersOf = (shard: Shard) => shard.pool.size + shard.provisioning;
@@ -410,7 +413,7 @@ const main = async (init: SwarmInit) => {
 		let sandbox: ProviderSandbox | undefined;
 		try {
 			let svixAppId: string | undefined;
-			if (shard.isSvix) {
+			if (shard.capability === "svix") {
 				svixAppId = await tw.svix.createSvixApp(tw.testOrg.TEST_ORG_CONFIG.id);
 				svixAppIds.push(svixAppId);
 			}
@@ -422,7 +425,7 @@ const main = async (init: SwarmInit) => {
 					...tw.run.buildWorkerEnv({
 						stripeAccountId: account.accountId,
 						stripeSecretKey: account.secretKey,
-						isSvixShard: shard.isSvix,
+						capability: shard.capability,
 						svixAppId,
 						ingressUrl: init.ingressUrl,
 						ingressToken: init.ingressToken,
@@ -460,7 +463,7 @@ const main = async (init: SwarmInit) => {
 				sandboxId: sandbox.name,
 				publicUrl,
 				accountId: account.accountId,
-				isSvixShard: shard.isSvix,
+				capability: shard.capability,
 				inFlight: 0,
 			});
 			shard.markReady();
@@ -512,7 +515,7 @@ const main = async (init: SwarmInit) => {
 		},
 	});
 	let running = false;
-	const totalFiles = svixFiles.length + normalFiles.length;
+	const totalFiles = shards.reduce((sum, shard) => sum + shard.files.length, 0);
 	// pool.acquire gates on idle workers, so the window is every file and grows with the pool.
 	const runShard = async (shard: Shard) => {
 		if (shard.files.length === 0) return;
@@ -571,7 +574,7 @@ const main = async (init: SwarmInit) => {
 	const progress = setInterval(() => {
 		const pools = shards.map(
 			(shard) =>
-				`${shard.isSvix ? "svix" : "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
+				`${shard.capability ?? "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
 		);
 		const line = `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`;
 		// stdout too: twd forwards child output to its own logs, so this survives any log budget.
@@ -674,7 +677,7 @@ process.once("message", (init: SwarmInit) => {
 });
 process.send?.({ type: "ready" });
 
-/** Svix detection reads file contents, so read them at the run's sha, then hand back twd-local paths. */
+/** Capability detection reads file contents, so read them at the run's sha, then hand back twd-local paths. */
 const partitionAtSha = async ({
 	tw,
 	init,
@@ -686,11 +689,13 @@ const partitionAtSha = async ({
 		file.replace(TESTS_DIR, init.testsDirAtSha);
 	const toLocalPath = (file: string) =>
 		file.replace(init.testsDirAtSha, TESTS_DIR);
-	const { svixFiles, normalFiles } = await tw.svix.partitionShards(
-		init.files.map(toShaPath),
-	);
+	const { normalFiles, capabilityShards } =
+		await tw.capabilities.partitionByCapability(init.files.map(toShaPath));
 	return {
-		svixFiles: svixFiles.map(toLocalPath),
 		normalFiles: normalFiles.map(toLocalPath),
+		capabilityShards: capabilityShards.map(({ capability, files }) => ({
+			capability,
+			files: files.map(toLocalPath),
+		})),
 	};
 };
