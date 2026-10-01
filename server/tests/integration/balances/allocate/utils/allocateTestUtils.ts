@@ -13,6 +13,7 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.j
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { sql } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { expireUsageWindowForReset } from "../../utils/usage-limit-utils/expireUsageWindowForReset.js";
 import { queryRows } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
 export const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
@@ -153,6 +154,12 @@ export const resetSharedCycle = async ({
 	ctx: TestContext;
 	customerId: string;
 }) => {
+	// A real reset moves the window a whole interval; the forced one only moves it seconds.
+	await expireUsageWindowForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
 	for (const row of await sharedMessagesRows({ ctx, customerId })) {
 		await ctx.db.execute(sql`
 			UPDATE customer_entitlements SET next_reset_at = ${Date.now() - 1000}
