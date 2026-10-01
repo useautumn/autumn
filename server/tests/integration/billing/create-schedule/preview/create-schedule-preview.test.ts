@@ -614,19 +614,13 @@ test.concurrent(
 				],
 			},
 			expectedTotal: 66,
-			expectedLineItemTotals: [0, 30, 36],
+			expectedLineItemTotals: [30, 36],
 			assertPreview: (preview) => {
 				expect(
 					sortStrings(
 						preview.line_items.map((lineItem) => lineItem.feature_id ?? "base"),
 					),
-				).toEqual(
-					sortStrings([
-						TestFeature.Messages,
-						TestFeature.Users,
-						TestFeature.Words,
-					]),
-				);
+				).toEqual(sortStrings([TestFeature.Messages, TestFeature.Words]));
 			},
 		});
 	},
