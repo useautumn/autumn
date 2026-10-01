@@ -1,7 +1,6 @@
 import {
 	type AllocateBalancesParamsV0,
 	type AllocateBalancesResponse,
-	type BalanceAllocations,
 	CustomerNotFoundError,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
@@ -35,7 +34,6 @@ import {
 } from "./repos/allocationStore.js";
 import { setAllocationCounters } from "./repos/setAllocationCounters.js";
 import {
-	allocationCounterUsage,
 	allocationCycleOf,
 	sharedRowsOf,
 	toAllocationCounter,
@@ -168,6 +166,7 @@ export const allocateBalances = async ({
 				cycle,
 			});
 			const plan = computeAllocationPlan({
+				featureId: feature.id,
 				isFirstCall: !existing,
 				sharedGranted,
 				sharedRemaining,

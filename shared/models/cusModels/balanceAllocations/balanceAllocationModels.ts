@@ -26,22 +26,43 @@ export type BalanceAllocations = z.infer<typeof BalanceAllocationsSchema>;
 /** Counter rows for allocations live in usage_windows under this filter key, apart from any usage limit. */
 export const ALLOCATION_USAGE_WINDOW_FILTER_KEY = "__allocation__";
 
-/** The stored scale while its cycle is current; otherwise re-solved from the pot at cycle start (remaining + claimed). */
+type StoredScale = Pick<
+	BalanceAllocation,
+	"scale" | "scale_cycle_end" | "parent_customer_entitlement_id"
+>;
+
+/** The stored scale was solved for this cycle against the parent row picked now. */
+export const isAllocationScaleCurrent = ({
+	allocation,
+	cycleEnd,
+	parentId,
+}: {
+	allocation: StoredScale;
+	cycleEnd: number;
+	parentId: string;
+}) =>
+	allocation.scale_cycle_end === cycleEnd &&
+	allocation.parent_customer_entitlement_id === parentId;
+
+/** The stored scale while current; otherwise re-solved from the pot at cycle start (remaining + claimed). */
 export const effectiveAllocationScale = ({
 	allocation,
 	cycleEnd,
+	parentId,
 	sharedRemaining,
 	claimed,
 	requestedTotal,
 }: {
-	allocation: Pick<BalanceAllocation, "scale" | "scale_cycle_end">;
+	allocation: StoredScale;
 	cycleEnd: number;
+	parentId: string;
 	sharedRemaining: number;
 	/** The customer-level claimed counter this cycle. */
 	claimed: number;
 	requestedTotal: number;
 }) => {
-	if (allocation.scale_cycle_end === cycleEnd) return allocation.scale;
+	if (isAllocationScaleCurrent({ allocation, cycleEnd, parentId }))
+		return allocation.scale;
 	if (requestedTotal <= 0) return 1;
 	return Math.min(
 		1,

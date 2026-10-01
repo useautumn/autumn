@@ -1,15 +1,11 @@
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
-	type BalanceAllocation,
 	type EntInterval,
 	type FullCusEntWithFullCusProduct,
-	type FullSubject,
 	getUsageWindowBounds,
-	isSameUsageWindow,
 	pickAllocationParent,
 	type UsageWindow,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 
 const isCustomerLevel = (customerEntitlement: FullCusEntWithFullCusProduct) =>
 	!customerEntitlement.internal_entity_id &&
@@ -52,37 +48,6 @@ export const allocationCycleOf = ({
 		anchor: parent.next_reset_at,
 	});
 	return { parentId: parent.id, ...bounds };
-};
-
-/** Live allocation counters, by internal entity id; the claimed total under null. */
-export const allocationCounterUsage = ({
-	fullSubject,
-	allocation,
-	cycle,
-}: {
-	fullSubject: FullSubject;
-	allocation: Pick<BalanceAllocation, "feature_id">;
-	cycle: { windowStartAt: number; windowEndAt: number };
-}) => {
-	const usage: Record<string, number> = {};
-	for (const window of fullSubject.usage_windows ?? []) {
-		if (
-			window.feature_id !== allocation.feature_id ||
-			window.filter_key !== ALLOCATION_USAGE_WINDOW_FILTER_KEY ||
-			!isSameUsageWindow({
-				usageWindow: window,
-				window: {
-					window_start_at: cycle.windowStartAt,
-					window_end_at: cycle.windowEndAt,
-				},
-			})
-		)
-			continue;
-		usage[window.internal_entity_id ?? ""] = new Decimal(
-			window.usage,
-		).toNumber();
-	}
-	return usage;
 };
 
 export const toAllocationCounter = ({

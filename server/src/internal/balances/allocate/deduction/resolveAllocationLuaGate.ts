@@ -2,6 +2,7 @@ import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
+	isAllocationScaleCurrent,
 	type UsageWindowLimit,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
@@ -98,7 +99,11 @@ export const resolveAllocationLuaGates = ({
 				0,
 			),
 			scale: allocation.scale,
-			scale_is_current: allocation.scale_cycle_end === cycle.windowEndAt,
+			scale_is_current: isAllocationScaleCurrent({
+				allocation,
+				cycleEnd: cycle.windowEndAt,
+				parentId: cycle.parentId,
+			}),
 		};
 		if (internalEntityId) limits.push(limitOf("entity"));
 		limits.push(limitOf("claimed"));

@@ -1,6 +1,7 @@
 import type { BalanceAllocations, UsageWindow } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerData.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -33,7 +34,7 @@ export const patchCachedAllocations = async ({
 				customerId,
 				featureId: counter.feature_id,
 			});
-			await tryRedisWrite(
+			const patched = await tryRedisWrite(
 				() =>
 					ctx.redisV2.patchAllocationCounter(
 						balanceKey,
@@ -41,6 +42,15 @@ export const patchCachedAllocations = async ({
 					),
 				ctx.redisV2,
 			);
+			// New shares over a stale counter would misgate draws; a cold cache reloads both from Postgres.
+			if (patched === null) {
+				await invalidateCachedFullSubject({
+					ctx,
+					customerId,
+					source: "patchCachedAllocations",
+				});
+				return;
+			}
 		}
 		await updateCachedCustomerData({
 			ctx,

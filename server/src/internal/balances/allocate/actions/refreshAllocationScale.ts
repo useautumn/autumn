@@ -180,6 +180,7 @@ export const refreshAllocationScale = async ({
 	customerId,
 	notify = true,
 	flushBalances = true,
+	now = Date.now(),
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -187,6 +188,8 @@ export const refreshAllocationScale = async ({
 	notify?: boolean;
 	/** False right after a direct Postgres balance write, where cached balances are no longer the truth. */
 	flushBalances?: boolean;
+	/** The event time, so Stripe test clocks pick the right cycle. */
+	now?: number;
 }): Promise<AllocationRefresh> => {
 	if (!(await hasStoredAllocations({ ctx, customerId }))) return NO_REFRESH;
 	const fullSubject = await loadFreshSubject({
@@ -206,7 +209,7 @@ export const refreshAllocationScale = async ({
 						tx,
 						fullSubject,
 						allocations,
-						now: Date.now(),
+						now,
 					})
 				: null,
 	});
@@ -229,11 +232,14 @@ export const refreshAllocationScaleAfterWrite = async ({
 	ctx,
 	customerId,
 	notify = true,
+	now = Date.now(),
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	/** False when the caller sends its own billing.updated and adds the tag there. */
 	notify?: boolean;
+	/** The event time, so Stripe test clocks pick the right cycle. */
+	now?: number;
 }): Promise<AllocationRefresh> => {
 	try {
 		return await refreshAllocationScale({
@@ -241,6 +247,7 @@ export const refreshAllocationScaleAfterWrite = async ({
 			customerId,
 			notify,
 			flushBalances: false,
+			now,
 		});
 	} catch (error) {
 		ctx.logger.error("[refreshAllocationScale] after balance write failed", {

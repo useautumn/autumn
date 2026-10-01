@@ -6,6 +6,7 @@
  */
 
 import { expect, test } from "bun:test";
+import type { TrackDeduction } from "@autumn/shared";
 import chalk from "chalk";
 import {
 	allocateMessages,
@@ -56,11 +57,25 @@ test.concurrent(
 		const customerId = "allocate-customer-2";
 		await setupPartialAllocation({ customerId });
 
-		await trackMessages({ customerId, value: 3000 });
+		const tracked = await trackMessages({ customerId, value: 3000 });
+		expect(tracked.value).toBe(3000);
+		expect(
+			((tracked.deductions ?? []) as TrackDeduction[]).reduce(
+				(sum, deduction) => sum + deduction.value,
+				0,
+			),
+		).toBe(2000);
+		// The 1000 past the unallocated pot is dropped, not billed as overage.
 		await expectMessagesBalance({
 			autumn: autumnV2_3,
 			customerId,
-			expected: { remaining: 8000, allocated: 8000, unallocated: 0 },
+			expected: {
+				granted: 10000,
+				usage: 2000,
+				remaining: 8000,
+				allocated: 8000,
+				unallocated: 0,
+			},
 		});
 		expect(await isMessagesAllowed({ customerId, requiredBalance: 1 })).toBe(
 			false,
@@ -78,7 +93,7 @@ test.concurrent(
 		await expectMessagesBalance({
 			autumn: autumnV2_3,
 			customerId,
-			expected: { remaining: 8000 },
+			expected: { remaining: 8000, allocated: 8000, unallocated: 0 },
 		});
 
 		await trackMessages({ customerId, entityId: a, value: 6000 });

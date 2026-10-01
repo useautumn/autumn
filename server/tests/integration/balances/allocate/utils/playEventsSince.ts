@@ -4,7 +4,7 @@ import {
 	type SvixPlayEvent,
 } from "../../../utils/svixWebhookTestUtils.js";
 
-/** The newest Play event id: history requested with it returns only later events. */
+/** The newest Play event id, or "" while history is empty: history requested with it returns only later events. */
 export const latestPlayIterator = async ({ token }: { token: string }) =>
 	(await getPlayHistory({ token })).iterator;
 
@@ -19,13 +19,14 @@ export const playEventsSince = async <T>({
 	const events: SvixPlayEvent[] = [];
 	let cursor = iterator;
 	while (true) {
+		// An empty cursor means history was empty at the baseline, so the full history is all new.
 		const page = await getPlayHistory({ token, iterator: cursor || undefined });
 		const unseen = page.data.filter(
 			(event) => !events.some((seen) => seen.id === event.id),
 		);
+		events.push(...unseen);
 		if (unseen.length === 0 || !page.iterator || page.iterator === cursor)
 			break;
-		events.push(...unseen);
 		cursor = page.iterator;
 	}
 	return events.map((event) => parseEventBody<T>(event));

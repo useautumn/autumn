@@ -128,21 +128,21 @@ const sharedMessagesRows = async ({
 		`),
 	);
 
-/** Waits until tracked usage has reached Postgres, for steps that drop the cache. */
+/** Waits until the shared rows' remaining balance in Postgres sums to `remainingBalance`, for steps that drop the cache. */
 export const waitForSharedBalanceInDb = ({
 	ctx,
 	customerId,
-	balance,
+	remainingBalance,
 }: {
 	ctx: TestContext;
 	customerId: string;
-	balance: number;
+	remainingBalance: number;
 }) =>
 	pollUntilAsserted({
 		fetch: () => sharedMessagesRows({ ctx, customerId }),
 		assert: (rows) =>
 			expect(rows.reduce((sum, row) => sum + Number(row.balance), 0)).toBe(
-				balance,
+				remainingBalance,
 			),
 	});
 

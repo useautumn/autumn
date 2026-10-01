@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	notNullish,
 	RecaseError,
 	type UpdateBalanceParamsV0,
 } from "@autumn/shared";
@@ -83,7 +84,10 @@ export const runUpdateBalanceV2 = async ({
 		await runBalanceWorkerUpdateBalance({ ctx, params, targetBalance });
 	else await updateBalanceOnCacheV2({ ctx, params, targetBalance });
 
-	if (updateChangesBalance({ params, targetBalance }))
+	if (
+		updateChangesBalance({ params, targetBalance }) ||
+		notNullish(params.next_reset_at)
+	)
 		await refreshAllocationScaleAfterWrite({
 			ctx,
 			customerId: params.customer_id,

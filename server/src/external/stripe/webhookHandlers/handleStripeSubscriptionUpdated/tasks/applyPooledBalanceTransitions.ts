@@ -42,6 +42,7 @@ export const applyPooledBalanceTransitions = async ({
 		customerId:
 			eventContext.fullCustomer.id || eventContext.fullCustomer.internal_id,
 		notify: false,
+		now: eventContext.nowMs,
 	});
 	if (adjusted) addBillingChangeTag(eventContext, ALLOCATIONS_ADJUSTED_TAG);
 };

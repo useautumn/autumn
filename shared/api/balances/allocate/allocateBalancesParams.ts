@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { ResetInterval } from "../../../models/productModels/intervals/resetInterval.js";
 
 export const MAX_ALLOCATIONS_PER_REQUEST = 250;
+export const MAX_ALLOCATED_ENTITIES = 1000;
 
 export const AllocateBalancesParamsV0Schema = z.object({
 	customer_id: z.string().meta({ description: "The ID of the customer." }),
