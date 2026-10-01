@@ -13,6 +13,7 @@ import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay
 import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
 import type { PublishedBalanceTransition } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
 import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
+import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
@@ -94,6 +95,7 @@ export interface Payloads {
 		balanceTransitions: PublishedBalanceTransition[];
 	};
 	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;
+	[JobName.EntityCreationRecovery]: EntityCreationRecoveryPayload;
 	[JobName.StripeWebhookReplay]: StripeWebhookReplayPayload;
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
