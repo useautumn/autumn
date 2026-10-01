@@ -1,4 +1,12 @@
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
@@ -82,7 +90,15 @@ const captureJsonResponse = async ({
 	return { captured, cloneCount };
 };
 
+const originalNodeEnv = process.env.NODE_ENV;
+
+// Development adds an EXTRA LOGS debug line; these tests assert only the terminal record.
+beforeEach(() => {
+	process.env.NODE_ENV = "test";
+});
+
 afterEach(() => {
+	process.env.NODE_ENV = originalNodeEnv;
 	mock.restore();
 	_setMiscellaneousEdgeConfigForTesting({
 		config: MiscellaneousEdgeConfigSchema.parse({}),

@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { ReceiveMessageCommand } from "@aws-sdk/client-sqs";
 import {
 	getAbortControllerCountForTesting,
 	startPollingLoop,
 } from "@/queue/initWorkers.js";
 
 const originalSetTimeout = globalThis.setTimeout;
+// The ReceiveMessage watchdog (30s) must never fire, or every poll times out and the loop never ends.
+const LONG_TIMER_MS = 30_000;
 
 const makeAbortError = () => {
 	const error = new Error("aborted") as Error & { name: string };
@@ -14,8 +17,8 @@ const makeAbortError = () => {
 
 describe("startPollingLoop", () => {
 	beforeEach(() => {
-		globalThis.setTimeout = ((callback: TimerHandler) => {
-			if (typeof callback === "function") {
+		globalThis.setTimeout = ((callback: TimerHandler, delayMs?: number) => {
+			if (typeof callback === "function" && (delayMs ?? 0) < LONG_TIMER_MS) {
 				callback();
 			}
 			return 0 as unknown as ReturnType<typeof setTimeout>;
@@ -28,7 +31,7 @@ describe("startPollingLoop", () => {
 
 	test("does not poll while the queue is disabled", async () => {
 		let shouldPollCalls = 0;
-		let sendCalls = 0;
+		let receiveCalls = 0;
 
 		await startPollingLoop({
 			db: {} as never,
@@ -37,15 +40,15 @@ describe("startPollingLoop", () => {
 			isFifo: true,
 			getSqsClientFn: () =>
 				({
-					send: async () => {
-						sendCalls++;
+					send: async (command: unknown) => {
+						if (command instanceof ReceiveMessageCommand) receiveCalls++;
 						throw makeAbortError();
 					},
 				}) as never,
 			recreateSqsClientFn: () =>
 				({
-					send: async () => {
-						sendCalls++;
+					send: async (command: unknown) => {
+						if (command instanceof ReceiveMessageCommand) receiveCalls++;
 						throw makeAbortError();
 					},
 				}) as never,
@@ -56,12 +59,12 @@ describe("startPollingLoop", () => {
 		});
 
 		expect(shouldPollCalls).toBeGreaterThan(1);
-		expect(sendCalls).toBe(1);
+		expect(receiveCalls).toBe(1);
 	});
 
 	test("polls immediately when the queue is enabled", async () => {
 		let shouldPollCalls = 0;
-		let sendCalls = 0;
+		let receiveCalls = 0;
 
 		await startPollingLoop({
 			db: {} as never,
@@ -70,15 +73,15 @@ describe("startPollingLoop", () => {
 			isFifo: true,
 			getSqsClientFn: () =>
 				({
-					send: async () => {
-						sendCalls++;
+					send: async (command: unknown) => {
+						if (command instanceof ReceiveMessageCommand) receiveCalls++;
 						throw makeAbortError();
 					},
 				}) as never,
 			recreateSqsClientFn: () =>
 				({
-					send: async () => {
-						sendCalls++;
+					send: async (command: unknown) => {
+						if (command instanceof ReceiveMessageCommand) receiveCalls++;
 						throw makeAbortError();
 					},
 				}) as never,
@@ -89,16 +92,16 @@ describe("startPollingLoop", () => {
 		});
 
 		expect(shouldPollCalls).toBe(1);
-		expect(sendCalls).toBe(1);
+		expect(receiveCalls).toBe(1);
 	});
 
 	test("does not leak abort controllers when the SQS client is recreated", async () => {
-		let sendCalls = 0;
+		let receiveCalls = 0;
 		let recreateCalls = 0;
 		const makeClient = (abortAfterRecreate: boolean) =>
 			({
-				send: async () => {
-					sendCalls++;
+				send: async (command: unknown) => {
+					if (command instanceof ReceiveMessageCommand) receiveCalls++;
 					if (abortAfterRecreate) {
 						throw makeAbortError();
 					}
@@ -120,7 +123,7 @@ describe("startPollingLoop", () => {
 		});
 
 		expect(recreateCalls).toBe(1);
-		expect(sendCalls).toBeGreaterThan(9);
+		expect(receiveCalls).toBeGreaterThan(9);
 		expect(getAbortControllerCountForTesting()).toBe(0);
 	});
 });
