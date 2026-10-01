@@ -1,5 +1,6 @@
 import type { ErrorClassification } from "../models/errorClassification.js";
 import type { ErrorClassifier } from "../models/errorClassifier.js";
+import { classifyDependencyError } from "./dependency/classifyDependencyError.js";
 import { classifyRecaseError } from "./recase/classifyRecaseError.js";
 import { classifyStripeError } from "./stripe/classifyStripeError.js";
 
@@ -7,6 +8,7 @@ import { classifyStripeError } from "./stripe/classifyStripeError.js";
 const builtInClassifiers: ErrorClassifier[] = [
 	classifyRecaseError,
 	classifyStripeError,
+	classifyDependencyError,
 ];
 
 const errorCodeOf = (error: unknown): string | undefined => {

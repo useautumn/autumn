@@ -8,12 +8,15 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ThemeProvider } from "./contexts/ThemeProvider";
 
+declare const __APP_ENV__: string;
+
 Sentry.init({
 	dsn: import.meta.env.VITE_SENTRY_DSN,
+	// Vercel's prod build doesn't set VITE_APP_ENV, and only it carries the DSN.
+	environment: __APP_ENV__ || "production",
 	sendDefaultPii: true,
 });
 
-declare const __APP_ENV__: string;
 declare const __WORKTREE_NUM__: string;
 if (__APP_ENV__ === "prod") {
 	document.title = "Autumn (P)";
@@ -33,7 +36,15 @@ const queryClient = new QueryClient({
 
 const shouldInitializePostHog = process.env.NODE_ENV === "production";
 
-createRoot(document.getElementById("root")!).render(
+/** React 19 routes render errors through these root hooks, not window.onerror, so Sentry must hear them here. */
+const reportRenderError = Sentry.reactErrorHandler((error, errorInfo) => {
+	console.error(error, errorInfo.componentStack);
+});
+
+createRoot(document.getElementById("root")!, {
+	onUncaughtError: reportRenderError,
+	onCaughtError: reportRenderError,
+}).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
 			<ThemeProvider>

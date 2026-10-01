@@ -21,6 +21,8 @@ export type CreateLoggerParams = {
 	axiomToken?: string;
 	axiomOrgId?: string;
 	useConsoleLog?: boolean;
+	/** pino hooks, e.g. @autumn/errors' error-report hook; it sees raw Errors, before they are serialised. */
+	hooks?: pino.LoggerOptions["hooks"];
 };
 
 export type ResolvedLoggerOptions = Required<

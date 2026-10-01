@@ -32,6 +32,7 @@
 		"@autumn/dynamodb": "workspace:*",
 		"@autumn/edge-config": "workspace:*",
 		"@autumn/env": "workspace:*",
+		"@autumn/errors": "workspace:*",
 		"@autumn/kafka": "workspace:*",
 		"@autumn/logging": "workspace:*",
 		"@autumn/postgres": "workspace:*",

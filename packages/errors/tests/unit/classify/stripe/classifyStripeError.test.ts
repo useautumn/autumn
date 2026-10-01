@@ -24,6 +24,20 @@ describe("classifyStripeError", () => {
 		expect(classifyStripeError({ error })?.kind).toBe("expected");
 	});
 
+	it("treats rate limits, connection failures and Stripe-side errors as infra", () => {
+		for (const type of [
+			"StripeRateLimitError",
+			"StripeConnectionError",
+			"StripeAPIError",
+		]) {
+			const error = stripeError({ type, message: "try again" });
+			expect(classifyStripeError({ error })).toEqual({
+				kind: "infra",
+				code: "stripe_unavailable",
+			});
+		}
+	});
+
 	it("leaves other Stripe errors to fall through as bugs", () => {
 		const error = stripeError({
 			type: "StripeInvalidRequestError",

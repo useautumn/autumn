@@ -1,4 +1,5 @@
 import { getHeraldEnv } from "@autumn/env/herald";
+import { flushErrorReports, initErrorReporting } from "@autumn/errors";
 import { initInfisical } from "@autumn/shared/utils/infisical";
 import {
 	registerProcessSignals,
@@ -27,6 +28,7 @@ const STOP_BUDGET_MS = 20_000;
 
 async function main(): Promise<void> {
 	await initInfisical();
+	initErrorReporting();
 	const logger = getHeraldLogger();
 	const state: HeraldLifecycleState = { stopping: null };
 	const herald = createHerald({
@@ -71,8 +73,11 @@ async function main(): Promise<void> {
 	await startHerald({ ctx, state });
 }
 
+/** The lifecycle has already flushed logs; queued Sentry events get the same chance. */
 function endProcess(code: number): void {
-	process.exit(code);
+	void flushErrorReports({ timeoutMs: 2_000 }).finally(() =>
+		process.exit(code),
+	);
 }
 
 async function run(): Promise<void> {
@@ -81,7 +86,7 @@ async function run(): Promise<void> {
 	} catch (cause) {
 		getHeraldLogger().error({ error: cause }, "Herald failed to boot");
 		await getHeraldLogger().flush?.();
-		process.exit(1);
+		endProcess(1);
 	}
 }
 
