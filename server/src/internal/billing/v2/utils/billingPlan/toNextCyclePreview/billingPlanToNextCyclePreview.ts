@@ -88,15 +88,17 @@ const getPlansRenewingThroughChange = ({
 			...event.incomingCustomerProducts,
 		],
 	});
-	const incomingIds = new Set(
-		event.incomingCustomerProducts.map((customerProduct) => customerProduct.id),
+	const changedIds = new Set(
+		[...event.outgoingCustomerProducts, ...event.incomingCustomerProducts].map(
+			(customerProduct) => customerProduct.id,
+		),
 	);
 	return getActiveCustomerProductsAt({
 		customerProducts,
 		startsAtMs: event.startsAtMs,
 	}).filter(
 		(customerProduct) =>
-			!incomingIds.has(customerProduct.id) &&
+			!changedIds.has(customerProduct.id) &&
 			changedSubscriptionIds.some((stripeSubscriptionId) =>
 				isCustomerProductOnStripeSubscription({
 					customerProduct,

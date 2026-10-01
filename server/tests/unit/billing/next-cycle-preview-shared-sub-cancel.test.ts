@@ -193,6 +193,26 @@ describe("next cycle preview on a shared subscription", () => {
 		]);
 	});
 
+	test("does not re-bill a replaced plan whose end isn't recorded yet", () => {
+		const nextCycle = previewNextCycle({
+			customerProducts: [
+				plan({ id: "pro", amount: 20, group: "main" }),
+				plan({
+					id: "premium",
+					amount: 50,
+					startsAt: renewalBoundaryMs,
+					status: CusProductStatus.Scheduled,
+					group: "main",
+				}),
+			],
+		});
+
+		const replacedPlanCharges = nextCycle?.line_items.filter(
+			(lineItem) => lineItem.plan_id === "pro" && lineItem.total > 0,
+		);
+		expect(replacedPlanCharges).toEqual([]);
+	});
+
 	test("still bills the continuing plan when another plan switches at renewal", () => {
 		const nextCycle = previewNextCycle({
 			customerProducts: [
