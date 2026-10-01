@@ -25,10 +25,9 @@ concurrency:
   group: build-${{ github.event.inputs.sha || github.ref }}
   cancel-in-progress: true
 
-env:
-  # ECR region is selected per-branch in the "Extract metadata" step:
-  #   prod repo (autumn)         -> us-east-2
-  #   staging repo (autumn-staging) -> us-east-1
+# ECR region is selected per-branch in the "Extract metadata" step:
+#   prod repo (autumn)         -> us-east-2
+#   staging repo (autumn-staging) -> us-east-1
 
 jobs:
   checks:
@@ -148,8 +147,8 @@ jobs:
           echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "deploy_staging_override=$DEPLOY_STAGING_OVERRIDE" >> $GITHUB_OUTPUT
           
-          # Only an explicitly requested staging deploy uses staging ECR.
-          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
+          # Only main builds into production's ECR; every other branch goes to staging's.
+          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ] || [ "$BRANCH_NAME" != "main" ]; then
             echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
             echo "region=us-east-1" >> $GITHUB_OUTPUT
           else
