@@ -43,10 +43,6 @@ const balanceBefore = (
 	...(change.previous_attributes as Partial<SetPlansPreviewBalance>),
 });
 
-/** A saved schedule already makes this change; older previews have no origin. */
-const isSavedChange = (change: SetPlansPreviewBalanceChange) =>
-	change.origin === "saved";
-
 const describeGranted = ({ before, after }: BalanceTransition) =>
 	before.granted === after.granted || before.granted === 0
 		? `${numberWithCommas(after.granted)} granted`
@@ -96,10 +92,7 @@ const balanceChangeToRow = ({
 	return {
 		key: `balance-${phaseIndex}-${change.entity_id ?? "customer"}-${change.feature_id}`,
 		title: feature?.name ?? change.feature_id,
-		description: joinDetail([
-			describeBalance({ before, after }),
-			isSavedChange(change) ? "already scheduled" : undefined,
-		]),
+		description: describeBalance({ before, after }),
 		status: change.behavior,
 		value: balanceValue(after),
 		entityId: change.entity_id ?? null,
@@ -120,17 +113,14 @@ export const balanceChangesToReviewSection = ({
 			balanceChangeToRow({ change, phaseIndex, features }),
 		),
 	}));
-	const requestedChanges = phases
-		.flatMap((phase) => phase.balance_changes)
-		.filter((change) => !isSavedChange(change));
+	const changes = phases.flatMap((phase) => phase.balance_changes);
 
 	return {
 		phases: withoutEmptyPhases(phaseRows),
 		summary: summarizeCounts({
 			counts: BEHAVIOR_SUMMARY_LABELS.map(([behavior, label]) => [
 				label,
-				requestedChanges.filter((change) => change.behavior === behavior)
-					.length,
+				changes.filter((change) => change.behavior === behavior).length,
 			]),
 			emptyLabel: "No changes",
 		}),

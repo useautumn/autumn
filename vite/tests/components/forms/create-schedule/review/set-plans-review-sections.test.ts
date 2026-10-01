@@ -246,7 +246,6 @@ const balanceChange = (
 	},
 	previous_attributes: { granted: 100 },
 	behavior: "carried",
-	origin: "request",
 	...overrides,
 });
 
@@ -304,7 +303,7 @@ test("balance rows show the server's behaviour with labelled numbers", () => {
 	expect(section.summary).toBe("1 reset · 1 carried over");
 });
 
-test("balance rows carry their entity, and saved changes are marked but not counted", () => {
+test("balance rows carry their entity and every change is counted", () => {
 	const section = balanceChangesToReviewSection({
 		features,
 		phases: [
@@ -315,9 +314,7 @@ test("balance rows carry their entity, and saved changes are marked but not coun
 				],
 			}),
 			phase(NOV_1, {
-				balance_changes: [
-					balanceChange({ behavior: "updated", origin: "saved" }),
-				],
+				balance_changes: [balanceChange({ behavior: "updated" })],
 			}),
 		],
 	});
@@ -331,15 +328,9 @@ test("balance rows carry their entity, and saved changes are marked but not coun
 			["balance-0-ent_a-credits", "ent_a", "100 → 500 granted · 240 used"],
 			["balance-0-ent_b-credits", "ent_b", "100 → 500 granted · 240 used"],
 		],
-		[
-			[
-				"balance-1-customer-credits",
-				null,
-				"100 → 500 granted · 240 used · already scheduled",
-			],
-		],
+		[["balance-1-customer-credits", null, "100 → 500 granted · 240 used"]],
 	]);
-	expect(section.summary).toBe("2 carried over");
+	expect(section.summary).toBe("2 carried over · 1 updated");
 });
 
 test("a pay-per-use balance reads as usage-based, not as nothing granted", () => {
