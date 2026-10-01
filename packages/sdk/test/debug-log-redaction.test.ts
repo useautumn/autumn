@@ -13,8 +13,11 @@ const startServer = () =>
 const aggregate = (autumn: Autumn) =>
 	autumn.events.aggregate({ featureId: "credits", range: "90d" });
 
+const initialAutumnDebug = process.env.AUTUMN_DEBUG;
+
 afterEach(() => {
-	delete process.env.AUTUMN_DEBUG;
+	if (initialAutumnDebug === undefined) delete process.env.AUTUMN_DEBUG;
+	else process.env.AUTUMN_DEBUG = initialAutumnDebug;
 	resetEnv();
 });
 
