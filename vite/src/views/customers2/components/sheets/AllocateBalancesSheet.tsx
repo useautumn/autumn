@@ -184,6 +184,7 @@ export function AllocateBalancesSheet() {
 										type="number"
 										min={0}
 										placeholder="Not allocated"
+										disabled={isSubmitting}
 										value={inputs[entityId] ?? ""}
 										onChange={(event) =>
 											setInputs((prev) => ({

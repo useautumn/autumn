@@ -141,7 +141,11 @@ export function CustomerSheets() {
 			case "check-balance":
 				return <CheckBalanceSheet />;
 			case "allocate-balances":
-				return <AllocateBalancesSheet />;
+				return (
+					<AllocateBalancesSheet
+						key={`${sheetData?.internalFeatureId}:${sheetData?.interval}`}
+					/>
+				);
 			case "create-schedule":
 			case "create-schedule-review":
 			case "create-schedule-send-invoice":
