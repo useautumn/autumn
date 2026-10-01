@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import type { ZodTypeAny, z } from "zod";
+import { type ZodTypeAny, z } from "zod";
 import {
 	CreateRunBody,
 	ListRunsQuery,
@@ -52,6 +52,11 @@ const parse = <S extends ZodTypeAny>({
 	});
 };
 
+const parseRepetition = ({ value }: { value: string | undefined }) =>
+	value
+		? parse({ schema: z.coerce.number().int().min(1), input: value })
+		: undefined;
+
 export const runsRoutes = new Hono<TwdHono>()
 	.get("/runs", async (c) =>
 		c.json(
@@ -82,7 +87,12 @@ export const runsRoutes = new Hono<TwdHono>()
 			});
 		}
 		return c.text(
-			await getRunLogs({ ctx: c.get("ctx"), runId: c.req.param("id"), file }),
+			await getRunLogs({
+				ctx: c.get("ctx"),
+				runId: c.req.param("id"),
+				file,
+				repetition: parseRepetition({ value: c.req.query("repetition") }),
+			}),
 		);
 	})
 	.get("/runs/:id/logs", async (c) => {
@@ -92,6 +102,7 @@ export const runsRoutes = new Hono<TwdHono>()
 				ctx: c.get("ctx"),
 				runId: c.req.param("id"),
 				file: c.req.query("file") || undefined,
+				repetition: parseRepetition({ value: c.req.query("repetition") }),
 				worker: c.req.query("worker") || undefined,
 				scope: scope === "run" ? "run" : undefined,
 			}),

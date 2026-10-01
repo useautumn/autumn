@@ -8,6 +8,7 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { resolveBranchSha } from "../../catalog/actions/gitRemote.ts";
 import { resolveTestSelection } from "../../catalog/actions/resolveTestSelection.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
+import { planWorkItems } from "../repeat/repetitions.ts";
 import { getRunWithEmail, toRunSummary, updateRun } from "../repos/runsRepo.ts";
 import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
 import type { RunProgress } from "../types/runProgress.ts";
@@ -53,10 +54,9 @@ export const createRun = async ({
 		});
 	}
 	const sha = body.sha ?? (await resolveBranchSha({ branch: body.branch }));
-	const files = await resolveTestSelection({
-		ctx,
-		sha,
-		selection: body.selection,
+	const files = planWorkItems({
+		files: await resolveTestSelection({ ctx, sha, selection: body.selection }),
+		repeat: body.repeat,
 	});
 
 	const progress: RunProgress = { phase: "queued", plannedFiles: files };
@@ -70,6 +70,7 @@ export const createRun = async ({
 			selection: body.selection,
 			purpose: body.purpose,
 			maxWorkers: body.maxWorkers ?? null,
+			repeat: body.repeat,
 			fileCount: files.length,
 			progress,
 			createdBy: actor.userId,

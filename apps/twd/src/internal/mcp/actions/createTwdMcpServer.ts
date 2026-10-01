@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import type { RunDetail } from "../../../api/contract.ts";
+import { MAX_REPEAT, type RunDetail } from "../../../api/contract.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { listCatalog } from "../../catalog/actions/listCatalog.ts";
@@ -10,6 +10,7 @@ import { createRun } from "../../runs/actions/createRun.ts";
 import { getRun } from "../../runs/actions/getRun.ts";
 import { summariseBoot } from "../../runs/boot/summariseBoot.ts";
 import { getFailedLogs, getRunLogs } from "../../runs/logs/getRunLogs.ts";
+import { MAX_REPEAT_WORK_ITEMS } from "../../runs/repeat/repetitions.ts";
 import { summariseRunTiming } from "../../runs/timing/summariseRunTiming.ts";
 import { toolOk } from "./toolResult.ts";
 import { defineTool, serveTools } from "./toolServer.ts";
@@ -17,6 +18,19 @@ import { defineTool, serveTools } from "./toolServer.ts";
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
 const WAIT_POLL_MS = 5_000;
 const WAIT_MAX_S = 600;
+const REPEATS_IN_SUMMARY = 5;
+
+const describeRepeats = (run: RunDetail) => {
+	if (run.repeats.length === 0) return "";
+	const shown = run.repeats
+		.slice(0, REPEATS_IN_SUMMARY)
+		.map(
+			(r) =>
+				`${r.file} passed ${r.firstAttemptPassed}/${r.total} on first attempt${r.passedOnRetry ? ` (+${r.passedOnRetry} on retry)` : ""}${r.done < r.total ? `, ${r.done}/${r.total} done` : ""}`,
+		);
+	const more = run.repeats.length - shown.length;
+	return ` Repeat ×${run.repeat}: ${shown.join("; ")}${more > 0 ? `; ${more} more file(s) in data.repeats` : ""}.`;
+};
 
 /** Agent-sized run view: counts, failures and drift only (never the full file list). */
 const summariseRun = (run: RunDetail) => {
@@ -44,6 +58,8 @@ const summariseRun = (run: RunDetail) => {
 		status: run.status,
 		phase: run.phase,
 		terminal: TERMINAL.has(run.status),
+		repeat: run.repeat,
+		repeats: run.repeats,
 		workers: { current: run.workerCount, wanted: run.workersWanted },
 		queuePosition: run.queuePosition,
 		boot: summariseBoot(run.workers),
@@ -60,7 +76,7 @@ const summariseRun = (run: RunDetail) => {
 		startedAt: run.startedAt,
 		finishedAt: run.finishedAt,
 	};
-	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).`;
+	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).${describeRepeats(run)}`;
 	return { summary, data };
 };
 
@@ -154,14 +170,32 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 						.describe(
 							"Cap on workers; default one per file (bounded by the Stripe key budget).",
 						),
+					repeat: z
+						.number()
+						.int()
+						.min(1)
+						.max(MAX_REPEAT)
+						.optional()
+						.describe(
+							`ONLY to confirm or measure a flaky test (e.g. prove a flake fix with repeat=10): runs each selected file N times, each on its own work item, and reports first-attempt passes X/N per file. Default 1. Never use it for normal runs; it multiplies cost. Max ${MAX_REPEAT}, and files × repeat ≤ ${MAX_REPEAT_WORK_ITEMS}.`,
+						),
 				})
 				.strict(),
-			run: async ({ branch, sha, groups, files, grep, max_workers }) => {
+			run: async ({
+				branch,
+				sha,
+				groups,
+				files,
+				grep,
+				max_workers,
+				repeat,
+			}) => {
 				const run = await createRun({
 					ctx,
 					branch,
 					sha,
 					maxWorkers: max_workers,
+					repeat,
 					selection: { groups, files, grep },
 					purpose: "adhoc",
 				});
@@ -174,7 +208,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run",
 			description:
-				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted, boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, cost, pass/fail counts, failing files with failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). Use wait_for_run to block until it finishes.",
+				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted, boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, cost, pass/fail counts, failing files with failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
 			input: z.object({ run_id: z.string().min(1) }),
 			run: async ({ run_id }) =>
 				toolOk(summariseRun(await getRun({ ctx, runId: run_id }))),
@@ -228,11 +262,17 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run_logs",
 			description:
-				"Read a run's raw output as text. Use failed_only=true after wait_for_run reports failures: it returns every failed file's log under a header. Or pass file (server/tests-relative path) or worker for one slice. Long logs are truncated to max_chars from the end.",
+				"Read a run's raw output as text. Use failed_only=true after wait_for_run reports failures: it returns every failed file's log under a header. Or pass file (server/tests-relative path) or worker for one slice; in a repeat run also pass repetition (1..N), or pass the <file>#<k> id from failures. Long logs are truncated to max_chars from the end.",
 			input: z.object({
 				run_id: z.string().min(1),
 				failed_only: z.boolean().optional(),
 				file: z.string().optional(),
+				repetition: z
+					.number()
+					.int()
+					.min(1)
+					.optional()
+					.describe("Repeat runs only: which repetition of file (1-based)."),
 				worker: z.string().optional(),
 				run_only: z
 					.boolean()
@@ -246,6 +286,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 				run_id,
 				failed_only,
 				file,
+				repetition,
 				worker,
 				run_only,
 				max_chars,
@@ -256,6 +297,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 							ctx,
 							runId: run_id,
 							file,
+							repetition,
 							worker,
 							scope: run_only ? "run" : undefined,
 						});

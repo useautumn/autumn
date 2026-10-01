@@ -20,6 +20,13 @@ import type {
 	StripeKey,
 	WorkerState,
 } from "../../../src/api/contract.ts";
+import { CreateRunBody } from "../../../src/api/contract.ts";
+import { TwdError } from "../../../src/http/apiError.ts";
+import {
+	planWorkItems,
+	splitRepetitionId,
+	summariseRepeats,
+} from "../../../src/internal/runs/repeat/repetitions.ts";
 import type { Method } from "../api/client.ts";
 import fixture from "./catalogFixture.json";
 
@@ -427,7 +434,7 @@ const finishedFile = (
 	worker: string,
 	failRate: number,
 ): RunFile => {
-	const base = p90.get(file) ?? 30_000;
+	const base = p90.get(splitRepetitionId({ id: file }).file) ?? 30_000;
 	const failed = r() < failRate;
 	const slow = r() < 0.02;
 	const tests = 2 + Math.floor(r() * 14);
@@ -474,11 +481,19 @@ const summarize = (run: RunDetail) => {
 	run.failed = run.files.filter(
 		(f) => f.status === "failed" || f.status === "crashed",
 	).length;
-	run.drift = computeDrift(run.files);
+	run.drift = run.repeat > 1 ? [] : computeDrift(run.files);
+	run.repeats = run.repeat > 1 ? summariseRepeats({ files: run.files }) : [];
 };
 
 const summary = (run: RunDetail): RunSummary => {
-	const { phase: _p, workers: _w, files: _f, drift: _d, ...rest } = run;
+	const {
+		phase: _p,
+		workers: _w,
+		files: _f,
+		drift: _d,
+		repeats: _r,
+		...rest
+	} = run;
 	return rest;
 };
 
@@ -590,6 +605,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		status: cancelled ? "cancelled" : "passed",
 		purpose: baseline ? "baseline" : "adhoc",
 		selection,
+		repeat: 1,
 		fileCount: list.length,
 		workerCount,
 		workersWanted: workerCount,
@@ -609,6 +625,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 			workerFree.set(f.worker ?? "", cursor);
 			return { ...f, finishedAt: iso(cursor) };
 		}),
+		repeats: [],
 		drift: [],
 		milestones: {
 			warmReadyAt: iso(createdAt + (startedAt - createdAt) * 0.6),
@@ -726,6 +743,7 @@ const startLiveRun = ({
 	queuedForMs = 0,
 	purpose = "adhoc",
 	pinnedSha = false,
+	repeat = 1,
 }: {
 	branch: string;
 	sha: string;
@@ -739,8 +757,9 @@ const startLiveRun = ({
 	/** Wait in the FIFO account queue before anything starts. */
 	queuedForMs?: number;
 	purpose?: RunSummary["purpose"];
+	repeat?: number;
 }) => {
-	const list = filesForSelection(selection);
+	const list = planWorkItems({ files: filesForSelection(selection), repeat });
 	const wanted = Math.min(list.length, workerCap);
 	const attached = queuedForMs ? 0 : Math.min(wanted, startWorkers);
 	const runId = `run_${hex(10)}`;
@@ -761,6 +780,7 @@ const startLiveRun = ({
 		status: progress > 0 ? "running" : "queued",
 		purpose,
 		selection,
+		repeat,
 		fileCount: list.length,
 		workerCount: attached,
 		workersWanted: wanted,
@@ -799,7 +819,18 @@ const startLiveRun = ({
 				worker: workerName(w),
 				failureSummary: null,
 			})),
+			...list.slice(done + running.length).map((file) => ({
+				file,
+				status: "queued" as const,
+				durationMs: null,
+				attempt: 0,
+				passedTests: 0,
+				failedTests: 0,
+				worker: null,
+				failureSummary: null,
+			})),
 		],
+		repeats: [],
 		drift: [],
 	};
 	summarize(run);
@@ -1038,7 +1069,7 @@ setInterval(() => {
 
 const fileLog = (run: RunDetail, file: string) => {
 	const f = run.files.find((x) => x.file === file);
-	if (!f) return null;
+	if (!f || f.status === "queued") return null;
 	const r = rng(hash(run.id + file));
 	const names = [
 		"attaches plan",
@@ -1225,6 +1256,7 @@ export const handle = ({
 				status: failed ? ("failed" as const) : ("passed" as const),
 				durationMs: Math.round(base * slow * (0.8 + r() * 0.4)),
 				attempt: 1,
+				repetition: null,
 				passedTests: 5,
 				failedTests: failed ? 1 : 0,
 				worker: null,
@@ -1293,6 +1325,7 @@ export const handle = ({
 			sha?: string;
 			selection: RunSummary["selection"];
 			purpose?: RunSummary["purpose"];
+			repeat?: number;
 		};
 		const branch = branches.find((x) => x.name === b.branch);
 		if (!branch)
@@ -1311,6 +1344,16 @@ export const handle = ({
 				"Retry in a few minutes, or watch GET /keys until gate is open.",
 				"If the gate stays draining for more than 15 minutes, ask a twd admin to check the reinit_keys job.",
 			);
+		const parsed = CreateRunBody.safeParse(b);
+		if (!parsed.success)
+			return err(
+				400,
+				"invalid_request",
+				parsed.error.issues
+					.map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
+					.join("; "),
+				"Fix the request to match src/api/contract.ts and retry.",
+			);
 		const count = filesForSelection(b.selection).length;
 		if (!count)
 			return err(
@@ -1319,17 +1362,24 @@ export const handle = ({
 				"The selection matched no test files.",
 				"Pick at least one group or file, or loosen the grep.",
 			);
-		const run = startLiveRun({
-			branch: branch.name,
-			sha: b.sha ?? branch.sha,
-			pinnedSha: b.sha !== undefined,
-			selection: b.selection,
-			createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
-			purpose: b.purpose,
-			workerCap: 120,
-			startWorkers: 10,
-			queuedForMs: capacity().accounts.clean === 0 ? 30_000 : 0,
-		});
+		let run: RunDetail;
+		try {
+			run = startLiveRun({
+				branch: branch.name,
+				sha: b.sha ?? branch.sha,
+				pinnedSha: b.sha !== undefined,
+				selection: b.selection,
+				createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
+				purpose: b.purpose,
+				repeat: parsed.data.repeat,
+				workerCap: 120,
+				startWorkers: 10,
+				queuedForMs: capacity().accounts.clean === 0 ? 30_000 : 0,
+			});
+		} catch (error) {
+			if (!(error instanceof TwdError)) throw error;
+			return err(error.status, error.code, error.message, error.next);
+		}
 		return ok(summary(run));
 	}
 
@@ -1397,9 +1447,13 @@ export const handle = ({
 			return ok(summary(run));
 		}
 		if (method === "POST" && seg[2] === "rerun-failed") {
-			const failed = run.files
-				.filter((f) => f.status === "failed" || f.status === "crashed")
-				.map((f) => f.file);
+			const failed = [
+				...new Set(
+					run.files
+						.filter((f) => f.status === "failed" || f.status === "crashed")
+						.map((f) => splitRepetitionId({ id: f.file }).file),
+				),
+			];
 			if (!failed.length)
 				return err(
 					422,
@@ -1413,6 +1467,7 @@ export const handle = ({
 				pinnedSha: run.pinnedSha,
 				selection: { files: failed },
 				createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
+				repeat: run.repeat,
 			});
 			return ok(summary(next));
 		}
