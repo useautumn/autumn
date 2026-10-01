@@ -12,7 +12,7 @@ export type SwarmInit = {
 	/** server/tests extracted at `sha`; read file contents here, not from twd's checkout. */
 	testsDirAtSha: string;
 	grep?: string;
-	/** First accounts; more arrive as `add_accounts` while the run grows. */
+	/** First accounts (none when every file is on the stripe-connect shard); more arrive as `add_accounts`. */
 	accounts: SwarmAccount[];
 	workersWanted: number;
 	/** Sizes the Stripe budget as if every usable key ran its full per-key cap. */
@@ -24,10 +24,10 @@ export type SwarmInit = {
 };
 
 /** Parent → swarm child after init. */
-export type SwarmParentMessage = {
-	type: "add_accounts";
-	accounts: SwarmAccount[];
-};
+export type SwarmParentMessage =
+	| { type: "add_accounts"; accounts: SwarmAccount[] }
+	/** This run now holds the stripe-connect account; no other run's worker is on it. */
+	| { type: "shard_lease_granted" };
 
 /** Child → parent. `file` paths are server/tests-relative contract ids. */
 export type SwarmChildMessage =
@@ -42,6 +42,10 @@ export type SwarmChildMessage =
 	| { type: "worker_ended"; name: string; accountId: string }
 	/** Accounts the child will not use (no sandbox touched them). */
 	| { type: "release_accounts"; accountIds: string[] }
+	/** A dedicated sub-account now exists; twd records it for deletion. */
+	| { type: "shard_account"; accountId: string }
+	/** Ask twd for the stripe-connect account; answered with `shard_lease_granted`. */
+	| { type: "shard_lease_request" }
 	/** Route a dedicated shard's unregistered accounts to its worker; null drops the route. */
 	| { type: "shard_route"; shard: string; workerUrl: string | null }
 	/** More accounts the child can use right now. */

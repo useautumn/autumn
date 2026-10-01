@@ -46,6 +46,7 @@ import { coalesceChunks } from "./coalesceChunks.ts";
 import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
 import { pickShard } from "./pickShard.ts";
 import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
+import { setUpStripeConnectAccount } from "./setUpStripeConnectAccount.ts";
 import {
 	loadTwModules,
 	type ProviderSandbox,
@@ -70,6 +71,11 @@ const send = (message: SwarmChildMessage) => process.send?.(message);
 
 let teardown: (() => Promise<void>) | undefined;
 let cancelled = false;
+
+let grantShardLease = () => {};
+const shardLeaseGranted = new Promise<void>((resolveGrant) => {
+	grantShardLease = resolveGrant;
+});
 
 /** Accounts that arrive before main() can fork workers. */
 const inbox: SwarmAccount[] = [];
@@ -247,10 +253,12 @@ const main = async (init: SwarmInit) => {
 	const signal = abort.signal;
 	const sandboxes = new Map<string, ProviderSandbox>();
 	const svixAppIds: string[] = [];
-	const shardAccountIds: string[] = [];
+	let stripeConnectSetup: Promise<unknown> | undefined;
 	let teardownPromise: Promise<void> | undefined;
+	const tearingDown = Promise.withResolvers<void>();
 
 	teardown = () => {
+		tearingDown.resolve();
 		teardownPromise ??= (async () => {
 			send({ type: "phase", phase: "tearing_down" });
 			const limit = pLimit(16);
@@ -261,9 +269,8 @@ const main = async (init: SwarmInit) => {
 				...svixAppIds.map((appId) =>
 					limit(() => timeBoxed(() => tw.run.deleteSvixApp(appId))),
 				),
-				...shardAccountIds.map((accountId) =>
-					limit(() => timeBoxed(() => deleteShardAccount({ init, accountId }))),
-				),
+				// An in-flight sub-account create must report its id before exit; twd deletes it.
+				timeBoxed(() => stripeConnectSetup ?? Promise.resolve()),
 			]);
 		})();
 		return teardownPromise;
@@ -343,10 +350,15 @@ const main = async (init: SwarmInit) => {
 				})
 			: { totalWorkers: 0, capabilityWorkers: [] };
 	// Sized as if every key ran its full cap, so growing never pushes a key over budget.
-	const budget = stripeBudgetForRun({
-		workers: init.usableKeys * ACCOUNTS_PER_KEY_CAP,
-		keys: init.usableKeys,
-	});
+	const poolBudget =
+		init.usableKeys > 0
+			? stripeBudgetForRun({
+					workers: init.usableKeys * ACCOUNTS_PER_KEY_CAP,
+					keys: init.usableKeys,
+				})
+			: undefined;
+	// The stripe-connect worker is alone on its key.
+	const dedicatedBudget = stripeBudgetForRun({ workers: 1, keys: 1 });
 	send({ type: "phase", phase: "provisioning" });
 
 	const sandboxByName = new Map<string, ProviderSandbox>();
@@ -464,6 +476,9 @@ const main = async (init: SwarmInit) => {
 				svixAppId = await tw.svix.createSvixApp(tw.testOrg.TEST_ORG_CONFIG.id);
 				svixAppIds.push(svixAppId);
 			}
+			const budget = shard.dedicated ? dedicatedBudget : poolBudget;
+			if (!budget)
+				throw new Error("no usable Stripe pool keys for this worker");
 			boot.mark(name, "forkStart");
 			const forkOptions = {
 				sourceSandbox: warmName,
@@ -614,28 +629,46 @@ const main = async (init: SwarmInit) => {
 	const provisionStripeConnectWorker = async (shard: Shard) => {
 		const config = init.stripeConnectShard;
 		if (!config) return;
-		let accountId: string;
+		send({
+			type: "log",
+			file: null,
+			worker: null,
+			text: "[twd] stripe-connect shard waiting for its account lease\n",
+		});
+		const setup = setUpStripeConnectAccount({
+			waitForLease: () => {
+				send({ type: "shard_lease_request" });
+				return Promise.race([shardLeaseGranted, tearingDown.promise]);
+			},
+			isCancelled: () => teardownPromise !== undefined,
+			ensureWebhook: () =>
+				ensureStripeConnectWebhook({
+					stripe: stripeForKey({ secret: config.secretKey }),
+					url: stripeConnectWebhookUrl({ ingressUrl: init.ingressUrl }),
+					events: CONNECT_WEBHOOK_EVENTS,
+				}),
+			createAccount: () =>
+				tw.stripe.createSandboxSubAccount({
+					orgName: `tw stripe-connect ${init.runId}`,
+					ownerEmail: "system@useautumn.com",
+					owner: "twd",
+					runId: init.runId,
+					orgId: tw.testOrg.TEST_ORG_CONFIG.id,
+					secretKey: config.secretKey,
+					extraMetadata: { autumn_tw_shard: STRIPE_CONNECT_SHARD },
+				}),
+			reportAccount: (accountId) => send({ type: "shard_account", accountId }),
+		});
+		stripeConnectSetup = setup.catch(() => undefined);
+		let accountId: string | null;
 		try {
-			await ensureStripeConnectWebhook({
-				stripe: stripeForKey({ secret: config.secretKey }),
-				url: stripeConnectWebhookUrl({ ingressUrl: init.ingressUrl }),
-				events: CONNECT_WEBHOOK_EVENTS,
-			});
-			accountId = await tw.stripe.createSandboxSubAccount({
-				orgName: `tw stripe-connect ${init.runId}`,
-				ownerEmail: "system@useautumn.com",
-				owner: "twd",
-				runId: init.runId,
-				orgId: tw.testOrg.TEST_ORG_CONFIG.id,
-				secretKey: config.secretKey,
-				extraMetadata: { autumn_tw_shard: STRIPE_CONNECT_SHARD },
-			});
+			accountId = await setup;
 		} catch (error) {
 			const reason = error instanceof Error ? error.message : String(error);
 			shard.fail(new Error(`stripe-connect shard setup failed: ${reason}`));
 			return;
 		}
-		shardAccountIds.push(accountId);
+		if (!accountId) return;
 		await provision({
 			account: { accountId, secretKey: config.secretKey },
 			shard,
@@ -738,6 +771,8 @@ process.once("message", (init: SwarmInit) => {
 				return;
 			}
 			receiveAccounts(message.accounts);
+		} else if (message.type === "shard_lease_granted") {
+			grantShardLease();
 		}
 	});
 	receiveAccounts(init.accounts);
@@ -785,18 +820,4 @@ const partitionAtSha = async ({
 			files: files.map(toLocalPath),
 		})),
 	};
-};
-
-/** Run-scoped, so closing it never touches the shard's platform account or webhook. */
-const deleteShardAccount = async ({
-	init,
-	accountId,
-}: {
-	init: SwarmInit;
-	accountId: string;
-}) => {
-	if (!init.stripeConnectShard) return;
-	await stripeForKey({
-		secret: init.stripeConnectShard.secretKey,
-	}).accounts.del(accountId);
 };
