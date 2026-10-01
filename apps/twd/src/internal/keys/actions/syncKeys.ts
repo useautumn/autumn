@@ -94,6 +94,21 @@ export const isShardKey = ({
 	secret: string;
 }) => secret === ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 
+/** A shard key imported before it was reserved keeps its row; mark it out so nothing allocates or nukes under it. */
+export const retireShardKey = async ({ ctx }: { ctx: TwdContext }) => {
+	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
+	if (!secret) return;
+	await ctx.db
+		.update(stripeKeys)
+		.set({
+			usable: false,
+			present: false,
+			unusableReason: SHARD_KEY_REASON,
+			updatedAt: new Date(),
+		})
+		.where(eq(stripeKeys.keyHash, hashKey({ secret })));
+};
+
 /** Any separator (commas, whitespace, newlines); only `sk_`/`rk_` tokens, deduped. */
 export const parseKeyList = ({ text }: { text: string }) => [
 	...new Set(
@@ -108,6 +123,7 @@ export const syncKeys = ({ ctx }: { ctx: TwdContext }): Promise<void> => {
 	inFlight ??= loadKnownSecrets({ ctx })
 		.then(async (secrets) => {
 			const { resolvedIds } = await probeAndStoreKeys({ ctx, secrets });
+			await retireShardKey({ ctx });
 			forgetKeySecretsExcept({ platformAccountIds: resolvedIds });
 		})
 		.finally(() => {

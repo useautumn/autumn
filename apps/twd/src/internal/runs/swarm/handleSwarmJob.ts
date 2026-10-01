@@ -58,6 +58,8 @@ import type {
 	SwarmInit,
 	SwarmParentMessage,
 } from "../types/swarmMessages.ts";
+import { countPooledFiles } from "./countPooledFiles.ts";
+import { acquireStripeConnectLease } from "./stripeConnectLease.ts";
 
 const SWARM_ENTRY = resolve(import.meta.dir, "swarmProcess/swarmProcess.ts");
 const WARM_POLL_MS = 5_000;
@@ -298,6 +300,7 @@ export const handleSwarmJob: JobHandler = async ({
 		},
 	};
 	let unregister = () => {};
+	let releaseShardLease = () => {};
 	abort.signal.addEventListener(
 		"abort",
 		() => {
@@ -322,8 +325,16 @@ export const handleSwarmJob: JobHandler = async ({
 			.select({ usableKeys: count() })
 			.from(stripeKeys)
 			.where(usableKey);
+		const { testsDir: testsDirAtSha } = await getTestTreeAtSha({
+			ctx,
+			sha: run.sha,
+		});
+		const pooledFiles = await countPooledFiles({
+			testIds: files,
+			testsDirAtSha,
+		});
 		const workersWanted = Math.min(
-			files.length,
+			pooledFiles,
 			run.maxWorkers ?? Number.POSITIVE_INFINITY,
 			usableKeys * ACCOUNTS_PER_KEY_CAP,
 			MAX_RUN_WORKERS,
@@ -333,11 +344,10 @@ export const handleSwarmJob: JobHandler = async ({
 			phase: "waiting for warm image",
 			set: { startedAt: new Date(), workersWanted },
 		});
-		if (workersWanted === 0) {
+		if (files.length === 0) throw new Error("run has no planned files");
+		if (pooledFiles > 0 && workersWanted === 0) {
 			throw new Error(
-				files.length === 0
-					? "run has no planned files"
-					: "no usable Stripe keys — import keys on the Stripe keys page, then Re-initialise",
+				"no usable Stripe keys — import keys on the Stripe keys page, then Re-initialise",
 			);
 		}
 		await waitForWarm({ ctx, run, signal: abort.signal });
@@ -346,11 +356,14 @@ export const handleSwarmJob: JobHandler = async ({
 
 		// From here a crash-resume must clean up (accounts, sandboxes), never re-run.
 		await checkpoint({ committed: true, sandboxIds: [] });
-		setStatus({ status: "queued", phase: "waiting for a free account" });
-		demand.wants = workersWanted;
-		unregister = registerRunDemand({ runId, demand });
-		await firstAccounts;
-		if (abort.signal.aborted) return;
+		// A run of only stripe-connect files brings its own account, so it never queues for the pool.
+		if (workersWanted > 0) {
+			setStatus({ status: "queued", phase: "waiting for a free account" });
+			demand.wants = workersWanted;
+			unregister = registerRunDemand({ runId, demand });
+			await firstAccounts;
+			if (abort.signal.aborted) return;
+		}
 		milestones.accountsAt = new Date().toISOString();
 
 		setStatus({ status: "provisioning", phase: "provisioning workers" });
@@ -359,7 +372,7 @@ export const handleSwarmJob: JobHandler = async ({
 			runId,
 			sha: run.sha,
 			files: files.map((testId) => toAbsoluteTestPath({ testId })),
-			testsDirAtSha: (await getTestTreeAtSha({ ctx, sha: run.sha })).testsDir,
+			testsDirAtSha,
 			grep: run.selection.grep,
 			accounts: parked.splice(0).map(toSwarmAccount),
 			workersWanted,
@@ -421,6 +434,12 @@ export const handleSwarmJob: JobHandler = async ({
 							accountIds: message.accountIds,
 						});
 						kickAllocator();
+					});
+				} else if (message.type === "shard_lease_request") {
+					void acquireStripeConnectLease().then((release) => {
+						releaseShardLease = release;
+						if (closed) release();
+						else sendToChild?.({ type: "shard_lease_granted" });
 					});
 				} else if (message.type === "shard_route") {
 					if (message.workerUrl)
@@ -497,6 +516,7 @@ export const handleSwarmJob: JobHandler = async ({
 		sendToChild = undefined;
 		unregister();
 		clearShardRoutesForRun({ runId });
+		releaseShardLease();
 		clearInterval(flushTimer);
 		await logWriter.close();
 		clearInterval(accrueTimer);

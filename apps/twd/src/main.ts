@@ -3,6 +3,7 @@ import { runMigrations } from "./db/migrate.ts";
 import { createApp } from "./http/createApp.ts";
 import { startJobRunner } from "./internal/jobs/runner/jobRunner.ts";
 import { preloadKeySecrets } from "./internal/keys/actions/resolveKeySecret.ts";
+import { retireShardKey } from "./internal/keys/actions/syncKeys.ts";
 import { startPgChangeListener } from "./internal/live/pgChanges/startPgChangeListener.ts";
 import { createContext, SYSTEM_ACTOR } from "./lib/createContext.ts";
 import { getTwdEnv } from "./lib/env.ts";
@@ -13,10 +14,10 @@ const env = getTwdEnv();
 const logger = getLogger();
 
 await runMigrations();
+const bootCtx = createContext({ actor: SYSTEM_ACTOR });
+await retireShardKey({ ctx: bootCtx });
 logger.info("key secrets preloaded", {
-	keys: await preloadKeySecrets({
-		ctx: createContext({ actor: SYSTEM_ACTOR }),
-	}),
+	keys: await preloadKeySecrets({ ctx: bootCtx }),
 });
 
 const app = createApp();

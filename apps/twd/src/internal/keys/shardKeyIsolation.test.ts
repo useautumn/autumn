@@ -3,7 +3,9 @@ import { expect, mock, test } from "bun:test";
 process.env.TWD_DATABASE_URL ??= "postgres://unused@localhost:1/unused";
 
 const { importKeys } = await import("./actions/importKeys.ts");
-const { loadKnownSecrets } = await import("./actions/syncKeys.ts");
+const { loadKnownSecrets, retireShardKey } = await import(
+	"./actions/syncKeys.ts"
+);
 
 const SHARD_KEY = "sk_test_shard";
 const POOL_KEY = "sk_test_pool";
@@ -43,4 +45,33 @@ test("importing the shard key is refused before it is probed or stored", async (
 		},
 	]);
 	expect(writes).not.toHaveBeenCalled();
+});
+
+test("a shard key stored before it was reserved is retired from the pool", async () => {
+	const sets: unknown[] = [];
+	const ctx = {
+		env: { SHARD_STRIPE_SANDBOX_KEY: SHARD_KEY },
+		db: {
+			update: () => ({
+				set: (values: unknown) => {
+					sets.push(values);
+					return { where: async () => [] };
+				},
+			}),
+		},
+	} as never;
+	await retireShardKey({ ctx });
+	expect(sets).toEqual([
+		expect.objectContaining({
+			usable: false,
+			present: false,
+			unusableReason: expect.stringContaining("stripe-connect shard"),
+		}),
+	]);
+
+	sets.length = 0;
+	await retireShardKey({
+		ctx: { env: { SHARD_STRIPE_SANDBOX_KEY: "" }, db: {} } as never,
+	});
+	expect(sets).toEqual([]);
 });

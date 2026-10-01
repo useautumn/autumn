@@ -71,6 +71,11 @@ const send = (message: SwarmChildMessage) => process.send?.(message);
 let teardown: (() => Promise<void>) | undefined;
 let cancelled = false;
 
+let grantShardLease = () => {};
+const shardLeaseGranted = new Promise<void>((resolveGrant) => {
+	grantShardLease = resolveGrant;
+});
+
 /** Accounts that arrive before main() can fork workers. */
 const inbox: SwarmAccount[] = [];
 let grow: ((accounts: SwarmAccount[]) => void) | undefined;
@@ -343,10 +348,15 @@ const main = async (init: SwarmInit) => {
 				})
 			: { totalWorkers: 0, capabilityWorkers: [] };
 	// Sized as if every key ran its full cap, so growing never pushes a key over budget.
-	const budget = stripeBudgetForRun({
-		workers: init.usableKeys * ACCOUNTS_PER_KEY_CAP,
-		keys: init.usableKeys,
-	});
+	const poolBudget =
+		init.usableKeys > 0
+			? stripeBudgetForRun({
+					workers: init.usableKeys * ACCOUNTS_PER_KEY_CAP,
+					keys: init.usableKeys,
+				})
+			: undefined;
+	// The stripe-connect worker is alone on its key.
+	const dedicatedBudget = stripeBudgetForRun({ workers: 1, keys: 1 });
 	send({ type: "phase", phase: "provisioning" });
 
 	const sandboxByName = new Map<string, ProviderSandbox>();
@@ -464,6 +474,9 @@ const main = async (init: SwarmInit) => {
 				svixAppId = await tw.svix.createSvixApp(tw.testOrg.TEST_ORG_CONFIG.id);
 				svixAppIds.push(svixAppId);
 			}
+			const budget = shard.dedicated ? dedicatedBudget : poolBudget;
+			if (!budget)
+				throw new Error("no usable Stripe pool keys for this worker");
 			boot.mark(name, "forkStart");
 			const forkOptions = {
 				sourceSandbox: warmName,
@@ -614,6 +627,15 @@ const main = async (init: SwarmInit) => {
 	const provisionStripeConnectWorker = async (shard: Shard) => {
 		const config = init.stripeConnectShard;
 		if (!config) return;
+		send({
+			type: "log",
+			file: null,
+			worker: null,
+			text: "[twd] stripe-connect shard waiting for its account lease\n",
+		});
+		send({ type: "shard_lease_request" });
+		await shardLeaseGranted;
+		if (teardownPromise) return;
 		let accountId: string;
 		try {
 			await ensureStripeConnectWebhook({
@@ -738,6 +760,8 @@ process.once("message", (init: SwarmInit) => {
 				return;
 			}
 			receiveAccounts(message.accounts);
+		} else if (message.type === "shard_lease_granted") {
+			grantShardLease();
 		}
 	});
 	receiveAccounts(init.accounts);
