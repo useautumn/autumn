@@ -14,6 +14,7 @@ import type { PhaseBalances } from "../diffPhaseBalances";
 import type {
 	BalanceScope,
 	ScopedPhaseBalances,
+	ScopePool,
 } from "./types/scopedPhaseBalances";
 
 type ScopedRow = { internal_entity_id?: string | null };
@@ -111,29 +112,40 @@ export const customerToScopedBalances = async ({
 		fullCustomer: readableCustomer,
 	});
 
+	const scopes = balanceScopesOf(readableCustomer).map((scope) => {
+		const scopeCustomer = scopeFullCustomer({
+			fullCustomer: readableCustomer,
+			scope,
+		});
+		const contributions = customerProductsToPooledContributions({
+			customerProducts: scopeCustomer.customer_products,
+			inStatuses,
+		});
+		return { scope, scopeCustomer, contributions };
+	});
+	const contributorCount = (featureId: string) =>
+		scopes.filter(({ contributions }) => featureId in contributions).length;
+
 	return Promise.all(
-		balanceScopesOf(readableCustomer).map(async (scope) => {
-			const scopeCustomer = scopeFullCustomer({
-				fullCustomer: readableCustomer,
-				scope,
-			});
+		scopes.map(async ({ scope, scopeCustomer, contributions }) => {
 			const { balances: ownBalances } = await getApiBalances({
 				ctx,
 				fullCus: scopeCustomer,
 			});
-			const contributions = customerProductsToPooledContributions({
-				customerProducts: scopeCustomer.customer_products,
-				inStatuses,
-			});
 			const balances: PhaseBalances = { ...ownBalances };
+			const pools: Record<string, ScopePool> = {};
 			for (const [featureId, contribution] of Object.entries(contributions)) {
 				balances[featureId] = attributePooledBalance({
 					own: ownBalances[featureId],
 					contribution,
 					pool: poolTotals[featureId],
 				});
+				pools[featureId] = {
+					total: poolTotals[featureId]?.granted ?? 0,
+					contributors: contributorCount(featureId),
+				};
 			}
-			return { scope, balances };
+			return { scope, balances, pools };
 		}),
 	);
 };

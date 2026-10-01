@@ -67,6 +67,18 @@ export const SetPlansPreviewBalanceSchema = PreviewBalanceSchema.extend({
 	overage_allowed: z.boolean(),
 });
 
+export const SetPlansPreviewPooledBalanceSchema = z.object({
+	previous_total: z.number().nullable().meta({
+		description:
+			"The shared pool's total before, or null when this scope wasn't pooling into it.",
+	}),
+	total: z.number(),
+	contributors: z.number().meta({
+		description:
+			"How many scopes pool into the shared balance after the change.",
+	}),
+});
+
 export const SetPlansPreviewBalanceChangeSchema =
 	PreviewBalanceChangeSchema.extend({
 		entity_id: z.string().nullable().meta({
@@ -75,6 +87,10 @@ export const SetPlansPreviewBalanceChangeSchema =
 		}),
 		balance: SetPlansPreviewBalanceSchema,
 		behavior: z.enum(["added", "removed", "reset", "carried", "updated"]),
+		pooled: SetPlansPreviewPooledBalanceSchema.optional().meta({
+			description:
+				"Set when this scope's plans pool the feature into the customer's shared balance; `balance` then holds their contribution.",
+		}),
 	});
 
 export const SetPlansPreviewPhaseSchema = z.object({
@@ -153,6 +169,9 @@ export type ProcessorItem = z.infer<typeof ProcessorItemSchema>;
 export type SetPlansPreviewPlan = z.infer<typeof SetPlansPreviewPlanSchema>;
 export type SetPlansPreviewBalance = z.infer<
 	typeof SetPlansPreviewBalanceSchema
+>;
+export type SetPlansPreviewPooledBalance = z.infer<
+	typeof SetPlansPreviewPooledBalanceSchema
 >;
 export type SetPlansPreviewBalanceChange = z.infer<
 	typeof SetPlansPreviewBalanceChangeSchema

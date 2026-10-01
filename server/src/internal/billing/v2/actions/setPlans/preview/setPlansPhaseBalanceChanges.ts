@@ -14,6 +14,7 @@ const balanceChangeSignature = ({
 	behavior,
 	previous_attributes,
 	balance,
+	pooled,
 }: SetPlansPreviewBalanceChange) =>
 	JSON.stringify([
 		entity_id,
@@ -21,6 +22,7 @@ const balanceChangeSignature = ({
 		behavior,
 		previous_attributes,
 		balance,
+		pooled,
 	]);
 
 /**

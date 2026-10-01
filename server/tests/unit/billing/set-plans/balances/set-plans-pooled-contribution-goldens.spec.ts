@@ -342,11 +342,15 @@ const describePooledChange = ({
 	behavior,
 	balance,
 	previous_attributes,
+	pooled,
 }: SetPlansPreviewBalanceChange) => {
 	const scope = entity_id ? `${entity_id}/` : "";
 	const granted = `${previous_attributes.granted ?? balance.granted} -> ${balance.granted} granted`;
 	const usageBased = balance.overage_allowed ? ", usage-based" : "";
-	return `${scope}${feature_id} ${behavior}: ${granted}${usageBased}`;
+	const pool = pooled
+		? `, pool ${pooled.previous_total} -> ${pooled.total} across ${pooled.contributors}`
+		: "";
+	return `${scope}${feature_id} ${behavior}: ${granted}${usageBased}${pool}`;
 };
 
 const describePooledPhases = (phaseChanges: SetPlansPreviewBalanceChange[][]) =>
@@ -385,7 +389,9 @@ describe(
 			});
 
 			expect(describePooledPhases(phaseChanges)).toEqual([
-				["ent_a/credits updated: 10000 -> 100000 granted, usage-based"],
+				[
+					"ent_a/credits updated: 10000 -> 100000 granted, usage-based, pool 10000 -> 100000 across 1",
+				],
 			]);
 		});
 
@@ -429,7 +435,9 @@ describe(
 			});
 
 			expect(describePooledPhases(phaseChanges)).toEqual([
-				["ent_a/credits updated: 10000 -> 30000 granted, usage-based"],
+				[
+					"ent_a/credits updated: 10000 -> 30000 granted, usage-based, pool 20000 -> 40000 across 2",
+				],
 			]);
 		});
 
@@ -507,7 +515,9 @@ describe(
 			});
 
 			expect(describePooledPhases(phaseChanges)).toEqual([
-				["ent_a/credits updated: 10000 -> 10000 granted, usage-based"],
+				[
+					"ent_a/credits updated: 10000 -> 10000 granted, usage-based, pool 20000 -> 20000 across 2",
+				],
 				[],
 			]);
 		});

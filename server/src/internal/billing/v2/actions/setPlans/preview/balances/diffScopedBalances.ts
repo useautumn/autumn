@@ -1,4 +1,7 @@
-import type { SetPlansPreviewBalanceChange } from "@autumn/shared";
+import type {
+	SetPlansPreviewBalanceChange,
+	SetPlansPreviewPooledBalance,
+} from "@autumn/shared";
 import { diffPhaseBalances } from "../diffPhaseBalances";
 import type {
 	BalanceScope,
@@ -21,7 +24,7 @@ const scopesOf = ({
 	return [...scopes.values()];
 };
 
-const balancesIn = ({
+const entryIn = ({
 	scopedBalances,
 	scope,
 }: {
@@ -30,7 +33,45 @@ const balancesIn = ({
 }) =>
 	scopedBalances.find(
 		(entry) => entry.scope.internalEntityId === scope.internalEntityId,
-	)?.balances ?? {};
+	);
+
+/** The feature's pool as any contributing scope sees it; a scope that stopped pooling still reports what remains. */
+const poolIn = ({
+	scopedBalances,
+	featureId,
+}: {
+	scopedBalances: ScopedPhaseBalances;
+	featureId: string;
+}) => scopedBalances.find(({ pools }) => pools[featureId])?.pools[featureId];
+
+/** The shared pool behind a scope's change, when the scope pools the feature on either side. */
+const pooledBalanceChange = ({
+	before,
+	after,
+	scope,
+	featureId,
+}: {
+	before: ScopedPhaseBalances;
+	after: ScopedPhaseBalances;
+	scope: BalanceScope;
+	featureId: string;
+}): SetPlansPreviewPooledBalance | undefined => {
+	const poolBefore = entryIn({ scopedBalances: before, scope })?.pools[
+		featureId
+	];
+	const scopePoolAfter = entryIn({ scopedBalances: after, scope })?.pools[
+		featureId
+	];
+	if (!poolBefore && !scopePoolAfter) return undefined;
+
+	const poolAfter =
+		scopePoolAfter ?? poolIn({ scopedBalances: after, featureId });
+	return {
+		previous_total: poolBefore?.total ?? null,
+		total: poolAfter?.total ?? 0,
+		contributors: poolAfter?.contributors ?? 0,
+	};
+};
 
 /** Each scope's balance changes between two moments, tagged with the entity they belong to. */
 export const diffScopedBalances = ({
@@ -42,7 +83,19 @@ export const diffScopedBalances = ({
 }): SetPlansPreviewBalanceChange[] =>
 	scopesOf({ before, after }).flatMap((scope) =>
 		diffPhaseBalances({
-			before: balancesIn({ scopedBalances: before, scope }),
-			after: balancesIn({ scopedBalances: after, scope }),
-		}).map((diff) => ({ ...diff, entity_id: scope.entityId })),
+			before: entryIn({ scopedBalances: before, scope })?.balances ?? {},
+			after: entryIn({ scopedBalances: after, scope })?.balances ?? {},
+		}).map((diff) => {
+			const pooled = pooledBalanceChange({
+				before,
+				after,
+				scope,
+				featureId: diff.feature_id,
+			});
+			return {
+				...diff,
+				entity_id: scope.entityId,
+				...(pooled ? { pooled } : {}),
+			};
+		}),
 	);
