@@ -56,346 +56,384 @@ import chalk from "chalk";
 // TEST 1: custom plan adds a boolean entitlement, base price reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: add boolean entitlement → base price Stripe IDs reused")}`, async () => {
-	const customerId = "reuse-custom-boolean";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: add boolean entitlement → base price Stripe IDs reused")}`,
+	async () => {
+		const customerId = "reuse-custom-boolean";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-boolean",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-boolean",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
-
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [
-				itemsV2.monthlyMessages({ included: 100 }),
-				itemsV2.dashboard(),
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
 			],
-		},
-	};
+			actions: [],
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [
+					itemsV2.monthlyMessages({ included: 100 }),
+					itemsV2.dashboard(),
+				],
+			},
+		};
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	expectAllStripeIdsReused({ pairs, catalogProduct });
-});
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
+
+		expectAllStripeIdsReused({ pairs, catalogProduct });
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: custom plan keeps prepaid/consumable/allocated items → all reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: paid feature shapes unchanged → all Stripe IDs reused")}`, async () => {
-	const customerId = "reuse-custom-paid";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: paid feature shapes unchanged → all Stripe IDs reused")}`,
+	async () => {
+		const customerId = "reuse-custom-paid";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-paid",
-		items: [
-			items.monthlyMessages({ includedUsage: 100 }),
-			items.prepaidUsers({ billingUnits: 1 }),
-			items.consumableWords({ includedUsage: 0 }),
-			// V2 UsageBased forbids top-level proration; catalog must be arrear to match.
-			items.allocatedV2Workflows({ includedUsage: 0 }),
-		],
-	});
-
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
-
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
+		const proPlan = products.pro({
+			id: "pro-reuse-paid",
 			items: [
-				itemsV2.monthlyMessages({ included: 100 }),
-				itemsV2.prepaidUsers({ amount: 10, billingUnits: 1 }),
-				itemsV2.consumableWords({ amount: 0.05 }),
-				itemsV2.allocatedWorkflows({ amount: 10 }),
-				itemsV2.dashboard(),
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.prepaidUsers({ billingUnits: 1 }),
+				items.consumableWords({ includedUsage: 0 }),
+				// V2 UsageBased forbids top-level proration; catalog must be arrear to match.
+				items.allocatedV2Workflows({ includedUsage: 0 }),
 			],
-		},
-	};
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [],
+		});
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [
+					itemsV2.monthlyMessages({ included: 100 }),
+					itemsV2.prepaidUsers({ amount: 10, billingUnits: 1 }),
+					itemsV2.consumableWords({ amount: 0.05 }),
+					itemsV2.allocatedWorkflows({ amount: 10 }),
+					itemsV2.dashboard(),
+				],
+			},
+		};
 
-	expectAllStripeIdsReused({ pairs, catalogProduct });
-});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
+
+		expectAllStripeIdsReused({ pairs, catalogProduct });
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3 (negative): swap prepaid → consumable on same feature → no reuse
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on same feature → stripe_price_id NOT reused")}`, async () => {
-	const customerId = "reuse-custom-prepaid-to-consumable";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: prepaid → consumable on same feature → stripe_price_id NOT reused")}`,
+	async () => {
+		const customerId = "reuse-custom-prepaid-to-consumable";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-prepaid-to-consumable",
-		items: [items.prepaidMessages({ includedUsage: 0 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-prepaid-to-consumable",
+			items: [items.prepaidMessages({ includedUsage: 0 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [],
+		});
 
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [itemsV2.consumableMessages({ amount: 0.5 })],
-		},
-	};
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [itemsV2.consumableMessages({ amount: 0.5 })],
+			},
+		};
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs, catalogProduct, catalogPrices, customerPrices } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		const { pairs, catalogProduct, catalogPrices, customerPrices } =
+			await loadCustomerAndCatalogPrices({
+				ctx,
+				customerId,
+				catalogProductId: proPlan.id,
+			});
 
-	expectStripePriceIdNotReused({
-		pairs,
-		catalogProduct,
-		featureId: TestFeature.Messages,
-		catalogPrices,
-		customerPrices,
-	});
-});
+		expectStripePriceIdNotReused({
+			pairs,
+			catalogProduct,
+			featureId: TestFeature.Messages,
+			catalogPrices,
+			customerPrices,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4 (negative): change prepaid price amount → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prepaid amount change → stripe_price_id NOT reused")}`, async () => {
-	const customerId = "reuse-custom-prepaid-amount";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: prepaid amount change → stripe_price_id NOT reused")}`,
+	async () => {
+		const customerId = "reuse-custom-prepaid-amount";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-prepaid-amount",
-		items: [items.prepaidMessages({ includedUsage: 0 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-prepaid-amount",
+			items: [items.prepaidMessages({ includedUsage: 0 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [],
+		});
 
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [itemsV2.prepaidMessages({ amount: 25, billingUnits: 100 })],
-		},
-	};
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [itemsV2.prepaidMessages({ amount: 25, billingUnits: 100 })],
+			},
+		};
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
 
-	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
-});
+		expectStripePriceIdNotReused({
+			pairs,
+			catalogProduct,
+			featureId: TestFeature.Messages,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 5 (negative): change tier amounts on tiered prepaid → not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: tier amount change → stripe_price_id NOT reused")}`, async () => {
-	const customerId = "reuse-custom-tier";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: tier amount change → stripe_price_id NOT reused")}`,
+	async () => {
+		const customerId = "reuse-custom-tier";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-tier",
-		items: [items.tieredPrepaidMessages({ includedUsage: 0 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-tier",
+			items: [items.tieredPrepaidMessages({ includedUsage: 0 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
-
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [
-				itemsV2.tieredPrepaidMessages({
-					tiers: [
-						{ to: 600, amount: 20 },
-						{ to: TierInfinite, amount: 10 },
-					],
-				}),
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
 			],
-		},
-	};
+			actions: [],
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [
+					itemsV2.tieredPrepaidMessages({
+						tiers: [
+							{ to: 600, amount: 20 },
+							{ to: TierInfinite, amount: 10 },
+						],
+					}),
+				],
+			},
+		};
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
-});
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
+
+		expectStripePriceIdNotReused({
+			pairs,
+			catalogProduct,
+			featureId: TestFeature.Messages,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 6 (negative): graduated → volume tier_behavior → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: graduated → volume tier_behavior → stripe_price_id NOT reused")}`, async () => {
-	const customerId = "reuse-custom-tier-behavior";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: graduated → volume tier_behavior → stripe_price_id NOT reused")}`,
+	async () => {
+		const customerId = "reuse-custom-tier-behavior";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-tier-behavior",
-		items: [items.tieredPrepaidMessages({ includedUsage: 0 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-tier-behavior",
+			items: [items.tieredPrepaidMessages({ includedUsage: 0 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
-
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [
-				{
-					feature_id: TestFeature.Messages,
-					included: 0,
-					price: {
-						tiers: [
-							{ to: 500, amount: 10 },
-							{ to: TierInfinite, amount: 5 },
-						],
-						tier_behavior: TierBehavior.VolumeBased,
-						interval: BillingInterval.Month,
-						billing_method: BillingMethod.Prepaid,
-						billing_units: 100,
-					},
-				},
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
 			],
-		},
-	};
+			actions: [],
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 0,
+						price: {
+							tiers: [
+								{ to: 500, amount: 10 },
+								{ to: TierInfinite, amount: 5 },
+							],
+							tier_behavior: TierBehavior.VolumeBased,
+							interval: BillingInterval.Month,
+							billing_method: BillingMethod.Prepaid,
+							billing_units: 100,
+						},
+					},
+				],
+			},
+		};
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
-});
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
+
+		expectStripePriceIdNotReused({
+			pairs,
+			catalogProduct,
+			featureId: TestFeature.Messages,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 7 (negative): add flat_amount to a tier → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → stripe_price_id NOT reused")}`, async () => {
-	const customerId = "reuse-custom-flat-amount";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: add flat_amount to tier → stripe_price_id NOT reused")}`,
+	async () => {
+		const customerId = "reuse-custom-flat-amount";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-flat-amount",
-		items: [items.volumePrepaidMessages({ includedUsage: 0 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-flat-amount",
+			items: [items.volumePrepaidMessages({ includedUsage: 0 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
-
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [
-				{
-					feature_id: TestFeature.Messages,
-					included: 0,
-					price: {
-						tiers: [
-							{ to: 500, amount: 10, flat_amount: 100 },
-							{ to: TierInfinite, amount: 5 },
-						],
-						tier_behavior: TierBehavior.VolumeBased,
-						interval: BillingInterval.Month,
-						billing_method: BillingMethod.Prepaid,
-						billing_units: 100,
-					},
-				},
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
 			],
-		},
-	};
+			actions: [],
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 0,
+						price: {
+							tiers: [
+								{ to: 500, amount: 10, flat_amount: 100 },
+								{ to: TierInfinite, amount: 5 },
+							],
+							tier_behavior: TierBehavior.VolumeBased,
+							interval: BillingInterval.Month,
+							billing_method: BillingMethod.Prepaid,
+							billing_units: 100,
+						},
+					},
+				],
+			},
+		};
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
-});
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
+
+		expectStripePriceIdNotReused({
+			pairs,
+			catalogProduct,
+			featureId: TestFeature.Messages,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 8 (negative): prorated allocated catalog → arrear V2 customize → not reused
@@ -403,83 +441,97 @@ test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → 
 // catalog → V2 UsageBased without proration (arrear).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prorated allocated → arrear customize → stripe_price_id NOT reused")}`, async () => {
-	const customerId = "reuse-custom-proration";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: prorated allocated → arrear customize → stripe_price_id NOT reused")}`,
+	async () => {
+		const customerId = "reuse-custom-proration";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-proration",
-		items: [items.allocatedWorkflows({ includedUsage: 0 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-proration",
+			items: [items.allocatedWorkflows({ includedUsage: 0 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [],
+		});
 
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [itemsV2.allocatedWorkflows({ amount: 10 })],
-		},
-	};
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [itemsV2.allocatedWorkflows({ amount: 10 })],
+			},
+		};
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
 
-	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Workflows });
-});
+		expectStripePriceIdNotReused({
+			pairs,
+			catalogProduct,
+			featureId: TestFeature.Workflows,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 9 (negative): change billing_units → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: change prepaid billing_units → stripe_price_id NOT reused")}`, async () => {
-	const customerId = "reuse-custom-billing-units";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: change prepaid billing_units → stripe_price_id NOT reused")}`,
+	async () => {
+		const customerId = "reuse-custom-billing-units";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-billing-units",
-		items: [items.prepaidMessages({ includedUsage: 0, billingUnits: 100 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-reuse-billing-units",
+			items: [items.prepaidMessages({ includedUsage: 0, billingUnits: 100 })],
+		});
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [],
+		});
 
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [itemsV2.prepaidMessages({ amount: 10, billingUnits: 50 })],
-		},
-	};
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [itemsV2.prepaidMessages({ amount: 10, billingUnits: 50 })],
+			},
+		};
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
 
-	expectStripePriceIdNotReused({ pairs, catalogProduct, featureId: TestFeature.Messages });
-});
+		expectStripePriceIdNotReused({
+			pairs,
+			catalogProduct,
+			featureId: TestFeature.Messages,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 10 (positive): change rollover config on ent (base price unaffected)
@@ -489,106 +541,112 @@ test.concurrent(`${chalk.yellowBright("custom plan: change prepaid billing_units
 // reuses all Stripe IDs across the customize.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: change rollover config → base price Stripe IDs still reused")}`, async () => {
-	const customerId = "reuse-custom-rollover";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: change rollover config → base price Stripe IDs still reused")}`,
+	async () => {
+		const customerId = "reuse-custom-rollover";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-rollover",
-		items: [
-			items.monthlyMessagesWithRollover({
-				includedUsage: 200,
-				rolloverConfig: {
-					max: 100,
-					length: 0,
-					duration: RolloverExpiryDurationType.Forever,
-				},
-			}),
-		],
-	});
-
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
-
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
+		const proPlan = products.pro({
+			id: "pro-reuse-rollover",
 			items: [
-				{
-					feature_id: TestFeature.Messages,
-					included: 200,
-					rollover: {
-						max: 500,
-						expiry_duration_type: RolloverExpiryDurationType.Forever,
-						expiry_duration_length: 0,
+				items.monthlyMessagesWithRollover({
+					includedUsage: 200,
+					rolloverConfig: {
+						max: 100,
+						length: 0,
+						duration: RolloverExpiryDurationType.Forever,
 					},
-				},
+				}),
 			],
-		},
-	};
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [],
+		});
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 200,
+						rollover: {
+							max: 500,
+							expiry_duration_type: RolloverExpiryDurationType.Forever,
+							expiry_duration_length: 0,
+						},
+					},
+				],
+			},
+		};
 
-	expectAllStripeIdsReused({ pairs, catalogProduct });
-});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
+
+		expectAllStripeIdsReused({ pairs, catalogProduct });
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 11 (positive): prepaid + consumable pair on same feature → both reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prepaid + consumable pair on same feature → both Stripe IDs reused")}`, async () => {
-	const customerId = "reuse-custom-pair";
+test.concurrent(
+	`${chalk.yellowBright("custom plan: prepaid + consumable pair on same feature → both Stripe IDs reused")}`,
+	async () => {
+		const customerId = "reuse-custom-pair";
 
-	const proPlan = products.pro({
-		id: "pro-reuse-pair",
-		items: [
-			items.prepaidMessages({ includedUsage: 0, billingUnits: 100 }),
-			items.consumableMessages({ includedUsage: 0, price: 0.5 }),
-		],
-	});
-
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [],
-	});
-
-	const params: AttachParamsV1Input = {
-		customer_id: customerId,
-		plan_id: proPlan.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 20 }),
+		const proPlan = products.pro({
+			id: "pro-reuse-pair",
 			items: [
-				itemsV2.prepaidMessages({ amount: 10, billingUnits: 100 }),
-				itemsV2.consumableMessages({ amount: 0.5 }),
-				itemsV2.dashboard(),
+				items.prepaidMessages({ includedUsage: 0, billingUnits: 100 }),
+				items.consumableMessages({ includedUsage: 0, price: 0.5 }),
 			],
-		},
-	};
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [],
+		});
 
-	const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: proPlan.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 20 }),
+				items: [
+					itemsV2.prepaidMessages({ amount: 10, billingUnits: 100 }),
+					itemsV2.consumableMessages({ amount: 0.5 }),
+					itemsV2.dashboard(),
+				],
+			},
+		};
 
-	expectAllStripeIdsReused({ pairs, catalogProduct });
-});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+
+		const { pairs, catalogProduct } = await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
+
+		expectAllStripeIdsReused({ pairs, catalogProduct });
+	},
+);
