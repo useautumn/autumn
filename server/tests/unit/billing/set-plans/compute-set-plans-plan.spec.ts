@@ -15,6 +15,7 @@ import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { computeSetPlansPlan } from "@/internal/billing/v2/actions/setPlans/compute/computeSetPlansPlan";
+import { deferredSetPlansSchedulePhases } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 
 const createBillingContext = ({
 	productContexts,
@@ -613,3 +614,48 @@ describe(chalk.yellowBright("computeSetPlansPlan: unchanged plans"), () => {
 		);
 	});
 });
+
+describe(
+	chalk.yellowBright("computeSetPlansPlan: resuming after payment"),
+	() => {
+		test("a deferred plan that keeps a plan and adds one persists the phases set_plans computed", () => {
+			const ctx = contexts.create({});
+			const currentEpochMs = 1_800_000_000_000;
+			const { pro, customerProduct } = proWithCustomerProduct({
+				subscriptionIds: ["sub_live"],
+			});
+			const addon = products.createFull({
+				id: "addon",
+				isAddOn: true,
+				prices: [prices.createFixed({ id: "price_addon" })],
+			});
+
+			const billingContext = createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({
+						fullProduct: pro,
+						currentCustomerProduct: customerProduct,
+					}),
+					requestProductContext({ fullProduct: addon }),
+				],
+				immediatePhase: {
+					starts_at: currentEpochMs,
+					plans: [{ plan_id: pro.id }, { plan_id: addon.id }],
+				},
+			});
+
+			const { autumnBillingPlan, phases } = computeSetPlansPlan({
+				ctx,
+				billingContext,
+			});
+
+			expect(
+				deferredSetPlansSchedulePhases({
+					billingContext,
+					billingPlan: { autumn: autumnBillingPlan, stripe: {} },
+				}),
+			).toEqual(phases);
+		});
+	},
+);

@@ -14,7 +14,8 @@ export const isSetPlansBillingContext = (
 	"immediatePhase" in billingContext &&
 	"scheduledPhaseContexts" in billingContext;
 
-const buildDeferredSchedulePhases = ({
+/** Plans deferred before `schedulePhases` existed: every phase plan was a fresh row. */
+const legacyDeferredSchedulePhases = ({
 	billingContext,
 	billingPlan,
 }: {
@@ -62,6 +63,16 @@ const buildDeferredSchedulePhases = ({
 	return phases;
 };
 
+export const deferredSetPlansSchedulePhases = ({
+	billingContext,
+	billingPlan,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	billingPlan: BillingPlan;
+}) =>
+	billingPlan.autumn.schedulePhases ??
+	legacyDeferredSchedulePhases({ billingContext, billingPlan });
+
 export const persistDeferredSetPlansSchedule = async ({
 	ctx,
 	billingContext,
@@ -81,7 +92,7 @@ export const persistDeferredSetPlansSchedule = async ({
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
 		currentEpochMs: Date.now(),
 		fullCustomer: billingContext.fullCustomer,
-		phases: buildDeferredSchedulePhases({
+		phases: deferredSetPlansSchedulePhases({
 			billingContext,
 			billingPlan,
 		}),

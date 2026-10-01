@@ -122,11 +122,18 @@ export const computeSetPlansPlan = ({
 				}
 			: undefined;
 
+	const immediatePhase: SchedulePhasePlan = {
+		startsAt: billingContext.immediatePhase.starts_at,
+		customerProductIds: immediate.phaseCustomerProductIds,
+	};
+	const phases = [immediatePhase, ...scheduled.scheduledPhases];
+
 	const baseAutumnBillingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
 		// Schedule persistence replaces phases wholesale, so nothing may rewrite them mid-flight.
 		ownsSchedulePersistence: true,
+		schedulePhases: phases,
 		insertCustomerProducts: allInsertCustomerProducts,
 		updateCustomerProducts: [
 			...immediate.updateCustomerProducts,
@@ -181,14 +188,9 @@ export const computeSetPlansPlan = ({
 		autumnBillingPlan,
 	});
 
-	const immediatePhase: SchedulePhasePlan = {
-		startsAt: billingContext.immediatePhase.starts_at,
-		customerProductIds: immediate.phaseCustomerProductIds,
-	};
-
 	return {
 		autumnBillingPlan,
-		phases: [immediatePhase, ...scheduled.scheduledPhases],
+		phases,
 		immediatePhaseTransition: {
 			outgoingCustomerProducts,
 			incomingCustomerProducts: immediateCustomerProducts,

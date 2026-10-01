@@ -173,6 +173,17 @@ export const AutumnBillingPlanSchema = z.object({
 	// be repointed underneath them.
 	ownsSchedulePersistence: z.boolean().optional(),
 
+	// The schedule phases a set_plans computed, so resuming after a deferred payment
+	// persists the same phases instead of re-deriving them from the inserted rows.
+	schedulePhases: z
+		.array(
+			z.object({
+				startsAt: z.number(),
+				customerProductIds: z.array(z.string()),
+			}),
+		)
+		.optional(),
+
 	// A null newCustomerProductId drops the old id from its phases instead of
 	// remapping it — the plan retires it without a successor.
 	schedulePhaseCustomerProductReplacements: z
