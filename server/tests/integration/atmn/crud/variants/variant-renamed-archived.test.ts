@@ -1,7 +1,7 @@
 /**
- * atmn crud/variants — variant [renamed, archived]
+ * atmn crud/variants — variant archived
  *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
+ * Renaming is not covered: atmn configs never send `newPlanId`.
  */
 
 import { expect, test } from "bun:test";
