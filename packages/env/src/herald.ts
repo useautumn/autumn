@@ -4,6 +4,7 @@ import {
 } from "./balanceWorker/balanceWorkerDeployment.js";
 import { brokerList } from "./balanceWorker/primitives.js";
 import { createKafkaAuthEnv } from "./kafkaAuth.js";
+import { isStagingEnv } from "./staging.js";
 
 const LOCAL_KAFKA_BROKERS = "127.0.0.1:19092";
 
@@ -51,6 +52,9 @@ export function createHeraldEnv(
 		/** Absent where Svix is not set up: herald then decides webhooks and delivers none. */
 		HERALD_SVIX_API_KEY: runtimeEnv.SVIX_API_KEY || null,
 		HERALD_DEPLOYMENT: deployment,
+		/** Atoms only run on dev stacks and staging for now; production pushes will go through each org's queue. */
+		HERALD_ATOM_HTTP_PUSH:
+			runtimeEnv.NODE_ENV !== "production" || isStagingEnv({ runtimeEnv }),
 		/** Read by the blue/green identity: absent off ECS, where the gate fails open. */
 		ECS_CONTAINER_METADATA_URI_V4: trimmedOrUndefined(
 			runtimeEnv.ECS_CONTAINER_METADATA_URI_V4,

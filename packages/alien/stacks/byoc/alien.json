@@ -1,6 +1,11 @@
 {
 	"id": "autumn-byoc",
 	"resources": {
+		"pushes": {
+			"config": { "id": "pushes", "type": "queue" },
+			"lifecycle": "live",
+			"dependencies": []
+		},
 		"atom": {
 			"config": {
 				"id": "atom",
@@ -25,7 +30,7 @@
 					"failureThreshold": 3
 				},
 				"kubernetesSecretMounts": [],
-				"links": [],
+				"links": [{ "type": "queue", "id": "pushes" }],
 				"permissions": "atom",
 				"persistentStorage": { "mountPath": "/data", "size": "10Gi" },
 				"ports": [{ "port": 8080 }],
@@ -45,7 +50,9 @@
 		}
 	},
 	"permissions": {
-		"profiles": { "atom": {} },
+		"profiles": {
+			"atom": { "pushes": ["queue/data-read", "queue/data-write"] }
+		},
 		"management": "auto"
 	}
 }
