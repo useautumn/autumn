@@ -10,6 +10,7 @@ import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
 import { ReviewStatusChip } from "./ReviewStatusChip";
+import { useReviewValueColumnWidth } from "./ReviewValueColumnContext";
 
 /** Status sits in a fixed column and value in a minimum-width one, so chips line up and amounts never clip. */
 export function ReviewChangeRowItem({
@@ -75,6 +76,7 @@ export function ReviewChangeRowTrailing({
 	valueOverride?: ReactNode;
 	isNested?: boolean;
 }) {
+	const valueColumnWidth = useReviewValueColumnWidth();
 	return (
 		<>
 			{row.ongoing && <OngoingChip />}
@@ -90,7 +92,10 @@ export function ReviewChangeRowTrailing({
 					)}
 				</div>
 			)}
-			<span className="flex min-w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap">
+			<span
+				className="flex min-w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap"
+				style={valueColumnWidth ? { width: valueColumnWidth } : undefined}
+			>
 				{valueOverride ??
 					(row.value && (
 						<>

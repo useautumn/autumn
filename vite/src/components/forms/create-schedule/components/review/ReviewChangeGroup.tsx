@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { SkeletonScope } from "../../utils/review/formPhasesToSkeletonPhases";
 import { hasScopedRows } from "../../utils/review/groupRowsByScope";
+import { reviewValueColumnWidth } from "../../utils/review/reviewValueColumnWidth";
 import type {
 	ReviewChangeLayout,
 	ReviewChangeSection,
@@ -22,6 +23,7 @@ import { ReviewPricingTable } from "./ReviewPricingTable";
 import { ReviewPricingTableSkeleton } from "./ReviewPricingTableSkeleton";
 import { ReviewStripeIdsPopover } from "./ReviewStripeIdsPopover";
 import { ReviewSystemMark } from "./ReviewSystemMark";
+import { ReviewValueColumnProvider } from "./ReviewValueColumnContext";
 
 const hasContent = (section: ReviewChangeSection) =>
 	section.phases.length > 0 || Boolean(section.stripeIds?.length);
@@ -121,15 +123,17 @@ function ReviewChangeGroupBody({
 	if (!section)
 		return <ReviewChangeSkeletonPhases phases={placeholderPhases} />;
 	return (
-		<div className="flex flex-col gap-4">
-			{section.phases.map((phase) => (
-				<ReviewChangePhaseBlock
-					key={phase.key}
-					phase={phase}
-					showsStatus={showsStatus}
-					showsScopes={showsScopes}
-				/>
-			))}
-		</div>
+		<ReviewValueColumnProvider value={reviewValueColumnWidth(section)}>
+			<div className="flex flex-col gap-4">
+				{section.phases.map((phase) => (
+					<ReviewChangePhaseBlock
+						key={phase.key}
+						phase={phase}
+						showsStatus={showsStatus}
+						showsScopes={showsScopes}
+					/>
+				))}
+			</div>
+		</ReviewValueColumnProvider>
 	);
 }
