@@ -16,7 +16,7 @@
  *       error and the --login / --keyless hint, without touching the repo
  */
 
-import { beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	existsSync,
 	mkdtempSync,
@@ -25,7 +25,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
 	packAtmnCli,
 	writeBunLockfile,
@@ -47,6 +47,9 @@ let cliTarball = "";
 beforeAll(() => {
 	cliTarball = packAtmnCli();
 });
+afterAll(() => {
+	if (cliTarball) rmSync(dirname(cliTarball), { recursive: true, force: true });
+});
 
 /** The CLI in a fresh process, headless, with only the env the test states. */
 const runCliHeadless = ({
@@ -67,7 +70,7 @@ const runCliHeadless = ({
 			HOME: process.env.HOME ?? "",
 			GIT_CEILING_DIRECTORIES: TMP_ROOT,
 			AUTUMN_BASE_URL: baseUrl,
-			// A package init writes depends on the CLI; from source that is this checkout.
+			// A package init writes depends on the CLI, packed from this checkout.
 			ATMN_INIT_DEPENDENCY: `file:${cliTarball}`,
 			NO_COLOR: "1",
 			FORCE_COLOR: "0",

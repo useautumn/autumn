@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CLI_PACKAGE_DIR } from "./initAtmnScenario.js";
@@ -8,15 +8,18 @@ import { CLI_PACKAGE_DIR } from "./initAtmnScenario.js";
  * dependency leaves atmn's `catalog:` devDependency unresolvable under bun.
  */
 export const packAtmnCli = (): string => {
-	const tarball = join(mkdtempSync(join(tmpdir(), "atmn-pack-")), "atmn.tgz");
+	const dir = mkdtempSync(join(tmpdir(), "atmn-pack-"));
+	const tarball = join(dir, "atmn.tgz");
 	const packed = Bun.spawnSync(
 		["bun", "pm", "pack", "--ignore-scripts", "--quiet", "--filename", tarball],
 		{ cwd: CLI_PACKAGE_DIR, stdout: "pipe", stderr: "pipe" },
 	);
-	if (packed.exitCode !== 0)
+	if (packed.exitCode !== 0) {
+		rmSync(dir, { recursive: true, force: true });
 		throw new Error(
 			`${packed.stdout.toString()}${packed.stderr.toString()}`.trim(),
 		);
+	}
 	return tarball;
 };
 

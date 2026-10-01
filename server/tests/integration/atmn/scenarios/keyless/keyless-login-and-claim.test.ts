@@ -23,7 +23,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { organizations } from "@autumn/shared";
 import {
 	packAtmnCli,
@@ -44,6 +44,9 @@ const baseUrl = process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080";
 let cliTarball = "";
 beforeAll(() => {
 	cliTarball = packAtmnCli();
+});
+afterAll(() => {
+	if (cliTarball) rmSync(dirname(cliTarball), { recursive: true, force: true });
 });
 
 const createdOrgIds: string[] = [];
