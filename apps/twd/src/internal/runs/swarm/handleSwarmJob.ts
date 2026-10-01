@@ -63,6 +63,7 @@ import type {
 import { countPooledFiles } from "./countPooledFiles.ts";
 import { deleteStripeConnectAccounts } from "./deleteStripeConnectAccounts.ts";
 import { acquireStripeConnectLease } from "./stripeConnectLease.ts";
+import { swarmChildEnv } from "./swarmChildEnv.ts";
 
 const SWARM_ENTRY = resolve(import.meta.dir, "swarmProcess/swarmProcess.ts");
 const WARM_POLL_MS = 5_000;
@@ -430,7 +431,7 @@ export const handleSwarmJob: JobHandler = async ({
 		({ exitCode } = await spawnTwChild<SwarmChildMessage, SwarmParentMessage>({
 			entry: SWARM_ENTRY,
 			init,
-			env: { TW_MODAL_NO_STALE: "1" },
+			env: swarmChildEnv({ env: process.env }),
 			signal: abort.signal,
 			logger: ctx.logger,
 			onInitSent: (send) => {

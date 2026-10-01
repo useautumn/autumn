@@ -51,7 +51,8 @@ warm timings from `[tw-warmup] +Ns`, provider stage lines from `[modal] ✓ (+Xs
   migrate-functions=1s, seed=3s. ~5s of a 104s phase; the warm cache already
   eliminates all of it on a hit.
 - **Fan-out pacing:** V2 create is ~1s/worker with no 429s at this width;
-  us-east-1 held ~1s/create at N=100 in prior benchmarks.
+  us-east-1 held ~1s/create at N=100 in prior benchmarks (creates are now
+  unpinned by default; `TW_MODAL_REGION` pins them).
 - **Memory snapshots:** not supported on Sandboxes V2 (SDK + docs). The
   freestyle-style "restore a running server" path is unavailable on Modal today.
 

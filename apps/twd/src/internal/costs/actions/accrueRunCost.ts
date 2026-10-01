@@ -13,7 +13,8 @@ export const accrueRunCost = async ({
 	ctx: TwdContext;
 	runId: string;
 }): Promise<void> => {
-	const { usdPerCoreSecond, usdPerGibSecond } = getCostRates();
+	const { usdPerCoreSecond, usdPerGibSecond, regionMultiplier } =
+		getCostRates();
 	await ctx.db.execute(sql`
 		update runs set
 			worker_seconds = totals.seconds,
@@ -21,7 +22,7 @@ export const accrueRunCost = async ({
 		from (
 			select
 				coalesce(sum(w.seconds), 0) as seconds,
-				coalesce(sum(w.seconds * (w.cores * ${usdPerCoreSecond}::float8 + w.memory_gib * ${usdPerGibSecond}::float8)), 0) as usd
+				coalesce(sum(w.seconds * (w.cores * ${usdPerCoreSecond}::float8 + w.memory_gib * ${usdPerGibSecond}::float8)), 0) * ${regionMultiplier}::float8 as usd
 			from (
 				select cores, memory_gib,
 					greatest(extract(epoch from coalesce(ended_at, now()) - started_at), 0)::float8 as seconds

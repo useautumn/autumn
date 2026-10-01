@@ -47,6 +47,7 @@ import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
 import { pickShard } from "./pickShard.ts";
 import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import { setUpStripeConnectAccount } from "./setUpStripeConnectAccount.ts";
+import { startIdleCulling } from "./startIdleCulling.ts";
 import {
 	loadTwModules,
 	type ProviderSandbox,
@@ -423,7 +424,6 @@ const main = async (init: SwarmInit) => {
 			makeShard({ capabilities, files, target: capabilityWorkers[index] ?? 0 }),
 		),
 	];
-	const [normalShard] = shards;
 	const stripeConnectShard = stripeConnectPlan
 		? makeShard({ ...stripeConnectPlan, target: 1, dedicated: true })
 		: undefined;
@@ -440,7 +440,7 @@ const main = async (init: SwarmInit) => {
 	let firstFailure: string | undefined;
 	let nextWorkerIdx = 0;
 	let lastDemand: number | undefined;
-	let stopCulling: (() => void) | undefined;
+	const culling = new Map<Shard, () => void>();
 	const currentDemand = () =>
 		teardownPromise || breaker.tripped()
 			? 0
@@ -448,9 +448,13 @@ const main = async (init: SwarmInit) => {
 	/** Tell twd how many more accounts help; once none do, the tail starts culling idle workers. */
 	const reportDemand = () => {
 		const demand = currentDemand();
-		if (demand === 0 && !stopCulling && normalShard.pool.size > 0) {
-			stopCulling = tw.run.startCulling(normalShard.pool, resolveSandbox);
-		}
+		if (demand === 0)
+			startIdleCulling({
+				shards,
+				culling,
+				startCulling: (shard) =>
+					tw.run.startCulling(shard.pool, resolveSandbox),
+			});
 		if (demand === lastDemand) return;
 		lastDemand = demand;
 		send({ type: "demand", workers: demand });
@@ -755,7 +759,7 @@ const main = async (init: SwarmInit) => {
 		clearInterval(outputTimer);
 		flushOutput();
 		flushFiles();
-		stopCulling?.();
+		for (const stop of culling.values()) stop();
 		for (const shard of shards) shard.pool.close();
 	}
 };
