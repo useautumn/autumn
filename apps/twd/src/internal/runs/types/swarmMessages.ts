@@ -42,6 +42,8 @@ export type SwarmChildMessage =
 	| { type: "worker_ended"; name: string; accountId: string }
 	/** Accounts the child will not use (no sandbox touched them). */
 	| { type: "release_accounts"; accountIds: string[] }
+	/** A dedicated sub-account now exists; twd records it for deletion. */
+	| { type: "shard_account"; accountId: string }
 	/** Ask twd for the stripe-connect account; answered with `shard_lease_granted`. */
 	| { type: "shard_lease_request" }
 	/** Route a dedicated shard's unregistered accounts to its worker; null drops the route. */

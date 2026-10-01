@@ -31,6 +31,7 @@ import {
 } from "../../ingress/actions/ingressRoutes.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
+import { stripeForKey } from "../../keys/stripeForKey.ts";
 import { onRunFinished } from "../../results/actions/refreshBaselines.ts";
 import {
 	orderFilesLongestFirst,
@@ -59,6 +60,7 @@ import type {
 	SwarmParentMessage,
 } from "../types/swarmMessages.ts";
 import { countPooledFiles } from "./countPooledFiles.ts";
+import { deleteStripeConnectAccounts } from "./deleteStripeConnectAccounts.ts";
 import { acquireStripeConnectLease } from "./stripeConnectLease.ts";
 
 const SWARM_ENTRY = resolve(import.meta.dir, "swarmProcess/swarmProcess.ts");
@@ -68,7 +70,35 @@ const ACCRUE_MS = 10_000;
 const LOG_TAIL_CHARS = 8_000;
 
 /** `committed`: accounts may be claimed / sandboxes may exist for this run. */
-type SwarmJobState = { committed?: boolean; sandboxIds?: string[] };
+type SwarmJobState = {
+	committed?: boolean;
+	sandboxIds?: string[];
+	/** Dedicated stripe-connect sub-accounts; never in the ledger, so twd deletes them itself. */
+	shardAccountIds?: string[];
+};
+
+/** Before the lease goes, so the next run's fallback route never meets this run's account. */
+const deleteRunShardAccounts = async ({
+	ctx,
+	accountIds,
+}: {
+	ctx: TwdContext;
+	accountIds: string[];
+}) => {
+	if (accountIds.length === 0) return;
+	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
+	if (!secret) {
+		ctx.logger.warn("stripe-connect sub-accounts left: shard key unset", {
+			accountIds,
+		});
+		return;
+	}
+	await deleteStripeConnectAccounts({
+		accountIds,
+		stripe: stripeForKey({ secret }),
+		logger: ctx.logger,
+	});
+};
 
 const sleep = ({ ms, signal }: { ms: number; signal: AbortSignal }) =>
 	new Promise<void>((resolveSleep) => {
@@ -137,6 +167,10 @@ const recoverCrashedSwarm = async ({
 	state: SwarmJobState;
 }) => {
 	await terminateSandboxes({ sandboxIds: state.sandboxIds ?? [] });
+	await deleteRunShardAccounts({
+		ctx,
+		accountIds: state.shardAccountIds ?? [],
+	});
 	await releaseRunAccounts({ ctx, runId: run.id });
 	await endRunWorkers({ ctx, runId: run.id });
 	await accrueRunCost({ ctx, runId: run.id });
@@ -237,7 +271,8 @@ export const handleSwarmJob: JobHandler = async ({
 
 	const sandboxIds: string[] = [];
 	const workers = new Set<string>();
-	let checkpointedSandboxes = 0;
+	const shardAccountIds: string[] = [];
+	let checkpointed = 0;
 	const flush = () => {
 		enqueueWrite(() =>
 			updateRun({
@@ -246,15 +281,18 @@ export const handleSwarmJob: JobHandler = async ({
 				set: { progress: snapshot(), workerCount: workers.size, ...counts() },
 			}),
 		);
-		if (sandboxIds.length === checkpointedSandboxes) return;
-		checkpointedSandboxes = sandboxIds.length;
+		if (sandboxIds.length + shardAccountIds.length === checkpointed) return;
+		checkpointed = sandboxIds.length + shardAccountIds.length;
+		const state: SwarmJobState = {
+			committed: true,
+			sandboxIds: [...sandboxIds],
+			shardAccountIds: [...shardAccountIds],
+		};
 		enqueueWrite(() =>
-			checkpoint({ committed: true, sandboxIds: [...sandboxIds] }).catch(
-				(error: unknown) => {
-					abort.abort();
-					throw error;
-				},
-			),
+			checkpoint(state).catch((error: unknown) => {
+				abort.abort();
+				throw error;
+			}),
 		);
 	};
 	const accrue = () =>
@@ -435,6 +473,9 @@ export const handleSwarmJob: JobHandler = async ({
 						});
 						kickAllocator();
 					});
+				} else if (message.type === "shard_account") {
+					shardAccountIds.push(message.accountId);
+					flush();
 				} else if (message.type === "shard_lease_request") {
 					void acquireStripeConnectLease().then((release) => {
 						releaseShardLease = release;
@@ -515,12 +556,13 @@ export const handleSwarmJob: JobHandler = async ({
 		closed = true;
 		sendToChild = undefined;
 		unregister();
-		clearShardRoutesForRun({ runId });
-		releaseShardLease();
 		clearInterval(flushTimer);
 		await logWriter.close();
 		clearInterval(accrueTimer);
 		if (exitCode !== 0) await terminateSandboxes({ sandboxIds });
+		await deleteRunShardAccounts({ ctx, accountIds: shardAccountIds });
+		clearShardRoutesForRun({ runId });
+		releaseShardLease();
 		await writes;
 		await returnUnusedAccounts({
 			ctx,
