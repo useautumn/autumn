@@ -7,7 +7,10 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { computeLicenseOverlays } from "../declared/computeLicenseOverlays";
 import { resolveDeclaredPlanLicenses } from "../declared/resolveDeclaredPlanLicenses";
-import { upsertProductPlanToLicenses } from "../licensePlanUtils";
+import {
+	projectedLicensePlanId,
+	upsertProductPlanToLicenses,
+} from "../licensePlanUtils";
 
 /**
  * A minted row continues the source offering. Declared licenses[] already
@@ -30,16 +33,22 @@ export const cloneOutgoingLicensesOnMint = ({
 	const alreadyPlannedIds = new Set(
 		alreadyPlanned.map((planLicense) => planLicense.licensePlanId),
 	);
-	const unplanned = upsertProductPlanToLicenses({ upsert }).filter(
-		(link) => !alreadyPlannedIds.has(link.product.id),
-	);
+	const unplanned = upsertProductPlanToLicenses({ upsert })
+		.map((link) => ({
+			link,
+			licensePlanId: projectedLicensePlanId({ link, productStatesContext }),
+		}))
+		.filter(({ licensePlanId }) => !alreadyPlannedIds.has(licensePlanId));
 	if (unplanned.length === 0) return [];
 
 	return computeLicenseOverlays({
 		ctx,
 		planLicenses: resolveDeclaredPlanLicenses({
-			declared: unplanned.map((link) => fullPlanLicenseToParams({ link })),
-			currentLicenses: unplanned,
+			declared: unplanned.map(({ link, licensePlanId }) => ({
+				...fullPlanLicenseToParams({ link }),
+				license_plan_id: licensePlanId,
+			})),
+			currentLicenses: unplanned.map(({ link }) => link),
 			productStatesContext,
 		}),
 	});
