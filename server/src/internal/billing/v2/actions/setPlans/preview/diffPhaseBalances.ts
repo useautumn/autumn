@@ -1,10 +1,10 @@
 import type {
-	ApiBalanceV1,
 	SetPlansPreviewBalance,
 	SetPlansPreviewBalanceChange,
 } from "@autumn/shared";
+import type { AttributedBalance } from "@/internal/billing/v2/pooledBalances/attribution/attributePooledBalances";
 
-export type PhaseBalances = Record<string, ApiBalanceV1>;
+export type PhaseBalances = Record<string, AttributedBalance>;
 
 /** One feature's change within a single scope; the caller adds the scope. */
 export type PhaseBalanceDiff = Pick<
@@ -30,7 +30,7 @@ const TRACKED_FIELDS = [
 
 /** A feature missing from a phase reads as an empty balance, so gaining or losing it diffs like any other change. */
 const toPreviewBalance = (
-	balance: ApiBalanceV1 | undefined,
+	balance: AttributedBalance | undefined,
 ): SetPlansPreviewBalance => ({
 	granted: balance?.granted ?? 0,
 	remaining: balance?.remaining ?? 0,
