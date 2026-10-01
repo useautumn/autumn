@@ -10,18 +10,28 @@ import { describe, expect, test } from "bun:test";
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
 	EntInterval,
+	FeatureType,
 	getUsageWindowBounds,
 } from "@autumn/shared";
 import type {
 	WorkerCustomerEntitlement,
 	WorkerUsageWindow,
 } from "../../../src/balanceEngine.js";
-import { createSubjectState } from "../../../src/balanceEngine.js";
-import { deduct } from "../../../src/deduction/deduct.js";
 import {
+	checkAfterDeduction,
+	computeTrackDecision,
+	createSubjectState,
+	subjectStateToFullSubject,
+} from "../../../src/balanceEngine.js";
+import { deduct } from "../../../src/deduction/deduct.js";
+import { toBalanceEditRequest } from "../../../src/deduction/toBalanceEditRequest.js";
+import {
+	createCatalogFor,
+	createCheckCommand,
 	createCustomerEntitlement,
 	createCustomerProduct,
 	createSubjectFor,
+	createTrackCommand,
 	entity,
 	identity,
 	occurredAt,
@@ -98,6 +108,7 @@ const trackAsEntity = ({
 	includeOwnRow = true,
 	poolUsageAllowed = false,
 	overageBehavior = "cap",
+	countsUsageWindows = true,
 	value,
 }: {
 	amounts: Record<string, number>;
@@ -109,45 +120,77 @@ const trackAsEntity = ({
 	includeOwnRow?: boolean;
 	poolUsageAllowed?: boolean;
 	overageBehavior?: "cap" | "reject" | "overflow";
+	countsUsageWindows?: boolean;
 	value: number;
 }) =>
 	deduct({
-		fullSubject: createSubjectFor({
-			entityId: entity.id,
-			state: createSubjectState({
-				identity: { ...identity, entityId: entity.id },
-				entity,
-				customer: {
-					...customerWith({}),
-					balance_allocations: {
-						feat_credits: {
-							feature_id: "credits",
-							interval: EntInterval.Month,
-							scale,
-							scale_cycle_end: scaleCycleEnd,
-							amounts,
-						},
-					},
-				},
-				customerProducts: [
-					createCustomerProduct(),
-					createCustomerProduct({
-						id: "cp_a",
-						internalEntityId: entity.internal_id,
-					}),
-				],
-				customerEntitlements: [
-					pool({ balance: poolBalance, usageAllowed: poolUsageAllowed }),
-					...(includeOwnRow ? [ownOverageRow({ usageAllowed })] : []),
-				],
-				usageWindows,
-			}),
+		fullSubject: allocatedSubject({
+			amounts,
+			poolBalance,
+			usageAllowed,
+			usageWindows,
+			scale,
+			scaleCycleEnd,
+			includeOwnRow,
+			poolUsageAllowed,
 		}),
 		request: createDeductionRequest({
 			org,
 			featureId: "credits",
 			value,
 			overageBehavior,
+			countsUsageWindows,
+		}),
+	});
+
+const allocatedSubject = ({
+	amounts,
+	poolBalance = 10000,
+	usageAllowed = true,
+	usageWindows = [],
+	scale = 1,
+	scaleCycleEnd = null,
+	includeOwnRow = true,
+	poolUsageAllowed = false,
+}: {
+	amounts: Record<string, number>;
+	poolBalance?: number;
+	usageAllowed?: boolean;
+	usageWindows?: WorkerUsageWindow[];
+	scale?: number;
+	scaleCycleEnd?: number | null;
+	includeOwnRow?: boolean;
+	poolUsageAllowed?: boolean;
+}) =>
+	createSubjectFor({
+		entityId: entity.id,
+		state: createSubjectState({
+			identity: { ...identity, entityId: entity.id },
+			entity,
+			customer: {
+				...customerWith({}),
+				balance_allocations: {
+					feat_credits: {
+						feature_id: "credits",
+						interval: EntInterval.Month,
+						scale,
+						scale_cycle_end: scaleCycleEnd,
+						amounts,
+					},
+				},
+			},
+			customerProducts: [
+				createCustomerProduct(),
+				createCustomerProduct({
+					id: "cp_a",
+					internalEntityId: entity.internal_id,
+				}),
+			],
+			customerEntitlements: [
+				pool({ balance: poolBalance, usageAllowed: poolUsageAllowed }),
+				...(includeOwnRow ? [ownOverageRow({ usageAllowed })] : []),
+			],
+			usageWindows,
 		}),
 	});
 
@@ -224,7 +267,7 @@ describe("allocation gate", () => {
 				value: 100,
 			});
 			expect(drawnFrom(outcome, "pool")).toBe(0);
-			expect(outcome.remaining).toBe(100);
+			expect(outcome).toMatchObject({ appliedValue: 0, remaining: 100 });
 		},
 	);
 
@@ -269,19 +312,22 @@ describe("allocation gate", () => {
 	);
 
 	test.concurrent(
-		"a scale solved for last cycle reads as 1 after a reset",
+		"a scale solved for last cycle is re-solved from the pot at the reset: 10k requested on a 6k pot grants 3000 each",
 		() => {
 			const stale = trackAsEntity({
 				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				poolBalance: 6000,
 				usageAllowed: false,
 				scale: 0.5,
 				scaleCycleEnd: cycle.windowStartAt,
 				value: 5000,
 			});
-			expect(drawnFrom(stale, "pool")).toBe(5000);
+			expect(drawnFrom(stale, "pool")).toBe(3000);
+			expect(stale.remaining).toBe(2000);
 
 			const current = trackAsEntity({
 				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				poolBalance: 6000,
 				usageAllowed: false,
 				scale: 0.5,
 				scaleCycleEnd: cycle.windowEndAt,
@@ -339,6 +385,7 @@ describe("allocation gate", () => {
 				value: 600,
 			});
 			expect(drawnFrom(outcome, "pool")).toBe(0);
+			expect(outcome).toMatchObject({ appliedValue: 0, remaining: 600 });
 		},
 	);
 
@@ -366,5 +413,247 @@ describe("allocation gate", () => {
 			value: 600,
 		});
 		expect(drawnFrom(outcome, "pool")).toBe(0);
+		expect(outcome).toMatchObject({ appliedValue: 0, remaining: 600 });
 	});
+
+	test.concurrent(
+		"a scale with no cycle end is re-solved from the pot, not held forever",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				poolBalance: 6000,
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: null,
+				value: 5000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(3000);
+		},
+	);
+
+	test.concurrent(
+		"a stale re-solve uses the pot as it stood at cycle start: after A draws 3000, B still gets 3000",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [otherEntity]: 5000, [entity.internal_id]: 5000 },
+				poolBalance: 3000,
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: null,
+				usageWindows: [
+					counter({ internalEntityId: otherEntity, usage: 3000 }),
+					counter({ internalEntityId: null, usage: 3000 }),
+				],
+				value: 5000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(3000);
+		},
+	);
+
+	test.concurrent(
+		"a stale scale reads as 1 when the pot covers every request at the reset",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				poolBalance: 10000,
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: cycle.windowStartAt,
+				value: 5000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(5000);
+		},
+	);
+
+	test.concurrent(
+		"a stale re-solved share still floors to whole credits",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 4000 },
+				poolBalance: 6000,
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: null,
+				value: 5000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(3333);
+		},
+	);
+
+	test.concurrent(
+		"a cut scale stops binding once the pot covers every unused promise again",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				poolBalance: 10000,
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: cycle.windowEndAt,
+				value: 6000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(5000);
+			expect(outcome.remaining).toBe(1000);
+		},
+	);
+
+	const adminEdit = ({
+		value,
+		countsUsageWindows,
+	}: {
+		value: number;
+		countsUsageWindows: boolean;
+	}) =>
+		deduct({
+			fullSubject: allocatedSubject({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				usageAllowed: false,
+				includeOwnRow: false,
+			}),
+			request: toBalanceEditRequest({
+				featureId: "credits",
+				internalFeatureId: "feat_credits",
+				value,
+				includesCreditSystems: false,
+				countsUsageWindows,
+				org,
+				now: occurredAt,
+			}),
+		});
+
+	test.concurrent(
+		"a rebuild redraws past the share and leaves the allocation counters alone",
+		() => {
+			const outcome = adminEdit({ value: 8000, countsUsageWindows: false });
+			expect(drawnFrom(outcome, "pool")).toBe(8000);
+			expect(counterUsageAdded(outcome, entity.internal_id)).toBe(0);
+			expect(counterUsageAdded(outcome, null)).toBe(0);
+		},
+	);
+
+	test.concurrent(
+		"an admin balance edit is neither capped by nor counted against the share",
+		() => {
+			const outcome = adminEdit({ value: 8000, countsUsageWindows: true });
+			expect(drawnFrom(outcome, "pool")).toBe(8000);
+			expect(counterUsageAdded(outcome, entity.internal_id)).toBe(0);
+			expect(counterUsageAdded(outcome, null)).toBe(0);
+		},
+	);
+
+	test.concurrent(
+		"a check right after a draw sees the share that draw used",
+		() => {
+			const fullSubject = allocatedSubject({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				usageAllowed: false,
+			});
+			const command = createCheckCommand({
+				entityId: entity.id,
+				featureId: "credits",
+				requiredBalance: 2500,
+			});
+			const { outcome } = computeTrackDecision({
+				fullSubject,
+				command: createTrackCommand({
+					featureId: "credits",
+					entityId: entity.id,
+					value: 3000,
+					overageBehavior: "cap",
+				}),
+			});
+			expect(outcome.appliedValue).toBe(3000);
+			const check = checkAfterDeduction({ fullSubject, command, outcome });
+			expect(check.after.allowed).toBe(false);
+			expect(check.before().allowed).toBe(true);
+		},
+	);
+});
+
+describe("allocation gates across features", () => {
+	const messagesPool = ({ balance }: { balance: number }) => ({
+		...createCustomerEntitlement({
+			id: "messages_pool",
+			featureId: "messages",
+			balance,
+		}),
+		next_reset_at: nextResetAt,
+	});
+	const subject = () => {
+		const state = createSubjectState({
+			identity: { ...identity, entityId: entity.id },
+			entity,
+			customer: {
+				...customerWith({}),
+				balance_allocations: {
+					feat_messages: {
+						feature_id: "messages",
+						interval: EntInterval.Month,
+						scale: 1,
+						amounts: { [entity.internal_id]: 100, [otherEntity]: 900 },
+					},
+					feat_credits: {
+						feature_id: "credits",
+						interval: EntInterval.Month,
+						scale: 1,
+						amounts: { [entity.internal_id]: 50, [otherEntity]: 950 },
+					},
+				},
+			},
+			customerProducts: [createCustomerProduct()],
+			customerEntitlements: [
+				messagesPool({ balance: 1000 }),
+				pool({ balance: 1000 }),
+			],
+		});
+		const catalog = createCatalogFor({ state });
+		const credits = catalog.features.feat_credits;
+		if (!credits) throw new Error("credits feature row missing");
+		credits.type = FeatureType.CreditSystem;
+		credits.config = {
+			schema: [
+				{ metered_feature_id: "messages", feature_amount: 1, credit_amount: 2 },
+			],
+		};
+		return subjectStateToFullSubject({
+			state,
+			catalog,
+			entityId: entity.id,
+		});
+	};
+
+	test.concurrent(
+		"a metered pool and the credit system funding it each hold the entity to its own share",
+		() => {
+			const outcome = deduct({
+				fullSubject: subject(),
+				request: createDeductionRequest({
+					org,
+					featureId: "messages",
+					value: 500,
+				}),
+			});
+			expect(drawnFrom(outcome, "messages_pool")).toBe(100);
+			expect(drawnFrom(outcome, "pool")).toBe(25);
+			expect(outcome).toMatchObject({ appliedValue: 125, remaining: 375 });
+			const allocationCounters = outcome.changes.flatMap((change) =>
+				change.table === "usageWindows" && change.op === "insert"
+					? [
+							[
+								change.row.internal_feature_id,
+								change.row.internal_entity_id,
+								change.row.usage,
+							],
+						]
+					: [],
+			);
+			expect(allocationCounters).toEqual(
+				expect.arrayContaining([
+					["feat_messages", entity.internal_id, 100],
+					["feat_messages", null, 100],
+					["feat_credits", entity.internal_id, 50],
+					["feat_credits", null, 50],
+				]),
+			);
+		},
+	);
 });

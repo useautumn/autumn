@@ -6,29 +6,17 @@
  * Green (after): 6k left for 10k promised → each share 3k; re-adding the add-on → 5k again.
  */
 
-import { expect, test } from "bun:test";
-import { type ApiBalanceV1, ApiVersion, ResetInterval } from "@autumn/shared";
+import { test } from "bun:test";
+import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { expectMessagesBalance } from "./utils/expectMessagesBalance.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
-
-type WithBalances = { balances: Record<string, ApiBalanceV1> };
-
-const entityGranted = async ({
-	customerId,
-	entityId,
-}: {
-	customerId: string;
-	entityId: string;
-}) =>
-	(await autumnV2_3.entities.get<WithBalances>(customerId, entityId)).balances[
-		TestFeature.Messages
-	].granted;
 
 test.concurrent(
 	`${chalk.yellowBright("allocate-pot1: shares shrink proportionally with the pot and recover when it grows back")}`,
@@ -72,21 +60,29 @@ test.concurrent(
 			plan_id: addOn.id,
 			cancel_action: "cancel_immediately",
 		});
-		expect(await entityGranted({ customerId, entityId: a })).toBe(3000);
-		expect(await entityGranted({ customerId, entityId: b })).toBe(3000);
-		const shrunk = (await autumnV2_3.customers.get<WithBalances>(customerId))
-			.balances[TestFeature.Messages];
-		expect(shrunk).toMatchObject({
-			remaining: 6000,
-			allocated: 6000,
-			unallocated: 0,
+		for (const entityId of [a, b])
+			await expectMessagesBalance({
+				autumn: autumnV2_3,
+				customerId,
+				entityId,
+				expected: { granted: 3000 },
+			});
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			expected: { remaining: 6000, allocated: 6000, unallocated: 0 },
 		});
 
 		await autumnV2_3.billing.attach({
 			customer_id: customerId,
 			plan_id: addOn.id,
 		});
-		expect(await entityGranted({ customerId, entityId: a })).toBe(5000);
-		expect(await entityGranted({ customerId, entityId: b })).toBe(5000);
+		for (const entityId of [a, b])
+			await expectMessagesBalance({
+				autumn: autumnV2_3,
+				customerId,
+				entityId,
+				expected: { granted: 5000 },
+			});
 	},
 );

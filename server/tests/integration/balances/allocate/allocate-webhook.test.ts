@@ -10,26 +10,32 @@ import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	getPlayHistory,
 	getTestSvixAppId,
-	parseEventBody,
 	setupWebhookTest,
 	type WebhookTestSetup,
 	waitForWebhook,
 } from "../../utils/svixWebhookTestUtils.js";
+import {
+	latestPlayIterator,
+	playEventsSince,
+} from "./utils/playEventsSince.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
+const customerId = "allocate-webhook-1";
 
 type BillingUpdatedPayload = {
 	type: string;
 	data: { customer_id: string; tags: string[] };
 };
+
+const isCustomerBillingUpdated = (payload: BillingUpdatedPayload) =>
+	payload.type === "billing.updated" && payload.data.customer_id === customerId;
 
 let webhook: WebhookTestSetup;
 
@@ -45,7 +51,6 @@ afterAll(async () => {
 });
 
 test(`${chalk.yellowBright("allocate-webhook1: a shrinking plan change sends one billing.updated tagged allocations_adjusted")}`, async () => {
-	const customerId = "allocate-webhook-1";
 	const base = products.base({
 		id: `${customerId}-base`,
 		items: [items.monthlyMessages({ includedUsage: 6000 })],
@@ -78,37 +83,38 @@ test(`${chalk.yellowBright("allocate-webhook1: a shrinking plan change sends one
 		],
 	});
 
-	const seenIds = new Set(
-		(await getPlayHistory({ token: webhook.playToken })).data.map(
-			(event) => event.id,
-		),
-	);
+	// allocate's own tagged billing.updated is fire-and-forget: let it land before the baseline.
+	const allocateEvent = await waitForWebhook<BillingUpdatedPayload>({
+		token: webhook.playToken,
+		predicate: (payload) =>
+			isCustomerBillingUpdated(payload) &&
+			payload.data.tags.includes("allocations_adjusted"),
+		timeoutMs: 20000,
+	});
+	expect(allocateEvent).not.toBeNull();
+	const baseline = await latestPlayIterator({ token: webhook.playToken });
+
 	await autumnV2_3.subscriptions.update({
 		customer_id: customerId,
 		plan_id: addOn.id,
 		cancel_action: "cancel_immediately",
 	});
 
-	const tagged = await waitForWebhook<BillingUpdatedPayload>({
-		token: webhook.playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data.customer_id === customerId &&
-			payload.data.tags.includes("allocations_adjusted"),
-		timeoutMs: 20000,
+	const customerEventsSinceCancel = async () =>
+		(
+			await playEventsSince<BillingUpdatedPayload>({
+				token: webhook.playToken,
+				iterator: baseline,
+			})
+		).filter(isCustomerBillingUpdated);
+	await pollUntilAsserted({
+		fetch: customerEventsSinceCancel,
+		assert: (events) => expect(events.length).toBeGreaterThan(0),
 	});
-	expect(tagged).not.toBeNull();
 
 	// Give a stray second event time to arrive before counting.
 	await timeout(5000);
-	const events = (await getPlayHistory({ token: webhook.playToken })).data
-		.filter((event) => !seenIds.has(event.id))
-		.map((event) => parseEventBody<BillingUpdatedPayload>(event))
-		.filter(
-			(payload) =>
-				payload.type === "billing.updated" &&
-				payload.data.customer_id === customerId,
-		);
+	const events = await customerEventsSinceCancel();
 	expect(events).toHaveLength(1);
 	expect(events[0].data.tags).toContain("allocations_adjusted");
 });

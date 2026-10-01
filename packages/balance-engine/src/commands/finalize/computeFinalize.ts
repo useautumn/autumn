@@ -57,6 +57,7 @@ export const computeFinalizeDecision = ({
 			properties: command.properties ?? lock.properties,
 			includesCreditSystems: true,
 			countsUsageWindows: true,
+			countsAllocations: true,
 			org: command.org,
 			// A release gives back regardless; only taking more is subject to the overdue block.
 			enforceOverdueBlock: true,

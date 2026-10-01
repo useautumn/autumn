@@ -8,6 +8,7 @@ import {
 import { Decimal } from "decimal.js";
 import type { DeductionSelection } from "../deduction/types/deductionRequest.js";
 import type { DeductionRow } from "../deduction/types/deductionRow.js";
+import { liveUsageWindowOf } from "../deduction/utils/limits/usageWindows.js";
 import type {
 	WorkerFullCustomerEntitlementWithProduct,
 	WorkerFullSubject,
@@ -80,8 +81,8 @@ const allocationCounter = ({
 	anchor_mode: "billing_cycle",
 });
 
-/** The gate for this selection, or null when the customer allocates none of the selected rows' credits. */
-export const resolveAllocationGate = ({
+/** One gate per allocated feature the selection draws, keyed by each of its shared row ids; empty when nothing selected is allocated. */
+export const resolveAllocationGates = ({
 	fullSubject,
 	selection,
 	customerEntitlements,
@@ -91,9 +92,10 @@ export const resolveAllocationGate = ({
 	selection: DeductionSelection;
 	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
 	rows: DeductionRow[];
-}): AllocationGate | null => {
+}): Map<string, AllocationGate> => {
+	const gates = new Map<string, AllocationGate>();
 	const allocations = fullSubject.customer.balance_allocations;
-	if (!allocations) return null;
+	if (!allocations) return gates;
 
 	for (const [internalFeatureId, allocation] of Object.entries(allocations)) {
 		const shared = customerEntitlements.filter((customerEntitlement) =>
@@ -135,11 +137,21 @@ export const resolveAllocationGate = ({
 				anchorId: parent.id,
 			});
 
-		return {
+		const claimedCounter = counterOf(null);
+		const claimed =
+			liveUsageWindowOf({
+				usageWindows: fullSubject.usage_windows,
+				now: selection.now,
+				limit: claimedCounter,
+			})?.usage ?? 0;
+		const gate: AllocationGate = {
 			sharedRowIds,
 			scale: effectiveAllocationScale({
 				allocation,
 				cycleEnd: bounds.windowEndAt,
+				sharedRemaining: sharedRemaining.toNumber(),
+				claimed: new Decimal(claimed).toNumber(),
+				requestedTotal: requestedTotal.toNumber(),
 			}),
 			ownRequested: internalEntityId
 				? (allocation.amounts[internalEntityId] ?? null)
@@ -147,8 +159,9 @@ export const resolveAllocationGate = ({
 			requestedTotal: requestedTotal.toNumber(),
 			sharedRemaining: sharedRemaining.toNumber(),
 			entityCounter: internalEntityId ? counterOf(internalEntityId) : null,
-			claimedCounter: counterOf(null),
+			claimedCounter,
 		};
+		for (const id of sharedRowIds) gates.set(id, gate);
 	}
-	return null;
+	return gates;
 };

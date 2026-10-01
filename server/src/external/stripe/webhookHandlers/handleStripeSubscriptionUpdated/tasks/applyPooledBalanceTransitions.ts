@@ -1,5 +1,8 @@
+import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale";
+import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag";
 import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
+import { addBillingChangeTag } from "../../common/billingChangeTags";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 import { classifyPooledBalanceTransitionProducts } from "./classifyPooledBalanceTransitionProducts";
 
@@ -31,4 +34,13 @@ export const applyPooledBalanceTransitions = async ({
 			incomingCustomerProducts,
 			now: eventContext.nowMs,
 		});
+
+	// Pools moved after the plans re-fit, so shares re-fit against the final pot; the batch event carries the tag.
+	const { adjusted } = await refreshAllocationScaleAfterWrite({
+		ctx,
+		customerId:
+			eventContext.fullCustomer.id || eventContext.fullCustomer.internal_id,
+		notify: false,
+	});
+	if (adjusted) addBillingChangeTag(eventContext, ALLOCATIONS_ADJUSTED_TAG);
 };

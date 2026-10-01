@@ -17,5 +17,7 @@ export type DeductionOutcome = {
 	deltas: DeductionDelta[];
 	/** What each windowed cap took, by limit key, in the cap's own unit; a later draw on the same context starts from it. */
 	usageWindowConsumed: Map<string, Decimal>;
+	/** What the draw moved on allocation counters, by counter key, in credits; a later draw on the same context starts from it. */
+	allocationConsumed?: Map<string, Decimal>;
 	changes: RowChange[];
 };

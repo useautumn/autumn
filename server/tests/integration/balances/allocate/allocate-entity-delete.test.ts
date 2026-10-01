@@ -5,21 +5,24 @@
  * Green (after): only B's 5k is allocated; A's unused share becomes unallocated.
  */
 
-import { expect, test } from "bun:test";
-import { type ApiBalanceV1, ApiVersion, ResetInterval } from "@autumn/shared";
+import { test } from "bun:test";
+import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { sql } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { queryRows } from "../utils/usage-limit-utils/usageWindowDbTestUtils.js";
+import {
+	allocateMessages,
+	setupSharedPool,
+	trackMessages,
+	waitForSharedBalanceInDb,
+	warmCaches,
+} from "./utils/allocateTestUtils.js";
+import { expectMessagesBalance } from "./utils/expectMessagesBalance.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
-
-type WithBalances = { balances: Record<string, ApiBalanceV1> };
 
 test.concurrent(
 	`${chalk.yellowBright("allocate-delete1: deleting an allocated entity releases its share")}`,
@@ -60,26 +63,95 @@ test.concurrent(
 		});
 
 		// Delete drops the cache, so let the track reach Postgres first.
-		await pollUntilAsserted({
-			fetch: async () =>
-				queryRows(
-					await ctx.db.execute(sql`
-						SELECT ce.balance FROM customer_entitlements ce
-						JOIN customers c ON c.internal_id = ce.internal_customer_id
-						WHERE c.id = ${customerId} AND c.org_id = ${ctx.org.id}
-							AND c.env = ${ctx.env} AND ce.feature_id = ${TestFeature.Messages}
-					`),
-				)[0],
-			assert: (row) => expect(Number(row?.balance)).toBe(8000),
-		});
+		await waitForSharedBalanceInDb({ ctx, customerId, balance: 8000 });
 		await autumnV2_3.entities.delete(customerId, a);
 
-		const balance = (await autumnV2_3.customers.get<WithBalances>(customerId))
-			.balances[TestFeature.Messages];
-		expect(balance).toMatchObject({
-			remaining: 8000,
-			allocated: 5000,
-			unallocated: 3000,
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			expected: { remaining: 8000, allocated: 5000, unallocated: 3000 },
+		});
+	},
+);
+
+/** A=5k, B=5k on 10k; A uses 2k, then A is deleted: 3k of A's share becomes unallocated. */
+const deleteUsedShare = async ({ customerId }: { customerId: string }) => {
+	const { ctx, entityIds } = await setupSharedPool({ customerId });
+	const [a, b, c] = entityIds;
+	await allocateMessages({
+		customerId,
+		allocations: [
+			{ entity_id: a, amount: 5000 },
+			{ entity_id: b, amount: 5000 },
+		],
+	});
+	await warmCaches({ customerId, entityIds });
+	await trackMessages({ customerId, entityId: a, value: 2000 });
+	await waitForSharedBalanceInDb({ ctx, customerId, balance: 8000 });
+	await autumnV2_3.entities.delete(customerId, a);
+	await expectMessagesBalance({
+		autumn: autumnV2_3,
+		customerId,
+		expected: { remaining: 8000, allocated: 5000, unallocated: 3000 },
+	});
+	await warmCaches({ customerId, entityIds: [b, c] });
+	return { b, c };
+};
+
+test.concurrent(
+	`${chalk.yellowBright("allocate-delete2: an entity without a share can use the freed credits, and no more")}`,
+	async () => {
+		const customerId = "allocate-delete-2";
+		const { c } = await deleteUsedShare({ customerId });
+
+		await trackMessages({ customerId, entityId: c, value: 3000 });
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			expected: { remaining: 5000, unallocated: 0 },
+		});
+
+		await trackMessages({ customerId, entityId: c, value: 1 });
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			expected: { remaining: 5000 },
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("allocate-delete3: the remaining entity draws its own share plus the freed credits")}`,
+	async () => {
+		const customerId = "allocate-delete-3";
+		const { b } = await deleteUsedShare({ customerId });
+
+		await trackMessages({ customerId, entityId: b, value: 8000 });
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			expected: { remaining: 0, allocated: 5000, unallocated: 0 },
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("allocate-delete4: a customer-level track takes the freed credits but not the remaining share")}`,
+	async () => {
+		const customerId = "allocate-delete-4";
+		const { b } = await deleteUsedShare({ customerId });
+
+		await trackMessages({ customerId, value: 4000 });
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			expected: { remaining: 5000, unallocated: 0 },
+		});
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			entityId: b,
+			expected: { granted: 5000, usage: 0, remaining: 5000 },
 		});
 	},
 );

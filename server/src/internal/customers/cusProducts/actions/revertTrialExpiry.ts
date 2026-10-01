@@ -11,6 +11,7 @@ import {
 import { and, eq, type InferSelectModel } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -125,10 +126,20 @@ export const tryProcessRevertExpiry = async ({
 		source: "productCron:revert",
 	});
 
+	const emitsBillingUpdated = Boolean(
+		trialFullCusProduct && previousFullCusProduct,
+	);
+	const { adjusted: allocationsAdjusted } =
+		await refreshAllocationScaleAfterWrite({
+			ctx,
+			customerId: fullCustomer.id ?? fullCustomer.internal_id,
+			notify: !emitsBillingUpdated,
+		});
+
 	// Emit billing.updated webhook (fire-and-forget) describing both the
 	// trial expiry and the restored previous plan. Skipped silently if we
 	// couldn't resolve either snapshot.
-	if (trialFullCusProduct && previousFullCusProduct) {
+	if (emitsBillingUpdated && trialFullCusProduct && previousFullCusProduct) {
 		const autumnBillingPlan: AutumnBillingPlan = {
 			customerId: fullCustomer.id ?? fullCustomer.internal_id,
 			insertCustomerProducts: [],
@@ -152,6 +163,7 @@ export const tryProcessRevertExpiry = async ({
 		});
 
 		void sendBillingUpdatedWebhook({
+			allocationsAdjusted,
 			ctx,
 			autumnBillingPlan,
 			originalFullCustomer: fullCustomer,

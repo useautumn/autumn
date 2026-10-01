@@ -144,10 +144,6 @@ export const applyAllocationsToBreakdown = ({
 		anchor: parent.next_reset_at,
 	});
 
-	const scale = effectiveAllocationScale({
-		allocation,
-		cycleEnd: bounds.windowEndAt,
-	});
 	const requestedTotal = Object.values(allocation.amounts).reduce(
 		(sum, amount) => sum.plus(amount),
 		new Decimal(0),
@@ -156,13 +152,22 @@ export const applyAllocationsToBreakdown = ({
 		(sum, index) => sum.plus(Decimal.max(0, withSource[index].remaining)),
 		new Decimal(0),
 	);
-
 	const claimed = counterUsage({
 		subject,
 		featureId: allocation.feature_id,
 		internalEntityId: null,
 		bounds,
 	});
+	// Matches the engines: a cut stops binding once the pot covers every unused promise.
+	const scale = requestedTotal.minus(claimed).lte(sharedRemaining)
+		? 1
+		: effectiveAllocationScale({
+				allocation,
+				cycleEnd: bounds.windowEndAt,
+				sharedRemaining: sharedRemaining.toNumber(),
+				claimed,
+				requestedTotal: requestedTotal.toNumber(),
+			});
 	const covered = sharedRemaining.plus(claimed);
 	const unallocated =
 		scale < 1 ? new Decimal(0) : Decimal.max(0, covered.minus(requestedTotal));

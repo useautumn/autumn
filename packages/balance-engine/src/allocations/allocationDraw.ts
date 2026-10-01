@@ -76,16 +76,18 @@ const gateNow = ({
 			.toNumber(),
 	});
 
-const gates = ({
+const gateOf = ({
 	context,
 	row,
 }: {
 	context: DeductionContext;
-	row: DeductionRow;
+	row: Pick<DeductionRow, "id" | "entityKey">;
 }) =>
-	context.allocationGate?.sharedRowIds.has(row.id) && row.entityKey === null
-		? context.allocationGate
-		: null;
+	row.entityKey === null ? (context.allocationGates.get(row.id) ?? null) : null;
+
+const distinctGates = ({ context }: { context: DeductionContext }) => [
+	...new Set(context.allocationGates.values()),
+];
 
 /** Credits a shared row may still give this subject: its own unused share, then credits nobody holds. Null when the row isn't gated. */
 export const allocationHeadroomOf = ({
@@ -97,7 +99,7 @@ export const allocationHeadroomOf = ({
 	deductionState: DeductionState;
 	row: DeductionRow;
 }): Decimal | null => {
-	const gate = gates({ context, row });
+	const gate = gateOf({ context, row });
 	if (!gate) return null;
 	const { ownUnused, unallocated } = gateNow({ context, deductionState, gate });
 	return Decimal.max(0, new Decimal(ownUnused).plus(unallocated));
@@ -137,7 +139,11 @@ const releaseAllocation = ({
 	});
 	const restored = Decimal.min(credits, Decimal.max(0, usage));
 	if (restored.lte(0)) return;
-	addConsumed({ deductionState, key: gate.entityCounter.key, amount: restored.neg() });
+	addConsumed({
+		deductionState,
+		key: gate.entityCounter.key,
+		amount: restored.neg(),
+	});
 	if (gate.ownRequested === null) return;
 	const claimedBefore = Decimal.min(usage, gate.ownRequested);
 	const claimedAfter = Decimal.min(usage.minus(restored), gate.ownRequested);
@@ -160,10 +166,15 @@ export const consumeAllocation = ({
 	row: DeductionRow;
 	credits: Decimal;
 }): void => {
-	const gate = gates({ context, row });
+	const gate = gateOf({ context, row });
 	if (!gate || !gate.entityCounter || credits.isZero()) return;
 	if (credits.lt(0)) {
-		releaseAllocation({ context, deductionState, gate, credits: credits.neg() });
+		releaseAllocation({
+			context,
+			deductionState,
+			gate,
+			credits: credits.neg(),
+		});
 		return;
 	}
 	const { ownUnused } = gateNow({ context, deductionState, gate });
@@ -183,18 +194,21 @@ export const deltasToFreedAllocation = ({
 	context: DeductionContext;
 	deltas: DeductionDelta[];
 }): Map<string, Decimal> | undefined => {
-	const gate = context.allocationGate;
-	if (!gate) return undefined;
-	const restored = deltas
-		.filter(
-			(delta) =>
-				gate.sharedRowIds.has(delta.id) &&
-				delta.entityKey === null &&
-				delta.balanceDelta > 0,
-		)
-		.reduce((sum, delta) => sum.plus(delta.balanceDelta), new Decimal(0));
 	const state = { allocationConsumed: undefined } as unknown as DeductionState;
-	releaseAllocation({ context, deductionState: state, gate, credits: restored });
+	for (const gate of distinctGates({ context })) {
+		const restored = deltas
+			.filter(
+				(delta) =>
+					gateOf({ context, row: delta }) === gate && delta.balanceDelta > 0,
+			)
+			.reduce((sum, delta) => sum.plus(delta.balanceDelta), new Decimal(0));
+		releaseAllocation({
+			context,
+			deductionState: state,
+			gate,
+			credits: restored,
+		});
+	}
 	return state.allocationConsumed;
 };
 
@@ -206,13 +220,14 @@ export const allocationCountersToRowChanges = ({
 	context: DeductionContext;
 	deductionState: DeductionState;
 }): RowChange[] => {
-	const gate = context.allocationGate;
-	if (!gate || !deductionState.allocationConsumed) return [];
+	if (!deductionState.allocationConsumed) return [];
 	return usageWindowsToRowChanges({
 		context: {
 			...context,
-			usageWindowLimits: [gate.entityCounter, gate.claimedCounter].filter(
-				(counter) => counter !== null,
+			usageWindowLimits: distinctGates({ context }).flatMap((gate) =>
+				[gate.entityCounter, gate.claimedCounter].filter(
+					(counter) => counter !== null,
+				),
 			),
 		},
 		deductionState: {

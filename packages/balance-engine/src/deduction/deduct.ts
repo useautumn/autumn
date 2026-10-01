@@ -53,6 +53,7 @@ export const deductionStateToOutcome = ({
 			: null,
 		deltas,
 		usageWindowConsumed: deductionState.usageWindowConsumed,
+		allocationConsumed: deductionState.allocationConsumed,
 		changes: rejected
 			? []
 			: [

@@ -16,6 +16,8 @@ export type DeductionOptions = {
 	/** The triggering event's properties; filtered usage limits only apply when these match. */
 	eventProperties?: EventProperties;
 	alterGrantedBalance?: boolean;
+	/** Customer usage (track, check-lock, finalize) moves allocation counters; admin balance edits never do. */
+	countsAllocations?: boolean;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 
 	// only for resolved
@@ -62,7 +64,7 @@ export type PreparedFeatureDeduction = {
 	// `_usage_windows` counter field, so their keys must be declared in KEYS[]
 	// even when no deduction entry references them.
 	usageWindowFeatureIds?: string[];
-	allocationGate?: AllocationLuaGate;
+	allocationGates?: Record<string, AllocationLuaGate>;
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	lock?: {

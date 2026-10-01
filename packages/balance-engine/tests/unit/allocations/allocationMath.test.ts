@@ -107,10 +107,21 @@ describe("allocationGate", () => {
 			allocationGate({
 				own: { requested: 5000, usage: 0 },
 				scale: 0.8,
-				heldUnused: 4000,
-				sharedRemaining: 4500,
+				heldUnused: 10000,
+				sharedRemaining: 8000,
 			}),
 		).toEqual({ ownUnused: 4000, unallocated: 0 });
+	});
+
+	test("a cut scale reads as 1 once the pot covers every unused promise", () => {
+		expect(
+			allocationGate({
+				own: { requested: 5000, usage: 0 },
+				scale: 0.8,
+				heldUnused: 10000,
+				sharedRemaining: 10500,
+			}),
+		).toEqual({ ownUnused: 5000, unallocated: 500 });
 	});
 });
 

@@ -18,7 +18,7 @@ import {
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { resolveAllocationLuaGate } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
+import { resolveAllocationLuaGates } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
@@ -291,17 +291,17 @@ export const prepareFeatureDeductionV2 = ({
 
 	const allocation = hasUnlimitedCusEnt
 		? null
-		: resolveAllocationLuaGate({
+		: resolveAllocationLuaGates({
 				fullSubject,
 				customerEntitlements,
-				now: Date.now(),
+				now: ctx.timestamp,
 			});
 	const luaWindowLimits = [...usageWindowLimits, ...(allocation?.limits ?? [])];
 
 	return {
 		customerEntitlements,
 		customerEntitlementDeductions,
-		allocationGate: allocation?.gate,
+		allocationGates: allocation?.gates,
 		spendLimitByFeatureId:
 			Object.keys(spendLimitByFeatureId).length > 0
 				? spendLimitByFeatureId

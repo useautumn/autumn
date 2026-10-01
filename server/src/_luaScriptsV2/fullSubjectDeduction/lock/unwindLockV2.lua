@@ -162,6 +162,7 @@ end
 --   {
 --     applied = boolean,
 --     unwind_iteration_value = number,
+--     balance_credits = number | nil, (credits given back to the balance, rate cards priced exactly)
 --     remaining_unwind_value = number,
 --     error = string | nil,
 --   }
@@ -278,6 +279,7 @@ local function unwind_lock_item_iteration(params)
     return {
       applied = true,
       unwind_iteration_value = unwind_iteration_value,
+      balance_credits = inverse_balance_delta,
       remaining_unwind_value = remaining_unwind_value - unwind_iteration_value,
       error = nil,
     }
@@ -340,6 +342,7 @@ local function unwind_lock_item_iteration(params)
     return {
       applied = true,
       unwind_iteration_value = unwind_iteration_value,
+      balance_credits = inverse_balance_delta,
       remaining_unwind_value = remaining_unwind_value - unwind_iteration_value,
       error = nil,
     }
@@ -419,6 +422,7 @@ local function unwind_lock_items(params)
       table.insert(iterations, {
         item = item,
         unwind_iteration_value = result.unwind_iteration_value,
+        balance_credits = result.balance_credits,
       })
     end
 

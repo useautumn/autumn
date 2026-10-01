@@ -9,6 +9,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
@@ -28,6 +29,7 @@ import {
 	preserveBalanceAsOverage,
 } from "./deleteBalanceUtils";
 
+/** Deleting shared credits can shrink what allocations divide, so shares re-fit after every delete. */
 export const deleteBalance = async ({
 	ctx,
 	params,
@@ -36,6 +38,22 @@ export const deleteBalance = async ({
 	ctx: AutumnContext;
 	params: DeleteBalanceParamsV0;
 	includeExpired?: boolean;
+}) => {
+	await deleteBalanceRows({ ctx, params, includeExpired });
+	await refreshAllocationScaleAfterWrite({
+		ctx,
+		customerId: params.customer_id,
+	});
+};
+
+const deleteBalanceRows = async ({
+	ctx,
+	params,
+	includeExpired,
+}: {
+	ctx: AutumnContext;
+	params: DeleteBalanceParamsV0;
+	includeExpired: boolean;
 }) => {
 	const { customer_id, entity_id, feature_id, recalculate_balances } = params;
 

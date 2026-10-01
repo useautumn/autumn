@@ -44,6 +44,19 @@ const assertBalanceExists = ({
 	throw balanceNotFoundError({ params });
 };
 
+export const updateChangesBalance = ({
+	params,
+	targetBalance,
+}: {
+	params: UpdateBalanceParamsV0;
+	targetBalance?: number;
+}) =>
+	notNullish(targetBalance) ||
+	notNullish(params.remaining) ||
+	notNullish(params.add_to_balance) ||
+	notNullish(params.usage) ||
+	notNullish(params.included_grant);
+
 export const validateBalanceMutation = ({
 	params,
 	targetBalance,
@@ -53,13 +66,7 @@ export const validateBalanceMutation = ({
 	targetBalance?: number;
 	fullSubject: FullSubject;
 }) => {
-	const changesBalance =
-		notNullish(targetBalance) ||
-		notNullish(params.remaining) ||
-		notNullish(params.add_to_balance) ||
-		notNullish(params.usage) ||
-		notNullish(params.included_grant);
-	if (!changesBalance) return;
+	if (!updateChangesBalance({ params, targetBalance })) return;
 
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,

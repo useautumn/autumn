@@ -30,6 +30,7 @@ export const toBalanceEditRequest = ({
 		properties: null,
 		includesCreditSystems,
 		countsUsageWindows,
+		countsAllocations: false,
 		customerEntitlementFilters,
 		org,
 		enforceOverdueBlock: false,

@@ -58,7 +58,7 @@ export const allocationGranted = ({
 /** What a deduction may take from shared rows: the entity's own unused share, then credits nobody holds. */
 export const allocationGate = ({
 	own,
-	scale,
+	scale: storedScale,
 	heldUnused,
 	sharedRemaining,
 }: {
@@ -67,6 +67,8 @@ export const allocationGate = ({
 	heldUnused: number;
 	sharedRemaining: number;
 }): { ownUnused: number; unallocated: number } => {
+	// A cut solved before the pot grew stops binding once every unused promise fits again.
+	const scale = heldUnused <= sharedRemaining ? 1 : storedScale;
 	const ownUnused = own
 		? Decimal.max(
 				0,

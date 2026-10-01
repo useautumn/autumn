@@ -25,8 +25,8 @@ export type DeductionContext = {
 	usageWindowLimits: UsageWindowLimit[];
 	/** The subject's counter rows as they stand; the caps read them and the outcome re-stamps them. */
 	usageWindows: WorkerUsageWindow[];
-	/** Holds an entity to its share of the customer's shared credits; null when nothing is allocated. */
-	allocationGate: AllocationGate | null;
+	/** Holds an entity to its share of each allocated feature's shared credits, keyed by shared row id. */
+	allocationGates: Map<string, AllocationGate>;
 	/** Past-due products were dropped from the selection; with no rows left, the value is refused, not unsupported. */
 	overdueBlocked: boolean;
 };

@@ -14,25 +14,38 @@ import { deductionRowToRateUnits } from "../convertDeductionUtils.js";
 import { creditRateUnitsForCreditChange } from "../credits/creditRateUnitsForCreditChange.js";
 
 /** The stored counter row for this cap, if it is still counting inside the cap's current window. */
+/** The stored counter for `limit` while its window is current; null once it rolled. */
+export const liveUsageWindowOf = ({
+	usageWindows,
+	now,
+	limit,
+}: {
+	usageWindows: WorkerUsageWindow[];
+	now: number;
+	limit: UsageWindowLimit;
+}): WorkerUsageWindow | null => {
+	const existing = findUsageWindowByLimit({ usageWindows, limit });
+	if (
+		!existing ||
+		existing.window_end_at <= now ||
+		!isSameUsageWindow({ usageWindow: existing, window: limit })
+	)
+		return null;
+	return existing;
+};
+
 const liveWindowOf = ({
 	context,
 	limit,
 }: {
 	context: DeductionContext;
 	limit: UsageWindowLimit;
-}): WorkerUsageWindow | null => {
-	const existing = findUsageWindowByLimit({
+}): WorkerUsageWindow | null =>
+	liveUsageWindowOf({
 		usageWindows: context.usageWindows,
+		now: context.selection.now,
 		limit,
 	});
-	if (
-		!existing ||
-		existing.window_end_at <= context.selection.now ||
-		!isSameUsageWindow({ usageWindow: existing, window: limit })
-	)
-		return null;
-	return existing;
-};
 
 /** A counter only counts inside its stamped window; expired or re-derived bounds read as zero. */
 export const storedUsageOf = ({

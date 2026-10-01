@@ -106,7 +106,7 @@ export const ApiBalanceBreakdownV1Schema = z.object({
 		internal: true,
 	}),
 
-	source: z.enum(["customer", "entity"]).optional().meta({
+	source: z.enum(["customer", "entity"]).optional().readonly().meta({
 		description:
 			"Where this row's credits come from: shared at the customer level, or owned by the entity.",
 	}),
@@ -118,6 +118,7 @@ export const ApiBalanceBreakdownV1Schema = z.object({
 		})
 		.nullable()
 		.optional()
+		.readonly()
 		.meta({
 			description:
 				"Set when this row's numbers are the entity's allocated share of the customer's credits.",
@@ -172,11 +173,11 @@ export const ApiBalanceV1Schema = z
 		rollovers: z.array(ApiBalanceRolloverSchema).optional().meta({
 			description: "Rollover balances carried over from previous periods.",
 		}),
-		allocated: z.number().optional().meta({
+		allocated: z.number().optional().readonly().meta({
 			description:
 				"Shared credits held for entities by allocations; present only when the customer allocates this feature.",
 		}),
-		unallocated: z.number().optional().meta({
+		unallocated: z.number().optional().readonly().meta({
 			description:
 				"Remaining shared credits no allocation holds; any entity may use them.",
 		}),

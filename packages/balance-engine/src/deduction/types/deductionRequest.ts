@@ -17,6 +17,8 @@ export type DeductionSelection = {
 	includesCreditSystems: boolean;
 	/** Consumption checks and counts windowed caps; a balance set to a target does neither. */
 	countsUsageWindows: boolean;
+	/** Customer usage is held to and counted against allocated shares; admin balance edits and rebuilds are not. */
+	countsAllocations: boolean;
 	/** Narrows the selected rows to one balance, entitlement or interval. */
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 	/** The product statuses that fund, from the org's `include_past_due`. */

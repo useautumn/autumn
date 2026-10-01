@@ -5,18 +5,17 @@
  * Green (after): A's share shows the refund; unallocated is unchanged.
  */
 
-import { expect, test } from "bun:test";
-import { type ApiBalanceV1, ApiVersion, ResetInterval } from "@autumn/shared";
+import { test } from "bun:test";
+import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { expectMessagesBalance } from "./utils/expectMessagesBalance.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
-
-type WithBalances = { balances: Record<string, ApiBalanceV1> };
 
 test.concurrent(
 	`${chalk.yellowBright("allocate-refund1: a refund returns to the entity's own share")}`,
@@ -60,13 +59,16 @@ test.concurrent(
 		await trackA(4000);
 		await trackA(-2000);
 
-		const entityA = (
-			await autumnV2_3.entities.get<WithBalances>(customerId, a)
-		).balances[TestFeature.Messages];
-		expect(entityA).toMatchObject({ granted: 5000, usage: 2000, remaining: 3000 });
-
-		const customer = (await autumnV2_3.customers.get<WithBalances>(customerId))
-			.balances[TestFeature.Messages];
-		expect(customer).toMatchObject({ remaining: 8000, unallocated: 0 });
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			entityId: a,
+			expected: { granted: 5000, usage: 2000, remaining: 3000 },
+		});
+		await expectMessagesBalance({
+			autumn: autumnV2_3,
+			customerId,
+			expected: { remaining: 8000, unallocated: 0 },
+		});
 	},
 );

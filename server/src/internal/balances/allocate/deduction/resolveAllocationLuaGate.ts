@@ -1,6 +1,5 @@
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,
-	effectiveAllocationScale,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	type UsageWindowLimit,
@@ -13,17 +12,22 @@ const UNBOUNDED_COUNTER_LIMIT = 1e15;
 
 export type AllocationLuaLimit = UsageWindowLimit & {
 	allocation_role: "entity" | "claimed";
+	/** The gate whose counter this is: its allocated internal feature id. */
+	allocation_key: string;
 };
 
 export type AllocationLuaGate = {
+	key: string;
 	shared_ent_ids: Record<string, true>;
 	requested: number | null;
 	requested_total: number;
+	/** The stored scale; Lua re-solves it from the pot when it belongs to another cycle. */
 	scale: number;
+	scale_is_current: boolean;
 };
 
-/** The allocation gate and its counters for the Lua deduction, or null when the selection draws no allocated credits. */
-export const resolveAllocationLuaGate = ({
+/** One gate per allocated feature the selection draws, keyed by internal feature id, with their counters; null when none. */
+export const resolveAllocationLuaGates = ({
 	fullSubject,
 	customerEntitlements,
 	now,
@@ -31,9 +35,15 @@ export const resolveAllocationLuaGate = ({
 	fullSubject: FullSubject;
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	now: number;
-}): { gate: AllocationLuaGate; limits: AllocationLuaLimit[] } | null => {
+}): {
+	gates: Record<string, AllocationLuaGate>;
+	limits: AllocationLuaLimit[];
+} | null => {
 	const allocations = fullSubject.customer.balance_allocations;
 	if (!allocations) return null;
+
+	const gates: Record<string, AllocationLuaGate> = {};
+	const limits: AllocationLuaLimit[] = [];
 
 	for (const [internalFeatureId, allocation] of Object.entries(allocations)) {
 		const sharedRows = sharedRowsOf({
@@ -72,29 +82,26 @@ export const resolveAllocationLuaGate = ({
 			anchor_mode: "billing_cycle",
 			new_window_id: generateId("uw"),
 			allocation_role: role,
+			allocation_key: internalFeatureId,
 		});
 
-		return {
-			gate: {
-				shared_ent_ids: Object.fromEntries(
-					sharedRows.map((row) => [row.id, true as const]),
-				),
-				requested: internalEntityId
-					? (allocation.amounts[internalEntityId] ?? null)
-					: null,
-				requested_total: Object.values(allocation.amounts).reduce(
-					(sum, amount) => sum + amount,
-					0,
-				),
-				scale: effectiveAllocationScale({
-					allocation,
-					cycleEnd: cycle.windowEndAt,
-				}),
-			},
-			limits: internalEntityId
-				? [limitOf("entity"), limitOf("claimed")]
-				: [limitOf("claimed")],
+		gates[internalFeatureId] = {
+			key: internalFeatureId,
+			shared_ent_ids: Object.fromEntries(
+				sharedRows.map((row) => [row.id, true as const]),
+			),
+			requested: internalEntityId
+				? (allocation.amounts[internalEntityId] ?? null)
+				: null,
+			requested_total: Object.values(allocation.amounts).reduce(
+				(sum, amount) => sum + amount,
+				0,
+			),
+			scale: allocation.scale,
+			scale_is_current: allocation.scale_cycle_end === cycle.windowEndAt,
 		};
+		if (internalEntityId) limits.push(limitOf("entity"));
+		limits.push(limitOf("claimed"));
 	}
-	return null;
+	return limits.length > 0 ? { gates, limits } : null;
 };

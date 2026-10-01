@@ -133,7 +133,8 @@ local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = lock_receipt_key_from_keys
 local usage_window_limits = params.usage_window_limits
-local allocation_gate = not is_nil(params.allocation_gate) and params.allocation_gate or nil
+local allocation_gates = index_allocation_gates(params.allocation_gates)
+local counts_allocations = params.counts_allocations == true
 local usage_window_now = params.usage_window_now
 local usage_window_ttl_seconds = params.usage_window_ttl_seconds
 local is_consumption = params.is_consumption
@@ -197,11 +198,10 @@ local enforce_usage_windows = is_consumption
     and not has_unwind
     and has_usage_window_limits
 local unwind_usage_windows = has_unwind and has_usage_window_limits
--- Allocation counters move on every shared draw or give-back, whatever else is enforced.
-local allocation_active = not is_nil(allocation_gate)
+-- Only customer usage (and its refunds) is gated and counted; admin balance edits never are.
+local allocation_active = counts_allocations
+    and not is_nil(allocation_gates)
     and has_usage_window_limits
-    and is_nil(target_balance)
-    and not alter_granted_balance
 local loaded_usage_window_limits = nil
 if enforce_usage_windows or unwind_usage_windows then
   loaded_usage_window_limits = usage_window_limits
@@ -238,6 +238,10 @@ if #(context.missing_customer_entitlement_ids or {}) > 0 then
   })
 end
 
+if allocation_active then
+  snapshot_allocation_pots(context, allocation_gates)
+end
+
 local unwind_modified_cus_ent_ids = {}
 
 if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
@@ -272,7 +276,7 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
   if allocation_active then
     release_allocation_for_unwind({
       context = context,
-      gate = allocation_gate,
+      gates = allocation_gates,
       iterations = unwind_result.iterations,
     })
   end
@@ -305,7 +309,7 @@ local deduction_result = run_deduction_on_context({
   target_entity_id = target_entity_id,
   alter_granted_balance = alter_granted_balance,
   overage_behaviour = overage_behaviour,
-  allocation_gate = allocation_active and allocation_gate or nil,
+  allocation_gates = allocation_active and allocation_gates or nil,
 })
 
 local updates = deduction_result.updates

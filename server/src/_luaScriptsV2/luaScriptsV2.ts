@@ -44,6 +44,7 @@ import USAGE_WINDOW_CONTEXT_UTILS_V2 from "./fullSubjectDeduction/usageWindows/u
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)
 // ============================================================================
 
+import PATCH_ALLOCATION_COUNTER_MAIN from "./fullSubject/patchAllocationCounter/patchAllocationCounter.lua";
 import ROLL_USAGE_WINDOWS_MAIN from "./fullSubject/rollUsageWindows/rollUsageWindows.lua";
 import APPLY_FIELD_UPDATES from "./fullSubject/updateSubjectBalances/applyFieldUpdates.lua";
 import UPDATE_CONTEXT_UTILS from "./fullSubject/updateSubjectBalances/updateContextUtils.lua";
@@ -133,3 +134,7 @@ ${UPDATE_SUBJECT_BALANCES_MAIN}`;
  */
 export const ROLL_USAGE_WINDOWS_SCRIPT = `${LUA_UTILS}
 ${ROLL_USAGE_WINDOWS_MAIN}`;
+
+/** Moves one allocation counter row in a per-feature hash's '_usage_windows' field the way Postgres moved it. */
+export const PATCH_ALLOCATION_COUNTER_SCRIPT = `${LUA_UTILS}
+${PATCH_ALLOCATION_COUNTER_MAIN}`;

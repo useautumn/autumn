@@ -24,6 +24,10 @@ import {
 	toAllocationCounter,
 } from "../utils/allocationRows.js";
 import { notifyAllocationsAdjusted } from "./notifyAllocationsAdjusted.js";
+import {
+	type AllocationCounterPatch,
+	patchCachedAllocations,
+} from "./patchCachedAllocations.js";
 
 const hasStoredAllocations = async ({
 	ctx,
@@ -59,12 +63,18 @@ const refitAllocations = async ({
 	fullSubject: FullSubject;
 	allocations: BalanceAllocations;
 	now: number;
-}): Promise<{ next: BalanceAllocations; changed: boolean }> => {
+}): Promise<{
+	next: BalanceAllocations;
+	changed: boolean;
+	dirty: boolean;
+	counterPatches: AllocationCounterPatch[];
+}> => {
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
 	});
 	const internalCustomerId = fullSubject.customer.internal_id;
 	const next: BalanceAllocations = { ...allocations };
+	const counterPatches: AllocationCounterPatch[] = [];
 	let changed = false;
 	let dirty = false;
 	for (const [internalFeatureId, allocation] of Object.entries(allocations)) {
@@ -91,25 +101,24 @@ const refitAllocations = async ({
 			(sum, [id, requested]) => sum + Math.min(usage[id] ?? 0, requested),
 			0,
 		);
-		if (claimed !== (usage[""] ?? 0))
+		const readClaimed = usage[""] ?? 0;
+		if (claimed !== readClaimed) {
+			const counter = toAllocationCounter({
+				id: generateId("uw"),
+				internalCustomerId,
+				internalFeatureId,
+				featureId: allocation.feature_id,
+				internalEntityId: null,
+				cycle,
+				usage: claimed,
+				now,
+			});
 			await setAllocationCounters({
 				db: tx,
-				counters: [
-					{
-						readUsage: usage[""] ?? 0,
-						...toAllocationCounter({
-							id: generateId("uw"),
-							internalCustomerId,
-							internalFeatureId,
-							featureId: allocation.feature_id,
-							internalEntityId: null,
-							cycle,
-							usage: claimed,
-							now,
-						}),
-					},
-				],
+				counters: [{ readUsage: readClaimed, ...counter }],
 			});
+			counterPatches.push({ counter, usageDelta: claimed - readClaimed });
+		}
 		const scale = solveAllocationScale({
 			sharedRemaining: cusEntsToBalance({ cusEnts: sharedRows }),
 			entries: Object.entries(allocation.amounts).map(([id, requested]) => ({
@@ -133,27 +142,90 @@ const refitAllocations = async ({
 	}
 	if (dirty)
 		await writeAllocations({ ctx, tx, internalCustomerId, allocations: next });
-	return { next, changed };
+	return { next, changed, dirty, counterPatches };
 };
 
+/** Flushing first is only safe when the caller hasn't just written balances to Postgres itself. */
 const loadFreshSubject = async ({
 	ctx,
 	customerId,
+	flushBalances,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	flushBalances: boolean;
 }) => {
-	await invalidateCachedFullSubject({
-		ctx,
-		customerId,
-		source: "refreshAllocationScale",
-		flushBalances: true,
-	});
+	if (flushBalances)
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			source: "refreshAllocationScale",
+			flushBalances: true,
+		});
 	return getFullSubject({ ctx, customerId, readFrom: "primary" });
 };
 
-/** Re-solves each allocated feature's scale against the shared credits left now; reports whether any share moved. */
+export type AllocationRefresh = {
+	/** A share moved and the change is committed. */
+	adjusted: boolean;
+	/** The stored allocations after this refit wrote them; null when it wrote nothing. */
+	written: BalanceAllocations | null;
+};
+
+const NO_REFRESH: AllocationRefresh = { adjusted: false, written: null };
+
+/** Re-solves each allocated feature's scale against the shared credits left now. */
 export const refreshAllocationScale = async ({
+	ctx,
+	customerId,
+	notify = true,
+	flushBalances = true,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	/** False when the caller sends its own billing.updated and adds the tag there. */
+	notify?: boolean;
+	/** False right after a direct Postgres balance write, where cached balances are no longer the truth. */
+	flushBalances?: boolean;
+}): Promise<AllocationRefresh> => {
+	if (!(await hasStoredAllocations({ ctx, customerId }))) return NO_REFRESH;
+	const fullSubject = await loadFreshSubject({
+		ctx,
+		customerId,
+		flushBalances,
+	});
+	if (!fullSubject) return NO_REFRESH;
+
+	const refit = await withAllocationLock({
+		ctx,
+		internalCustomerId: fullSubject.customer.internal_id,
+		fn: async ({ tx, allocations }) =>
+			allocations
+				? refitAllocations({
+						ctx,
+						tx,
+						fullSubject,
+						allocations,
+						now: Date.now(),
+					})
+				: null,
+	});
+	if (!refit) return NO_REFRESH;
+	if (refit.dirty || refit.counterPatches.length > 0)
+		await patchCachedAllocations({
+			ctx,
+			customerId: fullSubject.customerId,
+			allocations: refit.next,
+			counterPatches: refit.counterPatches,
+		});
+	const { changed } = refit;
+	const written = refit.dirty ? refit.next : null;
+	if (changed && notify) void notifyAllocationsAdjusted({ ctx, customerId });
+	return { adjusted: changed, written };
+};
+
+/** For callers that just wrote balances to Postgres themselves: never flushes, and a failed refit is logged, not thrown. */
+export const refreshAllocationScaleAfterWrite = async ({
 	ctx,
 	customerId,
 	notify = true,
@@ -162,37 +234,40 @@ export const refreshAllocationScale = async ({
 	customerId: string;
 	/** False when the caller sends its own billing.updated and adds the tag there. */
 	notify?: boolean;
-}): Promise<boolean> => {
-	if (!(await hasStoredAllocations({ ctx, customerId }))) return false;
-	const fullSubject = await loadFreshSubject({ ctx, customerId });
-	if (!fullSubject) return false;
-
-	const changed = await withAllocationLock({
-		ctx,
-		internalCustomerId: fullSubject.customer.internal_id,
-		fn: async ({ tx, allocations }) =>
-			allocations
-				? (
-						await refitAllocations({
-							ctx,
-							tx,
-							fullSubject,
-							allocations,
-							now: Date.now(),
-						})
-					).changed
-				: false,
-	});
-	await invalidateCachedFullSubject({
-		ctx,
-		customerId,
-		source: "refreshAllocationScale",
-	});
-	if (changed && notify) void notifyAllocationsAdjusted({ ctx, customerId });
-	return changed;
+}): Promise<AllocationRefresh> => {
+	try {
+		return await refreshAllocationScale({
+			ctx,
+			customerId,
+			notify,
+			flushBalances: false,
+		});
+	} catch (error) {
+		ctx.logger.error("[refreshAllocationScale] after balance write failed", {
+			error,
+		});
+		return NO_REFRESH;
+	}
 };
 
-/** Drops a deleted entity's share and re-fits what's left in one locked write. */
+/** The allocations with the entity's share dropped; a feature nobody holds a share of anymore goes with it. */
+const withoutEntity = ({
+	allocations,
+	internalEntityId,
+}: {
+	allocations: BalanceAllocations;
+	internalEntityId: string;
+}): BalanceAllocations => {
+	const remaining: BalanceAllocations = {};
+	for (const [internalFeatureId, allocation] of Object.entries(allocations)) {
+		const { [internalEntityId]: _released, ...amounts } = allocation.amounts;
+		if (Object.keys(amounts).length === 0) continue;
+		remaining[internalFeatureId] = { ...allocation, amounts };
+	}
+	return remaining;
+};
+
+/** Drops a deleted entity's share and re-fits what's left in one locked write. Runs after the delete's own Postgres writes, so it never flushes. */
 export const releaseEntityAllocations = async ({
 	ctx,
 	customerId,
@@ -203,46 +278,44 @@ export const releaseEntityAllocations = async ({
 	internalEntityId: string;
 }): Promise<void> => {
 	if (!(await hasStoredAllocations({ ctx, customerId }))) return;
-	const fullSubject = await loadFreshSubject({ ctx, customerId });
+	const fullSubject = await loadFreshSubject({
+		ctx,
+		customerId,
+		flushBalances: false,
+	});
 	if (!fullSubject) return;
 
 	const released = await withAllocationLock({
 		ctx,
 		internalCustomerId: fullSubject.customer.internal_id,
 		fn: async ({ tx, allocations }) => {
-			if (!allocations) return false;
+			if (!allocations) return null;
 			const held = Object.values(allocations).some(
 				(allocation) => allocation.amounts[internalEntityId] !== undefined,
 			);
-			if (!held) return false;
-			const withoutEntity: BalanceAllocations = Object.fromEntries(
-				Object.entries(allocations).map(([internalFeatureId, allocation]) => {
-					const { [internalEntityId]: _released, ...amounts } =
-						allocation.amounts;
-					return [internalFeatureId, { ...allocation, amounts }];
-				}),
-			);
+			if (!held) return null;
+			const remaining = withoutEntity({ allocations, internalEntityId });
 			await writeAllocations({
 				ctx,
 				tx,
 				internalCustomerId: fullSubject.customer.internal_id,
-				allocations: withoutEntity,
+				allocations: remaining,
 			});
-			await refitAllocations({
+			return refitAllocations({
 				ctx,
 				tx,
 				fullSubject,
-				allocations: withoutEntity,
+				allocations: remaining,
 				now: Date.now(),
 			});
-			return true;
 		},
 	});
 	if (!released) return;
-	await invalidateCachedFullSubject({
+	await patchCachedAllocations({
 		ctx,
-		customerId,
-		source: "releaseEntityAllocations",
+		customerId: fullSubject.customerId,
+		allocations: released.next,
+		counterPatches: released.counterPatches,
 	});
 	void notifyAllocationsAdjusted({ ctx, customerId });
 };

@@ -8,6 +8,7 @@ import {
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
 import type { InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
@@ -77,32 +78,38 @@ export const processExpiredTrialRow = async ({
 	});
 
 	let activatedDefault: FullCusProduct | undefined;
+	let defaultAdjusted = false;
 	if (defaultProduct) {
-		activatedDefault = await activateFreeDefaultProduct({
+		const activation = await activateFreeDefaultProduct({
 			ctx,
 			customerProduct: trialFullCusProduct,
 			fullCustomer: originalFullCustomer,
 			defaultProduct,
+			emitsBillingUpdated: true,
 		});
+		activatedDefault = activation.insertedCustomerProduct;
+		defaultAdjusted = activation.allocationsAdjusted;
 	}
 	// Executing through the shared plan runs the license lifecycle when the
 	// expiring trial carried license state.
-	const { allocationsAdjusted } = await executeAutumnBillingPlan({
-		emitsBillingUpdated: true,
-		ctx,
-		autumnBillingPlan: {
-			customerId: fullCustomer.id || fullCustomer.internal_id,
-			insertCustomerProducts: [],
-			updateCustomerProducts: [
-				{
-					customerProduct: trialFullCusProduct,
-					updates: { status: CusProductStatus.Expired },
-				},
-			],
-		},
-	});
+	const { allocationsAdjusted: expiryAdjusted = false } =
+		await executeAutumnBillingPlan({
+			emitsBillingUpdated: true,
+			ctx,
+			autumnBillingPlan: {
+				customerId: fullCustomer.id || fullCustomer.internal_id,
+				insertCustomerProducts: [],
+				updateCustomerProducts: [
+					{
+						customerProduct: trialFullCusProduct,
+						updates: { status: CusProductStatus.Expired },
+					},
+				],
+			},
+		});
 
 	// Default activation already executes the outgoing and incoming transition together.
+	let transitionAdjusted = false;
 	if (!activatedDefault) {
 		await applyPooledBalanceCustomerProductTransitions({
 			ctx,
@@ -111,6 +118,12 @@ export const processExpiredTrialRow = async ({
 			incomingCustomerProducts: [],
 			now: Date.now(),
 		});
+		// Pools moved after the plan re-fit, so shares re-fit against the final pot.
+		({ adjusted: transitionAdjusted } = await refreshAllocationScaleAfterWrite({
+			ctx,
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+			notify: false,
+		}));
 	}
 
 	await deleteCachedFullCustomer({
@@ -137,7 +150,8 @@ export const processExpiredTrialRow = async ({
 	});
 
 	void sendBillingUpdatedWebhook({
-		allocationsAdjusted,
+		allocationsAdjusted:
+			defaultAdjusted || expiryAdjusted || transitionAdjusted,
 		ctx,
 		autumnBillingPlan,
 		originalFullCustomer,
