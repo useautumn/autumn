@@ -6,7 +6,6 @@ import { Button } from "@autumn/ui";
 import { useState } from "react";
 import { ByocCacheMachineTable } from "./ByocCacheMachineTable";
 import { ByocCacheSetupStep } from "./ByocCacheSetupStep";
-import { byocCacheMachineLabel } from "./byocCacheMachineDisplay";
 
 const LATER_STEPS = [
 	{
@@ -47,7 +46,7 @@ export const ByocCacheEmptyState = ({
 				<ByocCacheSetupStep
 					number={1}
 					title="Pick a machine size"
-					description="One Graviton instance in your AWS account. You can resize it later."
+					description="The AWS setup doesn't apply this yet: pick the same machine under Configure before you launch."
 				>
 					<ByocCacheMachineTable
 						selected={machine}
@@ -66,7 +65,7 @@ export const ByocCacheEmptyState = ({
 					onClick={() => onDeploy(machine)}
 					isLoading={isDeploying}
 				>
-					Deploy {byocCacheMachineLabel(machine)} cache
+					Deploy cache
 				</Button>
 				<span className="text-xs text-subtle">
 					Opens the AWS setup in a new tab

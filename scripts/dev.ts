@@ -188,7 +188,7 @@ async function startDev() {
 		worktreeNum,
 	});
 	process.env.TRIGGER_DEV_BRANCH = triggerDevBranch;
-	// The branch name keeps this stack's alien deployments apart from other branches'.
+	// The user and branch keep this stack's alien deployments apart from other people's and branches'.
 	const atomDeploymentPrefix = resolveAtomDeploymentPrefix({ projectRoot });
 	process.env.ATOM_DEPLOYMENT_PREFIX = atomDeploymentPrefix;
 
