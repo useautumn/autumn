@@ -82,18 +82,32 @@ export const stripeConnectWebhookUrl = ({
 }): string =>
 	`${ingressUrl.replace(/\/+$/, "")}/ingress/connect/sandbox?shard=${STRIPE_CONNECT_SHARD}`;
 
+/** Stripe's endpoint object doesn't report `connect`, so the tag set at creation proves it is a Connect endpoint. */
+const SHARD_WEBHOOK_METADATA = { autumn_tw_shard: STRIPE_CONNECT_SHARD };
+
 type WebhookEndpointsApi<TEvent extends string> = {
 	webhookEndpoints: {
-		list(params: { limit: number }): AsyncIterable<{ id: string; url: string }>;
+		list(params: { limit: number }): AsyncIterable<{
+			id: string;
+			url: string;
+			enabled_events: string[];
+			status: string;
+			metadata: Record<string, string> | null;
+		}>;
 		create(params: {
 			url: string;
 			enabled_events: TEvent[];
 			connect: boolean;
+			metadata: Record<string, string>;
 		}): Promise<{ id: string }>;
+		update(
+			id: string,
+			params: { enabled_events: TEvent[]; disabled: boolean },
+		): Promise<{ id: string }>;
 	};
 };
 
-/** Reuses the endpoint already pointing at `url`, else creates it; it is never deleted. */
+/** Reuses (and repairs) the tagged endpoint at `url`, else creates it; it is never deleted. */
 export const ensureStripeConnectWebhook = async <TEvent extends string>({
 	stripe,
 	url,
@@ -102,14 +116,39 @@ export const ensureStripeConnectWebhook = async <TEvent extends string>({
 	stripe: WebhookEndpointsApi<TEvent>;
 	url: string;
 	events: TEvent[];
-}): Promise<{ id: string; created: boolean }> => {
+}): Promise<{ id: string; created: boolean; repaired: boolean }> => {
+	let untagged = false;
 	for await (const endpoint of stripe.webhookEndpoints.list({ limit: 100 })) {
-		if (endpoint.url === url) return { id: endpoint.id, created: false };
+		if (endpoint.url !== url) continue;
+		if (
+			endpoint.metadata?.autumn_tw_shard !==
+			SHARD_WEBHOOK_METADATA.autumn_tw_shard
+		) {
+			untagged = true;
+			continue;
+		}
+		const enabled = endpoint.enabled_events;
+		const missing = enabled.includes("*")
+			? []
+			: events.filter((event) => !enabled.includes(event));
+		if (missing.length === 0 && endpoint.status === "enabled")
+			return { id: endpoint.id, created: false, repaired: false };
+		await stripe.webhookEndpoints.update(endpoint.id, {
+			enabled_events: [...enabled, ...missing] as TEvent[],
+			disabled: false,
+		});
+		return { id: endpoint.id, created: false, repaired: true };
+	}
+	if (untagged) {
+		throw new Error(
+			`a webhook endpoint at ${url} was not created by the stripe-connect shard, so its Connect setting is unknown; remove it in the shard's Stripe dashboard`,
+		);
 	}
 	const endpoint = await stripe.webhookEndpoints.create({
 		url,
 		enabled_events: events,
 		connect: true,
+		metadata: SHARD_WEBHOOK_METADATA,
 	});
-	return { id: endpoint.id, created: true };
+	return { id: endpoint.id, created: true, repaired: false };
 };

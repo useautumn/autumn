@@ -17,7 +17,7 @@ mock.module("@server/external/connect/stripeFromKey.js", () => ({
 const { collectPoolKeys, resolvePoolKeys } = await import("./stripeKeyPool.ts");
 
 const SHARD_KEY = "sk_test_shard_only";
-const events = ["account.application.deauthorized"];
+const events = ["account.application.deauthorized", "customer.updated"];
 const POOL_KEY = "sk_test_pool_a";
 const savedEnv = { ...process.env };
 
@@ -33,12 +33,25 @@ afterEach(() => {
 	}
 });
 
-const fakeStripe = (initialUrls: string[]) => {
-	const endpoints = initialUrls.map((url, index) => ({
+type FakeEndpoint = {
+	id: string;
+	url: string;
+	enabled_events: string[];
+	status: string;
+	metadata: Record<string, string>;
+};
+
+const fakeStripe = (initial: Partial<FakeEndpoint>[]) => {
+	const endpoints: FakeEndpoint[] = initial.map((endpoint, index) => ({
 		id: `we_${index}`,
-		url,
+		url: "",
+		enabled_events: events,
+		status: "enabled",
+		metadata: {},
+		...endpoint,
 	}));
-	const created: { url: string; connect?: boolean }[] = [];
+	const created: Record<string, unknown>[] = [];
+	const updated: { id: string; params: Record<string, unknown> }[] = [];
 	const stripe = {
 		webhookEndpoints: {
 			list: () =>
@@ -48,20 +61,35 @@ const fakeStripe = (initialUrls: string[]) => {
 			create: async (params: {
 				url: string;
 				enabled_events: string[];
-				connect?: boolean;
+				connect: boolean;
+				metadata: Record<string, string>;
 			}) => {
 				created.push(params);
-				const endpoint = { id: `we_new_${created.length}`, url: params.url };
+				const endpoint = {
+					id: `we_new_${created.length}`,
+					status: "enabled",
+					...params,
+				};
 				endpoints.push(endpoint);
 				return endpoint;
+			},
+			update: async (
+				id: string,
+				params: { enabled_events: string[]; disabled: boolean },
+			) => {
+				updated.push({ id, params });
+				return { id };
 			},
 			del: () => {
 				throw new Error("the shard endpoint is never deleted");
 			},
 		},
 	};
-	return { stripe, created };
+	return { stripe, created, updated };
 };
+
+const url = stripeConnectWebhookUrl({ ingressUrl: "https://twd.example/" });
+const ours = { url, metadata: { autumn_tw_shard: "stripe-connect" } };
 
 test("the shard is configured only when both SHARD_STRIPE_* vars are set", () => {
 	expect(resolveStripeConnectShard({})).toBeNull();
@@ -90,36 +118,62 @@ test("an unconfigured shard fails each file with a clear message instead of runn
 	expect(chunks.join("")).toContain("stripe-connect shard not configured");
 });
 
-test("the shard webhook is created once on first use and reused after", async () => {
-	const url = stripeConnectWebhookUrl({ ingressUrl: "https://twd.example/" });
+test("the shard webhook is created once, as a tagged Connect endpoint, and reused after", async () => {
 	expect(url).toBe(
 		"https://twd.example/ingress/connect/sandbox?shard=stripe-connect",
 	);
-	const { stripe, created } = fakeStripe([
-		"https://twd.example/ingress/connect/sandbox",
+	const { stripe, created, updated } = fakeStripe([
+		{ url: "https://twd.example/ingress/connect/sandbox" },
 	]);
 
 	const first = await ensureStripeConnectWebhook({ stripe, url, events });
 	const second = await ensureStripeConnectWebhook({ stripe, url, events });
 
-	expect(first).toEqual({ id: "we_new_1", created: true });
-	expect(second).toEqual({ id: "we_new_1", created: false });
-	expect(created).toHaveLength(1);
-	expect(created[0]).toMatchObject({
-		url,
-		connect: true,
-		enabled_events: events,
-	});
+	expect(first).toEqual({ id: "we_new_1", created: true, repaired: false });
+	expect(second).toEqual({ id: "we_new_1", created: false, repaired: false });
+	expect(created).toEqual([
+		{
+			url,
+			connect: true,
+			enabled_events: events,
+			metadata: { autumn_tw_shard: "stripe-connect" },
+		},
+	]);
+	expect(updated).toEqual([]);
 });
 
-test("an existing shard webhook is adopted without creating another", async () => {
-	const url = stripeConnectWebhookUrl({ ingressUrl: "https://twd.example" });
-	const { stripe, created } = fakeStripe(["https://other.example/hook", url]);
+test("a shard webhook missing events or disabled is repaired in place", async () => {
+	const { stripe, created, updated } = fakeStripe([
+		{ ...ours, enabled_events: ["customer.created"], status: "disabled" },
+	]);
 	expect(await ensureStripeConnectWebhook({ stripe, url, events })).toEqual({
-		id: "we_1",
+		id: "we_0",
 		created: false,
+		repaired: true,
 	});
-	expect(created).toHaveLength(0);
+	expect(updated).toEqual([
+		{
+			id: "we_0",
+			params: {
+				enabled_events: ["customer.created", ...events],
+				disabled: false,
+			},
+		},
+	]);
+	expect(created).toEqual([]);
+
+	const all = fakeStripe([{ ...ours, enabled_events: ["*"] }]);
+	expect(
+		await ensureStripeConnectWebhook({ stripe: all.stripe, url, events }),
+	).toMatchObject({ repaired: false });
+});
+
+test("an untagged endpoint at the shard URL is refused, since its Connect flag can't be checked", async () => {
+	const { stripe, created } = fakeStripe([{ url }]);
+	await expect(
+		ensureStripeConnectWebhook({ stripe, url, events }),
+	).rejects.toThrow("not created by the stripe-connect shard");
+	expect(created).toEqual([]);
 });
 
 test("the shard key never enters the Stripe key pool", () => {
