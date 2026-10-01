@@ -38,12 +38,22 @@ const syncWithCustomize = async ({
 	planId: string;
 	stripeSubscription: Stripe.Subscription;
 	customize: CustomizePlanV1;
-}) =>
-	autumnV1.post("/billing.sync_v2", {
+}) => {
+	const t0 = Date.now();
+	const res = await autumnV1.post("/billing.sync_v2", {
 		customer_id: customerId,
 		stripe_subscription_id: stripeSubscription.id,
 		phases: [{ starts_at: "now", plans: [{ plan_id: planId, customize }] }],
 	});
+	const cus = await autumnV1.customers.get(customerId);
+	console.log(
+		`[sync-diag] ${customerId} subCreated=${stripeSubscription.created} syncMs=${Date.now() - t0} res=${JSON.stringify(res)} products=${JSON.stringify(
+			// biome-ignore lint/suspicious/noExplicitAny: diag
+			cus.products.map((p: any) => ({ id: p.id, status: p.status, started_at: p.started_at, sub: p.subscription_ids })),
+		)}`,
+	);
+	return res;
+};
 
 // ── A. remove + re-add the same feature with a new included amount ─────────
 

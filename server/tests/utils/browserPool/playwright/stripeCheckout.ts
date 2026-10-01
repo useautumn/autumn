@@ -38,10 +38,45 @@ export const stripeCheckout = async ({
 	/** Click "Add" on the first Stripe Checkout optional item (session's `optional_items`). */
 	addOptionalItem?: boolean;
 }) => {
+	const diagStart = performance.now();
+	const diagNet: string[] = [];
+	page.on("response", (r) => {
+		const u = r.url();
+		if (!u.includes("stripe.com") || /\.(js|css|woff2?|png|svg)(\?|$)/.test(u)) return;
+		diagNet.push(`${Math.round(performance.now() - diagStart)}:${r.status()}:${r.request().method()}:${u.replace(/\?.*$/, "").slice(0, 110)}`);
+	});
+	const dump = async (label: string, shot = false) => {
+		const state = await page
+			.evaluate(() => ({
+				testids: Array.from(document.querySelectorAll("[data-testid]"))
+					.map((e) => (e as HTMLElement).dataset.testid)
+					.filter((t) => t && /accordion|card|payment|tab|method/i.test(t))
+					.slice(0, 40),
+				inputs: Array.from(document.querySelectorAll("input,button"))
+					.map((e) => {
+						const el = e as HTMLInputElement;
+						const r = el.getBoundingClientRect();
+						return `${el.tagName}#${el.id}|${el.name}|${el.type}|${r.width > 0 ? "v" : "h"}${el.checked ? "|chk" : ""}|${(el.textContent || "").trim().slice(0, 20)}`;
+					})
+					.slice(0, 60),
+				radio: !!document.getElementById("payment-method-accordion-item-title-card"),
+				iframes: Array.from(document.querySelectorAll("iframe")).map((f) => (f.getAttribute("name") || f.src || "").slice(0, 60)),
+				text: document.body.innerText.replace(/\s+/g, " ").slice(0, 900),
+			}))
+			.catch((e) => ({ error: String(e) }));
+		console.log(`[stripeCheckout][diag] ${label} t=${Math.round(performance.now() - diagStart)} url=${page.url().slice(0, 80)} ${JSON.stringify(state)}`);
+		if (shot) {
+			const b = await page.screenshot({ type: "jpeg", quality: 20, fullPage: true }).catch(() => null);
+			if (b) console.log(`[stripeCheckout][shot:${label}]${b.toString("base64")}[/shot]`);
+			console.log(`[stripeCheckout][diag] net ${JSON.stringify(diagNet)}`);
+		}
+	};
+
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[stripeCheckout] Page loaded");
 
 	await page.waitForTimeout(3000);
+	await dump("after-3s");
 
 	if (addOptionalItem) {
 		const addBtn = page.getByRole("button", { name: /^add$/i }).first();
@@ -68,6 +103,7 @@ export const stripeCheckout = async ({
 			});
 			console.log("[stripeCheckout] Card selected via radio fallback");
 			await page.waitForTimeout(500);
+			await dump("after-fallback");
 		}
 	} catch {
 		// Card may already be selected or absent.
@@ -76,7 +112,12 @@ export const stripeCheckout = async ({
 	// Card fields require real key events — `.fill()` skips keydown/up so
 	// Stripe never registers the input. Use `.pressSequentially()`.
 	const cardNumber = page.locator("#cardNumber");
-	await cardNumber.waitFor({ timeout: 120000 });
+	try {
+		await cardNumber.waitFor({ timeout: 40000 });
+	} catch (e) {
+		await dump("cardNumber-timeout", true);
+		throw e;
+	}
 	await cardNumber.pressSequentially("4242424242424242");
 	console.log("[stripeCheckout] Card number filled");
 
