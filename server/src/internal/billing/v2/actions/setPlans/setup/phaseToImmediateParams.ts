@@ -47,4 +47,5 @@ export const phaseToImmediateParams = ({
 	checkout_session_params: params.checkout_session_params,
 	redirect_mode: params.redirect_mode ?? "if_required",
 	enable_plan_immediately: params.enable_plan_immediately,
+	processor_subscription_id: params.stripe_subscription_id,
 });

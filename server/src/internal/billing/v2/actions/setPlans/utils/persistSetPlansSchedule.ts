@@ -10,6 +10,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
+import { mergePreservedSchedulePhases } from "../subscriptionScope/mergePreservedSchedulePhases";
 
 /**
  * A customer holds one schedule, so a new one replaces everything queued. Scope
@@ -22,7 +23,11 @@ export const getExistingScheduleState = async ({
 	ctx: AutumnContext;
 	internalCustomerId: string;
 }) => {
-	const empty = { scheduleIds: [], existingCustomerProductIds: [] };
+	const empty = {
+		scheduleIds: [],
+		existingCustomerProductIds: [],
+		existingPhases: [],
+	};
 
 	const customerSchedules = await ctx.db
 		.select({ id: schedules.id })
@@ -33,7 +38,10 @@ export const getExistingScheduleState = async ({
 
 	const scheduleIds = customerSchedules.map((schedule) => schedule.id);
 	const existingPhases = await ctx.db
-		.select({ customer_product_ids: schedulePhases.customer_product_ids })
+		.select({
+			starts_at: schedulePhases.starts_at,
+			customer_product_ids: schedulePhases.customer_product_ids,
+		})
 		.from(schedulePhases)
 		.where(inArray(schedulePhases.schedule_id, scheduleIds));
 
@@ -42,6 +50,10 @@ export const getExistingScheduleState = async ({
 		existingCustomerProductIds: existingPhases.flatMap(
 			(phase) => phase.customer_product_ids,
 		),
+		existingPhases: existingPhases.map((phase) => ({
+			startsAt: phase.starts_at,
+			customerProductIds: phase.customer_product_ids,
+		})),
 	};
 };
 
@@ -83,12 +95,14 @@ export const persistSetPlansSchedule = async ({
 	currentEpochMs,
 	fullCustomer,
 	phases,
+	preservedCustomerProductIds = [],
 }: {
 	ctx: AutumnContext;
 	customerId: CreateScheduleParamsV0["customer_id"];
 	currentEpochMs: number;
 	fullCustomer: FullCustomer;
 	phases: { startsAt: number; customerProductIds: string[] }[];
+	preservedCustomerProductIds?: string[];
 }) => {
 	return await ctx.db.transaction(async (tx) => {
 		const txDb = tx as unknown as DrizzleCli;
@@ -99,11 +113,17 @@ export const persistSetPlansSchedule = async ({
 			internalCustomerId: fullCustomer.internal_id,
 		});
 
+		const persistedPhases = mergePreservedSchedulePhases({
+			phases,
+			existingPhases: existingScheduleState.existingPhases,
+			preservedCustomerProductIds: new Set(preservedCustomerProductIds),
+		});
+
 		await deleteExistingSchedules({
 			ctx: txCtx,
 			...existingScheduleState,
 			keptCustomerProductIds: new Set(
-				phases.flatMap((phase) => phase.customerProductIds),
+				persistedPhases.flatMap((phase) => phase.customerProductIds),
 			),
 		});
 
@@ -119,7 +139,7 @@ export const persistSetPlansSchedule = async ({
 			created_at: currentEpochMs,
 		});
 
-		const insertedPhases = phases.map((phase) => ({
+		const insertedPhases = persistedPhases.map((phase) => ({
 			phase_id: generateId("phase"),
 			starts_at: phase.startsAt,
 			customer_product_ids: phase.customerProductIds,

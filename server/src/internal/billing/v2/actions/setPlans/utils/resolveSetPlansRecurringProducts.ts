@@ -9,6 +9,7 @@ import {
 	isCusProductOnEntity,
 	productToReplacementKey,
 } from "@autumn/shared";
+import { isCustomerProductInStripeSubscriptionScope } from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
 
 type PhasePlan = { fullProduct: FullProduct; internalEntityId?: string };
 
@@ -37,20 +38,26 @@ const plansReplaceCustomerProduct = ({
 	);
 };
 
-/** Products in the request's scopes, plus everything the replaced schedule placed. */
+/** Products in the request's entity and subscription scopes, plus everything the replaced schedule placed. */
 const collectCandidateCustomerProducts = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
 }): FullCusProduct[] => {
 	const candidatesById = new Map<string, FullCusProduct>();
+	const { stripeSubscriptionScope } = billingContext;
 
 	for (const { fullCustomer } of billingContext.productContexts) {
 		for (const customerProduct of fullCustomer.customer_products) {
-			const inScope = isCusProductOnEntity({
-				cusProduct: customerProduct,
-				internalEntityId: fullCustomer.entity?.internal_id,
-			});
+			const inScope =
+				isCusProductOnEntity({
+					cusProduct: customerProduct,
+					internalEntityId: fullCustomer.entity?.internal_id,
+				}) &&
+				isCustomerProductInStripeSubscriptionScope({
+					stripeSubscriptionScope,
+					customerProduct,
+				});
 			if (inScope) candidatesById.set(customerProduct.id, customerProduct);
 		}
 	}

@@ -26,6 +26,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import { isAttachUpgrade } from "@/internal/billing/v2/actions/attach/utils/isAttachUpgrade";
+import { assertStripeSubscriptionLinkedToCustomer } from "@/internal/billing/v2/actions/setPlans/errors/subscriptionScope/assertStripeSubscriptionLinkedToCustomer";
 import { resolveReplacedStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/resolveReplacedStripeSubscription";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
@@ -50,6 +51,8 @@ export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
 		license_quantities?: LicenseQuantityParams[];
 	})[];
 	no_billing_changes?: boolean;
+	/** Pins billing to this subscription instead of resolving one from the plans. */
+	processor_subscription_id?: string;
 };
 
 const isWithinStartTolerance = ({
@@ -86,6 +89,60 @@ const getSubscriptionTarget = ({
 		productGroup: fullProduct.group ?? "",
 		cusProductId: currentCustomerProduct?.id ?? scheduledCustomerProduct?.id,
 	});
+};
+
+/** A pinned subscription wins; otherwise the plans being changed must share one. */
+const resolveSubscriptionTarget = ({
+	params,
+	fullCustomer,
+	productContexts,
+}: {
+	params: ImmediateMultiProductParams;
+	fullCustomer: MultiAttachBillingContext["fullCustomer"];
+	productContexts: MultiAttachProductContext[];
+}) => {
+	const pinnedStripeSubscriptionId = params.processor_subscription_id;
+	if (pinnedStripeSubscriptionId) {
+		assertStripeSubscriptionLinkedToCustomer({
+			customerProducts: fullCustomer.customer_products,
+			stripeSubscriptionId: pinnedStripeSubscriptionId,
+		});
+		const [targetCustomerProduct] =
+			filterCustomerProductsByStripeSubscriptionId({
+				customerProducts: fullCustomer.customer_products,
+				stripeSubscriptionId: pinnedStripeSubscriptionId,
+			});
+		return { forceNewSubscription: false, targetCustomerProduct };
+	}
+
+	const hasSubscriptionTransition = productContexts.some(
+		({ currentCustomerProduct, scheduledCustomerProduct }) =>
+			customerProductHasSubscription(currentCustomerProduct) ||
+			customerProductHasSubscription(scheduledCustomerProduct),
+	);
+	const forceNewSubscription =
+		params.new_billing_subscription === true && !hasSubscriptionTransition;
+	const targetCustomerProducts = forceNewSubscription
+		? []
+		: productContexts
+				.map((productContext) => getSubscriptionTarget({ productContext }))
+				.filter(notNullish);
+	const subscriptionIds = customerProductsToStripeSubscriptionIds({
+		customerProducts: targetCustomerProducts,
+	});
+
+	if (subscriptionIds.length > 1) {
+		throw new RecaseError({
+			message: "Cannot update products across multiple existing subscriptions.",
+			statusCode: 400,
+		});
+	}
+
+	const [targetCustomerProduct] = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: targetCustomerProducts,
+		stripeSubscriptionId: subscriptionIds[0],
+	});
+	return { forceNewSubscription, targetCustomerProduct };
 };
 
 /** Resolve checkout mode for immediate multi-product billing. */
@@ -310,34 +367,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 		throw new Error("setupImmediateMultiProductBillingContext requires plans");
 	}
 
-	const hasSubscriptionTransition = productContexts.some(
-		({ currentCustomerProduct, scheduledCustomerProduct }) =>
-			customerProductHasSubscription(currentCustomerProduct) ||
-			customerProductHasSubscription(scheduledCustomerProduct),
-	);
-	const forceNewSubscription =
-		params.new_billing_subscription === true && !hasSubscriptionTransition;
-	const targetCustomerProducts = forceNewSubscription
-		? []
-		: productContexts
-				.map((productContext) => getSubscriptionTarget({ productContext }))
-				.filter(notNullish);
-	const subscriptionIds = customerProductsToStripeSubscriptionIds({
-		customerProducts: targetCustomerProducts,
-	});
-
-	if (subscriptionIds.length > 1) {
-		throw new RecaseError({
-			message: "Cannot update products across multiple existing subscriptions.",
-			statusCode: 400,
-		});
-	}
-
-	const [subscriptionId] = subscriptionIds;
-	const [targetCustomerProduct] = filterCustomerProductsByStripeSubscriptionId({
-		customerProducts: targetCustomerProducts,
-		stripeSubscriptionId: subscriptionId,
-	});
+	const { forceNewSubscription, targetCustomerProduct } =
+		resolveSubscriptionTarget({ params, fullCustomer, productContexts });
 
 	const stripeBillingContext = await setupStripeBillingContext({
 		ctx,

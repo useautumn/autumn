@@ -1,4 +1,4 @@
-import { CusProductStatus, type FullCustomer } from "@autumn/shared";
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import { phaseStartsMatch } from "@/internal/billing/v2/utils/phaseStartsMatch";
 
 type PhaseWithStart = { starts_at?: number | "now" };
@@ -6,12 +6,12 @@ type PhaseWithStart = { starts_at?: number | "now" };
 /** A future phase within tolerance of an already-scheduled plan starts exactly when that plan does, so an unchanged schedule stays unchanged. */
 export const alignPhasesToScheduledStarts = <Phase extends PhaseWithStart>({
 	phases,
-	fullCustomer,
+	customerProducts,
 }: {
 	phases: [Phase, ...Phase[]];
-	fullCustomer: FullCustomer;
+	customerProducts: FullCusProduct[];
 }): [Phase, ...Phase[]] => {
-	const scheduledStarts = fullCustomer.customer_products
+	const scheduledStarts = customerProducts
 		.filter(
 			(customerProduct) =>
 				customerProduct.status === CusProductStatus.Scheduled,

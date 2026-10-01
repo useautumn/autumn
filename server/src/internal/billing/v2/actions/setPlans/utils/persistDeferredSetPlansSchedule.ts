@@ -4,6 +4,7 @@ import type {
 	CreateScheduleBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { findOutOfScopeCustomerProductIds } from "../subscriptionScope/findOutOfScopeCustomerProductIds";
 import { persistSetPlansSchedule } from "./persistSetPlansSchedule";
 import { resolveUnscheduledProductContexts } from "./unscheduledProductContexts";
 
@@ -83,6 +84,9 @@ export const persistDeferredSetPlansSchedule = async ({
 		phases: buildDeferredSchedulePhases({
 			billingContext,
 			billingPlan,
+		}),
+		preservedCustomerProductIds: findOutOfScopeCustomerProductIds({
+			billingContext,
 		}),
 	});
 };

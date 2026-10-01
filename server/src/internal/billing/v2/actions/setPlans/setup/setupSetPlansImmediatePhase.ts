@@ -1,6 +1,7 @@
 import type {
 	MultiAttachBillingContext,
 	SetPlansParamsV0,
+	StripeSubscriptionScope,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
@@ -24,14 +25,18 @@ export const setupSetPlansImmediatePhase = async ({
 	preview,
 	billingContext,
 	normalizedPhases,
+	stripeSubscriptionScope,
 }: {
 	ctx: AutumnContext;
 	params: SetPlansParamsV0;
 	preview: boolean;
 	billingContext: MultiAttachBillingContext;
 	normalizedPhases: ReturnType<typeof normalizeSetPlansPhases>;
+	stripeSubscriptionScope?: StripeSubscriptionScope;
 }) => {
-	const immediatePhaseIndex = isExistingScheduleUpdate({ billingContext })
+	const immediatePhaseIndex = isExistingScheduleUpdate({
+		billingContext: { ...billingContext, stripeSubscriptionScope },
+	})
 		? getCurrentSetPlansPhaseIndex({
 				phases: normalizedPhases,
 				currentEpochMs: billingContext.currentEpochMs,

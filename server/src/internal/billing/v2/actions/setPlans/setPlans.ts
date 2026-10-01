@@ -22,6 +22,7 @@ import {
 } from "./errors/handleSetPlansErrors";
 import { logSetPlansContext } from "./logs/logSetPlansContext";
 import { setupSetPlansBillingContext } from "./setup/setupSetPlansBillingContext";
+import { findOutOfScopeCustomerProductIds } from "./subscriptionScope/findOutOfScopeCustomerProductIds";
 import type { SetPlansResult } from "./types/setPlansResult";
 import { buildReplacedSubscriptionAction } from "./utils/buildReplacedSubscriptionAction";
 import { ensureFreePhaseStripeProducts } from "./utils/ensureFreePhaseStripeProducts";
@@ -167,6 +168,9 @@ export const setPlans = async ({
 		currentEpochMs: billingContext.currentEpochMs,
 		fullCustomer: billingContext.fullCustomer,
 		phases,
+		preservedCustomerProductIds: findOutOfScopeCustomerProductIds({
+			billingContext,
+		}),
 	});
 
 	return { ...result, billingResult, persistedSchedule };

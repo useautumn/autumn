@@ -12,6 +12,11 @@ import {
 	normalizeSetPlansPhases,
 	phaseHasNumericStart,
 } from "../errors/normalizeSetPlansPhases";
+import {
+	filterCustomerProductsInStripeSubscriptionScope,
+	isCustomerProductInStripeSubscriptionScope,
+} from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
+import { setupStripeSubscriptionScope } from "../subscriptionScope/setupStripeSubscriptionScope";
 import { alignPhasesToScheduledStarts } from "./alignPhasesToScheduledStarts";
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
@@ -46,6 +51,12 @@ export const setupSetPlansBillingContext = async ({
 		...SET_PLANS_IMMEDIATE_SETUP_OPTIONS,
 	});
 
+	const stripeSubscriptionScope = setupStripeSubscriptionScope({
+		fullCustomer: initialBillingContext.fullCustomer,
+		stripeSubscriptionId: params.stripe_subscription_id,
+		stripeScheduleId: initialBillingContext.stripeSubscriptionSchedule?.id,
+	});
+
 	const normalizedPhases = alignPhasesToScheduledStarts({
 		phases: normalizeSetPlansPhases({
 			phases: params.phases,
@@ -55,7 +66,10 @@ export const setupSetPlansBillingContext = async ({
 				params,
 			}),
 		}),
-		fullCustomer: initialBillingContext.fullCustomer,
+		customerProducts: filterCustomerProductsInStripeSubscriptionScope({
+			stripeSubscriptionScope,
+			customerProducts: initialBillingContext.fullCustomer.customer_products,
+		}),
 	});
 
 	const { billingContext, immediatePhase, futurePhases } =
@@ -65,6 +79,7 @@ export const setupSetPlansBillingContext = async ({
 			preview,
 			billingContext: initialBillingContext,
 			normalizedPhases,
+			stripeSubscriptionScope,
 		});
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
@@ -76,11 +91,18 @@ export const setupSetPlansBillingContext = async ({
 		endsAt: params.ends_at,
 	});
 
-	const replacedScheduleCustomerProductIds =
+	const scheduledCustomerProductIds =
 		await setupReplacedScheduleCustomerProductIds({
 			ctx,
 			internalCustomerId: billingContext.fullCustomer.internal_id,
 		});
+	const replacedScheduleCustomerProductIds = scheduledCustomerProductIds.filter(
+		(id) =>
+			isCustomerProductInStripeSubscriptionScope({
+				stripeSubscriptionScope,
+				customerProduct: { id },
+			}),
+	);
 
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
@@ -107,6 +129,7 @@ export const setupSetPlansBillingContext = async ({
 		futurePhases,
 		scheduledPhaseContexts,
 		endsAt: params.ends_at,
+		stripeSubscriptionScope,
 	};
 
 	const keptCycleBillingContext: CreateScheduleBillingContext = {
