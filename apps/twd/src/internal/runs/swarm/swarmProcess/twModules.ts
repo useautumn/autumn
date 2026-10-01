@@ -56,6 +56,7 @@ export type TwModules = {
 			stripeSecretKey: string;
 			capabilities: string[];
 			svixAppId?: string;
+			stripeClientId?: string;
 			ingressUrl: string;
 			ingressToken: string;
 		}): Record<string, string>;
@@ -100,6 +101,17 @@ export type TwModules = {
 	svix: {
 		createSvixApp(orgId: string): Promise<string>;
 	};
+	stripe: {
+		createSandboxSubAccount(args: {
+			orgName: string;
+			ownerEmail: string;
+			owner: string;
+			runId: string;
+			orgId: string;
+			secretKey: string;
+			extraMetadata?: Record<string, string>;
+		}): Promise<string>;
+	};
 	capabilities: {
 		partitionByCapability(files: string[]): Promise<{
 			normalFiles: string[];
@@ -121,6 +133,7 @@ export const loadTwModules = async (): Promise<TwModules> => ({
 	remoteExecutor: await load("helpers/remoteExecutor.ts"),
 	ingress: await load("helpers/ingress.ts"),
 	svix: await load("helpers/svix.ts"),
+	stripe: await load("helpers/stripe.ts"),
 	capabilities: await load("helpers/testCapabilities.ts"),
 	constants: await load("constants.ts"),
 	testOrg: await load("../setupTestUtils/createTestOrg.ts"),

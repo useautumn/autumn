@@ -81,3 +81,46 @@ describe("buildWorkerEnv app config", () => {
 		expect(buildFor("acct_1")).not.toHaveProperty("ANTHROPIC_API_KEY");
 	});
 });
+
+describe("buildWorkerEnv stripe-connect shard", () => {
+	const build = ({
+		capabilities,
+		stripeClientId,
+	}: {
+		capabilities: ("svix" | "stripe-connect")[];
+		stripeClientId?: string;
+	}) =>
+		buildWorkerEnv({
+			stripeAccountId: "acct_1",
+			stripeSecretKey: "sk_test_shard",
+			capabilities,
+			stripeClientId,
+			ingressUrl: "https://ingress.example.com",
+			ingressToken: "ingress-token",
+		});
+
+	beforeEach(() => {
+		for (const key of REQUIRED_SECRETS) process.env[key] ??= `test-${key}`;
+	});
+
+	test("gives the shard worker its platform's key and Connect client_id", () => {
+		const env = build({
+			capabilities: ["stripe-connect"],
+			stripeClientId: "ca_shard",
+		});
+		expect(env.STRIPE_SANDBOX_CLIENT_ID).toBe("ca_shard");
+		expect(env.STRIPE_SANDBOX_SECRET_KEY).toBe("sk_test_shard");
+	});
+
+	test("refuses to build a shard worker without a client_id", () => {
+		expect(() => build({ capabilities: ["stripe-connect"] })).toThrow(
+			"client_id",
+		);
+	});
+
+	test("normal workers never get a Connect client_id", () => {
+		expect(
+			build({ capabilities: [], stripeClientId: "ca_shard" }),
+		).not.toHaveProperty("STRIPE_SANDBOX_CLIENT_ID");
+	});
+});
