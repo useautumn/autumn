@@ -154,10 +154,12 @@ import {
 	webhookKeyTag,
 } from "../helpers/stripeKeyPool.ts";
 import { claimPoolAccounts } from "../helpers/stripePool.ts";
+import { createSvixApp as orchestratorCreateSvixApp } from "../helpers/svix.ts";
 import {
-	createSvixApp as orchestratorCreateSvixApp,
-	partitionShards,
-} from "../helpers/svix.ts";
+	capabilityWorkerEnv,
+	partitionByCapability,
+	type TestCapabilityId,
+} from "../helpers/testCapabilities.ts";
 import { createTestFileResolver } from "../testDiscovery/createTestFileResolver";
 import { runShardTests } from "../tui/runShardTests.ts";
 import {
@@ -537,8 +539,8 @@ const requireSecret = (name: string): string => {
 /**
  * Build the env baked into a worker fork (plan §11a). The localhost service URLs
  * are constants; the encryption/auth secrets + the Stripe platform key are
- * resolved once on the orchestrator and injected. `SVIX_API_KEY` / `NEEDS_SVIX`
- * are added only for the dedicated svix shard.
+ * resolved once on the orchestrator and injected. Capability shards add their
+ * registry env; `SVIX_API_KEY` / `SVIX_APP_ID` go only to Svix workers.
  */
 /** Resolved commit sha for this run (set in run()); workers fast-forward to it. */
 let resolvedTargetSha = "";
@@ -555,7 +557,7 @@ const customerJwtSecret = randomBytes(32).toString("hex");
 export const buildWorkerEnv = ({
 	stripeAccountId,
 	stripeSecretKey,
-	isSvixShard,
+	capabilities,
 	svixAppId,
 	ingressUrl,
 	ingressToken,
@@ -563,7 +565,7 @@ export const buildWorkerEnv = ({
 	stripeAccountId: string;
 	/** This worker's pool key — MUST match the key its sub-account was created on. */
 	stripeSecretKey: string;
-	isSvixShard: boolean;
+	capabilities: TestCapabilityId[];
 	svixAppId?: string;
 	ingressUrl: string;
 	ingressToken: string;
@@ -681,8 +683,8 @@ export const buildWorkerEnv = ({
 		env.KERNEL_API_KEY = process.env.KERNEL_API_KEY;
 	}
 
-	if (isSvixShard) {
-		env.NEEDS_SVIX = "1";
+	Object.assign(env, capabilityWorkerEnv(capabilities));
+	if (capabilities.includes("svix")) {
 		env.SVIX_API_KEY = requireSecret("SVIX_API_KEY");
 		// The orchestrator already created + recorded the Svix app (§9a); the worker
 		// only BINDS this id into svix_config (it no longer creates the app itself).
@@ -1006,7 +1008,7 @@ const provisionWorker = async ({
 	owner,
 	runId,
 	warmName,
-	isSvixShard,
+	capabilities,
 	ownerEmail,
 	pooledAccounts,
 	ingress,
@@ -1017,7 +1019,7 @@ const provisionWorker = async ({
 	owner: string;
 	runId: string;
 	warmName: string;
-	isSvixShard: boolean;
+	capabilities: TestCapabilityId[];
 	ownerEmail: string;
 	/** The run's pool claim (encoded `acct_*::keyIndex` per worker idx), if pooled. */
 	pooledAccounts: Promise<string[] | undefined>;
@@ -1047,7 +1049,7 @@ const provisionWorker = async ({
 	const stripeMs = Date.now() - fanoutStart;
 
 	let svixAppId: string | undefined;
-	if (isSvixShard) {
+	if (capabilities.includes("svix")) {
 		svixAppId = await provisionSvixApp(() => orchestratorCreateSvixApp(orgId));
 		await registry.addSvixApp({ runId, svixAppId });
 	}
@@ -1061,7 +1063,7 @@ const provisionWorker = async ({
 		env: buildWorkerEnv({
 			stripeAccountId: accountId,
 			stripeSecretKey,
-			isSvixShard,
+			capabilities,
 			svixAppId,
 			ingressUrl,
 			ingressToken,
@@ -1077,7 +1079,9 @@ const provisionWorker = async ({
 	const publicUrl = await getPublicUrl(sandbox, SERVER_PORT);
 	const tunnelMs = Date.now() - fanoutStart;
 
-	log(`worker ${name}: booting${isSvixShard ? " (svix shard)" : ""}`);
+	log(
+		`worker ${name}: booting${capabilities.length > 0 ? ` (${capabilities.join("+")} shard)` : ""}`,
+	);
 	await waitForReady({ sandbox, name, signal });
 	log(`worker ${name}: READY`);
 	bumpWorkerReady();
@@ -1097,7 +1101,7 @@ const provisionWorker = async ({
 		sandboxId: sandbox.name,
 		publicUrl,
 		accountId,
-		isSvixShard,
+		capabilities,
 		inFlight: 0,
 	};
 
@@ -1481,17 +1485,34 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		);
 	}
 
-	const { svixFiles, normalFiles } = await partitionShards(allFiles);
+	const { normalFiles, capabilityShards } =
+		await partitionByCapability(allFiles);
 
 	const requestedWorkers = Math.max(1, args.workers);
-	const { totalWorkers: effectiveWorkers, svixWorkers } = planShardWorkers({
-		workers: requestedWorkers,
-		normalFileCount: normalFiles.length,
-		svixFileCount: svixFiles.length,
-	});
-	if (svixWorkers > 0) requireSecret("SVIX_API_KEY");
+	const { totalWorkers: effectiveWorkers, capabilityWorkers } =
+		planShardWorkers({
+			workers: requestedWorkers,
+			normalFileCount: normalFiles.length,
+			capabilityFileCounts: capabilityShards.map(({ files }) => files.length),
+		});
+	if (
+		capabilityShards.some(({ capabilities }) => capabilities.includes("svix"))
+	)
+		requireSecret("SVIX_API_KEY");
+	// Capability workers take the lowest indices; the rest serve the normal pool.
+	const workerCapabilities = capabilityShards.flatMap(
+		({ capabilities }, index) =>
+			Array.from({ length: capabilityWorkers[index] ?? 0 }, () => capabilities),
+	);
 	log(
-		`running ${normalFiles.length} normal and ${svixFiles.length} Svix files on ${effectiveWorkers} isolated workers`,
+		`running ${normalFiles.length} normal and ${
+			capabilityShards
+				.map(
+					({ capabilities, files }) =>
+						`${files.length} ${capabilities.join("+")}`,
+				)
+				.join(", ") || "no capability"
+		} files on ${effectiveWorkers} isolated workers`,
 	);
 
 	// Size the per-worker Stripe budget now that the pool size is final — every
@@ -1699,7 +1720,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const fanoutStart = Date.now();
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
-			const isSvixShard = idx < svixWorkers;
+			const capabilities = workerCapabilities[idx] ?? [];
 			const workerName = expectedNames[idx];
 			provisionTasks.push(
 				provisionWorker({
@@ -1707,7 +1728,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					owner,
 					runId,
 					warmName,
-					isSvixShard,
+					capabilities,
 					ownerEmail,
 					pooledAccounts: pooledAccountsPromise,
 					ingress: ingressPromise,
@@ -1810,26 +1831,38 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const resolveSandbox = (
 			worker: WorkerHandle,
 		): ProviderSandbox | undefined => sandboxByName.get(worker.name);
-		const svixHandles = provisioned
-			.filter(({ handle }) => handle.isSvixShard)
-			.map(({ handle }) => handle);
-		const normalHandles = provisioned
-			.filter(({ handle }) => !handle.isSvixShard)
-			.map(({ handle }) => handle);
-		if (svixFiles.length > 0 && svixHandles.length === 0)
-			throw new Error(
-				"No Svix workers provisioned; cannot run selected Svix tests",
-			);
-		if (normalFiles.length > 0 && normalHandles.length === 0)
-			throw new Error(
-				"No normal workers provisioned; cannot run selected tests",
-			);
+		const handlesFor = (capabilities: TestCapabilityId[]) =>
+			provisioned
+				.map(({ handle }) => handle)
+				.filter(
+					(handle) => handle.capabilities.join(",") === capabilities.join(","),
+				);
+		// Capability workers run one file at a time; only the normal pool packs --per-worker.
+		const runShards = [
+			...capabilityShards.map(({ capabilities, files }) => ({
+				label: capabilities.join("+"),
+				files,
+				handles: handlesFor(capabilities),
+				slots: 1,
+			})),
+			{
+				label: "normal",
+				files: normalFiles,
+				handles: handlesFor([]),
+				slots: Math.max(1, args.perWorker),
+			},
+		];
+		for (const { label, files, handles } of runShards) {
+			if (files.length > 0 && handles.length === 0)
+				throw new Error(
+					`No ${label} workers provisioned; cannot run selected ${label} tests`,
+				);
+		}
 
-		const svixPool = new WorkerPool(svixHandles, 1);
-		const normalPool = new WorkerPool(
-			normalHandles,
-			Math.max(1, args.perWorker),
+		const pools = runShards.map(
+			({ handles, slots }) => new WorkerPool(handles, slots),
 		);
+		const normalPool = pools[pools.length - 1];
 
 		const stopCulling = startCulling(normalPool, resolveSandbox);
 		markPhase("first test dispatched");
@@ -1840,31 +1873,19 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const runPhaseStart = Date.now();
 		try {
 			await runShardTests({
-				shards: [
-					{
-						files: svixFiles,
-						executor: new RemoteExecutor({
-							pool: svixPool,
-							resolveSandbox,
-							toWorkerPath: toSandboxPath,
-						}),
-						maxParallel: Math.max(1, svixHandles.length),
-					},
-					{
-						files: normalFiles,
-						executor: new RemoteExecutor({
-							pool: normalPool,
-							resolveSandbox,
-							toWorkerPath: toSandboxPath,
-						}),
-						maxParallel: Math.max(1, normalHandles.length * args.perWorker),
-					},
-				],
+				shards: runShards.map(({ files, handles, slots }, index) => ({
+					files,
+					executor: new RemoteExecutor({
+						pool: pools[index],
+						resolveSandbox,
+						toWorkerPath: toSandboxPath,
+					}),
+					maxParallel: Math.max(1, handles.length * slots),
+				})),
 			});
 		} finally {
 			stopCulling();
-			svixPool.close();
-			normalPool.close();
+			for (const pool of pools) pool.close();
 		}
 
 		lastRunWallMs = Date.now() - runPhaseStart;

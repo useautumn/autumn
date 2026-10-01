@@ -12,7 +12,7 @@ export type WorkerHandle = {
 	sandboxId?: string;
 	publicUrl: string;
 	accountId?: string;
-	isSvixShard: boolean;
+	capabilities: string[];
 	lastFile?: string;
 	inFlight: number;
 };
@@ -54,7 +54,7 @@ export type TwModules = {
 		buildWorkerEnv(args: {
 			stripeAccountId: string;
 			stripeSecretKey: string;
-			isSvixShard: boolean;
+			capabilities: string[];
 			svixAppId?: string;
 			ingressUrl: string;
 			ingressToken: string;
@@ -98,11 +98,13 @@ export type TwModules = {
 		}): Promise<void>;
 	};
 	svix: {
-		partitionShards(files: string[]): Promise<{
-			svixFiles: string[];
-			normalFiles: string[];
-		}>;
 		createSvixApp(orgId: string): Promise<string>;
+	};
+	capabilities: {
+		partitionByCapability(files: string[]): Promise<{
+			normalFiles: string[];
+			capabilityShards: { capabilities: string[]; files: string[] }[];
+		}>;
 	};
 	constants: { SERVER_PORT: number; WARM_SANDBOX_PREFIX: string };
 	testOrg: { TEST_ORG_CONFIG: { id: string } };
@@ -119,6 +121,7 @@ export const loadTwModules = async (): Promise<TwModules> => ({
 	remoteExecutor: await load("helpers/remoteExecutor.ts"),
 	ingress: await load("helpers/ingress.ts"),
 	svix: await load("helpers/svix.ts"),
+	capabilities: await load("helpers/testCapabilities.ts"),
 	constants: await load("constants.ts"),
 	testOrg: await load("../setupTestUtils/createTestOrg.ts"),
 });
