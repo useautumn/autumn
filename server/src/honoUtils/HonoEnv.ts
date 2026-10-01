@@ -104,6 +104,8 @@ export type RequestContext = {
 		mockVercelApi?: boolean;
 		allowVercelTestOidc?: boolean;
 		mockRevenueCat?: boolean;
+		/** Every balance worker write fails as unreachable (non-prod only). */
+		balanceWorkerOutage?: boolean;
 		/** Caps customers walked per list page (non-prod only). */
 		listScanCap?: number;
 		revenueCat?: {
