@@ -19,12 +19,7 @@ export const invoiceCheckout = async ({
 		if (!/stripe\.com|stripe\.network|link\.com/.test(reqUrl)) return;
 		if (/\.(js|css|woff2?|png|svg|ico)(\?|$)/.test(reqUrl)) return;
 		const method = response.request().method();
-		if (/r\.stripe\.com\/b/.test(reqUrl)) {
-			const post = response.request().postData() ?? "";
-			const events = [...post.matchAll(/event_name(?:%22|")?(?:%3A|:|=)(?:%22|")?([a-zA-Z0-9_.%-]+)/g)].map((m) => decodeURIComponent(m[1]));
-			diagNet.push(`${Date.now() - diagStart}ms rstripe ${events.join(",") || post.slice(0, 200)}`);
-			return;
-		}
+		if (/r\.stripe\.com|m\.stripe\.com|errors\.stripe/.test(reqUrl)) return;
 		if (method === "GET" && !/api\.stripe\.com|merchant-ui|invoice/.test(reqUrl)) return;
 		let body = "";
 		if (method !== "GET" || response.status() >= 400) {
@@ -36,7 +31,7 @@ export const invoiceCheckout = async ({
 		const frameEl = page.locator('iframe[title="Secure payment input frame"]').first();
 		const pageText = (await page.locator("body").innerText({ timeout: 2000 }).catch((e) => `ERR ${e}`)).replace(/\s+/g, " ").slice(0, 2500);
 		const frames = [] as string[];
-		for (const frame of page.frames()) {
+		for (const frame of page.frames().filter((fr) => /elements-inner-payment|universal-link/.test(fr.url()))) {
 			const text = (await frame.locator("body").innerText({ timeout: 1000 }).catch(() => "")).replace(/\s+/g, " ").slice(0, 800);
 			frames.push(`${frame.url().split("?")[0]} :: ${text}`);
 		}
