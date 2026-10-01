@@ -20,6 +20,7 @@ import type {
 	StripeKey,
 	WorkerState,
 } from "../../../src/api/contract.ts";
+import { CreateRunBody } from "../../../src/api/contract.ts";
 import { TwdError } from "../../../src/http/apiError.ts";
 import {
 	planWorkItems,
@@ -1068,7 +1069,7 @@ setInterval(() => {
 
 const fileLog = (run: RunDetail, file: string) => {
 	const f = run.files.find((x) => x.file === file);
-	if (!f) return null;
+	if (!f || f.status === "queued") return null;
 	const r = rng(hash(run.id + file));
 	const names = [
 		"attaches plan",
@@ -1343,6 +1344,16 @@ export const handle = ({
 				"Retry in a few minutes, or watch GET /keys until gate is open.",
 				"If the gate stays draining for more than 15 minutes, ask a twd admin to check the reinit_keys job.",
 			);
+		const parsed = CreateRunBody.safeParse(b);
+		if (!parsed.success)
+			return err(
+				400,
+				"invalid_request",
+				parsed.error.issues
+					.map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
+					.join("; "),
+				"Fix the request to match src/api/contract.ts and retry.",
+			);
 		const count = filesForSelection(b.selection).length;
 		if (!count)
 			return err(
@@ -1360,7 +1371,7 @@ export const handle = ({
 				selection: b.selection,
 				createdBy: { userId: ME.userId, email: ME.email, via: ME.via },
 				purpose: b.purpose,
-				repeat: b.repeat,
+				repeat: parsed.data.repeat,
 				workerCap: 120,
 				startWorkers: 10,
 				queuedForMs: capacity().accounts.clean === 0 ? 30_000 : 0,
