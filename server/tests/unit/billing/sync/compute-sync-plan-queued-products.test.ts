@@ -39,6 +39,7 @@ const syncContext = ({
 	immediatePhase: null,
 	futurePhases,
 	unscheduledProductContexts: [],
+	retainedCustomerProducts: [],
 	queuedCustomerProducts: [queuedAddOn],
 	currentEpochMs: Date.now(),
 	acknowledgedWarnings: [],

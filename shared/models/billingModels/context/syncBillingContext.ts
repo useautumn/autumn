@@ -56,6 +56,8 @@ export interface SyncBillingContext {
 	futurePhases: SyncPhaseContext[];
 	/** Start now like the immediate phase but never end at a phase boundary. */
 	unscheduledProductContexts: SyncProductContext[];
+	/** Customer-wide free plans the request repeats unchanged; kept as they are. */
+	retainedCustomerProducts: FullCusProduct[];
 	/** Plans the customer's current Autumn schedule has queued. A multi-phase
 	 * sync replaces that schedule, so they get deleted. */
 	queuedCustomerProducts: FullCusProduct[];
@@ -63,7 +65,7 @@ export interface SyncBillingContext {
 	currentEpochMs: number;
 	acknowledgedWarnings: NonNullable<SyncParamsV1["acknowledge_warnings"]>;
 
-	/** Expire live plans linked to the subscription that the request leaves out. */
+	/** Expire live plans linked to the subscription, and free plans, that the request leaves out. */
 	expireUnlistedPlans: boolean;
 
 	/** Carry an expired plan's consumed usage onto the replacement plan's

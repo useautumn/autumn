@@ -1,10 +1,12 @@
 import {
+	ACTIVE_STATUSES,
 	cp,
 	type Entity,
 	EntityNotFoundError,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
+	isCustomerProductUnlinkedFree,
 	RecaseError,
 	type SyncBillingContext,
 	type SyncParamsV1,
@@ -31,6 +33,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { customerProductsToOngoingStripePriceIds } from "../utils/customerProductsToOngoingStripePriceIds";
 import { findQueuedCustomerProducts } from "./findQueuedCustomerProducts";
+import { findUnchangedFreeCustomerProduct } from "./findUnchangedFreeCustomerProduct";
 import { linkSyncedPricesToStripe } from "./linkSyncedPricesToStripe";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
 import { resolveSyncPhaseEndsAt } from "./resolveSyncPhaseEndsAt";
@@ -67,9 +70,13 @@ const findLinkedAddOnCustomerProduct = ({
 		if (customerProduct.product?.id !== fullProduct.id) return false;
 		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
 			return false;
-		return cp(customerProduct)
-			.hasActiveStatus()
-			.onStripeSubscription({ stripeSubscriptionId }).valid;
+		return (
+			cp(customerProduct).hasActiveStatus().onStripeSubscription({
+				stripeSubscriptionId,
+			}).valid ||
+			(ACTIVE_STATUSES.includes(customerProduct.status) &&
+				isCustomerProductUnlinkedFree(customerProduct))
+		);
 	});
 
 const buildProductContext = async ({
@@ -187,6 +194,11 @@ const phaseToStripePrices = ({
 	);
 };
 
+type PlanProductContexts = {
+	productContexts: SyncProductContext[];
+	retainedCustomerProducts: FullCusProduct[];
+};
+
 const buildPlanProductContexts = async ({
 	ctx,
 	fullCustomer,
@@ -195,6 +207,7 @@ const buildPlanProductContexts = async ({
 	stripeSubscriptionId,
 	stripePrices,
 	claimedStripePriceIds,
+	retainedCustomerProductIds,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -204,7 +217,9 @@ const buildPlanProductContexts = async ({
 	/** The Stripe prices billing this phase, for linking plan prices to them. */
 	stripePrices: Stripe.Price[];
 	claimedStripePriceIds: Set<string>;
-}): Promise<SyncProductContext[]> => {
+	/** Live phases only: unchanged free plans are kept rather than re-inserted. */
+	retainedCustomerProductIds?: Set<string>;
+}): Promise<PlanProductContexts> => {
 	const productContextsPerPlan = await Promise.all(
 		plans.map((plan) =>
 			buildProductContext({
@@ -231,14 +246,38 @@ const buildPlanProductContexts = async ({
 
 	// Expand add-on plans with quantity > 1 into N independent product contexts
 	// so the executor inserts one cusProduct per add-on instance.
-	return linkedProductContexts.flatMap((productContext) => {
-		const requested = productContext.plan.quantity ?? 1;
-		const shouldExpand =
-			productContext.fullProduct.is_add_on === true && requested > 1;
-		return shouldExpand
-			? Array.from({ length: requested }, () => productContext)
-			: [productContext];
-	});
+	const expandedProductContexts = linkedProductContexts.flatMap(
+		(productContext) => {
+			const requested = productContext.plan.quantity ?? 1;
+			const shouldExpand =
+				productContext.fullProduct.is_add_on === true && requested > 1;
+			return shouldExpand
+				? Array.from({ length: requested }, () => productContext)
+				: [productContext];
+		},
+	);
+
+	const result: PlanProductContexts = {
+		productContexts: [],
+		retainedCustomerProducts: [],
+	};
+	for (const productContext of expandedProductContexts) {
+		const unchangedCustomerProduct = retainedCustomerProductIds
+			? findUnchangedFreeCustomerProduct({
+					ctx,
+					fullCustomer,
+					productContext,
+					claimedCustomerProductIds: retainedCustomerProductIds,
+				})
+			: undefined;
+		if (unchangedCustomerProduct) {
+			retainedCustomerProductIds?.add(unchangedCustomerProduct.id);
+			result.retainedCustomerProducts.push(unchangedCustomerProduct);
+		} else {
+			result.productContexts.push(productContext);
+		}
+	}
+	return result;
 };
 
 /**
@@ -299,6 +338,8 @@ export const setupSyncContext = async ({
 
 	// Unscheduled plans bill alongside the immediate phase, so they share its claims.
 	const claimedImmediateStripePriceIds = new Set<string>();
+	const retainedCustomerProductIds = new Set<string>();
+	const retainedCustomerProducts: FullCusProduct[] = [];
 	const phaseContexts: SyncPhaseContext[] = await Promise.all(
 		inputPhases.map(async (phase, index) => {
 			const startsAt = resolvePhaseStart({
@@ -319,22 +360,27 @@ export const setupSyncContext = async ({
 					: null,
 			});
 
-			const productContexts = await buildPlanProductContexts({
-				ctx,
-				fullCustomer,
-				plans: phase.plans,
-				currentEpochMs,
-				stripeSubscriptionId: params.stripe_subscription_id,
-				stripePrices: phaseToStripePrices({
-					startsAt: phase.starts_at,
-					stripeSubscription,
-					stripeSchedule,
-				}),
-				claimedStripePriceIds:
-					phase.starts_at === "now"
+			const isLivePhase = phase.starts_at === "now";
+			const { productContexts, retainedCustomerProducts: retainedOnPhase } =
+				await buildPlanProductContexts({
+					ctx,
+					fullCustomer,
+					plans: phase.plans,
+					currentEpochMs,
+					stripeSubscriptionId: params.stripe_subscription_id,
+					stripePrices: phaseToStripePrices({
+						startsAt: phase.starts_at,
+						stripeSubscription,
+						stripeSchedule,
+					}),
+					claimedStripePriceIds: isLivePhase
 						? claimedImmediateStripePriceIds
 						: new Set<string>(),
-			});
+					retainedCustomerProductIds: isLivePhase
+						? retainedCustomerProductIds
+						: undefined,
+				});
+			retainedCustomerProducts.push(...retainedOnPhase);
 
 			return { startsAt, endsAt, productContexts };
 		}),
@@ -348,7 +394,10 @@ export const setupSyncContext = async ({
 			statusCode: 400,
 		});
 	}
-	const unscheduledProductContexts = await buildPlanProductContexts({
+	const {
+		productContexts: unscheduledProductContexts,
+		retainedCustomerProducts: retainedUnscheduled,
+	} = await buildPlanProductContexts({
 		ctx,
 		fullCustomer,
 		plans: unscheduledPlans,
@@ -360,7 +409,9 @@ export const setupSyncContext = async ({
 			stripeSchedule,
 		}),
 		claimedStripePriceIds: claimedImmediateStripePriceIds,
+		retainedCustomerProductIds,
 	});
+	retainedCustomerProducts.push(...retainedUnscheduled);
 
 	const immediatePhase = firstPhaseIsImmediate
 		? (phaseContexts[0] ?? null)
@@ -388,6 +439,7 @@ export const setupSyncContext = async ({
 		immediatePhase,
 		futurePhases,
 		unscheduledProductContexts,
+		retainedCustomerProducts,
 		queuedCustomerProducts,
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],
