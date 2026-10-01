@@ -19,6 +19,7 @@ import { computeScheduledAnchorResetPreview } from "./computeScheduledAnchorRese
 import {
 	getActiveCustomerProductsAt,
 	getNextCycleEvent,
+	type NextCycleEvent,
 	type SmallestInterval,
 } from "./getNextCycleEvent";
 
@@ -67,6 +68,26 @@ const outgoingPlansRunToBoundary = ({
 			customerProduct.ended_at != null &&
 			timestampsMatch(customerProduct.ended_at, renewalBoundaryMs),
 	);
+
+/** Cancelling some plans on a shared subscription at renewal only shrinks it,
+ * so the plans left on it still renew at the boundary. */
+const getPlansRenewingThroughCancellation = ({
+	event,
+	customerProducts,
+}: {
+	event: Extract<NextCycleEvent, { kind: "scheduled_change" }>;
+	customerProducts: FullCusProduct[];
+}): FullCusProduct[] => {
+	const isCancellationAtRenewal =
+		event.incomingCustomerProducts.length === 0 &&
+		timestampsMatch(event.startsAtMs, event.renewalBoundaryMs);
+	if (!isCancellationAtRenewal) return [];
+
+	return getActiveCustomerProductsAt({
+		customerProducts,
+		startsAtMs: event.startsAtMs,
+	});
+};
 
 const scaleNextCycleAmounts = ({
 	lineItemsResult,
@@ -206,15 +227,27 @@ export const billingPlanToNextCyclePreview = ({
 				transitionMs: event.startsAtMs,
 				renewalBoundaryMs: event.renewalBoundaryMs,
 			});
+		const renewingCustomerProducts = getPlansRenewingThroughCancellation({
+			event,
+			customerProducts,
+		});
+		// Mirrors the renewal path: only prices whose period starts at the boundary.
+		const renewRemainingPlans = {
+			customerProducts: renewingCustomerProducts,
+			direction: "charge" as const,
+			billingCycleAnchorMs: anchorMs,
+			priceFilters: { excludeOneOffPrices: true },
+		};
 		const lineItemSpecs = keepsOldPlanCredit
-			? [chargeNewPlan, creditOldPlanUnusedTime]
-			: [chargeNewPlan];
+			? [chargeNewPlan, creditOldPlanUnusedTime, renewRemainingPlans]
+			: [chargeNewPlan, renewRemainingPlans];
 
 		const lineItemsResult = billingPlanToNextCycleLineItems({
 			ctx,
 			customerProducts: [
 				...event.incomingCustomerProducts,
 				...event.outgoingCustomerProducts,
+				...renewingCustomerProducts,
 			],
 			productsForUsageLineItems,
 			lineItemSpecs,
@@ -235,7 +268,10 @@ export const billingPlanToNextCyclePreview = ({
 			debug: {
 				...baseDebug,
 				nextCycleStart: event.startsAtMs,
-				filteredCustomerProducts: event.incomingCustomerProducts,
+				filteredCustomerProducts: [
+					...event.incomingCustomerProducts,
+					...renewingCustomerProducts,
+				],
 			},
 		};
 	}
