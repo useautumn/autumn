@@ -775,6 +775,36 @@ describe("buildInitialValues", () => {
 		expect(result.phases[0].plans[0]).toEqual(EMPTY_CUSTOMER_STATE_PLAN);
 	});
 
+	test("with a subscription in focus, seeds its plans and the free plans only", () => {
+		const onSubscription = (id: string, stripeSubscriptionId: string) =>
+			({
+				...makeCusProduct({
+					id,
+					productId: "prod_1",
+					customerPrices: [{ price: makeFixedPrice() }],
+				}),
+				subscription_ids: [stripeSubscriptionId],
+			}) as FullCusProduct;
+		const customer = makeCustomer({
+			customerProducts: [
+				onSubscription("cp_picked", "sub_picked"),
+				onSubscription("cp_other", "sub_other"),
+				makeCusProduct({ id: "cp_free", productId: "prod_2" }),
+			],
+		});
+
+		const result = buildInitialValues({
+			customer,
+			products,
+			stripeSubscriptionId: "sub_picked",
+		});
+
+		expect(result.phases[0].plans.map((plan) => plan.productId)).toEqual([
+			"prod_1",
+			"prod_2",
+		]);
+	});
+
 	test("handles undefined customer gracefully", () => {
 		const result = buildInitialValues({ customer: undefined, products });
 

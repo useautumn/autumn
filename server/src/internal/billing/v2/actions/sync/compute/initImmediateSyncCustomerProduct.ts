@@ -4,6 +4,7 @@ import {
 	type ExistingUsagesConfig,
 	type FullCusProduct,
 	type FullCustomer,
+	isFreeProduct,
 	type SyncProductContext,
 	secondsToMs,
 } from "@autumn/shared";
@@ -23,6 +24,7 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
  *   - anchor the reset cycle to the Stripe billing_cycle_anchor
  *   - carry the previous plan's rollovers onto the matching features
  *   - link the Stripe subscription id
+ *   - free plans skip all of the Stripe fields: they stay customer-wide
  *   - apply prepaid feature quantities + customize-derived custom prices/ents
  */
 export const initImmediateSyncCustomerProduct = ({
@@ -44,6 +46,27 @@ export const initImmediateSyncCustomerProduct = ({
 }): FullCusProduct => {
 	const { fullProduct, featureQuantities, customerLicenseQuantities, entity } =
 		productContext;
+
+	if (isFreeProduct({ product: fullProduct })) {
+		return initFullCustomerProduct({
+			ctx,
+			initContext: {
+				fullCustomer,
+				fullProduct,
+				featureQuantities,
+				customerLicenseQuantities,
+				entity,
+				resetCycleAnchor: currentEpochMs,
+				now: currentEpochMs,
+				freeTrial: null,
+				trialEndsAt: undefined,
+				billingVersion: BillingVersion.V2,
+				existingUsagesConfig,
+				existingRolloversConfig,
+			},
+			initOptions: { internalEntityId: entity?.internal_id },
+		});
+	}
 
 	const trialEndsAt = getTrialEndsAtFromStripe({ stripeSubscription });
 	const { canceledAt, endedAt } = getCancelFieldsFromStripe({

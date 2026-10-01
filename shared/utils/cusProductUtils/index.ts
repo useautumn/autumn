@@ -24,6 +24,7 @@ export * from "./filterCustomerProducts/filterCustomerProductsByActiveStatuses.j
 export * from "./filterCustomerProducts/filterCustomerProductsByFeatureId.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByProcessorType.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionId.js";
+export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionScope.js";
 export * from "./filterCustomerProducts/filterLicenseAssignmentsByEntityId.js";
 export * from "./findCustomerProduct/findActiveCustomerProduct.js";
 export * from "./findCustomerProduct/findCustomerProduct.js";

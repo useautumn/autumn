@@ -14,14 +14,35 @@ const liveCustomerProduct = ({ id }: { id: string }): FullCusProduct =>
 		id,
 		status: CusProductStatus.Active,
 		subscription_ids: ["sub_123"],
+		customer_prices: [],
+	}) as unknown as FullCusProduct;
+
+const freeCustomerProduct = ({ id }: { id: string }): FullCusProduct =>
+	({
+		id,
+		status: CusProductStatus.Active,
+		subscription_ids: [],
+		scheduled_ids: [],
+		customer_prices: [],
+		customer_licenses: [],
+	}) as unknown as FullCusProduct;
+
+const unlinkedPaidCustomerProduct = ({ id }: { id: string }): FullCusProduct =>
+	({
+		...freeCustomerProduct({ id }),
+		customer_prices: [
+			{ price: { config: { type: "fixed", amount: 20, interval: "one_off" } } },
+		],
 	}) as unknown as FullCusProduct;
 
 const syncContext = ({
 	customerProducts,
 	immediateProductContexts,
+	retainedCustomerProducts = [],
 }: {
 	customerProducts: FullCusProduct[];
 	immediateProductContexts: SyncProductContext[];
+	retainedCustomerProducts?: FullCusProduct[];
 }): SyncBillingContext => ({
 	customer_id: "customer_123",
 	fullCustomer: {
@@ -37,6 +58,7 @@ const syncContext = ({
 	},
 	futurePhases: [],
 	unscheduledProductContexts: [],
+	retainedCustomerProducts,
 	queuedCustomerProducts: [],
 	currentEpochMs: Date.now(),
 	acknowledgedWarnings: [],
@@ -60,6 +82,24 @@ describe("computeUnlistedCustomerProductExpiries", () => {
 
 		expect(expiries.map(({ customerProduct }) => customerProduct.id)).toEqual([
 			"cus_prod_add_on",
+		]);
+	});
+
+	test("expires a left-out free plan, keeps a retained one, and never touches unlinked paid plans", () => {
+		const removedFree = freeCustomerProduct({ id: "cus_prod_free_removed" });
+		const retainedFree = freeCustomerProduct({ id: "cus_prod_free_kept" });
+		const oneOff = unlinkedPaidCustomerProduct({ id: "cus_prod_one_off" });
+
+		const expiries = computeUnlistedCustomerProductExpiries({
+			syncContext: syncContext({
+				customerProducts: [removedFree, retainedFree, oneOff],
+				immediateProductContexts: [],
+				retainedCustomerProducts: [retainedFree],
+			}),
+		});
+
+		expect(expiries.map(({ customerProduct }) => customerProduct.id)).toEqual([
+			"cus_prod_free_removed",
 		]);
 	});
 });

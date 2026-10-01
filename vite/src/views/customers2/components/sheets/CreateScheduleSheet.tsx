@@ -1,4 +1,9 @@
-import type { FullCusProduct, FullCustomer, ProductV2 } from "@autumn/shared";
+import type {
+	Entity,
+	FullCusProduct,
+	FullCustomer,
+	ProductV2,
+} from "@autumn/shared";
 import { ACTIVE_STATUSES, CusProductStatus } from "@autumn/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -21,6 +26,7 @@ import {
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -87,24 +93,36 @@ export function getActiveCustomerPlans({
 	);
 }
 
-/** Built from the customer's plans alone, the same way Sync from Stripe reads
- * them; scheduled plans mean the customer is already on a schedule. */
+/** Built from the customer's plans alone, scoped the same way Sync from Stripe
+ * scopes them; scheduled plans mean the customer is already on a schedule. */
 export function buildInitialValues({
 	customer,
 	products,
+	stripeSubscriptionId,
+	stripeScheduleId,
 	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
 	products: ProductV2[];
+	stripeSubscriptionId?: string | null;
+	stripeScheduleId?: string | null;
 	nowMs?: number;
 }): CustomerStateForm {
-	const customerProducts = customer?.customer_products ?? [];
+	const customerProducts = scopeCustomerProducts({
+		customerProducts: customer?.customer_products ?? [],
+		stripeSubscriptionId,
+		stripeScheduleId,
+	});
 	const hasScheduledPlans = customerProducts.some(isScheduledCustomerProduct);
 	const currentPhaseStart = hasScheduledPlans
 		? findCurrentPhaseStart({ customerProducts })
 		: undefined;
 
-	const seededState = customerProductsToSetPlansState({ customer, products });
+	const seededState = customerProductsToSetPlansState({
+		customerProducts,
+		entities: customer?.entities ?? [],
+		products,
+	});
 	const phases = seededState.phases.map((phase, index) => {
 		const persistedStartsAt =
 			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
@@ -139,13 +157,14 @@ export function buildInitialValues({
 /** The live plans are today's phase and each scheduled start is its own later
  * phase. */
 function customerProductsToSetPlansState({
-	customer,
+	customerProducts,
+	entities,
 	products,
 }: {
-	customer: FullCustomer | undefined;
+	customerProducts: FullCusProduct[];
+	entities: Entity[];
 	products: ProductV2[];
 }) {
-	const customerProducts = customer?.customer_products ?? [];
 	const scheduledStarts = customerProducts
 		.filter(
 			(customerProduct) =>
@@ -161,7 +180,7 @@ function customerProductsToSetPlansState({
 		customerProducts,
 		phaseStarts,
 		canUnschedule: phaseStarts.length > 1,
-		entities: customer?.entities ?? [],
+		entities,
 		products,
 	});
 }

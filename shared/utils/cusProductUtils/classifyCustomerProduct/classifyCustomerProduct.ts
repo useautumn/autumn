@@ -240,6 +240,14 @@ export const isCustomerProductOnStripeSubscriptionSchedule = ({
 	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
 };
 
+/** Free and billed on no Stripe subscription or schedule, so it applies customer-wide. */
+export const isCustomerProductUnlinkedFree = (
+	customerProduct: FullCusProduct,
+) =>
+	isCustomerProductFree(customerProduct) &&
+	!customerProduct.subscription_ids?.length &&
+	!customerProduct.scheduled_ids?.length;
+
 /** Note: this does not CONFIRM that the subscription is active (might be canceled in Stripe...) */
 export const cusProductHasSubscription = ({
 	cusProduct,
