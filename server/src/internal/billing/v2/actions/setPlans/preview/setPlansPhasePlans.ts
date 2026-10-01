@@ -101,6 +101,15 @@ const activeCustomerProducts = (fullCustomer: FullCustomer) =>
 	fullCustomer.customer_products.filter(customerProductHasActiveStatus);
 
 /** A saved phase diffs against the saved state; a new phase only against the previous request phase, without removals. */
+/** A newly added phase only starts plans: a changed plan is a new version starting, and nothing ends. */
+const newPhaseDiff = (diff: PhasePlanDiff): PhasePlanDiff[] => {
+	if (diff.status === "ends") return [];
+	if (diff.status === "updated") {
+		return [{ status: "starts", before: null, after: diff.after }];
+	}
+	return [diff];
+};
+
 const phaseDiffs = ({
 	phase,
 	phaseIndex,
@@ -137,7 +146,7 @@ const phaseDiffs = ({
 		features,
 		before: activeCustomerProducts(phaseCustomers[phaseIndex - 1]),
 		after,
-	}).filter((diff) => diff.status !== "ends");
+	}).flatMap(newPhaseDiff);
 };
 
 /** Every plan in each phase, classified against the saved state, or the previous phase for a newly added one. */

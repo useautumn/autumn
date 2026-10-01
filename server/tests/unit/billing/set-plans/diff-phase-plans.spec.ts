@@ -399,6 +399,36 @@ describe("diffPhasePlans", () => {
 		]);
 	});
 
+	test("a newly added phase with a changed version of the previous phase's plan creates it", () => {
+		const proNow = planRow({ id: "cp_pro_now", planId: "pro" });
+		const customPro = planRow({
+			id: "cp_pro_custom",
+			planId: "pro",
+			amount: 40,
+			status: CusProductStatus.Scheduled,
+			startsAt: PHASE_TWO,
+		});
+
+		expect(
+			previewStatuses({
+				originalFullCustomer: makeFullCustomer({ customerProducts: [proNow] }),
+				autumnBillingPlan: makeAutumnBillingPlan({
+					inserts: [customPro],
+					updates: [
+						makeUpdate({
+							customerProduct: proNow,
+							updates: { ended_at: PHASE_TWO },
+						}),
+					],
+				}),
+				phases: [
+					{ startsAt: NOW, customerProductIds: [proNow.id] },
+					{ startsAt: PHASE_TWO, customerProductIds: [customPro.id] },
+				],
+			}),
+		).toEqual([[["kept", "pro"]], [["starts", "pro"]]]);
+	});
+
 	test("a custom plan re-sent with its stored $0 base price is kept", () => {
 		const customPlan = {
 			...planRow({ id: "cp_custom", planId: "custom", amount: 0 }),
