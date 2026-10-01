@@ -47,8 +47,8 @@ test("AUTUMN_DEBUG console logging never prints the secret key", async () => {
 	process.env.AUTUMN_DEBUG = "true";
 	resetEnv();
 	const logSpy = spyOn(console, "log").mockImplementation(() => {});
-	spyOn(console, "group").mockImplementation(() => {});
-	spyOn(console, "groupEnd").mockImplementation(() => {});
+	const groupSpy = spyOn(console, "group").mockImplementation(() => {});
+	const groupEndSpy = spyOn(console, "groupEnd").mockImplementation(() => {});
 
 	try {
 		const autumn = new Autumn({
@@ -62,6 +62,8 @@ test("AUTUMN_DEBUG console logging never prints the secret key", async () => {
 		expect(printed).not.toContain(SECRET_KEY);
 	} finally {
 		logSpy.mockRestore();
+		groupSpy.mockRestore();
+		groupEndSpy.mockRestore();
 		await server.stop(true);
 	}
 });
