@@ -30,8 +30,19 @@ export const cloneOutgoingLicensesOnMint = ({
 	if (upsert.row.versioning !== "new_version") return [];
 	if (upsert.row.baseFullProduct == null) return [];
 
+	// Pin/propagate key by the child's addressed id; a rename projects it to the new one.
 	const alreadyPlannedIds = new Set(
-		alreadyPlanned.map((planLicense) => planLicense.licensePlanId),
+		alreadyPlanned.flatMap((planLicense) => [
+			planLicense.licensePlanId,
+			...(planLicense.currentPlanLicense
+				? [
+						projectedLicensePlanId({
+							link: planLicense.currentPlanLicense,
+							productStatesContext,
+						}),
+					]
+				: []),
+		]),
 	);
 	const unplanned = upsertProductPlanToLicenses({ upsert })
 		.map((link) => ({
