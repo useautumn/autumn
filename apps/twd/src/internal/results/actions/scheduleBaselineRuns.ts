@@ -6,10 +6,19 @@ import { createRun } from "../../runs/actions/createRun.ts";
 import { BASELINE_BRANCH } from "./refreshBaselines.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
-const MAX_BASELINE_AGE_MS = 24 * HOUR_MS;
-const MIN_BASELINE_GAP_MS = 6 * HOUR_MS;
+// Once a day flat for cost; dev moving does not trigger an early baseline.
+const BASELINE_INTERVAL_MS = 24 * HOUR_MS;
 
-/** Interval hook: start a full dev baseline run when the last one is > 24h old, or dev moved and ≥ 6h passed. */
+export const baselineIsDue = ({
+	lastCreatedAt,
+	now,
+}: {
+	lastCreatedAt: Date | undefined;
+	now: number;
+}): boolean =>
+	!lastCreatedAt || now - lastCreatedAt.getTime() > BASELINE_INTERVAL_MS;
+
+/** Interval hook: start a full dev baseline run when the last one is more than 24h old. */
 export const scheduleBaselineRuns = async ({
 	ctx,
 }: {
@@ -22,6 +31,9 @@ export const scheduleBaselineRuns = async ({
 		.orderBy(desc(runs.createdAt))
 		.limit(1);
 
+	if (!baselineIsDue({ lastCreatedAt: lastRun?.createdAt, now: Date.now() }))
+		return null;
+
 	// Every push to dev is auto-warmed, so the newest warm image tracks dev's head.
 	const [devHead] = await ctx.db
 		.select({ sha: warmImages.sha })
@@ -29,14 +41,6 @@ export const scheduleBaselineRuns = async ({
 		.where(eq(warmImages.branch, BASELINE_BRANCH))
 		.orderBy(desc(warmImages.createdAt))
 		.limit(1);
-
-	const ageMs = lastRun
-		? Date.now() - lastRun.createdAt.getTime()
-		: Number.POSITIVE_INFINITY;
-	const devMoved = devHead !== undefined && devHead.sha !== lastRun?.sha;
-	const due =
-		ageMs > MAX_BASELINE_AGE_MS || (devMoved && ageMs >= MIN_BASELINE_GAP_MS);
-	if (!due) return null;
 
 	ctx.logger.info("scheduling dev baseline run", {
 		lastSha: lastRun?.sha ?? null,
