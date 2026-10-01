@@ -33,12 +33,15 @@ export async function appendMeteringRecords({
 	}
 	if (!ctx.producer.send)
 		throw new Error("Idempotent commits need a producer with a plain send");
+	const ownerEpoch = ctx.ownerEpoch?.();
+	if (ownerEpoch === undefined)
+		throw new Error("Idempotent commits need the owner epoch on every record");
 	const appended = await sendIdempotentBatch({
 		sender: { send: ctx.producer.send },
 		topic,
 		partition,
 		messages,
-		ownerEpoch: ctx.ownerEpoch?.(),
+		ownerEpoch,
 	});
 	// No longer atomic with the batch: a crash between the two redelivers the command, and its id makes the replay a no-op.
 	if (offsets) {

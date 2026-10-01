@@ -54,6 +54,37 @@ export class OwnedPartitionProducerFencedError extends OwnedPartitionRecoveryReq
 	}
 }
 
+export class OwnedPartitionLogDivergedError extends OwnedPartitionProducerFencedError {
+	readonly expectedOffset: bigint;
+	readonly actualOffset: bigint;
+
+	constructor({
+		topic,
+		partition,
+		expectedOffset,
+		actualOffset,
+	}: {
+		topic: string;
+		partition: number;
+		expectedOffset: bigint;
+		actualOffset: bigint;
+	}) {
+		super({ topic, partition, cause: undefined });
+		this.name = "OwnedPartitionLogDivergedError";
+		this.message = `Owned partition ${topic}[${partition}] log diverged: expected its batch at offset ${expectedOffset}, it landed at ${actualOffset}`;
+		this.expectedOffset = expectedOffset;
+		this.actualOffset = actualOffset;
+	}
+}
+
+export class OwnedPartitionUnfencedError extends OwnedPartitionRecoveryRequiredError {
+	constructor({ topic, partition }: { topic: string; partition: number }) {
+		super({ topic, partition, cause: undefined });
+		this.name = "OwnedPartitionUnfencedError";
+		this.message = `Owned partition ${topic}[${partition}] has no fence marker under its epoch; idempotent commits are refused`;
+	}
+}
+
 export class PartitionPreparationFailedError extends Error {
 	constructor({
 		topic,

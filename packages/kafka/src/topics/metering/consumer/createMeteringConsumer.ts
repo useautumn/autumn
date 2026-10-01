@@ -16,6 +16,7 @@ import type {
 	MeteringRecordApplication,
 	MeteringRecordHandler,
 	MeteringRecordsHandler,
+	MeteringStaleRecord,
 } from "./types/meteringConsumer.js";
 
 function isRecordsHandler(
@@ -38,11 +39,67 @@ export function createMeteringConsumer({
 		return handler;
 	}
 
+	const fences = new Map<string, MeteringStaleRecord["fence"]>();
+	function fenceKeyOf({
+		topic,
+		partition,
+	}: {
+		topic: string;
+		partition: number;
+	}) {
+		return `${topic}[${partition}]`;
+	}
+	function raiseFence({
+		position,
+		ownerEpoch,
+	}: {
+		position: MeteringStaleRecord["position"];
+		ownerEpoch: bigint;
+	}): void {
+		const key = fenceKeyOf(position);
+		const current = fences.get(key);
+		if (current && current.epoch >= ownerEpoch) return;
+		fences.set(key, { epoch: ownerEpoch, offset: position.offset });
+	}
+	function staleFenceOf({
+		position,
+		ownerEpoch,
+	}: {
+		position: MeteringStaleRecord["position"];
+		ownerEpoch: bigint | undefined;
+	}): MeteringStaleRecord["fence"] | null {
+		if (ownerEpoch === undefined) return null;
+		const fence = fences.get(fenceKeyOf(position));
+		if (!fence || position.offset <= fence.offset || ownerEpoch >= fence.epoch)
+			return null;
+		return fence;
+	}
+
 	function readResumeOffset(
 		position: TopicResumePosition,
 	): bigint | null | Promise<bigint | null> {
 		const secondary = secondaryHandlerOf(position);
 		if (secondary) return secondary.readResumeOffset(position);
+		const { handler } = ctx;
+		const keepsOwnFence = !isRecordsHandler(handler) && handler.applyFence;
+		if (keepsOwnFence || !handler.readOwnerFence)
+			return handler.readResumeOffset(position);
+		return seedFenceThenResume({ position, read: handler.readOwnerFence });
+	}
+
+	async function seedFenceThenResume({
+		position,
+		read,
+	}: {
+		position: TopicResumePosition;
+		read: NonNullable<MeteringRecordsHandler["readOwnerFence"]>;
+	}): Promise<bigint | null> {
+		const stored = await read(position);
+		if (stored)
+			raiseFence({
+				position: { ...position, offset: stored.offset },
+				ownerEpoch: stored.epoch,
+			});
 		return ctx.handler.readResumeOffset(position);
 	}
 
@@ -66,8 +123,11 @@ export function createMeteringConsumer({
 					return undefined;
 				const owner = readOwnerHeaders({ headers: message.headers });
 				if (owner.fence) {
-					if (owner.ownerEpoch === undefined || !handler.applyFence)
+					if (owner.ownerEpoch === undefined) return undefined;
+					if (!handler.applyFence) {
+						raiseFence({ position, ownerEpoch: owner.ownerEpoch });
 						return undefined;
+					}
 					const fenced = handler.applyFence({
 						position,
 						ownerEpoch: owner.ownerEpoch,
@@ -75,6 +135,20 @@ export function createMeteringConsumer({
 					return fenced instanceof Promise
 						? settleRecordApplication({ handler, input, application: fenced })
 						: fenced;
+				}
+				if (!handler.applyFence) {
+					const fence = staleFenceOf({
+						position,
+						ownerEpoch: owner.ownerEpoch,
+					});
+					if (fence && owner.ownerEpoch !== undefined) {
+						handler.onStaleRecord?.({
+							position,
+							ownerEpoch: owner.ownerEpoch,
+							fence,
+						});
+						return undefined;
+					}
 				}
 				const record = parseMeteringRecord({
 					key: message.key,
@@ -108,7 +182,23 @@ export function createMeteringConsumer({
 				if (handler.shouldApply && !handler.shouldApply(position)) continue;
 				try {
 					const owner = readOwnerHeaders({ headers: message.headers });
-					if (owner.fence) continue;
+					if (owner.fence) {
+						if (owner.ownerEpoch !== undefined)
+							raiseFence({ position, ownerEpoch: owner.ownerEpoch });
+						continue;
+					}
+					const fence = staleFenceOf({
+						position,
+						ownerEpoch: owner.ownerEpoch,
+					});
+					if (fence && owner.ownerEpoch !== undefined) {
+						handler.onStaleRecord?.({
+							position,
+							ownerEpoch: owner.ownerEpoch,
+							fence,
+						});
+						continue;
+					}
 					applications.push({
 						position,
 						record: parseMeteringRecord({
