@@ -5,10 +5,9 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
-import type { TimelineDiff } from "../timeline/types/timelineDiff";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { buildSavedPhaseCustomers } from "./balances/buildSavedPhaseCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
-import { diffToReview, type SetPlansReview } from "./diffToReview/diffToReview";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
 import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
 import {
@@ -17,6 +16,7 @@ import {
 } from "./processorItems/scheduleActionToProcessorItems";
 import { subscriptionActionToProcessorItems } from "./processorItems/subscriptionActionToProcessorItems";
 import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
+import { diffToReview, type SetPlansReview } from "./review/diffToReview";
 import { setPlansPhaseBalanceChanges } from "./setPlansPhaseBalanceChanges";
 
 /** Credits on the immediate invoice, unless custom line items replace the computed ones. */
@@ -33,7 +33,7 @@ export const buildSetPlansPreviewPhases = async ({
 	billingContext,
 	billingPlan,
 	phases,
-	diff,
+	timeline,
 	customerProductIdBySegmentId,
 	processorItemContext,
 }: {
@@ -41,12 +41,12 @@ export const buildSetPlansPreviewPhases = async ({
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	phases: SchedulePhasePlan[];
-	diff: TimelineDiff;
+	timeline: Pick<SetPlansTimeline, "saved" | "diff">;
 	customerProductIdBySegmentId: Map<string, string>;
 	processorItemContext: ProcessorItemContext;
 }): Promise<{
 	phases: SetPlansPreviewPhase[];
-	review: Pick<SetPlansReview, "unlistedPhases" | "withdrawnStarts">;
+	review: Pick<SetPlansReview, "removedPhases" | "withdrawnStarts">;
 }> => {
 	const { fullCustomer, stripeSubscription } = billingContext;
 	const { autumn: autumnBillingPlan, stripe: stripeBillingPlan } = billingPlan;
@@ -69,7 +69,8 @@ export const buildSetPlansPreviewPhases = async ({
 		}),
 	});
 	const review = diffToReview({
-		diff,
+		saved: timeline.saved,
+		diff: timeline.diff,
 		phaseStarts: phases.map(({ startsAt }) => startsAt),
 		lookup: {
 			originalFullCustomer: fullCustomer,
@@ -123,7 +124,7 @@ export const buildSetPlansPreviewPhases = async ({
 			processor_items: processorItemsByPhase[phaseIndex],
 		})),
 		review: {
-			unlistedPhases: review.unlistedPhases,
+			removedPhases: review.removedPhases,
 			withdrawnStarts: review.withdrawnStarts,
 		},
 	};

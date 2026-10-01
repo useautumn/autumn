@@ -4,6 +4,7 @@ import { isInRequestScope } from "@/internal/billing/v2/actions/setPlans/timelin
 import type { UndeclaredPlansPolicy } from "@/internal/billing/v2/actions/setPlans/timeline/types/setPlansPolicies";
 import type { TimelineRow } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineRow";
 import type { DesiredSegment } from "@/internal/billing/v2/actions/setPlans/timeline/types/timelineSegment";
+import { expectReviewInvariants } from "./reviewInvariants";
 import { describeTransitions } from "./timelineDescribe";
 import {
 	B,
@@ -339,6 +340,7 @@ describe(chalk.yellowBright("diffTimelines: generated table"), () => {
 		test(caseName(tableCase), () => {
 			const timelineCase = buildCase(tableCase);
 			const { diff } = expectAllInvariants(timelineCase);
+			expectReviewInvariants(timelineCase);
 
 			if (tableCase.operation === "keep" || isOutOfScope(tableCase)) {
 				expectIdempotent({ diff });

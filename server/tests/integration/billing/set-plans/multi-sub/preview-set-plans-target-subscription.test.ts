@@ -23,7 +23,7 @@ test.concurrent(
 		});
 		const previewPlanIds = [
 			...preview.phases.flatMap((phase) => phase.plans),
-			...preview.unlisted_phases.flatMap((phase) => phase.plans),
+			...preview.removed_phases.flatMap((phase) => phase.plans),
 		].map((plan) => plan.plan_id);
 		expect(previewPlanIds).not.toContain(plans.seats.id);
 		expect(

@@ -64,7 +64,7 @@ export const buildSetPlansPreview = async ({
 		billingContext,
 		billingPlan,
 		phases,
-		diff: timeline.diff,
+		timeline,
 		customerProductIdBySegmentId:
 			customerProductChanges.customerProductIdBySegmentId,
 		processorItemContext,
@@ -77,7 +77,7 @@ export const buildSetPlansPreview = async ({
 	return {
 		...attachPreview,
 		phases: previewPhases,
-		unlisted_phases: review.unlistedPhases,
+		removed_phases: review.removedPhases,
 		processor_changes: processorChanges,
 		warnings: setPlansPreviewToWarnings({
 			phases: previewPhases,
