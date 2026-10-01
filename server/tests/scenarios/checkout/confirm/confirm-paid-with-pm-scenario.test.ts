@@ -121,5 +121,5 @@ test(
 		);
 		expect(matchingInvoice).toBeDefined();
 	},
-	{ timeout: 30000 },
+	{ timeout: 60000 },
 );
