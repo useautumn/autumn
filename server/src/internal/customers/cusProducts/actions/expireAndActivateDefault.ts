@@ -43,7 +43,8 @@ export const expireCustomerProductAndActivateDefault = async ({
 		...extraUpdates,
 	};
 
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan: {
 			customerId: fullCustomer.id || fullCustomer.internal_id,
@@ -91,6 +92,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 	// 4. Emit billing.updated (payload needs the activated/inserted products)
 	if (emitBillingUpdated) {
 		emitCustomerProductBillingUpdated({
+			allocationsAdjusted,
 			ctx,
 			originalFullCustomer,
 			updateCustomerProducts: [

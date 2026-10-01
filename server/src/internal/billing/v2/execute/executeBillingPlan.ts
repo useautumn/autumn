@@ -80,7 +80,8 @@ export const executeBillingPlan = async ({
 		};
 	}
 
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		stripeInvoice: stripeBillingResult.stripeInvoice,
@@ -97,6 +98,7 @@ export const executeBillingPlan = async ({
 
 	// Fire-and-forget: don't block the action on svix delivery
 	void sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		originalFullCustomer: billingContext.fullCustomer,

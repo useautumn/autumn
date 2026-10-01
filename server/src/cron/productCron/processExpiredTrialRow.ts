@@ -87,7 +87,8 @@ export const processExpiredTrialRow = async ({
 	}
 	// Executing through the shared plan runs the license lifecycle when the
 	// expiring trial carried license state.
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan: {
 			customerId: fullCustomer.id || fullCustomer.internal_id,
@@ -136,6 +137,7 @@ export const processExpiredTrialRow = async ({
 	});
 
 	void sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan,
 		originalFullCustomer,

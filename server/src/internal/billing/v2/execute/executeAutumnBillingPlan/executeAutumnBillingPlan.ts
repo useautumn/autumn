@@ -11,6 +11,8 @@ export type AutumnBillingPlanResult = {
 	status: "applied" | "customer_exists";
 	/** The existing customer's internal id, when the worker or an email claim found it. */
 	internalCustomerId?: string;
+	/** Allocated shares changed; set only when the caller sends billing.updated itself. */
+	allocationsAdjusted?: boolean;
 };
 
 /** A billing plan's writes: the catalog rows it references, the customer's rows, the balance moves after them, then side effects. */
@@ -20,12 +22,15 @@ export const executeAutumnBillingPlan = async ({
 	stripeInvoice,
 	stripeInvoiceItems,
 	autumnInvoice,
+	emitsBillingUpdated = false,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeInvoice?: Stripe.Invoice;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	autumnInvoice?: Invoice;
+	/** The caller sends billing.updated after this; allocation changes ride on that event. */
+	emitsBillingUpdated?: boolean;
 }): Promise<AutumnBillingPlanResult> => {
 	// 1. Catalog
 	await resolvePlanCatalog({ ctx, autumnBillingPlan });
@@ -44,13 +49,14 @@ export const executeAutumnBillingPlan = async ({
 		await applyPlanRebalances({ ctx, autumnBillingPlan });
 
 	// 4. Side effects
-	await runPlanSideEffects({
+	const { allocationsAdjusted } = await runPlanSideEffects({
 		ctx,
 		autumnBillingPlan,
 		pendingBatchTransitions: written.pendingBatchTransitions,
 		stripeInvoice,
 		stripeInvoiceItems,
 		autumnInvoice,
+		emitsBillingUpdated,
 	});
-	return { status: "applied" };
+	return { status: "applied", allocationsAdjusted };
 };

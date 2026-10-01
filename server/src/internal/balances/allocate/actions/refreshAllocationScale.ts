@@ -21,7 +21,6 @@ import {
 	toAllocationCounter,
 } from "../utils/allocationRows.js";
 
-export const ALLOCATIONS_ADJUSTED_TAG = "allocations_adjusted";
 
 const loadStoredAllocations = async ({
 	ctx,
@@ -51,9 +50,12 @@ const loadStoredAllocations = async ({
 export const refreshAllocationScale = async ({
 	ctx,
 	customerId,
+	notify = true,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	/** False when the caller sends its own billing.updated and adds the tag there. */
+	notify?: boolean;
 }): Promise<boolean> => {
 	const stored = await loadStoredAllocations({ ctx, customerId });
 	if (!stored) return false;
@@ -142,11 +144,13 @@ export const refreshAllocationScale = async ({
 	}
 
 	const { customer } = fullSubject;
-	const originalFullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		withEntities: true,
-	});
+	const originalFullCustomer = notify
+		? await CusService.getFull({
+				ctx,
+				idOrInternalId: customerId,
+				withEntities: true,
+			})
+		: null;
 	const autumnBillingPlan = {
 		customerId: customer.id ?? customer.internal_id,
 		insertCustomerProducts: [],
@@ -161,12 +165,13 @@ export const refreshAllocationScale = async ({
 		customerId,
 		source: "refreshAllocationScale",
 	});
-	void sendBillingUpdatedWebhook({
-		ctx,
-		autumnBillingPlan,
-		originalFullCustomer,
-		tags: [ALLOCATIONS_ADJUSTED_TAG],
-	});
+	if (originalFullCustomer)
+		void sendBillingUpdatedWebhook({
+			ctx,
+			autumnBillingPlan,
+			originalFullCustomer,
+			allocationsAdjusted: true,
+		});
 	return true;
 };
 

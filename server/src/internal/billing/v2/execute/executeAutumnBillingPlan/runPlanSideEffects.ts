@@ -22,6 +22,7 @@ export const runPlanSideEffects = async ({
 	stripeInvoice,
 	stripeInvoiceItems,
 	autumnInvoice,
+	emitsBillingUpdated,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
@@ -29,7 +30,8 @@ export const runPlanSideEffects = async ({
 	stripeInvoice?: Stripe.Invoice;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	autumnInvoice?: Invoice;
-}): Promise<void> => {
+	emitsBillingUpdated: boolean;
+}): Promise<{ allocationsAdjusted: boolean }> => {
 	const { db } = ctx;
 
 	await startBatchTransitions({ ctx, pending: pendingBatchTransitions });
@@ -95,14 +97,17 @@ export const runPlanSideEffects = async ({
 
 	// Shared credits may have moved: re-fit any allocations to what's left.
 	if (
-		autumnBillingPlan.customerId &&
-		!planOnlyUpdatesAllocations({ autumnBillingPlan })
-	) {
-		await refreshAllocationScale({
-			ctx,
-			customerId: autumnBillingPlan.customerId,
-		}).catch((error) =>
-			ctx.logger.error("[refreshAllocationScale] failed", { error }),
-		);
-	}
+		!autumnBillingPlan.customerId ||
+		planOnlyUpdatesAllocations({ autumnBillingPlan })
+	)
+		return { allocationsAdjusted: false };
+	const allocationsAdjusted = await refreshAllocationScale({
+		ctx,
+		customerId: autumnBillingPlan.customerId,
+		notify: !emitsBillingUpdated,
+	}).catch((error) => {
+		ctx.logger.error("[refreshAllocationScale] failed", { error });
+		return false;
+	});
+	return { allocationsAdjusted: emitsBillingUpdated && allocationsAdjusted };
 };
