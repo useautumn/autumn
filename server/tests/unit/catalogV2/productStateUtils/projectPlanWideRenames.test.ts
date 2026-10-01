@@ -16,7 +16,7 @@ test("renaming one version re-keys its untouched sibling versions", () => {
 	const renamedV2 = { ...v2, id: "seatNew" };
 	const upsert = {
 		row: {
-			planId: "seatNew",
+			planId: "seat",
 			version: 2,
 			op: "update",
 			source: "direct",
