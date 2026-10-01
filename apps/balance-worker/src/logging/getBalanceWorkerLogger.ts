@@ -1,3 +1,4 @@
+import { createErrorLogHook } from "@autumn/errors";
 import { type AutumnLogger, createAppLogger } from "@autumn/logging";
 
 let logger: AutumnLogger | undefined;
@@ -42,6 +43,12 @@ export function getBalanceWorkerLogger(): AutumnLogger {
 			workerDeployment: process.env.BALANCE_WORKER_DEPLOYMENT ?? "unknown",
 		},
 		mixin: logIdentity,
+		hooks: {
+			logMethod: createErrorLogHook({
+				service: "balance-worker",
+				captureToSentry: process.env.SENTRY_CAPTURE_LOGGED_ERRORS !== "false",
+			}),
+		},
 	});
 	return logger;
 }

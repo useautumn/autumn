@@ -18,14 +18,13 @@ const isUnavailableWorkerError = (error: Error) =>
 	"code" in error &&
 	UNAVAILABLE_WORKER_CODES.has(String(error.code));
 
-/** Transient dependency failures: one is noise, a rate of them is an incident. */
+/** The server's own transient failures (pg, redis, shed 503s, the balance worker); generic dependencies are classified in @autumn/errors. */
 export const classifyInfraError: ErrorClassifier = ({ error }) => {
 	if (!(error instanceof Error)) return;
 	if (error instanceof RecaseError && error.statusCode < 500) return;
 
 	const isInfra =
 		(error instanceof RecaseError && error.code === "service_unavailable") ||
-		error.name.startsWith("KafkaJS") ||
 		isUnavailableWorkerError(error) ||
 		isTransientDbError({ error }) ||
 		isTransientRedisError({ error });

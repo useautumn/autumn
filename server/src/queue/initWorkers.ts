@@ -37,6 +37,7 @@ import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
 import { shutdownSqsSendBatchers } from "./queueUtils.js";
 import { getQueueRetryBudget } from "./retryBudget/getQueueRetryBudget.js";
+import { reportJobTimeout } from "./retryBudget/reportJobTimeout.js";
 import type { RetryBudget } from "./retryBudget/types/retryBudget.js";
 import { getTrackAndUpdateBalanceWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
@@ -366,6 +367,11 @@ export const startPollingLoop = async ({
 					timeoutMs,
 					timeoutMessage: `Processing timed out after ${timeoutMs}ms`,
 					fn: () => processMessage({ message, db, retryBudget }),
+					// A scan-retried job's catch below already logs the failed attempt.
+					onTimeout: () => {
+						if (override?.ack === "always-after-processing") return;
+						reportJobTimeout({ job, message, timeoutMs, retryBudget });
+					},
 				});
 			}
 		} catch (error) {

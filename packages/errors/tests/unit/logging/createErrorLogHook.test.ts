@@ -88,6 +88,21 @@ describe("createErrorLogHook", () => {
 		});
 	});
 
+	it("uses an error's own fingerprint so shared-stack errors split into issues", () => {
+		captureException.mockClear();
+		const { jobLogger } = createTestLogger();
+		const error = Object.assign(new Error("track timed out"), {
+			fingerprint: ["job-timeout", "track"],
+		});
+
+		jobLogger.error({ error }, "timed out");
+
+		expect(captureException).toHaveBeenCalledWith(
+			error,
+			expect.objectContaining({ fingerprint: ["job-timeout", "track"] }),
+		);
+	});
+
 	it("prefers the request's route template over its concrete path", () => {
 		captureException.mockClear();
 		const { logger } = createTestLogger();
