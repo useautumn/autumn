@@ -26,6 +26,7 @@
  * signal → force-exit (registry + tags persist for `bun tw kill`).
  */
 
+import { randomBytes } from "node:crypto";
 import { readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
@@ -548,6 +549,8 @@ let stripeBudget = stripeBudgetForRun({
 });
 /** Whether the run's servers route to the balance worker; set from `--balance-worker` before fan-out. */
 let balanceWorkerEnabled = true;
+/** One per run (module state is per orchestrator / twd swarm child), shared by every worker. */
+const customerJwtSecret = randomBytes(32).toString("hex");
 
 export const buildWorkerEnv = ({
 	stripeAccountId,
@@ -596,6 +599,11 @@ export const buildWorkerEnv = ({
 		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
 		BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
+		CUSTOMER_JWT_SECRET: customerJwtSecret,
+		CLIENT_URL: "http://localhost:3000",
+		// platform.link_revenuecat only builds the authorize URL; it never calls RevenueCat.
+		REVENUECAT_OAUTH_CLIENT_ID: "tw_placeholder_rc_client_id",
+		REVENUECAT_OAUTH_CLIENT_SECRET: "tw_placeholder_rc_client_secret",
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 		// per-worker Stripe (this worker's POOL key + the sub-account it binds; the
 		// account was created on this same key, so they share one rate-limit bucket).
@@ -641,6 +649,10 @@ export const buildWorkerEnv = ({
 		// S3) and forces the v2-cache rollout to 100% — the prod default for months.
 		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: EDGE_CONFIG_OVERRIDE_B64,
 	};
+
+	if (process.env.ANTHROPIC_API_KEY) {
+		env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+	}
 
 	// Shared dev Tinybird (no in-µVM instance — gVisor blocks it). Flows per-run
 	// like the other secrets, never baked into the warm image/snapshot.
