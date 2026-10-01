@@ -8,7 +8,6 @@ import {
 import type { PartitionProcessorScope } from "../../../types/partitionProcessor.js";
 import { planInsertedRowsState } from "../ensure/ensurePlanCatalog.js";
 
-/** What a plan's rebalances join the rows to: the customer's, the named entities', and the plan's new rows. None without a rebalance. */
 export const readPlanCatalog = ({
 	scope,
 	command,
@@ -20,8 +19,10 @@ export const readPlanCatalog = ({
 	customer: SubjectState | null;
 	parts: readonly BillingPlanEntityPart[];
 }): Catalog | undefined => {
-	const hasRebalance = command.ops.some(({ op }) => op === "rebalance");
-	if (!hasRebalance) return undefined;
+	const needsCatalog = command.ops.some(
+		({ op }) => op === "rebalance" || op === "addRollovers",
+	);
+	if (!needsCatalog) return undefined;
 	const states = [
 		...(customer ? [customer] : []),
 		...parts.map(({ state }) => state),
