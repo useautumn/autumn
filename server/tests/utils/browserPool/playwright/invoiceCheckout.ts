@@ -56,7 +56,7 @@ export const invoiceCheckout = async ({
 	} finally {
 		await diagDump("final").catch((e) => console.log(`[DIAG ${label}] dump failed ${e}`));
 		for (const line of diagNet) console.log(`[DIAG ${label}] net ${line}`);
-		const shot = diagConfirmed ? null : await page.screenshot({ fullPage: true, type: "jpeg", quality: 25 }).catch(() => null);
+		const shot = diagConfirmed || !label.endsWith("no-pm") ? null : await page.screenshot({ fullPage: true, type: "jpeg", quality: 25 }).catch(() => null);
 		if (shot) console.log(`[DIAG ${label}] SHOT_BEGIN${shot.toString("base64")}SHOT_END`);
 	}
 	async function invoiceCheckoutInner() {
@@ -87,6 +87,31 @@ export const invoiceCheckout = async ({
 		readyForm.waitFor().then(() => "form"),
 	]);
 	await diagDump("loaded");
+	await page.evaluate(() => {
+		const w = window as unknown as { __diagLayout: string[] };
+		w.__diagLayout = [];
+		let last = "";
+		setInterval(() => {
+			const f = document.querySelector('iframe[title="Secure payment input frame"]');
+			const b = document.querySelector('button[type="submit"], button.SubmitButton');
+			const cur = `${Math.round(f?.getBoundingClientRect().height ?? -1)}/${Math.round(b?.getBoundingClientRect().top ?? -1)}/${Math.round(window.scrollY)}`;
+			if (cur !== last) w.__diagLayout.push(`${Math.round(performance.now())}:${cur}`);
+			last = cur;
+		}, 20);
+	});
+	for (const frame of page.frames().filter((fr) => /elements-inner-payment/.test(fr.url()))) {
+		await frame.evaluate(() => {
+			const w = window as unknown as { __diagClicks: string[] };
+			w.__diagClicks = [];
+			for (const type of ["pointerdown", "click"]) {
+				window.addEventListener(type, (e) => {
+					const t = e.target as HTMLElement;
+					const me = e as MouseEvent;
+					w.__diagClicks.push(`${Math.round(performance.now())} ${type}@${me.clientX},${Math.round(me.clientY)}->${t.tagName}|${(t.innerText || t.getAttribute("aria-label") || "").slice(0, 30)}`);
+				}, true);
+			}
+		}).catch((e) => console.log(`[DIAG ${label}] frame listener failed ${e}`));
+	}
 	if (initialState === "paid") return;
 	if (!(await cardInput.isVisible())) await cardAccordion.click();
 
@@ -145,18 +170,18 @@ export const invoiceCheckout = async ({
 		window.addEventListener("blur", () => (window as unknown as { __diagClicks: string[] }).__diagClicks.push(`window-blur active=${document.activeElement?.tagName}.${(document.activeElement as HTMLElement)?.title}`));
 	});
 	await diagBoxes("pre-click");
-	const diagShotPre = await page.screenshot({ fullPage: true, type: "jpeg", quality: 25 }).catch(() => null);
-	await diagSubmit.click({ trial: true });
-	await diagBoxes("post-trial");
 	await diagSubmit.click();
-	console.log(`[DIAG ${label}] clicked submit t=${Date.now() - diagStart}ms`);
+	console.log(`[DIAG ${label}] clicked submit t=${Date.now() - diagStart}ms perf=${await page.evaluate(() => Math.round(performance.now())).catch(() => -1)}`);
 	await diagBoxes("post-click");
 	for (const ms of [100, 300, 700, 1500]) {
 		await page.waitForTimeout(ms);
 		await diagBoxes(`+${ms}`);
 	}
 	console.log(`[DIAG ${label}] mainClicks=${JSON.stringify(await page.evaluate(() => (window as unknown as { __diagClicks: string[] }).__diagClicks).catch(() => []))}`);
-	if (diagShotPre) console.log(`[DIAG ${label}] PRESHOT_BEGIN${diagShotPre.toString("base64")}PRESHOT_END`);
+	console.log(`[DIAG ${label}] layout=${JSON.stringify(await page.evaluate(() => (window as unknown as { __diagLayout: string[] }).__diagLayout).catch(() => []))}`);
+	for (const frame of page.frames().filter((fr) => /elements-inner-payment/.test(fr.url()))) {
+		console.log(`[DIAG ${label}] frameClicks=${JSON.stringify(await frame.evaluate(() => (window as unknown as { __diagClicks?: string[] }).__diagClicks ?? null).catch((e) => `ERR ${e}`))}`);
+	}
 	// Watches for errors and a CAPTCHA; the caller asks Stripe whether the payment went through.
 	const deadline = performance.now() + 10_000;
 	while (performance.now() < deadline) {
