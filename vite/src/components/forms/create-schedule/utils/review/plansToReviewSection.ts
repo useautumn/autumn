@@ -40,10 +40,12 @@ const updatedChanges = ({
 	plan,
 	planChanges,
 	features,
+	currency,
 }: {
 	plan: SetPlansPreviewPlan;
 	planChanges: CustomerPlanChange[];
 	features: Feature[];
+	currency: string;
 }) => {
 	if (plan.status !== "updated") return undefined;
 	const change = findPlanChange({
@@ -51,7 +53,7 @@ const updatedChanges = ({
 		planId: plan.plan_id,
 		entityId: plan.entity_id,
 	});
-	return change ? planChangeLines({ change, features }) : undefined;
+	return change ? planChangeLines({ change, features, currency }) : undefined;
 };
 
 const endsLater = (plan: SetPlansPreviewPlan) =>
@@ -89,7 +91,7 @@ const planToRow = ({
 	entityId: plan.entity_id ?? null,
 	status: plan.status,
 	ongoing: plan.ongoing,
-	changes: updatedChanges({ plan, planChanges, features }),
+	changes: updatedChanges({ plan, planChanges, features, currency }),
 	trialEndsAt:
 		plan.status !== "ends" &&
 		plan.trial_ends_at !== null &&

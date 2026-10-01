@@ -1,13 +1,17 @@
 import {
 	StatusChip,
+	StatusChipIcon,
 	type StatusGlyph,
 	type StatusTone,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { ChangeDot } from "@/components/v2/ItemStatusDot";
-import type { ReviewChangeLine } from "../../utils/review/planChangeLines";
+import { cn } from "@/lib/utils";
+import type {
+	ReviewChangeLine,
+	ReviewChangeLineState,
+} from "../../utils/review/planChangeLines";
 import type { ReviewChangeStatus } from "../../utils/review/types/reviewChange";
 
 const REVIEW_STATUSES: Record<
@@ -43,14 +47,57 @@ export function ReviewStatusChip({
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>{chip}</TooltipTrigger>
-			<TooltipContent side="top" className="flex flex-col gap-px">
+			<TooltipContent side="top" className="flex flex-col gap-1">
 				{changes.map((change) => (
-					<span key={change.text} className="flex items-center gap-2">
-						<ChangeDot state={change.state} />
-						{change.text}
-					</span>
+					<ReviewChangeLineRow key={change.label} change={change} />
 				))}
 			</TooltipContent>
 		</Tooltip>
+	);
+}
+
+const CHANGE_LINE_ICONS: Record<
+	ReviewChangeLineState,
+	{ tone: StatusTone; glyph: StatusGlyph }
+> = {
+	new: { tone: "green", glyph: "check" },
+	updated: { tone: "blue", glyph: "pencil" },
+	removed: { tone: "red", glyph: "x" },
+};
+
+/** Old values sit muted beside the foreground new value; a removed feature is struck through. */
+function ReviewChangeLineRow({ change }: { change: ReviewChangeLine }) {
+	const isRemoved = change.state === "removed";
+	return (
+		<span className="flex min-w-56 items-center gap-2">
+			<StatusChipIcon {...CHANGE_LINE_ICONS[change.state]} />
+			<span
+				className={cn(
+					"flex-1 text-muted-foreground",
+					isRemoved && "text-tertiary-foreground line-through",
+				)}
+			>
+				{change.label}
+			</span>
+			<span className="flex items-baseline gap-1.5 tabular-nums">
+				{change.before && (
+					<>
+						<span className="text-tertiary-foreground">{change.before}</span>
+						<span className="text-tertiary-foreground/70">→</span>
+					</>
+				)}
+				{change.after && (
+					<span
+						className={cn(
+							isRemoved
+								? "text-muted-foreground"
+								: "font-medium text-foreground",
+						)}
+					>
+						{change.after}
+					</span>
+				)}
+			</span>
+		</span>
 	);
 }
