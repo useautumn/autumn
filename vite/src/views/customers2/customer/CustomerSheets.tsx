@@ -11,8 +11,8 @@ import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/Su
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { AllocateBalancesSheet } from "../components/sheets/AllocateBalancesSheet";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
-
 import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
 import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
@@ -140,6 +140,8 @@ export function CustomerSheets() {
 				return <RecordUsageSheet />;
 			case "check-balance":
 				return <CheckBalanceSheet />;
+			case "allocate-balances":
+				return <AllocateBalancesSheet />;
 			case "create-schedule":
 			case "create-schedule-review":
 			case "create-schedule-send-invoice":

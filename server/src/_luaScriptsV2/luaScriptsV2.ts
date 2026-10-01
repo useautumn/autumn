@@ -137,4 +137,5 @@ ${ROLL_USAGE_WINDOWS_MAIN}`;
 
 /** Moves one allocation counter row in a per-feature hash's '_usage_windows' field the way Postgres moved it. */
 export const PATCH_ALLOCATION_COUNTER_SCRIPT = `${LUA_UTILS}
+local USAGE_WINDOW_BOUND_TOLERANCE_MS = ${USAGE_WINDOW_BOUND_TOLERANCE_MS}
 ${PATCH_ALLOCATION_COUNTER_MAIN}`;

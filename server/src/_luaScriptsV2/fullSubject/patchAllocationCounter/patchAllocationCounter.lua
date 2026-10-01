@@ -56,8 +56,11 @@ if existing == nil then
   counter.usage = math.max(0, safe_number(counter.usage))
   counter.updated_at = now
   table.insert(windows, counter)
-elseif safe_number(existing.window_start_at) == safe_number(counter.window_start_at)
-    and safe_number(existing.window_end_at) == safe_number(counter.window_end_at) then
+-- Same drift tolerance as setAllocationCounters, so a refit never drops un-synced usage.
+elseif math.abs(safe_number(existing.window_start_at) - safe_number(counter.window_start_at))
+      <= USAGE_WINDOW_BOUND_TOLERANCE_MS
+    and math.abs(safe_number(existing.window_end_at) - safe_number(counter.window_end_at))
+      <= USAGE_WINDOW_BOUND_TOLERANCE_MS then
   existing.usage = math.max(0, safe_number(existing.usage) + usage_delta)
   existing.updated_at = now
 else
