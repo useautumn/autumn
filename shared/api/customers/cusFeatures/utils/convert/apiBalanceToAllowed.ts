@@ -25,14 +25,22 @@ export type ApiBalanceInput = {
 };
 
 export const apiBalanceToAllowed = ({
-	apiBalance,
+	apiBalance: displayedBalance,
 	apiSubject,
 	feature,
 	requiredBalance,
 	originalFeature,
 	properties,
 }: ApiBalanceInput): AllowedResult => {
-	if (!apiBalance) return { allowed: false };
+	if (!displayedBalance) return { allowed: false };
+	// An allocated customer's entity may draw own unused + unallocated, not the shown rows' remaining.
+	const apiBalance =
+		displayedBalance.allocation_check_remaining === undefined
+			? displayedBalance
+			: {
+					...displayedBalance,
+					remaining: displayedBalance.allocation_check_remaining,
+				};
 
 	if (isBooleanFeature({ feature })) return { allowed: true };
 

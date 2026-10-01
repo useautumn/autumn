@@ -173,7 +173,11 @@ export const customerEntitlementsToApiBalance = ({
 			return unused;
 		}),
 	);
-	const { breakdownItems, totals: allocationTotals } =
+	const {
+		breakdownItems,
+		totals: allocationTotals,
+		checkRemainingOffset,
+	} =
 		applyAllocationsToBreakdown({
 			subject: fullSubject,
 			feature,
@@ -247,7 +251,17 @@ export const customerEntitlementsToApiBalance = ({
 		aggregatedFeatureBalance,
 	});
 
-	return { data: roundApiBalance({ apiBalance: merged }) };
+	const rounded = roundApiBalance({ apiBalance: merged });
+	if (checkRemainingOffset === null) return { data: rounded };
+	return {
+		data: {
+			...rounded,
+			allocation_check_remaining: Decimal.max(
+				0,
+				new Decimal(rounded.remaining).plus(checkRemainingOffset),
+			).toNumber(),
+		},
+	};
 };
 
 export const getApiBalanceV2 = ({

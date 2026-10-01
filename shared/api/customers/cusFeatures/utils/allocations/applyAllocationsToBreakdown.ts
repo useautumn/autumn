@@ -93,6 +93,8 @@ export const applyAllocationsToBreakdown = ({
 }): {
 	breakdownItems: ApiBalanceBreakdownV1[];
 	totals: { allocated: number; unallocated: number } | null;
+	/** What check may draw beyond the displayed remaining: own unused + unallocated in place of the shown shared rows. */
+	checkRemainingOffset: number | null;
 } => {
 	const sourced = breakdownItems.map((item, index) => ({
 		...item,
@@ -102,7 +104,8 @@ export const applyAllocationsToBreakdown = ({
 	}));
 
 	const allocation = subject.customer?.balance_allocations?.[feature.internal_id];
-	if (!allocation) return { breakdownItems: sourced, totals: null };
+	if (!allocation)
+		return { breakdownItems: sourced, totals: null, checkRemainingOffset: null };
 	const withSource: ApiBalanceBreakdownV1[] = sourced.map((item) => ({
 		...item,
 		allocation: null,
@@ -118,7 +121,7 @@ export const applyAllocationsToBreakdown = ({
 		sharedRows: sharedIndexes.map((index) => customerEntitlements[index]),
 	});
 	if (!parent?.next_reset_at)
-		return { breakdownItems: withSource, totals: null };
+		return { breakdownItems: withSource, totals: null, checkRemainingOffset: null };
 	const bounds = getUsageWindowBounds({
 		interval: allocation.interval,
 		now,
@@ -134,27 +137,37 @@ export const applyAllocationsToBreakdown = ({
 		new Decimal(0),
 	);
 
+	const claimed = counterUsage({
+		subject,
+		featureId: allocation.feature_id,
+		internalEntityId: null,
+		bounds,
+	});
+	const covered = sharedRemaining.plus(claimed);
+	const unallocated =
+		allocation.scale < 1
+			? new Decimal(0)
+			: Decimal.max(0, covered.minus(requestedTotal));
+
 	const internalEntityId = subject.entity?.internal_id ?? null;
 	if (!internalEntityId) {
-		const claimed = counterUsage({
-			subject,
-			featureId: allocation.feature_id,
-			internalEntityId: null,
-			bounds,
-		});
-		const covered = sharedRemaining.plus(claimed);
 		return {
 			breakdownItems: withSource,
 			totals: {
 				allocated: Decimal.min(requestedTotal, covered).toNumber(),
-				unallocated: Decimal.max(0, covered.minus(requestedTotal)).toNumber(),
+				unallocated: unallocated.toNumber(),
 			},
+			checkRemainingOffset: null,
 		};
 	}
 
 	const requested = allocation.amounts[internalEntityId];
 	if (requested === undefined)
-		return { breakdownItems: withSource, totals: null };
+		return {
+			breakdownItems: withSource,
+			totals: null,
+			checkRemainingOffset: unallocated.minus(sharedRemaining).toNumber(),
+		};
 
 	const usage = counterUsage({
 		subject,
@@ -190,5 +203,10 @@ export const applyAllocationsToBreakdown = ({
 			allocation: { amount: requested },
 		};
 	});
-	return { breakdownItems: scoped, totals: null };
+	// The scoped rows already show own unused; check may also draw unallocated credits.
+	return {
+		breakdownItems: scoped,
+		totals: null,
+		checkRemainingOffset: unallocated.toNumber(),
+	};
 };

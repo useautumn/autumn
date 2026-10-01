@@ -180,6 +180,9 @@ export const ApiBalanceV1Schema = z
 			description:
 				"Remaining shared credits no allocation holds; any entity may use them.",
 		}),
+		allocation_check_remaining: z.number().optional().meta({
+			internal: true,
+		}),
 	})
 	.meta({
 		examples: [API_BALANCE_V1_EXAMPLE],
