@@ -166,6 +166,7 @@ export const allocateBalances = async ({
 			usage,
 			now,
 		});
+	// Counters bypass the worker until plans can set usage_windows; the eviction below drops any stale copy.
 	await setAllocationCounters({
 		db: ctx.db,
 		counters: [

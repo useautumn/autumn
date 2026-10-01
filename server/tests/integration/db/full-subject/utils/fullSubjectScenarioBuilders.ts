@@ -97,6 +97,7 @@ const buildCustomer = ({
 	usage_limits: null,
 	usage_alerts: null,
 	overage_allowed: null,
+	balance_allocations: null,
 });
 
 const buildEntity = ({
