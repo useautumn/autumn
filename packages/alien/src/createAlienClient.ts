@@ -1,5 +1,9 @@
 import { ALIEN_HOSTED_API_URL } from "./alienConstants.js";
-import { deleteDeployment, findDeployment } from "./deployments/deployments.js";
+import {
+	deleteDeployment,
+	findDeployment,
+	updateDeploymentCompute,
+} from "./deployments/deployments.js";
 import { revokeSetupLinks } from "./setup/setupLinks.js";
 import { startSetup } from "./setup/startSetup.js";
 import type { AlienApi } from "./types/alienApi.js";
@@ -21,6 +25,8 @@ export const createAlienClient = ({
 	return {
 		startSetup: (params) => startSetup({ ctx, ...params }),
 		findDeployment: (params) => findDeployment({ ctx, ...params }),
+		updateDeploymentCompute: (params) =>
+			updateDeploymentCompute({ ctx, ...params }),
 		deleteDeployment: (params) => deleteDeployment({ ctx, ...params }),
 		revokeSetupLinks: (params) => revokeSetupLinks({ ctx, ...params }),
 	};

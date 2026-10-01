@@ -11,7 +11,7 @@ const sendRequest = async ({
 	body,
 }: {
 	api: AlienApi;
-	method: "GET" | "POST" | "DELETE";
+	method: "GET" | "POST" | "PATCH" | "DELETE";
 	path: string;
 	body?: unknown;
 }): Promise<Response> => {
@@ -38,7 +38,7 @@ export const alienRequest = async <Schema extends z.ZodType>({
 	schema,
 }: {
 	api: AlienApi;
-	method: "GET" | "POST" | "DELETE";
+	method: "GET" | "POST" | "PATCH" | "DELETE";
 	path: string;
 	body?: unknown;
 	schema: Schema;

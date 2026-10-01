@@ -2,9 +2,11 @@ import { z } from "zod/v4";
 import { alienRequest } from "../common/alienRequest.js";
 import { findDeploymentGroupByExternalId } from "../deploymentGroups/deploymentGroups.js";
 import { AlienDeploymentSchema } from "../deployments/deploymentSchemas.js";
+import { fixedPoolsToCompute } from "../deployments/fixedPoolsToCompute.js";
 import type { AlienApi } from "../types/alienApi.js";
 import type {
 	AlienEnvironmentVariable,
+	AlienFixedPools,
 	AlienSetup,
 } from "../types/alienClient.js";
 import { toDeploymentGroupName } from "./deploymentGroupName.js";
@@ -49,12 +51,14 @@ const startHostedSetup = async ({
 	externalId,
 	name,
 	environmentVariables,
+	pools,
 }: {
 	api: AlienApi;
 	config: { project: string; workspace: string };
 	externalId: string;
 	name: string;
 	environmentVariables: AlienEnvironmentVariable[];
+	pools: AlienFixedPools;
 }): Promise<AlienSetup> => {
 	const existingGroup = await findDeploymentGroupByExternalId({
 		api,
@@ -78,6 +82,9 @@ const startHostedSetup = async ({
 				policy: {
 					allowedPlatforms: ["aws"],
 					allowedSetupMethods: ["cloudformation"],
+					stackSettings: {
+						defaults: { compute: fixedPoolsToCompute({ pools }) },
+					},
 				},
 				environmentVariables,
 			},
@@ -95,16 +102,19 @@ const startHostedSetup = async ({
 	};
 };
 
+/** The local manager runs no machines, so only a hosted setup takes `pools`. */
 export const startSetup = ({
 	ctx,
 	externalId,
 	label,
 	environmentVariables,
+	pools,
 }: {
 	ctx: { api: AlienApi };
 	externalId: string;
 	label: string;
 	environmentVariables: AlienEnvironmentVariable[];
+	pools: AlienFixedPools;
 }): Promise<AlienSetup> => {
 	const { api } = ctx;
 	const name = toDeploymentGroupName({ label });
@@ -116,5 +126,6 @@ export const startSetup = ({
 		externalId,
 		name,
 		environmentVariables,
+		pools,
 	});
 };

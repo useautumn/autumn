@@ -55,6 +55,7 @@ export const ErrCode = {
 
 	// BYOC
 	ByocUnavailable: "byoc_unavailable",
+	ByocCacheNotReady: "byoc_cache_not_ready",
 
 	// Internal
 	InternalError: "internal_error",

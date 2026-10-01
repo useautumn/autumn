@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { alienRequest } from "../common/alienRequest.js";
 import { hostedQuery } from "../common/hostedQuery.js";
 import type { AlienApi } from "../types/alienApi.js";
-import type { AlienDeployment } from "../types/alienClient.js";
+import type { AlienDeployment, AlienFixedPools } from "../types/alienClient.js";
 import {
 	isDeploymentAwaitingSetup,
 	isDeploymentBeingDeleted,
@@ -11,6 +11,7 @@ import {
 	AlienDeploymentListSchema,
 	AlienDeploymentSchema,
 } from "./deploymentSchemas.js";
+import { fixedPoolsToCompute } from "./fixedPoolsToCompute.js";
 
 /** The local manager filters by `deploymentGroupId`; the hosted API by `deploymentGroup`, scoped to a project. */
 const deploymentsQuery = ({
@@ -84,6 +85,26 @@ export const deleteDeployment = async ({
 		method: "POST",
 		path: `/v1/deployments/${encodeURIComponent(deployment.id)}/delete${hostedQuery({ api: ctx.api })}`,
 		body: { action },
+		schema: z.unknown(),
+	});
+};
+
+/** Same machines is a no-op on alien's side. The local manager runs no machines, so it has nothing to change. */
+export const updateDeploymentCompute = async ({
+	ctx,
+	deployment,
+	pools,
+}: {
+	ctx: { api: AlienApi };
+	deployment: AlienDeployment;
+	pools: AlienFixedPools;
+}): Promise<void> => {
+	if (ctx.api.config.kind === "local") return;
+	await alienRequest({
+		api: ctx.api,
+		method: "PATCH",
+		path: `/v1/deployments/${encodeURIComponent(deployment.id)}/compute${hostedQuery({ api: ctx.api })}`,
+		body: { compute: fixedPoolsToCompute({ pools }) },
 		schema: z.unknown(),
 	});
 };

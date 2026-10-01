@@ -1,3 +1,8 @@
+import {
+	type ByocCacheMachine,
+	ByocCacheStatus,
+	DEFAULT_BYOC_CACHE_MACHINE,
+} from "@autumn/shared";
 import { Button, Skeleton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -6,19 +11,22 @@ import { getBackendErr } from "@/utils/genUtils";
 import { SettingsSection } from "../SettingsSection";
 import { ByocCacheActions } from "./components/byocCache/ByocCacheActions";
 import { ByocCacheEmptyState } from "./components/byocCache/ByocCacheEmptyState";
+import { ByocCacheMachineSection } from "./components/byocCache/ByocCacheMachineSection";
 import { ByocCacheStatusCard } from "./components/byocCache/ByocCacheStatusCard";
+import { cacheToMachine } from "./components/byocCache/byocCacheMachineDisplay";
 import { BYOC_CACHE_STATUS_DISPLAY } from "./components/byocCache/byocCacheStatusDisplay";
 import { DeleteByocCacheDialog } from "./components/byocCache/DeleteByocCacheDialog";
 import { useByocCacheActions } from "./components/byocCache/useByocCacheActions";
 
 export const ByocCacheSection = () => {
 	const { cache, isLoading, error, refetch } = useByocCacheQuery();
-	const { create, remove, startSetup, setupUrl } = useByocCacheActions();
+	const { create, resize, remove, startSetup, setupUrl } =
+		useByocCacheActions();
 	const [deleteOpen, setDeleteOpen] = useState(false);
 
-	const deploy = async () => {
+	const deploy = async (machine: ByocCacheMachine) => {
 		try {
-			await startSetup();
+			await startSetup(machine);
 		} catch (err) {
 			toast.error(getBackendErr(err, "Failed to deploy the cache"));
 		}
@@ -68,19 +76,25 @@ export const ByocCacheSection = () => {
 			);
 		}
 
+		const isReady = cache.status === ByocCacheStatus.Ready;
 		return (
-			<ByocCacheStatusCard
-				cache={cache}
-				actions={
-					<ByocCacheActions
-						cache={cache}
-						setupUrl={setupUrl}
-						onGetSetupLink={deploy}
-						isGettingSetupLink={create.isPending}
-						onDelete={() => setDeleteOpen(true)}
-					/>
-				}
-			/>
+			<div className="flex flex-col gap-10">
+				<ByocCacheStatusCard
+					cache={cache}
+					actions={
+						<ByocCacheActions
+							cache={cache}
+							setupUrl={setupUrl}
+							onGetSetupLink={() =>
+								deploy(cacheToMachine(cache) ?? DEFAULT_BYOC_CACHE_MACHINE)
+							}
+							isGettingSetupLink={create.isPending}
+							onDelete={() => setDeleteOpen(true)}
+						/>
+					}
+				/>
+				{isReady && <ByocCacheMachineSection cache={cache} resize={resize} />}
+			</div>
 		);
 	};
 
@@ -90,13 +104,13 @@ export const ByocCacheSection = () => {
 			description="Serve balance checks from a cache in your own AWS account"
 		>
 			{renderContent()}
-			{removal && (
+			{cache && removal && (
 				<DeleteByocCacheDialog
 					removal={removal}
+					confirmPhrase={`delete ${cache.env} cache`}
 					open={deleteOpen}
 					onOpenChange={setDeleteOpen}
 					onConfirm={confirmDelete}
-					isDeleting={remove.isPending}
 				/>
 			)}
 		</SettingsSection>
