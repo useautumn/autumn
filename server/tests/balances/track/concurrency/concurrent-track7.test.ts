@@ -33,7 +33,7 @@ const pro = constructProduct({
 	items: [lifetimeMessagesItem, monthlyMessagesItem],
 });
 
-const NUM_REQUESTS = 250; // Reduced from 10000 — local Redis saturates under FullSubject cache load
+const NUM_REQUESTS = 350;
 const NUM_CUSTOMERS = 3;
 
 // Calculate total included usage dynamically
@@ -47,7 +47,7 @@ const randomDecimal = (min: number, max: number): Decimal => {
 	return new Decimal(value).toDecimalPlaces(2);
 };
 
-describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent requests per customer through check (send_event)`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} concurrent requests through check (send_event)`)}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const customerIds = Array.from(
 		{ length: NUM_CUSTOMERS },
@@ -103,21 +103,21 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 		}
 	});
 
-	test(`should handle ${NUM_REQUESTS * NUM_CUSTOMERS} concurrent requests across ${NUM_CUSTOMERS} customers`, async () => {
+	test(`should handle ${NUM_REQUESTS} concurrent requests across ${NUM_CUSTOMERS} customers`, async () => {
 		console.log(
-			`\n🚀 Starting ${NUM_REQUESTS * NUM_CUSTOMERS} concurrent track requests...`,
-		);
-		console.log(
-			`   ${NUM_REQUESTS} requests per customer × ${NUM_CUSTOMERS} customers`,
+			`\n🚀 Starting ${NUM_REQUESTS} concurrent track requests across ${NUM_CUSTOMERS} customers...`,
 		);
 
 		const allPromises: Promise<number>[] = [];
 
 		// Generate requests for each customer
-		for (const customerId of customerIds) {
+		for (const [customerIndex, customerId] of customerIds.entries()) {
 			const customerPromises: Promise<number>[] = [];
+			const requestCount =
+				Math.floor(NUM_REQUESTS / NUM_CUSTOMERS) +
+				(customerIndex < NUM_REQUESTS % NUM_CUSTOMERS ? 1 : 0);
 
-			for (let i = 0; i < NUM_REQUESTS; i++) {
+			for (let i = 0; i < requestCount; i++) {
 				// Generate random value between 0.01 and 2.00 using Decimal
 				const decimalValue = randomDecimal(0.01, 2.0);
 				const value = decimalValue.toDecimalPlaces(5).toNumber();
@@ -148,6 +148,7 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 		const startTime = Date.now();
 		const durations = await Promise.all(allPromises);
 		const endTime = Date.now();
+		expect(durations).toHaveLength(NUM_REQUESTS);
 
 		// Calculate P99
 		const sortedDurations = durations.sort((a, b) => a - b);
@@ -155,10 +156,10 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 		const p99 = sortedDurations[p99Index];
 
 		console.log(
-			`\n✅ Completed ${NUM_REQUESTS * NUM_CUSTOMERS} requests in ${endTime - startTime}ms`,
+			`\n✅ Completed ${NUM_REQUESTS} requests in ${endTime - startTime}ms`,
 		);
 		console.log(
-			`   Average: ${((endTime - startTime) / (NUM_REQUESTS * NUM_CUSTOMERS)).toFixed(2)}ms per request`,
+			`   Average: ${((endTime - startTime) / NUM_REQUESTS).toFixed(2)}ms per request`,
 		);
 		console.log(`   P99: ${p99.toFixed(2)}ms`);
 
