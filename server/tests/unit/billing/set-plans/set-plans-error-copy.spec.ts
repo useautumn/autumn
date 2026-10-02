@@ -92,6 +92,14 @@ const EVERY_ERROR: [SetPlansErrorDetails, string][] = [
 		},
 		"The billing cycle anchor 01 Jan 2026 12:00:00 is after the end date 01 Jan 2026 09:00:00. Move it before the end date.",
 	],
+	[
+		{
+			type: "future_start_conflict",
+			conflict: "free_trial",
+			starts_at: NOV_1_2026,
+		},
+		"A free trial can't start on 01 Nov 2026. Start the first phase now, or remove the trial.",
+	],
 ];
 
 test("every Set Plans error reads as one sentence from the shared copy", () => {

@@ -72,7 +72,7 @@ const FUTURE_START_CONFLICT_COPY: Record<
 	{ subject: string; hint: string }
 > = {
 	free_trial: {
-		subject: "A free trial can't start on a later date,",
+		subject: "A free trial can't start on",
 		hint: "Start the first phase now, or remove the trial.",
 	},
 	invoice_mode: {
