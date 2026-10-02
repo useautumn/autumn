@@ -140,8 +140,13 @@ test.concurrent(
 			periods: [
 				{
 					startMs: live.periodStartMs,
+					endMs: live.periodEndMs,
+					total: renewalTotal,
+				},
+				{
+					startMs: live.periodEndMs,
 					endMs: addMonths(live.periodEndMs, 1).getTime(),
-					total: new Decimal(live.billedTotal).plus(renewalTotal).toNumber(),
+					total: live.billedTotal,
 				},
 			],
 		});
