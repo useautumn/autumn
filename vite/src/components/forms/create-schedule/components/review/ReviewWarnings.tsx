@@ -1,6 +1,5 @@
 import type { SetPlansPreviewWarning, SetPlansTextPart } from "@autumn/shared";
-import { Alert, AlertDescription, cn } from "@autumn/ui";
-import { InfoIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { Alert, StatusChipIcon } from "@autumn/ui";
 import { SetPlansTextLine } from "@/components/forms/shared/errors/SetPlansTextLine";
 
 /** Changes that remove or lose something, or charge now, get a banner; the review sections already show the rest. */
@@ -51,25 +50,28 @@ export function ReviewWarnings({
 	const isInfoOnly = bannerWarnings.every(
 		(warning) => warning.severity === "info",
 	);
-	const Icon = isInfoOnly ? InfoIcon : WarningCircleIcon;
 	const lines = toBannerLines(bannerWarnings);
 
 	return (
 		<div className="px-4 pt-4">
-			<Alert variant={isInfoOnly ? "default" : "warning"} className="py-1">
-				<Icon weight="fill" className="mt-1.5" />
-				<AlertDescription
-					className={cn(
-						"flex flex-col divide-y *:py-1.5",
-						isInfoOnly ? "divide-zinc-500/10" : "divide-amber-500/10",
-					)}
-				>
-					{lines.map((line) => (
-						<div key={line.message}>
+			<Alert
+				variant={isInfoOnly ? "default" : "warning"}
+				className="gap-0.5 p-1.5"
+			>
+				{lines.map((line) => (
+					<div
+						key={line.message}
+						className="flex items-center gap-2.5 px-2 py-1.5"
+					>
+						<StatusChipIcon
+							tone={isInfoOnly ? "neutral" : "amber"}
+							glyph="alert"
+						/>
+						<span>
 							<BannerLineText line={line} />
-						</div>
-					))}
-				</AlertDescription>
+						</span>
+					</div>
+				))}
 			</Alert>
 		</div>
 	);
