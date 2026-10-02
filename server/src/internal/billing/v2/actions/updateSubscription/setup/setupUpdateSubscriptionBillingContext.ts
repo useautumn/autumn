@@ -291,6 +291,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		invoiceMode,
 		paymentBehaviorIntent: contextOverride.paymentBehaviorIntent,
+		billingUpdatedTags: contextOverride.billingUpdatedTags,
 		featureQuantities,
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 		customerLicenseQuantities,

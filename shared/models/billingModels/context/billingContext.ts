@@ -144,6 +144,8 @@ export interface BillingContext {
 	subscriptionParams?: Record<string, unknown>;
 
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
+	/** Extra tags on the billing.updated webhook this action emits. */
+	billingUpdatedTags?: string[];
 	shouldFinalizeFirstInvoice?: boolean;
 	skipCustomPaymentMethodGuard?: boolean;
 

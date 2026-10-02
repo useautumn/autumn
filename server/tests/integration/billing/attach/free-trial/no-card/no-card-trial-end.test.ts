@@ -8,7 +8,7 @@
  *  - a trial Autumn did not mark on_trial_end "bill" (e.g. no_billing_changes, legacy rows) is never settled
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
 	ApiEntityV0,
@@ -27,6 +27,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService";
 
 const TRIAL_DAYS = 7;
 const DAYS_PAST_TRIAL_END = TRIAL_DAYS + 1;
@@ -173,5 +174,13 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 		await expectSubCount({ ctx, customerId, count: 0 });
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const [trialCustomerProduct] = fullCustomer.customer_products;
+		expect(trialCustomerProduct?.trial_ends_at).toBeTruthy();
+		expect(trialCustomerProduct?.on_trial_end ?? null).toBeNull();
 	},
 );

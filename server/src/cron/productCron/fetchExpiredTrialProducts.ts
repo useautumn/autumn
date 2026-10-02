@@ -85,6 +85,7 @@ export const fetchExpiredTrialProducts = async ({
 					: undefined,
 			),
 		)
+		.orderBy(customerProducts.trial_ends_at, customerProducts.id)
 		.limit(batchSize);
 };
 

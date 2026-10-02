@@ -131,7 +131,8 @@ const computeAttachNewCustomerProductResult = ({
 	// on_trial_end "bill" tells the product cron it owns this trial's end; legacy trials stay null.
 	const isAutumnManagedBillTrial =
 		Boolean(trialContext?.autumnManaged) &&
-		!isRevertTrialContext({ trialContext });
+		!isRevertTrialContext({ trialContext }) &&
+		planTiming === "immediate";
 	const preservedBillingLinkage = params.no_billing_changes
 		? currentCustomerProduct
 		: undefined;

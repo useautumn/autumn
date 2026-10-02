@@ -62,12 +62,12 @@ export const processExpiredTrialRow = async ({
 		}));
 	if (!trialFullCusProduct) return;
 
-	const converted = await tryConvertExpiredTrial({
+	const conversion = await tryConvertExpiredTrial({
 		ctx,
 		fullCustomer,
 		customerProduct: trialFullCusProduct,
 	});
-	if (converted) return;
+	if (conversion !== "unbillable") return;
 
 	const originalFullCustomer = customerPageTrialCusProduct
 		? fullCustomer

@@ -1,9 +1,33 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import {
+	ErrCode,
+	type FullCusProduct,
+	type FullCustomer,
+	isCustomerProductPaidRecurring,
+} from "@autumn/shared";
+import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
+
+/** billed: now on a Stripe sub. unbillable: expire the trial. retry: leave it for the next cron tick. */
+export type ExpiredTrialConversion = "billed" | "unbillable" | "retry";
+
+const PAYMENT_FAILURE_CODES = new Set<string>([
+	ErrCode.StripeCardDeclined,
+	ErrCode.PayInvoiceFailed,
+	"card_declined",
+]);
+
+const isPaymentFailure = (error: unknown) =>
+	error instanceof Stripe.errors.StripeCardError ||
+	PAYMENT_FAILURE_CODES.has((error as { code?: string })?.code ?? "");
+
+const isBillableTrial = (customerProduct: FullCusProduct) =>
+	!customerProduct.canceled &&
+	isCustomerProductAutumnManagedTrial(customerProduct) &&
+	isCustomerProductPaidRecurring(customerProduct);
 
 const customerHasPaymentMethod = async ({
 	ctx,
@@ -32,10 +56,39 @@ const customerProductToEntityId = ({
 	return entity ? (entity.id ?? entity.internal_id) : undefined;
 };
 
-/**
- * Bills a lapsed no-card trial into Stripe when the customer has a card on file.
- * Returns false when there is nothing to bill or the charge was rejected, so the caller expires it.
- */
+const billExpiredTrial = async ({
+	ctx,
+	fullCustomer,
+	customerProduct,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	customerProduct: FullCusProduct;
+}): Promise<ExpiredTrialConversion> => {
+	const { billingResult } = await billingActions.updateSubscription({
+		ctx,
+		params: {
+			customer_id: fullCustomer.id || fullCustomer.internal_id,
+			customer_product_id: customerProduct.id,
+			entity_id: customerProductToEntityId({ fullCustomer, customerProduct }),
+			version: customerProduct.product.version,
+			redirect_mode: "if_required",
+		},
+		contextOverride: {
+			paymentBehaviorIntent: "error_if_incomplete",
+			billingUpdatedTags: ["trial_ended"],
+		},
+		options: { skipAutumnCheckout: true },
+	});
+
+	// Billed only when a live subscription came back, not a deferred plan awaiting a failed payment.
+	const isBilled =
+		billingResult?.stripe.stripeSubscription !== undefined &&
+		!billingResult.stripe.deferred;
+	return isBilled ? "billed" : "unbillable";
+};
+
+/** Bills a lapsed Autumn-managed no-card trial into Stripe when the customer has a card on file. */
 export const tryConvertExpiredTrial = async ({
 	ctx,
 	fullCustomer,
@@ -44,37 +97,27 @@ export const tryConvertExpiredTrial = async ({
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	customerProduct: FullCusProduct;
-}): Promise<boolean> => {
-	if (
-		customerProduct.canceled ||
-		!isCustomerProductAutumnManagedTrial(customerProduct)
-	)
-		return false;
-	if (!(await customerHasPaymentMethod({ ctx, fullCustomer }))) return false;
+}): Promise<ExpiredTrialConversion> => {
+	if (!isBillableTrial(customerProduct)) return "unbillable";
 
 	try {
-		const { billingResult } = await billingActions.updateSubscription({
-			ctx,
-			params: {
-				customer_id: fullCustomer.id || fullCustomer.internal_id,
-				customer_product_id: customerProduct.id,
-				entity_id: customerProductToEntityId({ fullCustomer, customerProduct }),
-				version: customerProduct.product.version,
-				redirect_mode: "if_required",
-			},
-			contextOverride: { paymentBehaviorIntent: "error_if_incomplete" },
-			options: { skipAutumnCheckout: true },
-		});
-		// Billed only when a live subscription came back, not a deferred plan awaiting a failed payment.
-		return (
-			billingResult?.stripe.stripeSubscription !== undefined &&
-			!billingResult.stripe.deferred
-		);
+		if (!(await customerHasPaymentMethod({ ctx, fullCustomer })))
+			return "unbillable";
+
+		return await billExpiredTrial({ ctx, fullCustomer, customerProduct });
 	} catch (error) {
-		ctx.logger.warn(
-			`[productCron] could not bill trial ${customerProduct.id}, expiring it`,
+		if (isPaymentFailure(error)) {
+			ctx.logger.warn(
+				`[productCron] payment failed for trial ${customerProduct.id}, expiring it`,
+				{ error },
+			);
+			return "unbillable";
+		}
+
+		ctx.logger.error(
+			`[productCron] could not bill trial ${customerProduct.id}, retrying next run`,
 			{ error },
 		);
-		return false;
+		return "retry";
 	}
 };

@@ -75,6 +75,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trials cancel with 
 		testClockID = res.testClockId;
 		stripeCli = ctx.stripeCli;
 		stripeCustomerId = res.customer.processor?.id ?? "";
+		expect(stripeCustomerId).toBeTruthy();
 	});
 
 	it("should create a customer with the paid default trial", async () => {

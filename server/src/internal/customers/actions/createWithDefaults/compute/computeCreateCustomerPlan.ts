@@ -18,7 +18,7 @@ export const computeCreateCustomerPlan = ({
 	ctx: AutumnContext;
 	context: CreateCustomerContext;
 }): AutumnBillingPlan => {
-	const { fullCustomer, fullProducts, currentEpochMs, trialContext } = context;
+	const { fullCustomer, fullProducts, currentEpochMs } = context;
 
 	const insertCustomerProducts = fullProducts.map((product) =>
 		initFullCustomerProductFromProduct({
@@ -28,7 +28,8 @@ export const computeCreateCustomerPlan = ({
 				fullProduct: product,
 				currentEpochMs,
 				onTrialEnd:
-					trialContext?.autumnManaged && isProductPaidAndRecurring(product)
+					product.free_trial?.card_required === false &&
+					isProductPaidAndRecurring(product)
 						? "bill"
 						: undefined,
 			},

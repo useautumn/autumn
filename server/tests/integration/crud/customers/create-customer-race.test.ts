@@ -163,7 +163,7 @@ test.concurrent(`${chalk.yellowBright("race: concurrent null ID same email retur
 	}
 });
 
-test.concurrent(`${chalk.yellowBright("race: concurrent create with default trial creates only 1 Stripe customer and subscription")}`, async () => {
+test.concurrent(`${chalk.yellowBright("race: concurrent create with default trial creates only 1 Stripe customer and no Stripe subscription")}`, async () => {
 	const customerId = "race-default-trial-test";
 	const email = `${customerId}@example.com`;
 

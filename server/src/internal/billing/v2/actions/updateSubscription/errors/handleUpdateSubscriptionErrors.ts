@@ -10,6 +10,7 @@ import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/han
 import { handleRevertTrialErrors } from "@/internal/billing/v2/common/errors/handleRevertTrialErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { computeFieldUpdates } from "../compute/computeFieldUpdates.js";
+import { handleAutumnManagedTrialInvoiceModeErrors } from "./handleAutumnManagedTrialInvoiceModeErrors.js";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors.js";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors.js";
 import { handleManualTopUpErrors } from "./handleManualTopUpErrors.js";
@@ -56,6 +57,8 @@ export const handleUpdateSubscriptionErrors = async ({
 		billingContext,
 		updatedCustomerProduct: customerProduct,
 	});
+
+	handleAutumnManagedTrialInvoiceModeErrors({ billingContext });
 
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
