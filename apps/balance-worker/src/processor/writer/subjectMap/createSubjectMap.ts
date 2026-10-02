@@ -224,8 +224,6 @@ export const createSubjectMap = ({
 		for (const subjectKey of [...keys]) {
 			const entry = entries.get(subjectKey);
 			if (!entry) continue;
-			// A pinned subject is still read until its pin releases, but its rows no longer descend from a full read.
-			entry.baselineAt = null;
 			if (entry.pins > 0) entry.evictOnUnpin = true;
 			else dropState({ subjectKey, entry });
 		}

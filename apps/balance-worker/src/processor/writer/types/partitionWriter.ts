@@ -194,8 +194,6 @@ export type PartitionWriterState = {
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
-	/** Customers whose resident rows are being disowned: nothing decided on them may be written as their snapshot. */
-	evicting: Set<string>;
 };
 
 export type UnappliedBatch = {
