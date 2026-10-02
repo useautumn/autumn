@@ -238,58 +238,17 @@ The final tier must use `'inf'`, and boundaries must strictly increase.
 
 ### Dimensions
 
-A **dimension** is a named alternative rate that applies when an event's `properties` match. Pass the properties on `track` and `check`:
+A row can charge a different rate based on the `properties` you send with each event. For example, a `large` machine can cost 16 credits per minute while a normal one costs 1. Multipliers can then scale that rate, for example 70% off for `spot` machines.
 
-```ts
-await autumn.track({
-  customer_id: 'cus_123',
-  feature_id: 'actions',
-  value: 1,
-  properties: { size: 'large', region: 'eu' },
-});
-```
+With [itemized invoice credits](#itemized-invoice-credits), the invoice shows one line for each feature and dimension.
 
-```ts autumn.config.ts
-{
-  meteredFeatureId: actions.featureId,
-  creditCost: 1,
-  dimensions: {
-    size_large: { match: { size: 'large' }, creditCost: 16 },
-    size_large_region_eu: {
-      match: { size: 'large', region: 'eu' },
-      creditCost: 20,
-    },
-    size_xl: {
-      match: { size: 'xl' },
-      tierBehavior: 'graduated',
-      tiers: [
-        { to: 5, creditCost: 2 },
-        { to: 'inf', creditCost: 1 },
-      ],
-    },
-  },
-  multipliers: {
-    lifecycle_spot: { match: { lifecycle: 'spot' }, factor: 0.3 },
-  },
-}
-```
-
-How a rate is chosen for an event:
-
-1. The dimension whose `match` has the **most keys** that all match the event wins. `{ size: 'large', region: 'eu' }` beats `{ size: 'large' }`.
-2. Ties on key count are broken by `priority` (higher wins). Two dimensions that could both match the same event with the same key count and no priority are rejected when you save.
-3. If no dimension matches, the row's own rate applies.
-4. **Multipliers** then scale the chosen rate: every matching multiplier's `factor` is multiplied together and every `add` is summed. A multiplier set that could push a rate below zero is rejected at save time.
-
-Property values are compared as strings, so `{ size: 1 }` and `{ size: '1' }` match the same dimension. Dimension names must be at most 64 characters and cannot contain `::`.
-
-Usage is attributed per dimension, so graduated dimensions progress through their own tiers, and invoice credit line items are broken down by feature and dimension.
+  How to set up dimensions and multipliers, how a rate is chosen, and how they appear on invoices.
 
   A plan item can override its credit system's rate card for customers on that plan via `featureOverride: { creditSchema: [...] }`. The override replaces the rate card entirely, dimensions included.
 
 ## Itemized invoice credits
 
-When a plan bills a credit system **pay-per-use at exactly one currency unit per credit** (for example `$1` per credit, or `$100` per 100 credits), Autumn treats the balance as invoice credits: every tracked usage is attributed to the feature that spent it, and the invoice lists one line per feature ("Premium messages, 40 units … $8") plus a "Credits applied" line for the credits the plan included. Balances like this can only be moved by tracked usage and cycle resets, so the invoice always matches the ledger.
+When a plan bills a credit system **pay-per-use at exactly one currency unit per credit** (for example `$1` per credit, or `$100` per 100 credits), Autumn treats the balance as invoice credits: every tracked usage is attributed to the feature that spent it, and the invoice lists one line per feature ("Premium messages, 40 units … $8") and per [dimension](/documentation/modelling-pricing/dimensions#invoices-with-monetary-credits), plus a "Credits applied" line for the credits the plan included. Balances like this can only be moved by tracked usage and cycle resets, so the invoice always matches the ledger.
 
 Any other price shape (a fractional price per credit, prepaid packs, included-only or pooled items) bills as an ordinary overage. The decision is made per customer when the plan is attached, so changing a plan's price later never rewrites an existing customer's invoices.
 
