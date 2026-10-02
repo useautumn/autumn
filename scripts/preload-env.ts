@@ -34,3 +34,5 @@ if (process.env.PW_MODE !== "1") {
 		}
 	}
 }
+
+process.env.TW_STRIPE_TRACE = "1";
