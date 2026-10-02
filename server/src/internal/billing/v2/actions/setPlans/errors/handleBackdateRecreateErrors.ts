@@ -3,12 +3,11 @@ import {
 	customerProductHasRelevantStatus,
 	isCustomerProductOnStripeSubscription,
 	type SetPlansBackdateConflict,
-	secondsToMs,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { exceedsStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { setPlansError } from "./setPlansError";
 
 const trialConflict = ({
@@ -20,20 +19,14 @@ const trialConflict = ({
 	billingContext.replacedStripeSubscription?.status === "trialing";
 
 const movesBillingCycleAnchor = ({
-	billingContext,
+	requestedBillingCycleAnchor,
+	periodEndMs,
 }: {
-	billingContext: CreateScheduleBillingContext;
+	requestedBillingCycleAnchor: CreateScheduleBillingContext["requestedBillingCycleAnchor"];
+	periodEndMs: number;
 }) => {
-	const { requestedBillingCycleAnchor, replacedStripeSubscription } =
-		billingContext;
 	if (requestedBillingCycleAnchor === undefined) return false;
-	if (requestedBillingCycleAnchor === "now" || !replacedStripeSubscription) {
-		return true;
-	}
-
-	const periodEndMs = secondsToMs(
-		getLatestPeriodEnd({ sub: replacedStripeSubscription }),
-	);
+	if (requestedBillingCycleAnchor === "now") return true;
 	return (
 		truncateMsToSecondPrecision(requestedBillingCycleAnchor) !== periodEndMs
 	);
@@ -75,7 +68,19 @@ const backdateConflict = ({
 	if (!preview && billingContext.checkoutMode === "stripe_checkout") {
 		return { conflict: "stripe_checkout" };
 	}
-	if (movesBillingCycleAnchor({ billingContext })) {
+	const periodEndMs = replacedSubscriptionPeriodEndMs(billingContext);
+	if (
+		periodEndMs === undefined ||
+		periodEndMs <= billingContext.currentEpochMs
+	) {
+		return { conflict: "period_ended" };
+	}
+	if (
+		movesBillingCycleAnchor({
+			requestedBillingCycleAnchor: billingContext.requestedBillingCycleAnchor,
+			periodEndMs,
+		})
+	) {
 		return { conflict: "billing_cycle_anchor" };
 	}
 	if (

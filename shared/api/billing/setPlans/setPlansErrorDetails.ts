@@ -92,6 +92,7 @@ export const SetPlansBackdateConflictSchema = z.object({
 		"free_trial",
 		"stripe_checkout",
 		"subscription_schedule",
+		"period_ended",
 		"billing_cycle_anchor",
 		"too_far_back",
 		"plan_outside_request",
