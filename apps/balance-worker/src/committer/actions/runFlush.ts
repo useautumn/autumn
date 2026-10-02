@@ -311,17 +311,16 @@ export const runFlush = async ({
 	);
 
 	const snapshots = timeSync({ label: "flush.snapshots" }, () =>
-		collectSnapshotWrites({
-			config,
-			flush,
-			onSizeCapped: ctx.onSnapshotSizeCapped,
-		}),
+		collectSnapshotWrites({ config, flush }),
 	);
 	const { applied } = await ctx.db.flush({
 		changes,
 		bookmarks,
-		...(snapshots && { snapshots }),
+		...(snapshots && { snapshots: snapshots.writes }),
 	});
+	// Counted once the flush landed, so a retried attempt does not count its capped customers again.
+	if (snapshots && snapshots.cappedCustomers > 0)
+		ctx.onSnapshotSizeCapped?.({ customers: snapshots.cappedCustomers });
 	const staleIds = changes
 		.filter((_, index) => !applied[index])
 		.map(

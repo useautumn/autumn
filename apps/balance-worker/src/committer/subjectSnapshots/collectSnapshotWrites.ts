@@ -12,12 +12,10 @@ import { stateExceedsCap } from "./rules/stateExceedsCap.js";
 export const collectSnapshotWrites = ({
 	config,
 	flush,
-	onSizeCapped,
 }: {
 	config: Pick<CommitterConfig, "snapshots">;
 	flush: Flush;
-	onSizeCapped?: (params: { customers: number }) => void;
-}): SubjectSnapshotWrites | undefined => {
+}): { writes: SubjectSnapshotWrites; cappedCustomers: number } | undefined => {
 	if (!config.snapshots) return undefined;
 	const { partitionCount, maxBytes } = config.snapshots;
 	const upserts: SubjectSnapshotUpsert[] = [];
@@ -36,9 +34,8 @@ export const collectSnapshotWrites = ({
 				);
 			else upserts.push(...rows);
 		}
-	if (cappedCustomers > 0) onSizeCapped?.({ customers: cappedCustomers });
 	if (upserts.length === 0 && deletes.length === 0) return undefined;
-	return { upserts, deletes };
+	return { writes: { upserts, deletes }, cappedCustomers };
 };
 
 const rowsOf = ({
