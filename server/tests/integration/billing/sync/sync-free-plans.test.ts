@@ -74,6 +74,23 @@ const activeCustomerProducts = async ({
 	);
 };
 
+const customerProductStatus = async ({
+	customerId,
+	customerProductId,
+}: {
+	customerId: string;
+	customerProductId: string;
+}) => {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		inStatuses: [CusProductStatus.Active, CusProductStatus.Expired],
+	});
+	return fullCustomer.customer_products.find(
+		(customerProduct) => customerProduct.id === customerProductId,
+	)?.status;
+};
+
 const fullListSync = ({
 	autumnV1,
 	customerId,
@@ -138,9 +155,8 @@ test.concurrent(
 	),
 	async () => {
 		const customerId = "sync-free-removed";
-		const { autumnV1, pro, stripeSubscriptionId } = await setupProWithFreeAddOn(
-			{ customerId },
-		);
+		const { autumnV1, pro, stripeSubscriptionId, bonusBefore } =
+			await setupProWithFreeAddOn({ customerId });
 
 		await fullListSync({
 			autumnV1,
@@ -152,6 +168,12 @@ test.concurrent(
 		expect(summarize(await activeCustomerProducts({ customerId }))).toEqual([
 			{ productId: pro.id, subscriptionIds: [stripeSubscriptionId] },
 		]);
+		expect(
+			await customerProductStatus({
+				customerId,
+				customerProductId: bonusBefore.id,
+			}),
+		).toBe(CusProductStatus.Expired);
 	},
 );
 

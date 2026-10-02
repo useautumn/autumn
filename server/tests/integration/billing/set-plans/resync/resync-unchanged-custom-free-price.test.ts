@@ -3,23 +3,28 @@
  *
  * Red (before):  the dashboard sent its $0 base price as `price: null`, so the plan read as changed —
  *                set_plans replaced the row and moved its balance ("1 updated") though nothing changed.
- * Green (after): the stored $0 price round-trips, the plan is kept and no balance changes.
+ * Green (after): the stored $0 price round-trips, the plan is kept and no balance changes,
+ *                and submitting it keeps the same row and its consumed balance.
  */
 
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
+	findActiveCustomerProductById,
 	ResetInterval,
 	type SetPlansParamsV0Input,
 	type SetPlansPreviewResponse,
 } from "@autumn/shared";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService";
 
 const INCLUDED_MESSAGES = 135;
+const TRACKED_MESSAGES = 35;
 
 /** The dashboard's customize for an untouched custom plan with a $0/month base price. */
 const unchangedFreeCustomize = {
@@ -47,7 +52,7 @@ test.concurrent(
 		});
 		const credits = products.base({ id: "credits", isAddOn: true, items: [] });
 
-		const { customerId, autumnV2_4 } = await initScenario({
+		const { customerId, autumnV2_4, ctx } = await initScenario({
 			customerId: "set-plans-kept-free-custom",
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -62,25 +67,47 @@ test.concurrent(
 						items.monthlyMessages({ includedUsage: INCLUDED_MESSAGES }),
 					],
 				}),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: TRACKED_MESSAGES,
+					timeout: 2000,
+				}),
 			],
 		});
+		const activeCreditsId = async () =>
+			findActiveCustomerProductById({
+				fullCus: await CusService.getFull({ ctx, idOrInternalId: customerId }),
+				productId: credits.id,
+			})?.id;
+		const creditsIdBefore = await activeCreditsId();
 
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [
+						{ plan_id: pro.id },
+						{ plan_id: credits.id, customize: unchangedFreeCustomize },
+					],
+				},
+			],
+		};
 		const preview =
-			await autumnV2_4.billing.previewSetPlans<SetPlansParamsV0Input>({
-				customer_id: customerId,
-				phases: [
-					{
-						starts_at: "now",
-						plans: [
-							{ plan_id: pro.id },
-							{ plan_id: credits.id, customize: unchangedFreeCustomize },
-						],
-					},
-				],
-			});
+			await autumnV2_4.billing.previewSetPlans<SetPlansParamsV0Input>(params);
 
 		expect(preview.total).toBe(0);
 		expect(keptPlanIds(preview)).toEqual([credits.id, pro.id].sort());
 		expect(preview.phases[0]?.balance_changes).toEqual([]);
+
+		await autumnV2_4.billing.setPlans(params);
+
+		expect(await activeCreditsId()).toBe(creditsIdBefore);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: INCLUDED_MESSAGES - TRACKED_MESSAGES,
+			usage: TRACKED_MESSAGES,
+		});
 	},
 );
