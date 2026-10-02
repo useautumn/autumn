@@ -3,6 +3,7 @@ import { forwardConnectEvent } from "./forwardConnectEvent.ts";
 import {
 	clearShardRoutesForRun,
 	deleteIngressRoute,
+	dropIngressAccounts,
 	setIngressRoute,
 	setShardRoute,
 } from "./ingressRoutes.ts";
@@ -22,6 +23,7 @@ afterEach(() => {
 	clearShardRoutesForRun({ runId: "run_a" });
 	clearShardRoutesForRun({ runId: "run_b" });
 	deleteIngressRoute({ accountId: "acct_pool" });
+	deleteIngressRoute({ accountId: "acct_dropped_mapped" });
 });
 
 const deliver = ({ account, shard }: { account: string; shard?: string }) => {
@@ -93,5 +95,23 @@ test("a finished run only clears the shard route it still owns", async () => {
 	expect(await deliver({ account: "acct_x", shard: "stripe-connect" })).toBe(
 		200,
 	);
+	expect(forwardedTo).toEqual([]);
+});
+
+test("events from a finished run's shard accounts are acked and never forwarded", async () => {
+	setShardRoute({
+		shard: "stripe-connect",
+		workerUrl: "https://next-run.worker",
+		runId: "run_b",
+	});
+	setIngressRoute({
+		accountId: "acct_dropped_mapped",
+		workerUrl: "https://old.worker",
+	});
+	dropIngressAccounts({
+		accountIds: ["acct_dropped_unmapped", "acct_dropped_mapped"],
+	});
+	for (const account of ["acct_dropped_unmapped", "acct_dropped_mapped"])
+		expect(await deliver({ account, shard: "stripe-connect" })).toBe(200);
 	expect(forwardedTo).toEqual([]);
 });

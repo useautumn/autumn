@@ -165,7 +165,7 @@ describe("createRedisAvailability", () => {
 		}
 	});
 
-	test("starts degraded before the first probe runs", () => {
+	test("starts healthy before the first probe runs", () => {
 		const redis = new FakeRedis();
 		const availability = createRedisAvailability({
 			getRedis: () => redis as never,
@@ -174,7 +174,7 @@ describe("createRedisAvailability", () => {
 			logType: "redis_v2_availability_state_set",
 		});
 
-		expect(availability.shouldUseRedis()).toBe(false);
+		expect(availability.shouldUseRedis()).toBe(true);
 	});
 
 	test("creates the probe connection only when monitoring begins", async () => {

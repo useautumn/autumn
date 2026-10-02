@@ -6,7 +6,7 @@
  *
  * Contract:
  *   catalog beats a newer custom; among customs, newest matching V2 slot wins
- *   volume vs graduated → no
+ *   volume vs graduated → no (multi-tier only; a single tier ignores tier_behavior)
  *   flat_amount 50 vs unset/0 → no
  *   consumable, one-off, V1-only, preview, other product.id → no
  *   catalog cannot reuse custom; custom can reuse catalog
@@ -27,9 +27,9 @@ import {
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { priceRepo } from "@/internal/products/prices/repos/priceRepo.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { uniqueSuffix } from "./feature-products/utils/createUnmintedFeaturePlans.js";
 
@@ -169,6 +169,7 @@ test.concurrent(
 		const newer = generateId("pr");
 		const preview = generateId("pr");
 		const volume = generateId("pr");
+		const graduatedTiered = generateId("pr");
 		const flat50 = generateId("pr");
 		const consumable = generateId("pr");
 		const v1Only = generateId("pr");
@@ -176,6 +177,10 @@ test.concurrent(
 		const catalog = generateId("pr");
 		const otherPlan = generateId("pr");
 		const now = Date.now();
+		const twoTiers: UsageTier[] = [
+			{ amount: 10, to: 500 },
+			{ amount: 5, to: TierInfinite },
+		];
 
 		await insertPrepaid({
 			id: older,
@@ -199,8 +204,17 @@ test.concurrent(
 			id: volume,
 			internalProductId: fullPro.internal_id,
 			createdAt: now + 60,
+			usageTiers: twoTiers,
 			stripePrepaidPriceV2Id: "price_volume_v2",
 			tierBehavior: TierBehavior.VolumeBased,
+		});
+		await insertPrepaid({
+			id: graduatedTiered,
+			internalProductId: fullPro.internal_id,
+			createdAt: now + 65,
+			usageTiers: twoTiers,
+			stripePrepaidPriceV2Id: "price_graduated_tiered_v2",
+			tierBehavior: TierBehavior.Graduated,
 		});
 		await insertPrepaid({
 			id: flat50,
@@ -268,9 +282,27 @@ test.concurrent(
 
 		expect(
 			await find({
-				target: targetPrepaid({ tierBehavior: TierBehavior.VolumeBased }),
+				target: targetPrepaid({
+					usageTiers: twoTiers,
+					tierBehavior: TierBehavior.VolumeBased,
+				}),
 			}),
 		).toMatchObject({ id: volume });
+		expect(
+			await find({
+				target: targetPrepaid({
+					usageTiers: twoTiers,
+					tierBehavior: TierBehavior.Graduated,
+				}),
+			}),
+		).toMatchObject({ id: graduatedTiered });
+		expect(
+			(
+				await find({
+					target: targetPrepaid({ tierBehavior: TierBehavior.VolumeBased }),
+				})
+			)?.id,
+		).toBe(catalog);
 		expect(
 			await find({
 				target: targetPrepaid({
@@ -297,9 +329,9 @@ test.concurrent(
 			}),
 		).toBeNull();
 
-		expect(
-			(await find({ target: target10, productId: premium.id }))?.id,
-		).toBe(otherPlan);
+		expect((await find({ target: target10, productId: premium.id }))?.id).toBe(
+			otherPlan,
+		);
 
 		expect(
 			(await find({ target: { ...target10, is_custom: false } }))?.id,

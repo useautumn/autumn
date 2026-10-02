@@ -13,12 +13,18 @@ import chalk from "chalk";
  * has a valid payment method on file.
  *
  * Expected behavior: Invoice is created and payment is processed immediately.
+ * The customer starts on a paid starter so the upgrade routes to Autumn checkout.
  */
 
 test(
 	`${chalk.yellowBright("autumn-checkout: confirm paid (with PM) - Invoice created")}`,
 	async () => {
 		const customerId = "checkout-confirm-paid-with-pm";
+
+		const starter = products.base({
+			id: "starter",
+			items: [items.dashboard(), items.monthlyPrice({ price: 10 })],
+		});
 
 		// Pro plan ($20/mo)
 		const pro = products.pro({
@@ -31,9 +37,9 @@ test(
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }), // Has valid PM
-				s.products({ list: [pro] }),
+				s.products({ list: [starter, pro] }),
 			],
-			actions: [],
+			actions: [s.attach({ productId: starter.id })],
 		});
 
 		// 1. Create checkout with redirect_mode: "always" (Autumn checkout)
@@ -45,7 +51,7 @@ test(
 		console.log("attach result:", attachResult);
 
 		// Should return autumn checkout URL (not stripe checkout)
-		const checkoutUrl = attachResult.checkout_url;
+		const checkoutUrl = attachResult.payment_url;
 		expect(checkoutUrl).toBeDefined();
 		expect(checkoutUrl).toContain("/c/");
 
@@ -103,17 +109,19 @@ test(
 		const invoices = customerAfter.invoices;
 		console.log(
 			"customer invoices:",
-			invoices?.map((i: { id: string; status: string; total: number }) => ({
-				id: i.id,
-				status: i.status,
-				total: i.total,
-			})),
+			invoices?.map(
+				(i: { stripe_id: string; status: string; total: number }) => ({
+					stripe_id: i.stripe_id,
+					status: i.status,
+					total: i.total,
+				}),
+			),
 		);
 
 		const matchingInvoice = invoices?.find(
-			(i: { id: string }) => i.id === confirmData.invoice_id,
+			(i: { stripe_id: string }) => i.stripe_id === confirmData.invoice_id,
 		);
 		expect(matchingInvoice).toBeDefined();
 	},
-	{ timeout: 30000 },
+	{ timeout: 60000 },
 );

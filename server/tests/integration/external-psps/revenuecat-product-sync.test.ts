@@ -9,19 +9,19 @@
  *   - when the RC product already exists with a different name, the name is patched
  */
 
+import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import {
 	BillingInterval,
 	type FullProduct,
 	type Price,
 	PriceType,
 } from "@autumn/shared";
-import { afterEach, beforeEach, expect, mock, test } from "bun:test";
+import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
 import { initRevenuecatCli } from "@/external/revenueCat/misc/initRevenuecatCli";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
-import { syncProductToRevenueCat } from "@/external/revenueCat/sync/syncRevenueCatProducts";
 import type { RevenueCatApp } from "@/external/revenueCat/revenuecatTypes";
-import ctx from "@tests/utils/testInitUtils/createTestContext";
+import { syncProductToRevenueCat } from "@/external/revenueCat/sync/syncRevenueCatProducts";
 
 const APPS: RevenueCatApp[] = [
 	{
@@ -166,11 +166,13 @@ test(`${chalk.yellowBright("rc sync: creates a product per app, unions the minte
 		// real store apps: subscription params are NOT sent on create (RC rejects them)
 		expect((c.body as { subscription?: unknown }).subscription).toBeUndefined();
 	}
-	expect(fetchCalls.some((c) => c.url.includes("/create_in_store"))).toBe(false);
-	// real stores own their prices — never call the MCP price tool
-	expect(fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai"))).toBe(
+	expect(fetchCalls.some((c) => c.url.includes("/create_in_store"))).toBe(
 		false,
 	);
+	// real stores own their prices — never call the MCP price tool
+	expect(
+		fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai")),
+	).toBe(false);
 
 	expect(result.status).toBe("synced");
 	expect(await getMappingIds(planId)).toContain(storeId(planId));
@@ -210,22 +212,25 @@ test(`${chalk.yellowBright("rc sync: test_store app gets subscription params on 
 		subscription: { duration: "P1M" },
 	});
 	// simulated store is already usable — no create_in_store even on live
-	expect(fetchCalls.some((c) => c.url.includes("/create_in_store"))).toBe(false);
+	expect(fetchCalls.some((c) => c.url.includes("/create_in_store"))).toBe(
+		false,
+	);
 
 	// test-store price IS set via the RC MCP server (create-product-prices)
 	const priceCall = fetchCalls.find((c) =>
 		c.url.startsWith("https://mcp.revenuecat.ai"),
 	);
 	expect(priceCall).toBeDefined();
-	const params = (priceCall?.body as { params?: { name?: string; arguments?: any } })
-		?.params;
+	const params = (
+		priceCall?.body as { params?: { name?: string; arguments?: any } }
+	)?.params;
 	expect(params?.name).toBe("create-product-prices");
 	expect(params?.arguments).toMatchObject({
 		project_id: "proj_test",
 		product_id: "prod_1",
-		prices: [{ amount_micros: 15_000_000 }],
+		body: { prices: [{ amount_micros: 15_000_000 }] },
 	});
-	expect(params?.arguments.prices[0].currency).toMatch(/^[A-Z]{3}$/);
+	expect(params?.arguments.body.prices[0].currency).toMatch(/^[A-Z]{3}$/);
 
 	await cleanup(planId);
 });
@@ -343,9 +348,9 @@ test(`${chalk.yellowBright("rc sync: test_store plan with no base price (free) s
 		product: buildProduct(planId, "Free", undefined, 0), // amount 0 → no base price
 	});
 
-	expect(fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai"))).toBe(
-		false,
-	);
+	expect(
+		fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai")),
+	).toBe(false);
 
 	await cleanup(planId);
 });
@@ -365,9 +370,9 @@ test(`${chalk.yellowBright("rc sync: MCP price failure is best-effort — sync s
 	});
 
 	// the MCP call was attempted, but a failure doesn't fail the sync
-	expect(fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai"))).toBe(
-		true,
-	);
+	expect(
+		fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai")),
+	).toBe(true);
 	expect(result.status).toBe("synced");
 	expect(result.apps?.[0].price).toBe("failed");
 

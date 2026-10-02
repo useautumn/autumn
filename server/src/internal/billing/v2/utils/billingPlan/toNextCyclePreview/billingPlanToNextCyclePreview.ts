@@ -3,9 +3,11 @@ import {
 	type BillingPlan,
 	type BillingPreviewResponse,
 	cp,
+	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
 	hasCustomerProductEnded,
 	hasCustomerProductStarted,
+	isCustomerProductOnStripeSubscription,
 	timestampsMatch,
 } from "@autumn/shared";
 import type { Decimal } from "decimal.js";
@@ -19,6 +21,7 @@ import { computeScheduledAnchorResetPreview } from "./computeScheduledAnchorRese
 import {
 	getActiveCustomerProductsAt,
 	getNextCycleEvent,
+	type NextCycleEvent,
 	type SmallestInterval,
 } from "./getNextCycleEvent";
 
@@ -67,6 +70,43 @@ const outgoingPlansRunToBoundary = ({
 			customerProduct.ended_at != null &&
 			timestampsMatch(customerProduct.ended_at, renewalBoundaryMs),
 	);
+
+/** A change on a shared subscription at renewal doesn't end it, so the plans
+ * that stay on that subscription still renew at the boundary. */
+const getPlansRenewingThroughChange = ({
+	event,
+	customerProducts,
+}: {
+	event: Extract<NextCycleEvent, { kind: "scheduled_change" }>;
+	customerProducts: FullCusProduct[];
+}): FullCusProduct[] => {
+	if (!timestampsMatch(event.startsAtMs, event.renewalBoundaryMs)) return [];
+
+	const changedSubscriptionIds = customerProductsToStripeSubscriptionIds({
+		customerProducts: [
+			...event.outgoingCustomerProducts,
+			...event.incomingCustomerProducts,
+		],
+	});
+	const changedIds = new Set(
+		[...event.outgoingCustomerProducts, ...event.incomingCustomerProducts].map(
+			(customerProduct) => customerProduct.id,
+		),
+	);
+	return getActiveCustomerProductsAt({
+		customerProducts,
+		startsAtMs: event.startsAtMs,
+	}).filter(
+		(customerProduct) =>
+			!changedIds.has(customerProduct.id) &&
+			changedSubscriptionIds.some((stripeSubscriptionId) =>
+				isCustomerProductOnStripeSubscription({
+					customerProduct,
+					stripeSubscriptionId,
+				}),
+			),
+	);
+};
 
 const scaleNextCycleAmounts = ({
 	lineItemsResult,
@@ -206,15 +246,29 @@ export const billingPlanToNextCyclePreview = ({
 				transitionMs: event.startsAtMs,
 				renewalBoundaryMs: event.renewalBoundaryMs,
 			});
-		const lineItemSpecs = keepsOldPlanCredit
-			? [chargeNewPlan, creditOldPlanUnusedTime]
-			: [chargeNewPlan];
+		const renewingCustomerProducts = getPlansRenewingThroughChange({
+			event,
+			customerProducts,
+		});
+		// Mirrors the renewal path: only prices whose period starts at the boundary.
+		const renewRemainingPlans = {
+			customerProducts: renewingCustomerProducts,
+			direction: "charge" as const,
+			billingCycleAnchorMs: anchorMs,
+			priceFilters: { excludeOneOffPrices: true },
+		};
+		const lineItemSpecs = [
+			chargeNewPlan,
+			...(keepsOldPlanCredit ? [creditOldPlanUnusedTime] : []),
+			renewRemainingPlans,
+		];
 
 		const lineItemsResult = billingPlanToNextCycleLineItems({
 			ctx,
 			customerProducts: [
 				...event.incomingCustomerProducts,
 				...event.outgoingCustomerProducts,
+				...renewingCustomerProducts,
 			],
 			productsForUsageLineItems,
 			lineItemSpecs,
@@ -235,7 +289,10 @@ export const billingPlanToNextCyclePreview = ({
 			debug: {
 				...baseDebug,
 				nextCycleStart: event.startsAtMs,
-				filteredCustomerProducts: event.incomingCustomerProducts,
+				filteredCustomerProducts: [
+					...event.incomingCustomerProducts,
+					...renewingCustomerProducts,
+				],
 			},
 		};
 	}

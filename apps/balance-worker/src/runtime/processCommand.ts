@@ -5,6 +5,7 @@ import {
 } from "@autumn/env/balanceWorkerConstants";
 import type { PartitionProcessor } from "../processor/types/partitionProcessor.js";
 import { PartitionWriterRecoveryRequiredError } from "../processor/writer/writerErrors.js";
+import { runWithAnswerDeadline } from "./answerDeadline.js";
 import { assertRuntimeReady } from "./getRuntimeHealth.js";
 import { enterRuntimeRecovery } from "./lifecycle/enterRuntimeRecovery.js";
 import { OwnedPartitionProducerFencedError } from "./runtimeErrors.js";
@@ -25,11 +26,17 @@ export async function processCommand<Decision>({
 	/** How long the caller will still wait; unset for a caller that did not say. */
 	budgetMs?: number;
 }): Promise<Decision> {
+	const answerBy = answerDeadlineOf({ budgetMs });
 	if (state.status === "activating")
 		await waitForActivation({ ctx, state, budgetMs });
 	assertRuntimeReady({ state });
+	function runOnProcessor(): Promise<Decision> {
+		return run(ctx.processor);
+	}
 	try {
-		return await run(ctx.processor);
+		return await (answerBy === undefined
+			? runOnProcessor()
+			: runWithAnswerDeadline({ expiresAt: answerBy, run: runOnProcessor }));
 	} catch (cause) {
 		if (state.terminalError) throw state.terminalError;
 		if (
@@ -82,5 +89,17 @@ function activationWaitMsOf({
 	return Math.min(
 		Math.max(budgetMs - BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS, 0),
 		BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS,
+	);
+}
+
+function answerDeadlineOf({
+	budgetMs,
+}: {
+	budgetMs?: number;
+}): number | undefined {
+	if (budgetMs === undefined || !Number.isFinite(budgetMs)) return undefined;
+	return (
+		performance.now() +
+		Math.max(budgetMs - BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS, 0)
 	);
 }

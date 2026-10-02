@@ -27,10 +27,12 @@ import { toAbsoluteTestPath } from "../../catalog/repoPaths.ts";
 import { accrueRunCost } from "../../costs/actions/accrueRunCost.ts";
 import {
 	clearShardRoutesForRun,
+	dropIngressAccounts,
 	setShardRoute,
 } from "../../ingress/actions/ingressRoutes.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
+import { stripeForKey } from "../../keys/stripeForKey.ts";
 import { onRunFinished } from "../../results/actions/refreshBaselines.ts";
 import {
 	orderFilesLongestFirst,
@@ -58,6 +60,9 @@ import type {
 	SwarmInit,
 	SwarmParentMessage,
 } from "../types/swarmMessages.ts";
+import { countPooledFiles } from "./countPooledFiles.ts";
+import { deleteStripeConnectAccounts } from "./deleteStripeConnectAccounts.ts";
+import { acquireStripeConnectLease } from "./stripeConnectLease.ts";
 
 const SWARM_ENTRY = resolve(import.meta.dir, "swarmProcess/swarmProcess.ts");
 const WARM_POLL_MS = 5_000;
@@ -66,7 +71,39 @@ const ACCRUE_MS = 10_000;
 const LOG_TAIL_CHARS = 8_000;
 
 /** `committed`: accounts may be claimed / sandboxes may exist for this run. */
-type SwarmJobState = { committed?: boolean; sandboxIds?: string[] };
+type SwarmJobState = {
+	committed?: boolean;
+	sandboxIds?: string[];
+	/** Set once the run holds the stripe-connect lease; recovery sweeps that run's sub-accounts. */
+	shardAccountIds?: string[];
+};
+
+/** Before the lease goes, so the next run's fallback route never meets this run's accounts. */
+const deleteRunShardAccounts = async ({
+	ctx,
+	runId,
+	accountIds,
+}: {
+	ctx: TwdContext;
+	runId: string;
+	accountIds: string[];
+}) => {
+	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
+	if (!secret) {
+		if (accountIds.length > 0)
+			ctx.logger.warn("stripe-connect sub-accounts left: shard key unset", {
+				accountIds,
+			});
+		return;
+	}
+	const failed = await deleteStripeConnectAccounts({
+		runId,
+		accountIds,
+		stripe: stripeForKey({ secret }),
+		logger: ctx.logger,
+	});
+	dropIngressAccounts({ accountIds: [...accountIds, ...failed] });
+};
 
 const sleep = ({ ms, signal }: { ms: number; signal: AbortSignal }) =>
 	new Promise<void>((resolveSleep) => {
@@ -135,6 +172,12 @@ const recoverCrashedSwarm = async ({
 	state: SwarmJobState;
 }) => {
 	await terminateSandboxes({ sandboxIds: state.sandboxIds ?? [] });
+	if (state.shardAccountIds)
+		await deleteRunShardAccounts({
+			ctx,
+			runId: run.id,
+			accountIds: state.shardAccountIds,
+		});
 	await releaseRunAccounts({ ctx, runId: run.id });
 	await endRunWorkers({ ctx, runId: run.id });
 	await accrueRunCost({ ctx, runId: run.id });
@@ -235,7 +278,9 @@ export const handleSwarmJob: JobHandler = async ({
 
 	const sandboxIds: string[] = [];
 	const workers = new Set<string>();
-	let checkpointedSandboxes = 0;
+	const shardAccountIds: string[] = [];
+	let shardLeaseHeld = false;
+	let checkpointed = 0;
 	const flush = () => {
 		enqueueWrite(() =>
 			updateRun({
@@ -244,15 +289,18 @@ export const handleSwarmJob: JobHandler = async ({
 				set: { progress: snapshot(), workerCount: workers.size, ...counts() },
 			}),
 		);
-		if (sandboxIds.length === checkpointedSandboxes) return;
-		checkpointedSandboxes = sandboxIds.length;
+		if (sandboxIds.length + shardAccountIds.length === checkpointed) return;
+		checkpointed = sandboxIds.length + shardAccountIds.length;
+		const state: SwarmJobState = {
+			committed: true,
+			sandboxIds: [...sandboxIds],
+			...(shardLeaseHeld ? { shardAccountIds: [...shardAccountIds] } : {}),
+		};
 		enqueueWrite(() =>
-			checkpoint({ committed: true, sandboxIds: [...sandboxIds] }).catch(
-				(error: unknown) => {
-					abort.abort();
-					throw error;
-				},
-			),
+			checkpoint(state).catch((error: unknown) => {
+				abort.abort();
+				throw error;
+			}),
 		);
 	};
 	const accrue = () =>
@@ -298,6 +346,7 @@ export const handleSwarmJob: JobHandler = async ({
 		},
 	};
 	let unregister = () => {};
+	let releaseShardLease = () => {};
 	abort.signal.addEventListener(
 		"abort",
 		() => {
@@ -322,8 +371,16 @@ export const handleSwarmJob: JobHandler = async ({
 			.select({ usableKeys: count() })
 			.from(stripeKeys)
 			.where(usableKey);
+		const { testsDir: testsDirAtSha } = await getTestTreeAtSha({
+			ctx,
+			sha: run.sha,
+		});
+		const pooledFiles = await countPooledFiles({
+			testIds: files,
+			testsDirAtSha,
+		});
 		const workersWanted = Math.min(
-			files.length,
+			pooledFiles,
 			run.maxWorkers ?? Number.POSITIVE_INFINITY,
 			usableKeys * ACCOUNTS_PER_KEY_CAP,
 			MAX_RUN_WORKERS,
@@ -333,11 +390,10 @@ export const handleSwarmJob: JobHandler = async ({
 			phase: "waiting for warm image",
 			set: { startedAt: new Date(), workersWanted },
 		});
-		if (workersWanted === 0) {
+		if (files.length === 0) throw new Error("run has no planned files");
+		if (pooledFiles > 0 && workersWanted === 0) {
 			throw new Error(
-				files.length === 0
-					? "run has no planned files"
-					: "no usable Stripe keys — import keys on the Stripe keys page, then Re-initialise",
+				"no usable Stripe keys — import keys on the Stripe keys page, then Re-initialise",
 			);
 		}
 		await waitForWarm({ ctx, run, signal: abort.signal });
@@ -346,11 +402,14 @@ export const handleSwarmJob: JobHandler = async ({
 
 		// From here a crash-resume must clean up (accounts, sandboxes), never re-run.
 		await checkpoint({ committed: true, sandboxIds: [] });
-		setStatus({ status: "queued", phase: "waiting for a free account" });
-		demand.wants = workersWanted;
-		unregister = registerRunDemand({ runId, demand });
-		await firstAccounts;
-		if (abort.signal.aborted) return;
+		// A run of only stripe-connect files brings its own account, so it never queues for the pool.
+		if (workersWanted > 0) {
+			setStatus({ status: "queued", phase: "waiting for a free account" });
+			demand.wants = workersWanted;
+			unregister = registerRunDemand({ runId, demand });
+			await firstAccounts;
+			if (abort.signal.aborted) return;
+		}
 		milestones.accountsAt = new Date().toISOString();
 
 		setStatus({ status: "provisioning", phase: "provisioning workers" });
@@ -359,7 +418,7 @@ export const handleSwarmJob: JobHandler = async ({
 			runId,
 			sha: run.sha,
 			files: files.map((testId) => toAbsoluteTestPath({ testId })),
-			testsDirAtSha: (await getTestTreeAtSha({ ctx, sha: run.sha })).testsDir,
+			testsDirAtSha,
 			grep: run.selection.grep,
 			accounts: parked.splice(0).map(toSwarmAccount),
 			workersWanted,
@@ -421,6 +480,29 @@ export const handleSwarmJob: JobHandler = async ({
 							accountIds: message.accountIds,
 						});
 						kickAllocator();
+					});
+				} else if (message.type === "shard_account") {
+					shardAccountIds.push(message.accountId);
+					flush();
+				} else if (message.type === "shard_lease_request") {
+					void acquireStripeConnectLease().then(async (release) => {
+						releaseShardLease = release;
+						shardLeaseHeld = true;
+						// Recovery must know to sweep before the child can create anything.
+						await writes;
+						await checkpoint({
+							committed: true,
+							sandboxIds: [...sandboxIds],
+							shardAccountIds: [...shardAccountIds],
+						}).catch((error: unknown) => {
+							abort.abort();
+							ctx.logger.error("stripe-connect lease checkpoint failed", {
+								runId,
+								error: String(error),
+							});
+						});
+						if (closed || abort.signal.aborted) release();
+						else sendToChild?.({ type: "shard_lease_granted" });
 					});
 				} else if (message.type === "shard_route") {
 					if (message.workerUrl)
@@ -496,11 +578,14 @@ export const handleSwarmJob: JobHandler = async ({
 		closed = true;
 		sendToChild = undefined;
 		unregister();
-		clearShardRoutesForRun({ runId });
 		clearInterval(flushTimer);
 		await logWriter.close();
 		clearInterval(accrueTimer);
 		if (exitCode !== 0) await terminateSandboxes({ sandboxIds });
+		if (shardLeaseHeld)
+			await deleteRunShardAccounts({ ctx, runId, accountIds: shardAccountIds });
+		clearShardRoutesForRun({ runId });
+		releaseShardLease();
 		await writes;
 		await returnUnusedAccounts({
 			ctx,

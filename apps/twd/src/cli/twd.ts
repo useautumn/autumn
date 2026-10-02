@@ -11,6 +11,7 @@ import {
 	Capacity,
 	CreateApiKeyResponse,
 	EnqueueResponse,
+	MAX_REPEAT,
 	Me,
 	RunEvent,
 	RunSummary,
@@ -26,7 +27,7 @@ const TERMINAL = ["passed", "failed", "cancelled", "errored"];
 const USAGE = `twd — test worker daemon client (TWD_URL=${BASE_URL})
 
   twd login [key]                         store an API key (mint one in the dashboard)
-  twd run <groups|files…> [--branch=] [--grep=] [--workers=N] [--wait]
+  twd run <groups|files…> [--branch=] [--grep=] [--workers=N] [--repeat=N] [--wait]
                                           starts as soon as one account is free, grows from there
   twd runs [--all] [--branch=]
   twd run-status <id>                     follow a run's events until it finishes
@@ -200,12 +201,22 @@ const commands: Record<
 				branch: { type: "string" },
 				grep: { type: "string" },
 				workers: { type: "string" },
+				repeat: { type: "string" },
 				wait: { type: "boolean" },
 			},
 		});
 		if (!positionals.length && !values.grep)
 			throw new CliError(
 				"nothing selected.\n  next: twd run <group|file…> [--grep=]",
+			);
+		const repeat =
+			values.repeat === undefined ? undefined : Number(values.repeat);
+		if (
+			repeat !== undefined &&
+			!(Number.isInteger(repeat) && repeat >= 1 && repeat <= MAX_REPEAT)
+		)
+			throw new CliError(
+				`--repeat must be a whole number from 1 to ${MAX_REPEAT}.\n  next: twd run <file> --repeat=10 (flaky checks only)`,
 			);
 		const isFile = (s: string) => s.includes("/") || s.endsWith(".ts");
 		const files = positionals.filter(isFile);
@@ -220,6 +231,7 @@ const commands: Record<
 			body: {
 				branch: values.branch ?? gitBranch(),
 				...(values.workers && { maxWorkers: Number(values.workers) }),
+				...(repeat !== undefined && { repeat }),
 				selection: {
 					...(groups.length && { groups }),
 					...(files.length && { files }),

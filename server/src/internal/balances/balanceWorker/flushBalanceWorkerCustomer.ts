@@ -26,7 +26,7 @@ export async function flushBalanceWorkerCustomer({
 			signal: AbortSignal.timeout(BALANCE_WORKER_FLUSH_TIMEOUT_MS),
 		});
 	} catch (error) {
-		ctx.logger.warn(
+		ctx.logger.error(
 			"[balance-worker] flush failed; Postgres may lag the worker's writes",
 			{ error, data: { customerId } },
 		);

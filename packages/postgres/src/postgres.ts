@@ -11,7 +11,10 @@ export {
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "./common/postgresErrors.js";
-export { createPostgresClient } from "./createPostgresClient.js";
+export {
+	createPostgresClient,
+	sqlOptionsOf,
+} from "./createPostgresClient.js";
 export { getBillingCycleAnchors } from "./customerProducts/repos/getBillingCycleAnchors.js";
 export { claimCustomerByEmail } from "./customers/repos/claimCustomerByEmail.js";
 export { createEventsDb } from "./eventsDb/createEventsDb.js";

@@ -1,13 +1,15 @@
 import { expect } from "bun:test";
 import {
 	type AppEnv,
-	type FullCusProduct,
-	type Price,
-	type UsagePriceConfig,
 	diffPriceStripeObjects,
+	type FullCusProduct,
+	type FullProduct,
 	isFixedPrice,
+	type Price,
 	priceStripeObjectsMatch,
+	type UsagePriceConfig,
 } from "@autumn/shared";
+import { v2BillingStripePriceId } from "@tests/integration/utils/expectStripePriceResources";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
@@ -41,6 +43,7 @@ export const loadCustomerAndCatalogPrices = async ({
 	customerId: string;
 	catalogProductId: string;
 }): Promise<{
+	catalogProduct: FullProduct;
 	catalogPrices: Price[];
 	customerPrices: Price[];
 	pairs: { catalog: Price; customer: Price }[];
@@ -78,6 +81,7 @@ export const loadCustomerAndCatalogPrices = async ({
 	}
 
 	return {
+		catalogProduct: fullCatalog,
 		catalogPrices: fullCatalog.prices,
 		customerPrices,
 		pairs,
@@ -91,24 +95,29 @@ const formatDiff = (catalog: Price, customer: Price): string => {
 		priceB: customer,
 	});
 	return diffs
-		.map((diff) => `${diff.field}: catalog=${diff.a ?? "null"}, customer=${diff.b ?? "null"}`)
+		.map(
+			(diff) =>
+				`${diff.field}: catalog=${diff.a ?? "null"}, customer=${diff.b ?? "null"}`,
+		)
 		.join("\n  ");
 };
 
 /**
  * Assert every (catalog, customer) price pair shares all Stripe-object IDs.
- * Each catalog price must also have a non-null stripe_price_id so the
- * assertion is meaningful (verifies real reuse, not "both empty").
+ * Each catalog price must hold its V2 billing price id, so reuse is real, not "both empty".
  */
 export const expectAllStripeIdsReused = ({
 	pairs,
+	catalogProduct,
 }: {
 	pairs: { catalog: Price; customer: Price }[];
+	catalogProduct: FullProduct;
 }) => {
 	expect(pairs.length).toBeGreaterThan(0);
 	for (const { catalog, customer } of pairs) {
-		const catalogConfig = catalog.config as Record<string, unknown>;
-		expect(catalogConfig.stripe_price_id ?? null).not.toBeNull();
+		expect(
+			v2BillingStripePriceId({ price: catalog, product: catalogProduct }),
+		).not.toBeNull();
 		const matches = priceStripeObjectsMatch({
 			priceA: catalog,
 			priceB: customer,
@@ -122,19 +131,18 @@ export const expectAllStripeIdsReused = ({
 };
 
 /**
- * Assert that the customer price keyed by `featureId` (or fixed base when
- * `featureId` is null) does NOT reuse stripe_price_id from the catalog.
- * Both prices must have non-null stripe_price_id values for the assertion
- * to be meaningful. Falls back to feature-id-only matching when the strict
- * (feature + bill_when) pairing misses (e.g. prepaid → consumable swap).
+ * Assert the customer price keyed by `featureId` (null = fixed base) does NOT reuse the
+ * catalog's V2 billing price id. Falls back to feature-only matching (e.g. prepaid → consumable).
  */
 export const expectStripePriceIdNotReused = ({
 	pairs,
+	catalogProduct,
 	featureId,
 	catalogPrices,
 	customerPrices,
 }: {
 	pairs: { catalog: Price; customer: Price }[];
+	catalogProduct: FullProduct;
 	featureId: string | null;
 	catalogPrices?: Price[];
 	customerPrices?: Price[];
@@ -166,13 +174,17 @@ export const expectStripePriceIdNotReused = ({
 	expect(catalogPrice).toBeDefined();
 	expect(customerPrice).toBeDefined();
 	if (!catalogPrice || !customerPrice) return;
-	const catalogConfig = catalogPrice.config as Record<string, unknown>;
-	const customerConfig = customerPrice.config as Record<string, unknown>;
-	expect(catalogConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(customerConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(customerConfig.stripe_price_id).not.toBe(
-		catalogConfig.stripe_price_id,
-	);
+	const catalogStripePriceId = v2BillingStripePriceId({
+		price: catalogPrice,
+		product: catalogProduct,
+	});
+	const customerStripePriceId = v2BillingStripePriceId({
+		price: customerPrice,
+		product: catalogProduct,
+	});
+	expect(catalogStripePriceId).not.toBeNull();
+	expect(customerStripePriceId).not.toBeNull();
+	expect(customerStripePriceId).not.toBe(catalogStripePriceId);
 };
 
 export { priceMatchKey };

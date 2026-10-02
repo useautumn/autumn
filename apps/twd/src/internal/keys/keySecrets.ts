@@ -29,6 +29,14 @@ export const forgetKeySecretsExcept = ({
 	}
 };
 
+export const forgetKeySecret = ({
+	platformAccountId,
+}: {
+	platformAccountId: string;
+}): void => {
+	secretsByPlatformAccount.delete(platformAccountId);
+};
+
 export const peekKeySecret = ({
 	platformAccountId,
 }: {

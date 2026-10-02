@@ -9,6 +9,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -254,6 +255,12 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity2 - prorate imm
 		env: ctx.env,
 		customerId,
 		usage,
+	});
+
+	// The prorated credit invoice is recorded from the async Stripe invoice webhook.
+	await pollUntil({
+		fetch: () => autumnV1.customers.get(customerId),
+		until: (customer) => customer.invoices.length >= 3,
 	});
 
 	await calcProrationAndExpectInvoice({

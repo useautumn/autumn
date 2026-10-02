@@ -10,12 +10,32 @@ import {
 	insertPartitionProgress,
 	listPooledBalancesWithoutOtherContributions,
 	type PostgresClient,
+	type PostgresClientConfig,
 	readPartitionProgress,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
+import {
+	type DatabaseTimings,
+	timeQuery,
+} from "../../logging/databaseTimings.js";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import type { CommitterDb } from "../../types/committerDb.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type { SubjectLoadGate } from "./createSubjectLoadGate.js";
+
+export const workerPostgresClientConfig = ({
+	env,
+}: {
+	env: Pick<
+		BalanceWorkerEnv,
+		"DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
+	>;
+}): PostgresClientConfig => ({
+	databaseUrl: env.DATABASE_URL,
+	maxConnections: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
+	connectTimeout: 10,
+	idleTimeout: 30,
+});
 
 /** One pool per worker, closed with it; its size counts against the fleet's PgBouncer client budget. */
 export const createWorkerPostgresClient = ({
@@ -26,58 +46,104 @@ export const createWorkerPostgresClient = ({
 		"DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
 	>;
 }): PostgresClient =>
-	createPostgresClient({
-		config: {
-			databaseUrl: env.DATABASE_URL,
-			maxConnections: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
-			connectTimeout: 10,
-			idleTimeout: 30,
-			maxLifetime: 1800,
-		},
-	});
+	createPostgresClient({ config: workerPostgresClientConfig({ env }) });
+
+type WorkerDbContext = {
+	postgres: Pick<PostgresClient, "db">;
+	subjectLoads: Pick<SubjectLoadGate, "run">;
+	timings: Pick<DatabaseTimings, "queryStarted" | "queryFinished">;
+};
 
 export const createWorkerDb = ({
 	ctx,
 }: {
-	ctx: { postgres: Pick<PostgresClient, "db"> };
+	ctx: WorkerDbContext;
 }): WorkerDb => ({
 	getSubjectRows: ({ identity, asOfTimestampMs }) =>
-		getSubjectRows({
-			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
-			customerId: identity.customerId,
-			entityId: identity.entityId,
-			asOfTimestampMs,
-		}),
+		ctx.subjectLoads.run(() =>
+			timeQuery({
+				ctx,
+				kind: "subject_rows",
+				run: () =>
+					getSubjectRows({
+						ctx: {
+							db: ctx.postgres.db,
+							orgId: identity.orgId,
+							env: identity.env,
+						},
+						customerId: identity.customerId,
+						entityId: identity.entityId,
+						asOfTimestampMs,
+					}),
+			}),
+		),
 	getCatalogRows: ({ identity, ids }) =>
-		getCatalogRows({
-			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
-			ids,
+		timeQuery({
+			ctx,
+			kind: "catalog_rows",
+			run: () =>
+				getCatalogRows({
+					ctx: {
+						db: ctx.postgres.db,
+						orgId: identity.orgId,
+						env: identity.env,
+					},
+					ids,
+				}),
 		}),
 	getBillingCycleAnchors: ({ identity, customerProductIds }) =>
-		getBillingCycleAnchors({
-			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
-			customerProductIds,
+		timeQuery({
+			ctx,
+			kind: "billing_anchors",
+			run: () =>
+				getBillingCycleAnchors({
+					ctx: {
+						db: ctx.postgres.db,
+						orgId: identity.orgId,
+						env: identity.env,
+					},
+					customerProductIds,
+				}),
 		}),
 	claimCustomerByEmail: ({ identity, email }) =>
-		claimCustomerByEmail({
-			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
-			customerId: identity.customerId,
-			email,
+		timeQuery({
+			ctx,
+			kind: "claim_customer",
+			run: () =>
+				claimCustomerByEmail({
+					ctx: {
+						db: ctx.postgres.db,
+						orgId: identity.orgId,
+						env: identity.env,
+					},
+					customerId: identity.customerId,
+					email,
+				}),
 		}),
 	sumPooledContributionGrants: ({ pooledBalanceIds, dueBy }) =>
-		sumPooledContributionGrants({
-			ctx: { db: ctx.postgres.db },
-			pooledBalanceIds,
-			dueBy,
+		timeQuery({
+			ctx,
+			kind: "pooled_balances",
+			run: () =>
+				sumPooledContributionGrants({
+					ctx: { db: ctx.postgres.db },
+					pooledBalanceIds,
+					dueBy,
+				}),
 		}),
 	listPooledBalancesWithoutOtherContributions: ({
 		pooledBalanceIds,
 		removedContributionIds,
 	}) =>
-		listPooledBalancesWithoutOtherContributions({
-			ctx: { db: ctx.postgres.db },
-			pooledBalanceIds,
-			removedContributionIds,
+		timeQuery({
+			ctx,
+			kind: "pooled_balances",
+			run: () =>
+				listPooledBalancesWithoutOtherContributions({
+					ctx: { db: ctx.postgres.db },
+					pooledBalanceIds,
+					removedContributionIds,
+				}),
 		}),
 });
 
@@ -87,19 +153,39 @@ const FLUSH_STATEMENT_TIMEOUT_MS = 2_000;
 export const createCommitterDb = ({
 	ctx,
 }: {
-	ctx: { postgres: Pick<PostgresClient, "db"> };
+	ctx: Omit<WorkerDbContext, "subjectLoads">;
 }): CommitterDb => ({
 	readPartitionProgress: (params) =>
-		readPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
+		timeQuery({
+			ctx,
+			kind: "partition_progress",
+			run: () =>
+				readPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
+		}),
 	insertPartitionProgress: (params) =>
-		insertPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
+		timeQuery({
+			ctx,
+			kind: "partition_progress",
+			run: () =>
+				insertPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
+		}),
 	claimPartitionProgress: (params) =>
-		claimPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
+		timeQuery({
+			ctx,
+			kind: "partition_progress",
+			run: () =>
+				claimPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
+		}),
 	flush: (request) =>
-		commitFlush({
-			ctx: { db: ctx.postgres.db, timing: timeFlushSection },
-			request,
-			statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
+		timeQuery({
+			ctx,
+			kind: "flush",
+			run: () =>
+				commitFlush({
+					ctx: { db: ctx.postgres.db, timing: timeFlushSection },
+					request,
+					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
+				}),
 		}),
 });
 

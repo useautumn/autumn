@@ -41,7 +41,17 @@ export const stripeCheckout = async ({
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[stripeCheckout] Page loaded");
 
-	await page.waitForTimeout(3000);
+	// The form renders only after the page's own Stripe API calls clear tw's rate-limit
+	// permits (up to 60s each), so a fixed sleep can run ahead of it.
+	const cardAccordion = page.locator(
+		'[data-testid="card-accordion-item-button"]',
+	);
+	const cardNumber = page.locator("#cardNumber");
+	await cardAccordion
+		.or(cardNumber)
+		.first()
+		.waitFor({ state: "attached", timeout: 60_000 });
+	console.log("[stripeCheckout] Form rendered");
 
 	if (addOptionalItem) {
 		const addBtn = page.getByRole("button", { name: /^add$/i }).first();
@@ -51,32 +61,16 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(1000);
 	}
 
-	// Select Card. The radio is hidden by an AccordionButton overlay; click
-	// the data-testid button via JS, fall back to the radio.
-	try {
-		const cardBtn = page.locator('[data-testid="card-accordion-item-button"]');
-		if ((await cardBtn.count()) > 0) {
-			await cardBtn.evaluate((el) => (el as HTMLElement).click());
-			console.log("[stripeCheckout] Card selected via accordion button");
-			await page.waitForTimeout(1000);
-		} else {
-			await page.evaluate(() => {
-				const radio = document.getElementById(
-					"payment-method-accordion-item-title-card",
-				);
-				if (radio) radio.click();
-			});
-			console.log("[stripeCheckout] Card selected via radio fallback");
-			await page.waitForTimeout(500);
-		}
-	} catch {
-		// Card may already be selected or absent.
+	// Card-only sessions render the form without an accordion; otherwise expand Card
+	// via its zero-size overlay button (re-clicking keeps Card selected).
+	if (!(await cardNumber.isVisible()) && (await cardAccordion.count()) > 0) {
+		await cardAccordion.evaluate((el) => (el as HTMLElement).click());
+		console.log("[stripeCheckout] Card selected via accordion button");
 	}
 
 	// Card fields require real key events — `.fill()` skips keydown/up so
 	// Stripe never registers the input. Use `.pressSequentially()`.
-	const cardNumber = page.locator("#cardNumber");
-	await cardNumber.waitFor({ timeout: 120000 });
+	await cardNumber.waitFor({ timeout: 60_000 });
 	await cardNumber.pressSequentially("4242424242424242");
 	console.log("[stripeCheckout] Card number filled");
 
@@ -189,8 +183,9 @@ export const stripeCheckout = async ({
 			throw new Error(".AdjustQuantityFooter-btn not found");
 		}
 		await updateBtn.click();
+		// Submit ignores Enter while the quantity overlay is still saving.
+		await quantityInput.waitFor({ state: "hidden", timeout: 60_000 });
 		console.log(`[stripeCheckout] Quantity set to ${overrideQuantity}`);
-		await page.waitForTimeout(1000);
 	}
 
 	if (promoCode) {
@@ -209,12 +204,17 @@ export const stripeCheckout = async ({
 		await saveWithLink.uncheck();
 	}
 
-	// Quantity changes can keep an overlay over an otherwise enabled Submit button.
-	await page
+	// A click can land in a Stripe iframe while the page scrolls to Submit; Enter goes
+	// to the focused button wherever it is on screen.
+	const submit = page
 		.locator("button.SubmitButton, button[type=submit]")
-		.first()
-		.click({ timeout: 60_000 });
-	console.log("[stripeCheckout] Submit clicked");
+		.first();
+	await (await submit.elementHandle({ timeout: 60_000 }))?.waitForElementState(
+		"enabled",
+		{ timeout: 60_000 },
+	);
+	await submit.press("Enter");
+	console.log("[stripeCheckout] Submit pressed");
 
 	// Stripe redirects off checkout.stripe.com once the session completes, so
 	// prefer that over a fixed sleep — a slow box would otherwise carry on

@@ -2,12 +2,13 @@ import {
 	STRIPE_REQUEST_OPTIONS,
 	withStripeRequestSlot,
 } from "@tw/helpers/stripeRequestBudget.ts";
-import { and, eq, isNotNull, like, sql } from "drizzle-orm";
+import { and, eq, isNotNull, like, or, sql } from "drizzle-orm";
 import pLimit from "p-limit";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import { openSecret, sealSecret } from "../../../lib/secretBox.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import {
+	forgetKeySecret,
 	forgetKeySecretsExcept,
 	hashKey,
 	keyHint,
@@ -94,6 +95,54 @@ export const isShardKey = ({
 	secret: string;
 }) => secret === ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 
+const shardPlatformAccountId = async (secret: string) =>
+	(
+		await withStripeRequestSlot(() =>
+			stripeForKey({ secret }).accounts.retrieve(
+				undefined,
+				STRIPE_REQUEST_OPTIONS,
+			),
+		)
+	).id;
+
+/** Retires any stored row for the shard's platform (current or rotated-out secret) and drops its secret; throws if Stripe can't name the platform. */
+export const retireShardKey = async ({
+	ctx,
+	resolvePlatformAccountId = shardPlatformAccountId,
+}: {
+	ctx: TwdContext;
+	resolvePlatformAccountId?: (secret: string) => Promise<string>;
+}) => {
+	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
+	if (!secret) return;
+	// Fail closed: without the platform id a row holding a rotated-out shard secret would stay usable.
+	const platformAccountId = await resolvePlatformAccountId(secret).catch(
+		(error: unknown) => {
+			throw new Error(
+				`stripe-connect shard platform lookup failed, so its stored keys can't be retired: ${String(error)}`,
+			);
+		},
+	);
+	const retired = await ctx.db
+		.update(stripeKeys)
+		.set({
+			usable: false,
+			present: false,
+			secretCiphertext: null,
+			unusableReason: SHARD_KEY_REASON,
+			updatedAt: new Date(),
+		})
+		.where(
+			or(
+				eq(stripeKeys.keyHash, hashKey({ secret })),
+				eq(stripeKeys.platformAccountId, platformAccountId),
+			),
+		)
+		.returning({ platformAccountId: stripeKeys.platformAccountId });
+	for (const row of retired)
+		forgetKeySecret({ platformAccountId: row.platformAccountId });
+};
+
 /** Any separator (commas, whitespace, newlines); only `sk_`/`rk_` tokens, deduped. */
 export const parseKeyList = ({ text }: { text: string }) => [
 	...new Set(
@@ -108,6 +157,7 @@ export const syncKeys = ({ ctx }: { ctx: TwdContext }): Promise<void> => {
 	inFlight ??= loadKnownSecrets({ ctx })
 		.then(async (secrets) => {
 			const { resolvedIds } = await probeAndStoreKeys({ ctx, secrets });
+			await retireShardKey({ ctx });
 			forgetKeySecretsExcept({ platformAccountIds: resolvedIds });
 		})
 		.finally(() => {

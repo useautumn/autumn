@@ -23,6 +23,7 @@ import { cleanupOneOffCustomerProducts } from "@/internal/customers/cusProducts/
 import {
 	expectProductStatusesByOrder,
 	getFullCustomerWithExpired,
+	oneOffCleanupCustomer,
 	trackUsageForCleanup,
 } from "./utils/oneOffCleanupTestUtils.js";
 
@@ -30,257 +31,257 @@ import {
 // TEST 1: Single one-time prepaid, track to 0, cleanup - should stay active
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: single-oneoff-no-newer")}`, async () => {
-	const customerId = "cleanup-single-oneoff-no-newer";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: single-oneoff-no-newer")}`,
+	async () => {
+		const customerId = "cleanup-single-oneoff-no-newer";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
 
-	const oneOff = products.oneOff({
-		id: "one-off",
-		items: [oneOffMessagesItem],
-	});
+		const oneOff = products.oneOff({
+			id: "one-off",
+			items: [oneOffMessagesItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [oneOffCleanupCustomer(), s.products({ list: [oneOff] })],
+			actions: [],
+		});
 
-	// Attach and track to 0
-	await autumnV1.billing.attach(
-		{
+		// Attach and track to 0
+		await autumnV1.billing.attach(
+			{
+				customer_id: customerId,
+				product_id: oneOff.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			},
+			{ timeout: 2000 },
+		);
+
+		await trackUsageForCleanup(autumnV1, {
 			customer_id: customerId,
-			product_id: oneOff.id,
-			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		},
-		{ timeout: 2000 },
-	);
+			feature_id: TestFeature.Messages,
+			value: 100,
+		});
 
-	await trackUsageForCleanup(autumnV1, {
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 100,
-	});
+		await timeout(2000);
 
-	await timeout(2000);
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
 
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
-
-	// Verify: product should still be active (no newer product exists)
-	const fullCus = await getFullCustomerWithExpired(customerId);
-	expectProductStatusesByOrder({
-		fullCus,
-		productId: oneOff.id,
-		expectedStatuses: [CusProductStatus.Active],
-	});
-});
+		// Verify: product should still be active (no newer product exists)
+		const fullCus = await getFullCustomerWithExpired(customerId);
+		expectProductStatusesByOrder({
+			fullCus,
+			productId: oneOff.id,
+			expectedStatuses: [CusProductStatus.Active],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Don't track to 0, attach again, cleanup - both active
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: oneoff-not-depleted-both-active")}`, async () => {
-	const customerId = "cleanup-oneoff-not-depleted-both-active";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: oneoff-not-depleted-both-active")}`,
+	async () => {
+		const customerId = "cleanup-oneoff-not-depleted-both-active";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
 
-	const oneOff = products.oneOff({
-		id: "one-off",
-		items: [oneOffMessagesItem],
-	});
+		const oneOff = products.oneOff({
+			id: "one-off",
+			items: [oneOffMessagesItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [oneOffCleanupCustomer(), s.products({ list: [oneOff] })],
+			actions: [],
+		});
 
-	// Attach first (don't track to 0)
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
+		// Attach first (don't track to 0)
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		});
 
-	await timeout(2000);
+		await timeout(2000);
 
-	// Attach second
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
+		// Attach second
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		});
 
-	await timeout(2000);
+		await timeout(2000);
 
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
 
-	// Verify: both should still be active (first not depleted)
-	const fullCus = await getFullCustomerWithExpired(customerId);
-	expectProductStatusesByOrder({
-		fullCus,
-		productId: oneOff.id,
-		expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
-	});
-});
+		// Verify: both should still be active (first not depleted)
+		const fullCus = await getFullCustomerWithExpired(customerId);
+		expectProductStatusesByOrder({
+			fullCus,
+			productId: oneOff.id,
+			expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Three purchases, middle depleted, cleanup - first expires
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: three-oneoff-all-depleted")}`, async () => {
-	const customerId = "cleanup-three-oneoff-middle-depleted";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: three-oneoff-all-depleted")}`,
+	async () => {
+		const customerId = "cleanup-three-oneoff-middle-depleted";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
 
-	const oneOff = products.oneOff({
-		id: "one-off",
-		items: [oneOffMessagesItem],
-	});
+		const oneOff = products.oneOff({
+			id: "one-off",
+			items: [oneOffMessagesItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [oneOffCleanupCustomer(), s.products({ list: [oneOff] })],
+			actions: [],
+		});
 
-	// Attach first
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
-
-	await timeout(2000);
-
-	// Attach second
-	await autumnV1.billing.attach(
-		{
+		// Attach first
+		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
 			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		},
-		{ timeout: 2000 },
-	);
+		});
 
-	// Track 100 to deplete the oldest active balance.
-	await trackUsageForCleanup(autumnV1, {
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 100,
-	});
+		await timeout(2000);
 
-	await timeout(2000);
+		// Attach second
+		await autumnV1.billing.attach(
+			{
+				customer_id: customerId,
+				product_id: oneOff.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			},
+			{ timeout: 2000 },
+		);
 
-	// Attach third
-	await autumnV1.billing.attach(
-		{
+		// Track 100 to deplete the oldest active balance.
+		await trackUsageForCleanup(autumnV1, {
 			customer_id: customerId,
-			product_id: oneOff.id,
-			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		},
-		{ timeout: 2000 },
-	);
+			feature_id: TestFeature.Messages,
+			value: 100,
+		});
 
-	// await autumnV1.track({
-	// 	customer_id: customerId,
-	// 	feature_id: TestFeature.Messages,
-	// 	value: 100,
-	// });
+		await timeout(2000);
 
-	await timeout(2000);
+		// Attach third
+		await autumnV1.billing.attach(
+			{
+				customer_id: customerId,
+				product_id: oneOff.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			},
+			{ timeout: 2000 },
+		);
 
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
+		// await autumnV1.track({
+		// 	customer_id: customerId,
+		// 	feature_id: TestFeature.Messages,
+		// 	value: 100,
+		// });
 
-	// Verify: first product expires, later purchases stay active.
-	const fullCus = await getFullCustomerWithExpired(customerId);
-	expectProductStatusesByOrder({
-		fullCus,
-		productId: oneOff.id,
-		expectedStatuses: [
-			CusProductStatus.Expired,
-			CusProductStatus.Active,
-			CusProductStatus.Active,
-		],
-	});
-});
+		await timeout(2000);
+
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
+
+		// Verify: first product expires, later purchases stay active.
+		const fullCus = await getFullCustomerWithExpired(customerId);
+		expectProductStatusesByOrder({
+			fullCus,
+			productId: oneOff.id,
+			expectedStatuses: [
+				CusProductStatus.Expired,
+				CusProductStatus.Active,
+				CusProductStatus.Active,
+			],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Attach one-time product TWICE (no tracking), cleanup - both active
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: attach-twice-no-depletion")}`, async () => {
-	const customerId = "cleanup-attach-twice-no-depletion";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: attach-twice-no-depletion")}`,
+	async () => {
+		const customerId = "cleanup-attach-twice-no-depletion";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
 
-	const oneOff = products.oneOff({
-		id: "one-off",
-		items: [oneOffMessagesItem],
-	});
+		const oneOff = products.oneOff({
+			id: "one-off",
+			items: [oneOffMessagesItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [oneOffCleanupCustomer(), s.products({ list: [oneOff] })],
+			actions: [],
+		});
 
-	// Attach twice without any tracking
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
+		// Attach twice without any tracking
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		});
 
-	await timeout(2000);
+		await timeout(2000);
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		});
 
-	await timeout(2000);
+		await timeout(2000);
 
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
 
-	// Verify: both still active (neither is depleted)
-	const fullCus = await getFullCustomerWithExpired(customerId);
-	expectProductStatusesByOrder({
-		fullCus,
-		productId: oneOff.id,
-		expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
-	});
-});
+		// Verify: both still active (neither is depleted)
+		const fullCus = await getFullCustomerWithExpired(customerId);
+		expectProductStatusesByOrder({
+			fullCus,
+			productId: oneOff.id,
+			expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
+		});
+	},
+);

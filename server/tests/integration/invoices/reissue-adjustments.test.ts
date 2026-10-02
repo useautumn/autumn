@@ -17,6 +17,7 @@ import type {
 	CreateInvoicePreview,
 } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
+import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -205,6 +206,9 @@ test.concurrent(
 		});
 
 		await attachInvoiceMode({ autumnV2_4, customerId, planId: pro.id });
+		// Line items are stored by an async queue job after the invoice is created.
+		const created = await firstInvoice({ autumnV2_3, customerId });
+		await waitForInvoiceLineItems({ stripeInvoiceId: created.stripe_id });
 		const original = await firstInvoice({ autumnV2_3, customerId });
 		const baseLine = original.items?.[0];
 		if (!baseLine) throw new Error("original invoice has no line items");

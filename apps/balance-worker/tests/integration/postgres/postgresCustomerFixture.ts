@@ -474,7 +474,6 @@ export function openFixturePostgres({
 			maxConnections: 2,
 			connectTimeout: 10,
 			idleTimeout: 30,
-			maxLifetime: 1800,
 		},
 	});
 }

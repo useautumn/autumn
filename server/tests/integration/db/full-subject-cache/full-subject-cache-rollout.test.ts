@@ -65,9 +65,10 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 				});
 				expect(result).toBe("OK");
 
-				// Rolled back from 50 to 20 a second past settling: this bucket left the worker,
-				// so the view written just above predates its return and must go.
-				const rolledBackAt = Date.now() - ROLLOUT_SETTLE_MS - 1000;
+				// A rollback from 50 to 20 that settles only after the view above was written,
+				// so this bucket's return to legacy postdates the view and it must go.
+				await Bun.sleep(10);
+				const rolledBackAt = Date.now() - ROLLOUT_SETTLE_MS;
 				_setRolloutConfigForTesting({
 					config: {
 						rollouts: {
@@ -88,7 +89,7 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 					source: "integration-test",
 				});
 
-				expect(cached).toBeUndefined();
+				expect(cached.fullSubject).toBeUndefined();
 
 				const subjectExists = await ctx.redisV2.get(
 					buildFullSubjectKey({

@@ -21,6 +21,8 @@ export const testResults = pgTable(
 		status: text("status").$type<FileResultStatus>().notNull(),
 		durationMs: integer("duration_ms").notNull(),
 		attempt: integer("attempt").notNull().default(1),
+		/** 1-based repetition of a repeat run; null for normal runs. */
+		repetition: integer("repetition"),
 		passedTests: integer("passed_tests").notNull().default(0),
 		failedTests: integer("failed_tests").notNull().default(0),
 		worker: text("worker"),
