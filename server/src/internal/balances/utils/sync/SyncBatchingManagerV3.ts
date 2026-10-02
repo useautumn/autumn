@@ -471,6 +471,16 @@ export class SyncBatchingManagerV3 {
 				// messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
 				messageDeduplicationId,
 			});
+			console.log(
+				"SYNC_DIAG " +
+					JSON.stringify({
+						stage: "enqueued",
+						at: Date.now(),
+						queuedAt: timestamp,
+						customerId: context.customerId,
+						messageDeduplicationId,
+					}),
+			);
 
 			logger.debug(
 				`[SyncV4] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers, ${usageWindowUpdates.length} usage windows`,

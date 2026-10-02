@@ -68,7 +68,11 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 			}
 			console.log(`SYNC_DIAG source: ${path}`);
 			for (const line of (await log.text()).split("\n")) {
-				if (line.includes("SYNC_DIAG ") || line.includes("[SYNC V4]"))
+				if (
+					line.includes("SYNC_DIAG ") ||
+					line.includes("[SYNC V4]") ||
+					line.includes("[SyncV4]")
+				)
 					console.log(line);
 			}
 		}
