@@ -22,18 +22,19 @@ import { dirname, join } from "node:path";
 import { TW_STRIPE_IDEMPOTENCY_NAMESPACE_FILE } from "@server/external/connect/clientCache/getTwStripeRequestHeaders.js";
 import { spawn } from "bun";
 import chalk from "chalk";
-import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 import { SERVER_PORT, TW_ENV } from "../constants.js";
 import {
 	balanceWorkerEnabled,
 	provisionSvixApp,
 	READY_SENTINEL,
+	startAtom,
 	startBackgroundProcs,
 	startBalanceWorker,
 	startServer,
 	waitForBalanceWorkerHealth,
 	waitForServerHealth,
 } from "./boot.js";
+import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 
 const TW_WORKER_STRIPE_KEY_FILE = "/opt/autumn-tw/worker-stripe-key";
 const RESUME_HEALTH_TIMEOUT_MS = 30_000;
@@ -118,6 +119,8 @@ const main = async (): Promise<void> => {
 		}
 		await prepareBalanceSyncQueue();
 		if (balanceWorkerEnabled()) startBalanceWorker(repoRoot);
+		// Restarted beside the server: both take this boot's Atom admin token.
+		startAtom(repoRoot);
 		const serverProc = startServer(repoRoot, serverPort);
 		void serverProc.exited.then((code) => {
 			if (code !== 0) {

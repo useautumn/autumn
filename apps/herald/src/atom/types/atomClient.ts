@@ -13,8 +13,9 @@ export type AtomSubjectBody = {
 	read_at: number;
 };
 
-/** How one org's Atom is reached, as the org's record holds it: the token is still encrypted. */
+/** How one Atom is reached, its token still encrypted. `org` is the org's own Atom; `shadow` is ours, test-only. */
 export type AtomConnection = {
+	target: "org" | "shadow";
 	endpointUrl: string;
 	encryptedToken: string;
 };

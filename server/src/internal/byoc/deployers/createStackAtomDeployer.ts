@@ -4,97 +4,53 @@ import {
 	ByocCacheStatus,
 	DEFAULT_BYOC_CACHE_MACHINE,
 	ErrCode,
-	type Organization,
 	RecaseError,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { cacheExternalId } from "../utils/byocCacheUtils.js";
+import { postToMultiTenantAtom } from "./postToMultiTenantAtom.js";
 import type {
+	AtomAuth,
 	AtomDeployer,
 	AtomDeployment,
+	AtomNames,
 	AtomSetup,
 } from "./types/atomDeployer.js";
+import type { MultiTenantAtomAddress } from "./types/multiTenantAtom.js";
 
 /** A dev stack has no machines, so each Atom's is only remembered here; a restart resets it to the default. */
 type StackContext = {
-	atomUrl: string;
+	atom: MultiTenantAtomAddress;
 	machineById: Map<string, ByocCacheMachine>;
 };
-
-const STACK_ATOM_TIMEOUT_MS = 2000;
 
 const GetAtomResponseSchema = z.object({
 	atom: z.object({ id: z.string() }).nullable(),
 });
 
-const stackAtomUnavailable = ({
-	route,
-	detail,
-}: {
-	route: string;
-	detail: string;
-}) =>
-	new RecaseError({
-		message: "This dev stack's Atom is not answering. Is `bun d` running it?",
-		code: ErrCode.ByocUnavailable,
-		statusCode: 503,
-		data: { route, detail },
-	});
-
-const sendToStackAtom = async ({
-	ctx,
-	route,
-	body,
-}: {
-	ctx: StackContext;
-	route: "atoms.put" | "atoms.get" | "atoms.delete";
-	body: Record<string, string>;
-}): Promise<Response> => {
-	try {
-		return await fetch(`${ctx.atomUrl}/v1/${route}`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(STACK_ATOM_TIMEOUT_MS),
-		});
-	} catch (error) {
-		throw stackAtomUnavailable({ route, detail: String(error) });
-	}
-};
-
-/** One call to the dev-only routes of the stack's Atom process. */
-const postToStackAtom = async ({
-	ctx,
-	route,
-	body,
-}: {
-	ctx: StackContext;
-	route: "atoms.put" | "atoms.get" | "atoms.delete";
-	body: Record<string, string>;
-}): Promise<unknown> => {
-	const response = await sendToStackAtom({ ctx, route, body });
-	if (response.ok) return response.json();
-	throw stackAtomUnavailable({ route, detail: await response.text() });
-};
-
 const startStackAtom = async ({
 	ctx,
-	org,
-	env,
-	tokenHash,
+	names,
+	auth,
 	machine,
 }: {
 	ctx: StackContext;
-	org: Organization;
-	env: AppEnv;
-	tokenHash: string;
+	names: AtomNames;
+	auth: AtomAuth;
 	machine: ByocCacheMachine;
 }): Promise<AtomSetup> => {
-	const id = cacheExternalId({ org, env });
-	await postToStackAtom({
-		ctx,
+	if (auth.mode === "multi_tenant")
+		throw new RecaseError({
+			message:
+				"The dev stack's Atom is already multi-tenant; it cannot start another.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	const id = names.externalId;
+	await postToMultiTenantAtom({
+		atom: ctx.atom,
 		route: "atoms.put",
-		body: { id, token_hash: tokenHash },
+		body: { id, token_hash: auth.tokenHash },
 	});
 	ctx.machineById.set(id, machine);
 	return { deploymentGroupId: id, setupUrl: null };
@@ -108,8 +64,8 @@ const findStackAtom = async ({
 	deploymentGroupId: string;
 }): Promise<AtomDeployment | null> => {
 	const { atom } = GetAtomResponseSchema.parse(
-		await postToStackAtom({
-			ctx,
+		await postToMultiTenantAtom({
+			atom: ctx.atom,
 			route: "atoms.get",
 			body: { id: deploymentGroupId },
 		}),
@@ -118,7 +74,7 @@ const findStackAtom = async ({
 	return {
 		id: atom.id,
 		status: ByocCacheStatus.Ready,
-		endpointUrl: ctx.atomUrl,
+		endpointUrl: ctx.atom.atomUrl,
 		machine: ctx.machineById.get(atom.id) ?? DEFAULT_BYOC_CACHE_MACHINE,
 	};
 };
@@ -143,21 +99,21 @@ const deleteStackAtom = async ({
 	ctx: StackContext;
 	deploymentGroupId: string;
 }): Promise<void> => {
-	await postToStackAtom({
-		ctx,
+	await postToMultiTenantAtom({
+		atom: ctx.atom,
 		route: "atoms.delete",
 		body: { id: deploymentGroupId },
 	});
 	ctx.machineById.delete(deploymentGroupId);
 };
 
-/** A dev stack runs one Atom process; every org's Atom is a token and a folder inside it. */
+/** A dev stack runs one multi-tenant Atom process; every org's Atom is a token and a folder inside it. */
 export const createStackAtomDeployer = ({
-	atomUrl,
+	atom,
 }: {
-	atomUrl: string;
+	atom: MultiTenantAtomAddress;
 }): AtomDeployer => {
-	const ctx = { atomUrl, machineById: new Map<string, ByocCacheMachine>() };
+	const ctx = { atom, machineById: new Map<string, ByocCacheMachine>() };
 	return {
 		start: (params) => startStackAtom({ ctx, ...params }),
 		find: (params) => findStackAtom({ ctx, ...params }),

@@ -16,24 +16,55 @@ import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
 const cacheNamePrefix = (): string | null =>
 	process.env.ATOM_DEPLOYMENT_PREFIX?.trim() || null;
 
+/** What alien accepts as a deployment group's external id. */
+const ALIEN_EXTERNAL_ID = /^[A-Za-z0-9][A-Za-z0-9._~-]*$/;
+
+/** Joins an external id from its parts and refuses one alien would reject, so a bad id fails here and not as a 503. */
+export const toAlienExternalId = ({ parts }: { parts: string[] }): string => {
+	const externalId = [cacheNamePrefix(), ...parts].filter(Boolean).join(".");
+	if (!ALIEN_EXTERNAL_ID.test(externalId))
+		throw new Error(`"${externalId}" is not a valid alien external id`);
+	return externalId;
+};
+
 /** One env's Atom, as its deployer knows it: one deployment group each, so lookups never match two. */
 export const cacheExternalId = ({
 	org,
 	env,
 }: {
-	org: Organization;
+	org: Pick<Organization, "id">;
 	env: AppEnv;
-}) => [cacheNamePrefix(), org.id, env].filter(Boolean).join(".");
+}) => toAlienExternalId({ parts: [org.id, env] });
 
 /** The deployment group's name, which also names the org's stack in AWS. */
 export const cacheGroupLabel = ({
 	org,
 	env,
 }: {
-	org: Organization;
+	org: Pick<Organization, "slug">;
 	env: AppEnv;
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
+
+/** An org's Atom names, as `createCache` starts it. */
+export const cacheNames = ({
+	org,
+	env,
+}: {
+	org: Organization;
+	env: AppEnv;
+}) => ({
+	externalId: cacheExternalId({ org, env }),
+	label: cacheGroupLabel({ org, env }),
+});
+
+/** Our one shadow Atom's names. An org's external id always ends `.<env>` and its label reads `autumn-byoc-…`, so neither can match. */
+export const shadowAtomCacheNames = () => ({
+	externalId: toAlienExternalId({ parts: ["autumn-internal-shadow-atom"] }),
+	label: [cacheNamePrefix(), "autumn-internal-shadow-atom"]
+		.filter(Boolean)
+		.join("-"),
+});
 
 /** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
 export const CACHE_LOCK_TTL_MS = 30_000;

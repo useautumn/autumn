@@ -1,6 +1,7 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
+import type { EdgeConfigStore, ShadowAtomConfig } from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb, PostgresDb } from "@autumn/postgres";
 import type { SqsJobs } from "@autumn/sqs";
@@ -26,6 +27,7 @@ export function createHeraldConsumers({
 		db: PostgresDb;
 		balanceWorkerClient: Pick<BalanceWorkerClient, "readSubjectState">;
 		getAtomClient: GetAtomClient;
+		shadowAtomConfig: Pick<EdgeConfigStore<ShadowAtomConfig>, "get">;
 		sqsJobs: Pick<SqsJobs, "autoTopup">;
 		logger: AutumnLogger;
 	};

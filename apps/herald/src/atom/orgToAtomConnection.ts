@@ -14,6 +14,7 @@ export const orgToAtomConnection = ({
 	if (!isByocCacheReady(cacheDeployment)) return null;
 	if (!cacheDeployment.endpoint_url) return null;
 	return {
+		target: "org",
 		endpointUrl: cacheDeployment.endpoint_url,
 		encryptedToken: cacheDeployment.encrypted_token,
 	};

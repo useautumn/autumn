@@ -38,6 +38,7 @@
  *   - plus the baked/localhost service env from §11a.
  */
 
+import { createHash, randomBytes } from "node:crypto";
 import { connect } from "node:net";
 import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
@@ -72,6 +73,9 @@ const CAPABILITY_RESTART_DELAY_MS = 1_000;
 const TCP_CONNECT_TIMEOUT_MS = 1_000;
 
 const bootStartedAt = Date.now();
+
+/** Minted per boot: the server registers each org's Atom with it; the Atom keeps only its hash. */
+const ATOM_ADMIN_TOKEN = `atom_admin_${randomBytes(32).toString("base64url")}`;
 // ms-since-boot prefix so worker logs double as a boot-phase profile.
 const log = (message: string): void => {
 	console.log(
@@ -238,8 +242,8 @@ export const startHerald = (repoRoot: string): Subprocess => {
 };
 
 /**
- * Starts Atom (`apps/atom`) in dev mode, as on a dev stack: one process stands in for
- * every org's Atom, and the server registers each through `ATOM_URL`.
+ * Starts Atom (`apps/atom`) in multi-tenant mode, as on a dev stack: one process stands in for
+ * every org's Atom, and the server registers each through `ATOM_URL` with the admin token.
  */
 export const startAtom = (repoRoot: string): Subprocess => {
 	log(`starting Atom (bun src/main.ts) on :${ATOM_PORT}`);
@@ -249,7 +253,11 @@ export const startAtom = (repoRoot: string): Subprocess => {
 		stderr: "inherit",
 		env: {
 			...process.env,
-			ATOM_DEV: "true",
+			ATOM_MODE: "multi_tenant",
+			ATOM_TOKEN_HASH: createHash("sha256")
+				.update(ATOM_ADMIN_TOKEN)
+				.digest("hex"),
+			ATOM_SLOT_COUNT: "2",
 			ATOM_PORT: String(ATOM_PORT),
 			ATOM_DATA_DIR: join(repoRoot, ".data", "atom"),
 		} as Record<string, string>,
@@ -389,6 +397,7 @@ export const startServer = (repoRoot: string, port: number): Subprocess => {
 			SERVER_PORT: String(port),
 			// Set here, not by the orchestrator: boot.ts runs from the ref under test.
 			ATOM_URL,
+			ATOM_ADMIN_TOKEN,
 		} as Record<string, string>,
 	});
 };

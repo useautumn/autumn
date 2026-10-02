@@ -7,7 +7,7 @@ import {
 	type EntityData,
 	type FullCustomer,
 } from "@autumn/shared";
-import { customerActions } from "@/internal/customers/actions/index.js";
+import { createCustomerWithDefaults } from "@/internal/customers/actions/createWithDefaults/createCustomerWithDefaults.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../CusService.js";
@@ -70,7 +70,7 @@ export const getOrCreateCustomer = async ({
 			throw new CustomerNotFoundError({ customerId: customerId || "" });
 		}
 
-		customer = await customerActions.createWithDefaults({
+		customer = await createCustomerWithDefaults({
 			ctx,
 			customerId,
 			customerData,

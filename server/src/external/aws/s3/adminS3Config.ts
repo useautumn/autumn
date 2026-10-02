@@ -2,6 +2,7 @@ import {
 	DB_CONTROL_CONFIG_KEY,
 	EDGE_CONFIG_TIMESTAMP_KEY,
 	MISC_REDIS_CONFIG_KEY,
+	SHADOW_ATOM_CONFIG_KEY,
 } from "@autumn/edge-config";
 
 export const ADMIN_REQUEST_BLOCK_CONFIG_KEY = "admin/request-block-config.json";
@@ -58,6 +59,7 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_REQUEST_BLOCK_CONFIG_KEY,
 		},
 		{ id: "rollouts", label: "Rollouts", key: ADMIN_ROLLOUT_CONFIG_KEY },
+		{ id: "shadow-atom", label: "Shadow Atom", key: SHADOW_ATOM_CONFIG_KEY },
 		{
 			id: "feature-flags",
 			label: "Feature Flags",
