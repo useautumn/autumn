@@ -8,9 +8,11 @@ import {
 	insertPartitionProgress,
 	type PostgresClient,
 	readPartitionProgress,
+	readSubjectSnapshots,
 	type SubjectSnapshotUpsert,
 } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
+import { readSubjectSnapshotsSql } from "../../../../../packages/postgres/src/subjects/repos/subjectSnapshots/readSubjectSnapshots.js";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
@@ -312,6 +314,61 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			});
 			const [customerRow] = await readSnapshots({ seeded });
 			expect(customerRow?.state).toEqual({ revision: 2, entityId: null });
+		} finally {
+			await seeded.cleanup();
+		}
+	});
+
+	test("a cold load reads back what the flush wrote, by key: the customer and its entity under the identity the worker holds, a key with no row absent", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const topic = topicOf();
+		await insertPartitionProgress({
+			ctx: { db: postgres.db },
+			topic,
+			partition: 5,
+			nextOffset: 40n,
+		});
+		const internalEntityId = await seedEntity({ seeded, entityId: "seat_1" });
+		try {
+			await flushAt({
+				topic,
+				upserts: [
+					upsertOf({ seeded, revision: 7 }),
+					upsertOf({
+						seeded,
+						entityId: "seat_1",
+						internalEntityId,
+						revision: 8,
+					}),
+				],
+			});
+
+			const own = { ...seeded.identity, entityId: null };
+			const rows = await readSubjectSnapshots({
+				ctx: { db: postgres.db },
+				keys: [
+					own,
+					{ ...own, entityId: "seat_1" },
+					{ ...own, customerId: "cus_nobody" },
+				],
+			});
+			expect(
+				rows
+					.map((row) => ({
+						...row,
+						state: (row.state as { revision: number }).revision,
+					}))
+					.sort((a, b) => a.state - b.state),
+			).toEqual([
+				{ ...own, stateVersion: 1, state: 7, baselineAt: 1_700_000_000_000 },
+				{
+					...own,
+					entityId: "seat_1",
+					stateVersion: 1,
+					state: 8,
+					baselineAt: 1_700_000_000_000,
+				},
+			]);
 		} finally {
 			await seeded.cleanup();
 		}
@@ -656,6 +713,49 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						"QUERY PLAN": unknown;
 					}[];
 					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
+					throw rolledBack;
+				})
+				.catch((cause) => {
+					if (cause !== rolledBack) throw cause;
+				});
+		} finally {
+			await seeded.cleanup();
+		}
+
+		expect(plan).toContain('"Index Name":"subject_snapshots_pkey"');
+		expect(plan).not.toMatch(
+			/"Seq Scan"[^}]*"Relation Name":"subject_snapshots"/,
+		);
+	});
+
+	test("a cold-load batch of 200 keys reads by primary key probes, never a scan of the table", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const rolledBack = new Error("explain only");
+		let plan = "";
+		try {
+			await postgres.db
+				.transaction(async (tx) => {
+					await tx.execute(sql`INSERT INTO customers (internal_id, id, org_id, env, created_at)
+						SELECT ${seeded.orgId} || '_c' || n, 'cus_' || n, ${seeded.orgId}, 'live', 0
+						FROM generate_series(1, 20000) AS n`);
+					await tx.execute(sql`INSERT INTO subject_snapshots
+						(org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
+						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, 0
+						FROM generate_series(1, 20000) AS n`);
+					await tx.execute(sql`ANALYZE subject_snapshots`);
+					const keys = Array.from({ length: 200 }, (_, index) => ({
+						orgId: seeded.orgId,
+						env: "live",
+						customerId: `cus_${index * 50 + 1}`,
+						entityId: null,
+					}));
+					const rows = (await tx.execute(
+						sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotsSql({ keys })}`,
+					)) as unknown as { "QUERY PLAN": unknown }[];
+					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
+					expect(
+						await readSubjectSnapshots({ ctx: { db: tx }, keys }),
+					).toHaveLength(200);
 					throw rolledBack;
 				})
 				.catch((cause) => {
