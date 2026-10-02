@@ -30,7 +30,7 @@ const toBannerLines = (warnings: SetPlansPreviewWarning[]): BannerLine[] => {
 		const line = linesByMessage.get(message);
 		linesByMessage.set(message, {
 			message,
-			parts: parts ?? [{ text: message }],
+			parts: parts?.length ? parts : [{ text: message }],
 			count: (line?.count ?? 0) + 1,
 		});
 	}
