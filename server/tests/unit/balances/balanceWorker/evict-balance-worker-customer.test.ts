@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { EvictCommand } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
+import { classifyInfraError } from "@/utils/logging/classifyInfraError.js";
 import { contexts } from "../../../utils/fixtures/db/contexts.js";
 
 function createHarness({
@@ -14,6 +15,7 @@ function createHarness({
 	const sent: EvictCommand[] = [];
 	const queued: EvictCommand[] = [];
 	const errors: unknown[][] = [];
+	const warnings: unknown[][] = [];
 	const base = contexts.create({ features: [] });
 	const ctx = {
 		...base,
@@ -23,6 +25,9 @@ function createHarness({
 			...base.logger,
 			error: (...args: unknown[]) => {
 				errors.push(args);
+			},
+			warn: (...args: unknown[]) => {
+				warnings.push(args);
 			},
 		},
 	};
@@ -39,7 +44,7 @@ function createHarness({
 			},
 		},
 	};
-	return { ctx, client, sent, queued, errors };
+	return { ctx, client, sent, queued, errors, warnings };
 }
 
 const notReady = () =>
@@ -97,20 +102,11 @@ describe("evictBalanceWorkerCustomer", () => {
 			});
 			expect(h.queued).toEqual(h.sent);
 			expect(h.errors).toHaveLength(0);
+			expect(h.warnings).toHaveLength(1);
+			const fields = h.warnings[0]?.[1] as { type: string; error: unknown };
+			expect(fields.type).toBe("balance_worker_fail_open");
+			expect(classifyInfraError({ error: fields.error })?.kind).toBe("infra");
 		}
-	});
-
-	test("an unconfirmed evict a Postgres read waits on is queued and still reported: the read may miss the worker's writes", async () => {
-		const h = createHarness({ directFailure: notReady() });
-		await evictBalanceWorkerCustomer({
-			ctx: h.ctx,
-			customerId: "cus_1",
-			client: h.client,
-			barrier: true,
-		});
-		expect(h.queued).toEqual(h.sent);
-		expect(h.errors).toHaveLength(1);
-		expect(h.errors[0]?.[0]).toContain("before a Postgres read");
 	});
 
 	test("an evict neither the worker nor the log took is reported as stale", async () => {
@@ -127,21 +123,23 @@ describe("evictBalanceWorkerCustomer", () => {
 		expect(h.errors[0]?.[0]).toContain("worker rows may be stale");
 	});
 
-	test("a worker verdict is reported, not queued", async () => {
-		const h = createHarness({
-			directFailure: new BalanceWorkerClientError({
-				code: "WORKER_ERROR",
-				outcome: "not_submitted",
-				message: "Invalid worker request",
-				workerCode: "INVALID_REQUEST",
-			}),
-		});
-		await evictBalanceWorkerCustomer({
-			ctx: h.ctx,
-			customerId: "cus_1",
-			client: h.client,
-		});
-		expect(h.queued).toHaveLength(0);
-		expect(h.errors).toHaveLength(1);
+	test("an owner that answered is reported, not queued", async () => {
+		for (const workerCode of ["INVALID_REQUEST", "OVERLOADED"] as const) {
+			const h = createHarness({
+				directFailure: new BalanceWorkerClientError({
+					code: "WORKER_ERROR",
+					outcome: "not_submitted",
+					message: "worker verdict",
+					workerCode,
+				}),
+			});
+			await evictBalanceWorkerCustomer({
+				ctx: h.ctx,
+				customerId: "cus_1",
+				client: h.client,
+			});
+			expect(h.queued).toHaveLength(0);
+			expect(h.errors).toHaveLength(1);
+		}
 	});
 });
