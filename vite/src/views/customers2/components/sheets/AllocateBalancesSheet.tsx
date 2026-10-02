@@ -209,55 +209,59 @@ export function AllocateBalancesSheet() {
 					description={`Hold part of the shared ${featureName ?? "feature"} credits that reset every ${interval ?? "cycle"} for each entity. Leave a row empty to release its share.`}
 				/>
 				{!sheetData?.featureId && (
-					<SheetSection withSeparator>
-						<FormLabel>Feature</FormLabel>
-						<Select
-							value={featureId}
-							disabled={isPending || isSubmitting || isError}
-							onValueChange={(value) => {
-								setSelectedFeatureId(value);
-								setSelectedInterval(
-									controls.find((control) => control.feature_id === value)
-										?.interval,
-								);
-								setInputs(null);
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue placeholder="Select a feature" />
-							</SelectTrigger>
-							<SelectContent>
-								{Object.keys(apiCustomer?.balances ?? {}).map((id) => (
-									<SelectItem key={id} value={id}>
-										{id}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<FormLabel>Reset interval</FormLabel>
-						<Select
-							value={interval}
-							disabled={isSubmitting || !featureId}
-							onValueChange={(value) => {
-								setSelectedInterval(
-									value as BalanceAllocationControl["interval"],
-								);
-								setInputs(null);
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue placeholder="Select the shared balance's interval" />
-							</SelectTrigger>
-							<SelectContent>
-								{Object.values(ResetInterval)
-									.filter((value) => value !== ResetInterval.OneOff)
-									.map((value) => (
-										<SelectItem key={value} value={value}>
-											{value}
+					<SheetSection withSeparator className="space-y-4">
+						<div className="flex flex-col gap-2">
+							<FormLabel className="mb-0">Feature</FormLabel>
+							<Select
+								value={featureId}
+								disabled={isPending || isSubmitting || isError}
+								onValueChange={(value) => {
+									setSelectedFeatureId(value);
+									setSelectedInterval(
+										controls.find((control) => control.feature_id === value)
+											?.interval,
+									);
+									setInputs(null);
+								}}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Select a feature" />
+								</SelectTrigger>
+								<SelectContent>
+									{Object.keys(apiCustomer?.balances ?? {}).map((id) => (
+										<SelectItem key={id} value={id}>
+											{id}
 										</SelectItem>
 									))}
-							</SelectContent>
-						</Select>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex flex-col gap-2">
+							<FormLabel className="mb-0">Reset interval</FormLabel>
+							<Select
+								value={interval}
+								disabled={isSubmitting || !featureId}
+								onValueChange={(value) => {
+									setSelectedInterval(
+										value as BalanceAllocationControl["interval"],
+									);
+									setInputs(null);
+								}}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Select an interval" />
+								</SelectTrigger>
+								<SelectContent>
+									{Object.values(ResetInterval)
+										.filter((value) => value !== ResetInterval.OneOff)
+										.map((value) => (
+											<SelectItem key={value} value={value}>
+												{value}
+											</SelectItem>
+										))}
+								</SelectContent>
+							</Select>
+						</div>
 					</SheetSection>
 				)}
 
@@ -274,14 +278,14 @@ export function AllocateBalancesSheet() {
 					)}
 					<div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
 						{entities.length === 0 && (
-							<p className="text-xs text-tertiary-foreground">
+							<p className="rounded-lg border border-dashed p-4 text-sm text-tertiary-foreground">
 								This customer has no entities.
 							</p>
 						)}
 						{entities.map((entity: Entity) => {
 							const entityId = entity.id as string;
 							return (
-								<div key={entityId} className="flex items-center gap-3">
+								<div key={entityId} className="flex items-center gap-3 py-1">
 									<div className="flex min-w-0 flex-1 flex-col">
 										<FormLabel className="mb-0 truncate">
 											{entity.name || entityId}
@@ -365,11 +369,9 @@ export function AllocateBalancesSheet() {
 							</div>
 						</CodeGroup>
 					) : (
-						<p className="text-xs text-tertiary-foreground">
-							Save requested credits per cycle in the customer's billing
-							controls. Other features and unchanged entities keep their
-							settings. Effective balances may be scaled to the available shared
-							credits.
+						<p className="text-xs leading-relaxed text-tertiary-foreground">
+							Shares scale to the available credits. Other allocation settings
+							stay unchanged.
 						</p>
 					)}
 				</div>
