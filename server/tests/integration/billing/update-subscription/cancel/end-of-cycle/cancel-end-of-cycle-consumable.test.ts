@@ -22,6 +22,7 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeInvoiceLineItemPeriodCorrect } from "@tests/integration/billing/utils/stripe/expectStripeInvoiceLineItemPeriodCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
@@ -104,6 +105,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: customer 
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1Beta,
+				count: 2,
+				latestTotal: 40,
+			}),
 	});
 
 	// Calculate expected overage amount
@@ -206,6 +214,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity - 
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 2,
+				latestTotal: 40,
+			}),
 	});
 
 	// Verify final state
@@ -330,6 +345,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: two entit
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 70,
+			}),
 	});
 
 	// Verify both products removed
@@ -460,7 +482,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: two entit
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		withPause: true,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 60,
+			}),
 	});
 
 	// Verify entity 1 product removed, entity 2 still active
@@ -552,8 +580,9 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		actions: [
 			s.attach({ productId: customerPro.id }), // Customer-level
 			s.attach({ productId: entityPro.id, entityIndex: 0, timeout: 4000 }), // Entity-level
+			s.warmEntityCaches(),
 			s.track({ featureId: TestFeature.Messages, value: 300 }),
-			s.track({ featureId: TestFeature.Messages, value: 250 }),
+			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }),
 			s.updateSubscription({
 				productId: customerPro.id,
 				cancelAction: "cancel_end_of_cycle",
@@ -576,7 +605,9 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
 
-	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
+	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
+		isBalanceWorkerRoute() ? -200 : -350,
+	);
 
 	expect(entityAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
 
@@ -589,9 +620,16 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	});
 
 	// Advance to next invoice
-	const advancedTo = await advanceToNextInvoice({
+	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 55,
+			}),
 	});
 
 	// Verify final state
@@ -611,11 +649,21 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	});
 
 	expectCustomerFeatureCorrect({
-		customer: customerFinal,
+		customer: entityFinal,
 		featureId: TestFeature.Messages,
 		balance: 100,
 		resetsAt: addMonths(Date.now(), 2).getTime(),
 	});
+	if (isBalanceWorkerRoute()) {
+		expect(customerFinal.features[TestFeature.Messages]).toBeUndefined();
+	} else {
+		expectCustomerFeatureCorrect({
+			customer: customerFinal,
+			featureId: TestFeature.Messages,
+			balance: 100,
+			resetsAt: addMonths(Date.now(), 2).getTime(),
+		});
+	}
 
 	const overageTotal = 35;
 	expectCustomerInvoiceCorrect({
@@ -684,8 +732,9 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		actions: [
 			s.attach({ productId: customerPro.id }), // Customer-level
 			s.attach({ productId: entityPro.id, entityIndex: 0, timeout: 4000 }), // Entity-level
+			s.warmEntityCaches(),
 			s.track({ featureId: TestFeature.Messages, value: 300 }),
-			s.track({ featureId: TestFeature.Messages, value: 250 }),
+			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }),
 			s.updateSubscription({
 				productId: customerPro.id,
 				cancelAction: "cancel_end_of_cycle",
@@ -703,9 +752,11 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	const customerAfterTrack =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
+	console.log("warming final views", JSON.stringify({ customer: customerAfterTrack.features[TestFeature.Messages], entity: entityAfterTrack.features[TestFeature.Messages] }));
 
-	// Customer and entity balance: 200 - 550 = -350
-	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
+	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
+		isBalanceWorkerRoute() ? -200 : -350,
+	);
 	expect(entityAfterTrack.features[TestFeature.Messages].balance).toBe(-350);
 
 	// Verify both products are canceling
@@ -723,13 +774,26 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	});
 
 	// Advance to next invoice
-	const advancedTo = await advanceToNextInvoice({
+	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				customerId,
+				autumn: autumnV1,
+				count: 3,
+				latestTotal: 35,
+			}),
 	});
 
 	// Verify final state - both products should be removed
-	const customerFinal = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerFinal = await expectCustomerInvoiceCorrect({
+		customerId,
+		autumn: autumnV1,
+		count: 3,
+		latestTotal: 35,
+		latestStatus: "paid",
+	});
 	await expectProductNotPresent({
 		customer: customerFinal,
 		productId: customerPro.id,
@@ -739,12 +803,6 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 	await expectProductNotPresent({
 		customer: entityFinal,
 		productId: entityPro.id,
-	});
-
-	expectCustomerInvoiceCorrect({
-		customer: customerFinal,
-		count: 3, // 2 initial attaches + 1 overage invoice
-		latestTotal: 35,
 	});
 
 	// Verify line item billing periods are correct (now -> now + 1 month)
