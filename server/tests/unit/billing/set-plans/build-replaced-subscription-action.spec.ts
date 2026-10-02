@@ -16,6 +16,14 @@ describe("buildReplacedSubscriptionAction", () => {
 		).toEqual({ type: "cancel", stripeSubscriptionId: "sub_paused" });
 	});
 
+	test("an active subscription a future start replaces is cancelled", () => {
+		expect(
+			buildReplacedSubscriptionAction({
+				replacedStripeSubscription: subscription("active"),
+			}),
+		).toEqual({ type: "cancel", stripeSubscriptionId: "sub_active" });
+	});
+
 	test("a terminal subscription needs no cancel", () => {
 		expect(
 			buildReplacedSubscriptionAction({

@@ -3,6 +3,7 @@ import type {
 	SetPlansParamsV0,
 } from "@autumn/shared";
 import type { SetPlansPolicies } from "../timeline/types/setPlansPolicies";
+import { firstPhaseStartsInFuture } from "./classifyFirstPhaseStart";
 
 /**
  * A requested trial starts every plan afresh. A replacement for a canceled, paid-up
@@ -34,7 +35,10 @@ export const setupSetPlansPolicies = ({
 	billingContext: CreateScheduleBillingContext;
 	params: Pick<SetPlansParamsV0, "undeclared_plans">;
 }): SetPlansPolicies => ({
-	undeclared: params.undeclared_plans ?? "end",
+	// A later start ends the live plans now, so none is left to retain.
+	undeclared: firstPhaseStartsInFuture({ billingContext })
+		? "end"
+		: (params.undeclared_plans ?? "end"),
 	canceling: "keepCancellation",
 	pastDue: "continue",
 	liveRows: liveRowsPolicy({ billingContext }),
