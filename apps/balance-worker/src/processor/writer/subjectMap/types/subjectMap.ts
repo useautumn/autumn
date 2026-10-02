@@ -12,7 +12,7 @@ export type SubjectMap = {
 		customerKey: string;
 		state: SubjectState;
 	}): void;
-	/** Held while a mutation is pending for the subject; released after commit. */
+	/** Held while a mutation is pending for the subject; released once the store holds it. */
 	pin(params: { subjectKey: string }): void;
 	unpin(params: { subjectKey: string }): void;
 	/** Drops the customer's resident rows, entities included. A pinned subject goes when its last pin is released. */
