@@ -58,7 +58,7 @@ function Switch({
 			data-slot="switch"
 			onKeyDown={handleKeyDown}
 			className={cn(
-				"peer data-checked:bg-primary data-unchecked:bg-input focus-visible:border-ring focus-visible:ring-ring/50 inline-flex shrink-0 items-center rounded-full border-2 border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+				"peer data-checked:bg-primary data-unchecked:bg-input focus-visible:border-ring focus-visible:ring-ring/50 inline-flex shrink-0 items-center rounded-[3px] border-2 border-transparent transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
 				sizeClasses.root,
 				className,
 			)}
@@ -67,7 +67,7 @@ function Switch({
 			<SwitchPrimitive.Thumb
 				data-slot="switch-thumb"
 				className={cn(
-					"bg-background pointer-events-none block rounded-full ring-0 shadow-lg transition-transform data-unchecked:translate-x-0",
+					"data-checked:bg-switch-thumb-on data-unchecked:bg-background pointer-events-none block rounded-[2px] ring-0 shadow-[0_1px_2px_rgba(0,0,0,0.45)] transition-transform data-unchecked:translate-x-0",
 					sizeClasses.thumb,
 					thumbClassName,
 				)}
