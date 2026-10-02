@@ -3,10 +3,9 @@
  *
  * Verifies all invalid combinations of on_end: "revert" are rejected:
  * - card_required: true + on_end: "revert" (card collected but never used)
- * - No existing customer product (nothing to revert to)
- * - Existing free plan with no Stripe subscription (can't revert without sub)
  *
  * Also verifies edge cases:
+ * - A free plan with no Stripe subscription is paused under an Autumn-only revert trial
  * - Downgrade with on_end: "revert" does NOT pause the current plan prematurely
  */
 
@@ -17,6 +16,7 @@ import {
 	CusProductStatus,
 	FreeTrialDuration,
 } from "@autumn/shared";
+import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { CusService } from "@/internal/customers/CusService";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -24,55 +24,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: No existing plan → error
+// TEST 2: Free plan (no Stripe subscription) → paused, trial runs in Autumn
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("trial-revert-errors 1: no existing plan throws")}`,
-	async () => {
-		const customerId = "trial-revert-err-no-plan";
-
-		const enterprisePrice = items.monthlyPrice({ price: 50 });
-		const enterprise = products.base({
-			id: "enterprise",
-			items: [enterprisePrice],
-		});
-
-		const { autumnV2 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [enterprise] }),
-			],
-			actions: [],
-		});
-
-		const params: AttachParamsV1Input = {
-			customer_id: customerId,
-			plan_id: enterprise.id,
-			redirect_mode: "if_required",
-			customize: {
-				free_trial: {
-					duration_length: 14,
-					duration_type: FreeTrialDuration.Day,
-					card_required: false,
-					on_end: "revert",
-				},
-			},
-		};
-
-		await expect(
-			autumnV2.billing.attach<AttachParamsV1Input>(params),
-		).rejects.toThrow();
-	},
-);
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Free plan (no Stripe subscription) → error
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.concurrent(
-	`${chalk.yellowBright("trial-revert-errors 2: free plan no subscription throws")}`,
+	`${chalk.yellowBright("trial-revert-errors 2: free plan no subscription is paused under an Autumn-only trial")}`,
 	async () => {
 		const customerId = "trial-revert-err-free-sub";
 
@@ -85,7 +41,7 @@ test.concurrent(
 			items: [enterprisePrice],
 		});
 
-		const { autumnV2 } = await initScenario({
+		const { autumnV2, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({}),
@@ -108,9 +64,19 @@ test.concurrent(
 			},
 		};
 
-		await expect(
-			autumnV2.billing.attach<AttachParamsV1Input>(params),
-		).rejects.toThrow();
+		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES,
+		});
+		const statusByProduct = Object.fromEntries(
+			fullCustomer.customer_products.map((cp) => [cp.product_id, cp.status]),
+		);
+		expect(statusByProduct[free.id]).toBe(CusProductStatus.Paused);
+		expect(statusByProduct[enterprise.id]).toBe(CusProductStatus.Active);
+		await expectSubCount({ ctx, customerId, count: 0 });
 	},
 );
 
