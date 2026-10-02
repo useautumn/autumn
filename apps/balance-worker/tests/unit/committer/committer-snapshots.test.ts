@@ -329,14 +329,19 @@ describe("committer subject snapshots", () => {
 		expect(capped).toEqual([1]);
 	});
 
-	test("past the flush's serialised budget the remaining customers delete instead of write, and are counted", async () => {
+	test("a flush never carries more serialised bytes than its budget: the customers that would cross it delete instead, and are counted", async () => {
 		const { db, requests } = createRecordingDb();
 		const capped: number[] = [];
+		const states = ["cus_first", "cus_second", "cus_third"].map((customerId) =>
+			createState({ identity: identityOf(customerId) }),
+		);
+		// Room for one state and a half: the first lands, the second would cross, the third is never serialised.
+		const oneState = Buffer.byteLength(JSON.stringify(states[0]));
 		const committer = committerFor({
 			db,
 			subjectSnapshots: createSubjectSnapshotsStore({
 				mode: "write",
-				maxFlushBytes: 1,
+				maxFlushBytes: Math.floor(oneState * 1.5),
 			}),
 			onSnapshotSizeCapped: ({ customers }) => capped.push(customers),
 		});
@@ -350,16 +355,17 @@ describe("committer subject snapshots", () => {
 				trackRecord({ customerId: "cus_second", offset: 11n }),
 				trackRecord({ customerId: "cus_third", offset: 12n }),
 			],
-			snapshotIntent: writing(
-				createState({ identity: identityOf("cus_first") }),
-				createState({ identity: identityOf("cus_second") }),
-				createState({ identity: identityOf("cus_third") }),
-			),
+			snapshotIntent: writing(...states),
 		});
 
 		expect(upsertedKeys(requests[0])).toEqual(["cus_first:"]);
 		expect(deletedCustomers(requests[0])).toEqual(["cus_second", "cus_third"]);
 		expect(capped).toEqual([2]);
+		const carried = requests[0]?.snapshots?.upserts.reduce(
+			(total, row) => total + Buffer.byteLength(row.stateJson),
+			0,
+		);
+		expect(carried).toBeLessThanOrEqual(Math.floor(oneState * 1.5));
 	});
 
 	test("a flush that times out twice with its snapshots attached lands on the third attempt with the customers' snapshots deleted, and never refuses a record", async () => {

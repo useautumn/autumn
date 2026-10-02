@@ -66,7 +66,10 @@ const createWriter = ({
 	mode?: "off" | "write";
 	maxBytes?: number;
 } = {}) => {
-	const subjectSnapshots = createSubjectSnapshotsStore({ mode, maxBytes });
+	const subjectSnapshots = createSubjectSnapshotsStore({
+		mode,
+		...(maxBytes !== undefined && { maxBytes }),
+	});
 	const intents: (SnapshotIntent | undefined)[] = [];
 	const applyGate = { held: Promise.resolve() as Promise<void> };
 	let rejectNext: string | null = null;

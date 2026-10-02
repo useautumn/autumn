@@ -33,23 +33,34 @@ export const collectSnapshotWrites = ({
 	let flushBytes = 0;
 	for (const call of flush.calls)
 		for (const [customerKey, entry] of call.snapshotIntent ?? []) {
-			// Past the flush budget nothing more is serialised: the rest of the flush's customers are deleted.
-			const rows =
-				flushBytes > maxFlushBytes
-					? []
-					: rowsOf({ call, entry, partitionCount });
-			const overCap =
-				flushBytes > maxFlushBytes ||
-				rows.some(({ stateJson }) => stateExceedsCap({ stateJson, maxBytes }));
-			if (overCap) cappedCustomers += 1;
-			if (entry === "delete" || overCap)
+			if (entry === "delete") {
 				deletes.push(
 					partitionKeyToMeteringIdentity({ partitionKey: customerKey }),
 				);
-			else {
-				upserts.push(...rows);
-				for (const { stateJson } of rows) flushBytes += stateJson.length;
+				continue;
 			}
+			// Past the flush budget nothing more is serialised: the rest of the flush's customers are deleted.
+			const rows =
+				flushBytes >= maxFlushBytes
+					? []
+					: rowsOf({ call, entry, partitionCount });
+			const rowBytes = rows.reduce(
+				(total, { stateJson }) => total + Buffer.byteLength(stateJson),
+				0,
+			);
+			const overCap =
+				rows.length === 0 ||
+				flushBytes + rowBytes > maxFlushBytes ||
+				rows.some(({ stateJson }) => stateExceedsCap({ stateJson, maxBytes }));
+			if (overCap) {
+				cappedCustomers += 1;
+				deletes.push(
+					partitionKeyToMeteringIdentity({ partitionKey: customerKey }),
+				);
+				continue;
+			}
+			upserts.push(...rows);
+			flushBytes += rowBytes;
 		}
 	if (upserts.length === 0 && deletes.length === 0) return undefined;
 	return { writes: { upserts, deletes }, cappedCustomers };
