@@ -5,6 +5,7 @@
  *  - card_required: false, no invoice mode → trial runs in Autumn only: trialing, no Stripe sub, no invoice,
  *    marked on_trial_end "bill" so the product cron settles it
  *  - upgrading off an Autumn-only trial bills the new plan and drops the trial
+ *  - downgrading off it also switches immediately: there is no paid period to wait out
  */
 
 import { expect, test } from "bun:test";
@@ -106,6 +107,49 @@ test.concurrent(
 			customer,
 			count: 1,
 			latestTotal: 50,
+		});
+		await expectSubCount({ ctx, customerId, count: 1 });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("no-card-trial-attach 3: downgrading off an Autumn-only trial switches immediately")}`,
+	async () => {
+		const proTrial = noCardProTrial();
+		const basic = products.base({
+			id: "basic",
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.monthlyPrice({ price: 10 }),
+			],
+		});
+
+		const { customerId, autumnV1, autumnV2_3, ctx } = await initScenario({
+			customerId: "no-card-attach-downgrade",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial, basic] }),
+			],
+			actions: [s.billing.attach({ productId: proTrial.id })],
+		});
+
+		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: basic.id,
+			redirect_mode: "if_required",
+		});
+
+		await expectCustomerProducts({
+			customerId,
+			autumn: autumnV1,
+			active: [basic.id],
+			notPresent: [proTrial.id],
+		});
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 1,
+			latestTotal: 10,
 		});
 		await expectSubCount({ ctx, customerId, count: 1 });
 	},
