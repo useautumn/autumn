@@ -674,8 +674,12 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 			customer: customerFinal,
 			featureId: TestFeature.Messages,
 			balance: 100,
-			resetsAt: addMonths(Date.now(), 2).getTime(),
+			includedUsage: 100,
+			usage: 0,
 		});
+		expect(
+			customerFinal.features[TestFeature.Messages].next_reset_at ?? null,
+		).toBeNull();
 	}
 
 	const overageTotal = 35;
