@@ -159,9 +159,12 @@ test("allocation controls: omit preserves, replacement releases omitted entities
 		expected: [],
 	});
 	expect(cleared.balances[TestFeature.Messages]).toMatchObject({
-		allocated: 0,
-		unallocated: 10000,
+		granted: 10000,
+		remaining: 10000,
+		usage: 0,
 	});
+	expect(cleared.balances[TestFeature.Messages].allocated).toBeUndefined();
+	expect(cleared.balances[TestFeature.Messages].unallocated).toBeUndefined();
 });
 
 test("allocation controls: invalid second feature leaves the entire configuration unchanged", async () => {
