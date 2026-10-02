@@ -20,7 +20,9 @@ export const setShadowAtomOrgPercent = ({
 		lockKey: SHADOW_ATOM_CONFIG_LOCK_KEY,
 		fn: async () => {
 			const config = await shadowAtomConfigStore.readFromSource();
-			const current = config[env].orgs[orgId];
+			const { orgs } = config[env];
+			// Own keys only: an id like "constructor" must not read Object.prototype as an org.
+			const current = Object.hasOwn(orgs, orgId) ? orgs[orgId] : undefined;
 			if (!current)
 				throw new RecaseError({
 					message:

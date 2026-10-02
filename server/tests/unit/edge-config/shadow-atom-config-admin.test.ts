@@ -259,6 +259,9 @@ test("staff change a registered org's percent; it routes from what routed before
 
 test("an org that is not registered has no percent to set, and a percent outside 0–100 is refused", async () => {
 	expect((await setPercent({ orgId: "org_9", percent: 50 })).status).toBe(404);
+	expect((await setPercent({ orgId: "constructor", percent: 50 })).status).toBe(
+		404,
+	);
 	expect((await setPercent({ orgId: "org_1", percent: 150 })).status).toBe(400);
 	expect(
 		(
