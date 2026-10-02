@@ -22,15 +22,13 @@ import {
 	activateFutureStart,
 	expectFutureStartScheduleCorrect,
 	findLiveCustomerProduct,
+	futureStartProducts,
 } from "./utils/futureStartUtils";
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: with nothing live, a future start schedules the plan and activates it on the start")}`,
 	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
+		const { pro } = futureStartProducts();
 		const { customerId, autumnV1, autumnV2_2, ctx, advancedTo, testClockId } =
 			await initScenario({
 				customerId: "set-plans-future-start-new",
@@ -100,14 +98,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: a live plan ends now with the previewed credit, and its subscription is cancelled")}`,
 	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
+		const { pro, premium } = futureStartProducts();
 		const { customerId, autumnV1, autumnV2_2, ctx, advancedTo } =
 			await initScenario({
 				customerId: "set-plans-future-start-live",
@@ -163,10 +154,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: a future start rejects a trial, and a free plan nothing in Stripe would start")}`,
 	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
+		const { pro } = futureStartProducts();
 		const free = products.base({
 			id: "free",
 			items: [items.monthlyMessages({ includedUsage: 10 })],

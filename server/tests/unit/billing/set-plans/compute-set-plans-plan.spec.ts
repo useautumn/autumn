@@ -703,11 +703,13 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 	const futureStartContext = ({
 		currentCustomerProduct,
 		fullProduct,
+		earlyAccess = false,
 	}: {
 		currentCustomerProduct?: FullCusProduct;
 		fullProduct: MultiAttachProductContext["fullProduct"];
-	}) =>
-		createBillingContext({
+		earlyAccess?: boolean;
+	}): CreateScheduleBillingContext => ({
+		...createBillingContext({
 			currentEpochMs,
 			productContexts: [
 				requestProductContext({ fullProduct, currentCustomerProduct }),
@@ -716,7 +718,23 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 				starts_at: startsAt,
 				plans: [{ plan_id: fullProduct.id }],
 			},
+		}),
+		...(earlyAccess && { accessStartsAt: currentEpochMs }),
+	});
+
+	const computeFutureStartErrors = (
+		billingContext: CreateScheduleBillingContext,
+	) => {
+		const ctx = contexts.create({});
+		const { autumnBillingPlan, immediatePhaseTransition } =
+			computeSetPlansPlanFromContext({ ctx, billingContext });
+		return handleSetPlansComputeErrors({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+			immediatePhaseTransition,
 		});
+	};
 
 	test("with nothing live, the plan is scheduled at the start and nothing is charged now", () => {
 		const ctx = contexts.create({});
@@ -779,10 +797,10 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 
 		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
 			ctx,
-			billingContext: {
-				...futureStartContext({ fullProduct: pro }),
-				accessStartsAt: currentEpochMs,
-			},
+			billingContext: futureStartContext({
+				fullProduct: pro,
+				earlyAccess: true,
+			}),
 		});
 
 		const [enabled] = autumnBillingPlan.insertCustomerProducts;
@@ -793,20 +811,10 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 	});
 
 	test("a free plan with nothing in Stripe to start it is rejected", async () => {
-		const ctx = contexts.create({});
 		const free = products.createFull({ id: "free", prices: [] });
-		const billingContext = futureStartContext({ fullProduct: free });
-
-		const { autumnBillingPlan, immediatePhaseTransition } =
-			computeSetPlansPlanFromContext({ ctx, billingContext });
 
 		await expect(
-			handleSetPlansComputeErrors({
-				ctx,
-				billingContext,
-				autumnBillingPlan,
-				immediatePhaseTransition,
-			}),
+			computeFutureStartErrors(futureStartContext({ fullProduct: free })),
 		).rejects.toThrow("can't start on a later date");
 	});
 
@@ -855,23 +863,12 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 	});
 
 	test("early access lets a free plan with nothing in Stripe start now", async () => {
-		const ctx = contexts.create({});
 		const free = products.createFull({ id: "free", prices: [] });
-		const billingContext = {
-			...futureStartContext({ fullProduct: free }),
-			accessStartsAt: currentEpochMs,
-		};
-
-		const { autumnBillingPlan, immediatePhaseTransition } =
-			computeSetPlansPlanFromContext({ ctx, billingContext });
 
 		await expect(
-			handleSetPlansComputeErrors({
-				ctx,
-				billingContext,
-				autumnBillingPlan,
-				immediatePhaseTransition,
-			}),
+			computeFutureStartErrors(
+				futureStartContext({ fullProduct: free, earlyAccess: true }),
+			),
 		).resolves.toBeUndefined();
 	});
 
@@ -881,24 +878,21 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 			id: "credits",
 			prices: [prices.createOneOff({ id: "price_credits" })],
 		});
-		const billingContext = {
-			...futureStartContext({ fullProduct: credits }),
-			accessStartsAt: currentEpochMs,
-		};
+		const billingContext = futureStartContext({
+			fullProduct: credits,
+			earlyAccess: true,
+		});
 
-		const { autumnBillingPlan, immediatePhaseTransition } =
-			computeSetPlansPlanFromContext({ ctx, billingContext });
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext,
+		});
 
 		expect(autumnBillingPlan.insertCustomerProducts[0]?.status).toBe(
 			CusProductStatus.Active,
 		);
-		await expect(
-			handleSetPlansComputeErrors({
-				ctx,
-				billingContext,
-				autumnBillingPlan,
-				immediatePhaseTransition,
-			}),
-		).rejects.toThrow("can't start on a later date");
+		await expect(computeFutureStartErrors(billingContext)).rejects.toThrow(
+			"can't start on a later date",
+		);
 	});
 });
