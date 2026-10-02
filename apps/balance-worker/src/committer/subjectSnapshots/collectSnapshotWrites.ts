@@ -16,11 +16,11 @@ export const collectSnapshotWrites = ({
 	config,
 	flush,
 }: {
-	ctx: Pick<CommitterContext, "subjectSnapshots">;
+	ctx: Pick<CommitterContext, "subjectSnapshotsConfig">;
 	config: Pick<CommitterConfig, "snapshots">;
 	flush: Flush;
 }): SubjectSnapshotWrites | undefined => {
-	if (!config.snapshots || ctx.subjectSnapshots?.get().mode !== "write")
+	if (!config.snapshots || ctx.subjectSnapshotsConfig?.get().mode !== "write")
 		return undefined;
 	const { partitionCount } = config.snapshots;
 	const upserts: SubjectSnapshotUpsert[] = [];

@@ -32,7 +32,7 @@ export const createCommitterStateStore = ({
 		>;
 		logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
 		/** Present when the worker has the snapshot settings: evicts delete their customer's rows through the store. */
-		subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+		subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	};
 }): CommitterStateStore => {
 	const claimTokens = new Map<string, string>();
@@ -116,12 +116,12 @@ export const createCommitterStateStore = ({
 	function readCommandNextOffset(params: PartitionPosition) {
 		return ctx.progress.readCommandNextOffset(params);
 	}
-	const evictDeletes = dependencies.subjectSnapshots
+	const evictDeletes = dependencies.subjectSnapshotsConfig
 		? createEvictDeletes({
 				ctx: {
 					committer: ctx.committer,
 					logger: dependencies.logger,
-					subjectSnapshots: dependencies.subjectSnapshots,
+					subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
 					runInLane,
 				},
 			})

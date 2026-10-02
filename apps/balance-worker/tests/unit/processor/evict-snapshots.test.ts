@@ -66,7 +66,7 @@ const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
 				insertPartitionProgress: async () => undefined,
 				claimPartitionProgress: async () => undefined,
 			},
-			subjectSnapshots: createSubjectSnapshotsStore({ mode: "write" }),
+			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "write" }),
 		},
 	});
 	await stateStore.initializePartition({ topic, partition, nextOffset: 0n });

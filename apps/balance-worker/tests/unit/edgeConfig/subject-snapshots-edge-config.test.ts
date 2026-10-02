@@ -42,19 +42,19 @@ describe("the subject snapshots edge config", () => {
 
 	test("the worker registers it under the admin key and reads a write it finds there", async () => {
 		const edgeConfigs = workerEdgeConfigsOver(createMemoryS3Client());
-		expect(edgeConfigs.subjectSnapshots.get()).toEqual(
+		expect(edgeConfigs.subjectSnapshotsConfig.get()).toEqual(
 			defaultSubjectSnapshotsEdgeConfig(),
 		);
 
-		await edgeConfigs.subjectSnapshots.writeToSource({
+		await edgeConfigs.subjectSnapshotsConfig.writeToSource({
 			config: {
 				mode: "write",
 				maxBytes: 1_024,
 				dropBatch: 10,
 			},
 		});
-		await edgeConfigs.subjectSnapshots.refresh();
-		expect(edgeConfigs.subjectSnapshots.get()).toEqual({
+		await edgeConfigs.subjectSnapshotsConfig.refresh();
+		expect(edgeConfigs.subjectSnapshotsConfig.get()).toEqual({
 			mode: "write",
 			maxBytes: 1_024,
 			dropBatch: 10,
@@ -70,25 +70,25 @@ describe("the subject snapshots edge config", () => {
 				return memory.send(command);
 			},
 		});
-		await edgeConfigs.subjectSnapshots.writeToSource({
+		await edgeConfigs.subjectSnapshotsConfig.writeToSource({
 			config: { ...defaultSubjectSnapshotsEdgeConfig(), mode: "write" },
 		});
-		await edgeConfigs.subjectSnapshots.refresh();
-		expect(edgeConfigs.subjectSnapshots.get().mode).toBe("write");
+		await edgeConfigs.subjectSnapshotsConfig.refresh();
+		expect(edgeConfigs.subjectSnapshotsConfig.get().mode).toBe("write");
 
 		failing = true;
-		await edgeConfigs.subjectSnapshots.refresh();
-		expect(edgeConfigs.subjectSnapshots.getStatus().healthy).toBe(false);
-		expect(edgeConfigs.subjectSnapshots.get().mode).toBe("write");
+		await edgeConfigs.subjectSnapshotsConfig.refresh();
+		expect(edgeConfigs.subjectSnapshotsConfig.getStatus().healthy).toBe(false);
+		expect(edgeConfigs.subjectSnapshotsConfig.get().mode).toBe("write");
 	});
 
 	test("an object naming a mode without a read path is refused, and the last good record stays", async () => {
 		const memory = createMemoryS3Client();
 		const edgeConfigs = workerEdgeConfigsOver(memory);
-		await edgeConfigs.subjectSnapshots.writeToSource({
+		await edgeConfigs.subjectSnapshotsConfig.writeToSource({
 			config: { ...defaultSubjectSnapshotsEdgeConfig(), mode: "write" },
 		});
-		await edgeConfigs.subjectSnapshots.refresh();
+		await edgeConfigs.subjectSnapshotsConfig.refresh();
 
 		await memory.send({
 			input: {
@@ -96,8 +96,8 @@ describe("the subject snapshots edge config", () => {
 				Body: JSON.stringify({ mode: "serve" }),
 			},
 		} as never);
-		await edgeConfigs.subjectSnapshots.refresh();
-		expect(edgeConfigs.subjectSnapshots.getStatus().healthy).toBe(false);
-		expect(edgeConfigs.subjectSnapshots.get().mode).toBe("write");
+		await edgeConfigs.subjectSnapshotsConfig.refresh();
+		expect(edgeConfigs.subjectSnapshotsConfig.getStatus().healthy).toBe(false);
+		expect(edgeConfigs.subjectSnapshotsConfig.get().mode).toBe("write");
 	});
 });

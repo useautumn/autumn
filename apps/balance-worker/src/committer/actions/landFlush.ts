@@ -391,7 +391,7 @@ export const landFlush = async ({
 			return outcomes;
 		}
 		if (
-			scope.ctx.subjectSnapshots?.get().mode === "write" &&
+			scope.ctx.subjectSnapshotsConfig?.get().mode === "write" &&
 			writesSnapshots({ call })
 		) {
 			const deleted = {

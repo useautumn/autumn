@@ -25,7 +25,7 @@ export function decideSnapshotIntent({
 	batch: readonly PendingMutation[];
 }): SnapshotIntent {
 	const intent: SnapshotIntent = new Map();
-	const settings = scope.ctx.subjectSnapshots?.get();
+	const settings = scope.ctx.subjectSnapshotsConfig?.get();
 	if (settings?.mode !== "write") return intent;
 	for (const pending of batch) {
 		if (!pending.nextState) continue;

@@ -237,11 +237,11 @@ const createWriterOverStore = () => {
 			return { applied: request.changes.map(() => true) };
 		},
 	};
-	const subjectSnapshots = createSubjectSnapshotsStore({ mode: "write" });
+	const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode: "write" });
 	const stateStore = createCommitterStateStore({
 		ctx: {
 			committer: createCommitter({
-				ctx: { db, subjectSnapshots },
+				ctx: { db, subjectSnapshotsConfig },
 				config: {
 					concurrency: 4,
 					maxRowsPerFlush: 500,
@@ -254,7 +254,7 @@ const createWriterOverStore = () => {
 				},
 			}),
 			db,
-			subjectSnapshots,
+			subjectSnapshotsConfig,
 		},
 	});
 	let nextOffset = 0n;

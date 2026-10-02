@@ -25,7 +25,7 @@ type EvictDeletesContext = {
 	committer: Pick<Committer, "apply">;
 	logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
 	/** Read at each tick: `dropBatch` sizes the DELETE, and off means no statement at all. */
-	subjectSnapshots: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	subjectSnapshotsConfig: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	runInLane(params: {
 		position: PartitionPosition;
 		run(): Promise<void>;
@@ -46,7 +46,7 @@ export const createEvictDeletes = ({
 		customerKey,
 	}: Parameters<EvictDeletes["enqueue"]>[0]): void {
 		// Off keeps Postgres untouched: nothing was written, so nothing is owed.
-		if (ctx.subjectSnapshots.get().mode !== "write") return;
+		if (ctx.subjectSnapshotsConfig.get().mode !== "write") return;
 		const position = { topic, partition };
 		const deletes = partitionDeletesOf({ byPartition, position });
 		if (deletes.pending.size >= EVICT_DELETES_MAX_PENDING) {
@@ -83,7 +83,7 @@ export const createEvictDeletes = ({
 		const deletes = byPartition.get(key);
 		if (!deletes) return;
 		deletes.scheduled = false;
-		const { mode, dropBatch } = ctx.subjectSnapshots.get();
+		const { mode, dropBatch } = ctx.subjectSnapshotsConfig.get();
 		// Flipped off since these were enqueued: what they would delete is no longer served by anyone.
 		if (mode !== "write") {
 			byPartition.delete(key);

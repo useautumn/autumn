@@ -92,7 +92,7 @@ export type PartitionProcessorDependencies = {
 	catalogCache: CatalogCache;
 	db: WorkerDb;
 	appender: CommittedOutcomeAppender;
-	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
 	assertCanRead(): void;

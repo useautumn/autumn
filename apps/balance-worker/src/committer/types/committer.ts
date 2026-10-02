@@ -20,7 +20,7 @@ export type CommitterContext = {
 	/** Read on every flush start; absent means the boot config is the only source. */
 	control?: { read(): CommitterControl };
 	/** Read at every decision that touches `subject_snapshots`: a flip in S3 lands with the next flush. */
-	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 };
 
 /** A transient failure is retried until the store answers or the committer stops; the record is never given up on. */

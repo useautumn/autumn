@@ -61,20 +61,22 @@ const SNAPSHOTS = { partitionCount: PARTITION_COUNT };
 const committerFor = ({
 	db,
 	snapshots = SNAPSHOTS,
-	subjectSnapshots = createSubjectSnapshotsStore({ mode: "write" }),
+	subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode: "write" }),
 	maxRowsPerFlush = 500,
 }: {
 	db: CommitterDb;
 	/** Null: the committer is not configured for snapshots at all. */
 	snapshots?: { partitionCount: number } | null;
 	/** Null: the worker registered no store, as a worker without edge configs. */
-	subjectSnapshots?: ReturnType<typeof createSubjectSnapshotsStore> | null;
+	subjectSnapshotsConfig?: ReturnType<
+		typeof createSubjectSnapshotsStore
+	> | null;
 	maxRowsPerFlush?: number;
 }) =>
 	createCommitter({
 		ctx: {
 			db,
-			...(subjectSnapshots && { subjectSnapshots }),
+			...(subjectSnapshotsConfig && { subjectSnapshotsConfig }),
 		},
 		config: {
 			concurrency: 1,
@@ -139,12 +141,12 @@ describe("committer subject snapshots", () => {
 
 	test("with the store reading off, or no store at all, the flush statement is untouched, whatever the writer intended", async () => {
 		const state = createState({ identity: identityOf("cus_1"), balance: 95 });
-		for (const subjectSnapshots of [
+		for (const subjectSnapshotsConfig of [
 			createSubjectSnapshotsStore({ mode: "off" }),
 			null,
 		]) {
 			const { db, requests } = createRecordingDb();
-			const committer = committerFor({ db, subjectSnapshots });
+			const committer = committerFor({ db, subjectSnapshotsConfig });
 			await committer.apply({
 				topic,
 				partition: 3,
@@ -159,8 +161,8 @@ describe("committer subject snapshots", () => {
 
 	test("a flip in the store takes effect at the next flush: off writes nothing, write upserts, off again writes nothing", async () => {
 		const { db, requests } = createRecordingDb();
-		const subjectSnapshots = createSubjectSnapshotsStore({ mode: "off" });
-		const committer = committerFor({ db, subjectSnapshots });
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode: "off" });
+		const committer = committerFor({ db, subjectSnapshotsConfig });
 		const state = createState({ identity: identityOf("cus_1"), balance: 95 });
 		const applyAt = (offset: bigint) =>
 			committer.apply({
@@ -172,13 +174,13 @@ describe("committer subject snapshots", () => {
 			});
 
 		await applyAt(10n);
-		subjectSnapshots._setRuntimeConfigForTesting({
-			...subjectSnapshots.get(),
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
 			mode: "write",
 		});
 		await applyAt(11n);
-		subjectSnapshots._setRuntimeConfigForTesting({
-			...subjectSnapshots.get(),
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
 			mode: "off",
 		});
 		await applyAt(12n);
@@ -411,12 +413,14 @@ describe("committer subject snapshots", () => {
 
 	test("snapshot rows count toward the flush's row cap only while snapshots are written", async () => {
 		const flushesOf = async (
-			subjectSnapshots: ReturnType<typeof createSubjectSnapshotsStore> | null,
+			subjectSnapshotsConfig: ReturnType<
+				typeof createSubjectSnapshotsStore
+			> | null,
 		) => {
 			const { db, requests } = createRecordingDb();
 			const committer = committerFor({
 				db,
-				subjectSnapshots,
+				subjectSnapshotsConfig,
 				maxRowsPerFlush: 3,
 			});
 			let release: () => void = () => {};

@@ -144,7 +144,7 @@ export async function createBalanceWorker({
 				partitionResolver: resources.partitionResolver,
 				bootstrapper: resources.bootstrapper,
 				checkpointMaintenance: resources.checkpoints?.maintenance,
-				subjectSnapshots: resources.edgeConfigs?.subjectSnapshots,
+				subjectSnapshotsConfig: resources.edgeConfigs?.subjectSnapshotsConfig,
 				commandOffsets: { commit: commitCommandOffsets },
 			},
 			config: runtimeConfig,

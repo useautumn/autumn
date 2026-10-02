@@ -54,7 +54,7 @@ const createStore = ({
 	db,
 	requestCount,
 	warnings = [],
-	subjectSnapshots = createSubjectSnapshotsStore({
+	subjectSnapshotsConfig = createSubjectSnapshotsStore({
 		mode: "write",
 		dropBatch: DROP_BATCH,
 	}),
@@ -62,10 +62,10 @@ const createStore = ({
 	db: CommitterDb;
 	requestCount: () => number;
 	warnings?: string[];
-	subjectSnapshots?: ReturnType<typeof createSubjectSnapshotsStore>;
+	subjectSnapshotsConfig?: ReturnType<typeof createSubjectSnapshotsStore>;
 }) => {
 	const committer = createCommitter({
-		ctx: { db, subjectSnapshots },
+		ctx: { db, subjectSnapshotsConfig },
 		config: {
 			concurrency: 32,
 			maxRowsPerFlush: 500,
@@ -78,7 +78,7 @@ const createStore = ({
 			committer,
 			db,
 			logger: { warn: (message) => warnings.push(message) },
-			subjectSnapshots,
+			subjectSnapshotsConfig,
 		},
 	});
 	const deletes = store.evictDeletes;
@@ -271,7 +271,7 @@ describe("committer state store evict deletes", () => {
 		const { deletes, drained } = createStore({
 			db,
 			requestCount: () => requests.length,
-			subjectSnapshots: createSubjectSnapshotsStore({ mode: "off" }),
+			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "off" }),
 		});
 
 		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(1) });
@@ -285,21 +285,21 @@ describe("committer state store evict deletes", () => {
 		const { db, requests, deleteStatements } = createCountingDb({
 			gate: held.promise,
 		});
-		const subjectSnapshots = createSubjectSnapshotsStore({
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({
 			mode: "write",
 			dropBatch: 1,
 		});
 		const { deletes, drained } = createStore({
 			db,
 			requestCount: () => requests.length,
-			subjectSnapshots,
+			subjectSnapshotsConfig,
 		});
 
 		for (const index of [1, 2])
 			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
 		await Bun.sleep(2);
-		subjectSnapshots._setRuntimeConfigForTesting({
-			...subjectSnapshots.get(),
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
 			mode: "off",
 		});
 		held.resolve();
@@ -308,8 +308,8 @@ describe("committer state store evict deletes", () => {
 			[customerOf(1)],
 		]);
 
-		subjectSnapshots._setRuntimeConfigForTesting({
-			...subjectSnapshots.get(),
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
 			mode: "write",
 		});
 		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(3) });

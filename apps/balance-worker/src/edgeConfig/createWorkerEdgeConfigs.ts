@@ -25,7 +25,7 @@ export type WorkerEdgeConfigs = {
 	dbControl: EdgeConfigStore<DbControlEdgeConfig>;
 	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
-	subjectSnapshots: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	subjectSnapshotsConfig: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** The same bucket and client the stores read, for objects the worker writes itself. */
 	adminBucket: { s3Client: EdgeConfigS3Client; location: EdgeConfigLocation };
 	start(): Promise<void>;
@@ -55,7 +55,7 @@ export const createWorkerEdgeConfigs = ({
 		defaultValue: dbControlEdgeConfig.defaultValue,
 	});
 	registry.register({ store: dbControl });
-	const subjectSnapshots = createEdgeConfigStore({
+	const subjectSnapshotsConfig = createEdgeConfigStore({
 		ctx: edgeConfigContext,
 		s3Key: subjectSnapshotsEdgeConfig.key,
 		schema: subjectSnapshotsEdgeConfig.schema,
@@ -63,7 +63,7 @@ export const createWorkerEdgeConfigs = ({
 		// A read error or an object naming a mode without a read path must not flip a writing fleet back to off.
 		retainOnError: true,
 	});
-	registry.register({ store: subjectSnapshots });
+	registry.register({ store: subjectSnapshotsConfig });
 	const activeSlot = createEdgeConfigStore({
 		ctx: edgeConfigContext,
 		s3Key: activeSlotEdgeConfig.key,
@@ -87,7 +87,7 @@ export const createWorkerEdgeConfigs = ({
 	return {
 		dbControl,
 		activeSlot,
-		subjectSnapshots,
+		subjectSnapshotsConfig,
 		adminBucket: { s3Client, location: config.location },
 		start,
 		stop,

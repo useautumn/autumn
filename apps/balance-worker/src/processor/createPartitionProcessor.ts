@@ -54,7 +54,7 @@ export function createPartitionProcessor({
 		ctx: {
 			stateStore: dependencies.stateStore,
 			appender: dependencies.appender,
-			subjectSnapshots: dependencies.subjectSnapshots,
+			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
 			onStateAdvanced: (advanced) => subjectHydrator.inheritCatalog(advanced),

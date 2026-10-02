@@ -87,7 +87,7 @@ export type PartitionRuntimeDependencies = {
 	receiptPolicy: ReceiptPolicy;
 	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
 	recentCommands: RecentCommands;
-	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 

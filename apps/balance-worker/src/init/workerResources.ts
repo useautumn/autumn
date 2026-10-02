@@ -184,7 +184,7 @@ export async function openWorkerResources({
 							db: committerDb,
 							logger: dependencies.logger,
 							control: { read: readCommitterControl },
-							subjectSnapshots: edgeConfigs.subjectSnapshots,
+							subjectSnapshotsConfig: edgeConfigs.subjectSnapshotsConfig,
 						},
 						config: {
 							...DEFAULT_COMMITTER_CONFIG,
@@ -196,7 +196,7 @@ export async function openWorkerResources({
 					}),
 					db: committerDb,
 					logger: dependencies.logger,
-					subjectSnapshots: edgeConfigs.subjectSnapshots,
+					subjectSnapshotsConfig: edgeConfigs.subjectSnapshotsConfig,
 				},
 			});
 			stateStore = committerStore;

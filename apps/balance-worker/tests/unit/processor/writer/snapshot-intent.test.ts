@@ -66,7 +66,7 @@ const createWriter = ({
 	mode?: "off" | "write";
 	maxBytes?: number;
 } = {}) => {
-	const subjectSnapshots = createSubjectSnapshotsStore({
+	const subjectSnapshotsConfig = createSubjectSnapshotsStore({
 		mode,
 		...(maxBytes !== undefined && { maxBytes }),
 	});
@@ -101,7 +101,7 @@ const createWriter = ({
 	const writer = createPartitionWriter({
 		ctx: {
 			stateStore,
-			subjectSnapshots,
+			subjectSnapshotsConfig,
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
 					const baseOffset = nextOffset;
@@ -161,8 +161,8 @@ const createWriter = ({
 			rejectNext = id;
 		},
 		setMode: (next: "off" | "write") => {
-			subjectSnapshots._setRuntimeConfigForTesting({
-				...subjectSnapshots.get(),
+			subjectSnapshotsConfig._setRuntimeConfigForTesting({
+				...subjectSnapshotsConfig.get(),
 				mode: next,
 			});
 		},
@@ -262,7 +262,9 @@ describe("the writer's snapshot intent", () => {
 			baselineAt: 3_000,
 		});
 		const scope = {
-			ctx: { subjectSnapshots: createSubjectSnapshotsStore({ mode: "write" }) },
+			ctx: {
+				subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "write" }),
+			},
 			state: { subjects },
 		} as unknown as PartitionWriterScope;
 		const pending = {

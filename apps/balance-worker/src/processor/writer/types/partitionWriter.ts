@@ -99,7 +99,7 @@ export type PartitionWriterContext = {
 	>;
 	appender: CommittedOutcomeAppender;
 	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */
-	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */

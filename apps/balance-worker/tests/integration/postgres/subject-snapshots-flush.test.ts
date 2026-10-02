@@ -160,9 +160,11 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				}
 			},
 		};
-		const subjectSnapshots = createSubjectSnapshotsStore({ mode: "write" });
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({
+			mode: "write",
+		});
 		const committer = createCommitter({
-			ctx: { db, subjectSnapshots },
+			ctx: { db, subjectSnapshotsConfig },
 			config: {
 				concurrency: 4,
 				maxRowsPerFlush: 500,
@@ -178,7 +180,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			ctx: {
 				committer,
 				db,
-				subjectSnapshots,
+				subjectSnapshotsConfig,
 			},
 		});
 		try {
