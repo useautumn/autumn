@@ -40,4 +40,6 @@ export type DesiredSegment = InstanceIdentity & {
 	startsAt: number;
 	endsAt: number | null;
 	source: DesiredSegmentSource;
+	/** Later phases that listed this instance unchanged and were folded into it. */
+	mergedSources?: DesiredSegmentSource[];
 };

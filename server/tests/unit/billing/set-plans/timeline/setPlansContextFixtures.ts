@@ -74,6 +74,7 @@ export type PlanInput = {
 	fullProduct: FullProduct;
 	entity?: Entity;
 	ongoing?: boolean;
+	externalId?: string;
 };
 
 export const buildContext = ({
@@ -96,9 +97,10 @@ export const buildContext = ({
 	return {
 		...billingContext,
 		productContexts: opening.map(
-			({ fullProduct, entity: planEntity, ongoing }) => ({
+			({ fullProduct, entity: planEntity, ongoing, externalId }) => ({
 				fullProduct,
 				unscheduled: ongoing,
+				externalId,
 				customPrices: [],
 				customEnts: [],
 				featureQuantities: [],
@@ -114,13 +116,16 @@ export const buildContext = ({
 		scheduledPhaseContexts: later.map(({ startsAt, plans }) => ({
 			startsAt,
 			endsAt: undefined,
-			productContexts: plans.map(({ fullProduct, entity: planEntity }) => ({
-				fullProduct,
-				customPrices: [],
-				customEntitlements: [],
-				featureQuantities: [],
-				entity: planEntity,
-			})),
+			productContexts: plans.map(
+				({ fullProduct, entity: planEntity, externalId }) => ({
+					fullProduct,
+					externalId,
+					customPrices: [],
+					customEntitlements: [],
+					featureQuantities: [],
+					entity: planEntity,
+				}),
+			),
 		})),
 		stripeSubscriptionScope,
 	};

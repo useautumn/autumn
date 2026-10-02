@@ -10,6 +10,7 @@ import {
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
+import { claimsRunningSubscriptionId } from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansSubscriptionIdErrors";
 import { setupSetPlansTimeline } from "@/internal/billing/v2/actions/setPlans/setup/setupSetPlansTimeline";
 import {
 	planCustomerProduct,
@@ -277,5 +278,37 @@ describe(chalk.yellowBright("setupSetPlansTimeline"), () => {
 			),
 		).toEqual(["pro:now-never", "sso:B-never"]);
 		expect(describeOperations(timeline.diff)).toEqual(["insert:sso@B"]);
+	});
+
+	test("a subscription id a later phase gives an unchanged plan still clashes with a running row", () => {
+		const ssoWithId = { ...running({ product: sso }), external_id: "sub_y" };
+		const timeline = setupSetPlansTimeline({
+			ctx,
+			billingContext: buildContext({
+				existing: [ssoWithId],
+				opening: [
+					{ fullProduct: pro, externalId: "sub_x" },
+					{ fullProduct: sso },
+				],
+				later: [
+					{
+						startsAt: PHASE_B,
+						plans: [
+							{ fullProduct: pro, externalId: "sub_y" },
+							{ fullProduct: sso },
+						],
+					},
+				],
+			}),
+			params: { undeclared_plans: "end" },
+		});
+
+		expect(
+			claimsRunningSubscriptionId({
+				customerProductId: ssoWithId.id,
+				externalId: "sub_y",
+				timeline,
+			}),
+		).toBe(true);
 	});
 });

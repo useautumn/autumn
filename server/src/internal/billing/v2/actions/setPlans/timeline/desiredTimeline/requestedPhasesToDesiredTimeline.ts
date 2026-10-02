@@ -45,7 +45,11 @@ const mergeContiguousSegments = (
 				previous.endsAt === segment.startsAt &&
 				previous.configHash === segment.configHash;
 			if (previous && continuesPrevious) {
-				merged[merged.length - 1] = { ...previous, endsAt: segment.endsAt };
+				merged[merged.length - 1] = {
+					...previous,
+					endsAt: segment.endsAt,
+					mergedSources: [...(previous.mergedSources ?? []), segment.source],
+				};
 			} else {
 				merged.push(segment);
 			}

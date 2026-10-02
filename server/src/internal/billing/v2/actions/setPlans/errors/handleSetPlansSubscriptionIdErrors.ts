@@ -8,6 +8,7 @@ import {
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import type { RequestedPhase } from "../timeline/desiredTimeline/types/requestedPhase";
 import type { ResolvedSegment } from "../timeline/types/timelineDiff";
+import type { DesiredSegmentSource } from "../timeline/types/timelineSegment";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 
 type Interval = { startsAt: number; endsAt: number | null };
@@ -16,21 +17,34 @@ const overlaps = ({ first, second }: { first: Interval; second: Interval }) =>
 	(first.endsAt === null || first.endsAt > second.startsAt) &&
 	(second.endsAt === null || second.endsAt > first.startsAt);
 
-const segmentExternalId = ({
+const sourceExternalId = ({
+	source,
+	requestedPhases,
+}: {
+	source: DesiredSegmentSource;
+	requestedPhases: RequestedPhase[];
+}) => {
+	const phaseIndex = source.type === "ongoing" ? 0 : source.phaseIndex;
+	return requestedPhases[phaseIndex]?.plans[source.planIndex]?.externalId;
+};
+
+/** Every id the phases folded into this segment ask for, not just the first. */
+const segmentExternalIds = ({
 	segment,
 	requestedPhases,
 }: {
 	segment: ResolvedSegment;
 	requestedPhases: RequestedPhase[];
 }) => {
-	const source = segment.desired?.source;
-	if (!source) return undefined;
-	const phaseIndex = source.type === "ongoing" ? 0 : source.phaseIndex;
-	return requestedPhases[phaseIndex]?.plans[source.planIndex]?.externalId;
+	const { desired } = segment;
+	if (!desired) return [];
+	return [desired.source, ...(desired.mergedSources ?? [])].map((source) =>
+		sourceExternalId({ source, requestedPhases }),
+	);
 };
 
 /** An existing row keeps its subscription id while it runs; another instance may only claim it once it ends. */
-const claimsRunningSubscriptionId = ({
+export const claimsRunningSubscriptionId = ({
 	customerProductId,
 	externalId,
 	timeline,
@@ -52,10 +66,10 @@ const claimsRunningSubscriptionId = ({
 	return segments.some(
 		(segment) =>
 			segment.key !== carrying?.key &&
-			segmentExternalId({
+			segmentExternalIds({
 				segment,
 				requestedPhases: timeline.requestedPhases,
-			}) === externalId &&
+			}).includes(externalId) &&
 			(!carrying || overlaps({ first: segment, second: carrying })),
 	);
 };
