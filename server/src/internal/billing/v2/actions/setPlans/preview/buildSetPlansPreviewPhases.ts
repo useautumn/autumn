@@ -62,6 +62,7 @@ export const buildSetPlansPreviewPhases = async ({
 		fullCustomer,
 		autumnBillingPlan,
 		phases,
+		firstPhaseStartsLater: firstPhaseStartsInFuture({ billingContext }),
 	});
 	const matches = matchReviewPhases({
 		saved: timeline.saved,

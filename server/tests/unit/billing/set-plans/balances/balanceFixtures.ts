@@ -23,6 +23,7 @@ import { savedComparisonCustomers } from "@/internal/billing/v2/actions/setPlans
 import { buildSetPlansPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPhaseCustomers";
 import type { ReviewPhaseMatches } from "@/internal/billing/v2/actions/setPlans/preview/review/types/reviewPhase";
 import { setPlansPhaseBalanceChanges } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPhaseBalanceChanges";
+import { classifyFirstPhaseStart } from "@/internal/billing/v2/actions/setPlans/setup/classifyFirstPhaseStart";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import {
 	makeAutumnBillingPlan,
@@ -257,6 +258,12 @@ export const previewBalanceChanges = ({
 			fullCustomer,
 			autumnBillingPlan,
 			phases,
+			firstPhaseStartsLater:
+				phases[0] !== undefined &&
+				classifyFirstPhaseStart({
+					startsAt: phases[0].startsAt,
+					currentEpochMs: NOW,
+				}) === "future",
 		}),
 		savedComparisonCustomers: savedComparisonCustomers({
 			ctx: balanceCtx,
