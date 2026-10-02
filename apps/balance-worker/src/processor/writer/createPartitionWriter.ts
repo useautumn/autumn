@@ -77,8 +77,8 @@ export function createPartitionWriter({
 		return readFreshestSubjectState({ scope, identity });
 	}
 
-	function evict({ customerKey }: Parameters<PartitionWriter["evict"]>[0]) {
-		return evictCustomer({ scope, customerKey });
+	function evict(params: Parameters<PartitionWriter["evict"]>[0]) {
+		return evictCustomer({ scope, ...params });
 	}
 
 	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {

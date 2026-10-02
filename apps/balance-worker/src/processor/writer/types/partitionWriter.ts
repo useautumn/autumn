@@ -44,8 +44,12 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
-	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
-	evict(params: { customerKey: string }): Promise<void>;
+	/** Drops the customer's resident rows once Postgres holds its earlier writes, then awaits its snapshot DELETE;
+	 *  `deferSnapshotDelete` hands that wait to the caller instead. */
+	evict(params: {
+		customerKey: string;
+		deferSnapshotDelete?: (deleted: Promise<void>) => void;
+	}): Promise<void>;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
 	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
 	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;
@@ -93,6 +97,7 @@ export type PartitionWriterContext = {
 		| "readOwnState"
 		| "readReceipt"
 		| "applyDurableMutations"
+		| "evictDeletes"
 	>;
 	appender: CommittedOutcomeAppender;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
