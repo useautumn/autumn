@@ -3,6 +3,7 @@ import {
 	type ApiCustomerV3,
 	type ApiPlanV1,
 	ApiVersion,
+	type AttachParamsV0Input,
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanParamsV2Input,
@@ -434,15 +435,22 @@ test.skipIf(workerRouteForcedOff)(
 		const { customerId, autumnV1 } = await initScenario({
 			customerId: uniqueId("sync-mc-wk-keep"),
 			setup: [
-				s.customer({ paymentMethod: "success" }),
+				s.customer({ paymentMethod: "success", data: { currency: "usd" } }),
 				s.products({ list: [usdPro] }),
 			],
-			actions: [s.billing.attach({ productId: usdPro.id })],
+			actions: [],
 		});
 		await pinToBalanceWorker({ customerId });
-		expect(
-			(await CusService.getFull({ ctx, idOrInternalId: customerId })).currency,
-		).toBe("usd");
+		// Autumn-only paid USD product: Stripe refuses a EUR subscription beside a live USD one.
+		await autumnV1.billing.attach<AttachParamsV0Input>({
+			customer_id: customerId,
+			product_id: usdPro.id,
+			no_billing_changes: true,
+		});
+		await expectProductActive({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			productId: usdPro.id,
+		});
 		const subscription = await createExternalSubscription({
 			customerId,
 			items: [
