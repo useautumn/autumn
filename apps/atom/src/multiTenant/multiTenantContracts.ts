@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ATOM_ID, type SharedAtom } from "./atomFolders.js";
+import { ATOM_ID, type TenantAtom } from "./atomFolders.js";
 
 const atomIdSchema = z.string().regex(ATOM_ID);
 
@@ -12,11 +12,11 @@ const putAtomBodySchema = z.object({
 /** `POST /v1/atoms.get` and `POST /v1/atoms.delete`. */
 const atomIdBodySchema = z.object({ id: atomIdSchema });
 
-export const putAtomBodyToSharedAtom = ({
+export const putAtomBodyToTenantAtom = ({
 	body,
 }: {
 	body: unknown;
-}): SharedAtom => {
+}): TenantAtom => {
 	const parsed = putAtomBodySchema.parse(body);
 	return { id: parsed.id, tokenHash: parsed.token_hash };
 };

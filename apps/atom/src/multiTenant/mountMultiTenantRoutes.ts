@@ -1,18 +1,18 @@
 import type { Hono } from "hono";
 import type { AtomHttpEnv } from "../http/types/atomHttp.js";
 import { adminTokenMiddleware } from "./adminTokenMiddleware.js";
+import type { MultiTenantContext } from "./multiTenantContext.js";
 import { receiveDeleteAtom } from "./receiveDeleteAtom.js";
 import { receiveGetAtom } from "./receiveGetAtom.js";
 import { receivePutAtom } from "./receivePutAtom.js";
-import type { SharedContext } from "./sharedContext.js";
 
-/** Routes only a shared Atom has: the admin adds and removes the orgs it holds. */
-export const mountSharedRoutes = ({
+/** Routes only a multi-tenant Atom has: the admin adds and removes the orgs it holds. */
+export const mountMultiTenantRoutes = ({
 	app,
 	ctx,
 }: {
 	app: Hono<AtomHttpEnv>;
-	ctx: SharedContext;
+	ctx: MultiTenantContext;
 }): void => {
 	// Per route, not on a sub-app: mounted at /v1, a sub-app's middleware would also guard the org routes.
 	const adminOnly = adminTokenMiddleware({ ctx });

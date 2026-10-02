@@ -463,8 +463,8 @@ async function startDev() {
 			EVE_PORT: EVE_PORT.toString(),
 			EVE_SERVER_URL,
 			EVE_INTERNAL_AUTH_TOKEN,
-			// One shared Atom keeps each deployed org's folder under the worktree's .data/atom, in 2 slots each.
-			ATOM_MODE: "shared",
+			// One multi-tenant Atom keeps each deployed org's folder under the worktree's .data/atom, in 2 slots each.
+			ATOM_MODE: "multi_tenant",
 			ATOM_ADMIN_TOKEN_HASH: createHash("sha256")
 				.update(ATOM_ADMIN_TOKEN)
 				.digest("hex"),

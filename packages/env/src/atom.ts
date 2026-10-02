@@ -3,7 +3,7 @@ import { positiveInteger } from "./balanceWorker/primitives.js";
 
 const LOCAL_ATOM_PORT = 8790;
 const AUTUMN_API_URL = "https://api.useautumn.com";
-/** Fixed per org, so more or fewer cores never moves a customer to another file; a shared Atom splits each org the same way. */
+/** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
 /** A container given no limits sees its whole host; past this many, more processes only cost memory. */
 const MAX_AUTOMATIC_PROCESSES = 8;
@@ -49,7 +49,7 @@ type AtomModeEnv =
 	  }
 	/** Our own Atom holding many orgs: only the admin token's holder registers them, each with a token of its own. */
 	| {
-			ATOM_MODE: "shared";
+			ATOM_MODE: "multi_tenant";
 			ATOM_TOKEN_HASH: null;
 			ATOM_ADMIN_TOKEN_HASH: string;
 	  };
@@ -62,13 +62,13 @@ const modeEnvOf = ({
 	const mode = runtimeEnv.ATOM_MODE?.trim() || "deployed";
 	const tokenHash = runtimeEnv.ATOM_TOKEN_HASH?.trim() || null;
 	const adminTokenHash = runtimeEnv.ATOM_ADMIN_TOKEN_HASH?.trim() || null;
-	if (mode === "shared") {
+	if (mode === "multi_tenant") {
 		if (tokenHash)
 			throw new Error("ATOM_TOKEN_HASH is only for ATOM_MODE=deployed");
 		if (!adminTokenHash)
-			throw new Error("ATOM_MODE=shared needs ATOM_ADMIN_TOKEN_HASH");
+			throw new Error("ATOM_MODE=multi_tenant needs ATOM_ADMIN_TOKEN_HASH");
 		return {
-			ATOM_MODE: "shared",
+			ATOM_MODE: "multi_tenant",
 			ATOM_TOKEN_HASH: null,
 			ATOM_ADMIN_TOKEN_HASH: sha256Hex({
 				name: "ATOM_ADMIN_TOKEN_HASH",
@@ -77,10 +77,11 @@ const modeEnvOf = ({
 		};
 	}
 	if (mode !== "deployed")
-		throw new Error("ATOM_MODE must be deployed or shared");
+		throw new Error("ATOM_MODE must be deployed or multi_tenant");
 	if (adminTokenHash)
-		throw new Error("ATOM_ADMIN_TOKEN_HASH is only for ATOM_MODE=shared");
-	if (!tokenHash) throw new Error("Set ATOM_TOKEN_HASH, or ATOM_MODE=shared");
+		throw new Error("ATOM_ADMIN_TOKEN_HASH is only for ATOM_MODE=multi_tenant");
+	if (!tokenHash)
+		throw new Error("Set ATOM_TOKEN_HASH, or ATOM_MODE=multi_tenant");
 	return {
 		ATOM_MODE: "deployed",
 		ATOM_TOKEN_HASH: sha256Hex({ name: "ATOM_TOKEN_HASH", value: tokenHash }),
@@ -91,19 +92,19 @@ const modeEnvOf = ({
 /** As many processes as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step. */
 const processesOf = ({
 	runtimeEnv,
-	isShared,
+	isMultiTenant,
 	machine,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
-	isShared: boolean;
+	isMultiTenant: boolean;
 	machine: AtomMachine;
 }): number => {
 	const told = runtimeEnv.ATOM_PROCESSES;
-	// A shared Atom keeps its list of orgs in memory, which a second process would not see.
-	if (isShared) {
+	// A multi-tenant Atom keeps its list of orgs in memory, which a second process would not see.
+	if (isMultiTenant) {
 		if (told && positiveInteger.parse(told) > 1)
 			throw new Error(
-				"ATOM_MODE=shared runs as one process; unset ATOM_PROCESSES",
+				"ATOM_MODE=multi_tenant runs as one process; unset ATOM_PROCESSES",
 			);
 		return 1;
 	}
@@ -139,7 +140,7 @@ export function createAtomEnv(
 	const modeEnv = modeEnvOf({ runtimeEnv });
 	const processes = processesOf({
 		runtimeEnv,
-		isShared: modeEnv.ATOM_MODE === "shared",
+		isMultiTenant: modeEnv.ATOM_MODE === "multi_tenant",
 		machine,
 	});
 	// alien sets this where the `pushes` queue is linked to the container.

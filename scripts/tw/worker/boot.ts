@@ -242,7 +242,7 @@ export const startHerald = (repoRoot: string): Subprocess => {
 };
 
 /**
- * Starts Atom (`apps/atom`) in shared mode, as on a dev stack: one process stands in for
+ * Starts Atom (`apps/atom`) in multi-tenant mode, as on a dev stack: one process stands in for
  * every org's Atom, and the server registers each through `ATOM_URL` with the admin token.
  */
 export const startAtom = (repoRoot: string): Subprocess => {
@@ -253,7 +253,7 @@ export const startAtom = (repoRoot: string): Subprocess => {
 		stderr: "inherit",
 		env: {
 			...process.env,
-			ATOM_MODE: "shared",
+			ATOM_MODE: "multi_tenant",
 			ATOM_ADMIN_TOKEN_HASH: createHash("sha256")
 				.update(ATOM_ADMIN_TOKEN)
 				.digest("hex"),

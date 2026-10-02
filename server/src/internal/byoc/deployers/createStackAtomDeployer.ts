@@ -7,17 +7,17 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { cacheExternalId } from "../utils/byocCacheUtils.js";
-import { postToSharedAtom } from "./postToSharedAtom.js";
+import { postToMultiTenantAtom } from "./postToMultiTenantAtom.js";
 import type {
 	AtomDeployer,
 	AtomDeployment,
 	AtomSetup,
 } from "./types/atomDeployer.js";
-import type { SharedAtomAddress } from "./types/sharedAtom.js";
+import type { MultiTenantAtomAddress } from "./types/multiTenantAtom.js";
 
 /** A dev stack has no machines, so each Atom's is only remembered here; a restart resets it to the default. */
 type StackContext = {
-	atom: SharedAtomAddress;
+	atom: MultiTenantAtomAddress;
 	machineById: Map<string, ByocCacheMachine>;
 };
 
@@ -39,7 +39,7 @@ const startStackAtom = async ({
 	machine: ByocCacheMachine;
 }): Promise<AtomSetup> => {
 	const id = cacheExternalId({ org, env });
-	await postToSharedAtom({
+	await postToMultiTenantAtom({
 		atom: ctx.atom,
 		route: "atoms.put",
 		body: { id, token_hash: tokenHash },
@@ -56,7 +56,7 @@ const findStackAtom = async ({
 	deploymentGroupId: string;
 }): Promise<AtomDeployment | null> => {
 	const { atom } = GetAtomResponseSchema.parse(
-		await postToSharedAtom({
+		await postToMultiTenantAtom({
 			atom: ctx.atom,
 			route: "atoms.get",
 			body: { id: deploymentGroupId },
@@ -91,7 +91,7 @@ const deleteStackAtom = async ({
 	ctx: StackContext;
 	deploymentGroupId: string;
 }): Promise<void> => {
-	await postToSharedAtom({
+	await postToMultiTenantAtom({
 		atom: ctx.atom,
 		route: "atoms.delete",
 		body: { id: deploymentGroupId },
@@ -99,11 +99,11 @@ const deleteStackAtom = async ({
 	ctx.machineById.delete(deploymentGroupId);
 };
 
-/** A dev stack runs one shared Atom process; every org's Atom is a token and a folder inside it. */
+/** A dev stack runs one multi-tenant Atom process; every org's Atom is a token and a folder inside it. */
 export const createStackAtomDeployer = ({
 	atom,
 }: {
-	atom: SharedAtomAddress;
+	atom: MultiTenantAtomAddress;
 }): AtomDeployer => {
 	const ctx = { atom, machineById: new Map<string, ByocCacheMachine>() };
 	return {

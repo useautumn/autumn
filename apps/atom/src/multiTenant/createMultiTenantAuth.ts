@@ -4,31 +4,31 @@ import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import {
 	atomFolderPath,
-	listSharedAtoms,
+	listTenantAtoms,
 	removeAtomFolder,
-	type SharedAtom,
-	writeSharedAtom,
+	type TenantAtom,
+	writeTenantAtom,
 } from "./atomFolders.js";
 
 /** Our one Atom process holding many orgs: each gets a token and a folder of its own. */
-export type SharedAuth = Auth & {
+export type MultiTenantAuth = Auth & {
 	/** Putting an Atom that exists only replaces its token hash; its customers stay. */
-	putAtom(params: SharedAtom): void;
+	putAtom(params: TenantAtom): void;
 	hasAtom(params: { id: string }): boolean;
 	/** Deletes the Atom's folder. Removing one that is not held is a no-op. */
 	removeAtom(params: { id: string }): void;
 };
 
 /** Slots stay null until the token is first used, so an Atom nobody asks holds no files, statements or timers. */
-type HeldAtom = SharedAtom & { slots: Slots | null };
+type HeldAtom = TenantAtom & { slots: Slots | null };
 
-export const createSharedAuth = ({
+export const createMultiTenantAuth = ({
 	dataDir,
 	slotCount,
 }: {
 	dataDir: string;
 	slotCount: number;
-}): SharedAuth => {
+}): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
 	const heldByTokenHash = new Map<string, HeldAtom>();
 
@@ -51,18 +51,18 @@ export const createSharedAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
-	function putAtom(sharedAtom: SharedAtom): void {
-		const held = heldById.get(sharedAtom.id);
-		if (held?.tokenHash === sharedAtom.tokenHash) return;
+	function putAtom(tenantAtom: TenantAtom): void {
+		const held = heldById.get(tenantAtom.id);
+		if (held?.tokenHash === tenantAtom.tokenHash) return;
 
-		writeSharedAtom({ dataDir, sharedAtom });
+		writeTenantAtom({ dataDir, tenantAtom });
 		if (!held) {
-			hold({ ...sharedAtom, slots: null });
+			hold({ ...tenantAtom, slots: null });
 			return;
 		}
 		// The same folder under a new token: the old one stops working at once.
 		heldByTokenHash.delete(held.tokenHash);
-		hold({ ...held, tokenHash: sharedAtom.tokenHash });
+		hold({ ...held, tokenHash: tenantAtom.tokenHash });
 	}
 
 	function hasAtom({ id }: { id: string }): boolean {
@@ -85,8 +85,8 @@ export const createSharedAuth = ({
 		heldByTokenHash.clear();
 	}
 
-	for (const sharedAtom of listSharedAtoms({ dataDir }))
-		hold({ ...sharedAtom, slots: null });
+	for (const tenantAtom of listTenantAtoms({ dataDir }))
+		hold({ ...tenantAtom, slots: null });
 
 	return { authorize, putAtom, hasAtom, removeAtom, close };
 };

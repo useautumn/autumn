@@ -9,7 +9,7 @@ import { z } from "zod/v4";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleRegisterAdminShadowAtomOrg } from "@/internal/admin/handleRegisterAdminShadowAtomOrg.js";
 import { handleUnregisterAdminShadowAtomOrg } from "@/internal/admin/handleUnregisterAdminShadowAtomOrg.js";
-import { createSharedAtomDeployer } from "@/internal/byoc/deployers/createSharedAtomDeployer.js";
+import { createMultiTenantAtomDeployer } from "@/internal/byoc/deployers/createMultiTenantAtomDeployer.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -17,13 +17,13 @@ import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 
 const ADMIN_TOKEN = "atom_admin_test";
 const previousPassword = process.env.ENCRYPTION_PASSWORD;
-process.env.ENCRYPTION_PASSWORD = "shared-atom-deployer-test-password";
+process.env.ENCRYPTION_PASSWORD = "multi-tenant-atom-deployer-test-password";
 
 type Received = { route: string; adminToken: string | null; body: unknown };
 
-/** A shared Atom's admin routes: only the admin token gets past them, as in apps/atom. */
+/** A multi-tenant Atom's admin routes: only the admin token gets past them, as in apps/atom. */
 const received: Received[] = [];
-const sharedAtom = Bun.serve({
+const multiTenantAtom = Bun.serve({
 	port: 0,
 	fetch: async (request) => {
 		const route = new URL(request.url).pathname.replace("/v1/", "");
@@ -63,7 +63,7 @@ const getOrg = spyOn(OrgService, "get").mockImplementation(
 );
 
 const useShadowAtom = ({
-	endpointUrl = sharedAtom.url.origin,
+	endpointUrl = multiTenantAtom.url.origin,
 	adminToken = ADMIN_TOKEN as string | null,
 }: {
 	endpointUrl?: string | null;
@@ -84,7 +84,7 @@ afterEach(() => {
 	useShadowAtom();
 });
 afterAll(() => {
-	sharedAtom.stop(true);
+	multiTenantAtom.stop(true);
 	read.mockRestore();
 	write.mockRestore();
 	getOrg.mockRestore();
@@ -146,9 +146,9 @@ const unregister = ({
 		{ method: "DELETE" },
 	);
 
-test("the shared deployer puts an org with the admin token, and the Atom gets only the org token's hash", async () => {
-	const deployer = createSharedAtomDeployer({
-		atom: { atomUrl: sharedAtom.url.origin, adminToken: ADMIN_TOKEN },
+test("the multi-tenant deployer puts an org with the admin token, and the Atom gets only the org token's hash", async () => {
+	const deployer = createMultiTenantAtomDeployer({
+		atom: { atomUrl: multiTenantAtom.url.origin, adminToken: ADMIN_TOKEN },
 	});
 
 	const { token } = await deployer.register({ atomId: "org_1.sandbox" });
@@ -169,9 +169,9 @@ test("the shared deployer puts an org with the admin token, and the Atom gets on
 	]);
 });
 
-test("a shared Atom that refuses the admin token is a 503, not a silent success", async () => {
-	const deployer = createSharedAtomDeployer({
-		atom: { atomUrl: sharedAtom.url.origin, adminToken: "wrong" },
+test("a multi-tenant Atom that refuses the admin token is a 503, not a silent success", async () => {
+	const deployer = createMultiTenantAtomDeployer({
+		atom: { atomUrl: multiTenantAtom.url.origin, adminToken: "wrong" },
 	});
 
 	expect(deployer.register({ atomId: "org_1.sandbox" })).rejects.toMatchObject({
