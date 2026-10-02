@@ -99,6 +99,35 @@ describe("buildSetPlansPhaseCustomers", () => {
 		});
 	});
 
+	test("a plan that ends while still trialing expires at its end", () => {
+		const phaseThree = PHASE_TWO + ms.days(7);
+		const trialingPremium = {
+			...makeFullCusProduct({
+				planId: "premium",
+				status: CusProductStatus.Scheduled,
+				startedAt: PHASE_TWO,
+			}),
+			trial_ends_at: PHASE_TWO + ms.days(14),
+			ended_at: phaseThree,
+		};
+
+		const phaseCustomers = buildSetPlansPhaseCustomers({
+			ctx,
+			fullCustomer: makeFullCustomer(),
+			autumnBillingPlan: makeAutumnBillingPlan({ inserts: [trialingPremium] }),
+			phases: [
+				{ startsAt: NOW, customerProductIds: [] },
+				{ startsAt: PHASE_TWO, customerProductIds: [trialingPremium.id] },
+				{ startsAt: phaseThree, customerProductIds: [] },
+			],
+		});
+
+		expect(phaseCustomers.slice(1).map(statusesByPlan)).toEqual([
+			{ premium: CusProductStatus.Trialing },
+			{ premium: CusProductStatus.Expired },
+		]);
+	});
+
 	test("a plan starting in a later phase inherits the outgoing plan's rollovers", () => {
 		const wordsEntitlement = ({
 			customerProductId,

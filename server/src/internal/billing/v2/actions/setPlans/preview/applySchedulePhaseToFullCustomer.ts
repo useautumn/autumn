@@ -14,6 +14,7 @@ import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handl
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
+import { runsInProjection } from "./runsInProjection";
 
 const isEndedByPhase = ({
 	customerProduct,
@@ -22,7 +23,7 @@ const isEndedByPhase = ({
 	customerProduct: FullCusProduct;
 	phase: SchedulePhasePlan;
 }) =>
-	cp(customerProduct).hasActiveStatus().valid &&
+	runsInProjection(customerProduct) &&
 	notNullish(customerProduct.ended_at) &&
 	customerProduct.ended_at <= phase.startsAt;
 
@@ -89,7 +90,7 @@ export const applySchedulePhaseToFullCustomer = ({
 
 	for (const customerProduct of phaseCustomer.customer_products) {
 		if (startingIds.has(customerProduct.id)) {
-			if (!cp(customerProduct).hasActiveStatus().valid) {
+			if (!runsInProjection(customerProduct)) {
 				incomingCustomerProducts.push(customerProduct);
 				carryExistingStatesIntoStartingProduct({
 					ctx,

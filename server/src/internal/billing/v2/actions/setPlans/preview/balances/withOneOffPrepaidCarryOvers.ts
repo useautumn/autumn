@@ -1,12 +1,12 @@
 import {
 	CusProductStatus,
-	customerProductHasActiveStatus,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullCustomerEntitlement,
 	findCustomerProductById,
 } from "@autumn/shared";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
+import { runsInProjection } from "../runsInProjection";
 
 const expiringCustomerProducts = ({
 	previousCustomer,
@@ -17,7 +17,7 @@ const expiringCustomerProducts = ({
 }) =>
 	previousCustomer.customer_products.filter(
 		(customerProduct) =>
-			customerProductHasActiveStatus(customerProduct) &&
+			runsInProjection(customerProduct) &&
 			findCustomerProductById({
 				fullCustomer: phaseCustomer,
 				customerProductId: customerProduct.id,

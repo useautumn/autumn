@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ms } from "@autumn/shared";
 import { entities } from "@tests/utils/fixtures/db/entities";
 import chalk from "chalk";
 import {
@@ -47,6 +48,49 @@ describe(
 					"words updated: 1000 -> 2000 granted, 2000 left",
 					"credits carried: 500 -> 300 granted, 300 left",
 				],
+			]);
+		});
+
+		test("a plan ending while still trialing keeps its one-off credits", async () => {
+			const pro = planRow({
+				planId: "pro",
+				endedAt: PHASE_TWO,
+				balances: [included({ featureId: "words", allowance: 1000 })],
+			});
+			const trialingPremium = {
+				...scheduledRow({
+					planId: "premium",
+					startsAt: PHASE_TWO,
+					endedAt: PHASE_THREE,
+					balances: [
+						included({ featureId: "words", allowance: 2000 }),
+						oneOffPrepaid({ featureId: "credits", quantity: 500 }),
+					],
+				}),
+				trial_ends_at: PHASE_THREE + ms.days(7),
+			};
+			const growth = scheduledRow({
+				planId: "growth",
+				startsAt: PHASE_THREE,
+				balances: [included({ featureId: "words", allowance: 3000 })],
+			});
+
+			const phaseChanges = await previewBalanceChanges({
+				current: [pro],
+				inserts: [trialingPremium, growth],
+				phases: [
+					{ startsAt: NOW, customerProductIds: [pro.id] },
+					{ startsAt: PHASE_TWO, customerProductIds: [trialingPremium.id] },
+					{ startsAt: PHASE_THREE, customerProductIds: [growth.id] },
+				],
+			});
+
+			expect(describeBalancePhases(phaseChanges).slice(1)).toEqual([
+				[
+					"words added: 0 -> 2000 granted, 2000 left",
+					"credits added: 0 -> 500 granted, 500 left",
+				],
+				["words updated: 2000 -> 3000 granted, 3000 left"],
 			]);
 		});
 
