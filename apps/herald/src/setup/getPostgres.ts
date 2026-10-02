@@ -14,7 +14,6 @@ export function getPostgres(): PostgresClient {
 			maxConnections: DATABASE_POOL_SIZE,
 			connectTimeout: 10,
 			idleTimeout: 30,
-			maxLifetime: 1800,
 		},
 	});
 	return postgres;

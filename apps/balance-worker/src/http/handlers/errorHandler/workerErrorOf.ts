@@ -15,6 +15,7 @@ import { FlushRecordRefusedError } from "../../../committer/committerErrors.js";
 import { PartitionProcessorStateNotFoundError } from "../../../processor/common/processorErrors.js";
 import {
 	SubjectCatalogEvictedError,
+	SubjectLoadBusyError,
 	SubjectLoadOvertakenError,
 	SubjectNotFoundError,
 	SubjectStaleError,
@@ -139,6 +140,13 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 		error = {
 			code: "NOT_READY",
 			message: "Catalog rows were evicted before the decision; retry",
+		};
+	} else if (cause instanceof SubjectLoadBusyError) {
+		status = 503;
+		error = {
+			code: "NOT_READY",
+			message:
+				"Customer was still loading at the caller's deadline; nothing ran, retry",
 		};
 	} else if (cause instanceof SubjectLoadOvertakenError) {
 		status = 503;

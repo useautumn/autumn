@@ -1,11 +1,17 @@
+import { BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY } from "@autumn/env/balanceWorkerConstants";
 import type { KafkaOffsetCommit } from "@autumn/kafka";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
+import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
+import {
+	createDatabaseReporter,
+	databaseTimings,
+} from "../logging/databaseTimings.js";
 import { createEventLoopStallMonitor } from "../logging/eventLoopStalls/createEventLoopStallMonitor.js";
 import { syncSections } from "../logging/eventLoopStalls/syncSections.js";
 import {
@@ -266,14 +272,29 @@ export async function createBalanceWorker({
 				endpoint: address.endpoint,
 			},
 		});
+		const databaseReporter = createDatabaseReporter({
+			ctx: {
+				logger: dependencies.logger,
+				timings: databaseTimings,
+				gate: subjectLoadGate,
+			},
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
+				poolSize: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
+				subjectLoadConcurrency: BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
+			},
+		});
 		function startTelemetry(): void {
 			healthReporter.start();
 			void slotHeartbeat?.start();
 			if (!reportsHealth) return;
 			stallMonitor.start();
 			kafkaRequestReporter.start();
+			databaseReporter.start();
 		}
 		function stopTelemetry(): void {
+			databaseReporter.stop();
 			kafkaRequestReporter.stop();
 			stallMonitor.stop();
 			slotHeartbeat?.stop();

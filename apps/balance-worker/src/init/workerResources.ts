@@ -25,7 +25,9 @@ import {
 	createWorkerDb,
 	createWorkerPostgresClient,
 } from "../external/postgres/getWorkerDb.js";
+import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createCatalogInvalidationConsumer } from "../kafka/createCatalogInvalidationConsumer.js";
+import { databaseTimings } from "../logging/databaseTimings.js";
 import { createPartitionBootstrapper } from "../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createProgressBootstrapper } from "../runtime/bootstrap/createProgressBootstrapper.js";
 import type {
@@ -112,7 +114,13 @@ export async function openWorkerResources({
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
 		const postgres = createWorkerPostgresClient({ env });
-		const db = createWorkerDb({ ctx: { postgres } });
+		const db = createWorkerDb({
+			ctx: {
+				postgres,
+				subjectLoads: subjectLoadGate,
+				timings: databaseTimings,
+			},
+		});
 		const dynamo = createWorkerDynamoClient({ env });
 		const idempotencyKeys = createIdempotencyKeyStore({
 			ctx: {
@@ -166,7 +174,9 @@ export async function openWorkerResources({
 				retryPolicy: bootstrap.retryPolicy,
 			});
 		} else {
-			const committerDb = createCommitterDb({ ctx: { postgres } });
+			const committerDb = createCommitterDb({
+				ctx: { postgres, timings: databaseTimings },
+			});
 			const committerStore = createCommitterStateStore({
 				ctx: {
 					committer: createCommitter({
