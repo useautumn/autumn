@@ -113,6 +113,9 @@ describe(chalk.yellowBright("setupSetPlansTimeline"), () => {
 			expect(fromSchedule.filter((line) => !line.startsWith("retime"))).toEqual(
 				fromAttach,
 			);
+			if (undeclared === "retain") {
+				expect(fromSchedule).toContain("retime:cus_prod_pro:never");
+			}
 		}
 	});
 
