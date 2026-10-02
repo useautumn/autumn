@@ -4,7 +4,8 @@
  * Contract under test:
  * - A replay re-runs the public batch create with the original API version and cannot
  *   enqueue itself again.
- * - An entity the original request did land is a successful replay, not a 409.
+ * - An entity the original request did land is a successful replay, not a 409; the rest of the
+ *   batch is still created.
  * - Replays log whether they created the entities or found them.
  */
 
@@ -22,6 +23,7 @@ import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 const mockState = {
 	batchCreateCalls: [] as Record<string, unknown>[],
 	batchCreateFailure: undefined as unknown,
+	existingEntityIds: [] as (string | null)[],
 };
 
 await mockModuleWithRestore(
@@ -29,11 +31,23 @@ await mockModuleWithRestore(
 	() => ({
 		batchCreateEntities: async (args: Record<string, unknown>) => {
 			mockState.batchCreateCalls.push(args);
-			if (mockState.batchCreateFailure) throw mockState.batchCreateFailure;
+			// The first attempt fails as the real create does on any existing id; a retry with the rest lands.
+			if (
+				mockState.batchCreateFailure &&
+				mockState.batchCreateCalls.length === 1
+			)
+				throw mockState.batchCreateFailure;
 			return [{ id: "entity_123" }];
 		},
 	}),
 );
+await mockModuleWithRestore("@/internal/customers/CusService.js", () => ({
+	CusService: {
+		getFull: async () => ({
+			entities: mockState.existingEntityIds.map((id) => ({ id })),
+		}),
+	},
+}));
 
 const { replayFailedEntityCreation } = await import(
 	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
@@ -60,7 +74,10 @@ const payload: EntityCreationRecoveryPayload = {
 	apiVersion: ApiVersion.V2_1,
 	params: {
 		customerId: "customer_123",
-		createEntityData: [{ id: "entity_123", name: null, feature_id: "seats" }],
+		createEntityData: [
+			{ id: "entity_123", name: null, feature_id: "seats" },
+			{ id: "entity_456", name: null, feature_id: "seats" },
+		],
 	},
 	failedAt: 1_785_000_000_000,
 };
@@ -69,6 +86,7 @@ describe("replayFailedEntityCreation", () => {
 	beforeEach(() => {
 		mockState.batchCreateCalls = [];
 		mockState.batchCreateFailure = undefined;
+		mockState.existingEntityIds = [];
 	});
 
 	test("replays the create through the public action with its original API semantics", async () => {
@@ -90,16 +108,37 @@ describe("replayFailedEntityCreation", () => {
 		});
 	});
 
-	test("treats an entity the original request landed as a successful replay", async () => {
+	test("treats a batch the original request landed as a successful replay", async () => {
 		mockState.batchCreateFailure = new EntityAlreadyExistsError({
 			entityId: "entity_123",
 		});
+		mockState.existingEntityIds = ["entity_123", "entity_456"];
 		const ctx = buildContext();
 
 		await replayFailedEntityCreation({ ctx, payload });
 
+		expect(mockState.batchCreateCalls).toHaveLength(1);
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
 			outcome: "existing",
+		});
+	});
+
+	test("creates the rest of the batch when only some entities already exist", async () => {
+		mockState.batchCreateFailure = new EntityAlreadyExistsError({
+			entityId: "entity_123",
+		});
+		mockState.existingEntityIds = ["entity_123"];
+		const ctx = buildContext();
+
+		await replayFailedEntityCreation({ ctx, payload });
+
+		expect(mockState.batchCreateCalls).toHaveLength(2);
+		expect(mockState.batchCreateCalls[1]).toMatchObject({
+			createEntityData: [{ id: "entity_456", name: null, feature_id: "seats" }],
+			enqueueRecoveryOnTransientFailure: false,
+		});
+		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
+			outcome: "created",
 		});
 	});
 
