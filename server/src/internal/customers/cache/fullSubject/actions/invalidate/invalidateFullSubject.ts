@@ -25,6 +25,9 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	flushBalances?: boolean;
 }): Promise<void> => {
 	// No not-ready guard here: the unlink + epoch bump below queues through
+	if (customerId === "cancel-eoc-cons-both") {
+		await redisV2.rpush(`{${customerId}}:warming-timeline`, JSON.stringify({ at: Date.now(), phase: "invalidate-start", source, entityId, flushBalances }));
+	}
 	// reconnect blips (queueIfNotReady). The balance-field flush still skips
 	// itself when the client isn't ready — its fail-fast read machinery treats
 	// a blip as "nothing to flush", same as before.
@@ -71,6 +74,9 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	});
 
 	if (result !== undefined) {
+		if (customerId === "cancel-eoc-cons-both") {
+			await redisV2.rpush(`{${customerId}}:warming-timeline`, JSON.stringify({ at: Date.now(), phase: "invalidate-end", source, entityId }));
+		}
 		logger.info(
 			`[invalidateCachedFullSubject] subject: ${subjectLabel}, source: ${source}`,
 		);

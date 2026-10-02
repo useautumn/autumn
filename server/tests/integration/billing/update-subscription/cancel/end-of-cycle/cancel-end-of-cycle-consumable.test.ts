@@ -11,7 +11,9 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, customerEntitlements } from "@autumn/shared";
+import { eq } from "drizzle-orm";
+import { getEntityAggregateForSync } from "@/internal/customers/repos/getFullSubject/getEntityAggregateForSync.js";
 import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -753,6 +755,14 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
 	console.log("warming final views", JSON.stringify({ customer: customerAfterTrack.features[TestFeature.Messages], entity: entityAfterTrack.features[TestFeature.Messages] }));
+	for (let sample = 0; sample <= 10; sample++) {
+		const dbRows = await ctx.db.query.customerEntitlements.findMany({ where: eq(customerEntitlements.customer_id, customerId) });
+		const aggregate = await getEntityAggregateForSync({ db: ctx.db, orgId: ctx.org.id, env: ctx.env, customerId });
+		const current = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		console.log("settling diagnostic", JSON.stringify({ at: Date.now(), sample, customerBalance: current.features[TestFeature.Messages].balance, dbRows: dbRows.map(row => ({ id: row.id, balance: row.balance, entities: row.entities, cache_version: row.cache_version })), aggregate }));
+		if (sample < 10) await Bun.sleep(2000);
+	}
+	console.log("invalidation timeline", JSON.stringify(await ctx.redisV2.lrange(`{${customerId}}:warming-timeline`, 0, -1)));
 
 	expect(customerAfterTrack.features[TestFeature.Messages].balance).toBe(
 		isBalanceWorkerRoute() ? -200 : -350,

@@ -1926,9 +1926,12 @@ export async function initScenario({
 		}
 	};
 
+	if (customerId === "cancel-eoc-cons-both") await ctx.redisV2.del(`{${customerId}}:warming-timeline`);
 	for (const action of config.actions) {
+		if (customerId === "cancel-eoc-cons-both") await ctx.redisV2.rpush(`{${customerId}}:warming-timeline`, JSON.stringify({ at: Date.now(), phase: "action-start", action }));
 		await runAction(action);
 		if (customerId === "cancel-eoc-cons-both") {
+			await ctx.redisV2.rpush(`{${customerId}}:warming-timeline`, JSON.stringify({ at: Date.now(), phase: "action-end", action }));
 			console.log("warming diagnostic", JSON.stringify({
 				action,
 				balances: await ctx.redisV2.hgetall(buildSharedFullSubjectBalanceKey({
