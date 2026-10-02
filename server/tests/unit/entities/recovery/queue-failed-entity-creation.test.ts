@@ -2,30 +2,46 @@
  * TDD contract for durable entities.create failure capture.
  *
  * Contract under test:
- * - Transient failures ride the customer creation recovery FIFO queue under their own job name.
+ * - Transient failures are sent as the entity creation recovery job, on the customer creation
+ *   recovery queue.
  * - Payloads preserve org, environment, API version, the validated create params, stage, and request ID.
  * - Identical recovery requests share a deterministic deduplication ID.
  * - The one global message group keeps replay at a concurrency ceiling of one, after any
  *   customer creation queued before it.
- * - Missing or unavailable recovery infrastructure never replaces the original API failure.
+ * - A send the queue could not make never replaces the original API failure.
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
-import type { SQSClient } from "@aws-sdk/client-sqs";
+import type { SendOptions } from "@autumn/sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID } from "@/internal/customers/recovery/queueCreationRecovery.js";
-import { queueFailedEntityCreation } from "@/internal/entities/recovery/queueFailedEntityCreation.js";
-import { getSqsClient } from "@/queue/initSqs.js";
-
-const recoveryQueueUrl =
-	"https://sqs.us-east-2.amazonaws.com/123456789012/customer-creation-recovery.fifo";
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const mockState = {
-	queueCommands: [] as Record<string, unknown>[],
-	originalSend: null as SQSClient["send"] | null,
+	sends: [] as { payload: Record<string, unknown>; options?: SendOptions }[],
 	shouldFailSend: false,
 };
+
+await mockModuleWithRestore("@/queue/getSqsJobs.js", () => ({
+	getSqsJobs: () => ({
+		entityCreationRecovery: {
+			trySend: async (
+				payload: Record<string, unknown>,
+				options?: SendOptions,
+			) => {
+				mockState.sends.push({ payload, options });
+				return mockState.shouldFailSend
+					? { sent: false, error: new Error("SQS unavailable") }
+					: { sent: true };
+			},
+		},
+	}),
+}));
+
+const { queueFailedEntityCreation } = await import(
+	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
+	"@/internal/entities/recovery/queueFailedEntityCreation.js?entityCreationQueue"
+);
 
 const buildContext = () =>
 	({
@@ -48,31 +64,12 @@ const params = {
 };
 
 describe("queueFailedEntityCreation", () => {
-	const originalQueueUrl = process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL;
-
 	beforeEach(() => {
-		mockState.queueCommands = [];
+		mockState.sends = [];
 		mockState.shouldFailSend = false;
-		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL = recoveryQueueUrl;
-
-		const sqsClient = getSqsClient({ queueUrl: recoveryQueueUrl });
-		mockState.originalSend = sqsClient.send.bind(sqsClient);
-		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
-			mockState.queueCommands.push(command.input);
-			if (mockState.shouldFailSend) throw new Error("SQS unavailable");
-			return {};
-		}) as typeof sqsClient.send;
 	});
 
-	afterEach(() => {
-		if (mockState.originalSend) {
-			getSqsClient({ queueUrl: recoveryQueueUrl }).send =
-				mockState.originalSend;
-		}
-		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL = originalQueueUrl;
-	});
-
-	test("stores a replayable, serialized request with deterministic deduplication", async () => {
+	test("sends a replayable request with deterministic deduplication", async () => {
 		const firstQueued = await queueFailedEntityCreation({
 			ctx: buildContext(),
 			params,
@@ -86,50 +83,33 @@ describe("queueFailedEntityCreation", () => {
 
 		expect(firstQueued).toBe(true);
 		expect(secondQueued).toBe(true);
-		expect(mockState.queueCommands).toHaveLength(2);
-		expect(mockState.queueCommands[0]).toMatchObject({
-			QueueUrl: recoveryQueueUrl,
-			MessageGroupId: CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID,
-		});
-		expect(mockState.queueCommands[0]?.MessageDeduplicationId).toBe(
-			mockState.queueCommands[1]?.MessageDeduplicationId,
+		expect(mockState.sends).toHaveLength(2);
+		expect(mockState.sends[0]?.options?.groupId).toBe(
+			"customer-creation-recovery",
+		);
+		expect(mockState.sends[0]?.options?.dedupeId).toStartWith(
+			"entity-creation-",
+		);
+		expect(mockState.sends[0]?.options?.dedupeId).toBe(
+			mockState.sends[1]?.options?.dedupeId,
 		);
 
-		const queuedMessage = JSON.parse(
-			mockState.queueCommands[0]?.MessageBody as string,
-		);
-		expect(queuedMessage).toMatchObject({
-			name: "entity-creation-recovery",
-			data: {
-				orgId: "org_123",
-				env: AppEnv.Live,
-				customerId: "customer_123",
-				requestId: "req_entity_123",
-				apiVersion: ApiVersion.V2_1,
-				params,
-				failureStage: "pre_commit",
-			},
-		});
-		expect(JSON.stringify(queuedMessage)).not.toContain("apiKey");
-		expect(JSON.stringify(queuedMessage)).not.toContain("secretKey");
-	});
-
-	test("returns false without masking the request when the queue is not configured", async () => {
-		delete process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL;
-		const ctx = buildContext();
-
-		const queued = await queueFailedEntityCreation({
-			ctx,
+		expect(mockState.sends[0]?.payload).toMatchObject({
+			orgId: "org_123",
+			env: AppEnv.Live,
+			customerId: "customer_123",
+			requestId: "req_entity_123",
+			apiVersion: ApiVersion.V2_1,
 			params,
 			failureStage: "pre_commit",
 		});
-
-		expect(queued).toBe(false);
-		expect(mockState.queueCommands).toHaveLength(0);
-		expect(ctx.logger.error).toHaveBeenCalled();
+		expect(JSON.stringify(mockState.sends[0]?.payload)).not.toContain("apiKey");
+		expect(JSON.stringify(mockState.sends[0]?.payload)).not.toContain(
+			"secretKey",
+		);
 	});
 
-	test("returns false without throwing when SQS is unavailable", async () => {
+	test("returns false without throwing when the send fails", async () => {
 		mockState.shouldFailSend = true;
 		const ctx = buildContext();
 
@@ -140,6 +120,6 @@ describe("queueFailedEntityCreation", () => {
 		});
 
 		expect(queued).toBe(false);
-		expect(ctx.logger.error).toHaveBeenCalled();
+		expect(ctx.extraLogs.entityCreationRecoveryQueued).toBeUndefined();
 	});
 });
