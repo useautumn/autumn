@@ -46,11 +46,13 @@ test.concurrent(
 
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
 		expect(preview.total).toBe(0);
-		expect(preview.warnings).toContainEqual({
-			type: "cycle_reset",
-			severity: "warning",
-			message: `The billing cycle resets on ${formatMsToDate(anchorMs)}.`,
-		});
+		expect(preview.warnings).toContainEqual(
+			expect.objectContaining({
+				type: "cycle_reset",
+				severity: "warning",
+				message: `The billing cycle resets on ${formatMsToDate(anchorMs)}.`,
+			}),
+		);
 
 		await autumnV2_4.billing.setPlans(params);
 
