@@ -2,8 +2,8 @@
  * TDD contract for wiring entities.create failures to recovery.
  *
  * Contract under test:
- * - A worker fail-open failure is captured with the validated create params and the stage
- *   the create reached, and still surfaces as the worker's own 503.
+ * - A worker fail-open failure is captured with the validated create params and still
+ *   surfaces as the worker's own 503.
  * - A transient Postgres failure is captured and shed as the usual 503.
  * - A 4xx verdict is never captured.
  * - Recovery replays can disable capture to prevent recursive enqueue.
@@ -20,7 +20,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
-import { setEntityCreationRecoveryStage } from "@/internal/entities/recovery/entityCreationRecoveryStage.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const mockState = {
@@ -37,8 +36,7 @@ await mockModuleWithRestore(
 await mockModuleWithRestore(
 	"@/internal/entities/actions/createEntitiesV2/createEntitiesV2.js",
 	() => ({
-		createEntitiesV2: async ({ ctx }: { ctx: AutumnContext }) => {
-			setEntityCreationRecoveryStage({ ctx, stage: "stripe_invoiced" });
+		createEntitiesV2: async () => {
 			throw mockState.createFailure;
 		},
 	}),
@@ -117,7 +115,7 @@ describe("batchCreateEntities recovery capture", () => {
 		);
 
 		expect(mockState.queueCalls).toEqual([
-			expect.objectContaining({ ctx, params, failureStage: "stripe_invoiced" }),
+			expect.objectContaining({ ctx, params }),
 		]);
 	});
 

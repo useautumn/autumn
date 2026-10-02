@@ -4,10 +4,6 @@ import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
-import {
-	getEntityCreationRecoveryStage,
-	setEntityCreationRecoveryStage,
-} from "../recovery/entityCreationRecoveryStage.js";
 import { queueFailedEntityCreation } from "../recovery/queueFailedEntityCreation.js";
 import { createEntitiesV2 } from "./createEntitiesV2/createEntitiesV2";
 
@@ -80,17 +76,12 @@ export const batchCreateEntities = async ({
 }: BatchCreateEntitiesParams) => {
 	const { org, env } = ctx;
 
-	setEntityCreationRecoveryStage({ ctx, stage: "pre_commit" });
 	return shed503OnTransientError({
 		ctx,
 		source: "entities.create",
 		onTransientError: enqueueRecoveryOnTransientFailure
 			? async () => {
-					await queueFailedEntityCreation({
-						ctx,
-						params,
-						failureStage: getEntityCreationRecoveryStage({ ctx }),
-					});
+					await queueFailedEntityCreation({ ctx, params });
 				}
 			: undefined,
 		run: () =>

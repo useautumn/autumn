@@ -7,18 +7,15 @@ import { getSqsJobs } from "@/queue/getSqsJobs.js";
 import type {
 	EntityCreationRecoveryParams,
 	EntityCreationRecoveryPayload,
-	EntityCreationRecoveryStage,
 } from "./entityCreationRecoveryTypes.js";
 
 /** False, never a throw, when the queue is missing or unreachable: the request's own failure is the answer. */
 export const queueFailedEntityCreation = async ({
 	ctx,
 	params,
-	failureStage,
 }: {
 	ctx: AutumnContext;
 	params: EntityCreationRecoveryParams;
-	failureStage: EntityCreationRecoveryStage;
 }): Promise<boolean> => {
 	const payload: EntityCreationRecoveryPayload = {
 		orgId: ctx.org.id,
@@ -27,7 +24,6 @@ export const queueFailedEntityCreation = async ({
 		requestId: ctx.id,
 		apiVersion: ctx.apiVersion.value,
 		params,
-		failureStage,
 		failedAt: Date.now(),
 	};
 	const { sent } = await getSqsJobs().entityCreationRecovery.trySend(payload, {
@@ -35,6 +31,6 @@ export const queueFailedEntityCreation = async ({
 		dedupeId: entityCreationRecoveryDedupeId({ payload }),
 	});
 	if (!sent) return false;
-	ctx.extraLogs.entityCreationRecoveryQueued = { failureStage };
+	ctx.extraLogs.entityCreationRecoveryQueued = true;
 	return true;
 };

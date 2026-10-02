@@ -39,7 +39,6 @@ const entityPayload = {
 		customerId: "cus_1",
 		createEntityData: [{ id: "ent_1", name: "Seat", feature_id: "seats" }],
 	},
-	failureStage: "pre_commit" as const,
 	failedAt: 1_785_000_000_000,
 };
 
@@ -55,19 +54,19 @@ describe("creation recovery jobs", () => {
 		expect(jobCatalogue.entityCreationRecovery).toBe(entityCreationRecoveryJob);
 	});
 
-	test("payloads parse with their stage and reject an unknown one", () => {
+	test("a customer payload carries its stage; an entity payload carries none, it replays in full", () => {
 		expect(
 			customerCreationRecoveryJob.payload.parse(customerPayload),
 		).toMatchObject({ failureStage: "pre_commit" });
-		expect(
-			entityCreationRecoveryJob.payload.parse(entityPayload),
-		).toMatchObject({ failureStage: "pre_commit" });
 		expect(() =>
-			entityCreationRecoveryJob.payload.parse({
-				...entityPayload,
-				failureStage: "autumn_committed",
+			customerCreationRecoveryJob.payload.parse({
+				...customerPayload,
+				failureStage: "stripe_invoiced",
 			}),
 		).toThrow();
+		expect(entityCreationRecoveryJob.payload.parse(entityPayload)).toEqual(
+			entityPayload,
+		);
 	});
 
 	test("the group id is one subject: same customer in order, other customers in parallel", () => {

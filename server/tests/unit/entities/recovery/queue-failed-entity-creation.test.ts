@@ -4,7 +4,7 @@
  * Contract under test:
  * - Transient failures are sent as the entity creation recovery job, on the customer creation
  *   recovery queue.
- * - Payloads preserve org, environment, API version, the validated create params, stage, and request ID.
+ * - Payloads preserve org, environment, API version, the validated create params, and request ID.
  * - Identical recovery requests share a deterministic deduplication ID.
  * - The message group is the subject: an entity replay lands after any customer creation
  *   queued for the same customer, beside other customers' replays.
@@ -73,12 +73,10 @@ describe("queueFailedEntityCreation", () => {
 		const firstQueued = await queueFailedEntityCreation({
 			ctx: buildContext(),
 			params,
-			failureStage: "pre_commit",
 		});
 		const secondQueued = await queueFailedEntityCreation({
 			ctx: buildContext(),
 			params,
-			failureStage: "pre_commit",
 		});
 
 		expect(firstQueued).toBe(true);
@@ -101,7 +99,6 @@ describe("queueFailedEntityCreation", () => {
 			requestId: "req_entity_123",
 			apiVersion: ApiVersion.V2_1,
 			params,
-			failureStage: "pre_commit",
 		});
 		expect(JSON.stringify(mockState.sends[0]?.payload)).not.toContain("apiKey");
 		expect(JSON.stringify(mockState.sends[0]?.payload)).not.toContain(
@@ -113,11 +110,7 @@ describe("queueFailedEntityCreation", () => {
 		mockState.shouldFailSend = true;
 		const ctx = buildContext();
 
-		const queued = await queueFailedEntityCreation({
-			ctx,
-			params,
-			failureStage: "pre_commit",
-		});
+		const queued = await queueFailedEntityCreation({ ctx, params });
 
 		expect(queued).toBe(false);
 		expect(ctx.extraLogs.entityCreationRecoveryQueued).toBeUndefined();

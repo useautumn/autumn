@@ -19,9 +19,6 @@ const customerCreationRecoveryStage = z.enum([
 	"completed",
 ]);
 
-/** Seats are invoiced before any row is written: past `stripe_invoiced`, a replay would charge again. */
-const entityCreationRecoveryStage = z.enum(["pre_commit", "stripe_invoiced"]);
-
 const creationRecoveryBase = z.object({
 	orgId: z.string(),
 	env: z.enum(AppEnv),
@@ -49,7 +46,7 @@ export const customerCreationRecoveryJob = job({
 	}),
 });
 
-/** The validated entities.create request, replayed through the same batch create. */
+/** The validated entities.create request, replayed in full through the same batch create. */
 export const entityCreationRecoveryJob = job({
 	name: "entity-creation-recovery",
 	queue: "customerCreationRecovery",
@@ -64,7 +61,6 @@ export const entityCreationRecoveryJob = job({
 			]),
 			withAutumnId: z.boolean().optional(),
 		}),
-		failureStage: entityCreationRecoveryStage,
 	}),
 });
 
@@ -120,6 +116,5 @@ export const entityCreationRecoveryDedupeId = ({
 			env: payload.env,
 			apiVersion: payload.apiVersion,
 			params: payload.params,
-			failureStage: payload.failureStage,
 		},
 	});

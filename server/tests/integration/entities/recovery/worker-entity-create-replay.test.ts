@@ -111,7 +111,6 @@ test.concurrent(
 					},
 				],
 			},
-			failureStage: "pre_commit",
 			failedAt: Date.now(),
 		};
 		await addTaskToQueue({ jobName: JobName.EntityCreationRecovery, payload });

@@ -6,7 +6,6 @@
  *   enqueue itself again.
  * - An entity the original request did land is a successful replay, not a 409.
  * - Replays log whether they created the entities or found them.
- * - Failures after Stripe invoiced the seats stop for manual billing review.
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
@@ -53,9 +52,7 @@ const buildContext = () =>
 		},
 	}) as unknown as AutumnContext;
 
-const buildPayload = (
-	failureStage: EntityCreationRecoveryPayload["failureStage"] = "pre_commit",
-): EntityCreationRecoveryPayload => ({
+const payload: EntityCreationRecoveryPayload = {
 	orgId: "org_123",
 	env: AppEnv.Live,
 	customerId: "customer_123",
@@ -65,10 +62,8 @@ const buildPayload = (
 		customerId: "customer_123",
 		createEntityData: [{ id: "entity_123", name: null, feature_id: "seats" }],
 	},
-	failureStage,
 	failedAt: 1_785_000_000_000,
-});
-const payload = buildPayload();
+};
 
 describe("replayFailedEntityCreation", () => {
 	beforeEach(() => {
@@ -106,17 +101,6 @@ describe("replayFailedEntityCreation", () => {
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
 			outcome: "existing",
 		});
-	});
-
-	test("refuses automatic replay after Stripe invoiced the seats", async () => {
-		await expect(
-			replayFailedEntityCreation({
-				ctx: buildContext(),
-				payload: buildPayload("stripe_invoiced"),
-			}),
-		).rejects.toThrow("requires manual billing review");
-
-		expect(mockState.batchCreateCalls).toHaveLength(0);
 	});
 
 	test("propagates any other verdict so the queue's retry policy decides", async () => {

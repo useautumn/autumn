@@ -13,7 +13,6 @@ import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
-import { setEntityCreationRecoveryStage } from "../../recovery/entityCreationRecoveryStage.js";
 import { computeCreateEntitiesPlan } from "./compute/computeCreateEntitiesPlan.js";
 import { mergeAllocatedInvoicePlan } from "./compute/mergeAllocatedInvoicePlan.js";
 import { handleCreateEntitiesErrors } from "./errors/handleCreateEntitiesErrors.js";
@@ -88,7 +87,6 @@ export const createEntitiesV2 = async ({
 			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
 		});
 		await refuseUnpaidInvoice({ ctx, billingContext, stripeResult });
-		setEntityCreationRecoveryStage({ ctx, stage: "stripe_invoiced" });
 	}
 
 	await executeAutumnBillingPlan({

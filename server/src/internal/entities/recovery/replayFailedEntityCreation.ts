@@ -20,12 +20,6 @@ export const replayFailedEntityCreation = async ({
 	ctx: AutumnContext;
 	payload: EntityCreationRecoveryPayload;
 }) => {
-	if (payload.failureStage === "stripe_invoiced") {
-		throw new Error(
-			`Entity creation recovery ${payload.requestId} requires manual billing review`,
-		);
-	}
-
 	ctx.apiVersion = new ApiVersionClass(payload.apiVersion);
 
 	const { error } = await tryCatch(
@@ -41,11 +35,9 @@ export const replayFailedEntityCreation = async ({
 	ctx.extraLogs.entityCreationRecoveryReplay = {
 		outcome,
 		sourceRequestId: payload.requestId,
-		failureStage: payload.failureStage,
 	};
 	ctx.logger.info("[entityCreationRecovery] Replay completed", {
 		outcome,
 		sourceRequestId: payload.requestId,
-		failureStage: payload.failureStage,
 	});
 };
