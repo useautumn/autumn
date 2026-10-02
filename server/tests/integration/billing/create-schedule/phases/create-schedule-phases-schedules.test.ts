@@ -269,7 +269,7 @@ test.concurrent(
 			);
 		expect(replacedScheduledProducts).toHaveLength(0);
 
-		// Replacing a schedule drops its queued products; the already-started plan stays.
+		// Every product the replaced schedule placed ends now, including its started plan.
 		const replacedOpeningProducts = await ctx.db
 			.select()
 			.from(customerProducts)
@@ -281,7 +281,7 @@ test.concurrent(
 			);
 		expect(replacedOpeningProducts).toHaveLength(1);
 		expect(replacedOpeningProducts[0]!.product_id).toBe(pro.id);
-		expect(replacedOpeningProducts[0]!.status).toBe(CusProductStatus.Active);
+		expect(replacedOpeningProducts[0]!.status).toBe(CusProductStatus.Expired);
 
 		const entityScheduledProducts = await ctx.db
 			.select()
