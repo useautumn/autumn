@@ -51,14 +51,24 @@ export const updateServerEdgeConfig = async <T>({
 			);
 		}
 
+		const next = update(schema.parse(current.data));
 		const written = await dashboardFetch(ctx, session, path, {
 			method: "PUT",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify(update(schema.parse(current.data))),
+			body: JSON.stringify(next),
 		});
 		if (written.status !== 200) {
 			throw new Error(
 				`PUT ${path} returned ${written.status}: ${JSON.stringify(written.data)}`,
+			);
+		}
+
+		const landed = await dashboardFetch(ctx, session, path, {
+			method: "GET",
+		});
+		if (!Bun.deepEquals(schema.parse(landed.data), next)) {
+			throw new Error(
+				`PUT ${path} did not land: ${JSON.stringify(landed.data)}`,
 			);
 		}
 	} finally {
