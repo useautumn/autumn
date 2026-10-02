@@ -5,28 +5,29 @@ import { buildSetPlansPhaseCustomers } from "../buildSetPlansPhaseCustomers";
 import { savedSchedulePhases } from "./savedSchedulePhases";
 import { withOneOffPrepaidCarryOvers } from "./withOneOffPrepaidCarryOvers";
 
-/** The customer at each saved phase date had the request never been sent. */
+/** The customer at each saved phase date (all after now) had the request never been sent. */
 export const buildSavedPhaseCustomers = ({
 	ctx,
 	fullCustomer,
 	autumnBillingPlan,
 	phases,
 	dates,
+	now,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	autumnBillingPlan: AutumnBillingPlan;
 	phases: SchedulePhasePlan[];
 	dates: number[];
+	now: number;
 }): Map<number, FullCustomer> => {
-	const firstPhaseStartsAt = phases[0]?.startsAt;
-	if (firstPhaseStartsAt === undefined || dates.length === 0) return new Map();
+	if (phases.length === 0 || dates.length === 0) return new Map();
 
 	const savedPhases = savedSchedulePhases({
 		fullCustomer,
 		phases,
 		autumnBillingPlan,
-		dates: [firstPhaseStartsAt, ...dates],
+		dates: [now, ...dates],
 	});
 	const savedPhaseCustomers = buildSetPlansPhaseCustomers({
 		ctx,

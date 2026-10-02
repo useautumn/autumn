@@ -735,6 +735,7 @@ describe(
 						autumnBillingPlan,
 						phases,
 						dates: [at],
+						now: NOW,
 					}).get(at) ?? fullCustomer;
 
 				for (const [phaseIndex, phase] of phases.entries()) {

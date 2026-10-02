@@ -34,6 +34,7 @@ export const savedComparisonCustomers = ({
 		autumnBillingPlan,
 		phases,
 		dates: [...new Set(savedDates)].sort((first, second) => first - second),
+		now,
 	});
 
 	return matches.phases.map((phase) => {
