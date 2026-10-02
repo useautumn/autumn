@@ -24,7 +24,7 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 			description:
 				"Pass 'now' to reset the billing cycle of the immediate phase to the current time, or a future timestamp in epoch milliseconds to anchor the cycle on that date.",
 		}),
-		stripe_subscription_id: z.string().optional().meta({
+		stripe_subscription_id: z.string().min(1).optional().meta({
 			description:
 				"The Stripe subscription to edit when the customer has several. Only plans billed on it, and free plans, are changed; new paid plans bill on it.",
 			internal: true,

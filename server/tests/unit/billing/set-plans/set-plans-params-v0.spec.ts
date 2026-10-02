@@ -69,6 +69,16 @@ describe(chalk.yellowBright("SetPlansParamsV0Schema"), () => {
 			}),
 		).toThrow("Phase starts_at values must be strictly increasing");
 	});
+
+	test("rejects an empty stripe_subscription_id instead of editing every subscription", () => {
+		const result = SetPlansParamsV0Schema.safeParse({
+			...resyncRequest,
+			stripe_subscription_id: "",
+		});
+
+		expect(result.success).toBe(false);
+		expect(result.error?.issues[0]?.path).toEqual(["stripe_subscription_id"]);
+	});
 });
 
 describe(chalk.yellowBright("createScheduleParamsToSetPlansParams"), () => {
