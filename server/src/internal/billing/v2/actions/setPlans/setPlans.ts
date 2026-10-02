@@ -1,6 +1,7 @@
 import {
 	type BillingPlan,
 	CheckoutAction,
+	type CreateScheduleBillingContext,
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
@@ -21,6 +22,7 @@ import {
 	handleSetPlansErrors,
 } from "./errors/handleSetPlansErrors";
 import { logSetPlansContext } from "./logs/logSetPlansContext";
+import { carryReplacedSubscriptionSettings } from "./setup/carryReplacedSubscription/carryReplacedSubscriptionSettings";
 import { setupSetPlansBillingContext } from "./setup/setupSetPlansBillingContext";
 import type { SetPlansResult } from "./types/setPlansResult";
 import { buildReplacedSubscriptionAction } from "./utils/buildReplacedSubscriptionAction";
@@ -49,15 +51,16 @@ export const setPlans = async ({
 			? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
 			: undefined;
 
-	const { billingContext, timeline } = await setupSetPlansBillingContext({
-		ctx,
-		params: resolvedParams,
-		preview,
-	});
-	logSetPlansContext({ ctx, billingContext, timeline });
+	const { billingContext: plannedBillingContext, timeline } =
+		await setupSetPlansBillingContext({
+			ctx,
+			params: resolvedParams,
+			preview,
+		});
+	logSetPlansContext({ ctx, billingContext: plannedBillingContext, timeline });
 	await handleSetPlansErrors({
 		ctx,
-		billingContext,
+		billingContext: plannedBillingContext,
 		timeline,
 		params: resolvedParams,
 		preview,
@@ -68,11 +71,19 @@ export const setPlans = async ({
 		phases,
 		immediatePhaseTransition,
 		customerProductChanges,
-	} = computeSetPlansPlan({ ctx, billingContext, timeline });
-	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
+	} = computeSetPlansPlan({
+		ctx,
+		billingContext: plannedBillingContext,
+		timeline,
+	});
+	logAutumnBillingPlan({
+		ctx,
+		plan: autumnBillingPlan,
+		billingContext: plannedBillingContext,
+	});
 	await handleSetPlansComputeErrors({
 		ctx,
-		billingContext,
+		billingContext: plannedBillingContext,
 		autumnBillingPlan,
 		immediatePhaseTransition,
 	});
@@ -80,10 +91,19 @@ export const setPlans = async ({
 	if (!preview) {
 		await ensureFreePhaseStripeProducts({
 			ctx,
-			billingContext,
+			billingContext: plannedBillingContext,
 			autumnBillingPlan,
 		});
 	}
+
+	const billingContext: CreateScheduleBillingContext = {
+		...plannedBillingContext,
+		...(await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: plannedBillingContext,
+			preview,
+		})),
+	};
 
 	const stripeBillingPlan = {
 		...(await evaluateStripeBillingPlan({
@@ -96,6 +116,8 @@ export const setPlans = async ({
 			? undefined
 			: buildReplacedSubscriptionAction({
 					replacedStripeSubscription: billingContext.replacedStripeSubscription,
+					subscriptionBackdateStartMs:
+						billingContext.subscriptionBackdateStartMs,
 				}),
 	};
 	logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });

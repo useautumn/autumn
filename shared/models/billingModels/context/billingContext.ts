@@ -93,6 +93,15 @@ export interface BillingContext {
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	stripeTaxRate?: Stripe.TaxRate;
 	paymentMethod?: Stripe.PaymentMethod;
+	/** Settings a replaced subscription hands its successor, applied when it is created. */
+	carriedSubscriptionParams?: Pick<
+		Stripe.SubscriptionCreateParams,
+		| "default_payment_method"
+		| "collection_method"
+		| "days_until_due"
+		| "default_tax_rates"
+		| "automatic_tax"
+	>;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
 	// Optional - only needed for custom plan flows

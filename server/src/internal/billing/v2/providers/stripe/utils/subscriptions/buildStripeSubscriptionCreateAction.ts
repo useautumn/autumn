@@ -53,6 +53,8 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		collection_method: "charge_automatically",
 
+		...billingContext.carriedSubscriptionParams,
+
 		payment_behavior:
 			billingContext.paymentBehaviorIntent ??
 			(!paymentMethod || isCustomPaymentMethod
