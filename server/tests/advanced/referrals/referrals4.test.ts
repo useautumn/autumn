@@ -45,11 +45,14 @@ test(`${chalk.yellowBright("referrals4: free product referrals delayed by trial"
 
 	// Reward & referral program
 	const reward = rewards.freeProduct({ freeProductId: freeAddOn.id });
-	const program = referralPrograms.onCheckoutBoth({
-		rewardId: reward.id,
-		productIds: [proWithTrial.id],
-		maxRedemptions: 2,
-	});
+	const program = {
+		...referralPrograms.onCheckoutBoth({
+			rewardId: reward.id,
+			productIds: [proWithTrial.id],
+			maxRedemptions: 2,
+		}),
+		exclude_trial: true,
+	};
 
 	// Setup — redeemer gets its own test clock (we need to advance it independently)
 	const { autumnV1, referralCode, testClockIds } = await initScenario({

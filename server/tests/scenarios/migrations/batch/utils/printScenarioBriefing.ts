@@ -26,7 +26,7 @@ const describeDivergence = (divergence: CastDivergence | undefined) => {
 	if (!divergence) return "plain catalog holder";
 	if (divergence.kind === "custom_attach") return "custom attach (is_custom)";
 	if (divergence.kind === "custom_patch") {
-		return "customized by subscriptions.update patch (is_custom)";
+		return "customized by billing.update patch (is_custom)";
 	}
 	if (divergence.kind === "custom_definition") {
 		return divergence.allowance === undefined

@@ -1,11 +1,11 @@
 // Manual customer creation - not using initCustomer to control test clock properly
-import { beforeAll, describe, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 import {
-	CusProductStatus,
 	FreeTrialDuration,
 	LegacyVersion,
 	ProductItemInterval,
 } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
@@ -35,7 +35,6 @@ const defaultTrialPro = constructProduct({
 	isDefault: true,
 	forcePaidDefault: true,
 	id: "defaultTrial_pro",
-	group: "defaultTrial",
 	type: "pro",
 	freeTrial: {
 		length: 7,
@@ -52,6 +51,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockID: string;
 	let stripeCli: Stripe;
+	let stripeCustomerId: string;
 
 	beforeAll(async () => {
 		// Products must be initialized BEFORE customer creation for default products
@@ -67,10 +67,13 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 			customerId,
 			attachPm: "success",
 			withTestClock: true,
+			withDefault: true,
 		});
 
 		testClockID = res.testClockId;
 		stripeCli = ctx.stripeCli;
+		stripeCustomerId = res.customer.processor?.id ?? "";
+		expect(stripeCustomerId).toBeTruthy();
 	});
 
 	it("should create a customer with the paid default trial", async () => {
@@ -83,13 +86,14 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 	});
 
 	it("should be active after 7 days", async () => {
+		const advancedTo = addHours(
+			addDays(new Date(), 7),
+			hoursToFinalizeInvoice,
+		).getTime();
 		await advanceTestClock({
 			stripeCli,
 			testClockId: testClockID,
-			advanceTo: addHours(
-				addDays(new Date(), 7),
-				hoursToFinalizeInvoice,
-			).getTime(),
+			advanceTo: advancedTo,
 			waitForSeconds: 10,
 		});
 
@@ -98,7 +102,19 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 		expectProductAttached({
 			customer,
 			product: defaultTrialPro,
-			status: CusProductStatus.Active,
+		});
+
+		// Legacy status reads "trialing" until wall-clock passes trial_ends_at, so assert on Stripe instead.
+		const { data: subscriptions } = await stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+		});
+		expect(subscriptions.map((sub) => sub.status)).toEqual(["active"]);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: 20,
+			latestStatus: "paid",
 		});
 	});
 });
