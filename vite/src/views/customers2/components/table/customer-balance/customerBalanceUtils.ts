@@ -1,8 +1,10 @@
 import {
+	AllowanceType,
 	cusEntsToBalance,
 	type DeleteBalanceParamsV0,
 	EntInterval,
 	type Entity,
+	entIntvToResetIntv,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	type FullCustomerEntitlement,
@@ -12,11 +14,47 @@ import {
 	fullCustomerToCustomerEntitlements,
 	fullCustomerToCustomerLicenses,
 	hasRecalculableScope,
+	isCusEntDisplayExpired,
 	isPaidCustomerEntitlement,
 	isPooledBalanceSourceCustomerEntitlement,
 	isSyntheticPooledBalanceCustomerEntitlement,
 	type RecalculateBalanceParamsV0,
 } from "@autumn/shared";
+
+export const getAllocatableSharedBalanceInterval = ({
+	customerEntitlements,
+}: {
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) => {
+	const sharedRows = customerEntitlements.filter(
+		(ent) =>
+			!isCusEntDisplayExpired({ cusEnt: ent }) &&
+			!ent.internal_entity_id &&
+			!ent.customer_product?.internal_entity_id,
+	);
+	const intervals = new Set(sharedRows.map((ent) => ent.entitlement.interval));
+	const eligible =
+		intervals.size === 1 &&
+		sharedRows.every(
+			(ent) =>
+				!ent.unlimited &&
+				ent.entitlement.allowance_type !== AllowanceType.Unlimited &&
+				ent.entitlement.allowance != null &&
+				(ent.entitlement.interval_count ?? 1) === 1 &&
+				!!ent.entitlement.interval &&
+				ent.entitlement.interval !== EntInterval.Lifetime,
+		);
+	return eligible
+		? entIntvToResetIntv({ entInterval: sharedRows[0].entitlement.interval })
+		: undefined;
+};
+
+export const isAllocatableSharedBalance = ({
+	customerEntitlements,
+}: {
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) =>
+	getAllocatableSharedBalanceInterval({ customerEntitlements }) !== undefined;
 
 export const getCustomerBalanceId = ({
 	balance,

@@ -8,7 +8,7 @@
  *   Entity 2: quantity 500 → 100 included + 400 purchased (4×$10 = $40)
  *
  * Test 2: Customer has the same prepaid product attached, then entities also attach it.
- *   Customer balance = customer's own + sum of entity balances.
+ *   Customer balance includes entity balances only on the non-worker route.
  *   Entity balance = entity's own + customer's balance (inheritance).
  */
 
@@ -19,6 +19,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -123,7 +124,7 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: attach prepaid messages
  * Then entity 1 attaches same product at entity level (qty 300 → balance 300).
  *
  * Expected:
- * - Customer total balance = 200 (own) + 300 (entity) = 500
+ * - Customer balance = 200 on the worker route, 500 on the non-worker route
  * - Entity 1 balance = 300 (own) + 200 (inherited from customer) = 500
  * - Invoices: 2 total (customer attach + entity attach)
  */
@@ -188,10 +189,12 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: customer + entity both 
 		balance: entityQuantity + customerQuantity,
 	});
 
-	// Verify customer total: own (200) + entity (300) = 500
+	// Worker customer reads exclude the entity-owned grant.
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(
-		customerQuantity + entityQuantity,
+		isBalanceWorkerRoute()
+			? customerQuantity
+			: customerQuantity + entityQuantity,
 	);
 
 	// Invoices: 2 total — customer attach + entity attach

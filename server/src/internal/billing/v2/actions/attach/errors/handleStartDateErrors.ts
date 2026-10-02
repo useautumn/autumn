@@ -9,6 +9,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
 import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 
@@ -76,6 +77,17 @@ export const handleStartDateErrors = ({
 
 	if (!isFutureStartDate(params.starts_at, billingContext.currentEpochMs)) {
 		return;
+	}
+
+	if (
+		isCustomerProductAutumnManagedTrial(billingContext.currentCustomerProduct)
+	) {
+		throw new RecaseError({
+			message:
+				"Future starts_at cannot be used while the customer is on a no-card free trial. Attach without starts_at to switch now.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
 	}
 
 	if (params.invoice_mode?.enabled) {

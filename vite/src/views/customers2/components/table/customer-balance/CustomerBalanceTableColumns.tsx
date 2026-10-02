@@ -4,12 +4,10 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import {
-	AllowanceType,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	cusEntsToUnlimitedUsage,
-	EntInterval,
 	getRolloverFields,
 	isCusEntDisplayExpired,
 	nullish,
@@ -43,6 +41,7 @@ import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 import {
 	canDeleteCustomerBalance,
 	canRecalculateCustomerBalances,
+	isAllocatableSharedBalance,
 } from "./customerBalanceUtils";
 import { SyncAnchorMenuItem } from "./SyncAnchorMenuItem";
 
@@ -413,30 +412,6 @@ function BarCell({
 		/>
 	);
 }
-
-/** balances.allocate splits the shared rows of one finite, resetting interval; entity-owned rows don't count. */
-const isAllocatableSharedBalance = ({
-	customerEntitlements,
-}: {
-	customerEntitlements: FullCusEntWithFullCusProduct[];
-}) => {
-	const sharedRows = customerEntitlements.filter(
-		(ent) =>
-			!ent.internal_entity_id && !ent.customer_product?.internal_entity_id,
-	);
-	const intervals = new Set(sharedRows.map((ent) => ent.entitlement.interval));
-	return (
-		intervals.size === 1 &&
-		sharedRows.every(
-			(ent) =>
-				!ent.unlimited &&
-				ent.entitlement.allowance_type !== AllowanceType.Unlimited &&
-				ent.entitlement.allowance != null &&
-				!!ent.entitlement.interval &&
-				ent.entitlement.interval !== EntInterval.Lifetime,
-		)
-	);
-};
 
 function BalanceActionsCell({
 	row,

@@ -25,7 +25,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Basic cancel trial EOC - preview.next_cycle null, no invoice after advance
+// TEST 1: Basic cancel trial EOC - empty $0 next cycle, no invoice after advance
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -34,13 +34,13 @@ import chalk from "chalk";
  * - User cancels at end of cycle
  *
  * Expected Result:
- * - Preview should have next_cycle as null/undefined (canceling, no next cycle)
+ * - Preview should have an empty $0 next_cycle at trial end
  * - Product should be canceling but still trialing
  * - After advancing past trial end:
  *   - Product is not present
  *   - No invoice created (was free during trial)
  */
-test.concurrent(`${chalk.yellowBright("cancel trial EOC: basic cancel, preview.next_cycle null, no invoice after advance")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC: basic cancel, empty zero next cycle, no invoice after advance")}`, async () => {
 	const customerId = "cancel-trial-eoc-basic";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -64,7 +64,7 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC: basic cancel, preview.n
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	await expectProductTrialing({
+	const trialEndsAt = await expectProductTrialing({
 		customer: customerAfterAttach,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(7),
@@ -89,11 +89,15 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC: basic cancel, preview.n
 	// Preview total should be $0 (no charge for canceling during trial)
 	expect(preview.total).toBe(0);
 
-	// next_cycle should be null/undefined since we're canceling
 	expectPreviewNextCycleCorrect({
 		preview,
-		expectDefined: false,
+		startsAt: trialEndsAt!,
+		total: 0,
+		toleranceMs: 1000,
 	});
+	expect(preview.next_cycle?.subtotal).toBe(0);
+	expect(preview.next_cycle?.line_items).toEqual([]);
+	expect(preview.next_cycle?.usage_line_items).toEqual([]);
 
 	// Execute the cancel
 	await autumnV1.subscriptions.update(cancelParams);

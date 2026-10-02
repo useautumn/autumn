@@ -560,14 +560,10 @@ test.concurrent(`${chalk.yellowBright("version-discount: preserved across v1 to 
 		version: 3,
 	});
 
-	// Current v2: 5 units * $15 = $75
-	// New v3: 5 units * $20 = $100
-	// Upgrade generates: refund (-$75) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 25% off: $100 * 0.75 = $75
-	// Total: -$75 + $75 = $0
-	const refundAmount = -75;
-	const discountedCharge = Math.round(100 * 0.75);
+	// v2 was paid at 25% off ($56.25), so its refund carries the discount
+	// Total: -$56.25 + $100 * 0.75 = $18.75
+	const refundAmount = -(75 * 0.75);
+	const discountedCharge = 100 * 0.75;
 	const expectedAmount = refundAmount + discountedCharge;
 
 	expect(previewV3.total).toBe(expectedAmount);

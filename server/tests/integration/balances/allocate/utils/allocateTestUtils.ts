@@ -1,7 +1,8 @@
 import { expect } from "bun:test";
 import {
-	type AllocateBalancesParamsV0,
+	type ApiBalanceV1,
 	ApiVersion,
+	type BalanceAllocationControl,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -17,6 +18,42 @@ import { expireUsageWindowForReset } from "../../utils/usage-limit-utils/expireU
 import { queryRows } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
 export const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
+
+export const expectAllocatedMessages = async ({
+	customerId,
+	response,
+	expected,
+}: {
+	customerId: string;
+	response: {
+		billing_controls: { balance_allocations?: BalanceAllocationControl[] };
+	};
+	expected: ({ entity_id?: string; amount?: number } & Partial<
+		Pick<ApiBalanceV1, "granted" | "usage" | "remaining">
+	>)[];
+}) => {
+	const control = response.billing_controls.balance_allocations?.[0];
+	expect(control?.feature_id).toBe(TestFeature.Messages);
+	for (const [index, { entity_id, amount, ...balance }] of expected.entries()) {
+		const entityId = entity_id ?? control!.allocations[index].entity_id;
+		if (amount !== undefined)
+			expect(control!.allocations).toContainEqual({
+				entity_id: entityId,
+				amount,
+			});
+		const entity = await autumnV2_3.entities.get<{
+			balances: Record<string, ApiBalanceV1>;
+		}>(customerId, entityId);
+		const allocated = { granted: 0, usage: 0, remaining: 0 };
+		for (const row of entity.balances[TestFeature.Messages].breakdown ?? []) {
+			if (!row.allocation) continue;
+			allocated.granted += row.included_grant + row.prepaid_grant;
+			allocated.usage += row.usage;
+			allocated.remaining += row.remaining;
+		}
+		expect(allocated).toMatchObject(balance);
+	}
+};
 
 /** A customer with one monthly shared messages pool and `entityCount` entities, caches warm. */
 export const setupSharedPool = async ({
@@ -65,14 +102,15 @@ export const allocateMessages = ({
 	interval = ResetInterval.Month,
 }: {
 	customerId: string;
-	allocations: AllocateBalancesParamsV0["allocations"];
+	allocations: BalanceAllocationControl["allocations"];
 	interval?: ResetInterval;
 }) =>
-	autumnV2_3.balances.allocate({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		interval,
-		allocations,
+	autumnV2_3.customers.update(customerId, {
+		billing_controls: {
+			balance_allocations: [
+				{ feature_id: TestFeature.Messages, interval, allocations },
+			],
+		},
 	});
 
 export const trackMessages = ({

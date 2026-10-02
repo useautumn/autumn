@@ -108,8 +108,7 @@ log "pulling local service images"
       dragonfly fakecloud
 )
 
-docker compose -f "$TRIGGER_COMPOSE_FILE" config --images \
-  | sort -u \
-  | xargs -n1 docker pull
+docker compose -f "$TRIGGER_COMPOSE_FILE" pull --ignore-buildable
+docker compose -f "$TRIGGER_COMPOSE_FILE" build electric
 
 log "init complete"

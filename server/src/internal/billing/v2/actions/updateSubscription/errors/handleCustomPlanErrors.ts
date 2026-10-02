@@ -47,7 +47,12 @@ export const handleCustomPlanErrors = ({
 			params.customize?.remove_licenses?.length,
 	);
 
-	if (itemsSame && !hasLicenseCustomize) {
+	if (
+		itemsSame &&
+		currentCustomerProduct.internal_product_id ===
+			newCustomerProduct.internal_product_id &&
+		!hasLicenseCustomize
+	) {
 		throw new RecaseError({
 			message:
 				"Custom plan configuration is identical to the current subscription; no update is needed",

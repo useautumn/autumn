@@ -376,6 +376,52 @@ components:
         billing_controls:
           type: object
           properties:
+            balance_allocations:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The feature whose shared customer credits are allocated.
+                  interval:
+                    enum:
+                      - one_off
+                      - minute
+                      - hour
+                      - day
+                      - week
+                      - month
+                      - quarter
+                      - semi_annual
+                      - year
+                    type: string
+                    description: The reset interval of the shared credits being allocated.
+                  allocations:
+                    type: array
+                    maxItems: 1000
+                    items:
+                      type: object
+                      properties:
+                        entity_id:
+                          type: string
+                          description: The public entity ID.
+                        amount:
+                          type: number
+                          minimum: 0
+                          description: Requested credits per cycle, before proportional scaling. 0
+                            releases the allocation.
+                      required:
+                        - entity_id
+                        - amount
+                    description: Complete list of entity allocations for this feature. Omitted
+                      entities release their shares.
+                required:
+                  - feature_id
+                  - interval
+                  - allocations
+              description: Customer-level entity allocations of shared credits. Amounts are
+                requested shares before proportional scaling.
             auto_topups:
               type: array
               items:
@@ -6125,6 +6171,52 @@ paths:
                   billing_controls:
                     type: object
                     properties:
+                      balance_allocations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature whose shared customer credits are allocated.
+                            interval:
+                              enum:
+                                - one_off
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: The reset interval of the shared credits being allocated.
+                            allocations:
+                              type: array
+                              maxItems: 1000
+                              items:
+                                type: object
+                                properties:
+                                  entity_id:
+                                    type: string
+                                    description: The public entity ID.
+                                  amount:
+                                    type: number
+                                    minimum: 0
+                                    description: Requested credits per cycle, before proportional scaling. 0
+                                      releases the allocation.
+                                required:
+                                  - entity_id
+                                  - amount
+                              description: Complete list of entity allocations for this feature. Omitted
+                                entities release their shares.
+                          required:
+                            - feature_id
+                            - interval
+                            - allocations
+                        description: Customer-level entity allocations of shared credits. Amounts are
+                          requested shares before proportional scaling.
                       auto_topups:
                         type: array
                         items:
@@ -7856,6 +7948,52 @@ paths:
                         billing_controls:
                           type: object
                           properties:
+                            balance_allocations:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature whose shared customer credits are allocated.
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - minute
+                                      - hour
+                                      - day
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: The reset interval of the shared credits being allocated.
+                                  allocations:
+                                    type: array
+                                    maxItems: 1000
+                                    items:
+                                      type: object
+                                      properties:
+                                        entity_id:
+                                          type: string
+                                          description: The public entity ID.
+                                        amount:
+                                          type: number
+                                          minimum: 0
+                                          description: Requested credits per cycle, before proportional scaling. 0
+                                            releases the allocation.
+                                      required:
+                                        - entity_id
+                                        - amount
+                                    description: Complete list of entity allocations for this feature. Omitted
+                                      entities release their shares.
+                                required:
+                                  - feature_id
+                                  - interval
+                                  - allocations
+                              description: Customer-level entity allocations of shared credits. Amounts are
+                                requested shares before proportional scaling.
                             auto_topups:
                               type: array
                               items:
@@ -9176,6 +9314,53 @@ paths:
                 billing_controls:
                   type: object
                   properties:
+                    balance_allocations:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature whose shared customer credits are allocated.
+                          interval:
+                            enum:
+                              - one_off
+                              - minute
+                              - hour
+                              - day
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: The reset interval of the shared credits being allocated.
+                          allocations:
+                            type: array
+                            maxItems: 1000
+                            items:
+                              type: object
+                              properties:
+                                entity_id:
+                                  type: string
+                                  description: The public entity ID.
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: Requested credits per cycle, before proportional scaling. 0
+                                    releases the allocation.
+                              required:
+                                - entity_id
+                                - amount
+                            description: Complete list of entity allocations for this feature. Omitted
+                              entities release their shares.
+                        required:
+                          - feature_id
+                          - interval
+                          - allocations
+                      description: Replace all customer-level balance allocations. Omit to keep
+                        existing allocations; pass [] to release all. Available
+                        only when updating an existing customer.
                     auto_topups:
                       type: array
                       items:
@@ -9603,6 +9788,16 @@ paths:
                   customer_id: cus_123
                   name: Jane Doe
                   email: jane@example.com
+                - customer_id: customer_123
+                  billing_controls:
+                    balance_allocations:
+                      - feature_id: credits
+                        interval: month
+                        allocations:
+                          - entity_id: workspace_a
+                            amount: 300
+                          - entity_id: workspace_b
+                            amount: 200
             example: *a8
       responses:
         "200":
@@ -9658,6 +9853,52 @@ paths:
                   billing_controls:
                     type: object
                     properties:
+                      balance_allocations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature whose shared customer credits are allocated.
+                            interval:
+                              enum:
+                                - one_off
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: The reset interval of the shared credits being allocated.
+                            allocations:
+                              type: array
+                              maxItems: 1000
+                              items:
+                                type: object
+                                properties:
+                                  entity_id:
+                                    type: string
+                                    description: The public entity ID.
+                                  amount:
+                                    type: number
+                                    minimum: 0
+                                    description: Requested credits per cycle, before proportional scaling. 0
+                                      releases the allocation.
+                                required:
+                                  - entity_id
+                                  - amount
+                              description: Complete list of entity allocations for this feature. Omitted
+                                entities release their shares.
+                          required:
+                            - feature_id
+                            - interval
+                            - allocations
+                        description: Customer-level entity allocations of shared credits. Amounts are
+                          requested shares before proportional scaling.
                       auto_topups:
                         type: array
                         items:

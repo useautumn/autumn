@@ -13,6 +13,7 @@ export {
 	type BillingPlanDeleteTable,
 	type BillingPlanInsertTable,
 	type BillingPlanUpdateTable,
+	toBillingPlanAddRolloversOp,
 	toBillingPlanDeleteOp,
 	toBillingPlanIncrementOp,
 	toBillingPlanInsertOp,

@@ -1,4 +1,7 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	isProductPaidAndRecurring,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan.js";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct.js";
@@ -24,6 +27,13 @@ export const computeCreateCustomerPlan = ({
 				fullCustomer,
 				fullProduct: product,
 				currentEpochMs,
+				onTrialEnd:
+					product.free_trial?.card_required === false &&
+					isProductPaidAndRecurring(product)
+						? product.free_trial.on_end === "revert"
+							? "revert"
+							: "bill"
+						: undefined,
 			},
 		}),
 	);

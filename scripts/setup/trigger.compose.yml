@@ -93,7 +93,9 @@ services:
       retries: 20
 
   electric:
-    image: electricsql/electric:1.2.4
+    image: autumn-capy-electric:1.2.4
+    build: https://github.com/electric-sql/electric.git#@core/sync-service@1.2.4:packages/sync-service
+    pull_policy: never
     restart: unless-stopped
     depends_on:
       postgres:

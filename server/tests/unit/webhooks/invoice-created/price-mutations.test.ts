@@ -1,55 +1,22 @@
-import { beforeEach, expect, mock, test } from "bun:test";
+import { beforeEach, expect, test } from "bun:test";
 import { EntInterval } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
+import { processAllocatedPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated";
+import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore";
+import {
+	type AutumnBillingPlanBuilder,
+	createAutumnBillingPlanBuilder,
+} from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 
-const updateProduct = mock(async () => {});
-const updateEntitlement = mock(async () => {});
-const incrementEntitlement = mock(async () => {});
-const deleteReplaceables = mock(async () => {});
-
-await mockModuleWithRestore(
-	"@/internal/customers/cusProducts/CusProductService",
-	() => ({
-		CusProductService: { update: updateProduct },
-	}),
-);
-await mockModuleWithRestore(
-	"@/internal/customers/cusProducts/cusEnts/CusEntitlementService",
-	() => ({
-		CusEntService: {
-			update: updateEntitlement,
-			increment: incrementEntitlement,
-		},
-	}),
-);
-await mockModuleWithRestore(
-	"@/internal/customers/cusProducts/cusEnts/RepService",
-	() => ({
-		RepService: { deleteInIds: deleteReplaceables },
-	}),
-);
-
-const { processPrepaidPricesForInvoiceCreated } = await import(
-	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated"
-);
-const { processAllocatedPricesForInvoiceCreated } = await import(
-	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated"
-);
+let plan: AutumnBillingPlanBuilder;
 
 beforeEach(() => {
-	for (const write of [
-		updateProduct,
-		updateEntitlement,
-		incrementEntitlement,
-		deleteReplaceables,
-	])
-		write.mockClear();
+	plan = createAutumnBillingPlanBuilder({ customerId: "customer_123" });
 });
 
 const createScenario = ({
@@ -101,34 +68,44 @@ const createScenario = ({
 	return { ctx, eventContext, customerEntitlement };
 };
 
-test("prepaid renewal records a balance reset", async () => {
-	const { ctx, eventContext } = createScenario();
-	await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
-	expect(updateEntitlement).toHaveBeenCalledTimes(1);
-	expect(eventContext.results.customerStateChanged).toBe(true);
+test("prepaid renewal plans a balance reset", () => {
+	const { ctx, eventContext, customerEntitlement } = createScenario();
+	processPrepaidPricesForInvoiceCreated({ ctx, eventContext, plan });
+	const { updateCustomerEntitlements, updateCustomerProducts } = plan.build();
+	expect(updateCustomerEntitlements).toHaveLength(1);
+	expect(updateCustomerEntitlements?.[0]).toMatchObject({
+		customerEntitlement: { id: customerEntitlement.id },
+		updates: { balance: 3 + 2, next_reset_at: 2000 * 1000 },
+	});
+	expect(updateCustomerProducts).toHaveLength(0);
+	expect(plan.hasChanges()).toBe(true);
 });
 
 test.each([undefined, 4])(
-	"separate reset intervals record only an applied quantity change: %s",
-	async (upcomingQuantity) => {
+	"separate reset intervals plan only an applied quantity change: %s",
+	(upcomingQuantity) => {
 		const { ctx, eventContext } = createScenario({
 			separateResetInterval: true,
 			upcomingQuantity,
 		});
-		await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
-		expect(updateEntitlement).not.toHaveBeenCalled();
-		expect(updateProduct).toHaveBeenCalledTimes(
+		processPrepaidPricesForInvoiceCreated({ ctx, eventContext, plan });
+		const { updateCustomerEntitlements, updateCustomerProducts } = plan.build();
+		expect(updateCustomerEntitlements).toHaveLength(0);
+		expect(updateCustomerProducts).toHaveLength(
 			upcomingQuantity === undefined ? 0 : 1,
 		);
-		expect(eventContext.results.customerStateChanged).toBe(
-			upcomingQuantity !== undefined,
-		);
+		if (upcomingQuantity !== undefined)
+			expect(updateCustomerProducts?.[0]?.updates.options?.[0]).toMatchObject({
+				quantity: upcomingQuantity,
+				upcoming_quantity: undefined,
+			});
+		expect(plan.hasChanges()).toBe(upcomingQuantity !== undefined);
 	},
 );
 
 test.each([false, true])(
-	"allocated renewal records whether replaceables were removed: %s",
-	async (removeReplaceable) => {
+	"allocated renewal plans the freed seats' return: %s",
+	(removeReplaceable) => {
 		const { ctx, eventContext, customerEntitlement } = createScenario({
 			allocated: true,
 		});
@@ -140,11 +117,15 @@ test.each([false, true])(
 				} as (typeof customerEntitlement.replaceables)[number],
 			];
 		}
-		await processAllocatedPricesForInvoiceCreated({ ctx, eventContext });
-		expect(incrementEntitlement).toHaveBeenCalledTimes(
-			removeReplaceable ? 1 : 0,
-		);
-		expect(deleteReplaceables).toHaveBeenCalledTimes(removeReplaceable ? 1 : 0);
-		expect(eventContext.results.customerStateChanged).toBe(removeReplaceable);
+		processAllocatedPricesForInvoiceCreated({ ctx, eventContext, plan });
+		const { updateCustomerEntitlements } = plan.build();
+		expect(updateCustomerEntitlements).toHaveLength(removeReplaceable ? 1 : 0);
+		if (removeReplaceable)
+			expect(updateCustomerEntitlements?.[0]).toMatchObject({
+				customerEntitlement: { id: customerEntitlement.id },
+				balanceChange: 1,
+				deletedReplaceables: [{ id: "replaceable_123" }],
+			});
+		expect(plan.hasChanges()).toBe(removeReplaceable);
 	},
 );

@@ -1,4 +1,5 @@
 import { beforeEach, expect, mock, test } from "bun:test";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import { Hono } from "hono";
 import type Stripe from "stripe";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
@@ -6,6 +7,7 @@ import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
 } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import type { InvoiceUpsertResult } from "@/internal/invoices/actions/types/invoiceUpsertResult";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore";
 
@@ -24,15 +26,20 @@ const invoice = () => ({
 	billing_reason: state.billingReason,
 });
 const processConsumable = mock(async () => []);
-const processPrepaid = mock(
-	async ({ eventContext }: { eventContext: InvoiceCreatedContext }) => {
-		if (state.customerStateChanged)
-			eventContext.results.customerStateChanged = true;
-	},
+const customerProduct = {
+	id: "product_123",
+} as InvoiceCreatedContext["customerProducts"][number];
+const processPrepaid = mock(({ plan }: { plan: AutumnBillingPlanBuilder }) => {
+	if (state.customerStateChanged)
+		plan.updateCustomerProduct({ customerProduct, updates: { options: [] } });
+});
+const processAllocated = mock(() => {});
+const planPoolAnchorReset = mock(() => {});
+const executePlan = mock(
+	async (_: { autumnBillingPlan: AutumnBillingPlan }) => ({
+		status: "applied" as const,
+	}),
 );
-const processAllocated = mock(async () => {});
-const resetPools = mock(async () => {});
-const updateProduct = mock(async () => {});
 const retrieveInvoice = mock(async () => invoice());
 const upsertInvoice = mock(async () => state.invoiceResult);
 
@@ -44,7 +51,12 @@ await mockModuleWithRestore(
 				? null
 				: ({
 						stripeInvoice: invoice(),
-						stripeSubscription: { schedule: "sub_sched_123" },
+						stripeSubscription: {
+							schedule: "sub_sched_123",
+							billing_cycle_anchor: 1000,
+						},
+						fullCustomer: { id: "customer_123" },
+						customerProducts: [customerProduct],
 						billingCycleAnchorResetCustomerProductIds: state.anchorResetIds,
 						results: { customerStateChanged: false },
 					} as InvoiceCreatedContext),
@@ -63,12 +75,12 @@ await mockModuleWithRestore(
 	() => ({ processAllocatedPricesForInvoiceCreated: processAllocated }),
 );
 await mockModuleWithRestore(
-	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/resetSubscriptionPooledBalances",
-	() => ({ resetSubscriptionPooledBalances: resetPools }),
+	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/planScheduledPooledAnchorReset",
+	() => ({ planScheduledPooledAnchorReset: planPoolAnchorReset }),
 );
 await mockModuleWithRestore(
-	"@/internal/customers/cusProducts/CusProductService",
-	() => ({ CusProductService: { update: updateProduct } }),
+	"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan",
+	() => ({ executeAutumnBillingPlan: executePlan }),
 );
 await mockModuleWithRestore(
 	"@/external/stripe/invoices/operations/getStripeInvoice",
@@ -111,8 +123,8 @@ beforeEach(() => {
 		processConsumable,
 		processPrepaid,
 		processAllocated,
-		resetPools,
-		updateProduct,
+		planPoolAnchorReset,
+		executePlan,
 		retrieveInvoice,
 		upsertInvoice,
 	])
@@ -162,16 +174,31 @@ test.each([
 		expect(processConsumable).toHaveBeenCalledTimes(1);
 		expect(processPrepaid).toHaveBeenCalledTimes(1);
 		expect(processAllocated).toHaveBeenCalledTimes(1);
-		expect(resetPools).toHaveBeenCalledTimes(1);
+		expect(planPoolAnchorReset).toHaveBeenCalledTimes(1);
+		expect(executePlan).not.toHaveBeenCalled();
 		expect(upsertInvoice).toHaveBeenCalledTimes(1);
 	},
 );
 
-test("an initial invoice still records an applied anchor reset and refreshes", async () => {
+test("an initial invoice still lands an applied anchor reset as one plan and refreshes", async () => {
 	state.anchorResetIds = ["product_123"];
 	const { ctx, response } = await runCreatedWebhook();
 	expect(response.status).toBe(200);
-	expect(updateProduct).toHaveBeenCalledTimes(1);
+	expect(executePlan).toHaveBeenCalledTimes(1);
+	expect(executePlan.mock.calls[0]?.[0]).toMatchObject({
+		autumnBillingPlan: {
+			customerId: "customer_123",
+			updateCustomerProducts: [
+				{
+					customerProduct: { id: "product_123" },
+					updates: {
+						billing_cycle_anchor: 1000 * 1000,
+						billing_cycle_anchor_resets_at: null,
+					},
+				},
+			],
+		},
+	});
 	expect(ctx.handlerResult?.context.results).toMatchObject({
 		customerStateChanged: true,
 	});

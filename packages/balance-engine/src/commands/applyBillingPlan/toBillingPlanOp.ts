@@ -82,6 +82,27 @@ export const toBillingPlanDeleteOp = ({
 }): BillingPlanOp =>
 	billingPlanOpSchema.parse({ op: "delete", table, id, ...share });
 
+/** New rollovers for a held grant, cut to the columns the worker stores; none names nothing. */
+export const toBillingPlanAddRolloversOp = ({
+	id,
+	rows,
+}: {
+	id: string;
+	rows: object[];
+}): BillingPlanOp[] =>
+	rows.length === 0
+		? []
+		: [
+				billingPlanOpSchema.parse({
+					op: "addRollovers",
+					table: "rollovers",
+					id,
+					rows: rows.map((row) =>
+						pickColumns({ schema: workerRolloverSchema, row }),
+					),
+				}),
+			];
+
 /** A grant's per-entity entries re-keyed; an empty map names nothing. */
 export const toBillingPlanMoveEntriesOp = ({
 	id,

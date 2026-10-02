@@ -102,6 +102,7 @@ export const executeBillingPlan = async ({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		originalFullCustomer: billingContext.fullCustomer,
+		tags: billingContext.billingUpdatedTags,
 	});
 
 	return { stripe: stripeBillingResult };

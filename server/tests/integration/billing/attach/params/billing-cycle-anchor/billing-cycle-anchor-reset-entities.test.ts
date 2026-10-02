@@ -21,6 +21,7 @@ import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/util
 import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration/calculateProration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -245,12 +246,16 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-prepaid-entities 2: 
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: entity1PremiumQuantity + entity2ProQuantity,
-		usage: 0,
-	});
+	if (isBalanceWorkerRoute()) {
+		expect(customer.balances[TestFeature.Messages]).toBeUndefined();
+	} else {
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			remaining: entity1PremiumQuantity + entity2ProQuantity,
+			usage: 0,
+		});
+	}
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 3,

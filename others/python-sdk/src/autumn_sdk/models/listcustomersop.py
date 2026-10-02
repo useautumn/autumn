@@ -212,6 +212,58 @@ ListCustomersEnv = Union[
 r"""The environment this customer was created in."""
 
 
+ListCustomersBalanceAllocationInterval = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""The reset interval of the shared credits being allocated."""
+
+
+class ListCustomersAllocationTypedDict(TypedDict):
+    entity_id: str
+    r"""The public entity ID."""
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class ListCustomersAllocation(BaseModel):
+    entity_id: str
+    r"""The public entity ID."""
+
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class ListCustomersBalanceAllocationTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+    interval: ListCustomersBalanceAllocationInterval
+    r"""The reset interval of the shared credits being allocated."""
+    allocations: List[ListCustomersAllocationTypedDict]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
+
+
+class ListCustomersBalanceAllocation(BaseModel):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+
+    interval: ListCustomersBalanceAllocationInterval
+    r"""The reset interval of the shared credits being allocated."""
+
+    allocations: List[ListCustomersAllocation]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
+
+
 ListCustomersAutoTopupInterval2 = Union[
     Literal[
         "hour",
@@ -742,6 +794,8 @@ class ListCustomersOverageAllowed(BaseModel):
 class ListCustomersBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
+    balance_allocations: NotRequired[List[ListCustomersBalanceAllocationTypedDict]]
+    r"""Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling."""
     auto_topups: NotRequired[List[ListCustomersAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[ListCustomersSpendLimitTypedDict]]
@@ -756,6 +810,9 @@ class ListCustomersBillingControlsTypedDict(TypedDict):
 
 class ListCustomersBillingControls(BaseModel):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    balance_allocations: Optional[List[ListCustomersBalanceAllocation]] = None
+    r"""Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling."""
 
     auto_topups: Optional[List[ListCustomersAutoTopup]] = None
     r"""List of auto top-up configurations per feature."""
@@ -776,6 +833,7 @@ class ListCustomersBillingControls(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "balance_allocations",
                 "auto_topups",
                 "spend_limits",
                 "usage_limits",

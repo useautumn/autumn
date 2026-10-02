@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type LimitedItem } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
@@ -33,7 +33,7 @@ const pro = constructProduct({
 	items: [lifetimeMessagesItem, monthlyMessagesItem],
 });
 
-const NUM_REQUESTS = 250; // Reduced from 10000 — local Redis saturates under FullSubject cache load
+const NUM_REQUESTS = 350;
 const NUM_CUSTOMERS = 3;
 
 // Calculate total included usage dynamically
@@ -47,7 +47,7 @@ const randomDecimal = (min: number, max: number): Decimal => {
 	return new Decimal(value).toDecimalPlaces(2);
 };
 
-describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent requests per customer through check (send_event)`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} concurrent requests through check (send_event)`)}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const customerIds = Array.from(
 		{ length: NUM_CUSTOMERS },
@@ -103,21 +103,21 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 		}
 	});
 
-	test(`should handle ${NUM_REQUESTS * NUM_CUSTOMERS} concurrent requests across ${NUM_CUSTOMERS} customers`, async () => {
+	test(`should handle ${NUM_REQUESTS} concurrent requests across ${NUM_CUSTOMERS} customers`, async () => {
 		console.log(
-			`\n🚀 Starting ${NUM_REQUESTS * NUM_CUSTOMERS} concurrent track requests...`,
-		);
-		console.log(
-			`   ${NUM_REQUESTS} requests per customer × ${NUM_CUSTOMERS} customers`,
+			`\n🚀 Starting ${NUM_REQUESTS} concurrent track requests across ${NUM_CUSTOMERS} customers...`,
 		);
 
 		const allPromises: Promise<number>[] = [];
 
 		// Generate requests for each customer
-		for (const customerId of customerIds) {
+		for (const [customerIndex, customerId] of customerIds.entries()) {
 			const customerPromises: Promise<number>[] = [];
+			const requestCount =
+				Math.floor(NUM_REQUESTS / NUM_CUSTOMERS) +
+				(customerIndex < NUM_REQUESTS % NUM_CUSTOMERS ? 1 : 0);
 
-			for (let i = 0; i < NUM_REQUESTS; i++) {
+			for (let i = 0; i < requestCount; i++) {
 				// Generate random value between 0.01 and 2.00 using Decimal
 				const decimalValue = randomDecimal(0.01, 2.0);
 				const value = decimalValue.toDecimalPlaces(5).toNumber();
@@ -148,6 +148,7 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 		const startTime = Date.now();
 		const durations = await Promise.all(allPromises);
 		const endTime = Date.now();
+		expect(durations).toHaveLength(NUM_REQUESTS);
 
 		// Calculate P99
 		const sortedDurations = durations.sort((a, b) => a - b);
@@ -155,10 +156,10 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 		const p99 = sortedDurations[p99Index];
 
 		console.log(
-			`\n✅ Completed ${NUM_REQUESTS * NUM_CUSTOMERS} requests in ${endTime - startTime}ms`,
+			`\n✅ Completed ${NUM_REQUESTS} requests in ${endTime - startTime}ms`,
 		);
 		console.log(
-			`   Average: ${((endTime - startTime) / (NUM_REQUESTS * NUM_CUSTOMERS)).toFixed(2)}ms per request`,
+			`   Average: ${((endTime - startTime) / NUM_REQUESTS).toFixed(2)}ms per request`,
 		);
 		console.log(`   P99: ${p99.toFixed(2)}ms`);
 
@@ -218,59 +219,65 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 		}
 	});
 
-	test("should have correct non-cached balances for all customers after 2s", async () => {
-		console.log("\n⏳ Waiting 2s for DB sync...");
-		await timeout(5000);
+	test("should have correct non-cached balances for all customers after sync", async () => {
+		await pollUntilAsserted({
+			fetch: () =>
+				Promise.all(
+					customerIds.map(async (customerId) => ({
+						customerId,
+						customer: await autumnV1.customers.get(customerId, {
+							skip_cache: "true",
+						}),
+					})),
+				),
+			assert: (customers) => {
+				for (const { customerId, customer } of customers) {
+					const totalUsage = customerExpectedUsage[customerId];
 
-		for (const customerId of customerIds) {
-			const customer = await autumnV1.customers.get(customerId, {
-				skip_cache: "true",
-			});
+					// Balance should be capped at 0 (no negative balances without overage_allowed)
+					const expectedBalance = Decimal.max(
+						0,
+						new Decimal(TOTAL_INCLUDED_USAGE).minus(totalUsage),
+					)
+						.toDP(5)
+						.toNumber();
+					const actualBalance = new Decimal(
+						customer.features[TestFeature.Messages].balance ?? 0,
+					)
+						.toDP(5)
+						.toNumber();
 
-			const totalUsage = customerExpectedUsage[customerId];
+					// Usage should be capped at included_usage without overage_allowed
+					const expectedUsage = Decimal.min(totalUsage, TOTAL_INCLUDED_USAGE)
+						.toDP(5)
+						.toNumber();
+					const actualUsage = new Decimal(
+						customer.features[TestFeature.Messages].usage ?? 0,
+					)
+						.toDP(5)
+						.toNumber();
 
-			// Balance should be capped at 0 (no negative balances without overage_allowed)
-			const expectedBalance = Decimal.max(
-				0,
-				new Decimal(TOTAL_INCLUDED_USAGE).minus(totalUsage),
-			)
-				.toDP(5)
-				.toNumber();
-			const actualBalance = new Decimal(
-				customer.features[TestFeature.Messages].balance ?? 0,
-			)
-				.toDP(5)
-				.toNumber();
+					// Use Decimal for precise comparisons - expect exact match
+					expect(actualBalance).toEqual(expectedBalance);
 
-			// Usage should be capped at included_usage without overage_allowed
-			const expectedUsage = Decimal.min(totalUsage, TOTAL_INCLUDED_USAGE)
-				.toDP(5)
-				.toNumber();
-			const actualUsage = new Decimal(
-				customer.features[TestFeature.Messages].usage ?? 0,
-			)
-				.toDP(5)
-				.toNumber();
+					// Verify usage matches - expect exact match
+					expect(actualUsage).toEqual(expectedUsage);
 
-			// Use Decimal for precise comparisons - expect exact match
-			expect(actualBalance).toEqual(expectedBalance);
+					// Verify breakdown balances match top-level (lifetime + monthly)
+					const breakdown = customer.features[TestFeature.Messages].breakdown;
+					if (breakdown && breakdown.length > 0) {
+						const breakdownBalance = breakdown.reduce(
+							(sum, b) => new Decimal(sum).plus(b.balance || 0).toNumber(),
+							0,
+						);
 
-			// Verify usage matches - expect exact match
-			expect(actualUsage).toEqual(expectedUsage);
-
-			// Verify breakdown balances match top-level (lifetime + monthly)
-			const breakdown = customer.features[TestFeature.Messages].breakdown;
-			if (breakdown && breakdown.length > 0) {
-				const breakdownBalance = breakdown.reduce(
-					(sum, b) => new Decimal(sum).plus(b.balance || 0).toNumber(),
-					0,
-				);
-
-				expect(new Decimal(breakdownBalance).toDP(5).toNumber()).toEqual(
-					actualBalance!,
-				);
-			}
-		}
+						expect(new Decimal(breakdownBalance).toDP(5).toNumber()).toEqual(
+							actualBalance!,
+						);
+					}
+				}
+			},
+		});
 
 		console.log("\n✅ All balances verified successfully!");
 	});

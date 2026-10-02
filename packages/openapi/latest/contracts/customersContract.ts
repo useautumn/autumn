@@ -141,6 +141,21 @@ export const updateCustomerContract = oc
 					name: "Jane Doe",
 					email: "jane@example.com",
 				},
+				{
+					customer_id: "customer_123",
+					billing_controls: {
+						balance_allocations: [
+							{
+								feature_id: "credits",
+								interval: "month",
+								allocations: [
+									{ entity_id: "workspace_a", amount: 300 },
+									{ entity_id: "workspace_b", amount: 200 },
+								],
+							},
+						],
+					},
+				},
 			],
 		}),
 	)

@@ -28,6 +28,7 @@ export const ApiEntityBillingControlsSchema = z.object({
 });
 
 const ApiEntityBillingControlsParamsBaseSchema = z.object({
+	balance_allocations: z.never().optional().meta({ internal: true }),
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
 		description:
 			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).",

@@ -48,6 +48,7 @@ export interface BillingContextOverride {
 	endOfCycleMsOverride?: number;
 
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
+	billingUpdatedTags?: string[];
 	shouldFinalizeFirstInvoice?: boolean;
 
 	/**

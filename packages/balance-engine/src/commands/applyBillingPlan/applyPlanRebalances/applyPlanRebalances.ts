@@ -5,13 +5,13 @@ import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { WorkerEntity } from "../../../models/subject/rows/workerEntity.js";
 import type { SubjectState } from "../../../models/subject/subjectState.js";
 import { applyChanges } from "../../../mutation/applyChanges.js";
+import { heldRowToFullSubject } from "../../common/heldRowToFullSubject.js";
 import type { AppliedPlanStep } from "../types/appliedPlanStep.js";
 import type { ApplyBillingPlanCommand } from "../types/applyBillingPlanCommand.js";
 import type {
 	BillingPlanOp,
 	BillingPlanRebalanceOp,
 } from "../types/billingPlanOp.js";
-import { purchasedRowToFullSubject } from "./purchasedRowToFullSubject.js";
 
 const isRebalanceOp = (op: BillingPlanOp): op is BillingPlanRebalanceOp =>
 	op.op === "rebalance";
@@ -38,8 +38,8 @@ export const applyPlanRebalances = ({
 	let appliedState = state;
 	const changes: RowChange[] = [];
 	for (const op of rebalanceOps) {
-		const fullSubject = purchasedRowToFullSubject({
-			op,
+		const fullSubject = heldRowToFullSubject({
+			id: op.id,
 			state: appliedState,
 			entities,
 			catalog,

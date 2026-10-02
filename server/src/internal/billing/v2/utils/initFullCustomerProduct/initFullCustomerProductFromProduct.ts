@@ -10,6 +10,7 @@ import {
 	findFeatureByIdOrInternalId,
 	type InitFullCustomerProductContext,
 	isPrepaidPrice,
+	type TrialOnEnd,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getMonthStartAnchorMs } from "@/internal/billing/v2/utils/cycleAnchor/getMonthStartAnchorMs";
@@ -28,6 +29,7 @@ export const initFullCustomerProductFromProduct = ({
 
 		existingUsagesConfig?: ExistingUsagesConfig;
 		existingRolloversConfig?: ExistingRolloversConfig;
+		onTrialEnd?: TrialOnEnd;
 	};
 }): FullCusProduct => {
 	const {
@@ -36,6 +38,7 @@ export const initFullCustomerProductFromProduct = ({
 		currentEpochMs,
 		existingUsagesConfig,
 		existingRolloversConfig,
+		onTrialEnd,
 	} = initContext;
 
 	const freeTrial = fullProduct.free_trial ?? null;
@@ -91,6 +94,6 @@ export const initFullCustomerProductFromProduct = ({
 	return initFullCustomerProduct({
 		ctx,
 		initContext: newInitContext,
-		initOptions: {},
+		initOptions: { onTrialEnd },
 	});
 };

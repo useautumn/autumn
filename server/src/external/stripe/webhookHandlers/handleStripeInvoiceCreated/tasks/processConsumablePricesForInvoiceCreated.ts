@@ -2,7 +2,6 @@ import {
 	atmnToStripeAmount,
 	customerEntitlementShouldBeBilled,
 	type FullCusEntWithFullCusProduct,
-	type FullCusEntWithProduct,
 	getRolloverUpdates,
 	isCustomerEntitlementDueAtInvoice,
 	type LineItem,
@@ -20,9 +19,7 @@ import {
 	updateStripeInvoiceItem,
 	updateStripeInvoiceLine,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
@@ -406,7 +403,8 @@ const addPendingLineItemsToInvoice = async ({
 
 /**
  * Processes consumable (usage-in-arrear) prices for an invoice.
- * Adds usage line items to the invoice for the billing period.
+ * Adds usage line items to the invoice for the billing period, then plans the
+ * cycle reset of the grants those lines billed.
  *
  * Returns the generated arrear line items so they can be used for matching
  * during line item storage.
@@ -421,9 +419,11 @@ const addPendingLineItemsToInvoice = async ({
 export const processConsumablePricesForInvoiceCreated = async ({
 	ctx,
 	eventContext,
+	plan,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
+	plan: AutumnBillingPlanBuilder;
 }): Promise<LineItem[]> => {
 	const { stripeInvoice, stripeSubscription } = eventContext;
 
@@ -499,40 +499,19 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		],
 	});
 
-	await CusEntService.batchUpdate({
-		ctx,
-		data: updateCustomerEntitlements,
-	});
-
-	if (updateCustomerEntitlements.length > 0) {
-		eventContext.results.customerStateChanged = true;
-		await deleteCachedFullCustomer({
-			ctx,
-			customerId:
-				eventContext.fullCustomer.id ?? eventContext.fullCustomer.internal_id,
-			source: "invoice-created-consumable-reset",
+	for (const update of updateCustomerEntitlements) {
+		// The rollover cap reads this row without its product, as this reset always has.
+		const { customer_product: _, ...customerEntitlement } =
+			update.customerEntitlement as FullCusEntWithFullCusProduct;
+		plan.updateCustomerEntitlement({
+			...update,
+			customerEntitlement,
+			insertRollovers: getRolloverUpdates({
+				cusEnt: customerEntitlement,
+				nextResetAt: invoicePeriodEndMs,
+			}).toInsert,
 		});
 	}
-
-	await Promise.all(
-		updateCustomerEntitlements.map(async (update) => {
-			const rolloverUpdates = getRolloverUpdates({
-				cusEnt: update.customerEntitlement,
-				nextResetAt: invoicePeriodEndMs,
-			});
-
-			const fullCusEnt: FullCusEntWithProduct = {
-				...update.customerEntitlement,
-				customer_product: null,
-			};
-
-			await RolloverService.insert({
-				ctx,
-				rows: rolloverUpdates.toInsert,
-				fullCusEnt,
-			});
-		}),
-	);
 
 	return [...consumableLineItems, ...invoiceCreditLineItems];
 };

@@ -143,6 +143,13 @@ export function CustomerBillingControlsSection() {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
+				{!isEntityView && (
+					<DropdownMenuItem
+						onClick={() => setSheet({ type: "allocate-balances", data: null })}
+					>
+						Balance allocations
+					</DropdownMenuItem>
+				)}
 				{addMenuItems.map((menuItem) => (
 					<DropdownMenuItem
 						key={menuItem.key}

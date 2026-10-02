@@ -14,6 +14,7 @@ import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -311,13 +312,17 @@ test.concurrent(
 		});
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			remaining: 200,
-			usage: 0,
-			nextResetAt: addMonths(advancedTo, 1).getTime(),
-		});
+		if (isBalanceWorkerRoute()) {
+			expect(customer.balances[TestFeature.Messages]).toBeUndefined();
+		} else {
+			expectBalanceCorrect({
+				customer,
+				featureId: TestFeature.Messages,
+				remaining: 200,
+				usage: 0,
+				nextResetAt: addMonths(advancedTo, 1).getTime(),
+			});
+		}
 
 		await expectCustomerInvoiceCorrect({
 			customerId,

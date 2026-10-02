@@ -1,4 +1,4 @@
-import { type FullCusProduct, hasCustomerProductEnded } from "@autumn/shared";
+import { CusProductStatus, hasCustomerProductEnded } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { expireAndActivateWithTracking } from "../../../common";
@@ -20,17 +20,25 @@ export const expireEndedCustomerProducts = async ({
 	const { customerProducts, stripeSubscription, nowMs, fullCustomer } =
 		eventContext;
 
-	const expiredCustomerProducts: FullCusProduct[] = [];
+	const endedCustomerProducts = customerProducts.filter((customerProduct) =>
+		hasCustomerProductEnded(customerProduct, { nowMs }),
+	);
+	if (endedCustomerProducts.length === 0) return;
+
+	await customerProductActions.expiredCache.set({
+		ctx,
+		stripeSubscriptionId: stripeSubscription.id,
+		customerProducts: endedCustomerProducts.map((customerProduct) => ({
+			...customerProduct,
+			status: CusProductStatus.Expired,
+		})),
+	});
 
 	// Iterate over a snapshot: `expireAndActivateWithTracking` may insert a
 	// default product (via `trackCustomerProductInsertion`), which `push`es
 	// onto `customerProducts`. Without the snapshot the for-of would then
 	// iterate the newly inserted default product as an extra pass.
-	for (const customerProduct of [...customerProducts]) {
-		const shouldExpire = hasCustomerProductEnded(customerProduct, { nowMs });
-
-		if (!shouldExpire) continue;
-
+	for (const customerProduct of endedCustomerProducts) {
 		logger.info(
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
@@ -54,21 +62,10 @@ export const expireEndedCustomerProducts = async ({
 			});
 		}
 
-		const { expiredCustomerProduct } = await expireAndActivateWithTracking({
+		await expireAndActivateWithTracking({
 			ctx,
 			eventContext,
 			customerProduct,
-		});
-
-		expiredCustomerProducts.push(expiredCustomerProduct);
-	}
-
-	// Cache expired products so invoice.created can access them for usage-based billing
-	if (expiredCustomerProducts.length > 0) {
-		await customerProductActions.expiredCache.set({
-			ctx,
-			stripeSubscriptionId: stripeSubscription.id,
-			customerProducts: expiredCustomerProducts,
 		});
 	}
 };

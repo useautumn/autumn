@@ -29,9 +29,11 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { getEntitySubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -62,21 +64,23 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: customer-level disc
 
 	const consumableItem = items.consumableMessages({
 		includedUsage: 100,
-		entityFeatureId: TestFeature.Users,
 	});
 	const pro = products.pro({
 		id: "pro",
 		items: [consumableItem],
 	});
 
-	const { autumnV1, ctx, entities, testClockId } = await initScenario({
+	const { autumnV1, autumnV2_4, ctx, entities, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
+		actions: [
+			s.attach({ productId: pro.id, entityIndex: 0 }),
+			s.warmEntityCaches(),
+		],
 	});
 
 	const entityId = entities[0].id;
@@ -110,6 +114,16 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: customer-level disc
 		entity_id: entityId,
 		feature_id: TestFeature.Messages,
 		value: 500,
+	});
+	await expectBalanceCorrect({
+		autumn: autumnV2_4,
+		customerId,
+		entityId,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		usage: 500,
+		remaining: 0,
+		skipCache: true,
 	});
 
 	// Verify usage tracked
@@ -194,21 +208,23 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: subscription-level 
 
 	const consumableItem = items.consumableMessages({
 		includedUsage: 100,
-		entityFeatureId: TestFeature.Users,
 	});
 	const pro = products.pro({
 		id: "pro",
 		items: [consumableItem],
 	});
 
-	const { autumnV1, ctx, entities, testClockId } = await initScenario({
+	const { autumnV1, autumnV2_4, ctx, entities, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
+		actions: [
+			s.attach({ productId: pro.id, entityIndex: 0 }),
+			s.warmEntityCaches(),
+		],
 	});
 
 	const entityId = entities[0].id;
@@ -246,6 +262,16 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: subscription-level 
 		entity_id: entityId,
 		feature_id: TestFeature.Messages,
 		value: 300,
+	});
+	await expectBalanceCorrect({
+		autumn: autumnV2_4,
+		customerId,
+		entityId,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		usage: 300,
+		remaining: 0,
+		skipCache: true,
 	});
 
 	// Verify usage tracked
@@ -316,21 +342,23 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: base price only dis
 
 	const consumableItem = items.consumableMessages({
 		includedUsage: 100,
-		entityFeatureId: TestFeature.Users,
 	});
 	const pro = products.pro({
 		id: "pro",
 		items: [consumableItem],
 	});
 
-	const { autumnV1, ctx, entities, testClockId } = await initScenario({
+	const { autumnV1, autumnV2_4, ctx, entities, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [s.attach({ productId: pro.id, entityIndex: 0, timeout: 5000 })],
+		actions: [
+			s.attach({ productId: pro.id, entityIndex: 0, timeout: 5000 }),
+			s.warmEntityCaches(),
+		],
 	});
 
 	const entityId = entities[0].id;
@@ -383,6 +411,16 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: base price only dis
 		feature_id: TestFeature.Messages,
 		value: 200,
 	});
+	await expectBalanceCorrect({
+		autumn: autumnV2_4,
+		customerId,
+		entityId,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		usage: 200,
+		remaining: 0,
+		skipCache: true,
+	});
 
 	// Verify usage tracked
 	const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
@@ -397,6 +435,14 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: base price only dis
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		beforeFinalize: async () =>
+			expectCustomerInvoiceCorrect({
+				autumn: autumnV1,
+				customerId,
+				count: 2,
+				latestTotal: 10,
+				settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+			}),
 	});
 
 	// Verify product is removed from entity
@@ -451,21 +497,23 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: consumable price on
 
 	const consumableItem = items.consumableMessages({
 		includedUsage: 100,
-		entityFeatureId: TestFeature.Users,
 	});
 	const pro = products.pro({
 		id: "pro",
 		items: [consumableItem],
 	});
 
-	const { autumnV1, ctx, entities, testClockId } = await initScenario({
+	const { autumnV1, autumnV2_4, ctx, entities, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
+		actions: [
+			s.attach({ productId: pro.id, entityIndex: 0 }),
+			s.warmEntityCaches(),
+		],
 	});
 
 	const entityId = entities[0].id;
@@ -523,6 +571,16 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: consumable price on
 		entity_id: entityId,
 		feature_id: TestFeature.Messages,
 		value: 300,
+	});
+	await expectBalanceCorrect({
+		autumn: autumnV2_4,
+		customerId,
+		entityId,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		usage: 300,
+		remaining: 0,
+		skipCache: true,
 	});
 
 	// Verify usage tracked
