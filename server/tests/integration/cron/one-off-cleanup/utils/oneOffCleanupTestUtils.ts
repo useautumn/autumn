@@ -23,8 +23,8 @@ export const trackUsageForCleanup = async (
 };
 
 /**
- * No test clock: attach stamps created_at from a frozen clock, so repeat purchases
- * would tie and the cron's "newer active product" check could never match.
+ * A test clock would stamp every attach's created_at with its frozen time, tying repeat
+ * purchases so the cron's strictly-newer product check never matches; skip it.
  */
 export const oneOffCleanupCustomer = () =>
 	s.customer({ paymentMethod: "success", testClock: false });
