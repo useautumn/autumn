@@ -655,12 +655,14 @@ describe(
 				billingContext,
 			});
 
-			expect(
-				deferredSetPlansSchedulePhases({
-					billingContext,
-					billingPlan: { autumn: autumnBillingPlan, stripe: {} },
-				}),
-			).toEqual(phases);
+			const persistedPhases = deferredSetPlansSchedulePhases({
+				billingContext,
+				billingPlan: { autumn: autumnBillingPlan, stripe: {} },
+			});
+			expect(persistedPhases).toEqual(phases);
+			expect(persistedPhases[0]?.customerProductIds).toContain(
+				customerProduct.id,
+			);
 		});
 	},
 );
