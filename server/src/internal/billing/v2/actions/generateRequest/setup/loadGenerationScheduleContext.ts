@@ -2,6 +2,7 @@ import type { FullCustomer, FullCustomerSchedule } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { getCustomerSchedulesByScope } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
+import { phaseResetsBillingCycle } from "./phaseResetsBillingCycle";
 
 export const loadGenerationScheduleContext = async ({
 	ctx,
@@ -56,10 +57,12 @@ export const loadGenerationScheduleContext = async ({
 		phases: schedule.phases.map(({ starts_at, customer_product_ids }) => ({
 			starts_at,
 			customer_product_ids,
-			...(customer_product_ids.some(
-				(id) =>
-					customerProductById.get(id)?.billing_cycle_anchor_resets_at ===
-					starts_at,
+			...(customer_product_ids.some((id) =>
+				phaseResetsBillingCycle({
+					billingCycleAnchorResetsAt:
+						customerProductById.get(id)?.billing_cycle_anchor_resets_at,
+					phaseStartsAt: starts_at,
+				}),
 			)
 				? { billing_cycle_anchor: "phase_start" as const }
 				: {}),
