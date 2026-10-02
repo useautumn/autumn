@@ -64,8 +64,7 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial attach: set trial with v1 f
 	});
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1,
-		latestTotal: 0,
+		count: 0,
 	});
 });
 

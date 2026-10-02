@@ -59,7 +59,7 @@ export const tryConvertExpiredTrial = async ({
 	if (!(await customerHasPaymentMethod({ ctx, fullCustomer }))) return false;
 
 	try {
-		await billingActions.updateSubscription({
+		const { billingResult } = await billingActions.updateSubscription({
 			ctx,
 			params: {
 				customer_id: fullCustomer.id || fullCustomer.internal_id,
@@ -68,9 +68,11 @@ export const tryConvertExpiredTrial = async ({
 				version: customerProduct.product.version,
 				redirect_mode: "if_required",
 			},
+			contextOverride: { paymentBehaviorIntent: "error_if_incomplete" },
 			options: { skipAutumnCheckout: true },
 		});
-		return true;
+		// A deferred plan is waiting on a payment that did not go through.
+		return billingResult !== undefined && !billingResult.stripe.deferred;
 	} catch (error) {
 		ctx.logger.warn(
 			`[productCron] could not bill trial ${customerProduct.id}, expiring it`,

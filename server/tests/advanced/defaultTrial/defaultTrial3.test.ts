@@ -1,14 +1,16 @@
 // Manual customer creation - not using initCustomer to control test clock properly
-import { beforeAll, describe, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 import {
-	CusProductStatus,
 	FreeTrialDuration,
 	LegacyVersion,
 	ProductItemInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
-import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import {
+	expectProductAttached,
+	expectProductNotAttached,
+} from "@tests/utils/expectUtils/expectProductAttached.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -22,7 +24,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 
 // 2.3:
 // -> Creating a new customer with a fake payment method should attach the pro product with default trial
-// --> Advancing the test clock should cancel the trial and attach the free product
+// --> Advancing the test clock should end the trial without creating a Stripe subscription
 
 const defaultTrialPro = constructProduct({
 	items: [
@@ -51,6 +53,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trials cancel with 
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockID: string;
 	let stripeCli: Stripe;
+	let stripeCustomerId: string;
 
 	beforeAll(async () => {
 		// Products must be initialized BEFORE customer creation for default products
@@ -71,6 +74,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trials cancel with 
 
 		testClockID = res.testClockId;
 		stripeCli = ctx.stripeCli;
+		stripeCustomerId = res.customer.processor?.id ?? "";
 	});
 
 	it("should create a customer with the paid default trial", async () => {
@@ -95,11 +99,13 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trials cancel with 
 
 		const customer = await autumn.customers.get(customerId);
 
-		expectProductAttached({
-			customer,
-			product: defaultTrialPro,
-			status: CusProductStatus.PastDue,
+		// The declined card can't bill the Autumn-only trial, so it expires with no Stripe sub left behind
+		expectProductNotAttached({ customer, product: defaultTrialPro });
+		const { data: subscriptions } = await stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+			status: "all",
 		});
+		expect(subscriptions).toHaveLength(0);
 
 		// await advanceTestClock({
 		//   stripeCli,

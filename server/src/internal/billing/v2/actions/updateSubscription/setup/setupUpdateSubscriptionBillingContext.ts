@@ -296,6 +296,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 				: params.proration_behavior,
 
 		invoiceMode,
+		paymentBehaviorIntent: contextOverride.paymentBehaviorIntent,
 		featureQuantities,
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 		customerLicenseQuantities,

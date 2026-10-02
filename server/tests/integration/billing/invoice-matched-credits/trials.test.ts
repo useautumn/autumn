@@ -65,8 +65,7 @@ test.concurrent(
 
 		await expectCustomerInvoiceCorrect({
 			customer: customerTrialing,
-			count: 1,
-			latestTotal: 0,
+			count: 0,
 		});
 
 		const preview = await autumnV2_2.billing.previewAttach({
@@ -100,7 +99,7 @@ test.concurrent(
 
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfterUpgrade,
-			count: 2,
+			count: 1,
 			latestTotal: 50,
 		});
 	},
