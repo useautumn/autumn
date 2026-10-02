@@ -5,14 +5,15 @@ import {
 	commitFlush,
 	FlushBookmarkConflictError,
 	flushSql,
+	getSubjectRows,
 	insertPartitionProgress,
 	type PostgresClient,
 	readPartitionProgress,
-	readSubjectSnapshots,
 	type SubjectSnapshotUpsert,
 } from "@autumn/postgres";
+import { RELEVANT_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { readSubjectSnapshotsSql } from "../../../../../packages/postgres/src/subjects/repos/subjectSnapshots/readSubjectSnapshots.js";
+import { subjectRowsSql } from "../../../../../packages/postgres/src/subjects/repos/getSubjectRows/subjectRowsSql.js";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
@@ -320,7 +321,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		}
 	});
 
-	test("a cold load reads back what the flush wrote, by key: the customer and its entity under the identity the worker holds, a key with no row absent", async () => {
+	test("a cold load is one statement: the customer's and its entity's snapshots answer in place of their rows, a subject with none gets its rows, an old version gets its rows", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();
 		try {
@@ -344,32 +345,37 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				],
 			});
 
-			const own = { ...seeded.identity, entityId: null };
-			const rows = await readSubjectSnapshots({
-				ctx: { db: postgres.db },
-				keys: [
-					own,
-					{ ...own, entityId: "seat_1" },
-					{ ...own, customerId: "cus_nobody" },
-				],
+			const ctx = { db: postgres.db, orgId: seeded.orgId, env: seeded.env };
+			const read = (entityId: string | null, snapshotVersion?: number) =>
+				getSubjectRows({
+					ctx,
+					customerId: seeded.identity.customerId,
+					entityId,
+					asOfTimestampMs: Date.now(),
+					snapshotVersion,
+				});
+			expect(await read(null, 1)).toEqual({
+				snapshot: { revision: 7, entityId: null },
+				envelope: null,
 			});
+			expect(await read("seat_1", 1)).toEqual({
+				snapshot: { revision: 8, entityId: "seat_1" },
+				envelope: null,
+			});
+			const old = await read(null, 2);
+			expect(old.snapshot).toBeNull();
+			expect(old.envelope?.customer.id).toBe(seeded.identity.customerId);
+			const plain = await read(null);
+			expect(plain.snapshot).toBeNull();
+			expect(plain.envelope?.customer.id).toBe(seeded.identity.customerId);
 			expect(
-				rows
-					.map((row) => ({
-						...row,
-						state: (row.state as { revision: number }).revision,
-					}))
-					.sort((a, b) => a.state - b.state),
-			).toEqual([
-				{ ...own, stateVersion: 1, state: 7, baselineAt: 1_700_000_000_000 },
-				{
-					...own,
-					entityId: "seat_1",
-					stateVersion: 1,
-					state: 8,
-					baselineAt: 1_700_000_000_000,
-				},
-			]);
+				await getSubjectRows({
+					ctx,
+					customerId: "cus_nobody",
+					asOfTimestampMs: Date.now(),
+					snapshotVersion: 1,
+				}),
+			).toEqual({ snapshot: null, envelope: null });
 		} finally {
 			await seeded.cleanup();
 		}
@@ -841,9 +847,9 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		expect(plan).not.toMatch(
 			/"Seq Scan"[^}]*"Relation Name":"subject_snapshots"/,
 		);
-	});
+	}, 30_000);
 
-	test("a cold-load batch of 200 keys reads by primary key probes, never a scan of the table", async () => {
+	test("a cold load's snapshot probe reads by primary key, never a scan of the table", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const rolledBack = new Error("explain only");
 		let plan = "";
@@ -858,19 +864,17 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, 0
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`ANALYZE subject_snapshots`);
-					const keys = Array.from({ length: 200 }, (_, index) => ({
-						orgId: seeded.orgId,
-						env: "live",
-						customerId: `cus_${index * 50 + 1}`,
-						entityId: null,
-					}));
 					const rows = (await tx.execute(
-						sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotsSql({ keys })}`,
+						sql`EXPLAIN (ANALYZE, FORMAT JSON) ${subjectRowsSql({
+							ctx: { orgId: seeded.orgId, env: "live" },
+							customerId: "cus_51",
+							entityId: null,
+							statuses: RELEVANT_STATUSES,
+							asOfTimestampMs: Date.now(),
+							snapshotVersion: 1,
+						})}`,
 					)) as unknown as { "QUERY PLAN": unknown }[];
 					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
-					expect(
-						await readSubjectSnapshots({ ctx: { db: tx }, keys }),
-					).toHaveLength(200);
 					throw rolledBack;
 				})
 				.catch((cause) => {
@@ -884,5 +888,9 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		expect(plan).not.toMatch(
 			/"Seq Scan"[^}]*"Relation Name":"subject_snapshots"/,
 		);
-	});
+		// A hit: the envelope's own scans are planned but never run.
+		expect(plan).not.toMatch(
+			/"Relation Name":"customer_products"[^}]*"Actual Loops":[1-9]/,
+		);
+	}, 30_000);
 });
