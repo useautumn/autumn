@@ -33,6 +33,12 @@ export const countStripeBackdateInvoiceLineItems = ({
 	}, 0);
 };
 
+export const exceedsStripeBackdateInvoiceLineItemLimit = (
+	params: Parameters<typeof countStripeBackdateInvoiceLineItems>[0],
+) =>
+	countStripeBackdateInvoiceLineItems(params) >
+	STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT;
+
 export const assertStripeBackdateInvoiceLineItemLimit = ({
 	products,
 	startsAt,

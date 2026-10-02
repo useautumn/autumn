@@ -13,6 +13,7 @@ import {
 	type FullCusProduct,
 	ms,
 	msToSeconds,
+	type SetPlansBackdateConflict,
 	type SetPlansErrorDetails,
 } from "@autumn/shared";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -99,15 +100,10 @@ const rejectionOf = ({
 	}
 };
 
-type BackdateConflict = Extract<
-	SetPlansErrorDetails,
-	{ type: "backdate_conflict" }
->;
-
 const conflict = (
-	conflictType: BackdateConflict["conflict"],
-	extra: Partial<BackdateConflict> = {},
-): BackdateConflict => ({
+	conflictType: SetPlansBackdateConflict,
+	extra: { plan_name?: string; starts_at?: number } = {},
+): SetPlansErrorDetails => ({
 	type: "backdate_conflict",
 	conflict: conflictType,
 	starts_at: BACKDATED_START,
@@ -193,7 +189,7 @@ describe(
 						subscriptionBackdateStartMs: startsAt,
 					}),
 				}),
-			).toEqual({ ...conflict("too_far_back"), starts_at: startsAt });
+			).toEqual(conflict("too_far_back", { starts_at: startsAt }));
 		});
 
 		test("a plan on the subscription the request doesn't cover is rejected", () => {

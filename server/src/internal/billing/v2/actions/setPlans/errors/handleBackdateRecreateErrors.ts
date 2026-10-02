@@ -2,21 +2,14 @@ import {
 	type CreateScheduleBillingContext,
 	customerProductHasRelevantStatus,
 	isCustomerProductOnStripeSubscription,
-	type SetPlansErrorDetails,
+	type SetPlansBackdateConflict,
 	secondsToMs,
+	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
-import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
-import { countStripeBackdateInvoiceLineItems } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
+import { exceedsStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { setPlansError } from "./setPlansError";
-
-type BackdateConflict = Extract<
-	SetPlansErrorDetails,
-	{ type: "backdate_conflict" }
->;
-
-const ANCHOR_PRECISION_MS = 1000;
 
 const trialConflict = ({
 	billingContext,
@@ -42,20 +35,9 @@ const movesBillingCycleAnchor = ({
 		getLatestPeriodEnd({ sub: replacedStripeSubscription }),
 	);
 	return (
-		Math.abs(requestedBillingCycleAnchor - periodEndMs) >= ANCHOR_PRECISION_MS
+		truncateMsToSecondPrecision(requestedBillingCycleAnchor) !== periodEndMs
 	);
 };
-
-const exceedsStripeBackdateLimit = ({
-	billingContext,
-}: {
-	billingContext: CreateScheduleBillingContext;
-}) =>
-	countStripeBackdateInvoiceLineItems({
-		products: billingContext.fullProducts,
-		startsAt: billingContext.immediatePhase.starts_at,
-		currentEpochMs: billingContext.currentEpochMs,
-	}) > STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT;
 
 /** A plan the recreated subscription would leave behind on the cancelled one. */
 const planLeftOnReplacedSubscription = ({
@@ -88,7 +70,7 @@ const backdateConflict = ({
 	billingContext: CreateScheduleBillingContext;
 	timeline: Pick<SetPlansTimeline, "outOfScopeCustomerProductIds">;
 	preview: boolean;
-}): Omit<BackdateConflict, "type" | "starts_at"> | undefined => {
+}): { conflict: SetPlansBackdateConflict; plan_name?: string } | undefined => {
 	if (trialConflict({ billingContext })) return { conflict: "free_trial" };
 	if (!preview && billingContext.checkoutMode === "stripe_checkout") {
 		return { conflict: "stripe_checkout" };
@@ -96,7 +78,13 @@ const backdateConflict = ({
 	if (movesBillingCycleAnchor({ billingContext })) {
 		return { conflict: "billing_cycle_anchor" };
 	}
-	if (exceedsStripeBackdateLimit({ billingContext })) {
+	if (
+		exceedsStripeBackdateInvoiceLineItemLimit({
+			products: billingContext.fullProducts,
+			startsAt: billingContext.immediatePhase.starts_at,
+			currentEpochMs: billingContext.currentEpochMs,
+		})
+	) {
 		return { conflict: "too_far_back" };
 	}
 
