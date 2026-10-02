@@ -20,15 +20,30 @@ const instancesAt = ({
 	at: number;
 	justBefore: boolean;
 }) =>
-	segments
-		.filter((segment) =>
-			justBefore
-				? isAliveJustBefore({ segment, at })
-				: isAliveAt({ segment, at }),
-		)
-		.map(({ key, configHash }) => `${key}:${configHash}`)
-		.sort()
-		.join(",");
+	new Set(
+		segments
+			.filter((segment) =>
+				justBefore
+					? isAliveJustBefore({ segment, at })
+					: isAliveAt({ segment, at }),
+			)
+			.map(({ key, configHash }) => `${key}:${configHash}`),
+	);
+
+/** The instances that start and end at a date, ignoring those running straight through it. */
+const transitionAt = ({
+	segments,
+	at,
+}: {
+	segments: ComparableSegment[];
+	at: number;
+}) => {
+	const before = instancesAt({ segments, at, justBefore: true });
+	const after = instancesAt({ segments, at, justBefore: false });
+	const started = [...after].filter((instance) => !before.has(instance));
+	const ended = [...before].filter((instance) => !after.has(instance));
+	return JSON.stringify([started.sort(), ended.sort()]);
+};
 
 /** The resulting timeline changes exactly what the saved one changes here, so no phase is touched. */
 const isPreservedBoundary = ({
@@ -40,11 +55,8 @@ const isPreservedBoundary = ({
 	timeline: ResolvedSegment[];
 	at: number;
 }) =>
-	[true, false].every(
-		(justBefore) =>
-			instancesAt({ segments: saved.segments, at, justBefore }) ===
-			instancesAt({ segments: timeline, at, justBefore }),
-	);
+	transitionAt({ segments: saved.segments, at }) ===
+	transitionAt({ segments: timeline, at });
 
 /** Future dates where the saved timeline's set of plans changes. */
 const savedPhaseStarts = ({

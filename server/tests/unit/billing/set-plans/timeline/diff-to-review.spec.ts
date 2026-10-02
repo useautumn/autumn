@@ -452,4 +452,23 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		});
 		expect(review.withdrawnStarts).toEqual([]);
 	});
+
+	test("a kept cancellation is not a removed phase when an unrelated ongoing plan is added", () => {
+		const cancelingBonus = {
+			...running({ product: bonus, endedAt: PHASE_B }),
+			canceled: true,
+			canceled_at: NOW - ms.days(1),
+		};
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [running({ product: pro }), cancelingBonus],
+				opening: [
+					{ fullProduct: pro },
+					{ fullProduct: bonus },
+					{ fullProduct: sso, ongoing: true },
+				],
+			}),
+		});
+		expect(removedRows(review)).toEqual([]);
+	});
 });
