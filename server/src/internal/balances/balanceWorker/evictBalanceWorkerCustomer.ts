@@ -13,14 +13,16 @@ const STALE_ROWS_MESSAGE =
 	"[balance-worker] evict failed; worker rows may be stale";
 
 /** Drops the owner's copy after another writer changed the rows, whatever the rollout says; a failure is logged, never fails the write.
- *  One the owner never confirmed (a partition mid-handoff, as on every deploy) goes on the command log its next owner reads in order. */
+ *  One the owner never confirmed (a partition mid-handoff) is queued on the command log, which is no barrier for a `barrier` caller's read. */
 export async function evictBalanceWorkerCustomer({
 	ctx,
 	customerId,
 	client = getBalanceWorkerClient(),
+	barrier = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	/** A Postgres read follows that needs the worker's writes landed first. */
 	barrier?: boolean;
 	client?: Pick<BalanceWorkerClient, "evict"> & {
 		queue: Pick<BalanceWorkerClient["queue"], "evict">;
@@ -41,14 +43,19 @@ export async function evictBalanceWorkerCustomer({
 			ctx.logger.error(STALE_ROWS_MESSAGE, { error, data: { customerId } });
 			return;
 		}
-		ctx.logger.warn(`[balance-worker] evict ${reason}; queueing it`, {
-			type: "balance_worker_fail_open",
-			fail_open_reason: reason,
-			fail_open_source: "evict",
-			worker_failure: describeBalanceWorkerFailure({ error }),
-			data: { customerId },
-			error,
-		});
+		ctx.logger[barrier ? "error" : "warn"](
+			barrier
+				? `[balance-worker] evict ${reason} before a Postgres read; worker writes may be missing`
+				: `[balance-worker] evict ${reason}; queueing it`,
+			{
+				type: "balance_worker_fail_open",
+				fail_open_reason: reason,
+				fail_open_source: "evict",
+				worker_failure: describeBalanceWorkerFailure({ error }),
+				data: { customerId },
+				error,
+			},
+		);
 	}
 	try {
 		await client.queue.evict({ commands: [command] });
