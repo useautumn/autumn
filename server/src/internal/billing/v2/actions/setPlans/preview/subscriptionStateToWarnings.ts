@@ -11,6 +11,7 @@ import {
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
 import { billingStartsLaterWarning } from "./billingStartsLaterWarning";
 import { warningText } from "./warningText";
@@ -65,6 +66,30 @@ const replacedSubscriptionWarning = ({
 	}
 
 	return undefined;
+};
+
+/** A backdate recreates a healthy subscription from its new start, continuing the paid cycle. */
+const backdateRecreateWarning = ({
+	billingContext,
+}: {
+	billingContext: SubscriptionWarningContext;
+}): Warning | undefined => {
+	const { subscriptionBackdateStartMs, billingCycleAnchorMs } = billingContext;
+	if (!isBackdateRecreate({ billingContext })) return undefined;
+	if (subscriptionBackdateStartMs === undefined) return undefined;
+	if (typeof billingCycleAnchorMs !== "number") return undefined;
+
+	return {
+		type: "subscription_recreated_backdated",
+		...warningText([
+			plainText(
+				"The current subscription will be cancelled and recreated starting",
+			),
+			boldText(`${formatMsToDate(subscriptionBackdateStartMs)};`),
+			plainText("billing continues from"),
+			boldText(`${formatMsToDate(billingCycleAnchorMs)}.`),
+		]),
+	};
 };
 
 const createsStripeSubscription = (stripeBillingPlan: StripeBillingPlan) =>
@@ -214,6 +239,7 @@ export const subscriptionStateToWarnings = ({
 					replacedStripeSubscription,
 					stripeBillingPlan,
 				}),
+				backdateRecreateWarning({ billingContext }),
 				...(stripeVoidsOpenInvoices(replacedStripeSubscription)
 					? []
 					: openInvoiceWarnings(replacedOpenInvoices)),

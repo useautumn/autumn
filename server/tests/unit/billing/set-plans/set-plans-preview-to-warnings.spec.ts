@@ -434,6 +434,38 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
+	test("a backdate over a live subscription says it is recreated and when billing continues", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				subscriptionBackdateStartMs: NOON_UTC - 40 * DAY_MS,
+				billingCycleAnchorMs: NOON_UTC + 12 * DAY_MS,
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_live",
+					status: "active",
+				}),
+				stripeDiscounts: [],
+			},
+			stripeBillingPlan: {
+				...createsSubscription,
+				replacedSubscriptionAction: {
+					type: "cancel",
+					stripeSubscriptionId: "sub_live",
+					reason: "backdate",
+				},
+			},
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "subscription_recreated_backdated",
+				severity: "warning",
+				message:
+					"The current subscription will be cancelled and recreated starting 20 Aug 2026; billing continues from 11 Oct 2026.",
+			},
+		]);
+	});
+
 	test("a customer with no subscription is told a new one will be created", () => {
 		const warnings = stateWarnings({
 			billingContext: {
