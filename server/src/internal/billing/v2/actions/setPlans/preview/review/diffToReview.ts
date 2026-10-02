@@ -8,6 +8,7 @@ import type {
 import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
 import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { TimelineDiff } from "../../timeline/types/timelineDiff";
+import { ongoingContextFor } from "./ongoingContextFor";
 import { reviewRowToPlanChange } from "./reviewRowToPlanChange";
 import { reviewRowToPreviewPlan } from "./reviewRowToPreviewPlan";
 import type { ReviewRowLookup } from "./reviewSegmentCustomerProduct";
@@ -39,11 +40,7 @@ export const diffToReview = ({
 	currency: string;
 }): SetPlansReview => {
 	const { entities } = lookup.originalFullCustomer;
-	const savedHasLaterPhases = saved.segments.some(
-		(segment) =>
-			segment.startsAt > diff.now ||
-			(segment.endsAt !== null && segment.endsAt > diff.now),
-	);
+	const ongoingContext = ongoingContextFor({ saved, now: diff.now });
 	const toPlans = ({
 		rows,
 		phaseStartsAt,
@@ -61,7 +58,7 @@ export const diffToReview = ({
 				creditLineItems: phaseCredits,
 				entities,
 				currency,
-				savedHasLaterPhases,
+				ongoingContext,
 			});
 			return plan ? [plan] : [];
 		});

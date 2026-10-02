@@ -339,7 +339,6 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 
 		expect(describeOperations(diff)).toEqual(["retime:sso_row:never"]);
 		expect(describeReview(review)).toEqual([
-			"B:removed:pro:h1",
 			"now:kept:pro:h1",
 			"now:kept:sso:h1",
 		]);
@@ -513,7 +512,6 @@ describe(chalk.yellowBright("diffTimelines: boundaries"), () => {
 
 		expect(describeOperations(diff)).toEqual(["delete:sso_row"]);
 		expect(describeReview(review)).toEqual([
-			"B:removed:pro:h1",
 			"B:removed:sso:h1",
 			"now:kept:pro:h1",
 		]);

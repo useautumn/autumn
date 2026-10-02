@@ -1,6 +1,11 @@
 import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { TimelineDiff } from "../../timeline/types/timelineDiff";
 import {
+	isOngoingReviewSegment,
+	type OngoingContext,
+} from "./isOngoingReviewSegment";
+import { ongoingContextFor } from "./ongoingContextFor";
+import {
 	phasePlanRows,
 	resolvedContentsAt,
 	savedContentsAt,
@@ -42,6 +47,17 @@ const comparisonContents = ({
 	});
 };
 
+/** A removed phase lists what stops with it; ongoing plans run on, and the first phase already shows them. */
+const isLostWithRemovedPhase = ({
+	row,
+	ongoingContext,
+}: {
+	row: ReviewPlanRow;
+	ongoingContext: OngoingContext;
+}) =>
+	row.status === "ends" &&
+	!isOngoingReviewSegment({ reviewSegment: row.before, ongoingContext });
+
 /** Each request phase against its matched saved self, or the phase before it when it is new. */
 export const timelineToReviewRows = ({
 	saved,
@@ -51,29 +67,35 @@ export const timelineToReviewRows = ({
 	saved: SavedTimeline;
 	diff: TimelineDiff;
 	matches: ReviewPhaseMatches;
-}): ReviewRows => ({
-	phases: withoutCarriedOverRows(
-		matches.phases.map((phase, phaseIndex) => ({
-			at: phase.at,
-			comparison: phase.comparison,
-			rows: phasePlanRows({
-				contents: resolvedContentsAt({ timeline: diff.timeline, at: phase.at }),
-				comparison: comparisonContents({
-					saved,
-					diff,
-					phase,
-					previousPhase: matches.phases[phaseIndex - 1],
+}): ReviewRows => {
+	const ongoingContext = ongoingContextFor({ saved, now: diff.now });
+	return {
+		phases: withoutCarriedOverRows(
+			matches.phases.map((phase, phaseIndex) => ({
+				at: phase.at,
+				comparison: phase.comparison,
+				rows: phasePlanRows({
+					contents: resolvedContentsAt({
+						timeline: diff.timeline,
+						at: phase.at,
+					}),
+					comparison: comparisonContents({
+						saved,
+						diff,
+						phase,
+						previousPhase: matches.phases[phaseIndex - 1],
+					}),
+					showsEnds: phase.comparison.type === "saved",
 				}),
-				showsEnds: phase.comparison.type === "saved",
-			}),
+			})),
+		),
+		removedPhases: matches.removedPhaseStarts.map((at) => ({
+			at,
+			rows: phasePlanRows({
+				contents: new Map(),
+				comparison: savedContentsAt({ saved, at }),
+				showsEnds: true,
+			}).filter((row) => isLostWithRemovedPhase({ row, ongoingContext })),
 		})),
-	),
-	removedPhases: matches.removedPhaseStarts.map((at) => ({
-		at,
-		rows: phasePlanRows({
-			contents: new Map(),
-			comparison: savedContentsAt({ saved, at }),
-			showsEnds: true,
-		}),
-	})),
-});
+	};
+};

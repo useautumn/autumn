@@ -8,7 +8,10 @@ import {
 import { Decimal } from "decimal.js";
 import { customerProductToEntityId } from "@/internal/billing/v2/actions/buildBillingChanges/buildCustomerPlanChanges/customerProductToEntityId";
 import { autumnPriceToProcessorItemPrice } from "../processorItems/price/autumnPriceToProcessorItemPrice";
-import { isOngoingReviewSegment } from "./isOngoingReviewSegment";
+import {
+	isOngoingReviewSegment,
+	type OngoingContext,
+} from "./isOngoingReviewSegment";
 import {
 	type ReviewRowLookup,
 	reviewSegmentCustomerProduct,
@@ -65,7 +68,7 @@ export const reviewRowToPreviewPlan = ({
 	creditLineItems,
 	entities,
 	currency,
-	savedHasLaterPhases,
+	ongoingContext,
 }: {
 	row: ReviewPlanRow;
 	phaseStartsAt: number;
@@ -73,7 +76,7 @@ export const reviewRowToPreviewPlan = ({
 	creditLineItems: LineItem[];
 	entities: Entity[];
 	currency: string;
-	savedHasLaterPhases: boolean;
+	ongoingContext: OngoingContext;
 }): SetPlansPreviewPlan | undefined => {
 	const reviewSegment = row.status === "ends" ? row.before : row.after;
 	const customerProduct = reviewSegmentCustomerProduct({
@@ -88,7 +91,7 @@ export const reviewRowToPreviewPlan = ({
 		name: customerProduct.product.name,
 		status: row.status,
 		custom: customerProduct.is_custom,
-		ongoing: isOngoingReviewSegment({ reviewSegment, savedHasLaterPhases }),
+		ongoing: isOngoingReviewSegment({ reviewSegment, ongoingContext }),
 		expires_at:
 			row.status === "ends"
 				? phaseStartsAt

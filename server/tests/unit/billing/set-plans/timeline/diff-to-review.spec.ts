@@ -125,6 +125,21 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		expect(removedRows(review)).toEqual(["B: bonus:ends, premium:ends"]);
 	});
 
+	test("a removed phase leaves out ongoing plans, which the first phase already shows", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [...threePhaseSchedule(), running({ product: sso })],
+				opening: [
+					{ fullProduct: pro },
+					{ fullProduct: bonus },
+					{ fullProduct: sso, ongoing: true },
+				],
+				later: [{ startsAt: PHASE_C, plans: [{ fullProduct: growth }] }],
+			}),
+		});
+		expect(removedRows(review)).toEqual(["B: bonus:ends, premium:ends"]);
+	});
+
 	test("an unchanged re-sent schedule keeps every plan and removes no phase", () => {
 		const review = reviewFor({
 			billingContext: buildContext({
