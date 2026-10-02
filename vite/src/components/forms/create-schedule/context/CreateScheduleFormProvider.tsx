@@ -215,8 +215,10 @@ export function CreateScheduleFormProvider({
 	);
 
 	const getResetBillingCycle = useCallback(
-		() => form.store.state.values.resetBillingCycle ?? false,
-		[form.store],
+		() =>
+			!backdatesLiveSubscription &&
+			(form.store.state.values.resetBillingCycle ?? false),
+		[form.store, backdatesLiveSubscription],
 	);
 
 	const getBillingCycleAnchorAndEndDate = useCallback(() => {
@@ -258,7 +260,8 @@ export function CreateScheduleFormProvider({
 		features,
 		nowMs,
 		billingBehavior: formValues.billingBehavior,
-		resetBillingCycle: formValues.resetBillingCycle,
+		resetBillingCycle:
+			formValues.resetBillingCycle && !backdatesLiveSubscription,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
@@ -307,15 +310,6 @@ export function CreateScheduleFormProvider({
 			form.setFieldValue("enablePlanImmediately", false);
 		}
 	}, [preview?.redirect_to_checkout, startsLater, form]);
-
-	useEffect(() => {
-		if (
-			backdatesLiveSubscription &&
-			form.store.state.values.resetBillingCycle
-		) {
-			form.setFieldValue("resetBillingCycle", false);
-		}
-	}, [backdatesLiveSubscription, form]);
 
 	const generation = useCreateScheduleGeneration({
 		currentRequest: generationRequestBody as Record<string, unknown> | null,

@@ -89,7 +89,7 @@ export function CreateScheduleAdvancedSection() {
 			{rules.resetBillingCycle.visible && (
 				<BillingCycleAnchorConfigRow
 					rule={anchorRule}
-					enabled={resetBillingCycle}
+					enabled={resetBillingCycle && !backdatesLiveSubscription}
 					mode={billingCycleAnchorMode}
 					allowCustomAnchor={!hasPersistedCreateSchedule({ phases })}
 					customAnchor={billingCycleAnchorDate}
