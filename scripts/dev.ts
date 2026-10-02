@@ -465,7 +465,7 @@ async function startDev() {
 			EVE_INTERNAL_AUTH_TOKEN,
 			// One multi-tenant Atom keeps each deployed org's folder under the worktree's .data/atom, in 2 slots each.
 			ATOM_MODE: "multi_tenant",
-			ATOM_ADMIN_TOKEN_HASH: createHash("sha256")
+			ATOM_TOKEN_HASH: createHash("sha256")
 				.update(ATOM_ADMIN_TOKEN)
 				.digest("hex"),
 			ATOM_SLOT_COUNT: "2",

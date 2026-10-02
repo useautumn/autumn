@@ -40,19 +40,11 @@ const sha256Hex = ({ name, value }: { name: string; value: string }) => {
 	return value;
 };
 
-type AtomModeEnv =
-	/** A customer's Atom, which sets no ATOM_MODE: one token, set at deploy by its hash, opens its one folder. */
-	| {
-			ATOM_MODE: "deployed";
-			ATOM_TOKEN_HASH: string;
-			ATOM_ADMIN_TOKEN_HASH: null;
-	  }
-	/** Our own Atom holding many orgs: only the admin token's holder registers them, each with a token of its own. */
-	| {
-			ATOM_MODE: "multi_tenant";
-			ATOM_TOKEN_HASH: null;
-			ATOM_ADMIN_TOKEN_HASH: string;
-	  };
+/** One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`. */
+type AtomModeEnv = {
+	ATOM_MODE: "deployed" | "multi_tenant";
+	ATOM_TOKEN_HASH: string;
+};
 
 /** Unset is the customer's single-tenant Atom; only our shadow Atom sets ATOM_MODE, to multi_tenant. */
 const modeEnvOf = ({
@@ -61,34 +53,13 @@ const modeEnvOf = ({
 	runtimeEnv: Record<string, string | undefined>;
 }): AtomModeEnv => {
 	const mode = runtimeEnv.ATOM_MODE?.trim() || null;
-	const tokenHash = runtimeEnv.ATOM_TOKEN_HASH?.trim() || null;
-	const adminTokenHash = runtimeEnv.ATOM_ADMIN_TOKEN_HASH?.trim() || null;
 	if (mode !== null && mode !== "multi_tenant")
 		throw new Error("ATOM_MODE is either unset or multi_tenant");
-	if (mode === "multi_tenant") {
-		if (tokenHash)
-			throw new Error(
-				"ATOM_TOKEN_HASH is only for an Atom with ATOM_MODE unset",
-			);
-		if (!adminTokenHash)
-			throw new Error("ATOM_MODE=multi_tenant needs ATOM_ADMIN_TOKEN_HASH");
-		return {
-			ATOM_MODE: "multi_tenant",
-			ATOM_TOKEN_HASH: null,
-			ATOM_ADMIN_TOKEN_HASH: sha256Hex({
-				name: "ATOM_ADMIN_TOKEN_HASH",
-				value: adminTokenHash,
-			}),
-		};
-	}
-	if (adminTokenHash)
-		throw new Error("ATOM_ADMIN_TOKEN_HASH is only for ATOM_MODE=multi_tenant");
-	if (!tokenHash)
-		throw new Error("Set ATOM_TOKEN_HASH, or ATOM_MODE=multi_tenant");
+	const tokenHash = runtimeEnv.ATOM_TOKEN_HASH?.trim();
+	if (!tokenHash) throw new Error("Set ATOM_TOKEN_HASH");
 	return {
-		ATOM_MODE: "deployed",
+		ATOM_MODE: mode ?? "deployed",
 		ATOM_TOKEN_HASH: sha256Hex({ name: "ATOM_TOKEN_HASH", value: tokenHash }),
-		ATOM_ADMIN_TOKEN_HASH: null,
 	};
 };
 
