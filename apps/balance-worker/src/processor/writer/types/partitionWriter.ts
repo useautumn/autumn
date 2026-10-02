@@ -9,6 +9,7 @@ import type {
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
+import type { SubjectSnapshotPayload } from "../../../state/types/durableMutation.js";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
@@ -44,10 +45,15 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
-	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
-	evict(params: { customerKey: string }): Promise<void>;
-	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there. */
-	adopt(params: { state: SubjectState }): SubjectState;
+	/** Drops resident rows after earlier writes land, then awaits the snapshot DELETE.
+	 * `deferSnapshotDrop` transfers that wait to the command batch. */
+	evict(params: {
+		customerKey: string;
+		deferSnapshotDrop?: (dropped: Promise<void>) => void;
+	}): Promise<void>;
+	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
+	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
+	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;
 	/** Releases the partition's share of the worker's budget and drops its resident rows. */
 	dispose(): void;
 };
@@ -92,6 +98,7 @@ export type PartitionWriterContext = {
 		| "readOwnState"
 		| "readReceipt"
 		| "applyDurableMutations"
+		| "subjectSnapshots"
 	>;
 	appender: CommittedOutcomeAppender;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
@@ -162,6 +169,8 @@ export type PendingMutation = {
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
+	/** The rows this mutation leaves, for `subject_snapshots`; absent unless every subject was read whole and nothing is disowning them. */
+	snapshots?: SubjectSnapshotPayload[];
 	queuedAt: number;
 };
 
@@ -188,6 +197,8 @@ export type PartitionWriterState = {
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
+	/** Customers whose resident rows are being disowned: a mutation decided on them now carries no snapshot. */
+	evicting: Set<string>;
 };
 
 export type UnappliedBatch = {

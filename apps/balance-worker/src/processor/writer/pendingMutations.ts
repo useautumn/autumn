@@ -6,6 +6,7 @@ import {
 	splitSubjectState,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
+import type { SubjectSnapshotPayload } from "../../state/types/durableMutation.js";
 import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
 import type {
 	CommittedMutation,
@@ -44,6 +45,7 @@ export function createPartitionWriterState({
 		deferredQueued: 0,
 		deferredCommitTimer: null,
 		deferredCommitDue: false,
+		evicting: new Set(),
 	};
 }
 
@@ -234,6 +236,8 @@ export function enqueueMutation({
 		state.subjects.pin({ subjectKey });
 		state.subjects.setState({ subjectKey, customerKey, state: projected });
 	}
+	const snapshots = snapshotPayloadsOf({ scope, pending, projectedStates });
+	if (snapshots) pending.snapshots = snapshots;
 	state.pendingByKey.set(pendingKey, pending);
 	customerPending.add(pending);
 	state.pendingByCustomerKey.set(customerKey, customerPending);
@@ -254,6 +258,57 @@ const projectedStatesOf = ({ state }: { state: SubjectState }) => {
 	const states = splitSubjectState({ state });
 	return states.entity ? [states.customer, states.entity] : [states.customer];
 };
+
+/** A refused record leaves memory ahead of Postgres: nothing decided on those rows may land as their snapshot. */
+export function disownQueuedSnapshots({
+	state,
+	customerKey,
+}: {
+	state: PartitionWriterState;
+	customerKey: string;
+}): void {
+	const queued = state.unapplied.flatMap((unapplied) => unapplied.batch);
+	for (const pending of [...queued, ...state.queue])
+		if (pending.customerKey === customerKey) pending.snapshots = undefined;
+}
+
+/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. */
+export function releasePins({
+	state,
+	pending,
+}: {
+	state: PartitionWriterState;
+	pending: PendingMutation;
+}): void {
+	for (const subjectKey of pending.projectedSubjectKeys)
+		state.subjects.unpin({ subjectKey });
+}
+
+/** Every projected subject's rows with the full read they descend from; nothing while an evict is disowning them. */
+function snapshotPayloadsOf({
+	scope,
+	pending,
+	projectedStates,
+}: {
+	scope: PartitionWriterScope;
+	pending: PendingMutation;
+	projectedStates: SubjectState[];
+}): SubjectSnapshotPayload[] | null {
+	const { state } = scope;
+	if (!scope.ctx.stateStore.subjectSnapshots?.written()) return null;
+	if (state.evicting.has(pending.customerKey)) return null;
+	const payloads: SubjectSnapshotPayload[] = [];
+	for (const [index, projected] of projectedStates.entries()) {
+		const subjectKey = pending.projectedSubjectKeys[index];
+		const baselineAt =
+			subjectKey === undefined
+				? null
+				: state.subjects.readBaselineAt({ subjectKey });
+		if (baselineAt === null) return null;
+		payloads.push({ state: projected, baselineAt });
+	}
+	return payloads;
+}
 
 /** Snapshot at call time: mutations enqueued later must not extend the wait. */
 export function pendingCommitsFor({
@@ -279,10 +334,6 @@ export function removePendingMutation({
 	pending: PendingMutation;
 }): void {
 	state.pendingByKey.delete(pending.pendingKey);
-	// The committed rows stay resident; only the pin that kept them from eviction is released.
-	for (const subjectKey of pending.projectedSubjectKeys) {
-		state.subjects.unpin({ subjectKey });
-	}
 	const customerPending = state.pendingByCustomerKey.get(pending.customerKey);
 	customerPending?.delete(pending);
 	if (customerPending && customerPending.size === 0) {

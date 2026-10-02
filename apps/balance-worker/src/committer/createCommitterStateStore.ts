@@ -1,3 +1,4 @@
+import type { SubjectSnapshotControl } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {
@@ -7,6 +8,7 @@ import {
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
+import { createSubjectSnapshots } from "./subjectSnapshots/createSubjectSnapshots.js";
 import type {
 	Committer,
 	CommitterStateStore,
@@ -17,6 +19,7 @@ import type { CommitterStateStoreContext } from "./types/committerStateStoreCont
 /** Reads answer null: the writer's map holds every subject this backend knows. */
 export const createCommitterStateStore = ({
 	ctx: dependencies,
+	config,
 }: {
 	ctx: {
 		committer: Committer;
@@ -27,6 +30,8 @@ export const createCommitterStateStore = ({
 			| "claimPartitionProgress"
 		>;
 	};
+	/** The same control the committer reads: present, the writer attaches state and evicts drop rows while it says write. */
+	config?: { subjectSnapshots: SubjectSnapshotControl };
 }): CommitterStateStore => {
 	const claimTokens = new Map<string, string>();
 	function claimTokenOf(position: PartitionPosition): string | undefined {
@@ -52,6 +57,18 @@ export const createCommitterStateStore = ({
 		laneByPartition.set(key, operation);
 		return operation;
 	}
+
+	// Evict DELETEs share the lane, so Postgres sees them in the order the partition asked.
+	const subjectSnapshots = config?.subjectSnapshots
+		? createSubjectSnapshots({
+				ctx: {
+					committer: ctx.committer,
+					snapshots: config.subjectSnapshots,
+					claimTokenOf,
+					runInLane,
+				},
+			})
+		: undefined;
 
 	const applyInLane: CommitterStateStore["applyDurableMutations"] = ({
 		records,
@@ -116,6 +133,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
+		...(subjectSnapshots ? { subjectSnapshots } : undefined),
 		claimPartition,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,

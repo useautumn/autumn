@@ -76,7 +76,10 @@ export async function createBalanceWorker({
 			`Subject map budget: ${Math.round(subjectMapBudget.totalBytes / 1_048_576)} MiB for this worker, shared by the partitions it holds`,
 		);
 	const resources = await openWorkerResources({
-		ctx: { logger: dependencies.logger },
+		ctx: {
+			logger: dependencies.logger,
+			subjectSnapshots: dependencies.subjectSnapshots,
+		},
 		config,
 		checkpointConfig,
 		bootstrap: {
