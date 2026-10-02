@@ -1,12 +1,11 @@
 // Manual customer creation - not using initCustomer to control test clock properly
-import { beforeAll, describe, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 import {
 	FreeTrialDuration,
 	LegacyVersion,
 	ProductItemInterval,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { expectProductNotTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
@@ -52,6 +51,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockID: string;
 	let stripeCli: Stripe;
+	let stripeCustomerId: string;
 
 	beforeAll(async () => {
 		// Products must be initialized BEFORE customer creation for default products
@@ -72,6 +72,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 
 		testClockID = res.testClockId;
 		stripeCli = ctx.stripeCli;
+		stripeCustomerId = res.customer.processor?.id ?? "";
 	});
 
 	it("should create a customer with the paid default trial", async () => {
@@ -102,12 +103,11 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 			product: defaultTrialPro,
 		});
 
-		// Legacy status reads "trialing" until wall-clock passes trial_ends_at, so judge by test-clock time.
-		await expectProductNotTrialing({
-			customer,
-			productId: defaultTrialPro.id,
-			nowMs: advancedTo,
+		// Legacy status reads "trialing" until wall-clock passes trial_ends_at, so assert on Stripe instead.
+		const { data: subscriptions } = await stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
 		});
+		expect(subscriptions.map((sub) => sub.status)).toEqual(["active"]);
 
 		await expectCustomerInvoiceCorrect({
 			customerId,
