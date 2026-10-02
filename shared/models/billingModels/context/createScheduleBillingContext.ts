@@ -37,14 +37,21 @@ export interface ScheduledPhaseContext {
 	productContexts: ScheduledProductContext[];
 }
 
+/** The one Stripe subscription a request edits when the customer has several. */
+export interface StripeSubscriptionScope {
+	stripeSubscriptionId: string;
+	/** Plans on the subscription or its schedule, plus customer-wide free plans. */
+	customerProductIds: string[];
+	otherStripeSubscriptionIds: string[];
+}
+
 export interface CreateScheduleBillingContext
 	extends MultiAttachBillingContext {
-	/**
-	 * Customer products the replaced schedule put in place. Dropping one from the
-	 * new phases expires it; products no schedule ever placed are left alone.
-	 */
-	replacedScheduleCustomerProductIds: string[];
 	immediatePhase: ResolvedCreateSchedulePhaseV0;
 	futurePhases: ResolvedCreateSchedulePhaseV0[];
 	scheduledPhaseContexts: ScheduledPhaseContext[];
+	/** When every plan ends, unscheduled plans included; Stripe cancels the subscription then. */
+	endsAt?: number;
+	/** Set when the request targets one subscription; nothing outside it may change. */
+	stripeSubscriptionScope?: StripeSubscriptionScope;
 }

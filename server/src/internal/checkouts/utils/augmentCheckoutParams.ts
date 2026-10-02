@@ -6,6 +6,7 @@ import {
 	type CreateScheduleParamsV0,
 	ErrCode,
 	RecaseError,
+	type SetPlansParamsV0,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -20,7 +21,11 @@ export function augmentCheckoutParams({
 }: {
 	checkout: Checkout;
 	body: ConfirmCheckoutParams;
-}): AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
+}):
+	| AttachParamsV1
+	| CreateScheduleParamsV0
+	| SetPlansParamsV0
+	| UpdateSubscriptionV1Params;
 
 export function augmentCheckoutParams({
 	checkout,
@@ -52,7 +57,11 @@ export function augmentCheckoutParams({
 }: {
 	checkout: Checkout;
 	body: ConfirmCheckoutParams;
-}): AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params {
+}):
+	| AttachParamsV1
+	| CreateScheduleParamsV0
+	| SetPlansParamsV0
+	| UpdateSubscriptionV1Params {
 	const mergeFeatureQuantities = ({
 		originalFeatureQuantities,
 	}: {

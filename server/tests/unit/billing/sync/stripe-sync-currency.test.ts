@@ -10,7 +10,10 @@ import {
 import type Stripe from "stripe";
 import { itemDiffsToMatchedPlans } from "@/internal/billing/v2/actions/sync/detect/itemDiffsToMatchedPlans/itemDiffsToMatchedPlans";
 import type { ItemDiff } from "@/internal/billing/v2/actions/sync/detect/types";
-import { syncContextHasPaidProduct } from "@/internal/billing/v2/actions/sync/utils/syncContextUtils";
+import {
+	isProductFreeInSyncCurrency,
+	syncContextHasPaidProduct,
+} from "@/internal/billing/v2/actions/sync/utils/syncContextUtils";
 import { autumnBasePriceToStripePriceShape } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/autumnPriceShape";
 import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
 import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
@@ -281,6 +284,30 @@ test("detects a product paid only in the sync currency", () => {
 	} as unknown as SyncBillingContext;
 
 	expect(syncContextHasPaidProduct({ syncContext })).toBe(true);
+});
+
+test("a product free in its base currency but paid in the sync currency is not free there", () => {
+	const fullProduct = {
+		...product,
+		prices: [
+			{
+				...catalogPrice,
+				config: {
+					...catalogPrice.config,
+					amount: 0,
+					base_currency: "usd",
+					currencies: { eur: { amount: 10 } },
+				},
+			},
+		],
+	} as FullProduct;
+
+	expect(isProductFreeInSyncCurrency({ fullProduct, currency: "eur" })).toBe(
+		false,
+	);
+	expect(isProductFreeInSyncCurrency({ fullProduct, currency: "usd" })).toBe(
+		true,
+	);
 });
 
 describe("Autumn base price currency shape", () => {

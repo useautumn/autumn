@@ -1,27 +1,42 @@
 import {
 	canResetScheduleBillingCycle,
 	hasMultipleImmediateSchedulePlans,
+	hasPersistedCreateSchedule,
 } from "@/components/forms/customer-state/customerStateSchema";
-import {
-	AdvancedSection,
-	ConfigRow,
-} from "@/components/forms/shared/advanced-section";
-import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { AdvancedSection } from "@/components/forms/shared/advanced-section";
+import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
+import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 
 export function CreateScheduleAdvancedSection() {
-	const { form, formValues } = useCreateScheduleFormContext();
-	const { billingBehavior, resetBillingCycle, phases } = formValues;
+	const { form, formValues, products, nowMs } = useCreateScheduleFormContext();
+	const {
+		billingBehavior,
+		resetBillingCycle,
+		billingCycleAnchorMode,
+		billingCycleAnchorDate,
+		endDate,
+		phases,
+	} = formValues;
+
+	const hasPaidRecurringPlan = hasPaidRecurringSchedulePlan({
+		phases,
+		products,
+	});
 
 	const rules = getBillingOptionRules({
 		flow: "schedule",
 		state: {
 			hasMultipleImmediatePlans: hasMultipleImmediateSchedulePlans({ phases }),
 			canResetScheduleBillingCycle: canResetScheduleBillingCycle({ phases }),
+			hasPaidRecurringPlan,
 		},
 	});
+	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
+	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
 
 	return (
 		<AdvancedSection>
@@ -38,18 +53,29 @@ export function CreateScheduleAdvancedSection() {
 				/>
 			)}
 			{rules.resetBillingCycle.visible && (
-				<ConfigRow
-					title="Reset Billing Cycle"
-					description="Align Stripe anchors to avoid off-cycle charges"
-					action={
-						<BillingOptionToggle
-							rule={rules.resetBillingCycle}
-							checked={resetBillingCycle}
-							onCheckedChange={(checked) =>
-								form.setFieldValue("resetBillingCycle", !!checked)
-							}
-						/>
+				<BillingCycleAnchorConfigRow
+					rule={rules.resetBillingCycle}
+					enabled={resetBillingCycle}
+					mode={billingCycleAnchorMode}
+					allowCustomAnchor={!hasPersistedCreateSchedule({ phases })}
+					customAnchor={billingCycleAnchorDate}
+					maxUnixDate={endDate ? endDate - 1_000 : undefined}
+					onEnabledChange={(enabled) =>
+						form.setFieldValue("resetBillingCycle", enabled)
 					}
+					onModeChange={(mode) =>
+						form.setFieldValue("billingCycleAnchorMode", mode)
+					}
+					onCustomAnchorChange={(anchor) =>
+						form.setFieldValue("billingCycleAnchorDate", anchor)
+					}
+				/>
+			)}
+			{rules.endDate.visible && (
+				<EndDateConfigRow
+					endDate={endDate}
+					minUnixDate={endDateMin}
+					onEndDateChange={(value) => form.setFieldValue("endDate", value)}
 				/>
 			)}
 		</AdvancedSection>

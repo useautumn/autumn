@@ -6,12 +6,15 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
+import { applyPooledBalancePlanToFullCustomer } from "@/internal/billing/v2/utils/billingPlan/applyPooledBalancePlanToFullCustomer";
 import { applyExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/applyExistingRollovers";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
+import { runsInProjection } from "./runsInProjection";
 
 const isEndedByPhase = ({
 	customerProduct,
@@ -20,7 +23,7 @@ const isEndedByPhase = ({
 	customerProduct: FullCusProduct;
 	phase: SchedulePhasePlan;
 }) =>
-	cp(customerProduct).hasActiveStatus().valid &&
+	runsInProjection(customerProduct) &&
 	notNullish(customerProduct.ended_at) &&
 	customerProduct.ended_at <= phase.startsAt;
 
@@ -82,22 +85,41 @@ export const applySchedulePhaseToFullCustomer = ({
 }): FullCustomer => {
 	const phaseCustomer = structuredClone(fullCustomer);
 	const startingIds = new Set(phase.customerProductIds);
+	const incomingCustomerProducts: FullCusProduct[] = [];
+	const outgoingCustomerProducts: FullCusProduct[] = [];
 
 	for (const customerProduct of phaseCustomer.customer_products) {
 		if (startingIds.has(customerProduct.id)) {
-			carryExistingStatesIntoStartingProduct({
-				ctx,
-				previousCustomer: fullCustomer,
-				customerProduct,
-			});
+			if (!runsInProjection(customerProduct)) {
+				incomingCustomerProducts.push(customerProduct);
+				carryExistingStatesIntoStartingProduct({
+					ctx,
+					previousCustomer: fullCustomer,
+					customerProduct,
+				});
+			}
 			customerProduct.status = statusAtPhaseStart({ customerProduct, phase });
 			continue;
 		}
 
 		if (isEndedByPhase({ customerProduct, phase })) {
 			customerProduct.status = CusProductStatus.Expired;
+			outgoingCustomerProducts.push(customerProduct);
 		}
 	}
+
+	// Mirrors activation, which re-sizes pools from the plans leaving and joining at this phase.
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer: phaseCustomer,
+		outgoingCustomerProducts,
+		incomingCustomerProducts,
+		now: phase.startsAt,
+	});
+	applyPooledBalancePlanToFullCustomer({
+		fullCustomer: phaseCustomer,
+		pooledBalancePlan,
+	});
 
 	return phaseCustomer;
 };

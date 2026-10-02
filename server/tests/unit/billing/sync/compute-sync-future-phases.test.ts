@@ -73,6 +73,7 @@ test("future sync phases preserve customer license quantities", () => {
 			},
 		],
 		unscheduledProductContexts: [],
+		retainedCustomerProducts: [],
 		queuedCustomerProducts: [],
 		currentEpochMs: Date.now(),
 		acknowledgedWarnings: [],

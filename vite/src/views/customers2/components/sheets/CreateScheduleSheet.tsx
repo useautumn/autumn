@@ -1,10 +1,11 @@
 import type {
+	Entity,
+	FullCusProduct,
 	FullCustomer,
-	FullCustomerSchedule,
 	ProductV2,
 } from "@autumn/shared";
-import { CusProductStatus, findCustomerProductById } from "@autumn/shared";
-import { useMemo } from "react";
+import { ACTIVE_STATUSES, CusProductStatus } from "@autumn/shared";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	CreateScheduleReviewContent,
@@ -14,10 +15,11 @@ import {
 	CreateScheduleFormProvider,
 	useCreateScheduleFormContext,
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
-import { useCustomerSchedules } from "@/components/forms/create-schedule/hooks/useCustomerSchedules";
+import type { SetPlansSubscriptionTarget } from "@/components/forms/create-schedule/types/setPlansSubscriptionTarget";
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
 import {
 	customerProductsToCustomerState,
+	MAX_PHASE_START_DRIFT_MS,
 	type PhaseStart,
 } from "@/components/forms/customer-state/customerProductsToCustomerState";
 import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
@@ -26,6 +28,7 @@ import {
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -35,62 +38,52 @@ import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useSubscriptionLinks } from "@/views/customers2/components/sheets/set-plans-subscription/hooks/useSubscriptionLinks";
 
-type MergedSchedulePhase = {
-	starts_at: number;
-	customer_product_ids: string[];
-};
+const subscriptionTargetFromSheetData = (
+	sheetData: Record<string, unknown> | null,
+): SetPlansSubscriptionTarget | null =>
+	(sheetData?.subscriptionTarget as SetPlansSubscriptionTarget | undefined) ??
+	null;
 
-function hasSchedulePhaseBillingCycleReset({
-	customer,
-	phases,
+const isScheduledCustomerProduct = (customerProduct: FullCusProduct) =>
+	customerProduct.status === CusProductStatus.Scheduled;
+
+/** A scheduled plan whose start also resets the billing cycle. */
+const hasUpcomingBillingCycleReset = ({
+	customerProducts,
 	nowMs,
 }: {
-	customer: FullCustomer | undefined;
-	phases: MergedSchedulePhase[];
+	customerProducts: FullCusProduct[];
 	nowMs: number;
-}) {
-	return phases.some(
-		(phase) =>
-			phase.starts_at > nowMs &&
-			phase.customer_product_ids.some((cpId) => {
-				const cusProduct = findCustomerProductById({
-					fullCustomer: customer,
-					customerProductId: cpId,
-				});
-				return cusProduct?.billing_cycle_anchor_resets_at === phase.starts_at;
-			}),
+}) =>
+	customerProducts.some(
+		(customerProduct) =>
+			isScheduledCustomerProduct(customerProduct) &&
+			customerProduct.starts_at > nowMs &&
+			customerProduct.billing_cycle_anchor_resets_at ===
+				customerProduct.starts_at,
 	);
-}
 
-/**
- * Schedules span scopes, so the sheet edits every schedule at once: phases that
- * start at the same instant collapse into one row of plans, each keeping its own
- * scope.
- */
-function mergeSchedulePhases({
-	schedules,
+/** When today's phase began: its earliest live plan that ends at a scheduled
+ * phase. Ongoing plans aren't part of it, so their start doesn't count. */
+const findCurrentPhaseStart = ({
+	customerProducts,
 }: {
-	schedules: FullCustomerSchedule[];
-}): MergedSchedulePhase[] {
-	const productIdsByStart = new Map<number, string[]>();
-
-	for (const schedule of schedules) {
-		for (const phase of schedule.phases) {
-			const existing = productIdsByStart.get(phase.starts_at);
-			if (existing) existing.push(...phase.customer_product_ids);
-			else
-				productIdsByStart.set(phase.starts_at, [...phase.customer_product_ids]);
-		}
-	}
-
-	return [...productIdsByStart.entries()]
-		.sort(([a], [b]) => a - b)
-		.map(([starts_at, customer_product_ids]) => ({
-			starts_at,
-			customer_product_ids,
-		}));
-}
+	customerProducts: FullCusProduct[];
+}): number | undefined => {
+	const currentPhaseStarts = customerProducts
+		.filter(
+			(customerProduct) =>
+				ACTIVE_STATUSES.includes(customerProduct.status) &&
+				customerProduct.ended_at != null &&
+				customerProduct.starts_at != null,
+		)
+		.map((customerProduct) => customerProduct.starts_at);
+	return currentPhaseStarts.length > 0
+		? Math.min(...currentPhaseStarts)
+		: undefined;
+};
 
 /** Every active plan, whatever its scope — each row carries its own. */
 export function getActiveCustomerPlans({
@@ -109,90 +102,108 @@ export function getActiveCustomerPlans({
 	);
 }
 
+/** Built from the customer's plans alone, scoped the same way Sync from Stripe
+ * scopes them; scheduled plans mean the customer is already on a schedule. */
 export function buildInitialValues({
 	customer,
-	schedules,
 	products,
+	stripeSubscriptionId,
+	stripeScheduleId,
 	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
-	schedules: FullCustomerSchedule[];
 	products: ProductV2[];
+	stripeSubscriptionId?: string | null;
+	stripeScheduleId?: string | null;
 	nowMs?: number;
 }): CustomerStateForm {
-	const scheduledPhases = mergeSchedulePhases({ schedules });
-	// An id with no live customer product is a stale phase entry, not a plan the
-	// user has yet to pick — skip it rather than seed a blank row.
-	const persistedPhases = scheduledPhases
-		.map((phase) => ({
-			startsAt: phase.starts_at,
-			persistedStartsAt: phase.starts_at,
-			plans: phase.customer_product_ids.flatMap((cpId) => {
-				const cusProduct = findCustomerProductById({
-					fullCustomer: customer,
-					customerProductId: cpId,
-				});
-				return cusProduct
-					? [customerProductToCustomerStatePlan({ cusProduct, products })]
-					: [];
-			}),
-		}))
-		.filter((phase) => phase.plans.length > 0);
+	const customerProducts = scopeCustomerProducts({
+		customerProducts: customer?.customer_products ?? [],
+		stripeSubscriptionId,
+		stripeScheduleId,
+	});
+	const hasScheduledPlans = customerProducts.some(isScheduledCustomerProduct);
+	const currentPhaseStart = hasScheduledPlans
+		? findCurrentPhaseStart({ customerProducts })
+		: undefined;
 
-	if (persistedPhases.length > 0) {
+	const seededState = customerProductsToSetPlansState({
+		customerProducts,
+		entities: customer?.entities ?? [],
+		products,
+	});
+	const phases = seededState.phases.map((phase, index) => {
+		const persistedStartsAt =
+			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
 		return {
-			phases: persistedPhases,
-			unscheduledPlans: [],
-			billingBehavior: null,
-			resetBillingCycle: hasSchedulePhaseBillingCycleReset({
-				customer,
-				phases: scheduledPhases,
-				nowMs,
-			}),
-			enablePlanImmediately: false,
+			...phase,
+			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
+			...(hasScheduledPlans && persistedStartsAt != null
+				? { persistedStartsAt }
+				: {}),
+			plans:
+				phase.plans.length > 0
+					? phase.plans
+					: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
 		};
-	}
+	});
 
-	const seededState = customerProductsToSetPlansState({ customer, products });
 	return {
-		phases: seededState.phases.map((phase) =>
-			phase.plans.length > 0
-				? phase
-				: { ...phase, plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }] },
-		),
+		phases,
 		unscheduledPlans: seededState.unscheduledPlans,
 		billingBehavior: null,
-		resetBillingCycle: false,
+		resetBillingCycle: hasUpcomingBillingCycleReset({
+			customerProducts,
+			nowMs,
+		}),
+		billingCycleAnchorMode: "now",
+		billingCycleAnchorDate: null,
+		endDate: null,
 		enablePlanImmediately: false,
 	};
 }
 
-/** Without an Autumn schedule, the live plans are today's phase and each
- * scheduled start is its own later phase. */
+/** The live plans are today's phase; each scheduled start, and each scheduled
+ * end of a live plan that isn't a cancellation, is its own later phase. */
 function customerProductsToSetPlansState({
-	customer,
+	customerProducts,
+	entities,
 	products,
 }: {
-	customer: FullCustomer | undefined;
+	customerProducts: FullCusProduct[];
+	entities: Entity[];
 	products: ProductV2[];
 }) {
-	const customerProducts = customer?.customer_products ?? [];
 	const scheduledStarts = customerProducts
 		.filter(
 			(customerProduct) =>
 				customerProduct.status === CusProductStatus.Scheduled,
 		)
 		.map((customerProduct) => customerProduct.starts_at);
+	const scheduledEnds = customerProducts.flatMap((customerProduct) =>
+		ACTIVE_STATUSES.includes(customerProduct.status) &&
+		customerProduct.ended_at != null &&
+		!customerProduct.canceled_at &&
+		!scheduledStarts.some(
+			(startsAt) =>
+				Math.abs(startsAt - (customerProduct.ended_at ?? 0)) <=
+				MAX_PHASE_START_DRIFT_MS,
+		)
+			? [customerProduct.ended_at]
+			: [],
+	);
 	const phaseStarts: PhaseStart[] = [
 		"now",
-		...[...new Set(scheduledStarts)].sort((a, b) => a - b),
+		...[...new Set([...scheduledStarts, ...scheduledEnds])].sort(
+			(a, b) => a - b,
+		),
 	];
 
 	return customerProductsToCustomerState({
 		customerProducts,
 		phaseStarts,
 		canUnschedule: phaseStarts.length > 1,
-		entities: customer?.entities ?? [],
+		entities,
 		products,
 	});
 }
@@ -260,13 +271,19 @@ function CreateScheduleSheetBody() {
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
 	const sheetData = useSheetStore((s) => s.data);
+	// Later stages replace the sheet data, so the target is read once on open.
+	const [subscriptionTarget] = useState(() =>
+		subscriptionTargetFromSheetData(sheetData),
+	);
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
 	const onApplied = useSettleApprovalOnApply();
-	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
+	const { customer, testClockFrozenTimeMs } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | undefined;
 
 	const { products } = useProductsQuery();
-	const schedules = useCustomerSchedules();
+	const subscriptionLinks = useSubscriptionLinks({
+		enabled: Boolean(subscriptionTarget),
+	});
 
 	const seedOverrides = approvalSeed?.defaultOverrides as
 		| Partial<CustomerStateForm>
@@ -274,14 +291,21 @@ export function CreateScheduleSheet() {
 	const initialValues = useMemo(() => {
 		const base = buildInitialValues({
 			customer: fullCustomer,
-			schedules,
 			products,
+			stripeSubscriptionId: subscriptionTarget?.stripeSubscriptionId,
+			stripeScheduleId: subscriptionTarget?.stripeScheduleId,
 			nowMs: testClockFrozenTimeMs,
 		});
 		// An approval seed is the proposed schedule itself — it replaces the
 		// customer's current schedule as the starting point.
 		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
-	}, [fullCustomer, schedules, products, testClockFrozenTimeMs, seedOverrides]);
+	}, [
+		fullCustomer,
+		products,
+		subscriptionTarget,
+		testClockFrozenTimeMs,
+		seedOverrides,
+	]);
 
 	const existingPlans = useMemo(
 		() => getActiveCustomerPlans({ customer: fullCustomer, products }),
@@ -293,6 +317,8 @@ export function CreateScheduleSheet() {
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
 			initialValues={initialValues}
 			existingPlans={existingPlans}
+			subscriptionTarget={subscriptionTarget}
+			subscriptionLinks={subscriptionLinks}
 			nowMs={testClockFrozenTimeMs}
 			onCheckoutRedirect={(checkoutUrl) => {
 				navigator.clipboard.writeText(checkoutUrl);

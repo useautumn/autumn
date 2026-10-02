@@ -28,6 +28,10 @@ const stripeBillingPlanToPriceIds = (
 	);
 };
 
+/** Subscriptions are fetched without price tiers, so a tiered live price is refetched with them. */
+const hasBillingDetail = (price: Stripe.Price) =>
+	price.billing_scheme !== "tiered" || price.tiers !== undefined;
+
 /** Every real Stripe price the preview references, keyed by id. */
 export const buildStripePriceLookup = async ({
 	ctx,
@@ -38,15 +42,20 @@ export const buildStripePriceLookup = async ({
 	stripeBillingPlan: StripeBillingPlan;
 	stripeSubscription?: Stripe.Subscription;
 }): Promise<Map<string, Stripe.Price>> => {
+	const livePrices = (stripeSubscription?.items.data ?? []).map(
+		(liveItem) => liveItem.price,
+	);
 	const stripePrices = new Map<string, Stripe.Price>(
-		(stripeSubscription?.items.data ?? []).map((liveItem) => [
-			liveItem.price.id,
-			liveItem.price,
-		]),
+		livePrices
+			.filter(hasBillingDetail)
+			.map((livePrice) => [livePrice.id, livePrice]),
 	);
 
 	const missingPriceIds = [
-		...new Set(stripeBillingPlanToPriceIds(stripeBillingPlan)),
+		...new Set([
+			...livePrices.map((livePrice) => livePrice.id),
+			...stripeBillingPlanToPriceIds(stripeBillingPlan),
+		]),
 	].filter(
 		(priceId) =>
 			!stripePrices.has(priceId) && !isPreviewStripeId({ stripeId: priceId }),

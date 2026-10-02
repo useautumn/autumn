@@ -4,7 +4,6 @@ import {
 	type ProcessorItemPrice,
 } from "@autumn/shared";
 import { intervalSuffix } from "@/utils/formatUtils/intervalSuffix";
-import { formatMoney } from "./formatMoney";
 import type { ReviewChangeValue } from "./types/reviewChange";
 
 const ONE_OFF_SUFFIX = "one-off";
@@ -18,56 +17,113 @@ export const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 	});
 };
 
-/** How the item is charged, e.g. "4 × $10", "$5 per 100, billed on usage", "10 × Graduated tiers". */
-export const unitPriceDetail = ({
-	price,
-	quantity,
+const NO_QUANTITY = "—";
+const ONE_TIME_LABEL = "one-time";
+const STRIPE_LOCALE = "en-GB";
+const MAX_UNIT_PRICE_DIGITS = 10;
+const TIER_LABELS: Record<
+	NonNullable<ProcessorItemPrice["tiers_mode"]>,
+	string
+> = { graduated: "Graduated tiers", volume: "Volume tiers" };
+
+const currencyFractionDigits = (currency: string) =>
+	new Intl.NumberFormat(STRIPE_LOCALE, {
+		style: "currency",
+		currency,
+	}).resolvedOptions().maximumFractionDigits ?? 0;
+
+/** Stripe's amount format: a disambiguated currency prefix such as "US$37,500.00". */
+const stripeMoney = ({
+	amount,
+	currency,
+	maxFractionDigits = 0,
 }: {
-	price: ProcessorItemPrice;
-	quantity: number | null;
+	amount: number;
+	currency: string;
+	maxFractionDigits?: number;
 }) => {
-	if (price.tiers_mode) {
-		const tierLabel =
-			price.tiers_mode === "volume" ? "Volume tiers" : "Graduated tiers";
-		return quantity === null
-			? tierLabel
-			: `${numberWithCommas(quantity)} × ${tierLabel}`;
-	}
-	if (price.unit_amount === null) return undefined;
-
-	const unitPrice = formatMoney({
-		amount: price.unit_amount,
-		currency: price.currency,
-	});
-	const unitsPerQuantity = price.units_per_quantity ?? 1;
-	const unitLabel =
-		unitsPerQuantity > 1
-			? `${unitPrice} per ${numberWithCommas(unitsPerQuantity)}`
-			: unitPrice;
-
-	if (price.usage_type === "metered") {
-		const perUnit = unitsPerQuantity > 1 ? unitLabel : `${unitLabel} each`;
-		return `${perUnit}, billed on usage`;
-	}
-	return quantity === null
-		? `${unitLabel} each`
-		: `${numberWithCommas(quantity)} × ${unitLabel}`;
+	const fractionDigits = currencyFractionDigits(currency);
+	return new Intl.NumberFormat(STRIPE_LOCALE, {
+		style: "currency",
+		currency,
+		currencyDisplay: "symbol",
+		minimumFractionDigits: fractionDigits,
+		maximumFractionDigits: Math.max(fractionDigits, maxFractionDigits),
+	}).format(amount);
 };
 
-/** What the item costs each interval, or how it's billed when that depends on usage. */
-export const processorItemValue = (
+/** "year", "3 months", or undefined for a one-time price. */
+const billingPeriod = (price: ProcessorItemPrice) => {
+	if (!price.interval) return undefined;
+	return price.interval_count > 1
+		? `${price.interval_count} ${price.interval}s`
+		: price.interval;
+};
+
+const unitsPerQuantity = (price: ProcessorItemPrice) =>
+	price.units_per_quantity ?? 1;
+
+/** "per unit" or "per 100 units" for usage-billed prices. */
+const perUnitLabel = (price: ProcessorItemPrice) =>
+	unitsPerQuantity(price) > 1
+		? `per ${numberWithCommas(unitsPerQuantity(price))} units`
+		: "per unit";
+
+const isBilledPerUnit = (price: ProcessorItemPrice) =>
+	price.usage_type === "metered" || unitsPerQuantity(price) > 1;
+
+/** "US$37,500.00 / year", or "US$37,500.00 one-time" without an interval. */
+const withBillingPeriod = ({
+	label,
+	price,
+}: {
+	label: string;
+	price: ProcessorItemPrice;
+}) => {
+	const period = billingPeriod(price);
+	return period ? `${label} / ${period}` : `${label} ${ONE_TIME_LABEL}`;
+};
+
+const chargeLabel = (price: ProcessorItemPrice) => {
+	if (price.tiers_mode) return TIER_LABELS[price.tiers_mode];
+	if (price.unit_amount === null) return undefined;
+	const unitAmount = stripeMoney({
+		amount: price.unit_amount,
+		currency: price.currency,
+		maxFractionDigits: MAX_UNIT_PRICE_DIGITS,
+	});
+	return isBilledPerUnit(price)
+		? `${unitAmount} ${perUnitLabel(price)}`
+		: unitAmount;
+};
+
+/** The price line under a product, as Stripe writes it: "US$37,500.00 / year" or "US$0.01 per unit / month". */
+export const pricingTableUnitPrice = (price: ProcessorItemPrice) => {
+	const label = chargeLabel(price);
+	return label ? withBillingPeriod({ label, price }) : undefined;
+};
+
+export const pricingTableQuantity = (item: ProcessorItem) =>
+	item.quantity === null || item.price?.usage_type === "metered"
+		? NO_QUANTITY
+		: numberWithCommas(item.quantity);
+
+/** The Total column: "US$37,500.00 / year", or how it varies when usage decides it. */
+export const pricingTableTotal = (
 	item: ProcessorItem,
 ): ReviewChangeValue | undefined => {
 	const { price } = item;
 	if (!price) return undefined;
-
 	if (item.amount !== null) {
 		return {
-			amount: formatMoney({ amount: item.amount, currency: price.currency }),
-			suffix: priceIntervalSuffix(price),
+			amount: withBillingPeriod({
+				label: stripeMoney({ amount: item.amount, currency: price.currency }),
+				price,
+			}),
 		};
 	}
-	if (price.usage_type === "metered") return { amount: "Usage-based" };
-	if (price.tiers_mode) return { amount: "Tiered" };
+	if (price.usage_type === "metered")
+		return { amount: "Varies with usage", isBasis: true };
+	if (price.tiers_mode) return { amount: "Varies by tier", isBasis: true };
 	return undefined;
 };

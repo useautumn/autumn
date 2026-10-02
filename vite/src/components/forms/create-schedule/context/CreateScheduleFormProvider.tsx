@@ -1,6 +1,5 @@
 import type {
 	Feature,
-	FullCusProduct,
 	FullCustomer,
 	ProductV2,
 	SetPlansPreviewResponse,
@@ -28,10 +27,16 @@ import {
 	getCreateSchedulePhaseTimingError,
 	hasPersistedCreateSchedule,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
+import type { SubscriptionLinks } from "@/components/forms/customer-state/types/subscriptionLinks";
 import {
 	type UseCustomerStateForm,
 	useCustomerStateForm,
 } from "@/components/forms/customer-state/useCustomerStateForm";
+import {
+	type FindSubscriptionConflict,
+	findSubscriptionConflict,
+} from "@/components/forms/customer-state/utils/findSubscriptionConflict";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -44,7 +49,7 @@ import {
 	useBuildCreateScheduleRequestBody,
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
-import { useHasSchedule } from "../hooks/useHasSchedule";
+import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
 
 interface CreateScheduleFormContextValue {
 	generation: BillingGenerationState;
@@ -59,6 +64,7 @@ interface CreateScheduleFormContextValue {
 	allowFirstPhaseBackdate: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
+	subscriptionTarget: SetPlansSubscriptionTarget | null;
 	isPending: boolean;
 	handleSubmit: () => void;
 	handleInvoiceSubmit: (params: SendInvoiceSubmitParams) => Promise<{
@@ -82,6 +88,8 @@ interface CreateScheduleFormProviderProps {
 	nowMs?: number;
 	initialValues?: CustomerStateForm;
 	existingPlans?: CustomerStatePlan[];
+	subscriptionTarget?: SetPlansSubscriptionTarget | null;
+	subscriptionLinks?: SubscriptionLinks | null;
 	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
@@ -95,6 +103,8 @@ export function CreateScheduleFormProvider({
 	nowMs: nowMsProp,
 	initialValues,
 	existingPlans = NO_EXISTING_PLANS,
+	subscriptionTarget = null,
+	subscriptionLinks = null,
 	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
@@ -102,20 +112,37 @@ export function CreateScheduleFormProvider({
 }: CreateScheduleFormProviderProps) {
 	const [nowMsFallback] = useState(Date.now);
 	const nowMs = nowMsProp ?? nowMsFallback;
+	const stripeSubscriptionId = subscriptionTarget?.stripeSubscriptionId ?? null;
 	const form = useCustomerStateForm({ initialValues });
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
 
 	const formValues = useStore(form.store, (state) => state.values);
-	const isDirty = useStore(form.store, (state) => state.isDirty);
 	const isExistingSchedule = useMemo(
 		() => hasPersistedCreateSchedule({ phases: formValues.phases }),
 		[formValues.phases],
 	);
 
 	const { customer } = useCusQuery();
-	const hasSchedule = useHasSchedule();
 	const fullCustomer = customer as FullCustomer | null;
+	const stripeScheduleId = subscriptionTarget?.stripeScheduleId ?? null;
+	const scopedCustomerProducts = useMemo(
+		() =>
+			scopeCustomerProducts({
+				customerProducts: fullCustomer?.customer_products ?? [],
+				stripeSubscriptionId,
+				stripeScheduleId,
+			}),
+		[fullCustomer?.customer_products, stripeSubscriptionId, stripeScheduleId],
+	);
+	const hasScheduledPlans = useMemo(
+		() =>
+			scopedCustomerProducts.some(
+				(customerProduct) =>
+					customerProduct.status === CusProductStatus.Scheduled,
+			),
+		[scopedCustomerProducts],
+	);
 
 	// Only a new scoped subscription can backdate its immediate phase, so this
 	// asks whether any scope the opening phase targets is already subscribed.
@@ -125,9 +152,7 @@ export function CreateScheduleFormProvider({
 				.filter((plan) => plan.productId)
 				.map((plan) => plan.entityId ?? null),
 		);
-		const cusProducts = (fullCustomer?.customer_products ??
-			[]) as FullCusProduct[];
-		return cusProducts.some((cusProduct) => {
+		return scopedCustomerProducts.some((cusProduct) => {
 			const activeOrTrialing =
 				ACTIVE_STATUSES.includes(cusProduct.status) ||
 				cusProduct.status === CusProductStatus.Trialing;
@@ -139,7 +164,7 @@ export function CreateScheduleFormProvider({
 				openingScopes.has(cusProduct.internal_entity_id)
 			);
 		});
-	}, [fullCustomer?.customer_products, formValues.phases]);
+	}, [scopedCustomerProducts, formValues.phases]);
 
 	const immediatePlansPaidRecurring = useMemo(() => {
 		const plans = (formValues.phases[0]?.plans ?? []).filter(
@@ -186,6 +211,12 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const getBillingCycleAnchorAndEndDate = useCallback(() => {
+		const { billingCycleAnchorMode, billingCycleAnchorDate, endDate } =
+			form.store.state.values;
+		return { billingCycleAnchorMode, billingCycleAnchorDate, endDate };
+	}, [form.store]);
+
 	const getEnablePlanImmediately = useCallback(
 		() => form.store.state.values.enablePlanImmediately ?? false,
 		[form.store],
@@ -205,8 +236,10 @@ export function CreateScheduleFormProvider({
 		getUnscheduledPlans,
 		getBillingBehavior,
 		getResetBillingCycle,
+		getBillingCycleAnchorAndEndDate,
 		getEnablePlanImmediately,
 		getAllowFirstPhaseBackdate,
+		stripeSubscriptionId,
 	});
 
 	const generationRequestBody = useCreateScheduleRequestBody({
@@ -218,9 +251,12 @@ export function CreateScheduleFormProvider({
 		nowMs,
 		billingBehavior: formValues.billingBehavior,
 		resetBillingCycle: formValues.resetBillingCycle,
+		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
+		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
+		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
+		stripeSubscriptionId,
 	});
-	const previewRequestBody = isDirty ? generationRequestBody : null;
 
 	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
@@ -243,7 +279,7 @@ export function CreateScheduleFormProvider({
 		data: preview,
 		isLoading: isPreviewLoading,
 		error: previewError,
-	} = useCreateSchedulePreview({ requestBody: previewRequestBody });
+	} = useCreateSchedulePreview({ requestBody: generationRequestBody });
 
 	// Only the checkout stage sets this, so drop it once the schedule no longer
 	// goes through checkout — otherwise a stale `true` reaches a direct submit.
@@ -283,6 +319,7 @@ export function CreateScheduleFormProvider({
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
 			createsRecurringSubscription,
+			subscriptionTarget,
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
@@ -303,6 +340,7 @@ export function CreateScheduleFormProvider({
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
 			createsRecurringSubscription,
+			subscriptionTarget,
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
@@ -315,6 +353,19 @@ export function CreateScheduleFormProvider({
 		],
 	);
 
+	const findPlanSubscriptionConflict = useCallback<FindSubscriptionConflict>(
+		({ product, entityId }) =>
+			findSubscriptionConflict({
+				customerProducts: fullCustomer?.customer_products ?? [],
+				entities: fullCustomer?.entities ?? [],
+				stripeSubscriptionId,
+				stripeScheduleId,
+				product,
+				entityId,
+			}),
+		[fullCustomer, stripeSubscriptionId, stripeScheduleId],
+	);
+
 	return (
 		<CreateScheduleFormReactContext.Provider value={value}>
 			<CustomerStateProvider
@@ -322,7 +373,9 @@ export function CreateScheduleFormProvider({
 				nowMs={nowMs}
 				existingPlans={existingPlans}
 				// Updating a schedule can't attach new plans, so only a new one can.
-				canMakeUnscheduled={!hasSchedule}
+				canMakeUnscheduled={!hasScheduledPlans}
+				findSubscriptionConflict={findPlanSubscriptionConflict}
+				subscriptionLinks={subscriptionLinks}
 			>
 				{children}
 			</CustomerStateProvider>

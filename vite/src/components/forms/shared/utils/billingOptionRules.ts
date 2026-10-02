@@ -38,6 +38,7 @@ export type BillingOptionState = {
 	// schedule
 	hasMultipleImmediatePlans?: boolean;
 	canResetScheduleBillingCycle?: boolean;
+	hasPaidRecurringPlan?: boolean;
 };
 
 const MULTI_ATTACH_UNSUPPORTED = "Not yet supported for multi attach";
@@ -119,7 +120,7 @@ function scheduleRules(state: BillingOptionState): BillingOptionRules {
 		resetUsage: HIDDEN,
 		skipBilling: HIDDEN,
 		startDate: HIDDEN,
-		endDate: HIDDEN,
+		endDate: show(!!state.hasPaidRecurringPlan),
 		carryOverBalances: HIDDEN,
 		carryOverUsages: HIDDEN,
 		overrideLineItems: HIDDEN,

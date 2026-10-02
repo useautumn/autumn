@@ -5,11 +5,15 @@
 
 import { expect, test } from "bun:test";
 import {
+	type AutumnBillingPlan,
 	CusProductStatus,
 	type CustomerProductUpdate,
 	type FullCusProduct,
 } from "@autumn/shared";
-import { toLiveCustomerProductUpdate } from "@/internal/billing/v2/execute/refreshDeferredBillingPlan/toLiveAutumnBillingPlan";
+import {
+	toLiveAutumnBillingPlan,
+	toLiveCustomerProductUpdate,
+} from "@/internal/billing/v2/execute/refreshDeferredBillingPlan/toLiveAutumnBillingPlan";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct.js";
 import { makeFullCustomer } from "../billing-change-response/helpers/makeFullCustomer.js";
 
@@ -110,4 +114,29 @@ test("a plan named for removal does not expire its group successor", () => {
 	});
 
 	expect(result).toBeUndefined();
+});
+
+test("the saved schedule phases follow a kept plan moved to its live row", () => {
+	const oldPro = makePlan({ id: "cp_pro_old", planId: "pro" });
+	const newPro = makePlan({ id: "cp_pro_new", planId: "pro" });
+	const addOn = makePlan({ id: "cp_addon", planId: "addon", isAddOn: true });
+
+	const livePlan = toLiveAutumnBillingPlan({
+		autumnBillingPlan: {
+			insertCustomerProducts: [addOn],
+			updateCustomerProducts: [
+				{ customerProduct: oldPro, updates: { ended_at: 2_000 } },
+			],
+			schedulePhases: [
+				{ startsAt: 1_000, customerProductIds: ["cp_pro_old", "cp_addon"] },
+				{ startsAt: 2_000, customerProductIds: ["cp_addon"] },
+			],
+		} as unknown as AutumnBillingPlan,
+		fullCustomer: makeFullCustomer({ customerProducts: [newPro] }),
+	});
+
+	expect(livePlan.schedulePhases).toEqual([
+		{ startsAt: 1_000, customerProductIds: ["cp_pro_new", "cp_addon"] },
+		{ startsAt: 2_000, customerProductIds: ["cp_addon"] },
+	]);
 });

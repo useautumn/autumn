@@ -1,11 +1,10 @@
 import {
-	CusProductStatus,
-	cp,
 	type Entity,
 	EntityNotFoundError,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
+	msToSeconds,
 	RecaseError,
 	type SyncBillingContext,
 	type SyncParamsV1,
@@ -16,10 +15,11 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { findStripeScheduleReleaseTailPhase } from "@/external/stripe/subscriptionSchedules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
-import { getExistingScheduleState } from "@/internal/billing/v2/actions/createSchedule/utils/persistCreateSchedule";
+import { getExistingScheduleState } from "@/internal/billing/v2/actions/setPlans/utils/persistSetPlansSchedule";
 import {
 	fetchStripeSyncSchedule,
 	fetchStripeSyncSubscription,
@@ -29,8 +29,14 @@ import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { assertSyncPhasesStartAfterNow } from "../errors/assertSyncPhasesStartAfterNow";
+import { customerProductsToOngoingStripePriceIds } from "../utils/customerProductsToOngoingStripePriceIds";
+import { findLinkedAddOnCustomerProduct } from "./findLinkedAddOnCustomerProduct";
+import { findQueuedCustomerProducts } from "./findQueuedCustomerProducts";
 import { linkSyncedPricesToStripe } from "./linkSyncedPricesToStripe";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
+import { resolveSyncPhaseEndsAt } from "./resolveSyncPhaseEndsAt";
+import { retainUnchangedFreeCustomerProducts } from "./retainUnchangedFreeCustomerProducts";
 
 const resolvePlanEntity = ({
 	plan,
@@ -48,26 +54,6 @@ const resolvePlanEntity = ({
 	}
 	return entity;
 };
-
-const findLinkedAddOnCustomerProduct = ({
-	fullCustomer,
-	fullProduct,
-	stripeSubscriptionId,
-	internalEntityId,
-}: {
-	fullCustomer: FullCustomer;
-	fullProduct: SyncProductContext["fullProduct"];
-	stripeSubscriptionId: string;
-	internalEntityId?: string;
-}): FullCusProduct | undefined =>
-	fullCustomer.customer_products.find((customerProduct) => {
-		if (customerProduct.product?.id !== fullProduct.id) return false;
-		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
-			return false;
-		return cp(customerProduct)
-			.hasActiveStatus()
-			.onStripeSubscription({ stripeSubscriptionId }).valid;
-	});
 
 const buildProductContext = async ({
 	ctx,
@@ -283,7 +269,18 @@ export const setupSyncContext = async ({
 
 	const currentEpochMs = Date.now();
 	const inputPhases = params.phases ?? [];
+	assertSyncPhasesStartAfterNow({ phases: inputPhases, currentEpochMs });
 	const firstPhaseIsImmediate = inputPhases[0]?.starts_at === "now";
+	const releaseTailPhase = stripeSchedule
+		? findStripeScheduleReleaseTailPhase({
+				schedule: stripeSchedule,
+				ongoingStripePriceIds: customerProductsToOngoingStripePriceIds({
+					customerProducts: fullCustomer.customer_products,
+					stripeSubscriptionId: params.stripe_subscription_id,
+				}),
+				nowSeconds: msToSeconds(currentEpochMs),
+			})
+		: null;
 
 	// Unscheduled plans bill alongside the immediate phase, so they share its claims.
 	const claimedImmediateStripePriceIds = new Set<string>();
@@ -294,13 +291,20 @@ export const setupSyncContext = async ({
 				currentEpochMs,
 			});
 			const nextPhase = inputPhases[index + 1];
-			const endsAt = nextPhase
-				? resolvePhaseStart({
-						startsAt: nextPhase.starts_at,
-						currentEpochMs,
-					})
-				: null;
+			const endsAt = resolveSyncPhaseEndsAt({
+				startsAt,
+				nextPhaseStartsAt: nextPhase
+					? resolvePhaseStart({
+							startsAt: nextPhase.starts_at,
+							currentEpochMs,
+						})
+					: null,
+				releaseTailStartsAt: releaseTailPhase
+					? secondsToMs(releaseTailPhase.start_date)
+					: null,
+			});
 
+			const isLivePhase = phase.starts_at === "now";
 			const productContexts = await buildPlanProductContexts({
 				ctx,
 				fullCustomer,
@@ -312,10 +316,9 @@ export const setupSyncContext = async ({
 					stripeSubscription,
 					stripeSchedule,
 				}),
-				claimedStripePriceIds:
-					phase.starts_at === "now"
-						? claimedImmediateStripePriceIds
-						: new Set<string>(),
+				claimedStripePriceIds: isLivePhase
+					? claimedImmediateStripePriceIds
+					: new Set<string>(),
 			});
 
 			return { startsAt, endsAt, productContexts };
@@ -330,7 +333,7 @@ export const setupSyncContext = async ({
 			statusCode: 400,
 		});
 	}
-	const unscheduledProductContexts = await buildPlanProductContexts({
+	const unscheduledPlanContexts = await buildPlanProductContexts({
 		ctx,
 		fullCustomer,
 		plans: unscheduledPlans,
@@ -344,23 +347,38 @@ export const setupSyncContext = async ({
 		claimedStripePriceIds: claimedImmediateStripePriceIds,
 	});
 
-	const immediatePhase = firstPhaseIsImmediate
-		? (phaseContexts[0] ?? null)
-		: null;
+	const livePhase = firstPhaseIsImmediate ? (phaseContexts[0] ?? null) : null;
 	const futurePhases = firstPhaseIsImmediate
 		? phaseContexts.slice(1)
 		: phaseContexts;
+
+	const retainedCustomerProductIds = new Set<string>();
+	const retainLivePlans = (productContexts: SyncProductContext[]) =>
+		retainUnchangedFreeCustomerProducts({
+			ctx,
+			fullCustomer,
+			currency,
+			productContexts,
+			laterProductContexts: futurePhases.flatMap(
+				(phase) => phase.productContexts,
+			),
+			retainedCustomerProductIds,
+		});
+	const liveRetention = retainLivePlans(livePhase?.productContexts ?? []);
+	const unscheduledRetention = retainLivePlans(unscheduledPlanContexts);
+	const immediatePhase = livePhase
+		? { ...livePhase, productContexts: liveRetention.productContexts }
+		: null;
 
 	const { existingCustomerProductIds } = await getExistingScheduleState({
 		ctx,
 		internalCustomerId: fullCustomer.internal_id,
 	});
-	const queuedCustomerProductIds = new Set(existingCustomerProductIds);
-	const queuedCustomerProducts = fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			customerProduct.status === CusProductStatus.Scheduled &&
-			queuedCustomerProductIds.has(customerProduct.id),
-	);
+	const queuedCustomerProducts = findQueuedCustomerProducts({
+		customerProducts: fullCustomer.customer_products,
+		autumnScheduledCustomerProductIds: new Set(existingCustomerProductIds),
+		stripeScheduleId: stripeSchedule?.id,
+	});
 
 	return {
 		customer_id: params.customer_id,
@@ -370,7 +388,11 @@ export const setupSyncContext = async ({
 		currency,
 		immediatePhase,
 		futurePhases,
-		unscheduledProductContexts,
+		unscheduledProductContexts: unscheduledRetention.productContexts,
+		retainedCustomerProducts: [
+			...liveRetention.retainedCustomerProducts,
+			...unscheduledRetention.retainedCustomerProducts,
+		],
 		queuedCustomerProducts,
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],

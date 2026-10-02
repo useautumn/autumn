@@ -21,7 +21,12 @@ const errorToResponse = ({
 	if (error instanceof RecaseError) {
 		if (error.statusCode === 503) c.header("Retry-After", "1");
 		return c.json(
-			{ message: error.message, code: error.code, env },
+			{
+				message: error.message,
+				code: error.code,
+				env,
+				...(error.details ? { details: error.details } : {}),
+			},
 			error.statusCode as ContentfulStatusCode,
 		);
 	}

@@ -6,6 +6,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 
 export const handleMultiAttachBillingCycleAnchorErrors = ({
 	billingContext,
@@ -14,14 +15,7 @@ export const handleMultiAttachBillingCycleAnchorErrors = ({
 }) => {
 	if (billingContext.requestedBillingCycleAnchor === undefined) return;
 
-	if (billingContext.trialContext?.trialEndsAt) {
-		throw new RecaseError({
-			message:
-				"billing_cycle_anchor cannot be used together with a free trial. The trial already controls the billing cycle start.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
+	assertNoBillingCycleAnchorWithTrial({ billingContext });
 
 	if (
 		billingContext.fullProducts.every((product) => isOneOffProduct({ product }))

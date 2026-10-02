@@ -86,6 +86,7 @@ export interface BillingContext {
 	 * this context must not write to Stripe. Only set for flows allowed to
 	 * proceed past that fault (immediate cancel). */
 	mismatchedStripeSubscriptionId?: string;
+	replacedStripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	stripeTaxRate?: Stripe.TaxRate;

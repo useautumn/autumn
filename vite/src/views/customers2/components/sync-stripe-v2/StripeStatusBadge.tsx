@@ -1,8 +1,12 @@
 import type { SyncProposalV2 } from "@autumn/shared";
 import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
-import { type StripeStatusTone, stripeObjectToStatus } from "./stripeStatus";
+import {
+	type StripeStatus,
+	type StripeStatusTone,
+	stripeObjectToStatus,
+} from "./stripeStatus";
 
-const TONE_INDICATORS: Record<
+export const STRIPE_STATUS_INDICATORS: Record<
 	StripeStatusTone,
 	{ tone: StatusTone; glyph: StatusGlyph }
 > = {
@@ -20,7 +24,13 @@ export function StripeStatusBadge({ proposal }: { proposal: SyncProposalV2 }) {
 	});
 	if (!status) return null;
 
+	return <StripeStatusChip status={status} />;
+}
+
+export function StripeStatusChip({ status }: { status: StripeStatus }) {
 	return (
-		<StatusChip {...TONE_INDICATORS[status.tone]}>{status.label}</StatusChip>
+		<StatusChip {...STRIPE_STATUS_INDICATORS[status.tone]}>
+			{status.label}
+		</StatusChip>
 	);
 }

@@ -87,6 +87,31 @@ export const toLiveCustomerProductUpdate = ({
 	return { ...update, customerProduct: liveCustomerProduct };
 };
 
+/** Saved schedule phases name the rows their updates now target. */
+const toLiveSchedulePhases = ({
+	schedulePhases,
+	updatePairs,
+}: {
+	schedulePhases: AutumnBillingPlan["schedulePhases"];
+	updatePairs: [CustomerProductUpdate, CustomerProductUpdate | undefined][];
+}) => {
+	const liveIdById = new Map(
+		updatePairs.flatMap(([update, liveUpdate]) =>
+			liveUpdate
+				? [[update.customerProduct.id, liveUpdate.customerProduct.id] as const]
+				: [],
+		),
+	);
+	return schedulePhases?.map((phase) => ({
+		...phase,
+		customerProductIds: [
+			...new Set(
+				phase.customerProductIds.map((id) => liveIdById.get(id) ?? id),
+			),
+		],
+	}));
+};
+
 export const toLiveAutumnBillingPlan = ({
 	autumnBillingPlan,
 	fullCustomer,
@@ -99,19 +124,33 @@ export const toLiveAutumnBillingPlan = ({
 		updateCustomerProducts,
 		insertCustomerProducts,
 	} = autumnBillingPlan;
-	const toLive = (update: CustomerProductUpdate) =>
+	const toLivePair = (
+		update: CustomerProductUpdate,
+	): [CustomerProductUpdate, CustomerProductUpdate | undefined] => [
+		update,
 		toLiveCustomerProductUpdate({
 			update,
 			fullCustomer,
 			insertCustomerProducts,
-		});
+		}),
+	];
+	const singleUpdatePair = updateCustomerProduct
+		? toLivePair(updateCustomerProduct)
+		: undefined;
+	const updatePairs = updateCustomerProducts?.map(toLivePair);
 
 	return {
 		...autumnBillingPlan,
-		updateCustomerProduct:
-			updateCustomerProduct && toLive(updateCustomerProduct),
-		updateCustomerProducts: updateCustomerProducts?.flatMap(
-			(update) => toLive(update) ?? [],
+		updateCustomerProduct: singleUpdatePair?.[1],
+		updateCustomerProducts: updatePairs?.flatMap(
+			([, liveUpdate]) => liveUpdate ?? [],
 		),
+		schedulePhases: toLiveSchedulePhases({
+			schedulePhases: autumnBillingPlan.schedulePhases,
+			updatePairs: [
+				...(singleUpdatePair ? [singleUpdatePair] : []),
+				...(updatePairs ?? []),
+			],
+		}),
 	};
 };
