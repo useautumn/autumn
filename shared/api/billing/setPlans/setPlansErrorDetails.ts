@@ -100,6 +100,10 @@ export const SetPlansBackdateConflictSchema = z.object({
 	plan_name: z.string().optional(),
 });
 
+export type SetPlansBackdateConflict = z.infer<
+	typeof SetPlansBackdateConflictSchema
+>["conflict"];
+
 export const SetPlansErrorDetailsSchema = z.discriminatedUnion("type", [
 	SetPlansSubscriptionConflictSchema,
 	SetPlansPlanOutsideSubscriptionSchema,

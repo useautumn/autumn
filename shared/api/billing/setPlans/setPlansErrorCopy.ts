@@ -3,6 +3,7 @@ import {
 	formatMsToDate,
 } from "../../../utils/common/formatUtils/formatUnix";
 import type {
+	SetPlansBackdateConflict,
 	SetPlansErrorDetails,
 	SetPlansFutureStartConflict,
 } from "./setPlansErrorDetails";
@@ -70,9 +71,23 @@ const BOUNDARY_COPY: Record<
 	},
 };
 
+type StartDateConflictCopy = { subject: string; hint: string };
+
+/** A start date conflict reads as its subject, then the date, then what to do. */
+const startDateConflictCopy = ({
+	copy,
+	startsAt,
+}: {
+	copy: StartDateConflictCopy;
+	startsAt: number;
+}): SetPlansErrorCopy => ({
+	line: [plain(copy.subject), bold(`${formatMsToDate(startsAt)}.`)],
+	hint: { text: copy.hint },
+});
+
 const FUTURE_START_CONFLICT_COPY: Record<
 	SetPlansFutureStartConflict,
-	{ subject: string; hint: string }
+	StartDateConflictCopy
 > = {
 	free_trial: {
 		subject: "A free trial can't start on",
@@ -90,11 +105,8 @@ const FUTURE_START_CONFLICT_COPY: Record<
 };
 
 const BACKDATE_CONFLICT_COPY: Record<
-	Exclude<
-		Extract<SetPlansErrorDetails, { type: "backdate_conflict" }>["conflict"],
-		"plan_outside_request"
-	>,
-	{ subject: string; hint: string }
+	Exclude<SetPlansBackdateConflict, "plan_outside_request">,
+	StartDateConflictCopy
 > = {
 	free_trial: {
 		subject: "A trial can't be backdated to",
@@ -121,7 +133,6 @@ const BACKDATE_CONFLICT_COPY: Record<
 const backdateConflictCopy = (
 	details: Extract<SetPlansErrorDetails, { type: "backdate_conflict" }>,
 ): SetPlansErrorCopy => {
-	const startsOn = bold(`${formatMsToDate(details.starts_at)}.`);
 	if (details.conflict === "plan_outside_request") {
 		return {
 			line: [
@@ -129,14 +140,16 @@ const backdateConflictCopy = (
 				plain(
 					"is on the subscription but not in this request, so it can't be backdated to",
 				),
-				startsOn,
+				bold(`${formatMsToDate(details.starts_at)}.`),
 			],
 			hint: { text: "Include every plan on the subscription in the request." },
 		};
 	}
 
-	const copy = BACKDATE_CONFLICT_COPY[details.conflict];
-	return { line: [plain(copy.subject), startsOn], hint: { text: copy.hint } };
+	return startDateConflictCopy({
+		copy: BACKDATE_CONFLICT_COPY[details.conflict],
+		startsAt: details.starts_at,
+	});
 };
 
 /** The one place every Set Plans error is worded, for the API message and the dashboard alike. */
@@ -263,16 +276,11 @@ export const setPlansErrorCopy = (
 				hint: { text: boundary.hint },
 			};
 		}
-		case "future_start_conflict": {
-			const copy = FUTURE_START_CONFLICT_COPY[details.conflict];
-			return {
-				line: [
-					plain(copy.subject),
-					bold(`${formatMsToDate(details.starts_at)}.`),
-				],
-				hint: { text: copy.hint },
-			};
-		}
+		case "future_start_conflict":
+			return startDateConflictCopy({
+				copy: FUTURE_START_CONFLICT_COPY[details.conflict],
+				startsAt: details.starts_at,
+			});
 		case "plan_cannot_start_later":
 			return {
 				line: [
