@@ -516,6 +516,25 @@ export type BalancePrice = {
   maxPurchase: number | null;
 };
 
+/**
+ * Where this row's credits come from: shared at the customer level, or owned by the entity.
+ */
+export const BalanceSource = {
+  Customer: "customer",
+  Entity: "entity",
+} as const;
+/**
+ * Where this row's credits come from: shared at the customer level, or owned by the entity.
+ */
+export type BalanceSource = OpenEnum<typeof BalanceSource>;
+
+export type Allocation = {
+  /**
+   * The amount allocated to this entity.
+   */
+  amount: number;
+};
+
 export type Breakdown = {
   /**
    * The unique identifier for this balance breakdown.
@@ -557,6 +576,14 @@ export type Breakdown = {
    * Timestamp when this balance expires, or null for no expiration.
    */
   expiresAt: number | null;
+  /**
+   * Where this row's credits come from: shared at the customer level, or owned by the entity.
+   */
+  source?: BalanceSource | undefined;
+  /**
+   * Set when this row's numbers are the entity's allocated share of the customer's credits.
+   */
+  allocation?: Allocation | null | undefined;
 };
 
 export type BalanceRollover = {
@@ -619,6 +646,14 @@ export type Balance = {
    * Rollover balances carried over from previous periods.
    */
   rollovers?: Array<BalanceRollover> | undefined;
+  /**
+   * Shared credits held for entities by allocations; present only when the customer allocates this feature.
+   */
+  allocated?: number | undefined;
+  /**
+   * Remaining shared credits no allocation holds; any entity may use them.
+   */
+  unallocated?: number | undefined;
 };
 
 /** @internal */
@@ -1534,6 +1569,28 @@ export function balancePriceFromJSON(
 }
 
 /** @internal */
+export const BalanceSource$inboundSchema: z.ZodMiniType<
+  BalanceSource,
+  unknown
+> = openEnums.inboundSchema(BalanceSource);
+
+/** @internal */
+export const Allocation$inboundSchema: z.ZodMiniType<Allocation, unknown> = z
+  .object({
+    amount: types.number(),
+  });
+
+export function allocationFromJSON(
+  jsonString: string,
+): SafeParseResult<Allocation, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Allocation$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Allocation' from JSON`,
+  );
+}
+
+/** @internal */
 export const Breakdown$inboundSchema: z.ZodMiniType<Breakdown, unknown> = z
   .pipe(
     z.object({
@@ -1547,6 +1604,10 @@ export const Breakdown$inboundSchema: z.ZodMiniType<Breakdown, unknown> = z
       reset: types.nullable(z.lazy(() => BalanceReset$inboundSchema)),
       price: types.nullable(z.lazy(() => BalancePrice$inboundSchema)),
       expires_at: types.nullable(types.number()),
+      source: types.optional(BalanceSource$inboundSchema),
+      allocation: z.optional(
+        z.nullable(z.lazy(() => Allocation$inboundSchema)),
+      ),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -1611,6 +1672,8 @@ export const Balance$inboundSchema: z.ZodMiniType<Balance, unknown> = z.pipe(
     rollovers: types.optional(z.array(z.lazy(() =>
       BalanceRollover$inboundSchema
     ))),
+    allocated: types.optional(types.number()),
+    unallocated: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

@@ -314,6 +314,26 @@ class ListBalancesPrice(BaseModel):
         return m
 
 
+ListBalancesSource = Union[
+    Literal[
+        "customer",
+        "entity",
+    ],
+    UnrecognizedStr,
+]
+r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
+
+
+class ListBalancesAllocationTypedDict(TypedDict):
+    amount: float
+    r"""The amount allocated to this entity."""
+
+
+class ListBalancesAllocation(BaseModel):
+    amount: float
+    r"""The amount allocated to this entity."""
+
+
 ListBalancesListStatus = Union[
     Literal[
         "active",
@@ -377,6 +397,10 @@ class ListBalancesListTypedDict(TypedDict):
     r"""Timestamp when this balance was created."""
     id: NotRequired[str]
     r"""The unique identifier for this balance breakdown."""
+    source: NotRequired[ListBalancesSource]
+    r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
+    allocation: NotRequired[Nullable[ListBalancesAllocationTypedDict]]
+    r"""Set when this row's numbers are the entity's allocated share of the customer's credits."""
 
 
 class ListBalancesList(BaseModel):
@@ -428,10 +452,18 @@ class ListBalancesList(BaseModel):
     id: Optional[str] = ""
     r"""The unique identifier for this balance breakdown."""
 
+    source: Optional[ListBalancesSource] = None
+    r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
+
+    allocation: OptionalNullable[ListBalancesAllocation] = UNSET
+    r"""Set when this row's numbers are the entity's allocated share of the customer's credits."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["id"])
-        nullable_fields = set(["plan_id", "reset", "price", "expires_at", "entity_id"])
+        optional_fields = set(["id", "source", "allocation"])
+        nullable_fields = set(
+            ["plan_id", "reset", "price", "expires_at", "allocation", "entity_id"]
+        )
         serialized = handler(self)
         m = {}
 

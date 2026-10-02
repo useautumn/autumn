@@ -145,7 +145,7 @@ CustomerPurchaseLimitUnion = TypeAliasType(
 r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
 
 
-AutoTopupSource = Union[
+CustomerAutoTopupSource = Union[
     Literal[
         "customer",
         "plan",
@@ -168,7 +168,7 @@ class CustomerAutoTopupTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
-    source: NotRequired[AutoTopupSource]
+    source: NotRequired[CustomerAutoTopupSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -191,7 +191,7 @@ class CustomerAutoTopup(BaseModel):
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
-    source: Optional[AutoTopupSource] = None
+    source: Optional[CustomerAutoTopupSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
@@ -221,7 +221,7 @@ CustomerLimitType = Union[
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
-SpendLimitSource = Union[
+CustomerSpendLimitSource = Union[
     Literal[
         "customer",
         "plan",
@@ -242,7 +242,7 @@ class CustomerSpendLimitTypedDict(TypedDict):
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
     skip_overage_billing: NotRequired[bool]
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
-    source: NotRequired[SpendLimitSource]
+    source: NotRequired[CustomerSpendLimitSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -262,7 +262,7 @@ class CustomerSpendLimit(BaseModel):
     skip_overage_billing: Optional[bool] = None
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
-    source: Optional[SpendLimitSource] = None
+    source: Optional[CustomerSpendLimitSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
@@ -325,7 +325,7 @@ class CustomerUsageLimitFilter(BaseModel):
     properties: Dict[str, str]
 
 
-UsageLimitSource = Union[
+CustomerUsageLimitSource = Union[
     Literal[
         "customer",
         "plan",
@@ -350,7 +350,7 @@ class CustomerUsageLimitTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Usage consumed in the active interval, stored in the usage-window counter."""
-    source: NotRequired[UsageLimitSource]
+    source: NotRequired[CustomerUsageLimitSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -378,7 +378,7 @@ class CustomerUsageLimit(BaseModel):
     usage: Optional[float] = None
     r"""Usage consumed in the active interval, stored in the usage-window counter."""
 
-    source: Optional[UsageLimitSource] = None
+    source: Optional[CustomerUsageLimitSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
@@ -434,7 +434,7 @@ class CustomerUsageAlertFilter(BaseModel):
     properties: Dict[str, str]
 
 
-UsageAlertSource = Union[
+CustomerUsageAlertSource = Union[
     Literal[
         "customer",
         "plan",
@@ -459,7 +459,7 @@ class CustomerUsageAlertTypedDict(TypedDict):
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-    source: NotRequired[UsageAlertSource]
+    source: NotRequired[CustomerUsageAlertSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -487,7 +487,7 @@ class CustomerUsageAlert(BaseModel):
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
-    source: Optional[UsageAlertSource] = None
+    source: Optional[CustomerUsageAlertSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
@@ -509,7 +509,7 @@ class CustomerUsageAlert(BaseModel):
         return m
 
 
-OverageAllowedSource = Union[
+CustomerOverageAllowedSource = Union[
     Literal[
         "customer",
         "plan",
@@ -524,7 +524,7 @@ class CustomerOverageAllowedTypedDict(TypedDict):
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
-    source: NotRequired[OverageAllowedSource]
+    source: NotRequired[CustomerOverageAllowedSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -535,7 +535,7 @@ class CustomerOverageAllowed(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether overage is allowed for this feature."""
 
-    source: Optional[OverageAllowedSource] = None
+    source: Optional[CustomerOverageAllowedSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")

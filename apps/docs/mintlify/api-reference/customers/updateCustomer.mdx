@@ -4251,6 +4251,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Timestamp when this balance expires, or null for no expiration.
         </DynamicResponseField>
 
+        <DynamicResponseField name="source" type="'customer' | 'entity'">
+          Where this row's credits come from: shared at the customer level, or owned by the entity.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="allocation" type="object | null">
+          Set when this row's numbers are the entity's allocated share of the customer's credits.
+          <Expandable title="properties">
+            <DynamicResponseField name="amount" type="number">
+              The amount allocated to this entity.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
       </Expandable>
     </DynamicResponseField>
 
@@ -4270,6 +4284,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicResponseField>
 
       </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="allocated" type="number">
+      Shared credits held for entities by allocations; present only when the customer allocates this feature.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="unallocated" type="number">
+      Remaining shared credits no allocation holds; any entity may use them.
     </DynamicResponseField>
 
   </Expandable>
