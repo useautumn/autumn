@@ -895,7 +895,7 @@ export class CusService {
 
 	// First paid attach only sends this when unset. Stripe sync also sends it
 	// to relock leftover currency after the previous paid product expired.
-	static async lockCurrencyIfUnset({
+	static async lockOrRelockCurrency({
 		ctx,
 		internalCustomerId,
 		currency,

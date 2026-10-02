@@ -450,6 +450,50 @@ describe("ownershipTail", function ownershipTailTests() {
 		}
 	});
 
+	test("a release from a worker that lost the partition leaves the owner; the owner's own release clears it", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail, errors } = await startTail(fixture);
+		try {
+			const releasedBy = ({
+				endpoint,
+			}: {
+				endpoint: string;
+			}): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "released",
+				partition: 3,
+				endpoint,
+				releasedAt: 5,
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimed, offset: 11n }),
+					serialized({
+						record: releasedBy({ endpoint: "http://former:8080" }),
+						offset: 12n,
+					}),
+				],
+			});
+			expect(tail.readView({ partition: 3 })?.owner).toBe(
+				"http://successor:8080",
+			);
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({
+						record: releasedBy({ endpoint: "http://successor:8080" }),
+						offset: 13n,
+					}),
+				],
+			});
+			expect(tail.readView({ partition: 3 })?.owner).toBeNull();
+			expect(errors).toEqual([]);
+		} finally {
+			await tail.stop();
+		}
+	});
+
 	test("delivers a partition's records in order to its listeners only", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);
