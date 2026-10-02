@@ -18,11 +18,23 @@ export {
 	otherMiscRedisInstance,
 	toLegacyMiscRedisInstanceName,
 } from "./configs/miscRedis/miscRedisEdgeConfig.js";
+export {
+	type ShadowAtomConfig,
+	ShadowAtomConfigSchema,
+	type ShadowAtomEnvConfig,
+	shadowAtomConfig,
+} from "./configs/shadowAtom/shadowAtomEdgeConfig.js";
+export {
+	inAtomRollout,
+	SHADOW_ATOM_SETTLE_MS,
+	scheduleShadowAtomConfig,
+} from "./configs/shadowAtom/shadowAtomRollout.js";
 export { EdgeConfigNotConfiguredError } from "./errors.js";
 export {
 	DB_CONTROL_CONFIG_KEY,
 	EDGE_CONFIG_TIMESTAMP_KEY,
 	MISC_REDIS_CONFIG_KEY,
+	SHADOW_ATOM_CONFIG_KEY,
 } from "./keys.js";
 export {
 	createEdgeConfigRegistry,
