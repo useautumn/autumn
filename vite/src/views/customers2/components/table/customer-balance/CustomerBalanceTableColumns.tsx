@@ -414,7 +414,7 @@ function BarCell({
 	);
 }
 
-/** balances.allocate splits the shared rows of one finite, resetting interval; entity-owned rows don't count. */
+/** Allocations split shared rows of one finite, resetting interval; entity-owned rows don't count. */
 const isAllocatableSharedBalance = ({
 	customerEntitlements,
 }: {

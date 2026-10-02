@@ -20,10 +20,16 @@ import {
 	STRIPE_MAX_KEY_LENGTH,
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { notifyAllocationsAdjusted } from "@/internal/balances/allocate/actions/notifyAllocationsAdjusted.js";
+import {
+	prepareBalanceAllocationReplacement,
+	replaceBalanceAllocations,
+} from "@/internal/balances/allocate/replaceBalanceAllocations.js";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { assertCustomerUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertCustomerUsageLimitAlertsResolvable";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { CusService } from "@/internal/customers/CusService";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { usageWindowRepo } from "../../usageWindows/repos/index.js";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
 import { getUsageLimitConfigUpdate } from "./getUsageLimitConfigUpdate.js";
@@ -95,6 +101,11 @@ export const updateCustomer = async ({
 	const configUsageLimits = getUsageLimitConfigUpdate({
 		usageLimits: billing_controls?.usage_limits,
 	});
+	const allocationSubject = await prepareBalanceAllocationReplacement({
+		ctx,
+		customerId,
+		controls: billing_controls?.balance_allocations,
+	});
 	const usageWindows = await prepareUsageLimitUsage({
 		ctx,
 		customerId,
@@ -106,7 +117,11 @@ export const updateCustomer = async ({
 		ctx,
 		customer: originalCustomer,
 		billingControls: billing_controls
-			? { ...billing_controls, usage_limits: configUsageLimits }
+			? {
+					...billing_controls,
+					balance_allocations: undefined,
+					usage_limits: configUsageLimits,
+				}
 			: undefined,
 	});
 
@@ -243,9 +258,19 @@ export const updateCustomer = async ({
 	}
 
 	const { id: renamedId, ...fieldUpdates } = updateData;
+	let allocationsAdjusted = false;
 
 	await db.transaction(async (tx) => {
 		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
+		if (
+			allocationSubject &&
+			billing_controls?.balance_allocations !== undefined
+		)
+			allocationsAdjusted = await replaceBalanceAllocations({
+				ctx: txCtx,
+				fullSubject: allocationSubject,
+				controls: billing_controls.balance_allocations,
+			});
 
 		if (billing_controls?.auto_topups !== undefined) {
 			await syncAutoTopupPurchaseLimitCounts({
@@ -265,6 +290,14 @@ export const updateCustomer = async ({
 				update: { id: renamedId },
 			});
 	});
+	if (allocationSubject) {
+		for (const id of new Set([customerId, renamedId ?? customerId]))
+			await invalidateCachedFullSubject({
+				ctx,
+				customerId: id,
+				source: "replaceBalanceAllocations",
+			});
+	}
 
 	// Through the worker when it holds the customer, so the read below and any top-up it dispatches see the new row.
 	const customer = {
@@ -282,6 +315,8 @@ export const updateCustomer = async ({
 
 	ctx.skipCache = true;
 	const resolvedCustomerId = newCustomerId ?? customerId;
+	if (allocationsAdjusted)
+		void notifyAllocationsAdjusted({ ctx, customerId: resolvedCustomerId });
 
 	const apiCustomer = await getApiCustomerByRollout({
 		disableReplicaRead: true,

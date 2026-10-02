@@ -73,14 +73,19 @@ test(`${chalk.yellowBright("allocate-webhook1: a shrinking plan change sends one
 		],
 	});
 	const [a, b] = entities.map((entity) => entity.id);
-	await autumnV2_3.balances.allocate({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		interval: ResetInterval.Month,
-		allocations: [
-			{ entity_id: a, amount: 5000 },
-			{ entity_id: b, amount: 5000 },
-		],
+	await autumnV2_3.customers.update(customerId, {
+		billing_controls: {
+			balance_allocations: [
+				{
+					feature_id: TestFeature.Messages,
+					interval: ResetInterval.Month,
+					allocations: [
+						{ entity_id: a, amount: 5000 },
+						{ entity_id: b, amount: 5000 },
+					],
+				},
+			],
+		},
 	});
 
 	// allocate's own tagged billing.updated is fire-and-forget: let it land before the baseline.
@@ -93,6 +98,29 @@ test(`${chalk.yellowBright("allocate-webhook1: a shrinking plan change sends one
 	});
 	expect(allocateEvent).not.toBeNull();
 	const baseline = await latestPlayIterator({ token: webhook.playToken });
+	await autumnV2_3.customers.update(customerId, {
+		billing_controls: {
+			balance_allocations: [
+				{
+					feature_id: TestFeature.Messages,
+					interval: ResetInterval.Month,
+					allocations: [
+						{ entity_id: a, amount: 5000 },
+						{ entity_id: b, amount: 5000 },
+					],
+				},
+			],
+		},
+	});
+	await timeout(5000);
+	expect(
+		(
+			await playEventsSince<BillingUpdatedPayload>({
+				token: webhook.playToken,
+				iterator: baseline,
+			})
+		).filter(isCustomerBillingUpdated),
+	).toEqual([]);
 
 	await autumnV2_3.subscriptions.update({
 		customer_id: customerId,

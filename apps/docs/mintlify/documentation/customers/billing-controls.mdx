@@ -5,7 +5,7 @@ description: "Configure overage behavior, spend limits, usage alerts, and auto t
 
 Billing controls let you manage how individual customers (or [entities](/documentation/customers/feature-entities)) consume usage-based features. You can toggle whether overage is allowed, cap how much overage accumulates, hard-cap how much a feature can be used per time window, get notified when usage crosses a threshold, and automatically replenish prepaid balances — all configured per-customer via the API or viewed in the dashboard.
 
-All billing controls are set through the `billingControls` field when [updating a customer](/api-reference/customers/updateCustomer) or [updating an entity](/api-reference/entities/updateEntity).
+Billing controls are set through the `billingControls` field when [updating a customer](/api-reference/customers/updateCustomer) or [updating an entity](/api-reference/entities/updateEntity). Balance allocations are customer-only and can only be set when updating an existing customer.
 
 <CodeGroup>
 
@@ -36,7 +36,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -52,6 +52,50 @@ curl -X POST "https://api.useautumn.com/v1/customers/update" \
 ```
 
 </CodeGroup>
+
+## Balance Allocations
+
+Reserve part of a customer's shared credits for specific entities with `billingControls.balanceAllocations` (`billing_controls.balance_allocations` in the REST API). Each feature has one configuration with a reset interval and the requested credits per cycle for each entity.
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "customer_123",
+  billingControls: {
+    balanceAllocations: [{
+      featureId: "credits",
+      interval: "month",
+      allocations: [
+        { entityId: "workspace_a", amount: 300 },
+        { entityId: "workspace_b", amount: 200 },
+      ],
+    }],
+  },
+});
+```
+
+The equivalent request body for `POST /v1/customers.update` is:
+
+```json
+{
+  "customer_id": "customer_123",
+  "billing_controls": {
+    "balance_allocations": [{
+      "feature_id": "credits",
+      "interval": "month",
+      "allocations": [
+        { "entity_id": "workspace_a", "amount": 300 },
+        { "entity_id": "workspace_b", "amount": 200 }
+      ]
+    }]
+  }
+}
+```
+
+This array replaces **all** balance allocation settings for the customer. Include every feature and entity allocation you want to keep; omitted features and entities release their shares. Omit `balance_allocations` to leave settings unchanged, or send `[]` to release all allocations. An amount of `0` releases that entity's allocation.
+
+The customer response returns the same requested configuration under `billing_controls.balance_allocations`. These are requested shares, not effective grants: when the shared pool cannot cover the requested credits, effective allocations scale proportionally. Continue reading `balances` for effective granted, remaining, allocated, and unallocated credits.
+
+Balance allocations cannot be set through customer creation, get-or-create, or entity updates.
 
 ## Overage Allowed
 

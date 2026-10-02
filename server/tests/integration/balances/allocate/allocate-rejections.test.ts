@@ -16,7 +16,10 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { allocateMessages } from "./utils/allocateTestUtils.js";
+import {
+	allocateMessages,
+	expectAllocatedMessages,
+} from "./utils/allocateTestUtils.js";
 
 /** Monthly and yearly shared messages, so either interval can be allocated. */
 const setupTwoIntervalPools = async ({
@@ -96,10 +99,23 @@ test.concurrent(
 			interval: ResetInterval.Year,
 			allocations: [{ entity_id: b, amount: 20000 }],
 		});
-		expect(yearly.allocations).toMatchObject([
-			{ entity_id: b, amount: 20000, granted: 20000 },
-		]);
-		expect(yearly.shared).toMatchObject({ granted: 50000, allocated: 20000 });
+		await expectAllocatedMessages({
+			customerId,
+			response: yearly,
+			expected: [{ entity_id: b, amount: 20000, granted: 20000 }],
+		});
+		expect(yearly.balances[TestFeature.Messages]).toMatchObject({
+			granted: 60000,
+			allocated: 20000,
+		});
+		expect(yearly.balances[TestFeature.Messages].breakdown).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					included_grant: 50000,
+					reset: expect.objectContaining({ interval: ResetInterval.Year }),
+				}),
+			]),
+		);
 
 		await expectAutumnError({
 			errCode: "allocation_interval_mismatch",

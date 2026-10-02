@@ -126,7 +126,8 @@ export const updateCustomerContract = oc
 		path: "/v1/customers.update",
 		operationId: "updateCustomer",
 		tags: ["customers"],
-		description: "Updates an existing customer by ID.",
+		description:
+			"Updates an existing customer by ID. Set billing_controls.balance_allocations to replace all customer-level entity allocation settings. Omit the field to leave allocations unchanged, or pass [] to release all. Include every feature and entity allocation you want to keep. Amounts are requested credits per cycle; read balances for effective allocations.",
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "update",

@@ -1,3 +1,5 @@
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAllocatedMessages } from "./utils/allocateTestUtils.js";
 /**
  * One allocate call is checked as a whole: moving credits between shares passes even when
  * applying its entries one by one would over-allocate on the way.
@@ -46,11 +48,15 @@ test.concurrent(
 				{ entity_id: a, amount: 2000 },
 			],
 		});
-		expect(moved.allocations).toMatchObject([
-			{ entity_id: b, amount: 8000, granted: 8000, remaining: 8000 },
-			{ entity_id: a, amount: 2000, granted: 2000, remaining: 2000 },
-		]);
-		expect(moved.shared).toEqual({
+		await expectAllocatedMessages({
+			customerId,
+			response: moved,
+			expected: [
+				{ entity_id: b, amount: 8000, granted: 8000, remaining: 8000 },
+				{ entity_id: a, amount: 2000, granted: 2000, remaining: 2000 },
+			],
+		});
+		expect(moved.balances[TestFeature.Messages]).toMatchObject({
 			granted: 10000,
 			remaining: 10000,
 			allocated: 10000,

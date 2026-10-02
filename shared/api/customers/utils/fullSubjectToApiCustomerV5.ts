@@ -2,6 +2,7 @@ import {
 	type ApiCustomerV5,
 	type ApiInvoiceV1,
 	type ApiVersionClass,
+	type BalanceAllocationControl,
 	type CustomerLegacyData,
 	type FullSubject,
 	getApiCustomerBaseV2,
@@ -18,6 +19,7 @@ export const fullSubjectToApiCustomerV5 = async ({
 	apiVersion,
 	withAutumnId = false,
 	invoices,
+	balanceAllocations,
 }: {
 	ctx: SharedContext;
 	fullSubject: FullSubject;
@@ -25,6 +27,7 @@ export const fullSubjectToApiCustomerV5 = async ({
 	withAutumnId?: boolean;
 	/** Rendered by the caller when invoices are expanded; undefined when not. */
 	invoices?: ApiInvoiceV1[];
+	balanceAllocations?: BalanceAllocationControl[];
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const subjectToUse =
 		fullSubject.subjectType === "customer" &&
@@ -37,6 +40,7 @@ export const fullSubjectToApiCustomerV5 = async ({
 		fullSubject: subjectToUse,
 		withAutumnId,
 		invoices,
+		balanceAllocations,
 	});
 
 	const billingControls = mergePlanBillingControlsForResponse({
