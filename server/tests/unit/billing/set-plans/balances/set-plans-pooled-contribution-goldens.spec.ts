@@ -378,5 +378,62 @@ describe(
 
 			expect(describePooledPhases(phaseChanges)).toEqual([[], []]);
 		});
+
+		test("an untouched ongoing contributor saved without its catalog base price shows no balance change", async () => {
+			const catalogGrowth = pooledCreditsPlan({
+				planId: "growth",
+				pooledAllowance: 10_000,
+			});
+			const savedGrowth = {
+				...catalogGrowth.product,
+				prices: catalogGrowth.product.prices.filter(
+					(price) => price.id !== "price_growth",
+				),
+			};
+			const enterprise = pooledCreditsPlan({
+				planId: "enterprise",
+				pooledAllowance: 96_000,
+			});
+			const customEnterprise = pooledCreditsPlan({
+				planId: "enterprise",
+				pooledAllowance: 100_000,
+				pooledEntitlementId: "ent_credits_pooled_custom",
+				isCustom: true,
+			});
+			const enterpriseOnA = entityRow({
+				product: enterprise.product,
+				entity: entityA,
+				rowId: "cp_enterprise_a",
+			});
+			const growthOnB = entityRow({
+				product: savedGrowth,
+				entity: entityB,
+				rowId: "cp_growth_b",
+			});
+
+			const phaseChanges = await previewPooledBalances({
+				current: [enterpriseOnA, growthOnB],
+				now: [
+					{
+						product: customEnterprise.product,
+						entity: entityA,
+						currentRow: enterpriseOnA,
+						customEntitlements: [customEnterprise.pooledEntitlement],
+					},
+					{
+						product: savedGrowth,
+						entity: entityB,
+						currentRow: growthOnB,
+						ongoing: true,
+					},
+				],
+			});
+
+			expect(describePooledPhases(phaseChanges)).toEqual([
+				[
+					"ent_a/credits updated: 96000 -> 100000 granted, usage-based, pool 106000 -> 110000 across 2",
+				],
+			]);
+		});
 	},
 );
