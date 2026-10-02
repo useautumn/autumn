@@ -16,22 +16,26 @@ export function SetPlansErrorAlert({
 
 	return (
 		<Alert variant="destructive">
-			<WarningCircleIcon weight="fill" />
+			<WarningCircleIcon weight="fill" aria-hidden />
 			<AlertDescription>
 				<p>
 					<SetPlansTextLine parts={line} />
 				</p>
 				{hint && (
 					<p className="text-tertiary-foreground">
-						{link && onAction && (
+						{link && (
 							<>
-								<button
-									type="button"
-									onClick={() => onAction(link.action)}
-									className="cursor-pointer font-medium text-foreground underline decoration-foreground/40 underline-offset-2 hover:decoration-foreground"
-								>
-									{link.label}
-								</button>{" "}
+								{onAction ? (
+									<button
+										type="button"
+										onClick={() => onAction(link.action)}
+										className="cursor-pointer font-medium text-foreground underline decoration-foreground/40 underline-offset-2 hover:decoration-foreground"
+									>
+										{link.label}
+									</button>
+								) : (
+									link.label
+								)}{" "}
 							</>
 						)}
 						{hint.text}
