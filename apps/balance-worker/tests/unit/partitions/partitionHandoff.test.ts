@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createStandbyPreparations } from "../../../src/blueGreen/createStandbyPreparations.js";
 import { ownedPartitionHealthOf } from "../../../src/health/ownedPartitionHealth.js";
 import { StateAheadOfKafkaLogEndError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { createPartitions } from "../../../src/partitions/createPartitions.js";
@@ -131,6 +132,7 @@ type WorkerOptions = {
 	prepareFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
+	acquirePreparation?: PartitionsDependencies["acquirePreparation"];
 	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
 	deaf?: boolean;
 	/** Says nothing before preparing: stands in for a successor on a build without the announcement. */
@@ -147,6 +149,7 @@ const createWorker = ({
 	prepareFailures,
 	activateGate,
 	awaitReadyAnnouncement,
+	acquirePreparation,
 	deaf = false,
 	silentPreparation = false,
 }: WorkerOptions) => {
@@ -320,6 +323,7 @@ const createWorker = ({
 		ctx: {
 			createRuntime,
 			awaitReadyAnnouncement,
+			acquirePreparation,
 			consumer: {
 				start: async () => undefined,
 				stop: async () => {
@@ -386,6 +390,111 @@ const ownAlone = async (
 		partitions.every((partition) => worker.status(partition) === "ready"),
 	);
 };
+
+const preparesOf = (worker: ReturnType<typeof createWorker>) =>
+	worker.events.filter((event) => event.startsWith(`${worker.name}:prepare:`))
+		.length;
+
+describe("standby preparation limit", () => {
+	const holdReady: PartitionsDependencies["awaitReadyAnnouncement"] = ({
+		signal,
+	}) =>
+		new Promise((_resolve, reject) =>
+			signal.addEventListener("abort", () => reject(signal.reason), {
+				once: true,
+			}),
+		);
+
+	test("a standby worker prepares its partitions one at a time and still prepares them all", async () => {
+		const log = createOwnershipLog();
+		const prepare = deferred();
+		const standby = createStandbyPreparations({
+			ctx: { gate: { isActive: () => false } },
+			config: { concurrency: 1 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			prepareGate: prepare.promise,
+			awaitReadyAnnouncement: holdReady,
+			acquirePreparation: standby.acquire,
+		});
+		try {
+			await B.ownership.start();
+			B.assign([1, 2, 3]);
+			await waitFor(() => preparesOf(B) === 1);
+			await settle();
+			expect(preparesOf(B)).toBe(1);
+
+			prepare.resolve();
+			await waitFor(() =>
+				[1, 2, 3].every((partition) => B.status(partition) === "prepared"),
+			);
+			expect(preparesOf(B)).toBe(3);
+			expect(B.errors).toEqual([]);
+		} finally {
+			prepare.resolve();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a live worker taking over partitions prepares them all at once", async () => {
+		const log = createOwnershipLog();
+		const prepare = deferred();
+		const live = createStandbyPreparations({
+			ctx: { gate: { isActive: () => true } },
+			config: { concurrency: 1 },
+		});
+		const A = createWorker({
+			name: "A",
+			log,
+			prepareGate: prepare.promise,
+			acquirePreparation: live.acquire,
+		});
+		try {
+			await A.ownership.start();
+			A.assign([1, 2, 3]);
+			await waitFor(() => preparesOf(A) === 3);
+
+			prepare.resolve();
+			await waitFor(() =>
+				[1, 2, 3].every((partition) => A.status(partition) === "ready"),
+			);
+			expect(A.errors).toEqual([]);
+		} finally {
+			prepare.resolve();
+			await A.ownership.stop();
+		}
+	});
+
+	test("a standby partition revoked while it waits for its turn retires without preparing", async () => {
+		const log = createOwnershipLog();
+		const prepare = deferred();
+		const standby = createStandbyPreparations({
+			ctx: { gate: { isActive: () => false } },
+			config: { concurrency: 1 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			prepareGate: prepare.promise,
+			awaitReadyAnnouncement: holdReady,
+			acquirePreparation: standby.acquire,
+		});
+		try {
+			await B.ownership.start();
+			B.assign([1, 2]);
+			await waitFor(() => preparesOf(B) === 1);
+			B.revoke();
+			prepare.resolve();
+			await waitFor(() => B.has("stop:1") && B.has("stop:2"));
+			expect(preparesOf(B)).toBe(1);
+		} finally {
+			prepare.resolve();
+			await B.ownership.stop();
+		}
+	});
+});
 
 describe("partition handoff", () => {
 	test("the successor never fences before the predecessor has drained", async () => {
