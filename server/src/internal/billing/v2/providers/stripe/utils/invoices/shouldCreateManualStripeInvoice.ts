@@ -10,18 +10,17 @@ import { isBackdateRecreate } from "@/internal/billing/v2/actions/setPlans/utils
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
 import { willStripeSubscriptionInvoiceEndOfCycle } from "../subscriptions/willStripeSubscriptionInvoiceEndOfCycle";
 
-const lineItemsTotal = ({
+const lineItemsCharge = ({
 	autumnBillingPlan,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 }) =>
-	autumnBillingPlan.lineItems
-		? sumValues(
-				autumnBillingPlan.lineItems.map((li) => li.amountAfterDiscounts),
-			)
-		: 0;
+	sumValues(
+		(autumnBillingPlan.lineItems ?? []).map(
+			(lineItem) => lineItem.amountAfterDiscounts,
+		),
+	) !== 0;
 
-/** A backdate recreate's new subscription bills nothing until the old period end, so its plan changes are invoiced on their own. */
 export const shouldCreateManualStripeInvoice = ({
 	ctx,
 	billingContext,
@@ -34,8 +33,9 @@ export const shouldCreateManualStripeInvoice = ({
 	stripeSubscriptionAction?: StripeSubscriptionAction;
 }): boolean => {
 	const isCreateAction = stripeSubscriptionAction?.type === "create";
+	// A backdate recreate bills nothing until the old period end, so its plan changes are invoiced on their own.
 	if (isCreateAction && isBackdateRecreate({ billingContext })) {
-		return lineItemsTotal({ autumnBillingPlan }) !== 0;
+		return lineItemsCharge({ autumnBillingPlan });
 	}
 	if (isCreateAction) {
 		const willCreateInvoiceEndOfCycle = willStripeSubscriptionInvoiceEndOfCycle(
@@ -58,7 +58,7 @@ export const shouldCreateManualStripeInvoice = ({
 
 	const { stripeSubscription } = billingContext;
 	if (!stripeSubscription) {
-		return lineItemsTotal({ autumnBillingPlan }) !== 0;
+		return lineItemsCharge({ autumnBillingPlan });
 	}
 
 	const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({
