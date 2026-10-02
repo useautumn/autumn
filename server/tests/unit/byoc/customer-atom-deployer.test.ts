@@ -68,7 +68,7 @@ test("off a dev stack the customer path resolves alien, even beside a shared Ato
 	await getAtomDeployer().start({
 		org: { id: "org_1", slug: "acme" } as Organization,
 		env: AppEnv.Sandbox,
-		tokenHash: "a".repeat(64),
+		auth: { mode: "deployed", tokenHash: "a".repeat(64) },
 		machine: DEFAULT_BYOC_CACHE_MACHINE,
 	});
 

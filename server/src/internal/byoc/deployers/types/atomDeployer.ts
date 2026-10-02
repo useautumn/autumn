@@ -21,13 +21,21 @@ export type AtomSetup = {
 	setupUrl: string | null;
 };
 
+/** Who an Atom answers to: one org's token, or, for our shadow Atom only, an admin token that registers orgs. */
+export type AtomAuth =
+	| { mode: "deployed"; tokenHash: string }
+	| { mode: "shared"; adminTokenHash: string };
+
+/** What names an Atom's deployment group: an org, or a fixed admin id for our shadow Atom. */
+export type AtomOwner = Pick<Organization, "id" | "slug">;
+
 /** Whoever runs an org's Atom: alien in a real cloud, the dev stack's own Atom process locally. */
 export type AtomDeployer = {
-	/** The Atom is only ever given its token's hash. Starting one that exists keeps its data. */
+	/** The Atom is only ever given token hashes. Starting one that exists keeps its data. */
 	start(params: {
-		org: Organization;
+		org: AtomOwner;
 		env: AppEnv;
-		tokenHash: string;
+		auth: AtomAuth;
 		machine: ByocCacheMachine;
 	}): Promise<AtomSetup>;
 	find(params: { deploymentGroupId: string }): Promise<AtomDeployment | null>;

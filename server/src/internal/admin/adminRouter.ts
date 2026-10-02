@@ -24,6 +24,12 @@ import {
 	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import {
+	handleCreateAdminShadowAtomDeployment,
+	handleDeleteAdminShadowAtomDeployment,
+	handleGetAdminShadowAtomDeployment,
+	handleResizeAdminShadowAtomDeployment,
+} from "./handleAdminShadowAtomDeployment.js";
 import { handleGetAdminAgentProvisionRateLimitConfig } from "./handleGetAdminAgentProvisionRateLimitConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
@@ -45,6 +51,7 @@ import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheCo
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
 import { handleGetAdminShadowAtomConfig } from "./handleGetAdminShadowAtomConfig.js";
+import { handleGetAdminShadowAtomResults } from "./handleGetAdminShadowAtomResults.js";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
@@ -196,6 +203,26 @@ honoAdminRouter.put(
 honoAdminRouter.delete(
 	"/shadow-atom-config/:env/orgs/:org_id",
 	...handleUnregisterAdminShadowAtomOrg,
+);
+honoAdminRouter.get(
+	"/shadow-atom-config/:env/deployment",
+	...handleGetAdminShadowAtomDeployment,
+);
+honoAdminRouter.post(
+	"/shadow-atom-config/:env/deployment",
+	...handleCreateAdminShadowAtomDeployment,
+);
+honoAdminRouter.patch(
+	"/shadow-atom-config/:env/deployment",
+	...handleResizeAdminShadowAtomDeployment,
+);
+honoAdminRouter.delete(
+	"/shadow-atom-config/:env/deployment",
+	...handleDeleteAdminShadowAtomDeployment,
+);
+honoAdminRouter.get(
+	"/shadow-atom-config/:env/results",
+	...handleGetAdminShadowAtomResults,
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
 honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);

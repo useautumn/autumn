@@ -3,14 +3,17 @@ import {
 	type ByocCacheMachine,
 	ByocCacheStatus,
 	DEFAULT_BYOC_CACHE_MACHINE,
-	type Organization,
+	ErrCode,
+	RecaseError,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { cacheExternalId } from "../utils/byocCacheUtils.js";
 import { postToSharedAtom } from "./postToSharedAtom.js";
 import type {
+	AtomAuth,
 	AtomDeployer,
 	AtomDeployment,
+	AtomOwner,
 	AtomSetup,
 } from "./types/atomDeployer.js";
 import type { SharedAtomAddress } from "./types/sharedAtom.js";
@@ -29,20 +32,27 @@ const startStackAtom = async ({
 	ctx,
 	org,
 	env,
-	tokenHash,
+	auth,
 	machine,
 }: {
 	ctx: StackContext;
-	org: Organization;
+	org: AtomOwner;
 	env: AppEnv;
-	tokenHash: string;
+	auth: AtomAuth;
 	machine: ByocCacheMachine;
 }): Promise<AtomSetup> => {
+	if (auth.mode === "shared")
+		throw new RecaseError({
+			message:
+				"The dev stack's Atom is already shared; it cannot start another.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
 	const id = cacheExternalId({ org, env });
 	await postToSharedAtom({
 		atom: ctx.atom,
 		route: "atoms.put",
-		body: { id, token_hash: tokenHash },
+		body: { id, token_hash: auth.tokenHash },
 	});
 	ctx.machineById.set(id, machine);
 	return { deploymentGroupId: id, setupUrl: null };

@@ -35,6 +35,8 @@ const ShadowAtomEnvConfigSchema = ShadowAtomEnvSettingsSchema.extend({
 	adminEncryptedToken: z.string().nullable().default(null),
 	/** By org id. An org not here is never pushed to or checked against the shadow Atom. */
 	orgs: z.record(z.string(), ShadowAtomOrgSchema).default({}),
+	/** The alien deployment group our shadow Atom runs in; only the admin deployment routes set it. */
+	deploymentGroupId: z.string().nullable().default(null),
 });
 
 /** Our own Atom, apart from every org's, that load-tests Atom on real traffic. Staff-only; an empty file is off. */

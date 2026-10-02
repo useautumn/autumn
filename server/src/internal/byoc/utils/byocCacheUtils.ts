@@ -21,7 +21,7 @@ export const cacheExternalId = ({
 	org,
 	env,
 }: {
-	org: Organization;
+	org: Pick<Organization, "id">;
 	env: AppEnv;
 }) => [cacheNamePrefix(), org.id, env].filter(Boolean).join(".");
 
@@ -30,7 +30,7 @@ export const cacheGroupLabel = ({
 	org,
 	env,
 }: {
-	org: Organization;
+	org: Pick<Organization, "slug">;
 	env: AppEnv;
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");

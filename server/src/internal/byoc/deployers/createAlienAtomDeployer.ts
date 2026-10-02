@@ -14,7 +14,6 @@ import {
 	type ByocCacheMachine,
 	ByocCacheStatus,
 	findByocCacheMachineByInstanceType,
-	type Organization,
 } from "@autumn/shared";
 import {
 	cacheExternalId,
@@ -22,8 +21,10 @@ import {
 	cacheNotRunning,
 } from "../utils/byocCacheUtils.js";
 import type {
+	AtomAuth,
 	AtomDeployer,
 	AtomDeployment,
+	AtomOwner,
 	AtomSetup,
 } from "./types/atomDeployer.js";
 
@@ -65,17 +66,35 @@ const alienDeploymentToCacheStatus = ({
 	return ByocCacheStatus.Provisioning;
 };
 
+const plainVariable = ({ name, value }: { name: string; value: string }) => ({
+	name,
+	value,
+	type: "plain" as const,
+	targetResources: null,
+});
+
+const atomAuthToVariables = ({ auth }: { auth: AtomAuth }) =>
+	auth.mode === "deployed"
+		? [plainVariable({ name: "ATOM_TOKEN_HASH", value: auth.tokenHash })]
+		: [
+				plainVariable({ name: "ATOM_MODE", value: "shared" }),
+				plainVariable({
+					name: "ATOM_ADMIN_TOKEN_HASH",
+					value: auth.adminTokenHash,
+				}),
+			];
+
 const startAlienAtom = ({
 	ctx,
 	org,
 	env,
-	tokenHash,
+	auth,
 	machine,
 }: {
 	ctx: AlienContext;
-	org: Organization;
+	org: AtomOwner;
 	env: AppEnv;
-	tokenHash: string;
+	auth: AtomAuth;
 	machine: ByocCacheMachine;
 }): Promise<AtomSetup> =>
 	ctx.alienClient.startSetup({
@@ -83,19 +102,12 @@ const startAlienAtom = ({
 		label: cacheGroupLabel({ org, env }),
 		pools: machineToAtomPools({ machine }),
 		environmentVariables: [
-			{
-				name: "ATOM_TOKEN_HASH",
-				value: tokenHash,
-				type: "plain",
-				targetResources: null,
-			},
+			...atomAuthToVariables({ auth }),
 			// A check Atom forwards must reach this environment's API, not the production default.
-			{
+			plainVariable({
 				name: "AUTUMN_API_URL",
 				value: getAutumnEnv().AUTUMN_PUBLIC_API_URL,
-				type: "plain",
-				targetResources: null,
-			},
+			}),
 		],
 	});
 

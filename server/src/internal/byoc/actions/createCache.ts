@@ -151,7 +151,7 @@ const startCacheSetup = async ({
 	const setup = await getAtomDeployer().start({
 		org,
 		env,
-		tokenHash: atomTokenToHash({ token }),
+		auth: { mode: "deployed", tokenHash: atomTokenToHash({ token }) },
 		machine,
 	});
 	const claimed = existing

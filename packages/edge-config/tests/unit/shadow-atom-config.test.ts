@@ -5,6 +5,7 @@ import {
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
 	type ShadowAtomEnvConfig,
+	ShadowAtomSettingsSchema,
 	scheduleShadowAtomConfig,
 	shadowAtomConfig,
 } from "../../src/edgeConfig.js";
@@ -151,4 +152,21 @@ test("a save keeps each env's admin token and registered orgs, whatever the call
 	expect(saved.sandbox.orgs).toEqual(registered);
 	expect(saved.live.adminEncryptedToken).toBeNull();
 	expect(saved.live.orgs).toEqual({});
+});
+
+test("a save keeps each env's deployment group, whatever the caller sent", () => {
+	const current = ShadowAtomConfigSchema.parse({
+		sandbox: { deploymentGroupId: "dg_sandbox" },
+		live: { deploymentGroupId: "dg_live" },
+	});
+	const saved = scheduleShadowAtomConfig({
+		current,
+		next: ShadowAtomSettingsSchema.parse({
+			live: { deploymentGroupId: "dg_x" },
+		}),
+		now: 0,
+	});
+
+	expect(saved.sandbox.deploymentGroupId).toBe("dg_sandbox");
+	expect(saved.live.deploymentGroupId).toBe("dg_live");
 });

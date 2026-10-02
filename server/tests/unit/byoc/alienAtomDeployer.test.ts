@@ -34,7 +34,7 @@ describe("starting an Atom on alien", () => {
 		await deployer.start({
 			org,
 			env: AppEnv.Sandbox,
-			tokenHash: "hash_1",
+			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 		});
 
@@ -62,12 +62,45 @@ describe("starting an Atom on alien", () => {
 		await deployer.start({
 			org,
 			env: AppEnv.Sandbox,
-			tokenHash: "hash_1",
+			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 		});
 
 		expect(started[0]?.pools).toEqual({
 			stateful: { machine: "t4g.micro", machines: 1 },
 		});
+	});
+
+	test("our shadow Atom starts in shared mode with only the admin token hash", async () => {
+		const { alienClient, started } = recordingAlienClient();
+		const deployer = createAlienAtomDeployer({ alienClient });
+
+		await deployer.start({
+			org,
+			env: AppEnv.Sandbox,
+			auth: { mode: "shared", adminTokenHash: "admin_hash" },
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+		});
+
+		expect(started[0]?.environmentVariables).toEqual([
+			{
+				name: "ATOM_MODE",
+				value: "shared",
+				type: "plain",
+				targetResources: null,
+			},
+			{
+				name: "ATOM_ADMIN_TOKEN_HASH",
+				value: "admin_hash",
+				type: "plain",
+				targetResources: null,
+			},
+			{
+				name: "AUTUMN_API_URL",
+				value: getAutumnEnv().AUTUMN_PUBLIC_API_URL,
+				type: "plain",
+				targetResources: null,
+			},
+		]);
 	});
 });
