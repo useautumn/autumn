@@ -6,6 +6,7 @@ import {
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import type { SkeletonScope } from "../../utils/review/formPhasesToSkeletonPhases";
+import { hasScopedRows } from "../../utils/review/groupRowsByScope";
 import { ReviewScopeHeader } from "./ReviewScopeHeader";
 
 const NAME_WIDTHS = ["w-2/5", "w-1/2", "w-1/3", "w-[45%]"];
@@ -58,9 +59,7 @@ export function ReviewChangeSkeletonPhases({
 }: {
 	phases: SkeletonScope[][];
 }) {
-	const showsScopes = phases.some((scopes) =>
-		scopes.some(({ entityId }) => entityId !== null),
-	);
+	const showsScopes = phases.some((scopes) => hasScopedRows({ rows: scopes }));
 
 	return (
 		<div className="flex flex-col gap-4">
