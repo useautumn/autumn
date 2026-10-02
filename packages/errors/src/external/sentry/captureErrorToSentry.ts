@@ -20,7 +20,9 @@ const fingerprintOf = ({
 
 	const isWebhookOperation =
 		operation === "stripe-webhook-replay" ||
-		operation === "POST /webhooks/connect/:env";
+		operation === "POST /webhooks/connect/:env" ||
+		operation === "POST /webhooks/stripe/:orgId/:env" ||
+		/^POST \/webhooks\/stripe\/[^/]+\/(live|sandbox)$/.test(operation ?? "");
 	const hasWebhookEnvironment = env === "live" || env === "sandbox";
 	const fingerprintOperation =
 		isWebhookOperation && hasWebhookEnvironment

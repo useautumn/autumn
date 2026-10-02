@@ -155,6 +155,13 @@ describe("createErrorLogHook", () => {
 			const origins = [
 				{ req: { name: operation } },
 				{ req: { name: operation, route: "POST /webhooks/connect/:env" } },
+				{ req: { name: `POST /webhooks/stripe/org_1/${env}` } },
+				{
+					req: {
+						name: `POST /webhooks/stripe/org_1/${env}`,
+						route: "POST /webhooks/stripe/:orgId/:env",
+					},
+				},
 				{ workflow: { name: "stripe-webhook-replay" } },
 			];
 

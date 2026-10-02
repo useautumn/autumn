@@ -71,6 +71,22 @@ describe("classifyError", () => {
 		expect(classifyError({ error })).toEqual({ kind: "infra", code: "5" });
 	});
 
+	it("honors a non-retriable Kafka error even when its code resembles a network failure", () => {
+		const error = Object.assign(
+			new Error("Kafka operation cannot be retried"),
+			{
+				name: "KafkaJSNonRetriableError",
+				retriable: false,
+				code: "ECONNRESET",
+			},
+		);
+
+		expect(classifyError({ error })).toEqual({
+			kind: "bug",
+			code: "ECONNRESET",
+		});
+	});
+
 	it("classifies exhausted Kafka retries by their underlying dependency failure", () => {
 		const cause = Object.assign(new Error("Connection failed"), {
 			name: "KafkaJSConnectionError",
