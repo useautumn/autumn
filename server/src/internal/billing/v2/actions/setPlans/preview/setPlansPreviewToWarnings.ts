@@ -33,6 +33,7 @@ const INFO_WARNING_TYPES: WarningType[] = [
 	"new_stripe_subscription",
 	"past_due_invoice_open",
 	"other_subscriptions_unaffected",
+	"billing_starts_later",
 ];
 
 /** Unmanaged live items that the immediate phase's end state no longer holds. */
