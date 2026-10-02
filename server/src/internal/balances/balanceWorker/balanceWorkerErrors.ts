@@ -32,6 +32,12 @@ const UNAVAILABLE_CLIENT_CODES = new Set([
 	"COMMAND_LOG_UNAVAILABLE",
 ]);
 
+/** No owner could take the command (none named, still activating, or out of budget getting there); nothing about the command was wrong. */
+export const isBalanceWorkerOwnerUnavailable = (error: unknown): boolean =>
+	error instanceof BalanceWorkerClientError &&
+	(UNAVAILABLE_CLIENT_CODES.has(error.code) ||
+		error.workerCode === "NOT_READY");
+
 const STALE_SUBJECT_CODE = "balance_worker_stale_subject";
 const UNAVAILABLE_CODE = "balance_worker_unavailable";
 const OVERLOADED_CODE = "balance_worker_overloaded";

@@ -62,7 +62,7 @@ export const withPaidAllocatedFallback = async <Result>({
 			"Balance worker refused a paid allocated grant; running it on Postgres",
 		);
 	}
-	await evictBalanceWorkerCustomer({ ctx, customerId, barrier: true });
+	await evictBalanceWorkerCustomer({ ctx, customerId });
 	const fullSubject = await readFreshSubject({ ctx, customerId, entityId });
 	try {
 		return await postgres({ fullSubject });
