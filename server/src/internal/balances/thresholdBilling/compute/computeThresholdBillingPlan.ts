@@ -55,6 +55,8 @@ export const computeThresholdBillingPlan = ({
 		featureId: feature.id,
 		quantity: chargeUnits,
 		prepaidCustomerEntitlementId: customerEntitlement.id,
+		// The credit offsets usage this invoice bills, so month-end itemization still nets correctly.
+		allowInvoiceCreditBalance: true,
 	});
 
 	return {

@@ -1,4 +1,9 @@
 import type { AutumnLogger } from "@autumn/logging";
+import {
+	type CpuCounters,
+	cpuWindowOf,
+	readCpuCounters,
+} from "./cpuCounters.js";
 import type { SyncSectionRecorder } from "./syncSections.js";
 
 type EventLoopStallMonitorConfig = {
@@ -12,6 +17,7 @@ type EventLoopStallMonitorConfig = {
 	/** Lateness that also gets its own log line, naming what held the thread. */
 	logStallMs: number;
 	reportEveryMs: number;
+	cpuModel?: string;
 };
 
 const MAX_STALL_LOGS_PER_REPORT = 20;
@@ -34,11 +40,14 @@ export function createEventLoopStallMonitor({
 		schedule?: (params: { intervalMs: number; run(): void }) => () => void;
 		/** Read once per logged stall: a stall with nothing timed and a heap that just moved is the collector's. */
 		memory?: () => { heapUsed: number; rss: number };
+		cpu?: () => CpuCounters;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
 	const now = ctx.now ?? (() => performance.now());
 	const memory = ctx.memory ?? (() => process.memoryUsage());
+	const cpu = ctx.cpu ?? (() => readCpuCounters());
+	let lastCpu: CpuCounters | undefined;
 	let cancel: (() => void) | undefined;
 	let lastTickAt = 0;
 	let lastReportAt = 0;
@@ -112,16 +121,24 @@ export function createEventLoopStallMonitor({
 				},
 			]),
 		);
+		const windowMs = round(tickedAt - lastReportAt);
+		const currentCpu = cpu();
+		const cpuWindow = lastCpu
+			? cpuWindowOf({ previous: lastCpu, current: currentCpu, windowMs })
+			: {};
+		lastCpu = currentCpu;
 		ctx.logger.info(
 			{
 				event: "balance_worker.event_loop",
 				workerDeployment: config.deployment,
 				data: {
 					workerEndpoint: config.endpoint,
-					windowMs: round(tickedAt - lastReportAt),
+					windowMs,
 					stalls: window.stalls,
 					stalledMs: round(window.stalledMs),
 					maxLagMs: round(window.maxLagMs),
+					cpuModel: config.cpuModel,
+					...cpuWindow,
 					sections,
 				},
 			},
@@ -135,6 +152,7 @@ export function createEventLoopStallMonitor({
 		if (cancel) return;
 		lastTickAt = now();
 		lastReportAt = lastTickAt;
+		lastCpu = cpu();
 		ctx.recorder.drainTotals();
 		cancel = (ctx.schedule ?? scheduleProbe)({
 			intervalMs: config.intervalMs,

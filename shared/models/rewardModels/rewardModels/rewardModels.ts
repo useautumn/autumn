@@ -36,6 +36,28 @@ export const FreeProductConfigSchema = z.object({
 	duration_value: z.number(),
 });
 
+/** Stripe's coupon name limit; feature grants never become a Stripe coupon. */
+export const MAX_COUPON_NAME_LENGTH = 40;
+
+const COUPON_NAME_TOO_LONG = `Reward name must be at most ${MAX_COUPON_NAME_LENGTH} characters`;
+
+export const CouponNameSchema = z
+	.string()
+	.max(MAX_COUPON_NAME_LENGTH, { message: COUPON_NAME_TOO_LONG });
+
+const addCouponNameLengthIssue = (
+	{ name, type }: { name?: string | null; type?: RewardType | null },
+	ctx: z.RefinementCtx,
+) => {
+	if (type === RewardType.FeatureGrant) return;
+	if ((name?.length ?? 0) <= MAX_COUPON_NAME_LENGTH) return;
+	ctx.addIssue({
+		code: "custom",
+		message: COUPON_NAME_TOO_LONG,
+		path: ["name"],
+	});
+};
+
 const RewardSchema = z.object({
 	name: z.string().nullish(),
 
@@ -82,18 +104,21 @@ export const CreateRewardSchema = z
 			return data.promo_codes.some((pc) => pc.code.length > 0);
 		},
 		{ message: "Feature grant rewards require at least one promo code" },
-	);
+	)
+	.superRefine(addCouponNameLengthIssue);
 
-export const UpdateRewardSchema = z.object({
-	name: z.string().nullish(),
-	promo_codes: z.array(PromoCodeSchema).optional(),
-	id: z.string().optional(),
-	type: z.nativeEnum(RewardType).optional(),
-	discount_config: DiscountConfigSchema.nullish(),
-	free_product_config: FreeProductConfigSchema.nullish(),
-	free_product_id: z.string().nullish(),
-	entitlements: z.array(RewardEntitlementSchema).nullish(),
-});
+export const UpdateRewardSchema = z
+	.object({
+		name: z.string().nullish(),
+		promo_codes: z.array(PromoCodeSchema).optional(),
+		id: z.string().optional(),
+		type: z.nativeEnum(RewardType).optional(),
+		discount_config: DiscountConfigSchema.nullish(),
+		free_product_config: FreeProductConfigSchema.nullish(),
+		free_product_id: z.string().nullish(),
+		entitlements: z.array(RewardEntitlementSchema).nullish(),
+	})
+	.superRefine(addCouponNameLengthIssue);
 
 export type PromoCode = z.infer<typeof PromoCodeSchema>;
 export type CreateReward = z.infer<typeof CreateRewardSchema>;

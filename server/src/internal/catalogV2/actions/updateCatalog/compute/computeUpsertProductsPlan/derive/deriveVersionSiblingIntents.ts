@@ -86,7 +86,7 @@ const mergeEdits = ({
 
 /**
  * Drop absolute content so siblings apply editDiff onto their own row.
- * `new_version_slug` is row identity — a sibling keeps the slug it already has.
+ * Slug and default flag are row identity — a sibling keeps what it already has.
  */
 const siblingPlanParams = ({
 	planParams,
@@ -102,6 +102,8 @@ const siblingPlanParams = ({
 		version: _version,
 		licenses: _licenses,
 		new_version_slug: _newVersionSlug,
+		is_default: _isDefault,
+		auto_enable: _autoEnable,
 		...rest
 	} = planParams;
 	return { ...rest, version };

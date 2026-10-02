@@ -93,6 +93,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 				stripeSubscriptionSchedule?.id ??
 				currentCustomerProduct.scheduled_ids?.[0],
 			externalId: currentCustomerProduct.external_id ?? undefined,
+			processor: currentCustomerProduct.processor,
 			startsAt: currentCustomerProduct.starts_at ?? undefined,
 			...cancelFields,
 

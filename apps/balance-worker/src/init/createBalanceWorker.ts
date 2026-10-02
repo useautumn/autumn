@@ -1,3 +1,4 @@
+import { cpus } from "node:os";
 import { BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY } from "@autumn/env/balanceWorkerConstants";
 import type { KafkaOffsetCommit } from "@autumn/kafka";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
@@ -268,6 +269,7 @@ export async function createBalanceWorker({
 				stallThresholdMs: 20,
 				logStallMs: 50,
 				reportEveryMs: 10_000,
+				cpuModel: cpus()[0]?.model,
 			},
 		});
 		const kafkaRequestReporter = createKafkaRequestReporter({

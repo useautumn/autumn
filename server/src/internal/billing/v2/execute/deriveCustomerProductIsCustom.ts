@@ -1,3 +1,4 @@
+import { reportError } from "@autumn/errors";
 import type {
 	DiffedCustomizePlanV1,
 	Feature,
@@ -5,6 +6,7 @@ import type {
 	FullProduct,
 } from "@autumn/shared";
 import { cusProductToProduct, diffPlanV1 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
 
 /**
@@ -25,6 +27,32 @@ const CUSTOM_DIFF_KEYS = [
 	"upsert_licenses",
 	"remove_licenses",
 ] as const satisfies readonly (keyof DiffedCustomizePlanV1)[];
+
+/** Best-effort: a reporting failure must never change the derived flag. */
+const reportDerivationFailure = ({
+	ctx,
+	customerProduct,
+	error,
+}: {
+	ctx: Pick<AutumnContext, "logger">;
+	customerProduct: FullCusProduct;
+	error: unknown;
+}) => {
+	try {
+		const ids = {
+			customer_product_id: customerProduct.id,
+			internal_product_id: customerProduct.internal_product_id,
+		};
+		reportError({
+			ctx: { logger: ctx.logger.child({ context: ids }) },
+			error: new Error(
+				`is_custom derivation failed for customer product ${ids.customer_product_id} (product ${ids.internal_product_id}): ${error instanceof Error ? error.message : String(error)}`,
+				{ cause: error },
+			),
+			operation: "derive customer product is_custom",
+		});
+	} catch {}
+};
 
 /**
  * Is this customer product a customized version of the plan it points at?
@@ -47,10 +75,12 @@ const CUSTOM_DIFF_KEYS = [
  * customized prices, entitlements and license terms.
  */
 export const deriveCustomerProductIsCustom = ({
+	ctx,
 	customerProduct,
 	baseProduct,
 	features,
 }: {
+	ctx: Pick<AutumnContext, "logger">;
 	customerProduct: FullCusProduct;
 	/** The catalog version `customerProduct.internal_product_id` points at,
 	 * loaded with custom rows excluded. Nullish when it could not be resolved. */
@@ -71,7 +101,8 @@ export const deriveCustomerProductIsCustom = ({
 		});
 
 		return CUSTOM_DIFF_KEYS.some((key) => diff[key] !== undefined);
-	} catch {
+	} catch (error) {
+		reportDerivationFailure({ ctx, customerProduct, error });
 		return true;
 	}
 };

@@ -78552,6 +78552,7 @@ paths:
                     name:
                       type: string
                       minLength: 1
+                      maxLength: 40
                     duration:
                       type: object
                       properties:
@@ -79452,6 +79453,7 @@ paths:
                     name:
                       type: string
                       minLength: 1
+                      maxLength: 40
                     plan_ids:
                       anyOf:
                         - type: array
