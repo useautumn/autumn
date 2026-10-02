@@ -1,6 +1,7 @@
 import {
 	type CreateScheduleBillingContext,
 	isCustomerProductMain,
+	isCustomerProductOneOff,
 	isOneOffProduct,
 } from "@autumn/shared";
 import { outOfScopeLiveCustomerProducts } from "./outOfScopeLiveCustomerProducts";
@@ -29,6 +30,7 @@ export const assertNoMainPlanGroupOnAnotherSubscription = ({
 		}).find(
 			(customerProduct) =>
 				isCustomerProductMain(customerProduct) &&
+				!isCustomerProductOneOff(customerProduct) &&
 				(customerProduct.product.group ?? "") === (fullProduct.group ?? ""),
 		);
 		if (!groupPlanElsewhere) continue;

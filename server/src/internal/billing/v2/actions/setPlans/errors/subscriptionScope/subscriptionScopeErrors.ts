@@ -22,6 +22,27 @@ export const stripeSubscriptionPlanName = ({
 		),
 	}) ?? "current";
 
+/** A plan queued on a schedule bills on the subscription its schedule-mates already use. */
+const customerProductToStripeSubscriptionId = ({
+	customerProducts,
+	customerProduct,
+}: {
+	customerProducts: FullCusProduct[];
+	customerProduct: FullCusProduct;
+}) => {
+	const [stripeSubscriptionId] = customerProduct.subscription_ids ?? [];
+	if (stripeSubscriptionId) return stripeSubscriptionId;
+
+	const scheduleIds = new Set(customerProduct.scheduled_ids ?? []);
+	return customerProducts
+		.find(
+			({ scheduled_ids, subscription_ids }) =>
+				subscription_ids?.length &&
+				scheduled_ids?.some((scheduleId) => scheduleIds.has(scheduleId)),
+		)
+		?.subscription_ids?.at(0);
+};
+
 /** A targeted request would change a plan billed somewhere other than the target. */
 export const subscriptionConflictError = ({
 	customerProducts,
@@ -34,8 +55,10 @@ export const subscriptionConflictError = ({
 	requestedPlanName: string;
 	conflictingCustomerProduct: FullCusProduct;
 }) => {
-	const [stripeSubscriptionId] =
-		conflictingCustomerProduct.subscription_ids ?? [];
+	const stripeSubscriptionId = customerProductToStripeSubscriptionId({
+		customerProducts,
+		customerProduct: conflictingCustomerProduct,
+	});
 	if (!stripeSubscriptionId) {
 		return setPlansError({
 			details: {
