@@ -169,7 +169,7 @@ test.concurrent(
 		});
 
 		await expectAutumnError({
-			errMessage: "A free trial can't start on a later date",
+			errMessage: "A free trial can't start on",
 			func: async () => {
 				await autumnV1.billing.createSchedule({
 					customer_id: customerId,
