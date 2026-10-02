@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs";
 import {
 	type AutumnBillingPlan,
 	addSafe,
@@ -42,10 +43,26 @@ const mergeCustomerEntitlementUpdates = ({
 		balanceChange !== 0 ||
 		Object.keys(entityBalanceChanges).length > 0 ||
 		Object.keys(moveEntityBalances).length > 0;
-	if (updates && movesBalance)
+	if (updates && movesBalance) {
+		appendFileSync(
+			"/tmp/pr3977-linked-lifetime-conflicts.jsonl",
+			`${JSON.stringify({
+				at: Date.now(),
+				grantId: base.customerEntitlement.id,
+				featureId: base.customerEntitlement.entitlement.feature_id,
+				interval: base.customerEntitlement.entitlement.interval,
+				entityFeatureId: base.customerEntitlement.entitlement.entity_feature_id,
+				baseBalanceChange: base.balanceChange,
+				incomingBalanceChange: incoming.balanceChange,
+				baseColumns: Object.keys(base.updates ?? {}),
+				incomingColumns: Object.keys(incoming.updates ?? {}),
+				stack: new Error().stack,
+			})}\n`,
+		);
 		throw new InternalError({
 			message: `Billing plan sets columns and moves the balance of the same grant ${base.customerEntitlement.id}`,
 		});
+	}
 	return {
 		customerEntitlement: incoming.customerEntitlement,
 		...(updates ? { updates } : {}),

@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import {
 	EntInterval,
 	findCustomerEntitlementByFeature,
@@ -21,6 +21,16 @@ import {
 	constructArrearProratedItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem";
+
+afterAll(async () => {
+	const trace = Bun.file("/tmp/pr3977-linked-lifetime-conflicts.jsonl");
+	console.log(
+		"[linked-lifetime-conflict-trace]",
+		(await trace.exists())
+			? await trace.text()
+			: "No builder conflicts captured",
+	);
+});
 
 test(
 	"invoice.created: linked lifetime quantity promotion and freed seat land together",
