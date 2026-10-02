@@ -809,4 +809,96 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 			}),
 		).rejects.toThrow("can't start on a later date");
 	});
+
+	test("an ongoing plan starts and is charged now while the first phase starts later", () => {
+		const ctx = contexts.create({});
+		const { pro } = proWithCustomerProduct();
+		const sso = products.createFull({
+			id: "sso",
+			isAddOn: true,
+			prices: [prices.createFixed({ id: "price_sso" })],
+		});
+		const billingContext: CreateScheduleBillingContext = {
+			...createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({ fullProduct: pro }),
+					{ ...requestProductContext({ fullProduct: sso }), unscheduled: true },
+				],
+				immediatePhase: { starts_at: startsAt, plans: [{ plan_id: pro.id }] },
+			}),
+			resetCycleAnchorMs: startsAt,
+		};
+
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext,
+		});
+
+		const byProduct = new Map(
+			autumnBillingPlan.insertCustomerProducts.map((customerProduct) => [
+				customerProduct.product_id,
+				customerProduct,
+			]),
+		);
+		expect(byProduct.get(pro.id)?.status).toBe(CusProductStatus.Scheduled);
+		expect(byProduct.get(pro.id)?.starts_at).toBe(startsAt);
+		expect(byProduct.get(sso.id)?.status).toBe(CusProductStatus.Active);
+		expect(byProduct.get(sso.id)?.starts_at).toBe(currentEpochMs);
+		expect(
+			(autumnBillingPlan.lineItems ?? []).some(
+				(lineItem) =>
+					lineItem.context.customerProduct?.id === byProduct.get(sso.id)?.id &&
+					lineItem.amountAfterDiscounts > 0,
+			),
+		).toBe(true);
+	});
+
+	test("early access lets a free plan with nothing in Stripe start now", async () => {
+		const ctx = contexts.create({});
+		const free = products.createFull({ id: "free", prices: [] });
+		const billingContext = {
+			...futureStartContext({ fullProduct: free }),
+			accessStartsAt: currentEpochMs,
+		};
+
+		const { autumnBillingPlan, immediatePhaseTransition } =
+			computeSetPlansPlanFromContext({ ctx, billingContext });
+
+		await expect(
+			handleSetPlansComputeErrors({
+				ctx,
+				billingContext,
+				autumnBillingPlan,
+				immediatePhaseTransition,
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("early access still rejects a paid one-off plan Stripe has nothing to bill at the start", async () => {
+		const ctx = contexts.create({});
+		const credits = products.createFull({
+			id: "credits",
+			prices: [prices.createOneOff({ id: "price_credits" })],
+		});
+		const billingContext = {
+			...futureStartContext({ fullProduct: credits }),
+			accessStartsAt: currentEpochMs,
+		};
+
+		const { autumnBillingPlan, immediatePhaseTransition } =
+			computeSetPlansPlanFromContext({ ctx, billingContext });
+
+		expect(autumnBillingPlan.insertCustomerProducts[0]?.status).toBe(
+			CusProductStatus.Active,
+		);
+		await expect(
+			handleSetPlansComputeErrors({
+				ctx,
+				billingContext,
+				autumnBillingPlan,
+				immediatePhaseTransition,
+			}),
+		).rejects.toThrow("can't start on a later date");
+	});
 });

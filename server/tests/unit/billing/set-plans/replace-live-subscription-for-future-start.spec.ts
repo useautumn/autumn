@@ -38,21 +38,28 @@ const expire = (customerProductId: string): TimelineOperation => ({
 	customerProductId,
 });
 
+const otherSchedule = {
+	id: "sub_sched_other",
+	subscription: "sub_other",
+} as Stripe.SubscriptionSchedule;
+
 const replace = ({
 	startsAt,
 	rows,
 	operations,
+	schedule = liveSchedule,
 }: {
 	startsAt: number;
 	rows: FullCusProduct[];
 	operations: TimelineOperation[];
+	schedule?: Stripe.SubscriptionSchedule;
 }) =>
 	replaceLiveSubscriptionForFutureStart({
 		billingContext: {
 			currentEpochMs,
 			immediatePhase: { starts_at: startsAt, plans: [] },
 			stripeSubscription: liveSubscription,
-			stripeSubscriptionSchedule: liveSchedule,
+			stripeSubscriptionSchedule: schedule,
 			fullCustomer: { customer_products: rows },
 		} as unknown as CreateScheduleBillingContext,
 		operations,
@@ -73,6 +80,23 @@ describe("replaceLiveSubscriptionForFutureStart", () => {
 		).toEqual({
 			stripeSubscription: undefined,
 			stripeSubscriptionSchedule: undefined,
+			replacedStripeSubscription: liveSubscription,
+		});
+	});
+
+	test("keeps a schedule that belongs to another subscription", () => {
+		const pro = rowOnLiveSubscription("pro");
+
+		expect(
+			replace({
+				startsAt: futureStart,
+				rows: [pro],
+				operations: [expire(pro.id)],
+				schedule: otherSchedule,
+			}),
+		).toEqual({
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: otherSchedule,
 			replacedStripeSubscription: liveSubscription,
 		});
 	});
