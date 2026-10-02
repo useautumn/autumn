@@ -61,7 +61,7 @@ interface CreateScheduleFormContextValue {
 	products: ProductV2[];
 	features: Feature[];
 	isExistingSchedule: boolean;
-	/** First phase may start in the past — only when a new Stripe subscription will be created. */
+	/** First phase may start in the past; a live subscription is recreated from that date. */
 	allowFirstPhaseBackdate: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
@@ -183,9 +183,7 @@ export function CreateScheduleFormProvider({
 	}, [formValues.phases, products]);
 
 	const allowFirstPhaseBackdate =
-		!isExistingSchedule &&
-		!hasActiveSubscription &&
-		immediatePlansPaidRecurring;
+		!isExistingSchedule && immediatePlansPaidRecurring;
 
 	// Mirrors attach: a new sub is created when there's no active subscription, and
 	// usage-only plans still bill recurring even though nothing is due immediately.
