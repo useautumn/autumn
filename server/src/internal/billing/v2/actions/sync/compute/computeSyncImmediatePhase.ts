@@ -123,6 +123,7 @@ const computeStartingNowProductContexts = ({
 			fullCustomer,
 			productContext,
 			stripeSubscription,
+			currency: syncContext.currency,
 			currentEpochMs,
 			existingUsagesConfig,
 			existingRolloversConfig,

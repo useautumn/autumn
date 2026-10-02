@@ -4,7 +4,6 @@ import {
 	type ExistingUsagesConfig,
 	type FullCusProduct,
 	type FullCustomer,
-	isFreeProduct,
 	type SyncProductContext,
 	secondsToMs,
 } from "@autumn/shared";
@@ -16,6 +15,7 @@ import {
 	getTrialEndsAtFromStripe,
 } from "@/internal/billing/v2/actions/sync/utils/initSyncFromStripe";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
+import { isProductFreeInSyncCurrency } from "../utils/syncContextUtils";
 
 /**
  * Build the immediate-phase cusProduct row for one plan instance, mirroring
@@ -32,6 +32,7 @@ export const initImmediateSyncCustomerProduct = ({
 	fullCustomer,
 	productContext,
 	stripeSubscription,
+	currency,
 	currentEpochMs,
 	existingUsagesConfig,
 	existingRolloversConfig,
@@ -40,6 +41,7 @@ export const initImmediateSyncCustomerProduct = ({
 	fullCustomer: FullCustomer;
 	productContext: SyncProductContext;
 	stripeSubscription: Stripe.Subscription;
+	currency: string;
 	currentEpochMs: number;
 	existingUsagesConfig?: ExistingUsagesConfig;
 	existingRolloversConfig?: ExistingRolloversConfig;
@@ -47,7 +49,7 @@ export const initImmediateSyncCustomerProduct = ({
 	const { fullProduct, featureQuantities, customerLicenseQuantities, entity } =
 		productContext;
 
-	if (isFreeProduct({ product: fullProduct })) {
+	if (isProductFreeInSyncCurrency({ fullProduct, currency })) {
 		return initFullCustomerProduct({
 			ctx,
 			initContext: {
