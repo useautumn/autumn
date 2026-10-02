@@ -40,6 +40,7 @@ export const initCustomerProduct = ({
 		previousCustomerProductId,
 		onTrialEnd,
 		processorType,
+		processor,
 	} = initOptions ?? {};
 
 	const internalEntityId =
@@ -104,10 +105,13 @@ export const initCustomerProduct = ({
 
 		status,
 
-		// Only stamp `processor` when an explicit type was supplied (e.g. RevenueCat
-		// from external-PSP origin flows). Stripe-origin and legacy callers omit
-		// it; `cusProductToProcessorType` resolves the missing field to Stripe.
-		...(processorType ? { processor: { type: processorType } } : {}),
+		// Only stamp `processor` when one was supplied (e.g. RevenueCat origin or a
+		// carried-over RevenueCat plan); `cusProductToProcessorType` defaults to Stripe.
+		...(processor !== undefined
+			? { processor }
+			: processorType
+				? { processor: { type: processorType } }
+				: {}),
 
 		starts_at: startsAt,
 		access_starts_at: accessStartsAt ?? null,

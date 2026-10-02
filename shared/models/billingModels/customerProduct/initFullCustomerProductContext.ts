@@ -12,6 +12,7 @@ import type {
 	CusProductStatus,
 } from "../../cusProductModels/cusProductEnums";
 import type {
+	CusProduct,
 	FeatureOptions,
 	FullCusProduct,
 } from "../../cusProductModels/cusProductModels";
@@ -110,4 +111,8 @@ export interface InitFullCustomerProductOptions {
 	 * origin flows (e.g. RevenueCat) to mark cus_products explicitly.
 	 */
 	processorType?: ProcessorType;
+
+	/** Full processor carried from the customer product being replaced, so a
+	 * RevenueCat plan keeps its type, id and store period. Wins over `processorType`. */
+	processor?: CusProduct["processor"];
 }

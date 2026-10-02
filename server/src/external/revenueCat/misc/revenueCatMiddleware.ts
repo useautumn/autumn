@@ -33,7 +33,8 @@ export const revenuecatSeederMiddleware = async (
 	if (ctx.env !== env) {
 		ctx.env = env as AppEnv;
 	}
-	if (!ctx.features && orgId) {
+	// The base ctx seeds `features: []`, so a falsy check never fires.
+	if (orgId) {
 		ctx.features = features;
 	}
 
