@@ -1,11 +1,13 @@
 /** Pooled license replacements reset the shared balance by default and carry
  * aggregate usage only when carry_over_usages enables the feature. */
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { EntInterval, PooledBalanceResetMode } from "@autumn/shared";
 import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect";
 import { getPooledBalanceDbState } from "@tests/integration/billing/pooled-balances/utils/getPooledBalanceDbState";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
+import { pollUntilAsserted } from "@tests/utils/genUtils";
 import chalk from "chalk";
 import {
 	completeImmediateItemTransition,
@@ -41,6 +43,41 @@ const runPooledTransition = async ({
 		toItems: [pooledMessages({ grant: TO_GRANT })],
 		trackedFeatureIds: [TestFeature.Messages],
 	});
+
+	if (expectUsageCarried) {
+		const expectedBalance =
+			FROM_GRANT * ITEM_TRANSITION_ENTITY_COUNT - TOTAL_USAGE;
+		await expectBalanceCorrect({
+			autumn: scenario.autumnV2_3,
+			customerId: scenario.customerId,
+			featureId: TestFeature.Messages,
+			remaining: expectedBalance,
+		});
+		const startedAt = Date.now();
+		const before = await getPooledBalanceDbState({
+			db: scenario.ctx.db,
+			customerId: scenario.customerId,
+		});
+		console.log("[pooled-pre-transition]", {
+			cachedBalance: expectedBalance,
+			persistedBalance: before.poolCustomerEntitlements[0]?.balance,
+		});
+		await pollUntilAsserted({
+			timeoutMs: 15_000,
+			fetch: () =>
+				getPooledBalanceDbState({
+					db: scenario.ctx.db,
+					customerId: scenario.customerId,
+				}),
+			assert: (state) => {
+				expect(state.poolCustomerEntitlements).toHaveLength(1);
+				expect(state.poolCustomerEntitlements[0].balance).toBe(expectedBalance);
+			},
+		});
+		console.log("[pooled-pre-transition-settled]", {
+			elapsedMs: Date.now() - startedAt,
+		});
+	}
 
 	await completeImmediateItemTransition({ scenario, carryOverUsages });
 
