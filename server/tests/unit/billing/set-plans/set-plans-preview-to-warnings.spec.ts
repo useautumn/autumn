@@ -466,6 +466,75 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
+	const backdateRecreateMessage = ({
+		requestedProrationBehavior,
+		billingCycleAnchorMs = NOON_UTC + 12 * DAY_MS,
+		restartsCycle = false,
+		lineItems = [],
+	}: {
+		requestedProrationBehavior?: "none" | "prorate_immediately";
+		billingCycleAnchorMs?: number;
+		restartsCycle?: boolean;
+		lineItems?: LineItem[];
+	}) =>
+		stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				subscriptionBackdateStartMs: NOON_UTC - 40 * DAY_MS,
+				billingCycleAnchorMs,
+				requestedProrationBehavior,
+				immediatePhase: {
+					starts_at: NOON_UTC - 40 * DAY_MS,
+					plans: [],
+					...(restartsCycle
+						? { billing_cycle_anchor: "phase_start" as const }
+						: {}),
+				},
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_live",
+					status: "active",
+					start_date: Math.floor((NOON_UTC - 30 * DAY_MS) / 1000),
+				}),
+				stripeDiscounts: [],
+			},
+			lineItems,
+		}).find(({ type }) => type === "subscription_recreated_backdated")?.message;
+
+	const gapLineItem = {
+		amount: 33.33,
+		amountAfterDiscounts: 33.33,
+		context: {
+			currency: "usd",
+			direction: "charge",
+			backdate: { startsAt: NOON_UTC - 40 * DAY_MS, cycleCount: 1 },
+		},
+	} as LineItem;
+
+	test("a backdate before the live start says whether the time before it is billed", () => {
+		expect(backdateRecreateMessage({})).toBe(
+			"The current subscription will be cancelled and recreated starting 20 Aug 2026; the time before 30 Aug 2026 isn't billed; billing continues from 11 Oct 2026.",
+		);
+		expect(
+			backdateRecreateMessage({
+				requestedProrationBehavior: "prorate_immediately",
+				lineItems: [gapLineItem],
+			}),
+		).toBe(
+			"The current subscription will be cancelled and recreated starting 20 Aug 2026; $33.33 is billed for the time before 30 Aug 2026; billing continues from 11 Oct 2026.",
+		);
+	});
+
+	test("a backdate that restarts the cycle says when the restarted cycle renews", () => {
+		expect(
+			backdateRecreateMessage({
+				restartsCycle: true,
+				billingCycleAnchorMs: NOON_UTC + 21 * DAY_MS,
+			}),
+		).toBe(
+			"The current subscription will be cancelled and recreated starting 20 Aug 2026; the time before 30 Aug 2026 isn't billed; the billing cycle restarts from it and renews on 20 Oct 2026.",
+		);
+	});
+
 	test("a customer with no subscription is told a new one will be created", () => {
 		const warnings = stateWarnings({
 			billingContext: {

@@ -184,6 +184,27 @@ describe(
 			).toBeUndefined();
 		});
 
+		test("restarting the cycle on the backdated start passes, but not alongside an anchor", () => {
+			const restartsCycle = {
+				immediatePhase: {
+					starts_at: BACKDATED_START,
+					plans: [],
+					billing_cycle_anchor: "phase_start" as const,
+				},
+			};
+			expect(
+				rejectionOf({ billingContext: backdateContext(restartsCycle) }),
+			).toBeUndefined();
+			expect(
+				rejectionOf({
+					billingContext: backdateContext({
+						...restartsCycle,
+						requestedBillingCycleAnchor: PERIOD_END,
+					}),
+				}),
+			).toEqual(conflict("billing_cycle_anchor"));
+		});
+
 		test("a start more than 250 invoice lines back is rejected", () => {
 			const startsAt = addInterval({
 				from: NOW,

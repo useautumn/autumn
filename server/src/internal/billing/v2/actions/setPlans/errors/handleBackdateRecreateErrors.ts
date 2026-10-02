@@ -8,6 +8,7 @@ import {
 import { exceedsStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
+import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { setPlansError } from "./setPlansError";
 
 const trialConflict = ({
@@ -18,14 +19,17 @@ const trialConflict = ({
 	!!billingContext.trialContext?.trialEndsAt ||
 	billingContext.replacedStripeSubscription?.status === "trialing";
 
+/** Only the live period end, or a restart on the backdated start alone, keeps every period billed once. */
 const movesBillingCycleAnchor = ({
-	requestedBillingCycleAnchor,
+	billingContext,
 	periodEndMs,
 }: {
-	requestedBillingCycleAnchor: CreateScheduleBillingContext["requestedBillingCycleAnchor"];
+	billingContext: CreateScheduleBillingContext;
 	periodEndMs: number;
 }) => {
+	const { requestedBillingCycleAnchor } = billingContext;
 	if (requestedBillingCycleAnchor === undefined) return false;
+	if (restartsCycleAtBackdatedStart({ billingContext })) return true;
 	if (requestedBillingCycleAnchor === "now") return true;
 	return (
 		truncateMsToSecondPrecision(requestedBillingCycleAnchor) !== periodEndMs
@@ -75,12 +79,7 @@ const backdateConflict = ({
 	) {
 		return { conflict: "period_ended" };
 	}
-	if (
-		movesBillingCycleAnchor({
-			requestedBillingCycleAnchor: billingContext.requestedBillingCycleAnchor,
-			periodEndMs,
-		})
-	) {
+	if (movesBillingCycleAnchor({ billingContext, periodEndMs })) {
 		return { conflict: "billing_cycle_anchor" };
 	}
 	if (

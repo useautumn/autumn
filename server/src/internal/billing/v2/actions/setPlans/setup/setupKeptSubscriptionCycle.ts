@@ -1,11 +1,14 @@
 import {
 	type BillingBehavior,
 	type CreateScheduleBillingContext,
+	getCycleEnd,
+	getSmallestInterval,
 	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
+import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 
 type KeptSubscriptionCycle = Partial<
 	Pick<
@@ -14,9 +17,33 @@ type KeptSubscriptionCycle = Partial<
 	>
 >;
 
+/** The first renewal of a cycle restarted on the backdated start: its next boundary after now. */
+const backdatedCycleRenewalMs = ({
+	billingContext,
+}: {
+	billingContext: CreateScheduleBillingContext;
+}) => {
+	const { subscriptionBackdateStartMs, currentEpochMs, fullProducts } =
+		billingContext;
+	const smallestInterval = getSmallestInterval({
+		prices: fullProducts.flatMap(({ prices }) => prices),
+		excludeOneOff: true,
+	});
+	if (subscriptionBackdateStartMs === undefined || !smallestInterval) {
+		return undefined;
+	}
+
+	return getCycleEnd({
+		anchor: subscriptionBackdateStartMs,
+		interval: smallestInterval.interval,
+		intervalCount: smallestInterval.intervalCount,
+		now: currentEpochMs,
+	});
+};
+
 /**
  * A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it.
- * A backdate recreate always does, and leaves proration to the plan changes it makes.
+ * A backdate recreate does too unless it restarts the cycle on its start, and leaves proration to the plan changes it makes.
  */
 export const setupKeptSubscriptionCycle = ({
 	billingContext,
@@ -36,7 +63,12 @@ export const setupKeptSubscriptionCycle = ({
 	if (periodEndMs === undefined || periodEndMs <= currentEpochMs) return {};
 
 	if (isBackdateRecreate({ billingContext })) {
-		return { billingCycleAnchorMs: periodEndMs, requestedProrationBehavior };
+		const billingCycleAnchorMs = restartsCycleAtBackdatedStart({
+			billingContext,
+		})
+			? (backdatedCycleRenewalMs({ billingContext }) ?? periodEndMs)
+			: periodEndMs;
+		return { billingCycleAnchorMs, requestedProrationBehavior };
 	}
 
 	const declaredSegmentIds = new Set(
