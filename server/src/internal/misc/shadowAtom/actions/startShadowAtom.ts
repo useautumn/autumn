@@ -19,7 +19,7 @@ export const startShadowAtom = ({
 		env,
 		fn: async () => {
 			const setup = await getShadowAtomDeployer().start({
-				names: shadowAtomCacheNames({ env }),
+				names: shadowAtomCacheNames(),
 				auth: { mode: "multi_tenant", tokenHash: adminTokenHash },
 				machine,
 			});

@@ -78,7 +78,7 @@ describe("starting an Atom on alien", () => {
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			names: shadowAtomCacheNames({ env: AppEnv.Sandbox }),
+			names: shadowAtomCacheNames(),
 			auth: { mode: "multi_tenant", tokenHash: "admin_hash" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 		});

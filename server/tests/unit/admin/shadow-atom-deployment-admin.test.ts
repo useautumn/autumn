@@ -149,8 +149,8 @@ test("staff create the shadow Atom with the customer's alien stack, in multi-ten
 		setup_url: "https://setup.example",
 	});
 	const [started] = calls.started;
-	expect(started?.externalId).toEndWith("autumn-internal:shadow-atom:sandbox");
-	expect(started?.label).toEndWith("autumn-internal-shadow-atom-sandbox");
+	expect(started?.externalId).toEndWith("autumn-internal-shadow-atom");
+	expect(started?.label).toEndWith("autumn-internal-shadow-atom");
 	expect(started?.pools).toEqual({
 		stateful: { machine: "c7g.xlarge", machines: 1 },
 	});
