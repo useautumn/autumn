@@ -17,8 +17,6 @@ export type CommitterContext = {
 	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 	/** Read on every flush start; absent means the boot config is the only source. */
 	control?: { read(): CommitterControl };
-	/** Customers whose state was too large to snapshot, so their rows were deleted instead. */
-	onSnapshotSizeCapped?: (params: { customers: number }) => void;
 };
 
 /** A transient failure is retried until the store answers or the committer stops; the record is never given up on. */
@@ -35,8 +33,8 @@ export type CommitterConfig = {
 	/** Row changes one flush may carry; a hot partition cannot crowd out the others. */
 	maxRowsPerFlush: number;
 	retry: FlushRetryPolicy;
-	/** Absent: no flush touches `subject_snapshots`. */
-	snapshots?: { partitionCount: number; maxBytes: number };
+	/** The deployment's partition count, written beside every snapshot row; absent, no flush touches `subject_snapshots`. */
+	snapshots?: { partitionCount: number };
 };
 
 export type PartitionPosition = { topic: string; partition: number };
