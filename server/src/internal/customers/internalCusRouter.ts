@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { adminAuthMiddleware } from "@/honoMiddlewares/adminAuthMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetAllocationState } from "@/internal/balances/allocate/handlers/handleGetAllocationState.js";
 import { handleGetCustomer } from "@/internal/customers/internalHandlers/handleGetCustomer.js";
@@ -39,6 +40,7 @@ internalCusRouter.post(
 internalCusRouter.get("/:customer_id/products", ...handleListCustomerProducts);
 internalCusRouter.get(
 	"/:customer_id/allocation_state",
+	adminAuthMiddleware,
 	...handleGetAllocationState,
 );
 internalCusRouter.get(
