@@ -298,6 +298,20 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		]);
 	});
 
+	test("a retained canceling plan claimed after its cancel date still ends on it", () => {
+		const { diff } = expectAllInvariants({
+			rows: [
+				savedRow({ id: "pro_row", plan: pro, endsAt: B, canceling: true }),
+			],
+			desired: desiredTimeline({
+				segments: [desiredSegment({ plan: ent, startsAt: C, phaseIndex: 1 })],
+			}),
+			policies: policiesFor({ undeclared: "retain" }),
+		});
+
+		expect(describeOperations(diff)).toEqual(["insert:ent:h1:C-never"]);
+	});
+
 	test("a canceling plan is recreated when the policy asks for it", () => {
 		const { diff } = expectAllInvariants({
 			rows: [

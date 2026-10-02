@@ -54,7 +54,7 @@ const firstClaimStart = ({
 	return claimStarts.length > 0 ? Math.min(...claimStarts) : null;
 };
 
-/** An undeclared live plan kept running until a declared plan claims its group, or the schedule ends. */
+/** An undeclared live plan kept running until a declared plan claims its group, the schedule ends, or it cancels. */
 const retainedSegment = ({
 	savedSegment,
 	desired,
@@ -64,9 +64,11 @@ const retainedSegment = ({
 	desired: DesiredTimeline;
 	now: number;
 }): PlannedSegment | undefined => {
+	const [liveRow] = savedSegment.rows;
 	const endsAt = earliestEnd([
 		firstClaimStart({ savedSegment, desired, now }),
 		savedSegment.onLiveSubscription ? desired.endsAt : null,
+		liveRow?.canceling ? savedSegment.endsAt : null,
 	]);
 	if (endsAt !== null && endsAt <= now) return undefined;
 
