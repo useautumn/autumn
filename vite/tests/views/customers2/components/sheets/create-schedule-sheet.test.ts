@@ -873,19 +873,35 @@ describe("buildInitialValues", () => {
 	});
 
 	test("with a subscription in focus, seeds its plans and the free plans only", () => {
-		const onSubscription = (id: string, stripeSubscriptionId: string) =>
+		const onSubscription = ({
+			id,
+			productId,
+			stripeSubscriptionId,
+		}: {
+			id: string;
+			productId: string;
+			stripeSubscriptionId: string;
+		}) =>
 			({
 				...makeCusProduct({
 					id,
-					productId: "prod_1",
+					productId,
 					customerPrices: [{ price: makeFixedPrice() }],
 				}),
 				subscription_ids: [stripeSubscriptionId],
 			}) as FullCusProduct;
 		const customer = makeCustomer({
 			customerProducts: [
-				onSubscription("cp_picked", "sub_picked"),
-				onSubscription("cp_other", "sub_other"),
+				onSubscription({
+					id: "cp_picked",
+					productId: "prod_1",
+					stripeSubscriptionId: "sub_picked",
+				}),
+				onSubscription({
+					id: "cp_other",
+					productId: "prod_other",
+					stripeSubscriptionId: "sub_other",
+				}),
 				makeCusProduct({ id: "cp_free", productId: "prod_2" }),
 			],
 		});
@@ -931,7 +947,8 @@ describe("buildInitialValues", () => {
 	});
 
 	test("with a not-started schedule in focus, seeds its scheduled plans", () => {
-		const startsAt = Date.now() + 86_400_000;
+		const nowMs = 1_000 * DAY;
+		const startsAt = nowMs + DAY;
 		const scheduledCustomerProduct = {
 			...makeCusProduct({
 				id: "cp_scheduled",
@@ -958,14 +975,19 @@ describe("buildInitialValues", () => {
 			customer,
 			products,
 			stripeScheduleId: "sub_sched_1",
+			nowMs,
 		});
 
-		const seededProductIds = [
-			...result.phases.flatMap((phase) => phase.plans),
-			...result.unscheduledPlans,
-		].map((plan) => plan.productId);
-		expect(seededProductIds).toContain("prod_1");
-		expect(seededProductIds).not.toContain("prod_2");
+		expect(
+			result.phases.map((phase) => ({
+				startsAt: phase.startsAt,
+				productIds: phase.plans.map((plan) => plan.productId),
+			})),
+		).toEqual([
+			{ startsAt: null, productIds: [""] },
+			{ startsAt, productIds: ["prod_1"] },
+		]);
+		expect(result.unscheduledPlans).toEqual([]);
 	});
 
 	test("handles undefined customer gracefully", () => {
