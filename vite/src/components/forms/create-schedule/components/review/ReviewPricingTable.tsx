@@ -10,6 +10,8 @@ import type {
 	ReviewPhaseBadge,
 } from "../../utils/review/types/reviewChange";
 
+const NO_TOTAL = "—";
+
 const BADGE_COPY: Record<
 	ReviewPhaseBadge,
 	{ label: string; className: string }
@@ -92,10 +94,12 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 				className={cn(
 					PRICING_TABLE_TOTAL_CLASS,
 					"text-sm tabular-nums",
-					row.value?.isBasis ? "text-tertiary-foreground" : "text-foreground",
+					row.value && !row.value.isBasis
+						? "text-foreground"
+						: "text-tertiary-foreground",
 				)}
 			>
-				{row.value?.amount}
+				{row.value?.amount ?? NO_TOTAL}
 			</span>
 		</div>
 	);
