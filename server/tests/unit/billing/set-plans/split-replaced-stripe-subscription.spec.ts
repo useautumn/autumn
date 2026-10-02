@@ -95,22 +95,6 @@ describe("splitReplacedStripeSubscription", () => {
 		});
 	});
 
-	test("a backdated first phase moves an active subscription and its schedule aside to be recreated", () => {
-		const active = subscription({ id: "sub_active", status: "active" });
-
-		expect(
-			splitReplacedStripeSubscription({
-				stripeSubscription: active,
-				stripeSubscriptionSchedule: schedule({ subscriptionId: "sub_active" }),
-				backdatesFirstPhase: true,
-			}),
-		).toEqual({
-			stripeSubscription: undefined,
-			stripeSubscriptionSchedule: undefined,
-			replacedStripeSubscription: active,
-		});
-	});
-
 	test("a pending plan's subscription that is still collectable is left alone", () => {
 		const active = subscription({ id: "sub_invoice_mode", status: "active" });
 

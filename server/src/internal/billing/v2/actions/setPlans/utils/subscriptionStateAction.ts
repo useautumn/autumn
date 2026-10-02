@@ -10,11 +10,8 @@ export type SubscriptionStateDecision = {
 	action: "update" | "create" | "cancel_and_create";
 	warning: Extract<
 		SetPlansPreviewWarning["type"],
-		| "subscription_replaced"
-		| "new_stripe_subscription"
-		| "subscription_recreated_backdated"
+		"subscription_replaced" | "new_stripe_subscription"
 	> | null;
-	reason?: "backdate";
 };
 
 const UPDATE: SubscriptionStateDecision = { action: "update", warning: null };
@@ -25,12 +22,6 @@ const CREATE_NEW_SUBSCRIPTION: SubscriptionStateDecision = {
 const CANCEL_AND_CREATE: SubscriptionStateDecision = {
 	action: "cancel_and_create",
 	warning: "subscription_replaced",
-};
-
-const BACKDATE_RECREATE: SubscriptionStateDecision = {
-	action: "cancel_and_create",
-	warning: "subscription_recreated_backdated",
-	reason: "backdate",
 };
 
 /** Stripe won't collect on incomplete, unpaid or paused subscriptions, so set_plans replaces them. */
@@ -50,16 +41,8 @@ const SUBSCRIPTION_STATE_DECISIONS: Record<
 	checkout_session: CANCEL_AND_CREATE,
 };
 
-/** A subscription set_plans would update can't take a backdated start, so it is recreated from it instead. */
 export const subscriptionStateAction = ({
 	state,
-	backdatesFirstPhase = false,
 }: {
 	state: SubscriptionState;
-	backdatesFirstPhase?: boolean;
-}): SubscriptionStateDecision => {
-	const decision = SUBSCRIPTION_STATE_DECISIONS[state];
-	return backdatesFirstPhase && decision.action === "update"
-		? BACKDATE_RECREATE
-		: decision;
-};
+}): SubscriptionStateDecision => SUBSCRIPTION_STATE_DECISIONS[state];

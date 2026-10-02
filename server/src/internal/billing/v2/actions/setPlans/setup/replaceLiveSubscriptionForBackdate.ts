@@ -4,16 +4,10 @@ import type {
 } from "@autumn/shared";
 import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
 import { classifyFirstPhaseStart } from "./classifyFirstPhaseStart";
-import { splitReplacedStripeSubscription } from "./splitReplacedStripeSubscription";
-
-type LiveSubscriptionFields = Partial<
-	Pick<
-		MultiAttachBillingContext,
-		| "stripeSubscription"
-		| "stripeSubscriptionSchedule"
-		| "replacedStripeSubscription"
-	>
->;
+import {
+	type LiveSubscriptionFields,
+	replaceStripeSubscription,
+} from "./replaceStripeSubscription";
 
 /** A backdated first phase can't move a live subscription's start, so the subscription is recreated from it. */
 export const replaceLiveSubscriptionForBackdate = ({
@@ -48,9 +42,8 @@ export const replaceLiveSubscriptionForBackdate = ({
 		return {};
 	}
 
-	return splitReplacedStripeSubscription({
+	return replaceStripeSubscription({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
-		backdatesFirstPhase,
 	});
 };
