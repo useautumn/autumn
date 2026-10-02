@@ -23,9 +23,11 @@ const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_3 });
 const createThresholdPlan = async ({
 	prefix,
 	threshold,
+	featureId = TestFeature.Messages,
 }: {
 	prefix: string;
 	threshold: number;
+	featureId?: string;
 }) => {
 	const planId = `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -33,7 +35,7 @@ const createThresholdPlan = async ({
 		name: `Threshold billing ${prefix}`,
 		items: [
 			{
-				feature_id: TestFeature.Messages,
+				feature_id: featureId,
 				included: 0,
 				price: {
 					amount: 1,
@@ -377,6 +379,59 @@ test(
 		expect(recovered).toMatchObject({ allowed: true });
 	},
 	{ timeout: 240_000 },
+);
+
+test(
+	"threshold billing charges an invoice-credit balance",
+	async () => {
+		const planId = await createThresholdPlan({
+			prefix: "threshold_invoice_credit",
+			threshold: 100,
+			featureId: TestFeature.InvoiceCredits,
+		});
+		const { customerId, autumnV2_3, ctx } = await initScenario({
+			customerId: `threshold-billing-invoice-credit-${Math.random().toString(36).slice(2, 8)}`,
+			setup: [s.customer({ paymentMethod: "success" })],
+			actions: [],
+		});
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: planId,
+		});
+
+		// Action1 costs 0.2 credits per unit, so 700 units is 140 credits.
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			value: 700,
+		});
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		const invoices = await pollUntil({
+			fetch: () =>
+				ctx.stripeCli.invoices.list({ customer: customer.stripe_id! }),
+			until: ({ data }) =>
+				data.some(
+					(invoice) =>
+						invoice.metadata?.autumn_action_source === "threshold_billing" &&
+						invoice.status === "paid",
+				),
+			timeoutMs: 60_000,
+		});
+		const thresholdInvoice = invoices.data.find(
+			(invoice) =>
+				invoice.metadata?.autumn_action_source === "threshold_billing",
+		);
+		expect(thresholdInvoice?.total).toBe(10_000);
+
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId: TestFeature.InvoiceCredits,
+			usage: 40,
+		});
+	},
+	{ timeout: 120_000 },
 );
 
 const expectRejectedTrack = async ({

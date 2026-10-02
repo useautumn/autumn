@@ -37,11 +37,14 @@ export const computeRebalancedAutoTopUp = ({
 	featureId,
 	quantity,
 	prepaidCustomerEntitlementId,
+	allowInvoiceCreditBalance = false,
 }: {
 	fullCustomer: FullCustomer;
 	featureId: string;
 	quantity: number;
 	prepaidCustomerEntitlementId: string;
+	/** Only a settlement of already-tracked usage may credit an invoice-credit balance. */
+	allowInvoiceCreditBalance?: boolean;
 }): { deltas: AutoTopupRebalanceDelta[] } => {
 	if (quantity <= 0) return { deltas: [] };
 
@@ -56,7 +59,11 @@ export const computeRebalancedAutoTopUp = ({
 
 	if (!prepaidCusEnt) return { deltas: [] };
 
-	validateInvoiceCreditBalanceMutation({ customerEntitlement: prepaidCusEnt });
+	if (!allowInvoiceCreditBalance) {
+		validateInvoiceCreditBalanceMutation({
+			customerEntitlement: prepaidCusEnt,
+		});
+	}
 
 	// Only the purchased row's own customer or entity is paid down, as the worker does.
 	const prepaidOwner = ownerEntityOf(prepaidCusEnt);
