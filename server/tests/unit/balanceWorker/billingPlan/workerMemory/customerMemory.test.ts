@@ -85,16 +85,15 @@ describe("customer facets in worker memory", () => {
 		expect(customer.customer.currency).toBe("usd");
 	});
 
-	test("a currency lock leaves an existing currency alone and changes nothing", async () => {
+	test("a currency lock relocks an existing currency, as the Postgres path does", async () => {
 		const before = customerMemory({
 			customer: { ...newCustomer, currency: "eur" },
 		});
-		const { customer, mutation } = await applyPlanToWorkerMemory({
+		const { customer } = await applyPlanToWorkerMemory({
 			autumnBillingPlan: lockUsd,
 			memory: { customer: before },
 		});
-		expect(mutation?.changes).toEqual([]);
-		expect(customer.customer).toEqual(before.customer);
+		expect(customer.customer.currency).toBe("usd");
 	});
 
 	test("a plan that writes nothing the worker holds is never sent, so memory is untouched", async () => {

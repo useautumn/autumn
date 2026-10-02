@@ -3,9 +3,11 @@ import {
 	type ApiCustomerV3,
 	type ApiPlanV1,
 	ApiVersion,
+	type AttachParamsV0Input,
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanParamsV2Input,
+	ErrCode,
 	filterCustomerProductsByActiveStatuses,
 	filterCustomerProductsByStripeSubscriptionId,
 	findActiveCustomerProductById,
@@ -17,11 +19,16 @@ import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/conver
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { setCustomerRolloutPinned } from "@tests/utils/rolloutTestUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli";
+import { getBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
@@ -370,3 +377,100 @@ test(`${chalk.yellowBright("sync multi-currency: leftover USD lock allows EUR sy
 		(await CusService.getFull({ ctx, idOrInternalId: customerId })).currency,
 	).toBe("eur");
 });
+
+/** Routes the customer through the balance worker; a no-op where the override or twd edge-config already does. */
+const pinToBalanceWorker = ({ customerId }: { customerId: string }) =>
+	setCustomerRolloutPinned({ ctx, customerId, pinned: true });
+
+// Forced-off rollout (BALANCE_WORKER_ROLLOUT_ENABLED=false) cannot exercise the worker route.
+const workerRouteForcedOff = getBalanceWorkerRolloutOverride() === false;
+
+test.skipIf(workerRouteForcedOff)(
+	`${chalk.yellowBright("sync multi-currency (worker route): leftover USD lock relocks to EUR when no live USD product remains")}`,
+	async () => {
+		const planId = uniqueId("sync_mc_wk_relock");
+		await createPlan({ planId });
+		const product = await initializeCurrency({ planId, currency: "eur" });
+		const { customerId, autumnV1 } = await initScenario({
+			customerId: uniqueId("sync-mc-wk-relock"),
+			setup: [
+				s.customer({ paymentMethod: "success", data: { currency: "usd" } }),
+			],
+			actions: [],
+		});
+		await pinToBalanceWorker({ customerId });
+		const subscription = await createExternalSubscription({
+			customerId,
+			items: [
+				{
+					price: priceIdForCurrency({
+						product,
+						currency: "eur",
+						kind: "fixed",
+					}),
+				},
+			],
+		});
+
+		await syncSubscription({ autumnV1, customerId, subscription });
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductActive({ customer, productId: planId });
+		expect(
+			(await CusService.getFull({ ctx, idOrInternalId: customerId })).currency,
+		).toBe("eur");
+	},
+);
+
+test.skipIf(workerRouteForcedOff)(
+	`${chalk.yellowBright("sync multi-currency (worker route): live USD product keeps the lock and rejects the EUR sync")}`,
+	async () => {
+		const planId = uniqueId("sync_mc_wk_keep");
+		await createPlan({ planId });
+		const product = await initializeCurrency({ planId, currency: "eur" });
+		const usdPro = products.pro({
+			id: "sync_mc_wk_usd",
+			items: [items.monthlyMessages()],
+		});
+		const { customerId, autumnV1 } = await initScenario({
+			customerId: uniqueId("sync-mc-wk-keep"),
+			setup: [
+				s.customer({ paymentMethod: "success", data: { currency: "usd" } }),
+				s.products({ list: [usdPro] }),
+			],
+			actions: [],
+		});
+		await pinToBalanceWorker({ customerId });
+		// Autumn-only paid USD product: Stripe refuses a EUR subscription beside a live USD one.
+		await autumnV1.billing.attach<AttachParamsV0Input>({
+			customer_id: customerId,
+			product_id: usdPro.id,
+			no_billing_changes: true,
+		});
+		await expectProductActive({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			productId: usdPro.id,
+		});
+		const subscription = await createExternalSubscription({
+			customerId,
+			items: [
+				{
+					price: priceIdForCurrency({
+						product,
+						currency: "eur",
+						kind: "fixed",
+					}),
+				},
+			],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.CurrencyMismatch,
+			func: () => syncSubscription({ autumnV1, customerId, subscription }),
+		});
+
+		expect(
+			(await CusService.getFull({ ctx, idOrInternalId: customerId })).currency,
+		).toBe("usd");
+	},
+);

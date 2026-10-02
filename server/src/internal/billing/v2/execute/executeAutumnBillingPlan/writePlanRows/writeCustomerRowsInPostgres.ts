@@ -83,7 +83,7 @@ export const writeCustomerRowsInPostgres = async ({
 
 	// Lock / relock customer currency. No-op when already the target currency.
 	if (lockCustomerCurrency) {
-		await CusService.lockCurrencyIfUnset({
+		await CusService.lockOrRelockCurrency({
 			ctx,
 			internalCustomerId: lockCustomerCurrency.internalCustomerId,
 			currency: lockCustomerCurrency.currency,
