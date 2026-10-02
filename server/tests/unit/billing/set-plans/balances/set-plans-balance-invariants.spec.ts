@@ -98,7 +98,7 @@ const balanceFor = ({
 	return included({ featureId, allowance: quantity, usage });
 };
 
-/** Overage only exists where something is granted to exceed; one-off credits can't go below zero. */
+/** One-off credits can't go below zero; pay-per-use "overage" is simply more billable usage. */
 const isMeaningful = ({
 	kind,
 	prior,
@@ -106,10 +106,7 @@ const isMeaningful = ({
 	timing,
 	scheduledBy,
 }: BalanceCase) =>
-	!(
-		prior === "overage" &&
-		(kind === "payPerUse" || kind === "oneOffPrepaid")
-	) &&
+	!(prior === "overage" && kind === "oneOffPrepaid") &&
 	!(
 		scheduledBy === "savedSchedule" &&
 		(timing === "immediate" || operation === "keep")
