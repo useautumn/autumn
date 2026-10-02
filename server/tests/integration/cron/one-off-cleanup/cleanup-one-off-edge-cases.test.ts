@@ -23,6 +23,7 @@ import { cleanupOneOffCustomerProducts } from "@/internal/customers/cusProducts/
 import {
 	expectProductStatusesByOrder,
 	getFullCustomerWithExpired,
+	oneOffCleanupCustomer,
 	trackUsageForCleanup,
 } from "./utils/oneOffCleanupTestUtils.js";
 
@@ -31,52 +32,52 @@ import {
 // Product with unlimited: true has no balance concept, so it should never qualify for cleanup
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: oneoff-unlimited-never-depleted")}`, async () => {
-	const customerId = "cleanup-oneoff-unlimited-never-depleted";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: oneoff-unlimited-never-depleted")}`,
+	async () => {
+		const customerId = "cleanup-oneoff-unlimited-never-depleted";
 
-	const unlimitedMessagesItem = items.unlimitedMessages();
+		const unlimitedMessagesItem = items.unlimitedMessages();
 
-	const oneOff = products.oneOff({
-		id: "one-off-unlimited",
-		items: [unlimitedMessagesItem],
-	});
+		const oneOff = products.oneOff({
+			id: "one-off-unlimited",
+			items: [unlimitedMessagesItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [oneOffCleanupCustomer(), s.products({ list: [oneOff] })],
+			actions: [],
+		});
 
-	// Attach first
-	await autumnV1.billing.attach(
-		{ customer_id: customerId, product_id: oneOff.id },
-		{ timeout: 2000 },
-	);
+		// Attach first
+		await autumnV1.billing.attach(
+			{ customer_id: customerId, product_id: oneOff.id },
+			{ timeout: 2000 },
+		);
 
-	await timeout(2000);
+		await timeout(2000);
 
-	// Attach second
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-	});
+		// Attach second
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+		});
 
-	await timeout(2000);
+		await timeout(2000);
 
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
 
-	// Verify: both should stay active (unlimited features can never be "depleted")
-	const fullCus = await getFullCustomerWithExpired(customerId);
-	expectProductStatusesByOrder({
-		fullCus,
-		productId: oneOff.id,
-		expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
-	});
-});
+		// Verify: both should stay active (unlimited features can never be "depleted")
+		const fullCus = await getFullCustomerWithExpired(customerId);
+		expectProductStatusesByOrder({
+			fullCus,
+			productId: oneOff.id,
+			expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Entity-specific isolation
@@ -87,107 +88,110 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-unlimited-never-depleted"
 // Expected: Only FIRST product on Entity 0 should be expired
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: entity-isolation-only-same-entity-expires")}`, async () => {
-	const customerId = "cleanup-entity-isolation";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: entity-isolation-only-same-entity-expires")}`,
+	async () => {
+		const customerId = "cleanup-entity-isolation";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
 
-	const oneOff = products.oneOff({
-		id: "one-off",
-		items: [oneOffMessagesItem],
-	});
+		const oneOff = products.oneOff({
+			id: "one-off",
+			items: [oneOffMessagesItem],
+		});
 
-	const { autumnV1, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1, entities } = await initScenario({
+			customerId,
+			setup: [
+				oneOffCleanupCustomer(),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [oneOff] }),
+			],
+			actions: [],
+		});
 
-	// Entity 0: Attach first product
-	await autumnV1.billing.attach(
-		{
+		// Entity 0: Attach first product
+		await autumnV1.billing.attach(
+			{
+				customer_id: customerId,
+				product_id: oneOff.id,
+				entity_id: entities[0].id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			},
+			{ timeout: 2000 },
+		);
+
+		// Entity 0: Track first to 0
+		await trackUsageForCleanup(autumnV1, {
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			entity_id: entities[0].id,
+			value: 100,
+		});
+
+		await timeout(2000);
+
+		// Entity 0: Attach second product
+		await autumnV1.billing.attach(
+			{
+				customer_id: customerId,
+				product_id: oneOff.id,
+				entity_id: entities[0].id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			},
+			{ timeout: 2000 },
+		);
+
+		// Entity 0: Track second to 0
+		await trackUsageForCleanup(autumnV1, {
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			entity_id: entities[0].id,
+			value: 100,
+		});
+
+		await timeout(2000);
+
+		// Entity 1: Attach product (different entity)
+		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
-			entity_id: entities[0].id,
+			entity_id: entities[1].id,
 			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		},
-		{ timeout: 2000 },
-	);
+		});
 
-	// Entity 0: Track first to 0
-	await trackUsageForCleanup(autumnV1, {
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		entity_id: entities[0].id,
-		value: 100,
-	});
+		await timeout(2000);
 
-	await timeout(2000);
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
 
-	// Entity 0: Attach second product
-	await autumnV1.billing.attach(
-		{
-			customer_id: customerId,
-			product_id: oneOff.id,
-			entity_id: entities[0].id,
-			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		},
-		{ timeout: 2000 },
-	);
+		// Verify: Only the FIRST product on Entity 0 should be expired
+		// The second product on Entity 0 stays active (no newer active on same entity)
+		// The product on Entity 1 stays active (different entity)
+		const fullCus = await getFullCustomerWithExpired(customerId);
 
-	// Entity 0: Track second to 0
-	await trackUsageForCleanup(autumnV1, {
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		entity_id: entities[0].id,
-		value: 100,
-	});
+		// Get customer products for this product, sorted by created_at
+		const cusProducts = fullCus.customer_products
+			.filter((cp) => cp.product.id === oneOff.id)
+			.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
 
-	await timeout(2000);
+		// Should have 3 customer products total
+		expect(cusProducts.length).toBe(3);
 
-	// Entity 1: Attach product (different entity)
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		entity_id: entities[1].id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
+		// First (Entity 0, oldest): Should be expired (depleted + has newer active on same entity)
+		expect(cusProducts[0].status).toBe(CusProductStatus.Expired);
 
-	await timeout(2000);
+		// Second (Entity 0, newer): Should stay active (no newer active product exists for this entity)
+		expect(cusProducts[1].status).toBe(CusProductStatus.Active);
 
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
-
-	// Verify: Only the FIRST product on Entity 0 should be expired
-	// The second product on Entity 0 stays active (no newer active on same entity)
-	// The product on Entity 1 stays active (different entity)
-	const fullCus = await getFullCustomerWithExpired(customerId);
-
-	// Get customer products for this product, sorted by created_at
-	const cusProducts = fullCus.customer_products
-		.filter((cp) => cp.product.id === oneOff.id)
-		.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
-
-	// Should have 3 customer products total
-	expect(cusProducts.length).toBe(3);
-
-	// First (Entity 0, oldest): Should be expired (depleted + has newer active on same entity)
-	expect(cusProducts[0].status).toBe(CusProductStatus.Expired);
-
-	// Second (Entity 0, newer): Should stay active (no newer active product exists for this entity)
-	expect(cusProducts[1].status).toBe(CusProductStatus.Active);
-
-	// Third (Entity 1): Should stay active (different entity, isolated)
-	expect(cusProducts[2].status).toBe(CusProductStatus.Active);
-});
+		// Third (Entity 1): Should stay active (different entity, isolated)
+		expect(cusProducts[2].status).toBe(CusProductStatus.Active);
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Multiple boolean features - newer product missing one
@@ -202,62 +206,62 @@ test.concurrent(`${chalk.yellowBright("cleanup: entity-isolation-only-same-entit
 // 5. Verify the first stays active (newer is missing adminRights)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: boolean-coverage-newer-missing-feature")}`, async () => {
-	const customerId = "cleanup-boolean-coverage-missing";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: boolean-coverage-newer-missing-feature")}`,
+	async () => {
+		const customerId = "cleanup-boolean-coverage-missing";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
-	const dashboardItem = items.dashboard();
-	const adminRightsItem = items.adminRights();
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
+		const dashboardItem = items.dashboard();
+		const adminRightsItem = items.adminRights();
 
-	// Product with messages + dashboard + adminRights
-	const oneOff = products.oneOff({
-		id: "one-off-two-bool",
-		items: [oneOffMessagesItem, dashboardItem, adminRightsItem],
-	});
+		// Product with messages + dashboard + adminRights
+		const oneOff = products.oneOff({
+			id: "one-off-two-bool",
+			items: [oneOffMessagesItem, dashboardItem, adminRightsItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [oneOffCleanupCustomer(), s.products({ list: [oneOff] })],
+			actions: [],
+		});
 
-	// Attach first product (with both dashboard + adminRights), deplete messages
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
+		// Attach first product (with both dashboard + adminRights), deplete messages
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		});
 
-	// Attach second product with custom items that exclude adminRights
-	// This simulates a scenario where the product was updated to remove a boolean feature
-	// between the two attaches
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		items: [oneOffMessagesItem, dashboardItem], // No adminRights
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
+		// Attach second product with custom items that exclude adminRights
+		// This simulates a scenario where the product was updated to remove a boolean feature
+		// between the two attaches
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+			items: [oneOffMessagesItem, dashboardItem], // No adminRights
+			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+		});
 
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
 
-	// Verify: BOTH should stay active
-	// First stays active because the newer product is missing adminRights (would lose entitlement)
-	// Second stays active because it's the newest
-	const fullCus = await getFullCustomerWithExpired(customerId);
-	expectProductStatusesByOrder({
-		fullCus,
-		productId: oneOff.id,
-		expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
-	});
-});
+		// Verify: BOTH should stay active
+		// First stays active because the newer product is missing adminRights (would lose entitlement)
+		// Second stays active because it's the newest
+		const fullCus = await getFullCustomerWithExpired(customerId);
+		expectProductStatusesByOrder({
+			fullCus,
+			productId: oneOff.id,
+			expectedStatuses: [CusProductStatus.Active, CusProductStatus.Active],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Multiple boolean features - same product, verify boolean check works
@@ -265,67 +269,67 @@ test.concurrent(`${chalk.yellowBright("cleanup: boolean-coverage-newer-missing-f
 // This verifies that when newer product HAS all booleans, cleanup proceeds.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("cleanup: boolean-coverage-same-product-all-covered")}`, async () => {
-	const customerId = "cleanup-boolean-all-covered";
+test.concurrent(
+	`${chalk.yellowBright("cleanup: boolean-coverage-same-product-all-covered")}`,
+	async () => {
+		const customerId = "cleanup-boolean-all-covered";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
-	const dashboardItem = items.dashboard();
-	const adminRightsItem = items.adminRights();
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
+		const dashboardItem = items.dashboard();
+		const adminRightsItem = items.adminRights();
 
-	// Product with messages + both boolean features
-	const oneOff = products.oneOff({
-		id: "one-off-two-booleans",
-		items: [oneOffMessagesItem, dashboardItem, adminRightsItem],
-	});
+		// Product with messages + both boolean features
+		const oneOff = products.oneOff({
+			id: "one-off-two-booleans",
+			items: [oneOffMessagesItem, dashboardItem, adminRightsItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [oneOffCleanupCustomer(), s.products({ list: [oneOff] })],
+			actions: [],
+		});
 
-	// Attach first, deplete messages
-	await autumnV1.billing.attach(
-		{
+		// Attach first, deplete messages
+		await autumnV1.billing.attach(
+			{
+				customer_id: customerId,
+				product_id: oneOff.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			},
+			{ timeout: 2000 },
+		);
+
+		await trackUsageForCleanup(autumnV1, {
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 100,
+		});
+
+		await timeout(2000);
+
+		// Attach second (same product, so has both dashboard AND adminRights)
+		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
 			options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		},
-		{ timeout: 2000 },
-	);
+		});
 
-	await trackUsageForCleanup(autumnV1, {
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 100,
-	});
+		await timeout(2000);
 
-	await timeout(2000);
+		// Run cleanup
+		await cleanupOneOffCustomerProducts({ ctx });
 
-	// Attach second (same product, so has both dashboard AND adminRights)
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-	});
-
-	await timeout(2000);
-
-	// Run cleanup
-	await cleanupOneOffCustomerProducts({ ctx });
-
-	// Verify: first should be expired because newer product has ALL boolean features
-	const fullCus = await getFullCustomerWithExpired(customerId);
-	expectProductStatusesByOrder({
-		fullCus,
-		productId: oneOff.id,
-		expectedStatuses: [CusProductStatus.Expired, CusProductStatus.Active],
-	});
-});
+		// Verify: first should be expired because newer product has ALL boolean features
+		const fullCus = await getFullCustomerWithExpired(customerId);
+		expectProductStatusesByOrder({
+			fullCus,
+			productId: oneOff.id,
+			expectedStatuses: [CusProductStatus.Expired, CusProductStatus.Active],
+		});
+	},
+);
