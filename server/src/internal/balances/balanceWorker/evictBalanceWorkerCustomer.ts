@@ -9,7 +9,7 @@ const STALE_ROWS_MESSAGE =
 	"[balance-worker] evict failed; worker rows may be stale";
 
 /** Drops the owner's copy after another writer changed the rows, whatever the rollout says; a failure is logged, never fails the write.
- *  One the worker never confirmed (a partition mid-handoff, as on every deploy) goes on the command log its next owner reads in order. */
+ *  If the worker path is unavailable or unconfirmed (e.g. a partition mid-handoff), the evict is queued on the command log for the next owner. */
 export async function evictBalanceWorkerCustomer({
 	ctx,
 	customerId,
