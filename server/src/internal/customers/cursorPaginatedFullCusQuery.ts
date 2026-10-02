@@ -250,7 +250,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		FROM customers c
 		WHERE c.org_id = ${orgId}
 			AND c.env = ${env}
-			${customerId ? sql`AND (c.id = ${customerId} OR c.internal_id = ${customerId})` : sql`${customerListFilterSql}${cursorPredicate}`}
+			${customerId ? sql`AND (c.id = ${customerId} OR c.internal_id = ${customerId})` : sql`${customerListFilterSql} ${cursorPredicate}`}
 		ORDER BY c.created_at ${orderDirection}, c.id ${orderDirection}
 		LIMIT ${fetchLimit}
 		),
