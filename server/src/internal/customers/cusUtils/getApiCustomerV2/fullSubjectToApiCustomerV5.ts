@@ -4,12 +4,12 @@ import {
 	type ApiVersionClass,
 	type CustomerLegacyData,
 	type FullSubject,
-	getApiCustomerBaseV2,
 	mergePlanBillingControlsForResponse,
-	type SharedContext,
 	shouldAggregateEntityData,
 	subjectWithoutEntityData,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
 
 /** customers.get's body before expands and version changes: plan billing controls merged, internal fields stripped. */
 export const fullSubjectToApiCustomerV5 = async ({
@@ -19,7 +19,7 @@ export const fullSubjectToApiCustomerV5 = async ({
 	withAutumnId = false,
 	invoices,
 }: {
-	ctx: SharedContext;
+	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	apiVersion: ApiVersionClass;
 	withAutumnId?: boolean;

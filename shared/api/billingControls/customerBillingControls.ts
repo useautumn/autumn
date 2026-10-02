@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import { rejectDuplicateBillingControls } from "../../models/cusModels/billingControls/duplicates/rejectDuplicateBillingControls.js";
 import { ApiAutoTopupSchema } from "./autoTopup.js";
+import { BalanceAllocationControlsSchema } from "./balanceAllocation.js";
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
@@ -14,6 +15,10 @@ import { ApiUsageLimitSchema, WritableUsageLimitsShape } from "./usageLimit.js";
  * `CustomerBillingControlsParamsSchema` (models), which remains strict.
  */
 export const CustomerBillingControlsResponseSchema = z.object({
+	balance_allocations: BalanceAllocationControlsSchema.optional().meta({
+		description:
+			"Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling.",
+	}),
 	auto_topups: z.array(ApiAutoTopupSchema).optional().meta({
 		description: "List of auto top-up configurations per feature.",
 	}),
@@ -40,6 +45,10 @@ export type CustomerBillingControlsResponse = z.infer<
 
 /** Update-request variant: usage limits may also be counter-only writes. */
 export const CustomerBillingControlsUpdateSchema =
-	CustomerBillingControlsParamsSchema.extend(WritableUsageLimitsShape).check(
-		rejectDuplicateBillingControls,
-	);
+	CustomerBillingControlsParamsSchema.extend({
+		...WritableUsageLimitsShape,
+		balance_allocations: BalanceAllocationControlsSchema.optional().meta({
+			description:
+				"Replace all customer-level balance allocations. Omit to keep existing allocations; pass [] to release all. Available only when updating an existing customer.",
+		}),
+	}).check(rejectDuplicateBillingControls);

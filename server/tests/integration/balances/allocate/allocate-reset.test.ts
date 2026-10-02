@@ -144,7 +144,7 @@ test.concurrent(
 		await waitForSharedBalanceInDb({ ctx, customerId, remainingBalance: 3000 });
 		await allocateMessages({
 			customerId,
-			allocations: [{ entity_id: a, amount: 0 }],
+			allocations: [{ entity_id: b, amount: 3000 }],
 		});
 
 		await autumnV2_3.billing.attach({
@@ -153,7 +153,10 @@ test.concurrent(
 		});
 		await allocateMessages({
 			customerId,
-			allocations: [{ entity_id: c, amount: 3000 }],
+			allocations: [
+				{ entity_id: b, amount: 3000 },
+				{ entity_id: c, amount: 3000 },
+			],
 		});
 
 		// 6k requested on 3k left: each share is cut by half.

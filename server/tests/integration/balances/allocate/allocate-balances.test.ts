@@ -1,21 +1,9 @@
-/**
- * balances.allocate holds shares of a customer's shared monthly credits for entities.
- *
- * Contract:
- *   POST /balances.allocate { customer_id, feature_id, interval, allocations[] }
- *     -> { allocations[{ entity_id, amount, granted, usage, remaining }], shared{ granted, remaining, allocated, unallocated } }
- *   An entity draws its own share, then unallocated credits; never another entity's share.
- *   First call: usage from before tracking is absorbed from the end of the list.
- *   Errors: duplicate entity, unknown entity, over-allocation, wrong interval.
- *
- * Red (before):  the route doesn't exist.
- * Green (after): responses and gating as above.
- */
-
 import { expect, test } from "bun:test";
 import {
-	type AllocateBalancesParamsV0,
+	type ApiCustomerV5,
+	type ApiEntityV2,
 	ApiVersion,
+	type BalanceAllocationControl,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -25,9 +13,36 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { expectAllocatedMessages } from "./utils/allocateTestUtils.js";
 import { expectSharedRemaining } from "./utils/expectSharedRemaining.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
+
+const canonicalAllocationControls = ({
+	controls,
+}: {
+	controls: BalanceAllocationControl[] | undefined;
+}) =>
+	controls
+		?.map((control) => ({
+			...control,
+			allocations: [...control.allocations].sort((a, b) =>
+				a.entity_id.localeCompare(b.entity_id),
+			),
+		}))
+		.sort((a, b) => a.feature_id.localeCompare(b.feature_id));
+
+const expectAllocationControls = ({
+	actual,
+	expected,
+}: {
+	actual: BalanceAllocationControl[] | undefined;
+	expected: BalanceAllocationControl[];
+}) => {
+	expect(canonicalAllocationControls({ controls: actual })).toEqual(
+		canonicalAllocationControls({ controls: expected }),
+	);
+};
 
 const setupSharedPool = async ({ customerId }: { customerId: string }) => {
 	const shared = products.base({
@@ -59,13 +74,18 @@ const allocate = async ({
 	allocations,
 }: {
 	customerId: string;
-	allocations: AllocateBalancesParamsV0["allocations"];
+	allocations: BalanceAllocationControl["allocations"];
 }) => {
-	const response = await autumnV2_3.balances.allocate({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		interval: ResetInterval.Month,
-		allocations,
+	const response = await autumnV2_3.customers.update(customerId, {
+		billing_controls: {
+			balance_allocations: [
+				{
+					feature_id: TestFeature.Messages,
+					interval: ResetInterval.Month,
+					allocations,
+				},
+			],
+		},
 	});
 	await warmCaches({ customerId });
 	return response;
@@ -87,6 +107,132 @@ const trackAs = ({
 		value,
 	});
 
+test("allocation controls: omit preserves, replacement releases omitted entities, empty clears", async () => {
+	const customerId = "allocate-controls-lifecycle";
+	const { a, b } = await setupSharedPool({ customerId });
+	const control = {
+		feature_id: TestFeature.Messages,
+		interval: ResetInterval.Month,
+		allocations: [
+			{ entity_id: a, amount: 6000 },
+			{ entity_id: b, amount: 2000 },
+		],
+	};
+	const initial = await autumnV2_3.customers.update(customerId, {
+		billing_controls: { balance_allocations: [control] },
+	});
+	expectAllocationControls({
+		actual: initial.billing_controls.balance_allocations,
+		expected: [control],
+	});
+	const omitted = await autumnV2_3.customers.update(customerId, {
+		billing_controls: {},
+	});
+	expectAllocationControls({
+		actual: omitted.billing_controls.balance_allocations,
+		expected: [control],
+	});
+	const replacement = {
+		...control,
+		allocations: [{ entity_id: b, amount: 3000 }],
+	};
+	const replaced = await autumnV2_3.customers.update(customerId, {
+		billing_controls: { balance_allocations: [replacement] },
+	});
+	expectAllocationControls({
+		actual: replaced.billing_controls.balance_allocations,
+		expected: [replacement],
+	});
+	expect(replaced.balances[TestFeature.Messages]).toMatchObject({
+		allocated: 3000,
+		unallocated: 7000,
+	});
+	const released = await autumnV2_3.entities.get<ApiEntityV2>(customerId, a);
+	expect(
+		released.balances[TestFeature.Messages].breakdown?.[0].allocation,
+	).toBeNull();
+	const cleared = await autumnV2_3.customers.update(customerId, {
+		billing_controls: { balance_allocations: [] },
+	});
+	expectAllocationControls({
+		actual: cleared.billing_controls.balance_allocations,
+		expected: [],
+	});
+	expect(cleared.balances[TestFeature.Messages]).toMatchObject({
+		granted: 10000,
+		remaining: 10000,
+		usage: 0,
+	});
+	expect(cleared.balances[TestFeature.Messages].allocated).toBeUndefined();
+	expect(cleared.balances[TestFeature.Messages].unallocated).toBeUndefined();
+});
+
+test("allocation controls: invalid second feature leaves the entire configuration unchanged", async () => {
+	const customerId = "allocate-controls-atomic";
+	const shared = products.base({
+		id: `${customerId}-shared`,
+		items: [
+			items.monthlyMessages({ includedUsage: 10000 }),
+			items.monthlyCredits({ includedUsage: 1000 }),
+		],
+	});
+	const { entities } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [shared] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [s.billing.attach({ productId: shared.id })],
+	});
+	const original = [
+		{
+			feature_id: TestFeature.Messages,
+			interval: ResetInterval.Month,
+			allocations: [{ entity_id: entities[0].id, amount: 5000 }],
+		},
+		{
+			feature_id: TestFeature.Credits,
+			interval: ResetInterval.Month,
+			allocations: [{ entity_id: entities[0].id, amount: 500 }],
+		},
+	];
+	await autumnV2_3.customers.update(customerId, {
+		billing_controls: { balance_allocations: original },
+	});
+	await expectAutumnError({
+		errCode: "allocation_exceeds_available",
+		func: () =>
+			autumnV2_3.customers.update(customerId, {
+				billing_controls: {
+					balance_allocations: [
+						{
+							...original[0],
+							allocations: [{ entity_id: entities[1].id, amount: 8000 }],
+						},
+						{
+							...original[1],
+							allocations: [{ entity_id: entities[1].id, amount: 1001 }],
+						},
+					],
+				},
+			}),
+	});
+	const unchanged = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+	expectAllocationControls({
+		actual: unchanged.billing_controls?.balance_allocations,
+		expected: original,
+	});
+	expect(unchanged.balances[TestFeature.Messages]).toMatchObject({
+		allocated: 5000,
+		remaining: 10000,
+	});
+	expect(unchanged.balances[TestFeature.Credits]).toMatchObject({
+		allocated: 500,
+		remaining: 1000,
+	});
+});
+
 test.concurrent(
 	`${chalk.yellowBright("allocate1: Kyle's split — A is held to its 5k share, B keeps its 5k")}`,
 	async () => {
@@ -100,11 +246,27 @@ test.concurrent(
 				{ entity_id: b, amount: 5000 },
 			],
 		});
-		expect(response.allocations).toMatchObject([
-			{ entity_id: a, amount: 5000, granted: 5000, usage: 0, remaining: 5000 },
-			{ entity_id: b, amount: 5000, granted: 5000, usage: 0, remaining: 5000 },
-		]);
-		expect(response.shared).toEqual({
+		await expectAllocatedMessages({
+			customerId,
+			response: response,
+			expected: [
+				{
+					entity_id: a,
+					amount: 5000,
+					granted: 5000,
+					usage: 0,
+					remaining: 5000,
+				},
+				{
+					entity_id: b,
+					amount: 5000,
+					granted: 5000,
+					usage: 0,
+					remaining: 5000,
+				},
+			],
+		});
+		expect(response.balances[TestFeature.Messages]).toMatchObject({
 			granted: 10000,
 			remaining: 10000,
 			allocated: 10000,
@@ -150,11 +312,15 @@ test.concurrent(
 				{ entity_id: b, amount: 5000 },
 			],
 		});
-		expect(response.allocations).toMatchObject([
-			{ entity_id: a, granted: 5000, usage: 0, remaining: 5000 },
-			{ entity_id: b, granted: 5000, usage: 4000, remaining: 1000 },
-		]);
-		expect(response.shared).toEqual({
+		await expectAllocatedMessages({
+			customerId,
+			response: response,
+			expected: [
+				{ entity_id: a, granted: 5000, usage: 0, remaining: 5000 },
+				{ entity_id: b, granted: 5000, usage: 4000, remaining: 1000 },
+			],
+		});
+		expect(response.balances[TestFeature.Messages]).toMatchObject({
 			granted: 10000,
 			remaining: 6000,
 			allocated: 10000,
@@ -162,14 +328,22 @@ test.concurrent(
 		});
 
 		// Later calls count real usage: releasing and re-adding B gives no fresh 5k.
-		await allocate({ customerId, allocations: [{ entity_id: b, amount: 0 }] });
+		await allocate({
+			customerId,
+			allocations: [{ entity_id: a, amount: 5000 }],
+		});
 		const readded = await allocate({
 			customerId,
-			allocations: [{ entity_id: b, amount: 5000 }],
+			allocations: [
+				{ entity_id: a, amount: 5000 },
+				{ entity_id: b, amount: 5000 },
+			],
 		});
-		expect(readded.allocations).toMatchObject([
-			{ entity_id: b, granted: 5000, usage: 4000, remaining: 1000 },
-		]);
+		await expectAllocatedMessages({
+			customerId,
+			response: readded,
+			expected: [{ entity_id: b, granted: 5000, usage: 4000, remaining: 1000 }],
+		});
 	},
 );
 
@@ -180,7 +354,7 @@ test.concurrent(
 		const { a, b } = await setupSharedPool({ customerId });
 
 		await expectAutumnError({
-			errCode: "duplicate_allocation_entity",
+			errCode: "invalid_inputs",
 			func: () =>
 				allocate({
 					customerId,
@@ -212,11 +386,16 @@ test.concurrent(
 		await expectAutumnError({
 			errCode: "no_shared_balance_for_interval",
 			func: () =>
-				autumnV2_3.balances.allocate({
-					customer_id: customerId,
-					feature_id: TestFeature.Messages,
-					interval: ResetInterval.Year,
-					allocations: [{ entity_id: a, amount: 1 }],
+				autumnV2_3.customers.update(customerId, {
+					billing_controls: {
+						balance_allocations: [
+							{
+								feature_id: TestFeature.Messages,
+								interval: ResetInterval.Year,
+								allocations: [{ entity_id: a, amount: 1 }],
+							},
+						],
+					},
 				}),
 		});
 	},

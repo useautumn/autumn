@@ -286,6 +286,7 @@ const laneParam = <T extends z.ZodType>({
 
 export const CustomerBillingControlsParamsSchema = z
 	.object({
+		balance_allocations: z.never().optional().meta({ internal: true }),
 		auto_topups: laneParam({
 			schema: AutoTopupParamsSchema,
 			description: "List of auto top-up configurations per feature.",

@@ -16,6 +16,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { getBalanceAllocationControls } from "@/internal/balances/allocate/getBalanceAllocationControls.js";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
@@ -87,6 +88,11 @@ export const getApiCustomerBase = async ({
 		flags: apiFlags,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 		billing_controls: {
+			balance_allocations: await getBalanceAllocationControls({
+				ctx,
+				internalCustomerId: fullCus.internal_id,
+				allocations: fullCus.balance_allocations,
+			}),
 			auto_topups: fullCus.auto_topups ?? undefined,
 			spend_limits: fullCus.spend_limits ?? undefined,
 			usage_limits: usageLimits,

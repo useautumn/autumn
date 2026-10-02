@@ -143,6 +143,7 @@ export const mergePlanBillingControlsForResponse = ({
 	});
 
 	return {
+		balance_allocations: billingControls.balance_allocations,
 		usage_limits: preserveEmpty(usageLimits, billingControls.usage_limits),
 		spend_limits: preserveEmpty(spendLimits, billingControls.spend_limits),
 		overage_allowed: preserveEmpty(
