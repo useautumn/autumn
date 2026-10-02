@@ -9,6 +9,7 @@ import {
 	type ProductV2,
 } from "@autumn/shared";
 import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
+import { customerStatePlanToApiPlan } from "@/components/forms/customer-state/customerStatePlanToApiPlan";
 import { EMPTY_CUSTOMER_STATE_PLAN } from "@/components/forms/customer-state/customerStateSchema";
 import {
 	buildInitialValues,
@@ -471,7 +472,7 @@ describe("customerProductToCustomerStatePlan", () => {
 		expect(adminItem!.feature_id).toBe("admin_rights");
 	});
 
-	test("custom plan includes product catalog items missing from customer data", () => {
+	test("custom plan leaves out catalog items the customer does not hold", () => {
 		const basePrice = makeFixedPrice({ amount: 2000, interval: "month" });
 		(basePrice as any).is_custom = true;
 		const cusProduct = makeCusProduct({
@@ -500,13 +501,75 @@ describe("customerProductToCustomerStatePlan", () => {
 		const dashboardItem = plan.items!.find(
 			(item) => item.feature_id === "dashboard",
 		);
-		expect(dashboardItem).toBeDefined();
+		expect(dashboardItem).toBeUndefined();
 
 		const priceItem = plan.items!.find(
 			(item) => item.price != null && !item.feature_id,
 		);
 		expect(priceItem).toBeDefined();
 		expect(priceItem!.price).toBe(2000);
+	});
+
+	test("an untouched custom plan without a base price is requested without the catalog's", () => {
+		const overagePrice = makeUsagePrice({
+			id: "price_credits_overage",
+			internalProductId: "int_growth",
+			entitlementId: "ent_credits_overage",
+			featureId: "credits",
+		});
+		const overageEntitlement = makeEntitlementWithFeature({
+			id: "ent_credits_overage",
+			internalProductId: "int_growth",
+			featureId: "credits",
+			featureName: "Credits",
+			allowance: 0,
+		});
+		const pooledEntitlement = {
+			...makeEntitlementWithFeature({
+				id: "ent_credits_pooled",
+				internalProductId: "int_growth",
+				featureId: "credits",
+				featureName: "Credits",
+				allowance: 10_000,
+			}),
+			pooled: true,
+		};
+		const growth = makeCusProduct({
+			productId: "growth",
+			isCustom: true,
+			customerPrices: [{ id: "cp_overage", price: overagePrice } as any],
+			customerEntitlements: [
+				{ id: "ce_overage", entitlement: overageEntitlement } as any,
+				{ id: "ce_pooled", entitlement: pooledEntitlement } as any,
+			],
+		});
+		const products = [
+			makeProduct({
+				id: "growth",
+				items: [
+					{
+						feature_id: null,
+						price: 500,
+						interval: ProductItemInterval.Month,
+					} as any,
+				],
+			}),
+		];
+
+		const plan = customerProductToCustomerStatePlan({
+			cusProduct: growth,
+			products,
+		});
+		const requested = customerStatePlanToApiPlan({
+			plan,
+			products,
+			features: [overageEntitlement.feature as any],
+		});
+
+		expect(
+			plan.items?.some((item) => item.price != null && !item.feature_id),
+		).toBe(false);
+		expect(requested.customize?.price).toBeNull();
 	});
 
 	test("computes prepaid options from backend options", () => {

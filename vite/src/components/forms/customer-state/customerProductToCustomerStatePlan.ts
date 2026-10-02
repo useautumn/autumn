@@ -21,9 +21,7 @@ export function customerProductToCustomerStatePlan({
 		cusProduct.is_custom ||
 		cusProduct.customer_prices.some((cp) => cp.price.is_custom) ||
 		cusProduct.customer_entitlements.some((ce) => ce.entitlement.is_custom);
-	const items = isCustom
-		? reconstructCustomItems({ cusProduct, product })
-		: null;
+	const items = isCustom ? reconstructCustomItems({ cusProduct }) : null;
 
 	// A custom plan can sell a different pack size than the catalog.
 	const prepaidItems = (items ?? product?.items ?? []).filter(
