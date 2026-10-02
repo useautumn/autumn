@@ -2,8 +2,8 @@ import {
 	AffectedResource,
 	ApiVersion,
 	GetCustomerQuerySchema,
-	UpdateCustomerParamsV0Schema,
 	Scopes,
+	UpdateCustomerParamsV0Schema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions";

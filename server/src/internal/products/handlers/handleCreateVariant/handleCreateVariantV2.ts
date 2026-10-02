@@ -1,7 +1,4 @@
-import {
-	CreateVariantParamsV2Schema,
-	Scopes,
-} from "@autumn/shared";
+import { CreateVariantParamsV2Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { createVariant } from "../../../product/actions/createVariant/createVariant.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";

@@ -1,4 +1,4 @@
-import { sql, type SQLWrapper } from "drizzle-orm";
+import { type SQLWrapper, sql } from "drizzle-orm";
 import { planLicenseFullProductJson } from "@/internal/licenses/repos/utils/planLicenseFullProductSql.js";
 
 /**

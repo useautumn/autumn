@@ -41,9 +41,7 @@ type FilterReplaceLiveRow = {
 };
 
 /** Buckets live from-rows by grant delta so one UPDATE can apply each patch. */
-export const groupFilterReplaceRows = <
-	LiveRow extends FilterReplaceLiveRow,
->({
+export const groupFilterReplaceRows = <LiveRow extends FilterReplaceLiveRow>({
 	rows,
 	toEntitlement,
 }: {

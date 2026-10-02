@@ -3,7 +3,6 @@ import { ByocCacheStatus } from "@autumn/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ShadowAtomDeploymentCard } from "../../../src/views/admin/shadow-atom/ShadowAtomDeploymentCard";
 import { ShadowAtomOrgList } from "../../../src/views/admin/shadow-atom/ShadowAtomOrgList";
-import { ShadowAtomResultsTable } from "../../../src/views/admin/shadow-atom/ShadowAtomResultsTable";
 import { ShadowAtomRolloutPanel } from "../../../src/views/admin/shadow-atom/ShadowAtomRolloutPanel";
 import {
 	toShadowAtomSettings,
@@ -13,10 +12,21 @@ import type {
 	ShadowAtomConfigView,
 	ShadowAtomDeployment,
 	ShadowAtomEnvView,
+	ShadowAtomNames,
 	ShadowAtomRollout,
 } from "../../../src/views/admin/shadow-atom/shadowAtomTypes";
 
 const noop = () => {};
+const names: ShadowAtomNames = {
+	orgsById: {
+		org_test_1: { id: "org_test_1", name: "Example Org", slug: "example-org" },
+	},
+	customerNamesByOrgId: {
+		org_test_1: {
+			cus_in: { name: "Pinned In Person", email: "in@example.com" },
+		},
+	},
+};
 const saved = async () => true;
 
 const rollout = (
@@ -117,6 +127,7 @@ const renderOrgs = ({
 	renderToStaticMarkup(
 		<ShadowAtomOrgList
 			envConfig={envConfig}
+			names={names}
 			issued={issued}
 			onRegister={saved}
 			onUnregister={noop}
@@ -130,6 +141,7 @@ describe("orgs on the shadow Atom", () => {
 		const html = renderOrgs({ envConfig: envView() });
 
 		expect(html).toContain("No org is on the shadow Atom.");
+		expect(html).toContain("Search orgs by name or slug");
 		expect(html).toContain(
 			"Registering and unregistering need a ready shadow Atom",
 		);
@@ -148,75 +160,12 @@ describe("orgs on the shadow Atom", () => {
 			issued: { orgId: "org_test_1", token: "atom_secret_example" },
 		});
 
-		expect(html).toContain("org_test_1");
+		expect(html).toContain("Example Org");
+		expect(html).toContain("example-org · org_test_1");
+		expect(html).toContain("Token for Example Org");
 		expect(html).toContain("atom_secret_example");
 		expect(html).toContain("Shown once");
 		expect(html).not.toContain("Registering and unregistering need");
-	});
-});
-
-describe("shadow results", () => {
-	test("a server without Axiom says so", () => {
-		const html = renderToStaticMarkup(
-			<ShadowAtomResultsTable
-				results={{ available: false, range: "1h", orgs: [] }}
-			/>,
-		);
-
-		expect(html).toContain("Axiom is not configured");
-	});
-
-	test("no lines in the window reads as empty", () => {
-		const html = renderToStaticMarkup(
-			<ShadowAtomResultsTable
-				results={{ available: true, range: "24h", orgs: [] }}
-			/>,
-		);
-
-		expect(html).toContain("No shadow checks in the last 24h.");
-	});
-
-	test("each org shows checks, match rate and p50/p99", () => {
-		const html = renderToStaticMarkup(
-			<ShadowAtomResultsTable
-				results={{
-					available: true,
-					range: "1h",
-					orgs: [
-						{
-							org_id: "org_test_1",
-							checks: 1200,
-							matches: 990,
-							mismatches: 10,
-							timeouts: 150,
-							errors: 50,
-							match_rate: 0.99,
-							p50_ms: 3.4,
-							p99_ms: 41.2,
-						},
-						{
-							org_id: "org_test_2",
-							checks: 3,
-							matches: 0,
-							mismatches: 0,
-							timeouts: 3,
-							errors: 0,
-							match_rate: null,
-							p50_ms: 300,
-							p99_ms: 300,
-						},
-					],
-				}}
-			/>,
-		);
-
-		expect(html).toContain("org_test_1");
-		expect(html).toContain("1,200");
-		expect(html).toContain("99.00%");
-		expect(html).toContain("3 ms");
-		expect(html).toContain("41 ms");
-		expect(html).toContain("150 / 50");
-		expect(html).toContain("—");
 	});
 });
 
@@ -225,6 +174,7 @@ describe("rollout panel", () => {
 		const html = renderToStaticMarkup(
 			<ShadowAtomRolloutPanel
 				rollout={rollout()}
+				names={names}
 				onSave={saved}
 				isSaving={false}
 			/>,
@@ -244,13 +194,18 @@ describe("rollout panel", () => {
 					orgs: { org_test_1: 50 },
 					customers: { org_test_1: { cus_in: true, cus_out: false } },
 				})}
+				names={names}
 				onSave={saved}
 				isSaving={false}
 			/>,
 		);
 
 		expect(html).toContain("50%");
-		expect(html).toContain("org_test_1 / cus_in");
+		expect(html).toContain("Example Org");
+		expect(html).toContain("Pinned In Person");
+		expect(html).toContain("in@example.com · cus_in");
+		expect(html).toContain("cus_out");
+		expect(html).toContain("Pick an org first");
 		expect(html).toContain("Pinned in");
 		expect(html).toContain("Pinned out");
 	});

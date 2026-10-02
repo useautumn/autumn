@@ -3,11 +3,13 @@ import { LIST_EMPTY, LIST_FRAME } from "../edge-config/rolloutRowStyles";
 import { ShadowAtomListRow } from "./ShadowAtomListRow";
 import { ShadowAtomOrgRegisterForm } from "./ShadowAtomOrgRegisterForm";
 import { ShadowAtomSecret } from "./ShadowAtomSecret";
-import type { ShadowAtomEnvView } from "./shadowAtomTypes";
+import { orgLabel } from "./shadowAtomNames";
+import type { ShadowAtomEnvView, ShadowAtomNames } from "./shadowAtomTypes";
 
 /** Orgs with a folder and a token on the env's shadow Atom; only these are pushed to and shadowed. */
 export const ShadowAtomOrgList = ({
 	envConfig,
+	names,
 	issued,
 	onRegister,
 	onUnregister,
@@ -15,6 +17,7 @@ export const ShadowAtomOrgList = ({
 	isBusy,
 }: {
 	envConfig: ShadowAtomEnvView;
+	names: ShadowAtomNames;
 	issued: { orgId: string; token: string } | null;
 	onRegister: ({ orgId }: { orgId: string }) => Promise<boolean>;
 	onUnregister: ({ orgId }: { orgId: string }) => void;
@@ -34,7 +37,7 @@ export const ShadowAtomOrgList = ({
 				{orgs.map(([orgId, { registeredAt }]) => (
 					<ShadowAtomListRow
 						key={orgId}
-						title={orgId}
+						{...orgLabel({ names, orgId })}
 						detail={`Registered ${format(registeredAt, "d MMM HH:mm")}`}
 						removeLabel={`Unregister ${orgId}`}
 						onRemove={() => onUnregister({ orgId })}
@@ -44,7 +47,7 @@ export const ShadowAtomOrgList = ({
 			</div>
 			{issued && (
 				<ShadowAtomSecret
-					label={`Token for ${issued.orgId}`}
+					label={`Token for ${orgLabel({ names, orgId: issued.orgId }).title}`}
 					value={issued.token}
 					hint="Shown once. Registering the org again rotates it."
 				/>

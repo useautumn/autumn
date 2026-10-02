@@ -1,9 +1,15 @@
-import { Button, Input, Switch } from "@autumn/ui";
+import { Button, Switch } from "@autumn/ui";
 import { useForm } from "@tanstack/react-form";
+import type {
+	RolloutCustomerOption,
+	RolloutOrg,
+} from "../edge-config/rolloutTypes";
+import { ShadowAtomCustomerPicker } from "./ShadowAtomCustomerPicker";
+import { ShadowAtomOrgPicker } from "./ShadowAtomOrgPicker";
 
 type Pin = { orgId: string; customerId: string; included: boolean };
 
-/** Pins one customer in or out of the shadow Atom, whatever the percents say. */
+/** Pins one customer, found by name within its org, in or out of the shadow Atom whatever the percents say. */
 export const ShadowAtomCustomerPinForm = ({
 	onPin,
 	isSaving,
@@ -12,42 +18,54 @@ export const ShadowAtomCustomerPinForm = ({
 	isSaving: boolean;
 }) => {
 	const form = useForm({
-		defaultValues: { orgId: "", customerId: "", included: true } as Pin,
+		defaultValues: {
+			org: null as RolloutOrg | null,
+			customer: null as RolloutCustomerOption | null,
+			included: true,
+		},
 		onSubmit: async ({ value, formApi }) => {
-			const pin = {
-				orgId: value.orgId.trim(),
-				customerId: value.customerId.trim(),
-				included: value.included,
-			};
-			if (isSaving || !pin.orgId || !pin.customerId) return;
-			if (await onPin(pin)) formApi.reset();
+			const { org, customer, included } = value;
+			if (isSaving || !org || !customer) return;
+			if (await onPin({ orgId: org.id, customerId: customer.id, included }))
+				formApi.reset();
 		},
 	});
 
 	return (
 		<form
-			className="flex flex-wrap items-center gap-2"
+			className="flex flex-wrap items-start gap-2"
 			onSubmit={(event) => {
 				event.preventDefault();
 				void form.handleSubmit();
 			}}
 		>
-			{(["orgId", "customerId"] as const).map((name) => (
-				<form.Field key={name} name={name}>
-					{(field) => (
-						<Input
-							value={field.state.value}
-							onChange={(event) => field.handleChange(event.target.value)}
-							placeholder={name === "orgId" ? "org id" : "customer id"}
-							aria-label={name === "orgId" ? "Pin org id" : "Pin customer id"}
-							className="h-8 w-48 font-mono text-xs"
-						/>
-					)}
-				</form.Field>
-			))}
+			<form.Field name="org">
+				{(field) => (
+					<ShadowAtomOrgPicker
+						value={field.state.value}
+						onChange={(org) => {
+							field.handleChange(org);
+							form.setFieldValue("customer", null);
+						}}
+					/>
+				)}
+			</form.Field>
+			<form.Subscribe selector={(state) => state.values.org?.id ?? null}>
+				{(orgId) => (
+					<form.Field name="customer">
+						{(field) => (
+							<ShadowAtomCustomerPicker
+								orgId={orgId}
+								value={field.state.value}
+								onChange={field.handleChange}
+							/>
+						)}
+					</form.Field>
+				)}
+			</form.Subscribe>
 			<form.Field name="included">
 				{(field) => (
-					<span className="flex items-center gap-1.5 text-xs text-foreground">
+					<span className="flex h-8 items-center gap-1.5 text-xs text-foreground">
 						<Switch
 							id="shadow-atom-pin-included"
 							checked={field.state.value}
@@ -61,8 +79,7 @@ export const ShadowAtomCustomerPinForm = ({
 			</form.Field>
 			<form.Subscribe
 				selector={(state) =>
-					state.values.orgId.trim() !== "" &&
-					state.values.customerId.trim() !== ""
+					state.values.org !== null && state.values.customer !== null
 				}
 			>
 				{(canSubmit) => (

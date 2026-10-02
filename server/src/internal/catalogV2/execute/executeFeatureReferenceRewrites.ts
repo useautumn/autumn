@@ -11,8 +11,8 @@ import type {
 	UpdateCreditSystemSchemaPlan,
 	UpdateFeaturePlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateFeaturePlan";
-import type { FeatureRewriteScopeIds } from "@/internal/features/repos/featureReferenceRewriteScopes.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import type { FeatureRewriteScopeIds } from "@/internal/features/repos/featureReferenceRewriteScopes.js";
 
 const scopeIds = ({
 	ctx,

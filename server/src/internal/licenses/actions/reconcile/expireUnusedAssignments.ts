@@ -28,11 +28,13 @@ export const expireUnusedAssignments = async ({
 	if (surplusAssignmentIds.length === 0) return;
 
 	const endedAt = Date.now();
-	const expiredSeats = await licenseAssignmentRepo.expireUnusedAssignmentsByIds({
-		db: ctx.db,
-		customerProductIds: surplusAssignmentIds,
-		endedAt,
-	});
+	const expiredSeats = await licenseAssignmentRepo.expireUnusedAssignmentsByIds(
+		{
+			db: ctx.db,
+			customerProductIds: surplusAssignmentIds,
+			endedAt,
+		},
+	);
 	if (expiredSeats.length === 0) return;
 
 	const outgoingCustomerProducts = await listFullCustomerProductsByIds({

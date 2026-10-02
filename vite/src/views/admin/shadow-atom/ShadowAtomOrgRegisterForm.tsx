@@ -1,5 +1,7 @@
-import { Button, Input } from "@autumn/ui";
+import { Button } from "@autumn/ui";
 import { useForm } from "@tanstack/react-form";
+import type { RolloutOrg } from "../edge-config/rolloutTypes";
+import { ShadowAtomOrgPicker } from "./ShadowAtomOrgPicker";
 
 export const ShadowAtomOrgRegisterForm = ({
 	onRegister,
@@ -11,40 +13,36 @@ export const ShadowAtomOrgRegisterForm = ({
 	disabled: boolean;
 }) => {
 	const form = useForm({
-		defaultValues: { orgId: "" },
+		defaultValues: { org: null as RolloutOrg | null },
 		onSubmit: async ({ value, formApi }) => {
-			const orgId = value.orgId.trim();
-			if (disabled || isSaving || !orgId) return;
-			if (await onRegister({ orgId })) formApi.reset();
+			if (disabled || isSaving || !value.org) return;
+			if (await onRegister({ orgId: value.org.id })) formApi.reset();
 		},
 	});
 
 	return (
 		<form
-			className="flex flex-wrap items-center gap-2"
+			className="flex flex-wrap items-start gap-2"
 			onSubmit={(event) => {
 				event.preventDefault();
 				void form.handleSubmit();
 			}}
 		>
-			<form.Field name="orgId">
+			<form.Field name="org">
 				{(field) => (
-					<Input
+					<ShadowAtomOrgPicker
 						value={field.state.value}
-						onChange={(event) => field.handleChange(event.target.value)}
-						placeholder="org id"
-						aria-label="Org id to register"
+						onChange={field.handleChange}
 						disabled={disabled}
-						className="h-8 w-56 font-mono text-xs"
 					/>
 				)}
 			</form.Field>
-			<form.Subscribe selector={(state) => state.values.orgId.trim() !== ""}>
-				{(hasOrgId) => (
+			<form.Subscribe selector={(state) => state.values.org !== null}>
+				{(hasOrg) => (
 					<Button
 						type="submit"
 						size="sm"
-						disabled={disabled || !hasOrgId}
+						disabled={disabled || !hasOrg}
 						isLoading={isSaving}
 					>
 						Register

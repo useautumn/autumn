@@ -69,7 +69,9 @@ const normalizeVariantSettingValue = ({
 	// both sides so those defaults line up and don't read as a change.
 	if (field === "config") {
 		const parsed = ProductConfigSchema.safeParse(value ?? {});
-		return JSON.stringify(sortDeep(parsed.success ? parsed.data : (value ?? {})));
+		return JSON.stringify(
+			sortDeep(parsed.success ? parsed.data : (value ?? {})),
+		);
 	}
 	if (field === "metadata") {
 		return JSON.stringify(sortDeep(value ?? {}));

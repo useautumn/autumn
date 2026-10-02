@@ -2,9 +2,9 @@ import {
 	AffectedResource,
 	ApiVersion,
 	InternalError,
+	Scopes,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
-	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";

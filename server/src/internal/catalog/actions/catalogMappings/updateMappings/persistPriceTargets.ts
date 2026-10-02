@@ -1,10 +1,10 @@
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	findMatchingStripePriceForConsumablePrice,
 	findMatchingStripePriceForFixedPrice,
 } from "@/internal/billing/v2/providers/stripe/utils/sync/matchUtils/stripePriceMatchesAutumnPrice.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { listExistingStripePricesByProduct } from "./matchExistingStripeBasePrice.js";
 import {
 	resetStripePriceResources,
@@ -12,11 +12,8 @@ import {
 } from "./resetStripePriceResources.js";
 import type { PriceTarget, PriceTargets } from "./updateMappingUtils.js";
 
-const shouldMatchExistingStripePrice = ({
-	target,
-}: {
-	target: PriceTarget;
-}) => target.matchExistingStripePrice && Boolean(target.stripeProductId);
+const shouldMatchExistingStripePrice = ({ target }: { target: PriceTarget }) =>
+	target.matchExistingStripePrice && Boolean(target.stripeProductId);
 
 const findMatchingStripePrice = ({
 	ctx,
@@ -70,7 +67,9 @@ export const persistPriceTargets = async ({
 	const pricesByProduct = await listExistingStripePricesByProduct({
 		ctx,
 		stripeProductIds: entries
-			.filter((entry) => shouldMatchExistingStripePrice({ target: entry.target }))
+			.filter((entry) =>
+				shouldMatchExistingStripePrice({ target: entry.target }),
+			)
 			.flatMap((entry) =>
 				entry.target.stripeProductId ? [entry.target.stripeProductId] : [],
 			),

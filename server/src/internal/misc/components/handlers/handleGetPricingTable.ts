@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import type { FullCusProduct, ProductV2 } from "@autumn/shared";
+import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";

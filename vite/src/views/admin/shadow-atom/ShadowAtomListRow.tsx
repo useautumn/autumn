@@ -7,15 +7,17 @@ import {
 	ROW_LAYOUT,
 } from "../edge-config/rolloutRowStyles";
 
-/** One row of a shadow Atom list: what it is, a detail, and remove. */
+/** One row of a shadow Atom list: its name with the id under it, a detail, and remove. */
 export const ShadowAtomListRow = ({
 	title,
+	subtitle,
 	detail,
 	removeLabel,
 	onRemove,
 	isRemoving,
 }: {
 	title: string;
+	subtitle: string;
 	detail: ReactNode;
 	removeLabel: string;
 	onRemove: () => void;
@@ -27,8 +29,13 @@ export const ShadowAtomListRow = ({
 			ROW_LAYOUT,
 		)}
 	>
-		<span className="truncate font-mono text-xs text-foreground">{title}</span>
-		<span className="text-xs tabular-nums text-tertiary-foreground">
+		<div className="order-1 min-w-0 md:order-none">
+			<p className="truncate text-sm font-medium text-foreground">{title}</p>
+			<p className="truncate font-mono text-tiny text-tertiary-foreground">
+				{subtitle}
+			</p>
+		</div>
+		<span className="order-3 text-xs tabular-nums text-tertiary-foreground md:order-none">
 			{detail}
 		</span>
 		<IconButton

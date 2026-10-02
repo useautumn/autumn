@@ -1,4 +1,8 @@
-import { AffectedResource, DeletePlanParamsV2Schema, Scopes } from "@autumn/shared";
+import {
+	AffectedResource,
+	DeletePlanParamsV2Schema,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { deleteProduct } from "../../../product/actions/deleteProduct.js";
 

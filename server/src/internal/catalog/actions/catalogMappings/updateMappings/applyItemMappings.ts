@@ -6,8 +6,8 @@ import {
 import { matchesPlanItemFilter } from "@utils/productV2Utils/productItemUtils/matchPlanItem.js";
 import type { ContextsByPlanId } from "./loadMappingContexts.js";
 import {
-	type PriceTargets,
 	normalizeStripeProductId,
+	type PriceTargets,
 	setPriceTarget,
 } from "./updateMappingUtils.js";
 

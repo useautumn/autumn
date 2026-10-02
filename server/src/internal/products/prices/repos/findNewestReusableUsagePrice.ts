@@ -5,9 +5,9 @@ import {
 	isConsumablePrice,
 	orgToCurrency,
 	type Price,
+	PriceType,
 	prices,
 	pricesAreSame,
-	PriceType,
 	products,
 	type UsagePriceConfig,
 } from "@autumn/shared";

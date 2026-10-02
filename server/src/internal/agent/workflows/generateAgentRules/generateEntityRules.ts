@@ -1,12 +1,12 @@
-import { AgentRulesSchema, entities, type EntityRules } from "@autumn/shared";
+import { AgentRulesSchema, type EntityRules, entities } from "@autumn/shared";
 import { and, count, desc, eq, isNotNull } from "drizzle-orm";
 import { isAxiomConfigured } from "@/external/axiom/initAxiom.js";
 import { queryAxiom } from "@/external/axiom/queryAxiom.js";
 import { escapeApl, isBillingUrl } from "@/external/axiom/utils/aplUtils.js";
 import {
 	axiomNumberFrom,
-	getAxiomResultDebug,
 	getAxiomMatchData,
+	getAxiomResultDebug,
 } from "@/external/axiom/utils/resultUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 

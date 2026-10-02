@@ -1,7 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
-import { deleteProductRowAndHandoffActive } from "@/internal/products/repos/activateHighestRemainingProduct";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { deleteProductRowAndHandoffActive } from "@/internal/products/repos/activateHighestRemainingProduct";
 
 /** Archive leaves `active` in place. Hard-delete of the active row promotes a survivor. */
 export const executeRemovePlans = async ({

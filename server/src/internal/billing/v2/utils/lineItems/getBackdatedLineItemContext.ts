@@ -25,7 +25,8 @@ export const getBackdatedLineItemContext = ({
 	billingTiming: LineItemContext["billingTiming"];
 }): BackdatedLineItemContext | undefined => {
 	if (!billingPeriod) return undefined;
-	if (billingContext.subscriptionBackdateStartMs === undefined) return undefined;
+	if (billingContext.subscriptionBackdateStartMs === undefined)
+		return undefined;
 	if (billingContext.stripeSubscription) return undefined;
 	if (direction !== "charge") return undefined;
 	if (billingTiming !== "in_advance") return undefined;

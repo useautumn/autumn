@@ -4,6 +4,7 @@ import { LIST_EMPTY, LIST_FRAME } from "../edge-config/rolloutRowStyles";
 import { ShadowAtomCustomerPinForm } from "./ShadowAtomCustomerPinForm";
 import { ShadowAtomListRow } from "./ShadowAtomListRow";
 import { ShadowAtomOrgPercentForm } from "./ShadowAtomOrgPercentForm";
+import { customerLabel, orgLabel } from "./shadowAtomNames";
 import {
 	pinCustomer,
 	removeOrgPercent,
@@ -13,6 +14,7 @@ import {
 } from "./shadowAtomRolloutEdits";
 import {
 	SHADOW_ATOM_SETTLE_MS,
+	type ShadowAtomNames,
 	type ShadowAtomRollout,
 } from "./shadowAtomTypes";
 
@@ -23,10 +25,12 @@ const Subheading = ({ children }: { children: string }) => (
 /** Whom the env's shadow Atom holds: its percent, org overrides and pinned customers. Every edit saves the whole rollout. */
 export const ShadowAtomRolloutPanel = ({
 	rollout,
+	names,
 	onSave,
 	isSaving,
 }: {
 	rollout: ShadowAtomRollout;
+	names: ShadowAtomNames;
 	/** Resolves true once saved, so a form keeps its draft when the save fails. */
 	onSave: (rollout: ShadowAtomRollout) => Promise<boolean>;
 	isSaving: boolean;
@@ -55,7 +59,7 @@ export const ShadowAtomRolloutPanel = ({
 					{orgOverrides.map(([orgId, percent]) => (
 						<ShadowAtomListRow
 							key={orgId}
-							title={orgId}
+							{...orgLabel({ names, orgId })}
 							detail={`${percent}%`}
 							removeLabel={`Remove override for ${orgId}`}
 							onRemove={() => void onSave(removeOrgPercent({ rollout, orgId }))}
@@ -77,18 +81,22 @@ export const ShadowAtomRolloutPanel = ({
 					{pins.length === 0 && (
 						<p className={LIST_EMPTY}>No customer is pinned.</p>
 					)}
-					{pins.map(({ orgId, customerId, included }) => (
-						<ShadowAtomListRow
-							key={`${orgId}/${customerId}`}
-							title={`${orgId} / ${customerId}`}
-							detail={included ? "Pinned in" : "Pinned out"}
-							removeLabel={`Unpin ${customerId}`}
-							onRemove={() =>
-								void onSave(unpinCustomer({ rollout, orgId, customerId }))
-							}
-							isRemoving={isSaving}
-						/>
-					))}
+					{pins.map(({ orgId, customerId, included }) => {
+						const customer = customerLabel({ names, orgId, customerId });
+						return (
+							<ShadowAtomListRow
+								key={`${orgId}/${customerId}`}
+								title={customer.title}
+								subtitle={`${orgLabel({ names, orgId }).title} · ${customer.subtitle}`}
+								detail={included ? "Pinned in" : "Pinned out"}
+								removeLabel={`Unpin ${customer.title}`}
+								onRemove={() =>
+									void onSave(unpinCustomer({ rollout, orgId, customerId }))
+								}
+								isRemoving={isSaving}
+							/>
+						);
+					})}
 				</div>
 				<ShadowAtomCustomerPinForm
 					onPin={(pin) => onSave(pinCustomer({ rollout, ...pin }))}

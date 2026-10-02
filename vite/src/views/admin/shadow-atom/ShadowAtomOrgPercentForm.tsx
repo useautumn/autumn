@@ -1,8 +1,9 @@
 import { Button, Input } from "@autumn/ui";
 import { useForm } from "@tanstack/react-form";
-import { isValidPercent } from "../edge-config/rolloutTypes";
+import { isValidPercent, type RolloutOrg } from "../edge-config/rolloutTypes";
+import { ShadowAtomOrgPicker } from "./ShadowAtomOrgPicker";
 
-/** An org id and its own percent, in place of the env's. */
+/** An org, found by name, and its own percent in place of the env's. */
 export const ShadowAtomOrgPercentForm = ({
 	onAdd,
 	isSaving,
@@ -17,36 +18,27 @@ export const ShadowAtomOrgPercentForm = ({
 	isSaving: boolean;
 }) => {
 	const form = useForm({
-		defaultValues: { orgId: "", percent: 100 },
+		defaultValues: { org: null as RolloutOrg | null, percent: 100 },
 		onSubmit: async ({ value, formApi }) => {
-			const orgId = value.orgId.trim();
-			if (isSaving || !orgId) return;
-			if (await onAdd({ orgId, percent: value.percent })) formApi.reset();
+			if (isSaving || !value.org) return;
+			if (await onAdd({ orgId: value.org.id, percent: value.percent }))
+				formApi.reset();
 		},
 	});
 
 	return (
 		<form
-			className="flex flex-wrap items-center gap-2"
+			className="flex flex-wrap items-start gap-2"
 			onSubmit={(event) => {
 				event.preventDefault();
 				void form.handleSubmit();
 			}}
 		>
-			<form.Field
-				name="orgId"
-				validators={{
-					onChange: ({ value }) =>
-						value.trim() ? undefined : "Enter an org id.",
-				}}
-			>
+			<form.Field name="org">
 				{(field) => (
-					<Input
+					<ShadowAtomOrgPicker
 						value={field.state.value}
-						onChange={(event) => field.handleChange(event.target.value)}
-						placeholder="org id"
-						aria-label="Org id"
-						className="h-8 w-56 font-mono text-xs"
+						onChange={field.handleChange}
 					/>
 				)}
 			</form.Field>
@@ -60,21 +52,28 @@ export const ShadowAtomOrgPercentForm = ({
 				}}
 			>
 				{(field) => (
-					<Input
-						type="number"
-						min={0}
-						max={100}
-						value={field.state.value}
-						onChange={(event) => field.handleChange(Number(event.target.value))}
-						aria-label="Org percent"
-						className="h-8 w-20 font-mono text-xs"
-					/>
+					<div className="flex flex-col gap-1">
+						<Input
+							type="number"
+							min={0}
+							max={100}
+							value={field.state.value}
+							onChange={(event) =>
+								field.handleChange(Number(event.target.value))
+							}
+							aria-label="Org percent"
+							className="h-8 w-20 font-mono text-xs"
+						/>
+						{field.state.meta.errors.length > 0 && (
+							<p role="alert" className="text-tiny text-destructive">
+								{field.state.meta.errors.join(" ")}
+							</p>
+						)}
+					</div>
 				)}
 			</form.Field>
 			<form.Subscribe
-				selector={(state) =>
-					state.canSubmit && state.values.orgId.trim() !== ""
-				}
+				selector={(state) => state.canSubmit && state.values.org !== null}
 			>
 				{(canSubmit) => (
 					<Button
@@ -86,19 +85,6 @@ export const ShadowAtomOrgPercentForm = ({
 						Set override
 					</Button>
 				)}
-			</form.Subscribe>
-			<form.Subscribe
-				selector={(state) =>
-					Object.values(state.fieldMeta).flatMap((meta) => meta?.errors ?? [])
-				}
-			>
-				{(errors) =>
-					errors.length > 0 && (
-						<p role="alert" className="basis-full text-tiny text-destructive">
-							{errors.join(" ")}
-						</p>
-					)
-				}
 			</form.Subscribe>
 		</form>
 	);

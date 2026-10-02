@@ -1,5 +1,5 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { MigrationService } from "@/internal/migrations/MigrationService";
 
 /**

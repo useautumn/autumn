@@ -5,8 +5,8 @@ import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/upd
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
-import { discardPendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingPlanIfAny";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { discardPendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingPlanIfAny";
 import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";

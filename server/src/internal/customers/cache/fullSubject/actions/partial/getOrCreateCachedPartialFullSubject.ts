@@ -1,8 +1,8 @@
-import { usesSubjectCache } from "../../usesSubjectCache.js";
 import type { CheckParams, FullSubject, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
+import { usesSubjectCache } from "../../usesSubjectCache.js";
 import { getOrCreateCachedFullSubject } from "../getOrCreateCachedFullSubject.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";
 

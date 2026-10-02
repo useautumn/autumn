@@ -37,7 +37,9 @@ export const shouldEnableStripeAutomaticTax = ({
 
 	// Use only the already-fetched Stripe customer. If setup did not fetch one,
 	// do not fetch again on the write path.
-	if (!customerHasUsableTaxLocationForStripeTax(billingContext.stripeCustomer)) {
+	if (
+		!customerHasUsableTaxLocationForStripeTax(billingContext.stripeCustomer)
+	) {
 		return false;
 	}
 

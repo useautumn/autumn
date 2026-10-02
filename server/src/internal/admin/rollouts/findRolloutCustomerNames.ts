@@ -1,7 +1,6 @@
 import { AppEnv, customers } from "@autumn/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { RolloutEntry } from "@/internal/misc/rollouts/rolloutSchemas.js";
 
 export type RolloutCustomerName = {
 	name: string | null;
@@ -14,7 +13,8 @@ export const findRolloutCustomerNames = async ({
 	customersByOrgId,
 }: {
 	db: DrizzleCli;
-	customersByOrgId: RolloutEntry["customers"];
+	/** Only the keys are read: org id, then customer id. */
+	customersByOrgId: Record<string, Record<string, unknown>>;
 }): Promise<Record<string, Record<string, RolloutCustomerName>>> => {
 	const orgFilters = Object.entries(customersByOrgId).map(
 		([orgId, orgCustomers]) =>

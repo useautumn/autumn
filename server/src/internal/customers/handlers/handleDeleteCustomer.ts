@@ -1,4 +1,8 @@
-import { AffectedResource, DeleteCustomerParamsSchema, Scopes } from "@autumn/shared";
+import {
+	AffectedResource,
+	DeleteCustomerParamsSchema,
+	Scopes,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";

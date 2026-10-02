@@ -1,11 +1,15 @@
-import { type AttachResponseV1, AttachResponseV1Schema, Scopes } from "@autumn/shared";
+import {
+	type AttachResponseV1,
+	AttachResponseV1Schema,
+	Scopes,
+} from "@autumn/shared";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { AttachBodyV0Schema } from "../../../../../shared/api/billing/attach/prevVersions/attachBodyV0";
 import {
 	AffectedResource,
 	applyResponseVersionChanges,
 } from "../../../../../shared/api/versionUtils/versionUtils";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { checkStripeConnections } from "../../customers/attach/attachRouter";
 import { getAttachParams } from "../../customers/attach/attachUtils/attachParams/getAttachParams";
 import { getAttachBranch } from "../../customers/attach/attachUtils/getAttachBranch";

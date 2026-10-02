@@ -28,8 +28,7 @@ export const runWithTransientDbRetry = async <T>({
 			return await run();
 		} catch (error) {
 			lastError = error;
-			const canRetry =
-				attempt < maxAttempts && isTransientDbError({ error });
+			const canRetry = attempt < maxAttempts && isTransientDbError({ error });
 			if (!canRetry) throw error;
 			onRetry?.({ error, attempt, maxAttempts });
 			await sleep({ ms: delayMs * 2 ** (attempt - 1) });

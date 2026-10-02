@@ -51,7 +51,7 @@ import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheCo
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
 import { handleGetAdminShadowAtomConfig } from "./handleGetAdminShadowAtomConfig.js";
-import { handleGetAdminShadowAtomResults } from "./handleGetAdminShadowAtomResults.js";
+import { handleGetAdminShadowAtomNames } from "./handleGetAdminShadowAtomNames.js";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
@@ -205,6 +205,10 @@ honoAdminRouter.delete(
 	...handleUnregisterAdminShadowAtomOrg,
 );
 honoAdminRouter.get(
+	"/shadow-atom-config/:env/names",
+	...handleGetAdminShadowAtomNames,
+);
+honoAdminRouter.get(
 	"/shadow-atom-config/:env/deployment",
 	...handleGetAdminShadowAtomDeployment,
 );
@@ -219,10 +223,6 @@ honoAdminRouter.patch(
 honoAdminRouter.delete(
 	"/shadow-atom-config/:env/deployment",
 	...handleDeleteAdminShadowAtomDeployment,
-);
-honoAdminRouter.get(
-	"/shadow-atom-config/:env/results",
-	...handleGetAdminShadowAtomResults,
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
 honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);

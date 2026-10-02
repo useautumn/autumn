@@ -3,11 +3,13 @@ import { ShadowAtomOrgList } from "./ShadowAtomOrgList";
 import { ShadowAtomSectionBody } from "./ShadowAtomSectionBody";
 import type { ShadowAtomEnv } from "./shadowAtomTypes";
 import { useShadowAtomConfig } from "./useShadowAtomConfig";
+import { useShadowAtomNames } from "./useShadowAtomNames";
 import { useShadowAtomOrgs } from "./useShadowAtomOrgs";
 
 export const ShadowAtomOrgsSection = ({ env }: { env: ShadowAtomEnv }) => {
 	const { query, envConfig } = useShadowAtomConfig({ env });
 	const { register, unregister, isBusy } = useShadowAtomOrgs({ env });
+	const names = useShadowAtomNames({ env });
 
 	return (
 		<RolloutSection
@@ -23,6 +25,7 @@ export const ShadowAtomOrgsSection = ({ env }: { env: ShadowAtomEnv }) => {
 				{envConfig && (
 					<ShadowAtomOrgList
 						envConfig={envConfig}
+						names={names}
 						issued={register.data ?? null}
 						onRegister={(params) =>
 							register.mutateAsync(params).then(

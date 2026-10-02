@@ -12,8 +12,8 @@ import {
 	rewardRepo,
 } from "@/internal/rewards/repos/index.js";
 import {
-	validateRewardTypeSupported,
 	validateRewardProgramTrigger,
+	validateRewardTypeSupported,
 } from "./validateRewardProgram.js";
 
 const UpdateRewardProgramParamsSchema = z.object({

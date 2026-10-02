@@ -10,8 +10,8 @@ import { queryAxiom } from "@/external/axiom/queryAxiom.js";
 import { escapeApl } from "@/external/axiom/utils/aplUtils.js";
 import {
 	axiomStringFrom,
-	getAxiomResultDebug,
 	getAxiomMatchData,
+	getAxiomResultDebug,
 } from "@/external/axiom/utils/resultUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
@@ -62,8 +62,11 @@ const resolveCreditFeatureId = ({
 	return "";
 };
 
-const resolveFallbackCreditFeatureId = ({ features }: { features: Feature[] }) =>
-	features.find(isConsumableCreditSystem)?.id ?? "";
+const resolveFallbackCreditFeatureId = ({
+	features,
+}: {
+	features: Feature[];
+}) => features.find(isConsumableCreditSystem)?.id ?? "";
 
 const getFeatures = async ({ ctx }: { ctx: AutumnContext }) =>
 	ctx.features.length > 0

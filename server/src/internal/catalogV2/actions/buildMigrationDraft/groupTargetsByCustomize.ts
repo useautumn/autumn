@@ -13,8 +13,7 @@ const customizeBucketKey = ({
 }: {
 	customize: DiffedCustomizePlanV1;
 	includeCustom: boolean;
-}): string =>
-	`${customizeToKey({ customize })}|includeCustom:${includeCustom}`;
+}): string => `${customizeToKey({ customize })}|includeCustom:${includeCustom}`;
 
 /** Bucket targets that share migratable customize and includeCustom. */
 export const groupTargetsByCustomize = ({

@@ -1,4 +1,4 @@
-import { FeatureType, type Feature } from "@autumn/shared";
+import { type Feature, FeatureType } from "@autumn/shared";
 
 export const sortRemoveFeatureIds = ({
 	features,

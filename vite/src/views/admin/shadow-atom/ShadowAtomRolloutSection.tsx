@@ -3,9 +3,11 @@ import { ShadowAtomRolloutPanel } from "./ShadowAtomRolloutPanel";
 import { ShadowAtomSectionBody } from "./ShadowAtomSectionBody";
 import type { ShadowAtomEnv } from "./shadowAtomTypes";
 import { useShadowAtomConfig } from "./useShadowAtomConfig";
+import { useShadowAtomNames } from "./useShadowAtomNames";
 
 export const ShadowAtomRolloutSection = ({ env }: { env: ShadowAtomEnv }) => {
 	const { query, envConfig, saveRollout } = useShadowAtomConfig({ env });
+	const names = useShadowAtomNames({ env });
 
 	return (
 		<RolloutSection
@@ -21,6 +23,7 @@ export const ShadowAtomRolloutSection = ({ env }: { env: ShadowAtomEnv }) => {
 				{envConfig && (
 					<ShadowAtomRolloutPanel
 						rollout={envConfig.rollout}
+						names={names}
 						onSave={(rollout) =>
 							saveRollout.mutateAsync({ rollout }).then(
 								() => true,

@@ -16,11 +16,13 @@ export const billingPlanToUpdateSubscriptionPreview = async ({
 	billingContext: UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<PreviewUpdateSubscriptionResponse> => {
-	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse({
-		ctx,
-		billingContext,
-		billingPlan,
-	});
+	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse(
+		{
+			ctx,
+			billingContext,
+			billingPlan,
+		},
+	);
 
 	const invoiceCredits = billingPlan.preview?.invoiceCredits;
 

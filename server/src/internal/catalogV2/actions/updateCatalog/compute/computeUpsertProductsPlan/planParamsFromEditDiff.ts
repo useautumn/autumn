@@ -36,9 +36,7 @@ export const planParamsFromEditDiff = ({
 	return {
 		...planParams,
 		items: applied.items.map((item) => toCreatePlanItemParams(item)),
-		...(editDiff.price !== undefined
-			? { price: applied.price ?? null }
-			: {}),
+		...(editDiff.price !== undefined ? { price: applied.price ?? null } : {}),
 		...(editDiff.free_trial !== undefined
 			? { free_trial: freeTrial ?? null }
 			: {}),

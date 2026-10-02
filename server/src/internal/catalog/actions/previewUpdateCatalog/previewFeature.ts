@@ -5,8 +5,8 @@ import {
 	diffFeatureV1,
 	expandPathIncludes,
 	type Feature,
-	type FullProduct,
 	type FeatureUpdateBlocker,
+	type FullProduct,
 	type PreviewUpdateFeatureReason,
 	type PreviewUpdateFeatureResponse,
 } from "@autumn/shared";
@@ -28,7 +28,8 @@ export const featurePreviewReason = ({
 	const codes = blockers.map((blocker) => blocker.code);
 
 	if (codes.includes("attached_to_customer")) return "has_customers";
-	if (codes.includes("used_in_product_credit_system")) return "used_in_products";
+	if (codes.includes("used_in_product_credit_system"))
+		return "used_in_products";
 	if (codes.includes("used_in_credit_system")) return "used_in_credit_system";
 	if (codes.includes("has_usage_price")) return "has_usage_price";
 	if (codes.includes("id_already_exists")) return "id_already_exists";
@@ -51,10 +52,7 @@ export const getFeatureUpdateBlockedReason = async ({
 	updates: Feature;
 	products: FullProduct[];
 }): Promise<PreviewUpdateFeatureReason> => {
-	if (
-		!existing ||
-		!isBlockableFeatureChange({ feature: existing, updates })
-	) {
+	if (!existing || !isBlockableFeatureChange({ feature: existing, updates })) {
 		return null;
 	}
 
@@ -149,11 +147,7 @@ export const previewFeature = async ({
 				to: feature,
 			}).previous_attributes
 		: null;
-	const action = !existing
-		? "create"
-		: previousAttributes
-			? "update"
-			: "none";
+	const action = !existing ? "create" : previousAttributes ? "update" : "none";
 	const featureChanges: PreviewUpdateFeatureResponse = {
 		feature_id: dbFeature.id,
 		action,

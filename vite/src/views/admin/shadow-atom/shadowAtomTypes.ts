@@ -1,5 +1,9 @@
 import type { ByocCacheStatus } from "@autumn/shared";
-import type { RolloutPercent } from "../edge-config/rolloutTypes";
+import type {
+	RolloutCustomerName,
+	RolloutOrg,
+	RolloutPercent,
+} from "../edge-config/rolloutTypes";
 
 export const SHADOW_ATOM_ENVS = ["sandbox", "live"] as const;
 export type ShadowAtomEnv = (typeof SHADOW_ATOM_ENVS)[number];
@@ -37,23 +41,8 @@ export type ShadowAtomCreated = {
 	setupUrl: string | null;
 };
 
-export const SHADOW_ATOM_RESULT_RANGES = ["1h", "24h"] as const;
-export type ShadowAtomResultRange = (typeof SHADOW_ATOM_RESULT_RANGES)[number];
-
-export type ShadowAtomOrgResult = {
-	org_id: string;
-	checks: number;
-	matches: number;
-	mismatches: number;
-	timeouts: number;
-	errors: number;
-	match_rate: number | null;
-	p50_ms: number;
-	p99_ms: number;
-};
-
-export type ShadowAtomResults = {
-	available: boolean;
-	range: ShadowAtomResultRange;
-	orgs: ShadowAtomOrgResult[];
+/** Names for the ids the env's config holds, from `GET /admin/shadow-atom-config/:env/names`. */
+export type ShadowAtomNames = {
+	orgsById: Record<string, RolloutOrg>;
+	customerNamesByOrgId: Record<string, Record<string, RolloutCustomerName>>;
 };

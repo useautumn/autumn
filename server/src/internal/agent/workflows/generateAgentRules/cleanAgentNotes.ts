@@ -9,7 +9,8 @@ const stripMarkdownFence = ({ text }: { text: string }) =>
 		.replace(/\s*```$/i, "")
 		.trim();
 
-const buildPrompt = ({ notes }: { notes: string }) => `
+const buildPrompt = ({ notes }: { notes: string }) =>
+	`
 You format org-specific instructions for an Autumn billing and entitlements agent.
 
 The user may have typed rough thoughts, fragments, or spitballs about how the agent should behave for this organization.

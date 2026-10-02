@@ -1,5 +1,5 @@
-import type { CustomizePlanV1 } from "@autumn/shared";
 import type {
+	CustomizePlanV1,
 	Entitlement,
 	EntitlementWithFeature,
 	Price,

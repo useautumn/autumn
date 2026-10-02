@@ -1,5 +1,5 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureFlagConfigSchema } from "@/internal/misc/featureFlags/featureFlagSchemas.js";
 import { updateFullFeatureFlagConfig } from "@/internal/misc/featureFlags/featureFlagStore.js";
 

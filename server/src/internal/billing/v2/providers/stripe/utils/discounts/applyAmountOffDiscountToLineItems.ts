@@ -31,7 +31,9 @@ const allocateAmountOffDiscounts = ({
 	if (totalWeight === 0) return new Map<LineItem, number>();
 
 	const allocations = weightedItems.map(({ item, index, weight }) => {
-		const exact = new Decimal(amountOffMinorUnits).times(weight).div(totalWeight);
+		const exact = new Decimal(amountOffMinorUnits)
+			.times(weight)
+			.div(totalWeight);
 		const minorUnits = exact.floor().toNumber();
 		return { item, index, minorUnits, remainder: exact.minus(minorUnits) };
 	});

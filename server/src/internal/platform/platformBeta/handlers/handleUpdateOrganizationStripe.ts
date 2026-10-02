@@ -1,4 +1,9 @@
-import { AppEnv, type Organization, organizations, Scopes } from "@autumn/shared";
+import {
+	AppEnv,
+	type Organization,
+	organizations,
+	Scopes,
+} from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { initPlatformStripe } from "@/external/connect/initStripeCli.js";

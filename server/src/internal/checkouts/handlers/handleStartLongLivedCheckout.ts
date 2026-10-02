@@ -1,8 +1,8 @@
 import {
-	type AttachParamsV1,
 	AffectedResource,
-	CheckoutAction,
+	type AttachParamsV1,
 	type Checkout,
+	CheckoutAction,
 	ErrCode,
 	InternalError,
 	RecaseError,
@@ -39,7 +39,8 @@ const getActiveStripeCheckoutUrl = async ({
 	try {
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 		const session = await stripeCli.checkout.sessions.retrieve(sessionId);
-		return session.status === "open" && isFuture(fromUnixTime(session.expires_at))
+		return session.status === "open" &&
+			isFuture(fromUnixTime(session.expires_at))
 			? session.url
 			: null;
 	} catch (error) {
@@ -77,7 +78,8 @@ export const handleStartLongLivedCheckout = createRoute({
 
 		if (!isLongLivedAttachCheckout(checkout)) {
 			throw new RecaseError({
-				message: "Long-lived checkout start only supports long-lived attach checkouts",
+				message:
+					"Long-lived checkout start only supports long-lived attach checkouts",
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

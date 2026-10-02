@@ -1,4 +1,4 @@
-import { prices, PriceType } from "@autumn/shared";
+import { PriceType, prices } from "@autumn/shared";
 import { and, isNull, sql } from "drizzle-orm";
 
 export const composeBasePriceCondition = () =>

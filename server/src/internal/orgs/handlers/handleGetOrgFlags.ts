@@ -1,5 +1,5 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getRuntimeFeatureFlags } from "@/internal/misc/featureFlags/featureFlagStore.js";
 
 /** GET /v1/orgs/flags — exposes the current feature flags to the frontend. */

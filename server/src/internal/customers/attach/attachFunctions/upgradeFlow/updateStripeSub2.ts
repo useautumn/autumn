@@ -70,36 +70,36 @@ export const updateStripeSub2 = async ({
 	const updatedSub = await stripeCli.subscriptions.update(
 		curSub.id,
 		{
-		items: sanitizeSubItems(itemSet.subItems),
-		proration_behavior:
-			proration === ProrationBehavior.None
-				? "none"
-				: // : fromCreate
-					// 	? "always_invoice"
-					"create_prorations",
+			items: sanitizeSubItems(itemSet.subItems),
+			proration_behavior:
+				proration === ProrationBehavior.None
+					? "none"
+					: // : fromCreate
+						// 	? "always_invoice"
+						"create_prorations",
 
-		trial_end: trialEnd,
+			trial_end: trialEnd,
 
-		add_invoice_items: itemSet.invoiceItems,
-		...(invoiceOnly && {
-			collection_method: "send_invoice",
-			days_until_due:
-				attachParams.org.config.default_invoice_net_terms_days ?? 30,
-		}),
-		payment_behavior: "error_if_incomplete",
+			add_invoice_items: itemSet.invoiceItems,
+			...(invoiceOnly && {
+				collection_method: "send_invoice",
+				days_until_due:
+					attachParams.org.config.default_invoice_net_terms_days ?? 30,
+			}),
+			payment_behavior: "error_if_incomplete",
 
-		expand: ["latest_invoice"],
+			expand: ["latest_invoice"],
 
-		// cancel_at_period_end: false,
-		// TODO: will error if sub managed by a schedule
-		cancel_at_period_end:
-			isStripeSubscriptionCanceling(curSub) &&
-			!(
-				branch === AttachBranch.SameCustomEnts ||
-				branch === AttachBranch.NewVersion
-			)
-				? false
-				: undefined,
+			// cancel_at_period_end: false,
+			// TODO: will error if sub managed by a schedule
+			cancel_at_period_end:
+				isStripeSubscriptionCanceling(curSub) &&
+				!(
+					branch === AttachBranch.SameCustomEnts ||
+					branch === AttachBranch.NewVersion
+				)
+					? false
+					: undefined,
 		},
 		autumnStripeRequestOptions({ source: "attach.upgrade_sub_update" }),
 	);

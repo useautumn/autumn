@@ -1,8 +1,4 @@
-import {
-	addInterval,
-	BillingInterval,
-	type LineItem,
-} from "@autumn/shared";
+import { addInterval, BillingInterval, type LineItem } from "@autumn/shared";
 import type Stripe from "stripe";
 
 export const getBackdatedDiscountCycleCount = ({

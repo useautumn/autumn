@@ -44,8 +44,7 @@ export const listStripeReuseFamilyIds = async ({
 
 	const rows = await db
 		.select({
-			baseInternalProductId:
-				sql<string>`COALESCE(${products.base_internal_product_id}, ${products.internal_id})`,
+			baseInternalProductId: sql<string>`COALESCE(${products.base_internal_product_id}, ${products.internal_id})`,
 			productId: products.id,
 		})
 		.from(products)

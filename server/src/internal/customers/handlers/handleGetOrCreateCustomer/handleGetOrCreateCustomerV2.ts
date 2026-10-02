@@ -34,9 +34,7 @@ export const getOrCreateCustomerV2 = async ({
 	});
 
 	const duration = Date.now() - start;
-	ctx.logger.debug(
-		`[post-customer] duration: ${duration}ms`,
-	);
+	ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
 
 	return apiCustomer;
 };

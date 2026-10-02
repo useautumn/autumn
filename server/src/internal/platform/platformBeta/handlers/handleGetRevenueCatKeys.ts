@@ -31,7 +31,8 @@ export const handleGetRevenueCatKeys = createRoute({
 		});
 
 		const revenueCatConfig = org.processor_configs?.revenuecat;
-		if (!revenueCatConfig) return c.json({ apps: [], oauth_access_token: null });
+		if (!revenueCatConfig)
+			return c.json({ apps: [], oauth_access_token: null });
 
 		const projectId = getRevenuecatProjectId({ revenueCatConfig, env: appEnv });
 		// Force-refresh the OAuth token so the master gets a fresh, full-lifetime access token.

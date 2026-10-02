@@ -2,11 +2,10 @@ import { Tabs, TabsList, TabsTrigger } from "@autumn/ui";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { ShadowAtomDeploymentSection } from "./ShadowAtomDeploymentSection";
 import { ShadowAtomOrgsSection } from "./ShadowAtomOrgsSection";
-import { ShadowAtomResultsSection } from "./ShadowAtomResultsSection";
 import { ShadowAtomRolloutSection } from "./ShadowAtomRolloutSection";
 import { SHADOW_ATOM_ENVS } from "./shadowAtomTypes";
 
-/** Staff-only: our shadow Atom per env, whom it holds, and how its answers compare with the API's. */
+/** Staff-only: our shadow Atom per env and whom it holds. */
 export const ShadowAtomTab = () => {
 	const [env, setEnv] = useQueryState(
 		"shadow_env",
@@ -30,7 +29,6 @@ export const ShadowAtomTab = () => {
 			<ShadowAtomDeploymentSection key={`deployment-${env}`} env={env} />
 			<ShadowAtomRolloutSection key={`rollout-${env}`} env={env} />
 			<ShadowAtomOrgsSection key={`orgs-${env}`} env={env} />
-			<ShadowAtomResultsSection key={`results-${env}`} env={env} />
 		</div>
 	);
 };
