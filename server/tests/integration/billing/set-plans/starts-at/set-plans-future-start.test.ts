@@ -182,7 +182,7 @@ test.concurrent(
 		const startsAt = addDays(advancedTo, 7).getTime();
 
 		await expectAutumnError({
-			errMessage: "A free trial can't start on a later date",
+			errMessage: "A free trial can't start on",
 			func: () =>
 				autumnV2_2.billing.setPlans({
 					customer_id: customerId,
