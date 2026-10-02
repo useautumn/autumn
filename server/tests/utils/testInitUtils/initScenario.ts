@@ -1,6 +1,10 @@
 import type { CustomerData } from "@autumn/shared";
+import { expect } from "bun:test";
+import { and, eq } from "drizzle-orm";
+import { pollUntilAsserted } from "../genUtils.js";
 import {
 	ApiVersion,
+	customerEntitlements,
 	type CreateReward,
 	type CreateRewardProgram,
 	type CustomerBillingControlsParams,
@@ -1928,6 +1932,17 @@ export async function initScenario({
 
 	if (customerId === "cancel-eoc-cons-both") await ctx.redisV2.del(`{${customerId}}:warming-timeline`);
 	for (const action of config.actions) {
+		if (customerId === "cancel-eoc-cons-both" && action.type === "updateSubscription" && action.entityIndex === undefined) {
+			const startedAt = Date.now();
+			const synced = await pollUntilAsserted({
+				fetch: () => ctx.db.query.customerEntitlements.findMany({ where: and(eq(customerEntitlements.customer_id, customerId), eq(customerEntitlements.feature_id, "messages")) }),
+				assert: rows => expect(rows).toEqual(expect.arrayContaining([
+					expect.objectContaining({ balance: -200, entities: null }),
+					expect.objectContaining({ entities: { "ent-1": expect.objectContaining({ balance: -150 }) } }),
+				])),
+			});
+			console.log("pre-cancel synced", JSON.stringify({ at: Date.now(), waitedMs: Date.now() - startedAt, rows: synced.map(row => ({ id: row.id, balance: row.balance, entities: row.entities })) }));
+		}
 		if (customerId === "cancel-eoc-cons-both") await ctx.redisV2.rpush(`{${customerId}}:warming-timeline`, JSON.stringify({ at: Date.now(), phase: "action-start", action }));
 		await runAction(action);
 		if (customerId === "cancel-eoc-cons-both") {
