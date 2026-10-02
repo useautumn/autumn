@@ -60,6 +60,9 @@ export const setCachedFullSubject = async ({
 	for (const { balanceKey } of balanceWrites) {
 		keys.push(balanceKey);
 	}
+	for (const { balanceKey } of balanceWrites) {
+		keys.push(`${balanceKey}:pr3977_pooled_cache_trace`);
+	}
 
 	const argv: string[] = [
 		String(fetchedSubjectViewEpoch),

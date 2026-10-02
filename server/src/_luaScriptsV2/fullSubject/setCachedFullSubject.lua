@@ -52,7 +52,7 @@ for i = 1, num_balance_keys do
       if type(next_value) == 'table' and next_value.id ~= nil then
         local previous_json = redis.call('HGET', balance_key, field_name)
         local previous_value = previous_json and cjson.decode(previous_json) or {}
-        redis.call('RPUSH', balance_key .. ':pr3977_pooled_cache_trace', cjson.encode({
+        redis.call('RPUSH', KEYS[2 + num_balance_keys + i], cjson.encode({
           at = redis.call('TIME'),
           subject_key = subject_key,
           grant_id = next_value.id,
