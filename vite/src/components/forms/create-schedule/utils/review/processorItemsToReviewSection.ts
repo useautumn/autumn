@@ -55,19 +55,30 @@ const processorItemToRow = ({
 	value: pricingTableTotal(item),
 });
 
+const phaseEndLabel = ({
+	nextPhase,
+	endsAt,
+}: {
+	nextPhase?: SetPlansPreviewPhase;
+	endsAt?: number | null;
+}) => {
+	if (nextPhase) return formatPhaseDate({ startsAt: nextPhase.starts_at });
+	if (endsAt != null) return formatPhaseDate({ startsAt: endsAt });
+	return OPEN_ENDED_LABEL;
+};
+
 const phaseRange = ({
 	phase,
 	nextPhase,
+	endsAt,
 }: {
 	phase: SetPlansPreviewPhase;
 	nextPhase?: SetPlansPreviewPhase;
+	endsAt?: number | null;
 }) => {
 	const start = formatPhaseDate({ startsAt: phase.starts_at });
 	if (phase.ends_subscription) return start;
-	const end = nextPhase
-		? formatPhaseDate({ startsAt: nextPhase.starts_at })
-		: OPEN_ENDED_LABEL;
-	return `${start} – ${end}`;
+	return `${start} – ${phaseEndLabel({ nextPhase, endsAt })}`;
 };
 
 const phaseBadge = ({
@@ -139,15 +150,22 @@ const priceStripeIds = (items: ProcessorItem[]): ReviewStripeId[] =>
 export const processorItemsToReviewSection = ({
 	preview,
 	nowMs,
+	endsAt,
 }: {
 	preview: SetPlansPreviewResponse;
 	nowMs: number;
+	/** The request's end date, which the final phase runs until. */
+	endsAt?: number | null;
 }): ReviewChangeSection => {
 	const phases: ReviewChangePhase[] = preview.phases.map(
 		(phase: SetPlansPreviewPhase, phaseIndex: number) => ({
 			key: `processor-${phaseIndex}`,
 			label: phaseLabel({ phase }),
-			range: phaseRange({ phase, nextPhase: preview.phases[phaseIndex + 1] }),
+			range: phaseRange({
+				phase,
+				nextPhase: preview.phases[phaseIndex + 1],
+				endsAt,
+			}),
 			badge: phaseBadge({ phase, nowMs }),
 			rows: phase.ends_subscription
 				? [subscriptionEndRow({ phaseIndex })]

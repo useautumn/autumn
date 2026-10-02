@@ -491,6 +491,25 @@ test("a phase the server says ends the subscription shows it ending", () => {
 	expect(section.summary).toBe("1 item now · Canceled on Nov 1, 2026");
 });
 
+test("with an end date, the final phase runs until it instead of forever", () => {
+	const JAN_1 = Date.UTC(2027, 0, 1);
+	const section = processorItemsToReviewSection({
+		nowMs: NOW,
+		endsAt: JAN_1,
+		preview: preview({
+			phases: [
+				phase(NOW, { processor_items: [processorItem()] }),
+				phase(NOV_1, { processor_items: [processorItem()] }),
+			],
+		}),
+	});
+
+	expect(section.phases.map((reviewPhase) => reviewPhase.range)).toEqual([
+		"Sep 25, 2026 – Nov 1, 2026",
+		"Nov 1, 2026 – Jan 1, 2027",
+	]);
+});
+
 test("canceling now reads as Canceled", () => {
 	const section = processorItemsToReviewSection({
 		nowMs: NOW,

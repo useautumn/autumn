@@ -1,6 +1,7 @@
 import type { SetPlansPreviewWarning } from "@autumn/shared";
 import { useMemo } from "react";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 import { balanceChangesToReviewSection } from "../utils/review/balanceChangesToReviewSection";
 import { plansToReviewSection } from "../utils/review/plansToReviewSection";
 import { processorItemsToReviewSection } from "../utils/review/processorItemsToReviewSection";
@@ -14,7 +15,12 @@ type SetPlansReviewSections = {
 };
 
 export function useSetPlansReviewSections(): SetPlansReviewSections | null {
-	const { preview, error, features, nowMs } = useCreateScheduleFormContext();
+	const { preview, error, features, products, formValues, nowMs } =
+		useCreateScheduleFormContext();
+	const { endDate, phases } = formValues;
+	const endsAt = hasPaidRecurringSchedulePlan({ phases, products })
+		? endDate
+		: null;
 
 	return useMemo(() => {
 		if (!preview || error) return null;
@@ -34,7 +40,7 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 				phases: preview.phases,
 				features,
 			}),
-			processor: processorItemsToReviewSection({ preview, nowMs }),
+			processor: processorItemsToReviewSection({ preview, nowMs, endsAt }),
 		};
-	}, [preview, error, features, nowMs]);
+	}, [preview, error, features, nowMs, endsAt]);
 }
