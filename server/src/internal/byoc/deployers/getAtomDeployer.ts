@@ -6,7 +6,7 @@ import type { AtomDeployer } from "./types/atomDeployer.js";
 
 let atomDeployer: AtomDeployer | null | undefined;
 
-/** alien where a manager is configured; otherwise the dev stack's own shared Atom (`ATOM_URL` + `ATOM_ADMIN_TOKEN`). Never the shadow Atom. */
+/** alien where a manager is configured; otherwise the dev stack's own multi-tenant Atom (`ATOM_URL` + `ATOM_ADMIN_TOKEN`). Never the shadow Atom. */
 const createAtomDeployer = (): AtomDeployer | null => {
 	const alienClient = getAlienClient();
 	if (alienClient) return createAlienAtomDeployer({ alienClient });

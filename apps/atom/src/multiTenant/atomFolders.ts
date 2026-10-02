@@ -9,8 +9,8 @@ import {
 import { join } from "node:path";
 import { z } from "zod/v4";
 
-/** What the admin registers on a shared Atom: an id for the folder, and the hash of the token that opens it. */
-export type SharedAtom = { id: string; tokenHash: string };
+/** What the admin registers on a multi-tenant Atom: an id for the folder, and the hash of the token that opens it. */
+export type TenantAtom = { id: string; tokenHash: string };
 
 const ATOM_FILE = "atom.json";
 /** One path segment, so an id can never name a folder outside the data directory. */
@@ -30,13 +30,13 @@ export const atomFolderPath = ({
 };
 
 /** Every folder under the data directory that records an Atom; anything else there is left alone. */
-export const listSharedAtoms = ({
+export const listTenantAtoms = ({
 	dataDir,
 }: {
 	dataDir: string;
-}): SharedAtom[] => {
+}): TenantAtom[] => {
 	mkdirSync(dataDir, { recursive: true });
-	const sharedAtoms: SharedAtom[] = [];
+	const tenantAtoms: TenantAtom[] = [];
 	for (const entry of readdirSync(dataDir, { withFileTypes: true })) {
 		const atomFile = join(dataDir, entry.name, ATOM_FILE);
 		if (!entry.isDirectory() || !ATOM_ID.test(entry.name)) continue;
@@ -45,23 +45,23 @@ export const listSharedAtoms = ({
 			JSON.parse(readFileSync(atomFile, "utf8")),
 		);
 		if (parsed.success)
-			sharedAtoms.push({ id: entry.name, tokenHash: parsed.data.token_hash });
+			tenantAtoms.push({ id: entry.name, tokenHash: parsed.data.token_hash });
 	}
-	return sharedAtoms;
+	return tenantAtoms;
 };
 
-export const writeSharedAtom = ({
+export const writeTenantAtom = ({
 	dataDir,
-	sharedAtom,
+	tenantAtom,
 }: {
 	dataDir: string;
-	sharedAtom: SharedAtom;
+	tenantAtom: TenantAtom;
 }): void => {
-	const folder = atomFolderPath({ dataDir, id: sharedAtom.id });
+	const folder = atomFolderPath({ dataDir, id: tenantAtom.id });
 	mkdirSync(folder, { recursive: true });
 	writeFileSync(
 		join(folder, ATOM_FILE),
-		JSON.stringify({ token_hash: sharedAtom.tokenHash }),
+		JSON.stringify({ token_hash: tenantAtom.tokenHash }),
 	);
 };
 

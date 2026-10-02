@@ -12,7 +12,7 @@ import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
-import { createSharedAuth } from "../../../src/shared/createSharedAuth.js";
+import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import { atomOrg } from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
@@ -66,16 +66,16 @@ const createDeployedApp = () => {
 	};
 };
 
-/** Our shared Atom: no orgs until the admin token's holder registers one. */
-const createSharedApp = () => {
-	const auth = createSharedAuth({ dataDir: newDataDir(), slotCount: 2 });
+/** Our multi-tenant Atom: no orgs until the admin token's holder registers one. */
+const createMultiTenantApp = () => {
+	const auth = createMultiTenantAuth({ dataDir: newDataDir(), slotCount: 2 });
 	opened.push(auth);
 	const { logger } = createLogger();
 	return createAtomApp({
 		ctx: {
 			auth,
 			logger,
-			shared: { auth, adminTokenHash: hashToken({ token: ADMIN_TOKEN }) },
+			multiTenant: { auth, adminTokenHash: hashToken({ token: ADMIN_TOKEN }) },
 			autumnApiUrl: AUTUMN_API_URL,
 		},
 	});
@@ -554,9 +554,9 @@ describe("the shared catalog", () => {
 	});
 });
 
-describe("our shared Atom", () => {
+describe("our multi-tenant Atom", () => {
 	test("an Atom is put per org, and each org's token reads only its own customers", async () => {
-		const app = createSharedApp();
+		const app = createMultiTenantApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -587,7 +587,7 @@ describe("our shared Atom", () => {
 	});
 
 	test("a deleted Atom's token stops working", async () => {
-		const app = createSharedApp();
+		const app = createMultiTenantApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -610,7 +610,7 @@ describe("our shared Atom", () => {
 	});
 
 	test("the admin can ask whether an Atom is held", async () => {
-		const app = createSharedApp();
+		const app = createMultiTenantApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -630,7 +630,7 @@ describe("our shared Atom", () => {
 	});
 
 	test("every Atom route needs the admin token: without it, or with an org's token, nothing is put, read or deleted", async () => {
-		const app = createSharedApp();
+		const app = createMultiTenantApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -672,7 +672,7 @@ describe("our shared Atom", () => {
 	});
 
 	test("the admin token opens no org's customers", async () => {
-		const app = createSharedApp();
+		const app = createMultiTenantApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -687,7 +687,7 @@ describe("our shared Atom", () => {
 	});
 
 	test("an id or hash the process cannot use is a 400", async () => {
-		const app = createSharedApp();
+		const app = createMultiTenantApp();
 
 		const badHash = await app.request(
 			"/v1/atoms.put",

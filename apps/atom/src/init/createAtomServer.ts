@@ -2,10 +2,10 @@ import type { AtomEnv } from "@autumn/env/atom";
 import { createDeployedAuth } from "../auth/createDeployedAuth.js";
 import type { Auth } from "../auth/types/auth.js";
 import { createAtomApp } from "../http/createAtomApp.js";
+import { createMultiTenantAuth } from "../multiTenant/createMultiTenantAuth.js";
+import type { MultiTenantContext } from "../multiTenant/multiTenantContext.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import type { PushReceiver } from "../pushes/types/pushReceiver.js";
-import { createSharedAuth } from "../shared/createSharedAuth.js";
-import type { SharedContext } from "../shared/sharedContext.js";
 import type { AtomProcessRole } from "./types/atomProcessRole.js";
 import type {
 	AtomServer,
@@ -13,7 +13,7 @@ import type {
 	AtomServerDependencies,
 } from "./types/atomServer.js";
 
-/** An org's deployment is given its one token hash, and its writers lease Autumn's pushes; a shared Atom adds orgs as the admin registers them. */
+/** An org's deployment is given its one token hash, and its writers lease Autumn's pushes; a multi-tenant Atom adds orgs as the admin registers them. */
 const openAuth = ({
 	ctx,
 	env,
@@ -22,7 +22,11 @@ const openAuth = ({
 	ctx: AtomServerDependencies;
 	env: AtomEnv;
 	role: AtomProcessRole;
-}): { auth: Auth; shared?: SharedContext; pushReceiver?: PushReceiver } => {
+}): {
+	auth: Auth;
+	multiTenant?: MultiTenantContext;
+	pushReceiver?: PushReceiver;
+} => {
 	if (env.ATOM_MODE === "deployed") {
 		const auth = createDeployedAuth({
 			dataDir: env.ATOM_DATA_DIR,
@@ -36,13 +40,13 @@ const openAuth = ({
 			: undefined;
 		return { auth, pushReceiver };
 	}
-	const auth = createSharedAuth({
+	const auth = createMultiTenantAuth({
 		dataDir: env.ATOM_DATA_DIR,
 		slotCount: env.ATOM_SLOT_COUNT,
 	});
 	return {
 		auth,
-		shared: { auth, adminTokenHash: env.ATOM_ADMIN_TOKEN_HASH },
+		multiTenant: { auth, adminTokenHash: env.ATOM_ADMIN_TOKEN_HASH },
 	};
 };
 
@@ -54,11 +58,11 @@ export const createAtomServer = ({
 	config: AtomServerConfig;
 }): AtomServer => {
 	const { env, role } = config;
-	const { auth, shared, pushReceiver } = openAuth({ ctx, env, role });
+	const { auth, multiTenant, pushReceiver } = openAuth({ ctx, env, role });
 	const app = createAtomApp({
 		ctx: {
 			auth,
-			shared,
+			multiTenant,
 			logger: ctx.logger,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		},

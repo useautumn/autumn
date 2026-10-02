@@ -3,7 +3,10 @@ import { createAtomEnv } from "./atom.js";
 
 const TOKEN_HASH = "a".repeat(64);
 const ADMIN_TOKEN_HASH = "b".repeat(64);
-const SHARED = { ATOM_MODE: "shared", ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH };
+const MULTI_TENANT = {
+	ATOM_MODE: "multi_tenant",
+	ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
+};
 
 describe("atom env", () => {
 	test("an org's deployment is given its token hash", () => {
@@ -17,14 +20,14 @@ describe("atom env", () => {
 		expect(env.ATOM_ADMIN_TOKEN_HASH).toBeNull();
 	});
 
-	test("a shared Atom is given the hash of the admin token that registers its orgs", () => {
+	test("a multi-tenant Atom is given the hash of the admin token that registers its orgs", () => {
 		const env = createAtomEnv({
-			ATOM_MODE: "shared",
+			ATOM_MODE: "multi_tenant",
 			ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
 			ATOM_HOSTNAME: "0.0.0.0",
 		});
 
-		expect(env.ATOM_MODE).toBe("shared");
+		expect(env.ATOM_MODE).toBe("multi_tenant");
 		expect(env.ATOM_ADMIN_TOKEN_HASH).toBe(ADMIN_TOKEN_HASH);
 		expect(env.ATOM_TOKEN_HASH).toBeNull();
 		expect(env.ATOM_HOSTNAME).toBe("0.0.0.0");
@@ -32,7 +35,7 @@ describe("atom env", () => {
 
 	test("each mode refuses the other's token and needs its own", () => {
 		expect(() => createAtomEnv({})).toThrow("ATOM_TOKEN_HASH");
-		expect(() => createAtomEnv({ ATOM_MODE: "shared" })).toThrow(
+		expect(() => createAtomEnv({ ATOM_MODE: "multi_tenant" })).toThrow(
 			"ATOM_ADMIN_TOKEN_HASH",
 		);
 		expect(() =>
@@ -40,10 +43,10 @@ describe("atom env", () => {
 				ATOM_TOKEN_HASH: TOKEN_HASH,
 				ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
 			}),
-		).toThrow("ATOM_MODE=shared");
+		).toThrow("ATOM_MODE=multi_tenant");
 		expect(() =>
 			createAtomEnv({
-				ATOM_MODE: "shared",
+				ATOM_MODE: "multi_tenant",
 				ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
 				ATOM_TOKEN_HASH: TOKEN_HASH,
 			}),
@@ -52,7 +55,10 @@ describe("atom env", () => {
 			"SHA-256",
 		);
 		expect(() =>
-			createAtomEnv({ ATOM_MODE: "shared", ATOM_ADMIN_TOKEN_HASH: "nope" }),
+			createAtomEnv({
+				ATOM_MODE: "multi_tenant",
+				ATOM_ADMIN_TOKEN_HASH: "nope",
+			}),
 		).toThrow("SHA-256");
 	});
 
@@ -65,7 +71,7 @@ describe("atom env", () => {
 	test("forwards to the public Autumn API unless told where the API is", () => {
 		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
 		const local = createAtomEnv({
-			...SHARED,
+			...MULTI_TENANT,
 			AUTUMN_API_URL: "http://localhost:8080",
 		});
 
@@ -75,11 +81,11 @@ describe("atom env", () => {
 
 	test("every Atom splits each org's customers over 128 slots unless told otherwise", () => {
 		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
-		const shared = createAtomEnv(SHARED);
-		const told = createAtomEnv({ ...SHARED, ATOM_SLOT_COUNT: "2" });
+		const multiTenant = createAtomEnv(MULTI_TENANT);
+		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_SLOT_COUNT: "2" });
 
 		expect(deployed.ATOM_SLOT_COUNT).toBe(128);
-		expect(shared.ATOM_SLOT_COUNT).toBe(128);
+		expect(multiTenant.ATOM_SLOT_COUNT).toBe(128);
 		expect(told.ATOM_SLOT_COUNT).toBe(2);
 	});
 
@@ -109,16 +115,16 @@ describe("atom env", () => {
 		expect(told.ATOM_PROCESSES).toBe(12);
 	});
 
-	test("a shared Atom is always one process", () => {
-		const shared = createAtomEnv(SHARED, {
+	test("a multi-tenant Atom is always one process", () => {
+		const multiTenant = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 16,
 			memoryLimitBytes: 64 * 1024 ** 3,
 		});
 
-		expect(shared.ATOM_PROCESSES).toBe(1);
-		expect(() => createAtomEnv({ ...SHARED, ATOM_PROCESSES: "2" })).toThrow(
-			"one process",
-		);
+		expect(multiTenant.ATOM_PROCESSES).toBe(1);
+		expect(() =>
+			createAtomEnv({ ...MULTI_TENANT, ATOM_PROCESSES: "2" }),
+		).toThrow("one process");
 	});
 
 	test("about 30% of the processes receive pushes when the push queue is linked, at least one of each", () => {

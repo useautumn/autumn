@@ -29,7 +29,7 @@ const ShadowAtomEnvSettingsSchema = z.object({
 	rollout: ShadowAtomRolloutSchema.prefault({}),
 });
 
-/** One env's shadow Atom (ATOM_MODE=shared). Its tokens are set only by the admin mint and the org register routes. */
+/** One env's shadow Atom (ATOM_MODE=multi_tenant). Its tokens are set only by the admin mint and the org register routes. */
 const ShadowAtomEnvConfigSchema = ShadowAtomEnvSettingsSchema.extend({
 	/** The admin token that registers orgs on it, encrypted. */
 	adminEncryptedToken: z.string().nullable().default(null),

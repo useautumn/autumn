@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
-import { createSharedAuth } from "../../../src/shared/createSharedAuth.js";
+import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
 	checkRequestFor,
 	forwardReasonOf,
@@ -19,7 +19,7 @@ const newDataDir = () => {
 	return dataDir;
 };
 const open = ({ dataDir }: { dataDir: string }) => {
-	const auth = createSharedAuth({ dataDir, slotCount: 2 });
+	const auth = createMultiTenantAuth({ dataDir, slotCount: 2 });
 	opened.push(auth);
 	return auth;
 };
@@ -44,7 +44,7 @@ const checkCustomer = ({ auth, token }: { auth: Auth; token: string }) =>
 		?.processorFor({ customerId: "cus_1" })
 		.check({ request: checkRequestFor({ params: { required_balance: 5 } }) });
 
-describe("shared auth", () => {
+describe("multi-tenant auth", () => {
 	test("a token opens the Atom it was put with, and no other", () => {
 		const auth = open({ dataDir: newDataDir() });
 		auth.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });

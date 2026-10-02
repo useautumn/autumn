@@ -1,7 +1,7 @@
 import type { ShadowAtomEnvConfig } from "@autumn/edge-config";
 import { type AppEnv, ErrCode, RecaseError } from "@autumn/shared";
-import { createSharedAtomDeployer } from "@/internal/byoc/deployers/createSharedAtomDeployer.js";
-import type { SharedAtomDeployer } from "@/internal/byoc/deployers/types/sharedAtom.js";
+import { createMultiTenantAtomDeployer } from "@/internal/byoc/deployers/createMultiTenantAtomDeployer.js";
+import type { MultiTenantAtomDeployer } from "@/internal/byoc/deployers/types/multiTenantAtom.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 
 /** One folder per org per env, so an Atom serving both envs never mixes them. */
@@ -18,7 +18,7 @@ export const shadowAtomDeployerFor = ({
 	config,
 }: {
 	config: ShadowAtomEnvConfig;
-}): SharedAtomDeployer => {
+}): MultiTenantAtomDeployer => {
 	if (!config.endpointUrl || !config.adminEncryptedToken)
 		throw new RecaseError({
 			message:
@@ -26,7 +26,7 @@ export const shadowAtomDeployerFor = ({
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
-	return createSharedAtomDeployer({
+	return createMultiTenantAtomDeployer({
 		atom: {
 			atomUrl: config.endpointUrl,
 			adminToken: decryptData(config.adminEncryptedToken),

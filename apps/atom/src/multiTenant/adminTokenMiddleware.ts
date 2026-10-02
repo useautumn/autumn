@@ -1,7 +1,7 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { tokenMatchesHash } from "../auth/tokenMatchesHash.js";
 import type { AtomHttpEnv } from "../http/types/atomHttp.js";
-import type { SharedContext } from "./sharedContext.js";
+import type { MultiTenantContext } from "./multiTenantContext.js";
 
 const ADMIN_TOKEN_HEADER = "x-atom-admin-token";
 
@@ -9,7 +9,7 @@ const ADMIN_TOKEN_HEADER = "x-atom-admin-token";
 export function adminTokenMiddleware({
 	ctx,
 }: {
-	ctx: SharedContext;
+	ctx: MultiTenantContext;
 }): MiddlewareHandler<AtomHttpEnv> {
 	async function authorizeAdmin(context: Context<AtomHttpEnv>, next: Next) {
 		const token = context.req.header(ADMIN_TOKEN_HEADER);

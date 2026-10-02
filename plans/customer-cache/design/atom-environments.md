@@ -21,7 +21,7 @@ token gets 401. It calls Autumn as little as possible.
  create_atom      Autumn makes the token and keeps it (encrypted) on the org
    prod           alien deploys the container with the token's hash
    dev / tw       server tells the stack's Atom: POST /v1/atoms.put { id, token_hash }
-                  (ATOM_MODE=shared only; needs the admin token, x-atom-admin-token)
+                  (ATOM_MODE=multi_tenant only; needs the admin token, x-atom-admin-token)
 ```
 
 ## Auth, decided (John, 2026-09-30)

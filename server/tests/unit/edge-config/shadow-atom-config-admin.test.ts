@@ -163,7 +163,7 @@ const mint = ({ env, scopes }: { env: string; scopes: string[] }) =>
 		body: JSON.stringify({ env }),
 	});
 
-test("staff mint an env's admin token: stored encrypted, its hash returned once for the shared Atom's ATOM_ADMIN_TOKEN_HASH", async () => {
+test("staff mint an env's admin token: stored encrypted, its hash returned once for the multi-tenant Atom's ATOM_ADMIN_TOKEN_HASH", async () => {
 	const response = await mint({ env: "live", scopes: [Scopes.Superuser] });
 
 	expect(response.status).toBe(200);

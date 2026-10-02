@@ -13,12 +13,12 @@ const previous = {
 	ENCRYPTION_PASSWORD: process.env.ENCRYPTION_PASSWORD,
 };
 
-/** Every Atom route a deployer could reach on a shared Atom; a customer's cache must never land here. */
-const sharedAtomCalls: string[] = [];
-const sharedAtom = Bun.serve({
+/** Every Atom route a deployer could reach on a multi-tenant Atom; a customer's cache must never land here. */
+const multiTenantAtomCalls: string[] = [];
+const multiTenantAtom = Bun.serve({
 	port: 0,
 	fetch: (request) => {
-		sharedAtomCalls.push(new URL(request.url).pathname);
+		multiTenantAtomCalls.push(new URL(request.url).pathname);
 		return Response.json({ id: "anything" });
 	},
 });
@@ -39,16 +39,16 @@ mock.module("@/external/alien/getAlienClient.js", () => ({
 }));
 
 afterAll(() => {
-	sharedAtom.stop(true);
+	multiTenantAtom.stop(true);
 	for (const [key, value] of Object.entries(previous)) {
 		if (value === undefined) delete process.env[key];
 		else process.env[key] = value;
 	}
 });
 
-test("off a dev stack the customer path resolves alien, even beside a shared Atom and a configured shadow Atom", async () => {
+test("off a dev stack the customer path resolves alien, even beside a multi-tenant Atom and a configured shadow Atom", async () => {
 	process.env.ENCRYPTION_PASSWORD = "customer-atom-deployer-test-password";
-	process.env.ATOM_URL = sharedAtom.url.origin;
+	process.env.ATOM_URL = multiTenantAtom.url.origin;
 	process.env.ATOM_ADMIN_TOKEN = "atom_admin_test";
 	const { _setShadowAtomConfigForTesting } = await import(
 		"@/internal/misc/shadowAtom/shadowAtomConfigStore.js"
@@ -56,7 +56,7 @@ test("off a dev stack the customer path resolves alien, even beside a shared Ato
 	_setShadowAtomConfigForTesting({
 		config: {
 			sandbox: {
-				endpointUrl: sharedAtom.url.origin,
+				endpointUrl: multiTenantAtom.url.origin,
 				adminEncryptedToken: encryptData("atom_admin_test"),
 			},
 		},
@@ -73,5 +73,5 @@ test("off a dev stack the customer path resolves alien, even beside a shared Ato
 	});
 
 	expect(alienStarts).toHaveLength(1);
-	expect(sharedAtomCalls).toEqual([]);
+	expect(multiTenantAtomCalls).toEqual([]);
 });
