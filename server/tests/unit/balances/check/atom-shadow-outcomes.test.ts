@@ -84,7 +84,12 @@ beforeAll(() => {
 		config: {
 			sandbox: {
 				endpointUrl: server.url.origin,
-				encryptedToken: encryptData("shadow_token_1"),
+				orgs: {
+					org_shadow: {
+						encryptedToken: encryptData("shadow_token_1"),
+						registeredAt: 1,
+					},
+				},
 				rollout: { percent: 100, previousPercent: 100 },
 			},
 		},

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, expect, spyOn, test } from "bun:test";
-import { shadowAtomConfig } from "@autumn/edge-config";
+import { ShadowAtomConfigSchema, shadowAtomConfig } from "@autumn/edge-config";
 import { RecaseError, Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { z } from "zod/v4";
@@ -104,14 +104,56 @@ test("a percent outside 0–100 is refused", async () => {
 	expect(write).not.toHaveBeenCalled();
 });
 
-test("staff read the shadow Atom config as stored", async () => {
+test("staff read the shadow Atom config with no token in it: whether the admin token is set, and when each org was registered", async () => {
+	read.mockResolvedValueOnce(
+		ShadowAtomConfigSchema.parse({
+			sandbox: {
+				endpointUrl: "https://shadow-atom.example.com",
+				adminEncryptedToken: "encrypted_admin",
+				orgs: { org_1: { encryptedToken: "encrypted_org_1", registeredAt: 7 } },
+			},
+		}),
+	);
 	const response = await createApp({ scopes: [Scopes.Superuser] }).request(
 		"/admin/shadow-atom-config",
 	);
 
 	expect(response.status).toBe(200);
-	expect(await response.json()).toEqual(shadowAtomConfig.defaultValue());
-	expect(read).toHaveBeenCalledTimes(1);
+	const body = await response.json();
+	expect(body.sandbox).toEqual({
+		endpointUrl: "https://shadow-atom.example.com",
+		hasAdminToken: true,
+		orgs: { org_1: { registeredAt: 7 } },
+		rollout: shadowAtomConfig.defaultValue().sandbox.rollout,
+	});
+	expect(body.live).toMatchObject({ hasAdminToken: false, orgs: {} });
+	expect(JSON.stringify(body)).not.toContain("encrypted");
+});
+
+test("a save cannot touch the admin token or the registered orgs, and answers without them", async () => {
+	const stored = ShadowAtomConfigSchema.parse({
+		sandbox: {
+			adminEncryptedToken: "encrypted_admin",
+			orgs: { org_1: { encryptedToken: "encrypted_org_1", registeredAt: 7 } },
+		},
+	});
+	read.mockResolvedValueOnce(stored);
+
+	const response = await save({
+		scopes: [Scopes.Superuser],
+		config: {
+			sandbox: {
+				endpointUrl: "https://shadow-atom.example.com",
+				adminEncryptedToken: "forged",
+				orgs: { org_2: { encryptedToken: "forged", registeredAt: 1 } },
+			},
+		},
+	});
+
+	const saved = write.mock.calls[0][0].config.sandbox;
+	expect(saved.adminEncryptedToken).toBe("encrypted_admin");
+	expect(saved.orgs).toEqual(stored.sandbox.orgs);
+	expect(JSON.stringify(await response.json())).not.toContain("encrypted");
 });
 
 const mint = ({ env, scopes }: { env: string; scopes: string[] }) =>
@@ -121,19 +163,22 @@ const mint = ({ env, scopes }: { env: string; scopes: string[] }) =>
 		body: JSON.stringify({ env }),
 	});
 
-test("staff mint an env's token: stored encrypted, its hash returned once for the deployment", async () => {
+test("staff mint an env's admin token: stored encrypted, its hash returned once for the shared Atom's ATOM_ADMIN_TOKEN_HASH", async () => {
 	const response = await mint({ env: "live", scopes: [Scopes.Superuser] });
 
 	expect(response.status).toBe(200);
-	const { token_hash } = await response.json();
+	const body = await response.json();
 	const saved = write.mock.calls[0][0].config;
-	const token = decryptData(saved.live.encryptedToken ?? "");
+	const token = decryptData(saved.live.adminEncryptedToken ?? "");
 	expect(token).toStartWith("atom_");
-	expect(token_hash).toBe(atomTokenToHash({ token }));
-	expect(saved.sandbox.encryptedToken).toBeNull();
+	expect(body).toEqual({
+		env: "live",
+		admin_token_hash: atomTokenToHash({ token }),
+	});
+	expect(saved.sandbox.adminEncryptedToken).toBeNull();
 });
 
-test("an org's own key cannot mint a shadow Atom token", async () => {
+test("an org's own key cannot mint the shadow Atom's admin token", async () => {
 	const response = await mint({
 		env: "live",
 		scopes: [Scopes.Organisation.Write],

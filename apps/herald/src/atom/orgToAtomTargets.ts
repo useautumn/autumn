@@ -3,7 +3,7 @@ import type { AppEnv, Organization } from "@autumn/shared";
 import { orgToAtomConnection } from "./orgToAtomConnection.js";
 import type { AtomConnection } from "./types/atomClient.js";
 
-/** Our shadow Atom for this env, or null unless it has an address, a token and, for a subject, holds its customer. */
+/** Our shadow Atom for this env, or null unless it has an address, the org is registered on it and, for a subject, it holds the customer. */
 const shadowAtomConnection = ({
 	shadowAtomConfig,
 	org,
@@ -16,20 +16,21 @@ const shadowAtomConnection = ({
 	customerId: string | null;
 }): AtomConnection | null => {
 	const config = shadowAtomConfig[env];
-	if (!config.endpointUrl || !config.encryptedToken) return null;
+	const registered = config.orgs[org.id];
+	if (!config.endpointUrl || !registered) return null;
 	const holdsSubject =
 		customerId === null || inAtomRollout({ config, orgId: org.id, customerId });
 	if (!holdsSubject) return null;
 	return {
 		target: "shadow",
 		endpointUrl: config.endpointUrl,
-		encryptedToken: config.encryptedToken,
+		encryptedToken: registered.encryptedToken,
 	};
 };
 
 /**
  * Every Atom a push goes to: the org's own whenever it is ready, and our shadow Atom when it holds the customer.
- * A catalog push names no customer, so the shadow Atom takes every org's catalog.
+ * A catalog push names no customer, so the shadow Atom takes every registered org's catalog.
  */
 export const orgToAtomTargets = ({
 	shadowAtomConfig,

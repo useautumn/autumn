@@ -22,6 +22,8 @@ export {
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
 	type ShadowAtomEnvConfig,
+	type ShadowAtomSettings,
+	ShadowAtomSettingsSchema,
 	shadowAtomConfig,
 } from "./configs/shadowAtom/shadowAtomEdgeConfig.js";
 export {

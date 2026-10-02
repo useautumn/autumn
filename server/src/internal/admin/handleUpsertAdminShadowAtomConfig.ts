@@ -1,15 +1,16 @@
 import {
-	ShadowAtomConfigSchema,
+	ShadowAtomSettingsSchema,
 	scheduleShadowAtomConfig,
 } from "@autumn/edge-config";
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
+import { shadowAtomConfigToAdminView } from "./shadowAtom/shadowAtomConfigToAdminView.js";
 
 /** Staff-only load-test dial: where each env's shadow Atom answers and which customers it holds. */
 export const handleUpsertAdminShadowAtomConfig = createRoute({
 	scopes: [Scopes.Superuser],
-	body: ShadowAtomConfigSchema,
+	body: ShadowAtomSettingsSchema,
 	handler: async (c) => {
 		const config = scheduleShadowAtomConfig({
 			current: await shadowAtomConfigStore.readFromSource(),
@@ -17,6 +18,6 @@ export const handleUpsertAdminShadowAtomConfig = createRoute({
 			now: Date.now(),
 		});
 		await shadowAtomConfigStore.writeToSource({ config });
-		return c.json(config);
+		return c.json(shadowAtomConfigToAdminView({ config }));
 	},
 });

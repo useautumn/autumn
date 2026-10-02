@@ -35,7 +35,8 @@ describe("shadowAtomConfig", () => {
 		expect(ShadowAtomConfigSchema.parse({})).toEqual(config);
 		for (const env of ["sandbox", "live"] as const) {
 			expect(config[env].endpointUrl).toBeNull();
-			expect(config[env].encryptedToken).toBeNull();
+			expect(config[env].adminEncryptedToken).toBeNull();
+			expect(config[env].orgs).toEqual({});
 			expect(shareIn(config[env])).toBe(0);
 		}
 	});
@@ -126,18 +127,28 @@ describe("scheduleShadowAtomConfig", () => {
 	});
 });
 
-test("a save keeps each env's stored token, whatever the caller sent", () => {
+test("a save keeps each env's admin token and registered orgs, whatever the caller sent", () => {
+	const registered = {
+		org_1: { encryptedToken: "org_1_token", registeredAt: 1 },
+	};
 	const current = ShadowAtomConfigSchema.parse({
-		sandbox: { encryptedToken: "minted" },
+		sandbox: { adminEncryptedToken: "minted", orgs: registered },
 	});
 	const saved = scheduleShadowAtomConfig({
 		current,
 		next: ShadowAtomConfigSchema.parse({
-			sandbox: { encryptedToken: "forged" },
-			live: { encryptedToken: "forged" },
+			sandbox: {
+				endpointUrl: "https://shadow.example.com",
+				adminEncryptedToken: "forged",
+				orgs: { org_2: { encryptedToken: "forged", registeredAt: 2 } },
+			},
+			live: { adminEncryptedToken: "forged" },
 		}),
 		now: settled,
 	});
-	expect(saved.sandbox.encryptedToken).toBe("minted");
-	expect(saved.live.encryptedToken).toBeNull();
+	expect(saved.sandbox.endpointUrl).toBe("https://shadow.example.com");
+	expect(saved.sandbox.adminEncryptedToken).toBe("minted");
+	expect(saved.sandbox.orgs).toEqual(registered);
+	expect(saved.live.adminEncryptedToken).toBeNull();
+	expect(saved.live.orgs).toEqual({});
 });

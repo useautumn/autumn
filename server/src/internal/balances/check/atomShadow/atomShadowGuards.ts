@@ -24,7 +24,7 @@ export const isAtomAnswerableCheck = ({
 	);
 };
 
-/** Our shadow Atom for this env, or null unless it has an address, a token, and holds this customer. Never the org's own Atom. */
+/** Our shadow Atom for this env, or null unless it has an address, the org is registered on it, and it holds this customer. Never the org's own Atom. */
 export const shadowAtomTarget = ({
 	ctx,
 	customerId,
@@ -33,10 +33,11 @@ export const shadowAtomTarget = ({
 	customerId: string;
 }): AtomShadowTarget | null => {
 	const config = getShadowAtomConfig()[ctx.env];
-	if (!config.endpointUrl || !config.encryptedToken) return null;
+	const registered = config.orgs[ctx.org.id];
+	if (!config.endpointUrl || !registered) return null;
 	if (!inAtomRollout({ config, orgId: ctx.org.id, customerId })) return null;
 	return {
 		endpointUrl: config.endpointUrl,
-		token: decryptData(config.encryptedToken),
+		token: decryptData(registered.encryptedToken),
 	};
 };

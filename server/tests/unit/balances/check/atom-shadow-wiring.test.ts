@@ -28,13 +28,26 @@ beforeAll(() => {
 	process.env.ENCRYPTION_PASSWORD = "atom-shadow-test-password";
 });
 
-/** Our shadow Atom at `endpointUrl`, holding half of the test org's customers. */
-const useShadowAtom = ({ endpointUrl }: { endpointUrl: string }) =>
+/** Our shadow Atom at `endpointUrl`, holding half of the test org's customers once the org is registered on it. */
+const useShadowAtom = ({
+	endpointUrl,
+	registered = true,
+}: {
+	endpointUrl: string;
+	registered?: boolean;
+}) =>
 	_setShadowAtomConfigForTesting({
 		config: {
 			sandbox: {
 				endpointUrl,
-				encryptedToken: encryptData("shadow_token_1"),
+				orgs: registered
+					? {
+							org_shadow: {
+								encryptedToken: encryptData("shadow_token_1"),
+								registeredAt: 1,
+							},
+						}
+					: {},
 				rollout: { orgs: { org_shadow: 50 } },
 			},
 		},
@@ -189,6 +202,20 @@ test("a customer outside the rollout, or a check Atom would hand back, never rea
 	});
 	await Bun.sleep(50);
 
+	expect(atom.calls).toBe(0);
+	expect(shadowLogs).toHaveLength(0);
+});
+
+test("an org not registered on the shadow Atom never reaches it", async () => {
+	useShadowAtom({ endpointUrl: server.url.origin, registered: false });
+	const { ctx, shadowLogs } = createCtx();
+	const response = await postCheck({
+		ctx,
+		body: { customer_id: inside, feature_id: "messages" },
+	});
+	await Bun.sleep(50);
+
+	expect(response.status).toBe(200);
 	expect(atom.calls).toBe(0);
 	expect(shadowLogs).toHaveLength(0);
 });

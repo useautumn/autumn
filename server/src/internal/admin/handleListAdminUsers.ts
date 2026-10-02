@@ -1,4 +1,4 @@
-import { user, Scopes } from "@autumn/shared";
+import { Scopes, user } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, isNull, lt, or } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 

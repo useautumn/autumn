@@ -2,6 +2,7 @@ import type {
 	ShadowAtomConfig,
 	ShadowAtomEnvConfig,
 	ShadowAtomRollout,
+	ShadowAtomSettings,
 } from "./shadowAtomEdgeConfig.js";
 
 /** Past every reader's config poll (10s in production, 1s locally), so server and herald flip together. */
@@ -63,32 +64,34 @@ const scheduleRollout = ({
 				changedAt: now,
 			};
 
-/** The config an admin saved, with each env's token and settle bookkeeping carried over: a new percent starts from what routes now. */
+const scheduleEnv = ({
+	current,
+	next,
+	now,
+}: {
+	current: ShadowAtomEnvConfig;
+	next: ShadowAtomSettings["sandbox"];
+	now: number;
+}): ShadowAtomEnvConfig => ({
+	...current,
+	endpointUrl: next.endpointUrl,
+	rollout: scheduleRollout({
+		current: current.rollout,
+		next: next.rollout,
+		now,
+	}),
+});
+
+/** The config an admin saved: only its address and rollout change, a new percent starting from what routes now; tokens and orgs stay. */
 export const scheduleShadowAtomConfig = ({
 	current,
 	next,
 	now,
 }: {
 	current: ShadowAtomConfig;
-	next: ShadowAtomConfig;
+	next: ShadowAtomSettings;
 	now: number;
 }): ShadowAtomConfig => ({
-	sandbox: {
-		...next.sandbox,
-		encryptedToken: current.sandbox.encryptedToken,
-		rollout: scheduleRollout({
-			current: current.sandbox.rollout,
-			next: next.sandbox.rollout,
-			now,
-		}),
-	},
-	live: {
-		...next.live,
-		encryptedToken: current.live.encryptedToken,
-		rollout: scheduleRollout({
-			current: current.live.rollout,
-			next: next.live.rollout,
-			now,
-		}),
-	},
+	sandbox: scheduleEnv({ current: current.sandbox, next: next.sandbox, now }),
+	live: scheduleEnv({ current: current.live, next: next.live, now }),
 });

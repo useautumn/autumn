@@ -35,18 +35,23 @@ const orgWith = ({ hasAtom }: { hasAtom: boolean }) =>
 			: null,
 	}) as unknown as Organization;
 
-/** The sandbox shadow Atom at `endpointUrl` (null is none), holding every customer or none. */
+/** The sandbox shadow Atom at `endpointUrl` (null is none), holding every customer or none, with org_1 registered unless told otherwise. */
 const shadowWith = ({
 	endpointUrl,
 	percent = 100,
+	registered = true,
 }: {
 	endpointUrl: string | null;
 	percent?: number;
+	registered?: boolean;
 }): ShadowAtomConfig =>
 	ShadowAtomConfigSchema.parse({
 		sandbox: {
 			endpointUrl,
-			encryptedToken: "encrypted_shadow",
+			adminEncryptedToken: "encrypted_admin",
+			orgs: registered
+				? { org_1: { encryptedToken: "encrypted_org_1", registeredAt: 1 } }
+				: {},
 			rollout: { percent, previousPercent: percent },
 		},
 	});
@@ -62,6 +67,7 @@ const createPushContext = ({
 	failing?: string[];
 }) => {
 	const reached: string[] = [];
+	const tokens: Record<string, string> = {};
 	const logged: { level: "warn" | "error"; target: unknown }[] = [];
 	const logAt =
 		(level: "warn" | "error") => (meta: { data?: { target?: unknown } }) =>
@@ -109,12 +115,15 @@ const createPushContext = ({
 			readSubjectState: async () => ({ state: {}, catalog: {} }),
 		},
 		shadowAtomConfig: { get: () => shadowAtom },
-		getAtomClient: ({ connection }: { connection: AtomConnection }) => ({
-			setSubject: atomAt(connection.endpointUrl),
-			setCatalog: atomAt(connection.endpointUrl),
-		}),
+		getAtomClient: ({ connection }: { connection: AtomConnection }) => {
+			tokens[connection.endpointUrl] = connection.encryptedToken;
+			return {
+				setSubject: atomAt(connection.endpointUrl),
+				setCatalog: atomAt(connection.endpointUrl),
+			};
+		},
 	} as unknown as CachePushContext;
-	return { ctx, reached, logged };
+	return { ctx, reached, logged, tokens };
 };
 
 const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
@@ -149,6 +158,34 @@ test("an org with no Atom of its own still feeds the shadow Atom", async () => {
 	});
 	await pushSubject({ ctx });
 	expect(reached).toEqual([SHADOW_ATOM]);
+});
+
+test("the shadow Atom is reached with the org's own token, and only once the org is registered on it", async () => {
+	const registered = createPushContext({
+		org: orgWith({ hasAtom: false }),
+		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
+	});
+	await pushSubject({ ctx: registered.ctx });
+	await pushCatalogToCache({
+		ctx: registered.ctx,
+		orgId: "org_1",
+		env: AppEnv.Sandbox,
+	});
+	expect(registered.reached).toEqual([SHADOW_ATOM, SHADOW_ATOM]);
+	expect(registered.tokens[SHADOW_ATOM]).toBe("encrypted_org_1");
+
+	_resetOrgWithFeaturesL1ForTesting();
+	const unregistered = createPushContext({
+		org: orgWith({ hasAtom: true }),
+		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM, registered: false }),
+	});
+	await pushSubject({ ctx: unregistered.ctx });
+	await pushCatalogToCache({
+		ctx: unregistered.ctx,
+		orgId: "org_1",
+		env: AppEnv.Sandbox,
+	});
+	expect(unregistered.reached).toEqual([ORG_ATOM, ORG_ATOM]);
 });
 
 test("a customer in the rollout reaches both; one outside it only the org's Atom", async () => {

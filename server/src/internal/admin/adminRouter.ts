@@ -55,6 +55,7 @@ import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import { handleMintAdminShadowAtomToken } from "./handleMintAdminShadowAtomToken.js";
+import { handleRegisterAdminShadowAtomOrg } from "./handleRegisterAdminShadowAtomOrg.js";
 import { handleSearchAdminOrgCustomers } from "./handleSearchAdminOrgCustomers";
 import {
 	handleCreateSlackAdminInstall,
@@ -62,6 +63,7 @@ import {
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleUnregisterAdminShadowAtomOrg } from "./handleUnregisterAdminShadowAtomOrg.js";
 import { handleUpsertAdminAgentProvisionRateLimitConfig } from "./handleUpsertAdminAgentProvisionRateLimitConfig";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
 import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
@@ -186,6 +188,14 @@ honoAdminRouter.put(
 honoAdminRouter.post(
 	"/shadow-atom-config/token",
 	...handleMintAdminShadowAtomToken,
+);
+honoAdminRouter.put(
+	"/shadow-atom-config/:env/orgs/:org_id",
+	...handleRegisterAdminShadowAtomOrg,
+);
+honoAdminRouter.delete(
+	"/shadow-atom-config/:env/orgs/:org_id",
+	...handleUnregisterAdminShadowAtomOrg,
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
 honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);
