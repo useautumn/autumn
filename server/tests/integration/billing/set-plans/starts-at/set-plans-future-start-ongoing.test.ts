@@ -14,13 +14,13 @@ import { addDays } from "date-fns";
 import {
 	expectFutureStartScheduleCorrect,
 	findLiveCustomerProduct,
-	futureStartProducts,
+	startsAtProducts,
 } from "./utils/futureStartUtils";
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: a running ongoing add-on keeps running while the first phase starts later")}`,
 	async () => {
-		const { pro, premium, addOn } = futureStartProducts();
+		const { pro, premium, addOn } = startsAtProducts();
 		const { customerId, autumnV2_2, ctx, advancedTo } = await initScenario({
 			customerId: "set-plans-future-start-ongoing-running",
 			setup: [
@@ -78,7 +78,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: a new ongoing add-on is attached and invoiced now while the first phase starts later")}`,
 	async () => {
-		const { pro, addOn } = futureStartProducts();
+		const { pro, addOn } = startsAtProducts();
 		const { customerId, autumnV1, autumnV2_2, ctx, advancedTo } =
 			await initScenario({
 				customerId: "set-plans-future-start-ongoing-new",

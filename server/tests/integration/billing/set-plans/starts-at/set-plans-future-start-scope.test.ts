@@ -16,7 +16,7 @@ import { initMultiSubScenario } from "../multi-sub/multiSubScenario";
 import {
 	expectFutureStartScheduleCorrect,
 	findLiveCustomerProduct,
-	futureStartProducts,
+	startsAtProducts,
 } from "./utils/futureStartUtils";
 
 test.concurrent(
@@ -71,7 +71,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: another entity's plan keeps the shared subscription, which the new plan joins at the start")}`,
 	async () => {
-		const { pro, premium } = futureStartProducts();
+		const { pro, premium } = startsAtProducts();
 		const { customerId, autumnV2_2, ctx, advancedTo, entities } =
 			await initScenario({
 				customerId: "set-plans-future-start-entities",
