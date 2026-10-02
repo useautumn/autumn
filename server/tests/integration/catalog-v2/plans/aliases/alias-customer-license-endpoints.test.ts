@@ -3,9 +3,11 @@
  */
 
 import { expect, test } from "bun:test";
-import type {
-	AttachParamsV1Input,
-	UpdateSubscriptionV1ParamsInput,
+import {
+	type ApiEntityV2,
+	type AttachParamsV1Input,
+	CusProductStatus,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import {
@@ -13,10 +15,13 @@ import {
 	listLicensePools,
 } from "@tests/integration/licenses/licenseTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 import { deleteAliases, renamePlan } from "../utils/planAliasTestUtils.js";
@@ -76,6 +81,11 @@ test.concurrent(
 				product_id: proOld,
 			});
 			expect(check.allowed).toBe(true);
+			await expectCustomerProducts({
+				customerId,
+				autumn: autumnV2_3,
+				active: [proNew],
+			});
 
 			await autumnV2_3.transfer(customerId, {
 				to_entity_id: entities[0].id,
@@ -84,7 +94,30 @@ test.concurrent(
 			await expectCustomerProducts({
 				customerId,
 				autumn: autumnV2_3,
-				active: [proNew],
+				...(isBalanceWorkerRoute()
+					? { notPresent: [proNew] }
+					: { active: [proNew] }),
+			});
+			const [transferredProduct] = await CusProductService.getByProductId({
+				db: ctx.db,
+				productId: proNew,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+			expect(transferredProduct).toMatchObject({
+				entity_id: entities[0].id,
+				status: CusProductStatus.Active,
+				product: { id: proNew },
+			});
+			await pollUntilAsserted({
+				fetch: () =>
+					autumnV2_3.entities.get<ApiEntityV2>(customerId, entities[0].id),
+				assert: (entity) =>
+					expectCustomerProducts({
+						customer: entity,
+						active: [proNew],
+						notPresent: [proOld],
+					}),
 			});
 		} finally {
 			await autumnV2_3.customers.delete(createdId).catch(() => {});
