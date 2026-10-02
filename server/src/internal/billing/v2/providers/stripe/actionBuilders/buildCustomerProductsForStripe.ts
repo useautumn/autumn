@@ -21,9 +21,7 @@ export const buildCustomerProductsForStripe = ({
 
 	const earlyAccessCustomerProducts =
 		autumnBillingPlan.insertCustomerProducts.filter(
-			(customerProduct) =>
-				customerProduct.access_starts_at !== undefined &&
-				customerProduct.access_starts_at !== null,
+			(customerProduct) => customerProduct.access_starts_at != null,
 		);
 	const earlyAccessCustomerProductIds = new Set(
 		earlyAccessCustomerProducts.map((customerProduct) => customerProduct.id),

@@ -1,7 +1,6 @@
 import {
 	type CreateScheduleBillingContext,
-	CusProductStatus,
-	customerProductHasActiveStatus,
+	customerProductHasRelevantStatus,
 	type FullCusProduct,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
@@ -19,10 +18,6 @@ type LiveSubscriptionFields = Partial<
 	>
 >;
 
-const isLiveOrScheduled = (customerProduct: FullCusProduct) =>
-	customerProductHasActiveStatus(customerProduct) ||
-	customerProduct.status === CusProductStatus.Scheduled;
-
 /** A plan the request leaves running on the live subscription or its schedule. */
 const staysOnLiveSubscription = ({
 	customerProduct,
@@ -36,7 +31,7 @@ const staysOnLiveSubscription = ({
 	removedCustomerProductIds: Set<string>;
 }) => {
 	if (removedCustomerProductIds.has(customerProduct.id)) return false;
-	if (!isLiveOrScheduled(customerProduct)) return false;
+	if (!customerProductHasRelevantStatus(customerProduct)) return false;
 	return (
 		isCustomerProductOnStripeSubscription({
 			customerProduct,

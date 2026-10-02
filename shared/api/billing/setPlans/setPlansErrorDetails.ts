@@ -74,6 +74,10 @@ export const SetPlansFutureStartConflictSchema = z.object({
 	starts_at: z.number(),
 });
 
+export type SetPlansFutureStartConflict = z.infer<
+	typeof SetPlansFutureStartConflictSchema
+>["conflict"];
+
 /** Nothing in Stripe would start this plan when a later first phase begins. */
 export const SetPlansPlanCannotStartLaterSchema = z.object({
 	type: z.literal("plan_cannot_start_later"),
