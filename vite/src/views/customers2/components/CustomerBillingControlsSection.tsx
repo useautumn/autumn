@@ -40,6 +40,8 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useCustomerContext } from "../customer/CustomerContext";
+import { useCustomerAllocationControls } from "../hooks/useCustomerAllocationControls";
+import { CustomerAllocationControls } from "./CustomerAllocationControls";
 import { useDisplayedBillingControls } from "./useDisplayedBillingControls";
 
 const ADD_MENU_ITEMS: Array<{ key: BillingControlKey; label: string }> = [
@@ -101,7 +103,18 @@ export function CustomerBillingControlsSection() {
 		featureNameById,
 		isLoading,
 	} = useDisplayedBillingControls();
-	const { setEntityId } = useCustomerContext();
+	const { setEntityId, entityId } = useCustomerContext();
+	const customerId = fullCustomer?.id ?? fullCustomer?.internal_id;
+	const allocationQuery = useCustomerAllocationControls({
+		customerId,
+		enabled: !entityId,
+	});
+	const allocations = !entityId
+		? (allocationQuery.data?.billing_controls.balance_allocations ?? [])
+		: [];
+	const allocationsLoading =
+		!entityId && !!customerId && allocationQuery.isPending;
+	const allocationsError = !entityId && allocationQuery.isError;
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isEntityView = !!selectedEntity;
 
@@ -239,7 +252,13 @@ export function CustomerBillingControlsSection() {
 		</Table.Toolbar>
 	);
 
-	if (!isLoading && !hasBillingControls(billingControls)) {
+	if (
+		!isLoading &&
+		!allocationsLoading &&
+		!allocationsError &&
+		!hasBillingControls(billingControls) &&
+		allocations.length === 0
+	) {
 		return (
 			<Table.Container>
 				{toolbar}
@@ -280,9 +299,30 @@ export function CustomerBillingControlsSection() {
 		<Table.Container>
 			{toolbar}
 
+			{allocationsError && (
+				<TrayPlaceholder text="Could not load balance allocations" />
+			)}
+			{allocationsLoading && (
+				<TrayPlaceholder text="Loading balance allocations" />
+			)}
+			<CustomerAllocationControls
+				controls={allocations}
+				featureNameById={featureNameById}
+				onEdit={(control) =>
+					setSheet({
+						type: "allocate-balances",
+						data: {
+							featureId: control.feature_id,
+							featureName:
+								featureNameById.get(control.feature_id) ?? control.feature_id,
+							interval: control.interval,
+						},
+					})
+				}
+			/>
 			{isLoading ? (
 				<TrayPlaceholder text="Loading billing controls" />
-			) : (
+			) : hasBillingControls(billingControls) ? (
 				<BillingControlsList
 					billingControls={billingControls}
 					featureNameById={featureNameById}
@@ -332,7 +372,7 @@ export function CustomerBillingControlsSection() {
 						});
 					}}
 				/>
-			)}
+			) : null}
 		</Table.Container>
 	);
 }
