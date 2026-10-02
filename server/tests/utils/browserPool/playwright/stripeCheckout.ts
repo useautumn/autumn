@@ -61,8 +61,9 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(1000);
 	}
 
-	// The card radio is hidden behind the accordion button, so click that via JS.
-	if (!(await cardNumber.isVisible())) {
+	// Card-only sessions render the form without an accordion; otherwise expand Card
+	// via its zero-size overlay button (re-clicking keeps Card selected).
+	if (!(await cardNumber.isVisible()) && (await cardAccordion.count()) > 0) {
 		await cardAccordion.evaluate((el) => (el as HTMLElement).click());
 		console.log("[stripeCheckout] Card selected via accordion button");
 	}

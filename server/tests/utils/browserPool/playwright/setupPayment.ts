@@ -30,8 +30,9 @@ export const setupPayment = async ({
 		.first()
 		.waitFor({ state: "attached", timeout: 60_000 });
 
-	// The card radio is hidden behind the accordion button, so click that via JS.
-	if (!(await cardNumber.isVisible())) {
+	// Card-only sessions render the form without an accordion; otherwise expand Card
+	// via its zero-size overlay button (re-clicking keeps Card selected).
+	if (!(await cardNumber.isVisible()) && (await cardAccordion.count()) > 0) {
 		await cardAccordion.evaluate((el) => (el as HTMLElement).click());
 		console.log("[setupPayment] Card selected via accordion button");
 	}
@@ -99,19 +100,19 @@ export const setupPayment = async ({
 		// Postal code field not present
 	}
 
+	// A click can land in a Stripe iframe while the page scrolls to Submit; Enter goes
+	// to the focused button wherever it is on screen.
+	const submit = page.locator("button[type=submit]");
+	await (await submit.elementHandle({ timeout: 30_000 }))?.waitForElementState(
+		"enabled",
+		{ timeout: 30_000 },
+	);
 	// Stripe can confirm setup while an unreachable success URL leaves the page processing.
 	const confirmationResponse = page.waitForResponse(
 		(response) =>
 			response.request().method() === "POST" &&
 			response.url().startsWith("https://api.stripe.com/v1/payment_pages/") &&
 			new URL(response.url()).pathname.endsWith("/confirm"),
-		{ timeout: 30_000 },
-	);
-	// A click can land in a Stripe iframe while the page scrolls to Submit; Enter goes
-	// to the focused button wherever it is on screen.
-	const submit = page.locator("button[type=submit]");
-	await (await submit.elementHandle({ timeout: 30_000 }))?.waitForElementState(
-		"enabled",
 		{ timeout: 30_000 },
 	);
 	const [response] = await Promise.all([
