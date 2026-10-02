@@ -44,10 +44,13 @@ export function SubscriptionConflictHoverCard({
 	return (
 		<HoverCard>
 			<HoverCardTrigger asChild delay={150} closeDelay={100}>
-				<span className="pointer-events-auto inline-flex shrink-0 cursor-default items-center gap-1 text-xs text-subtle">
+				<button
+					type="button"
+					className="pointer-events-auto inline-flex shrink-0 cursor-default items-center gap-1 rounded-sm text-xs text-subtle outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				>
 					<StripeIcon size={11} className="text-indigo-500" />
 					Subscription conflict
-				</span>
+				</button>
 			</HoverCardTrigger>
 			<HoverCardContent
 				side="bottom"

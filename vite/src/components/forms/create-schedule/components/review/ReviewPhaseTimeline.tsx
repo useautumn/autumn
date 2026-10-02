@@ -27,9 +27,12 @@ export function ReviewPhaseTimeline({
 	return (
 		<HoverCard>
 			<HoverCardTrigger asChild delay={400} closeDelay={100}>
-				<span className="shrink-0 cursor-default rounded-full border border-border/50 bg-muted px-2 py-px text-xs font-normal text-tertiary-foreground">
+				<button
+					type="button"
+					className="shrink-0 cursor-default rounded-full border border-border/50 bg-muted px-2 py-px text-xs font-normal text-tertiary-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				>
 					{phases.length} phases
-				</span>
+				</button>
 			</HoverCardTrigger>
 			<HoverCardContent
 				align="end"
