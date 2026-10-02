@@ -24,7 +24,7 @@ import type {
 	AtomAuth,
 	AtomDeployer,
 	AtomDeployment,
-	AtomOwner,
+	AtomNames,
 	AtomSetup,
 } from "./types/atomDeployer.js";
 
@@ -73,33 +73,27 @@ const plainVariable = ({ name, value }: { name: string; value: string }) => ({
 	targetResources: null,
 });
 
-const atomAuthToVariables = ({ auth }: { auth: AtomAuth }) =>
-	auth.mode === "deployed"
-		? [plainVariable({ name: "ATOM_TOKEN_HASH", value: auth.tokenHash })]
-		: [
-				plainVariable({ name: "ATOM_MODE", value: "multi_tenant" }),
-				plainVariable({
-					name: "ATOM_ADMIN_TOKEN_HASH",
-					value: auth.adminTokenHash,
-				}),
-			];
+/** A customer's Atom sets no ATOM_MODE; only our shadow Atom is multi-tenant. */
+const atomAuthToVariables = ({ auth }: { auth: AtomAuth }) => [
+	...(auth.mode === "multi_tenant"
+		? [plainVariable({ name: "ATOM_MODE", value: "multi_tenant" })]
+		: []),
+	plainVariable({ name: "ATOM_TOKEN_HASH", value: auth.tokenHash }),
+];
 
 const startAlienAtom = ({
 	ctx,
-	org,
-	env,
+	names,
 	auth,
 	machine,
 }: {
 	ctx: AlienContext;
-	org: AtomOwner;
-	env: AppEnv;
+	names: AtomNames;
 	auth: AtomAuth;
 	machine: ByocCacheMachine;
 }): Promise<AtomSetup> =>
 	ctx.alienClient.startSetup({
-		externalId: cacheExternalId({ org, env }),
-		label: cacheGroupLabel({ org, env }),
+		...names,
 		pools: machineToAtomPools({ machine }),
 		environmentVariables: [
 			...atomAuthToVariables({ auth }),

@@ -1,9 +1,7 @@
 import type { AppEnv, ByocCacheMachine } from "@autumn/shared";
 import type { AtomSetup } from "@/internal/byoc/deployers/types/atomDeployer.js";
-import {
-	getShadowAtomDeployer,
-	SHADOW_ATOM_OWNER,
-} from "../getShadowAtomDeployer.js";
+import { shadowAtomCacheNames } from "@/internal/byoc/utils/byocCacheUtils.js";
+import { getShadowAtomDeployer } from "../getShadowAtomDeployer.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
 import { patchShadowAtomEnv } from "./patchShadowAtomEnv.js";
 
@@ -21,9 +19,8 @@ export const startShadowAtom = ({
 		env,
 		fn: async () => {
 			const setup = await getShadowAtomDeployer().start({
-				org: SHADOW_ATOM_OWNER,
-				env,
-				auth: { mode: "multi_tenant", adminTokenHash },
+				names: shadowAtomCacheNames({ env }),
+				auth: { mode: "multi_tenant", tokenHash: adminTokenHash },
 				machine,
 			});
 			await patchShadowAtomEnv({

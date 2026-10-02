@@ -1,9 +1,4 @@
-import type {
-	AppEnv,
-	ByocCacheMachine,
-	ByocCacheStatus,
-	Organization,
-} from "@autumn/shared";
+import type { ByocCacheMachine, ByocCacheStatus } from "@autumn/shared";
 
 /** One env's Atom as whoever runs it reports it. */
 export type AtomDeployment = {
@@ -21,20 +16,17 @@ export type AtomSetup = {
 	setupUrl: string | null;
 };
 
-/** Who an Atom answers to: one org's token, or, for our shadow Atom only, an admin token that registers orgs. */
-export type AtomAuth =
-	| { mode: "deployed"; tokenHash: string }
-	| { mode: "multi_tenant"; adminTokenHash: string };
+/** The Atom's one token: an org's own, or for our multi-tenant shadow Atom only, the admin token that registers orgs. */
+export type AtomAuth = { mode: "deployed" | "multi_tenant"; tokenHash: string };
 
-/** What names an Atom's deployment group: an org, or a fixed admin id for our shadow Atom. */
-export type AtomOwner = Pick<Organization, "id" | "slug">;
+/** A deployment group's identity (`externalId`) and display name, which also names its stack. */
+export type AtomNames = { externalId: string; label: string };
 
 /** Whoever runs an org's Atom: alien in a real cloud, the dev stack's own Atom process locally. */
 export type AtomDeployer = {
 	/** The Atom is only ever given token hashes. Starting one that exists keeps its data. */
 	start(params: {
-		org: AtomOwner;
-		env: AppEnv;
+		names: AtomNames;
 		auth: AtomAuth;
 		machine: ByocCacheMachine;
 	}): Promise<AtomSetup>;

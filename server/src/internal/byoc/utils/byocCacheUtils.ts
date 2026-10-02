@@ -35,6 +35,28 @@ export const cacheGroupLabel = ({
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
 
+/** An org's Atom names, as `createCache` starts it. */
+export const cacheNames = ({
+	org,
+	env,
+}: {
+	org: Organization;
+	env: AppEnv;
+}) => ({
+	externalId: cacheExternalId({ org, env }),
+	label: cacheGroupLabel({ org, env }),
+});
+
+/** Our shadow Atom's names. An org's external id always ends `.<env>` and its label has `autumn-byoc` after the prefix, so neither can match. */
+export const shadowAtomCacheNames = ({ env }: { env: AppEnv }) => ({
+	externalId: [cacheNamePrefix(), `autumn-internal:shadow-atom:${env}`]
+		.filter(Boolean)
+		.join("."),
+	label: [cacheNamePrefix(), "autumn-internal", "shadow-atom", env]
+		.filter(Boolean)
+		.join("-"),
+});
+
 /** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
 export const CACHE_LOCK_TTL_MS = 30_000;
 

@@ -26,6 +26,7 @@ import {
 	cacheDeploymentToCreateResponse,
 	cacheDeploymentToMachine,
 	cacheLockKey,
+	cacheNames,
 	resourcesToMachine,
 } from "../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
@@ -149,8 +150,7 @@ const startCacheSetup = async ({
 		: generateAtomToken();
 	const machine = setupMachine({ params, existing });
 	const setup = await getAtomDeployer().start({
-		org,
-		env,
+		names: cacheNames({ org, env }),
 		auth: { mode: "deployed", tokenHash: atomTokenToHash({ token }) },
 		machine,
 	});

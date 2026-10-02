@@ -7,6 +7,10 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { createAlienAtomDeployer } from "@/internal/byoc/deployers/createAlienAtomDeployer.js";
+import {
+	cacheNames,
+	shadowAtomCacheNames,
+} from "@/internal/byoc/utils/byocCacheUtils.js";
 
 const org = { id: "org_1", slug: "acme" } as Organization;
 
@@ -32,8 +36,7 @@ describe("starting an Atom on alien", () => {
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			org,
-			env: AppEnv.Sandbox,
+			names: cacheNames({ org, env: AppEnv.Sandbox }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 		});
@@ -60,8 +63,7 @@ describe("starting an Atom on alien", () => {
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			org,
-			env: AppEnv.Sandbox,
+			names: cacheNames({ org, env: AppEnv.Sandbox }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 		});
@@ -71,14 +73,13 @@ describe("starting an Atom on alien", () => {
 		});
 	});
 
-	test("our shadow Atom starts in multi-tenant mode with only the admin token hash", async () => {
+	test("our shadow Atom starts multi-tenant, its ATOM_TOKEN_HASH the admin token's", async () => {
 		const { alienClient, started } = recordingAlienClient();
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			org,
-			env: AppEnv.Sandbox,
-			auth: { mode: "multi_tenant", adminTokenHash: "admin_hash" },
+			names: shadowAtomCacheNames({ env: AppEnv.Sandbox }),
+			auth: { mode: "multi_tenant", tokenHash: "admin_hash" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 		});
 
@@ -90,7 +91,7 @@ describe("starting an Atom on alien", () => {
 				targetResources: null,
 			},
 			{
-				name: "ATOM_ADMIN_TOKEN_HASH",
+				name: "ATOM_TOKEN_HASH",
 				value: "admin_hash",
 				type: "plain",
 				targetResources: null,

@@ -13,7 +13,7 @@ import type {
 	AtomAuth,
 	AtomDeployer,
 	AtomDeployment,
-	AtomOwner,
+	AtomNames,
 	AtomSetup,
 } from "./types/atomDeployer.js";
 import type { MultiTenantAtomAddress } from "./types/multiTenantAtom.js";
@@ -30,14 +30,12 @@ const GetAtomResponseSchema = z.object({
 
 const startStackAtom = async ({
 	ctx,
-	org,
-	env,
+	names,
 	auth,
 	machine,
 }: {
 	ctx: StackContext;
-	org: AtomOwner;
-	env: AppEnv;
+	names: AtomNames;
 	auth: AtomAuth;
 	machine: ByocCacheMachine;
 }): Promise<AtomSetup> => {
@@ -48,7 +46,7 @@ const startStackAtom = async ({
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
-	const id = cacheExternalId({ org, env });
+	const id = names.externalId;
 	await postToMultiTenantAtom({
 		atom: ctx.atom,
 		route: "atoms.put",

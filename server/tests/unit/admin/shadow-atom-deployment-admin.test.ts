@@ -149,7 +149,8 @@ test("staff create the shadow Atom with the customer's alien stack, in multi-ten
 		setup_url: "https://setup.example",
 	});
 	const [started] = calls.started;
-	expect(started?.externalId).toEndWith("autumn-shadow-atom.sandbox");
+	expect(started?.externalId).toEndWith("autumn-internal:shadow-atom:sandbox");
+	expect(started?.label).toEndWith("autumn-internal-shadow-atom-sandbox");
 	expect(started?.pools).toEqual({
 		stateful: { machine: "c7g.xlarge", machines: 1 },
 	});
@@ -161,9 +162,9 @@ test("staff create the shadow Atom with the customer's alien stack, in multi-ten
 	);
 	expect(variables).toMatchObject({
 		ATOM_MODE: "multi_tenant",
-		ATOM_ADMIN_TOKEN_HASH: "admin_hash",
+		ATOM_TOKEN_HASH: "admin_hash",
 	});
-	expect(variables.ATOM_TOKEN_HASH).toBeUndefined();
+	expect(variables.ATOM_ADMIN_TOKEN_HASH).toBeUndefined();
 	expect(lastWritten()?.sandbox.deploymentGroupId).toBe("dg_1");
 	expect(lastWritten()?.live.deploymentGroupId).toBeNull();
 });
