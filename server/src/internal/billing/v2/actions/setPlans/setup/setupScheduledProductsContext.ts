@@ -59,9 +59,11 @@ export const setupScheduledProductsContext = async ({
 						customPrices,
 						customEntitlements,
 						featureQuantities,
-						customerLicenseQuantities: setupCustomerLicenseQuantityContext({
-							params: plan,
-						}),
+						// Omitted grants only the included seats later, so it must stay distinct from [].
+						customerLicenseQuantities:
+							plan.license_quantities === undefined
+								? undefined
+								: setupCustomerLicenseQuantityContext({ params: plan }),
 						insertPlanLicenses,
 						externalId: plan.subscription_id,
 						entity: computeScopeForScheduledProduct({

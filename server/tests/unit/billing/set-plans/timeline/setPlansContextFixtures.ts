@@ -2,6 +2,7 @@ import {
 	BillingVersion,
 	type CreateScheduleBillingContext,
 	CusProductStatus,
+	type CustomerLicenseQuantity,
 	type Entity,
 	type FullCusProduct,
 	type FullProduct,
@@ -75,6 +76,7 @@ export type PlanInput = {
 	entity?: Entity;
 	ongoing?: boolean;
 	externalId?: string;
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
 };
 
 export const buildContext = ({
@@ -97,10 +99,17 @@ export const buildContext = ({
 	return {
 		...billingContext,
 		productContexts: opening.map(
-			({ fullProduct, entity: planEntity, ongoing, externalId }) => ({
+			({
+				fullProduct,
+				entity: planEntity,
+				ongoing,
+				externalId,
+				customerLicenseQuantities,
+			}) => ({
 				fullProduct,
 				unscheduled: ongoing,
 				externalId,
+				customerLicenseQuantities,
 				customPrices: [],
 				customEnts: [],
 				featureQuantities: [],
@@ -117,9 +126,15 @@ export const buildContext = ({
 			startsAt,
 			endsAt: undefined,
 			productContexts: plans.map(
-				({ fullProduct, entity: planEntity, externalId }) => ({
+				({
+					fullProduct,
+					entity: planEntity,
+					externalId,
+					customerLicenseQuantities,
+				}) => ({
 					fullProduct,
 					externalId,
+					customerLicenseQuantities,
 					customPrices: [],
 					customEntitlements: [],
 					featureQuantities: [],
