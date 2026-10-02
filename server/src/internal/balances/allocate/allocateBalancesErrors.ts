@@ -1,4 +1,4 @@
-import { RecaseError } from "@autumn/shared";
+import { MAX_ALLOCATED_ENTITIES, RecaseError } from "@autumn/shared";
 
 export const duplicateAllocationEntityError = ({
 	entityId,
@@ -56,5 +56,16 @@ export const allocationExceedsAvailableError = ({
 	new RecaseError({
 		message: `Allocations exceed available shared credits by ${shortfall}`,
 		code: "allocation_exceeds_available",
+		statusCode: 400,
+	});
+
+export const tooManyAllocatedEntitiesError = ({
+	featureId,
+}: {
+	featureId: string;
+}): RecaseError =>
+	new RecaseError({
+		message: `A ${featureId} allocation can hold at most ${MAX_ALLOCATED_ENTITIES} entities`,
+		code: "too_many_allocated_entities",
 		statusCode: 400,
 	});

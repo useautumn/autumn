@@ -16,6 +16,7 @@ import type { ApiBalanceBreakdownV1 } from "../../apiBalanceV1.js";
 
 type AllocationCounterView = {
 	feature_id: string;
+	internal_feature_id?: string | null;
 	internal_entity_id?: string | null;
 	filter_key?: string | null;
 	window_start_at: number;
@@ -40,18 +41,20 @@ const isEntityOwned = (
 
 const counterUsage = ({
 	subject,
-	featureId,
+	feature,
 	internalEntityId,
 	bounds,
 }: {
 	subject: AllocationSubjectView;
-	featureId: string;
+	feature: Pick<Feature, "id" | "internal_id">;
 	internalEntityId: string | null;
 	bounds: { windowStartAt: number; windowEndAt: number };
 }) => {
 	const counter = (subject.usage_windows ?? []).find(
 		(window) =>
-			window.feature_id === featureId &&
+			(window.internal_feature_id
+				? window.internal_feature_id === feature.internal_id
+				: window.feature_id === feature.id) &&
 			(window.internal_entity_id ?? null) === internalEntityId &&
 			window.filter_key === ALLOCATION_USAGE_WINDOW_FILTER_KEY &&
 			isSameUsageWindow({
@@ -154,7 +157,7 @@ export const applyAllocationsToBreakdown = ({
 	);
 	const claimed = counterUsage({
 		subject,
-		featureId: allocation.feature_id,
+		feature,
 		internalEntityId: null,
 		bounds,
 	});
@@ -164,6 +167,7 @@ export const applyAllocationsToBreakdown = ({
 		: effectiveAllocationScale({
 				allocation,
 				cycleEnd: bounds.windowEndAt,
+				parentId: parent.id,
 				sharedRemaining: sharedRemaining.toNumber(),
 				claimed,
 				requestedTotal: requestedTotal.toNumber(),
@@ -195,7 +199,7 @@ export const applyAllocationsToBreakdown = ({
 
 	const usage = counterUsage({
 		subject,
-		featureId: allocation.feature_id,
+		feature,
 		internalEntityId,
 		bounds,
 	});

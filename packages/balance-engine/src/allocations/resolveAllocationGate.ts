@@ -149,6 +149,7 @@ export const resolveAllocationGates = ({
 			scale: effectiveAllocationScale({
 				allocation,
 				cycleEnd: bounds.windowEndAt,
+				parentId: parent.id,
 				sharedRemaining: sharedRemaining.toNumber(),
 				claimed: new Decimal(claimed).toNumber(),
 				requestedTotal: requestedTotal.toNumber(),

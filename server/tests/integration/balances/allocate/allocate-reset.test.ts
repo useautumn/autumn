@@ -95,7 +95,7 @@ test.concurrent(
 		});
 		await warmCaches({ customerId, entityIds });
 		await trackMessages({ customerId, entityId: a, value: 4000 });
-		await waitForSharedBalanceInDb({ ctx, customerId, balance: 6000 });
+		await waitForSharedBalanceInDb({ ctx, customerId, remainingBalance: 6000 });
 
 		await resetSharedCycle({ ctx, customerId });
 
@@ -141,7 +141,7 @@ test.concurrent(
 		});
 		await warmCaches({ customerId, entityIds });
 		await trackMessages({ customerId, entityId: a, value: 3000 });
-		await waitForSharedBalanceInDb({ ctx, customerId, balance: 3000 });
+		await waitForSharedBalanceInDb({ ctx, customerId, remainingBalance: 3000 });
 		await allocateMessages({
 			customerId,
 			allocations: [{ entity_id: a, amount: 0 }],

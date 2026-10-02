@@ -1,10 +1,14 @@
 import {
 	allocationGranted,
+	MAX_ALLOCATED_ENTITIES,
 	packAllocationGap,
 	solveAllocationScale,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { allocationExceedsAvailableError } from "../allocateBalancesErrors.js";
+import {
+	allocationExceedsAvailableError,
+	tooManyAllocatedEntitiesError,
+} from "../allocateBalancesErrors.js";
 
 export type AllocationEntry = { internalEntityId: string; amount: number };
 
@@ -35,6 +39,7 @@ const unusedOf = ({
 
 /** The first call fits against the cycle's grant and absorbs untracked usage; later calls fit against what's left. */
 export const computeAllocationPlan = ({
+	featureId,
 	isFirstCall,
 	sharedGranted,
 	sharedRemaining,
@@ -42,6 +47,7 @@ export const computeAllocationPlan = ({
 	currentUsage,
 	entries,
 }: {
+	featureId: string;
 	isFirstCall: boolean;
 	sharedGranted: number;
 	sharedRemaining: number;
@@ -54,6 +60,13 @@ export const computeAllocationPlan = ({
 		if (amount === 0) delete amounts[internalEntityId];
 		else amounts[internalEntityId] = amount;
 	}
+	// Releases and changes to existing shares stay allowed even when the stored set is already over the cap.
+	const addsEntity = entries.some(
+		(entry) =>
+			entry.amount > 0 && currentAmounts[entry.internalEntityId] === undefined,
+	);
+	if (addsEntity && Object.keys(amounts).length > MAX_ALLOCATED_ENTITIES)
+		throw tooManyAllocatedEntitiesError({ featureId });
 
 	let entityUsage = currentUsage;
 	let seededEntityIds: string[] = [];

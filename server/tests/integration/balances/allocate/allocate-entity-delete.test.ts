@@ -63,7 +63,7 @@ test.concurrent(
 		});
 
 		// Delete drops the cache, so let the track reach Postgres first.
-		await waitForSharedBalanceInDb({ ctx, customerId, balance: 8000 });
+		await waitForSharedBalanceInDb({ ctx, customerId, remainingBalance: 8000 });
 		await autumnV2_3.entities.delete(customerId, a);
 
 		await expectMessagesBalance({
@@ -87,7 +87,7 @@ const deleteUsedShare = async ({ customerId }: { customerId: string }) => {
 	});
 	await warmCaches({ customerId, entityIds });
 	await trackMessages({ customerId, entityId: a, value: 2000 });
-	await waitForSharedBalanceInDb({ ctx, customerId, balance: 8000 });
+	await waitForSharedBalanceInDb({ ctx, customerId, remainingBalance: 8000 });
 	await autumnV2_3.entities.delete(customerId, a);
 	await expectMessagesBalance({
 		autumn: autumnV2_3,

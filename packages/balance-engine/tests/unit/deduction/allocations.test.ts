@@ -105,10 +105,10 @@ const trackAsEntity = ({
 	usageWindows = [],
 	scale = 1,
 	scaleCycleEnd = null,
+	parentId = "pool",
 	includeOwnRow = true,
 	poolUsageAllowed = false,
 	overageBehavior = "cap",
-	countsUsageWindows = true,
 	value,
 }: {
 	amounts: Record<string, number>;
@@ -117,10 +117,10 @@ const trackAsEntity = ({
 	usageWindows?: WorkerUsageWindow[];
 	scale?: number;
 	scaleCycleEnd?: number | null;
+	parentId?: string;
 	includeOwnRow?: boolean;
 	poolUsageAllowed?: boolean;
 	overageBehavior?: "cap" | "reject" | "overflow";
-	countsUsageWindows?: boolean;
 	value: number;
 }) =>
 	deduct({
@@ -131,6 +131,7 @@ const trackAsEntity = ({
 			usageWindows,
 			scale,
 			scaleCycleEnd,
+			parentId,
 			includeOwnRow,
 			poolUsageAllowed,
 		}),
@@ -139,7 +140,6 @@ const trackAsEntity = ({
 			featureId: "credits",
 			value,
 			overageBehavior,
-			countsUsageWindows,
 		}),
 	});
 
@@ -150,6 +150,7 @@ const allocatedSubject = ({
 	usageWindows = [],
 	scale = 1,
 	scaleCycleEnd = null,
+	parentId = "pool",
 	includeOwnRow = true,
 	poolUsageAllowed = false,
 }: {
@@ -159,6 +160,7 @@ const allocatedSubject = ({
 	usageWindows?: WorkerUsageWindow[];
 	scale?: number;
 	scaleCycleEnd?: number | null;
+	parentId?: string;
 	includeOwnRow?: boolean;
 	poolUsageAllowed?: boolean;
 }) =>
@@ -175,6 +177,7 @@ const allocatedSubject = ({
 						interval: EntInterval.Month,
 						scale,
 						scale_cycle_end: scaleCycleEnd,
+						parent_customer_entitlement_id: parentId,
 						amounts,
 					},
 				},
@@ -285,6 +288,24 @@ describe("allocation gate", () => {
 				value: 3000,
 			});
 			expect(drawnFrom(outcome, "pool")).toBe(1000);
+		},
+	);
+
+	test.concurrent(
+		"a counter left by another feature under the same public id doesn't count against the share",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				usageAllowed: false,
+				usageWindows: [
+					{
+						...counter({ internalEntityId: entity.internal_id, usage: 5000 }),
+						internal_feature_id: "feat_credits_old",
+					},
+				],
+				value: 5000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(5000);
 		},
 	);
 
@@ -415,6 +436,22 @@ describe("allocation gate", () => {
 		expect(drawnFrom(outcome, "pool")).toBe(0);
 		expect(outcome).toMatchObject({ appliedValue: 0, remaining: 600 });
 	});
+
+	test.concurrent(
+		"a scale solved against a pinned parent that's gone is re-solved from the pot",
+		() => {
+			const outcome = trackAsEntity({
+				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
+				poolBalance: 6000,
+				usageAllowed: false,
+				scale: 0.5,
+				scaleCycleEnd: cycle.windowEndAt,
+				parentId: "removed_pool",
+				value: 5000,
+			});
+			expect(drawnFrom(outcome, "pool")).toBe(3000);
+		},
+	);
 
 	test.concurrent(
 		"a scale with no cycle end is re-solved from the pot, not held forever",

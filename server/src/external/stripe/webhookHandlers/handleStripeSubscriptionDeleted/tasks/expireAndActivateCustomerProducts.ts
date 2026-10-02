@@ -102,6 +102,7 @@ export const expireAndActivateCustomerProducts = async ({
 		ctx,
 		customerId: fullCustomer.id || fullCustomer.internal_id,
 		notify: false,
+		now: eventContext.nowMs,
 	});
 	if (adjusted) addBillingChangeTag(eventContext, ALLOCATIONS_ADJUSTED_TAG);
 
