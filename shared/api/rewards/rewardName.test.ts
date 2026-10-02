@@ -21,9 +21,10 @@ const createCoupon = (name: string) => ({
 	},
 });
 
-const legacyCreateReward = (name: string) => ({
+const legacyCreateReward = (name: string, type = "percentage_discount") => ({
 	name,
 	id: "summer",
+	type,
 	promo_codes: [],
 	discount_config: null,
 });
@@ -53,5 +54,32 @@ describe("reward name length", () => {
 			expect(result.success).toBe(false);
 			expect(result.error?.issues[0]?.path.at(-1)).toBe("name");
 		}
+	});
+
+	test("leaves feature grant names unbounded: they never become a Stripe coupon", () => {
+		const featureGrant = {
+			name: fortyOneCharName,
+			id: "beta",
+			type: "feature_grant",
+			promo_codes: [{ code: "BETA" }],
+			entitlements: [{ internal_feature_id: "fe_messages", allowance: 10 }],
+		};
+		expect(CreateRewardSchema.safeParse(featureGrant).success).toBe(true);
+		expect(
+			UpdateRewardSchema.safeParse({
+				name: fortyOneCharName,
+				type: "feature_grant",
+			}).success,
+		).toBe(true);
+		expect(
+			CreateRewardParamsSchema.safeParse({
+				feature_grant: {
+					id: "beta",
+					name: fortyOneCharName,
+					grants: [{ feature_id: "messages", included: 10, expiry: null }],
+					promo_codes: [{ code: "BETA", max_uses: null }],
+				},
+			}).success,
+		).toBe(true);
 	});
 });

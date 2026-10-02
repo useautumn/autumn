@@ -3,6 +3,7 @@ import {
 	CouponDurationType,
 	RewardType,
 } from "@models/rewardModels/rewardModels/rewardEnums.js";
+import { CouponNameSchema } from "@models/rewardModels/rewardModels/rewardModels.js";
 import { z } from "zod/v4";
 import { ApiCouponPromoCodeV0Schema } from "./components/apiCouponPromoCodeV0.js";
 import { ApiFeatureGrantPromoCodeV0Schema } from "./components/apiFeatureGrantPromoCodeV0.js";
@@ -48,10 +49,7 @@ const CreateCouponBaseSchema = ApiCouponV0Schema.omit({
 	.extend({
 		id: z.string().min(1),
 		internal_id: internalId,
-		name: z
-			.string()
-			.min(1)
-			.max(40, { message: "Reward name must be at most 40 characters" }),
+		name: CouponNameSchema.min(1),
 		duration: CouponDurationSchema,
 		plan_ids: z
 			.array(z.string().min(1))
