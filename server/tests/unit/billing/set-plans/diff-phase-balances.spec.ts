@@ -103,6 +103,12 @@ describe(chalk.yellowBright("diffPhaseBalances"), () => {
 			behaviors: ["updated"],
 		},
 		{
+			name: "a balance that grants nothing on either side is no change, even if its reset date moves",
+			before: credits({ next_reset_at: 1_800_000_000_000 }),
+			after: NO_CREDITS,
+			behaviors: [],
+		},
+		{
 			name: "an identical balance is no change",
 			before: credits({ granted: 100, remaining: 60, usage: 40 }),
 			after: credits({ granted: 100, remaining: 60, usage: 40 }),

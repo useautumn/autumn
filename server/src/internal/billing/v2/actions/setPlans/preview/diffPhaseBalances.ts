@@ -44,6 +44,13 @@ const toPreviewBalance = (
 const grantsAccess = (balance: SetPlansPreviewBalance) =>
 	balance.unlimited || balance.granted > 0 || balance.overage_allowed;
 
+/** Nothing granted and nothing used on either side: there is no balance to report. */
+const holdsNothing = ({ before, after }: BalanceTransition) =>
+	!grantsAccess(before) &&
+	!grantsAccess(after) &&
+	before.usage === 0 &&
+	after.usage === 0;
+
 const gainsAccess = ({ before, after }: BalanceTransition) =>
 	!grantsAccess(before) && grantsAccess(after);
 
@@ -108,6 +115,7 @@ export const diffPhaseBalances = ({
 		};
 		const previousAttributes = changedPreviousAttributes(transition);
 		if (Object.keys(previousAttributes).length === 0) return [];
+		if (holdsNothing(transition)) return [];
 
 		return [
 			{
