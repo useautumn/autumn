@@ -106,6 +106,7 @@ function Calendar({
 	className,
 	classNames,
 	showOutsideDays = true,
+	fixedWeeks = true,
 	...props
 }: React.ComponentProps<typeof DayPicker>) {
 	const hasDropdown =
@@ -115,6 +116,8 @@ function Calendar({
 	return (
 		<DayPicker
 			showOutsideDays={showOutsideDays}
+			// Six rows every month, so paging never changes the popover's height.
+			fixedWeeks={fixedWeeks}
 			className={cn("p-3", className)}
 			classNames={{
 				months: "flex flex-col sm:flex-row gap-2",
