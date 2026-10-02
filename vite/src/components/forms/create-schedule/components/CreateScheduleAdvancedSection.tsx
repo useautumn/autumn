@@ -12,10 +12,12 @@ import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationB
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
+import { findBackdateRecreateWarning } from "../utils/review/findBackdateRecreateWarning";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function CreateScheduleAdvancedSection() {
-	const { form, formValues, products, nowMs } = useCreateScheduleFormContext();
+	const { form, formValues, products, nowMs, preview } =
+		useCreateScheduleFormContext();
 	const {
 		billingBehavior,
 		resetBillingCycle,
@@ -39,6 +41,8 @@ export function CreateScheduleAdvancedSection() {
 			hasPaidRecurringPlan,
 		},
 	});
+	const recreatesBackdatedSubscription =
+		findBackdateRecreateWarning({ warnings: preview?.warnings }) !== undefined;
 	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
 	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
 
@@ -62,11 +66,17 @@ export function CreateScheduleAdvancedSection() {
 			{rules.proration.visible && (
 				<ProrationBehaviorConfigRow
 					rule={rules.proration}
-					value={billingBehavior ?? "prorate_immediately"}
+					billsBackdatedGap={recreatesBackdatedSubscription}
+					value={
+						billingBehavior ??
+						(recreatesBackdatedSubscription ? "none" : "prorate_immediately")
+					}
 					onChange={(value) =>
 						form.setFieldValue(
 							"billingBehavior",
-							value === "prorate_immediately" ? null : value,
+							value === "prorate_immediately" && !recreatesBackdatedSubscription
+								? null
+								: value,
 						)
 					}
 				/>
@@ -77,6 +87,7 @@ export function CreateScheduleAdvancedSection() {
 					enabled={resetBillingCycle}
 					mode={billingCycleAnchorMode}
 					allowCustomAnchor={!hasPersistedCreateSchedule({ phases })}
+					allowBackdatedStartAnchor={recreatesBackdatedSubscription}
 					customAnchor={billingCycleAnchorDate}
 					maxUnixDate={endDate ? endDate - 1_000 : undefined}
 					onEnabledChange={(enabled) =>

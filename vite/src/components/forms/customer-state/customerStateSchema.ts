@@ -224,7 +224,7 @@ export const CustomerStateFormSchema = z
 		unscheduledPlans: z.array(CustomerStatePlanSchema),
 		billingBehavior: BillingBehaviorSchema.nullable(),
 		resetBillingCycle: z.boolean(),
-		billingCycleAnchorMode: z.enum(["now", "custom"]),
+		billingCycleAnchorMode: z.enum(["now", "custom", "phase_start"]),
 		billingCycleAnchorDate: z.number().nullable(),
 		endDate: z.number().nullable(),
 		enablePlanImmediately: z.boolean(),

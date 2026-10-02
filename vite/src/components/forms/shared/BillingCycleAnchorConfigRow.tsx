@@ -11,6 +11,22 @@ const ENABLED_RULE: BillingOptionRule = {
 	disabledReason: null,
 };
 
+const anchorDescription = ({
+	allowCustomAnchor,
+	allowBackdatedStartAnchor,
+}: {
+	allowCustomAnchor: boolean;
+	allowBackdatedStartAnchor: boolean;
+}) => {
+	if (allowBackdatedStartAnchor) {
+		return "Restart the billing cycle now, on a future date, or on the backdated start";
+	}
+	if (allowCustomAnchor) {
+		return "Restart the billing cycle now or on a future date";
+	}
+	return "Restart the billing cycle now";
+};
+
 export function BillingCycleAnchorConfigRow({
 	enabled,
 	mode,
@@ -18,6 +34,7 @@ export function BillingCycleAnchorConfigRow({
 	minUnixDate = Date.now(),
 	maxUnixDate,
 	allowCustomAnchor = true,
+	allowBackdatedStartAnchor = false,
 	rule = ENABLED_RULE,
 	onEnabledChange,
 	onModeChange,
@@ -29,6 +46,8 @@ export function BillingCycleAnchorConfigRow({
 	minUnixDate?: number;
 	maxUnixDate?: number;
 	allowCustomAnchor?: boolean;
+	/** The first phase is backdated over a live subscription, so the cycle can restart on that start. */
+	allowBackdatedStartAnchor?: boolean;
 	rule?: BillingOptionRule;
 	onEnabledChange: (enabled: boolean) => void;
 	onModeChange: (mode: BillingCycleAnchorMode) => void;
@@ -48,11 +67,10 @@ export function BillingCycleAnchorConfigRow({
 	return (
 		<ConfigRow
 			title="Set Billing Cycle Anchor"
-			description={
-				allowCustomAnchor
-					? "Restart the billing cycle now or on a future date"
-					: "Restart the billing cycle now"
-			}
+			description={anchorDescription({
+				allowCustomAnchor,
+				allowBackdatedStartAnchor,
+			})}
 			expanded={enabled}
 			action={
 				<BillingOptionToggle
@@ -71,6 +89,9 @@ export function BillingCycleAnchorConfigRow({
 						options={[
 							{ value: "now", label: "Now" },
 							{ value: "custom", label: "Custom" },
+							...(allowBackdatedStartAnchor
+								? [{ value: "phase_start", label: "Backdated start" }]
+								: []),
 						]}
 					/>
 				)}
