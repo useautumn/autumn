@@ -148,16 +148,15 @@ describe(chalk.yellowBright("setupKeptSubscriptionCycle: backdate"), () => {
 	};
 
 	test("anchors on the live period end, leaving the requested proration to the plan change", () => {
+		const billingContext = backdatedOverLiveSubscription({
+			planOnSubscription: true,
+		});
 		expect(
 			setupKeptSubscriptionCycle({
-				billingContext: backdatedOverLiveSubscription({
-					planOnSubscription: true,
-				}),
+				billingContext,
 				timeline: setupSetPlansTimeline({
 					ctx,
-					billingContext: backdatedOverLiveSubscription({
-						planOnSubscription: true,
-					}),
+					billingContext,
 					params: { undeclared_plans: "end" },
 				}),
 				requestedProrationBehavior: "prorate_immediately",

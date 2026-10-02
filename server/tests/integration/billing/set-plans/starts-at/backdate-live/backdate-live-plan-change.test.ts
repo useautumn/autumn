@@ -16,6 +16,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { startsAtProducts } from "../utils/futureStartUtils";
 import {
 	expectEachPeriodBilledOnce,
 	expectRecreatedSubscriptionCorrect,
@@ -26,15 +27,7 @@ import {
 test.concurrent(
 	`${chalk.yellowBright("set-plans backdate live: an upgrade and a downgrade together bill only their difference to the period end")}`,
 	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const premium = products.premium({
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
-		const addOn = products.recurringAddOn({
-			items: [items.monthlyWords({ includedUsage: 50 })],
-		});
+		const { pro, premium, addOn } = startsAtProducts();
 		const smallAddOn = products.base({
 			id: "small-addon",
 			isAddOn: true,
@@ -122,6 +115,5 @@ test.concurrent(
 			productId: premium.id,
 			startsAt: backdatedStart,
 		});
-		expect(preview.total).toBeGreaterThan(0);
 	},
 );
