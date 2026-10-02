@@ -121,6 +121,9 @@ async function prepareInTurn({
 		signal: entry.handoffAbort.signal,
 	});
 	try {
+		// Best effort, not awaited: the owner that hears it keeps serving through this preparation
+		// instead of releasing at its handoff timeout; without it the old path still applies.
+		void announcePreparing({ ctx, entry });
 		await entry.runtime.prepare();
 	} finally {
 		release?.();
@@ -142,9 +145,6 @@ export async function startPartition({
 		);
 	}
 	try {
-		// Best effort, not awaited: the owner that hears it keeps serving through this preparation
-		// instead of releasing at its handoff timeout; without it the old path still applies.
-		void announcePreparing({ ctx, entry });
 		await prepareInTurn({ ctx, entry });
 		if (!isStillStarting()) return;
 		await ctx.awaitReadyAnnouncement?.({

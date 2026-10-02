@@ -412,7 +412,7 @@ describe("standby preparation limit", () => {
 			ctx: {
 				gate: { isActive: () => false, subscribe: () => () => undefined },
 			},
-			config: { concurrency: 1 },
+			config: { concurrency: 1, settleMs: 0 },
 		});
 		const B = createWorker({
 			name: "B",
@@ -445,7 +445,7 @@ describe("standby preparation limit", () => {
 		const prepare = deferred();
 		const live = createStandbyPreparations({
 			ctx: { gate: { isActive: () => true, subscribe: () => () => undefined } },
-			config: { concurrency: 1 },
+			config: { concurrency: 1, settleMs: 0 },
 		});
 		const A = createWorker({
 			name: "A",
@@ -469,6 +469,40 @@ describe("standby preparation limit", () => {
 		}
 	});
 
+	test("a standby reassigned the same partitions in quick succession prepares and announces each once, after the assignment settles", async () => {
+		const log = createOwnershipLog();
+		const standby = createStandbyPreparations({
+			ctx: {
+				gate: { isActive: () => false, subscribe: () => () => undefined },
+			},
+			config: { concurrency: 1, settleMs: 40 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			awaitReadyAnnouncement: holdReady,
+			acquirePreparation: standby.acquire,
+		});
+		try {
+			await B.ownership.start();
+			for (let rebalance = 0; rebalance < 3; rebalance++) {
+				B.assign([1, 2]);
+				await Bun.sleep(5);
+				B.revoke();
+			}
+			B.assign([1, 2]);
+			await waitFor(() =>
+				[1, 2].every((partition) => B.status(partition) === "prepared"),
+			);
+			expect(preparesOf(B)).toBe(2);
+			expect(
+				B.events.filter((event) => event.startsWith("B:preparing:")),
+			).toHaveLength(2);
+		} finally {
+			await B.ownership.stop();
+		}
+	});
+
 	test("a standby partition revoked while it waits for its turn retires without preparing", async () => {
 		const log = createOwnershipLog();
 		const prepare = deferred();
@@ -476,7 +510,7 @@ describe("standby preparation limit", () => {
 			ctx: {
 				gate: { isActive: () => false, subscribe: () => () => undefined },
 			},
-			config: { concurrency: 1 },
+			config: { concurrency: 1, settleMs: 0 },
 		});
 		const B = createWorker({
 			name: "B",
