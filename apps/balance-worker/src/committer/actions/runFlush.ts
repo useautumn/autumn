@@ -316,11 +316,8 @@ export const runFlush = async ({
 	const { applied } = await ctx.db.flush({
 		changes,
 		bookmarks,
-		...(snapshots && { snapshots: snapshots.writes }),
+		...(snapshots && { snapshots }),
 	});
-	// Counted once the flush landed, so a retried attempt does not count its capped customers again.
-	if (snapshots && snapshots.cappedCustomers > 0)
-		ctx.onSnapshotSizeCapped?.({ customers: snapshots.cappedCustomers });
 	const staleIds = changes
 		.filter((_, index) => !applied[index])
 		.map(
