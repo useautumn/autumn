@@ -12,7 +12,7 @@ import {
 } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
-/** Mints or rotates an env's shadow Atom admin token; only the hash leaves, for the multi-tenant Atom's ATOM_ADMIN_TOKEN_HASH. */
+/** Mints or rotates an env's shadow Atom admin token; only the hash leaves, for the multi-tenant Atom's ATOM_TOKEN_HASH. */
 export const handleMintAdminShadowAtomToken = createRoute({
 	scopes: [Scopes.Superuser],
 	body: z.object({ env: z.enum(AppEnv) }),

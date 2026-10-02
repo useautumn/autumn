@@ -46,7 +46,7 @@ const openAuth = ({
 	});
 	return {
 		auth,
-		multiTenant: { auth, adminTokenHash: env.ATOM_ADMIN_TOKEN_HASH },
+		multiTenant: { auth, adminTokenHash: env.ATOM_TOKEN_HASH },
 	};
 };
 
