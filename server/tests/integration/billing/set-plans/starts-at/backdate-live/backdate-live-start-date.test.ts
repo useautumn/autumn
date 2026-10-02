@@ -21,25 +21,16 @@ import {
 	expectEachPeriodBilledOnce,
 	expectRecreatedSubscriptionCorrect,
 	expectReplacedSubscriptionCancelledQuietly,
+	initLiveProScenario,
 	liveSubscriptionPeriod,
 } from "./utils/backdateLiveUtils";
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans backdate live: a monthly plan moved before its start is recreated with no new charge")}`,
 	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const { customerId, autumnV2_4, ctx } = await initScenario({
+		const { pro, customerId, autumnV2_4, ctx } = await initLiveProScenario({
 			customerId: "set-plans-backdate-live-monthly",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [
-				s.billing.attach({ productId: pro.id }),
-				s.advanceTestClock({ days: 10 }),
-			],
+			advanceDays: 10,
 		});
 		const live = await liveSubscriptionPeriod({ ctx, customerId });
 		const backdatedStart = live.startMs - ms.days(20);

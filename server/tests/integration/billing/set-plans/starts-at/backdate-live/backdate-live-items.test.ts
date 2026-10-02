@@ -22,6 +22,7 @@ import {
 	expectEachPeriodBilledOnce,
 	expectRecreatedSubscriptionCorrect,
 	expectReplacedSubscriptionCancelledQuietly,
+	initLiveProScenario,
 	liveSubscriptionPeriod,
 } from "./utils/backdateLiveUtils";
 
@@ -150,22 +151,12 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans backdate live: entity plans sharing the subscription all move onto the recreated one")}`,
 	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const { customerId, autumnV2_4, ctx, entities } = await initScenario({
-			customerId: "set-plans-backdate-live-entities",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-				s.entities({ count: 2, featureId: TestFeature.Users }),
-			],
-			actions: [
-				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
-				s.advanceTestClock({ days: 10 }),
-			],
-		});
+		const { pro, customerId, autumnV2_4, ctx, entities } =
+			await initLiveProScenario({
+				customerId: "set-plans-backdate-live-entities",
+				entityCount: 2,
+				advanceDays: 10,
+			});
 		const live = await liveSubscriptionPeriod({ ctx, customerId });
 		const backdatedStart = live.startMs - ms.days(15);
 		const entityIds = entities.map(({ id }) => id);

@@ -1,12 +1,49 @@
 import { expect } from "bun:test";
 import { msToSeconds, secondsToMs } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
+import { TestFeature } from "@tests/setup/v2Features";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
+import { startsAtProducts } from "../../utils/futureStartUtils";
 
 const CENTS_PER_UNIT = 100;
+
+/** A customer with pro on a live subscription, attached per entity when it has entities, then aged by advanceDays. */
+export const initLiveProScenario = async ({
+	customerId,
+	entityCount = 0,
+	advanceDays,
+}: {
+	customerId: string;
+	entityCount?: number;
+	advanceDays?: number;
+}) => {
+	const { pro } = startsAtProducts();
+	const attachSteps =
+		entityCount > 0
+			? Array.from({ length: entityCount }, (_, entityIndex) =>
+					s.billing.attach({ productId: pro.id, entityIndex }),
+				)
+			: [s.billing.attach({ productId: pro.id })];
+	const scenario = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+			...(entityCount > 0
+				? [s.entities({ count: entityCount, featureId: TestFeature.Users })]
+				: []),
+		],
+		actions: [
+			...attachSteps,
+			...(advanceDays ? [s.advanceTestClock({ days: advanceDays })] : []),
+		],
+	});
+	return { ...scenario, pro };
+};
 
 /** The live subscription a backdate recreates, with the dates its paid period runs between. */
 export const liveSubscriptionPeriod = async ({

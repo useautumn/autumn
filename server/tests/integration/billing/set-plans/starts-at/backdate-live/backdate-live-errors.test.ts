@@ -12,13 +12,15 @@ import {
 	type SetPlansParamsV0Input,
 } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
-import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { liveSubscriptionPeriod } from "./utils/backdateLiveUtils";
+import {
+	initLiveProScenario,
+	liveSubscriptionPeriod,
+} from "./utils/backdateLiveUtils";
 
 const BEYOND_STRIPE_BACKDATE_LIMIT_MONTHS = 251;
 
@@ -67,20 +69,11 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans backdate live: Stripe Checkout and a start past the 250-line limit are rejected")}`,
 	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
-			customerId: "set-plans-backdate-live-checkout-limit",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [
-				s.billing.attach({ productId: pro.id }),
-				s.advanceTestClock({ days: 10 }),
-			],
-		});
+		const { pro, customerId, autumnV2_4, ctx, advancedTo } =
+			await initLiveProScenario({
+				customerId: "set-plans-backdate-live-checkout-limit",
+				advanceDays: 10,
+			});
 		const live = await liveSubscriptionPeriod({ ctx, customerId });
 
 		await expectAutumnError({
@@ -123,22 +116,12 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans backdate live: an entity request is rejected while another entity's plan shares the subscription")}`,
 	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const { customerId, autumnV2_4, ctx, entities } = await initScenario({
-			customerId: "set-plans-backdate-live-other-entity",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-				s.entities({ count: 2, featureId: TestFeature.Users }),
-			],
-			actions: [
-				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
-				s.advanceTestClock({ days: 10 }),
-			],
-		});
+		const { pro, customerId, autumnV2_4, ctx, entities } =
+			await initLiveProScenario({
+				customerId: "set-plans-backdate-live-other-entity",
+				entityCount: 2,
+				advanceDays: 10,
+			});
 		const live = await liveSubscriptionPeriod({ ctx, customerId });
 
 		await expectAutumnError({
