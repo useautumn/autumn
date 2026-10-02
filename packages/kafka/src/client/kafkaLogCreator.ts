@@ -1,4 +1,8 @@
 import { type LogEntry, type logCreator, logLevel } from "kafkajs";
+import {
+	describeProcessKafkaToken,
+	type KafkaTokenState,
+} from "./kafkaTokens.js";
 
 /**
  * Refusals a broker hands out in the ordinary course of things, which the
@@ -48,19 +52,32 @@ function effectiveKafkaLogLevel({ entry }: { entry: LogEntry }): logLevel {
 	return entry.level;
 }
 
+const AUTHORIZATION_REFUSAL = /authorization failed|not authorized to access/i;
+
+function isAuthorizationRefusal({ entry }: { entry: LogEntry }): boolean {
+	const refusal = entry.log.error;
+	return (
+		(typeof refusal === "string" && AUTHORIZATION_REFUSAL.test(refusal)) ||
+		AUTHORIZATION_REFUSAL.test(entry.log.message)
+	);
+}
+
 /** kafkajs's console format, unchanged, so the lines already read in Axiom keep their shape. */
 function formatKafkaLogLine({
 	entry,
 	level,
+	readToken,
 }: {
 	entry: LogEntry;
 	level: logLevel;
+	readToken: () => KafkaTokenState | null;
 }): string {
 	const prefix = entry.namespace ? `[${entry.namespace}] ` : "";
 	return JSON.stringify({
 		level: labelOf({ level }),
 		...entry.log,
 		message: `${prefix}${entry.log.message}`,
+		...(isAuthorizationRefusal({ entry }) && { kafkaToken: readToken() }),
 	});
 }
 
@@ -119,14 +136,16 @@ function writeDebug(line: string): void {
  */
 export function createKafkaLogCreator({
 	sink = consoleSink(),
+	readToken = describeProcessKafkaToken,
 }: {
 	sink?: KafkaLogSink;
+	readToken?: () => KafkaTokenState | null;
 } = {}): logCreator {
 	function createLogger(configuredLevel: logLevel) {
 		function writeEntry(entry: LogEntry): void {
 			const level = effectiveKafkaLogLevel({ entry });
 			if (level > configuredLevel) return;
-			const line = formatKafkaLogLine({ entry, level });
+			const line = formatKafkaLogLine({ entry, level, readToken });
 			switch (level) {
 				case logLevel.ERROR:
 					sink.error(line);

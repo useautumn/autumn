@@ -6,12 +6,25 @@ import {
 	type KafkaLogSink,
 	routineRefusalMessages,
 } from "../../../src/client/kafkaLogCreator.js";
+import type { KafkaTokenState } from "../../../src/client/kafkaTokens.js";
 
 const CONCURRENT_TRANSACTIONS =
 	"The producer attempted to update a transaction while another concurrent operation on the same transaction was ongoing";
 const GROUP_AUTHORIZATION_FAILED =
 	"Not authorized to access group: Group authorization failed";
 const REBALANCE_IN_PROGRESS = "The group is rebalancing, so a rejoin is needed";
+const TOPIC_AUTHORIZATION_FAILED =
+	"Not authorized to access topics: [Topic authorization failed]";
+
+const presentedToken: KafkaTokenState = {
+	keyIdSuffix: "KB2VR",
+	signedAt: "2026-10-02T04:01:00.000Z",
+	expiresAt: "2026-10-02T04:16:00.000Z",
+	ttlSeconds: 900,
+	secondsSinceSigned: 150,
+	expired: false,
+	tokensSigned: 12,
+};
 
 function refusedResponse({ error }: { error: string }): LogEntry {
 	return {
@@ -70,7 +83,9 @@ test("the same refusal is written as DEBUG when the client logs at DEBUG", () =>
 
 test("a real refusal keeps kafkajs's ERROR line and shape", () => {
 	const { sink, written } = recordingSink();
-	const write = createKafkaLogCreator({ sink })(logLevel.INFO);
+	const write = createKafkaLogCreator({ sink, readToken: () => null })(
+		logLevel.INFO,
+	);
 	write(refusedResponse({ error: GROUP_AUTHORIZATION_FAILED }));
 	expect(written).toHaveLength(1);
 	expect(written[0]?.method).toBe("error");
@@ -83,7 +98,42 @@ test("a real refusal keeps kafkajs's ERROR line and shape", () => {
 		size: 12,
 		clientId: "balance-worker-1",
 		broker: "b-1:9098",
+		kafkaToken: null,
 	});
+});
+
+test("an authorization refusal carries the token this process last signed, how old it was and whether it had expired", () => {
+	const { sink, written } = recordingSink();
+	const write = createKafkaLogCreator({
+		sink,
+		readToken: () => presentedToken,
+	})(logLevel.INFO);
+	write(refusedResponse({ error: TOPIC_AUTHORIZATION_FAILED }));
+	write({
+		namespace: "Consumer",
+		level: logLevel.ERROR,
+		label: "ERROR",
+		log: {
+			timestamp: "t",
+			message: `Crash: KafkaJSNonRetriableError: ${TOPIC_AUTHORIZATION_FAILED}`,
+		},
+	});
+	expect(written).toHaveLength(2);
+	for (const { line } of written)
+		expect(JSON.parse(line).kafkaToken).toEqual(presentedToken);
+});
+
+test("lines that are not authorization refusals carry no token", () => {
+	const { sink, written } = recordingSink();
+	const write = createKafkaLogCreator({
+		sink,
+		readToken: () => presentedToken,
+	})(logLevel.DEBUG);
+	write(refusedResponse({ error: REBALANCE_IN_PROGRESS }));
+	write(refusedResponse({ error: CONCURRENT_TRANSACTIONS }));
+	expect(written).toHaveLength(2);
+	for (const { line } of written)
+		expect(JSON.parse(line)).not.toHaveProperty("kafkaToken");
 });
 
 test("a rebalance in progress is informational", () => {

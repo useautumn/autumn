@@ -1,3 +1,4 @@
+import { heapSize } from "bun:jsc";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { adopt as adoptState } from "./actions/adopt.js";
 import { flushDeferredLogs as flushDeferred } from "./actions/commit.js";
@@ -8,6 +9,7 @@ import {
 } from "./actions/decide.js";
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
+import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
 import { createPartitionWriterState } from "./pendingMutations.js";
 import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
 import type {
@@ -38,6 +40,18 @@ export function createPartitionWriter({
 		}),
 	};
 
+	const slowDecides = createSlowDecideReporter({
+		ctx: {
+			logger: ctx.logger,
+			now: ctx.now ?? (() => performance.now()),
+			heapSize: ctx.heapSize ?? heapSize,
+			stateBytesOf: ({ subjectKey }) =>
+				scope.state.subjects.bytesOf({ subjectKey }),
+			pendingCommands: () => scope.state.queue.length,
+		},
+		config: { topic: config.topic, partition: config.partition },
+	});
+
 	function dispose(): void {
 		budgetShare?.leave();
 		scope.state.subjects.clear();
@@ -46,9 +60,13 @@ export function createPartitionWriter({
 	function decide<Reply>(
 		submission: MutationSubmission<Reply>,
 	): DecidedMutation<Reply> {
-		return timeSync({ label: "writer.decide" }, () =>
-			decideMutation({ scope, submission }),
-		);
+		return slowDecides.measure({
+			command: submission.command,
+			run: () =>
+				timeSync({ label: "writer.decide" }, () =>
+					decideMutation({ scope, submission }),
+				),
+		});
 	}
 
 	function log(params: Parameters<PartitionWriter["log"]>[0]): Promise<void> {
