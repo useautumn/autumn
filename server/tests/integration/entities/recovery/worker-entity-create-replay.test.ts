@@ -5,8 +5,8 @@
  * Contract under test:
  * - With `x-balance-worker-outage`, the entity's worker write fails as unreachable: the
  *   request answers the worker's own 503 and no entity exists.
- * - The same JobName.EntityCreationRecovery job the server enqueues, consumed by the REAL
- *   worker process off SQS, creates the entity, readable through entities.get.
+ * - The failed request itself enqueues the EntityCreationRecovery job; the REAL worker process
+ *   consumes it off SQS and creates the entity, readable through entities.get.
  * - A second replay of the same request finds the entity and succeeds without creating another.
  */
 
@@ -22,8 +22,6 @@ import { isLockConflict } from "@/external/redis/utils/lockUtils/acquireLock.js"
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
 import { replayFailedEntityCreation } from "@/internal/entities/recovery/replayFailedEntityCreation.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 const POLL_INTERVAL_MS = 500;
 const POLL_TIMEOUT_MS = 30_000;
@@ -60,6 +58,8 @@ test.concurrent(
 	async () => {
 		const customerId = "worker-entity-create-replay";
 		const entityId = "replayed-seat";
+		// Per run: the FIFO dedupe id is derived from the request, and a repeat inside the dedupe window would be dropped.
+		const entityName = `Replayed Seat ${Date.now()}`;
 		// A free seat grant: the create deducts a seat on the worker and never invoices.
 		const seats = products.base({
 			id: "seats",
@@ -85,7 +85,7 @@ test.concurrent(
 				{
 					customer_id: customerId,
 					entity_id: entityId,
-					name: "Replayed Seat",
+					name: entityName,
 					feature_id: TestFeature.Users,
 				},
 				{ "x-balance-worker-outage": "true" },
@@ -94,27 +94,7 @@ test.concurrent(
 		expect(code).toBe("balance_worker_unavailable");
 		expect(await rejectedCode(getEntity())).toBe("entity_not_found");
 
-		// ── 2. Recover via the QUEUE: the job the server enqueues, consumed by the dev worker ──
-		const payload: EntityCreationRecoveryPayload = {
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			requestId: "req_worker_entity_create_replay",
-			apiVersion: ApiVersion.V2_3,
-			params: {
-				customerId,
-				createEntityData: [
-					{
-						id: entityId,
-						name: "Replayed Seat",
-						feature_id: TestFeature.Users,
-					},
-				],
-			},
-			failedAt: Date.now(),
-		};
-		await addTaskToQueue({ jobName: JobName.EntityCreationRecovery, payload });
-
+		// ── 2. The failed request enqueued its own recovery; the dev worker consumes it ──
 		const replayed = await waitFor<ApiEntityV2>({
 			description: "entity created by the recovery replay",
 			fetch: async () => {
@@ -127,11 +107,29 @@ test.concurrent(
 		});
 		expect(replayed.id).toBe(entityId);
 		expect(replayed.feature_id).toBe(TestFeature.Users);
-		expect(replayed.name).toBe("Replayed Seat");
+		expect(replayed.name).toBe(entityName);
 
 		// ── 3. Replaying again finds the entity and succeeds. The entity is readable
 		// before the queue consumer releases the create lock, so a conflict is retried. ──
-		const replayCtx = { ...ctx, extraLogs: {} as AutumnContext["extraLogs"] };
+		const payload: EntityCreationRecoveryPayload = {
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			requestId: "req_worker_entity_create_replay",
+			apiVersion: ApiVersion.V2_3,
+			params: {
+				customerId,
+				createEntityData: [
+					{ id: entityId, name: entityName, feature_id: TestFeature.Users },
+				],
+			},
+			failedAt: Date.now(),
+		};
+		const replayCtx = {
+			...ctx,
+			extraLogs: {} as AutumnContext["extraLogs"],
+			state: {},
+		};
 		await waitFor({
 			description: "second replay past the consumer's create lock",
 			fetch: async () => {

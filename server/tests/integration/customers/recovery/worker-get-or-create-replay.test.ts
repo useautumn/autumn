@@ -5,9 +5,9 @@
  * Contract under test:
  * - With `x-balance-worker-outage`, the create's worker write fails as unreachable: the
  *   request answers the worker's own 503 and no customer exists.
- * - The same JobName.CustomerCreationRecovery job the server enqueues, consumed by the REAL
- *   worker process off SQS, creates the customer with its customer_data applied and a
- *   Stripe customer linked (create_in_stripe).
+ * - The failed request itself enqueues the CustomerCreationRecovery job; the REAL worker process
+ *   consumes it off SQS and creates the customer with its customer_data applied and a Stripe
+ *   customer linked (create_in_stripe).
  * - A second replay of the same request is a no-op: the customer is fetched, not re-created,
  *   and keeps the Stripe customer it already has.
  */
@@ -20,8 +20,6 @@ import type AutumnError from "@/external/autumn/autumnCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 const POLL_INTERVAL_MS = 500;
 const POLL_TIMEOUT_MS = 30_000;
@@ -57,8 +55,9 @@ test.concurrent(
 	`${chalk.yellowBright("worker get_or_create replay: outage during create is replayed with customer_data and a Stripe customer")}`,
 	async () => {
 		const customerId = "worker-get-or-create-replay";
+		// Per run: the FIFO dedupe id is derived from the request, and a repeat inside the dedupe window would be dropped.
 		const customerData = {
-			name: "Replayed Customer",
+			name: `Replayed Customer ${Date.now()}`,
 			email: `${customerId}@example.com`,
 			create_in_stripe: true,
 		};
@@ -81,24 +80,8 @@ test.concurrent(
 			"customer_not_found",
 		);
 
-		// ── 2. Recover via the QUEUE: the job the server enqueues, consumed by the dev worker ──
-		const payload: CustomerCreationRecoveryPayload = {
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			requestId: "req_worker_get_or_create_replay",
-			apiVersion: ApiVersion.V2_3,
-			params: { customer_id: customerId, customer_data: customerData },
-			source: "handleGetOrCreateCustomerV2",
-			failureStage: "pre_commit",
-			failedAt: Date.now(),
-		};
-		await addTaskToQueue({
-			jobName: JobName.CustomerCreationRecovery,
-			payload,
-		});
-
-		// The replay links Stripe after the row lands, so wait for the whole create.
+		// ── 2. The failed request enqueued its own recovery; the dev worker consumes it.
+		// The replay links Stripe after the row lands, so wait for the whole create. ──
 		const replayed = await waitFor<ApiCustomerV5>({
 			description: "customer created by the recovery replay",
 			fetch: async () => {
@@ -116,7 +99,22 @@ test.concurrent(
 		expect(replayed.stripe_id).toBeString();
 
 		// ── 3. Replaying again finds the customer and leaves it alone ──
-		const replayCtx = { ...ctx, extraLogs: {} as AutumnContext["extraLogs"] };
+		const payload: CustomerCreationRecoveryPayload = {
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			requestId: "req_worker_get_or_create_replay",
+			apiVersion: ApiVersion.V2_3,
+			params: { customer_id: customerId, customer_data: customerData },
+			source: "handleGetOrCreateCustomerV2",
+			failureStage: "pre_commit",
+			failedAt: Date.now(),
+		};
+		const replayCtx = {
+			...ctx,
+			extraLogs: {} as AutumnContext["extraLogs"],
+			state: {},
+		};
 		await replayFailedCustomerCreation({ ctx: replayCtx, payload });
 		expect(replayCtx.extraLogs.customerCreationRecoveryReplay).toMatchObject({
 			outcome: "fetched",

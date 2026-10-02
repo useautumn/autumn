@@ -76,7 +76,7 @@ export type RequestContext = {
 	 *  re-enqueue another migration task. */
 	insideTriggerTask?: boolean;
 
-	/** Payload for the request log line only; never read back by the request. */
+	/** Payload for the request log line. Request state belongs on `state`; a few older readers still look here. */
 	extraLogs: Record<string, unknown>;
 
 	/** What the request has done so far, read back by later steps; never logged. Narrowed by each owner's get/set. */
