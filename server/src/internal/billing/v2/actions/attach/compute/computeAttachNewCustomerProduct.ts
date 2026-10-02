@@ -128,6 +128,10 @@ const computeAttachNewCustomerProductResult = ({
 
 	const isRevertTrial =
 		isRevertTrialContext({ trialContext }) && planTiming === "immediate";
+	// on_trial_end "bill" tells the product cron it owns this trial's end; legacy trials stay null.
+	const isAutumnManagedBillTrial =
+		Boolean(trialContext?.autumnManaged) &&
+		!isRevertTrialContext({ trialContext });
 	const preservedBillingLinkage = params.no_billing_changes
 		? currentCustomerProduct
 		: undefined;
@@ -173,6 +177,7 @@ const computeAttachNewCustomerProductResult = ({
 				previousCustomerProductId: currentCustomerProduct?.id,
 				onTrialEnd: "revert" as const,
 			}),
+			...(isAutumnManagedBillTrial && { onTrialEnd: "bill" as const }),
 		},
 	});
 };

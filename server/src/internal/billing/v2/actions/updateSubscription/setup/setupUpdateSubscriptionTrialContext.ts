@@ -76,6 +76,7 @@ export const setupUpdateSubscriptionTrialContext = ({
 			appliesToBilling: true,
 			cardRequired: false,
 			onEnd: customerProduct.on_trial_end ?? undefined,
+			autumnManaged: true,
 		};
 	}
 

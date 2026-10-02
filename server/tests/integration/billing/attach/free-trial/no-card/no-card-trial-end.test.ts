@@ -6,6 +6,7 @@
  *  - card added during the trial → plan is billed into a new Stripe sub and stops trialing
  *  - two entities trialing the same plan convert into a single Stripe sub
  *  - on_end: revert with no previous plan → expires to the default plan, never billed even with a card
+ *  - a trial Autumn did not mark on_trial_end "bill" (e.g. no_billing_changes, legacy rows) is never settled
  */
 
 import { test } from "bun:test";
@@ -138,6 +139,42 @@ test.concurrent(
 			});
 		}
 		await expectSubCount({ ctx, customerId, count: 1 });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("no-card-trial-end 5: trial without the bill marker is left alone")}`,
+	async () => {
+		const proTrial = noCardProTrial();
+
+		const { customerId, autumnV1, autumnV2_3, ctx, testClockId } =
+			await initScenario({
+				customerId: "no-card-end-unmarked",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [proTrial] }),
+				],
+				actions: [],
+			});
+
+		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: proTrial.id,
+			no_billing_changes: true,
+		});
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId ?? "",
+			numberOfDays: DAYS_PAST_TRIAL_END,
+		});
+
+		await expectProductActive({
+			customerId,
+			autumn: autumnV1,
+			productId: proTrial.id,
+		});
+		await expectSubCount({ ctx, customerId, count: 0 });
 	},
 );
 

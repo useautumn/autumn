@@ -30,7 +30,7 @@ import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPay
 import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
-import { isAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/isAutumnManagedTrialContext";
+import { markAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/isAutumnManagedTrialContext";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
@@ -213,25 +213,25 @@ export const setupAttachBillingContext = async ({
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 
 	// Setup trial context
-	const trialContext = await setupAttachTrialContext({
-		ctx,
-		params,
-		currentContext: {
-			fullCustomer,
-			attachProduct,
-			stripeSubscription,
-			currentEpochMs,
-			currentCustomerProduct,
-		},
+	const trialContext = markAutumnManagedTrialContext({
+		trialContext: await setupAttachTrialContext({
+			ctx,
+			params,
+			currentContext: {
+				fullCustomer,
+				attachProduct,
+				stripeSubscription,
+				currentEpochMs,
+				currentCustomerProduct,
+			},
+		}),
+		invoiceMode,
+		stripeSubscription,
+		skipBillingChangesBase,
 	});
 
 	const skipBillingChanges =
-		skipBillingChangesBase ||
-		isAutumnManagedTrialContext({
-			trialContext,
-			invoiceMode,
-			stripeSubscription,
-		});
+		skipBillingChangesBase || Boolean(trialContext?.autumnManaged);
 
 	const requestedBillingCycleAnchor = setupRequestedBillingCycleAnchor({
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,

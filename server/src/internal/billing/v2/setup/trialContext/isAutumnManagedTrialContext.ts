@@ -33,3 +33,27 @@ export const isAutumnManagedTrialContext = ({
 		invoiceMode,
 		stripeSubscription,
 	});
+
+/** Records on the trial context that Autumn settles its end, unless billing is already switched off for the request. */
+export const markAutumnManagedTrialContext = ({
+	trialContext,
+	invoiceMode,
+	stripeSubscription,
+	skipBillingChangesBase,
+}: {
+	trialContext?: TrialContext;
+	invoiceMode?: InvoiceMode;
+	stripeSubscription?: Stripe.Subscription;
+	skipBillingChangesBase: boolean;
+}): TrialContext | undefined => {
+	if (!trialContext || skipBillingChangesBase) return trialContext;
+	if (
+		!isAutumnManagedTrialContext({
+			trialContext,
+			invoiceMode,
+			stripeSubscription,
+		})
+	)
+		return trialContext;
+	return { ...trialContext, autumnManaged: true };
+};

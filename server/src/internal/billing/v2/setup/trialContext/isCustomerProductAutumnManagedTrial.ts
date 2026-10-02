@@ -1,12 +1,6 @@
-import {
-	cusProductToProcessorType,
-	type FullCusProduct,
-	isCustomerProductPaidRecurring,
-	isCustomerProductTrialing,
-	ProcessorType,
-} from "@autumn/shared";
+import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
 
-/** A paid Stripe-processed plan still in its trial with no Stripe subscription behind it. */
+/** A no-card trial Autumn runs without Stripe (marked on_trial_end "bill"), still within its trial. */
 export const isCustomerProductAutumnManagedTrial = ({
 	customerProduct,
 	nowMs,
@@ -14,8 +8,6 @@ export const isCustomerProductAutumnManagedTrial = ({
 	customerProduct?: FullCusProduct;
 	nowMs: number;
 }): boolean =>
-	!!customerProduct &&
+	customerProduct?.on_trial_end === "bill" &&
 	!customerProduct.subscription_ids?.length &&
-	cusProductToProcessorType(customerProduct) === ProcessorType.Stripe &&
-	isCustomerProductPaidRecurring(customerProduct) &&
-	!!isCustomerProductTrialing(customerProduct, { nowMs });
+	Boolean(isCustomerProductTrialing(customerProduct, { nowMs }));

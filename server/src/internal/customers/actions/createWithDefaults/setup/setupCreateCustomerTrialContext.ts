@@ -33,5 +33,6 @@ export const setupCreateCustomerTrialContext = ({
 		}),
 		appliesToBilling: true,
 		cardRequired: false,
+		autumnManaged: true,
 	};
 };

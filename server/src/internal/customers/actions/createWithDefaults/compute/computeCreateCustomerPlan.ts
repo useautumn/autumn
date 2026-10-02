@@ -1,4 +1,7 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	isProductPaidAndRecurring,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan.js";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct.js";
@@ -15,7 +18,7 @@ export const computeCreateCustomerPlan = ({
 	ctx: AutumnContext;
 	context: CreateCustomerContext;
 }): AutumnBillingPlan => {
-	const { fullCustomer, fullProducts, currentEpochMs } = context;
+	const { fullCustomer, fullProducts, currentEpochMs, trialContext } = context;
 
 	const insertCustomerProducts = fullProducts.map((product) =>
 		initFullCustomerProductFromProduct({
@@ -24,6 +27,10 @@ export const computeCreateCustomerPlan = ({
 				fullCustomer,
 				fullProduct: product,
 				currentEpochMs,
+				onTrialEnd:
+					trialContext?.autumnManaged && isProductPaidAndRecurring(product)
+						? "bill"
+						: undefined,
 			},
 		}),
 	);

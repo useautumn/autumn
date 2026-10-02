@@ -1,19 +1,15 @@
 import {
 	ACTIVE_STATUSES,
-	AppEnv,
+	type AppEnv,
 	customerPrices,
 	customerProducts,
 	customers,
 	type Feature,
-	freeTrials,
 	type Organization,
-	organizations,
-	ProcessorType,
 } from "@autumn/shared";
 import {
 	and,
 	eq,
-	exists,
 	type InferSelectModel,
 	inArray,
 	isNotNull,
@@ -58,36 +54,10 @@ export const fetchExpiredTrialProducts = async ({
 			.where(eq(customerPrices.customer_product_id, customerProducts.id)),
 	);
 
-	const isNoCardTrial = exists(
-		db
-			.select()
-			.from(freeTrials)
-			.where(
-				and(
-					eq(freeTrials.id, customerProducts.free_trial_id),
-					eq(freeTrials.card_required, false),
-				),
-			),
-	);
-
-	const orgWritesToStripe = notExists(
-		db
-			.select()
-			.from(organizations)
-			.where(
-				and(
-					eq(organizations.id, customers.org_id),
-					eq(customers.env, AppEnv.Live),
-					sql`(${organizations.config}->>'disable_stripe_writes')::boolean is true`,
-				),
-			),
-	);
-
-	const isUnbilledNoCardTrial = and(
-		isNoCardTrial,
+	// Autumn writes on_trial_end "bill" only for no-card trials it runs without Stripe; legacy trials stay null.
+	const isAutumnManagedBillTrial = and(
+		eq(customerProducts.on_trial_end, "bill"),
 		sql`coalesce(cardinality(${customerProducts.subscription_ids}), 0) = 0`,
-		sql`coalesce(${customerProducts.processor}->>'type', ${ProcessorType.Stripe}) = ${ProcessorType.Stripe}`,
-		orgWritesToStripe,
 	);
 
 	return db
@@ -105,7 +75,7 @@ export const fetchExpiredTrialProducts = async ({
 				or(
 					hasNoPrices,
 					eq(customerProducts.on_trial_end, "revert"),
-					isUnbilledNoCardTrial,
+					isAutumnManagedBillTrial,
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),
