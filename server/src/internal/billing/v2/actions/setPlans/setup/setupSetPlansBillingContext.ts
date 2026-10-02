@@ -22,6 +22,7 @@ import {
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 import { replaceLiveSubscriptionForFutureStart } from "./replaceLiveSubscriptionForFutureStart";
+import { setupFutureStartTiming } from "./setupFutureStartTiming";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 import { setupSetPlansBillingCycleAnchor } from "./setupSetPlansBillingCycleAnchor";
@@ -98,9 +99,10 @@ export const setupSetPlansBillingContext = async ({
 			stripeSubscriptionScope,
 		});
 
-	const startsInFuture = firstPhaseStartsInFuture({
-		billingContext: { ...billingContext, immediatePhase },
-	});
+	const firstPhaseContext = {
+		immediatePhase,
+		currentEpochMs: billingContext.currentEpochMs,
+	};
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
@@ -120,7 +122,9 @@ export const setupSetPlansBillingContext = async ({
 		checkoutMode: setupSetPlansCheckoutMode({
 			billingContext,
 			redirectMode: params.redirect_mode,
-			startsInFuture,
+			startsInFuture: firstPhaseStartsInFuture({
+				billingContext: firstPhaseContext,
+			}),
 		}),
 		requestedProrationBehavior: params.proration_behavior,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
@@ -137,12 +141,7 @@ export const setupSetPlansBillingContext = async ({
 		scheduledPhaseContexts,
 		endsAt: params.ends_at,
 		stripeSubscriptionScope,
-		...(startsInFuture && {
-			resetCycleAnchorMs: immediatePhase.starts_at,
-			accessStartsAt: params.enable_plan_immediately
-				? billingContext.currentEpochMs
-				: undefined,
-		}),
+		...setupFutureStartTiming({ billingContext: firstPhaseContext, params }),
 	};
 
 	const timeline = setupSetPlansTimeline({
