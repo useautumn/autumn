@@ -99,9 +99,12 @@ export function buildCreateScheduleRequestBody({
 		resetBillingCycle &&
 		!pinsCustomAnchor &&
 		(!hasMultipleImmediatePlans || hasPersistedSchedule);
+	const restartsAtFirstPhaseStart =
+		resetBillingCycle && billingCycleAnchorMode === "phase_start";
 	const phasesWithBillingAnchors = validPhases.map((phase, index) => ({
 		...phase,
-		...(index > 0 && canResetFuturePhases
+		...((index > 0 && canResetFuturePhases) ||
+		(index === 0 && restartsAtFirstPhaseStart)
 			? { billing_cycle_anchor: "phase_start" as const }
 			: {}),
 	}));

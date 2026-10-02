@@ -1,4 +1,4 @@
-export type BillingCycleAnchorMode = "now" | "custom";
+export type BillingCycleAnchorMode = "now" | "custom" | "phase_start";
 
 export const resolveBillingCycleAnchor = ({
 	resetBillingCycle,
@@ -11,5 +11,6 @@ export const resolveBillingCycleAnchor = ({
 }): "now" | number | undefined => {
 	if (!resetBillingCycle) return undefined;
 	if (billingCycleAnchorMode === "now") return "now";
+	if (billingCycleAnchorMode === "phase_start") return undefined;
 	return billingCycleAnchorDate ?? undefined;
 };
