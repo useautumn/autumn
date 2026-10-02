@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { parseISO } from "date-fns";
 import { formatStripeObjectId } from "@/views/customers2/components/sheets/set-plans-subscription/utils/formatStripeObjectId";
 import { stripeSubscriptionIntervalLabel } from "@/views/customers2/components/sheets/set-plans-subscription/utils/stripeSubscriptionIntervalLabel";
 import {
@@ -11,7 +12,7 @@ import {
 	PERIOD_START_SECONDS,
 } from "./setPlansSubscriptionFixtures";
 
-const RENEWAL_DATE_MS = Date.UTC(2026, 9, 3, 12);
+const RENEWAL_DATE_MS = parseISO("2026-10-03T12:00:00").getTime();
 
 describe("stripeSubscriptionToRenewal", () => {
 	test("renews at the current period end", () => {
