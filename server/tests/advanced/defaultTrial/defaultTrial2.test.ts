@@ -112,7 +112,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 
 		await expectCustomerInvoiceCorrect({
 			customerId,
-			count: 2,
+			count: 1,
 			latestTotal: 20,
 			latestStatus: "paid",
 		});

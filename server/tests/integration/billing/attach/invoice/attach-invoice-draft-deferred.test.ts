@@ -245,7 +245,7 @@ test.concurrent(
 
 		await expectCustomerInvoiceCorrect({
 			customer: customerBefore,
-			count: 3,
+			count: 2,
 			latestTotal: preview.total,
 			latestStatus: "open",
 		});
@@ -286,7 +286,7 @@ test.concurrent(
 			autumn: autumnV1,
 			customerId,
 			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
-			count: 3,
+			count: 2,
 			latestTotal: preview.total,
 			latestStatus: "paid",
 		});

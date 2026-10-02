@@ -177,7 +177,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	const skipBillingChanges =
 		skipBillingChangesBase ||
 		isUnbillableSubscription ||
-		isRevertTrialContext({ trialContext });
+		isRevertTrialContext({ trialContext }) ||
+		Boolean(trialContext?.autumnManaged);
 
 	// 3. Determine final anchor based on product transitions
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
@@ -289,6 +290,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 				: params.proration_behavior,
 
 		invoiceMode,
+		paymentBehaviorIntent: contextOverride.paymentBehaviorIntent,
+		billingUpdatedTags: contextOverride.billingUpdatedTags,
 		featureQuantities,
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 		customerLicenseQuantities,

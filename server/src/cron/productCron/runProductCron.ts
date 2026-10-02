@@ -22,6 +22,16 @@ export const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
 	return { revert, standard };
 };
 
+const groupRowsByCustomer = (rows: ExpiredTrialRow[]) => {
+	const rowsByCustomer = new Map<string, ExpiredTrialRow[]>();
+	for (const row of rows) {
+		const customerRows = rowsByCustomer.get(row.customer.internal_id) ?? [];
+		customerRows.push(row);
+		rowsByCustomer.set(row.customer.internal_id, customerRows);
+	}
+	return [...rowsByCustomer.values()];
+};
+
 const BATCH_SIZE = 250;
 
 const processRowsInBatches = async ({
@@ -35,15 +45,18 @@ const processRowsInBatches = async ({
 }) => {
 	for (let i = 0; i < rows.length; i += BATCH_SIZE) {
 		const batch = rows.slice(i, i + BATCH_SIZE);
+		// A customer's rows run in order so converting trials share one subscription.
 		await Promise.all(
-			batch.map((row) =>
-				processExpiredTrialRow({
-					ctx,
-					customerProduct: row.customerProduct,
-					customer: row.customer,
-					defaultProducts,
-				}),
-			),
+			groupRowsByCustomer(batch).map(async (customerRows) => {
+				for (const row of customerRows) {
+					await processExpiredTrialRow({
+						ctx,
+						customerProduct: row.customerProduct,
+						customer: row.customer,
+						defaultProducts,
+					});
+				}
+			}),
 		);
 	}
 };
@@ -61,6 +74,7 @@ export const runProductCron = async ({
 	const startTime = Date.now();
 	const batchSize = 1000;
 	let totalExpired = 0;
+	const attemptedCustomerProductIds = new Set<string>();
 
 	try {
 		let iteration = 0;
@@ -72,7 +86,10 @@ export const runProductCron = async ({
 				batchSize,
 				db,
 				nowMs: Date.now(),
+				excludeCustomerProductIds: [...attemptedCustomerProductIds],
 			});
+			for (const row of results)
+				attemptedCustomerProductIds.add(row.customerProduct.id);
 
 			if (results.length === 0) break;
 

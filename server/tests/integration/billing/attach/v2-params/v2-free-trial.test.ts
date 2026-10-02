@@ -7,6 +7,7 @@ import {
 	expectProductTrialing,
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -24,7 +25,7 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial attach: set trial with v1 f
 		],
 	});
 
-	const { autumnV1, autumnV2, advancedTo } = await initScenario({
+	const { autumnV1, autumnV2, advancedTo, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -64,9 +65,9 @@ test.concurrent(`${chalk.yellowBright("v2-free-trial attach: set trial with v1 f
 	});
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1,
-		latestTotal: 0,
+		count: 0,
 	});
+	await expectSubCount({ ctx, customerId, count: 0 });
 });
 
 test.concurrent(`${chalk.yellowBright("v2-free-trial attach: remove product trial with free_trial null")}`, async () => {
