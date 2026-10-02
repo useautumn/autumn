@@ -13,7 +13,8 @@ export const handleAutumnManagedTrialInvoiceModeErrors = ({
 }) => {
 	const { invoiceMode, trialContext } = billingContext;
 	if (!invoiceMode || !trialContext?.autumnManaged) return;
-	if (trialContext.cardRequired !== false) return;
+	if (trialContext.cardRequired !== false || trialContext.onEnd === "revert")
+		return;
 
 	throw new RecaseError({
 		message:

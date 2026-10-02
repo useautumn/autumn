@@ -30,7 +30,9 @@ export const computeCreateCustomerPlan = ({
 				onTrialEnd:
 					product.free_trial?.card_required === false &&
 					isProductPaidAndRecurring(product)
-						? "bill"
+						? product.free_trial.on_end === "revert"
+							? "revert"
+							: "bill"
 						: undefined,
 			},
 		}),

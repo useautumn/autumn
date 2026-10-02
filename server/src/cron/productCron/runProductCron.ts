@@ -74,6 +74,7 @@ export const runProductCron = async ({
 	const startTime = Date.now();
 	const batchSize = 1000;
 	let totalExpired = 0;
+	const attemptedCustomerProductIds = new Set<string>();
 
 	try {
 		let iteration = 0;
@@ -85,7 +86,10 @@ export const runProductCron = async ({
 				batchSize,
 				db,
 				nowMs: Date.now(),
+				excludeCustomerProductIds: [...attemptedCustomerProductIds],
 			});
+			for (const row of results)
+				attemptedCustomerProductIds.add(row.customerProduct.id);
 
 			if (results.length === 0) break;
 

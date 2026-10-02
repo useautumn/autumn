@@ -15,6 +15,7 @@ import {
 	isNotNull,
 	lt,
 	notExists,
+	notInArray,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -41,11 +42,14 @@ export const fetchExpiredTrialProducts = async ({
 	db,
 	nowMs = Date.now(),
 	internalCustomerId,
+	excludeCustomerProductIds = [],
 }: {
 	batchSize: number;
 	db: DrizzleCli;
 	nowMs?: number;
 	internalCustomerId?: string;
+	/** Rows already attempted this run, so ones left for a retry don't block newer rows. */
+	excludeCustomerProductIds?: string[];
 }) => {
 	const hasNoPrices = notExists(
 		db
@@ -82,6 +86,9 @@ export const fetchExpiredTrialProducts = async ({
 				lt(customerProducts.trial_ends_at, nowMs),
 				internalCustomerId
 					? eq(customerProducts.internal_customer_id, internalCustomerId)
+					: undefined,
+				excludeCustomerProductIds.length > 0
+					? notInArray(customerProducts.id, excludeCustomerProductIds)
 					: undefined,
 			),
 		)
