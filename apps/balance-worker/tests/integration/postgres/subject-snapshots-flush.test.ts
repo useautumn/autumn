@@ -13,6 +13,7 @@ import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 import {
 	openFixturePostgres,
 	readWorktreeDatabaseUrl,
@@ -20,13 +21,8 @@ import {
 	seedCustomer,
 } from "./postgresCustomerFixture.js";
 
-/** The control every store here reads: snapshots are written for the whole file. */
-const writing = {
-	read: () => ({
-		...defaultSubjectSnapshotsEdgeConfig(),
-		mode: "write" as const,
-	}),
-};
+/** The settings every store here reads: snapshots are written for the whole file. */
+const writing = createSubjectSnapshotsStore({ mode: "write" });
 
 const databaseUrl = readWorktreeDatabaseUrl();
 const PARTITION_COUNT = 64;
@@ -82,7 +78,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			},
 		};
 		const committer = createCommitter({
-			ctx: { db },
+			ctx: { db, subjectSnapshots: writing },
 			config: {
 				concurrency: 1,
 				maxRowsPerFlush: 500,
@@ -91,12 +87,11 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 					initialBackoffMs: 1,
 					maxBackoffMs: 1,
 				},
-				snapshots: { ...writing, partitionCount: 64 },
+				snapshots: { partitionCount: 64 },
 			},
 		});
 		const store = createCommitterStateStore({
-			ctx: { committer, db },
-			config: { subjectSnapshots: writing },
+			ctx: { committer, db, subjectSnapshots: writing },
 		});
 		try {
 			await postgres.db.execute(sql`INSERT INTO subject_snapshots (org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)

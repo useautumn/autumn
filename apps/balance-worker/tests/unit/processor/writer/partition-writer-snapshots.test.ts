@@ -13,10 +13,7 @@ import type {
 	Committer,
 	FlushOutcome,
 } from "../../../../src/committer/types/committer.js";
-import {
-	defaultSubjectSnapshotsEdgeConfig,
-	type SubjectSnapshotMode,
-} from "../../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+import type { SubjectSnapshotMode } from "../../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { dropStaleSubject } from "../../../../src/processor/actions/dropStaleSubject.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
@@ -29,6 +26,7 @@ import {
 	createSubjectFor,
 	createTrackCommand,
 } from "../../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "writer-snapshots";
 const partition = 2;
@@ -66,7 +64,7 @@ const createHarness = async ({
 	/** A bound small enough that the next subject read whole evicts the last unpinned one. */
 	subjectMapBytes?: number;
 } = {}) => {
-	const settings = { ...defaultSubjectSnapshotsEdgeConfig(), mode };
+	const subjectSnapshots = createSubjectSnapshotsStore({ mode });
 	const applied: DurableMutationRecord[][] = [];
 	const drops: SubjectSnapshotCustomer[][] = [];
 	const events: string[] = [];
@@ -113,8 +111,8 @@ const createHarness = async ({
 				insertPartitionProgress: async () => undefined,
 				claimPartitionProgress: async () => undefined,
 			},
+			subjectSnapshots,
 		},
-		config: { subjectSnapshots: { read: () => settings } },
 	});
 	await stateStore.initializePartition({ topic, partition, nextOffset: 0n });
 	let nextOffset = 0n;
@@ -122,6 +120,7 @@ const createHarness = async ({
 	const writer = createPartitionWriter({
 		ctx: {
 			stateStore,
+			subjectSnapshots,
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
 					await appendGate.held;
@@ -172,7 +171,10 @@ const createHarness = async ({
 			rejectNext = commandId;
 		},
 		setMode: (next: SubjectSnapshotMode) => {
-			settings.mode = next;
+			subjectSnapshots._setRuntimeConfigForTesting({
+				...subjectSnapshots.get(),
+				mode: next,
+			});
 		},
 	};
 };

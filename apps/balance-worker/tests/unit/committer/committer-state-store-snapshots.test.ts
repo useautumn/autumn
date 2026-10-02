@@ -8,6 +8,7 @@ import {
 } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import { createState, createTrackMutation } from "../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "autumn-metering";
 const retry = {
@@ -52,23 +53,21 @@ const createStore = ({
 	db: CommitterDb;
 	mode?: SubjectSnapshotMode;
 }) => {
-	const snapshots = {
-		read: () => ({ ...defaultSubjectSnapshotsEdgeConfig(), mode }),
-	};
+	const subjectSnapshots = createSubjectSnapshotsStore({ mode });
 	return createCommitterStateStore({
 		ctx: {
 			committer: createCommitter({
-				ctx: { db },
+				ctx: { db, subjectSnapshots },
 				config: {
 					concurrency: 32,
 					maxRowsPerFlush: 500,
 					retry,
-					snapshots: { ...snapshots, partitionCount: 64 },
+					snapshots: { partitionCount: 64 },
 				},
 			}),
 			db,
+			subjectSnapshots,
 		},
-		config: { subjectSnapshots: snapshots },
 	});
 };
 
@@ -79,14 +78,6 @@ const customerOf = (index: number) => ({
 });
 
 describe("committer state store snapshot drops", () => {
-	test("the store says whether snapshots are written right now, from the control it was given", () => {
-		const { db } = createCountingDb();
-		expect(createStore({ db, mode: "off" }).subjectSnapshots?.written()).toBe(
-			false,
-		);
-		expect(createStore({ db }).subjectSnapshots?.written()).toBe(true);
-	});
-
 	test("drops asked for in one tick land as one DELETE, and each caller resolves once it commits", async () => {
 		const { db, requests } = createCountingDb();
 		const store = createStore({ db });

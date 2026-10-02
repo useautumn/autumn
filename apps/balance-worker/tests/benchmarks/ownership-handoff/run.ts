@@ -48,6 +48,10 @@ import {
 } from "../../../src/blueGreen/types/slotHeartbeat.js";
 import { BALANCE_WORKER_ACTIVE_SLOT_KEY } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
 import {
+	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
+	defaultSubjectSnapshotsEdgeConfig,
+} from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+import {
 	openFixturePostgres,
 	type SeededCustomer,
 	seedCustomer,
@@ -377,9 +381,24 @@ const fleets: Record<Fleet["name"], Fleet> = {
 	blue: fleetOfArn("blue"),
 	green: fleetOfArn("green"),
 };
+/** The snapshot settings every spawned worker serves from memory; a fleet member reads the same object from the directory. */
+const subjectSnapshotsConfig = {
+	...defaultSubjectSnapshotsEdgeConfig(),
+	mode: args.snapshots,
+};
+const edgeConfigOverride = Buffer.from(
+	JSON.stringify({
+		[BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY]: subjectSnapshotsConfig,
+	}),
+).toString("base64");
 const edgeConfigDir = SLOTS
 	? mkdtempSync(join(tmpdir(), `bench-edge-${deployment}-`))
 	: undefined;
+if (edgeConfigDir) {
+	const path = join(edgeConfigDir, BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY);
+	mkdirSync(join(path, ".."), { recursive: true });
+	await Bun.write(path, JSON.stringify(subjectSnapshotsConfig));
+}
 async function writeSlotRecord({
 	fleet,
 	reason,
@@ -471,7 +490,6 @@ async function spawnWorker(name: string, fleet?: Fleet): Promise<Worker> {
 			BALANCE_WORKER_DEPLOYMENT: deployment,
 		}),
 		BENCH_NAME: name,
-		BENCH_SUBJECT_SNAPSHOTS: args.snapshots,
 		BENCH_BACKEND: BACKEND,
 		...(fleet && {
 			BENCH_SERVICE_ARN: fleet.serviceArn,
@@ -486,7 +504,9 @@ async function spawnWorker(name: string, fleet?: Fleet): Promise<Worker> {
 			env: {
 				...inherited,
 				NODE_ENV: "test",
-				...(fleet ? {} : { AUTUMN_EDGE_CONFIG_OVERRIDE_B64: "e30=" }),
+				...(fleet
+					? {}
+					: { AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverride }),
 				BENCH_WORKER_ENV: JSON.stringify(env),
 			},
 			stdout: "pipe",

@@ -15,6 +15,7 @@ import {
 	createState,
 	createTrackMutation,
 } from "../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "autumn-metering";
 const retry = {
@@ -71,15 +72,16 @@ const committerFor = ({
 	onSnapshotSizeCapped?: (params: { customers: number }) => void;
 }) =>
 	createCommitter({
-		ctx: { db, onSnapshotSizeCapped },
+		ctx: {
+			db,
+			onSnapshotSizeCapped,
+			subjectSnapshots: createSubjectSnapshotsStore({ mode }),
+		},
 		config: {
 			concurrency: 1,
 			maxRowsPerFlush,
 			retry,
-			snapshots: {
-				read: () => ({ ...defaultSubjectSnapshotsEdgeConfig(), mode }),
-				partitionCount: PARTITION_COUNT,
-			},
+			snapshots: { partitionCount: PARTITION_COUNT },
 		},
 	});
 

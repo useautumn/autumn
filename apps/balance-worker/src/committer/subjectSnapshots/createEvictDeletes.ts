@@ -1,5 +1,6 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { SubjectSnapshotCustomer } from "@autumn/postgres";
-import type { SubjectSnapshotControl } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { Committer, PartitionPosition } from "../types/committer.js";
 import type { SubjectSnapshots } from "./types/subjectSnapshots.js";
 
@@ -16,7 +17,7 @@ type PartitionEvictDeletes = {
 
 type SubjectSnapshotsContext = {
 	committer: Pick<Committer, "apply">;
-	snapshots: SubjectSnapshotControl;
+	subjectSnapshots: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	runInLane(params: {
 		position: PartitionPosition;
 		run(): Promise<void>;
@@ -67,7 +68,7 @@ export const createEvictDeletes = ({
 		const drops = byPartition.get(key);
 		if (!drops) return;
 		drops.scheduled = false;
-		const { dropBatch } = ctx.snapshots.read();
+		const { dropBatch } = ctx.subjectSnapshots.get();
 		const taken = takeEvictDeletes({ drops, dropBatch });
 		if (drops.pending.size > 0) scheduleEvictDelete({ position, drops });
 		else byPartition.delete(key);
@@ -85,11 +86,7 @@ export const createEvictDeletes = ({
 		}
 	}
 
-	function written(): boolean {
-		return ctx.snapshots.read().mode === "write";
-	}
-
-	return { written, dropCustomer };
+	return { dropCustomer };
 };
 
 function keyOf(position: PartitionPosition): string {

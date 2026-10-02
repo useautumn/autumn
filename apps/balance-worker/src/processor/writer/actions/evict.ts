@@ -12,14 +12,17 @@ export async function evict({
 	deferSnapshotDrop?: (dropped: Promise<void>) => void;
 }): Promise<void> {
 	const { state, config } = scope;
-	const snapshots = scope.ctx.stateStore.subjectSnapshots;
+	const snapshots =
+		scope.ctx.subjectSnapshots?.get().mode === "write"
+			? scope.ctx.stateStore.subjectSnapshots
+			: undefined;
 	// Set before any await: a mutation decided on these rows from here on must not snapshot them.
 	state.evicting.add(customerKey);
 	try {
 		// The next command re-reads Postgres, so the worker's own writes must be there first.
 		await state.storeCompletion;
 		state.subjects.evictCustomer({ customerKey });
-		if (!snapshots?.written()) return;
+		if (!snapshots) return;
 		// Handed to the partition's lane now, so it lands after every record decided before this evict.
 		const dropped = snapshots.dropCustomer({
 			topic: config.topic,

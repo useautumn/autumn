@@ -19,7 +19,6 @@ import {
 } from "../committer/createCommitter.js";
 import { createCommitterStateStore } from "../committer/createCommitterStateStore.js";
 import { createWorkerEdgeConfigs } from "../edgeConfig/createWorkerEdgeConfigs.js";
-import type { SubjectSnapshotControl } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createWorkerDynamoClient } from "../external/dynamodb/createWorkerDynamoClient.js";
 import {
 	createCommitterDb,
@@ -66,8 +65,6 @@ export async function openWorkerResources({
 		logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
 		/** Stands in for the admin bucket; the benchmark polls a directory through it. */
 		edgeConfigS3Client?: EdgeConfigS3Client;
-		/** Stands in for the snapshot edge config; tests pin a mode without S3. */
-		subjectSnapshots?: SubjectSnapshotControl;
 	};
 	config: BalanceWorkerConfig;
 	checkpointConfig: WorkerCheckpointConfig;
@@ -149,11 +146,6 @@ export async function openWorkerResources({
 		function readCommitterControl() {
 			return edgeConfigs.dbControl.get().balanceCommitter;
 		}
-		function readSubjectSnapshotSettings() {
-			return edgeConfigs.subjectSnapshots.get();
-		}
-		const subjectSnapshots: SubjectSnapshotControl =
-			dependencies.subjectSnapshots ?? { read: readSubjectSnapshotSettings };
 		const catalogCache = createCatalogCache({
 			ctx: {
 				db,
@@ -200,19 +192,19 @@ export async function openWorkerResources({
 							logger: dependencies.logger,
 							control: { read: readCommitterControl },
 							onSnapshotSizeCapped: recordSnapshotSizeCapped,
+							subjectSnapshots: edgeConfigs.subjectSnapshots,
 						},
 						config: {
 							...DEFAULT_COMMITTER_CONFIG,
 							concurrency: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
 							snapshots: {
-								...subjectSnapshots,
 								partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
 							},
 						},
 					}),
 					db: committerDb,
+					subjectSnapshots: edgeConfigs.subjectSnapshots,
 				},
-				config: { subjectSnapshots },
 			});
 			stateStore = committerStore;
 			bootstrapper = createProgressBootstrapper({ stateStore: committerStore });

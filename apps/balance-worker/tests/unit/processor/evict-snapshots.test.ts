@@ -3,7 +3,6 @@ import { type EvictCommand, parseCheckCommand } from "@autumn/balance-engine";
 import type { SubjectSnapshotCustomer } from "@autumn/postgres";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
-import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
@@ -16,6 +15,7 @@ import {
 	testOccurredAt,
 	testOrg,
 } from "../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "evict-snapshots";
 const partition = 0;
@@ -30,6 +30,7 @@ const evictOf = ({ customerId }: { customerId: string }): EvictCommand => ({
 
 /** The production processor over the committer's store with snapshots written; DELETEs wait on `dropGate`. */
 const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
+	const subjectSnapshots = createSubjectSnapshotsStore({ mode: "write" });
 	const drops: SubjectSnapshotCustomer[][] = [];
 	const dropGate = { held: Promise.resolve() as Promise<void> };
 	const committer: Committer = {
@@ -55,11 +56,7 @@ const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
 				insertPartitionProgress: async () => undefined,
 				claimPartitionProgress: async () => undefined,
 			},
-		},
-		config: {
-			subjectSnapshots: {
-				read: () => ({ ...defaultSubjectSnapshotsEdgeConfig(), mode: "write" }),
-			},
+			subjectSnapshots,
 		},
 	});
 	await stateStore.initializePartition({ topic, partition, nextOffset: 0n });
@@ -71,6 +68,7 @@ const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
 				readCommandNextOffset: () => null,
 				advanceCommandNextOffset: async () => undefined,
 			},
+			subjectSnapshots,
 			catalogCache: createTestCatalogCache(),
 			db: createSyntheticWorkerDb(),
 			appender: {

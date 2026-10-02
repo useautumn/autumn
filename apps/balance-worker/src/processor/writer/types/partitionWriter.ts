@@ -8,7 +8,9 @@ import type {
 	SubjectState,
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
+import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { MeteringRecord } from "@autumn/kafka";
+import type { SubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { SubjectSnapshotPayload } from "../../../state/types/durableMutation.js";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
@@ -101,6 +103,8 @@ export type PartitionWriterContext = {
 		| "subjectSnapshots"
 	>;
 	appender: CommittedOutcomeAppender;
+	/** Read as each mutation is queued: a record carries its subjects' state only while this says write. */
+	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */

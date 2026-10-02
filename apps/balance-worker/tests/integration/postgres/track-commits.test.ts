@@ -28,7 +28,10 @@ import {
 import type { PostgresClient } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { Kafka, logLevel } from "kafkajs";
-import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+import {
+	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
+	defaultSubjectSnapshotsEdgeConfig,
+} from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
 	openFixturePostgres,
@@ -173,6 +176,21 @@ async function createHarness(): Promise<Harness> {
 	return { deployment, topics, routing, client, stop, admin };
 }
 
+/** The edge configs a spawned worker serves from memory: the snapshot settings under their S3 key. */
+function edgeConfigOverrideOf({
+	subjectSnapshots,
+}: {
+	subjectSnapshots: "off" | "write";
+}): string {
+	const configs = {
+		[BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY]: {
+			...defaultSubjectSnapshotsEdgeConfig(),
+			mode: subjectSnapshots,
+		},
+	};
+	return Buffer.from(JSON.stringify(configs)).toString("base64");
+}
+
 /** A whole worker on the postgres backend: Kafka log, Postgres rows and bookmark, no SQLite. */
 async function startWorker({
 	harness,
@@ -202,29 +220,34 @@ async function startWorker({
 		BALANCE_WORKER_PARTITION_COUNT: PARTITION_COUNT,
 	};
 	const errors: unknown[] = [];
-	const child = subprocess
-		? Bun.spawn(
-				[
-					"bun",
-					"--config=./bunfig.toml",
-					fileURLToPath(new URL("./commandWorker.ts", import.meta.url)),
-				],
-				{
-					env: {
-						...process.env,
-						BALANCE_WORKER_TEST_ENV: JSON.stringify(env),
-						BALANCE_WORKER_TEST_SUBJECT_SNAPSHOTS: subjectSnapshots,
+	// The snapshot settings come from the edge-config override, decoded once per process: a writing worker is its own process.
+	const child =
+		subprocess || subjectSnapshots === "write"
+			? Bun.spawn(
+					[
+						"bun",
+						"--config=./bunfig.toml",
+						fileURLToPath(new URL("./commandWorker.ts", import.meta.url)),
+					],
+					{
+						env: {
+							...process.env,
+							BALANCE_WORKER_TEST_ENV: JSON.stringify(env),
+							AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverrideOf({
+								subjectSnapshots,
+							}),
+						},
+						stdout: "inherit",
+						stderr: "inherit",
 					},
-					stdout: "inherit",
-					stderr: "inherit",
-				},
-			)
-		: null;
+				)
+			: null;
 	const worker = child
 		? {
 				start: async () => {},
+				// `subprocess` callers want a crash; a worker spawned only for its settings stops like an in-process one.
 				stop: async () => {
-					child.kill("SIGKILL");
+					child.kill(subprocess ? "SIGKILL" : "SIGTERM");
 					await child.exited;
 				},
 			}
@@ -233,12 +256,6 @@ async function startWorker({
 					onError: ({ cause }) => {
 						errors.push(cause);
 						runtimeErrors.push(cause);
-					},
-					subjectSnapshots: {
-						read: () => ({
-							...defaultSubjectSnapshotsEdgeConfig(),
-							mode: subjectSnapshots,
-						}),
 					},
 					logger: {
 						debug: ignoreLog,
@@ -251,11 +268,11 @@ async function startWorker({
 			});
 	await worker.start();
 	let owned = false;
-	for (
-		let attempt = 0;
-		attempt < OWNERSHIP_POLL_ATTEMPTS && !owned;
-		attempt++
-	) {
+	// A spawned worker boots for seconds and may wait out a killed predecessor's session before it can join.
+	const pollAttempts = child
+		? OWNERSHIP_POLL_ATTEMPTS * 6
+		: OWNERSHIP_POLL_ATTEMPTS;
+	for (let attempt = 0; attempt < pollAttempts && !owned; attempt++) {
 		await harness.routing.refresh();
 		owned =
 			harness.routing.findOwner({ partition: PARTITION })?.endpoint ===

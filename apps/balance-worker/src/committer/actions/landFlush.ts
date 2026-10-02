@@ -5,7 +5,6 @@ import {
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "@autumn/postgres";
-import { writesSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,
@@ -363,7 +362,7 @@ export const landFlush = async ({
 		if (cause instanceof CommitterStoppedError) throw cause;
 		// Only a flush landing whole may write a snapshot, and a snapshot must never be why a record is refused.
 		if (
-			writesSnapshots({ snapshots: scope.config.snapshots }) &&
+			scope.ctx.subjectSnapshots?.get().mode === "write" &&
 			carriesSnapshots({ flush })
 		)
 			return landWithSnapshotsDeleted({ scope, flush });

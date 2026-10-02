@@ -295,7 +295,7 @@ function snapshotPayloadsOf({
 	projectedStates: SubjectState[];
 }): SubjectSnapshotPayload[] | null {
 	const { state } = scope;
-	if (!scope.ctx.stateStore.subjectSnapshots?.written()) return null;
+	if (scope.ctx.subjectSnapshots?.get().mode !== "write") return null;
 	if (state.evicting.has(pending.customerKey)) return null;
 	const payloads: SubjectSnapshotPayload[] = [];
 	for (const [index, projected] of projectedStates.entries()) {

@@ -7,7 +7,6 @@ import type { PostgresClient } from "@autumn/postgres";
 import type { Admin, Kafka } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { WorkerEdgeConfigs } from "../../edgeConfig/createWorkerEdgeConfigs.js";
-import type { SubjectSnapshotControl } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type {
 	PartitionServiceStopReason,
 	Partitions,
@@ -26,8 +25,6 @@ export type BalanceWorker = {
 
 export type BalanceWorkerDependencies = {
 	checkpointSource?: PartitionCheckpointSource;
-	/** Stands in for the snapshot edge config; tests pin a mode without S3. */
-	subjectSnapshots?: SubjectSnapshotControl;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
 	onError(failure: { cause: unknown }): void;
 	/** Raised when the partition service shuts itself down and will not resume.

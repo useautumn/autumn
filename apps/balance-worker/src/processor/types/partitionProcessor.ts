@@ -30,7 +30,9 @@ import type {
 	UpdateBalanceReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "@autumn/catalog-lru";
+import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
@@ -90,6 +92,7 @@ export type PartitionProcessorDependencies = {
 	catalogCache: CatalogCache;
 	db: WorkerDb;
 	appender: CommittedOutcomeAppender;
+	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
 	assertCanRead(): void;

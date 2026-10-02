@@ -311,11 +311,7 @@ export const runFlush = async ({
 	);
 
 	const snapshots = timeSync({ label: "flush.snapshots" }, () =>
-		collectSnapshotWrites({
-			config,
-			flush,
-			onSizeCapped: ctx.onSnapshotSizeCapped,
-		}),
+		collectSnapshotWrites({ ctx, config, flush }),
 	);
 
 	const { applied } = await ctx.db.flush({

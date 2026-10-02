@@ -3,8 +3,11 @@ import type {
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "@autumn/postgres";
-import { writesSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
-import type { CommitterConfig, Flush } from "../types/committer.js";
+import type {
+	CommitterConfig,
+	CommitterContext,
+	Flush,
+} from "../types/committer.js";
 import {
 	type CustomerSnapshots,
 	customerEntryOf,
@@ -17,18 +20,18 @@ import { stateExceedsCap } from "./rules/stateExceedsCap.js";
 
 /** One action per customer per flush: upsert the last proven state of each of its subjects, else DELETE the customer. */
 export const collectSnapshotWrites = ({
+	ctx,
 	config,
 	flush,
-	onSizeCapped,
 }: {
+	ctx: Pick<CommitterContext, "subjectSnapshots" | "onSnapshotSizeCapped">;
 	config: Pick<CommitterConfig, "snapshots">;
 	flush: Flush;
-	onSizeCapped?: (params: { customers: number }) => void;
 }): SubjectSnapshotWrites | undefined => {
-	if (!config.snapshots || !writesSnapshots({ snapshots: config.snapshots }))
-		return undefined;
+	const settings = ctx.subjectSnapshots?.get();
+	if (!config.snapshots || settings?.mode !== "write") return undefined;
 	const { partitionCount } = config.snapshots;
-	const { maxBytes } = config.snapshots.read();
+	const { maxBytes } = settings;
 	const byCustomer = new Map<string, CustomerSnapshots>();
 	for (const call of flush.calls)
 		for (const customer of call.snapshotDrops ?? [])
@@ -53,6 +56,7 @@ export const collectSnapshotWrites = ({
 		if (entry.deletes || overCap) deletes.push(entry.customer);
 		else upserts.push(...rows);
 	}
-	if (cappedCustomers > 0) onSizeCapped?.({ customers: cappedCustomers });
+	if (cappedCustomers > 0)
+		ctx.onSnapshotSizeCapped?.({ customers: cappedCustomers });
 	return { upserts, deletes };
 };

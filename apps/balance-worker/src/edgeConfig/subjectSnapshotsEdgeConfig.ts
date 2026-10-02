@@ -21,16 +21,6 @@ export type SubjectSnapshotsEdgeConfig = z.infer<
 >;
 export type SubjectSnapshotMode = SubjectSnapshotsEdgeConfig["mode"];
 
-/** Whoever decides about the table reads this, never a boot-time copy: a flip in S3 takes effect at the next flush and the next evict. */
-export type SubjectSnapshotControl = { read(): SubjectSnapshotsEdgeConfig };
-
-/** Absent, or a control reading off: nothing touches `subject_snapshots`. */
-export const writesSnapshots = ({
-	snapshots,
-}: {
-	snapshots?: SubjectSnapshotControl;
-}): boolean => snapshots?.read().mode === "write";
-
 export const defaultSubjectSnapshotsEdgeConfig =
 	(): SubjectSnapshotsEdgeConfig => ({
 		mode: "off",
