@@ -7,7 +7,10 @@ import type { z } from "zod/v4";
 import { getMiscRedis, waitForRedisReady } from "@/external/redis/initRedis.js";
 import { acquireLockWithWait } from "@/external/redis/utils/lockUtils/acquireLockWithWait.js";
 import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
-import { RateLimitOverridesConfigSchema } from "@/internal/misc/rateLimiter/rateLimitOverridesSchemas.js";
+import {
+	type RateLimitOverridesConfig,
+	RateLimitOverridesConfigSchema,
+} from "@/internal/misc/rateLimiter/rateLimitOverridesSchemas.js";
 
 type ServerEdgeConfigCtx = { org: { id: string }; env: AppEnv };
 
@@ -84,6 +87,29 @@ export const updateServerEdgeConfig = async <T>({
 
 const RATE_LIMIT_OVERRIDES_PATH = "/admin/rate-limit-overrides-config";
 
+/** Read-modify-write of the server's rate-limit overrides, refused unless edge config is in memory. */
+export const updateServerRateLimitOverrides = async ({
+	ctx,
+	update,
+}: {
+	ctx: ServerEdgeConfigCtx;
+	update: (config: RateLimitOverridesConfig) => RateLimitOverridesConfig;
+}) => {
+	// Without the in-memory override the route writes the shared S3 config the fleet reads.
+	if (!process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64) {
+		throw new Error(
+			"Server rate-limit override writes require AUTUMN_EDGE_CONFIG_OVERRIDE_B64 (in-memory edge config)",
+		);
+	}
+
+	await updateServerEdgeConfig({
+		ctx,
+		path: RATE_LIMIT_OVERRIDES_PATH,
+		schema: RateLimitOverridesConfigSchema,
+		update,
+	});
+};
+
 /**
  * Sets the server's rate-limit override for one org key (id or slug), leaving other
  * entries untouched. Returns a restore that removes only that key.
@@ -97,17 +123,8 @@ export const setServerRateLimitOverride = async ({
 	orgKey: string;
 	limits: Record<string, number>;
 }) => {
-	// Without the in-memory override the route writes the shared S3 config the fleet reads.
-	if (!process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64) {
-		throw new Error(
-			"setServerRateLimitOverride requires AUTUMN_EDGE_CONFIG_OVERRIDE_B64 (in-memory edge config)",
-		);
-	}
-
-	await updateServerEdgeConfig({
+	await updateServerRateLimitOverrides({
 		ctx,
-		path: RATE_LIMIT_OVERRIDES_PATH,
-		schema: RateLimitOverridesConfigSchema,
 		update: (config) => ({
 			orgs: { ...config.orgs, [orgKey]: { limits } },
 		}),
@@ -115,10 +132,8 @@ export const setServerRateLimitOverride = async ({
 
 	return {
 		restore: () =>
-			updateServerEdgeConfig({
+			updateServerRateLimitOverrides({
 				ctx,
-				path: RATE_LIMIT_OVERRIDES_PATH,
-				schema: RateLimitOverridesConfigSchema,
 				update: (config) => {
 					const { [orgKey]: _removed, ...orgs } = config.orgs;
 					return { orgs };

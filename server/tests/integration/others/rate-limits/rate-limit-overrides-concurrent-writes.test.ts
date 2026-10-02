@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	setServerRateLimitOverride,
-	updateServerEdgeConfig,
+	updateServerRateLimitOverrides,
 } from "@tests/utils/serverEdgeConfigTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import {
@@ -10,10 +10,7 @@ import {
 } from "@tests/utils/testInitUtils/dashboardSession.js";
 import chalk from "chalk";
 import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
-import {
-	type RateLimitOverridesConfig,
-	RateLimitOverridesConfigSchema,
-} from "@/internal/misc/rateLimiter/rateLimitOverridesSchemas.js";
+import type { RateLimitOverridesConfig } from "@/internal/misc/rateLimiter/rateLimitOverridesSchemas.js";
 
 const testCase = "rate-limit-overrides-concurrent-writes";
 const WRITER_COUNT = 8;
@@ -58,10 +55,8 @@ test(`${chalk.yellowBright(`${testCase}: parallel writers keep every org key`)}`
 		const remaining = await readServerOverrideKeys();
 		expect(orgKeys.filter((orgKey) => remaining.includes(orgKey))).toEqual([]);
 	} finally {
-		await updateServerEdgeConfig({
+		await updateServerRateLimitOverrides({
 			ctx,
-			path: RATE_LIMIT_OVERRIDES_PATH,
-			schema: RateLimitOverridesConfigSchema,
 			update: (config) => ({
 				orgs: Object.fromEntries(
 					Object.entries(config.orgs).filter(
