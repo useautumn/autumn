@@ -5,6 +5,7 @@ import type { WorkerEntity } from "../../models/subject/rows/workerEntity.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import { applyCorePlan } from "./applyCorePlan.js";
 import { applyPlanRebalances } from "./applyPlanRebalances/applyPlanRebalances.js";
+import { applyPlanRollovers } from "./applyPlanRollovers/applyPlanRollovers.js";
 import { assertInsertsHaveNamedOwners } from "./assertInsertsHaveNamedOwners.js";
 import { toPlanMutation } from "./toPlanMutation.js";
 import type { ApplyBillingPlanCommand } from "./types/applyBillingPlanCommand.js";
@@ -38,7 +39,7 @@ export const planInsertedEntities = ({
 		op.op === "insert" && op.table === "entity" ? [op.row] : [],
 	);
 
-/** The plan's ops as one mutation over the customer and the entities it names: its core plan applied, then its rebalances on the result. */
+/** The plan's ops as one mutation over the customer and the entities it names: its core plan applied, then its rollovers and rebalances on the result. */
 export const computeApplyBillingPlan = ({
 	command,
 	state,
@@ -49,20 +50,26 @@ export const computeApplyBillingPlan = ({
 	/** The customer's state with the named entities' rows merged in. */
 	state: SubjectState | null;
 	entities?: readonly WorkerEntity[];
-	/** The rows the plan's state and inserts join to; a rebalance reads them. */
+	/** The rows the plan's state and inserts join to; a rebalance or a rollover cap reads them. */
 	catalog?: Catalog;
 }): SubjectStateMutation => {
 	assertInsertsHaveNamedOwners({ command, state, entities });
 	const corePlan = applyCorePlan({ command, state });
-	const rebalances = applyPlanRebalances({
+	const rollovers = applyPlanRollovers({
 		command,
 		state: corePlan.state,
+		entities,
+		catalog,
+	});
+	const rebalances = applyPlanRebalances({
+		command,
+		state: rollovers.state,
 		entities,
 		catalog,
 	});
 	return toPlanMutation({
 		command,
 		state,
-		changes: [...corePlan.changes, ...rebalances.changes],
+		changes: [...corePlan.changes, ...rollovers.changes, ...rebalances.changes],
 	});
 };

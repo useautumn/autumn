@@ -1,33 +1,30 @@
 import { secondsToMs } from "@autumn/shared";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
-import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 
-export const consumeBillingCycleAnchorReset = async ({
-	ctx,
+/** A product whose scheduled anchor move landed on this invoice now bills from Stripe's anchor. */
+export const consumeBillingCycleAnchorReset = ({
 	eventContext,
+	plan,
 }: {
-	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
+	plan: AutumnBillingPlanBuilder;
 }) => {
 	const stripeAnchorMs = secondsToMs(
 		eventContext.stripeSubscription.billing_cycle_anchor,
 	);
-
-	await Promise.all(
-		eventContext.billingCycleAnchorResetCustomerProductIds.map(
-			(customerProductId) =>
-				CusProductService.update({
-					ctx,
-					cusProductId: customerProductId,
-					updates: {
-						billing_cycle_anchor: stripeAnchorMs,
-						billing_cycle_anchor_resets_at: null,
-					},
-				}),
-		),
+	const resetCustomerProductIds = new Set(
+		eventContext.billingCycleAnchorResetCustomerProductIds,
 	);
-	if (eventContext.billingCycleAnchorResetCustomerProductIds.length > 0) {
-		eventContext.results.customerStateChanged = true;
+
+	for (const customerProduct of eventContext.customerProducts) {
+		if (!resetCustomerProductIds.has(customerProduct.id)) continue;
+		plan.updateCustomerProduct({
+			customerProduct,
+			updates: {
+				billing_cycle_anchor: stripeAnchorMs,
+				billing_cycle_anchor_resets_at: null,
+			},
+		});
 	}
 };

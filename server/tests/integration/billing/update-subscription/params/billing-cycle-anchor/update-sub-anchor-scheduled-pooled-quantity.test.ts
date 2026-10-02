@@ -10,13 +10,15 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { items } from "@tests/utils/fixtures/items.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { addDays, addMonths } from "date-fns";
+import { CusService } from "@/internal/customers/CusService.js";
 import {
 	expectAnchorQuantityIdentity,
 	setupAnchorQuantityScenario,
 } from "./setupAnchorQuantityScenario.js";
 
-// Contract: a scheduled anchor replenishes the existing subscription pool at its final quantity.
-// Deferred contributions become current at the boundary; source balances stay zero and later usage survives.
+// Contract: a scheduled anchor re-anchors the existing subscription pool at the boundary and the next
+// read's lazy reset replenishes it at its final quantity. Deferred contributions become current at the
+// boundary; source balances stay zero and later usage survives.
 for (const quantity of [700, 300, 0]) {
 	test.concurrent(`scheduled pooled quantity: ${quantity}`, async () => {
 		const customerId = `anchor-scheduled-pool-${quantity}`;
@@ -77,7 +79,14 @@ for (const quantity of [700, 300, 0]) {
 			testClockId: scenario.testClockId!,
 			advanceTo: addDays(resetAt, 1).getTime(),
 		});
-		// Inspect persistence before any customer read can trigger a lazy reset.
+		const reanchored = await getPooledBalanceDbState({
+			db: ctx.db,
+			customerId,
+		});
+		expect(reanchored.poolCustomerEntitlements[0]).toMatchObject({
+			reset_cycle_anchor: resetAt,
+		});
+		await CusService.getFull({ ctx, idOrInternalId: customerId });
 		const after = await getPooledBalanceDbState({ db: ctx.db, customerId });
 		expect(after.poolCustomerEntitlements[0].balance).toBe(quantity);
 		expect(after.pools[0]).toMatchObject({

@@ -1,13 +1,12 @@
 import {
-	clearRolloversOverMax,
 	cusEntToStartingBalance,
 	customerEntitlementToNextResetAt,
 	getResetBalancesUpdate,
 	getRolloverUpdates,
-	type Rollover,
 } from "@autumn/shared";
 import type { RowChange } from "../../models/mutation/rowChange.js";
 import type { DueRow } from "../../utils/subjectUtils/fullSubjectToDueRows.js";
+import { addRolloversWithinMax } from "../common/addRolloversWithinMax.js";
 import type { ResetCommand } from "./types/resetCommand.js";
 import type { ResetRow } from "./types/resetResult.js";
 
@@ -17,43 +16,19 @@ export type CustomerEntitlementReset = {
 	row: ResetRow;
 };
 
-/** What is left on the row carries over, then the cap trims the oldest rollovers first; each outcome is its own change. */
+/** What is left on the row carries over, then the cap trims the oldest rollovers first. */
 const customerEntitlementToRolloverChanges = ({
 	row,
 	cycleEndedAt,
 }: {
 	row: DueRow;
 	cycleEndedAt: number;
-}): RowChange[] => {
-	const { inserts, updates, deleteIds } = clearRolloversOverMax({
-		cusEnt: row,
+}): RowChange[] =>
+	addRolloversWithinMax({
+		row,
 		newRollovers: getRolloverUpdates({ cusEnt: row, nextResetAt: cycleEndedAt })
 			.toInsert,
 	});
-	const existingById = new Map(
-		row.rollovers.map((rollover) => [rollover.id, rollover]),
-	);
-	const rolloverToUpdateChange = (rollover: Rollover): RowChange => ({
-		table: "rollovers",
-		op: "update",
-		id: rollover.id,
-		before: { balance: existingById.get(rollover.id)?.balance },
-		after: { balance: rollover.balance, entities: rollover.entities },
-	});
-	return [
-		...inserts.map(
-			(rollover): RowChange => ({
-				table: "rollovers",
-				op: "insert",
-				row: rollover,
-			}),
-		),
-		...updates.map(rolloverToUpdateChange),
-		...deleteIds.map(
-			(id): RowChange => ({ table: "rollovers", op: "delete", id }),
-		),
-	];
-};
 
 /**
  * Runs for every due row that is a pool's own row. Before the row refills like any other, its pool

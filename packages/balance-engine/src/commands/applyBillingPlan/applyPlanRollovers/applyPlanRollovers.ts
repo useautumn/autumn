@@ -1,23 +1,23 @@
-import { rebalance } from "../../../common/rebalance/rebalance.js";
 import { UnsupportedCommandError } from "../../../errors.js";
 import type { Catalog } from "../../../models/catalog/catalog.js";
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { WorkerEntity } from "../../../models/subject/rows/workerEntity.js";
 import type { SubjectState } from "../../../models/subject/subjectState.js";
 import { applyChanges } from "../../../mutation/applyChanges.js";
-import { heldRowToFullSubject } from "../../common/heldRowToFullSubject.js";
+import { addRolloversWithinMax } from "../../common/addRolloversWithinMax.js";
 import type { AppliedPlanStep } from "../types/appliedPlanStep.js";
 import type { ApplyBillingPlanCommand } from "../types/applyBillingPlanCommand.js";
 import type {
+	BillingPlanAddRolloversOp,
 	BillingPlanOp,
-	BillingPlanRebalanceOp,
 } from "../types/billingPlanOp.js";
+import { heldRowToJoinedRow } from "./heldRowToJoinedRow.js";
 
-const isRebalanceOp = (op: BillingPlanOp): op is BillingPlanRebalanceOp =>
-	op.op === "rebalance";
+const isAddRolloversOp = (op: BillingPlanOp): op is BillingPlanAddRolloversOp =>
+	op.op === "addRollovers";
 
-/** Each purchase sized against the rows as they stand after the plan's rows and the purchases before it. */
-export const applyPlanRebalances = ({
+/** Each grant's new rollovers capped against the ones it holds, as the plan's rows and the ops before it leave them: the same cap a reset applies. */
+export const applyPlanRollovers = ({
 	command,
 	state,
 	entities,
@@ -28,37 +28,30 @@ export const applyPlanRebalances = ({
 	entities: readonly WorkerEntity[];
 	catalog?: Catalog;
 }): AppliedPlanStep => {
-	const rebalanceOps = command.ops.filter(isRebalanceOp);
-	if (rebalanceOps.length === 0) return { changes: [], state };
+	const addRolloversOps = command.ops.filter(isAddRolloversOp);
+	if (addRolloversOps.length === 0) return { changes: [], state };
 	if (!catalog)
 		throw new UnsupportedCommandError({
-			reason: "billing_plan_rebalance_needs_catalog",
+			reason: "billing_plan_rollovers_need_catalog",
 		});
 
 	let appliedState = state;
 	const changes: RowChange[] = [];
-	for (const op of rebalanceOps) {
-		const fullSubject = heldRowToFullSubject({
-			id: op.id,
-			state: appliedState,
-			entities,
-			catalog,
-		});
-		const { changes: rebalanceChanges } = rebalance({
-			fullSubject,
-			request: {
-				featureId: op.featureId,
-				customerEntitlementId: op.id,
-				quantity: op.quantity,
-				creditedCustomerEntitlementId: op.creditedId,
-				now: command.occurredAt,
-			},
+	for (const op of addRolloversOps) {
+		const rolloverChanges = addRolloversWithinMax({
+			row: heldRowToJoinedRow({
+				id: op.id,
+				state: appliedState,
+				entities,
+				catalog,
+			}),
+			newRollovers: op.rows,
 		});
 		appliedState = applyChanges({
 			state: appliedState,
-			changes: rebalanceChanges,
+			changes: rolloverChanges,
 		});
-		changes.push(...rebalanceChanges);
+		changes.push(...rolloverChanges);
 	}
 	return { changes, state: appliedState };
 };
