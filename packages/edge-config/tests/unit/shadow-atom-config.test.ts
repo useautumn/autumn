@@ -3,8 +3,8 @@ import {
 	applyShadowAtomSettings,
 	inAtomRollout,
 	SHADOW_ATOM_SETTLE_MS,
+	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
-	type ShadowAtomEnvConfig,
 	type ShadowAtomOrg,
 	scheduleOrgPercent,
 	shadowAtomConfig,
@@ -16,7 +16,7 @@ const bucketOf = (customerId: string) =>
 	Number(BigInt(Bun.hash(customerId)) % 100n);
 
 const registered = (org: Partial<ShadowAtomOrg>): ShadowAtomOrg => ({
-	encryptedToken: "org_token",
+	encryptedTokens: { sandbox: "sandbox_token", live: "live_token" },
 	registeredAt: 1,
 	percent: 100,
 	previousPercent: 0,
@@ -26,32 +26,36 @@ const registered = (org: Partial<ShadowAtomOrg>): ShadowAtomOrg => ({
 
 const envWith = (orgs: Record<string, Partial<ShadowAtomOrg>>) =>
 	ShadowAtomConfigSchema.parse({
-		sandbox: {
-			endpointUrl: "https://shadow.example.com",
-			orgs: Object.fromEntries(
-				Object.entries(orgs).map(([orgId, org]) => [orgId, registered(org)]),
-			),
-		},
-	}).sandbox;
+		endpointUrl: "https://shadow.example.com",
+		orgs: Object.fromEntries(
+			Object.entries(orgs).map(([orgId, org]) => [orgId, registered(org)]),
+		),
+	});
 
 const atPercent = (percent: number) =>
 	envWith({ org_1: { percent, previousPercent: percent } });
 
-const shareIn = (config: ShadowAtomEnvConfig, orgId = "org_1") =>
+const shareIn = (config: ShadowAtomConfig, orgId = "org_1") =>
 	customerIds.filter((customerId) =>
 		inAtomRollout({ config, orgId, customerId, now: settled }),
 	).length / customerIds.length;
 
 describe("shadowAtomConfig", () => {
-	test("an empty file is off in both envs: no endpoint, no org, no one in", () => {
+	test("an empty file is off: no endpoint, no org, no one in", () => {
 		const config = shadowAtomConfig.defaultValue();
 		expect(ShadowAtomConfigSchema.parse({})).toEqual(config);
-		for (const env of ["sandbox", "live"] as const) {
-			expect(config[env].endpointUrl).toBeNull();
-			expect(config[env].adminEncryptedToken).toBeNull();
-			expect(config[env].orgs).toEqual({});
-			expect(shareIn(config[env])).toBe(0);
-		}
+		expect(config.endpointUrl).toBeNull();
+		expect(config.adminEncryptedToken).toBeNull();
+		expect(config.orgs).toEqual({});
+		expect(shareIn(config)).toBe(0);
+	});
+
+	test("there are no per-env keys: one config serves both envs", () => {
+		expect(Object.keys(shadowAtomConfig.defaultValue()).sort()).toEqual([
+			"adminEncryptedToken",
+			"endpointUrl",
+			"orgs",
+		]);
 	});
 
 	test("an org's percent outside 0–100, or a fraction, is refused", () => {
@@ -61,8 +65,9 @@ describe("shadowAtomConfig", () => {
 });
 
 describe("inAtomRollout", () => {
-	test("an org that is not registered has no one in", () => {
+	test("an org that is not registered has no one in, and an inherited key is no org", () => {
 		expect(shareIn(atPercent(100), "org_2")).toBe(0);
+		expect(shareIn(atPercent(100), "constructor")).toBe(0);
 	});
 
 	test("a registered org's customer is in when its bucket lands below the org's percent", () => {
@@ -137,27 +142,23 @@ describe("scheduleOrgPercent", () => {
 	});
 });
 
-test("a save sets only each env's address; admin token and orgs stay, whatever the caller sent", () => {
+test("a save sets only the address; admin token and orgs stay, whatever the caller sent", () => {
 	const orgs = { org_1: registered({}) };
 	const current = ShadowAtomConfigSchema.parse({
-		sandbox: { adminEncryptedToken: "minted", orgs },
+		adminEncryptedToken: "minted",
+		orgs,
 	});
 	const saved = applyShadowAtomSettings({
 		current,
 		next: ShadowAtomConfigSchema.parse({
-			sandbox: {
-				endpointUrl: "https://shadow.example.com",
-				adminEncryptedToken: "forged",
-				orgs: { org_2: registered({ encryptedToken: "forged" }) },
-			},
-			live: { adminEncryptedToken: "forged" },
+			endpointUrl: "https://shadow.example.com",
+			adminEncryptedToken: "forged",
+			orgs: { org_2: registered({}) },
 		}),
 	});
-	expect(saved.sandbox.endpointUrl).toBe("https://shadow.example.com");
-	expect(saved.sandbox.adminEncryptedToken).toBe("minted");
-	expect(saved.sandbox.orgs).toEqual(orgs);
-	expect(saved.live.adminEncryptedToken).toBeNull();
-	expect(saved.live.orgs).toEqual({});
+	expect(saved.endpointUrl).toBe("https://shadow.example.com");
+	expect(saved.adminEncryptedToken).toBe("minted");
+	expect(saved.orgs).toEqual(orgs);
 });
 
 test("a save keeps each env's deployment group, whatever the caller sent", () => {

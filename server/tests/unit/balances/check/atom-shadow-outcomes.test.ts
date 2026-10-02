@@ -82,15 +82,16 @@ beforeAll(() => {
 	process.env.ENCRYPTION_PASSWORD = "atom-shadow-test-password";
 	_setShadowAtomConfigForTesting({
 		config: {
-			sandbox: {
-				endpointUrl: server.url.origin,
-				orgs: {
-					org_shadow: {
-						encryptedToken: encryptData("shadow_token_1"),
-						registeredAt: 1,
-						percent: 100,
-						previousPercent: 100,
+			endpointUrl: server.url.origin,
+			orgs: {
+				org_shadow: {
+					encryptedTokens: {
+						sandbox: encryptData("shadow_token_1"),
+						live: encryptData("shadow_token_live"),
 					},
+					registeredAt: 1,
+					percent: 100,
+					previousPercent: 100,
 				},
 			},
 		},

@@ -1,5 +1,4 @@
-import { AppEnv, Scopes } from "@autumn/shared";
-import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
@@ -12,24 +11,20 @@ import {
 } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
-/** Mints or rotates an env's shadow Atom admin token; only the hash leaves, for the multi-tenant Atom's ATOM_TOKEN_HASH. */
+/** Mints or rotates the shadow Atom's admin token; only the hash leaves, for the multi-tenant Atom's ATOM_TOKEN_HASH. */
 export const handleMintAdminShadowAtomToken = createRoute({
 	scopes: [Scopes.Superuser],
-	body: z.object({ env: z.enum(AppEnv) }),
 	handler: async (c) => {
-		const { env } = c.req.valid("json");
 		const token = generateAtomToken();
 		await withLock({
 			lockKey: SHADOW_ATOM_CONFIG_LOCK_KEY,
 			fn: async () => {
 				const config = await shadowAtomConfigStore.readFromSource();
-				config[env] = {
-					...config[env],
-					adminEncryptedToken: encryptData(token),
-				};
-				await shadowAtomConfigStore.writeToSource({ config });
+				await shadowAtomConfigStore.writeToSource({
+					config: { ...config, adminEncryptedToken: encryptData(token) },
+				});
 			},
 		});
-		return c.json({ env, admin_token_hash: atomTokenToHash({ token }) });
+		return c.json({ admin_token_hash: atomTokenToHash({ token }) });
 	},
 });

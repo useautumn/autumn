@@ -46,20 +46,21 @@ const shadowWith = ({
 	registered?: boolean;
 }): ShadowAtomConfig =>
 	ShadowAtomConfigSchema.parse({
-		sandbox: {
-			endpointUrl,
-			adminEncryptedToken: "encrypted_admin",
-			orgs: registered
-				? {
-						org_1: {
-							encryptedToken: "encrypted_org_1",
-							registeredAt: 1,
-							percent,
-							previousPercent: percent,
+		endpointUrl,
+		adminEncryptedToken: "encrypted_admin",
+		orgs: registered
+			? {
+					org_1: {
+						encryptedTokens: {
+							sandbox: "encrypted_org_1",
+							live: "encrypted_org_1_live",
 						},
-					}
-				: {},
-		},
+						registeredAt: 1,
+						percent,
+						previousPercent: percent,
+					},
+				}
+			: {},
 	});
 
 /** A herald reading `org`, whose Atoms record what reached them; `failing` Atoms reject every push. */

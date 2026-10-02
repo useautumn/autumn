@@ -65,7 +65,7 @@ const createApp = ({ scopes }: { scopes: string[] }) => {
 		...handleMintAdminShadowAtomToken,
 	);
 	app.patch(
-		"/admin/shadow-atom-config/:env/orgs/:org_id",
+		"/admin/shadow-atom-config/orgs/:org_id",
 		...handleSetAdminShadowAtomOrgPercent,
 	);
 	return app;
@@ -78,16 +78,23 @@ const save = ({ config, scopes }: { config: unknown; scopes: string[] }) =>
 		body: JSON.stringify(config),
 	});
 
-test("staff save a shadow Atom's address", async () => {
+const org = (percent: number) => ({
+	encryptedTokens: { sandbox: "encrypted_sandbox", live: "encrypted_live" },
+	registeredAt: 7,
+	percent,
+	previousPercent: percent,
+});
+
+test("staff save the shadow Atom's address", async () => {
 	const response = await save({
 		scopes: [Scopes.Superuser],
-		config: { sandbox: { endpointUrl: "https://shadow-atom.example.com" } },
+		config: { endpointUrl: "https://shadow-atom.example.com" },
 	});
 
 	expect(response.status).toBe(200);
 	expect(write).toHaveBeenCalledTimes(1);
 	expect(lockedKeys).toEqual(["admin:shadow-atom-config"]);
-	expect(write.mock.calls[0][0].config.sandbox.endpointUrl).toBe(
+	expect(write.mock.calls[0][0].config.endpointUrl).toBe(
 		"https://shadow-atom.example.com",
 	);
 });
@@ -104,20 +111,12 @@ test("an org's own key cannot read or write the shadow Atom config", async () =>
 	expect(write).not.toHaveBeenCalled();
 });
 
-test("staff read the shadow Atom config with no token in it: whether the admin token is set, and when each org was registered", async () => {
+test("staff read one config for both envs with no token in it: whether the admin token is set, and each org's percent", async () => {
 	read.mockResolvedValueOnce(
 		ShadowAtomConfigSchema.parse({
-			sandbox: {
-				endpointUrl: "https://shadow-atom.example.com",
-				adminEncryptedToken: "encrypted_admin",
-				orgs: {
-					org_1: {
-						encryptedToken: "encrypted_org_1",
-						registeredAt: 7,
-						percent: 40,
-					},
-				},
-			},
+			endpointUrl: "https://shadow-atom.example.com",
+			adminEncryptedToken: "encrypted_admin",
+			orgs: { org_1: org(40) },
 		}),
 	);
 	const response = await createApp({ scopes: [Scopes.Superuser] }).request(
@@ -125,88 +124,59 @@ test("staff read the shadow Atom config with no token in it: whether the admin t
 	);
 
 	expect(response.status).toBe(200);
-	const body = await response.json();
-	expect(body.sandbox).toEqual({
+	expect(await response.json()).toEqual({
 		endpointUrl: "https://shadow-atom.example.com",
 		hasAdminToken: true,
 		orgs: { org_1: { registeredAt: 7, percent: 40 } },
-	});
-	expect(body.live).toEqual({
-		endpointUrl: null,
-		hasAdminToken: false,
-		orgs: {},
 	});
 });
 
 test("a save cannot touch the admin token or the registered orgs, and answers without them", async () => {
 	const stored = ShadowAtomConfigSchema.parse({
-		sandbox: {
-			adminEncryptedToken: "encrypted_admin",
-			orgs: {
-				org_1: {
-					encryptedToken: "encrypted_org_1",
-					registeredAt: 7,
-					percent: 40,
-				},
-			},
-		},
+		adminEncryptedToken: "encrypted_admin",
+		orgs: { org_1: org(40) },
 	});
 	read.mockResolvedValueOnce(stored);
 
 	const response = await save({
 		scopes: [Scopes.Superuser],
 		config: {
-			sandbox: {
-				endpointUrl: "https://shadow-atom.example.com",
-				adminEncryptedToken: "forged",
-				orgs: {
-					org_2: { encryptedToken: "forged", registeredAt: 1, percent: 100 },
-				},
-			},
+			endpointUrl: "https://shadow-atom.example.com",
+			adminEncryptedToken: "forged",
+			orgs: { org_2: org(100) },
 		},
 	});
 
-	const saved = write.mock.calls[0][0].config.sandbox;
+	const saved = write.mock.calls[0][0].config;
 	expect(saved.adminEncryptedToken).toBe("encrypted_admin");
-	expect(saved.orgs).toEqual(stored.sandbox.orgs);
+	expect(saved.orgs).toEqual(stored.orgs);
 	const body = await response.json();
-	expect(Object.keys(body.sandbox).sort()).toEqual([
+	expect(Object.keys(body).sort()).toEqual([
 		"endpointUrl",
 		"hasAdminToken",
 		"orgs",
 	]);
-	expect(body.sandbox.orgs).toEqual({
-		org_1: { registeredAt: 7, percent: 40 },
-	});
+	expect(body.orgs).toEqual({ org_1: { registeredAt: 7, percent: 40 } });
 });
 
-const mint = ({ env, scopes }: { env: string; scopes: string[] }) =>
+const mint = ({ scopes }: { scopes: string[] }) =>
 	createApp({ scopes }).request("/admin/shadow-atom-config/token", {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ env }),
 	});
 
-test("staff mint an env's admin token: stored encrypted, its hash returned once for the multi-tenant Atom's ATOM_TOKEN_HASH", async () => {
-	const response = await mint({ env: "live", scopes: [Scopes.Superuser] });
+test("staff mint the admin token: stored encrypted, its hash returned once for the multi-tenant Atom's ATOM_TOKEN_HASH", async () => {
+	const response = await mint({ scopes: [Scopes.Superuser] });
 
 	expect(response.status).toBe(200);
 	const body = await response.json();
 	const saved = write.mock.calls[0][0].config;
-	const token = decryptData(saved.live.adminEncryptedToken ?? "");
+	const token = decryptData(saved.adminEncryptedToken ?? "");
 	expect(token).toStartWith("atom_");
-	expect(body).toEqual({
-		env: "live",
-		admin_token_hash: atomTokenToHash({ token }),
-	});
-	expect(saved.sandbox.adminEncryptedToken).toBeNull();
+	expect(body).toEqual({ admin_token_hash: atomTokenToHash({ token }) });
 });
 
 test("an org's own key cannot mint the shadow Atom's admin token", async () => {
-	const response = await mint({
-		env: "live",
-		scopes: [Scopes.Organisation.Write],
-	});
+	const response = await mint({ scopes: [Scopes.Organisation.Write] });
 
 	expect(response.status).toBe(403);
 	expect(write).not.toHaveBeenCalled();
@@ -221,37 +191,23 @@ const setPercent = ({
 	percent: number;
 	scopes?: string[];
 }) =>
-	createApp({ scopes }).request(
-		`/admin/shadow-atom-config/sandbox/orgs/${orgId}`,
-		{
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ percent }),
-		},
-	);
+	createApp({ scopes }).request(`/admin/shadow-atom-config/orgs/${orgId}`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ percent }),
+	});
 
 test("staff change a registered org's percent; it routes from what routed before until it settles", async () => {
 	read.mockResolvedValueOnce(
-		ShadowAtomConfigSchema.parse({
-			sandbox: {
-				orgs: {
-					org_1: {
-						encryptedToken: "encrypted_org_1",
-						registeredAt: 7,
-						percent: 40,
-						previousPercent: 40,
-					},
-				},
-			},
-		}),
+		ShadowAtomConfigSchema.parse({ orgs: { org_1: org(40) } }),
 	);
 
 	const response = await setPercent({ orgId: "org_1", percent: 70 });
 
 	expect(response.status).toBe(200);
 	expect(lockedKeys).toEqual(["admin:shadow-atom-config"]);
-	expect(write.mock.calls[0][0].config.sandbox.orgs.org_1).toMatchObject({
-		encryptedToken: "encrypted_org_1",
+	expect(write.mock.calls[0][0].config.orgs.org_1).toMatchObject({
+		encryptedTokens: org(40).encryptedTokens,
 		percent: 70,
 		previousPercent: 40,
 	});

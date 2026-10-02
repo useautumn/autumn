@@ -38,19 +38,20 @@ const useShadowAtom = ({
 }) =>
 	_setShadowAtomConfigForTesting({
 		config: {
-			sandbox: {
-				endpointUrl,
-				orgs: registered
-					? {
-							org_shadow: {
-								encryptedToken: encryptData("shadow_token_1"),
-								registeredAt: 1,
-								percent: 50,
-								previousPercent: 50,
+			endpointUrl,
+			orgs: registered
+				? {
+						org_shadow: {
+							encryptedTokens: {
+								sandbox: encryptData("shadow_token_1"),
+								live: encryptData("shadow_token_live"),
 							},
-						}
-					: {},
-			},
+							registeredAt: 1,
+							percent: 50,
+							previousPercent: 50,
+						},
+					}
+				: {},
 		},
 	});
 

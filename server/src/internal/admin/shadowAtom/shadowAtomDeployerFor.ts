@@ -1,4 +1,4 @@
-import type { ShadowAtomEnvConfig } from "@autumn/edge-config";
+import type { ShadowAtomConfig } from "@autumn/edge-config";
 import { type AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import { createMultiTenantAtomDeployer } from "@/internal/byoc/deployers/createMultiTenantAtomDeployer.js";
 import type { MultiTenantAtomDeployer } from "@/internal/byoc/deployers/types/multiTenantAtom.js";
@@ -13,11 +13,11 @@ export const shadowAtomIdOf = ({
 	env: AppEnv;
 }): string => `${orgId}.${env}`;
 
-/** The env's shadow Atom as its admin reaches it; refused until it has an address and a minted admin token. */
+/** Our shadow Atom as its admin reaches it; refused until it has an address and a minted admin token. */
 export const shadowAtomDeployerFor = ({
 	config,
 }: {
-	config: ShadowAtomEnvConfig;
+	config: ShadowAtomConfig;
 }): MultiTenantAtomDeployer => {
 	if (!config.endpointUrl || !config.adminEncryptedToken)
 		throw new RecaseError({
