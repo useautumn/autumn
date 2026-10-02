@@ -329,6 +329,41 @@ describe("committer subject snapshots", () => {
 		expect(capped).toEqual([1]);
 	});
 
+	test("a flush that times out twice with its snapshots attached lands on the third attempt with the customers' snapshots deleted, and never refuses a record", async () => {
+		let attempts = 0;
+		const { db, requests } = createRecordingDb({
+			failWhen: (request) => {
+				attempts += 1;
+				return (request.snapshots?.upserts.length ?? 0) > 0
+					? Object.assign(
+							new Error("canceling statement due to statement timeout"),
+							{
+								errno: "57014",
+							},
+						)
+					: null;
+			},
+		});
+		const committer = committerFor({ db });
+
+		const outcome = await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 10n,
+			records: [trackRecord({ customerId: "cus_big", offset: 10n })],
+			snapshotIntent: writing(createState({ identity: identityOf("cus_big") })),
+		});
+
+		expect(outcome).toEqual({ nextOffset: 11n });
+		expect(attempts).toBe(3);
+		expect(requests.slice(0, 2).map((r) => upsertedKeys(r))).toEqual([
+			["cus_big:"],
+			["cus_big:"],
+		]);
+		expect(deletedCustomers(requests[2])).toEqual(["cus_big"]);
+		expect(requests[2]?.changes).toHaveLength(1);
+	});
+
 	test("a flush that fails lands call by call: the call whose snapshot is the reason lands its records with the customer deleted, and no record is refused", async () => {
 		const poisonId = "ce_poison";
 		const { db, requests } = createRecordingDb({

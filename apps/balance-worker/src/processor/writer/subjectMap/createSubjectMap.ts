@@ -224,6 +224,9 @@ export const createSubjectMap = ({
 	const readBaselineAt = ({ subjectKey }: { subjectKey: string }) =>
 		entries.get(subjectKey)?.baselineAt ?? null;
 
+	const readBytes = ({ subjectKey }: { subjectKey: string }) =>
+		entries.get(subjectKey)?.bytes ?? 0;
+
 	// Only an evict's drops reach `onEvicted`: a drop for space leaves rows Postgres still holds true.
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
 		let pinned = 0;
@@ -249,6 +252,7 @@ export const createSubjectMap = ({
 		readState,
 		setState,
 		readBaselineAt,
+		readBytes,
 		pin,
 		unpin,
 		evictCustomer,
