@@ -1942,6 +1942,10 @@ export async function initScenario({
 				])),
 			});
 			console.log("pre-cancel synced", JSON.stringify({ at: Date.now(), waitedMs: Date.now() - startedAt, rows: synced.map(row => ({ id: row.id, balance: row.balance, entities: row.entities })) }));
+			console.log("pre-cancel cache-vs-db", JSON.stringify({
+				cached: (await autumnV1.customers.get(customerId)).features.messages,
+				uncached: (await autumnV1.customers.get(customerId, { skip_cache: "true" })).features.messages,
+			}));
 		}
 		if (customerId === "cancel-eoc-cons-both") await ctx.redisV2.rpush(`{${customerId}}:warming-timeline`, JSON.stringify({ at: Date.now(), phase: "action-start", action }));
 		await runAction(action);
