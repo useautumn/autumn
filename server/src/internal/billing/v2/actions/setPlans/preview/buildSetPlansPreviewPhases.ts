@@ -88,6 +88,7 @@ export const buildSetPlansPreviewPhases = async ({
 		},
 		creditLineItems: immediateCreditLineItems(billingPlan),
 		currency: processorItemContext.currency,
+		org: processorItemContext.org,
 	});
 	const endsSubscription = phasesEndingSubscription({
 		subscriptionAction: stripeBillingPlan.subscriptionAction,

@@ -1,8 +1,11 @@
 import {
+	cusProductToEnts,
 	cusProductToPrices,
 	type Entity,
 	type FullCusProduct,
 	type LineItem,
+	type Organization,
+	priceToEnt,
 	type SetPlansPreviewPlan,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -51,14 +54,23 @@ const replacedPlanCredit = ({
 const pricesOf = ({
 	customerProduct,
 	currency,
+	org,
 }: {
 	customerProduct: FullCusProduct;
 	currency: string;
-}) =>
-	cusProductToPrices({ cusProduct: customerProduct }).map((price) => ({
+	org: Organization;
+}) => {
+	const entitlements = cusProductToEnts({ cusProduct: customerProduct });
+	return cusProductToPrices({ cusProduct: customerProduct }).map((price) => ({
 		feature_id: price.config.feature_id ?? null,
-		price: autumnPriceToProcessorItemPrice({ price, currency }),
+		price: autumnPriceToProcessorItemPrice({
+			price,
+			entitlement: priceToEnt({ price, entitlements }),
+			org,
+			currency,
+		}),
 	}));
+};
 
 /** One review row; a removed plan expires at the phase start, the others when their segment ends. */
 export const reviewRowToPreviewPlan = ({
@@ -68,6 +80,7 @@ export const reviewRowToPreviewPlan = ({
 	creditLineItems,
 	entities,
 	currency,
+	org,
 	ongoingContext,
 }: {
 	row: ReviewPlanRow;
@@ -76,6 +89,7 @@ export const reviewRowToPreviewPlan = ({
 	creditLineItems: LineItem[];
 	entities: Entity[];
 	currency: string;
+	org: Organization;
 	ongoingContext: OngoingContext;
 }): SetPlansPreviewPlan | undefined => {
 	const reviewSegment = row.status === "ends" ? row.before : row.after;
@@ -98,6 +112,6 @@ export const reviewRowToPreviewPlan = ({
 				: (customerProduct.ended_at ?? null),
 		trial_ends_at: customerProduct.trial_ends_at ?? null,
 		credit: replacedPlanCredit({ row, creditLineItems }),
-		prices: pricesOf({ customerProduct, currency }),
+		prices: pricesOf({ customerProduct, currency, org }),
 	};
 };

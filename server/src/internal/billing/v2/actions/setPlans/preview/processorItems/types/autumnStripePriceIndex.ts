@@ -1,4 +1,4 @@
-import type { Price } from "@autumn/shared";
+import type { Entitlement, Price } from "@autumn/shared";
 
 export type AutumnStripePrice = {
 	planId: string;
@@ -6,6 +6,7 @@ export type AutumnStripePrice = {
 	featureId: string | null;
 	featureName: string | null;
 	price: Price;
+	entitlement?: Entitlement;
 };
 
 export type AutumnStripePriceIndex = {

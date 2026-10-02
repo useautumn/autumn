@@ -1,9 +1,11 @@
 import {
+	cusProductToEnts,
 	cusProductToPrices,
 	type Feature,
 	type FullCusProduct,
 	findFeatureById,
 	getAllPriceStripeIds,
+	priceToEnt,
 } from "@autumn/shared";
 import type {
 	AutumnStripePrice,
@@ -23,6 +25,7 @@ export const buildAutumnStripePriceIndex = ({
 	};
 
 	for (const customerProduct of customerProducts) {
+		const entitlements = cusProductToEnts({ cusProduct: customerProduct });
 		for (const price of cusProductToPrices({ cusProduct: customerProduct })) {
 			const featureId = price.config.feature_id ?? null;
 			const feature = featureId
@@ -34,6 +37,7 @@ export const buildAutumnStripePriceIndex = ({
 				featureId,
 				featureName: feature?.name ?? null,
 				price,
+				entitlement: priceToEnt({ price, entitlements }),
 			};
 
 			priceIndex.byAutumnPriceId.set(price.id, autumnStripePrice);

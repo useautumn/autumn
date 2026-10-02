@@ -2,6 +2,7 @@ import type {
 	CustomerPlanChange,
 	FullCusProduct,
 	LineItem,
+	Organization,
 	SetPlansPreviewPlan,
 	SetPlansPreviewRemovedPhase,
 } from "@autumn/shared";
@@ -31,6 +32,7 @@ export const diffToReview = ({
 	lookup,
 	creditLineItems,
 	currency,
+	org,
 }: {
 	saved: SavedTimeline;
 	diff: TimelineDiff;
@@ -38,6 +40,7 @@ export const diffToReview = ({
 	lookup: ReviewRowLookup;
 	creditLineItems: LineItem[];
 	currency: string;
+	org: Organization;
 }): SetPlansReview => {
 	const { entities } = lookup.originalFullCustomer;
 	const ongoingContext = ongoingContextFor({ saved, now: diff.now });
@@ -58,6 +61,7 @@ export const diffToReview = ({
 				creditLineItems: phaseCredits,
 				entities,
 				currency,
+				org,
 				ongoingContext,
 			});
 			return plan ? [plan] : [];

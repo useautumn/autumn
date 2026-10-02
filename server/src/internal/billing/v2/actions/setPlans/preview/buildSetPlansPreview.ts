@@ -57,6 +57,7 @@ export const buildSetPlansPreview = async ({
 		}),
 		stripePrices,
 		currency: attachPreview.currency,
+		org: ctx.org,
 	};
 
 	const { phases: previewPhases, review } = await buildSetPlansPreviewPhases({

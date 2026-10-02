@@ -13,6 +13,13 @@ export const ProcessorChangeSchema = z.object({
 	action: z.enum(["created", "updated", "released", "canceled"]),
 });
 
+/** One Stripe price tier; `up_to` is null on the last tier. */
+export const ProcessorItemPriceTierSchema = z.object({
+	up_to: z.number().nullable(),
+	unit_amount: z.number(),
+	flat_amount: z.number(),
+});
+
 /** How Stripe bills one item. Amounts are in major currency units. */
 export const ProcessorItemPriceSchema = z.object({
 	currency: z.string(),
@@ -21,7 +28,7 @@ export const ProcessorItemPriceSchema = z.object({
 	interval_count: z.number(),
 	usage_type: z.enum(["licensed", "metered"]),
 	tiers_mode: z.enum(["graduated", "volume"]).nullable(),
-	first_tier_amount: z.number().nullable(),
+	tiers: z.array(ProcessorItemPriceTierSchema).nullable(),
 	units_per_quantity: z.number().nullable(),
 });
 
@@ -165,6 +172,9 @@ export const SetPlansPreviewResponseSchema = AttachPreviewResponseSchema.extend(
 
 export type ProcessorChange = z.infer<typeof ProcessorChangeSchema>;
 export type ProcessorItemPrice = z.infer<typeof ProcessorItemPriceSchema>;
+export type ProcessorItemPriceTier = z.infer<
+	typeof ProcessorItemPriceTierSchema
+>;
 export type ProcessorItem = z.infer<typeof ProcessorItemSchema>;
 export type SetPlansPreviewPlan = z.infer<typeof SetPlansPreviewPlanSchema>;
 export type SetPlansPreviewBalance = z.infer<
