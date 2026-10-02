@@ -270,7 +270,7 @@ export const previewBalanceChanges = ({
 };
 
 /** Future phases on a date where a saved row starts or ends match that saved phase; others are new. */
-const exactDateMatches = ({
+export const exactDateMatches = ({
 	current,
 	phases,
 }: {

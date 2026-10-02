@@ -41,7 +41,32 @@ const savedScheduledCustomerProducts = ({
 	);
 };
 
-/** The saved schedule cut at the given dates: each starts the saved rows due since the previous one. */
+/** A saved row starting between two dates is a cut of its own, so one that also ends before the later date ends there. */
+const withSavedStartsBetween = ({
+	dates,
+	savedScheduled,
+}: {
+	dates: number[];
+	savedScheduled: FullCusProduct[];
+}) => {
+	const [firstAt] = dates;
+	const lastAt = dates[dates.length - 1];
+	if (firstAt === undefined || lastAt === undefined) return dates;
+
+	const startsBetween = savedScheduled
+		.map((customerProduct) => customerProduct.starts_at)
+		.filter(
+			(startsAt) =>
+				startsAt > firstAt &&
+				startsAt < lastAt &&
+				!dates.some((at) => phaseStartsMatch({ startsAt, otherStartsAt: at })),
+		);
+	return [...new Set([...dates, ...startsBetween])].sort(
+		(first, second) => first - second,
+	);
+};
+
+/** The saved schedule cut at the given dates and at its own starts between them: each cut starts the saved rows due since the previous one. */
 export const savedSchedulePhases = ({
 	fullCustomer,
 	phases,
@@ -58,9 +83,10 @@ export const savedSchedulePhases = ({
 		phases,
 		autumnBillingPlan,
 	});
+	const cutDates = withSavedStartsBetween({ dates, savedScheduled });
 
-	return dates.map((at, dateIndex) => {
-		const previousAt = dates[dateIndex - 1];
+	return cutDates.map((at, dateIndex) => {
+		const previousAt = cutDates[dateIndex - 1];
 		return {
 			startsAt: at,
 			customerProductIds: savedScheduled

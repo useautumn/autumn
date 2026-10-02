@@ -6,6 +6,7 @@ import {
 	included,
 	NOW,
 	oneOffPrepaid,
+	PHASE_THREE,
 	PHASE_TWO,
 	payPerUse,
 	planRow,
@@ -375,5 +376,33 @@ describe(chalk.yellowBright("set_plans balance preview: carried over"), () => {
 			["words updated: 1000 -> 2000 granted, 2000 left"],
 			["words updated: 1000 -> 3000 granted, 3000 left"],
 		]);
+	});
+
+	test("a saved plan ending exactly where the next starts counts once when the request skips the phase between", async () => {
+		const balances = [included({ featureId: "words", allowance: 1000 })];
+		const pro = planRow({ planId: "pro", endedAt: PHASE_TWO, balances });
+		const renewedPro = scheduledRow({
+			planId: "pro_renewed",
+			startsAt: PHASE_TWO,
+			endedAt: PHASE_THREE,
+			balances,
+		});
+		const laterPro = scheduledRow({
+			planId: "pro_later",
+			startsAt: PHASE_THREE,
+			balances,
+		});
+
+		const phaseChanges = await previewBalanceChanges({
+			current: [pro, renewedPro, laterPro],
+			endings: [{ customerProduct: pro, endedAt: PHASE_THREE }],
+			deletes: [renewedPro],
+			phases: [
+				{ startsAt: NOW, customerProductIds: [pro.id] },
+				{ startsAt: PHASE_THREE, customerProductIds: [laterPro.id] },
+			],
+		});
+
+		expect(describeBalancePhases(phaseChanges)).toEqual([[], []]);
 	});
 });

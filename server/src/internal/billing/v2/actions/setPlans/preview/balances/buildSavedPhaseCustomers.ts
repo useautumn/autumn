@@ -22,6 +22,12 @@ export const buildSavedPhaseCustomers = ({
 	const firstPhaseStartsAt = phases[0]?.startsAt;
 	if (firstPhaseStartsAt === undefined || dates.length === 0) return new Map();
 
+	const savedPhases = savedSchedulePhases({
+		fullCustomer,
+		phases,
+		autumnBillingPlan,
+		dates: [firstPhaseStartsAt, ...dates],
+	});
 	const savedPhaseCustomers = buildSetPlansPhaseCustomers({
 		ctx,
 		fullCustomer,
@@ -29,21 +35,13 @@ export const buildSavedPhaseCustomers = ({
 			customerId: autumnBillingPlan.customerId,
 			insertCustomerProducts: [],
 		},
-		phases: savedSchedulePhases({
-			fullCustomer,
-			phases,
-			autumnBillingPlan,
-			dates: [firstPhaseStartsAt, ...dates],
-		}),
+		phases: savedPhases,
 	});
 	const savedCustomers = withOneOffPrepaidCarryOvers({
 		originalFullCustomer: fullCustomer,
 		phaseCustomers: savedPhaseCustomers,
 	});
-	return new Map(
-		dates.map((at, dateIndex) => [
-			at,
-			savedCustomers[dateIndex + 1] ?? fullCustomer,
-		]),
-	);
+	const savedCustomerAt = (at: number) =>
+		savedCustomers[savedPhases.findIndex(({ startsAt }) => startsAt === at)];
+	return new Map(dates.map((at) => [at, savedCustomerAt(at) ?? fullCustomer]));
 };
