@@ -7,34 +7,17 @@ const isNoCardTrialWithoutSubscription = ({
 	invoiceMode,
 	stripeSubscription,
 }: {
-	trialContext?: TrialContext;
+	trialContext: TrialContext;
 	invoiceMode?: InvoiceMode;
 	stripeSubscription?: Stripe.Subscription;
 }) =>
-	trialContext?.cardRequired === false &&
+	trialContext.cardRequired === false &&
 	trialContext.appliesToBilling &&
 	trialContext.trialEndsAt !== null &&
 	!invoiceMode &&
 	!stripeSubscription;
 
-/** Trials Autumn runs without touching Stripe; the product cron settles them at trial end. */
-export const isAutumnManagedTrialContext = ({
-	trialContext,
-	invoiceMode,
-	stripeSubscription,
-}: {
-	trialContext?: TrialContext;
-	invoiceMode?: InvoiceMode;
-	stripeSubscription?: Stripe.Subscription;
-}) =>
-	isRevertTrialContext({ trialContext }) ||
-	isNoCardTrialWithoutSubscription({
-		trialContext,
-		invoiceMode,
-		stripeSubscription,
-	});
-
-/** Records on the trial context that Autumn settles its end, unless billing is already switched off for the request. */
+/** Marks trials Autumn settles itself (revert, or no-card without a subscription), unless billing is already off. */
 export const markAutumnManagedTrialContext = ({
 	trialContext,
 	invoiceMode,
@@ -47,13 +30,16 @@ export const markAutumnManagedTrialContext = ({
 	skipBillingChangesBase: boolean;
 }): TrialContext | undefined => {
 	if (!trialContext || skipBillingChangesBase) return trialContext;
-	if (
-		!isAutumnManagedTrialContext({
+
+	const isAutumnManaged =
+		isRevertTrialContext({ trialContext }) ||
+		isNoCardTrialWithoutSubscription({
 			trialContext,
 			invoiceMode,
 			stripeSubscription,
-		})
-	)
-		return trialContext;
-	return { ...trialContext, autumnManaged: true };
+		});
+
+	return isAutumnManaged
+		? { ...trialContext, autumnManaged: true }
+		: trialContext;
 };

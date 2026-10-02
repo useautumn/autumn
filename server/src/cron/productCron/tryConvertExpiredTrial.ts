@@ -1,19 +1,9 @@
-import {
-	type FullCusProduct,
-	type FullCustomer,
-	isCustomerProductPaidRecurring,
-	isCustomerProductRevertingTrial,
-} from "@autumn/shared";
+import type { FullCusProduct, FullCustomer } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-
-const isUnbilledPaidTrial = (customerProduct: FullCusProduct) =>
-	!customerProduct.canceled &&
-	!isCustomerProductRevertingTrial(customerProduct) &&
-	!customerProduct.subscription_ids?.length &&
-	isCustomerProductPaidRecurring(customerProduct);
+import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 
 const customerHasPaymentMethod = async ({
 	ctx,
@@ -55,7 +45,11 @@ export const tryConvertExpiredTrial = async ({
 	fullCustomer: FullCustomer;
 	customerProduct: FullCusProduct;
 }): Promise<boolean> => {
-	if (!isUnbilledPaidTrial(customerProduct)) return false;
+	if (
+		customerProduct.canceled ||
+		!isCustomerProductAutumnManagedTrial(customerProduct)
+	)
+		return false;
 	if (!(await customerHasPaymentMethod({ ctx, fullCustomer }))) return false;
 
 	try {
@@ -71,8 +65,11 @@ export const tryConvertExpiredTrial = async ({
 			contextOverride: { paymentBehaviorIntent: "error_if_incomplete" },
 			options: { skipAutumnCheckout: true },
 		});
-		// A deferred plan is waiting on a payment that did not go through.
-		return billingResult !== undefined && !billingResult.stripe.deferred;
+		// Billed only when a live subscription came back, not a deferred plan awaiting a failed payment.
+		return (
+			billingResult?.stripe.stripeSubscription !== undefined &&
+			!billingResult.stripe.deferred
+		);
 	} catch (error) {
 		ctx.logger.warn(
 			`[productCron] could not bill trial ${customerProduct.id}, expiring it`,

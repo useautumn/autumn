@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	isCustomerProductRevertingTrial,
+	isCustomerProductTrialing,
 	isProductPaidAndRecurring,
 	resolveFreeTrialParam,
 } from "@autumn/shared";
@@ -24,7 +25,7 @@ import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup
  * Logic:
  * 1. If a free_trial param passed (customize.free_trial or the shorthand) → Use it (null removes trial, value sets fresh trial)
  * 2. If revert trial → Inherit from customer product (its subscription belongs to the paused plan)
- * 3. If paid trial with no Stripe subscription → Autumn-managed no-card trial
+ * 3. If Autumn-managed no-card trial (on_trial_end "bill", no Stripe sub) → keep it Autumn-managed
  * 4. If paid product with trialing subscription → Inherit from subscription
  * 5. If customer product is trialing (free product case) → Inherit from customer product
  * 6. Otherwise → No trial context
@@ -43,6 +44,8 @@ export const setupUpdateSubscriptionTrialContext = ({
 	params: FreeTrialParamsSource;
 }): TrialContext | undefined => {
 	const isRevertTrial = isCustomerProductRevertingTrial(customerProduct);
+	const isAutumnManagedTrial =
+		isCustomerProductAutumnManagedTrial(customerProduct);
 
 	// Handle explicit free_trial param (null or value), in either shape
 	const freeTrialParam = resolveFreeTrialParam(params);
@@ -55,8 +58,18 @@ export const setupUpdateSubscriptionTrialContext = ({
 			currentEpochMs,
 		});
 
-		if (!trialContext || !isRevertTrial) return trialContext;
-		return { ...trialContext, onEnd: trialContext.onEnd ?? "revert" };
+		if (trialContext && isRevertTrial)
+			return { ...trialContext, onEnd: trialContext.onEnd ?? "revert" };
+
+		// A changed no-card trial stays Autumn's; removing it or requiring a card moves it to Stripe.
+		const staysAutumnManaged =
+			isAutumnManagedTrial &&
+			trialContext?.cardRequired === false &&
+			trialContext.trialEndsAt !== null;
+		if (trialContext && staysAutumnManaged)
+			return { ...trialContext, autumnManaged: true };
+
+		return trialContext;
 	}
 
 	if (customerProduct && isRevertTrial) {
@@ -65,10 +78,8 @@ export const setupUpdateSubscriptionTrialContext = ({
 
 	if (
 		customerProduct &&
-		isCustomerProductAutumnManagedTrial({
-			customerProduct,
-			nowMs: currentEpochMs,
-		})
+		isAutumnManagedTrial &&
+		isCustomerProductTrialing(customerProduct, { nowMs: currentEpochMs })
 	) {
 		return {
 			freeTrial: customerProduct.free_trial,

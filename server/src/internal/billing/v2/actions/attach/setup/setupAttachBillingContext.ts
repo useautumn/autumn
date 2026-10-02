@@ -30,7 +30,7 @@ import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPay
 import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
-import { markAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/isAutumnManagedTrialContext";
+import { markAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/markAutumnManagedTrialContext";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";

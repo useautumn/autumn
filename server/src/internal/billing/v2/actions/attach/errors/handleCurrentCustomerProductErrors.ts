@@ -18,7 +18,6 @@ export const handleCurrentCustomerProductErrors = ({
 		skipBillingChanges,
 		skipExternalPSPGuard,
 		canceledStripeSubscriptionId,
-		currentEpochMs,
 	} = billingContext;
 
 	if (currentCustomerProduct?.product.id === attachProduct.id) {
@@ -40,10 +39,7 @@ export const handleCurrentCustomerProductErrors = ({
 		!skipBillingChanges &&
 		!skipExternalPSPGuard &&
 		!canceledStripeSubscriptionId &&
-		!isCustomerProductAutumnManagedTrial({
-			customerProduct: currentCustomerProduct,
-			nowMs: currentEpochMs,
-		}) &&
+		!isCustomerProductAutumnManagedTrial(currentCustomerProduct) &&
 		isCustomerProductPaid(currentCustomerProduct) &&
 		!stripeSubscription
 	) {

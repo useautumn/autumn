@@ -30,10 +30,7 @@ export const filterLineItemsForTrialTransition = ({
 
 	// An Autumn-managed trial has no Stripe sub to report trialing, so its own line items say so.
 	const isFromAutumnManagedTrial = (lineItem: LineItem) =>
-		isCustomerProductAutumnManagedTrial({
-			customerProduct: lineItem.context.customerProduct,
-			nowMs: billingContext.currentEpochMs,
-		});
+		isCustomerProductAutumnManagedTrial(lineItem.context.customerProduct);
 
 	return lineItems.filter((lineItem) => {
 		const { billingTiming, direction, price } = lineItem.context;
