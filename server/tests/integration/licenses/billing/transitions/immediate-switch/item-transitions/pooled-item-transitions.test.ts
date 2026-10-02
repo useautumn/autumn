@@ -42,6 +42,18 @@ const runPooledTransition = async ({
 		trackedFeatureIds: [TestFeature.Messages],
 	});
 
+	if (expectUsageCarried) {
+		const before = await getPooledBalanceDbState({
+			db: scenario.ctx.db,
+			customerId: scenario.customerId,
+		});
+		console.log("[pooled-transition-before]", {
+			at: Date.now(),
+			expected: FROM_GRANT * ITEM_TRANSITION_ENTITY_COUNT - TOTAL_USAGE,
+			persisted: before.poolCustomerEntitlements.map(({ balance }) => balance),
+		});
+	}
+
 	await completeImmediateItemTransition({ scenario, carryOverUsages });
 
 	const totalGrant = TO_GRANT * ITEM_TRANSITION_ENTITY_COUNT;
@@ -49,6 +61,13 @@ const runPooledTransition = async ({
 		db: scenario.ctx.db,
 		customerId: scenario.customerId,
 	});
+	if (expectUsageCarried) {
+		console.log("[pooled-transition-after]", {
+			at: Date.now(),
+			expected: totalGrant - TOTAL_USAGE,
+			persisted: state.poolCustomerEntitlements.map(({ balance }) => balance),
+		});
+	}
 	const livePool = state.pools.find((pool) => pool.expires_at === null);
 	if (!livePool) throw new Error("Expected a live pooled license balance");
 	await expectPooledBalanceCorrect({
