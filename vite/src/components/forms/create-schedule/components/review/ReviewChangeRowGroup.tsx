@@ -2,6 +2,7 @@ import { CaretRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import { isRemovedReviewRow } from "../../utils/review/isRemovedReviewRow";
 import { joinDetail } from "../../utils/review/reviewSectionText";
 import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
 import { ReviewChangeRowTrailing } from "./ReviewChangeRowItem";
@@ -23,7 +24,13 @@ export function ReviewChangeRowGroup({
 	const showsItemCount = isExpanded || !row.value;
 
 	return (
-		<div className={cn("flex flex-col", TABLE_TRAY_SURFACE_DIVIDER_CLASS)}>
+		<div
+			className={cn(
+				"flex flex-col",
+				TABLE_TRAY_SURFACE_DIVIDER_CLASS,
+				isRemovedReviewRow(row) && "opacity-80",
+			)}
+		>
 			<button
 				type="button"
 				aria-expanded={isExpanded}

@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import { isRemovedReviewRow } from "../../utils/review/isRemovedReviewRow";
 import type {
 	ReviewChangeRow,
 	ReviewPooledBalance,
@@ -30,13 +31,14 @@ export function ReviewChangeRowItem({
 			className={cn(
 				"flex min-h-11 items-center gap-3 px-3 py-[7px]",
 				TABLE_TRAY_SURFACE_DIVIDER_CLASS,
+				isRemovedReviewRow(row) && "opacity-80",
 			)}
 		>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<span
 					className={cn(
 						"truncate text-sm font-medium",
-						row.status === "ends" || row.status === "removed"
+						isRemovedReviewRow(row)
 							? "text-muted-foreground"
 							: "text-foreground",
 					)}

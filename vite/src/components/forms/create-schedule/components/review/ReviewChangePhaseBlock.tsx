@@ -63,7 +63,7 @@ export function ReviewChangePhaseBlock({
 					<PlanTraySectionTitle title={phase.label} />
 				)
 			}
-			surfaceClassName={phase.removed ? "border-dashed opacity-80" : undefined}
+			surfaceClassName={phase.removed ? "border-dashed" : undefined}
 		>
 			{showsScopes
 				? groupRowsByScope({ rows: phase.rows }).map(({ entityId, rows }) => (
