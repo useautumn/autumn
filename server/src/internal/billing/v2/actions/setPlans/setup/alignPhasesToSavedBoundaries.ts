@@ -31,6 +31,24 @@ const savedBoundaries = ({
 		),
 ];
 
+/** Snapping must keep phase starts strictly increasing. */
+const startsStrictlyBetween = ({
+	startsAt,
+	previousStartsAt,
+	nextStartsAt,
+}: {
+	startsAt: PhaseWithStart["starts_at"];
+	previousStartsAt: PhaseWithStart["starts_at"];
+	nextStartsAt: PhaseWithStart["starts_at"];
+}) => {
+	if (typeof startsAt !== "number") return true;
+	const afterPrevious =
+		typeof previousStartsAt !== "number" || startsAt > previousStartsAt;
+	const beforeNext =
+		typeof nextStartsAt !== "number" || startsAt < nextStartsAt;
+	return afterPrevious && beforeNext;
+};
+
 /** A phase within tolerance of a saved boundary starts exactly there, so an unchanged schedule stays unchanged. */
 export const alignPhasesToSavedBoundaries = <Phase extends PhaseWithStart>({
 	phases,
@@ -52,6 +70,18 @@ export const alignPhasesToSavedBoundaries = <Phase extends PhaseWithStart>({
 		return boundary === undefined ? phase : { ...phase, starts_at: boundary };
 	};
 
-	const [firstPhase, ...laterPhases] = phases;
-	return [alignPhase(firstPhase), ...laterPhases.map(alignPhase)];
+	const [firstPhase, ...laterPhases] = phases.reduce<Phase[]>(
+		(aligned, phase, index) => {
+			const candidate = alignPhase(phase);
+			const keepsOrder = startsStrictlyBetween({
+				startsAt: candidate.starts_at,
+				previousStartsAt: aligned.at(-1)?.starts_at,
+				nextStartsAt: phases[index + 1]?.starts_at,
+			});
+			aligned.push(keepsOrder ? candidate : phase);
+			return aligned;
+		},
+		[],
+	);
+	return [firstPhase ?? phases[0], ...laterPhases];
 };
