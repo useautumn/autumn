@@ -1,7 +1,7 @@
 /**
  * set_plans with a future phases[0].starts_at:
  * - nothing live: rows are Scheduled on a Stripe schedule that starts that day, nothing is invoiced now,
- *   and the subscription Stripe creates at the start activates them;
+ *   the preview's next event is the start, and the subscription Stripe creates at the start activates them;
  * - a live plan ends now with a credit equal to the preview, its subscription is cancelled,
  *   and the new plan waits for the start;
  * - a trial, or a free plan nothing in Stripe would start, is rejected.
@@ -48,6 +48,8 @@ test.concurrent(
 
 		const preview = await autumnV2_2.billing.previewSetPlans(params);
 		expect(preview.total).toBe(0);
+		expect(preview.next_cycle?.starts_at).toBe(startsAt);
+		expect(preview.next_cycle?.total).toBe(20);
 		expect(preview.phases[0]?.starts_now).toBe(false);
 		expect(preview.warnings.map(({ type }) => type)).toContain(
 			"billing_starts_later",
