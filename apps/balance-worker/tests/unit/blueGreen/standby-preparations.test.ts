@@ -6,9 +6,25 @@ const settledValue = async <Value>(promise: Promise<Value>) =>
 	await Promise.race([promise, Bun.sleep(5).then(() => pending)]);
 
 const createFixture = ({ active = false }: { active?: boolean } = {}) => {
-	const gate = { live: active };
+	const listeners = new Set<() => void>();
+	const gate = {
+		live: active,
+		goLive: () => {
+			gate.live = true;
+			for (const listener of [...listeners]) listener();
+		},
+		watchers: () => listeners.size,
+	};
 	const preparations = createStandbyPreparations({
-		ctx: { gate: { isActive: () => gate.live } },
+		ctx: {
+			gate: {
+				isActive: () => gate.live,
+				subscribe: (listener) => {
+					listeners.add(listener);
+					return () => listeners.delete(listener);
+				},
+			},
+		},
 		config: { concurrency: 1 },
 	});
 	const acquire = (signal = new AbortController().signal) =>
@@ -44,6 +60,36 @@ describe("standby preparations", () => {
 		first();
 		expect(await settledValue(second)).not.toBe(pending);
 		expect(await settledValue(third)).not.toBe(pending);
+	});
+
+	test("going live releases everything queued at once, even while the preparation in flight never finishes", async () => {
+		const { gate, acquire } = createFixture();
+		await acquire();
+		const second = acquire();
+		const third = acquire();
+
+		gate.goLive();
+		expect(await settledValue(second)).not.toBe(pending);
+		expect(await settledValue(third)).not.toBe(pending);
+	});
+
+	test("the gate is only watched while something is queued", async () => {
+		const { gate, acquire } = createFixture();
+		const first = await acquire();
+		expect(gate.watchers()).toBe(0);
+		const second = acquire();
+		expect(gate.watchers()).toBe(1);
+
+		first();
+		await second;
+		expect(gate.watchers()).toBe(0);
+
+		const leaving = new AbortController();
+		const queued = acquire(leaving.signal);
+		expect(gate.watchers()).toBe(1);
+		leaving.abort(new Error("retired"));
+		await expect(queued).rejects.toThrow("retired");
+		expect(gate.watchers()).toBe(0);
 	});
 
 	test("a partition that leaves while queued gives up its place and never takes the slot", async () => {

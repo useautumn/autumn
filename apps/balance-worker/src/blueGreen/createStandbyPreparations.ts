@@ -1,3 +1,5 @@
+import type { SlotGate } from "./createSlotGate.js";
+
 export type StandbyPreparations = {
 	acquire(params: { signal: AbortSignal }): Promise<() => void>;
 };
@@ -12,11 +14,12 @@ export function createStandbyPreparations({
 	ctx,
 	config,
 }: {
-	ctx: { gate: { isActive(): boolean } };
+	ctx: { gate: Pick<SlotGate, "isActive" | "subscribe"> };
 	config: { concurrency: number };
 }): StandbyPreparations {
 	let running = 0;
 	const queue: QueuedPreparation[] = [];
+	let stopWatchingGate: (() => void) | null = null;
 
 	function takeSlot(): () => void {
 		running += 1;
@@ -30,15 +33,20 @@ export function createStandbyPreparations({
 	}
 
 	function grantQueued(): void {
-		if (ctx.gate.isActive()) {
+		if (ctx.gate.isActive())
 			for (const queued of queue.splice(0)) queued.grant(unlimited);
-			return;
-		}
-		while (running < config.concurrency) {
-			const next = queue.shift();
-			if (!next) return;
-			next.grant(takeSlot());
-		}
+		while (queue.length > 0 && running < config.concurrency)
+			queue.shift()?.grant(takeSlot());
+		if (queue.length === 0) unwatchGate();
+	}
+
+	function watchGate(): void {
+		stopWatchingGate ??= ctx.gate.subscribe(grantQueued);
+	}
+
+	function unwatchGate(): void {
+		stopWatchingGate?.();
+		stopWatchingGate = null;
 	}
 
 	function acquire({ signal }: { signal: AbortSignal }): Promise<() => void> {
@@ -55,10 +63,12 @@ export function createStandbyPreparations({
 			function leave(): void {
 				const index = queue.indexOf(queued);
 				if (index !== -1) queue.splice(index, 1);
+				if (queue.length === 0) unwatchGate();
 				reject(signal.reason);
 			}
 			signal.addEventListener("abort", leave, { once: true });
 			queue.push(queued);
+			watchGate();
 		});
 	}
 

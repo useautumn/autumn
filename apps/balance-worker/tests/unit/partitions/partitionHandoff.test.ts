@@ -409,7 +409,9 @@ describe("standby preparation limit", () => {
 		const log = createOwnershipLog();
 		const prepare = deferred();
 		const standby = createStandbyPreparations({
-			ctx: { gate: { isActive: () => false } },
+			ctx: {
+				gate: { isActive: () => false, subscribe: () => () => undefined },
+			},
 			config: { concurrency: 1 },
 		});
 		const B = createWorker({
@@ -442,7 +444,7 @@ describe("standby preparation limit", () => {
 		const log = createOwnershipLog();
 		const prepare = deferred();
 		const live = createStandbyPreparations({
-			ctx: { gate: { isActive: () => true } },
+			ctx: { gate: { isActive: () => true, subscribe: () => () => undefined } },
 			config: { concurrency: 1 },
 		});
 		const A = createWorker({
@@ -471,7 +473,9 @@ describe("standby preparation limit", () => {
 		const log = createOwnershipLog();
 		const prepare = deferred();
 		const standby = createStandbyPreparations({
-			ctx: { gate: { isActive: () => false } },
+			ctx: {
+				gate: { isActive: () => false, subscribe: () => () => undefined },
+			},
 			config: { concurrency: 1 },
 		});
 		const B = createWorker({
