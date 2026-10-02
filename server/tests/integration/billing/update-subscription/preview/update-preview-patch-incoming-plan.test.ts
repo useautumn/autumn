@@ -78,7 +78,7 @@ test.concurrent(
 	`${chalk.yellowBright("preview patch: incoming plan reflects price and item changes")}`,
 	async () => {
 		const customerId = "preview-patch-incoming-price";
-		const pro = products.pro({
+		const pro = products.base({
 			id: "preview-patch-incoming-price",
 			items: [
 				items.monthlyMessages({ includedUsage: CATALOG_INCLUDED }),
