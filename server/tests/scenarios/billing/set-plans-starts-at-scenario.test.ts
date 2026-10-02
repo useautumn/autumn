@@ -8,7 +8,9 @@ import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-p
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { addMonths } from "date-fns";
 
 const AGED_DAYS = 10;
 const NEXT_PHASE_DAYS = 30;
@@ -79,9 +81,10 @@ test.concurrent(
 test.concurrent(
 	"QA SA5: live pro with a repeating coupon — a backdate carries only its remaining cycles",
 	async () => {
-		const { ctx, customerId } = await initLiveProScenario({
-			customerId: "qa-sa-live-coupon",
-		});
+		const { ctx, customerId, testClockId, advancedTo } =
+			await initLiveProScenario({
+				customerId: "qa-sa-live-coupon",
+			});
 		const subscription = await findStripeSubscriptionByStatus({
 			ctx,
 			customerId,
@@ -94,6 +97,12 @@ test.concurrent(
 		});
 		await ctx.stripeCli.subscriptions.update(subscription.id, {
 			discounts: [{ coupon: coupon.id }],
+		});
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: addMonths(advancedTo, 1).getTime() + ms.days(AGED_DAYS),
+			waitForSeconds: 20,
 		});
 	},
 );
