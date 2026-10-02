@@ -271,6 +271,7 @@ export const updateCustomer = async ({
 		)
 			allocationReplacement = await replaceBalanceAllocations({
 				ctx: txCtx,
+				tx: txCtx.db,
 				fullSubject: allocationSubject,
 				controls: billing_controls.balance_allocations,
 			});

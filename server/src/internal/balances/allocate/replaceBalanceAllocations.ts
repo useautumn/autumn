@@ -9,7 +9,10 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
-import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
+import {
+	getFullSubject,
+	getFullSubjectNormalized,
+} from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import type { AllocationCounterPatch } from "./actions/patchCachedAllocations.js";
 import { computeAllocationUpdate } from "./computeAllocationUpdate.js";
 import {
@@ -92,10 +95,12 @@ export const prepareBalanceAllocationReplacement = async ({
 
 export const replaceBalanceAllocations = async ({
 	ctx,
+	tx,
 	fullSubject,
 	controls,
 }: {
 	ctx: AutumnContext;
+	tx: DrizzleCli;
 	fullSubject: FullSubject;
 	controls: BalanceAllocationControl[];
 }): Promise<{
@@ -105,20 +110,22 @@ export const replaceBalanceAllocations = async ({
 }> =>
 	withAllocationLock({
 		ctx,
+		tx,
 		internalCustomerId: fullSubject.customer.internal_id,
 		fn: async ({ tx, allocations }) => {
 			const txCtx = { ...ctx, db: tx };
-			const currentSubject = await getFullSubject({
+			const currentSubject = await getFullSubjectNormalized({
 				ctx: txCtx,
 				customerId: fullSubject.customerId,
 				readFrom: "primary",
+				runLazyResets: false,
 			});
 			if (!currentSubject)
 				throw new CustomerNotFoundError({ customerId: fullSubject.customerId });
 			const { next, counters } = await computeReplacement({
 				ctx: txCtx,
 				tx,
-				fullSubject: currentSubject,
+				fullSubject: currentSubject.fullSubject,
 				controls,
 				allocations,
 			});

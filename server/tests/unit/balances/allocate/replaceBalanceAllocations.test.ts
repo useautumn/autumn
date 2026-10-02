@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 import {
+	AppEnv,
 	type BalanceAllocations,
 	type FullSubject,
 	ResetInterval,
@@ -7,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { withAllocationLock } from "@/internal/balances/allocate/repos/allocationStore.js";
 
 const paths = [
 	"@/internal/balances/allocate/repos/allocationStore.js",
@@ -20,8 +22,28 @@ afterAll(() => {
 	for (const [path, exports] of originals) mock.module(path, () => exports);
 });
 
-const tx = {} as DrizzleCli;
-const ctx = { db: {} } as AutumnContext;
+const nestedTransaction = mock(() => {
+	throw new Error("allocation replacement must reuse the caller transaction");
+});
+const tx = {
+	transaction: nestedTransaction,
+	select: () => ({
+		from: () => ({
+			where: () => ({
+				for: async (mode: string) => {
+					expect(mode).toBe("update");
+					events.push("lock");
+					return [];
+				},
+			}),
+		}),
+	}),
+} as unknown as DrizzleCli;
+const ctx = {
+	db: tx,
+	org: { id: "org_123" },
+	env: AppEnv.Sandbox,
+} as AutumnContext;
 const preparedSubject = {
 	customerId: "customer_123",
 	customer: { internal_id: "cus_123" },
@@ -31,23 +53,18 @@ const currentSubject = {
 	customer_products: [],
 } as FullSubject;
 const events: string[] = [];
+const writtenAllocations: BalanceAllocations[] = [];
 let failFeature: string | undefined;
 const counter = { usage: 12 } as UsageWindow;
 
 mock.module(paths[0], () => ({
 	...originals.get(paths[0]),
-	withAllocationLock: async ({
-		fn,
+	writeAllocations: async ({
+		allocations,
 	}: {
-		fn: (params: {
-			tx: DrizzleCli;
-			allocations: BalanceAllocations | null;
-		}) => Promise<unknown>;
+		allocations: BalanceAllocations;
 	}) => {
-		events.push("lock");
-		return fn({ tx, allocations: null });
-	},
-	writeAllocations: async () => {
+		writtenAllocations.push(allocations);
 		events.push("write-config");
 	},
 }));
@@ -80,20 +97,23 @@ mock.module(paths[2], () => ({
 }));
 mock.module(paths[3], () => ({
 	...originals.get(paths[3]),
-	getFullSubject: async ({
+	getFullSubjectNormalized: async ({
 		ctx: readCtx,
 		customerId,
 		readFrom,
+		runLazyResets,
 	}: {
 		ctx: AutumnContext;
 		customerId: string;
 		readFrom: string;
+		runLazyResets: boolean;
 	}) => {
 		expect(readCtx.db).toBe(tx);
 		expect(customerId).toBe("customer_123");
 		expect(readFrom).toBe("primary");
+		expect(runLazyResets).toBe(false);
 		events.push("read-current");
-		return currentSubject;
+		return { fullSubject: currentSubject };
 	},
 }));
 
@@ -104,7 +124,9 @@ const { replaceBalanceAllocations } = await import(
 
 beforeEach(() => {
 	events.length = 0;
+	writtenAllocations.length = 0;
 	failFeature = undefined;
+	nestedTransaction.mockClear();
 });
 const control = (featureId: string) => ({
 	feature_id: featureId,
@@ -115,6 +137,7 @@ const control = (featureId: string) => ({
 test("replacement reads current balances under its lock and returns counter deltas", async () => {
 	const result = await replaceBalanceAllocations({
 		ctx,
+		tx,
 		fullSubject: preparedSubject,
 		controls: [control("credits")],
 	});
@@ -126,6 +149,7 @@ test("replacement reads current balances under its lock and returns counter delt
 		"write-config",
 	]);
 	expect(result.counterPatches).toEqual([{ counter, usageDelta: 7 }]);
+	expect(nestedTransaction).not.toHaveBeenCalled();
 });
 
 test("replacement validates every feature before writing any counters or config", async () => {
@@ -133,6 +157,7 @@ test("replacement validates every feature before writing any counters or config"
 	await expect(
 		replaceBalanceAllocations({
 			ctx,
+			tx,
 			fullSubject: preparedSubject,
 			controls: [control("credits"), control("messages")],
 		}),
@@ -148,9 +173,28 @@ test("replacement validates every feature before writing any counters or config"
 test("clearing allocations returns no counter patches", async () => {
 	const result = await replaceBalanceAllocations({
 		ctx,
+		tx,
 		fullSubject: preparedSubject,
 		controls: [],
 	});
 	expect(result.allocations).toEqual({});
+	expect(writtenAllocations).toEqual([{}]);
 	expect(result.counterPatches).toEqual([]);
+});
+
+test("allocation locks still open a transaction when no caller transaction is supplied", async () => {
+	const transaction = mock(async (fn: (tx: DrizzleCli) => Promise<string>) =>
+		fn(tx),
+	);
+	const result = await withAllocationLock({
+		ctx: { ...ctx, db: { transaction } as unknown as DrizzleCli },
+		internalCustomerId: "cus_123",
+		fn: async ({ tx: lockedTx }) => {
+			expect(lockedTx).toBe(tx);
+			return "locked";
+		},
+	});
+	expect(result).toBe("locked");
+	expect(transaction).toHaveBeenCalledTimes(1);
+	expect(nestedTransaction).not.toHaveBeenCalled();
 });

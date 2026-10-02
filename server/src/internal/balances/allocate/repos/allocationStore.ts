@@ -12,18 +12,19 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 /** Runs `fn` holding the customer row lock, so allocation writers never interleave. */
 export const withAllocationLock = async <T>({
 	ctx,
+	tx,
 	internalCustomerId,
 	fn,
 }: {
 	ctx: AutumnContext;
+	tx?: DrizzleCli;
 	internalCustomerId: string;
 	fn: (params: {
 		tx: DrizzleCli;
 		allocations: BalanceAllocations | null;
 	}) => Promise<T>;
-}): Promise<T> =>
-	ctx.db.transaction(async (transaction) => {
-		const tx = transaction as unknown as DrizzleCli;
+}): Promise<T> => {
+	const runLocked = async ({ tx }: { tx: DrizzleCli }): Promise<T> => {
 		const [row] = await tx
 			.select({ balanceAllocations: customers.balance_allocations })
 			.from(customers)
@@ -41,7 +42,12 @@ export const withAllocationLock = async <T>({
 			allocations:
 				allocations && Object.keys(allocations).length > 0 ? allocations : null,
 		});
-	});
+	};
+	if (tx) return runLocked({ tx });
+	return ctx.db.transaction((transaction) =>
+		runLocked({ tx: transaction as unknown as DrizzleCli }),
+	);
+};
 
 export const writeAllocations = async ({
 	ctx,
