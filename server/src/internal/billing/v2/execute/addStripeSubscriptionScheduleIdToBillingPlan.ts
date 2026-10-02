@@ -43,7 +43,17 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	})) {
 		const isExpiring = updates.status === CusProductStatus.Expired;
 		if (isExpiring) continue;
-		if (!isOnStripeSchedule({ customerProduct, linksFreePlaceholders })) {
+		const updatedCustomerProduct: FullCusProduct = {
+			...customerProduct,
+			ended_at:
+				"ended_at" in updates ? updates.ended_at : customerProduct.ended_at,
+		};
+		if (
+			!isOnStripeSchedule({
+				customerProduct: updatedCustomerProduct,
+				linksFreePlaceholders,
+			})
+		) {
 			continue;
 		}
 		updates.scheduled_ids = [stripeSubscriptionScheduleId];
