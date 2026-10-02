@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { savedComparisonCustomers } from "./balances/savedComparisonCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
@@ -126,7 +127,10 @@ export const buildSetPlansPreviewPhases = async ({
 			starts_at: phase.startsAt,
 			starts_now:
 				phaseIndex === 0 &&
-				billingContext.subscriptionBackdateStartMs === undefined,
+				classifyFirstPhaseStart({
+					startsAt: billingContext.immediatePhase.starts_at,
+					currentEpochMs: billingContext.currentEpochMs,
+				}) === "now",
 			ends_subscription: endsSubscription[phaseIndex],
 			plans: review.phases[phaseIndex]?.plans ?? [],
 			plan_changes: review.phases[phaseIndex]?.planChanges ?? [],
