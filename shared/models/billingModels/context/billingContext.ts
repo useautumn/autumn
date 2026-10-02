@@ -97,6 +97,7 @@ export interface BillingContext {
 	carriedSubscriptionParams?: Pick<
 		Stripe.SubscriptionCreateParams,
 		| "default_payment_method"
+		| "default_source"
 		| "collection_method"
 		| "days_until_due"
 		| "default_tax_rates"

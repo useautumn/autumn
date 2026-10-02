@@ -18,6 +18,7 @@ export const replacedSubscriptionCreateParams = ({
 }): CarriedSubscriptionParams => {
 	const {
 		default_payment_method: defaultPaymentMethod,
+		default_source: defaultSource,
 		collection_method: collectionMethod,
 		days_until_due: daysUntilDue,
 		default_tax_rates: defaultTaxRates,
@@ -25,8 +26,10 @@ export const replacedSubscriptionCreateParams = ({
 	} = replacedStripeSubscription;
 
 	const paymentMethodId = expandableId(defaultPaymentMethod);
+	const sourceId = expandableId(defaultSource);
 	return {
 		...(paymentMethodId && { default_payment_method: paymentMethodId }),
+		...(sourceId && { default_source: sourceId }),
 		...(collectionMethod === "send_invoice" && {
 			collection_method: collectionMethod,
 			days_until_due: daysUntilDue ?? undefined,

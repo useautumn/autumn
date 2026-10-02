@@ -13,36 +13,37 @@ const INTERVAL_DURATION_KEYS = {
 	year: "years",
 } as const;
 
-const nextRenewal = ({
-	from,
+const renewalAt = ({
+	billingCycleAnchorMs,
 	renewal,
+	count,
 }: {
-	from: number;
+	billingCycleAnchorMs: number;
 	renewal: SubscriptionRenewal;
+	count: number;
 }) =>
-	add(from, {
-		[INTERVAL_DURATION_KEYS[renewal.interval]]: renewal.intervalCount,
+	add(billingCycleAnchorMs, {
+		[INTERVAL_DURATION_KEYS[renewal.interval]]: renewal.intervalCount * count,
 	}).getTime();
 
-/** The last renewal, from the period end on, that still falls inside the discount. */
+/** The last renewal, from the period end on, inside the discount; each steps from the anchor so month ends don't drift. */
 const lastDiscountedRenewal = ({
+	billingCycleAnchorMs,
 	periodEndMs,
 	renewal,
 	discountEndMs,
 }: {
+	billingCycleAnchorMs: number;
 	periodEndMs: number;
 	renewal: SubscriptionRenewal;
 	discountEndMs: number;
 }) => {
 	let lastRenewal: number | undefined;
-	for (
-		let renewalMs = periodEndMs;
-		renewalMs < discountEndMs;
-		renewalMs = nextRenewal({ from: renewalMs, renewal })
-	) {
-		lastRenewal = renewalMs;
+	for (let count = 0; ; count++) {
+		const renewalMs = renewalAt({ billingCycleAnchorMs, renewal, count });
+		if (renewalMs >= discountEndMs) return lastRenewal;
+		if (renewalMs >= periodEndMs) lastRenewal = renewalMs;
 	}
-	return lastRenewal;
 };
 
 /**
@@ -51,16 +52,19 @@ const lastDiscountedRenewal = ({
  */
 export const remainingDiscountMonths = ({
 	currentEpochMs,
+	billingCycleAnchorMs,
 	periodEndMs,
 	renewal,
 	discountEndMs,
 }: {
 	currentEpochMs: number;
+	billingCycleAnchorMs: number;
 	periodEndMs: number;
 	renewal: SubscriptionRenewal;
 	discountEndMs: number;
 }) => {
 	const lastRenewal = lastDiscountedRenewal({
+		billingCycleAnchorMs,
 		periodEndMs,
 		renewal,
 		discountEndMs,

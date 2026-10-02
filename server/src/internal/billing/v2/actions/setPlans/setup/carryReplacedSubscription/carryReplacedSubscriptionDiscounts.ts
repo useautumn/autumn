@@ -1,9 +1,9 @@
 import { type StripeDiscountWithCoupon, secondsToMs } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
+import { replacedSubscriptionPeriodEndMs } from "../../utils/replacedSubscriptionPeriodEndMs";
 import {
 	remainingDiscountMonths,
 	type SubscriptionRenewal,
@@ -32,15 +32,25 @@ const subscriptionRenewal = (
 		: DEFAULT_RENEWAL;
 };
 
-/** A copy of the coupon that runs only the months the old discount had left. */
-const createRemainingCoupon = async ({
-	ctx,
+/** The coupon cut to the months the old discount had left. */
+const remainingCoupon = ({
 	coupon,
 	months,
 }: {
-	ctx: AutumnContext;
 	coupon: Stripe.Coupon;
 	months: number;
+}): Stripe.Coupon => ({
+	...coupon,
+	duration: "repeating",
+	duration_in_months: months,
+});
+
+const createCouponCopy = async ({
+	ctx,
+	coupon,
+}: {
+	ctx: AutumnContext;
+	coupon: Stripe.Coupon;
 }) =>
 	createStripeCli({ org: ctx.org, env: ctx.env }).coupons.create({
 		id: `${coupon.id}_${generateId("roll")}`,
@@ -48,8 +58,8 @@ const createRemainingCoupon = async ({
 		percent_off: coupon.percent_off ?? undefined,
 		amount_off: coupon.amount_off ?? undefined,
 		currency: coupon.currency ?? undefined,
-		duration: "repeating",
-		duration_in_months: months,
+		duration: coupon.duration,
+		duration_in_months: coupon.duration_in_months ?? undefined,
 		applies_to: coupon.applies_to ?? undefined,
 		metadata: coupon.metadata ?? undefined,
 	});
@@ -71,19 +81,27 @@ const carryDiscount = async ({
 	if (coupon.duration === "forever") return { source: { coupon } };
 	if (coupon.duration !== "repeating" || !discount.end) return undefined;
 
+	const periodEndMs = replacedSubscriptionPeriodEndMs({
+		replacedStripeSubscription,
+	});
+	if (periodEndMs === undefined) return undefined;
+
 	const months = remainingDiscountMonths({
 		currentEpochMs,
-		periodEndMs: secondsToMs(
-			getLatestPeriodEnd({ sub: replacedStripeSubscription }),
+		billingCycleAnchorMs: secondsToMs(
+			replacedStripeSubscription.billing_cycle_anchor,
 		),
+		periodEndMs,
 		renewal: subscriptionRenewal(replacedStripeSubscription),
 		discountEndMs: secondsToMs(discount.end),
 	});
 	if (months === 0) return undefined;
-	if (preview) return { source: { coupon } };
+
+	const carriedCoupon = remainingCoupon({ coupon, months });
+	if (preview) return { source: { coupon: carriedCoupon } };
 
 	return {
-		source: { coupon: await createRemainingCoupon({ ctx, coupon, months }) },
+		source: { coupon: await createCouponCopy({ ctx, coupon: carriedCoupon }) },
 	};
 };
 
