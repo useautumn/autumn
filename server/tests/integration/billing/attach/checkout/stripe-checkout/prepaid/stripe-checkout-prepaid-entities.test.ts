@@ -12,9 +12,9 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerProductCorrect } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
-import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { expectCustomerProductOptions } from "@tests/integration/utils/expectCustomerProductOptions";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";

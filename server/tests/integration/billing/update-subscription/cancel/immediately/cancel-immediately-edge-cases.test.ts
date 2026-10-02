@@ -12,8 +12,8 @@ import {
 	expectProductCanceling,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
-import { items } from "@tests/utils/fixtures/items";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
+import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
