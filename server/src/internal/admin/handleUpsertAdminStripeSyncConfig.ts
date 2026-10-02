@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { Scopes } from "@autumn/shared";
 import { StripeSyncConfigSchema } from "@/internal/misc/stripeSync/stripeSyncSchemas.js";
 import { updateFullStripeSyncConfig } from "@/internal/misc/stripeSync/stripeSyncStore.js";
 

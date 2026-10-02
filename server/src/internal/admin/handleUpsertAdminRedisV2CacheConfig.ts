@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { Scopes } from "@autumn/shared";
 import { RedisV2CacheConfigSchema } from "@/internal/misc/redisV2Cache/redisV2CacheSchemas.js";
 import { updateActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 

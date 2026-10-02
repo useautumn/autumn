@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { Scopes } from "@autumn/shared";
 import { RequestBlockConfigSchema } from "@/internal/misc/requestBlocks/requestBlockSchemas.js";
 import { updateFullRequestBlockConfig } from "@/internal/misc/requestBlocks/requestBlockStore.js";
 
