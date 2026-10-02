@@ -115,6 +115,7 @@ export const setupItemTransitionScenario = async ({
 					(_, index) => index,
 				),
 			}),
+			s.warmEntityCaches(),
 			...trackedFeatureIds.flatMap((featureId) =>
 				ITEM_TRANSITION_ENTITY_USAGES.map((value, entityIndex) =>
 					s.track({ featureId, value, entityIndex, timeout: 2000 }),
