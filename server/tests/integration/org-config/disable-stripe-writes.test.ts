@@ -1,12 +1,16 @@
 /**
- * Invoice Created Webhook Tests - Consumable Edge Cases
+ * disable_stripe_writes org config
  *
- * Tests for edge case scenarios involving consumable (usage-in-arrear) prices
- * during downgrades, multiple subscriptions, and complex billing scenarios.
+ * The setting only applies in live: orgDisableStripeWrites returns false in
+ * sandbox, so sandbox attaches keep creating Stripe customers.
  */
 
 import { expect, test } from "bun:test";
-import type { AttachParamsV0Input } from "@autumn/shared";
+import {
+	AppEnv,
+	type AttachParamsV0Input,
+	orgDisableStripeWrites,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -15,83 +19,75 @@ import { db } from "@/db/initDrizzle";
 import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Disable stripe writes
-// ═══════════════════════════════════════════════════════════════════════════════
+test.concurrent(
+	`${chalk.yellowBright("disable stripe writes: no-op in sandbox, applies in live")}`,
+	async () => {
+		const customerId = "disable-stripe-writes";
 
-/**
- * Scenario:
- * - Pro ($20/mo) with consumable messages (100 included, $0.10/unit)
- * - Recurring Addon ($20/mo) with consumable words (50 included, $0.05/unit)
- *   - Addon attached with new_billing_subscription: true (separate Stripe subscription)
- * - Track 200 messages (100 overage) and 150 words (100 overage)
- * - Advance to next billing cycle
- *
- * Expected Result:
- * - Pro invoice: $20 base + $10 message overage = $30
- * - Addon invoice: $20 base + $5 word overage = $25
- * - Each subscription's invoice has its own product's overage
- */
-test.concurrent(`${chalk.yellowBright("disable stripe writes")}`, async () => {
-	const customerId = "disable-stripe-writes";
+		const freeProduct = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
 
-	const freeProduct = products.base({
-		id: "free",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
-	// Save original org config and enable void_invoices_on_subscription_deletion
-	// This must be set in the database because webhooks read config from DB, not request headers
+		const { ctx, autumnV1 } = await initScenario({
+			setup: [s.deleteCustomer({ customerId })],
+			actions: [s.products({ list: [freeProduct] })],
+		});
 
-	const { ctx, autumnV1 } = await initScenario({
-		// customerId,
-		setup: [s.deleteCustomer({ customerId })],
-		actions: [s.products({ list: [freeProduct] })],
-	});
+		const disabledConfig = { ...ctx.org.config, disable_stripe_writes: true };
 
-	await OrgService.update({
-		db: db,
-		orgId: ctx.org.id,
-		updates: {
-			config: {
-				...ctx.org.config,
-				disable_stripe_writes: true,
-			},
-		},
-	});
+		await OrgService.update({
+			db: db,
+			orgId: ctx.org.id,
+			updates: { config: disabledConfig },
+		});
 
-	await autumnV1.customers.create({
-		id: customerId,
-		name: "Disable Stripe Writes Customer",
-		email: `${customerId}@example.com`,
-		internalOptions: {
-			disable_defaults: true,
-		},
-	});
+		try {
+			const disabledOrg = { ...ctx.org, config: disabledConfig };
+			expect(
+				orgDisableStripeWrites({
+					ctx: { ...ctx, org: disabledOrg, env: AppEnv.Sandbox },
+				}),
+			).toBe(false);
+			expect(
+				orgDisableStripeWrites({
+					ctx: { ...ctx, org: disabledOrg, env: AppEnv.Live },
+				}),
+			).toBe(true);
 
-	await autumnV1.billing.attach<AttachParamsV0Input>({
-		customer_id: customerId,
-		product_id: freeProduct.id,
-	});
+			await autumnV1.customers.create({
+				id: customerId,
+				name: "Disable Stripe Writes Customer",
+				email: `${customerId}@example.com`,
+				internalOptions: {
+					disable_defaults: true,
+				},
+			});
 
-	const customer = await CusService.get({
-		db: db,
-		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+			await autumnV1.billing.attach<AttachParamsV0Input>({
+				customer_id: customerId,
+				product_id: freeProduct.id,
+			});
 
-	expect(customer?.processor?.id).toBeFalsy();
-	const apiCustomer = await autumnV1.customers.get(customerId);
-	expect(apiCustomer?.stripe_id).toBeFalsy();
+			const customer = await CusService.get({
+				db: db,
+				idOrInternalId: customerId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
 
-	await OrgService.update({
-		db: db,
-		orgId: ctx.org.id,
-		updates: {
-			config: {
-				...ctx.org.config,
-				disable_stripe_writes: false,
-			},
-		},
-	});
-});
+			expect(ctx.env).toBe(AppEnv.Sandbox);
+			expect(customer?.processor?.id).toBeTruthy();
+			const apiCustomer = await autumnV1.customers.get(customerId);
+			expect(apiCustomer?.stripe_id).toBe(customer?.processor?.id);
+		} finally {
+			await OrgService.update({
+				db: db,
+				orgId: ctx.org.id,
+				updates: {
+					config: { ...ctx.org.config, disable_stripe_writes: false },
+				},
+			});
+		}
+	},
+);
