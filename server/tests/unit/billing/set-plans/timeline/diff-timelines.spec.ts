@@ -474,7 +474,7 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 	});
 
 	test("the schedule end date ends retained plans on the live subscription only", () => {
-		const free = plan({ planId: "free_addon", kind: "free", group: "free" });
+		const free = plan({ planId: "free_addon", kind: "free", isAddOn: true });
 		const { diff } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "sso_row", plan: sso }),

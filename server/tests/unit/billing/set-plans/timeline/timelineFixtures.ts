@@ -17,20 +17,24 @@ export type TestPlan = {
 	planId: string;
 	kind: PlanKind;
 	group?: string;
+	isAddOn: boolean;
 };
 
+/** Add-on status is separate from pricing, so a free plan can be an add-on. */
 export const plan = ({
 	planId,
 	kind = "main",
 	group = "main",
+	isAddOn = kind === "addOn",
 }: {
 	planId: string;
 	kind?: PlanKind;
 	group?: string;
-}): TestPlan => ({ planId, kind, group });
+	isAddOn?: boolean;
+}): TestPlan => ({ planId, kind, group, isAddOn });
 
 const replacementKeyOf = (testPlan: TestPlan) =>
-	testPlan.kind === "main" || testPlan.kind === "free"
+	(testPlan.kind === "main" || testPlan.kind === "free") && !testPlan.isAddOn
 		? (testPlan.group ?? "main")
 		: testPlan.planId;
 
