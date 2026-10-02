@@ -1,7 +1,6 @@
 import {
 	ACTIVE_STATUSES,
 	type AppEnv,
-	customerPrices,
 	customerProducts,
 	customers,
 	type Feature,
@@ -14,7 +13,6 @@ import {
 	inArray,
 	isNotNull,
 	lt,
-	notExists,
 	or,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -22,6 +20,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
 import { createWorkerAutumnContext } from "@/utils/workerUtils/createAutumnContext";
 import type { CronContext } from "../utils/CronContext";
+import { hasNoBillingSource } from "./hasNoBillingSourceSql";
 
 export type ExpiredTrialRow = {
 	customerProduct: InferSelectModel<typeof customerProducts>;
@@ -59,15 +58,8 @@ export const fetchExpiredTrialProducts = async ({
 		.where(
 			and(
 				or(
-					notExists(
-						db
-							.select()
-							.from(customerPrices)
-							.where(
-								eq(customerPrices.customer_product_id, customerProducts.id),
-							),
-					),
 					eq(customerProducts.on_trial_end, "revert"),
+					hasNoBillingSource({ db }),
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),
