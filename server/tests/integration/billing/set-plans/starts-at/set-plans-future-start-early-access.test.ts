@@ -1,7 +1,8 @@
 /**
  * set_plans enable_plan_immediately with a future phases[0].starts_at: the plan is Active now with
  * its balance granted, nothing is invoiced until the start, and the subscription Stripe creates at
- * the start links the row without re-granting or resetting the balance (it resets a cycle after the start).
+ * the start invoices it once and links the row without re-granting or resetting the balance (it resets
+ * a cycle after the start).
  */
 
 import { expect, test } from "bun:test";
@@ -15,6 +16,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
@@ -106,5 +108,12 @@ test.concurrent(
 		expect(billed.status).toBe(CusProductStatus.Active);
 		expect(billed.subscription_ids).toEqual([stripeSubscriptionId]);
 		await expectBalanceCorrect(expectedBalance);
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			autumn: autumnV1,
+			count: 1,
+			latestTotal: 20,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		});
 	},
 );
