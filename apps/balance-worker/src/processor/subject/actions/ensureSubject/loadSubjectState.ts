@@ -1,6 +1,7 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
 import { timeSync } from "../../../../logging/eventLoopStalls/syncSections.js";
 import type { InFlightLoad } from "../../inFlightLoads/types/inFlightLoad.js";
+import { loadSubjectBaseline } from "../../snapshotLoader/loadSubjectBaseline.js";
 import { SubjectLoadOvertakenError } from "../../subjectErrors.js";
 import type { SubjectScope } from "../../types/subject.js";
 import { keepSubjectBaseline } from "./keepSubjectBaseline.js";
@@ -47,7 +48,11 @@ export const loadSubjectState = async ({
 }): Promise<SubjectState> => {
 	for (let read = 0; read < MAX_READS; read++) {
 		const occurredAt = scope.ctx.receiptPolicy.now();
-		const baseline = await readSubjectBaseline({ scope, identity, occurredAt });
+		// A read an evict overtook goes to the full query: the snapshot row may predate the DELETE still on the lane.
+		const baseline =
+			read === 0
+				? await loadSubjectBaseline({ scope, identity, occurredAt })
+				: await readSubjectBaseline({ scope, identity, occurredAt });
 		reportLargeState({ scope, identity, baseline });
 		// Checked with no await before the keep, so overtaken rows never become resident.
 		if (!load.overtaken)

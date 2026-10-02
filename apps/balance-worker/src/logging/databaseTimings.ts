@@ -4,6 +4,7 @@ import { percentileOf, sampleInto } from "./sampleWindow.js";
 
 export type DatabaseQueryKind =
 	| "subject_rows"
+	| "subject_snapshots"
 	| "entity_rows"
 	| "catalog_rows"
 	| "billing_anchors"

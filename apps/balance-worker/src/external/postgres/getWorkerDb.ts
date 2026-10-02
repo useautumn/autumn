@@ -13,6 +13,7 @@ import {
 	type PostgresClient,
 	type PostgresClientConfig,
 	readPartitionProgress,
+	readSubjectSnapshots,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
 import {
@@ -75,6 +76,18 @@ export const createWorkerDb = ({
 						customerId: identity.customerId,
 						entityId: identity.entityId,
 						asOfTimestampMs,
+					}),
+			}),
+		),
+	readSubjectSnapshots: ({ identities }) =>
+		ctx.subjectLoads.run(() =>
+			timeQuery({
+				ctx,
+				kind: "subject_snapshots",
+				run: () =>
+					readSubjectSnapshots({
+						ctx: { db: ctx.postgres.db },
+						keys: identities,
 					}),
 			}),
 		),

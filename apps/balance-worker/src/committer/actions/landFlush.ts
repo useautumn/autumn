@@ -5,6 +5,7 @@ import {
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "@autumn/postgres";
+import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,
@@ -391,7 +392,9 @@ export const landFlush = async ({
 			return outcomes;
 		}
 		if (
-			scope.ctx.subjectSnapshotsConfig?.get().mode === "write" &&
+			writesSubjectSnapshots(
+				scope.ctx.subjectSnapshotsConfig?.get() ?? { mode: "off" },
+			) &&
 			writesSnapshots({ call })
 		) {
 			const deleted = {
