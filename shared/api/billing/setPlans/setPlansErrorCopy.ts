@@ -2,7 +2,10 @@ import {
 	formatMs,
 	formatMsToDate,
 } from "../../../utils/common/formatUtils/formatUnix";
-import type { SetPlansErrorDetails } from "./setPlansErrorDetails";
+import type {
+	SetPlansErrorDetails,
+	SetPlansFutureStartConflict,
+} from "./setPlansErrorDetails";
 import {
 	boldText,
 	plainText,
@@ -68,7 +71,7 @@ const BOUNDARY_COPY: Record<
 };
 
 const FUTURE_START_CONFLICT_COPY: Record<
-	Extract<SetPlansErrorDetails, { type: "future_start_conflict" }>["conflict"],
+	SetPlansFutureStartConflict,
 	{ subject: string; hint: string }
 > = {
 	free_trial: {

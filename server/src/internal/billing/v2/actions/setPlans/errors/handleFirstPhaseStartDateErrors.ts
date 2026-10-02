@@ -3,7 +3,7 @@ import {
 	ErrCode,
 	isProductPaidAndRecurring,
 	RecaseError,
-	type SetPlansErrorDetails,
+	type SetPlansFutureStartConflict,
 } from "@autumn/shared";
 import { isExistingScheduleUpdate } from "@/internal/billing/v2/actions/setPlans/utils/isExistingScheduleUpdate";
 import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
@@ -11,16 +11,11 @@ import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import { setPlansError } from "./setPlansError";
 
-type FutureStartConflict = Extract<
-	SetPlansErrorDetails,
-	{ type: "future_start_conflict" }
->["conflict"];
-
 const futureStartConflict = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
-}): FutureStartConflict | undefined => {
+}): SetPlansFutureStartConflict | undefined => {
 	if (billingContext.trialContext?.trialEndsAt) return "free_trial";
 	if (billingContext.invoiceMode) return "invoice_mode";
 	if (billingContext.requestedBillingCycleAnchor !== undefined) {
