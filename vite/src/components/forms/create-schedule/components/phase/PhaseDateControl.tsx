@@ -135,22 +135,16 @@ export function PhaseDateControl({
 		/>
 	);
 
-	if (isNewFirstPhase && !allowFirstPhaseBackdate) {
-		return <PhaseDateBox>{dateLabel(null)}</PhaseDateBox>;
-	}
-
-	const disablePastDates = !hasStarted;
-	const limits: PickerLimits = isNewFirstPhase
-		? {
-				disableFutureDates: true,
-				maxUnixDate: nowMs,
-				fromYear: subYears(nowMs, BACKDATE_START_YEAR_LOOKBACK).getFullYear(),
-			}
-		: {
-				disabled: hasStarted,
-				disablePastDates,
-				minUnixDate: disablePastDates ? nowMs : undefined,
-			};
+	const disablePastDates =
+		!hasStarted && !(isNewFirstPhase && allowFirstPhaseBackdate);
+	const limits: PickerLimits = {
+		disabled: hasStarted,
+		disablePastDates,
+		minUnixDate: disablePastDates ? nowMs : undefined,
+		fromYear: disablePastDates
+			? undefined
+			: subYears(nowMs, BACKDATE_START_YEAR_LOOKBACK).getFullYear(),
+	};
 
 	return (
 		<ConditionalTooltip
