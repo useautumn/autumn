@@ -24,7 +24,7 @@ export const useSubscriptionLinks = ({
 	const queryOptions = useSyncProposalsV2QueryOptions({
 		customerId: fullCustomer?.id ?? "",
 	});
-	const { data } = useQuery({
+	const { data, error } = useQuery({
 		...queryOptions,
 		enabled: enabled && Boolean(fullCustomer?.id),
 		refetchOnWindowFocus: false,
@@ -33,7 +33,7 @@ export const useSubscriptionLinks = ({
 	return useMemo(() => {
 		if (!enabled) return null;
 		const rows = buildSubscriptionPickerRows({
-			proposals: data?.proposals,
+			proposals: error ? undefined : data?.proposals,
 			customerProducts: fullCustomer?.customer_products ?? [],
 			entities: fullCustomer?.entities ?? [],
 		});
@@ -56,5 +56,5 @@ export const useSubscriptionLinks = ({
 				}),
 			pick: () => setSheet({ type: "create-schedule-choose-subscription" }),
 		};
-	}, [enabled, data, fullCustomer, setSheet]);
+	}, [enabled, data, error, fullCustomer, setSheet]);
 };
