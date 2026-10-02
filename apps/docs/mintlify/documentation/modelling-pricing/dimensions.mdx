@@ -324,19 +324,65 @@ A multiplier needs at least one of `factor` or `add`.
 
 ## Invoices with monetary credits
 
-When your credits are money (eg, one credit is $1), you usually want the invoice to show **what** the customer spent them on. Autumn does this when the plan item for the credit system has:
+When your credits are money (eg, one credit is \$1), you usually want the invoice to show **what** the customer spent them on. Autumn does this when the plan item for the credit system has:
 
 - a **usage-based** price (pay per use), and
 - a price of **exactly one currency unit per credit** (eg, `$1` per credit, or `$100` per 100 credits), and
 - no pooling across [entities](/documentation/modelling-pricing/entity-plans).
 
 ```ts autumn.config.ts
-{
-  featureId: credits.featureId,
-  included: 100, // $100 of credits included each month
-  reset: { interval: "month" },
-  price: { amount: 1, interval: "month", billingMethod: "usage_based" },
-}
+import { atmn, feature, plan } from "atmn";
+
+export const computeMinutes = feature({
+  featureId: "compute_minutes",
+  name: "Compute minutes",
+  type: "metered",
+  consumable: true,
+});
+
+export const credits = feature({
+  featureId: "credits",
+  name: "Credits",
+  type: "credit_system",
+  creditSchema: [
+    {
+      meteredFeatureId: computeMinutes.featureId,
+      creditCost: 1,
+      dimensions: {
+        size_large: { match: { size: "large" }, creditCost: 16 },
+        size_large_region_eu: {
+          match: { size: "large", region: "eu" },
+          creditCost: 20,
+        },
+      },
+      multipliers: {
+        lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+      },
+    },
+  ],
+});
+
+export const pro = plan({
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [
+    {
+      featureId: credits.featureId,
+      included: 100, // $100 of credits included each month
+      reset: { interval: "month" },
+      // $1 per credit, billed at the end of the month
+      price: { amount: 1, interval: "month", billingMethod: "usage_based" },
+    },
+  ],
+});
+
+export default atmn({
+  features: [computeMinutes, credits],
+  plans: [pro],
+});
 ```
 
 At the end of the billing period, the invoice has:
@@ -347,7 +393,7 @@ At the end of the billing period, the invoice has:
 Usage with no matching dimension goes on a line with just the feature name. Multipliers do not get their own line. Their usage is added to the line of the dimension that was chosen.
 
 > **Example** <br />
-> A customer on Pro ($20 per month, $100 of credits included) uses this in one month:
+> A customer on Pro (\$20 per month, \$100 of credits included) uses this in one month:
 > - 40 minutes with no properties: 40 × 1 = 40 credits
 > - 10 minutes on `{ size: "large" }`: 10 × 16 = 160 credits
 > - 10 minutes on `{ size: "large", region: "eu", lifecycle: "spot" }`: 10 × 20 × 0.3 = 60 credits
@@ -356,14 +402,14 @@ The invoice looks like this:
 
 | Line | Amount |
 |------|--------|
-| Pro | $20 |
-| Compute minutes, 40 units | $40 |
-| Compute minutes — size_large, 10 units | $160 |
-| Compute minutes — size_large_region_eu, 10 units | $60 |
-| Credits applied | −$100 |
-| **Total** | **$180** |
+| Pro | \$20 |
+| Compute minutes, 40 units | \$40 |
+| Compute minutes — size_large, 10 units | \$160 |
+| Compute minutes — size_large_region_eu, 10 units | \$60 |
+| Credits applied | −\$100 |
+| **Total** | **\$180** |
 
-The customer used $260 of credits. $100 was included, so they pay $160 for usage plus the $20 plan price.
+The customer used \$260 of credits. \$100 was included, so they pay \$160 for usage plus the \$20 plan price.
 
 When a balance belongs to an [entity](/documentation/modelling-pricing/entity-plans), the entity's name is added to the end of each line, eg `Compute minutes — size_large, 10 units (Workspace A)`.
 
