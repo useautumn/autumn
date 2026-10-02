@@ -1,6 +1,7 @@
 import {
 	type CustomerLicenseQuantity,
 	type Feature,
+	type FullPlanLicense,
 	featureOptionsAreSame,
 	productsAreSame,
 } from "@autumn/shared";
@@ -29,6 +30,21 @@ const requestedMatchesGranted = ({
 		);
 	});
 
+/** Requested totals within the plan's included seats buy no paid seats, as included-only does. */
+const requestedIsIncludedOnly = ({
+	quantities,
+	planLicenses,
+}: {
+	quantities: CustomerLicenseQuantity[];
+	planLicenses: FullPlanLicense[];
+}) =>
+	quantities.every((quantity) => {
+		const planLicense = planLicenses.find(
+			({ product }) => product.id === quantity.licensePlanId,
+		);
+		return !planLicense || quantity.totalQuantity <= planLicense.included;
+	});
+
 const sortedQuantities = (quantities: CustomerLicenseQuantity[]) =>
 	[...quantities]
 		.sort((first, second) =>
@@ -53,9 +69,11 @@ const sortedGranted = (licenses: GrantedLicense[]) =>
 const licensesMatch = ({
 	first,
 	second,
+	planLicenses,
 }: {
 	first: LicenseConfig;
 	second: LicenseConfig;
+	planLicenses: FullPlanLicense[];
 }): boolean => {
 	if (first.type === "granted" && second.type === "granted") {
 		return sortedGranted(first.licenses) === sortedGranted(second.licenses);
@@ -67,13 +85,13 @@ const licensesMatch = ({
 		});
 	}
 	if (first.type === "requested" && second.type === "granted") {
-		return licensesMatch({ first: second, second: first });
+		return licensesMatch({ first: second, second: first, planLicenses });
 	}
 	if (first.type === "granted" && second.type === "includedOnly") {
 		return first.licenses.every(({ paidQuantity }) => paidQuantity === 0);
 	}
 	if (first.type === "includedOnly" && second.type === "granted") {
-		return licensesMatch({ first: second, second: first });
+		return licensesMatch({ first: second, second: first, planLicenses });
 	}
 	if (first.type === "requested" && second.type === "requested") {
 		return (
@@ -81,10 +99,13 @@ const licensesMatch = ({
 		);
 	}
 	if (first.type === "requested" && second.type === "includedOnly") {
-		return first.quantities.length === 0;
+		return requestedIsIncludedOnly({
+			quantities: first.quantities,
+			planLicenses,
+		});
 	}
 	if (first.type === "includedOnly" && second.type === "requested") {
-		return second.quantities.length === 0;
+		return licensesMatch({ first: second, second: first, planLicenses });
 	}
 	return first.type === "includedOnly" && second.type === "includedOnly";
 };
@@ -111,7 +132,15 @@ export const instanceConfigsMatch = ({
 		newFeatureOptions: second.featureQuantities,
 	});
 	if (!sameSchedulingShape || !sameFeatureQuantities) return false;
-	if (!licensesMatch({ first: first.licenses, second: second.licenses })) {
+	const planLicenses =
+		second.fullProduct.licenses ?? first.fullProduct.licenses ?? [];
+	if (
+		!licensesMatch({
+			first: first.licenses,
+			second: second.licenses,
+			planLicenses,
+		})
+	) {
 		return false;
 	}
 
