@@ -22,10 +22,18 @@ type InvoiceStatus = "open" | "paid" | "void" | "missing";
 const state = {
 	invoices: {} as Record<string, { status: InvoiceStatus; url: string | null }>,
 	retrievedInvoiceIds: [] as string[],
+	stripeConnected: true,
+};
+
+const requireStripeConnected = () => {
+	if (!state.stripeConnected)
+		throw new Error("There is no Stripe account linked to this organization.");
+	return {};
 };
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 	createStripeCli: () => ({
+		...requireStripeConnected(),
 		invoices: {
 			retrieve: async (id: string) => {
 				state.retrievedInvoiceIds.push(id);
@@ -294,4 +302,21 @@ test("skips add-on attach targets without loading rows or touching Stripe", asyn
 	expect(billingResult).toBeUndefined();
 	expect(loads).toBe(0);
 	expect(state.retrievedInvoiceIds).toEqual([]);
+});
+
+test("no pending rows: never creates a Stripe client", async () => {
+	withInvoices({});
+	state.stripeConnected = false;
+
+	try {
+		const billingResult = await findPendingInvoiceConflict({
+			ctx,
+			fullCustomer,
+			attachProduct,
+			loadPendingCustomerProducts: async () => [],
+		});
+		expect(billingResult).toBeUndefined();
+	} finally {
+		state.stripeConnected = true;
+	}
 });

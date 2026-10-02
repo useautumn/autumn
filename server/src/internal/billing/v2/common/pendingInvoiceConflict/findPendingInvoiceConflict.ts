@@ -76,7 +76,7 @@ const listPendingInvoiceCandidates = async ({
 	attachProduct: FullProduct;
 	pendingCustomerProducts: FullCusProduct[];
 }): Promise<PendingInvoiceCandidate[]> => {
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	let stripeCli: Stripe | undefined;
 	const candidates: PendingInvoiceCandidate[] = [];
 	const seenInvoiceIds = new Set<string>();
 
@@ -101,6 +101,7 @@ const listPendingInvoiceCandidates = async ({
 		if (!invoiceBacked || !metadata?.stripe_invoice_id) continue;
 		if (seenInvoiceIds.has(metadata.stripe_invoice_id)) continue;
 		seenInvoiceIds.add(metadata.stripe_invoice_id);
+		stripeCli ??= createStripeCli({ org: ctx.org, env: ctx.env });
 
 		candidates.push({
 			customerProduct,
