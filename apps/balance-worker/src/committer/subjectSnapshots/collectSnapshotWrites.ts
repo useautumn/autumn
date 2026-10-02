@@ -1,5 +1,5 @@
 import type {
-	SubjectSnapshotDelete,
+	SubjectSnapshotCustomer,
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "@autumn/postgres";
@@ -7,10 +7,8 @@ import type { CommitterConfig, Flush } from "../types/committer.js";
 import { writesSnapshots } from "./flushSnapshotGuards.js";
 import {
 	type CustomerSnapshots,
-	claimOf,
 	customerEntryOf,
 	customerOf,
-	deleteRowOf,
 	holdSubjectStates,
 	upsertRowsOf,
 } from "./snapshotRows.js";
@@ -31,22 +29,18 @@ export const collectSnapshotWrites = ({
 	const { maxBytes } = config.snapshots.read();
 	const byCustomer = new Map<string, CustomerSnapshots>();
 	for (const call of flush.calls)
-		for (const customer of call.snapshotDrops ?? []) {
-			const entry = customerEntryOf({ byCustomer, customer });
-			entry.deletes = true;
-			entry.claim = claimOf({ call }) ?? entry.claim;
-		}
+		for (const customer of call.snapshotDrops ?? [])
+			customerEntryOf({ byCustomer, customer }).deletes = true;
 	for (const call of flush.calls)
 		for (const record of call.records) {
 			const customer = customerOf({ identity: record.mutation.identity });
 			const entry = customerEntryOf({ byCustomer, customer });
-			entry.claim = undefined;
 			if (recordProvesState({ record }))
 				holdSubjectStates({ entry, call, record });
 			else entry.deletes = true;
 		}
 	const upserts: SubjectSnapshotUpsert[] = [];
-	const deletes: SubjectSnapshotDelete[] = [];
+	const deletes: SubjectSnapshotCustomer[] = [];
 	let cappedCustomers = 0;
 	for (const entry of byCustomer.values()) {
 		const rows = entry.deletes ? [] : upsertRowsOf({ entry, partitionCount });
@@ -54,9 +48,7 @@ export const collectSnapshotWrites = ({
 			stateExceedsCap({ stateJson, maxBytes }),
 		);
 		if (overCap) cappedCustomers += 1;
-		const { customer, claim } = entry;
-		if (entry.deletes || overCap)
-			deletes.push(deleteRowOf({ customer, claim }));
+		if (entry.deletes || overCap) deletes.push(entry.customer);
 		else upserts.push(...rows);
 	}
 	if (cappedCustomers > 0) onSizeCapped?.({ customers: cappedCustomers });

@@ -1,7 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type {
-	SubjectSnapshotClaim,
-	SubjectSnapshotDelete,
+	SubjectSnapshotCustomer,
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "../../types/subjectSnapshot.js";
@@ -10,76 +9,25 @@ import type {
 const jsonbRecordsOf = ({ document }: { document: string }): SQL =>
 	sql`${document}::text::jsonb`;
 
-const distinctClaimsOf = ({
-	deletes,
-}: {
-	deletes: readonly SubjectSnapshotDelete[];
-}): SubjectSnapshotClaim[] => {
-	const byKey = new Map<string, SubjectSnapshotClaim>();
-	for (const { claim } of deletes) {
-		if (!claim) continue;
-		byKey.set(`${claim.topic}[${claim.partition}]:${claim.claimToken}`, claim);
-	}
-	return [...byKey.values()];
-};
-
-/** FOR SHARE: a reclaim's UPDATE waits behind this statement, or has already landed and the claim no longer matches. */
-const snapshotClaimsCte = ({
-	claims,
-}: {
-	claims: readonly SubjectSnapshotClaim[];
-}): SQL => {
-	const document = JSON.stringify(
-		claims.map((claim) => ({
-			topic: claim.topic,
-			partition_id: claim.partition,
-			claim_token: claim.claimToken,
-		})),
-	);
-	return sql`snapshot_claims AS (
-			SELECT p.topic, p.partition_id, c.claim_token
-			FROM partition_progress p
-			JOIN jsonb_to_recordset(${jsonbRecordsOf({ document })}) AS c(topic text, partition_id integer, claim_token text)
-				ON p.topic = c.topic AND p.partition_id = c.partition_id
-			WHERE p.claim_token IS NULL OR p.claim_token = c.claim_token
-			FOR SHARE OF p
-		)`;
-};
-
-/** COLLATE "C" on the probe side so the PK, which is "C", serves the join.
- * A claimed customer's rows go only while snapshot_claims still holds that partition. */
+/** COLLATE "C" on the probe side so the PK, which is "C", serves the join. */
 const snapshotDeletesCte = ({
 	deletes,
-	claimed,
 }: {
-	deletes: readonly SubjectSnapshotDelete[];
-	claimed: boolean;
+	deletes: readonly SubjectSnapshotCustomer[];
 }): SQL => {
 	const document = JSON.stringify(
 		deletes.map((customer) => ({
 			org_id: customer.orgId,
 			env: customer.env,
 			customer_id: customer.customerId,
-			...(claimed && {
-				topic: customer.claim?.topic ?? null,
-				partition_id: customer.claim?.partition ?? null,
-				claim_token: customer.claim?.claimToken ?? null,
-			}),
 		})),
 	);
-	const probe = claimed
-		? sql`d(org_id text, env text, customer_id text, topic text, partition_id integer, claim_token text)`
-		: sql`d(org_id text, env text, customer_id text)`;
-	const claimHeld = claimed
-		? sql`AND (d.claim_token IS NULL OR EXISTS (SELECT 1 FROM snapshot_claims k WHERE k.topic = d.topic AND k.partition_id = d.partition_id AND k.claim_token = d.claim_token))`
-		: sql``;
 	return sql`snapshot_deletes AS (
 			DELETE FROM subject_snapshots s
-			USING jsonb_to_recordset(${jsonbRecordsOf({ document })}) AS ${probe}
+			USING jsonb_to_recordset(${jsonbRecordsOf({ document })}) AS d(org_id text, env text, customer_id text)
 			WHERE s.org_id = d.org_id COLLATE "C"
 				AND s.env = d.env COLLATE "C"
 				AND s.customer_id = d.customer_id COLLATE "C"
-				${claimHeld}
 			RETURNING 1
 		)`;
 };
@@ -143,17 +91,11 @@ export const subjectSnapshotFlushSql = ({
 }: {
 	snapshots: SubjectSnapshotWrites;
 }): { ctes: SQL[]; upserted: SQL; deleted: SQL } => {
-	const claims = distinctClaimsOf({ deletes: snapshots.deletes });
-	const hasClaims = claims.length > 0;
 	const hasDeletes = snapshots.deletes.length > 0;
 	const hasUpserts = snapshots.upserts.length > 0;
 
 	const ctes: SQL[] = [];
-	if (hasClaims) ctes.push(snapshotClaimsCte({ claims }));
-	if (hasDeletes)
-		ctes.push(
-			snapshotDeletesCte({ deletes: snapshots.deletes, claimed: hasClaims }),
-		);
+	if (hasDeletes) ctes.push(snapshotDeletesCte({ deletes: snapshots.deletes }));
 	if (hasUpserts) ctes.push(snapshotUpsertsCte({ upserts: snapshots.upserts }));
 
 	return {

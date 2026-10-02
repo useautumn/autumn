@@ -139,61 +139,6 @@ describe("flushSql subject snapshots", () => {
 			"SELECT '[]'::json AS applied, 0 AS bookmarks, 0 AS snapshot_upserts, (SELECT count(*) FROM snapshot_deletes) AS snapshot_deletes",
 		);
 	});
-
-	test("a delete asked under a claim shares its partition's progress row and lands only while that claim still holds", () => {
-		const claim = { topic: "metering", partition: 3, claimToken: "claim_a" };
-		const query = dialect.sqlToQuery(
-			flushSql({
-				changes: [],
-				bookmarks: [],
-				snapshots: {
-					upserts: [],
-					deletes: [
-						{ orgId: "org_1", env: "live", customerId: "cus_9", claim },
-						{ orgId: "org_1", env: "live", customerId: "cus_8", claim },
-						{ orgId: "org_2", env: "live", customerId: "cus_7" },
-					],
-				},
-			}),
-		);
-		const sql = flatten(query.sql);
-		expect(sql).toContain(
-			"snapshot_claims AS ( SELECT p.topic, p.partition_id, c.claim_token FROM partition_progress p JOIN jsonb_to_recordset($1::text::jsonb) AS c(topic text, partition_id integer, claim_token text) ON p.topic = c.topic AND p.partition_id = c.partition_id WHERE p.claim_token IS NULL OR p.claim_token = c.claim_token FOR SHARE OF p )",
-		);
-		expect(sql).toContain(
-			'snapshot_deletes AS ( DELETE FROM subject_snapshots s USING jsonb_to_recordset($2::text::jsonb) AS d(org_id text, env text, customer_id text, topic text, partition_id integer, claim_token text) WHERE s.org_id = d.org_id COLLATE "C" AND s.env = d.env COLLATE "C" AND s.customer_id = d.customer_id COLLATE "C" AND (d.claim_token IS NULL OR EXISTS (SELECT 1 FROM snapshot_claims k WHERE k.topic = d.topic AND k.partition_id = d.partition_id AND k.claim_token = d.claim_token)) RETURNING 1 )',
-		);
-		const [claims, deletes] = query.params as [string, string];
-		expect(JSON.parse(claims)).toEqual([
-			{ topic: "metering", partition_id: 3, claim_token: "claim_a" },
-		]);
-		expect(JSON.parse(deletes)).toEqual([
-			{
-				org_id: "org_1",
-				env: "live",
-				customer_id: "cus_9",
-				topic: "metering",
-				partition_id: 3,
-				claim_token: "claim_a",
-			},
-			{
-				org_id: "org_1",
-				env: "live",
-				customer_id: "cus_8",
-				topic: "metering",
-				partition_id: 3,
-				claim_token: "claim_a",
-			},
-			{
-				org_id: "org_2",
-				env: "live",
-				customer_id: "cus_7",
-				topic: null,
-				partition_id: null,
-				claim_token: null,
-			},
-		]);
-	});
 });
 
 /** A transaction stand-in that answers the flush statement with the given row. */

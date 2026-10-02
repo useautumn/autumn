@@ -1,9 +1,7 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import type {
-	SubjectSnapshotClaim,
 	SubjectSnapshotCustomer,
-	SubjectSnapshotDelete,
 	SubjectSnapshotUpsert,
 } from "@autumn/postgres";
 import type {
@@ -24,8 +22,6 @@ export type CustomerSnapshots = {
 	customer: SubjectSnapshotCustomer;
 	subjects: Map<string, HeldSubject>;
 	deletes: boolean;
-	/** Set by a drop and cleared by any record of the customer, whose bookmark proves ownership instead. */
-	claim?: SubjectSnapshotClaim;
 };
 
 export const customerOf = ({
@@ -58,20 +54,6 @@ export const customerEntryOf = ({
 	byCustomer.set(key, created);
 	return created;
 };
-
-/** Undefined for a call that holds no claim, so a drop keeps the claim an earlier drop was asked under. */
-export const claimOf = ({
-	call,
-}: {
-	call: FlushCall;
-}): SubjectSnapshotClaim | undefined =>
-	call.claimToken === undefined
-		? undefined
-		: {
-				topic: call.topic,
-				partition: call.partition,
-				claimToken: call.claimToken,
-			};
 
 /** A later record of the same subject replaces the state an earlier one held. */
 export const holdSubjectStates = ({
@@ -125,11 +107,3 @@ const upsertRowOf = ({
 		logOffset: held.logOffset,
 	};
 };
-
-export const deleteRowOf = ({
-	customer,
-	claim,
-}: {
-	customer: SubjectSnapshotCustomer;
-	claim?: SubjectSnapshotClaim;
-}): SubjectSnapshotDelete => (claim ? { ...customer, claim } : customer);

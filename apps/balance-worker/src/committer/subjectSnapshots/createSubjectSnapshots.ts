@@ -3,10 +3,8 @@ import type { SubjectSnapshotControl } from "../../edgeConfig/subjectSnapshotsEd
 import type { Committer, PartitionPosition } from "../types/committer.js";
 import type { SubjectSnapshots } from "./types/subjectSnapshots.js";
 
-/** The claim is the one held when the drop was asked: a partition claimed again since lands it as nothing. */
 type PendingDrop = {
 	customer: SubjectSnapshotCustomer;
-	claimToken: string | undefined;
 	settled: ReturnType<typeof Promise.withResolvers<void>>;
 };
 
@@ -16,14 +14,13 @@ type PartitionDrops = { pending: Map<string, PendingDrop>; scheduled: boolean };
 type SubjectSnapshotsContext = {
 	committer: Pick<Committer, "apply">;
 	snapshots: SubjectSnapshotControl;
-	claimTokenOf(position: PartitionPosition): string | undefined;
 	runInLane(params: {
 		position: PartitionPosition;
 		run(): Promise<void>;
 	}): Promise<void>;
 };
 
-/** Evicts collect per partition; each lane tick lands one DELETE under one claim, then settles the callers it took. */
+/** Evicts collect per partition; each lane tick lands one DELETE, then settles the callers it took. */
 export const createSubjectSnapshots = ({
 	ctx,
 }: {
@@ -38,10 +35,9 @@ export const createSubjectSnapshots = ({
 	}: Parameters<SubjectSnapshots["dropCustomer"]>[0]): Promise<void> {
 		const position = { topic, partition };
 		const drops = partitionDropsOf({ byPartition, position });
-		const claimToken = ctx.claimTokenOf(position);
-		const existing = drops.pending.get(dropKeyOf({ customer, claimToken }));
+		const existing = drops.pending.get(dropKeyOf({ customer }));
 		if (existing) return existing.settled.promise;
-		const drop = collectDrop({ drops, customer, claimToken });
+		const drop = collectDrop({ drops, customer });
 		scheduleDelete({ position, drops });
 		return drop.settled.promise;
 	}
@@ -69,14 +65,14 @@ export const createSubjectSnapshots = ({
 		if (!drops) return;
 		drops.scheduled = false;
 		const { dropBatch } = ctx.snapshots.read();
-		const taken = takeDropsUnderOneClaim({ drops, dropBatch });
+		const taken = takeDrops({ drops, dropBatch });
 		if (drops.pending.size > 0) scheduleDelete({ position, drops });
 		else byPartition.delete(key);
 		try {
+			// No claim: a DELETE is always safe to land, at worst it removes a row the new owner will write again.
 			await ctx.committer.apply({
 				...position,
 				expectedOffset: 0n,
-				claimToken: taken[0]?.claimToken,
 				records: [],
 				snapshotDrops: taken.map((drop) => drop.customer),
 			});
@@ -113,42 +109,30 @@ function partitionDropsOf({
 	return drops;
 }
 
-/** The same customer asked under a different claim is a different drop: the earlier one may land as nothing. */
 function dropKeyOf({
 	customer,
-	claimToken,
 }: {
 	customer: SubjectSnapshotCustomer;
-	claimToken: string | undefined;
 }): string {
-	return JSON.stringify([
-		customer.orgId,
-		customer.env,
-		customer.customerId,
-		claimToken ?? null,
-	]);
+	return JSON.stringify([customer.orgId, customer.env, customer.customerId]);
 }
 
 function collectDrop({
 	drops,
 	customer,
-	claimToken,
 }: {
 	drops: PartitionDrops;
 	customer: SubjectSnapshotCustomer;
-	claimToken: string | undefined;
 }): PendingDrop {
 	const drop: PendingDrop = {
 		customer,
-		claimToken,
 		settled: Promise.withResolvers<void>(),
 	};
-	drops.pending.set(dropKeyOf({ customer, claimToken }), drop);
+	drops.pending.set(dropKeyOf({ customer }), drop);
 	return drop;
 }
 
-/** One claim per DELETE: drops asked under a later claim wait for the next lane tick. */
-function takeDropsUnderOneClaim({
+function takeDrops({
 	drops,
 	dropBatch,
 }: {
@@ -158,7 +142,6 @@ function takeDropsUnderOneClaim({
 	const taken: PendingDrop[] = [];
 	for (const [key, drop] of drops.pending) {
 		if (taken.length >= dropBatch) break;
-		if (taken[0] && taken[0].claimToken !== drop.claimToken) continue;
 		drops.pending.delete(key);
 		taken.push(drop);
 	}

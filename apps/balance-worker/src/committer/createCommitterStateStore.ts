@@ -64,7 +64,6 @@ export const createCommitterStateStore = ({
 				ctx: {
 					committer: ctx.committer,
 					snapshots: config.subjectSnapshots,
-					claimTokenOf,
 					runInLane,
 				},
 			})

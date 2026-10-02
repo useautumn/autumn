@@ -218,136 +218,23 @@ describe("committer state store snapshot drops", () => {
 		]);
 	});
 
-	test("a drop lands under the claim the partition holds, with no bookmark to move", async () => {
-		const { db, requests, claimTokens } = createCountingDb();
+	test("a drop lands with no bookmark to move and no claim: a DELETE is always safe, even from an owner the partition has left", async () => {
+		const { db, requests } = createCountingDb();
 		const store = createStore({ db });
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
 		await store.claimPartition({ topic, partition: 4 });
 		const drops = store.subjectSnapshots;
 		if (!drops) throw new Error("expected snapshot drops");
 
+		await store.claimPartition({ topic, partition: 4 });
 		await drops.dropCustomer({ topic, partition: 4, customer: customerOf(1) });
 
-		const [claimToken] = claimTokens;
-		expect(claimToken).toBeString();
 		expect(requests).toEqual([
 			{
 				changes: [],
 				bookmarks: [],
-				snapshots: {
-					upserts: [],
-					deletes: [
-						{
-							...customerOf(1),
-							claim: { topic, partition: 4, claimToken },
-						},
-					],
-				},
+				snapshots: { upserts: [], deletes: [customerOf(1)] },
 			},
 		]);
-	});
-
-	test("a queued drop keeps the claim it was asked under when the partition is claimed again before it lands", async () => {
-		const held = Promise.withResolvers<void>();
-		const { db, requests, claimTokens } = createCountingDb({
-			gate: held.promise,
-		});
-		const store = createStore({ db });
-		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
-		await store.claimPartition({ topic, partition: 4 });
-		const drops = store.subjectSnapshots;
-		if (!drops) throw new Error("expected snapshot drops");
-
-		const applied = store.applyDurableMutations({
-			records: [
-				{
-					position: { topic, partition: 4, offset: 0n },
-					mutation: createTrackMutation({
-						state: createState({ balance: 100 }),
-						value: 5,
-					}),
-				},
-			],
-		});
-		await Bun.sleep(1);
-		const queued = drops.dropCustomer({
-			topic,
-			partition: 4,
-			customer: customerOf(21),
-		});
-		await Bun.sleep(1);
-		await store.claimPartition({ topic, partition: 4 });
-		held.resolve();
-		await Promise.all([applied, queued]);
-		await drops.dropCustomer({ topic, partition: 4, customer: customerOf(22) });
-
-		const [first, second] = claimTokens;
-		expect(first).not.toBe(second);
-		expect(
-			requests
-				.filter((request) => request.changes.length === 0)
-				.map((request) => request.snapshots?.deletes),
-		).toEqual([
-			[
-				{
-					...customerOf(21),
-					claim: { topic, partition: 4, claimToken: first },
-				},
-			],
-			[
-				{
-					...customerOf(22),
-					claim: { topic, partition: 4, claimToken: second },
-				},
-			],
-		]);
-	});
-
-	test("drops waiting under different claims land as separate DELETEs, each under its own claim", async () => {
-		const held = Promise.withResolvers<void>();
-		const { db, requests, claimTokens } = createCountingDb({
-			gate: held.promise,
-		});
-		const store = createStore({ db });
-		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
-		await store.claimPartition({ topic, partition: 4 });
-		const drops = store.subjectSnapshots;
-		if (!drops) throw new Error("expected snapshot drops");
-
-		const applied = store.applyDurableMutations({
-			records: [
-				{
-					position: { topic, partition: 4, offset: 0n },
-					mutation: createTrackMutation({
-						state: createState({ balance: 100 }),
-						value: 5,
-					}),
-				},
-			],
-		});
-		await Bun.sleep(1);
-		const first = drops.dropCustomer({
-			topic,
-			partition: 4,
-			customer: customerOf(21),
-		});
-		await store.claimPartition({ topic, partition: 4 });
-		const second = drops.dropCustomer({
-			topic,
-			partition: 4,
-			customer: customerOf(22),
-		});
-		held.resolve();
-		await Promise.all([applied, first, second]);
-
-		expect(
-			requests
-				.filter((request) => request.changes.length === 0)
-				.map((request) =>
-					request.snapshots?.deletes.map((drop) => [
-						drop.customerId,
-						drop.claim?.claimToken,
-					]),
-				),
-		).toEqual([[["cus_21", claimTokens[0]]], [["cus_22", claimTokens[1]]]]);
 	});
 });

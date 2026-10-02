@@ -394,7 +394,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		}
 	});
 
-	test("a drop asked under a claim another owner has since replaced deletes nothing: the new owner's rows survive, nothing moves", async () => {
+	test("a late evict from an owner the partition has left still deletes the row: a DELETE is always safe, and the next load is a full query", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();
 		await insertPartitionProgress({
@@ -404,8 +404,16 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			nextOffset: 40n,
 			claimToken: "owner_a",
 		});
-		const dropUnder = (claimToken: string) =>
-			commitFlush({
+		try {
+			await flushAt({ topic, upserts: [upsertOf({ seeded })] });
+			await claimPartitionProgress({
+				ctx: { db: postgres.db },
+				topic,
+				partition: 5,
+				claimToken: "owner_b",
+			});
+
+			const lateEvict = await commitFlush({
 				ctx: { db: postgres.db },
 				request: {
 					changes: [],
@@ -417,180 +425,27 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 								orgId: seeded.orgId,
 								env: seeded.env,
 								customerId: seeded.identity.customerId,
-								claim: { topic, partition: 5, claimToken },
 							},
 						],
 					},
 				},
 				statementTimeoutMs: 2_000,
 			});
-		try {
-			await flushAt({ topic, upserts: [upsertOf({ seeded })] });
-			await claimPartitionProgress({
-				ctx: { db: postgres.db },
-				topic,
-				partition: 5,
-				claimToken: "owner_b",
-			});
 
-			expect(await dropUnder("owner_a")).toEqual({
-				applied: [],
-				snapshots: { upserted: 0, deleted: 0 },
-			});
-			expect(await readSnapshots({ seeded })).toHaveLength(1);
-			expect(await seeded.readNextOffset({ topic, partition: 5 })).toBe(42n);
-
-			expect(await dropUnder("owner_b")).toEqual({
+			expect(lateEvict).toEqual({
 				applied: [],
 				snapshots: { upserted: 0, deleted: 1 },
 			});
 			expect(await readSnapshots({ seeded })).toEqual([]);
 			expect(await seeded.readNextOffset({ topic, partition: 5 })).toBe(42n);
-		} finally {
-			await seeded.cleanup();
-		}
-	});
-
-	test("a drop queued behind a flush keeps the claim it was asked under: once a new owner claims the partition it lands as zero rows", async () => {
-		const seeded = await seedCustomer({ postgres });
-		const topic = topicOf();
-		const held = Promise.withResolvers<void>();
-		const started = Promise.withResolvers<void>();
-		let flushes = 0;
-		const db: CommitterDb = {
-			readPartitionProgress: (params) =>
-				readPartitionProgress({ ctx: { db: postgres.db }, ...params }),
-			insertPartitionProgress: (params) =>
-				insertPartitionProgress({ ctx: { db: postgres.db }, ...params }),
-			claimPartitionProgress: (params) =>
-				claimPartitionProgress({ ctx: { db: postgres.db }, ...params }),
-			flush: async (request) => {
-				if (flushes++ === 0) {
-					started.resolve();
-					await held.promise;
-				}
-				return commitFlush({
+			expect(
+				await readPartitionProgress({
 					ctx: { db: postgres.db },
-					request,
-					statementTimeoutMs: 2_000,
-				});
-			},
-		};
-		const committer = createCommitter({
-			ctx: { db },
-			config: {
-				concurrency: 1,
-				maxRowsPerFlush: 500,
-				retry: {
-					degradedAfterAttempts: 1,
-					initialBackoffMs: 1,
-					maxBackoffMs: 1,
-				},
-				snapshots: { ...writing, partitionCount: 64 },
-			},
-		});
-		const store = createCommitterStateStore({
-			ctx: { committer, db },
-			config: { subjectSnapshots: writing },
-		});
-		try {
-			await store.claimPartition({ topic, partition: 5 });
-			await store.initializePartition({ topic, partition: 5, nextOffset: 0n });
-			await postgres.db.execute(sql`INSERT INTO subject_snapshots (org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
-				VALUES (${seeded.orgId}, ${seeded.env}, ${seeded.identity.customerId}, '', ${seeded.internalCustomerId}, 5, 64, 1, '{}'::jsonb, 0, 0)`);
-			const drops = store.subjectSnapshots;
-			if (!drops) throw new Error("Expected snapshot drops");
-
-			const bookmarked = store.advanceCommandNextOffset({
-				topic,
-				partition: 5,
-				commandNextOffset: 7n,
-			});
-			await started.promise;
-			const queued = drops.dropCustomer({
-				topic,
-				partition: 5,
-				customer: {
-					orgId: seeded.orgId,
-					env: seeded.env,
-					customerId: seeded.identity.customerId,
-				},
-			});
-			await claimPartitionProgress({
-				ctx: { db: postgres.db },
-				topic,
-				partition: 5,
-				claimToken: "new_owner",
-			});
-			held.resolve();
-
-			await expect(bookmarked).rejects.toBeInstanceOf(
-				FlushBookmarkConflictError,
-			);
-			await queued;
-			expect(await readSnapshots({ seeded })).toHaveLength(1);
-			expect(await seeded.readCommandNextOffset({ topic, partition: 5 })).toBe(
-				null,
-			);
-		} finally {
-			await store.close();
-			await seeded.cleanup();
-		}
-	});
-
-	test("a drop asked under a claim waits behind a reclaim in flight instead of deleting past it", async () => {
-		const seeded = await seedCustomer({ postgres });
-		const topic = topicOf();
-		await insertPartitionProgress({
-			ctx: { db: postgres.db },
-			topic,
-			partition: 5,
-			nextOffset: 40n,
-			claimToken: "owner_a",
-		});
-		const blocker = openFixturePostgres({ databaseUrl: databaseUrl ?? "" });
-		const held = Promise.withResolvers<void>();
-		const locked = Promise.withResolvers<void>();
-		let reclaiming: Promise<void> = Promise.resolve();
-		try {
-			// The row is bookmarked before the reclaim takes its lock, so only the drop below ever waits on it.
-			await flushAt({ topic, upserts: [upsertOf({ seeded })] });
-			reclaiming = blocker.db.transaction(async (tx) => {
-				await tx.execute(
-					sql`UPDATE partition_progress SET claim_token = 'owner_b' WHERE topic = ${topic}`,
-				);
-				locked.resolve();
-				await held.promise;
-			});
-			await locked.promise;
-			await expect(
-				commitFlush({
-					ctx: { db: postgres.db },
-					request: {
-						changes: [],
-						bookmarks: [],
-						snapshots: {
-							upserts: [],
-							deletes: [
-								{
-									orgId: seeded.orgId,
-									env: seeded.env,
-									customerId: seeded.identity.customerId,
-									claim: { topic, partition: 5, claimToken: "owner_a" },
-								},
-							],
-						},
-					},
-					statementTimeoutMs: 200,
+					topic,
+					partition: 5,
 				}),
-			).rejects.toThrow();
-			held.resolve();
-			await reclaiming;
-			expect(await readSnapshots({ seeded })).toHaveLength(1);
+			).toMatchObject({ claimToken: "owner_b" });
 		} finally {
-			held.resolve();
-			await reclaiming.catch(() => undefined);
-			await blocker.close();
 			await seeded.cleanup();
 		}
 	});

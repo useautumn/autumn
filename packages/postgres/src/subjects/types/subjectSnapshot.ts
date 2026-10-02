@@ -22,20 +22,9 @@ export type SubjectSnapshotCustomer = {
 	customerId: string;
 };
 
-/** The partition claim a drop was asked under; its rows go only while that claim still holds the partition. */
-export type SubjectSnapshotClaim = {
-	topic: string;
-	partition: number;
-	claimToken: string;
-};
-
-/** A customer whose rows a flush removes; unclaimed when the flush's own bookmark already proves ownership. */
-export type SubjectSnapshotDelete = SubjectSnapshotCustomer & {
-	claim?: SubjectSnapshotClaim;
-};
-
 /** What one flush does to `subject_snapshots`; a customer is in one list or the other, never both. */
 export type SubjectSnapshotWrites = {
 	upserts: readonly SubjectSnapshotUpsert[];
-	deletes: readonly SubjectSnapshotDelete[];
+	/** A DELETE is always safe to land, so an evict's never waits on a claim: at worst it removes a fresh row. */
+	deletes: readonly SubjectSnapshotCustomer[];
 };
