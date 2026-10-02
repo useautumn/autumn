@@ -1,12 +1,14 @@
 /** Pooled license replacements reset the shared balance by default and carry
  * aggregate usage only when carry_over_usages enables the feature. */
-import { test } from "bun:test";
+import { afterAll, test } from "bun:test";
 import { EntInterval, PooledBalanceResetMode } from "@autumn/shared";
 import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect";
 import { getPooledBalanceDbState } from "@tests/integration/billing/pooled-balances/utils/getPooledBalanceDbState";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
+import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
+import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey";
 import {
 	completeImmediateItemTransition,
 	ITEM_TRANSITION_ENTITY_COUNT,
@@ -20,6 +22,19 @@ const TOTAL_USAGE = ITEM_TRANSITION_ENTITY_USAGES.reduce(
 	(total, usage) => total + usage,
 	0,
 );
+
+afterAll(async () => {
+	const balanceKey = buildSharedFullSubjectBalanceKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId: "license-pooled-carry-customer",
+		featureId: TestFeature.Messages,
+	});
+	console.log(
+		"[pooled-cache-write-trace]",
+		await ctx.redisV2.lrange(`${balanceKey}:pr3977_pooled_cache_trace`, 0, -1),
+	);
+});
 
 const pooledMessages = ({ grant }: { grant: number }) => ({
 	...items.monthlyMessages({ includedUsage: grant }),

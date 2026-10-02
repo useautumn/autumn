@@ -48,6 +48,18 @@ for i = 1, num_balance_keys do
     for j = 1, field_count do
       local field_name = ARGV[argv_index]
       local field_value = ARGV[argv_index + 1]
+      local next_value = cjson.decode(field_value)
+      if type(next_value) == 'table' and next_value.is_pooled_balance == true then
+        local previous_json = redis.call('HGET', balance_key, field_name)
+        local previous_value = previous_json and cjson.decode(previous_json) or {}
+        redis.call('RPUSH', balance_key .. ':pr3977_pooled_cache_trace', cjson.encode({
+          at = redis.call('TIME'),
+          subject_key = subject_key,
+          grant_id = next_value.id,
+          previous_balance = previous_value.balance,
+          next_balance = next_value.balance
+        }))
+      end
       redis.call('HSET', balance_key, field_name, field_value)
       argv_index = argv_index + 2
     end
