@@ -37,7 +37,29 @@ const findProductContext = ({
 	throw new Error(`set_plans cannot find the requested plan for ${segment.id}`);
 };
 
-/** A first-phase plan is attached like any immediate plan; one starting later without early access waits like a scheduled one, and an ongoing one runs from now. */
+/** A plan starting later waits like a scheduled one unless early access opens it; an ongoing one under a later first phase runs from now. */
+const firstPhaseTiming = ({
+	billingContext,
+	startsLater,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	startsLater: boolean;
+}): Partial<AttachBillingContext> => {
+	if (startsLater) {
+		return billingContext.accessStartsAt === undefined
+			? { planTiming: "end_of_cycle" }
+			: {};
+	}
+	if (!firstPhaseStartsInFuture({ billingContext })) return {};
+
+	return {
+		billingStartsAt: undefined,
+		accessStartsAt: undefined,
+		resetCycleAnchorMs: "now",
+	};
+};
+
+/** A first-phase plan is attached like any immediate plan, carrying over the row it replaces. */
 const insertImmediateCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -61,16 +83,7 @@ const insertImmediateCustomerProduct = ({
 			productContext,
 			currentCustomerProductOverride: replacedCustomerProduct,
 		}),
-		...(startsLater &&
-			billingContext.accessStartsAt === undefined && {
-				planTiming: "end_of_cycle",
-			}),
-		...(!startsLater &&
-			firstPhaseStartsInFuture({ billingContext }) && {
-				billingStartsAt: undefined,
-				accessStartsAt: undefined,
-				resetCycleAnchorMs: "now",
-			}),
+		...firstPhaseTiming({ billingContext, startsLater }),
 	};
 	const customerProduct = computeAttachNewCustomerProduct({
 		ctx,
