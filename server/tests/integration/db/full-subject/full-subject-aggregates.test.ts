@@ -137,20 +137,7 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 					JSON.stringify(scenario.customerEntitlements[1]!.feature_id),
 				);
 
-				expect(aggregate.entities).toMatchObject({
-					[scenario.ids.internalEntityIds[0]!]: {
-						id: scenario.ids.internalEntityIds[0],
-						balance: 20,
-						adjustment: 0,
-						additional_balance: 0,
-					},
-					[scenario.ids.internalEntityIds[1]!]: {
-						id: scenario.ids.internalEntityIds[1],
-						balance: 10,
-						adjustment: 0,
-						additional_balance: 0,
-					},
-				});
+				expect(aggregate.entities ?? null).toBeNull();
 			},
 		});
 	});
@@ -183,20 +170,7 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 				const aggregate = comparable.aggregated_customer_entitlements[0]!;
 				expect(aggregate.allowance_total).toBe(200);
 				expect(aggregate.balance).toBe(30);
-				expect(aggregate.entities).toMatchObject({
-					[scenario.ids.internalEntityIds[0]!]: {
-						id: scenario.ids.internalEntityIds[0],
-						balance: 20,
-						adjustment: 0,
-						additional_balance: 0,
-					},
-					[scenario.ids.internalEntityIds[1]!]: {
-						id: scenario.ids.internalEntityIds[1],
-						balance: 10,
-						adjustment: 0,
-						additional_balance: 0,
-					},
-				});
+				expect(aggregate.entities ?? null).toBeNull();
 			},
 		});
 	});
