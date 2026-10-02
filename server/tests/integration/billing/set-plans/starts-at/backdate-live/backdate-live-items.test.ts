@@ -1,7 +1,8 @@
 /**
  * A backdate over a live subscription moves everything on it, unchanged:
  * - an add-on, a prepaid quantity and metered usage carry over; the prepaid quantity isn't
- *   charged again and the usage is billed once, at the old renewal date;
+ *   charged again (the new subscription's first invoice is $0) and the usage is billed once,
+ *   at the old renewal date;
  * - entity plans sharing the subscription all move onto the recreated one, none billed twice.
  */
 
@@ -113,7 +114,8 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			autumn: autumnV1,
-			count: 1,
+			count: 2,
+			latestTotal: 0,
 		});
 
 		await advanceToAnchor({
@@ -128,7 +130,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			autumn: autumnV1,
-			count: 2,
+			count: 3,
 			latestTotal: renewalTotal,
 		});
 		await expectEachPeriodBilledOnce({
