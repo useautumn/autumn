@@ -220,7 +220,7 @@ describe("the writer's snapshot intent", () => {
 			baselineAt: 3_000,
 		});
 		const scope = {
-			state: { subjects, evicting: new Set<string>() },
+			state: { subjects },
 		} as unknown as PartitionWriterScope;
 		const pending = {
 			customerKey,
@@ -239,7 +239,7 @@ describe("the writer's snapshot intent", () => {
 		expect(entry.baselineAt).toBe(2_000);
 	});
 
-	test("an evict disowns the rows before it awaits: a flush built earlier still writes, one built meanwhile deletes, a new read whole writes again", async () => {
+	test("an evict waits for the pins: a record decided on the rows meanwhile still writes them, the rows drop once it is stored, a new read whole writes again", async () => {
 		const { writer, intents, applyGate, track, readWhole } = createWriter();
 		readWhole();
 		const held = Promise.withResolvers<void>();
@@ -248,12 +248,16 @@ describe("the writer's snapshot intent", () => {
 		await before.waitForCommit();
 		const evicted = writer.evict({ customerKey });
 		const meanwhile = track("t2");
+		await meanwhile.waitForCommit();
+		// Still resident: t2 read these rows, so they stay until its flush is stored.
+		expect(writer.readFreshestState({ identity })).not.toBeNull();
 		held.resolve();
 		await before.waitForStore();
 		await meanwhile.waitForStore();
 		await evicted;
 		expect(balanceOf(intents[0])).toEqual([99]);
-		expect(balanceOf(intents[1])).toBe("delete");
+		expect(balanceOf(intents[1])).toEqual([98]);
+		expect(writer.readFreshestState({ identity })).toBeNull();
 
 		readWhole({ balance: 50, baselineAt: 2 });
 		await track("t3").waitForStore();
@@ -262,7 +266,7 @@ describe("the writer's snapshot intent", () => {
 		expect(entry.baselineAt).toBe(2);
 	});
 
-	test("a record the store refused disowns the rows: a record decided on them meanwhile deletes, the next read whole writes", async () => {
+	test("a record the store refused evicts the rows: a record decided on them meanwhile still writes, the drop follows its store, the next read whole writes", async () => {
 		const { writer, intents, applyGate, track, readWhole, rejectCommand } =
 			createWriter();
 		readWhole();
@@ -275,7 +279,8 @@ describe("the writer's snapshot intent", () => {
 		held.resolve();
 		await meanwhile.waitForStore();
 
-		expect(balanceOf(intents[1])).toBe("delete");
+		// Written from memory the refusal invalidated; the evict's DELETE follows it on the lane.
+		expect(balanceOf(intents[1])).toEqual([98]);
 		expect(writer.readFreshestState({ identity })).toBeNull();
 		readWhole({ balance: 100, baselineAt: 3 });
 		await track("t3").waitForStore();

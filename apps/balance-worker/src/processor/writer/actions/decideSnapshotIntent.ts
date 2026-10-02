@@ -48,10 +48,9 @@ function extend({
 	pending: PendingMutation;
 }): SnapshotIntentEntry {
 	const { state } = scope;
-	const { customerKey, mutation } = pending;
-	// Rows being disowned, or inserted by this very statement, are not rows the statement's snapshot can see.
-	if (state.evicting.has(customerKey) || insertsSubjectRows({ mutation }))
-		return "delete";
+	const { mutation } = pending;
+	// Rows inserted by this very statement are not rows the statement's snapshot can see.
+	if (insertsSubjectRows({ mutation })) return "delete";
 	const bySubject = new Map<string, SubjectState>();
 	let baselineAt = sofar?.baselineAt ?? Number.POSITIVE_INFINITY;
 	for (const projected of sofar?.states ?? [])
