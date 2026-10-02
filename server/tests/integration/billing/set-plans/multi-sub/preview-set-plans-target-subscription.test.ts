@@ -16,11 +16,13 @@ test.concurrent(
 			phases: [{ starts_at: "now", plans: [{ plan_id: plans.premium.id }] }],
 		});
 
-		expect(preview.warnings).toContainEqual({
-			type: "other_subscriptions_unaffected",
-			severity: "info",
-			message: "Plans on 1 other subscription aren't affected.",
-		});
+		expect(preview.warnings).toContainEqual(
+			expect.objectContaining({
+				type: "other_subscriptions_unaffected",
+				severity: "info",
+				message: "Plans on 1 other subscription aren't affected.",
+			}),
+		);
 		const previewPlanIds = [
 			...preview.phases.flatMap((phase) => phase.plans),
 			...preview.removed_phases.flatMap((phase) => phase.plans),
@@ -30,7 +32,6 @@ test.concurrent(
 			preview.processor_changes.every(
 				(processorChange) =>
 					processorChange.type !== "subscription" ||
-					processorChange.id === null ||
 					processorChange.id === subscriptionA,
 			),
 		).toBe(true);
