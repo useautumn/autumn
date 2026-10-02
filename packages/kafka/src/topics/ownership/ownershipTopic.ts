@@ -14,6 +14,7 @@ import {
 	type OwnershipRecord,
 	preparingOwnershipRecordSchema,
 	readyOwnershipRecordSchema,
+	releasedOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
 } from "./types/ownershipRecord.js";
 
@@ -37,6 +38,16 @@ function parseUnowned({
 	return parsed.data;
 }
 
+function parseReleased({
+	input,
+}: {
+	input: unknown;
+}): Extract<OwnershipRecord, { type: "released" }> {
+	const parsed = releasedOwnershipRecordSchema.safeParse(input);
+	if (!parsed.success) throw new InvalidRecordError({ cause: parsed.error });
+	return parsed.data;
+}
+
 function parseReady({
 	input,
 }: {
@@ -47,12 +58,14 @@ function parseReady({
 	return parsed.data;
 }
 
-/** Key scheme on a compacted topic: `claimed` and `unowned` share the
+/** Key scheme on a compacted topic: `claimed` (and legacy `unowned`) share the
  *  partition's key, so compaction keeps only the latest word on who owns it.
  *  A handoff signal (`ready`, `draining`) is keyed `<partition>:<type>` so it only
  *  ever compacts against its own kind; under the owner's key it would replace
  *  the current `claimed` once a segment rolled, and a cold-starting owner
- *  table would see no owner while the predecessor was still serving. */
+ *  table would see no owner while the predecessor was still serving. A `released`
+ *  is keyed per releasing worker for the same reason: a release from a worker
+ *  that already lost the partition is ignored live, so it must not outlive the claim. */
 function parseDraining({
 	input,
 }: {
@@ -76,6 +89,8 @@ function parsePreparing({
 function ownershipRecordToKey({ record }: { record: OwnershipRecord }): string {
 	if (record.type === "claimed" || record.type === "unowned")
 		return record.partition.toString();
+	if (record.type === "released")
+		return `${record.partition}:released:${record.endpoint}`;
 	return `${record.partition}:${record.type}`;
 }
 
@@ -88,6 +103,8 @@ function parseOwnershipPayload({
 			return parseClaimed({ input: payload });
 		case "unowned":
 			return parseUnowned({ input: payload });
+		case "released":
+			return parseReleased({ input: payload });
 		case "ready":
 			return parseReady({ input: payload });
 		case "draining":
@@ -102,6 +119,7 @@ function parseOwnershipPayload({
 const OWNERSHIP_RECORD_TYPES = new Set<OwnershipRecord["type"]>([
 	"claimed",
 	"unowned",
+	"released",
 	"ready",
 	"draining",
 	"preparing",

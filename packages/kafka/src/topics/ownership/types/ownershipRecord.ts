@@ -28,6 +28,17 @@ export const unownedOwnershipRecordSchema = z
 	})
 	.strict();
 
+/** A worker giving up a partition, honoured only when it names the current holder. */
+export const releasedOwnershipRecordSchema = z
+	.object({
+		schemaVersion: z.literal(1),
+		type: z.literal("released"),
+		partition: partitionSchema,
+		endpoint: nonEmptyStringSchema,
+		releasedAt: z.number().int().nonnegative(),
+	})
+	.strict();
+
 /** A successor has prepared the partition and can take it; the owner table ignores it. */
 export const readyOwnershipRecordSchema = z
 	.object({
@@ -70,6 +81,7 @@ export const preparingOwnershipRecordSchema = z
 export const ownershipRecordSchema = z.discriminatedUnion("type", [
 	claimedOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
+	releasedOwnershipRecordSchema,
 	readyOwnershipRecordSchema,
 	drainingOwnershipRecordSchema,
 	preparingOwnershipRecordSchema,

@@ -23,6 +23,7 @@ function releaseApplies({
 	record: OwnershipRecord;
 	current: PartitionOwner | undefined;
 }): boolean {
+	if (record.type === "released") return current?.endpoint === record.endpoint;
 	if (record.type !== "unowned") return false;
 	if (record.endpoint === undefined) return true;
 	return current?.endpoint === record.endpoint;
