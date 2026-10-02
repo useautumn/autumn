@@ -1,5 +1,10 @@
 import { expect } from "bun:test";
-import { msToSeconds, secondsToMs } from "@autumn/shared";
+import {
+	addInterval,
+	BillingInterval,
+	msToSeconds,
+	secondsToMs,
+} from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { TestFeature } from "@tests/setup/v2Features";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -133,6 +138,63 @@ const lineFallsIn = ({
 };
 
 export type BilledPeriod = { startMs: number; endMs: number; total: number };
+
+/**
+ * What a backdate bills for the monthly cycles before the live start that it reaches: each in full
+ * for bill_difference, otherwise pro rata for the days it covers.
+ */
+export const expectedBackdateGapCharge = ({
+	monthlyPrice,
+	backdatedStartMs,
+	liveStartMs,
+	prorationBehavior,
+}: {
+	monthlyPrice: number;
+	backdatedStartMs: number;
+	liveStartMs: number;
+	prorationBehavior: "prorate_immediately" | "bill_difference";
+}) => {
+	let cycles = 1;
+	while (
+		addInterval({
+			from: liveStartMs,
+			interval: BillingInterval.Month,
+			intervalCount: -cycles,
+		}) > backdatedStartMs
+	) {
+		cycles += 1;
+	}
+	const wholeCycles = new Decimal(monthlyPrice).mul(cycles);
+	if (prorationBehavior === "bill_difference") return wholeCycles.toNumber();
+
+	const cyclesStartMs = addInterval({
+		from: liveStartMs,
+		interval: BillingInterval.Month,
+		intervalCount: -cycles,
+	});
+	return wholeCycles
+		.mul(liveStartMs - backdatedStartMs)
+		.div(liveStartMs - cyclesStartMs)
+		.toDP(2)
+		.toNumber();
+};
+
+/** The proration of a monthly price over the rest of a cycle from now. */
+export const expectedRestOfCycle = ({
+	monthlyPrice,
+	nowMs,
+	cycleStartMs,
+	cycleEndMs,
+}: {
+	monthlyPrice: number;
+	nowMs: number;
+	cycleStartMs: number;
+	cycleEndMs: number;
+}) =>
+	new Decimal(monthlyPrice)
+		.mul(cycleEndMs - nowMs)
+		.div(cycleEndMs - cycleStartMs)
+		.toNumber();
 
 /**
  * Across every invoice the customer has, on the replaced and the recreated subscription alike,
