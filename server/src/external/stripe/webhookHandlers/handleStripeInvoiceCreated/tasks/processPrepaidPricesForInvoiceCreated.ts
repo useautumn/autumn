@@ -10,10 +10,12 @@ import {
 	getResetBalancesUpdate,
 	getRolloverUpdates,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	isEntityScopedCusEnt,
 	isPooledBalanceSourceCustomerEntitlement,
 	notNullish,
 	secondsToMs,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { isStripeInvoiceForNewPeriod } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
@@ -97,7 +99,18 @@ const processPrepaidPrice = ({
 				(options?.quantity ?? 0) - (options?.upcoming_quantity ?? 0);
 			plan.updateCustomerEntitlement({
 				customerEntitlement,
-				balanceChange: -difference,
+				...(isEntityScopedCusEnt(customerEntitlement)
+					? {
+							entityBalanceChanges: Object.fromEntries(
+								Object.keys(customerEntitlement.entities ?? {}).map(
+									(entityId) => [
+										entityId,
+										new Decimal(difference).mul(billingUnits).neg().toNumber(),
+									],
+								),
+							),
+						}
+					: { balanceChange: -difference }),
 			});
 			return;
 		}
