@@ -5,11 +5,30 @@ import {
 	msToSeconds,
 } from "@autumn/shared";
 import { triggerSubscriptionCreated } from "@tests/integration/billing/attach/params/start-date/utils";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { addHours, addMinutes } from "date-fns";
 import type Stripe from "stripe";
+import { scheduleSubscriptionId } from "@/internal/billing/v2/actions/setPlans/setup/splitReplacedStripeSubscription";
 import { CusService } from "@/internal/customers/CusService";
+
+/** The plans the future-start tests move between: a main plan, its upgrade, and an add-on. */
+export const futureStartProducts = () => ({
+	pro: products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	}),
+	premium: products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	}),
+	addOn: products.recurringAddOn({
+		id: "addon",
+		items: [items.monthlyWords({ includedUsage: 50 })],
+	}),
+});
 
 /** The customer's row for a plan in a scope, skipping the expired rows a set_plans call leaves behind. */
 export const findLiveCustomerProduct = async ({
@@ -67,11 +86,6 @@ export const expectFutureStartScheduleCorrect = async ({
 	}
 	return schedule;
 };
-
-const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
-	typeof schedule.subscription === "string"
-		? schedule.subscription
-		: schedule.subscription?.id;
 
 /** Moves the test clock past the start, then delivers the subscription Stripe created to the subscription.created handler. */
 export const activateFutureStart = async ({

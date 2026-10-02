@@ -9,18 +9,14 @@ import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addDays } from "date-fns";
-import {
-	fetchLiveCustomerProduct,
-	initMultiSubScenario,
-} from "../multi-sub/multiSubScenario";
+import { initMultiSubScenario } from "../multi-sub/multiSubScenario";
 import {
 	expectFutureStartScheduleCorrect,
 	findLiveCustomerProduct,
+	futureStartProducts,
 } from "./utils/futureStartUtils";
 
 test.concurrent(
@@ -29,7 +25,7 @@ test.concurrent(
 		const customerId = "set-plans-future-start-targeted";
 		const { autumnV2_4, ctx, advancedTo, subscriptionA, subscriptionB, plans } =
 			await initMultiSubScenario({ customerId });
-		const seatsBefore = await fetchLiveCustomerProduct({
+		const seatsBefore = await findLiveCustomerProduct({
 			ctx,
 			customerId,
 			productId: plans.seats.id,
@@ -56,13 +52,13 @@ test.concurrent(
 			}),
 			startsAt,
 		});
-		const seatsAfter = await fetchLiveCustomerProduct({
+		const seatsAfter = await findLiveCustomerProduct({
 			ctx,
 			customerId,
 			productId: plans.seats.id,
 		});
-		expect(seatsAfter?.id).toBe(seatsBefore?.id);
-		expect(seatsAfter?.subscription_ids).toEqual([subscriptionB]);
+		expect(seatsAfter.id).toBe(seatsBefore.id);
+		expect(seatsAfter.subscription_ids).toEqual([subscriptionB]);
 		expect(
 			(await ctx.stripeCli.subscriptions.retrieve(subscriptionA)).status,
 		).toBe("canceled");
@@ -75,14 +71,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: another entity's plan keeps the shared subscription, which the new plan joins at the start")}`,
 	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
+		const { pro, premium } = futureStartProducts();
 		const { customerId, autumnV2_2, ctx, advancedTo, entities } =
 			await initScenario({
 				customerId: "set-plans-future-start-entities",

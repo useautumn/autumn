@@ -8,31 +8,19 @@ import { expect, test } from "bun:test";
 import { CusProductStatus, type SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import {
 	expectFutureStartScheduleCorrect,
 	findLiveCustomerProduct,
+	futureStartProducts,
 } from "./utils/futureStartUtils";
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: a running ongoing add-on keeps running while the first phase starts later")}`,
 	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
-		const addOn = products.recurringAddOn({
-			id: "addon",
-			items: [items.monthlyWords({ includedUsage: 50 })],
-		});
+		const { pro, premium, addOn } = futureStartProducts();
 		const { customerId, autumnV2_2, ctx, advancedTo } = await initScenario({
 			customerId: "set-plans-future-start-ongoing-running",
 			setup: [
@@ -90,14 +78,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: a new ongoing add-on is attached and invoiced now while the first phase starts later")}`,
 	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const addOn = products.recurringAddOn({
-			id: "addon",
-			items: [items.monthlyWords({ includedUsage: 50 })],
-		});
+		const { pro, addOn } = futureStartProducts();
 		const { customerId, autumnV1, autumnV2_2, ctx, advancedTo } =
 			await initScenario({
 				customerId: "set-plans-future-start-ongoing-new",

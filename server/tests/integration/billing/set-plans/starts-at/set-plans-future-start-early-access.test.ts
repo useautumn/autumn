@@ -14,8 +14,6 @@ import {
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -24,6 +22,7 @@ import {
 	activateFutureStart,
 	expectFutureStartScheduleCorrect,
 	findLiveCustomerProduct,
+	futureStartProducts,
 } from "./utils/futureStartUtils";
 
 const TRACKED_USAGE = 30;
@@ -31,10 +30,7 @@ const TRACKED_USAGE = 30;
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: early access is active now and keeps its balance when billing starts")}`,
 	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
+		const { pro } = futureStartProducts();
 		const { customerId, autumnV1, autumnV2_2, ctx, advancedTo, testClockId } =
 			await initScenario({
 				customerId: "set-plans-future-start-early-access",
