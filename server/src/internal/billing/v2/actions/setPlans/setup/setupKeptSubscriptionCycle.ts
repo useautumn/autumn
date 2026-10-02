@@ -2,11 +2,10 @@ import {
 	type BillingBehavior,
 	type CreateScheduleBillingContext,
 	isCustomerProductOnStripeSubscription,
-	secondsToMs,
 } from "@autumn/shared";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 
 type KeptSubscriptionCycle = Partial<
 	Pick<
@@ -29,12 +28,12 @@ export const setupKeptSubscriptionCycle = ({
 	requestedProrationBehavior?: BillingBehavior;
 }): KeptSubscriptionCycle => {
 	const { replacedStripeSubscription, currentEpochMs } = billingContext;
-	if (!replacedStripeSubscription?.items.data.length) return {};
+	if (!replacedStripeSubscription) return {};
 
-	const periodEndMs = secondsToMs(
-		getLatestPeriodEnd({ sub: replacedStripeSubscription }),
-	);
-	if (periodEndMs <= currentEpochMs) return {};
+	const periodEndMs = replacedSubscriptionPeriodEndMs({
+		replacedStripeSubscription,
+	});
+	if (periodEndMs === undefined || periodEndMs <= currentEpochMs) return {};
 
 	if (isBackdateRecreate({ billingContext })) {
 		return { billingCycleAnchorMs: periodEndMs, requestedProrationBehavior };

@@ -120,6 +120,11 @@ const BACKDATE_CONFLICT_COPY: Record<
 		subject: "A subscription with a schedule can't be backdated to",
 		hint: "Keep the first phase on its current start date.",
 	},
+	period_ended: {
+		subject:
+			"The subscription's paid period has already ended, so it can't be backdated to",
+		hint: "Collect the overdue invoice first, or start the first phase now.",
+	},
 	billing_cycle_anchor: {
 		subject: "The billing cycle anchor can't change when backdating to",
 		hint: "Billing continues on the current cycle, so remove the anchor.",

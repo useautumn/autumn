@@ -1,7 +1,7 @@
 /**
  * A backdate over a healthy live subscription recreates it, so anything the recreate would
- * lose or rebill is rejected with structured details: a trial, Stripe Checkout, a changed
- * anchor, a start too far back, a plan on it the request doesn't cover, or a schedule.
+ * lose or rebill is rejected with structured details: a trial, Stripe Checkout, a paid period
+ * already over, a changed anchor, a start too far back, a plan it doesn't cover, or a schedule.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -49,11 +49,19 @@ const rowOnLiveSubscription = ({
 		startsAt,
 	});
 
-const liveSubscription = (status: Stripe.Subscription.Status = "active") =>
+const liveSubscription = (
+	status: Stripe.Subscription.Status = "active",
+	periodEndMs: number | null = PERIOD_END,
+) =>
 	({
 		id: "sub_live",
 		status,
-		items: { data: [{ current_period_end: msToSeconds(PERIOD_END) }] },
+		items: {
+			data:
+				periodEndMs === null
+					? []
+					: [{ current_period_end: msToSeconds(periodEndMs) }],
+		},
 	}) as Stripe.Subscription;
 
 const backdateContext = (
@@ -192,6 +200,30 @@ describe(
 			).toEqual(conflict("too_far_back", { starts_at: startsAt }));
 		});
 
+		test("a past_due subscription whose paid period already ended is rejected", () => {
+			expect(
+				rejectionOf({
+					billingContext: backdateContext({
+						replacedStripeSubscription: liveSubscription(
+							"past_due",
+							NOW - ms.days(1),
+						),
+					}),
+				}),
+			).toEqual(conflict("period_ended"));
+		});
+
+		test("a subscription with no items has no paid period to continue, rather than a misread anchor", () => {
+			expect(
+				rejectionOf({
+					billingContext: backdateContext({
+						replacedStripeSubscription: liveSubscription("active", null),
+						requestedBillingCycleAnchor: PERIOD_END,
+					}),
+				}),
+			).toEqual(conflict("period_ended"));
+		});
+
 		test("a plan on the subscription the request doesn't cover is rejected", () => {
 			const addOn = rowOnLiveSubscription({ id: "addon" });
 			expect(
@@ -229,6 +261,35 @@ describe(
 					}),
 				}),
 			).toBeUndefined();
+		});
+
+		test("a replayed start between an older and a newer plan's start predates the newer plan", () => {
+			const betweenStarts = NOW - ms.days(30);
+			expect(
+				rejectionOf({
+					billingContext: backdateContext({
+						replacedStripeSubscription: undefined,
+						subscriptionBackdateStartMs: undefined,
+						stripeSubscription: liveSubscription(),
+						stripeSubscriptionSchedule: {
+							id: "sub_sched_live",
+							subscription: "sub_live",
+						} as Stripe.SubscriptionSchedule,
+						immediatePhase: { starts_at: betweenStarts, plans: [] },
+						fullCustomer: {
+							customer_products: [
+								rowOnLiveSubscription({
+									id: "pro",
+									startsAt: NOW - ms.days(60),
+								}),
+								rowOnLiveSubscription({ id: "addon" }),
+							],
+						} as CreateScheduleBillingContext["fullCustomer"],
+					}),
+				}),
+			).toEqual(
+				conflict("subscription_schedule", { starts_at: betweenStarts }),
+			);
 		});
 	},
 );

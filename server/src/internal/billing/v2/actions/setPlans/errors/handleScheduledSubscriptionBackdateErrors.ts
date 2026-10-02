@@ -6,7 +6,7 @@ import { FIRST_PHASE_TOLERANCE_MS } from "../setup/classifyFirstPhaseStart";
 import { filterCustomerProductsInStripeSubscriptionScope } from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
 import { setPlansError } from "./setPlansError";
 
-/** Re-saving a schedule replays its started phase's date, which never predates the plans that phase runs. */
+/** Re-saving a schedule replays its started phase's date, which never predates any plan that phase runs. */
 const startsBeforeLivePlans = ({
 	billingContext,
 }: {
@@ -21,7 +21,7 @@ const startsBeforeLivePlans = ({
 	if (liveStarts.length === 0) return false;
 
 	return (
-		Math.min(...liveStarts) - billingContext.immediatePhase.starts_at >
+		Math.max(...liveStarts) - billingContext.immediatePhase.starts_at >
 		FIRST_PHASE_TOLERANCE_MS
 	);
 };
