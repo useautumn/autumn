@@ -280,6 +280,34 @@ describe(chalk.yellowBright("setupSetPlansTimeline"), () => {
 		expect(describeOperations(timeline.diff)).toEqual(["insert:sso@B"]);
 	});
 
+	test("an ongoing plan runs from now while the first phase starts later", () => {
+		const futureStart = (existing: FullCusProduct[]) => ({
+			...buildContext({
+				existing,
+				opening: [{ fullProduct: pro }, { fullProduct: sso, ongoing: true }],
+			}),
+			immediatePhase: { starts_at: PHASE_B, plans: [] },
+		});
+
+		const timeline = setupSetPlansTimeline({
+			ctx,
+			billingContext: futureStart([]),
+			params: { undeclared_plans: "end" },
+		});
+		expect(
+			timeline.desired.segments.map(
+				({ planId, startsAt, endsAt }) =>
+					`${planId}:${momentName(startsAt)}-${momentName(endsAt)}`,
+			),
+		).toEqual(["pro:B-never", "sso:now-never"]);
+		expect(
+			operationsFor({
+				billingContext: futureStart([running({ product: sso })]),
+				undeclared: "end",
+			}),
+		).toEqual(["insert:pro@B"]);
+	});
+
 	test("a subscription id a later phase gives an unchanged plan still clashes with a running row", () => {
 		const ssoWithId = { ...running({ product: sso }), external_id: "sub_y" };
 		const timeline = setupSetPlansTimeline({

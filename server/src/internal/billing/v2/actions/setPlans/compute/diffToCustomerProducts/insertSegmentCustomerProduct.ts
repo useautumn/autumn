@@ -8,6 +8,7 @@ import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/a
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { initScheduledCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initScheduledCustomerProduct";
+import { firstPhaseStartsInFuture } from "../../setup/classifyFirstPhaseStart";
 import { startsInFuture } from "../../timeline/timelineGuards";
 import type { ResolvedSegment } from "../../timeline/types/timelineDiff";
 
@@ -36,7 +37,7 @@ const findProductContext = ({
 	throw new Error(`set_plans cannot find the requested plan for ${segment.id}`);
 };
 
-/** A first-phase plan is attached like any immediate plan; one starting later without early access waits like a scheduled one. */
+/** A first-phase plan is attached like any immediate plan; one starting later without early access waits like a scheduled one, and an ongoing one runs from now. */
 const insertImmediateCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -63,6 +64,12 @@ const insertImmediateCustomerProduct = ({
 		...(startsLater &&
 			billingContext.accessStartsAt === undefined && {
 				planTiming: "end_of_cycle",
+			}),
+		...(!startsLater &&
+			firstPhaseStartsInFuture({ billingContext }) && {
+				billingStartsAt: undefined,
+				accessStartsAt: undefined,
+				resetCycleAnchorMs: "now",
 			}),
 	};
 	const customerProduct = computeAttachNewCustomerProduct({
