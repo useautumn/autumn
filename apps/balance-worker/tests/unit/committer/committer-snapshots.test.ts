@@ -197,8 +197,14 @@ describe("committer subject snapshots", () => {
 		expect(requests[1]).not.toHaveProperty("snapshots");
 	});
 
-	test("a state over the size cap deletes its customer instead, and is counted", async () => {
-		const { db, requests } = createRecordingDb();
+	test("a state over the size cap deletes its customer instead, and is counted once the flush lands, not per attempt", async () => {
+		let transientFailures = 1;
+		const { db, requests } = createRecordingDb({
+			failWhen: () =>
+				transientFailures-- > 0
+					? Object.assign(new Error("connection reset"), { errno: "08006" })
+					: null,
+		});
 		const capped: number[] = [];
 		const committer = committerFor({
 			db,
@@ -223,8 +229,9 @@ describe("committer subject snapshots", () => {
 			snapshotIntent: writing(huge, small),
 		});
 
-		expect(deletedCustomers(requests[0])).toEqual(["cus_huge"]);
-		expect(upsertedKeys(requests[0])).toEqual(["cus_small:"]);
+		expect(requests).toHaveLength(2);
+		expect(deletedCustomers(requests[1])).toEqual(["cus_huge"]);
+		expect(upsertedKeys(requests[1])).toEqual(["cus_small:"]);
 		expect(capped).toEqual([1]);
 	});
 
@@ -246,8 +253,21 @@ describe("committer subject snapshots", () => {
 			customerEntitlements: [createCustomerEntitlement({ id: poisonId })],
 		});
 		const fine = createState({ identity: identityOf("cus_a") });
+		// The lane is busy with a held flush while both calls queue, so they land in one flush together.
+		const gate = Promise.withResolvers<void>();
+		const flush = db.flush;
+		db.flush = async (request) => {
+			await gate.promise;
+			return flush(request);
+		};
+		const held = committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [trackRecord({ customerId: "cus_0", offset: 0n, partition: 0 })],
+		});
 
-		const [a, x] = await Promise.all([
+		const landing = Promise.all([
 			committer.apply({
 				topic,
 				partition: 1,
@@ -267,11 +287,20 @@ describe("committer subject snapshots", () => {
 				snapshotIntent: writing(poison),
 			}),
 		]);
+		gate.resolve();
+		await held;
+		const [a, x] = await landing;
 
 		expect(a).toEqual({ nextOffset: 11n });
 		expect(x).toEqual({ nextOffset: 21n });
-		const landedA = requests.filter((r) => upsertedKeys(r).includes("cus_a:"));
-		expect(landedA.length).toBeGreaterThanOrEqual(1);
+		const shared = requests[1];
+		expect(shared?.bookmarks.map((b) => b.partition)).toEqual([1, 2]);
+		expect(upsertedKeys(shared)).toEqual(["cus_a:", "cus_x:"]);
+		const landedA = requests
+			.slice(2)
+			.filter((r) => upsertedKeys(r).includes("cus_a:"));
+		expect(landedA).toHaveLength(1);
+		expect(landedA[0]?.bookmarks.map((b) => b.partition)).toEqual([1]);
 		const landedX = requests.filter((r) =>
 			deletedCustomers(r).includes("cus_x"),
 		);

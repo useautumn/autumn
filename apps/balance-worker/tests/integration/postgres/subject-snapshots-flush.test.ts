@@ -5,6 +5,7 @@ import {
 	claimPartitionProgress,
 	commitFlush,
 	FlushBookmarkConflictError,
+	flushSql,
 	insertPartitionProgress,
 	type PostgresClient,
 	readPartitionProgress,
@@ -508,6 +509,11 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						entityId: "seat_gone",
 						internalEntityId: "ent_int_never_existed",
 					}),
+					{
+						...upsertOf({ seeded }),
+						customerId: "cus_gone",
+						internalCustomerId: "cus_int_never_existed",
+					},
 				],
 			});
 
@@ -515,6 +521,11 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			expect(
 				(await readSnapshots({ seeded })).map((row) => row.entity_id),
 			).toEqual([""]);
+			expect(
+				await postgres.db.execute(
+					sql`SELECT 1 FROM subject_snapshots WHERE org_id = ${seeded.orgId} AND env = ${seeded.env} AND customer_id = 'cus_gone'`,
+				),
+			).toHaveLength(0);
 			expect(await seeded.readNextOffset({ topic, partition: 5 })).toBe(42n);
 		} finally {
 			await seeded.cleanup();
@@ -597,12 +608,22 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						env: "live",
 						customer_id: `cus_${index * 50 + 1}`,
 					}));
-					const rows = (await tx.execute(sql`EXPLAIN (FORMAT JSON)
-						DELETE FROM subject_snapshots s
-						USING jsonb_to_recordset(${JSON.stringify(deletes)}::text::jsonb) AS d(org_id text, env text, customer_id text)
-						WHERE s.org_id = d.org_id COLLATE "C"
-							AND s.env = d.env COLLATE "C"
-							AND s.customer_id = d.customer_id COLLATE "C"`)) as unknown as {
+					// The statement an evict-only flush sends, so the plan is production's.
+					const statement = flushSql({
+						changes: [],
+						bookmarks: [],
+						snapshots: {
+							upserts: [],
+							deletes: deletes.map((d) => ({
+								orgId: d.org_id,
+								env: d.env,
+								customerId: d.customer_id,
+							})),
+						},
+					});
+					const rows = (await tx.execute(
+						sql`EXPLAIN (FORMAT JSON) ${statement}`,
+					)) as unknown as {
 						"QUERY PLAN": unknown;
 					}[];
 					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);

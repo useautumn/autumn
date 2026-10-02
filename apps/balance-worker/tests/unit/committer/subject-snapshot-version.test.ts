@@ -5,12 +5,16 @@ import { subjectStateSchema } from "../../../../../packages/balance-engine/src/m
 
 /** Every shape SubjectState has had, by the version written beside it. A new shape is a new entry with a new version. */
 const VERSION_BY_SCHEMA_SHA256: Record<string, number> = {
-	"8312cc467867b650a6ed2e5d04c4db9b41184535708b796f2de1e193bce258f8": 1,
+	"3c3a4d72a84befab0db7be7952b5dc73a1b323eb7ac5c09dc96f2324b275e060": 1,
 };
 
+// Output, not input: a snapshot serialises the parsed state, where defaulted fields are present.
 const currentSchemaSha256 = () => {
 	const schema = JSON.stringify(
-		z.toJSONSchema(subjectStateSchema, { io: "input", unrepresentable: "any" }),
+		z.toJSONSchema(subjectStateSchema, {
+			io: "output",
+			unrepresentable: "any",
+		}),
 	);
 	return new Bun.CryptoHasher("sha256").update(schema).digest("hex");
 };

@@ -21,7 +21,7 @@ export type FlushRequest = {
 	snapshots?: SubjectSnapshotWrites;
 };
 
-/** `applied[i]` answers for `changes[i]`, folded or not; bookmarks are all-or-nothing. Snapshot counts come back only when the flush wrote any. */
+/** `applied[i]` answers for `changes[i]`, folded or not; bookmarks are all-or-nothing. Snapshot counts come back only when snapshot writes were requested. */
 export type FlushResult = {
 	applied: boolean[];
 	snapshots?: { upserted: number; deleted: number };
