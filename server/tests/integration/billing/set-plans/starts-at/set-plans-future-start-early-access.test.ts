@@ -22,7 +22,7 @@ import {
 	activateFutureStart,
 	expectFutureStartScheduleCorrect,
 	findLiveCustomerProduct,
-	futureStartProducts,
+	startsAtProducts,
 } from "./utils/futureStartUtils";
 
 const TRACKED_USAGE = 30;
@@ -30,7 +30,7 @@ const TRACKED_USAGE = 30;
 test.concurrent(
 	`${chalk.yellowBright("set-plans starts_at: early access is active now and keeps its balance when billing starts")}`,
 	async () => {
-		const { pro } = futureStartProducts();
+		const { pro } = startsAtProducts();
 		const { customerId, autumnV1, autumnV2_2, ctx, advancedTo, testClockId } =
 			await initScenario({
 				customerId: "set-plans-future-start-early-access",

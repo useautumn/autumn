@@ -14,18 +14,13 @@ import type Stripe from "stripe";
 import { scheduleSubscriptionId } from "@/internal/billing/v2/actions/setPlans/setup/splitReplacedStripeSubscription";
 import { CusService } from "@/internal/customers/CusService";
 
-/** The plans the future-start tests move between: a main plan, its upgrade, and an add-on. */
-export const futureStartProducts = () => ({
-	pro: products.pro({
-		id: "pro",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	}),
+/** The plans the starts_at tests move between: a main plan, its upgrade, and an add-on. */
+export const startsAtProducts = () => ({
+	pro: products.pro({ items: [items.monthlyMessages({ includedUsage: 100 })] }),
 	premium: products.premium({
-		id: "premium",
 		items: [items.monthlyMessages({ includedUsage: 500 })],
 	}),
 	addOn: products.recurringAddOn({
-		id: "addon",
 		items: [items.monthlyWords({ includedUsage: 50 })],
 	}),
 });
