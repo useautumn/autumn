@@ -1,6 +1,6 @@
 import type { SubjectState } from "@autumn/balance-engine";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
-import type { SubjectMap } from "./types/subjectMap.js";
+import type { OnSubjectEvicted, SubjectMap } from "./types/subjectMap.js";
 
 /** The bound a map falls back to when no worker budget is handed in: the fixed per-partition size prod ran before the budget existed. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
@@ -77,8 +77,10 @@ export const reweighSubjectState = ({
 
 export const createSubjectMap = ({
 	maxBytes = SUBJECT_MAP_MAX_BYTES,
+	onEvicted,
 }: {
 	maxBytes?: number | (() => number);
+	onEvicted?: OnSubjectEvicted;
 } = {}): SubjectMap => {
 	if (typeof maxBytes === "number" && !(maxBytes > 0))
 		throw new RangeError("maxBytes must be positive");
@@ -207,26 +209,35 @@ export const createSubjectMap = ({
 			unindex({ subjectKey, customerKey: entry.customerKey });
 	};
 
+	// Only an evict's drop: a drop for space leaves rows Postgres still holds true, so nothing is owed for it.
+	const settleEvict = ({ customerKey }: { customerKey: string }) => {
+		if (!subjectKeysByCustomer.has(customerKey)) onEvicted?.({ customerKey });
+	};
+
 	const unpin = ({ subjectKey }: { subjectKey: string }) => {
 		const entry = entries.get(subjectKey);
 		if (!entry || entry.pins === 0) return;
 		entry.pins -= 1;
-		if (entry.pins === 0 && entry.evictOnUnpin)
+		if (entry.pins === 0 && entry.evictOnUnpin) {
 			dropState({ subjectKey, entry });
+			if (entry.customerKey !== null)
+				settleEvict({ customerKey: entry.customerKey });
+		}
 	};
 
 	const readBaselineAt = ({ subjectKey }: { subjectKey: string }) =>
 		entries.get(subjectKey)?.baselineAt ?? null;
 
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
-		const keys = subjectKeysByCustomer.get(customerKey);
-		if (!keys) return;
-		for (const subjectKey of [...keys]) {
+		for (const subjectKey of [
+			...(subjectKeysByCustomer.get(customerKey) ?? []),
+		]) {
 			const entry = entries.get(subjectKey);
 			if (!entry) continue;
 			if (entry.pins > 0) entry.evictOnUnpin = true;
 			else dropState({ subjectKey, entry });
 		}
+		settleEvict({ customerKey });
 	};
 
 	const clear = () => {

@@ -36,20 +36,11 @@ export async function executeCommand<Decision>({
 		return Promise.resolve();
 	}
 
-	// A queued evict's snapshot DELETE settles with the batch, like its log: awaited per record, a storm would serialize.
-	function evict(params: Parameters<PartitionWriter["evict"]>[0]) {
-		if (!deferredLogs) return scope.ctx.writer.evict(params);
-		return scope.ctx.writer.evict({
-			...params,
-			deferSnapshotDelete: (deleted) => deferredLogs.push(deleted),
-		});
-	}
-
 	const result = await run({
 		...scope,
 		ctx: {
 			...scope.ctx,
-			writer: { ...scope.ctx.writer, decide, log, evict },
+			writer: { ...scope.ctx.writer, decide, log },
 		},
 	});
 	// Joined and skipped commands have no new mutation to carry their offset.

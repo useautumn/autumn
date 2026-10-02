@@ -3,6 +3,7 @@ import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type { FlushRequest } from "@autumn/postgres";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
+import { EVICT_DELETES_MAX_PENDING } from "../../../src/committer/subjectSnapshots/createEvictDeletes.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import { createState, createTrackMutation } from "../../fixtures/mutations.js";
 
@@ -14,7 +15,7 @@ const retry = {
 };
 const DROP_BATCH = 500;
 
-/** A Postgres stand-in that counts statements; `gate` holds every flush until it resolves. */
+/** A Postgres stand-in that counts statements and how many run at once; `gate` holds every flush until it resolves. */
 const createCountingDb = ({
 	gate = Promise.resolve(),
 	failDeletes = false,
@@ -23,39 +24,71 @@ const createCountingDb = ({
 	failDeletes?: boolean;
 } = {}) => {
 	const requests: FlushRequest[] = [];
+	let inFlight = 0;
+	let maxInFlight = 0;
 	const db: CommitterDb = {
 		readPartitionProgress: async () => null,
 		insertPartitionProgress: async () => {},
 		claimPartitionProgress: async () => {},
 		flush: async (request) => {
 			requests.push(request);
-			await gate;
-			if (failDeletes && (request.snapshots?.deletes.length ?? 0) > 0)
-				throw new Error("relation subject_snapshots does not exist");
-			return { applied: request.changes.map(() => true) };
+			inFlight += 1;
+			maxInFlight = Math.max(maxInFlight, inFlight);
+			try {
+				await gate;
+				if (failDeletes && (request.snapshots?.deletes.length ?? 0) > 0)
+					throw new Error("relation subject_snapshots does not exist");
+				return { applied: request.changes.map(() => true) };
+			} finally {
+				inFlight -= 1;
+			}
 		},
 	};
 	const deleteStatements = () =>
 		requests.filter((request) => (request.snapshots?.deletes.length ?? 0) > 0);
-	return { db, requests, deleteStatements };
+	return { db, requests, deleteStatements, maxInFlight: () => maxInFlight };
 };
 
-const createStore = ({ db }: { db: CommitterDb }) =>
-	createCommitterStateStore({
+const createStore = ({
+	db,
+	requestCount,
+	warnings = [],
+}: {
+	db: CommitterDb;
+	requestCount: () => number;
+	warnings?: string[];
+}) => {
+	const committer = createCommitter({
+		ctx: { db },
+		config: {
+			concurrency: 32,
+			maxRowsPerFlush: 500,
+			retry,
+			snapshots: { partitionCount: 64, maxBytes: 262_144 },
+		},
+	});
+	const store = createCommitterStateStore({
 		ctx: {
-			committer: createCommitter({
-				ctx: { db },
-				config: {
-					concurrency: 32,
-					maxRowsPerFlush: 500,
-					retry,
-					snapshots: { partitionCount: 64, maxBytes: 262_144 },
-				},
-			}),
+			committer,
 			db,
+			logger: { warn: (message) => warnings.push(message) },
 			snapshots: { dropBatch: DROP_BATCH },
 		},
 	});
+	const deletes = store.evictDeletes;
+	if (!deletes) throw new Error("expected evict deletes");
+	/** Lane ticks hand the committer one DELETE at a time, so quiet means every tick has run and landed. */
+	const drained = async () => {
+		for (let quiet = 0; quiet < 3; ) {
+			await committer.drain();
+			await Bun.sleep(2);
+			quiet = statementsSeen() === statementsSeen.last ? quiet + 1 : 0;
+			statementsSeen.last = statementsSeen();
+		}
+	};
+	const statementsSeen = Object.assign(() => requestCount(), { last: -1 });
+	return { store, deletes, drained };
+};
 
 /** A deleted customer comes back as the customer part of its identity: what the engine's key names. */
 const customerOf = (index: number) => ({
@@ -68,21 +101,19 @@ const keyOf = (index: number) =>
 	meteringIdentityToPartitionKey({ identity: customerOf(index) });
 
 describe("committer state store evict deletes", () => {
-	test("evicts asked for in one tick land as one DELETE, and each caller resolves once it commits", async () => {
+	test("enqueue is synchronous and returns nothing: evicts of one tick land as one DELETE, each customer once", async () => {
 		const { db, requests } = createCountingDb();
-		const store = createStore({ db });
-		const deletes = store.evictDeletes;
-		if (!deletes) throw new Error("expected evict deletes");
+		const { deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
 
-		await Promise.all(
-			[1, 2, 3, 2].map((index) =>
-				deletes.deleteCustomer({
-					topic,
-					partition: 4,
-					customerKey: keyOf(index),
-				}),
-			),
-		);
+		for (const index of [1, 2, 3, 2])
+			expect(
+				deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) }),
+			).toBeUndefined();
+		expect(requests).toHaveLength(0);
+		await drained();
 
 		expect(requests).toEqual([
 			{
@@ -96,21 +127,16 @@ describe("committer state store evict deletes", () => {
 		]);
 	});
 
-	test("an evict storm of 10,000 in one tick on one partition is ceil(10,000 / batch) DELETEs, never one per evict", async () => {
-		const { db, deleteStatements } = createCountingDb();
-		const store = createStore({ db });
-		const deletes = store.evictDeletes;
-		if (!deletes) throw new Error("expected evict deletes");
+	test("a storm of 10,000 on one partition is ceil(10,000 / batch) DELETEs, one in flight at a time", async () => {
+		const { db, requests, deleteStatements, maxInFlight } = createCountingDb();
+		const { deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
 
-		await Promise.all(
-			Array.from({ length: 10_000 }, (_, index) =>
-				deletes.deleteCustomer({
-					topic,
-					partition: 4,
-					customerKey: keyOf(index),
-				}),
-			),
-		);
+		for (let index = 0; index < 10_000; index++)
+			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+		await drained();
 
 		const statements = deleteStatements();
 		expect(statements).toHaveLength(Math.ceil(10_000 / DROP_BATCH));
@@ -120,35 +146,43 @@ describe("committer state store evict deletes", () => {
 				0,
 			),
 		).toBe(10_000);
+		expect(maxInFlight()).toBe(1);
 	});
 
-	test("a storm spread over partitions batches per partition", async () => {
-		const { db, deleteStatements } = createCountingDb();
-		const store = createStore({ db });
-		const deletes = store.evictDeletes;
-		if (!deletes) throw new Error("expected evict deletes");
+	test("a storm spread over partitions batches per partition, one in flight per partition", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests, deleteStatements, maxInFlight } = createCountingDb({
+			gate: held.promise,
+		});
+		const { deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
 
-		await Promise.all(
-			Array.from({ length: 10_000 }, (_, index) =>
-				deletes.deleteCustomer({
-					topic,
-					partition: index % 4,
-					customerKey: keyOf(index),
-				}),
-			),
-		);
+		for (let index = 0; index < 10_000; index++)
+			deletes.enqueue({
+				topic,
+				partition: index % 4,
+				customerKey: keyOf(index),
+			});
+		await Bun.sleep(5);
+		expect(deleteStatements()).toHaveLength(4);
+		held.resolve();
+		await drained();
 
 		// 2,500 per partition: ceil(2,500 / 500) each.
 		expect(deleteStatements()).toHaveLength(4 * 5);
+		expect(maxInFlight()).toBe(4);
 	});
 
 	test("a DELETE waits behind the partition's apply already in flight: Postgres order is lane order", async () => {
 		const held = Promise.withResolvers<void>();
 		const { db, requests } = createCountingDb({ gate: held.promise });
-		const store = createStore({ db });
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
 		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
-		const deletes = store.evictDeletes;
-		if (!deletes) throw new Error("expected evict deletes");
 		const state = createState({ balance: 100 });
 
 		const applied = store.applyDurableMutations({
@@ -160,42 +194,69 @@ describe("committer state store evict deletes", () => {
 			],
 		});
 		await Bun.sleep(1);
-		const dropped = deletes.deleteCustomer({
-			topic,
-			partition: 4,
-			customerKey: keyOf(99),
-		});
+		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(99) });
 		await Bun.sleep(5);
 
-		// Only the apply's flush has reached Postgres; the drop waits for it to settle.
+		// Only the apply's flush has reached Postgres; the DELETE waits for it to settle.
 		expect(requests).toHaveLength(1);
 		expect(requests[0]?.snapshots?.deletes ?? []).not.toContainEqual(
 			customerOf(99),
 		);
 		held.resolve();
-		await Promise.all([applied, dropped]);
+		await applied;
+		await drained();
 		expect(requests.at(-1)?.snapshots?.deletes).toEqual([customerOf(99)]);
 	});
 
-	test("a DELETE that cannot land rejects every evict in its batch, so their evicts fail and are retried", async () => {
-		const { db } = createCountingDb({ failDeletes: true });
-		const store = createStore({ db });
-		const deletes = store.evictDeletes;
-		if (!deletes) throw new Error("expected evict deletes");
+	test("a DELETE that cannot land is logged once per batch and the lane carries on", async () => {
+		const { db, requests, deleteStatements } = createCountingDb({
+			failDeletes: true,
+		});
+		const warnings: string[] = [];
+		const { deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+			warnings,
+		});
 
-		const outcomes = await Promise.allSettled(
-			[1, 2].map((index) =>
-				deletes.deleteCustomer({
-					topic,
-					partition: 4,
-					customerKey: keyOf(index),
-				}),
-			),
+		for (const index of [1, 2])
+			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+		await drained();
+		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(3) });
+		await drained();
+
+		expect(deleteStatements()).toHaveLength(2);
+		expect(warnings).toHaveLength(2);
+		expect(warnings[0]).toContain("could not delete 2 customers' rows");
+	});
+
+	test("past the pending ceiling a partition stops enqueuing and warns once; nothing is awaited or thrown", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests, deleteStatements } = createCountingDb({
+			gate: held.promise,
+		});
+		const warnings: string[] = [];
+		const { deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+			warnings,
+		});
+
+		// One synchronous burst: no tick runs between enqueues, so the ceiling is what one tick can find waiting.
+		const offered = EVICT_DELETES_MAX_PENDING + 50;
+		for (let index = 0; index < offered; index++)
+			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+		expect(warnings).toHaveLength(1);
+		expect(warnings[0]).toContain(
+			`${EVICT_DELETES_MAX_PENDING} customers pending`,
 		);
+		held.resolve();
+		await drained();
 
-		expect(outcomes.map((outcome) => outcome.status)).toEqual([
-			"rejected",
-			"rejected",
-		]);
+		const deleted = deleteStatements().reduce(
+			(total, request) => total + (request.snapshots?.deletes.length ?? 0),
+			0,
+		);
+		expect(deleted).toBe(EVICT_DELETES_MAX_PENDING);
 	});
 });

@@ -268,6 +268,64 @@ const isWholeState = ([value]: unknown[]) =>
 	value !== null &&
 	"customerEntitlements" in value;
 
+describe("createSubjectMap onEvicted", () => {
+	const entityKey = `${customerKey}:entity_1`;
+	const createEvicting = ({
+		maxBytes = 1_000_000,
+	}: {
+		maxBytes?: number;
+	} = {}) => {
+		const evicted: string[] = [];
+		const map = createSubjectMap({
+			maxBytes,
+			onEvicted: ({ customerKey: key }) => evicted.push(key),
+		});
+		return { map, evicted };
+	};
+
+	test("fires once, when the evict has left nothing of the customer resident", () => {
+		const { map, evicted } = createEvicting();
+		const state = createState();
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		map.setState({ subjectKey: entityKey, customerKey, state });
+
+		map.evictCustomer({ customerKey });
+		expect(evicted).toEqual([customerKey]);
+	});
+
+	test("waits for the last pin: a pinned subject drops, and the hook fires, only when its pin releases", () => {
+		const { map, evicted } = createEvicting();
+		const state = createState();
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		map.setState({ subjectKey: entityKey, customerKey, state });
+		map.pin({ subjectKey: entityKey });
+
+		map.evictCustomer({ customerKey });
+		expect(map.readState({ subjectKey: customerKey })).toBeNull();
+		expect(map.readState({ subjectKey: entityKey })).toEqual(state);
+		expect(evicted).toEqual([]);
+
+		map.unpin({ subjectKey: entityKey });
+		expect(map.readState({ subjectKey: entityKey })).toBeNull();
+		expect(evicted).toEqual([customerKey]);
+	});
+
+	test("a drop for space never fires it: those rows are still true in Postgres", () => {
+		const { map, evicted } = createEvicting({ maxBytes: 1 });
+		const state = createState();
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		map.setState({ subjectKey: "other", customerKey: "other", state });
+		expect(map.readState({ subjectKey: customerKey })).toBeNull();
+		expect(evicted).toEqual([]);
+	});
+
+	test("an evict of a customer with nothing resident still fires: rows may have outlived a drop for space", () => {
+		const { map, evicted } = createEvicting();
+		map.evictCustomer({ customerKey });
+		expect(evicted).toEqual([customerKey]);
+	});
+});
+
 describe("writer over a store with no resident state", () => {
 	test("the map keeps the committed rows, so the next track starts from them", async () => {
 		const { writer } = createWriterOverNullStore();

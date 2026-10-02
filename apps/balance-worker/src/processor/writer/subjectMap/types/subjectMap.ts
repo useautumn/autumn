@@ -1,5 +1,8 @@
 import type { SubjectState } from "@autumn/balance-engine";
 
+/** Synchronous, called once an evict has left nothing of the customer resident. */
+export type OnSubjectEvicted = (params: { customerKey: string }) => void;
+
 /**
  * The writer's one map: each subject's freshest rows, projected or committed.
  * Bounded by bytes; a pinned subject is never evicted.

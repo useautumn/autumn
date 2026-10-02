@@ -130,30 +130,39 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			statementTimeoutMs,
 		});
 
-	test("10,000 one-tick evicts delete real rows in exactly ceil(10,000 / batch) statements", async () => {
+	test("a 10,000-evict storm lands as ceil(10,000 / batch) DELETEs, one in flight, within a second", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();
-		let statements = 0;
+		let inFlight = 0;
+		let maxInFlight = 0;
+		const statementMs: number[] = [];
 		let deleted = 0;
 		const db: CommitterDb = {
 			readPartitionProgress: async () => null,
 			insertPartitionProgress: async () => {},
 			claimPartitionProgress: async () => {},
 			flush: async (request) => {
-				statements += 1;
-				const result = await commitFlush({
-					ctx: { db: postgres.db },
-					request,
-					statementTimeoutMs: 10_000,
-				});
-				deleted += result.snapshots?.deleted ?? 0;
-				return result;
+				inFlight += 1;
+				maxInFlight = Math.max(maxInFlight, inFlight);
+				const startedAt = performance.now();
+				try {
+					const result = await commitFlush({
+						ctx: { db: postgres.db },
+						request,
+						statementTimeoutMs: 10_000,
+					});
+					deleted += result.snapshots?.deleted ?? 0;
+					return result;
+				} finally {
+					statementMs.push(performance.now() - startedAt);
+					inFlight -= 1;
+				}
 			},
 		};
 		const committer = createCommitter({
 			ctx: { db },
 			config: {
-				concurrency: 1,
+				concurrency: 4,
 				maxRowsPerFlush: 500,
 				retry: {
 					degradedAfterAttempts: 1,
@@ -176,45 +185,61 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			const deletes = store.evictDeletes;
 			if (!deletes) throw new Error("Expected evict deletes");
 			const startedAt = performance.now();
-			await Promise.all(
-				Array.from({ length: 10_000 }, (_, index) =>
-					deletes.deleteCustomer({
-						topic,
-						partition: 0,
-						customerKey: meteringIdentityToPartitionKey({
-							identity: {
-								orgId: seeded.orgId,
-								env: seeded.env,
-								customerId: `cus_storm_${index}`,
-								entityId: null,
-							},
-						}),
+			for (let index = 0; index < 10_000; index++)
+				deletes.enqueue({
+					topic,
+					partition: 0,
+					customerKey: meteringIdentityToPartitionKey({
+						identity: {
+							orgId: seeded.orgId,
+							env: seeded.env,
+							customerId: `cus_storm_${index}`,
+							entityId: null,
+						},
 					}),
-				),
+				});
+			const enqueuedMs = performance.now() - startedAt;
+			while (deleted < 10_000 && performance.now() - startedAt < 10_000)
+				await Bun.sleep(5);
+			const durationMs = performance.now() - startedAt;
+
+			const statements = Math.ceil(
+				10_000 / BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH,
 			);
-			expect(statements).toBe(
-				Math.ceil(10_000 / BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH),
-			);
+			expect(statementMs).toHaveLength(statements);
 			expect(deleted).toBe(10_000);
+			expect(maxInFlight).toBe(1);
+			expect(durationMs).toBeLessThan(2_000);
 			expect(
 				await postgres.db.execute(
 					sql`SELECT 1 FROM subject_snapshots WHERE org_id = ${seeded.orgId} AND env = ${seeded.env}`,
 				),
 			).toHaveLength(0);
+			const sorted = [...statementMs].sort((a, b) => a - b);
 			console.info(
-				"[snapshot one-tick evict deletes]",
+				"[snapshot evict storm]",
 				JSON.stringify({
 					customers: 10_000,
 					statements,
-					deleted,
-					durationMs: Math.round(performance.now() - startedAt),
+					maxInFlight,
+					enqueueMs: Math.round(enqueuedMs * 100) / 100,
+					statementP50Ms:
+						Math.round((sorted[Math.floor(sorted.length / 2)] ?? 0) * 100) /
+						100,
+					statementP99Ms:
+						Math.round(
+							(sorted[
+								Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))
+							] ?? 0) * 100,
+						) / 100,
+					durationMs: Math.round(durationMs),
 				}),
 			);
 		} finally {
-			await store.close();
+			store.close();
 			await seeded.cleanup();
 		}
-	}, 60_000);
+	});
 
 	test("a flush writes each subject's row under the identity it was held by, with its partition and lineage", async () => {
 		const seeded = await seedCustomer({ postgres });

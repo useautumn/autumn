@@ -1,17 +1,27 @@
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
-import type { Committer, PartitionPosition } from "../types/committer.js";
+import type {
+	Committer,
+	CommitterContext,
+	PartitionPosition,
+} from "../types/committer.js";
 import type { EvictDeletes } from "./types/evictDeletes.js";
 
-type Settled = ReturnType<typeof Promise.withResolvers<void>>;
+/**
+ * Past this many pending customers a partition stops enqueuing: 20 statements of 500 drain in well under a
+ * second, so a backlog beyond it means Postgres is the slow part, and a row left behind only costs its next flush.
+ */
+export const EVICT_DELETES_MAX_PENDING = 10_000;
 
 /** A partition's customers waiting to be deleted, and whether a lane DELETE is already queued to take them. */
 type PartitionDeletes = {
-	pending: Map<string, Settled>;
+	pending: Set<string>;
 	scheduled: boolean;
+	warned: boolean;
 };
 
 type EvictDeletesContext = {
 	committer: Pick<Committer, "apply">;
+	logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
 	/** Customers one DELETE carries; a storm of evicts lands as this many per statement. */
 	batch: number;
 	runInLane(params: {
@@ -20,7 +30,7 @@ type EvictDeletesContext = {
 	}): Promise<void>;
 };
 
-/** Evicts collect per partition; each lane tick lands one DELETE, then settles the evicts it took. */
+/** Evicts collect per partition; each lane tick lands one DELETE of at most `batch` customers, one in flight per partition. */
 export const createEvictDeletes = ({
 	ctx,
 }: {
@@ -28,19 +38,23 @@ export const createEvictDeletes = ({
 }): EvictDeletes => {
 	const byPartition = new Map<string, PartitionDeletes>();
 
-	function deleteCustomer({
+	function enqueue({
 		topic,
 		partition,
 		customerKey,
-	}: Parameters<EvictDeletes["deleteCustomer"]>[0]): Promise<void> {
+	}: Parameters<EvictDeletes["enqueue"]>[0]): void {
 		const position = { topic, partition };
 		const deletes = partitionDeletesOf({ byPartition, position });
-		const existing = deletes.pending.get(customerKey);
-		if (existing) return existing.promise;
-		const settled = Promise.withResolvers<void>();
-		deletes.pending.set(customerKey, settled);
+		if (deletes.pending.size >= EVICT_DELETES_MAX_PENDING) {
+			if (!deletes.warned)
+				ctx.logger?.warn(
+					`[evict deletes] ${keyOf(position)} has ${deletes.pending.size} customers pending; further evicts leave their rows to the next flush`,
+				);
+			deletes.warned = true;
+			return;
+		}
+		deletes.pending.add(customerKey);
 		scheduleDelete({ position, deletes });
-		return settled.promise;
 	}
 
 	function scheduleDelete({
@@ -55,7 +69,7 @@ export const createEvictDeletes = ({
 		void ctx.runInLane({ position, run: () => landDelete({ position }) });
 	}
 
-	/** Never rejects: a failed DELETE rejects its evicts, not the lane. */
+	/** Never rejects: a DELETE that cannot land is logged, and the lane carries on. */
 	async function landDelete({
 		position,
 	}: {
@@ -69,7 +83,7 @@ export const createEvictDeletes = ({
 		if (deletes.pending.size > 0) scheduleDelete({ position, deletes });
 		else byPartition.delete(key);
 		const snapshotIntent: SnapshotIntent = new Map(
-			[...taken.keys()].map((customerKey) => [customerKey, "delete"]),
+			taken.map((customerKey) => [customerKey, "delete"]),
 		);
 		try {
 			await ctx.committer.apply({
@@ -78,13 +92,14 @@ export const createEvictDeletes = ({
 				records: [],
 				snapshotIntent,
 			});
-			for (const settled of taken.values()) settled.resolve();
 		} catch (cause) {
-			for (const settled of taken.values()) settled.reject(cause);
+			ctx.logger?.warn(
+				`[evict deletes] ${key} could not delete ${taken.length} customers' rows: ${cause instanceof Error ? cause.message : String(cause)}`,
+			);
 		}
 	}
 
-	return { deleteCustomer };
+	return { enqueue };
 };
 
 function keyOf(position: PartitionPosition): string {
@@ -100,8 +115,9 @@ function partitionDeletesOf({
 }): PartitionDeletes {
 	const key = keyOf(position);
 	const deletes = byPartition.get(key) ?? {
-		pending: new Map(),
+		pending: new Set(),
 		scheduled: false,
+		warned: false,
 	};
 	byPartition.set(key, deletes);
 	return deletes;
@@ -113,12 +129,12 @@ function takeDeletes({
 }: {
 	deletes: PartitionDeletes;
 	batch: number;
-}): Map<string, Settled> {
-	const taken = new Map<string, Settled>();
-	for (const [customerKey, settled] of deletes.pending) {
-		if (taken.size >= batch) break;
+}): string[] {
+	const taken: string[] = [];
+	for (const customerKey of deletes.pending) {
+		if (taken.length >= batch) break;
 		deletes.pending.delete(customerKey);
-		taken.set(customerKey, settled);
+		taken.push(customerKey);
 	}
 	return taken;
 }

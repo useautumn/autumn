@@ -106,30 +106,19 @@ const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
 	return { processor, deleted, deleteGate };
 };
 
-/** Only ever asserted false: a settled operation is proven by awaiting it, never by a deadline. */
-const settledWithin = async ({
-	operation,
-	ms,
-}: {
-	operation: Promise<unknown>;
-	ms: number;
-}): Promise<boolean> =>
-	Promise.race([operation.then(() => true), Bun.sleep(ms).then(() => false)]);
-
 describe("evict snapshot deletes", () => {
-	test("a warm check answers while another customer's snapshot DELETE holds the partition lane", async () => {
-		const { processor, deleteGate } = await createProcessor({
+	test("a check answers while a snapshot DELETE holds the partition lane: an evict never reaches the hot path", async () => {
+		const { processor, deleted, deleteGate } = await createProcessor({
 			logsEvicts: true,
 		});
 		await processor.initialize({ request: createInitializeRequest() });
 		await processor.drain();
 		const held = Promise.withResolvers<void>();
 		deleteGate.held = held.promise;
-		const evicted = processor.evict({
-			command: evictOf({ customerId: "cus_other" }),
-		});
+		await processor.evict({ command: evictOf({ customerId: "cus_other" }) });
+		await Bun.sleep(2);
+		expect(deleted).toEqual([]);
 		try {
-			expect(await settledWithin({ operation: evicted, ms: 10 })).toBe(false);
 			const checked = processor.check({
 				command: parseCheckCommand({
 					input: {
@@ -150,12 +139,13 @@ describe("evict snapshot deletes", () => {
 			expect((await checked).result.allowed).toBe(true);
 		} finally {
 			held.resolve();
-			await evicted;
 		}
+		await Bun.sleep(2);
+		expect(deleted).toEqual([[keyOf("cus_other")]]);
 	});
 
 	test.each([true, false])(
-		"an evict over HTTP answers only after its customer's snapshot DELETE commits (evicts logged: %p)",
+		"an evict over HTTP answers once the rows are gone from memory; its DELETE lands on the lane behind it (evicts logged: %p)",
 		async (logsEvicts) => {
 			const { processor, deleted, deleteGate } = await createProcessor({
 				logsEvicts,
@@ -163,18 +153,17 @@ describe("evict snapshot deletes", () => {
 			const held = Promise.withResolvers<void>();
 			deleteGate.held = held.promise;
 
-			const evicted = processor.evict({
-				command: evictOf({ customerId: "cus_1" }),
-			});
+			await processor.evict({ command: evictOf({ customerId: "cus_1" }) });
+			await Bun.sleep(2);
+			expect(deleted).toEqual([]);
 
-			expect(await settledWithin({ operation: evicted, ms: 50 })).toBe(false);
 			held.resolve();
-			await evicted;
+			await Bun.sleep(2);
 			expect(deleted).toEqual([[keyOf("cus_1")]]);
 		},
 	);
 
-	test("a queued evict hands its DELETE to the batch instead of waiting for it, so evicts behind it share the next DELETE", async () => {
+	test("queued evicts never wait on the lane, and the ones behind an in-flight DELETE share the next", async () => {
 		const { processor, deleted, deleteGate } = await createProcessor({
 			logsEvicts: true,
 		});
@@ -183,18 +172,18 @@ describe("evict snapshot deletes", () => {
 		const deferredLogs: Promise<void>[] = [];
 
 		for (const [index, customerId] of ["cus_1", "cus_2", "cus_3"].entries()) {
-			const queued = processor.execute({
+			await processor.execute({
 				source: { commandOffset: String(index) },
 				deferredLogs,
 				run: (scope) => scope.evict({ command: evictOf({ customerId }) }),
 			});
-			// The DELETE lane is still held, so this await only returns if the queued evict never waits on it.
-			await queued;
+			await Bun.sleep(1);
 		}
 		expect(deleted).toEqual([]);
 
 		held.resolve();
 		await Promise.all(deferredLogs);
+		await Bun.sleep(5);
 		// The first DELETE was already in flight; the two queued behind it went together.
 		expect(deleted.map((batch) => batch.map(customerIdOf))).toEqual([
 			["cus_1"],

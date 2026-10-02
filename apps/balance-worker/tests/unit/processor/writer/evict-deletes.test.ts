@@ -6,10 +6,14 @@ import {
 	meteringIdentityToPartitionKey,
 	type TrackCommand,
 } from "@autumn/balance-engine";
+import { createCommitter } from "../../../../src/committer/createCommitter.js";
+import { createCommitterStateStore } from "../../../../src/committer/createCommitterStateStore.js";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import { createSubjectMapBudget } from "../../../../src/processor/writer/subjectMap/createSubjectMapBudget.js";
 import type { MutateParams } from "../../../../src/processor/writer/types/mutation.js";
 import type { PartitionWriterContext } from "../../../../src/processor/writer/types/partitionWriter.js";
+import type { CommitterDb } from "../../../../src/types/committerDb.js";
 import {
 	createState,
 	createSubjectFor,
@@ -18,13 +22,14 @@ import {
 
 const topic = "writer-evict-deletes";
 const partition = 2;
-const identity: MeteringIdentity = {
+const identityOf = (customerId: string): MeteringIdentity => ({
 	orgId: "org_1",
 	env: "sandbox",
-	customerId: "cus_1",
+	customerId,
 	entityId: null,
-};
-const customerKey = meteringIdentityToPartitionKey({ identity });
+});
+const keyOf = (customerId: string) =>
+	meteringIdentityToPartitionKey({ identity: identityOf(customerId) });
 
 const decideTrack = ({
 	state,
@@ -42,17 +47,21 @@ const decideTrack = ({
 	};
 };
 
-/** A writer over a store that records applies and DELETEs in the order they are asked; the DELETE waits on `deleteGate`. */
-const createWriter = () => {
+/** A writer whose store records applies and enqueued DELETEs in order; `applyGate` holds every apply until it resolves. */
+const createWriter = ({
+	subjectMapMaxBytes,
+}: {
+	subjectMapMaxBytes?: number;
+} = {}) => {
 	const events: string[] = [];
-	const deleteGate = { held: Promise.resolve() as Promise<void> };
-	let deleteFailure: Error | null = null;
+	const applyGate = { held: Promise.resolve() as Promise<void> };
 	const stateStore: PartitionWriterContext["stateStore"] = {
 		baseline: "map",
 		readState: () => null,
 		readOwnState: () => null,
 		readReceipt: () => null,
 		applyDurableMutations: async ({ records }) => {
+			await applyGate.held;
 			events.push("apply");
 			return records.map((record) => ({
 				kind: "applied" as const,
@@ -61,11 +70,8 @@ const createWriter = () => {
 			}));
 		},
 		evictDeletes: {
-			deleteCustomer: async (params) => {
-				events.push(`delete ${params.customerKey}`);
-				await deleteGate.held;
-				if (deleteFailure) throw deleteFailure;
-				events.push("deleted");
+			enqueue: ({ customerKey }) => {
+				events.push(`enqueue ${customerKey}`);
 			},
 		},
 	};
@@ -90,95 +96,97 @@ const createWriter = () => {
 				maxBatchSize: 100,
 				maxPendingCommands: 100,
 				maxPendingCommandsPerCustomer: 10,
+				...(subjectMapMaxBytes !== undefined && {
+					subjectMapBudget: createSubjectMapBudget({
+						totalBytes: subjectMapMaxBytes,
+					}),
+				}),
 			},
 		},
 	});
-	const track = (commandId: string) =>
-		writer.decide({
-			command: createTrackCommand({ identity, value: 1, commandId }),
-			mutate: ({ state }) =>
-				decideTrack({
-					state,
-					command: createTrackCommand({ identity, value: 1, commandId }),
-				}),
+	const track = ({
+		customerId,
+		commandId,
+	}: {
+		customerId: string;
+		commandId: string;
+	}) => {
+		const identity = identityOf(customerId);
+		const command = createTrackCommand({ identity, value: 1, commandId });
+		return writer.decide({
+			command,
+			mutate: ({ state }) => decideTrack({ state, command }),
 		});
-	return {
-		writer,
-		events,
-		deleteGate,
-		track,
-		failDeletes: (error: Error) => {
-			deleteFailure = error;
-		},
 	};
+	const adopt = (customerId: string) =>
+		writer.adopt({
+			state: createState({ identity: identityOf(customerId), balance: 100 }),
+			baselineAt: 1,
+		});
+	return { writer, events, applyGate, track, adopt };
 };
 
-const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
-
 describe("an evict's snapshot DELETE", () => {
-	test("is asked only once the store holds the customer's earlier writes, so it lands after them on the lane", async () => {
-		const { writer, events, track } = createWriter();
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
-		const tracked = track("t1");
-		await tracked.waitForCommit();
+	test("is enqueued synchronously when the drop leaves nothing of the customer resident, after its earlier writes are stored", async () => {
+		const { writer, events, track, adopt } = createWriter();
+		adopt("cus_1");
+		await track({ customerId: "cus_1", commandId: "t1" }).waitForCommit();
 
-		await writer.evict({ customerKey });
-
-		expect(events).toEqual(["apply", `delete ${customerKey}`, "deleted"]);
-		expect(writer.readFreshestState({ identity })).toBeNull();
-	});
-
-	test("the evict resolves only once the DELETE has committed", async () => {
-		const { writer, events, deleteGate } = createWriter();
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
-		const held = Promise.withResolvers<void>();
-		deleteGate.held = held.promise;
-		let settled = false;
-		const evicted = writer.evict({ customerKey }).then(() => {
-			settled = true;
-		});
-		await tick();
-		await tick();
-		expect(events).toEqual([`delete ${customerKey}`]);
-		expect(settled).toBe(false);
-
-		held.resolve();
+		const evicted = writer.evict({ customerKey: keyOf("cus_1") });
 		await evicted;
-		expect(events).toEqual([`delete ${customerKey}`, "deleted"]);
+
+		expect(events).toEqual(["apply", `enqueue ${keyOf("cus_1")}`]);
+		expect(
+			writer.readFreshestState({ identity: identityOf("cus_1") }),
+		).toBeNull();
 	});
 
-	test("a DELETE that cannot land fails the evict, so the caller retries it", async () => {
-		const { writer, failDeletes } = createWriter();
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
-		failDeletes(new Error("relation subject_snapshots does not exist"));
-
-		await expect(writer.evict({ customerKey })).rejects.toThrow(
-			"subject_snapshots does not exist",
-		);
-	});
-
-	test("a deferred DELETE is handed to the caller and the evict returns once the rows are gone from memory", async () => {
-		const { writer, deleteGate } = createWriter();
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
+	test("a record decided on the rows meanwhile re-pins them: the drop and its DELETE wait for that record's store", async () => {
+		const { writer, events, applyGate, track, adopt } = createWriter();
+		adopt("cus_1");
 		const held = Promise.withResolvers<void>();
-		deleteGate.held = held.promise;
-		const deferred: Promise<void>[] = [];
+		applyGate.held = held.promise;
+		const before = track({ customerId: "cus_1", commandId: "t1" });
+		await before.waitForCommit();
+		const evicted = writer.evict({ customerKey: keyOf("cus_1") });
+		const meanwhile = track({ customerId: "cus_1", commandId: "t2" });
+		await meanwhile.waitForCommit();
+		expect(events).toEqual([]);
 
-		await writer.evict({
-			customerKey,
-			deferSnapshotDelete: (deleted) => deferred.push(deleted),
-		});
-
-		expect(writer.readFreshestState({ identity })).toBeNull();
-		expect(deferred).toHaveLength(1);
 		held.resolve();
-		await Promise.all(deferred);
+		await before.waitForStore();
+		await meanwhile.waitForStore();
+		await evicted;
+		// One DELETE, enqueued only once t2's apply was stored: lane order lands it after t2's rows.
+		expect(events).toEqual(["apply", "apply", `enqueue ${keyOf("cus_1")}`]);
+		expect(
+			writer.readFreshestState({ identity: identityOf("cus_1") }),
+		).toBeNull();
 	});
 
-	test("a store without evict deletes evicts the rows and owes nothing", async () => {
-		const { writer, events, track } = createWriter();
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
-		await track("t1").waitForStore();
+	test("a drop for space enqueues nothing: the rows Postgres holds are still true", async () => {
+		const { writer, events, adopt } = createWriter({ subjectMapMaxBytes: 1 });
+		adopt("cus_1");
+		adopt("cus_2");
+
+		expect(
+			writer.readFreshestState({ identity: identityOf("cus_1") }),
+		).toBeNull();
+		expect(events).toEqual([]);
+	});
+
+	test("an evict of a customer with nothing resident still enqueues: its rows may have outlived a drop for space", async () => {
+		const { writer, events } = createWriter();
+
+		await writer.evict({ customerKey: keyOf("cus_1") });
+
+		expect(events).toEqual([`enqueue ${keyOf("cus_1")}`]);
+	});
+
+	test("a store without evict deletes drops the rows and owes nothing", async () => {
+		const { events, track, adopt } = createWriter();
+		adopt("cus_1");
+		await track({ customerId: "cus_1", commandId: "t1" }).waitForStore();
 		const bare = createPartitionWriter({
 			ctx: {
 				stateStore: {
@@ -202,9 +210,153 @@ describe("an evict's snapshot DELETE", () => {
 				},
 			},
 		});
-		bare.adopt({ state: createState({ identity, balance: 1 }) });
-		await bare.evict({ customerKey });
-		expect(bare.readFreshestState({ identity })).toBeNull();
+		bare.adopt({
+			state: createState({ identity: identityOf("cus_1"), balance: 1 }),
+		});
+		await bare.evict({ customerKey: keyOf("cus_1") });
+		expect(
+			bare.readFreshestState({ identity: identityOf("cus_1") }),
+		).toBeNull();
 		expect(events).toEqual(["apply"]);
+	});
+});
+
+/** A writer over the real committer store; a DELETE never returns until `deleteGate` resolves. */
+const createWriterOverStore = () => {
+	const deleteGate = Promise.withResolvers<void>();
+	let flushes = 0;
+	const db: CommitterDb = {
+		readPartitionProgress: async () => null,
+		insertPartitionProgress: async () => {},
+		claimPartitionProgress: async () => {},
+		flush: async (request) => {
+			flushes += 1;
+			if ((request.snapshots?.deletes.length ?? 0) > 0)
+				await deleteGate.promise;
+			return { applied: request.changes.map(() => true) };
+		},
+	};
+	const stateStore = createCommitterStateStore({
+		ctx: {
+			committer: createCommitter({
+				ctx: { db },
+				config: {
+					concurrency: 4,
+					maxRowsPerFlush: 500,
+					retry: {
+						degradedAfterAttempts: 1,
+						initialBackoffMs: 1,
+						maxBackoffMs: 1,
+					},
+					snapshots: { partitionCount: 64, maxBytes: 262_144 },
+				},
+			}),
+			db,
+			snapshots: { dropBatch: 500 },
+		},
+	});
+	let nextOffset = 0n;
+	const writer = createPartitionWriter({
+		ctx: {
+			stateStore,
+			appender: {
+				appendCommitted: async ({ outcomes }) => {
+					const baseOffset = nextOffset;
+					nextOffset += BigInt(outcomes.length);
+					return { baseOffset };
+				},
+			},
+			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+		},
+		config: {
+			topic,
+			partition,
+			limits: {
+				maxBatchSize: 100,
+				maxPendingCommands: 1_000,
+				maxPendingCommandsPerCustomer: 10,
+			},
+		},
+	});
+	return { writer, stateStore, deleteGate, flushes: () => flushes };
+};
+
+const percentile = ({
+	samples,
+	fraction,
+}: {
+	samples: number[];
+	fraction: number;
+}) => {
+	const sorted = [...samples].sort((a, b) => a - b);
+	return (
+		sorted[Math.min(sorted.length - 1, Math.floor(fraction * sorted.length))] ??
+		0
+	);
+};
+
+describe("evicts never touch the hot path", () => {
+	test("with a DELETE held open indefinitely, checks on other customers and on the evicted one keep answering from memory at memory latency", async () => {
+		const { writer, stateStore, deleteGate, flushes } = createWriterOverStore();
+		await stateStore.initializePartition({ topic, partition, nextOffset: 0n });
+		const others = Array.from(
+			{ length: 200 },
+			(_, index) => `cus_other_${index}`,
+		);
+		for (const customerId of [...others, "cus_evicted"])
+			writer.adopt({
+				state: createState({ identity: identityOf(customerId), balance: 100 }),
+				baselineAt: 1,
+			});
+
+		await writer.evict({ customerKey: keyOf("cus_evicted") });
+		await Bun.sleep(5);
+		expect(flushes()).toBe(1);
+
+		// The evicted customer reloads (a full read, stood in by adopt) and answers; nobody waits on the lane.
+		expect(
+			writer.readFreshestState({ identity: identityOf("cus_evicted") }),
+		).toBeNull();
+		writer.adopt({
+			state: createState({ identity: identityOf("cus_evicted"), balance: 50 }),
+			baselineAt: 2,
+		});
+		const samples: number[] = [];
+		for (let round = 0; round < 10; round++)
+			for (const customerId of [...others, "cus_evicted"]) {
+				const startedAt = performance.now();
+				const state = writer.readFreshestState({
+					identity: identityOf(customerId),
+				});
+				samples.push(performance.now() - startedAt);
+				expect(state).not.toBeNull();
+			}
+		expect(percentile({ samples, fraction: 0.99 })).toBeLessThan(1);
+
+		// A track on another customer is answered once the log holds it; only its store waits behind the held DELETE.
+		const command = createTrackCommand({
+			identity: identityOf("cus_other_0"),
+			value: 1,
+			commandId: "t1",
+		});
+		const tracked = writer.decide({
+			command,
+			mutate: ({ state }) => decideTrack({ state, command }),
+		});
+		await tracked.waitForCommit();
+		let stored = false;
+		void tracked.waitForStore().then(() => {
+			stored = true;
+		});
+		await Bun.sleep(5);
+		expect(stored).toBe(false);
+		expect(flushes()).toBe(1);
+
+		deleteGate.resolve();
+		await tracked.waitForStore();
+		expect(stored).toBe(true);
+		expect(flushes()).toBe(2);
+		stateStore.close();
 	});
 });

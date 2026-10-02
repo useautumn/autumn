@@ -10,6 +10,7 @@ import { createProgressMirror } from "./repos/progressMirror.js";
 import { createEvictDeletes } from "./subjectSnapshots/createEvictDeletes.js";
 import type {
 	Committer,
+	CommitterContext,
 	CommitterStateStore,
 	PartitionPosition,
 } from "./types/committer.js";
@@ -27,6 +28,7 @@ export const createCommitterStateStore = ({
 			| "insertPartitionProgress"
 			| "claimPartitionProgress"
 		>;
+		logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
 		/** Present when the committer writes snapshots: evicts delete their customer's rows through the store. */
 		snapshots?: { dropBatch: number };
 	};
@@ -116,6 +118,7 @@ export const createCommitterStateStore = ({
 		? createEvictDeletes({
 				ctx: {
 					committer: ctx.committer,
+					logger: dependencies.logger,
 					batch: dependencies.snapshots.dropBatch,
 					runInLane,
 				},
