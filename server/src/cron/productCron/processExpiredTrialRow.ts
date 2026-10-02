@@ -18,6 +18,7 @@ import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/act
 import { tryProcessRevertExpiry } from "@/internal/customers/cusProducts/actions/revertTrialExpiry";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { tryConvertExpiredTrial } from "./tryConvertExpiredTrial";
 
 export const processExpiredTrialRow = async ({
 	ctx,
@@ -60,6 +61,13 @@ export const processExpiredTrialRow = async ({
 			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 		}));
 	if (!trialFullCusProduct) return;
+
+	const converted = await tryConvertExpiredTrial({
+		ctx,
+		fullCustomer,
+		customerProduct: trialFullCusProduct,
+	});
+	if (converted) return;
 
 	const originalFullCustomer = customerPageTrialCusProduct
 		? fullCustomer

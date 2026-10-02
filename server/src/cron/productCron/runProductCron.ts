@@ -1,4 +1,4 @@
-import { isCustomerProductRevertingTrial, ms } from "@autumn/shared";
+import { ms } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService";
 import type { CronContext } from "../utils/CronContext";
 import {
@@ -9,17 +9,14 @@ import {
 } from "./fetchExpiredTrialProducts";
 import { processExpiredTrialRow } from "./processExpiredTrialRow";
 
-export const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
-	const revert: ExpiredTrialRow[] = [];
-	const standard: ExpiredTrialRow[] = [];
+const groupRowsByCustomer = (rows: ExpiredTrialRow[]) => {
+	const rowsByCustomer = new Map<string, ExpiredTrialRow[]>();
 	for (const row of rows) {
-		if (isCustomerProductRevertingTrial(row.customerProduct)) {
-			revert.push(row);
-		} else {
-			standard.push(row);
-		}
+		const customerRows = rowsByCustomer.get(row.customer.internal_id) ?? [];
+		customerRows.push(row);
+		rowsByCustomer.set(row.customer.internal_id, customerRows);
 	}
-	return { revert, standard };
+	return [...rowsByCustomer.values()];
 };
 
 const BATCH_SIZE = 250;
@@ -35,15 +32,18 @@ const processRowsInBatches = async ({
 }) => {
 	for (let i = 0; i < rows.length; i += BATCH_SIZE) {
 		const batch = rows.slice(i, i + BATCH_SIZE);
+		// A customer's rows run in order so converting trials share one subscription.
 		await Promise.all(
-			batch.map((row) =>
-				processExpiredTrialRow({
-					ctx,
-					customerProduct: row.customerProduct,
-					customer: row.customer,
-					defaultProducts,
-				}),
-			),
+			groupRowsByCustomer(batch).map(async (customerRows) => {
+				for (const row of customerRows) {
+					await processExpiredTrialRow({
+						ctx,
+						customerProduct: row.customerProduct,
+						customer: row.customer,
+						defaultProducts,
+					});
+				}
+			}),
 		);
 	}
 };
@@ -83,19 +83,6 @@ export const runProductCron = async ({
 			const resultsByOrgEnv = await groupByOrgEnv({ results, cronContext });
 
 			for (const { ctx, rows } of resultsByOrgEnv) {
-				const { revert: revertRows, standard: standardRows } =
-					partitionRevertRows(rows);
-
-				if (revertRows.length > 0) {
-					await processRowsInBatches({
-						ctx,
-						rows: revertRows,
-						defaultProducts: [],
-					});
-				}
-
-				if (standardRows.length === 0) continue;
-
 				const defaultProducts = await ProductService.listDefault({
 					db: ctx.db,
 					orgId: ctx.org.id,
@@ -107,11 +94,7 @@ export const runProductCron = async ({
 				// `billing.updated` webhook (tagged "trial_ended") fires from
 				// a single emission site — regardless of whether a free default
 				// is being activated alongside the expiry.
-				await processRowsInBatches({
-					ctx,
-					rows: standardRows,
-					defaultProducts,
-				});
+				await processRowsInBatches({ ctx, rows, defaultProducts });
 			}
 
 			totalExpired += results.length;

@@ -27,7 +27,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
+import { isAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/isAutumnManagedTrialContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
@@ -174,10 +174,23 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		canceledStripeSubscriptionId !== undefined ||
 		mismatchedStripeSubscriptionId !== undefined;
 
+	const invoiceMode = await setupInvoiceModeContext({
+		ctx,
+		fullCustomer,
+		params,
+		stripeCustomer,
+	});
+
 	const skipBillingChanges =
 		skipBillingChangesBase ||
 		isUnbillableSubscription ||
-		isRevertTrialContext({ trialContext });
+		isAutumnManagedTrialContext({
+			trialContext,
+			invoiceMode,
+			stripeSubscription: customerProduct.subscription_ids?.length
+				? stripeSubscription
+				: undefined,
+		});
 
 	// 3. Determine final anchor based on product transitions
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
@@ -200,12 +213,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		newFullProduct: fullProduct,
 	});
 
-	const invoiceMode = await setupInvoiceModeContext({
-		ctx,
-		fullCustomer,
-		params,
-		stripeCustomer,
-	});
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined
 			? contextOverride.forceIsCustom

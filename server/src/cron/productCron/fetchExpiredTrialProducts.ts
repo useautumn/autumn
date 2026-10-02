@@ -1,21 +1,26 @@
 import {
 	ACTIVE_STATUSES,
-	type AppEnv,
+	AppEnv,
 	customerPrices,
 	customerProducts,
 	customers,
 	type Feature,
+	freeTrials,
 	type Organization,
+	organizations,
+	ProcessorType,
 } from "@autumn/shared";
 import {
 	and,
 	eq,
+	exists,
 	type InferSelectModel,
 	inArray,
 	isNotNull,
 	lt,
 	notExists,
 	or,
+	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -46,6 +51,45 @@ export const fetchExpiredTrialProducts = async ({
 	nowMs?: number;
 	internalCustomerId?: string;
 }) => {
+	const hasNoPrices = notExists(
+		db
+			.select()
+			.from(customerPrices)
+			.where(eq(customerPrices.customer_product_id, customerProducts.id)),
+	);
+
+	const isNoCardTrial = exists(
+		db
+			.select()
+			.from(freeTrials)
+			.where(
+				and(
+					eq(freeTrials.id, customerProducts.free_trial_id),
+					eq(freeTrials.card_required, false),
+				),
+			),
+	);
+
+	const orgWritesToStripe = notExists(
+		db
+			.select()
+			.from(organizations)
+			.where(
+				and(
+					eq(organizations.id, customers.org_id),
+					eq(customers.env, AppEnv.Live),
+					sql`(${organizations.config}->>'disable_stripe_writes')::boolean is true`,
+				),
+			),
+	);
+
+	const isUnbilledNoCardTrial = and(
+		isNoCardTrial,
+		sql`coalesce(cardinality(${customerProducts.subscription_ids}), 0) = 0`,
+		sql`coalesce(${customerProducts.processor}->>'type', ${ProcessorType.Stripe}) = ${ProcessorType.Stripe}`,
+		orgWritesToStripe,
+	);
+
 	return db
 		.select({
 			customerProduct: customerProducts,
@@ -59,15 +103,9 @@ export const fetchExpiredTrialProducts = async ({
 		.where(
 			and(
 				or(
-					notExists(
-						db
-							.select()
-							.from(customerPrices)
-							.where(
-								eq(customerPrices.customer_product_id, customerProducts.id),
-							),
-					),
+					hasNoPrices,
 					eq(customerProducts.on_trial_end, "revert"),
+					isUnbilledNoCardTrial,
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),

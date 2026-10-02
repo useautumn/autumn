@@ -30,7 +30,7 @@ import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPay
 import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
-import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
+import { isAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/isAutumnManagedTrialContext";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
@@ -226,7 +226,12 @@ export const setupAttachBillingContext = async ({
 	});
 
 	const skipBillingChanges =
-		skipBillingChangesBase || isRevertTrialContext({ trialContext });
+		skipBillingChangesBase ||
+		isAutumnManagedTrialContext({
+			trialContext,
+			invoiceMode,
+			stripeSubscription,
+		});
 
 	const requestedBillingCycleAnchor = setupRequestedBillingCycleAnchor({
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,

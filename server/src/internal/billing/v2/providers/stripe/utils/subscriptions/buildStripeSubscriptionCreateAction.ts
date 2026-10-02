@@ -26,7 +26,8 @@ export const buildStripeSubscriptionCreateAction = ({
 
 	const trialEndsAt = trialContext?.trialEndsAt;
 
-	const freeTrialNoCardRequired = trialContext?.cardRequired === false;
+	const freeTrialNoCardRequired =
+		trialContext?.cardRequired === false && !billingContext.invoiceMode;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	const willCreateInvoiceEndOfCycle = willStripeSubscriptionInvoiceEndOfCycle({

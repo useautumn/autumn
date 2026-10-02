@@ -16,6 +16,7 @@ import {
 	inheritTrialFromCustomerProduct,
 	inheritTrialFromSubscription,
 } from "@/internal/billing/v2/setup/trialContext";
+import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 
 /**
  * Sets up trial context for update subscription operations.
@@ -23,9 +24,10 @@ import {
  * Logic:
  * 1. If a free_trial param passed (customize.free_trial or the shorthand) → Use it (null removes trial, value sets fresh trial)
  * 2. If revert trial → Inherit from customer product (its subscription belongs to the paused plan)
- * 3. If paid product with trialing subscription → Inherit from subscription
- * 4. If customer product is trialing (free product case) → Inherit from customer product
- * 5. Otherwise → No trial context
+ * 3. If paid trial with no Stripe subscription → Autumn-managed no-card trial
+ * 4. If paid product with trialing subscription → Inherit from subscription
+ * 5. If customer product is trialing (free product case) → Inherit from customer product
+ * 6. Otherwise → No trial context
  */
 export const setupUpdateSubscriptionTrialContext = ({
 	stripeSubscription,
@@ -59,6 +61,22 @@ export const setupUpdateSubscriptionTrialContext = ({
 
 	if (customerProduct && isRevertTrial) {
 		return inheritTrialFromCustomerProduct({ customerProduct, currentEpochMs });
+	}
+
+	if (
+		customerProduct &&
+		isCustomerProductAutumnManagedTrial({
+			customerProduct,
+			nowMs: currentEpochMs,
+		})
+	) {
+		return {
+			freeTrial: customerProduct.free_trial,
+			trialEndsAt: customerProduct.trial_ends_at ?? null,
+			appliesToBilling: true,
+			cardRequired: false,
+			onEnd: customerProduct.on_trial_end ?? undefined,
+		};
 	}
 
 	// Inherit from stripe subscription (paid product case)
