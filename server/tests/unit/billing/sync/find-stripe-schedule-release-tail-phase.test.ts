@@ -55,10 +55,17 @@ const scheduleWith = ({
 		],
 	}) as unknown as Stripe.SubscriptionSchedule;
 
-const findTail = ({ schedule }: { schedule: Stripe.SubscriptionSchedule }) =>
+const findTail = ({
+	schedule,
+	nowSeconds = START,
+}: {
+	schedule: Stripe.SubscriptionSchedule;
+	nowSeconds?: number;
+}) =>
 	findStripeScheduleReleaseTailPhase({
 		schedule,
 		ongoingStripePriceIds: new Set([ONGOING_BASE, ONGOING_USAGE]),
+		nowSeconds,
 	});
 
 describe("findStripeScheduleReleaseTailPhase", () => {
@@ -91,6 +98,14 @@ describe("findStripeScheduleReleaseTailPhase", () => {
 		});
 
 		expect(findTail({ schedule })).toBeNull();
+	});
+
+	it("ignores it once it has started, since it is then the current billing phase", () => {
+		const schedule = scheduleWith({ lastPrices: [ONGOING_USAGE] });
+
+		expect(
+			findTail({ schedule, nowSeconds: START + 365 * DAY + 1 }),
+		).toBeNull();
 	});
 
 	it("ignores it when the schedule cancels instead of releasing", () => {

@@ -57,19 +57,22 @@ const continuesOngoingItems = ({
 };
 
 /** Stripe has no open-ended future phase, so a released schedule ends its plans
- * with a last phase holding only ongoing plans' prices; that's release, not a phase. */
+ * with a last phase holding only ongoing plans' prices; until it starts, that's release, not a phase. */
 export const findStripeScheduleReleaseTailPhase = ({
 	schedule,
 	ongoingStripePriceIds,
+	nowSeconds,
 }: {
 	schedule: Stripe.SubscriptionSchedule;
 	ongoingStripePriceIds: ReadonlySet<string>;
+	nowSeconds: number;
 }): Stripe.SubscriptionSchedule.Phase | null => {
 	if (schedule.end_behavior !== "release") return null;
 
 	const lastPhase = schedule.phases.at(-1);
 	const previousPhase = schedule.phases.at(-2);
 	if (!lastPhase || !previousPhase) return null;
+	if (lastPhase.start_date <= nowSeconds) return null;
 	if (lastPhase.items.length === 0) return null;
 	if ((lastPhase.add_invoice_items ?? []).length > 0) return null;
 

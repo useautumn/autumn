@@ -64,6 +64,7 @@ const buildScheduleProposalPhases = ({
 	const releaseTailPhase = findStripeScheduleReleaseTailPhase({
 		schedule,
 		ongoingStripePriceIds,
+		nowSeconds,
 	});
 	const openPhases = schedule.phases.filter(
 		(phase) =>

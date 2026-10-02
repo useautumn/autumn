@@ -7,6 +7,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	isCustomerProductUnlinkedFree,
+	msToSeconds,
 	RecaseError,
 	type SyncBillingContext,
 	type SyncParamsV1,
@@ -333,6 +334,7 @@ export const setupSyncContext = async ({
 					customerProducts: fullCustomer.customer_products,
 					stripeSubscriptionId: params.stripe_subscription_id,
 				}),
+				nowSeconds: msToSeconds(currentEpochMs),
 			})
 		: null;
 
