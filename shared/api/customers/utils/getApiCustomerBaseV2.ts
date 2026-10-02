@@ -2,7 +2,6 @@ import {
 	type ApiCustomerV5,
 	ApiCustomerV5Schema,
 	type ApiInvoiceV1,
-	type BalanceAllocationControl,
 	type CustomerLegacyData,
 	type FullSubject,
 	fullSubjectToApiUsageLimits,
@@ -25,14 +24,12 @@ export const getApiCustomerBaseV2 = async ({
 	fullSubject,
 	withAutumnId = true,
 	invoices,
-	balanceAllocations,
 }: {
 	ctx: SharedContext;
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
 	/** Already in API form: an invoice's hosted URL is built from the server's own address, which this has no way to know. */
 	invoices?: ApiInvoiceV1[];
-	balanceAllocations?: BalanceAllocationControl[];
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const { balances: apiBalances, flags: apiFlags } = getApiBalancesV2({
 		ctx,
@@ -83,7 +80,6 @@ export const getApiCustomerBaseV2 = async ({
 		flags: apiFlags,
 		send_email_receipts: customer.send_email_receipts ?? false,
 		billing_controls: {
-			balance_allocations: balanceAllocations,
 			auto_topups: customer.auto_topups ?? undefined,
 			spend_limits: customer.spend_limits ?? undefined,
 			usage_limits: usageLimits,

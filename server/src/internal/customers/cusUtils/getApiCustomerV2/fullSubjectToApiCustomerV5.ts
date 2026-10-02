@@ -2,15 +2,14 @@ import {
 	type ApiCustomerV5,
 	type ApiInvoiceV1,
 	type ApiVersionClass,
-	type BalanceAllocationControl,
 	type CustomerLegacyData,
 	type FullSubject,
-	getApiCustomerBaseV2,
 	mergePlanBillingControlsForResponse,
-	type SharedContext,
 	shouldAggregateEntityData,
 	subjectWithoutEntityData,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
 
 /** customers.get's body before expands and version changes: plan billing controls merged, internal fields stripped. */
 export const fullSubjectToApiCustomerV5 = async ({
@@ -19,15 +18,13 @@ export const fullSubjectToApiCustomerV5 = async ({
 	apiVersion,
 	withAutumnId = false,
 	invoices,
-	balanceAllocations,
 }: {
-	ctx: SharedContext;
+	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	apiVersion: ApiVersionClass;
 	withAutumnId?: boolean;
 	/** Rendered by the caller when invoices are expanded; undefined when not. */
 	invoices?: ApiInvoiceV1[];
-	balanceAllocations?: BalanceAllocationControl[];
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const subjectToUse =
 		fullSubject.subjectType === "customer" &&
@@ -40,7 +37,6 @@ export const fullSubjectToApiCustomerV5 = async ({
 		fullSubject: subjectToUse,
 		withAutumnId,
 		invoices,
-		balanceAllocations,
 	});
 
 	const billingControls = mergePlanBillingControlsForResponse({

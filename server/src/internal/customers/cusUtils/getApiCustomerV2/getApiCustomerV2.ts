@@ -4,12 +4,11 @@ import {
 	applyResponseVersionChanges,
 	CustomerExpand,
 	type FullSubject,
-	fullSubjectToApiCustomerV5,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getBalanceAllocationControls } from "@/internal/balances/allocate/getBalanceAllocationControls.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
+import { fullSubjectToApiCustomerV5 } from "./fullSubjectToApiCustomerV5.js";
 
 /**
  * Transform FullSubject to ApiCustomer with expand fields and version changes applied.
@@ -36,11 +35,6 @@ export const getApiCustomerV2 = async ({
 			apiVersion: ctx.apiVersion,
 			withAutumnId,
 			invoices,
-			balanceAllocations: await getBalanceAllocationControls({
-				ctx,
-				internalCustomerId: fullSubject.customer.internal_id,
-				allocations: fullSubject.customer.balance_allocations,
-			}),
 		});
 
 	const apiCustomerExpand = await getApiCustomerExpandV2({

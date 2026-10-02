@@ -6,12 +6,11 @@ import {
 	dbToApiFeatureV1,
 	type FullSubject,
 	findFeatureById,
-	getApiCustomerBaseV2,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getBalanceAllocationControls } from "@/internal/balances/allocate/getBalanceAllocationControls.js";
+import { getApiCustomerBaseV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiCustomerBaseV2.js";
 
 /** The customer at the caller's API version, without the autumn id or invoices the event never carried. */
 const renderCustomer = async ({
@@ -25,11 +24,6 @@ const renderCustomer = async ({
 		ctx,
 		fullSubject,
 		withAutumnId: false,
-		balanceAllocations: await getBalanceAllocationControls({
-			ctx,
-			internalCustomerId: fullSubject.customer.internal_id,
-			allocations: fullSubject.customer.balance_allocations,
-		}),
 	});
 	return applyResponseVersionChanges({
 		input: apiCustomer,
