@@ -1,3 +1,4 @@
+import { truncateMsToSecondPrecision } from "@autumn/shared";
 import { isAliveAt } from "../timeline/timelineGuards";
 import type {
 	ResolvedSegment,
@@ -39,7 +40,7 @@ export const diffToSchedule = ({
 	customerProductIdBySegmentId: Map<string, string>;
 }): SchedulePhasePlan[] =>
 	phaseStarts.map((startsAt) => {
-		const at = Math.max(startsAt, diff.now);
+		const at = Math.max(truncateMsToSecondPrecision(startsAt), diff.now);
 		return {
 			startsAt,
 			customerProductIds: diff.timeline

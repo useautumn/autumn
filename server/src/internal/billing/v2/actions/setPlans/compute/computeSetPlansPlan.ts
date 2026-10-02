@@ -120,7 +120,7 @@ export const computeSetPlansPlan = ({
 		diff: timeline.diff,
 		phaseStarts: [
 			billingContext.immediatePhase.starts_at,
-			...timeline.requestedPhases.slice(1).map(({ startsAt }) => startsAt),
+			...billingContext.scheduledPhaseContexts.map(({ startsAt }) => startsAt),
 		],
 		customerProductIdBySegmentId:
 			customerProductChanges.customerProductIdBySegmentId,

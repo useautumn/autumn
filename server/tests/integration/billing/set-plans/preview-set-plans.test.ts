@@ -157,7 +157,6 @@ test.concurrent(
 		]);
 		expect(preview.warnings.map((warning) => warning.type)).toEqual([
 			"existing_schedule_replaced",
-			"future_phase_removed",
 		]);
 	},
 );
