@@ -113,7 +113,9 @@ export type SqliteStateStore = Omit<
 		partition: number;
 		nextOffset: bigint;
 	}): void;
+	/** Resident: the intent is accepted and ignored, there is no snapshot table behind it. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
+		snapshotIntent?: SnapshotIntent;
 	}): SqliteDurableMutationApplyResult[];
 };
