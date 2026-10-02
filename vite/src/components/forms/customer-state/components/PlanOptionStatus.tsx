@@ -13,17 +13,17 @@ export function PlanOptionStatus({
 	subscriptionConflict: SubscriptionConflict | null;
 	productName: string;
 }) {
-	if (isSelectedElsewhere) {
-		return (
-			<span className="shrink-0 text-xs text-subtle">Already selected</span>
-		);
-	}
 	if (subscriptionConflict) {
 		return (
 			<SubscriptionConflictHoverCard
 				productName={productName}
 				conflict={subscriptionConflict}
 			/>
+		);
+	}
+	if (isSelectedElsewhere) {
+		return (
+			<span className="shrink-0 text-xs text-subtle">Already selected</span>
 		);
 	}
 	if (isGroupUsed) {
