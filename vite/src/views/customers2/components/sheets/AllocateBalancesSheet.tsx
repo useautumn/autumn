@@ -4,7 +4,10 @@ import type {
 	Entity,
 	FullCustomer,
 } from "@autumn/shared";
-import { LATEST_VERSION, ResetInterval } from "@autumn/shared";
+import {
+	fullCustomerToCustomerEntitlements,
+	LATEST_VERSION,
+} from "@autumn/shared";
 import {
 	Button,
 	FormLabel,
@@ -38,6 +41,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 // import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { getAllocatableSharedBalanceInterval } from "../table/customer-balance/customerBalanceUtils";
 import {
 	// AllocationUsageWindows,
 	allocationStateQueryKey,
@@ -104,8 +108,6 @@ export function AllocateBalancesSheet() {
 	);
 	const customerId = customer?.id || customer?.internal_id;
 	const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
-	const [selectedInterval, setSelectedInterval] =
-		useState<BalanceAllocationControl["interval"]>();
 	const featureId =
 		selectedFeatureId ?? (sheetData?.featureId as string | undefined);
 	const featureName =
@@ -128,12 +130,33 @@ export function AllocateBalancesSheet() {
 	const [response, setResponse] = useState<ApiCustomerV5 | null>(null);
 	const controls =
 		(response ?? apiCustomer)?.billing_controls.balance_allocations ?? [];
+	const existingControl = controls.find(
+		(control) => control.feature_id === featureId,
+	);
+	const pinnedInterval = existingControl?.allocations.length
+		? existingControl.interval
+		: undefined;
+	const allocatableFeatures = Object.keys(apiCustomer?.balances ?? {}).flatMap(
+		(id) => {
+			if (!fullCustomer || entities.length === 0) return [];
+			const sharedInterval = getAllocatableSharedBalanceInterval({
+				customerEntitlements: fullCustomerToCustomerEntitlements({
+					fullCustomer,
+					featureId: id,
+				}),
+			});
+			return sharedInterval
+				? [{ featureId: id, interval: sharedInterval }]
+				: [];
+		},
+	);
 	const interval =
-		selectedInterval ??
-		(sheetData?.interval as BalanceAllocationControl["interval"] | undefined);
+		pinnedInterval ??
+		allocatableFeatures.find((feature) => feature.featureId === featureId)
+			?.interval;
 	const stored = storedAmountInputs({ controls, featureId, interval });
 	const [editedInputs, setInputs] = useState<AmountInputs | null>(null);
-	const inputs = editedInputs ?? stored;
+	const inputs = { ...stored, ...editedInputs };
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const allocations = changedAllocations({ entities, inputs, stored });
@@ -155,14 +178,32 @@ export function AllocateBalancesSheet() {
 
 		setIsSubmitting(true);
 		try {
-			const requested = { ...stored };
+			const { data: freshCustomer } = await axiosInstance.get<ApiCustomerV5>(
+				`/v1/customers/${encodeURIComponent(customerId)}`,
+			);
+			const freshControls =
+				freshCustomer.billing_controls.balance_allocations ?? [];
+			const freshControl = freshControls.find(
+				(control) => control.feature_id === featureId,
+			);
+			if (freshControl && freshControl.interval !== interval) {
+				toast.error(
+					"The allocation interval changed. Reopen this sheet to refresh.",
+				);
+				return;
+			}
+			const requested = storedAmountInputs({
+				controls: freshControls,
+				featureId,
+				interval,
+			});
 			for (const { entity_id, amount } of allocations)
 				requested[entity_id] = String(amount);
 			const featureAllocations = Object.entries(requested).flatMap(
 				([entity_id, amount]) =>
 					Number(amount) > 0 ? [{ entity_id, amount: Number(amount) }] : [],
 			);
-			const balanceAllocations = controls.filter(
+			const balanceAllocations = freshControls.filter(
 				(control) => control.feature_id !== featureId,
 			);
 			if (featureAllocations.length)
@@ -217,10 +258,6 @@ export function AllocateBalancesSheet() {
 								disabled={isPending || isSubmitting || isError}
 								onValueChange={(value) => {
 									setSelectedFeatureId(value);
-									setSelectedInterval(
-										controls.find((control) => control.feature_id === value)
-											?.interval,
-									);
 									setInputs(null);
 								}}
 							>
@@ -228,7 +265,7 @@ export function AllocateBalancesSheet() {
 									<SelectValue placeholder="Select a feature" />
 								</SelectTrigger>
 								<SelectContent>
-									{Object.keys(apiCustomer?.balances ?? {}).map((id) => (
+									{allocatableFeatures.map(({ featureId: id }) => (
 										<SelectItem key={id} value={id}>
 											{id}
 										</SelectItem>
@@ -238,27 +275,14 @@ export function AllocateBalancesSheet() {
 						</div>
 						<div className="flex flex-col gap-2">
 							<FormLabel className="mb-0">Reset interval</FormLabel>
-							<Select
-								value={interval}
-								disabled={isSubmitting || !featureId}
-								onValueChange={(value) => {
-									setSelectedInterval(
-										value as BalanceAllocationControl["interval"],
-									);
-									setInputs(null);
-								}}
-							>
+							<Select value={interval} disabled>
 								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Select an interval" />
 								</SelectTrigger>
 								<SelectContent>
-									{Object.values(ResetInterval)
-										.filter((value) => value !== ResetInterval.OneOff)
-										.map((value) => (
-											<SelectItem key={value} value={value}>
-												{value}
-											</SelectItem>
-										))}
+									{interval && (
+										<SelectItem value={interval}>{interval}</SelectItem>
+									)}
 								</SelectContent>
 							</Select>
 						</div>
@@ -311,7 +335,7 @@ export function AllocateBalancesSheet() {
 										value={inputs[entityId] ?? ""}
 										onChange={(event) =>
 											setInputs((prev) => ({
-												...(prev ?? stored),
+												...prev,
 												[entityId]: event.target.value,
 											}))
 										}
