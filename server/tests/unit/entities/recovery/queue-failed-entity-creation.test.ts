@@ -6,8 +6,8 @@
  *   recovery queue.
  * - Payloads preserve org, environment, API version, the validated create params, stage, and request ID.
  * - Identical recovery requests share a deterministic deduplication ID.
- * - The one global message group keeps replay at a concurrency ceiling of one, after any
- *   customer creation queued before it.
+ * - The message group is the subject: an entity replay lands after any customer creation
+ *   queued for the same customer, beside other customers' replays.
  * - A send the queue could not make never replaces the original API failure.
  */
 
@@ -85,7 +85,7 @@ describe("queueFailedEntityCreation", () => {
 		expect(secondQueued).toBe(true);
 		expect(mockState.sends).toHaveLength(2);
 		expect(mockState.sends[0]?.options?.groupId).toBe(
-			"customer-creation-recovery",
+			"org_123:live:customer_123",
 		);
 		expect(mockState.sends[0]?.options?.dedupeId).toStartWith(
 			"entity-creation-",

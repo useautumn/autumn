@@ -1,5 +1,8 @@
 import type { BillingDetailsParams } from "@autumn/shared";
-import { customerCreationRecoveryDedupeId } from "@autumn/sqs";
+import {
+	creationRecoveryGroupId,
+	customerCreationRecoveryDedupeId,
+} from "@autumn/sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsJobs } from "@/queue/getSqsJobs.js";
 import type {
@@ -7,10 +10,6 @@ import type {
 	CustomerCreationRecoveryPayload,
 	CustomerCreationRecoveryStage,
 } from "./customerCreationRecoveryTypes.js";
-
-/** One group for every creation replay: a hard concurrency ceiling of one, in failure order. */
-export const CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID =
-	"customer-creation-recovery";
 
 /** False, never a throw, when the queue is missing or unreachable: the request's own failure is the answer. */
 export const queueFailedCustomerCreation = async ({
@@ -44,7 +43,7 @@ export const queueFailedCustomerCreation = async ({
 	const { sent } = await getSqsJobs().customerCreationRecovery.trySend(
 		payload,
 		{
-			groupId: CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID,
+			groupId: creationRecoveryGroupId(payload),
 			dedupeId: customerCreationRecoveryDedupeId({ payload }),
 		},
 	);

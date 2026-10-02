@@ -5,7 +5,8 @@
  * - Transient failures are sent as the customer creation recovery job, without API credentials.
  * - Payloads preserve org, environment, API version, normalized request, stage, and request ID.
  * - Identical recovery requests share a deterministic deduplication ID.
- * - Every message uses one global message group so replay has a hard concurrency ceiling of one.
+ * - The message group is the subject, so one customer's replays stay in failure order while
+ *   other customers replay in parallel.
  * - A send the queue could not make never replaces the original API failure.
  */
 
@@ -93,7 +94,7 @@ describe("queueFailedCustomerCreation", () => {
 		expect(secondQueued).toBe(true);
 		expect(mockState.sends).toHaveLength(2);
 		expect(mockState.sends[0]?.options?.groupId).toBe(
-			"customer-creation-recovery",
+			"org_123:live:customer_123",
 		);
 		expect(mockState.sends[0]?.options?.dedupeId).toStartWith(
 			"customer-creation-",

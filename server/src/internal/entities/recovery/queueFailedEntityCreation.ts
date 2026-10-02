@@ -1,6 +1,8 @@
-import { entityCreationRecoveryDedupeId } from "@autumn/sqs";
+import {
+	creationRecoveryGroupId,
+	entityCreationRecoveryDedupeId,
+} from "@autumn/sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
 import { getSqsJobs } from "@/queue/getSqsJobs.js";
 import type {
 	EntityCreationRecoveryParams,
@@ -29,7 +31,7 @@ export const queueFailedEntityCreation = async ({
 		failedAt: Date.now(),
 	};
 	const { sent } = await getSqsJobs().entityCreationRecovery.trySend(payload, {
-		groupId: CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID,
+		groupId: creationRecoveryGroupId(payload),
 		dedupeId: entityCreationRecoveryDedupeId({ payload }),
 	});
 	if (!sent) return false;
