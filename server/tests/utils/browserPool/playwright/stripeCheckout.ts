@@ -47,7 +47,10 @@ export const stripeCheckout = async ({
 		'[data-testid="card-accordion-item-button"]',
 	);
 	const cardNumber = page.locator("#cardNumber");
-	await cardAccordion.or(cardNumber).first().waitFor({ timeout: 60_000 });
+	await cardAccordion
+		.or(cardNumber)
+		.first()
+		.waitFor({ state: "attached", timeout: 60_000 });
 	console.log("[stripeCheckout] Form rendered");
 
 	if (addOptionalItem) {
@@ -179,8 +182,9 @@ export const stripeCheckout = async ({
 			throw new Error(".AdjustQuantityFooter-btn not found");
 		}
 		await updateBtn.click();
+		// Submit ignores Enter while the quantity overlay is still saving.
+		await quantityInput.waitFor({ state: "hidden", timeout: 60_000 });
 		console.log(`[stripeCheckout] Quantity set to ${overrideQuantity}`);
-		await page.waitForTimeout(1000);
 	}
 
 	if (promoCode) {
@@ -199,8 +203,8 @@ export const stripeCheckout = async ({
 		await saveWithLink.uncheck();
 	}
 
-	// A click can land in a Stripe iframe while the page scrolls to Submit (or hit a
-	// quantity overlay); Enter goes to the focused button wherever it is on screen.
+	// A click can land in a Stripe iframe while the page scrolls to Submit; Enter goes
+	// to the focused button wherever it is on screen.
 	const submit = page
 		.locator("button.SubmitButton, button[type=submit]")
 		.first();

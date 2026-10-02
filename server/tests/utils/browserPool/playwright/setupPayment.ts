@@ -25,7 +25,10 @@ export const setupPayment = async ({
 		'[data-testid="card-accordion-item-button"]',
 	);
 	const cardNumber = page.locator("#cardNumber");
-	await cardAccordion.or(cardNumber).first().waitFor({ timeout: 60_000 });
+	await cardAccordion
+		.or(cardNumber)
+		.first()
+		.waitFor({ state: "attached", timeout: 60_000 });
 
 	// The card radio is hidden behind the accordion button, so click that via JS.
 	if (!(await cardNumber.isVisible())) {
