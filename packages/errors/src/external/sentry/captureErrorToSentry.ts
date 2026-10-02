@@ -8,15 +8,30 @@ import { logContextToSentryEvent } from "./logContextToSentryEvent.js";
 const fingerprintOf = ({
 	error,
 	operation,
+	env,
 }: {
 	error: Error;
 	operation: string | undefined;
+	env: string | undefined;
 }): string[] | undefined => {
 	if ("fingerprint" in error && Array.isArray(error.fingerprint))
 		return error.fingerprint.map(String);
-	// Every Stripe error's top frame is the SDK's, so the stack would put them all in one issue.
-	if (isStripeError(error))
-		return ["stripe", error.code ?? error.type, operation ?? "unknown"];
+	if (!isStripeError(error)) return;
+
+	const isWebhookOperation =
+		operation === "stripe-webhook-replay" ||
+		operation === "POST /webhooks/connect/:env";
+	const hasWebhookEnvironment = env === "live" || env === "sandbox";
+	const fingerprintOperation =
+		isWebhookOperation && hasWebhookEnvironment
+			? `POST /webhooks/connect/${env}`
+			: operation;
+
+	return [
+		"stripe",
+		error.code ?? error.type,
+		fingerprintOperation ?? "unknown",
+	];
 };
 
 /** Context goes on this one event, never the shared scope, so concurrent jobs can't swap tags. */
@@ -36,7 +51,11 @@ export const captureErrorToSentry = ({
 		logContext,
 		classification,
 	});
-	const fingerprint = fingerprintOf({ error, operation: event.tags.operation });
+	const fingerprint = fingerprintOf({
+		error,
+		operation: event.tags.operation,
+		env: event.tags.env,
+	});
 	Sentry.captureException(error, {
 		...event,
 		...(fingerprint && { fingerprint }),

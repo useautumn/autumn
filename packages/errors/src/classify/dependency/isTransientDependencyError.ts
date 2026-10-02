@@ -39,9 +39,13 @@ const AWS_THROTTLING_NAMES = new Set([
 const isRetryableStatus = (status: unknown) =>
 	typeof status === "number" && (status === 429 || status >= 500);
 
+const isRetriableKafkaError = (error: Error) =>
+	error.name.startsWith("KafkaJS") &&
+	!("retriable" in error && error.retriable === false);
+
 const isTransientNetworkError = (error: Error) =>
 	error.name === "TimeoutError" ||
-	error.name.startsWith("KafkaJS") ||
+	isRetriableKafkaError(error) ||
 	("code" in error && TRANSIENT_NETWORK_CODES.has(String(error.code)));
 
 /** A server-sent Postgres error carries `severity`; only those codes are SQLSTATEs. */
