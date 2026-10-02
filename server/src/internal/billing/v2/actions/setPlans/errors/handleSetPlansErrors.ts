@@ -80,7 +80,7 @@ export const handleSetPlansErrors = async ({
 		});
 	}
 
-	handleFirstPhaseStartDateErrors({ billingContext, preview });
+	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
 	assertNoBillingCycleAnchorWithTrial({ billingContext });
 	handleSetPlansBillingCycleAnchorErrors({
 		billingContext,

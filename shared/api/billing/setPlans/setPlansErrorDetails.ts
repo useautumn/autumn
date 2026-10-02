@@ -85,6 +85,21 @@ export const SetPlansPlanCannotStartLaterSchema = z.object({
 	starts_at: z.number(),
 });
 
+/** A backdate over a live subscription that can't be recreated without losing or rebilling something. */
+export const SetPlansBackdateConflictSchema = z.object({
+	type: z.literal("backdate_conflict"),
+	conflict: z.enum([
+		"free_trial",
+		"stripe_checkout",
+		"subscription_schedule",
+		"billing_cycle_anchor",
+		"too_far_back",
+		"plan_outside_request",
+	]),
+	starts_at: z.number(),
+	plan_name: z.string().optional(),
+});
+
 export const SetPlansErrorDetailsSchema = z.discriminatedUnion("type", [
 	SetPlansSubscriptionConflictSchema,
 	SetPlansPlanOutsideSubscriptionSchema,
@@ -97,6 +112,7 @@ export const SetPlansErrorDetailsSchema = z.discriminatedUnion("type", [
 	SetPlansDateOrderSchema,
 	SetPlansFutureStartConflictSchema,
 	SetPlansPlanCannotStartLaterSchema,
+	SetPlansBackdateConflictSchema,
 ]);
 
 export type SetPlansErrorDetails = z.infer<typeof SetPlansErrorDetailsSchema>;
