@@ -6,6 +6,8 @@ import { useNavigate } from "react-router";
 import { useScopes } from "@/hooks/useScopes";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
+import { adminPageCommands } from "@/views/admin/adminPages";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { LogsIcon } from "@/views/event-logs/LogsIcon";
 import { DEV_SUB_TABS } from "@/views/main-sidebar/MainSidebar";
 import {
@@ -31,6 +33,7 @@ export interface PageCommand {
  */
 export const usePageCommands = (): PageCommand[] => {
 	const { has } = useScopes();
+	const { isAdmin } = useAdmin();
 	const isSettingsTabEnabled = useIsSettingsTabEnabled();
 
 	const settings = SETTINGS_GROUPS.flatMap((group) =>
@@ -90,7 +93,12 @@ export const usePageCommands = (): PageCommand[] => {
 		},
 	];
 
-	return [...topLevel, ...settings, ...developer];
+	return [
+		...topLevel,
+		...settings,
+		...developer,
+		...adminPageCommands({ isAdmin }),
+	];
 };
 
 export const usePageCommandNavigate = () => {
