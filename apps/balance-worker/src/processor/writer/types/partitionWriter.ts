@@ -53,7 +53,7 @@ export type PartitionWriter = {
 };
 
 export type CommitWaits = {
-	queuedMs: number;
+	queuedMs: number | null;
 	lingerMs: number;
 	storeWaitMs: number;
 };

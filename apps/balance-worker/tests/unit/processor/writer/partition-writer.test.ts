@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	applyMutation,
+	computeEvict,
 	computeTrack,
 	createSubjectState,
 	type InitializeRequest,
+	type LoggedEvictCommand,
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
 	parseTrackCommand,
@@ -272,6 +274,7 @@ type TestWriter = {
 	submitInitialization(params: {
 		initialization: InitializeRequest;
 	}): Promise<InitializeReply>;
+	logDeferredEvict(): Promise<void>;
 };
 
 const createPartitionTrackWriter = ({
@@ -338,6 +341,21 @@ const createPartitionTrackWriter = ({
 				: track({ scope, command }),
 		submitInitialization: ({ initialization }) =>
 			initialize({ scope, request: initialization }),
+		logDeferredEvict: () => {
+			const command: LoggedEvictCommand = {
+				schemaVersion: 1,
+				type: "evict",
+				requestId: "req_evict",
+				commandId: `evict_${crypto.randomUUID()}`,
+				identity: { ...firstIdentity, entityId: null },
+				occurredAt: 1_700_000_000_000,
+			};
+			return writer.log({
+				command,
+				mutation: computeEvict({ state: null, command }),
+				defersCommit: true,
+			});
+		},
 	};
 };
 
@@ -1140,6 +1158,60 @@ describe("partition writer", () => {
 				{ queuedMs: 0, lingerMs: 0, storeWaitMs: 0 },
 				{ queuedMs: 20, lingerMs: 0, storeWaitMs: 0 },
 			]);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("an evict deferred at the front of a batch does not count as the track's wait", async () => {
+		const fixture = createFixture();
+		let clock = 0;
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+				now: () => clock,
+			});
+			const evicted = writer.logDeferredEvict();
+			clock = 500;
+			const tracked = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1", value: 1 }),
+			});
+			await waitForBatch();
+			appender.resolve({ baseOffset: 0n });
+			await Promise.all([evicted, tracked]);
+
+			expect(appender.batches[0]).toHaveLength(2);
+			expect(appender.waits[0]?.queuedMs).toBe(0);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("a commit of deferred evicts alone reports no queued wait", async () => {
+		const fixture = createFixture();
+		let clock = 0;
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, deferredCommitMs: 5 },
+				now: () => clock,
+			});
+			const evicted = writer.logDeferredEvict();
+			clock = 900;
+			await Bun.sleep(20);
+			appender.resolve({ baseOffset: 0n });
+			await evicted;
+
+			expect(appender.waits[0]?.queuedMs).toBeNull();
 		} finally {
 			closeFixture(fixture);
 		}

@@ -141,7 +141,7 @@ async function commitOutcomes({
 				scope,
 				batch,
 				waits: {
-					queuedMs: takenAt - (batch[0]?.queuedAt ?? takenAt),
+					queuedMs: queuedMsOf({ batch, takenAt }),
 					lingerMs: takenAt - lingerStartedAt,
 					storeWaitMs: lingerStartedAt - storeWaitStartedAt,
 				},
@@ -396,6 +396,17 @@ function enterRecovery({
 // Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.
 /** Up to maxBatchSize records and maxBatchBytes, and never empty: enqueue already
  *  refused any single record over the byte limit. */
+function queuedMsOf({
+	batch,
+	takenAt,
+}: {
+	batch: PendingMutation[];
+	takenAt: number;
+}): number | null {
+	const oldestAwaited = batch.find((pending) => !pending.defersCommit);
+	return oldestAwaited ? takenAt - oldestAwaited.queuedAt : null;
+}
+
 function takeBatch({
 	scope,
 }: {

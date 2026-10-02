@@ -161,10 +161,10 @@ export const maxBatchBytesOf = ({
 	limits: PartitionWriterScope["config"]["limits"];
 }): number => limits.maxBatchBytes ?? DEFAULT_MAX_BATCH_BYTES;
 
-/** A queued mutation owns both durability milestones, even after its log reply releases its pins. */
 export const writerNowOf = ({ scope }: { scope: PartitionWriterScope }) =>
 	scope.ctx.now?.() ?? performance.now();
 
+/** A queued mutation owns both durability milestones, even after its log reply releases its pins. */
 export function enqueueMutation({
 	scope,
 	pendingKey,

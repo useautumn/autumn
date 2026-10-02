@@ -205,7 +205,7 @@ export function createPartitionCommitLogging({
 function waitFieldsOf({ waits }: { waits?: CommitWaits }) {
 	if (!waits) return {};
 	return {
-		queuedMs: roundMs(waits.queuedMs),
+		queuedMs: waits.queuedMs === null ? null : roundMs(waits.queuedMs),
 		lingerMs: roundMs(waits.lingerMs),
 		storeWaitMs: roundMs(waits.storeWaitMs),
 	};
