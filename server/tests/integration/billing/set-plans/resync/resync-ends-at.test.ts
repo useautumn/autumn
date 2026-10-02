@@ -163,7 +163,7 @@ test.concurrent(
 
 		const lastPhaseStartsAt = advancedTo + ms.days(20);
 		await expectAutumnError({
-			errMessage: "is before the last phase starts on",
+			errMessage: "isn't after the last phase starts on",
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,

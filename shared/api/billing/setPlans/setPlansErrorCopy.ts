@@ -1,4 +1,7 @@
-import { formatMsToDate } from "../../../utils/common/formatUtils/formatUnix";
+import {
+	formatMs,
+	formatMsToDate,
+} from "../../../utils/common/formatUtils/formatUnix";
 import type { SetPlansErrorDetails } from "./setPlansErrorDetails";
 import {
 	boldText,
@@ -22,6 +25,19 @@ export type SetPlansErrorCopy = {
 	};
 };
 
+/** Two dates on the same day only read in order with their times. */
+const formatDatePair = ({
+	firstMs,
+	secondMs,
+}: {
+	firstMs: number;
+	secondMs: number;
+}) => {
+	const sameDay = formatMsToDate(firstMs) === formatMsToDate(secondMs);
+	const formatDate = sameDay ? formatMs : formatMsToDate;
+	return { first: formatDate(firstMs), second: formatDate(secondMs) };
+};
+
 const plain = plainText;
 const bold = boldText;
 
@@ -38,7 +54,7 @@ const BOUNDARY_COPY: Record<
 	{ relation: string; hint: string }
 > = {
 	last_phase: {
-		relation: "is before the last phase starts on",
+		relation: "isn't after the last phase starts on",
 		hint: "Move it after the last phase.",
 	},
 	next_phase: {
@@ -161,12 +177,16 @@ export const setPlansErrorCopy = (
 			};
 		case "date_order": {
 			const boundary = BOUNDARY_COPY[details.boundary];
+			const dates = formatDatePair({
+				firstMs: details.date_ms,
+				secondMs: details.boundary_ms,
+			});
 			return {
 				line: [
 					plain(DATE_LABELS[details.date]),
-					bold(formatMsToDate(details.date_ms)),
+					bold(dates.first),
 					plain(boundary.relation),
-					bold(`${formatMsToDate(details.boundary_ms)}.`),
+					bold(`${dates.second}.`),
 				],
 				hint: { text: boundary.hint },
 			};

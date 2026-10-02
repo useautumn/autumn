@@ -5,8 +5,10 @@ import {
 	setPlansErrorCopyToText,
 } from "@autumn/shared";
 
-const NOV_1_2026 = Date.UTC(2026, 10, 1, 12);
-const OCT_15_2026 = Date.UTC(2026, 9, 15, 12);
+const NOV_1_2026 = new Date(2026, 10, 1, 12).getTime();
+const OCT_15_2026 = new Date(2026, 9, 15, 12).getTime();
+const JAN_1_2026_9AM = new Date(2026, 0, 1, 9).getTime();
+const JAN_1_2026_NOON = new Date(2026, 0, 1, 12).getTime();
 
 const EVERY_ERROR: [SetPlansErrorDetails, string][] = [
 	[
@@ -78,7 +80,17 @@ const EVERY_ERROR: [SetPlansErrorDetails, string][] = [
 			boundary: "last_phase",
 			boundary_ms: NOV_1_2026,
 		},
-		"The end date 15 Oct 2026 is before the last phase starts on 01 Nov 2026. Move it after the last phase.",
+		"The end date 15 Oct 2026 isn't after the last phase starts on 01 Nov 2026. Move it after the last phase.",
+	],
+	[
+		{
+			type: "date_order",
+			date: "billing_cycle_anchor",
+			date_ms: JAN_1_2026_NOON,
+			boundary: "end_date",
+			boundary_ms: JAN_1_2026_9AM,
+		},
+		"The billing cycle anchor 01 Jan 2026 12:00:00 is after the end date 01 Jan 2026 09:00:00. Move it before the end date.",
 	],
 ];
 
