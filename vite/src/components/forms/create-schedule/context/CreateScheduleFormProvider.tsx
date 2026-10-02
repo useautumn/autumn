@@ -11,7 +11,6 @@ import {
 	isOneOffProductV2,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
-import { isAfter } from "date-fns";
 import {
 	createContext,
 	type ReactNode,
@@ -264,8 +263,11 @@ export function CreateScheduleFormProvider({
 	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
 		if (allowFirstPhaseBackdate || isExistingSchedule) return;
-		const startsAt = form.store.state.values.phases[0]?.startsAt;
-		if (startsAt != null && !isAfter(startsAt, nowMs)) {
+		const { phases } = form.store.state.values;
+		if (
+			phases[0]?.startsAt != null &&
+			!firstPhaseStartsLater({ phases, nowMs })
+		) {
 			form.setFieldValue("phases[0].startsAt", null);
 		}
 	}, [allowFirstPhaseBackdate, isExistingSchedule, form, nowMs]);

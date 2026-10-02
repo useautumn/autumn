@@ -110,7 +110,7 @@ const schedulePhase = ({
 	persistedStartsAt,
 	productIds = ["prod_1"],
 }: {
-	startsAt?: number;
+	startsAt?: number | null;
 	persistedStartsAt?: number;
 	productIds?: string[];
 }): CustomerStatePhase => ({
@@ -847,13 +847,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		const firstPhaseFrom = (startsAt: number) =>
 			buildCreateScheduleRequestBody({
 				customerId: "cus_1",
-				phases: [
-					{
-						startsAt,
-						persistedStartsAt: undefined,
-						plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
-					},
-				],
+				phases: [schedulePhase({ startsAt })],
 				products: defaultProducts,
 				features,
 				nowMs: now,
@@ -881,13 +875,7 @@ describe("buildCreateScheduleRequestBody", () => {
 			buildCreateScheduleStageRequestBody({
 				stageParams,
 				customerId: "cus_1",
-				phases: [
-					{
-						startsAt,
-						persistedStartsAt: undefined,
-						plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
-					},
-				],
+				phases: [schedulePhase({ startsAt })],
 				products: defaultProducts,
 				features,
 				nowMs: now,
