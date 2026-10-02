@@ -34,6 +34,14 @@ describe("stripeSubscriptionToRenewal", () => {
 		).toEqual({ kind: "payment_failed", date: PERIOD_START_SECONDS * 1000 });
 	});
 
+	test("an unpaid subscription reads as a failed payment, not a renewal", () => {
+		expect(
+			stripeSubscriptionToRenewal({
+				subscription: makeStripeSubscription({ id: "sub_a", status: "unpaid" }),
+			}),
+		).toEqual({ kind: "payment_failed", date: PERIOD_START_SECONDS * 1000 });
+	});
+
 	test("cancel_at wins over the period end", () => {
 		const cancelAt = PERIOD_START_SECONDS + 100;
 		expect(

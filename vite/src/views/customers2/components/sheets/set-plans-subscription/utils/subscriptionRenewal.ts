@@ -16,6 +16,11 @@ const stripeTimestampToMs = (timestamp: number) =>
 const firstItemPeriod = (subscription: Stripe.Subscription) =>
 	subscription.items?.data?.[0];
 
+const FAILED_PAYMENT_STATUSES: Stripe.Subscription.Status[] = [
+	"past_due",
+	"unpaid",
+];
+
 const isCancelling = (subscription: Stripe.Subscription) =>
 	subscription.cancel_at_period_end || subscription.cancel_at != null;
 
@@ -28,7 +33,10 @@ export const stripeSubscriptionToRenewal = ({
 }): SubscriptionRenewal => {
 	const period = firstItemPeriod(subscription);
 
-	if (subscription.status === "past_due" && period?.current_period_start) {
+	const hasFailedPayment = FAILED_PAYMENT_STATUSES.includes(
+		subscription.status,
+	);
+	if (hasFailedPayment && period?.current_period_start) {
 		return {
 			kind: "payment_failed",
 			date: stripeTimestampToMs(period.current_period_start),
