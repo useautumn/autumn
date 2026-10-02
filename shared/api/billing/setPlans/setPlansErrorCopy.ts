@@ -127,7 +127,7 @@ const BACKDATE_CONFLICT_COPY: Record<
 	},
 	billing_cycle_anchor: {
 		subject: "The billing cycle anchor can't change when backdating to",
-		hint: "Billing continues on the current cycle, so remove the anchor.",
+		hint: "Remove it to keep the current cycle, or restart the cycle on the backdated start instead.",
 	},
 	too_far_back: {
 		subject: "Stripe can't backdate the subscription this far, to",

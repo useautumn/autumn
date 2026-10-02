@@ -85,3 +85,27 @@ test("a backdate over a healthy subscription carries its live rows onto the recr
 		}).liveRows,
 	).toBe("recreate");
 });
+
+test("a backdate that restarts the cycle on its start recreates the live rows, so their paid time is credited", () => {
+	const currentEpochMs = 1_800_000_000_000;
+	const backdatedStart = currentEpochMs - ms.days(20);
+
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({
+				currentEpochMs,
+				immediatePhase: {
+					starts_at: backdatedStart,
+					plans: [],
+					billing_cycle_anchor: "phase_start",
+				},
+				subscriptionBackdateStartMs: backdatedStart,
+				replacedStripeSubscription: {
+					id: "sub_live",
+					status: "active",
+				} as Stripe.Subscription,
+			}),
+			params: {},
+		}).liveRows,
+	).toBe("recreate");
+});
