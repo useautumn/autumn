@@ -14,7 +14,11 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 	.extend({
 		phases: CreateScheduleParamsV0BaseSchema.shape.phases.meta({
 			description:
-				"Ordered phase definitions. Together with unscheduled_plans they are the full list of the customer's plans in the request's scope: a current plan none of them lists ends now (with credit per proration_behavior), and a plan a later phase leaves out ends when that phase starts. One-off purchases are never ended.",
+				"Ordered phase definitions. Together with unscheduled_plans they are the full list of the customer's plans in the request's scope: a current plan none of them lists ends now (with credit per proration_behavior), and a plan a later phase leaves out ends when that phase starts. One-off purchases are never ended. The first phase may start at a future starts_at: the current plans in scope end now (with credit per proration_behavior) and billing starts on that date.",
+		}),
+		enable_plan_immediately: z.boolean().optional().meta({
+			description:
+				"If true, the first phase's plans are activated immediately even when billing starts later: on a future first phase starts_at they are usable now and first billed on that date, and with Stripe checkout they are inserted before the customer completes the hosted form.",
 		}),
 		proration_behavior: BillingBehaviorSchema.optional().meta({
 			description:

@@ -67,6 +67,20 @@ export const SetPlansDateOrderSchema = z.object({
 	boundary_ms: z.number(),
 });
 
+/** A first phase that starts later can't take something that bills or anchors now. */
+export const SetPlansFutureStartConflictSchema = z.object({
+	type: z.literal("future_start_conflict"),
+	conflict: z.enum(["free_trial", "invoice_mode", "billing_cycle_anchor"]),
+	starts_at: z.number(),
+});
+
+/** Nothing in Stripe would start this plan when a later first phase begins. */
+export const SetPlansPlanCannotStartLaterSchema = z.object({
+	type: z.literal("plan_cannot_start_later"),
+	plan_name: z.string(),
+	starts_at: z.number(),
+});
+
 export const SetPlansErrorDetailsSchema = z.discriminatedUnion("type", [
 	SetPlansSubscriptionConflictSchema,
 	SetPlansPlanOutsideSubscriptionSchema,
@@ -77,6 +91,8 @@ export const SetPlansErrorDetailsSchema = z.discriminatedUnion("type", [
 	SetPlansTooManyPhasesSchema,
 	SetPlansFreePlanNeedsStripeSchema,
 	SetPlansDateOrderSchema,
+	SetPlansFutureStartConflictSchema,
+	SetPlansPlanCannotStartLaterSchema,
 ]);
 
 export type SetPlansErrorDetails = z.infer<typeof SetPlansErrorDetailsSchema>;

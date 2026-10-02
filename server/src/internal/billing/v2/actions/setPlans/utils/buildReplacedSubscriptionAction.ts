@@ -12,7 +12,7 @@ export const buildReplacedSubscriptionAction = ({
 	const { action } = subscriptionStateAction({
 		state: replacedStripeSubscription.status,
 	});
-	if (action !== "cancel_and_create") return undefined;
+	if (action === "create") return undefined;
 
 	return {
 		type: "cancel",

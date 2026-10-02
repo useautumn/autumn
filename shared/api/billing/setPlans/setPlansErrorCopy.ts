@@ -67,6 +67,25 @@ const BOUNDARY_COPY: Record<
 	},
 };
 
+const FUTURE_START_CONFLICT_COPY: Record<
+	Extract<SetPlansErrorDetails, { type: "future_start_conflict" }>["conflict"],
+	{ subject: string; hint: string }
+> = {
+	free_trial: {
+		subject: "A free trial can't start on a later date,",
+		hint: "Start the first phase now, or remove the trial.",
+	},
+	invoice_mode: {
+		subject: "Invoice mode can't be used when the first phase starts on",
+		hint: "Start the first phase now, or turn off invoice mode.",
+	},
+	billing_cycle_anchor: {
+		subject:
+			"The billing cycle anchor can't be set when the first phase starts on",
+		hint: "Billing is anchored to that date, so remove the anchor.",
+	},
+};
+
 /** The one place every Set Plans error is worded, for the API message and the dashboard alike. */
 export const setPlansErrorCopy = (
 	details: SetPlansErrorDetails,
@@ -191,6 +210,27 @@ export const setPlansErrorCopy = (
 				hint: { text: boundary.hint },
 			};
 		}
+		case "future_start_conflict": {
+			const copy = FUTURE_START_CONFLICT_COPY[details.conflict];
+			return {
+				line: [
+					plain(copy.subject),
+					bold(`${formatMsToDate(details.starts_at)}.`),
+				],
+				hint: { text: copy.hint },
+			};
+		}
+		case "plan_cannot_start_later":
+			return {
+				line: [
+					bold(details.plan_name),
+					plain("can't start on a later date,"),
+					bold(`${formatMsToDate(details.starts_at)}.`),
+				],
+				hint: {
+					text: "Stripe has nothing to start it then. Start the first phase now, or turn on early access.",
+				},
+			};
 	}
 };
 

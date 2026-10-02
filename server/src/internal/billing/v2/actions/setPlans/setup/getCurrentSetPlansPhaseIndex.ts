@@ -1,5 +1,5 @@
-import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import type { normalizeSetPlansPhases } from "../errors/normalizeSetPlansPhases";
+import { FIRST_PHASE_TOLERANCE_MS } from "./classifyFirstPhaseStart";
 
 export const getCurrentSetPlansPhaseIndex = ({
 	phases,

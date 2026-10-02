@@ -1,4 +1,5 @@
 import type {
+	AttachBillingContext,
 	CreateScheduleBillingContext,
 	FullCusProduct,
 } from "@autumn/shared";
@@ -7,6 +8,7 @@ import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/a
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { initScheduledCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initScheduledCustomerProduct";
+import { startsInFuture } from "../../timeline/timelineGuards";
 import type { ResolvedSegment } from "../../timeline/types/timelineDiff";
 
 const findProductContext = ({
@@ -34,7 +36,7 @@ const findProductContext = ({
 	throw new Error(`set_plans cannot find the requested plan for ${segment.id}`);
 };
 
-/** A plan starting now is attached like any immediate plan, carrying over the row it replaces. */
+/** A first-phase plan is attached like any immediate plan; one starting later without early access waits like a scheduled one. */
 const insertImmediateCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -48,18 +50,28 @@ const insertImmediateCustomerProduct = ({
 	segment: ResolvedSegment;
 	replacedCustomerProduct?: FullCusProduct;
 }): FullCusProduct => {
-	const attachBillingContext = productContextToAttachBillingContext({
-		billingContext,
-		productContext,
-		currentCustomerProductOverride: replacedCustomerProduct,
+	const startsLater = startsInFuture({
+		segment,
+		now: billingContext.currentEpochMs,
 	});
+	const attachBillingContext: AttachBillingContext = {
+		...productContextToAttachBillingContext({
+			billingContext,
+			productContext,
+			currentCustomerProductOverride: replacedCustomerProduct,
+		}),
+		...(startsLater &&
+			billingContext.accessStartsAt === undefined && {
+				planTiming: "end_of_cycle",
+			}),
+	};
 	const customerProduct = computeAttachNewCustomerProduct({
 		ctx,
 		attachBillingContext,
 		params: { no_billing_changes: billingContext.skipBillingChanges },
 	});
 
-	if (replacedCustomerProduct) {
+	if (replacedCustomerProduct && !startsLater) {
 		customerProduct.starts_at = replacedCustomerProduct.starts_at;
 	}
 	applyScheduleTimingToCustomerProductPlan({

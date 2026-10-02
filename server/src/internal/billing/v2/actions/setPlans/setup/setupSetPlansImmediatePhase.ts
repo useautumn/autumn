@@ -5,10 +5,10 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
-import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import type { normalizeSetPlansPhases } from "../errors/normalizeSetPlansPhases";
 import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
 import { markUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
+import { FIRST_PHASE_TOLERANCE_MS } from "./classifyFirstPhaseStart";
 import { getCurrentSetPlansPhaseIndex } from "./getCurrentSetPlansPhaseIndex";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 
