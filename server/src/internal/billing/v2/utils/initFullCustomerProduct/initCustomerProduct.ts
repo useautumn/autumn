@@ -107,7 +107,7 @@ export const initCustomerProduct = ({
 
 		// Only stamp `processor` when one was supplied (e.g. RevenueCat origin or a
 		// carried-over RevenueCat plan); `cusProductToProcessorType` defaults to Stripe.
-		...(processor
+		...(processor !== undefined
 			? { processor }
 			: processorType
 				? { processor: { type: processorType } }
