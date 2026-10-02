@@ -90,7 +90,7 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 			),
 		]);
 
-		expect(tokens.accessToken()).toStartWith("am_oauth_");
+		expect(tokens.accessToken()).toStartWith("am_sk_test_oauth_");
 		expect(tokens.scopes()).toEqual(grantedScopes);
 		expect(concurrentRetry.accessToken()).toBe(tokens.accessToken());
 		expect(concurrentRetry.refreshToken()).toBe(tokens.refreshToken());

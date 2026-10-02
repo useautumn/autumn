@@ -3,11 +3,15 @@ import { ApiVersion } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
+import {
+	RATE_LIMIT_CONFIGS,
+	RateLimitType,
+} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
 const testCase = "rate-limit-list-products";
 
-// Products route falls back to the General bucket at 10 per second per org
-const GENERAL_RATE_LIMIT = 10;
+// Products route falls back to the General bucket
+const GENERAL_RATE_LIMIT = RATE_LIMIT_CONFIGS[RateLimitType.General].limit;
 
 /**
  * Test: Rate limit on GET /products endpoint
