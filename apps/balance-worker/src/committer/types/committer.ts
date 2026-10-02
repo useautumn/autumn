@@ -1,3 +1,5 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";
@@ -19,6 +21,8 @@ export type CommitterContext = {
 	control?: { read(): CommitterControl };
 	/** Customers whose state was too large to snapshot, so their rows were deleted instead. */
 	onSnapshotSizeCapped?: (params: { customers: number }) => void;
+	/** Read at every decision that touches `subject_snapshots`: a flip in S3 lands with the next flush. */
+	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 };
 
 /** A transient failure is retried until the store answers or the committer stops; the record is never given up on. */
@@ -35,8 +39,8 @@ export type CommitterConfig = {
 	/** Row changes one flush may carry; a hot partition cannot crowd out the others. */
 	maxRowsPerFlush: number;
 	retry: FlushRetryPolicy;
-	/** Absent: no flush touches `subject_snapshots`. */
-	snapshots?: { partitionCount: number; maxBytes: number };
+	/** The deployment's partition count, written beside every snapshot row; absent, no flush touches `subject_snapshots`. */
+	snapshots?: { partitionCount: number };
 };
 
 export type PartitionPosition = { topic: string; partition: number };

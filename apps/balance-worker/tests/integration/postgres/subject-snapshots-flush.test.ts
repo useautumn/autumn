@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
-import { BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH } from "@autumn/env/balanceWorkerConstants";
 import {
 	claimPartitionProgress,
 	commitFlush,
@@ -14,7 +13,9 @@ import {
 import { sql } from "drizzle-orm";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
+import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 import {
 	openFixturePostgres,
 	readWorktreeDatabaseUrl,
@@ -159,8 +160,9 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				}
 			},
 		};
+		const subjectSnapshots = createSubjectSnapshotsStore({ mode: "write" });
 		const committer = createCommitter({
-			ctx: { db },
+			ctx: { db, subjectSnapshots },
 			config: {
 				concurrency: 4,
 				maxRowsPerFlush: 500,
@@ -169,14 +171,14 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 					initialBackoffMs: 1,
 					maxBackoffMs: 1,
 				},
-				snapshots: { partitionCount: 64, maxBytes: 262_144 },
+				snapshots: { partitionCount: 64 },
 			},
 		});
 		const store = createCommitterStateStore({
 			ctx: {
 				committer,
 				db,
-				snapshots: { dropBatch: BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH },
+				subjectSnapshots,
 			},
 		});
 		try {
@@ -204,7 +206,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			const durationMs = performance.now() - startedAt;
 
 			const statements = Math.ceil(
-				10_000 / BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH,
+				10_000 / defaultSubjectSnapshotsEdgeConfig().dropBatch,
 			);
 			expect(statementMs).toHaveLength(statements);
 			expect(deleted).toBe(10_000);

@@ -29,6 +29,7 @@ import {
 	createTrackCommand,
 	createTrackMutation,
 } from "../../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "writer-intent";
 const partition = 2;
@@ -58,7 +59,8 @@ const decideTrack = ({
 };
 
 /** The writer over a store with nothing resident; the store records the intent handed in with each apply. */
-const createWriter = () => {
+const createWriter = ({ mode = "write" }: { mode?: "off" | "write" } = {}) => {
+	const subjectSnapshots = createSubjectSnapshotsStore({ mode });
 	const intents: (SnapshotIntent | undefined)[] = [];
 	const applyGate = { held: Promise.resolve() as Promise<void> };
 	let rejectNext: string | null = null;
@@ -90,6 +92,7 @@ const createWriter = () => {
 	const writer = createPartitionWriter({
 		ctx: {
 			stateStore,
+			subjectSnapshots,
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
 					const baseOffset = nextOffset;
@@ -148,6 +151,12 @@ const createWriter = () => {
 		rejectCommand: (id: string) => {
 			rejectNext = id;
 		},
+		setMode: (next: "off" | "write") => {
+			subjectSnapshots._setRuntimeConfigForTesting({
+				...subjectSnapshots.get(),
+				mode: next,
+			});
+		},
 	};
 };
 
@@ -158,6 +167,30 @@ const balanceOf = (intent: SnapshotIntent | undefined) => {
 };
 
 describe("the writer's snapshot intent", () => {
+	test("with the store reading off, a subject read whole still leaves no intent: the flush carries no customer", async () => {
+		const { intents, track, readWhole } = createWriter({ mode: "off" });
+		readWhole({ baselineAt: 1_234 });
+		await track("t1").waitForStore();
+
+		expect(intents).toHaveLength(1);
+		expect(intents[0]?.size).toBe(0);
+	});
+
+	test("a flip in the store takes effect at the next flush: off carries nothing, write carries the rows, off again carries nothing", async () => {
+		const { intents, track, readWhole, setMode } = createWriter({
+			mode: "off",
+		});
+		readWhole({ baselineAt: 1_234 });
+		await track("t1").waitForStore();
+		setMode("write");
+		await track("t2").waitForStore();
+		setMode("off");
+		await track("t3").waitForStore();
+
+		expect(intents.map((intent) => intent?.size)).toEqual([0, 1, 0]);
+		expect(balanceOf(intents[1])).toEqual([98]);
+	});
+
 	test("a subject read whole: its record's flush may write the rows it leaves, aged by that read", async () => {
 		const { intents, track, readWhole } = createWriter();
 		readWhole({ baselineAt: 1_234 });
@@ -220,6 +253,7 @@ describe("the writer's snapshot intent", () => {
 			baselineAt: 3_000,
 		});
 		const scope = {
+			ctx: { subjectSnapshots: createSubjectSnapshotsStore({ mode: "write" }) },
 			state: { subjects },
 		} as unknown as PartitionWriterScope;
 		const pending = {

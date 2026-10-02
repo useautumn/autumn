@@ -348,7 +348,10 @@ export const landFlush = async ({
 			call.settle.reject(cause);
 			return outcomes;
 		}
-		if (writesSnapshots({ call })) {
+		if (
+			scope.ctx.subjectSnapshots?.get().mode === "write" &&
+			writesSnapshots({ call })
+		) {
 			const deleted = {
 				...call,
 				snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),

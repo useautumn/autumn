@@ -45,7 +45,7 @@ export const createCommitter = ({
 			...params,
 			rows:
 				countRowChanges({ records: params.records }) +
-				snapshotRowsOf({ config: scope.config, call: params }),
+				snapshotRowsOf({ scope, call: params }),
 			settle: Promise.withResolvers<FlushOutcome>(),
 		};
 		scope.state.queue.push(call);
@@ -125,15 +125,16 @@ function countRowChanges({
 	return rows;
 }
 
-/** Rows the call's snapshot intent adds to its flush: one per state written, one per customer deleted. */
+/** Rows the call's snapshot intent adds to its flush: one per state written, one per customer deleted; none unless snapshots are written. */
 function snapshotRowsOf({
-	config,
+	scope,
 	call,
 }: {
-	config: Pick<CommitterConfig, "snapshots">;
+	scope: Pick<CommitterScope, "ctx" | "config">;
 	call: Pick<FlushCall, "snapshotIntent">;
 }): number {
-	if (!config.snapshots) return 0;
+	if (!scope.config.snapshots) return 0;
+	if (scope.ctx.subjectSnapshots?.get().mode !== "write") return 0;
 	let rows = 0;
 	for (const entry of call.snapshotIntent?.values() ?? [])
 		rows += entry === "delete" ? 1 : entry.states.length;

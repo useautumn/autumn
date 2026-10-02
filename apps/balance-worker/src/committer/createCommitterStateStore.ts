@@ -1,3 +1,5 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
+import type { SubjectSnapshotsEdgeConfig } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {
@@ -29,8 +31,8 @@ export const createCommitterStateStore = ({
 			| "claimPartitionProgress"
 		>;
 		logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
-		/** Present when the committer writes snapshots: evicts delete their customer's rows through the store. */
-		snapshots?: { dropBatch: number };
+		/** Present when the worker has the snapshot settings: evicts delete their customer's rows through the store. */
+		subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	};
 }): CommitterStateStore => {
 	const claimTokens = new Map<string, string>();
@@ -114,12 +116,12 @@ export const createCommitterStateStore = ({
 	function readCommandNextOffset(params: PartitionPosition) {
 		return ctx.progress.readCommandNextOffset(params);
 	}
-	const evictDeletes = dependencies.snapshots
+	const evictDeletes = dependencies.subjectSnapshots
 		? createEvictDeletes({
 				ctx: {
 					committer: ctx.committer,
 					logger: dependencies.logger,
-					batch: dependencies.snapshots.dropBatch,
+					subjectSnapshots: dependencies.subjectSnapshots,
 					runInLane,
 				},
 			})

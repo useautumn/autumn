@@ -19,6 +19,7 @@ import {
 	testOccurredAt,
 	testOrg,
 } from "../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "evict-snapshots";
 const partition = 0;
@@ -65,7 +66,7 @@ const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
 				insertPartitionProgress: async () => undefined,
 				claimPartitionProgress: async () => undefined,
 			},
-			snapshots: { dropBatch: 500 },
+			subjectSnapshots: createSubjectSnapshotsStore({ mode: "write" }),
 		},
 	});
 	await stateStore.initializePartition({ topic, partition, nextOffset: 0n });

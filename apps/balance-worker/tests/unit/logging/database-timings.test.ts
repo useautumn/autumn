@@ -102,4 +102,20 @@ describe("database timings", () => {
 		expect(logged[0]?.[1]).toBe("Balance worker database");
 		reporter.stop();
 	});
+
+	test("subject snapshot writes are counted on the database line, and absent from it while nothing was written", () => {
+		const timings = createDatabaseTimings();
+		expect(timings.drain()).not.toHaveProperty("subjectSnapshots");
+
+		timings.recordSubjectSnapshots({ upserted: 3, deleted: 1 });
+		timings.recordSubjectSnapshots({ upserted: 2, deleted: 0 });
+		timings.recordSubjectSnapshots({ sizeCapped: 1 });
+
+		expect(timings.drain().subjectSnapshots).toEqual({
+			upserted: 5,
+			deleted: 1,
+			sizeCapped: 1,
+		});
+		expect(timings.drain()).not.toHaveProperty("subjectSnapshots");
+	});
 });

@@ -25,6 +25,7 @@ export function decideSnapshotIntent({
 	batch: readonly PendingMutation[];
 }): SnapshotIntent {
 	const intent: SnapshotIntent = new Map();
+	if (scope.ctx.subjectSnapshots?.get().mode !== "write") return intent;
 	for (const pending of batch) {
 		if (!pending.nextState) continue;
 		const customerKey = meteringIdentityToPartitionKey({
