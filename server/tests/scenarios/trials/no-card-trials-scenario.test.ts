@@ -9,6 +9,7 @@ import chalk from "chalk";
  * No-card trials run by Autumn (no Stripe subscription until they convert).
  *
  * Each test sets up one customer in a state to inspect in the dashboard and Stripe:
+ * - qa-nct-fresh:           no plans yet, no card (attach the no-card trial yourself from the dashboard)
  * - qa-nct-trialing:        no card, mid-trial (try upgrade / downgrade / cancel / extend in the UI)
  * - qa-nct-trialing-card:   card on file, mid-trial (try upgrade / downgrade / remove trial in the UI)
  * - qa-nct-expired:         trial ended with no card → back on the free default, no Stripe sub
@@ -50,6 +51,19 @@ const basic = () =>
 			items.monthlyPrice({ price: 10 }),
 		],
 	});
+
+test(`${chalk.yellowBright("no-card trials: fresh customer with no plans")}`, async () => {
+	await initScenario({
+		customerId: "qa-nct-fresh",
+		setup: [
+			s.customer({}),
+			s.products({
+				list: [noCardProTrial(), premium(), basic(), freeDefault()],
+			}),
+		],
+		actions: [],
+	});
+});
 
 test(`${chalk.yellowBright("no-card trials: mid-trial, no card")}`, async () => {
 	await initScenario({
