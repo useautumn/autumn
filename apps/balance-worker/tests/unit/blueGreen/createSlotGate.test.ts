@@ -91,6 +91,32 @@ describe("the worker's active slot store", () => {
 	});
 });
 
+describe("subscribing to the slot gate", () => {
+	test("a subscriber hears the flip that makes this fleet live, until it unsubscribes", async () => {
+		const activeSlot = createActiveSlotStore();
+		activeSlot._setRuntimeConfigForTesting(
+			record({ flightcontrolBlueArn: theirs }),
+		);
+		const gate = createSlotGate({
+			ctx: { identity: { serviceArn: ours, imageSha: null }, activeSlot },
+		});
+		const heard: boolean[] = [];
+		const unsubscribe = gate.subscribe(() => heard.push(gate.isActive()));
+
+		activeSlot._setRuntimeConfigForTesting(
+			record({ flightcontrolBlueArn: ours }),
+		);
+		expect(heard.at(-1)).toBe(true);
+
+		unsubscribe();
+		const before = heard.length;
+		activeSlot._setRuntimeConfigForTesting(
+			record({ flightcontrolBlueArn: theirs }),
+		);
+		expect(heard).toHaveLength(before);
+	});
+});
+
 describe("awaitReadyAnnouncement from the slot gate", () => {
 	test("resolves at once while active or failing open", async () => {
 		const activeSlot = createActiveSlotStore();

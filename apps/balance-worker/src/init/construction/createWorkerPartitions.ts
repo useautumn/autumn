@@ -306,6 +306,7 @@ export function createWorkerPartitions({
 			served: ctx.served,
 			ownershipLink: ctx.ownershipLink,
 			awaitReadyAnnouncement: ctx.awaitReadyAnnouncement,
+			acquirePreparation: ctx.acquirePreparation,
 			onError: ctx.onError,
 			onUnhealthyPartition: ctx.onUnhealthyPartition,
 			onServiceStopped: ctx.onServiceStopped,

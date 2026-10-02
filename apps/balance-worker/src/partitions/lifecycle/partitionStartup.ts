@@ -12,6 +12,7 @@ import type {
 	AllocationScope,
 	PartitionEntry,
 	PartitionScope,
+	PartitionsContext,
 	PartitionsState,
 } from "../types/partitionState.js";
 import type { PartitionFailure } from "../types/partitions.js";
@@ -109,6 +110,23 @@ export function subscribeEntryUnavailable({
 		entry.runtime.subscribeUnavailable(onUnavailable);
 }
 
+async function prepareInTurn({
+	ctx,
+	entry,
+}: {
+	ctx: PartitionsContext;
+	entry: PartitionEntry;
+}): Promise<void> {
+	const release = await ctx.acquirePreparation?.({
+		signal: entry.handoffAbort.signal,
+	});
+	try {
+		await entry.runtime.prepare();
+	} finally {
+		release?.();
+	}
+}
+
 /** prepare → announce ready → named owner by the predecessor (or claim for itself) → activate → admit. */
 export async function startPartition({
 	ctx,
@@ -127,7 +145,7 @@ export async function startPartition({
 		// Best effort, not awaited: the owner that hears it keeps serving through this preparation
 		// instead of releasing at its handoff timeout; without it the old path still applies.
 		void announcePreparing({ ctx, entry });
-		await entry.runtime.prepare();
+		await prepareInTurn({ ctx, entry });
 		if (!isStillStarting()) return;
 		await ctx.awaitReadyAnnouncement?.({
 			partition,

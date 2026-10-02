@@ -42,6 +42,7 @@ export type WorkerPartitionsContext = {
 	served?: PartitionsDependencies["served"];
 	ownershipLink?: PartitionsDependencies["ownershipLink"];
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
+	acquirePreparation?: PartitionsDependencies["acquirePreparation"];
 	onError: PartitionsDependencies["onError"];
 	onUnhealthyPartition: PartitionsDependencies["onUnhealthyPartition"];
 	onServiceStopped?: PartitionsDependencies["onServiceStopped"];

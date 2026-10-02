@@ -1,8 +1,12 @@
 import { cpus } from "node:os";
-import { BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY } from "@autumn/env/balanceWorkerConstants";
+import {
+	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
+	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
+} from "@autumn/env/balanceWorkerConstants";
 import type { KafkaOffsetCommit } from "@autumn/kafka";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
+import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
@@ -145,6 +149,15 @@ export async function createBalanceWorker({
 			config: runtimeConfig,
 		});
 
+		const standbyPreparations = slotGate
+			? createStandbyPreparations({
+					ctx: { gate: slotGate },
+					config: {
+						concurrency: BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
+					},
+				})
+			: undefined;
+
 		function awaitReadyAnnouncement({
 			signal,
 		}: {
@@ -172,6 +185,7 @@ export async function createBalanceWorker({
 				served: partitionLoad,
 				ownershipLink: ownershipHandoff,
 				awaitReadyAnnouncement,
+				acquirePreparation: standbyPreparations?.acquire,
 				onError: dependencies.onError,
 				onUnhealthyPartition: dependencies.onError,
 				onServiceStopped: dependencies.onServiceStopped,

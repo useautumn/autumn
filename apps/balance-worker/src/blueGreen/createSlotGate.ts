@@ -9,6 +9,7 @@ export type SlotGate = {
 	isActive(): boolean;
 	/** Resolves once this fleet is the active slot, at once when it already is; rejects with the signal's reason. */
 	awaitActive(params: { signal: AbortSignal }): Promise<void>;
+	subscribe(listener: () => void): () => void;
 };
 
 type SlotGateContext = {
@@ -55,5 +56,9 @@ export function createSlotGate({ ctx }: { ctx: SlotGateContext }): SlotGate {
 		});
 	}
 
-	return { describe, isActive, awaitActive };
+	function subscribe(listener: () => void): () => void {
+		return ctx.activeSlot.subscribe(() => listener());
+	}
+
+	return { describe, isActive, awaitActive, subscribe };
 }

@@ -143,6 +143,7 @@ export type PartitionsDependencies = {
 		partition: number;
 		signal: AbortSignal;
 	}): Promise<void>;
+	acquirePreparation?(params: { signal: AbortSignal }): Promise<() => void>;
 	onError(failure: PartitionFailure): void;
 	onUnhealthyPartition(failure: {
 		topic: string;
