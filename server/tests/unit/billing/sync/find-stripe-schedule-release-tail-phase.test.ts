@@ -15,20 +15,30 @@ const SCHEDULED_BASE = "price_scheduled_base";
 const ONGOING_USAGE = "price_ongoing_usage";
 const ONGOING_BASE = "price_ongoing_base";
 
-const phase = ({ start, prices }: { start: number; prices: string[] }) =>
+const phase = ({
+	start,
+	prices,
+	quantity = 1,
+}: {
+	start: number;
+	prices: string[];
+	quantity?: number;
+}) =>
 	({
 		start_date: start,
 		end_date: start + 365 * DAY,
-		items: prices.map((price) => ({ price, quantity: 1 })),
+		items: prices.map((price) => ({ price, quantity })),
 		add_invoice_items: [],
 	}) as unknown as Stripe.SubscriptionSchedule.Phase;
 
 const scheduleWith = ({
 	endBehavior = "release",
 	lastPrices,
+	lastQuantity,
 }: {
 	endBehavior?: Stripe.SubscriptionSchedule.EndBehavior;
 	lastPrices: string[];
+	lastQuantity?: number;
 }) =>
 	({
 		end_behavior: endBehavior,
@@ -37,7 +47,11 @@ const scheduleWith = ({
 				start: START,
 				prices: [SCHEDULED_BASE, ONGOING_BASE, ONGOING_USAGE],
 			}),
-			phase({ start: START + 365 * DAY, prices: lastPrices }),
+			phase({
+				start: START + 365 * DAY,
+				prices: lastPrices,
+				quantity: lastQuantity,
+			}),
 		],
 	}) as unknown as Stripe.SubscriptionSchedule;
 
@@ -65,6 +79,15 @@ describe("findStripeScheduleReleaseTailPhase", () => {
 	it("ignores a last phase that renews a scheduled plan's price", () => {
 		const schedule = scheduleWith({
 			lastPrices: [SCHEDULED_BASE, ONGOING_USAGE],
+		});
+
+		expect(findTail({ schedule })).toBeNull();
+	});
+
+	it("ignores a last phase that changes an ongoing price's quantity", () => {
+		const schedule = scheduleWith({
+			lastPrices: [ONGOING_BASE],
+			lastQuantity: 3,
 		});
 
 		expect(findTail({ schedule })).toBeNull();

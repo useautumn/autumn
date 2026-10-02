@@ -29,6 +29,33 @@ const phaseItemToPriceId = ({
 	item: Stripe.SubscriptionSchedule.Phase.Item;
 }): string => (typeof item.price === "string" ? item.price : item.price.id);
 
+/** Each ongoing item bills on as the previous phase billed it; a changed quantity is a scheduled change. */
+const continuesOngoingItems = ({
+	lastPhase,
+	previousPhase,
+	ongoingStripePriceIds,
+}: {
+	lastPhase: Stripe.SubscriptionSchedule.Phase;
+	previousPhase: Stripe.SubscriptionSchedule.Phase;
+	ongoingStripePriceIds: ReadonlySet<string>;
+}): boolean => {
+	const previousQuantities = new Map(
+		previousPhase.items.map((item) => [
+			phaseItemToPriceId({ item }),
+			item.quantity,
+		]),
+	);
+
+	return lastPhase.items.every((item) => {
+		const priceId = phaseItemToPriceId({ item });
+		return (
+			ongoingStripePriceIds.has(priceId) &&
+			previousQuantities.has(priceId) &&
+			previousQuantities.get(priceId) === item.quantity
+		);
+	});
+};
+
 /** Stripe has no open-ended future phase, so a released schedule ends its plans
  * with a last phase holding only ongoing plans' prices; that's release, not a phase. */
 export const findStripeScheduleReleaseTailPhase = ({
@@ -41,15 +68,18 @@ export const findStripeScheduleReleaseTailPhase = ({
 	if (schedule.end_behavior !== "release") return null;
 
 	const lastPhase = schedule.phases.at(-1);
-	if (!lastPhase || schedule.phases.length < 2) return null;
+	const previousPhase = schedule.phases.at(-2);
+	if (!lastPhase || !previousPhase) return null;
 	if (lastPhase.items.length === 0) return null;
 	if ((lastPhase.add_invoice_items ?? []).length > 0) return null;
 
-	const holdsOnlyOngoingPrices = lastPhase.items.every((item) =>
-		ongoingStripePriceIds.has(phaseItemToPriceId({ item })),
-	);
-
-	return holdsOnlyOngoingPrices ? lastPhase : null;
+	return continuesOngoingItems({
+		lastPhase,
+		previousPhase,
+		ongoingStripePriceIds,
+	})
+		? lastPhase
+		: null;
 };
 
 /** Checks if a Stripe subscription schedule is in its last phase. */
