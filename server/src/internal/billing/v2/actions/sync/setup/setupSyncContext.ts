@@ -1,12 +1,9 @@
 import {
-	ACTIVE_STATUSES,
-	cp,
 	type Entity,
 	EntityNotFoundError,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
-	isCustomerProductUnlinkedFree,
 	msToSeconds,
 	RecaseError,
 	type SyncBillingContext,
@@ -33,6 +30,7 @@ import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setup
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { customerProductsToOngoingStripePriceIds } from "../utils/customerProductsToOngoingStripePriceIds";
+import { findLinkedAddOnCustomerProduct } from "./findLinkedAddOnCustomerProduct";
 import { findQueuedCustomerProducts } from "./findQueuedCustomerProducts";
 import { findUnchangedFreeCustomerProduct } from "./findUnchangedFreeCustomerProduct";
 import { linkSyncedPricesToStripe } from "./linkSyncedPricesToStripe";
@@ -55,30 +53,6 @@ const resolvePlanEntity = ({
 	}
 	return entity;
 };
-
-const findLinkedAddOnCustomerProduct = ({
-	fullCustomer,
-	fullProduct,
-	stripeSubscriptionId,
-	internalEntityId,
-}: {
-	fullCustomer: FullCustomer;
-	fullProduct: SyncProductContext["fullProduct"];
-	stripeSubscriptionId: string;
-	internalEntityId?: string;
-}): FullCusProduct | undefined =>
-	fullCustomer.customer_products.find((customerProduct) => {
-		if (customerProduct.product?.id !== fullProduct.id) return false;
-		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
-			return false;
-		return (
-			cp(customerProduct).hasActiveStatus().onStripeSubscription({
-				stripeSubscriptionId,
-			}).valid ||
-			(ACTIVE_STATUSES.includes(customerProduct.status) &&
-				isCustomerProductUnlinkedFree(customerProduct))
-		);
-	});
 
 const buildProductContext = async ({
 	ctx,
