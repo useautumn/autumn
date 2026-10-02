@@ -14,7 +14,7 @@ import chalk from "chalk";
 import { eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 import {
-	getFullCustomerSchedule,
+	getCustomerSchedulesByScope,
 	hydrateCustomerWithSchedules,
 } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 import { getRequiredScheduleId } from "../utils/createScheduleTestHelpers";
@@ -248,11 +248,15 @@ test.concurrent(
 		expect(dbSchedules[0]!.internal_entity_id).toBeNull();
 		expect(dbSchedules[0]!.entity_id).toBeNull();
 
-		const customerScopedSchedule = await getFullCustomerSchedule({
-			ctx,
-			internalCustomerId: dbSchedules[0]!.internal_customer_id,
-		});
-		expect(customerScopedSchedule?.id).toBe(entityScheduleId);
+		const { customerSchedule: customerScopedSchedule, entitySchedules } =
+			await getCustomerSchedulesByScope({
+				ctx,
+				internalCustomerId: dbSchedules[0]!.internal_customer_id,
+			});
+		expect(customerScopedSchedule).toBeUndefined();
+		expect(
+			Object.values(entitySchedules).map((schedule) => schedule.id),
+		).toEqual([entityScheduleId]);
 
 		const replacedScheduledProducts = await ctx.db
 			.select()

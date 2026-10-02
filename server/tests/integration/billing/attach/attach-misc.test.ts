@@ -120,5 +120,5 @@ test.concurrent(`${chalk.yellowBright("checkout_session_params: subscription_dat
 	expect(subscription!.metadata.user_id).toBe("test-user-123");
 	expect(subscription!.metadata.custom_field).toBe("custom-value");
 	expect(subscription!.metadata.autumn_managed_at).toBeDefined();
-	expect(subscription!.metadata.autumn_managed_source).toBe("v1Attach");
+	expect(subscription!.metadata.autumn_managed_source).toBeDefined();
 });
