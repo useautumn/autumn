@@ -1,6 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import type { FullCusProduct, FullProduct } from "@autumn/shared";
 import { AllowanceType, EntInterval, FeatureType } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deriveCustomerProductIsCustom } from "@/internal/billing/v2/execute/deriveCustomerProductIsCustom";
 
 /**
@@ -173,14 +174,30 @@ const customerProduct = ({
 		})),
 	}) as unknown as FullCusProduct;
 
+const fakeLogger = ({
+	onError = () => {},
+}: {
+	onError?: (...args: unknown[]) => void;
+} = {}) => {
+	const logger = {
+		warn: mock(() => {}),
+		error: mock(onError),
+		child: mock(() => logger),
+	};
+	return logger;
+};
+
 const derive = ({
 	customer,
 	base,
+	logger = fakeLogger(),
 }: {
 	customer: FullCusProduct;
 	base?: FullProduct | null;
+	logger?: ReturnType<typeof fakeLogger>;
 }) =>
 	deriveCustomerProductIsCustom({
+		ctx: { logger } as unknown as Pick<AutumnContext, "logger">,
 		customerProduct: customer,
 		baseProduct: base,
 		features: [seatsFeature],
@@ -398,18 +415,56 @@ describe("deriveCustomerProductIsCustom", () => {
 		).toBe(true);
 	});
 
-	test("comparison throwing → custom", () => {
-		const malformed = {
+	const malformedCustomerProduct = () =>
+		({
+			id: "cus_prod_malformed",
+			internal_product_id: "prod_internal_malformed",
 			get product() {
 				throw new Error("unreadable customer product");
 			},
-		} as unknown as FullCusProduct;
+		}) as unknown as FullCusProduct;
+
+	test("comparison throwing → custom, reported with the product ids", () => {
+		const logger = fakeLogger();
 
 		expect(
 			derive({
-				customer: malformed,
+				customer: malformedCustomerProduct(),
 				base: baseProduct({ entitlements: [seatsEntitlement()] }),
+				logger,
 			}),
 		).toBe(true);
+
+		expect(logger.child).toHaveBeenCalledWith({
+			context: {
+				customer_product_id: "cus_prod_malformed",
+				internal_product_id: "prod_internal_malformed",
+			},
+		});
+		expect(logger.error).toHaveBeenCalledTimes(1);
+		const [message, fields] = logger.error.mock.calls[0] as unknown as [
+			string,
+			{ error: Error },
+		];
+		expect(message).toContain("unreadable customer product");
+		expect(fields.error.message).toContain("cus_prod_malformed");
+		expect(fields.error.message).toContain("prod_internal_malformed");
+	});
+
+	test("reporter throwing → still custom", () => {
+		const logger = fakeLogger({
+			onError: () => {
+				throw new Error("sentry down");
+			},
+		});
+
+		expect(
+			derive({
+				customer: malformedCustomerProduct(),
+				base: baseProduct({ entitlements: [seatsEntitlement()] }),
+				logger,
+			}),
+		).toBe(true);
+		expect(logger.error).toHaveBeenCalledTimes(1);
 	});
 });

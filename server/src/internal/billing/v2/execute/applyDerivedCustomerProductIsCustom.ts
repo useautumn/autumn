@@ -137,6 +137,7 @@ export const applyDerivedCustomerProductIsCustom = async ({
 
 	for (const { customerProduct, target, via } of targets) {
 		const isCustom = deriveCustomerProductIsCustom({
+			ctx,
 			customerProduct,
 			baseProduct: customerProduct.internal_product_id
 				? baseProducts.get(customerProduct.internal_product_id)
