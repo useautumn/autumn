@@ -13,6 +13,7 @@ import {
 	EntityAlreadyExistsError,
 } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
+import { throwOnSimulatedBalanceWorkerOutage } from "@/external/balanceWorker/simulateBalanceWorkerOutage.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { requestContextToCommandBase } from "@/internal/balances/balanceWorker/requestContextToCommandBase.js";
@@ -39,7 +40,7 @@ const isDuplicateCommand = (cause: unknown): boolean =>
 	cause.workerCode === "DUPLICATE_COMMAND";
 
 /** Sent under the given id: the same id is deduplicated by the worker, a new id is a new command. */
-const sendPlan = ({
+const sendPlan = async ({
 	ctx,
 	client,
 	customerId,
@@ -54,6 +55,7 @@ const sendPlan = ({
 	ops: BillingPlanOp[];
 	commandId: string;
 }): Promise<ApplyBillingPlanReply> => {
+	throwOnSimulatedBalanceWorkerOutage({ ctx });
 	const request: ApplyBillingPlanRequest = parseApplyBillingPlanRequest({
 		input: {
 			command: {

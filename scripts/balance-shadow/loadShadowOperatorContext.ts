@@ -43,6 +43,7 @@ export async function loadShadowOperatorContext({
 		scopes: [],
 		skipCache: false,
 		extraLogs: {},
+		state: {},
 	};
 	return getCtxWithCustomerRedis({ ctx, customerId: customer.customerId }).ctx;
 }

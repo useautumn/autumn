@@ -1,12 +1,13 @@
 /**
- * TDD contract for durable customer get-or-create failure capture.
+ * TDD contract for durable entities.create failure capture.
  *
  * Contract under test:
- * - Transient failures are sent as the customer creation recovery job, without API credentials.
- * - Payloads preserve org, environment, API version, normalized request, stage, and request ID.
+ * - Transient failures are sent as the entity creation recovery job, on the customer creation
+ *   recovery queue.
+ * - Payloads preserve org, environment, API version, the validated create params, and request ID.
  * - Identical recovery requests share a deterministic deduplication ID.
- * - The message group is the subject, so one customer's replays stay in failure order while
- *   other customers replay in parallel.
+ * - The message group is the subject: an entity replay lands after any customer creation
+ *   queued for the same customer, beside other customers' replays.
  * - A send the queue could not make never replaces the original API failure.
  */
 
@@ -23,7 +24,7 @@ const mockState = {
 
 await mockModuleWithRestore("@/queue/getSqsJobs.js", () => ({
 	getSqsJobs: () => ({
-		customerCreationRecovery: {
+		entityCreationRecovery: {
 			trySend: async (
 				payload: Record<string, unknown>,
 				options?: SendOptions,
@@ -37,14 +38,14 @@ await mockModuleWithRestore("@/queue/getSqsJobs.js", () => ({
 	}),
 }));
 
-const { queueFailedCustomerCreation } = await import(
+const { queueFailedEntityCreation } = await import(
 	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
-	"@/internal/customers/recovery/queueFailedCustomerCreation.js?customerCreationQueue"
+	"@/internal/entities/recovery/queueFailedEntityCreation.js?entityCreationQueue"
 );
 
 const buildContext = () =>
 	({
-		id: "req_customer_123",
+		id: "req_entity_123",
 		org: { id: "org_123" },
 		env: AppEnv.Live,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
@@ -56,38 +57,26 @@ const buildContext = () =>
 	}) as unknown as AutumnContext;
 
 const params = {
-	customer_id: "customer_123",
-	customer_data: {
-		email: "customer@example.com",
-		name: "Customer",
-	},
-	entity_id: "entity_123",
-	entity_data: {
-		name: "Entity",
-		feature_id: "seats",
-	},
+	customerId: "customer_123",
+	customerData: { email: "customer@example.com", name: "Customer" },
+	createEntityData: [{ id: "entity_123", name: "Entity", feature_id: "seats" }],
+	withAutumnId: true,
 };
 
-describe("queueFailedCustomerCreation", () => {
+describe("queueFailedEntityCreation", () => {
 	beforeEach(() => {
 		mockState.sends = [];
 		mockState.shouldFailSend = false;
 	});
 
-	test("sends a replayable request with deterministic ordering and deduplication", async () => {
-		const firstQueued = await queueFailedCustomerCreation({
+	test("sends a replayable request with deterministic deduplication", async () => {
+		const firstQueued = await queueFailedEntityCreation({
 			ctx: buildContext(),
 			params,
-			source: "handleGetOrCreateCustomerV2",
-			withAutumnId: true,
-			failureStage: "lookup",
 		});
-		const secondQueued = await queueFailedCustomerCreation({
+		const secondQueued = await queueFailedEntityCreation({
 			ctx: buildContext(),
 			params,
-			source: "handleGetOrCreateCustomerV2",
-			withAutumnId: true,
-			failureStage: "lookup",
 		});
 
 		expect(firstQueued).toBe(true);
@@ -97,7 +86,7 @@ describe("queueFailedCustomerCreation", () => {
 			"org_123:live:customer_123",
 		);
 		expect(mockState.sends[0]?.options?.dedupeId).toStartWith(
-			"customer-creation-",
+			"entity-creation-",
 		);
 		expect(mockState.sends[0]?.options?.dedupeId).toBe(
 			mockState.sends[1]?.options?.dedupeId,
@@ -107,12 +96,9 @@ describe("queueFailedCustomerCreation", () => {
 			orgId: "org_123",
 			env: AppEnv.Live,
 			customerId: "customer_123",
-			requestId: "req_customer_123",
+			requestId: "req_entity_123",
 			apiVersion: ApiVersion.V2_1,
 			params,
-			source: "handleGetOrCreateCustomerV2",
-			withAutumnId: true,
-			failureStage: "lookup",
 		});
 		expect(JSON.stringify(mockState.sends[0]?.payload)).not.toContain("apiKey");
 		expect(JSON.stringify(mockState.sends[0]?.payload)).not.toContain(
@@ -124,14 +110,9 @@ describe("queueFailedCustomerCreation", () => {
 		mockState.shouldFailSend = true;
 		const ctx = buildContext();
 
-		const queued = await queueFailedCustomerCreation({
-			ctx,
-			params,
-			source: "handleGetOrCreateCustomerV2",
-			failureStage: "lookup",
-		});
+		const queued = await queueFailedEntityCreation({ ctx, params });
 
 		expect(queued).toBe(false);
-		expect(ctx.extraLogs.customerCreationRecoveryQueued).toBeUndefined();
+		expect(ctx.extraLogs.entityCreationRecoveryQueued).toBeUndefined();
 	});
 });

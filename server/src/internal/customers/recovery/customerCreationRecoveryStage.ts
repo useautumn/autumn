@@ -11,6 +11,7 @@ const RECOVERY_STAGES = new Set<CustomerCreationRecoveryStage>([
 	"completed",
 ]);
 
+/** The worker path reaches the same stages: its plan write is the `pre_commit` → `autumn_committed` step, Stripe linking follows. */
 export const setCustomerCreationRecoveryStage = ({
 	ctx,
 	stage,
@@ -18,7 +19,7 @@ export const setCustomerCreationRecoveryStage = ({
 	ctx: AutumnContext;
 	stage: CustomerCreationRecoveryStage;
 }) => {
-	ctx.extraLogs[CUSTOMER_CREATION_RECOVERY_STAGE_KEY] = stage;
+	ctx.state[CUSTOMER_CREATION_RECOVERY_STAGE_KEY] = stage;
 };
 
 export const getCustomerCreationRecoveryStage = ({
@@ -26,7 +27,7 @@ export const getCustomerCreationRecoveryStage = ({
 }: {
 	ctx: AutumnContext;
 }): CustomerCreationRecoveryStage => {
-	const stage = ctx.extraLogs[CUSTOMER_CREATION_RECOVERY_STAGE_KEY];
+	const stage = ctx.state[CUSTOMER_CREATION_RECOVERY_STAGE_KEY];
 	return typeof stage === "string" &&
 		RECOVERY_STAGES.has(stage as CustomerCreationRecoveryStage)
 		? (stage as CustomerCreationRecoveryStage)

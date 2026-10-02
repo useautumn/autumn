@@ -1,16 +1,19 @@
 import type { CreateEntityParams, CustomerData, Entity } from "@autumn/shared";
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
+import { queueFailedEntityCreation } from "../recovery/queueFailedEntityCreation.js";
 import { createEntitiesV2 } from "./createEntitiesV2/createEntitiesV2";
 
-type BatchCreateEntitiesParams = {
+export type BatchCreateEntitiesParams = {
 	ctx: AutumnContext;
 	customerData?: CustomerData;
 	customerId: string;
 	createEntityData: CreateEntityParams[] | CreateEntityParams;
 	withAutumnId?: boolean;
+	enqueueRecoveryOnTransientFailure?: boolean;
 };
 
 /** The created entities rendered from a fresh read, the way `entities.get` sees them. */
@@ -66,16 +69,27 @@ const createEntities = async ({
 	return readApiEntities({ ctx, customerId, entities, withAutumnId });
 };
 
-export const batchCreateEntities = async (
-	params: BatchCreateEntitiesParams,
-) => {
-	const { ctx, customerId } = params;
+export const batchCreateEntities = async ({
+	ctx,
+	enqueueRecoveryOnTransientFailure = true,
+	...params
+}: BatchCreateEntitiesParams) => {
 	const { org, env } = ctx;
 
-	return withLock({
-		lockKey: `lock:create-entity-request:${org.id}:${env}:${customerId}`,
-		errorMessage:
-			"Entity creation already in progress for this customer, try again in a few seconds",
-		fn: () => createEntities(params),
+	return shed503OnTransientError({
+		ctx,
+		source: "entities.create",
+		onTransientError: enqueueRecoveryOnTransientFailure
+			? async () => {
+					await queueFailedEntityCreation({ ctx, params });
+				}
+			: undefined,
+		run: () =>
+			withLock({
+				lockKey: `lock:create-entity-request:${org.id}:${env}:${params.customerId}`,
+				errorMessage:
+					"Entity creation already in progress for this customer, try again in a few seconds",
+				fn: () => createEntities({ ctx, ...params }),
+			}),
 	});
 };

@@ -1,6 +1,7 @@
 import { RecaseError } from "@autumn/shared";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { balanceWorkerFailOpenReasonOf } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { isTransientDbError } from "./dbUtils.js";
 
 export const shed503OnTransientError = async <T>({
@@ -23,8 +24,10 @@ export const shed503OnTransientError = async <T>({
 	} catch (error) {
 		const isDbTransient = isTransientDbError({ error });
 		const isRedisTransient = isTransientRedisError({ error });
+		// The worker gave no verdict; its error is already a 503 that names why.
+		const isWorkerTransient = balanceWorkerFailOpenReasonOf(error) !== null;
 
-		if (!(isDbTransient || isRedisTransient)) {
+		if (!(isDbTransient || isRedisTransient || isWorkerTransient)) {
 			throw error;
 		}
 
@@ -62,6 +65,7 @@ export const shed503OnTransientError = async <T>({
 				{ error: recoveryError },
 			);
 		}
+		if (isWorkerTransient) throw error;
 		throw new RecaseError({
 			message: "Service is temporarily unavailable, please retry shortly.",
 			code: "service_unavailable",

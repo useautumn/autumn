@@ -14,6 +14,7 @@ import {
 import { stripeWebhookErrorWouldRedeliver } from "@/external/stripe/webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { balanceWorkerFailOpenReasonOf } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
@@ -31,6 +32,7 @@ import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/s
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
 import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
+import { replayFailedEntityCreation } from "@/internal/entities/recovery/replayFailedEntityCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
@@ -77,8 +79,14 @@ export const shouldRetrySqsJobError = ({
 	switch (jobName) {
 		case JobName.PersistPublishedBalanceTransitions:
 			return true;
+		// A replay may hit the balance worker's own outage; that is the same transient the request did.
 		case JobName.CustomerCreationRecovery:
-			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		case JobName.EntityCreationRecovery:
+			return (
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error }) ||
+				balanceWorkerFailOpenReasonOf(error) !== null
+			);
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
@@ -210,6 +218,17 @@ export const processMessage = async ({
 				throw new Error("No context found for customer creation recovery job");
 			}
 			await replayFailedCustomerCreation({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.EntityCreationRecovery) {
+			if (!ctx) {
+				throw new Error("No context found for entity creation recovery job");
+			}
+			await replayFailedEntityCreation({
 				ctx,
 				payload: job.data,
 			});

@@ -35,6 +35,7 @@ export const appendMigrationBillingLog = ({
 	const captureCtx: AutumnContext = {
 		...ctx,
 		extraLogs: {},
+		state: {},
 	};
 
 	log(captureCtx);
