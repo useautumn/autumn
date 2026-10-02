@@ -47,6 +47,55 @@ class UpdateCustomerGlobals(BaseModel):
         return m
 
 
+BalanceAllocationIntervalRequestBody = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""The reset interval of the shared credits being allocated."""
+
+
+class AllocationRequestTypedDict(TypedDict):
+    entity_id: str
+    r"""The public entity ID."""
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class AllocationRequest(BaseModel):
+    entity_id: str
+    r"""The public entity ID."""
+
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class BalanceAllocationRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+    interval: BalanceAllocationIntervalRequestBody
+    r"""The reset interval of the shared credits being allocated."""
+    allocations: List[AllocationRequestTypedDict]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
+
+
+class BalanceAllocationRequest(BaseModel):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+
+    interval: BalanceAllocationIntervalRequestBody
+    r"""The reset interval of the shared credits being allocated."""
+
+    allocations: List[AllocationRequest]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
+
+
 UpdateCustomerAutoTopupIntervalRequestBody = Literal[
     "hour",
     "day",
@@ -541,6 +590,8 @@ class UpdateCustomerOverageAllowedRequestBody(BaseModel):
 
 
 class UpdateCustomerBillingControlsRequestBodyTypedDict(TypedDict):
+    balance_allocations: NotRequired[List[BalanceAllocationRequestTypedDict]]
+    r"""Replace all customer-level balance allocations. Omit to keep existing allocations; pass [] to release all. Available only when updating an existing customer."""
     auto_topups: NotRequired[List[UpdateCustomerAutoTopupRequestBodyTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestBodyTypedDict]]
@@ -554,6 +605,9 @@ class UpdateCustomerBillingControlsRequestBodyTypedDict(TypedDict):
 
 
 class UpdateCustomerBillingControlsRequestBody(BaseModel):
+    balance_allocations: Optional[List[BalanceAllocationRequest]] = None
+    r"""Replace all customer-level balance allocations. Omit to keep existing allocations; pass [] to release all. Available only when updating an existing customer."""
+
     auto_topups: Optional[List[UpdateCustomerAutoTopupRequestBody]] = None
     r"""List of auto top-up configurations per feature."""
 
@@ -573,6 +627,7 @@ class UpdateCustomerBillingControlsRequestBody(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "balance_allocations",
                 "auto_topups",
                 "spend_limits",
                 "usage_limits",
@@ -972,6 +1027,58 @@ UpdateCustomerEnv = Union[
     UnrecognizedStr,
 ]
 r"""The environment this customer was created in."""
+
+
+UpdateCustomerBalanceAllocationIntervalResponse = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""The reset interval of the shared credits being allocated."""
+
+
+class UpdateCustomerAllocationResponseTypedDict(TypedDict):
+    entity_id: str
+    r"""The public entity ID."""
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class UpdateCustomerAllocationResponse(BaseModel):
+    entity_id: str
+    r"""The public entity ID."""
+
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class UpdateCustomerBalanceAllocationResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+    interval: UpdateCustomerBalanceAllocationIntervalResponse
+    r"""The reset interval of the shared credits being allocated."""
+    allocations: List[UpdateCustomerAllocationResponseTypedDict]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
+
+
+class UpdateCustomerBalanceAllocationResponse(BaseModel):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+
+    interval: UpdateCustomerBalanceAllocationIntervalResponse
+    r"""The reset interval of the shared credits being allocated."""
+
+    allocations: List[UpdateCustomerAllocationResponse]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
 
 
 UpdateCustomerAutoTopupIntervalResponse2 = Union[
@@ -1507,6 +1614,10 @@ class UpdateCustomerOverageAllowedResponse(BaseModel):
 class UpdateCustomerBillingControlsResponseTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
+    balance_allocations: NotRequired[
+        List[UpdateCustomerBalanceAllocationResponseTypedDict]
+    ]
+    r"""Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling."""
     auto_topups: NotRequired[List[UpdateCustomerAutoTopupResponseTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitResponseTypedDict]]
@@ -1521,6 +1632,9 @@ class UpdateCustomerBillingControlsResponseTypedDict(TypedDict):
 
 class UpdateCustomerBillingControlsResponse(BaseModel):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    balance_allocations: Optional[List[UpdateCustomerBalanceAllocationResponse]] = None
+    r"""Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling."""
 
     auto_topups: Optional[List[UpdateCustomerAutoTopupResponse]] = None
     r"""List of auto top-up configurations per feature."""
@@ -1541,6 +1655,7 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "balance_allocations",
                 "auto_topups",
                 "spend_limits",
                 "usage_limits",

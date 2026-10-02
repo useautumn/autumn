@@ -89,6 +89,58 @@ GetCustomerEnv = Union[
 r"""The environment this customer was created in."""
 
 
+GetCustomerBalanceAllocationInterval = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""The reset interval of the shared credits being allocated."""
+
+
+class GetCustomerAllocationTypedDict(TypedDict):
+    entity_id: str
+    r"""The public entity ID."""
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class GetCustomerAllocation(BaseModel):
+    entity_id: str
+    r"""The public entity ID."""
+
+    amount: float
+    r"""Requested credits per cycle, before proportional scaling. 0 releases the allocation."""
+
+
+class GetCustomerBalanceAllocationTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+    interval: GetCustomerBalanceAllocationInterval
+    r"""The reset interval of the shared credits being allocated."""
+    allocations: List[GetCustomerAllocationTypedDict]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
+
+
+class GetCustomerBalanceAllocation(BaseModel):
+    feature_id: str
+    r"""The feature whose shared customer credits are allocated."""
+
+    interval: GetCustomerBalanceAllocationInterval
+    r"""The reset interval of the shared credits being allocated."""
+
+    allocations: List[GetCustomerAllocation]
+    r"""Complete list of entity allocations for this feature. Omitted entities release their shares."""
+
+
 GetCustomerAutoTopupInterval2 = Union[
     Literal[
         "hour",
@@ -619,6 +671,8 @@ class GetCustomerOverageAllowed(BaseModel):
 class GetCustomerBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
+    balance_allocations: NotRequired[List[GetCustomerBalanceAllocationTypedDict]]
+    r"""Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling."""
     auto_topups: NotRequired[List[GetCustomerAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[GetCustomerSpendLimitTypedDict]]
@@ -633,6 +687,9 @@ class GetCustomerBillingControlsTypedDict(TypedDict):
 
 class GetCustomerBillingControls(BaseModel):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
+
+    balance_allocations: Optional[List[GetCustomerBalanceAllocation]] = None
+    r"""Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling."""
 
     auto_topups: Optional[List[GetCustomerAutoTopup]] = None
     r"""List of auto top-up configurations per feature."""
@@ -653,6 +710,7 @@ class GetCustomerBillingControls(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "balance_allocations",
                 "auto_topups",
                 "spend_limits",
                 "usage_limits",
@@ -1031,6 +1089,53 @@ class GetCustomerDimensions5(BaseModel):
         return m
 
 
+GetCustomerDimensionsUnion3TypedDict = TypeAliasType(
+    "GetCustomerDimensionsUnion3TypedDict",
+    Union[GetCustomerDimensions6TypedDict, GetCustomerDimensions5TypedDict],
+)
+
+
+GetCustomerDimensionsUnion3 = TypeAliasType(
+    "GetCustomerDimensionsUnion3", Union[GetCustomerDimensions6, GetCustomerDimensions5]
+)
+
+
+class GetCustomerMultipliers3TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class GetCustomerMultipliers3(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class GetCustomerCreditSchema3TypedDict(TypedDict):
     credit_cost: float
     r"""Credits consumed per billing-unit group."""
@@ -1100,53 +1205,6 @@ class GetCustomerDimensions4(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["priority"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-GetCustomerDimensionsUnion3TypedDict = TypeAliasType(
-    "GetCustomerDimensionsUnion3TypedDict",
-    Union[GetCustomerDimensions6TypedDict, GetCustomerDimensions5TypedDict],
-)
-
-
-GetCustomerDimensionsUnion3 = TypeAliasType(
-    "GetCustomerDimensionsUnion3", Union[GetCustomerDimensions6, GetCustomerDimensions5]
-)
-
-
-class GetCustomerMultipliers3TypedDict(TypedDict):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class GetCustomerMultipliers3(BaseModel):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
         serialized = handler(self)
         m = {}
 

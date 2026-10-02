@@ -46,6 +46,53 @@ export const GetCustomerEnv = {
 export type GetCustomerEnv = OpenEnum<typeof GetCustomerEnv>;
 
 /**
+ * The reset interval of the shared credits being allocated.
+ */
+export const GetCustomerBalanceAllocationInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * The reset interval of the shared credits being allocated.
+ */
+export type GetCustomerBalanceAllocationInterval = OpenEnum<
+  typeof GetCustomerBalanceAllocationInterval
+>;
+
+export type GetCustomerAllocation = {
+  /**
+   * The public entity ID.
+   */
+  entityId: string;
+  /**
+   * Requested credits per cycle, before proportional scaling. 0 releases the allocation.
+   */
+  amount: number;
+};
+
+export type GetCustomerBalanceAllocation = {
+  /**
+   * The feature whose shared customer credits are allocated.
+   */
+  featureId: string;
+  /**
+   * The reset interval of the shared credits being allocated.
+   */
+  interval: GetCustomerBalanceAllocationInterval;
+  /**
+   * Complete list of entity allocations for this feature. Omitted entities release their shares.
+   */
+  allocations: Array<GetCustomerAllocation>;
+};
+
+/**
  * The time interval for the purchase limit window.
  */
 export const GetCustomerAutoTopupInterval2 = {
@@ -420,6 +467,10 @@ export type GetCustomerOverageAllowed = {
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type GetCustomerBillingControls = {
+  /**
+   * Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling.
+   */
+  balanceAllocations?: Array<GetCustomerBalanceAllocation> | undefined;
   /**
    * List of auto top-up configurations per feature.
    */
@@ -1588,6 +1639,65 @@ export const GetCustomerEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetCustomerEnv);
 
 /** @internal */
+export const GetCustomerBalanceAllocationInterval$inboundSchema: z.ZodMiniType<
+  GetCustomerBalanceAllocationInterval,
+  unknown
+> = openEnums.inboundSchema(GetCustomerBalanceAllocationInterval);
+
+/** @internal */
+export const GetCustomerAllocation$inboundSchema: z.ZodMiniType<
+  GetCustomerAllocation,
+  unknown
+> = z.pipe(
+  z.object({
+    entity_id: types.string(),
+    amount: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "entity_id": "entityId",
+    });
+  }),
+);
+
+export function getCustomerAllocationFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerAllocation, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerAllocation$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerAllocation' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerBalanceAllocation$inboundSchema: z.ZodMiniType<
+  GetCustomerBalanceAllocation,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    interval: GetCustomerBalanceAllocationInterval$inboundSchema,
+    allocations: z.array(z.lazy(() => GetCustomerAllocation$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function getCustomerBalanceAllocationFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerBalanceAllocation, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerBalanceAllocation$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerBalanceAllocation' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetCustomerAutoTopupInterval2$inboundSchema: z.ZodMiniType<
   GetCustomerAutoTopupInterval2,
   unknown
@@ -1942,6 +2052,9 @@ export const GetCustomerBillingControls$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    balance_allocations: types.optional(
+      z.array(z.lazy(() => GetCustomerBalanceAllocation$inboundSchema)),
+    ),
     auto_topups: types.optional(
       z.array(z.lazy(() => GetCustomerAutoTopup$inboundSchema)),
     ),
@@ -1960,6 +2073,7 @@ export const GetCustomerBillingControls$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "balance_allocations": "balanceAllocations",
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
       "usage_limits": "usageLimits",
