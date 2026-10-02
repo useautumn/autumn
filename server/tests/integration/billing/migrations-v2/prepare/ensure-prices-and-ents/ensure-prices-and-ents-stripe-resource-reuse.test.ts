@@ -182,7 +182,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: Stripe price/
 	expect(oldVersionPriceId).not.toBe(latestVersionPriceId);
 
 	// ── Contract assertion 2 (the actual fix): those two DIFFERENT Autumn price
-	// rows share the SAME real Stripe price + v2 prepaid price, not one each ──
+	// rows share the SAME Stripe product + v2 prepaid price, not one each ──
 	await expectPreparedStripePriceReused({
 		ctx,
 		priceIds: [oldVersionPriceId, latestVersionPriceId],

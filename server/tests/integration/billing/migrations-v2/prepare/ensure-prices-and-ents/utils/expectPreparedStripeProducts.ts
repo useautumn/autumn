@@ -78,15 +78,16 @@ export const expectPreparedStripePriceReused = async ({
 		(row) => row.config as PriceConfigWithStripeResources,
 	);
 
+	for (const config of configs) {
+		expect(config.stripe_product_id).toBeTruthy();
+		expect(config.stripe_prepaid_price_v2_id).toBeTruthy();
+	}
+
 	const stripeProductIds = new Set(
-		configs
-			.map((config) => config.stripe_product_id)
-			.filter((id): id is string => Boolean(id)),
+		configs.map((config) => config.stripe_product_id as string),
 	);
 	const stripePrepaidV2Ids = new Set(
-		configs
-			.map((config) => config.stripe_prepaid_price_v2_id)
-			.filter((id): id is string => Boolean(id)),
+		configs.map((config) => config.stripe_prepaid_price_v2_id as string),
 	);
 
 	expect(stripeProductIds.size).toBe(1);
