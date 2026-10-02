@@ -5,16 +5,20 @@ import type {
 import type { SetPlansPolicies } from "../timeline/types/setPlansPolicies";
 
 /**
- * A replacement for a canceled, paid-up subscription keeps plans' cycle unless
- * a new paid plan or anchor restarts billing; any other replacement recreates them.
+ * A requested trial starts every plan afresh. A replacement for a canceled, paid-up
+ * subscription keeps plans' cycle unless a new paid plan or anchor restarts billing.
  */
 const liveRowsPolicy = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
 }): SetPlansPolicies["liveRows"] => {
-	const { replacedStripeSubscription, requestedBillingCycleAnchor } =
-		billingContext;
+	const {
+		replacedStripeSubscription,
+		requestedBillingCycleAnchor,
+		trialContext,
+	} = billingContext;
+	if (trialContext?.customFreeTrial) return "recreate";
 	if (!replacedStripeSubscription) return "carry";
 
 	const continuesPaidUpCycle =

@@ -74,3 +74,34 @@ test("only kept plans billed on the Stripe schedule get its id; free and expirin
 		["expiring", undefined],
 	]);
 });
+
+test("a free plan the schedule now ends rides the placeholder and gets its id; an open-ended one stays customer-wide", () => {
+	const updateCustomerProducts = [
+		keptPlan({ id: "free-ending", isPaid: false }),
+		{
+			customerProduct: customerProduct({ id: "free-open", isPaid: false }),
+			updates: { quantity: 1 },
+		},
+	];
+	const autumnBillingPlan = {
+		insertCustomerProducts: [],
+		updateCustomerProducts,
+		ownsSchedulePersistence: true,
+	} as unknown as AutumnBillingPlan;
+
+	addStripeSubscriptionScheduleIdToBillingPlan({
+		autumnBillingPlan,
+		stripeBillingPlan: {} as StripeBillingPlan,
+		stripeSubscriptionScheduleId: SCHEDULE_ID,
+	});
+
+	expect(
+		updateCustomerProducts.map(({ customerProduct, updates }) => [
+			customerProduct.id,
+			(updates as { scheduled_ids?: string[] }).scheduled_ids,
+		]),
+	).toEqual([
+		["free-ending", [SCHEDULE_ID]],
+		["free-open", undefined],
+	]);
+});
