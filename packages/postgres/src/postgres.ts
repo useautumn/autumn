@@ -62,6 +62,13 @@ export type {
 	SubjectRowTable,
 	SubjectRowUpdate,
 } from "./subjects/types/subjectRowUpdate.js";
+export type {
+	SubjectSnapshotClaim,
+	SubjectSnapshotCustomer,
+	SubjectSnapshotDelete,
+	SubjectSnapshotUpsert,
+	SubjectSnapshotWrites,
+} from "./subjects/types/subjectSnapshot.js";
 export { getSubscriptionsByStripeIds } from "./subscriptions/repos/getSubscriptionsByStripeIds.js";
 export type {
 	PostgresClient,
