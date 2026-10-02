@@ -20,30 +20,37 @@ export const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 const NO_QUANTITY = "—";
 const ONE_TIME_LABEL = "one-time";
 const STRIPE_LOCALE = "en-GB";
-const CENTS_DIGITS = 2;
 const MAX_UNIT_PRICE_DIGITS = 10;
 const TIER_LABELS: Record<
 	NonNullable<ProcessorItemPrice["tiers_mode"]>,
 	string
 > = { graduated: "Graduated tiers", volume: "Volume tiers" };
 
+const currencyFractionDigits = (currency: string) =>
+	new Intl.NumberFormat(STRIPE_LOCALE, {
+		style: "currency",
+		currency,
+	}).resolvedOptions().maximumFractionDigits ?? 0;
+
 /** Stripe's amount format: a disambiguated currency prefix such as "US$37,500.00". */
 const stripeMoney = ({
 	amount,
 	currency,
-	maxFractionDigits = CENTS_DIGITS,
+	maxFractionDigits = 0,
 }: {
 	amount: number;
 	currency: string;
 	maxFractionDigits?: number;
-}) =>
-	new Intl.NumberFormat(STRIPE_LOCALE, {
+}) => {
+	const fractionDigits = currencyFractionDigits(currency);
+	return new Intl.NumberFormat(STRIPE_LOCALE, {
 		style: "currency",
 		currency,
 		currencyDisplay: "symbol",
-		minimumFractionDigits: CENTS_DIGITS,
-		maximumFractionDigits: maxFractionDigits,
+		minimumFractionDigits: fractionDigits,
+		maximumFractionDigits: Math.max(fractionDigits, maxFractionDigits),
 	}).format(amount);
+};
 
 /** "year", "3 months", or undefined for a one-time price. */
 const billingPeriod = (price: ProcessorItemPrice) => {
@@ -53,13 +60,17 @@ const billingPeriod = (price: ProcessorItemPrice) => {
 		: price.interval;
 };
 
+const unitsPerQuantity = (price: ProcessorItemPrice) =>
+	price.units_per_quantity ?? 1;
+
 /** "per unit" or "per 100 units" for usage-billed prices. */
-const perUnitLabel = (price: ProcessorItemPrice) => {
-	const unitsPerQuantity = price.units_per_quantity ?? 1;
-	return unitsPerQuantity > 1
-		? `per ${numberWithCommas(unitsPerQuantity)} units`
+const perUnitLabel = (price: ProcessorItemPrice) =>
+	unitsPerQuantity(price) > 1
+		? `per ${numberWithCommas(unitsPerQuantity(price))} units`
 		: "per unit";
-};
+
+const isBilledPerUnit = (price: ProcessorItemPrice) =>
+	price.usage_type === "metered" || unitsPerQuantity(price) > 1;
 
 /** "US$37,500.00 / year", or "US$37,500.00 one-time" without an interval. */
 const withBillingPeriod = ({
@@ -81,7 +92,7 @@ const chargeLabel = (price: ProcessorItemPrice) => {
 		currency: price.currency,
 		maxFractionDigits: MAX_UNIT_PRICE_DIGITS,
 	});
-	return price.usage_type === "metered"
+	return isBilledPerUnit(price)
 		? `${unitAmount} ${perUnitLabel(price)}`
 		: unitAmount;
 };
