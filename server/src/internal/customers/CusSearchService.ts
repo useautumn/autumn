@@ -179,7 +179,7 @@ export const buildSearchPredicates = ({
 			sql`${customers.org_id} = ${orgId}`,
 			sql`${customers.env} = ${env}`,
 			search
-				? sql`(${customers.id} ILIKE ${`%${search}%`} OR ${customers.name} ILIKE ${`%${search}%`} OR ${customers.email} ILIKE ${`%${search}%`})`
+				? sql`(${customers.id} ILIKE ${`%${search}%`} OR ${customers.name} ILIKE ${`%${search}%`} OR ${customers.email} ILIKE ${`%${search}%`} OR (${customers.processor} ->> 'id') ILIKE ${`%${search}%`})`
 				: null,
 			filters?.processor?.length
 				? sql`(${sql.join(
