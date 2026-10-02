@@ -26,22 +26,30 @@ export const collectSnapshotWrites = ({
 	const settings = ctx.subjectSnapshots?.get();
 	if (!config.snapshots || settings?.mode !== "write") return undefined;
 	const { partitionCount } = config.snapshots;
-	const { maxBytes } = settings;
+	const { maxBytes, maxFlushBytes } = settings;
 	const upserts: SubjectSnapshotUpsert[] = [];
 	const deletes: SubjectSnapshotWrites["deletes"][number][] = [];
 	let cappedCustomers = 0;
+	let flushBytes = 0;
 	for (const call of flush.calls)
 		for (const [customerKey, entry] of call.snapshotIntent ?? []) {
-			const rows = rowsOf({ call, entry, partitionCount });
-			const overCap = rows.some(({ stateJson }) =>
-				stateExceedsCap({ stateJson, maxBytes }),
-			);
+			// Past the flush budget nothing more is serialised: the rest of the flush's customers are deleted.
+			const rows =
+				flushBytes > maxFlushBytes
+					? []
+					: rowsOf({ call, entry, partitionCount });
+			const overCap =
+				flushBytes > maxFlushBytes ||
+				rows.some(({ stateJson }) => stateExceedsCap({ stateJson, maxBytes }));
 			if (overCap) cappedCustomers += 1;
 			if (entry === "delete" || overCap)
 				deletes.push(
 					partitionKeyToMeteringIdentity({ partitionKey: customerKey }),
 				);
-			else upserts.push(...rows);
+			else {
+				upserts.push(...rows);
+				for (const { stateJson } of rows) flushBytes += stateJson.length;
+			}
 		}
 	if (upserts.length === 0 && deletes.length === 0) return undefined;
 	return { writes: { upserts, deletes }, cappedCustomers };

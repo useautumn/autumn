@@ -123,7 +123,22 @@ describe("createCommitterDb", () => {
 			changes: [balanceIncrement],
 			bookmarks: [bookmark],
 			snapshots: {
-				upserts: [],
+				upserts: [
+					{
+						orgId: "org_1",
+						env: "live",
+						customerId: "cus_2",
+						entityId: null,
+						internalCustomerId: "cus_int_2",
+						internalEntityId: null,
+						partition: 0,
+						partitionCount: 1,
+						stateVersion: 1,
+						stateJson: "{}",
+						baselineAt: 0,
+						logOffset: 0n,
+					},
+				],
 				deletes: [{ orgId: "org_1", env: "live", customerId: "cus_1" }],
 			},
 		});

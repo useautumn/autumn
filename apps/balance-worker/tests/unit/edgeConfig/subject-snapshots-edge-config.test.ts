@@ -22,6 +22,7 @@ describe("the subject snapshots edge config", () => {
 		expect(SubjectSnapshotsEdgeConfigSchema.parse({ mode: "write" })).toEqual({
 			mode: "write",
 			maxBytes: 262_144,
+			maxFlushBytes: 4_194_304,
 			dropBatch: 500,
 		});
 	});
@@ -32,6 +33,7 @@ describe("the subject snapshots edge config", () => {
 			{ mode: "serve" },
 			{ mode: "write", serve: true },
 			{ maxBytes: 0 },
+			{ maxFlushBytes: 0 },
 			{ dropBatch: 5_001 },
 			{ dropBatch: 1.5 },
 		])
@@ -47,12 +49,18 @@ describe("the subject snapshots edge config", () => {
 		);
 
 		await edgeConfigs.subjectSnapshots.writeToSource({
-			config: { mode: "write", maxBytes: 1_024, dropBatch: 10 },
+			config: {
+				mode: "write",
+				maxBytes: 1_024,
+				maxFlushBytes: 8_192,
+				dropBatch: 10,
+			},
 		});
 		await edgeConfigs.subjectSnapshots.refresh();
 		expect(edgeConfigs.subjectSnapshots.get()).toEqual({
 			mode: "write",
 			maxBytes: 1_024,
+			maxFlushBytes: 8_192,
 			dropBatch: 10,
 		});
 	});
@@ -67,7 +75,7 @@ describe("the subject snapshots edge config", () => {
 			},
 		});
 		await edgeConfigs.subjectSnapshots.writeToSource({
-			config: { mode: "write", maxBytes: 262_144, dropBatch: 500 },
+			config: { ...defaultSubjectSnapshotsEdgeConfig(), mode: "write" },
 		});
 		await edgeConfigs.subjectSnapshots.refresh();
 		expect(edgeConfigs.subjectSnapshots.get().mode).toBe("write");
@@ -82,7 +90,7 @@ describe("the subject snapshots edge config", () => {
 		const memory = createMemoryS3Client();
 		const edgeConfigs = workerEdgeConfigsOver(memory);
 		await edgeConfigs.subjectSnapshots.writeToSource({
-			config: { mode: "write", maxBytes: 262_144, dropBatch: 500 },
+			config: { ...defaultSubjectSnapshotsEdgeConfig(), mode: "write" },
 		});
 		await edgeConfigs.subjectSnapshots.refresh();
 

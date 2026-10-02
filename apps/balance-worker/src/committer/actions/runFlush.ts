@@ -318,9 +318,6 @@ export const runFlush = async ({
 		bookmarks,
 		...(snapshots && { snapshots: snapshots.writes }),
 	});
-	// Counted once the flush landed, so a retried attempt does not count its capped customers again.
-	if (snapshots && snapshots.cappedCustomers > 0)
-		ctx.onSnapshotSizeCapped?.({ customers: snapshots.cappedCustomers });
 	const staleIds = changes
 		.filter((_, index) => !applied[index])
 		.map(
@@ -328,5 +325,8 @@ export const runFlush = async ({
 				`${subjectRowIdOf(change)} (${recordOf[index]?.mutation.id})`,
 		);
 	if (staleIds.length > 0) throw new StaleSubjectRowsError({ ids: staleIds });
+	// Counted once the flush landed, so neither a retried attempt nor a rolled-back one counts its capped customers.
+	if (snapshots && snapshots.cappedCustomers > 0)
+		ctx.onSnapshotSizeCapped?.({ customers: snapshots.cappedCustomers });
 	return outcomes;
 };

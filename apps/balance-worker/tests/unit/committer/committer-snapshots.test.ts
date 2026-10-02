@@ -329,6 +329,39 @@ describe("committer subject snapshots", () => {
 		expect(capped).toEqual([1]);
 	});
 
+	test("past the flush's serialised budget the remaining customers delete instead of write, and are counted", async () => {
+		const { db, requests } = createRecordingDb();
+		const capped: number[] = [];
+		const committer = committerFor({
+			db,
+			subjectSnapshots: createSubjectSnapshotsStore({
+				mode: "write",
+				maxFlushBytes: 1,
+			}),
+			onSnapshotSizeCapped: ({ customers }) => capped.push(customers),
+		});
+
+		await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 10n,
+			records: [
+				trackRecord({ customerId: "cus_first", offset: 10n }),
+				trackRecord({ customerId: "cus_second", offset: 11n }),
+				trackRecord({ customerId: "cus_third", offset: 12n }),
+			],
+			snapshotIntent: writing(
+				createState({ identity: identityOf("cus_first") }),
+				createState({ identity: identityOf("cus_second") }),
+				createState({ identity: identityOf("cus_third") }),
+			),
+		});
+
+		expect(upsertedKeys(requests[0])).toEqual(["cus_first:"]);
+		expect(deletedCustomers(requests[0])).toEqual(["cus_second", "cus_third"]);
+		expect(capped).toEqual([2]);
+	});
+
 	test("a flush that times out twice with its snapshots attached lands on the third attempt with the customers' snapshots deleted, and never refuses a record", async () => {
 		let attempts = 0;
 		const { db, requests } = createRecordingDb({

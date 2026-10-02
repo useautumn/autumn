@@ -68,6 +68,8 @@ const { values: args } = parseArgs({
 		snapshots: { type: "string", default: "off" },
 	},
 });
+if (args.snapshots !== "off" && args.snapshots !== "write")
+	throw new Error("--snapshots must be off or write");
 const RUNS = Number(args.runs);
 const SLOTS = args.slots;
 const BACKEND = args.backend as "sqlite" | "postgres";

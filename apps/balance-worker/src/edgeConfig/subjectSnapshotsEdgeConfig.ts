@@ -11,6 +11,8 @@ export const SubjectSnapshotsEdgeConfigSchema = z
 		mode: z.enum(["off", "write"]).default("off"),
 		/** A serialized state larger than this is never written: its customer's rows are deleted on its next flush. */
 		maxBytes: z.number().int().positive().default(262_144),
+		/** Serialized bytes one flush may carry as snapshots; the customers past it are deleted instead of written. */
+		maxFlushBytes: z.number().int().positive().default(4_194_304),
 		/** Customers one evict DELETE carries; a storm of evicts lands as this many per statement. */
 		dropBatch: z.number().int().positive().max(5_000).default(500),
 	})
@@ -25,6 +27,7 @@ export const defaultSubjectSnapshotsEdgeConfig =
 	(): SubjectSnapshotsEdgeConfig => ({
 		mode: "off",
 		maxBytes: 262_144,
+		maxFlushBytes: 4_194_304,
 		dropBatch: 500,
 	});
 

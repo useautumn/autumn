@@ -211,7 +211,10 @@ export const createCommitterDb = ({
 					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
 				}),
 		});
-		if (result.snapshots) ctx.timings.recordSubjectSnapshots(result.snapshots);
+		const { snapshots } = result;
+		// A rolled-back flush answers zero counts: nothing to put on the database line.
+		if (snapshots && snapshots.upserted + snapshots.deleted > 0)
+			ctx.timings.recordSubjectSnapshots(snapshots);
 		return result;
 	},
 });

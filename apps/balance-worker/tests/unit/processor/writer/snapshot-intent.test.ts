@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
 	applyMutation,
 	computeTrack,
@@ -59,8 +59,14 @@ const decideTrack = ({
 };
 
 /** The writer over a store with nothing resident; the store records the intent handed in with each apply. */
-const createWriter = ({ mode = "write" }: { mode?: "off" | "write" } = {}) => {
-	const subjectSnapshots = createSubjectSnapshotsStore({ mode });
+const createWriter = ({
+	mode = "write",
+	maxBytes,
+}: {
+	mode?: "off" | "write";
+	maxBytes?: number;
+} = {}) => {
+	const subjectSnapshots = createSubjectSnapshotsStore({ mode, maxBytes });
 	const intents: (SnapshotIntent | undefined)[] = [];
 	const applyGate = { held: Promise.resolve() as Promise<void> };
 	let rejectNext: string | null = null;
@@ -319,6 +325,26 @@ describe("the writer's snapshot intent", () => {
 		readWhole({ balance: 100, baselineAt: 3 });
 		await track("t3").waitForStore();
 		expect(balanceOf(intents[2])).toEqual([99]);
+	});
+
+	test("a state over the cap is decided from the map's weight: the customer deletes, and nothing of it is serialised", async () => {
+		const { intents, readWhole, track } = createWriter({
+			maxBytes: 64,
+		});
+		const resident = readWhole();
+		const stringify = spyOn(JSON, "stringify");
+		try {
+			await track("t1").waitForStore();
+			expect(balanceOf(intents[0])).toBe("delete");
+			const serialisedState = stringify.mock.calls.some(
+				([value]) =>
+					value === resident ||
+					(value as { customer?: unknown })?.customer === resident.customer,
+			);
+			expect(serialisedState).toBe(false);
+		} finally {
+			stringify.mockRestore();
+		}
 	});
 
 	test("a mutation that inserts the customer's own row cannot be snapshotted by the statement that inserts it", async () => {
