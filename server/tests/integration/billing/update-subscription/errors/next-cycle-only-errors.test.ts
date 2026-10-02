@@ -1,5 +1,5 @@
 import { test } from "bun:test";
-import { type ApiCustomerV3, ErrCode, FreeTrialDuration } from "@autumn/shared";
+import { ErrCode, FreeTrialDuration } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -53,10 +53,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: free to paid upgrade cre
 		billing_behavior: "none",
 	});
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({ customer, productId: freeProduct.id });
+	await expectProductActive({
+		customerId,
+		autumn: autumnV1,
+		productId: freeProduct.id,
+	});
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customerId,
+		autumn: autumnV1,
 		count: 1,
 		latestTotal: 20,
 	});

@@ -206,15 +206,16 @@ test.concurrent(`${chalk.yellowBright("one-off item quantity update on recurring
 		options: [{ feature_id: TestFeature.Messages, quantity: 2 * billingUnits }],
 	});
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		customerId,
+		autumn: autumnV1,
 		featureId: TestFeature.Messages,
 		balance: 3 * billingUnits,
 		usage: 0,
 	});
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customerId,
+		autumn: autumnV1,
 		count: 2,
 		latestTotal: 20,
 	});
