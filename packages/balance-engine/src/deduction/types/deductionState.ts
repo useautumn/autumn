@@ -9,4 +9,6 @@ export type DeductionState = {
 	deltas: DeductionDelta[];
 	/** By limit key, in the limit's own unit: tracked units for metered caps, credits for balance caps. */
 	usageWindowConsumed: Map<string, Decimal>;
+	/** Allocation counters this draw moved, by counter key, in credits. */
+	allocationConsumed?: Map<string, Decimal>;
 };

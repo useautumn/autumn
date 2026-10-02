@@ -72,7 +72,8 @@ export const executeMultiSubscriptionBillingPlan = async ({
 	}
 
 	const primaryStripeResult = stripeResults[0];
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan,
 		stripeInvoice: primaryStripeResult?.stripeInvoice,
@@ -89,6 +90,7 @@ export const executeMultiSubscriptionBillingPlan = async ({
 	}
 
 	const billingUpdatedPromise = sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan,
 		originalFullCustomer,

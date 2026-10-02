@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import { allocationCountersToRowChanges } from "../allocations/allocationDraw.js";
 import type { WorkerFullSubject } from "../models/subject/workerFullSubject.js";
 import { setupDeductionContext } from "./setup/setupDeductionContext.js";
 import type { DeductionContext } from "./types/deductionContext.js";
@@ -52,11 +53,13 @@ export const deductionStateToOutcome = ({
 			: null,
 		deltas,
 		usageWindowConsumed: deductionState.usageWindowConsumed,
+		allocationConsumed: deductionState.allocationConsumed,
 		changes: rejected
 			? []
 			: [
 					...deltasToRowChanges({ context, deltas }),
 					...usageWindowsToRowChanges({ context, deductionState }),
+					...allocationCountersToRowChanges({ context, deductionState }),
 				],
 	};
 };

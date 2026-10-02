@@ -1,3 +1,4 @@
+export * from "./allocate/index";
 export * from "./common/lockParams";
 export * from "./create/index";
 export * from "./delete/index";

@@ -5,6 +5,7 @@ import {
 	findFeatureById,
 	Scopes,
 } from "@autumn/shared";
+import { releaseEntityAllocations } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance.js";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
@@ -131,6 +132,12 @@ export const handleDeleteEntity = createRoute({
 			ctx,
 			fullCustomer: fullCus,
 			entity,
+		});
+
+		await releaseEntityAllocations({
+			ctx,
+			customerId: customer_id,
+			internalEntityId: entity.internal_id,
 		});
 
 		await EntityService.deleteInInternalIds({

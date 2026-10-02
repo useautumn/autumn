@@ -14,6 +14,7 @@ export const trackCommandToDeductionRequest = ({
 		properties: command.properties,
 		includesCreditSystems: true,
 		countsUsageWindows: true,
+		countsAllocations: true,
 		org: command.org,
 		enforceOverdueBlock: command.enforceOverdueBlock ?? false,
 	}),

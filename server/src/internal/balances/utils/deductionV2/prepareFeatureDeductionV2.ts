@@ -18,6 +18,7 @@ import {
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { resolveAllocationLuaGates } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
@@ -288,9 +289,19 @@ export const prepareFeatureDeductionV2 = ({
 			}
 		: undefined;
 
+	const allocation = hasUnlimitedCusEnt
+		? null
+		: resolveAllocationLuaGates({
+				fullSubject,
+				customerEntitlements,
+				now: ctx.timestamp,
+			});
+	const luaWindowLimits = [...usageWindowLimits, ...(allocation?.limits ?? [])];
+
 	return {
 		customerEntitlements,
 		customerEntitlementDeductions,
+		allocationGates: allocation?.gates,
 		spendLimitByFeatureId:
 			Object.keys(spendLimitByFeatureId).length > 0
 				? spendLimitByFeatureId
@@ -299,11 +310,10 @@ export const prepareFeatureDeductionV2 = ({
 			Object.keys(usageBasedCusEntIdsByFeatureId).length > 0
 				? usageBasedCusEntIdsByFeatureId
 				: undefined,
-		usageWindowLimits:
-			usageWindowLimits.length > 0 ? usageWindowLimits : undefined,
+		usageWindowLimits: luaWindowLimits.length > 0 ? luaWindowLimits : undefined,
 		usageWindowFeatureIds:
-			usageWindowLimits.length > 0
-				? [...new Set(usageWindowLimits.map((limit) => limit.feature_id))]
+			luaWindowLimits.length > 0
+				? [...new Set(luaWindowLimits.map((limit) => limit.feature_id))]
 				: undefined,
 		rollovers: sortedRollovers.map((rollover) => ({
 			id: rollover.id,

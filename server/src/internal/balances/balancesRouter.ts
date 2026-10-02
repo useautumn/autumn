@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCheck } from "../api/check/handleCheck.js";
+import { handleAllocateBalances } from "./handlers/handleAllocateBalances.js";
 import { handleBatchTrack } from "./handlers/handleBatchTrack.js";
 import { handleBatchTrackTokens } from "./handlers/handleBatchTrackTokens.js";
 import { handleCreateBalance } from "./handlers/handleCreateBalance.js";
@@ -40,6 +41,7 @@ balancesRouter.post("/check", ...handleCheck);
 balancesRouter.post("/usage", ...handleSetUsage);
 
 export const balancesRpcRouter = new Hono<HonoEnv>();
+balancesRpcRouter.post("/balances.allocate", ...handleAllocateBalances);
 balancesRpcRouter.post("/balances.create", ...handleCreateBalance);
 balancesRpcRouter.post("/balances.list", ...handleListBalancesV2);
 balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);

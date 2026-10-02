@@ -17,6 +17,7 @@ import {
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
+import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	billingChangeResponseHasContent,
@@ -28,11 +29,14 @@ export const sendBillingUpdatedWebhook = async ({
 	autumnBillingPlan,
 	originalFullCustomer,
 	tags,
+	allocationsAdjusted = false,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	originalFullCustomer: FullCustomer;
 	tags?: string[];
+	/** The plan moved shared credits enough to change allocated shares. */
+	allocationsAdjusted?: boolean;
 }): Promise<void> => {
 	if (ctx.testOptions?.skipWebhooks) return;
 
@@ -41,7 +45,9 @@ export const sendBillingUpdatedWebhook = async ({
 			ctx,
 			originalFullCustomer,
 			autumnBillingPlan,
-			tags,
+			tags: allocationsAdjusted
+				? [...(tags ?? []), ALLOCATIONS_ADJUSTED_TAG]
+				: tags,
 		});
 
 		// console.log("response", response);

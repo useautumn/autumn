@@ -49,6 +49,7 @@ export const isSameSelection = ({
 	left.now === right.now &&
 	left.includesCreditSystems === right.includesCreditSystems &&
 	left.countsUsageWindows === right.countsUsageWindows &&
+	left.countsAllocations === right.countsAllocations &&
 	left.reverseOrder === right.reverseOrder &&
 	left.blocksOverdue === right.blocksOverdue &&
 	sameJson(left.inStatuses, right.inStatuses) &&

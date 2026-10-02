@@ -27,6 +27,7 @@ import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 // FULL SUBJECT DEDUCTION HELPERS (V2 cache — per-feature hash balances)
 // ============================================================================
 
+import ALLOCATION_GATE_V2 from "./fullSubjectDeduction/allocations/allocationGateV2.lua";
 import CONTEXT_UTILS_V2 from "./fullSubjectDeduction/contextUtilsV2.lua";
 import CREDIT_RATE_UTILS from "./fullSubjectDeduction/creditRateUtils.lua";
 import DEDUCT_FROM_MAIN_BALANCE_V2 from "./fullSubjectDeduction/deductFromMainBalanceV2.lua";
@@ -43,6 +44,7 @@ import USAGE_WINDOW_CONTEXT_UTILS_V2 from "./fullSubjectDeduction/usageWindows/u
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)
 // ============================================================================
 
+import PATCH_ALLOCATION_COUNTER_MAIN from "./fullSubject/patchAllocationCounter/patchAllocationCounter.lua";
 import ROLL_USAGE_WINDOWS_MAIN from "./fullSubject/rollUsageWindows/rollUsageWindows.lua";
 import APPLY_FIELD_UPDATES from "./fullSubject/updateSubjectBalances/applyFieldUpdates.lua";
 import UPDATE_CONTEXT_UTILS from "./fullSubject/updateSubjectBalances/updateContextUtils.lua";
@@ -90,6 +92,7 @@ ${DEDUCT_FROM_ROLLOVERS_V2}
 ${DEDUCT_FROM_MAIN_BALANCE_V2}
 ${SPEND_LIMIT_UTILS_V2}
 ${USAGE_WINDOW_CONTEXT_UTILS_V2}
+${ALLOCATION_GATE_V2}
 ${RUN_DEDUCTION_ON_CONTEXT_V2}
 ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS_V2}
@@ -131,3 +134,8 @@ ${UPDATE_SUBJECT_BALANCES_MAIN}`;
  */
 export const ROLL_USAGE_WINDOWS_SCRIPT = `${LUA_UTILS}
 ${ROLL_USAGE_WINDOWS_MAIN}`;
+
+/** Moves one allocation counter row in a per-feature hash's '_usage_windows' field the way Postgres moved it. */
+export const PATCH_ALLOCATION_COUNTER_SCRIPT = `${LUA_UTILS}
+local USAGE_WINDOW_BOUND_TOLERANCE_MS = ${USAGE_WINDOW_BOUND_TOLERANCE_MS}
+${PATCH_ALLOCATION_COUNTER_MAIN}`;

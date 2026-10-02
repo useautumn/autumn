@@ -126,6 +126,7 @@ export const runRedisTrackV3 = async ({
 				overageBehaviour: overageBehavior,
 				triggerAutoTopUp: true,
 				eventProperties: body.properties,
+				countsAllocations: true,
 			},
 		}),
 	);

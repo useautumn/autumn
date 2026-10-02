@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
 import { ExternalProcessorsSchema } from "../genModels/processorSchemas.js";
+import { BalanceAllocationsSchema } from "./balanceAllocations/balanceAllocationModels.js";
 import { DbBillingControlsSchema } from "./billingControls/customerBillingControls.js";
 
 export const CustomerSchema = z.object({
@@ -20,6 +21,7 @@ export const CustomerSchema = z.object({
 	send_email_receipts: z.boolean().default(false),
 	currency: z.string().nullish(),
 	...DbBillingControlsSchema.shape,
+	balance_allocations: BalanceAllocationsSchema.nullish(),
 	config: z
 		.object({
 			disable_pooled_balance: z.boolean().optional(),

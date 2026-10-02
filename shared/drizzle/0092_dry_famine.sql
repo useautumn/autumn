@@ -1,0 +1,1 @@
+ALTER TABLE "customers" ADD COLUMN "balance_allocations" jsonb;

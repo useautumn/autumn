@@ -5,8 +5,10 @@ import {
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
+import { addBillingChangeTag } from "../../../common/billingChangeTags";
 import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
@@ -71,14 +73,18 @@ export const activateScheduledCustomerProducts = async ({
 				? [stripeSubscriptionSchedule.id]
 				: [];
 
-		const { updates } = await customerProductActions.activateScheduled({
-			ctx,
-			customerProduct,
-			fullCustomer,
-			subscriptionIds,
-			scheduledIds,
-			activatedAt: nowMs,
-		});
+		const { updates, allocationsAdjusted } =
+			await customerProductActions.activateScheduled({
+				ctx,
+				customerProduct,
+				fullCustomer,
+				subscriptionIds,
+				scheduledIds,
+				activatedAt: nowMs,
+				emitsBillingUpdated: true,
+			});
+		if (allocationsAdjusted)
+			addBillingChangeTag(eventContext, ALLOCATIONS_ADJUSTED_TAG);
 
 		trackCustomerProductUpdate({
 			eventContext,

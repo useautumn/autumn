@@ -13,6 +13,7 @@ import {
 import { collatePgColumn } from "../../db/utils.js";
 import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
+import type { BalanceAllocations } from "./balanceAllocations/balanceAllocationModels.js";
 import { billingControlColumns } from "./billingControls/billingControlTableColumns.js";
 
 export type CustomerConfig = {
@@ -45,6 +46,9 @@ export const customers = pgTable(
 		// null = not yet locked; resolves to org.default_currency at use-time
 		currency: text(),
 		...billingControlColumns(),
+		balance_allocations: jsonb(
+			"balance_allocations",
+		).$type<BalanceAllocations>(),
 		config: jsonb().$type<CustomerConfig>().default({}),
 	},
 	(table) => [

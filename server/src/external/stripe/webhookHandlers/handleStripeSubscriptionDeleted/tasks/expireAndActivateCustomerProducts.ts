@@ -6,10 +6,13 @@ import {
 	isCustomerProductScheduled,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale";
+import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag";
 import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { deleteScheduledCustomerProduct } from "@/internal/customers/cusProducts/actions/deleteScheduledCustomerProduct";
 import {
+	addBillingChangeTag,
 	expireAndActivateWithTracking,
 	trackCustomerProductDeletion,
 } from "../../common";
@@ -93,6 +96,15 @@ export const expireAndActivateCustomerProducts = async ({
 		incomingCustomerProducts,
 		now: eventContext.nowMs,
 	});
+
+	// Pools moved after the plans re-fit, so shares re-fit against the final pot; the batch event carries the tag.
+	const { adjusted } = await refreshAllocationScaleAfterWrite({
+		ctx,
+		customerId: fullCustomer.id || fullCustomer.internal_id,
+		notify: false,
+		now: eventContext.nowMs,
+	});
+	if (adjusted) addBillingChangeTag(eventContext, ALLOCATIONS_ADJUSTED_TAG);
 
 	// invoice.created needs the expired snapshots for final usage billing.
 	await customerProductActions.expiredCache.set({

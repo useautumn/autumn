@@ -1,6 +1,7 @@
 import {
 	type ApiBalanceBreakdownV1,
 	type ApiBalanceV1,
+	type ApiBalanceWithAllocationCheck,
 	CheckExpand,
 	type CustomerEntitlementWithPricesView,
 	CustomerExpand,
@@ -33,6 +34,10 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import {
+	type AllocationSubjectView,
+	applyAllocationsToBreakdown,
+} from "./allocations/applyAllocationsToBreakdown.js";
 import { getUnlimitedApiBalance } from "./apiBalanceUtils.js";
 import {
 	getEmptyApiBalanceV2,
@@ -113,12 +118,12 @@ export const customerEntitlementsToApiBalance = ({
 	aggregatedFeatureBalance,
 	apiFeature,
 }: {
-	fullSubject: Pick<FullSubjectView, "entity">;
+	fullSubject: Pick<FullSubjectView, "entity"> & AllocationSubjectView;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
 	apiFeature?: ReturnType<typeof dbToApiFeatureV1>;
-}): { data: ApiBalanceV1 } => {
+}): { data: ApiBalanceWithAllocationCheck } => {
 	const entityId = fullSubject.entity?.id ?? fullSubject.entity?.internal_id;
 
 	// console.log("customerEntitlements", customerEntitlements);
@@ -169,12 +174,21 @@ export const customerEntitlementsToApiBalance = ({
 			return unused;
 		}),
 	);
-	const breakdownItems = customerEntitlements.map((customerEntitlement) =>
-		getApiBalanceBreakdownItemV2({
-			fullSubject,
-			customerEntitlement,
-		}),
-	);
+	const {
+		breakdownItems,
+		totals: allocationTotals,
+		checkRemainingOffset,
+	} = applyAllocationsToBreakdown({
+		subject: fullSubject,
+		feature,
+		customerEntitlements,
+		breakdownItems: customerEntitlements.map((customerEntitlement) =>
+			getApiBalanceBreakdownItemV2({
+				fullSubject,
+				customerEntitlement,
+			}),
+		),
+	});
 	const totalGranted = sumValues(
 		breakdownItems.map((breakdownItem) =>
 			new Decimal(breakdownItem.included_grant)
@@ -232,11 +246,24 @@ export const customerEntitlementsToApiBalance = ({
 			next_reset_at: nextResetAt,
 			breakdown: breakdownItems,
 			rollovers: totalRollovers,
+			...(allocationTotals ?? {}),
 		},
 		aggregatedFeatureBalance,
 	});
 
-	return { data: roundApiBalance({ apiBalance: merged }) };
+	const rounded: ApiBalanceWithAllocationCheck = roundApiBalance({
+		apiBalance: merged,
+	});
+	if (checkRemainingOffset === null) return { data: rounded };
+	return {
+		data: {
+			...rounded,
+			allocation_check_remaining: Decimal.max(
+				0,
+				new Decimal(rounded.remaining).plus(checkRemainingOffset),
+			).toNumber(),
+		},
+	};
 };
 
 export const getApiBalanceV2 = ({
@@ -247,11 +274,11 @@ export const getApiBalanceV2 = ({
 	aggregatedFeatureBalance,
 }: {
 	ctx: SharedContext;
-	fullSubject: Pick<FullSubjectView, "entity">;
+	fullSubject: Pick<FullSubjectView, "entity"> & AllocationSubjectView;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
-}): { data: ApiBalanceV1 } => {
+}): { data: ApiBalanceWithAllocationCheck } => {
 	const apiFeature = expandIncludes({
 		expand: ctx.expand,
 		includes: [
