@@ -3,6 +3,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 import { fullSubjectToComparableSubject } from "./utils/buildComparableFullSubject.js";
+import { entityAggregationCtx } from "./utils/entityAggregationCtx.js";
 import {
 	buildCustomerWithEntityBoundDataScenario,
 	buildEntitySubjectScenario,
@@ -22,7 +23,7 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const fullSubject = await getFullSubject({
-					ctx,
+					ctx: entityAggregationCtx,
 					customerId: scenario.ids.customerId,
 				});
 
@@ -43,6 +44,32 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 		});
 	});
 
+	test("customer-scoped at V2_4: entity-bound data is not aggregated", async () => {
+		const scenario = buildCustomerWithEntityBoundDataScenario({
+			ctx,
+			name: "fullsubject-aggregated-v2-4",
+		});
+
+		await withInsertedScenario({
+			ctx,
+			scenario,
+			run: async ({ scenario }) => {
+				const fullSubject = await getFullSubject({
+					ctx,
+					customerId: scenario.ids.customerId,
+				});
+
+				const comparable = fullSubjectToComparableSubject({
+					fullSubject: fullSubject!,
+				});
+
+				expect(comparable.customer_products).toHaveLength(1);
+				expect(comparable.aggregated_customer_products).toEqual([]);
+				expect(comparable.aggregated_customer_entitlements).toEqual([]);
+			},
+		});
+	});
+
 	test("customer-scoped: entity-bound entitlements move to aggregated_customer_entitlements", async () => {
 		const scenario = buildCustomerWithEntityBoundDataScenario({
 			ctx,
@@ -54,7 +81,7 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const fullSubject = await getFullSubject({
-					ctx,
+					ctx: entityAggregationCtx,
 					customerId: scenario.ids.customerId,
 				});
 
@@ -91,7 +118,7 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const fullSubject = await getFullSubject({
-					ctx,
+					ctx: entityAggregationCtx,
 					customerId: scenario.ids.customerId,
 				});
 
@@ -139,7 +166,7 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const fullSubject = await getFullSubject({
-					ctx,
+					ctx: entityAggregationCtx,
 					customerId: scenario.ids.customerId,
 				});
 

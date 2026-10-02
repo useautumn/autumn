@@ -6,6 +6,7 @@ import {
 	getFullSubjectNormalized,
 } from "@/internal/customers/repos/getFullSubject/index.js";
 import { fullSubjectToComparableSubject } from "./utils/buildComparableFullSubject.js";
+import { entityAggregationCtx } from "./utils/entityAggregationCtx.js";
 import {
 	buildBooleanMeteredLooseScenario,
 	buildBooleanOnlyScenario,
@@ -139,7 +140,7 @@ describe(`${chalk.yellowBright("fullSubject mixed shapes")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const fullSubject = await getFullSubject({
-					ctx,
+					ctx: entityAggregationCtx,
 					customerId: scenario.ids.customerId,
 				});
 				const comparable = fullSubjectToComparableSubject({
