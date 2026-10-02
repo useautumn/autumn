@@ -17,10 +17,12 @@ export const resolveRemoveProductTargets = ({
 }): RemovePlanTarget[] =>
 	params.remove_plans.flatMap((entry): RemovePlanTarget[] => {
 		const versions =
-			catalogContext.productStatesContext.versionsByPlanId[entry.plan_id] ?? [];
+			catalogContext.productStatesContext.versionsByPlanId[entry.plan_id] ??
+			[];
 		if (entry.version !== undefined) {
 			const current =
-				versions.find((product) => product.version === entry.version) ?? null;
+				versions.find((product) => product.version === entry.version) ??
+				null;
 			return [
 				{
 					planId: entry.plan_id,

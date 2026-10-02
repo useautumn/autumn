@@ -1,8 +1,8 @@
 import {
 	AffectedResource,
 	ErrCode,
-	Scopes,
 	SetupPaymentParamsV0Schema,
+	Scopes,
 } from "@autumn/shared";
 
 import { createStripeCli } from "@/external/connect/createStripeCli.js";

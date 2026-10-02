@@ -1,8 +1,4 @@
-import {
-	isFixedPrice,
-	type Price,
-	type UsagePriceConfig,
-} from "@autumn/shared";
+import { isFixedPrice, type Price, type UsagePriceConfig } from "@autumn/shared";
 
 /** Donor feature Product — skip fixed; plan processor is a different object. */
 export const copyReusableStripeProductId = ({

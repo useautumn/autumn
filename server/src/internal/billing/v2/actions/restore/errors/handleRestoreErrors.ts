@@ -1,12 +1,12 @@
 import {
 	type FullCustomer,
-	filterCustomerProductsByActiveStatuses,
-	filterCustomerProductsByStripeSubscriptionId,
 	InternalError,
-	isCustomerProductScheduled,
 	type StripeBillingPlan,
 	type StripeSubscriptionAction,
 	type StripeSubscriptionScheduleAction,
+	filterCustomerProductsByActiveStatuses,
+	filterCustomerProductsByStripeSubscriptionId,
+	isCustomerProductScheduled,
 } from "@autumn/shared";
 
 const ALLOWED_SUB_ACTION_TYPES = new Set<StripeSubscriptionAction["type"]>([

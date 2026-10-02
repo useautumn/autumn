@@ -36,7 +36,9 @@ const previousPriceKey = ({
 }: {
 	previousPrice: MigrationTarget["previousPrice"];
 }) =>
-	previousPrice === null ? "null" : basePriceToKey({ price: previousPrice });
+	previousPrice === null
+		? "null"
+		: basePriceToKey({ price: previousPrice });
 
 /** Stamp previous_price only when every target shares one base price — one op can't carry mixed previous prices. */
 export const stampPreviousPrice = ({

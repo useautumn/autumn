@@ -30,10 +30,7 @@ export const computeLicensePricesAndEntitlements = ({
 	planLicense: PlanLicensePlan;
 	writesFreshRow: boolean;
 }): PlanLicensePricesAndEntitlements | undefined => {
-	if (
-		planLicense.entitlementPricesPlan &&
-		planLicense.effectiveLicenseProduct
-	) {
+	if (planLicense.entitlementPricesPlan && planLicense.effectiveLicenseProduct) {
 		return fromProduct(planLicense.effectiveLicenseProduct);
 	}
 

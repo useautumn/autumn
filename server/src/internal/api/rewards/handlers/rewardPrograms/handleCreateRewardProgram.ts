@@ -11,8 +11,8 @@ import {
 } from "@/internal/rewards/repos/index.js";
 import { constructRewardProgram } from "@/internal/rewards/rewardUtils.js";
 import {
-	validateRewardProgramTrigger,
 	validateRewardTypeSupported,
+	validateRewardProgramTrigger,
 } from "./validateRewardProgram.js";
 
 export const handleCreateRewardProgram = createRoute({

@@ -1,3 +1,4 @@
+import { usesSubjectCache } from "../../usesSubjectCache.js";
 import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
@@ -9,7 +10,6 @@ import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubj
 import { filterDrainedLooseEntitlements } from "../../filterDrainedLooseEntitlements.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import { isReplicaSourced } from "../../subjectProvenance.js";
-import { usesSubjectCache } from "../../usesSubjectCache.js";
 import { rehydrateWithLiveBalances } from "../rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "../setCachedFullSubject/setCachedFullSubject.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";

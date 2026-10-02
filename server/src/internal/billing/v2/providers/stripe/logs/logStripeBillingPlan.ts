@@ -1,6 +1,7 @@
-import type { BillingContext, StripeBillingPlan } from "@autumn/shared";
 import { customerProductsToPricesWithProduct } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BillingContext } from "@autumn/shared";
+import type { StripeBillingPlan } from "@autumn/shared";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logStripeBillingPlan = ({
@@ -16,12 +17,8 @@ export const logStripeBillingPlan = ({
 		customerProducts: billingContext.fullCustomer.customer_products,
 	});
 
-	const {
-		invoiceAction,
-		subscriptionAction,
-		refundAction,
-		...restBillingPlan
-	} = stripeBillingPlan;
+	const { invoiceAction, subscriptionAction, refundAction, ...restBillingPlan } =
+		stripeBillingPlan;
 
 	const refund = refundAction
 		? `${refundAction.amountInCents} cents from charge ${refundAction.chargeId} (invoice ${refundAction.stripeInvoiceId})`

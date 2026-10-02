@@ -5,9 +5,9 @@ export type {
 	EntitlementPricesPlanMode,
 } from "./types/computeEntitlementPricesPlanParams";
 export {
-	type EntitlementPricesDiff,
-	type EntitlementPricesPlan,
 	emptyEntitlementPricesPlan,
 	entitlementPricesPlanHasWrites,
+	type EntitlementPricesDiff,
+	type EntitlementPricesPlan,
 	type RowBuckets,
 } from "./types/entitlementPricesPlan";

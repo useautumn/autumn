@@ -56,8 +56,7 @@ const withCustomGuard = ({
 }: {
 	includeCustom: boolean;
 	planFilter: PlanFilter;
-}): PlanFilter =>
-	includeCustom ? planFilter : { ...planFilter, custom: false };
+}): PlanFilter => (includeCustom ? planFilter : { ...planFilter, custom: false });
 
 /** Targets → PlanFilter: one branch per plan, version `$in` within a plan, `$or` across plans. */
 export const buildMigrationPlanFilter = ({

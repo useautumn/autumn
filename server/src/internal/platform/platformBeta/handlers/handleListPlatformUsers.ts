@@ -4,8 +4,8 @@ import {
 	ListPlatformUsersQuerySchema,
 	member,
 	organizations,
-	Scopes,
 	user as userTable,
+	Scopes,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { cte } from "@/db/cteUtils/buildCte.js";

@@ -2,10 +2,7 @@ import type { BatchTrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { runBalanceWorkerBatchTrack } from "./balanceWorker/runBalanceWorkerBatchTrack.js";
-import {
-	type BatchTrackEntry,
-	toBatchTrackEntries,
-} from "./batchTrackEntries.js";
+import { type BatchTrackEntry, toBatchTrackEntries } from "./batchTrackEntries.js";
 import { runBatchTrack } from "./runBatchTrack.js";
 
 const partitionByRollout = ({

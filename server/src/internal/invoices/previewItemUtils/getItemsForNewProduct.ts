@@ -14,8 +14,8 @@ import {
 	isOneOffPrice,
 	isPrepaidPrice,
 	isUsagePrice,
-	type LegacyPreviewLineItem,
 	type Organization,
+	type LegacyPreviewLineItem,
 	type Price,
 	priceToFeature,
 	priceToInvoiceAmount,
@@ -221,9 +221,9 @@ export const getItemsForNewProduct = async ({
 						periodEnd: finalProration.end,
 						periodStart: finalProration.start,
 						now,
-						amount: getPriceForOverage({ price }),
-					})
-				: getPriceForOverage({ price, overage: 0 });
+			amount: getPriceForOverage({ price }),
+				})
+			: getPriceForOverage({ price, overage: 0 });
 
 			if (freeTrial) {
 				amount = 0;

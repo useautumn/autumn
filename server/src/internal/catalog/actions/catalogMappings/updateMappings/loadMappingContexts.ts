@@ -2,8 +2,8 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
-	buildProductMappingContext,
 	type ProductMappingContext,
+	buildProductMappingContext,
 } from "../catalogMappingUtils.js";
 
 export type ContextsByPlanId = Map<string, ProductMappingContext[]>;

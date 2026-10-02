@@ -33,7 +33,4 @@ publicCheckoutRouter.use("/:checkout_id/*", traceEnrichMiddleware);
 publicCheckoutRouter.get("/:checkout_id", ...handleGetCheckout);
 publicCheckoutRouter.post("/:checkout_id/preview", ...handlePreviewCheckout);
 publicCheckoutRouter.post("/:checkout_id/confirm", ...handleConfirmCheckout);
-publicCheckoutRouter.get(
-	"/:checkout_id/start",
-	...handleStartLongLivedCheckout,
-);
+publicCheckoutRouter.get("/:checkout_id/start", ...handleStartLongLivedCheckout);

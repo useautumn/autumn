@@ -61,10 +61,7 @@ const preflightCatalogLicenses = async ({
 	});
 	validateCatalogPlanVersionTargets({ plans, products: persistedProducts });
 	const currentById = new Map(
-		getActiveProducts(persistedProducts).map((product) => [
-			product.id,
-			product,
-		]),
+		getActiveProducts(persistedProducts).map((product) => [product.id, product]),
 	);
 	const maxVersionById = new Map<string, number>();
 	for (const product of persistedProducts) {

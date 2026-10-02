@@ -9,8 +9,5 @@ import { handleUpdateCatalogMappings } from "./handlers/handleUpdateCatalogMappi
 export const catalogRpcRouter = new Hono<HonoEnv>();
 catalogRpcRouter.post("/catalog.get_mappings", ...handleGetCatalogMappings);
 catalogRpcRouter.post("/catalog.preview_update", ...handlePreviewUpdateCatalog);
-catalogRpcRouter.post(
-	"/catalog.update_mappings",
-	...handleUpdateCatalogMappings,
-);
+catalogRpcRouter.post("/catalog.update_mappings", ...handleUpdateCatalogMappings);
 catalogRpcRouter.post("/catalog.update", ...handleUpdateCatalog);

@@ -1,5 +1,5 @@
-import type { Checkout, GetCheckoutResponse } from "@autumn/shared";
 import { Scopes } from "@autumn/shared";
+import type { Checkout, GetCheckoutResponse } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getAdjustableFeatureIds } from "../utils/getAdjustableFeatureIds";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";

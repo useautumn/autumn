@@ -1,9 +1,5 @@
 import type { LookupMaps } from "./buildLookupMaps.js";
-import {
-	toFloat,
-	toNullableTimestamp,
-	toTimestamp,
-} from "./normalizeFields.js";
+import { toFloat, toNullableTimestamp, toTimestamp } from "./normalizeFields.js";
 import type { FlatCustomerEntitlement } from "./types.js";
 
 export const hydrateCustomerEntitlement = (

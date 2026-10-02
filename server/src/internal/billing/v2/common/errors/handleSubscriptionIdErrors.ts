@@ -12,7 +12,9 @@ export const handleSubscriptionIdErrors = async ({
 	internalCustomerId: string;
 	subscriptionIds: (string | undefined | null)[];
 }) => {
-	const subscriptionIds = rawSubscriptionIds.filter((id): id is string => !!id);
+	const subscriptionIds = rawSubscriptionIds.filter(
+		(id): id is string => !!id,
+	);
 	if (subscriptionIds.length === 0) return;
 
 	// Check for duplicates within the request itself

@@ -8,7 +8,8 @@ export const baseRowMinted = ({
 }: {
 	upsert: UpsertProductPlan;
 }): boolean =>
-	upsert.row.versioning === "new_version" && upsert.row.baseFullProduct != null;
+	upsert.row.versioning === "new_version" &&
+	upsert.row.baseFullProduct != null;
 
 /** Variant product rows whose pointer is one of these base internal ids. */
 export const variantRowsAnchoredTo = ({

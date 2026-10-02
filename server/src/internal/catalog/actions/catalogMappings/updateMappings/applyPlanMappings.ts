@@ -1,14 +1,11 @@
-import {
-	type CatalogUpdateMappingsParams,
-	ProcessorType,
-} from "@autumn/shared";
+import { type CatalogUpdateMappingsParams, ProcessorType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import type { ContextsByPlanId } from "./loadMappingContexts.js";
 import {
+	type PriceTargets,
 	normalizeAdditionalStripeProductIds,
 	normalizeStripeProductId,
-	type PriceTargets,
 	setPriceTarget,
 } from "./updateMappingUtils.js";
 

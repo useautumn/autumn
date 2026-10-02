@@ -31,10 +31,7 @@ export const resolveCouponPlanIds = async ({
 
 		internalProductIdByPriceId.set(price.id, price.internal_product_id);
 		if (price.product?.id) {
-			planIdByInternalProductId.set(
-				price.internal_product_id,
-				price.product.id,
-			);
+			planIdByInternalProductId.set(price.internal_product_id, price.product.id);
 		}
 	}
 

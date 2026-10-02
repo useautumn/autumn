@@ -1,16 +1,16 @@
-import { createHash } from "node:crypto";
 import {
 	type Entitlement,
+	featureUtils,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullCustomerEntitlement,
-	featureUtils,
 	type InsertCustomerEntitlement,
 	isBooleanCusEnt,
 	isOneOffPrice,
 	isPrepaidPrice,
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
+import { createHash } from "node:crypto";
 import {
 	initCarryOverCustomerEntitlement,
 	initCarryOverEntitlement,
@@ -18,9 +18,7 @@ import {
 
 const ONE_OFF_PREPAID_CARRYOVER_PREFIX = "one_off_prepaid_carryover_";
 
-const oneOffPrepaidCarryoverExternalId = (
-	originatingCusEntId: string,
-): string =>
+const oneOffPrepaidCarryoverExternalId = (originatingCusEntId: string): string =>
 	`${ONE_OFF_PREPAID_CARRYOVER_PREFIX}${createHash("sha256")
 		.update(originatingCusEntId)
 		.digest("hex")
@@ -41,9 +39,7 @@ export const oneOffPrepaidCusEntsByFeatureId = (
 				return isOneOffPrice(price) && isPrepaidPrice(price);
 			})
 			.map((cusPrice) => cusPrice.price.entitlement_id)
-			.filter((entitlementId): entitlementId is string =>
-				Boolean(entitlementId),
-			),
+			.filter((entitlementId): entitlementId is string => Boolean(entitlementId)),
 	);
 
 	const result = new Map<string, FullCustomerEntitlement>();
@@ -183,3 +179,4 @@ export const cusProductsToOneOffPrepaidCarryOvers = ({
 
 	return { entitlements, customerEntitlements };
 };
+

@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { Scopes } from "@autumn/shared";
 import { OrgLimitsConfigSchema } from "@/internal/misc/edgeConfig/orgLimitsSchemas.js";
 import { updateFullOrgLimitsConfig } from "@/internal/misc/edgeConfig/orgLimitsStore.js";
 

@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { Scopes } from "@autumn/shared";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService";
 
 /**

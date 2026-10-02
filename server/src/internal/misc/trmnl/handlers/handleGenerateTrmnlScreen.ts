@@ -1,9 +1,4 @@
-import {
-	type Feature,
-	getFeatureName,
-	RecaseError,
-	Scopes,
-} from "@autumn/shared";
+import { type Feature, getFeatureName, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
 

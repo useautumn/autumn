@@ -82,8 +82,7 @@ export const listExistingStripePricesByProduct = async ({
 	const uniqueProductIds = [...new Set(stripeProductIds)];
 	const pricesByProduct = new Map<string, Stripe.Price[]>();
 	if (uniqueProductIds.length === 0) return pricesByProduct;
-	if (!isStripeConnected({ org: ctx.org, env: ctx.env }))
-		return pricesByProduct;
+	if (!isStripeConnected({ org: ctx.org, env: ctx.env })) return pricesByProduct;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const entries = await runBatches({

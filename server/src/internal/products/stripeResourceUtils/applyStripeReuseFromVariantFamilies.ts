@@ -29,8 +29,7 @@ const listStripeReuseFamilyProductsByBaseInternalId = async ({
 	ctx: AutumnContext;
 	baseInternalProductIds: string[];
 }) => {
-	if (baseInternalProductIds.length === 0)
-		return new Map<string, FullProduct[]>();
+	if (baseInternalProductIds.length === 0) return new Map<string, FullProduct[]>();
 
 	const familyProducts = await listStripeReuseFamilyProducts({
 		ctx,
@@ -75,8 +74,9 @@ export const applyStripeReuseFromVariantFamilies = async ({
 			}
 
 			const candidateProducts =
-				familyProductsByBaseInternalId.get(product.base_internal_product_id) ??
-				[];
+				familyProductsByBaseInternalId.get(
+					product.base_internal_product_id,
+				) ?? [];
 			return applyStripeResourceReuseForProduct({
 				ctx,
 				product,

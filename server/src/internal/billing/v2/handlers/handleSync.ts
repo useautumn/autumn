@@ -1,4 +1,4 @@
-import { Scopes, SyncParamsV0Schema } from "@autumn/shared";
+import { SyncParamsV0Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { billingActions } from "@/internal/billing/v2/actions";
 

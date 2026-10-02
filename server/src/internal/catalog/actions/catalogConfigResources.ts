@@ -10,7 +10,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { createApiReward } from "@/internal/rewards/actions/createApiReward/createApiReward.js";
 import {
 	createApiReferralProgram,
 	deleteApiReferralProgram,
@@ -20,6 +19,7 @@ import {
 	deleteApiReward,
 	updateApiReward,
 } from "@/internal/rewards/actions/rewardCrud/index.js";
+import { createApiReward } from "@/internal/rewards/actions/createApiReward/createApiReward.js";
 import { getApiReferralProgram } from "@/internal/rewards/apiRewards/getApiReferralProgram.js";
 import {
 	rewardProgramRepo,

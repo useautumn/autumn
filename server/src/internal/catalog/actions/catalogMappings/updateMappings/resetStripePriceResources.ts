@@ -13,8 +13,7 @@ export const shouldResetStripePriceResources = ({
 
 	if (currentStripeProductId !== target.stripeProductId) return true;
 	if (target.resetStripeResources && isFixedPrice(price)) return true;
-	if (target.matchExistingStripePrice && !price.config.stripe_price_id)
-		return true;
+	if (target.matchExistingStripePrice && !price.config.stripe_price_id) return true;
 
 	return false;
 };

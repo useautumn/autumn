@@ -1,6 +1,6 @@
+import type Stripe from "stripe";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type Stripe from "stripe";
 
 /**
  * Fetches a Stripe TaxRate by id. Returns undefined when no id is provided

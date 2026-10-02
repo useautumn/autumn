@@ -1,8 +1,8 @@
-import type {
-	CreateReward,
-	CreateRewardParams,
-	CreateRewardResponse,
-	FullProduct,
+import {
+	type CreateReward,
+	type CreateRewardParams,
+	type CreateRewardResponse,
+	type FullProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";

@@ -1,3 +1,4 @@
+import { usesSubjectCache } from "../usesSubjectCache.js";
 import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
@@ -8,7 +9,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterDrainedLooseEntitlements } from "../filterDrainedLooseEntitlements.js";
 import { isReplicaSourced } from "../subjectProvenance.js";
-import { usesSubjectCache } from "../usesSubjectCache.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { rehydrateWithLiveBalances } from "./rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";

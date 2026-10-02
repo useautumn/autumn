@@ -4,8 +4,8 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { assertCatalogConfigResourceScope } from "../actions/catalogConfigResources.js";
 import { updateCatalog } from "../actions/updateCatalog/updateCatalog.js";
+import { assertCatalogConfigResourceScope } from "../actions/catalogConfigResources.js";
 
 export const handleUpdateCatalog = createRoute({
 	scopes: { ALL: [Scopes.Plans.Write, Scopes.Features.Write] },

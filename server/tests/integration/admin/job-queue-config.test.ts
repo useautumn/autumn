@@ -99,9 +99,7 @@ describe("admin job queue config", () => {
 	test("GET returns the stored config, status, and known queues", async () => {
 		const app = buildApp();
 
-		const response = await app.request(
-			"http://localhost/admin/job-queue-config",
-		);
+		const response = await app.request("http://localhost/admin/job-queue-config");
 		const body = await response.json();
 
 		expect(response.status).toBe(200);
@@ -142,9 +140,7 @@ describe("admin job queue config", () => {
 		};
 
 		const app = buildApp();
-		const response = await app.request(
-			"http://localhost/admin/job-queue-config",
-		);
+		const response = await app.request("http://localhost/admin/job-queue-config");
 		const body = await response.json();
 
 		expect(response.status).toBe(200);
@@ -161,21 +157,18 @@ describe("admin job queue config", () => {
 	test("PUT saves a validated config payload", async () => {
 		const app = buildApp();
 
-		const response = await app.request(
-			"http://localhost/admin/job-queue-config",
-			{
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					queues: {
-						primary: { enabled: false },
-						track: { enabled: true },
-					},
-				}),
+		const response = await app.request("http://localhost/admin/job-queue-config", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
 			},
-		);
+			body: JSON.stringify({
+				queues: {
+					primary: { enabled: false },
+					track: { enabled: true },
+				},
+			}),
+		});
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ success: true });
@@ -192,20 +185,17 @@ describe("admin job queue config", () => {
 	test("PUT preserves unknown queues for future config expansion", async () => {
 		const app = buildApp();
 
-		const response = await app.request(
-			"http://localhost/admin/job-queue-config",
-			{
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					queues: {
-						reports: { enabled: false },
-					},
-				}),
+		const response = await app.request("http://localhost/admin/job-queue-config", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
 			},
-		);
+			body: JSON.stringify({
+				queues: {
+					reports: { enabled: false },
+				},
+			}),
+		});
 
 		expect(response.status).toBe(200);
 		expect(mockState.updateCalls).toEqual([
@@ -220,16 +210,13 @@ describe("admin job queue config", () => {
 	test("PUT accepts an empty payload and writes the schema default", async () => {
 		const app = buildApp();
 
-		const response = await app.request(
-			"http://localhost/admin/job-queue-config",
-			{
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({}),
+		const response = await app.request("http://localhost/admin/job-queue-config", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
 			},
-		);
+			body: JSON.stringify({}),
+		});
 
 		expect(response.status).toBe(200);
 		expect(mockState.updateCalls).toEqual([{ queues: {} }]);
@@ -238,20 +225,17 @@ describe("admin job queue config", () => {
 	test("PUT rejects invalid queue payloads", async () => {
 		const app = buildApp();
 
-		const response = await app.request(
-			"http://localhost/admin/job-queue-config",
-			{
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					queues: {
-						track: { enabled: "yes" },
-					},
-				}),
+		const response = await app.request("http://localhost/admin/job-queue-config", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
 			},
-		);
+			body: JSON.stringify({
+				queues: {
+					track: { enabled: "yes" },
+				},
+			}),
+		});
 
 		const body = await response.json();
 

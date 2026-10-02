@@ -8,6 +8,7 @@ import type {
 } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import {
 	childEditsItemsInPlace,
 	childPropagatesToParent,
@@ -15,7 +16,6 @@ import {
 	reverseLinksOnChildPlan,
 	reverseLinksOnChildProduct,
 } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
-import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import { computeVersioningOptionsForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/versioningOptions/computeVersioningOptionsForPlan";
@@ -24,10 +24,10 @@ import type {
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
-import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
 const byPlanId = (
 	left: CatalogLicenseParentPreview,
@@ -186,9 +186,7 @@ const childEditRewritesLink = ({
 	if (movesActivePointer({ upsert: child })) return true;
 	if (!childEditsItemsInPlace({ child })) return false;
 	if (!link) return false;
-	return (
-		link.license_internal_product_id === child.row.nextFullProduct.internal_id
-	);
+	return link.license_internal_product_id === child.row.nextFullProduct.internal_id;
 };
 
 const buildParentVersionPreview = ({
@@ -251,7 +249,10 @@ const buildParentVersionPreview = ({
 		license_action: licenseAction,
 		...(planChange ? { plan_change: planChange } : {}),
 	};
-	if (licenseAction === "explicit" || !childEditRewritesLink({ link, child })) {
+	if (
+		licenseAction === "explicit" ||
+		!childEditRewritesLink({ link, child })
+	) {
 		return preview;
 	}
 	return withCatalogConflicts({

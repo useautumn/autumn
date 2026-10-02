@@ -1,7 +1,7 @@
 import {
 	FeatureNotFoundError,
-	Scopes,
 	UpdateBalancesParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";

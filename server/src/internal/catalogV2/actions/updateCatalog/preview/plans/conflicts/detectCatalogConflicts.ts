@@ -1,8 +1,8 @@
 import {
 	type ApiPlanV1,
 	type CatalogConflictPreview,
-	diffPlanV1,
 	type Feature,
+	diffPlanV1,
 } from "@autumn/shared";
 import { detectVariantConflicts } from "@/internal/product/actions/previewUpdatePlan/detectVariantConflicts";
 

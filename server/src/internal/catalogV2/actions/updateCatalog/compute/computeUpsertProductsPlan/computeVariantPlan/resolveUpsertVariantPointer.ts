@@ -1,9 +1,9 @@
-import type { FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	ProductUpsertIntent,
 	UpsertProductSource,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import type { FullProduct } from "@autumn/shared";
 import { resolveBaseVariantIdPointer } from "./resolveBaseVariantIdPointer";
 import {
 	type DeclaredVariantsMap,

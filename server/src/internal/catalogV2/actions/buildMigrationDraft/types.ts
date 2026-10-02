@@ -1,4 +1,4 @@
-import type { DiffedCustomizePlanV1, toBasePriceParams } from "@autumn/shared";
+import { type DiffedCustomizePlanV1, toBasePriceParams } from "@autumn/shared";
 
 type PreviousPrice = ReturnType<typeof toBasePriceParams> | null;
 

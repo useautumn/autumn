@@ -1,9 +1,6 @@
-import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import {
-	rewardProgramRepo,
-	rewardRepo,
-} from "@/internal/rewards/repos/index.js";
+import { Scopes } from "@autumn/shared";
+import { rewardRepo, rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 /**
  * GET /products/rewards

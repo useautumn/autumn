@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 

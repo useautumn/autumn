@@ -20,13 +20,11 @@ export const billingPlanToAttachPreview = async ({
 		| UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<AttachPreviewResponse> => {
-	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse(
-		{
-			ctx,
-			billingContext,
-			billingPlan,
-		},
-	);
+	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse({
+		ctx,
+		billingContext,
+		billingPlan,
+	});
 
 	const willRedirectToCheckout =
 		billingContext.checkoutMode === "stripe_checkout" ||
