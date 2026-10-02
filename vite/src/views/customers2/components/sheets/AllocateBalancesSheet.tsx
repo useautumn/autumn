@@ -368,12 +368,7 @@ export function AllocateBalancesSheet() {
 								<CodeGroupCode language="json">{formattedJson}</CodeGroupCode>
 							</div>
 						</CodeGroup>
-					) : (
-						<p className="text-xs leading-relaxed text-tertiary-foreground">
-							Shares scale to the available credits. Other allocation settings
-							stay unchanged.
-						</p>
-					)}
+					) : null}
 				</div>
 
 				<SheetFooter>
