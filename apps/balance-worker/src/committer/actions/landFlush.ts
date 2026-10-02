@@ -154,11 +154,12 @@ const runWithRetries = async ({
 	const { signal } = scope.state.stop;
 	const sleep = ctx.sleep ?? defaultSleep;
 	let delayMs = config.retry.initialBackoffMs;
+	let attempted = flush;
 	for (let attempt = 1; ; attempt++) {
 		try {
-			const outcomes = await runFlush({ ctx, config, flush });
+			const outcomes = await runFlush({ ctx, config, flush: attempted });
 			reportStoreRecovered({ scope, attempt });
-			return outcomes;
+			return keyedByOriginalCalls({ flush, attempted, outcomes });
 		} catch (cause) {
 			if (attempt > 1 && isOwnershipLost(cause)) {
 				const landed = await flushLandedEarlier({ ctx, flush });
@@ -171,6 +172,16 @@ const runWithRetries = async ({
 				}
 			}
 			if (!isTransientPostgresError({ error: cause })) throw cause;
+			// Two transient refusals of a snapshot-carrying flush: the snapshots may be the weight, so they go before the records wait longer.
+			if (
+				attempt === 2 &&
+				attempted.calls.some((call) => writesSnapshots({ call }))
+			) {
+				attempted = withoutSnapshotWrites({ flush: attempted });
+				ctx.logger?.warn(
+					"[committer] a flush failed twice with its snapshots attached; retrying it with the customers' snapshots deleted instead",
+				);
+			}
 			reportStoreWaiting({ scope, attempt, cause });
 			await sleep({ delayMs, signal });
 			if (signal.aborted) throw new CommitterStoppedError({ cause });
@@ -195,6 +206,37 @@ const recordCall = ({
 	// A record landing alone no longer lands with the rest of its customer's: its snapshot is deleted, not written.
 	snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
 });
+
+/** The same calls with every snapshot deleted instead of written; a call that wrote none is the same object. */
+const withoutSnapshotWrites = ({ flush }: { flush: Flush }): Flush => ({
+	calls: flush.calls.map((call) =>
+		writesSnapshots({ call })
+			? {
+					...call,
+					snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
+				}
+			: call,
+	),
+});
+
+/** Outcomes under the calls the caller handed in, when a retry ran stand-in calls for them. */
+const keyedByOriginalCalls = ({
+	flush,
+	attempted,
+	outcomes,
+}: {
+	flush: Flush;
+	attempted: Flush;
+	outcomes: Map<FlushCall, FlushOutcome>;
+}): Map<FlushCall, FlushOutcome> => {
+	if (attempted === flush) return outcomes;
+	const keyed = new Map<FlushCall, FlushOutcome>();
+	flush.calls.forEach((call, index) => {
+		const outcome = outcomes.get(attempted.calls[index] ?? call);
+		if (outcome) keyed.set(call, outcome);
+	});
+	return keyed;
+};
 
 /** The same intent with every customer's rows deleted instead of written. */
 const withSnapshotsDeleted = ({
