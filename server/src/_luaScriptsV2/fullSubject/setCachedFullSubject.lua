@@ -48,7 +48,7 @@ for i = 1, num_balance_keys do
     for j = 1, field_count do
       local field_name = ARGV[argv_index]
       local field_value = ARGV[argv_index + 1]
-      redis.call('HSET', balance_key, field_name, field_value)
+      redis.call('HSETNX', balance_key, field_name, field_value)
       argv_index = argv_index + 2
     end
   end
