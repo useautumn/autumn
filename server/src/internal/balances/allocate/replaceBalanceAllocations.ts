@@ -10,6 +10,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
+import type { AllocationCounterPatch } from "./actions/patchCachedAllocations.js";
 import { computeAllocationUpdate } from "./computeAllocationUpdate.js";
 import {
 	withAllocationLock,
@@ -97,15 +98,27 @@ export const replaceBalanceAllocations = async ({
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	controls: BalanceAllocationControl[];
-}): Promise<boolean> =>
+}): Promise<{
+	adjusted: boolean;
+	allocations: BalanceAllocations;
+	counterPatches: AllocationCounterPatch[];
+}> =>
 	withAllocationLock({
 		ctx,
 		internalCustomerId: fullSubject.customer.internal_id,
 		fn: async ({ tx, allocations }) => {
+			const txCtx = { ...ctx, db: tx };
+			const currentSubject = await getFullSubject({
+				ctx: txCtx,
+				customerId: fullSubject.customerId,
+				readFrom: "primary",
+			});
+			if (!currentSubject)
+				throw new CustomerNotFoundError({ customerId: fullSubject.customerId });
 			const { next, counters } = await computeReplacement({
-				ctx,
+				ctx: txCtx,
 				tx,
-				fullSubject,
+				fullSubject: currentSubject,
 				controls,
 				allocations,
 			});
@@ -116,9 +129,16 @@ export const replaceBalanceAllocations = async ({
 				internalCustomerId: fullSubject.customer.internal_id,
 				allocations: next,
 			});
-			return !isDeepStrictEqual(
-				allocationShares(allocations),
-				allocationShares(next),
-			);
+			return {
+				adjusted: !isDeepStrictEqual(
+					allocationShares(allocations),
+					allocationShares(next),
+				),
+				allocations: next,
+				counterPatches: counters.map(({ readUsage, ...counter }) => ({
+					counter,
+					usageDelta: counter.usage - readUsage,
+				})),
+			};
 		},
 	});

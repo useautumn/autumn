@@ -379,8 +379,16 @@ test.concurrent(
 			response: lowered,
 			expected: [
 				{
+					entity_id: a,
 					amount: 1000,
 					granted: 1000,
+				},
+				{
+					entity_id: b,
+					amount: 5000,
+					granted: 5000,
+					usage: 0,
+					remaining: 5000,
 				},
 			],
 		});

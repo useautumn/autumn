@@ -21,6 +21,7 @@ import {
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { notifyAllocationsAdjusted } from "@/internal/balances/allocate/actions/notifyAllocationsAdjusted.js";
+import { patchCachedAllocations } from "@/internal/balances/allocate/actions/patchCachedAllocations.js";
 import {
 	prepareBalanceAllocationReplacement,
 	replaceBalanceAllocations,
@@ -103,7 +104,7 @@ export const updateCustomer = async ({
 	});
 	const allocationSubject = await prepareBalanceAllocationReplacement({
 		ctx,
-		customerId,
+		customerId: originalCustomer.id ?? originalCustomer.internal_id,
 		controls: billing_controls?.balance_allocations,
 	});
 	const usageWindows = await prepareUsageLimitUsage({
@@ -258,7 +259,9 @@ export const updateCustomer = async ({
 	}
 
 	const { id: renamedId, ...fieldUpdates } = updateData;
-	let allocationsAdjusted = false;
+	let allocationReplacement:
+		| Awaited<ReturnType<typeof replaceBalanceAllocations>>
+		| undefined;
 
 	await db.transaction(async (tx) => {
 		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
@@ -266,7 +269,7 @@ export const updateCustomer = async ({
 			allocationSubject &&
 			billing_controls?.balance_allocations !== undefined
 		)
-			allocationsAdjusted = await replaceBalanceAllocations({
+			allocationReplacement = await replaceBalanceAllocations({
 				ctx: txCtx,
 				fullSubject: allocationSubject,
 				controls: billing_controls.balance_allocations,
@@ -290,13 +293,22 @@ export const updateCustomer = async ({
 				update: { id: renamedId },
 			});
 	});
-	if (allocationSubject) {
-		for (const id of new Set([customerId, renamedId ?? customerId]))
-			await invalidateCachedFullSubject({
-				ctx,
-				customerId: id,
-				source: "replaceBalanceAllocations",
-			});
+	if (allocationSubject && allocationReplacement) {
+		await patchCachedAllocations({
+			ctx,
+			customerId: allocationSubject.customerId,
+			allocations: allocationReplacement.allocations,
+			counterPatches: allocationReplacement.counterPatches,
+			flushBalances: true,
+		});
+		if (renamedId != null)
+			for (const id of new Set([allocationSubject.customerId, renamedId]))
+				await invalidateCachedFullSubject({
+					ctx,
+					customerId: id,
+					source: "replaceBalanceAllocations",
+					flushBalances: true,
+				});
 	}
 
 	// Through the worker when it holds the customer, so the read below and any top-up it dispatches see the new row.
@@ -315,8 +327,11 @@ export const updateCustomer = async ({
 
 	ctx.skipCache = true;
 	const resolvedCustomerId = newCustomerId ?? customerId;
-	if (allocationsAdjusted)
-		void notifyAllocationsAdjusted({ ctx, customerId: resolvedCustomerId });
+	if (allocationReplacement?.adjusted)
+		void notifyAllocationsAdjusted({
+			ctx,
+			customerId: customer.id ?? customer.internal_id,
+		});
 
 	const apiCustomer = await getApiCustomerByRollout({
 		disableReplicaRead: true,

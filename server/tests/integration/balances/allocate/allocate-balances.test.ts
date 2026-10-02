@@ -18,6 +18,32 @@ import { expectSharedRemaining } from "./utils/expectSharedRemaining.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
+const canonicalAllocationControls = ({
+	controls,
+}: {
+	controls: BalanceAllocationControl[] | undefined;
+}) =>
+	controls
+		?.map((control) => ({
+			...control,
+			allocations: [...control.allocations].sort((a, b) =>
+				a.entity_id.localeCompare(b.entity_id),
+			),
+		}))
+		.sort((a, b) => a.feature_id.localeCompare(b.feature_id));
+
+const expectAllocationControls = ({
+	actual,
+	expected,
+}: {
+	actual: BalanceAllocationControl[] | undefined;
+	expected: BalanceAllocationControl[];
+}) => {
+	expect(canonicalAllocationControls({ controls: actual })).toEqual(
+		canonicalAllocationControls({ controls: expected }),
+	);
+};
+
 const setupSharedPool = async ({ customerId }: { customerId: string }) => {
 	const shared = products.base({
 		id: `${customerId}-shared`,
@@ -95,11 +121,17 @@ test("allocation controls: omit preserves, replacement releases omitted entities
 	const initial = await autumnV2_3.customers.update(customerId, {
 		billing_controls: { balance_allocations: [control] },
 	});
-	expect(initial.billing_controls.balance_allocations).toEqual([control]);
+	expectAllocationControls({
+		actual: initial.billing_controls.balance_allocations,
+		expected: [control],
+	});
 	const omitted = await autumnV2_3.customers.update(customerId, {
 		billing_controls: {},
 	});
-	expect(omitted.billing_controls.balance_allocations).toEqual([control]);
+	expectAllocationControls({
+		actual: omitted.billing_controls.balance_allocations,
+		expected: [control],
+	});
 	const replacement = {
 		...control,
 		allocations: [{ entity_id: b, amount: 3000 }],
@@ -107,7 +139,10 @@ test("allocation controls: omit preserves, replacement releases omitted entities
 	const replaced = await autumnV2_3.customers.update(customerId, {
 		billing_controls: { balance_allocations: [replacement] },
 	});
-	expect(replaced.billing_controls.balance_allocations).toEqual([replacement]);
+	expectAllocationControls({
+		actual: replaced.billing_controls.balance_allocations,
+		expected: [replacement],
+	});
 	expect(replaced.balances[TestFeature.Messages]).toMatchObject({
 		allocated: 3000,
 		unallocated: 7000,
@@ -119,7 +154,10 @@ test("allocation controls: omit preserves, replacement releases omitted entities
 	const cleared = await autumnV2_3.customers.update(customerId, {
 		billing_controls: { balance_allocations: [] },
 	});
-	expect(cleared.billing_controls.balance_allocations).toEqual([]);
+	expectAllocationControls({
+		actual: cleared.billing_controls.balance_allocations,
+		expected: [],
+	});
 	expect(cleared.balances[TestFeature.Messages]).toMatchObject({
 		allocated: 0,
 		unallocated: 10000,
@@ -178,7 +216,10 @@ test("allocation controls: invalid second feature leaves the entire configuratio
 			}),
 	});
 	const unchanged = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-	expect(unchanged.billing_controls?.balance_allocations).toEqual(original);
+	expectAllocationControls({
+		actual: unchanged.billing_controls?.balance_allocations,
+		expected: original,
+	});
 	expect(unchanged.balances[TestFeature.Messages]).toMatchObject({
 		allocated: 5000,
 		remaining: 10000,

@@ -31,7 +31,6 @@ export const getBalanceAllocationControls = async ({
 			and(
 				eq(entities.org_id, ctx.org.id),
 				eq(entities.env, ctx.env),
-				eq(entities.deleted, false),
 				eq(entities.internal_customer_id, internalCustomerId),
 				inArray(entities.internal_id, internalEntityIds),
 			),

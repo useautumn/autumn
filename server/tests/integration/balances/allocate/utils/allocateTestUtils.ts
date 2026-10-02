@@ -28,7 +28,9 @@ export const expectAllocatedMessages = async ({
 	response: {
 		billing_controls: { balance_allocations?: BalanceAllocationControl[] };
 	};
-	expected: ({ entity_id?: string; amount?: number } & Partial<ApiBalanceV1>)[];
+	expected: ({ entity_id?: string; amount?: number } & Partial<
+		Pick<ApiBalanceV1, "granted" | "usage" | "remaining">
+	>)[];
 }) => {
 	const control = response.billing_controls.balance_allocations?.[0];
 	expect(control?.feature_id).toBe(TestFeature.Messages);
