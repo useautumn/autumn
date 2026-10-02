@@ -3,7 +3,6 @@ import { type ApiCustomerV3, CusProductStatus } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing.js";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -192,6 +191,7 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 			name: "Concurrent Trial",
 			email,
 			withAutumnId: true,
+			create_in_stripe: true,
 			internalOptions: {
 				default_group: customerId,
 			},
@@ -201,6 +201,7 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 			name: "Concurrent Trial",
 			email,
 			withAutumnId: true,
+			create_in_stripe: true,
 			internalOptions: {
 				default_group: customerId,
 			},
@@ -210,6 +211,7 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 			name: "Concurrent Trial",
 			email,
 			withAutumnId: true,
+			create_in_stripe: true,
 			internalOptions: {
 				default_group: customerId,
 			},
@@ -249,15 +251,12 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 	const stripeCustomerId = fullCustomer.processor?.id;
 	expect(stripeCustomerId).toBeDefined();
 
-	// 3. Verify only 1 Stripe subscription was created
+	// 3. The no-card default trial runs in Autumn, so no Stripe subscription exists
 	const subscriptions = await ctx.stripeCli.subscriptions.list({
 		customer: stripeCustomerId!,
 		status: "all",
 	});
-	expect(subscriptions.data.length).toBe(1);
-
-	// Verify the subscription is in trialing status
-	expect(subscriptions.data[0].status).toBe("trialing");
+	expect(subscriptions.data.length).toBe(0);
 
 	// Verify no duplicate customer_products in DB
 	const productCounts = fullCustomer.customer_products.reduce(
@@ -272,12 +271,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 		expect(count).toBe(1);
 	}
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
 });
 
 test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs without name preserves name")}`, async () => {
