@@ -218,6 +218,9 @@ export const createSubjectMap = ({
 	const readBaselineAt = ({ subjectKey }: { subjectKey: string }) =>
 		entries.get(subjectKey)?.baselineAt ?? null;
 
+	const readBytes = ({ subjectKey }: { subjectKey: string }) =>
+		entries.get(subjectKey)?.bytes ?? 0;
+
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
 		const keys = subjectKeysByCustomer.get(customerKey);
 		if (!keys) return;
@@ -239,6 +242,7 @@ export const createSubjectMap = ({
 		readState,
 		setState,
 		readBaselineAt,
+		readBytes,
 		pin,
 		unpin,
 		evictCustomer,
