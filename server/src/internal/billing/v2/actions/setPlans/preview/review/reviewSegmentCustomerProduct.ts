@@ -49,9 +49,9 @@ export const reviewSegmentCustomerProduct = ({
 				})
 			: findRow({
 					fullCustomer: lookup.finalFullCustomer,
-					customerProductId: lookup.customerProductIdBySegmentId.get(
-						reviewSegment.segment.id,
-					),
+					customerProductId:
+						lookup.customerProductIdBySegmentId.get(reviewSegment.segment.id) ??
+						reviewSegment.segment.carriedBy?.rows.at(-1)?.customerProductId,
 				});
 	return row ? { ...row, ended_at: reviewSegment.segment.endsAt } : undefined;
 };

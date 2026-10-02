@@ -10,6 +10,7 @@ import {
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import { prices } from "@tests/utils/fixtures/db/prices";
+import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import { buildSetPlansPhaseCustomers } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPhaseCustomers";
 import { diffToReview } from "@/internal/billing/v2/actions/setPlans/preview/review/diffToReview";
@@ -401,5 +402,19 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		expect(review.withdrawnStarts.map(({ product_id }) => product_id)).toEqual([
 			"enterprise",
 		]);
+	});
+
+	test("an untouched one-off purchase stays listed as kept", () => {
+		const credits = products.createFull({
+			id: "credits",
+			prices: [prices.createOneOff({ id: "price_credits" })],
+		});
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [running({ product: pro }), running({ product: credits })],
+				opening: [{ fullProduct: pro }],
+			}),
+		});
+		expect(phaseRows(review)).toEqual([["pro:kept", "credits:kept"]]);
 	});
 });
