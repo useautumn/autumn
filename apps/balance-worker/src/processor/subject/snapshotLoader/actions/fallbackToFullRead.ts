@@ -8,6 +8,7 @@ import type { SubjectScope } from "../../types/subject.js";
 import type { Quarantine } from "../quarantine/createQuarantine.js";
 import { SNAPSHOT_QUARANTINE_AFTER } from "../snapshotLoaderLimits.js";
 import type { SnapshotWaiting } from "../types/snapshotLoader.js";
+import { backfillSnapshot } from "./backfillSnapshot.js";
 
 /** A miss answered by the full query; a subject that keeps failing it is shut out for a while instead of asked again. */
 export const fallbackToFullRead = async ({
@@ -29,6 +30,7 @@ export const fallbackToFullRead = async ({
 			occurredAt: asOf,
 		});
 		quarantine.succeeded({ subjectKey });
+		backfillSnapshot({ scope, waiting, baseline });
 		return baseline;
 	} catch (cause) {
 		// An answer, not a failure: the customer is simply not there.

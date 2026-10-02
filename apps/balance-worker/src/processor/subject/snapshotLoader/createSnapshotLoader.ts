@@ -44,9 +44,11 @@ export const createSnapshotLoader = ({
 	function load({
 		identity,
 		asOf,
+		overtaken,
 	}: {
 		identity: MeteringIdentity;
 		asOf: number;
+		overtaken: () => boolean;
 	}) {
 		const subjectKey = meteringIdentityToSubjectKey({ identity });
 		const joined = waiting.get(subjectKey);
@@ -57,6 +59,7 @@ export const createSnapshotLoader = ({
 			identity,
 			subjectKey,
 			asOf,
+			overtaken,
 			settle: Promise.withResolvers<SubjectState>(),
 		};
 		waiting.set(subjectKey, entry);

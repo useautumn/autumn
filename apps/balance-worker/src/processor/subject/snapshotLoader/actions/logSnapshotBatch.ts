@@ -35,7 +35,7 @@ export const logSnapshotBatch = ({
 		{
 			event: "balance_worker.snapshot_batch",
 			data: {
-				partition: scope.ctx.partition,
+				partition: scope.ctx.position?.partition,
 				size,
 				...counts,
 				selectMs: Math.round(selectMs * 100) / 100,

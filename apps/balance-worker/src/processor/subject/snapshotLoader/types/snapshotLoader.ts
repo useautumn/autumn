@@ -5,6 +5,8 @@ export type SnapshotWaiting = {
 	identity: MeteringIdentity;
 	subjectKey: string;
 	asOf: number;
+	/** True once an evict landed during this load: what it read must not be written back. */
+	overtaken: () => boolean;
 	settle: ReturnType<typeof Promise.withResolvers<SubjectState>>;
 };
 
@@ -13,6 +15,7 @@ export type SnapshotLoader = {
 	load(params: {
 		identity: MeteringIdentity;
 		asOf: number;
+		overtaken: () => boolean;
 	}): Promise<SubjectState>;
 	queueDepth(): number;
 };

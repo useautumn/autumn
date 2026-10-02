@@ -36,7 +36,7 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
-			onEvicted: evictDeletesOf({ ctx, config }),
+			onEvicted: evictDeleteOf({ ctx, config }),
 		}),
 	};
 
@@ -126,17 +126,17 @@ function validateWriterConfig(config: PartitionWriterConfig): void {
 }
 
 /** The map's evict hook: a synchronous enqueue onto the partition's lane, never awaited by a request. */
-function evictDeletesOf({
+function evictDeleteOf({
 	ctx,
 	config,
 }: {
 	ctx: PartitionWriterContext;
 	config: PartitionWriterConfig;
 }): OnSubjectEvicted | undefined {
-	const deletes = ctx.stateStore.evictDeletes;
-	if (!deletes) return undefined;
+	const writes = ctx.stateStore.snapshotWrites;
+	if (!writes) return undefined;
 	return ({ customerKey }) =>
-		deletes.enqueue({
+		writes.enqueueDelete({
 			topic: config.topic,
 			partition: config.partition,
 			customerKey,

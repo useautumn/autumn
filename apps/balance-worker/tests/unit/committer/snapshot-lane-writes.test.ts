@@ -3,7 +3,7 @@ import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type { FlushRequest } from "@autumn/postgres";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
-import { EVICT_DELETES_MAX_PENDING } from "../../../src/committer/subjectSnapshots/createEvictDeletes.js";
+import { SNAPSHOT_LANE_MAX_PENDING } from "../../../src/committer/subjectSnapshots/createSnapshotLaneWrites.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import { createState, createTrackMutation } from "../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
@@ -81,8 +81,8 @@ const createStore = ({
 			subjectSnapshotsConfig,
 		},
 	});
-	const deletes = store.evictDeletes;
-	if (!deletes) throw new Error("expected evict deletes");
+	const deletes = store.snapshotWrites;
+	if (!deletes) throw new Error("expected snapshot writes");
 	/** Lane ticks hand the committer one DELETE at a time, so quiet means every tick has run and landed. */
 	const drained = async () => {
 		for (let quiet = 0; quiet < 3; ) {
@@ -106,7 +106,7 @@ const customerOf = (index: number) => ({
 const keyOf = (index: number) =>
 	meteringIdentityToPartitionKey({ identity: customerOf(index) });
 
-describe("committer state store evict deletes", () => {
+describe("snapshot lane writes: evict deletes", () => {
 	test("enqueue is synchronous and returns nothing: evicts of one tick land as one DELETE, each customer once", async () => {
 		const { db, requests } = createCountingDb();
 		const { deletes, drained } = createStore({
@@ -116,7 +116,11 @@ describe("committer state store evict deletes", () => {
 
 		for (const index of [1, 2, 3, 2])
 			expect(
-				deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) }),
+				deletes.enqueueDelete({
+					topic,
+					partition: 4,
+					customerKey: keyOf(index),
+				}),
 			).toBeUndefined();
 		expect(requests).toHaveLength(0);
 		await drained();
@@ -141,7 +145,7 @@ describe("committer state store evict deletes", () => {
 		});
 
 		for (let index = 0; index < 10_000; index++)
-			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+			deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(index) });
 		await drained();
 
 		const statements = deleteStatements();
@@ -166,7 +170,7 @@ describe("committer state store evict deletes", () => {
 		});
 
 		for (let index = 0; index < 10_000; index++)
-			deletes.enqueue({
+			deletes.enqueueDelete({
 				topic,
 				partition: index % 4,
 				customerKey: keyOf(index),
@@ -200,7 +204,7 @@ describe("committer state store evict deletes", () => {
 			],
 		});
 		await Bun.sleep(1);
-		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(99) });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(99) });
 		await Bun.sleep(5);
 
 		// Only the apply's flush has reached Postgres; the DELETE waits for it to settle.
@@ -226,14 +230,14 @@ describe("committer state store evict deletes", () => {
 		});
 
 		for (const index of [1, 2])
-			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+			deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(index) });
 		await drained();
-		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(3) });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(3) });
 		await drained();
 
 		expect(deleteStatements()).toHaveLength(2);
 		expect(warnings).toHaveLength(2);
-		expect(warnings[0]).toContain("could not delete 2 customers' rows");
+		expect(warnings[0]).toContain("could not write 2 customers' rows");
 	});
 
 	test("past the pending ceiling a partition stops enqueuing and warns once; nothing is awaited or thrown", async () => {
@@ -249,12 +253,12 @@ describe("committer state store evict deletes", () => {
 		});
 
 		// One synchronous burst: no tick runs between enqueues, so the ceiling is what one tick can find waiting.
-		const offered = EVICT_DELETES_MAX_PENDING + 50;
+		const offered = SNAPSHOT_LANE_MAX_PENDING + 50;
 		for (let index = 0; index < offered; index++)
-			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+			deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(index) });
 		expect(warnings).toHaveLength(1);
 		expect(warnings[0]).toContain(
-			`${EVICT_DELETES_MAX_PENDING} customers pending`,
+			`${SNAPSHOT_LANE_MAX_PENDING} customers pending`,
 		);
 		held.resolve();
 		await drained();
@@ -263,7 +267,7 @@ describe("committer state store evict deletes", () => {
 			(total, request) => total + (request.snapshots?.deletes.length ?? 0),
 			0,
 		);
-		expect(deleted).toBe(EVICT_DELETES_MAX_PENDING);
+		expect(deleted).toBe(SNAPSHOT_LANE_MAX_PENDING);
 	});
 
 	test("with the store off, an enqueue is a no-op and Postgres sees no statement", async () => {
@@ -274,7 +278,7 @@ describe("committer state store evict deletes", () => {
 			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "off" }),
 		});
 
-		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(1) });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
 		await drained();
 
 		expect(requests).toEqual([]);
@@ -296,7 +300,7 @@ describe("committer state store evict deletes", () => {
 		});
 
 		for (const index of [1, 2])
-			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+			deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(index) });
 		await Bun.sleep(2);
 		subjectSnapshotsConfig._setRuntimeConfigForTesting({
 			...subjectSnapshotsConfig.get(),
@@ -312,11 +316,116 @@ describe("committer state store evict deletes", () => {
 			...subjectSnapshotsConfig.get(),
 			mode: "write",
 		});
-		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(3) });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(3) });
 		await drained();
 		expect(deleteStatements().map((r) => r.snapshots?.deletes)).toEqual([
 			[customerOf(1)],
 			[customerOf(3)],
 		]);
+	});
+});
+
+describe("snapshot lane writes: backfills", () => {
+	const stateOf = (index: number) =>
+		createState({ identity: customerOf(index), balance: 100 });
+
+	test("a backfill lands as an upsert under the partition's bookmark and claim, so a stale owner's rolls back as a bookmark conflict", async () => {
+		const { db, requests } = createCountingDb();
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 7n });
+		await store.claimPartition({ topic, partition: 4 });
+
+		deletes.enqueueBackfill({
+			topic,
+			partition: 4,
+			customerKey: keyOf(1),
+			states: [stateOf(1)],
+			baselineAt: 1_700_000_000_000,
+		});
+		await drained();
+
+		expect(requests).toHaveLength(1);
+		expect(
+			requests[0]?.snapshots?.upserts.map((row) => row.customerId),
+		).toEqual(["cus_1"]);
+		expect(requests[0]?.snapshots?.deletes).toEqual([]);
+		expect(requests[0]?.bookmarks).toEqual([
+			expect.objectContaining({
+				partition: 4,
+				expectedOffset: 7n,
+				nextOffset: 7n,
+				claimToken: expect.any(String),
+			}),
+		]);
+	});
+
+	test("deletes alone carry no bookmark: a DELETE is always safe", async () => {
+		const { db, requests } = createCountingDb();
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 7n });
+		await store.claimPartition({ topic, partition: 4 });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
+		await drained();
+		expect(requests[0]?.bookmarks).toEqual([]);
+	});
+
+	test("a DELETE enqueued after a pending backfill replaces it: the latest word on a customer is what lands", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests } = createCountingDb({ gate: held.promise });
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		// A tick is in flight for cus_9, so what follows waits in the pending map.
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(9) });
+		await Bun.sleep(2);
+		deletes.enqueueBackfill({
+			topic,
+			partition: 4,
+			customerKey: keyOf(1),
+			states: [stateOf(1)],
+			baselineAt: 1,
+		});
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
+		held.resolve();
+		await drained();
+
+		const second = requests[1]?.snapshots;
+		expect(second?.upserts).toEqual([]);
+		expect(second?.deletes).toEqual([customerOf(1)]);
+	});
+
+	test("a backfill refused by Postgres is logged and the lane carries on", async () => {
+		const { db, requests } = createCountingDb({ failDeletes: false });
+		const warnings: string[] = [];
+		const flush = db.flush;
+		db.flush = async (request) => {
+			if ((request.snapshots?.upserts.length ?? 0) > 0)
+				throw new Error("bookmark moved");
+			return flush(request);
+		};
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+			warnings,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		deletes.enqueueBackfill({
+			topic,
+			partition: 4,
+			customerKey: keyOf(1),
+			states: [stateOf(1)],
+			baselineAt: 1,
+		});
+		await drained();
+		expect(warnings).toHaveLength(1);
+		expect(warnings[0]).toContain("could not write 1 customers' rows");
 	});
 });

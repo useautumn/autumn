@@ -236,12 +236,14 @@ const commandNextOffsetOf = ({
 	return call.commandNextOffset;
 };
 
+/** A call with nothing to move still carries its bookmark when it writes snapshot rows: the bookmark is the fence a stale owner's rows roll back on. Deletes alone are always safe and go unfenced. */
 const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 	const last = call.records.at(-1);
 	if (
 		!last &&
 		call.commandNextOffset === undefined &&
-		call.ownerFence === undefined
+		call.ownerFence === undefined &&
+		!writesSnapshotRows({ call })
 	)
 		return null;
 	return {
@@ -327,3 +329,8 @@ export const runFlush = async ({
 	if (staleIds.length > 0) throw new StaleSubjectRowsError({ ids: staleIds });
 	return outcomes;
 };
+
+export const writesSnapshotRows = ({ call }: { call: FlushCall }): boolean =>
+	[...(call.snapshotIntent?.values() ?? [])].some(
+		(entry) => entry !== "delete",
+	);

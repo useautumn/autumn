@@ -51,7 +51,7 @@ export const loadSubjectState = async ({
 		// A read an evict overtook goes to the full query: the snapshot row may predate the DELETE still on the lane.
 		const baseline =
 			read === 0
-				? await loadSubjectBaseline({ scope, identity, occurredAt })
+				? await loadSubjectBaseline({ scope, identity, occurredAt, load })
 				: await readSubjectBaseline({ scope, identity, occurredAt });
 		reportLargeState({ scope, identity, baseline });
 		// Checked with no await before the keep, so overtaken rows never become resident.

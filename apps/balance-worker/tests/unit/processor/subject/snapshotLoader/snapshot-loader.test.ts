@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
@@ -99,6 +100,9 @@ const createScope = ({
 	const selects: MeteringIdentity[][] = [];
 	const fullReads: string[] = [];
 	const logged: unknown[] = [];
+	const backfills: Parameters<
+		NonNullable<SubjectScope["ctx"]["snapshotWrites"]>["enqueueBackfill"]
+	>[0][] = [];
 	let fullInFlight = 0;
 	let fullInFlightMax = 0;
 	let selectFailures: Error[] = [];
@@ -148,7 +152,15 @@ const createScope = ({
 			},
 			receiptPolicy: { retentionMs: 60_000, now: () => now },
 			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode }),
-			partition: 7,
+			snapshotWrites: {
+				enqueueDelete: () => {
+					throw new Error("not exercised");
+				},
+				enqueueBackfill: (params) => {
+					backfills.push(params);
+				},
+			},
+			position: { topic: "metering", partition: 7 },
 			logger: {
 				info: (...args: unknown[]) => logged.push(args),
 				warn: (...args: unknown[]) => logged.push(args),
@@ -168,11 +180,16 @@ const createScope = ({
 			}),
 		},
 	};
-	const load = (customerId: string, asOf = now) =>
+	const load = (
+		customerId: string,
+		asOf = now,
+		inFlight = { customerKey: customerId, overtaken: false },
+	) =>
 		loadSubjectBaseline({
 			scope,
 			identity: identityOf(customerId),
 			occurredAt: asOf,
+			load: inFlight,
 		});
 	const batchLines = () =>
 		logged.filter(
@@ -183,6 +200,7 @@ const createScope = ({
 	return {
 		scope,
 		load,
+		backfills,
 		selects,
 		fullReads,
 		sleeps,
@@ -419,5 +437,33 @@ describe("the snapshot loader", () => {
 		expect(keyOf("cus_1")).toBe(
 			meteringIdentityToSubjectKey({ identity: a.identity }),
 		);
+	});
+
+	test("a miss answered by the full query is written back for the next cold load; a hit writes nothing", async () => {
+		const { load, backfills } = createScope({ rows: [rowOf("cus_hit")] });
+		await Promise.all([load("cus_hit"), load("cus_miss")]);
+		expect(backfills).toHaveLength(1);
+		expect(backfills[0]).toMatchObject({
+			topic: "metering",
+			partition: 7,
+			customerKey: meteringIdentityToPartitionKey({
+				identity: identityOf("cus_miss"),
+			}),
+			baselineAt: NOW,
+		});
+		expect(backfills[0]?.states.map((state) => state.customer.id)).toEqual([
+			"cus_miss",
+		]);
+	});
+
+	test("a read an evict overtook is not written back: its rows may predate the write behind the evict", async () => {
+		const { load, backfills, fullReads } = createScope({ fullDelayMs: 5 });
+		const inFlight = { customerKey: "cus_1", overtaken: false };
+		const loading = load("cus_1", NOW, inFlight);
+		await Bun.sleep(2);
+		inFlight.overtaken = true;
+		await loading;
+		expect(fullReads).toEqual(["cus_1"]);
+		expect(backfills).toEqual([]);
 	});
 });
