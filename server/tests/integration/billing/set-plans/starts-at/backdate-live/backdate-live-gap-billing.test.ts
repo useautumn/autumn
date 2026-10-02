@@ -90,7 +90,7 @@ for (const { prorationBehavior, daysBeforeLiveStart } of [
 			expectPreviewWarning({
 				preview,
 				type: "subscription_recreated_backdated",
-				messageContains: ["is billed for the time before"],
+				messageContains: ["is billed now for the time before"],
 			});
 
 			await autumnV2_4.billing.setPlans(params);
@@ -182,7 +182,7 @@ test.concurrent(
 		expectPreviewWarning({
 			preview,
 			type: "subscription_recreated_backdated",
-			messageContains: ["the billing cycle restarts from it and renews on"],
+			messageContains: ["The billing cycle restarts from"],
 		});
 
 		await autumnV2_4.billing.setPlans(params);
