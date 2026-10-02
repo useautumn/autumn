@@ -29,6 +29,7 @@ import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { assertSyncPhasesStartAfterNow } from "../errors/assertSyncPhasesStartAfterNow";
 import { customerProductsToOngoingStripePriceIds } from "../utils/customerProductsToOngoingStripePriceIds";
 import { findLinkedAddOnCustomerProduct } from "./findLinkedAddOnCustomerProduct";
 import { findQueuedCustomerProducts } from "./findQueuedCustomerProducts";
@@ -268,6 +269,7 @@ export const setupSyncContext = async ({
 
 	const currentEpochMs = Date.now();
 	const inputPhases = params.phases ?? [];
+	assertSyncPhasesStartAfterNow({ phases: inputPhases, currentEpochMs });
 	const firstPhaseIsImmediate = inputPhases[0]?.starts_at === "now";
 	const releaseTailPhase = stripeSchedule
 		? findStripeScheduleReleaseTailPhase({
