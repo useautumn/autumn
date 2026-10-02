@@ -1,1 +1,0 @@
-CREATE INDEX CONCURRENTLY "idx_customers_processor_id_trgm" ON "customers" USING gin (("processor" ->> 'id') gin_trgm_ops);

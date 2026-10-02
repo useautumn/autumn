@@ -1,5 +1,5 @@
 {
-  "id": "b2cf3397-232a-46c1-b8c4-80a0128d1570",
+  "id": "968bcbc7-b292-4fb1-9150-f03167e5dd09",
   "prevId": "b06c2e91-e828-42c3-aaa1-110e39cbec4c",
   "version": "7",
   "dialect": "postgresql",
@@ -3863,6 +3863,7 @@
             }
           ],
           "isUnique": false,
+          "where": "(\"customers\".\"processor\" ->> 'id') IS NOT NULL",
           "concurrently": true,
           "method": "gin",
           "with": {}

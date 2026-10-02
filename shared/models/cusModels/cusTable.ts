@@ -70,6 +70,7 @@ export const customers = pgTable(
 		index("idx_customers_processor_id").on(sql`(${table.processor} ->> 'id')`),
 		index("idx_customers_processor_id_trgm")
 			.using("gin", sql`(${table.processor} ->> 'id') gin_trgm_ops`)
+			.where(sql`(${table.processor} ->> 'id') IS NOT NULL`)
 			.concurrently(),
 		index("idx_customers_composite").on(table.org_id, table.env, table.id),
 		index("idx_customers_org_env_internal_id").on(

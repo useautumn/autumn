@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_customers_processor_id_trgm" ON "customers" USING gin (("processor" ->> 'id') gin_trgm_ops) WHERE ("customers"."processor" ->> 'id') IS NOT NULL;
