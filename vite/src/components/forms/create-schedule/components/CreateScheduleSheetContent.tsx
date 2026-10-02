@@ -1,5 +1,6 @@
 import { Button } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
+import { useState } from "react";
 import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
@@ -12,9 +13,11 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { findBackdateRecreateWarning } from "../utils/review/findBackdateRecreateWarning";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
 import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
+import { BackdateRecreateConfirmDialog } from "./review/BackdateRecreateConfirmDialog";
 import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePreview } from "./SchedulePreview";
 import { SetPlansSubscriptionNote } from "./SetPlansSubscriptionNote";
@@ -112,8 +115,12 @@ export function CreateScheduleReviewContent() {
 		createsRecurringSubscription,
 	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
+	const [isConfirmingRecreate, setIsConfirmingRecreate] = useState(false);
 
 	const confirmLabel = getConfirmLabel({ preview });
+	const backdateRecreateWarning = findBackdateRecreateWarning({
+		warnings: preview?.warnings,
+	});
 
 	const {
 		isInvoiceOnlyStart,
@@ -173,6 +180,10 @@ export function CreateScheduleReviewContent() {
 							setSheet({ type: "create-schedule-checkout" });
 							return;
 						}
+						if (backdateRecreateWarning) {
+							setIsConfirmingRecreate(true);
+							return;
+						}
 						handleSubmit();
 					}}
 					isLoading={isPending}
@@ -181,6 +192,18 @@ export function CreateScheduleReviewContent() {
 					{confirmLabel}
 				</Button>
 			</BillingFooter>
+			{backdateRecreateWarning && (
+				<BackdateRecreateConfirmDialog
+					warning={backdateRecreateWarning}
+					open={isConfirmingRecreate}
+					isPending={isPending}
+					onOpenChange={setIsConfirmingRecreate}
+					onConfirm={() => {
+						setIsConfirmingRecreate(false);
+						handleSubmit();
+					}}
+				/>
+			)}
 		</div>
 	);
 }
