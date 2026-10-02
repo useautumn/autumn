@@ -12,6 +12,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerProductCorrect } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { expectCustomerProductOptions } from "@tests/integration/utils/expectCustomerProductOptions";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool";
@@ -97,16 +98,20 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout prepaid entities"
 	await completeStripeCheckoutFormV2({ url: res.payment_url });
 
 	const customerAfter = await autumnV1.customers.get(customerId);
+	// Worker customer reads omit entity-owned products and balances.
+	const subject = isBalanceWorkerRoute()
+		? await autumnV1.entities.get<ApiEntityV0>(customerId, entities[0].id)
+		: customerAfter;
 	await expectCustomerProductCorrect({
 		customerId,
-		customer: customerAfter,
+		customer: subject,
 		productId: pro.id,
 		state: "active",
 	});
 
 	expectCustomerFeatureCorrect({
 		customerId,
-		customer: customerAfter,
+		customer: subject,
 		featureId: TestFeature.Messages,
 		includedUsage: quantity1,
 		balance: quantity1,
@@ -360,14 +365,17 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout monthly volume pr
 		entityAfter.id,
 	);
 
-	expectCustomerFeatureCorrect({
-		customerId,
-		customer: customerAfter,
-		featureId: TestFeature.Messages,
-		includedUsage: checkoutPrepaidQuantity + consumableIncludedUsage,
-		balance: checkoutPrepaidQuantity + consumableIncludedUsage,
-		usage: 0,
-	});
+	// Worker customer reads omit entity-owned balances; the entity assert below covers it.
+	if (!isBalanceWorkerRoute()) {
+		expectCustomerFeatureCorrect({
+			customerId,
+			customer: customerAfter,
+			featureId: TestFeature.Messages,
+			includedUsage: checkoutPrepaidQuantity + consumableIncludedUsage,
+			balance: checkoutPrepaidQuantity + consumableIncludedUsage,
+			usage: 0,
+		});
+	}
 
 	expectBalanceCorrect({
 		customer: entityAfterV2_2,
@@ -531,16 +539,20 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout prepaid volume en
 	await completeStripeCheckoutFormV2({ url: res.payment_url });
 
 	const customerAfter = await autumnV1.customers.get(customerId);
+	// Worker customer reads omit entity-owned products and balances.
+	const subject = isBalanceWorkerRoute()
+		? await autumnV1.entities.get<ApiEntityV0>(customerId, entities[0].id)
+		: customerAfter;
 	await expectCustomerProductCorrect({
 		customerId,
-		customer: customerAfter,
+		customer: subject,
 		productId: pro.id,
 		state: "active",
 	});
 
 	expectCustomerFeatureCorrect({
 		customerId,
-		customer: customerAfter,
+		customer: subject,
 		featureId: TestFeature.Messages,
 		includedUsage: quantity1,
 		balance: quantity1,

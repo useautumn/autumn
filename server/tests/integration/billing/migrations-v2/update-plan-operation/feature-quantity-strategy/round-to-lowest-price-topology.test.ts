@@ -18,6 +18,7 @@ import { expectCustomerProducts } from "@tests/integration/billing/utils/expectC
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -298,7 +299,13 @@ test.concurrent(
 			planId: pro.id,
 		});
 
-		await expectCustomerProducts({ customerId, active: [pro.id, addon.id] });
+		// Worker customer reads omit entity-owned plans, so pro is read off the entity.
+		if (isBalanceWorkerRoute()) {
+			await expectCustomerProducts({ customer: entity, active: [pro.id] });
+			await expectCustomerProducts({ customerId, active: [addon.id] });
+		} else {
+			await expectCustomerProducts({ customerId, active: [pro.id, addon.id] });
+		}
 
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},

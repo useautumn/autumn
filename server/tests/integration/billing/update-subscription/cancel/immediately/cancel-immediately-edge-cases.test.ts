@@ -13,6 +13,7 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { items } from "@tests/utils/fixtures/items";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -95,7 +96,8 @@ test.concurrent(`${chalk.yellowBright("cancel immediately edge: cancel pro after
 		customer: customerAfterCancel,
 		notPresent: [pro.id],
 		active: [addon.id],
-		canceling: [premium.id],
+		// Worker customer reads omit entity-owned plans; the entity assert below covers premium.
+		...(isBalanceWorkerRoute() ? {} : { canceling: [premium.id] }),
 	});
 
 	// Entity premium should still be canceling
