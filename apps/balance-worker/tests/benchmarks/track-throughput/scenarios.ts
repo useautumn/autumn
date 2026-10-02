@@ -21,7 +21,7 @@ export type Scenario = {
 const FAR_FUTURE = 4_000_000_000_000;
 
 /** A customer holding `products` plans, each granting every feature once: one ent row per (plan, feature). */
-const buildScenario = ({
+export const buildScenario = ({
 	name,
 	products,
 	features,

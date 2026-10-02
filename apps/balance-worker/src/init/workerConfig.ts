@@ -1,3 +1,4 @@
+import { BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION } from "@autumn/env/balanceWorkerConstants";
 import {
 	assertConsumerGroupTimings,
 	coPartitionedAssigner,
@@ -10,6 +11,11 @@ import {
 	partitionProducerTransactionalIdOf,
 } from "@autumn/kafka";
 import type { Admin, ConsumerConfig, ITopicMetadata } from "kafkajs";
+import {
+	createSubjectMapBudget,
+	subjectMapBudgetBytesOf,
+} from "../processor/writer/subjectMap/createSubjectMapBudget.js";
+import { readContainerMemoryBytes } from "./containerMemory.js";
 import type {
 	KafkaBalanceWorkerTimings,
 	PartitionRuntimeFactoryConfig,
@@ -144,7 +150,12 @@ export function balanceWorkerEnvToRuntimeConfig({
 			// Sized for one customer bursting 500 parallel tracks, the largest the balance suites send.
 			maxPendingCommands: 4000,
 			maxPendingCommandsPerCustomer: 1000,
-			subjectMapMaxBytes: env.BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
+			subjectMapBudget: createSubjectMapBudget({
+				totalBytes: subjectMapBudgetBytesOf({
+					containerMemoryBytes: readContainerMemoryBytes(),
+					memoryFraction: BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
+				}),
+			}),
 			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.
 			commitLingerMs: 5,
 		},

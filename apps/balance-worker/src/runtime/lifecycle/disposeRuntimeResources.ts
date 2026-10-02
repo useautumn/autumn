@@ -23,6 +23,11 @@ export async function disposeRuntimeResources({
 	} catch (cause) {
 		cleanupErrors.push(cause);
 	}
+	try {
+		ctx.processor.dispose();
+	} catch (cause) {
+		cleanupErrors.push(cause);
+	}
 	if (cleanupErrors.length > 0) {
 		throw new AggregateError(
 			cleanupErrors,

@@ -25,13 +25,23 @@ export function createPartitionWriter({
 	config: PartitionWriterConfig;
 }): PartitionWriter {
 	validateWriterConfig(config);
+	const budgetShare = config.limits.subjectMapBudget?.join({
+		sizeBytes: () => scope.state.subjects.sizeBytes(),
+	});
 	const scope: PartitionWriterScope = {
 		ctx,
 		config,
 		state: createPartitionWriterState({
-			subjectMapMaxBytes: config.limits.subjectMapMaxBytes,
+			subjectMapMaxBytes: budgetShare
+				? () => budgetShare.maxBytes()
+				: undefined,
 		}),
 	};
+
+	function dispose(): void {
+		budgetShare?.leave();
+		scope.state.subjects.clear();
+	}
 
 	function decide<Reply>(
 		submission: MutationSubmission<Reply>,
@@ -95,6 +105,7 @@ export function createPartitionWriter({
 		readFreshestState,
 		evict,
 		adopt,
+		dispose,
 	};
 }
 
@@ -105,7 +116,7 @@ function validateWriterConfig(config: PartitionWriterConfig): void {
 		throw new RangeError(`Invalid Kafka partition: ${config.partition}`);
 	}
 	for (const [name, value] of Object.entries(config.limits)) {
-		if (value === undefined) continue;
+		if (value === undefined || typeof value !== "number") continue;
 		if (!Number.isSafeInteger(value) || value <= 0) {
 			throw new RangeError(`${name} must be a positive safe integer`);
 		}

@@ -32,4 +32,29 @@ describe("createWorkerDb", () => {
 		expect(gated).toEqual(["subject_rows"]);
 		expect(timings.drain().queries.subject_rows).toMatchObject({ count: 1 });
 	});
+
+	test("a batched entity read waits for the same gate and is timed as an entity load", async () => {
+		const gated: string[] = [];
+		const timings = createDatabaseTimings();
+		const db = createWorkerDb({
+			ctx: {
+				postgres: { db: { execute: async () => [] } as never },
+				subjectLoads: {
+					run: async (load) => {
+						gated.push("entity_rows");
+						return load();
+					},
+				},
+				timings,
+			},
+		});
+
+		await db.getEntitySubjectRows({
+			identity,
+			entityIds: ["ent_1", "ent_2"],
+			asOfTimestampMs: 1_700_000_000_000,
+		});
+		expect(gated).toEqual(["entity_rows"]);
+		expect(timings.drain().queries.entity_rows).toMatchObject({ count: 1 });
+	});
 });

@@ -49,6 +49,7 @@ export {
 	SubjectRowColumnNotCounterError,
 	UnknownSubjectRowColumnError,
 } from "./subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
+export { getEntitySubjectRows } from "./subjects/repos/getSubjectRows/getEntitySubjectRows.js";
 export { getSubjectRows } from "./subjects/repos/getSubjectRows/getSubjectRows.js";
 export { SUBJECT_ROW_LIMITS } from "./subjects/repos/getSubjectRows/subjectRowLimits.js";
 export { SubjectRowsInvalidError } from "./subjects/subjectErrors.js";

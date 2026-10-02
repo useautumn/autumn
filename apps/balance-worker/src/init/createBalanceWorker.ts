@@ -69,6 +69,11 @@ export async function createBalanceWorker({
 		endpoint: address.endpoint,
 		groupId,
 	});
+	const subjectMapBudget = runtimeConfig.writerLimits.subjectMapBudget;
+	if (subjectMapBudget)
+		dependencies.logger.info(
+			`Subject map budget: ${Math.round(subjectMapBudget.totalBytes / 1_048_576)} MiB for this worker, shared by the partitions it holds`,
+		);
 	const resources = await openWorkerResources({
 		ctx: { logger: dependencies.logger },
 		config,

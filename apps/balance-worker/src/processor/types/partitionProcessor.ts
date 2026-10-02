@@ -52,6 +52,8 @@ export type PartitionProcessor = {
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	/** Releases what the partition held on the worker: its budget share and its resident rows. */
+	dispose(): void;
 	readSubjectState(params: {
 		command: ReadSubjectStateCommand;
 	}): Promise<ReadSubjectStateReply>;

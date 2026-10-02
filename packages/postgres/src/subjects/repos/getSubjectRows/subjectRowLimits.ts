@@ -11,4 +11,6 @@ export const SUBJECT_ROW_LIMITS = {
 	looseCustomerEntitlements: 200,
 	/** Pools per subject, newest first. */
 	pooledCustomerEntitlements: 200,
+	/** Entities one coalesced load reads for a customer; a larger request is split. */
+	entitiesPerLoad: 200,
 } as const;

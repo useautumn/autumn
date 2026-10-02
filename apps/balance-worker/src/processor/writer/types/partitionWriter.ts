@@ -13,6 +13,7 @@ import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
 import type { SubjectMap } from "../subjectMap/types/subjectMap.js";
+import type { SubjectMapBudget } from "../subjectMap/types/subjectMapBudget.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
@@ -47,6 +48,8 @@ export type PartitionWriter = {
 	evict(params: { customerKey: string }): Promise<void>;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there. */
 	adopt(params: { state: SubjectState }): SubjectState;
+	/** Releases the partition's share of the worker's budget and drops its resident rows. */
+	dispose(): void;
 };
 
 export type CommittedOutcomeAppender = {
@@ -105,8 +108,8 @@ export type PartitionWriterLimits = {
 	/** Committed batches allowed to wait for the store before committing pauses;
 	 *  defaults to DEFAULT_MAX_UNAPPLIED_BATCHES. */
 	maxUnappliedBatches?: number;
-	/** Resident customer state the partition keeps before the oldest is dropped; defaults to the map's own bound. */
-	subjectMapMaxBytes?: number;
+	/** The worker's resident-state allowance this partition takes a share of; absent, the map keeps its own fixed bound. */
+	subjectMapBudget?: SubjectMapBudget;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
 	deferredCommitMs?: number;

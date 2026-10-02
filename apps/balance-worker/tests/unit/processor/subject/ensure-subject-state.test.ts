@@ -8,6 +8,7 @@ import {
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { ensureSubjectState } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubjectState.js";
+import { createEntityLoads } from "../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
 import {
 	SubjectLoadBusyError,
@@ -128,6 +129,7 @@ const createScope = ({
 					if (!releasedAll) await gateOf(read);
 					return Array.isArray(rows) ? (rows[read] ?? null) : rows;
 				},
+				getEntitySubjectRows: async () => [],
 			},
 			writer,
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
@@ -137,6 +139,7 @@ const createScope = ({
 			joinCache: createSubjectJoinCache({
 				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
 			}),
+			entityLoads: createEntityLoads({ scopeOf: () => scope }),
 		},
 	};
 	return {
@@ -390,6 +393,47 @@ describe("ensure subject state against the caller's answer deadline", () => {
 		} finally {
 			process.off("unhandledRejection", onUnhandled);
 		}
+	});
+
+	test("a cold entity of a resident customer answers busy at the deadline without failing a patient caller on the same batched read", async () => {
+		const { scope } = createScope({ initial: emptyState, rows: null });
+		const entityIdentity = { ...identity, entityId: "ent_1" };
+		const entityEnvelope: SubjectRowsEnvelope = {
+			...emptyEnvelope,
+			entity: {
+				id: "ent_1",
+				internal_id: "ent_internal_1",
+				internal_customer_id: emptyEnvelope.customer.internal_id,
+				feature_id: "projects",
+				org_id: identity.orgId,
+				created_at: 1_700_000_000_000,
+				env: AppEnv.Sandbox,
+				name: null,
+				deleted: false,
+				internal_feature_id: "feat_projects",
+			},
+		};
+		let entityReads = 0;
+		let releaseEntityRead = (): void => undefined;
+		const entityRead = new Promise<void>((resolve) => {
+			releaseEntityRead = resolve;
+		});
+		scope.ctx.db.getEntitySubjectRows = async () => {
+			entityReads += 1;
+			await entityRead;
+			return [entityEnvelope];
+		};
+
+		const patient = ensureSubjectState({ scope, identity: entityIdentity });
+		const hurried = runWithAnswerDeadline({
+			expiresAt: performance.now() + 10,
+			run: () => ensureSubjectState({ scope, identity: entityIdentity }),
+		});
+
+		await expect(hurried).rejects.toBeInstanceOf(SubjectLoadBusyError);
+		releaseEntityRead();
+		await expect(patient).resolves.toBeDefined();
+		expect(entityReads).toBe(1);
 	});
 
 	test("a resident customer answers at once, even past the deadline", async () => {

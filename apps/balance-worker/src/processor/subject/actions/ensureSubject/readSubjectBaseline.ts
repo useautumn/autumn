@@ -3,8 +3,31 @@ import {
 	type MeteringIdentity,
 	type SubjectState,
 } from "@autumn/balance-engine";
+import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { SubjectNotFoundError } from "../../subjectErrors.js";
 import type { SubjectScope } from "../../types/subject.js";
+
+export const subjectEnvelopeToState = ({
+	identity,
+	envelope,
+}: {
+	identity: MeteringIdentity;
+	envelope: SubjectRowsEnvelope;
+}): SubjectState =>
+	customerRowsToSubjectState({
+		identity,
+		customer: envelope.customer,
+		customerProducts: envelope.customer_products,
+		customerPrices: envelope.customer_prices,
+		customerEntitlements: envelope.customer_entitlements,
+		rollovers: envelope.rollovers,
+		replaceables: envelope.replaceables,
+		usageWindows: envelope.usage_windows,
+		openLocks: envelope.open_locks,
+		pooledBalances: envelope.pooled_balances,
+		customerLicenses: envelope.customer_licenses,
+		entity: envelope.entity,
+	});
 
 /** The subject's own rows as Postgres holds them at `occurredAt`. Nothing becomes resident here. */
 export const readSubjectBaseline = async ({
@@ -21,18 +44,5 @@ export const readSubjectBaseline = async ({
 		asOfTimestampMs: occurredAt,
 	});
 	if (!envelope) throw new SubjectNotFoundError({ identity });
-	return customerRowsToSubjectState({
-		identity,
-		customer: envelope.customer,
-		customerProducts: envelope.customer_products,
-		customerPrices: envelope.customer_prices,
-		customerEntitlements: envelope.customer_entitlements,
-		rollovers: envelope.rollovers,
-		replaceables: envelope.replaceables,
-		usageWindows: envelope.usage_windows,
-		openLocks: envelope.open_locks,
-		pooledBalances: envelope.pooled_balances,
-		customerLicenses: envelope.customer_licenses,
-		entity: envelope.entity,
-	});
+	return subjectEnvelopeToState({ identity, envelope });
 };
