@@ -4,8 +4,8 @@ import type { RolloutPercent } from "../edge-config/rolloutTypes";
 export const SHADOW_ATOM_ENVS = ["sandbox", "live"] as const;
 export type ShadowAtomEnv = (typeof SHADOW_ATOM_ENVS)[number];
 
-/** Mirrors `SHADOW_ATOM_SETTLE_MS` in production: past every reader's 10s config poll. */
-export const SHADOW_ATOM_SETTLE_MS = 15_000;
+/** Mirrors the server's `SHADOW_ATOM_SETTLE_MS`: 15s in production builds, 5s locally. */
+export const SHADOW_ATOM_SETTLE_MS = import.meta.env.PROD ? 15_000 : 5_000;
 
 export type ShadowAtomRollout = RolloutPercent & {
 	orgs: Record<string, number>;

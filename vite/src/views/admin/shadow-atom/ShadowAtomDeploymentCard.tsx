@@ -27,6 +27,7 @@ export const ShadowAtomDeploymentCard = ({
 	isCreating,
 	isResizing,
 	isDeleting,
+	isBusy,
 }: {
 	deployment: ShadowAtomDeployment | null;
 	created: ShadowAtomCreated | null;
@@ -36,6 +37,8 @@ export const ShadowAtomDeploymentCard = ({
 	isCreating: boolean;
 	isResizing: boolean;
 	isDeleting: boolean;
+	/** Any create, resize or delete in flight: every action waits for it. */
+	isBusy: boolean;
 }) => (
 	<div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
 		<div className="flex flex-wrap items-center justify-between gap-2">
@@ -46,6 +49,7 @@ export const ShadowAtomDeploymentCard = ({
 					size="sm"
 					onClick={onDelete}
 					isLoading={isDeleting}
+					disabled={isBusy}
 				>
 					Delete
 				</Button>
@@ -97,6 +101,7 @@ export const ShadowAtomDeploymentCard = ({
 				submitLabel="Resize"
 				onSubmit={onResize}
 				isSaving={isResizing}
+				disabled={isBusy}
 			/>
 		) : (
 			<ShadowAtomMachineForm
@@ -104,6 +109,7 @@ export const ShadowAtomDeploymentCard = ({
 				submitLabel="Create"
 				onSubmit={onCreate}
 				isSaving={isCreating}
+				disabled={isBusy}
 			/>
 		)}
 	</div>

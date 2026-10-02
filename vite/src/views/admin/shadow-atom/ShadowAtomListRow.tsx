@@ -38,7 +38,10 @@ export const ShadowAtomListRow = ({
 			icon={<Trash2 className="size-3.5" />}
 			onClick={onRemove}
 			disabled={isRemoving}
-			className={ROW_ACTIONS_REVEAL}
+			className={cn(
+				"order-2 justify-self-end md:order-none",
+				ROW_ACTIONS_REVEAL,
+			)}
 		/>
 	</div>
 );

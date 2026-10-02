@@ -8,18 +8,19 @@ export const ShadowAtomCustomerPinForm = ({
 	onPin,
 	isSaving,
 }: {
-	onPin: (pin: Pin) => void;
+	onPin: (pin: Pin) => Promise<boolean>;
 	isSaving: boolean;
 }) => {
 	const form = useForm({
 		defaultValues: { orgId: "", customerId: "", included: true } as Pin,
-		onSubmit: ({ value, formApi }) => {
-			onPin({
+		onSubmit: async ({ value, formApi }) => {
+			const pin = {
 				orgId: value.orgId.trim(),
 				customerId: value.customerId.trim(),
 				included: value.included,
-			});
-			formApi.reset();
+			};
+			if (isSaving || !pin.orgId || !pin.customerId) return;
+			if (await onPin(pin)) formApi.reset();
 		},
 	});
 

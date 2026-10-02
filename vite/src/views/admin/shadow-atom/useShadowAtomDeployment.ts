@@ -27,7 +27,8 @@ export const useShadowAtomDeployment = ({ env }: { env: ShadowAtomEnv }) => {
 			return data.deployment;
 		},
 		refetchInterval: (current) =>
-			current.state.data && current.state.data.status !== ByocCacheStatus.Ready
+			current.state.data?.status === ByocCacheStatus.AwaitingSetup ||
+			current.state.data?.status === ByocCacheStatus.Provisioning
 				? POLL_MS
 				: false,
 	});
@@ -86,5 +87,7 @@ export const useShadowAtomDeployment = ({ env }: { env: ShadowAtomEnv }) => {
 		onError: onError("Failed to delete the shadow Atom"),
 	});
 
-	return { query, create, resize, remove };
+	const isBusy = create.isPending || resize.isPending || remove.isPending;
+
+	return { query, create, resize, remove, isBusy };
 };

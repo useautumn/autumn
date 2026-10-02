@@ -36,5 +36,9 @@ export const useShadowAtomOrgs = ({ env }: { env: ShadowAtomEnv }) => {
 			toast.error(getBackendErr(error, "Failed to unregister the org")),
 	});
 
-	return { register, unregister };
+	return {
+		register,
+		unregister,
+		isBusy: register.isPending || unregister.isPending,
+	};
 };

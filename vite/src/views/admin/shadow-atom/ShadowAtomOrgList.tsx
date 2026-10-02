@@ -12,14 +12,15 @@ export const ShadowAtomOrgList = ({
 	onRegister,
 	onUnregister,
 	isRegistering,
-	isUnregistering,
+	isBusy,
 }: {
 	envConfig: ShadowAtomEnvView;
 	issued: { orgId: string; token: string } | null;
-	onRegister: ({ orgId }: { orgId: string }) => void;
+	onRegister: ({ orgId }: { orgId: string }) => Promise<boolean>;
 	onUnregister: ({ orgId }: { orgId: string }) => void;
 	isRegistering: boolean;
-	isUnregistering: boolean;
+	/** A register or unregister in flight: both wait, so a slow one never undoes a newer one. */
+	isBusy: boolean;
 }) => {
 	const orgs = Object.entries(envConfig.orgs);
 	const canRegister = Boolean(envConfig.endpointUrl && envConfig.hasAdminToken);
@@ -37,7 +38,7 @@ export const ShadowAtomOrgList = ({
 						detail={`Registered ${format(registeredAt, "d MMM HH:mm")}`}
 						removeLabel={`Unregister ${orgId}`}
 						onRemove={() => onUnregister({ orgId })}
-						isRemoving={isUnregistering}
+						isRemoving={isBusy || !canRegister}
 					/>
 				))}
 			</div>
@@ -50,13 +51,14 @@ export const ShadowAtomOrgList = ({
 			)}
 			{!canRegister && (
 				<p className="text-xs text-tertiary-foreground">
-					Registering needs a ready shadow Atom: its endpoint and admin token.
+					Registering and unregistering need a ready shadow Atom: its endpoint
+					and admin token.
 				</p>
 			)}
 			<ShadowAtomOrgRegisterForm
 				onRegister={onRegister}
 				isSaving={isRegistering}
-				disabled={!canRegister}
+				disabled={isBusy || !canRegister}
 			/>
 		</div>
 	);

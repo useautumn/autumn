@@ -2,6 +2,7 @@ import { cn } from "@autumn/ui/lib/utils";
 import { useState } from "react";
 import { RolloutSection } from "../edge-config/RolloutSection";
 import { ShadowAtomResultsTable } from "./ShadowAtomResultsTable";
+import { ShadowAtomSectionBody } from "./ShadowAtomSectionBody";
 import {
 	SHADOW_ATOM_RESULT_RANGES,
 	type ShadowAtomEnv,
@@ -46,11 +47,14 @@ export const ShadowAtomResultsSection = ({ env }: { env: ShadowAtomEnv }) => {
 			description="From the API's atom_shadow_check log lines: match rate of answered checks, p50/p99 latency per org."
 			actions={<RangeToggle value={range} onChange={setRange} />}
 		>
-			{results.data ? (
-				<ShadowAtomResultsTable results={results.data} />
-			) : (
-				<div className="h-24 animate-pulse rounded-lg bg-muted" />
-			)}
+			<ShadowAtomSectionBody
+				isError={results.isError}
+				isPending={!results.data}
+				what="shadow results"
+				onRetry={() => void results.refetch()}
+			>
+				{results.data && <ShadowAtomResultsTable results={results.data} />}
+			</ShadowAtomSectionBody>
 		</RolloutSection>
 	);
 };

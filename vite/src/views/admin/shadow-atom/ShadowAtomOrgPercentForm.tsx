@@ -7,14 +7,21 @@ export const ShadowAtomOrgPercentForm = ({
 	onAdd,
 	isSaving,
 }: {
-	onAdd: ({ orgId, percent }: { orgId: string; percent: number }) => void;
+	onAdd: ({
+		orgId,
+		percent,
+	}: {
+		orgId: string;
+		percent: number;
+	}) => Promise<boolean>;
 	isSaving: boolean;
 }) => {
 	const form = useForm({
 		defaultValues: { orgId: "", percent: 100 },
-		onSubmit: ({ value, formApi }) => {
-			onAdd({ orgId: value.orgId.trim(), percent: value.percent });
-			formApi.reset();
+		onSubmit: async ({ value, formApi }) => {
+			const orgId = value.orgId.trim();
+			if (isSaving || !orgId) return;
+			if (await onAdd({ orgId, percent: value.percent })) formApi.reset();
 		},
 	});
 
@@ -29,7 +36,8 @@ export const ShadowAtomOrgPercentForm = ({
 			<form.Field
 				name="orgId"
 				validators={{
-					onChange: ({ value }) => (value.trim() ? undefined : "Org id"),
+					onChange: ({ value }) =>
+						value.trim() ? undefined : "Enter an org id.",
 				}}
 			>
 				{(field) => (
@@ -46,7 +54,9 @@ export const ShadowAtomOrgPercentForm = ({
 				name="percent"
 				validators={{
 					onChange: ({ value }) =>
-						isValidPercent(value) ? undefined : "0 to 100",
+						isValidPercent(value)
+							? undefined
+							: "Percent must be a whole number from 0 to 100.",
 				}}
 			>
 				{(field) => (
@@ -76,6 +86,19 @@ export const ShadowAtomOrgPercentForm = ({
 						Set override
 					</Button>
 				)}
+			</form.Subscribe>
+			<form.Subscribe
+				selector={(state) =>
+					Object.values(state.fieldMeta).flatMap((meta) => meta?.errors ?? [])
+				}
+			>
+				{(errors) =>
+					errors.length > 0 && (
+						<p role="alert" className="basis-full text-tiny text-destructive">
+							{errors.join(" ")}
+						</p>
+					)
+				}
 			</form.Subscribe>
 		</form>
 	);

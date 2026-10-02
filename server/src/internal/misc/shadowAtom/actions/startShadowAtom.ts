@@ -4,10 +4,11 @@ import {
 	getShadowAtomDeployer,
 	SHADOW_ATOM_OWNER,
 } from "../getShadowAtomDeployer.js";
-import { shadowAtomConfigStore } from "../shadowAtomConfigStore.js";
+import { withShadowAtomLock } from "../withShadowAtomLock.js";
+import { patchShadowAtomEnv } from "./patchShadowAtomEnv.js";
 
 /** Starts our shadow Atom in shared mode and keeps its deployment group; starting again reuses the group. */
-export const startShadowAtom = async ({
+export const startShadowAtom = ({
 	env,
 	adminTokenHash,
 	machine,
@@ -15,19 +16,20 @@ export const startShadowAtom = async ({
 	env: AppEnv;
 	adminTokenHash: string;
 	machine: ByocCacheMachine;
-}): Promise<AtomSetup> => {
-	const setup = await getShadowAtomDeployer().start({
-		org: SHADOW_ATOM_OWNER,
+}): Promise<AtomSetup> =>
+	withShadowAtomLock({
 		env,
-		auth: { mode: "shared", adminTokenHash },
-		machine,
-	});
-	const config = await shadowAtomConfigStore.readFromSource();
-	await shadowAtomConfigStore.writeToSource({
-		config: {
-			...config,
-			[env]: { ...config[env], deploymentGroupId: setup.deploymentGroupId },
+		fn: async () => {
+			const setup = await getShadowAtomDeployer().start({
+				org: SHADOW_ATOM_OWNER,
+				env,
+				auth: { mode: "shared", adminTokenHash },
+				machine,
+			});
+			await patchShadowAtomEnv({
+				env,
+				patch: { deploymentGroupId: setup.deploymentGroupId },
+			});
+			return setup;
 		},
 	});
-	return setup;
-};

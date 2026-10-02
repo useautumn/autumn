@@ -32,9 +32,10 @@ export const useShadowAtomConfig = ({ env }: { env: ShadowAtomEnv }) => {
 				toShadowAtomSettings({ config: query.data, env, rollout }),
 			);
 		},
+		// Stays pending until the refetch lands, so the next edit starts from the saved rollout.
 		onSuccess: () => {
 			toast.success("Shadow Atom rollout saved");
-			void queryClient.invalidateQueries({
+			return queryClient.invalidateQueries({
 				queryKey: SHADOW_ATOM_CONFIG_QUERY_KEY,
 			});
 		},

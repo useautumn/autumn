@@ -17,6 +17,7 @@ import type {
 } from "../../../src/views/admin/shadow-atom/shadowAtomTypes";
 
 const noop = () => {};
+const saved = async () => true;
 
 const rollout = (
 	overrides: Partial<ShadowAtomRollout> = {},
@@ -56,6 +57,7 @@ const renderDeployment = ({
 			isCreating={false}
 			isResizing={false}
 			isDeleting={false}
+			isBusy={false}
 		/>,
 	);
 
@@ -116,10 +118,10 @@ const renderOrgs = ({
 		<ShadowAtomOrgList
 			envConfig={envConfig}
 			issued={issued}
-			onRegister={noop}
+			onRegister={saved}
 			onUnregister={noop}
 			isRegistering={false}
-			isUnregistering={false}
+			isBusy={false}
 		/>,
 	);
 
@@ -128,7 +130,9 @@ describe("orgs on the shadow Atom", () => {
 		const html = renderOrgs({ envConfig: envView() });
 
 		expect(html).toContain("No org is on the shadow Atom.");
-		expect(html).toContain("Registering needs a ready shadow Atom");
+		expect(html).toContain(
+			"Registering and unregistering need a ready shadow Atom",
+		);
 		expect(html).toMatch(
 			/<button type="submit"[^>]* disabled=""[^>]*><span[^>]*>Register</,
 		);
@@ -147,7 +151,7 @@ describe("orgs on the shadow Atom", () => {
 		expect(html).toContain("org_test_1");
 		expect(html).toContain("atom_secret_example");
 		expect(html).toContain("Shown once");
-		expect(html).not.toContain("Registering needs");
+		expect(html).not.toContain("Registering and unregistering need");
 	});
 });
 
@@ -221,7 +225,7 @@ describe("rollout panel", () => {
 		const html = renderToStaticMarkup(
 			<ShadowAtomRolloutPanel
 				rollout={rollout()}
-				onSave={noop}
+				onSave={saved}
 				isSaving={false}
 			/>,
 		);
@@ -240,7 +244,7 @@ describe("rollout panel", () => {
 					orgs: { org_test_1: 50 },
 					customers: { org_test_1: { cus_in: true, cus_out: false } },
 				})}
-				onSave={noop}
+				onSave={saved}
 				isSaving={false}
 			/>,
 		);

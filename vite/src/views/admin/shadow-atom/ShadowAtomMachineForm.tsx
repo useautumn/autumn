@@ -28,11 +28,13 @@ export const ShadowAtomMachineForm = ({
 	submitLabel,
 	onSubmit,
 	isSaving,
+	disabled,
 }: {
 	current: ShadowAtomMachine | null;
 	submitLabel: string;
 	onSubmit: (machine: ShadowAtomMachine) => void;
 	isSaving: boolean;
+	disabled: boolean;
 }) => {
 	const form = useForm({
 		defaultValues: { machine: machineKey(current ?? BYOC_CACHE_MACHINES[0]) },
@@ -69,7 +71,7 @@ export const ShadowAtomMachineForm = ({
 					</Select>
 				)}
 			</form.Field>
-			<Button type="submit" size="sm" isLoading={isSaving}>
+			<Button type="submit" size="sm" isLoading={isSaving} disabled={disabled}>
 				{submitLabel}
 			</Button>
 		</form>

@@ -236,6 +236,24 @@ test("resize moves the running Atom's pool to the new machine", async () => {
 	});
 });
 
+test("resize of an Atom still awaiting setup is a 409", async () => {
+	stored = configWith({ deploymentGroupId: "dg_1" });
+
+	const response = await send({ method: "PATCH", body: { cpu: 2, memory: 4 } });
+
+	expect(response.status).toBe(409);
+	expect(calls.resized).toHaveLength(0);
+});
+
+test("an endpoint alien no longer reports is cleared, so the shadow check stops", async () => {
+	stored = configWith({ deploymentGroupId: "dg_1", endpointUrl: ENDPOINT });
+
+	await send({ method: "GET" });
+
+	expect(lastWritten()?.sandbox.endpointUrl).toBeNull();
+	expect(lastWritten()?.sandbox.deploymentGroupId).toBe("dg_1");
+});
+
 test("resize with nothing deployed is a 409", async () => {
 	const response = await send({ method: "PATCH", body: { cpu: 2, memory: 4 } });
 
@@ -243,8 +261,12 @@ test("resize with nothing deployed is a 409", async () => {
 	expect(calls.resized).toHaveLength(0);
 });
 
-test("delete tears the deployment down and forgets its group and endpoint", async () => {
-	stored = configWith({ deploymentGroupId: "dg_1", endpointUrl: ENDPOINT });
+test("delete tears the deployment down and forgets its group, endpoint and registered orgs", async () => {
+	stored = configWith({
+		deploymentGroupId: "dg_1",
+		endpointUrl: ENDPOINT,
+		orgs: { org_1: { encryptedToken: "enc", registeredAt: 1 } },
+	});
 	deployment = runningDeployment;
 
 	const response = await send({ method: "DELETE" });
@@ -255,6 +277,7 @@ test("delete tears the deployment down and forgets its group and endpoint", asyn
 	expect(lastWritten()?.sandbox).toMatchObject({
 		deploymentGroupId: null,
 		endpointUrl: null,
+		orgs: {},
 	});
 });
 

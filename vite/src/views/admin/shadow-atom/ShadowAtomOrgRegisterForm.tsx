@@ -6,15 +6,16 @@ export const ShadowAtomOrgRegisterForm = ({
 	isSaving,
 	disabled,
 }: {
-	onRegister: ({ orgId }: { orgId: string }) => void;
+	onRegister: ({ orgId }: { orgId: string }) => Promise<boolean>;
 	isSaving: boolean;
 	disabled: boolean;
 }) => {
 	const form = useForm({
 		defaultValues: { orgId: "" },
-		onSubmit: ({ value, formApi }) => {
-			onRegister({ orgId: value.orgId.trim() });
-			formApi.reset();
+		onSubmit: async ({ value, formApi }) => {
+			const orgId = value.orgId.trim();
+			if (disabled || isSaving || !orgId) return;
+			if (await onRegister({ orgId })) formApi.reset();
 		},
 	});
 

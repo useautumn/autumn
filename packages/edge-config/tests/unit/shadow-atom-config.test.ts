@@ -5,7 +5,6 @@ import {
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
 	type ShadowAtomEnvConfig,
-	ShadowAtomSettingsSchema,
 	scheduleShadowAtomConfig,
 	shadowAtomConfig,
 } from "../../src/edgeConfig.js";
@@ -161,7 +160,7 @@ test("a save keeps each env's deployment group, whatever the caller sent", () =>
 	});
 	const saved = scheduleShadowAtomConfig({
 		current,
-		next: ShadowAtomSettingsSchema.parse({
+		next: ShadowAtomConfigSchema.parse({
 			live: { deploymentGroupId: "dg_x" },
 		}),
 		now: 0,

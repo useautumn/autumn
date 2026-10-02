@@ -27,7 +27,8 @@ export const ShadowAtomRolloutPanel = ({
 	isSaving,
 }: {
 	rollout: ShadowAtomRollout;
-	onSave: (rollout: ShadowAtomRollout) => void;
+	/** Resolves true once saved, so a form keeps its draft when the save fails. */
+	onSave: (rollout: ShadowAtomRollout) => Promise<boolean>;
 	isSaving: boolean;
 }) => {
 	const orgOverrides = Object.entries(rollout.orgs);
@@ -39,7 +40,7 @@ export const ShadowAtomRolloutPanel = ({
 				<RolloutPercentForm
 					key={rollout.percent}
 					current={rollout.percent}
-					onApply={({ percent }) => onSave({ ...rollout, percent })}
+					onApply={({ percent }) => void onSave({ ...rollout, percent })}
 					isSaving={isSaving}
 				/>
 				<RolloutFlipStatus rollout={rollout} settleMs={SHADOW_ATOM_SETTLE_MS} />
@@ -57,7 +58,7 @@ export const ShadowAtomRolloutPanel = ({
 							title={orgId}
 							detail={`${percent}%`}
 							removeLabel={`Remove override for ${orgId}`}
-							onRemove={() => onSave(removeOrgPercent({ rollout, orgId }))}
+							onRemove={() => void onSave(removeOrgPercent({ rollout, orgId }))}
 							isRemoving={isSaving}
 						/>
 					))}
@@ -83,7 +84,7 @@ export const ShadowAtomRolloutPanel = ({
 							detail={included ? "Pinned in" : "Pinned out"}
 							removeLabel={`Unpin ${customerId}`}
 							onRemove={() =>
-								onSave(unpinCustomer({ rollout, orgId, customerId }))
+								void onSave(unpinCustomer({ rollout, orgId, customerId }))
 							}
 							isRemoving={isSaving}
 						/>

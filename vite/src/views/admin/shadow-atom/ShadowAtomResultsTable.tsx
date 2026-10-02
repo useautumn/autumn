@@ -50,7 +50,7 @@ export const ShadowAtomResultsTable = ({
 					<span className="truncate font-mono text-foreground">
 						{org.org_id}
 					</span>
-					<span>{org.checks.toLocaleString()}</span>
+					<span>{org.checks.toLocaleString("en-US")}</span>
 					<span>{formatRate(org.match_rate)}</span>
 					<span>{formatMs(org.p50_ms)}</span>
 					<span>{formatMs(org.p99_ms)}</span>
