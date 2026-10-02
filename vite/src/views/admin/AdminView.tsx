@@ -23,6 +23,7 @@ import { EdgeConfigTab } from "./components/EdgeConfigTab";
 import { QueueCronConfigsTab } from "./components/QueueCronConfigsTab";
 import { SlackAdminBotTab } from "./components/SlackAdminBotTab";
 import { useAdmin } from "./hooks/useAdmin";
+import { ShadowAtomTab } from "./shadow-atom/ShadowAtomTab";
 
 const ADMIN_TAB_IDS = [
 	"orgs",
@@ -31,6 +32,7 @@ const ADMIN_TAB_IDS = [
 	"edge-config",
 	"queue-cron-configs",
 	"caches",
+	"shadow-atom",
 ] as const;
 
 type AdminTab = (typeof ADMIN_TAB_IDS)[number];
@@ -115,6 +117,7 @@ export const AdminView = () => {
 							Queue / Cron configs
 						</TabsTrigger>
 						<TabsTrigger value="caches">Caches</TabsTrigger>
+						<TabsTrigger value="shadow-atom">Shadow Atom</TabsTrigger>
 					</TabsList>
 					<div className="flex shrink-0 items-center gap-2">
 						<Switch
@@ -153,6 +156,10 @@ export const AdminView = () => {
 
 				<TabsContent value="caches" className="mt-4">
 					<CachesTab />
+				</TabsContent>
+
+				<TabsContent value="shadow-atom" className="mt-4">
+					<ShadowAtomTab />
 				</TabsContent>
 			</Tabs>
 		</div>
