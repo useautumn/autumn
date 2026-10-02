@@ -88,6 +88,12 @@ describe("allocationGranted", () => {
 		).toEqual([8000, 6666, 5333]);
 	});
 
+	test("a genuine fraction below a whole credit still rounds down", () => {
+		expect(
+			allocationGranted({ requested: 1, usage: 0, scale: 0.9999995 }),
+		).toBe(0);
+	});
+
 	test("never drops below what's already been used", () => {
 		expect(
 			allocationGranted({ requested: 5000, usage: 4000, scale: 0.6 }),

@@ -139,7 +139,8 @@ export const allocateBalances = async ({
 	)
 		.plus(
 			cusEntsToPrepaidQuantity({
-				cusEnts: sharedRows,
+				// Expiring purchases already sit on loose grant rows; their quantity only sizes the charge.
+				cusEnts: sharedRows.filter((row) => !row.entitlement.expiry_duration),
 				sumAcrossEntities: true,
 			}),
 		)

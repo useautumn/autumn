@@ -2,8 +2,8 @@ import { Decimal } from "decimal.js";
 
 export type AllocationUsage = { requested: number; usage: number };
 
-/** A stored scale is a float ratio; without this, 12000 × ⅔ floors to 7999. Lua uses the same value. */
-export const ALLOCATION_FLOAT_TOLERANCE = 1e-6;
+/** Relative float noise in a stored scale; without it, 12000 × ⅔ floors to 7999. Lua uses the same value. */
+export const ALLOCATION_FLOAT_TOLERANCE = 1e-9;
 
 const claimedOf = ({ requested, usage }: AllocationUsage) =>
 	Decimal.min(usage, requested);
@@ -56,7 +56,7 @@ export const allocationGranted = ({
 	if (scale >= 1) return requested;
 	const scaled = new Decimal(requested)
 		.times(scale)
-		.plus(ALLOCATION_FLOAT_TOLERANCE)
+		.plus(new Decimal(requested).times(ALLOCATION_FLOAT_TOLERANCE))
 		.floor();
 	return Decimal.max(claimedOf({ requested, usage }), scaled).toNumber();
 };
