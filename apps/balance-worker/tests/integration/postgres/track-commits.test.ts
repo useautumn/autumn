@@ -2548,11 +2548,12 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					isolated,
 					trackCommand({ customer: checked, commandId: "verify_1", value: 5 }),
 				);
-				await waitForSnapshotBalance({
+				const written = await waitForSnapshotBalance({
 					postgres,
 					customer: checked,
 					balance: 95,
 				});
+				expect(snapshotBalanceOf(written[0], checked)).toBe(95);
 				await running.stop();
 
 				// A restart over an untouched row: the row and the rows agree, nothing is logged.
@@ -2565,11 +2566,12 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					trackCommand({ customer: checked, commandId: "verify_2", value: 5 }),
 				);
 				expect(balanceOf(agreed, checked.customerEntitlementId)).toBe(90);
-				await waitForSnapshotBalance({
+				const rewritten = await waitForSnapshotBalance({
 					postgres,
 					customer: checked,
 					balance: 90,
 				});
+				expect(snapshotBalanceOf(rewritten[0], checked)).toBe(90);
 				expect(running.warnings()).toEqual([]);
 				await running.stop();
 

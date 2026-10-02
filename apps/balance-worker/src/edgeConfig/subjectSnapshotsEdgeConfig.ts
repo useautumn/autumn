@@ -9,7 +9,7 @@ export const SubjectSnapshotsEdgeConfigSchema = z
 	.object({
 		/**
 		 * off writes nothing; write keeps the table from the committer's flushes and the evicts' deletes; verify also reads
-		 * it beside the rows at every cold load and logs where they disagree, serving the rows; serve loads from it.
+		 * it beside the rows on a cold load for now and logs where they disagree, serving the rows; serve loads from it.
 		 */
 		mode: z.enum(["off", "write", "verify", "serve"]).default("off"),
 		/** A state weighing more than this is never written: the writer deletes its customer's rows instead. */

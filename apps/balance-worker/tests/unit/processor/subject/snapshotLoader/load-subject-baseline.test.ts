@@ -228,7 +228,7 @@ describe("loadSubjectBaseline", () => {
 			]);
 		});
 
-		test("no row is a miss written back; a row, right or wrong, is not", async () => {
+		test("a miss is written back; a row, right or wrong, is not", async () => {
 			const miss = createScope({ mode: "verify" });
 			await miss.load();
 			const wrong = createScope({
