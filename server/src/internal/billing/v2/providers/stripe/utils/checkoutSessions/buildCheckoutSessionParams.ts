@@ -57,6 +57,8 @@ export const buildCheckoutSessionParams = ({
 	const mergedParams: Stripe.Checkout.SessionCreateParams = {
 		...(checkoutSessionParams ?? {}),
 		...params,
+		tax_id_collection:
+			checkoutSessionParams?.tax_id_collection ?? params.tax_id_collection,
 	};
 
 	const hasPreAppliedDiscounts = Boolean(mergedParams.discounts?.length);
