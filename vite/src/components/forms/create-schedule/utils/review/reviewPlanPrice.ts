@@ -30,7 +30,7 @@ const unitLabel = ({
 	return billingUnits > 1 ? `${numberWithCommas(billingUnits)} ${name}` : name;
 };
 
-/** A plan with no base price shows its first feature's unit price, e.g. "From $10/seat +1". */
+/** A plan with no base price shows its first feature's unit price, e.g. "From $10/seat +1"; a free allowance tier is skipped. */
 const featureUnitPrice = ({
 	featurePrices,
 	features,
@@ -40,7 +40,8 @@ const featureUnitPrice = ({
 }): ReviewChangeValue => {
 	const [planPrice] = featurePrices;
 	const amount =
-		planPrice?.price.unit_amount ?? planPrice?.price.first_tier_amount;
+		planPrice?.price.unit_amount ??
+		planPrice?.price.tiers?.find((tier) => tier.unit_amount > 0)?.unit_amount;
 	if (!planPrice || amount === null || amount === undefined) {
 		return { amount: PRICE_VARIES_LABEL };
 	}
