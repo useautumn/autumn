@@ -4,6 +4,65 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="October 2nd 2026">
+  ## List subscriptions, purchases and balances
+
+  New [`subscriptions.list`](/api-reference/customers/listSubscriptions), [`purchases.list`](/api-reference/customers/listPurchases) and [`balances.list`](/api-reference/balances/listBalances) endpoints return a customer's records, including expired history. Pooled sources are folded into their pool — [#3853](https://github.com/useautumn/autumn/pull/3853)
+
+  ## Draft, finalize and send invoices
+
+  [`invoices.create`](/api-reference/invoices/createInvoice) and [`invoices.reissue`](/api-reference/invoices/reissueInvoice) accept `issue_method` (`draft`, `finalize` or `send`). The new [`invoices.finalize`](/api-reference/invoices/finalizeInvoice) endpoint finalizes a draft. In the dashboard, the redesigned invoice sheet has a single primary action, lets you finalize or reissue drafts, and can mark an invoice as paid. Reissue now always shows payment method options — [#3858](https://github.com/useautumn/autumn/pull/3858), [#3838](https://github.com/useautumn/autumn/pull/3838), [#3849](https://github.com/useautumn/autumn/pull/3849), [#3818](https://github.com/useautumn/autumn/pull/3818), [#3918](https://github.com/useautumn/autumn/pull/3918), [#3932](https://github.com/useautumn/autumn/pull/3932)
+
+  ## Bill the full price difference
+
+  `proration_behavior` accepts a new `bill_difference` option on [`billing.attach`](/api-reference/billing/attach) and [`billing.update`](/api-reference/billing/billingUpdate). It charges or credits the full-period price difference now, without changing the billing cycle. The option is also available in the dashboard. See [proration](/documentation/modelling-pricing/proration) — [#3788](https://github.com/useautumn/autumn/pull/3788)
+
+  ## Anchor plans to the start of the month
+
+  A new plan setting, `anchor_to_month_start`, aligns billing and reset cycles to the 1st of each month (00:00 UTC). Turn it on from plan settings in the dashboard — [#3766](https://github.com/useautumn/autumn/pull/3766)
+
+  ## Webhooks as code
+
+  Webhook endpoints in the `atmn` config now use one `webhook({ id, env, url })` per endpoint per environment. `atmn pull` reads webhooks from every environment with a key, and `atmn push` deletes endpoints removed from your config. [Sync webhooks](/api-reference/webhooks/syncWebhooks) gains `skip_deletions`, and omitting `events` subscribes an endpoint to every event — [#3808](https://github.com/useautumn/autumn/pull/3808), [#3731](https://github.com/useautumn/autumn/pull/3731), [#3817](https://github.com/useautumn/autumn/pull/3817), [#3798](https://github.com/useautumn/autumn/pull/3798)
+
+  ## Dashboard refresh
+
+  The dashboard has a cleaner sidebar and environment switcher, a manage sandboxes dialog, a refreshed command palette and compact dialogs and menus. Tables use a tray style with status chips, and the customer list gains plan status filters. The set plans review shows plan, balance and Stripe changes for each phase — [#3719](https://github.com/useautumn/autumn/pull/3719), [#3725](https://github.com/useautumn/autumn/pull/3725), [#3727](https://github.com/useautumn/autumn/pull/3727), [#3785](https://github.com/useautumn/autumn/pull/3785), [#3736](https://github.com/useautumn/autumn/pull/3736), [#3826](https://github.com/useautumn/autumn/pull/3826), [#3704](https://github.com/useautumn/autumn/pull/3704)
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - The Stripe mappings page now maps Stripe prices per feature and per price. Stripe price settings moved there from the plan editor — [#3744](https://github.com/useautumn/autumn/pull/3744)
+      - [`billing.attach`](/api-reference/billing/attach) accepts `remove_discounts`, and the attach sheet can remove existing subscription discounts — [#3683](https://github.com/useautumn/autumn/pull/3683)
+      - [`billing.create_schedule`](/api-reference/billing/createSchedule) accepts `license_quantities` per phase, with matching seat inputs in the dashboard — [#3713](https://github.com/useautumn/autumn/pull/3713)
+      - [`billing.verify`](/api-reference/billing/verify) is now public in the API, SDKs and CLI — [#3715](https://github.com/useautumn/autumn/pull/3715)
+      - RevenueCat plans return their current period start and end — [#3806](https://github.com/useautumn/autumn/pull/3806)
+      - Invoices record when they were paid — [#3738](https://github.com/useautumn/autumn/pull/3738)
+      - The API keys page shows when each secret key was last used — [#3882](https://github.com/useautumn/autumn/pull/3882)
+      - You can delete your own account from the dashboard. Deleting an organization also removes its sandboxes — [#3799](https://github.com/useautumn/autumn/pull/3799)
+      - Expired or reused platform OAuth links now return to the platform instead of failing — [#3851](https://github.com/useautumn/autumn/pull/3851)
+      - Request a Slack Connect channel from onboarding or **Contact us** — [#3775](https://github.com/useautumn/autumn/pull/3775)
+      - Usage chart groups are ranked once per date range, and bars stay visible on dense charts — [#3786](https://github.com/useautumn/autumn/pull/3786), [#3900](https://github.com/useautumn/autumn/pull/3900)
+      - The SDKs no longer crash consumers on unhandled request rejections — [#3894](https://github.com/useautumn/autumn/pull/3894)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Currencies added to a custom plan are kept on attach — [#3949](https://github.com/useautumn/autumn/pull/3949)
+      - Reissuing an invoice drops hidden zero-quantity lines. A failed reissue of a draft restores the original — [#3935](https://github.com/useautumn/autumn/pull/3935), [#3903](https://github.com/useautumn/autumn/pull/3903)
+      - Changing the billing cycle anchor now moves pooled balances and free add-ons too — [#3886](https://github.com/useautumn/autumn/pull/3886)
+      - Seat assignments carry across plan switches between groups, survive Stripe sync, and license pools expire when their grant is removed — [#3787](https://github.com/useautumn/autumn/pull/3787), [#3773](https://github.com/useautumn/autumn/pull/3773), [#3770](https://github.com/useautumn/autumn/pull/3770), [#3795](https://github.com/useautumn/autumn/pull/3795)
+      - Stripe sync keeps the linked plan when a custom price matches no catalog price, and restores past-due plans. Set plans is prefilled — [#3721](https://github.com/useautumn/autumn/pull/3721), [#3895](https://github.com/useautumn/autumn/pull/3895)
+      - Custom usage prices use their feature's Stripe product — [#3771](https://github.com/useautumn/autumn/pull/3771)
+      - Revert-on-end trials stay in Autumn on subscription update — [#3638](https://github.com/useautumn/autumn/pull/3638)
+      - The coupon scope picker offers one option per Stripe product — [#3743](https://github.com/useautumn/autumn/pull/3743)
+      - The Plan response schema now declares `licenses` — [#3911](https://github.com/useautumn/autumn/pull/3911)
+      - Deleted sandbox keys no longer break `webhooks.list` or `atmn pull`, and webhook deletes across apps are more reliable — [#3803](https://github.com/useautumn/autumn/pull/3803), [#3829](https://github.com/useautumn/autumn/pull/3829), [#3723](https://github.com/useautumn/autumn/pull/3723), [#3801](https://github.com/useautumn/autumn/pull/3801), [#3810](https://github.com/useautumn/autumn/pull/3810)
+      - Vercel marketplace secret rotation works again — [#3942](https://github.com/useautumn/autumn/pull/3942)
+      - RevenueCat OAuth token refreshes no longer race each other — [#3913](https://github.com/useautumn/autumn/pull/3913)
+      - Only owners can remove another owner from an organization — [#3737](https://github.com/useautumn/autumn/pull/3737)
+      - Analytics keeps future empty periods, the sandbox Logs tab redirects correctly, and empty states and chart axes render properly — [#3742](https://github.com/useautumn/autumn/pull/3742), [#3844](https://github.com/useautumn/autumn/pull/3844)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="September 24th 2026">
   ## Create invoices from the dashboard
 
