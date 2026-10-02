@@ -20,6 +20,7 @@ import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/util
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
@@ -217,7 +218,12 @@ test.concurrent(`${chalk.yellowBright("patch update items: entity update only af
 	);
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	await expectCustomerProducts({ customer, active: [pro.id] });
+	await expectCustomerProducts({
+		customer,
+		...(isBalanceWorkerRoute()
+			? { notPresent: [pro.id] }
+			: { active: [pro.id] }),
+	});
 
 	const entity1 = await autumnV2_2.entities.get<ApiEntityV2>(
 		customerId,
@@ -227,6 +233,8 @@ test.concurrent(`${chalk.yellowBright("patch update items: entity update only af
 		customerId,
 		entities[1].id,
 	);
+	await expectCustomerProducts({ customer: entity1, active: [pro.id] });
+	await expectCustomerProducts({ customer: entity2, active: [pro.id] });
 
 	expectFlagCorrect({
 		customer: entity1,
