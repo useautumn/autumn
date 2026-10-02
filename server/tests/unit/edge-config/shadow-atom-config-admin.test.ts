@@ -7,6 +7,7 @@ import * as lockModule from "@/external/redis/utils/lockUtils/withLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetAdminShadowAtomConfig } from "@/internal/admin/handleGetAdminShadowAtomConfig.js";
 import { handleMintAdminShadowAtomToken } from "@/internal/admin/handleMintAdminShadowAtomToken.js";
+import { handleSetAdminShadowAtomOrgPercent } from "@/internal/admin/handleSetAdminShadowAtomOrgPercent.js";
 import { handleUpsertAdminShadowAtomConfig } from "@/internal/admin/handleUpsertAdminShadowAtomConfig.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
@@ -63,6 +64,10 @@ const createApp = ({ scopes }: { scopes: string[] }) => {
 		"/admin/shadow-atom-config/token",
 		...handleMintAdminShadowAtomToken,
 	);
+	app.patch(
+		"/admin/shadow-atom-config/:env/orgs/:org_id",
+		...handleSetAdminShadowAtomOrgPercent,
+	);
 	return app;
 };
 
@@ -73,24 +78,18 @@ const save = ({ config, scopes }: { config: unknown; scopes: string[] }) =>
 		body: JSON.stringify(config),
 	});
 
-test("staff save a shadow Atom: its address, an env percent and an org override, scheduled from what routes now", async () => {
+test("staff save a shadow Atom's address", async () => {
 	const response = await save({
 		scopes: [Scopes.Superuser],
-		config: {
-			sandbox: {
-				endpointUrl: "https://shadow-atom.example.com",
-				rollout: { percent: 10, previousPercent: 99, orgs: { org_1: 50 } },
-			},
-		},
+		config: { sandbox: { endpointUrl: "https://shadow-atom.example.com" } },
 	});
 
 	expect(response.status).toBe(200);
 	expect(write).toHaveBeenCalledTimes(1);
 	expect(lockedKeys).toEqual(["admin:shadow-atom-config"]);
-	expect(write.mock.calls[0][0].config.sandbox).toMatchObject({
-		endpointUrl: "https://shadow-atom.example.com",
-		rollout: { percent: 10, previousPercent: 0, orgs: { org_1: 50 } },
-	});
+	expect(write.mock.calls[0][0].config.sandbox.endpointUrl).toBe(
+		"https://shadow-atom.example.com",
+	);
 });
 
 test("an org's own key cannot read or write the shadow Atom config", async () => {
@@ -105,23 +104,19 @@ test("an org's own key cannot read or write the shadow Atom config", async () =>
 	expect(write).not.toHaveBeenCalled();
 });
 
-test("a percent outside 0–100 is refused", async () => {
-	const response = await save({
-		scopes: [Scopes.Superuser],
-		config: { live: { rollout: { percent: 150 } } },
-	});
-
-	expect(response.status).toBe(400);
-	expect(write).not.toHaveBeenCalled();
-});
-
 test("staff read the shadow Atom config with no token in it: whether the admin token is set, and when each org was registered", async () => {
 	read.mockResolvedValueOnce(
 		ShadowAtomConfigSchema.parse({
 			sandbox: {
 				endpointUrl: "https://shadow-atom.example.com",
 				adminEncryptedToken: "encrypted_admin",
-				orgs: { org_1: { encryptedToken: "encrypted_org_1", registeredAt: 7 } },
+				orgs: {
+					org_1: {
+						encryptedToken: "encrypted_org_1",
+						registeredAt: 7,
+						percent: 40,
+					},
+				},
 			},
 		}),
 	);
@@ -134,14 +129,12 @@ test("staff read the shadow Atom config with no token in it: whether the admin t
 	expect(body.sandbox).toEqual({
 		endpointUrl: "https://shadow-atom.example.com",
 		hasAdminToken: true,
-		orgs: { org_1: { registeredAt: 7 } },
-		rollout: shadowAtomConfig.defaultValue().sandbox.rollout,
+		orgs: { org_1: { registeredAt: 7, percent: 40 } },
 	});
 	expect(body.live).toEqual({
 		endpointUrl: null,
 		hasAdminToken: false,
 		orgs: {},
-		rollout: shadowAtomConfig.defaultValue().live.rollout,
 	});
 });
 
@@ -149,7 +142,13 @@ test("a save cannot touch the admin token or the registered orgs, and answers wi
 	const stored = ShadowAtomConfigSchema.parse({
 		sandbox: {
 			adminEncryptedToken: "encrypted_admin",
-			orgs: { org_1: { encryptedToken: "encrypted_org_1", registeredAt: 7 } },
+			orgs: {
+				org_1: {
+					encryptedToken: "encrypted_org_1",
+					registeredAt: 7,
+					percent: 40,
+				},
+			},
 		},
 	});
 	read.mockResolvedValueOnce(stored);
@@ -160,7 +159,9 @@ test("a save cannot touch the admin token or the registered orgs, and answers wi
 			sandbox: {
 				endpointUrl: "https://shadow-atom.example.com",
 				adminEncryptedToken: "forged",
-				orgs: { org_2: { encryptedToken: "forged", registeredAt: 1 } },
+				orgs: {
+					org_2: { encryptedToken: "forged", registeredAt: 1, percent: 100 },
+				},
 			},
 		},
 	});
@@ -173,9 +174,10 @@ test("a save cannot touch the admin token or the registered orgs, and answers wi
 		"endpointUrl",
 		"hasAdminToken",
 		"orgs",
-		"rollout",
 	]);
-	expect(body.sandbox.orgs).toEqual({ org_1: { registeredAt: 7 } });
+	expect(body.sandbox.orgs).toEqual({
+		org_1: { registeredAt: 7, percent: 40 },
+	});
 });
 
 const mint = ({ env, scopes }: { env: string; scopes: string[] }) =>
@@ -207,5 +209,65 @@ test("an org's own key cannot mint the shadow Atom's admin token", async () => {
 	});
 
 	expect(response.status).toBe(403);
+	expect(write).not.toHaveBeenCalled();
+});
+
+const setPercent = ({
+	orgId,
+	percent,
+	scopes = [Scopes.Superuser],
+}: {
+	orgId: string;
+	percent: number;
+	scopes?: string[];
+}) =>
+	createApp({ scopes }).request(
+		`/admin/shadow-atom-config/sandbox/orgs/${orgId}`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ percent }),
+		},
+	);
+
+test("staff change a registered org's percent; it routes from what routed before until it settles", async () => {
+	read.mockResolvedValueOnce(
+		ShadowAtomConfigSchema.parse({
+			sandbox: {
+				orgs: {
+					org_1: {
+						encryptedToken: "encrypted_org_1",
+						registeredAt: 7,
+						percent: 40,
+						previousPercent: 40,
+					},
+				},
+			},
+		}),
+	);
+
+	const response = await setPercent({ orgId: "org_1", percent: 70 });
+
+	expect(response.status).toBe(200);
+	expect(lockedKeys).toEqual(["admin:shadow-atom-config"]);
+	expect(write.mock.calls[0][0].config.sandbox.orgs.org_1).toMatchObject({
+		encryptedToken: "encrypted_org_1",
+		percent: 70,
+		previousPercent: 40,
+	});
+});
+
+test("an org that is not registered has no percent to set, and a percent outside 0–100 is refused", async () => {
+	expect((await setPercent({ orgId: "org_9", percent: 50 })).status).toBe(404);
+	expect((await setPercent({ orgId: "org_1", percent: 150 })).status).toBe(400);
+	expect(
+		(
+			await setPercent({
+				orgId: "org_1",
+				percent: 50,
+				scopes: [Scopes.Organisation.Write],
+			})
+		).status,
+	).toBe(403);
 	expect(write).not.toHaveBeenCalled();
 });

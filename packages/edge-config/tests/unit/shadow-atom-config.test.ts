@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+	applyShadowAtomSettings,
 	inAtomRollout,
 	SHADOW_ATOM_SETTLE_MS,
-	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
 	type ShadowAtomEnvConfig,
-	scheduleShadowAtomConfig,
+	type ShadowAtomOrg,
+	scheduleOrgPercent,
 	shadowAtomConfig,
 } from "../../src/edgeConfig.js";
 
@@ -14,23 +15,35 @@ const settled = 1_000_000;
 const bucketOf = (customerId: string) =>
 	Number(BigInt(Bun.hash(customerId)) % 100n);
 
-const envAt = (
-	rollout: Partial<ShadowAtomEnvConfig["rollout"]>,
-): ShadowAtomEnvConfig =>
+const registered = (org: Partial<ShadowAtomOrg>): ShadowAtomOrg => ({
+	encryptedToken: "org_token",
+	registeredAt: 1,
+	percent: 100,
+	previousPercent: 0,
+	changedAt: 0,
+	...org,
+});
+
+const envWith = (orgs: Record<string, Partial<ShadowAtomOrg>>) =>
 	ShadowAtomConfigSchema.parse({
-		sandbox: { endpointUrl: "https://shadow.example.com", rollout },
+		sandbox: {
+			endpointUrl: "https://shadow.example.com",
+			orgs: Object.fromEntries(
+				Object.entries(orgs).map(([orgId, org]) => [orgId, registered(org)]),
+			),
+		},
 	}).sandbox;
 
 const atPercent = (percent: number) =>
-	envAt({ percent, previousPercent: percent });
+	envWith({ org_1: { percent, previousPercent: percent } });
 
-const shareIn = (config: ShadowAtomEnvConfig) =>
+const shareIn = (config: ShadowAtomEnvConfig, orgId = "org_1") =>
 	customerIds.filter((customerId) =>
-		inAtomRollout({ config, orgId: "org_1", customerId, now: settled }),
+		inAtomRollout({ config, orgId, customerId, now: settled }),
 	).length / customerIds.length;
 
 describe("shadowAtomConfig", () => {
-	test("an empty file is off in both envs: no endpoint, no one in", () => {
+	test("an empty file is off in both envs: no endpoint, no org, no one in", () => {
 		const config = shadowAtomConfig.defaultValue();
 		expect(ShadowAtomConfigSchema.parse({})).toEqual(config);
 		for (const env of ["sandbox", "live"] as const) {
@@ -41,14 +54,18 @@ describe("shadowAtomConfig", () => {
 		}
 	});
 
-	test("a percent outside 0–100, or a fraction, is refused", () => {
+	test("an org's percent outside 0–100, or a fraction, is refused", () => {
 		for (const percent of [150, -1, 12.5])
-			expect(() => envAt({ percent })).toThrow();
+			expect(() => envWith({ org_1: { percent } })).toThrow();
 	});
 });
 
 describe("inAtomRollout", () => {
-	test("a customer is in when its bucket lands below the percent", () => {
+	test("an org that is not registered has no one in", () => {
+		expect(shareIn(atPercent(100), "org_2")).toBe(0);
+	});
+
+	test("a registered org's customer is in when its bucket lands below the org's percent", () => {
 		for (const customerId of customerIds.slice(0, 100))
 			expect(
 				inAtomRollout({
@@ -69,28 +86,20 @@ describe("inAtomRollout", () => {
 			).toBeLessThan(0.02);
 	});
 
-	test("an org's own percent beats the env's, both ways", () => {
-		expect(shareIn(envAt({ percent: 100, orgs: { org_1: 0 } }))).toBe(0);
-		expect(shareIn(envAt({ percent: 0, orgs: { org_1: 100 } }))).toBe(1);
-	});
-
-	test("a pinned customer is in or out whatever the percent, and only in its own org", () => {
-		const [pinnedIn, pinnedOut] = customerIds;
-		const config = envAt({
-			percent: 0,
-			orgs: { org_2: 100 },
-			customers: { org_1: { [pinnedIn]: true }, org_2: { [pinnedOut]: false } },
+	test("each org follows its own percent", () => {
+		const config = envWith({
+			org_1: { percent: 0, previousPercent: 0 },
+			org_2: { percent: 100, previousPercent: 100 },
 		});
-		const isIn = (orgId: string, customerId: string) =>
-			inAtomRollout({ config, orgId, customerId, now: settled });
-		expect(isIn("org_1", pinnedIn)).toBe(true);
-		expect(isIn("org_2", pinnedOut)).toBe(false);
-		expect(isIn("org_3", pinnedIn)).toBe(false);
+		expect(shareIn(config, "org_1")).toBe(0);
+		expect(shareIn(config, "org_2")).toBe(1);
 	});
 
 	test("a percent change routes the previous percent until it settles", () => {
 		const customerId = customerIds.find((id) => bucketOf(id) < 50) as string;
-		const config = envAt({ percent: 0, previousPercent: 50, changedAt: 0 });
+		const config = envWith({
+			org_1: { percent: 0, previousPercent: 50, changedAt: 0 },
+		});
 		const isInAt = (now: number) =>
 			inAtomRollout({ config, orgId: "org_1", customerId, now });
 		expect(isInAt(SHADOW_ATOM_SETTLE_MS - 1)).toBe(true);
@@ -98,57 +107,47 @@ describe("inAtomRollout", () => {
 	});
 });
 
-describe("scheduleShadowAtomConfig", () => {
-	const current: ShadowAtomConfig = ShadowAtomConfigSchema.parse({
-		sandbox: { rollout: { percent: 20, previousPercent: 10, changedAt: 0 } },
-	});
-	const save = (sandboxRollout: Partial<ShadowAtomEnvConfig["rollout"]>) =>
-		scheduleShadowAtomConfig({
-			current,
-			next: ShadowAtomConfigSchema.parse({
-				sandbox: { rollout: sandboxRollout },
-			}),
-			now: settled,
-		}).sandbox.rollout;
+describe("scheduleOrgPercent", () => {
+	const current = registered({ percent: 20, previousPercent: 10, changedAt: 0 });
 
-	test("a new percent starts from what routes now, whatever the caller sent", () => {
+	test("a new percent starts from what routes now", () => {
 		expect(
-			save({ percent: 50, previousPercent: 99, changedAt: 7 }),
-		).toMatchObject({ percent: 50, previousPercent: 20, changedAt: settled });
+			scheduleOrgPercent({ current, percent: 50, now: settled }),
+		).toEqual({ percent: 50, previousPercent: 20, changedAt: settled });
 	});
 
 	test("the same percent keeps its settle bookkeeping", () => {
-		expect(save({ percent: 20, orgs: { org_1: 5 } })).toMatchObject({
-			percent: 20,
-			previousPercent: 10,
-			changedAt: 0,
-			orgs: { org_1: 5 },
-		});
+		expect(
+			scheduleOrgPercent({ current, percent: 20, now: settled }),
+		).toEqual({ percent: 20, previousPercent: 10, changedAt: 0 });
+	});
+
+	test("a newly registered org starts from no one", () => {
+		expect(
+			scheduleOrgPercent({ current: undefined, percent: 100, now: settled }),
+		).toEqual({ percent: 100, previousPercent: 0, changedAt: settled });
 	});
 });
 
-test("a save keeps each env's admin token and registered orgs, whatever the caller sent", () => {
-	const registered = {
-		org_1: { encryptedToken: "org_1_token", registeredAt: 1 },
-	};
+test("a save sets only each env's address; admin token and orgs stay, whatever the caller sent", () => {
+	const orgs = { org_1: registered({}) };
 	const current = ShadowAtomConfigSchema.parse({
-		sandbox: { adminEncryptedToken: "minted", orgs: registered },
+		sandbox: { adminEncryptedToken: "minted", orgs },
 	});
-	const saved = scheduleShadowAtomConfig({
+	const saved = applyShadowAtomSettings({
 		current,
 		next: ShadowAtomConfigSchema.parse({
 			sandbox: {
 				endpointUrl: "https://shadow.example.com",
 				adminEncryptedToken: "forged",
-				orgs: { org_2: { encryptedToken: "forged", registeredAt: 2 } },
+				orgs: { org_2: registered({ encryptedToken: "forged" }) },
 			},
 			live: { adminEncryptedToken: "forged" },
 		}),
-		now: settled,
 	});
 	expect(saved.sandbox.endpointUrl).toBe("https://shadow.example.com");
 	expect(saved.sandbox.adminEncryptedToken).toBe("minted");
-	expect(saved.sandbox.orgs).toEqual(registered);
+	expect(saved.sandbox.orgs).toEqual(orgs);
 	expect(saved.live.adminEncryptedToken).toBeNull();
 	expect(saved.live.orgs).toEqual({});
 });

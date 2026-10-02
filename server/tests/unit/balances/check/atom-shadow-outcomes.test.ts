@@ -88,9 +88,10 @@ beforeAll(() => {
 					org_shadow: {
 						encryptedToken: encryptData("shadow_token_1"),
 						registeredAt: 1,
+						percent: 100,
+						previousPercent: 100,
 					},
 				},
-				rollout: { percent: 100, previousPercent: 100 },
 			},
 		},
 	});

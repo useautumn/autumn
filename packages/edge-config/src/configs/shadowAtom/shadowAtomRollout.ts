@@ -1,7 +1,7 @@
 import type {
 	ShadowAtomConfig,
 	ShadowAtomEnvConfig,
-	ShadowAtomRollout,
+	ShadowAtomOrg,
 	ShadowAtomSettings,
 } from "./shadowAtomEdgeConfig.js";
 
@@ -14,17 +14,17 @@ const customerBucket = ({ customerId }: { customerId: string }): number =>
 	Number(BigInt(Bun.hash(customerId)) % 100n);
 
 const routingPercentAt = ({
-	rollout,
+	org,
 	now,
 }: {
-	rollout: ShadowAtomRollout;
+	org: ShadowAtomOrg;
 	now: number;
 }): number =>
-	now >= rollout.changedAt + SHADOW_ATOM_SETTLE_MS
-		? rollout.percent
-		: rollout.previousPercent;
+	now >= org.changedAt + SHADOW_ATOM_SETTLE_MS
+		? org.percent
+		: org.previousPercent;
 
-/** A pinned customer, else the org's percent, else the env's percent as it routes now. */
+/** Only a registered org's customers, and of those its percent as it routes now. */
 export const inAtomRollout = ({
 	config,
 	orgId,
@@ -36,62 +36,42 @@ export const inAtomRollout = ({
 	customerId: string;
 	now?: number;
 }): boolean => {
-	const { rollout } = config;
-	const pinned = rollout.customers[orgId]?.[customerId];
-	if (pinned !== undefined) return pinned;
-	const percent = rollout.orgs[orgId] ?? routingPercentAt({ rollout, now });
-	return customerBucket({ customerId }) < percent;
+	const org = config.orgs[orgId];
+	if (!org) return false;
+	return customerBucket({ customerId }) < routingPercentAt({ org, now });
 };
 
-const scheduleRollout = ({
+/** An org's routing fields for a new percent: it starts from what routes now and lands once settled. */
+export const scheduleOrgPercent = ({
 	current,
-	next,
+	percent,
 	now,
 }: {
-	current: ShadowAtomRollout;
-	next: ShadowAtomRollout;
+	current: ShadowAtomOrg | undefined;
+	percent: number;
 	now: number;
-}): ShadowAtomRollout =>
-	next.percent === current.percent
-		? {
-				...next,
-				previousPercent: current.previousPercent,
-				changedAt: current.changedAt,
-			}
-		: {
-				...next,
-				previousPercent: routingPercentAt({ rollout: current, now }),
-				changedAt: now,
-			};
+}): Pick<ShadowAtomOrg, "percent" | "previousPercent" | "changedAt"> => {
+	if (current?.percent === percent)
+		return {
+			percent,
+			previousPercent: current.previousPercent,
+			changedAt: current.changedAt,
+		};
+	return {
+		percent,
+		previousPercent: current ? routingPercentAt({ org: current, now }) : 0,
+		changedAt: now,
+	};
+};
 
-const scheduleEnv = ({
+/** The config an admin saved: only each env's address changes; tokens and orgs stay. */
+export const applyShadowAtomSettings = ({
 	current,
 	next,
-	now,
-}: {
-	current: ShadowAtomEnvConfig;
-	next: ShadowAtomSettings["sandbox"];
-	now: number;
-}): ShadowAtomEnvConfig => ({
-	...current,
-	endpointUrl: next.endpointUrl,
-	rollout: scheduleRollout({
-		current: current.rollout,
-		next: next.rollout,
-		now,
-	}),
-});
-
-/** The config an admin saved: only its address and rollout change, a new percent starting from what routes now; tokens and orgs stay. */
-export const scheduleShadowAtomConfig = ({
-	current,
-	next,
-	now,
 }: {
 	current: ShadowAtomConfig;
 	next: ShadowAtomSettings;
-	now: number;
 }): ShadowAtomConfig => ({
-	sandbox: scheduleEnv({ current: current.sandbox, next: next.sandbox, now }),
-	live: scheduleEnv({ current: current.live, next: next.live, now }),
+	sandbox: { ...current.sandbox, endpointUrl: next.sandbox.endpointUrl },
+	live: { ...current.live, endpointUrl: next.live.endpointUrl },
 });

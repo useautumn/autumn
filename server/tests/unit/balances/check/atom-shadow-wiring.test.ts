@@ -45,10 +45,11 @@ const useShadowAtom = ({
 							org_shadow: {
 								encryptedToken: encryptData("shadow_token_1"),
 								registeredAt: 1,
+								percent: 50,
+								previousPercent: 50,
 							},
 						}
 					: {},
-				rollout: { orgs: { org_shadow: 50 } },
 			},
 		},
 	});

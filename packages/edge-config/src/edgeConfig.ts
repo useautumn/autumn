@@ -22,14 +22,16 @@ export {
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
 	type ShadowAtomEnvConfig,
+	type ShadowAtomOrg,
 	type ShadowAtomSettings,
 	ShadowAtomSettingsSchema,
 	shadowAtomConfig,
 } from "./configs/shadowAtom/shadowAtomEdgeConfig.js";
 export {
+	applyShadowAtomSettings,
 	inAtomRollout,
 	SHADOW_ATOM_SETTLE_MS,
-	scheduleShadowAtomConfig,
+	scheduleOrgPercent,
 } from "./configs/shadowAtom/shadowAtomRollout.js";
 export { EdgeConfigNotConfiguredError } from "./errors.js";
 export {
