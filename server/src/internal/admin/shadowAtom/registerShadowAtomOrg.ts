@@ -1,6 +1,10 @@
 import type { AppEnv } from "@autumn/shared";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
+import {
+	SHADOW_ATOM_CONFIG_LOCK_KEY,
+	shadowAtomConfigStore,
+} from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import {
@@ -19,6 +23,20 @@ export const registerShadowAtomOrg = async ({
 	orgId: string;
 }): Promise<{ token: string }> => {
 	await OrgService.get({ db: ctx.db, orgId });
+	return withLock({
+		lockKey: SHADOW_ATOM_CONFIG_LOCK_KEY,
+		fn: () => putOrgAndRecordToken({ env, orgId }),
+	});
+};
+
+/** If the config write fails, the Atom already holds the new hash: registering again heals it. */
+const putOrgAndRecordToken = async ({
+	env,
+	orgId,
+}: {
+	env: AppEnv;
+	orgId: string;
+}): Promise<{ token: string }> => {
 	const config = await shadowAtomConfigStore.readFromSource();
 	const { token } = await shadowAtomDeployerFor({
 		config: config[env],

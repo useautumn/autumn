@@ -34,11 +34,18 @@ const alienClient: AlienClient = {
 	deleteDeployment: async () => {},
 	revokeSetupLinks: async () => {},
 };
-mock.module("@/external/alien/getAlienClient.js", () => ({
+const ALIEN_CLIENT_MODULE = "@/external/alien/getAlienClient.js";
+// Kept so afterAll can hand the real module back: mock.module is process-wide.
+const realAlienClientModule: Record<string, unknown> = await import(
+	ALIEN_CLIENT_MODULE
+);
+mock.module(ALIEN_CLIENT_MODULE, () => ({
+	...realAlienClientModule,
 	getAlienClient: () => alienClient,
 }));
 
 afterAll(() => {
+	mock.module(ALIEN_CLIENT_MODULE, () => realAlienClientModule);
 	multiTenantAtom.stop(true);
 	for (const [key, value] of Object.entries(previous)) {
 		if (value === undefined) delete process.env[key];

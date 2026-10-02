@@ -19,7 +19,7 @@ const ShadowAtomRolloutSchema = z.object({
 
 /** An org registered on the shadow Atom: its own token there, encrypted the way an org's Atom token is. */
 const ShadowAtomOrgSchema = z.object({
-	encryptedToken: z.string(),
+	encryptedToken: z.string().min(1),
 	registeredAt: z.number(),
 });
 

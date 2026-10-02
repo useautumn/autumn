@@ -3,6 +3,7 @@ import { ShadowAtomConfigSchema, shadowAtomConfig } from "@autumn/edge-config";
 import { RecaseError, Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { z } from "zod/v4";
+import * as lockModule from "@/external/redis/utils/lockUtils/withLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetAdminShadowAtomConfig } from "@/internal/admin/handleGetAdminShadowAtomConfig.js";
 import { handleMintAdminShadowAtomToken } from "@/internal/admin/handleMintAdminShadowAtomToken.js";
@@ -14,12 +15,20 @@ import { decryptData } from "@/utils/encryptUtils.js";
 const previousPassword = process.env.ENCRYPTION_PASSWORD;
 process.env.ENCRYPTION_PASSWORD = "shadow-atom-admin-test-password";
 
+const lockedKeys: string[] = [];
+const withLock = spyOn(lockModule, "withLock").mockImplementation(
+	async ({ lockKey, fn }) => {
+		lockedKeys.push(lockKey);
+		return fn();
+	},
+);
 const write = spyOn(shadowAtomConfigStore, "writeToSource").mockResolvedValue();
 const read = spyOn(shadowAtomConfigStore, "readFromSource").mockResolvedValue(
 	shadowAtomConfig.defaultValue(),
 );
 
 afterEach(() => {
+	lockedKeys.length = 0;
 	write.mockClear();
 	read.mockClear();
 });
@@ -28,6 +37,7 @@ afterAll(() => {
 	else process.env.ENCRYPTION_PASSWORD = previousPassword;
 	write.mockRestore();
 	read.mockRestore();
+	withLock.mockRestore();
 });
 
 const createApp = ({ scopes }: { scopes: string[] }) => {
@@ -76,6 +86,7 @@ test("staff save a shadow Atom: its address, an env percent and an org override,
 
 	expect(response.status).toBe(200);
 	expect(write).toHaveBeenCalledTimes(1);
+	expect(lockedKeys).toEqual(["admin:shadow-atom-config"]);
 	expect(write.mock.calls[0][0].config.sandbox).toMatchObject({
 		endpointUrl: "https://shadow-atom.example.com",
 		rollout: { percent: 10, previousPercent: 0, orgs: { org_1: 50 } },
@@ -126,8 +137,12 @@ test("staff read the shadow Atom config with no token in it: whether the admin t
 		orgs: { org_1: { registeredAt: 7 } },
 		rollout: shadowAtomConfig.defaultValue().sandbox.rollout,
 	});
-	expect(body.live).toMatchObject({ hasAdminToken: false, orgs: {} });
-	expect(JSON.stringify(body)).not.toContain("encrypted");
+	expect(body.live).toEqual({
+		endpointUrl: null,
+		hasAdminToken: false,
+		orgs: {},
+		rollout: shadowAtomConfig.defaultValue().live.rollout,
+	});
 });
 
 test("a save cannot touch the admin token or the registered orgs, and answers without them", async () => {
@@ -153,7 +168,14 @@ test("a save cannot touch the admin token or the registered orgs, and answers wi
 	const saved = write.mock.calls[0][0].config.sandbox;
 	expect(saved.adminEncryptedToken).toBe("encrypted_admin");
 	expect(saved.orgs).toEqual(stored.sandbox.orgs);
-	expect(JSON.stringify(await response.json())).not.toContain("encrypted");
+	const body = await response.json();
+	expect(Object.keys(body.sandbox).sort()).toEqual([
+		"endpointUrl",
+		"hasAdminToken",
+		"orgs",
+		"rollout",
+	]);
+	expect(body.sandbox.orgs).toEqual({ org_1: { registeredAt: 7 } });
 });
 
 const mint = ({ env, scopes }: { env: string; scopes: string[] }) =>
@@ -163,7 +185,7 @@ const mint = ({ env, scopes }: { env: string; scopes: string[] }) =>
 		body: JSON.stringify({ env }),
 	});
 
-test("staff mint an env's admin token: stored encrypted, its hash returned once for the multi-tenant Atom's ATOM_ADMIN_TOKEN_HASH", async () => {
+test("staff mint an env's admin token: stored encrypted, its hash returned once for the multi-tenant Atom's ATOM_TOKEN_HASH", async () => {
 	const response = await mint({ env: "live", scopes: [Scopes.Superuser] });
 
 	expect(response.status).toBe(200);

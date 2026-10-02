@@ -1,5 +1,9 @@
 import type { AppEnv } from "@autumn/shared";
-import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
+import {
+	SHADOW_ATOM_CONFIG_LOCK_KEY,
+	shadowAtomConfigStore,
+} from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import {
 	shadowAtomDeployerFor,
 	shadowAtomIdOf,
@@ -7,6 +11,18 @@ import {
 
 /** Herald and the shadow check stop at once, then the org's folder goes; a retry after a failed delete finishes it. */
 export const unregisterShadowAtomOrg = async ({
+	env,
+	orgId,
+}: {
+	env: AppEnv;
+	orgId: string;
+}): Promise<void> =>
+	withLock({
+		lockKey: SHADOW_ATOM_CONFIG_LOCK_KEY,
+		fn: () => forgetOrgAndDeleteFolder({ env, orgId }),
+	});
+
+const forgetOrgAndDeleteFolder = async ({
 	env,
 	orgId,
 }: {

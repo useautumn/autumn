@@ -5,11 +5,11 @@ const TOKEN_HASH = "a".repeat(64);
 const ADMIN_TOKEN_HASH = "b".repeat(64);
 const MULTI_TENANT = {
 	ATOM_MODE: "multi_tenant",
-	ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
+	ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
 };
 
 describe("atom env", () => {
-	test("an org's deployment is given its token hash", () => {
+	test("a customer's Atom sets no ATOM_MODE: unset is single-tenant, given its token hash", () => {
 		const env = createAtomEnv({
 			ATOM_TOKEN_HASH: TOKEN_HASH,
 			ATOM_HOSTNAME: "0.0.0.0",
@@ -17,55 +17,41 @@ describe("atom env", () => {
 
 		expect(env.ATOM_MODE).toBe("deployed");
 		expect(env.ATOM_TOKEN_HASH).toBe(TOKEN_HASH);
-		expect(env.ATOM_ADMIN_TOKEN_HASH).toBeNull();
 	});
 
-	test("a multi-tenant Atom is given the hash of the admin token that registers its orgs", () => {
+	test("a multi-tenant Atom's ATOM_TOKEN_HASH is the admin token that registers its orgs", () => {
 		const env = createAtomEnv({
 			ATOM_MODE: "multi_tenant",
-			ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
+			ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
 			ATOM_HOSTNAME: "0.0.0.0",
 		});
 
 		expect(env.ATOM_MODE).toBe("multi_tenant");
-		expect(env.ATOM_ADMIN_TOKEN_HASH).toBe(ADMIN_TOKEN_HASH);
-		expect(env.ATOM_TOKEN_HASH).toBeNull();
+		expect(env.ATOM_TOKEN_HASH).toBe(ADMIN_TOKEN_HASH);
 		expect(env.ATOM_HOSTNAME).toBe("0.0.0.0");
 	});
 
-	test("each mode refuses the other's token and needs its own", () => {
+	test("both modes need a SHA-256 ATOM_TOKEN_HASH", () => {
 		expect(() => createAtomEnv({})).toThrow("ATOM_TOKEN_HASH");
 		expect(() => createAtomEnv({ ATOM_MODE: "multi_tenant" })).toThrow(
-			"ATOM_ADMIN_TOKEN_HASH",
+			"ATOM_TOKEN_HASH",
 		);
-		expect(() =>
-			createAtomEnv({
-				ATOM_TOKEN_HASH: TOKEN_HASH,
-				ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
-			}),
-		).toThrow("ATOM_MODE=multi_tenant");
-		expect(() =>
-			createAtomEnv({
-				ATOM_MODE: "multi_tenant",
-				ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
-				ATOM_TOKEN_HASH: TOKEN_HASH,
-			}),
-		).toThrow("ATOM_MODE=deployed");
 		expect(() => createAtomEnv({ ATOM_TOKEN_HASH: "not-a-hash" })).toThrow(
 			"SHA-256",
 		);
 		expect(() =>
-			createAtomEnv({
-				ATOM_MODE: "multi_tenant",
-				ATOM_ADMIN_TOKEN_HASH: "nope",
-			}),
+			createAtomEnv({ ATOM_MODE: "multi_tenant", ATOM_TOKEN_HASH: "nope" }),
 		).toThrow("SHA-256");
 	});
 
-	test("an unknown mode is refused", () => {
-		expect(() =>
-			createAtomEnv({ ATOM_MODE: "dev", ATOM_TOKEN_HASH: TOKEN_HASH }),
-		).toThrow("ATOM_MODE");
+	test("multi_tenant is the only ATOM_MODE value; anything else, deployed included, is refused", () => {
+		for (const mode of ["dev", "deployed", "shared", "multiTenant"])
+			expect(() =>
+				createAtomEnv({ ATOM_MODE: mode, ATOM_TOKEN_HASH: TOKEN_HASH }),
+			).toThrow("ATOM_MODE is either unset or multi_tenant");
+		expect(
+			createAtomEnv({ ATOM_MODE: " ", ATOM_TOKEN_HASH: TOKEN_HASH }).ATOM_MODE,
+		).toBe("deployed");
 	});
 
 	test("forwards to the public Autumn API unless told where the API is", () => {

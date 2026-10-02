@@ -254,7 +254,7 @@ export const startAtom = (repoRoot: string): Subprocess => {
 		env: {
 			...process.env,
 			ATOM_MODE: "multi_tenant",
-			ATOM_ADMIN_TOKEN_HASH: createHash("sha256")
+			ATOM_TOKEN_HASH: createHash("sha256")
 				.update(ATOM_ADMIN_TOKEN)
 				.digest("hex"),
 			ATOM_SLOT_COUNT: "2",
