@@ -309,6 +309,7 @@ export function CreateScheduleFormProvider({
 		useCreateScheduleMutation({
 			customerId,
 			buildRequestBody,
+			getEnablePlanImmediately,
 			onApplied,
 			onCheckoutRedirect,
 			onSuccess,

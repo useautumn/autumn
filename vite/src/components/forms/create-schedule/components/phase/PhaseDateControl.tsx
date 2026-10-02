@@ -1,4 +1,5 @@
-import { ConditionalTooltip, DateInputUnix } from "@autumn/ui";
+import { ConditionalTooltip, DateInputUnix, IconButton } from "@autumn/ui";
+import { XIcon } from "@phosphor-icons/react";
 import { format, subYears } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
@@ -137,6 +138,10 @@ export function PhaseDateControl({
 
 	const disablePastDates =
 		!hasStarted && !(isNewFirstPhase && allowFirstPhaseBackdate);
+	const canResetToNow =
+		isNewFirstPhase && !hasStarted && phase.startsAt !== null;
+	const setStartsAt = (startsAt: number | null) =>
+		form.setFieldValue(`phases[${phaseIndex}].startsAt`, startsAt);
 	const limits: PickerLimits = {
 		disabled: hasStarted,
 		disablePastDates,
@@ -151,16 +156,25 @@ export function PhaseDateControl({
 			enabled={hasStarted && !isLocked}
 			content={CURRENT_PHASE_TIME_LOCKED_MESSAGE}
 		>
-			<div className="w-fit">
+			<div className="flex w-fit items-center gap-1">
 				<PhaseDatePicker
 					startsAt={phase.startsAt}
 					label={dateLabel(phase.startsAt)}
 					limits={limits}
 					hasTimingError={hasTimingError}
-					onChange={(startsAt) =>
-						form.setFieldValue(`phases[${phaseIndex}].startsAt`, startsAt)
-					}
+					onChange={setStartsAt}
 				/>
+				{canResetToNow && (
+					<IconButton
+						type="button"
+						variant="muted"
+						size="sm"
+						aria-label="Start now"
+						onClick={() => setStartsAt(null)}
+						icon={<XIcon size={12} />}
+						className="shrink-0 text-tertiary-foreground"
+					/>
+				)}
 			</div>
 		</ConditionalTooltip>
 	);

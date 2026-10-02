@@ -50,6 +50,7 @@ export function CreateScheduleAdvancedSection() {
 					description="Give access now, and start billing when the first phase starts"
 					action={
 						<Switch
+							aria-label="Early Access"
 							checked={enablePlanImmediately}
 							onCheckedChange={(checked) =>
 								form.setFieldValue("enablePlanImmediately", checked)

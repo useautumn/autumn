@@ -142,6 +142,19 @@ export function buildCreateScheduleRequestBody({
 	return body as SetPlansParamsV0;
 }
 
+/** A submit body: the form's request plus what its billing stage chose, never a stale form-only flag. */
+export function buildCreateScheduleStageRequestBody({
+	stageParams = {},
+	...params
+}: Parameters<typeof buildCreateScheduleRequestBody>[0] & {
+	stageParams?: BillingStageParams;
+}): SetPlansParamsV0 | null {
+	return applyMultiPlanStageParams({
+		...stageParams,
+		requestBody: buildCreateScheduleRequestBody(params),
+	});
+}
+
 export function useCreateScheduleRequestBody({
 	customerId,
 	phases,
@@ -242,8 +255,9 @@ export function useBuildCreateScheduleRequestBody({
 }) {
 	return useMemo(
 		() =>
-			(stageParams: BillingStageParams = {}): SetPlansParamsV0 | null => {
-				const requestBody = buildCreateScheduleRequestBody({
+			(stageParams: BillingStageParams = {}): SetPlansParamsV0 | null =>
+				buildCreateScheduleStageRequestBody({
+					stageParams,
 					customerId,
 					phases: getPhases(),
 					unscheduledPlans: getUnscheduledPlans?.(),
@@ -256,18 +270,7 @@ export function useBuildCreateScheduleRequestBody({
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
 					enablePlanImmediately: getEnablePlanImmediately?.() ?? false,
 					stripeSubscriptionId,
-				});
-
-				if (!requestBody) return null;
-
-				return applyMultiPlanStageParams({
-					...stageParams,
-					requestBody,
-					enableProductImmediately:
-						stageParams.enableProductImmediately ??
-						(getEnablePlanImmediately?.() || undefined),
-				});
-			},
+				}),
 		[
 			customerId,
 			products,

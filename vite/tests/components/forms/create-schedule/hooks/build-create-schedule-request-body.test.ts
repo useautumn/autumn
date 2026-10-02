@@ -2,12 +2,16 @@ import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { AppEnv, ProductItemInterval, UsageModel } from "@autumn/shared";
 import { addDays, subDays } from "date-fns";
-import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
+import {
+	buildCreateScheduleRequestBody,
+	buildCreateScheduleStageRequestBody,
+} from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import {
 	type CustomerStatePhase,
 	canResetScheduleBillingCycle,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import {
 	buildCustomize,
 	buildCustomizeBasePrice,
@@ -863,6 +867,43 @@ describe("buildCreateScheduleRequestBody", () => {
 		const immediateStart = firstPhaseFrom(subDays(now, 1).getTime());
 		expect(immediateStart!.phases[0].starts_at).toBe(now);
 		expect(immediateStart!.enable_plan_immediately).toBeUndefined();
+	});
+
+	test("a submit sends early access only for a later first phase or from the checkout stage", () => {
+		const now = Date.now();
+		const submit = ({
+			startsAt,
+			stageParams,
+		}: {
+			startsAt: number | null;
+			stageParams?: BillingStageParams;
+		}) =>
+			buildCreateScheduleStageRequestBody({
+				stageParams,
+				customerId: "cus_1",
+				phases: [
+					{
+						startsAt,
+						persistedStartsAt: undefined,
+						plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
+					},
+				],
+				products: defaultProducts,
+				features,
+				nowMs: now,
+				enablePlanImmediately: true,
+			});
+
+		expect(submit({ startsAt: null })!.enable_plan_immediately).toBeUndefined();
+		expect(
+			submit({ startsAt: addDays(now, 7).getTime() })!.enable_plan_immediately,
+		).toBe(true);
+		expect(
+			submit({
+				startsAt: null,
+				stageParams: { enableProductImmediately: true },
+			})!.enable_plan_immediately,
+		).toBe(true);
 	});
 
 	test("preserves persisted first phase start when editing an existing schedule", () => {
