@@ -28,24 +28,6 @@ describe("Balance worker environment", () => {
 			}).BALANCE_WORKER_PARTITION_COUNT,
 		).toBe(128);
 	});
-	test("sizes the subject map from a tenth of the container's memory unless a deployment fixes the budget", () => {
-		const env = createBalanceWorkerEnv(valid);
-		expect(env.BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION).toBe(0.25);
-		expect(env.BALANCE_WORKER_SUBJECT_MAP_BUDGET_BYTES).toBeUndefined();
-		const fixed = createBalanceWorkerEnv({
-			...valid,
-			BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION: "0.4",
-			BALANCE_WORKER_SUBJECT_MAP_BUDGET_BYTES: "1073741824",
-		});
-		expect(fixed.BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION).toBe(0.4);
-		expect(fixed.BALANCE_WORKER_SUBJECT_MAP_BUDGET_BYTES).toBe(1_073_741_824);
-		expect(() =>
-			createBalanceWorkerEnv({
-				...valid,
-				BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION: "0.75",
-			}),
-		).toThrow();
-	});
 	test("samples successful request logs at one in twenty unless a deployment says otherwise", () => {
 		expect(
 			createBalanceWorkerEnv(valid).BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,

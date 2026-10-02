@@ -8,13 +8,10 @@ export const SUBJECT_MAP_FALLBACK_BUDGET_BYTES = 256 * 1024 * 1024;
 export const subjectMapBudgetBytesOf = ({
 	containerMemoryBytes,
 	memoryFraction,
-	overrideBytes,
 }: {
 	containerMemoryBytes: number | null;
 	memoryFraction: number;
-	overrideBytes?: number;
 }): number => {
-	if (overrideBytes !== undefined) return overrideBytes;
 	if (containerMemoryBytes === null) return SUBJECT_MAP_FALLBACK_BUDGET_BYTES;
 	return Math.floor(containerMemoryBytes * memoryFraction);
 };

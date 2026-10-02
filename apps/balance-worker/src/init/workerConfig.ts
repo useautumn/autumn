@@ -1,3 +1,4 @@
+import { BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION } from "@autumn/env/balanceWorkerConstants";
 import {
 	assertConsumerGroupTimings,
 	coPartitionedAssigner,
@@ -152,8 +153,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 			subjectMapBudget: createSubjectMapBudget({
 				totalBytes: subjectMapBudgetBytesOf({
 					containerMemoryBytes: readContainerMemoryBytes(),
-					memoryFraction: env.BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
-					overrideBytes: env.BALANCE_WORKER_SUBJECT_MAP_BUDGET_BYTES,
+					memoryFraction: BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
 				}),
 			}),
 			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.

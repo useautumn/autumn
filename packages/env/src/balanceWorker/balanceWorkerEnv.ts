@@ -11,7 +11,6 @@ import {
 	BALANCE_WORKER_MAX_REQUEST_BYTES,
 	BALANCE_WORKER_RECEIPT_RETENTION_MS,
 	BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
-	BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
 } from "./balanceWorkerConstants.js";
 import {
 	balanceWorkerDeploymentToKafkaNames,
@@ -50,12 +49,6 @@ const listener = z.object({
 		.min(0)
 		.max(1)
 		.default(BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE),
-	BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION: z.coerce
-		.number()
-		.gt(0)
-		.max(0.5)
-		.default(BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION),
-	BALANCE_WORKER_SUBJECT_MAP_BUDGET_BYTES: positiveInteger.optional(),
 });
 
 const state = z.object({

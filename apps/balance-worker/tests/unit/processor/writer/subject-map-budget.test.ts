@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION } from "@autumn/env/balanceWorkerConstants";
 import { readContainerMemoryBytes } from "../../../../src/init/containerMemory.js";
 import { createSubjectMap } from "../../../../src/processor/writer/subjectMap/createSubjectMap.js";
 import {
@@ -11,7 +12,7 @@ import { createState } from "../../../fixtures/mutations.js";
 const gib = 1024 * 1024 * 1024;
 
 describe("subject map budget", () => {
-	test("the worker-wide budget is a share of container memory, a fixed override, or the fallback when memory is unknown", () => {
+	test("the worker-wide budget is a share of container memory, or the fallback when memory is unknown", () => {
 		expect(
 			subjectMapBudgetBytesOf({
 				containerMemoryBytes: 8 * gib,
@@ -20,17 +21,19 @@ describe("subject map budget", () => {
 		).toBe(Math.floor(0.8 * gib));
 		expect(
 			subjectMapBudgetBytesOf({
-				containerMemoryBytes: 8 * gib,
-				memoryFraction: 0.1,
-				overrideBytes: 123_456_789,
-			}),
-		).toBe(123_456_789);
-		expect(
-			subjectMapBudgetBytesOf({
 				containerMemoryBytes: null,
 				memoryFraction: 0.1,
 			}),
 		).toBe(SUBJECT_MAP_FALLBACK_BUDGET_BYTES);
+	});
+
+	test("a prod-sized 4 GiB worker gets a 512 MiB budget", () => {
+		expect(
+			subjectMapBudgetBytesOf({
+				containerMemoryBytes: 4 * gib,
+				memoryFraction: BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
+			}),
+		).toBe(512 * 1024 * 1024);
 	});
 
 	test("container memory comes from the cgroup limit when one is set, bounded by the host, else the host's total", () => {

@@ -70,7 +70,8 @@ export const BALANCE_WORKER_CATALOG_RECHECK_MS = BALANCE_WORKER_CATALOG_TTL_MS;
  *  the caller cannot do anything useful with. */
 export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
 
-export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.25;
+/** An eighth of the task: 512 MiB on a 4 GiB worker, growing with the task size. */
+export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;
 
 /** How a partition's writer commits a batch to the log. Transactional is three
  *  broker round trips per commit (register the partition, produce, end the
