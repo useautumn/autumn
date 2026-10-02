@@ -5,6 +5,7 @@ import {
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "@autumn/postgres";
+import { writesSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,
@@ -16,11 +17,6 @@ import {
 	FlushRecordRefusedError,
 	StaleSubjectRowsError,
 } from "../committerErrors.js";
-import {
-	carriesSnapshots,
-	withoutSnapshots,
-	writesSnapshots,
-} from "../subjectSnapshots/flushSnapshotGuards.js";
 import type {
 	CommitterContext,
 	CommitterScope,
@@ -85,6 +81,21 @@ const reportRefusal = ({
 	if (refusal instanceof FlushRecordRefusedError)
 		ctx.logger?.error(`[committer] ${refusal.message}`);
 };
+
+const withoutSnapshots = ({
+	record,
+}: {
+	record: DurableMutationRecord;
+}): DurableMutationRecord => {
+	if (!record.snapshots) return record;
+	const { snapshots: _dropped, ...rest } = record;
+	return rest;
+};
+
+const carriesSnapshots = ({ flush }: { flush: Flush }): boolean =>
+	flush.calls.some((call) =>
+		call.records.some((record) => record.snapshots !== undefined),
+	);
 
 /** The same record with nothing to write: lands only its bookmark, so the records behind it are not held up. Its customer's snapshot is deleted. */
 const withoutChanges = ({
@@ -352,7 +363,7 @@ export const landFlush = async ({
 		if (cause instanceof CommitterStoppedError) throw cause;
 		// Only a flush landing whole may write a snapshot, and a snapshot must never be why a record is refused.
 		if (
-			writesSnapshots({ config: scope.config }) &&
+			writesSnapshots({ snapshots: scope.config.snapshots }) &&
 			carriesSnapshots({ flush })
 		)
 			return landWithSnapshotsDeleted({ scope, flush });

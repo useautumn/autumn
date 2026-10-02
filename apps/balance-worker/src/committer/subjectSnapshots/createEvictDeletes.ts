@@ -3,13 +3,16 @@ import type { SubjectSnapshotControl } from "../../edgeConfig/subjectSnapshotsEd
 import type { Committer, PartitionPosition } from "../types/committer.js";
 import type { SubjectSnapshots } from "./types/subjectSnapshots.js";
 
-type PendingDrop = {
+type PendingEvictDelete = {
 	customer: SubjectSnapshotCustomer;
 	settled: ReturnType<typeof Promise.withResolvers<void>>;
 };
 
-/** A partition's drops not yet taken, and whether a lane DELETE is already queued to take them. */
-type PartitionDrops = { pending: Map<string, PendingDrop>; scheduled: boolean };
+/** A partition's evict deletes not yet taken, and whether a lane DELETE is already queued to take them. */
+type PartitionEvictDeletes = {
+	pending: Map<string, PendingEvictDelete>;
+	scheduled: boolean;
+};
 
 type SubjectSnapshotsContext = {
 	committer: Pick<Committer, "apply">;
@@ -20,13 +23,13 @@ type SubjectSnapshotsContext = {
 	}): Promise<void>;
 };
 
-/** Evicts collect per partition; each lane tick lands one DELETE, then settles the callers it took. */
-export const createSubjectSnapshots = ({
+/** Evicts collect per partition; each lane tick lands one DELETE, then settles the evicts it took. */
+export const createEvictDeletes = ({
 	ctx,
 }: {
 	ctx: SubjectSnapshotsContext;
 }): SubjectSnapshots => {
-	const byPartition = new Map<string, PartitionDrops>();
+	const byPartition = new Map<string, PartitionEvictDeletes>();
 
 	function dropCustomer({
 		topic,
@@ -34,28 +37,28 @@ export const createSubjectSnapshots = ({
 		customer,
 	}: Parameters<SubjectSnapshots["dropCustomer"]>[0]): Promise<void> {
 		const position = { topic, partition };
-		const drops = partitionDropsOf({ byPartition, position });
-		const existing = drops.pending.get(dropKeyOf({ customer }));
+		const drops = partitionEvictDeletesOf({ byPartition, position });
+		const existing = drops.pending.get(evictDeleteKeyOf({ customer }));
 		if (existing) return existing.settled.promise;
-		const drop = collectDrop({ drops, customer });
-		scheduleDelete({ position, drops });
+		const drop = collectEvictDelete({ drops, customer });
+		scheduleEvictDelete({ position, drops });
 		return drop.settled.promise;
 	}
 
-	function scheduleDelete({
+	function scheduleEvictDelete({
 		position,
 		drops,
 	}: {
 		position: PartitionPosition;
-		drops: PartitionDrops;
+		drops: PartitionEvictDeletes;
 	}): void {
 		if (drops.scheduled) return;
 		drops.scheduled = true;
-		void ctx.runInLane({ position, run: () => landDelete({ position }) });
+		void ctx.runInLane({ position, run: () => landEvictDelete({ position }) });
 	}
 
-	/** Never rejects: a failed DELETE rejects its callers, not the lane. */
-	async function landDelete({
+	/** Never rejects: a failed DELETE rejects its evicts, not the lane. */
+	async function landEvictDelete({
 		position,
 	}: {
 		position: PartitionPosition;
@@ -65,8 +68,8 @@ export const createSubjectSnapshots = ({
 		if (!drops) return;
 		drops.scheduled = false;
 		const { dropBatch } = ctx.snapshots.read();
-		const taken = takeDrops({ drops, dropBatch });
-		if (drops.pending.size > 0) scheduleDelete({ position, drops });
+		const taken = takeEvictDeletes({ drops, dropBatch });
+		if (drops.pending.size > 0) scheduleEvictDelete({ position, drops });
 		else byPartition.delete(key);
 		try {
 			// No claim: a DELETE is always safe to land, at worst it removes a row the new owner will write again.
@@ -93,13 +96,13 @@ function keyOf(position: PartitionPosition): string {
 	return `${position.topic}[${position.partition}]`;
 }
 
-function partitionDropsOf({
+function partitionEvictDeletesOf({
 	byPartition,
 	position,
 }: {
-	byPartition: Map<string, PartitionDrops>;
+	byPartition: Map<string, PartitionEvictDeletes>;
 	position: PartitionPosition;
-}): PartitionDrops {
+}): PartitionEvictDeletes {
 	const key = keyOf(position);
 	const drops = byPartition.get(key) ?? {
 		pending: new Map(),
@@ -109,7 +112,7 @@ function partitionDropsOf({
 	return drops;
 }
 
-function dropKeyOf({
+function evictDeleteKeyOf({
 	customer,
 }: {
 	customer: SubjectSnapshotCustomer;
@@ -117,29 +120,29 @@ function dropKeyOf({
 	return JSON.stringify([customer.orgId, customer.env, customer.customerId]);
 }
 
-function collectDrop({
+function collectEvictDelete({
 	drops,
 	customer,
 }: {
-	drops: PartitionDrops;
+	drops: PartitionEvictDeletes;
 	customer: SubjectSnapshotCustomer;
-}): PendingDrop {
-	const drop: PendingDrop = {
+}): PendingEvictDelete {
+	const drop: PendingEvictDelete = {
 		customer,
 		settled: Promise.withResolvers<void>(),
 	};
-	drops.pending.set(dropKeyOf({ customer }), drop);
+	drops.pending.set(evictDeleteKeyOf({ customer }), drop);
 	return drop;
 }
 
-function takeDrops({
+function takeEvictDeletes({
 	drops,
 	dropBatch,
 }: {
-	drops: PartitionDrops;
+	drops: PartitionEvictDeletes;
 	dropBatch: number;
-}): PendingDrop[] {
-	const taken: PendingDrop[] = [];
+}): PendingEvictDelete[] {
+	const taken: PendingEvictDelete[] = [];
 	for (const [key, drop] of drops.pending) {
 		if (taken.length >= dropBatch) break;
 		drops.pending.delete(key);

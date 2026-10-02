@@ -1,5 +1,5 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
-import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
+import type { DurableMutationRecord } from "../../../state/types/durableMutation.js";
 
 /** A record proves its subjects' state when it carried payloads, each the record's own subject, from a statement that saw their rows. */
 export const recordProvesState = ({
@@ -17,7 +17,7 @@ export const recordProvesState = ({
 };
 
 /** The statement's own snapshot cannot see a customer or entity row the same statement inserts. */
-export const recordCreatesSubject = ({
+const recordCreatesSubject = ({
 	record,
 }: {
 	record: DurableMutationRecord;
@@ -27,14 +27,6 @@ export const recordCreatesSubject = ({
 			(change.table === "customer" || change.table === "entity") &&
 			change.op === "insert",
 	);
-
-export const stateExceedsCap = ({
-	stateJson,
-	maxBytes,
-}: {
-	stateJson: string;
-	maxBytes: number;
-}): boolean => Buffer.byteLength(stateJson) > maxBytes;
 
 const isOwnSubject = ({
 	state,

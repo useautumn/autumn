@@ -8,7 +8,7 @@ import {
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
-import { createSubjectSnapshots } from "./subjectSnapshots/createSubjectSnapshots.js";
+import { createEvictDeletes } from "./subjectSnapshots/createEvictDeletes.js";
 import type {
 	Committer,
 	CommitterStateStore,
@@ -60,7 +60,7 @@ export const createCommitterStateStore = ({
 
 	// Evict DELETEs share the lane, so Postgres sees them in the order the partition asked.
 	const subjectSnapshots = config?.subjectSnapshots
-		? createSubjectSnapshots({
+		? createEvictDeletes({
 				ctx: {
 					committer: ctx.committer,
 					snapshots: config.subjectSnapshots,

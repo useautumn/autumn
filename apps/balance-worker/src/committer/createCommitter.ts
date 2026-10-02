@@ -1,7 +1,9 @@
+import type { SubjectSnapshotCustomer } from "@autumn/postgres";
+import { writesSnapshots } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import type { DurableMutationRecord } from "../state/types/durableMutation.js";
 import { landFlush } from "./actions/landFlush.js";
 import { takeFlush } from "./actions/takeFlush.js";
 import { CommitterStoppedError } from "./committerErrors.js";
-import { snapshotRowsOf } from "./subjectSnapshots/flushSnapshotGuards.js";
 import type {
 	Committer,
 	CommitterConfig,
@@ -127,5 +129,21 @@ function countRowChanges({
 }): number {
 	let rows = 0;
 	for (const record of records) rows += record.mutation.changes.length;
+	return rows;
+}
+
+/** Rows a call's snapshot writes add to its flush; nothing unless snapshots are written. */
+function snapshotRowsOf({
+	config,
+	records,
+	snapshotDrops,
+}: {
+	config: Pick<CommitterConfig, "snapshots">;
+	records: readonly DurableMutationRecord[];
+	snapshotDrops?: readonly SubjectSnapshotCustomer[];
+}): number {
+	if (!writesSnapshots({ snapshots: config.snapshots })) return 0;
+	let rows = snapshotDrops?.length ?? 0;
+	for (const record of records) rows += record.snapshots?.length ?? 0;
 	return rows;
 }

@@ -3,16 +3,17 @@ import type {
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "@autumn/postgres";
+import { writesSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterConfig, Flush } from "../types/committer.js";
-import { writesSnapshots } from "./flushSnapshotGuards.js";
 import {
 	type CustomerSnapshots,
 	customerEntryOf,
 	customerOf,
 	holdSubjectStates,
-	upsertRowsOf,
-} from "./snapshotRows.js";
-import { recordProvesState, stateExceedsCap } from "./snapshotWriteRules.js";
+} from "./rows/customerSnapshots.js";
+import { upsertRowsOf } from "./rows/upsertRowsOf.js";
+import { recordProvesState } from "./rules/recordProvesState.js";
+import { stateExceedsCap } from "./rules/stateExceedsCap.js";
 
 /** One action per customer per flush: upsert the last proven state of each of its subjects, else DELETE the customer. */
 export const collectSnapshotWrites = ({
@@ -24,7 +25,8 @@ export const collectSnapshotWrites = ({
 	flush: Flush;
 	onSizeCapped?: (params: { customers: number }) => void;
 }): SubjectSnapshotWrites | undefined => {
-	if (!config.snapshots || !writesSnapshots({ config })) return undefined;
+	if (!config.snapshots || !writesSnapshots({ snapshots: config.snapshots }))
+		return undefined;
 	const { partitionCount } = config.snapshots;
 	const { maxBytes } = config.snapshots.read();
 	const byCustomer = new Map<string, CustomerSnapshots>();
