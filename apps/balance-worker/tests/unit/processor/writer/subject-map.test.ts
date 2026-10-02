@@ -57,6 +57,16 @@ describe("createSubjectMap", () => {
 		map.evictCustomer({ customerKey });
 	});
 
+	test("a subject's own weight is readable, and an absent subject has none", () => {
+		const map = createSubjectMap();
+		const state = createState();
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		expect(map.bytesOf({ subjectKey: customerKey })).toBe(
+			JSON.stringify(state).length,
+		);
+		expect(map.bytesOf({ subjectKey: "absent" })).toBeNull();
+	});
+
 	test("a pinned subject stays until its last pin is released, then goes", () => {
 		const map = createSubjectMap();
 		const state = createState();
