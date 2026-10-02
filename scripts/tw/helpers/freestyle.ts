@@ -33,6 +33,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import chalk from "chalk";
+import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
 import { Freestyle } from "freestyle";
 import {
 	BALANCE_WORKER_PORT,
@@ -52,7 +53,6 @@ import {
 	WORKER_TIMEOUT_MS,
 } from "../constants.ts";
 import { READY_SENTINEL } from "../worker/boot.ts";
-import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
 import { narrate, sink } from "./logSink.ts";
 import { resolveBakedPlaywrightVersion } from "./playwrightVersion.ts";
 import type {
@@ -341,8 +341,6 @@ const warmServerEnv = (): Record<string, string> => {
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 		BALANCE_SYNC_SQS_QUEUE_URL,
 		SQS_QUEUE_URL_V2,
-		// The primary queue: the worker consumes it, and processMessage dispatches by job name.
-		CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL: SQS_QUEUE_URL_V2,
 		STRIPE_WEBHOOK_SQS_QUEUE_URL,
 		TRACK_SQS_QUEUE_URL,
 		TRACK_ASYNC_SQS_QUEUE_URL,

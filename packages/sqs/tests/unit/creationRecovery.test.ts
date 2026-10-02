@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { createSqsEnv } from "@autumn/env/sqs";
 import { ApiVersion, AppEnv } from "@autumn/shared";
 import {
 	creationRecoveryGroupId,
@@ -13,6 +14,7 @@ import {
 	entityCreationRecoveryJob,
 } from "../../src/jobs/creationRecovery.js";
 import { jobCatalogue } from "../../src/jobs/jobs.js";
+import { queues } from "../../src/queues/queues.js";
 
 const customerPayload = {
 	orgId: "org_1",
@@ -52,6 +54,25 @@ describe("creation recovery jobs", () => {
 			customerCreationRecoveryJob,
 		);
 		expect(jobCatalogue.entityCreationRecovery).toBe(entityCreationRecoveryJob);
+	});
+
+	test("the recovery queue falls back to the general FIFO, whose consumer dispatches by job name", () => {
+		const general = "https://sqs.us-east-2.amazonaws.com/1/autumn.fifo";
+		const dedicated =
+			"https://sqs.us-east-2.amazonaws.com/1/customer-creation-recovery.fifo";
+		expect(
+			queues.customerCreationRecovery.url(
+				createSqsEnv({ SQS_QUEUE_URL_V2: general }),
+			),
+		).toBe(general);
+		expect(
+			queues.customerCreationRecovery.url(
+				createSqsEnv({
+					SQS_QUEUE_URL_V2: general,
+					CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL: dedicated,
+				}),
+			),
+		).toBe(dedicated);
 	});
 
 	test("a customer payload carries its stage; an entity payload carries none, it replays in full", () => {

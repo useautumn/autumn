@@ -109,8 +109,6 @@ export function provisionedInfraEnv(
 		TRACK_ASYNC_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: queueUrl("autumn-track-async"),
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: queueUrl("autumn-stripe-webhook.fifo"),
-		// The primary queue: the workers process consumes it, and processMessage dispatches by job name.
-		CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL: queueUrl("autumn.fifo"),
 		AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN: FAKECLOUD_SCHEDULER_ROLE_ARN,
 	};
 }
