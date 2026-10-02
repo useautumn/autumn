@@ -30,14 +30,19 @@ export function StripeItemMatchIcon({
 }) {
 	if (!mark) return null;
 	const { label, tone, glyph } = STRIPE_ITEM_MATCHES[mark];
+	const description = tooltip ?? label;
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<span className="flex">
+				<button
+					type="button"
+					aria-label={description}
+					className="flex cursor-default rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				>
 					<StatusChipIcon tone={tone} glyph={glyph} />
-				</span>
+				</button>
 			</TooltipTrigger>
-			<TooltipContent>{tooltip ?? label}</TooltipContent>
+			<TooltipContent>{description}</TooltipContent>
 		</Tooltip>
 	);
 }
