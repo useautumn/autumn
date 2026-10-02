@@ -25,7 +25,7 @@
  *   warmFullSubjectCacheTask.ts and writes the expected Redis keys.
  */
 
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -37,6 +37,16 @@ import {
 	invalidateCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { runWarmFullSubjectCache } from "@/trigger/cache/warmFullSubjectCacheTask.js";
+
+// Worker-routed customers never use the Redis subject cache, so the warmer only applies on the legacy path.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
+afterAll(() => {
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
+});
 
 test(
 	`${chalk.yellowBright("cache warmer: hydrates customer + every entity after invalidation")}`,
