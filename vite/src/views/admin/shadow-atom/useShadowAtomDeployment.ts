@@ -6,7 +6,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import type {
 	ShadowAtomCreated,
 	ShadowAtomDeployment,
-	ShadowAtomEnv,
 	ShadowAtomMachine,
 } from "./shadowAtomTypes";
 import { SHADOW_ATOM_CONFIG_QUERY_KEY } from "./useShadowAtomConfig";
@@ -14,11 +13,11 @@ import { SHADOW_ATOM_CONFIG_QUERY_KEY } from "./useShadowAtomConfig";
 const POLL_MS = 10_000;
 
 /** Our shadow Atom on alien: its state, polled until ready, and create / resize / delete. */
-export const useShadowAtomDeployment = ({ env }: { env: ShadowAtomEnv }) => {
+export const useShadowAtomDeployment = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
-	const path = `/admin/shadow-atom-config/${env}/deployment`;
-	const queryKey = ["admin-shadow-atom-deployment", env];
+	const path = "/admin/shadow-atom-config/deployment";
+	const queryKey = ["admin-shadow-atom-deployment"];
 
 	const query = useQuery<ShadowAtomDeployment | null>({
 		queryKey,
@@ -49,7 +48,6 @@ export const useShadowAtomDeployment = ({ env }: { env: ShadowAtomEnv }) => {
 		): Promise<ShadowAtomCreated> => {
 			const { data: minted } = await axiosInstance.post(
 				"/admin/shadow-atom-config/token",
-				{ env },
 			);
 			const { data } = await axiosInstance.post(path, {
 				...machine,

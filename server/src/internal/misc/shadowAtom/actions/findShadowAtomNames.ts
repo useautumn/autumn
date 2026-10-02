@@ -1,18 +1,12 @@
-import { type AppEnv, organizations } from "@autumn/shared";
+import { organizations } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { shadowAtomConfigStore } from "../shadowAtomConfigStore.js";
 
-/** Name and slug for every org registered on the env's shadow Atom. */
-export const findShadowAtomNames = async ({
-	db,
-	env,
-}: {
-	db: DrizzleCli;
-	env: AppEnv;
-}) => {
+/** Name and slug for every org registered on the shadow Atom. */
+export const findShadowAtomNames = async ({ db }: { db: DrizzleCli }) => {
 	const orgIds = Object.keys(
-		(await shadowAtomConfigStore.readFromSource())[env].orgs,
+		(await shadowAtomConfigStore.readFromSource()).orgs,
 	);
 	const orgs =
 		orgIds.length > 0

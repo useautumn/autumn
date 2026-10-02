@@ -56,12 +56,10 @@ const alienClient: AlienClient = {
 	revokeSetupLinks: async () => {},
 };
 
-const configWith = (
-	sandbox: Partial<ShadowAtomConfig["sandbox"]>,
-): ShadowAtomConfig => {
-	const config = shadowAtomConfig.defaultValue();
-	return { ...config, sandbox: { ...config.sandbox, ...sandbox } };
-};
+const configWith = (patch: Partial<ShadowAtomConfig>): ShadowAtomConfig => ({
+	...shadowAtomConfig.defaultValue(),
+	...patch,
+});
 
 let stored = shadowAtomConfig.defaultValue();
 const getAlien = spyOn(alienClientModule, "getAlienClient").mockReturnValue(
@@ -108,7 +106,7 @@ const createApp = ({ scopes }: { scopes: string[] }) => {
 							: 500,
 			}),
 	);
-	const path = "/admin/shadow-atom-config/:env/deployment";
+	const path = "/admin/shadow-atom-config/deployment";
 	app.get(path, ...handleGetAdminShadowAtomDeployment);
 	app.post(path, ...handleCreateAdminShadowAtomDeployment);
 	app.patch(path, ...handleResizeAdminShadowAtomDeployment);
@@ -120,16 +118,14 @@ const staff = [Scopes.Superuser];
 
 const send = ({
 	method,
-	env = "sandbox",
 	body,
 	scopes = staff,
 }: {
 	method: string;
-	env?: string;
 	body?: unknown;
 	scopes?: string[];
 }) =>
-	createApp({ scopes }).request(`/admin/shadow-atom-config/${env}/deployment`, {
+	createApp({ scopes }).request("/admin/shadow-atom-config/deployment", {
 		method,
 		headers: { "Content-Type": "application/json" },
 		body: body === undefined ? undefined : JSON.stringify(body),
@@ -165,8 +161,7 @@ test("staff create the shadow Atom with the customer's alien stack, in multi-ten
 		ATOM_TOKEN_HASH: "admin_hash",
 	});
 	expect(variables.ATOM_ADMIN_TOKEN_HASH).toBeUndefined();
-	expect(lastWritten()?.sandbox.deploymentGroupId).toBe("dg_1");
-	expect(lastWritten()?.live.deploymentGroupId).toBeNull();
+	expect(lastWritten()?.deploymentGroupId).toBe("dg_1");
 });
 
 test("a machine that is not offered is refused before alien is called", async () => {
@@ -202,7 +197,7 @@ test("reading a running deployment saves its endpoint into the config, once", as
 			machine: { cpu: 2, memory: 1 },
 		},
 	});
-	expect(lastWritten()?.sandbox.endpointUrl).toBe(ENDPOINT);
+	expect(lastWritten()?.endpointUrl).toBe(ENDPOINT);
 
 	write.mockClear();
 	stored = configWith({ deploymentGroupId: "dg_1", endpointUrl: ENDPOINT });
@@ -255,8 +250,8 @@ test("an endpoint alien no longer reports is cleared, so the shadow check stops"
 
 	await send({ method: "GET" });
 
-	expect(lastWritten()?.sandbox.endpointUrl).toBeNull();
-	expect(lastWritten()?.sandbox.deploymentGroupId).toBe("dg_1");
+	expect(lastWritten()?.endpointUrl).toBeNull();
+	expect(lastWritten()?.deploymentGroupId).toBe("dg_1");
 });
 
 test("resize with nothing deployed is a 409", async () => {
@@ -272,7 +267,7 @@ test("delete tears the deployment down and forgets its group, endpoint and regis
 		endpointUrl: ENDPOINT,
 		orgs: {
 			org_1: {
-				encryptedToken: "enc",
+				encryptedTokens: { sandbox: "enc", live: "enc" },
 				registeredAt: 1,
 				percent: 100,
 				previousPercent: 0,
@@ -287,7 +282,7 @@ test("delete tears the deployment down and forgets its group, endpoint and regis
 	expect(response.status).toBe(200);
 	expect(await response.json()).toEqual({ deleted: true });
 	expect(calls.deleted).toHaveLength(1);
-	expect(lastWritten()?.sandbox).toMatchObject({
+	expect(lastWritten()).toMatchObject({
 		deploymentGroupId: null,
 		endpointUrl: null,
 		orgs: {},

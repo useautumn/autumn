@@ -10,19 +10,19 @@ import { createHonoApp } from "@/initHono.js";
 import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 
 const ROUTES = [
-	{ method: "GET", path: "/admin/shadow-atom-config/live/names" },
-	{ method: "GET", path: "/admin/shadow-atom-config/sandbox/deployment" },
+	{ method: "GET", path: "/admin/shadow-atom-config/names" },
+	{ method: "GET", path: "/admin/shadow-atom-config/deployment" },
 	{
 		method: "POST",
-		path: "/admin/shadow-atom-config/sandbox/deployment",
+		path: "/admin/shadow-atom-config/deployment",
 		body: { admin_token_hash: "a".repeat(64), cpu: 2, memory: 1 },
 	},
 	{
 		method: "PATCH",
-		path: "/admin/shadow-atom-config/live/deployment",
+		path: "/admin/shadow-atom-config/deployment",
 		body: { cpu: 2, memory: 4 },
 	},
-	{ method: "DELETE", path: "/admin/shadow-atom-config/live/deployment" },
+	{ method: "DELETE", path: "/admin/shadow-atom-config/deployment" },
 ] as const;
 
 let app: ReturnType<typeof createHonoApp>;

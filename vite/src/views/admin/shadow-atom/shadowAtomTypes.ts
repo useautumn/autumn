@@ -1,18 +1,13 @@
 import type { ByocCacheStatus } from "@autumn/shared";
 import type { RolloutOrg } from "../edge-config/rolloutTypes";
 
-export const SHADOW_ATOM_ENVS = ["sandbox", "live"] as const;
-export type ShadowAtomEnv = (typeof SHADOW_ATOM_ENVS)[number];
-
-/** One env as `GET /admin/shadow-atom-config` returns it: no token, encrypted or not. */
-export type ShadowAtomEnvView = {
+/** `GET /admin/shadow-atom-config`: one config for both envs, no token, encrypted or not. */
+export type ShadowAtomConfigView = {
 	endpointUrl: string | null;
 	hasAdminToken: boolean;
 	/** A registered org and the share of its customers the shadow Atom holds. */
 	orgs: Record<string, { registeredAt: number; percent: number }>;
 };
-
-export type ShadowAtomConfigView = Record<ShadowAtomEnv, ShadowAtomEnvView>;
 
 export type ShadowAtomMachine = { cpu: number; memory: number };
 
@@ -29,5 +24,5 @@ export type ShadowAtomCreated = {
 	setupUrl: string | null;
 };
 
-/** Registered orgs' names, from `GET /admin/shadow-atom-config/:env/names`. */
+/** Registered orgs' names, from `GET /admin/shadow-atom-config/names`. */
 export type ShadowAtomNames = { orgsById: Record<string, RolloutOrg> };

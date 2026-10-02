@@ -210,23 +210,23 @@ honoAdminRouter.delete(
 	...handleUnregisterAdminShadowAtomOrg,
 );
 honoAdminRouter.get(
-	"/shadow-atom-config/:env/names",
+	"/shadow-atom-config/names",
 	...handleGetAdminShadowAtomNames,
 );
 honoAdminRouter.get(
-	"/shadow-atom-config/:env/deployment",
+	"/shadow-atom-config/deployment",
 	...handleGetAdminShadowAtomDeployment,
 );
 honoAdminRouter.post(
-	"/shadow-atom-config/:env/deployment",
+	"/shadow-atom-config/deployment",
 	...handleCreateAdminShadowAtomDeployment,
 );
 honoAdminRouter.patch(
-	"/shadow-atom-config/:env/deployment",
+	"/shadow-atom-config/deployment",
 	...handleResizeAdminShadowAtomDeployment,
 );
 honoAdminRouter.delete(
-	"/shadow-atom-config/:env/deployment",
+	"/shadow-atom-config/deployment",
 	...handleDeleteAdminShadowAtomDeployment,
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);

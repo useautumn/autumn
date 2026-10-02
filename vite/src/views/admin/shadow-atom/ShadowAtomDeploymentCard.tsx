@@ -17,7 +17,7 @@ const Field = ({ label, value }: { label: string; value: string }) => (
 	</div>
 );
 
-/** One env's shadow Atom: where it stands on alien, and create / resize / delete. */
+/** Our shadow Atom: where it stands on alien, and create / resize / delete. */
 export const ShadowAtomDeploymentCard = ({
 	deployment,
 	created,

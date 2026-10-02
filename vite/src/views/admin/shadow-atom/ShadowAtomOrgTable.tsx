@@ -8,13 +8,13 @@ import { ShadowAtomAddOrgForm } from "./ShadowAtomAddOrgForm";
 import { ORG_TABLE_COLUMNS, ShadowAtomOrgRow } from "./ShadowAtomOrgRow";
 import { ShadowAtomSecret } from "./ShadowAtomSecret";
 import { orgLabel } from "./shadowAtomNames";
-import type { ShadowAtomEnvView, ShadowAtomNames } from "./shadowAtomTypes";
+import type { ShadowAtomConfigView, ShadowAtomNames } from "./shadowAtomTypes";
 
 const HEADERS = ["Org", "Percent", "Status", ""];
 
-/** The orgs on the env's shadow Atom, each with the share of its customers pushed there and shadowed. */
+/** The orgs on the shadow Atom, each with the share of its customers pushed there and shadowed. */
 export const ShadowAtomOrgTable = ({
-	envConfig,
+	config,
 	names,
 	issued,
 	onAdd,
@@ -23,9 +23,9 @@ export const ShadowAtomOrgTable = ({
 	isAdding,
 	isBusy,
 }: {
-	envConfig: ShadowAtomEnvView;
+	config: ShadowAtomConfigView;
 	names: ShadowAtomNames;
-	issued: { orgId: string; token: string } | null;
+	issued: { orgId: string; tokens: Record<"sandbox" | "live", string> } | null;
 	onAdd: ({
 		orgId,
 		percent,
@@ -45,8 +45,8 @@ export const ShadowAtomOrgTable = ({
 	/** Any add, percent change or remove in flight: every control waits for it. */
 	isBusy: boolean;
 }) => {
-	const orgs = Object.entries(envConfig.orgs);
-	const isReady = Boolean(envConfig.endpointUrl && envConfig.hasAdminToken);
+	const orgs = Object.entries(config.orgs);
+	const isReady = Boolean(config.endpointUrl && config.hasAdminToken);
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -70,13 +70,15 @@ export const ShadowAtomOrgTable = ({
 					/>
 				))}
 			</div>
-			{issued && (
-				<ShadowAtomSecret
-					label={`Token for ${orgLabel({ names, orgId: issued.orgId }).title}`}
-					value={issued.token}
-					hint="Shown once. Adding the org again rotates it."
-				/>
-			)}
+			{issued &&
+				(["sandbox", "live"] as const).map((env) => (
+					<ShadowAtomSecret
+						key={env}
+						label={`${env === "sandbox" ? "Sandbox" : "Live"} token for ${orgLabel({ names, orgId: issued.orgId }).title}`}
+						value={issued.tokens[env]}
+						hint="Shown once. Adding the org again rotates it."
+					/>
+				))}
 			{!isReady && (
 				<p className="text-xs text-tertiary-foreground">
 					Adding and changing orgs need a ready shadow Atom: its endpoint and

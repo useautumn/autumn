@@ -1,30 +1,29 @@
 import { RolloutSection } from "../edge-config/RolloutSection";
 import { ShadowAtomOrgTable } from "./ShadowAtomOrgTable";
 import { ShadowAtomSectionBody } from "./ShadowAtomSectionBody";
-import type { ShadowAtomEnv } from "./shadowAtomTypes";
 import { useShadowAtomConfig } from "./useShadowAtomConfig";
 import { useShadowAtomNames } from "./useShadowAtomNames";
 import { useShadowAtomOrgs } from "./useShadowAtomOrgs";
 
-export const ShadowAtomOrgsSection = ({ env }: { env: ShadowAtomEnv }) => {
-	const { query, envConfig } = useShadowAtomConfig({ env });
-	const { add, setPercent, remove, isBusy } = useShadowAtomOrgs({ env });
-	const names = useShadowAtomNames({ env });
+export const ShadowAtomOrgsSection = () => {
+	const query = useShadowAtomConfig();
+	const { add, setPercent, remove, isBusy } = useShadowAtomOrgs();
+	const names = useShadowAtomNames();
 
 	return (
 		<RolloutSection
 			title="Orgs on the shadow Atom"
-			description="Each org's percent is the share of its customers pushed to the shadow Atom and checked against it."
+			description="Each org's percent is the share of its customers, sandbox and live, pushed to the shadow Atom and checked against it."
 		>
 			<ShadowAtomSectionBody
 				isError={query.isError}
-				isPending={!envConfig}
+				isPending={!query.data}
 				what="the shadow Atom config"
 				onRetry={() => void query.refetch()}
 			>
-				{envConfig && (
+				{query.data && (
 					<ShadowAtomOrgTable
-						envConfig={envConfig}
+						config={query.data}
 						names={names}
 						issued={add.data ?? null}
 						onAdd={(params) =>

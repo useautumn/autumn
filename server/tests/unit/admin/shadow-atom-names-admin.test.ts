@@ -9,16 +9,13 @@ import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConf
 const config: ShadowAtomConfig = (() => {
 	const base = shadowAtomConfig.defaultValue();
 	const org = (registeredAt: number) => ({
-		encryptedToken: "enc",
+		encryptedTokens: { sandbox: "enc", live: "enc" },
 		registeredAt,
 		percent: 100,
 		previousPercent: 0,
 		changedAt: 0,
 	});
-	return {
-		...base,
-		sandbox: { ...base.sandbox, orgs: { org_a: org(1), org_b: org(2) } },
-	};
+	return { ...base, orgs: { org_a: org(1), org_b: org(2) } };
 })();
 const read = spyOn(shadowAtomConfigStore, "readFromSource").mockResolvedValue(
 	config,
@@ -49,14 +46,11 @@ const fetchNames = ({ scopes }: { scopes: string[] }) => {
 				status: error instanceof RecaseError ? error.statusCode : 500,
 			}),
 	);
-	app.get(
-		"/admin/shadow-atom-config/:env/names",
-		...handleGetAdminShadowAtomNames,
-	);
-	return app.request("/admin/shadow-atom-config/sandbox/names");
+	app.get("/admin/shadow-atom-config/names", ...handleGetAdminShadowAtomNames);
+	return app.request("/admin/shadow-atom-config/names");
 };
 
-test("staff get the name and slug of every org registered on the env's shadow Atom", async () => {
+test("staff get the name and slug of every org registered on the shadow Atom", async () => {
 	const response = await fetchNames({ scopes: [Scopes.Superuser] });
 
 	expect(response.status).toBe(200);

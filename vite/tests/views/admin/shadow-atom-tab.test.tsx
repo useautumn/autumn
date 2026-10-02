@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ShadowAtomDeploymentCard } from "../../../src/views/admin/shadow-atom/ShadowAtomDeploymentCard";
 import { ShadowAtomOrgTable } from "../../../src/views/admin/shadow-atom/ShadowAtomOrgTable";
 import type {
+	ShadowAtomConfigView,
 	ShadowAtomDeployment,
-	ShadowAtomEnvView,
 	ShadowAtomNames,
 } from "../../../src/views/admin/shadow-atom/shadowAtomTypes";
 
@@ -18,15 +18,15 @@ const names: ShadowAtomNames = {
 };
 
 const envView = (
-	overrides: Partial<ShadowAtomEnvView> = {},
-): ShadowAtomEnvView => ({
+	overrides: Partial<ShadowAtomConfigView> = {},
+): ShadowAtomConfigView => ({
 	endpointUrl: null,
 	hasAdminToken: false,
 	orgs: {},
 	...overrides,
 });
 
-const ready = (orgs: ShadowAtomEnvView["orgs"]) =>
+const ready = (orgs: ShadowAtomConfigView["orgs"]) =>
 	envView({
 		endpointUrl: "https://shadow-atom.example.com",
 		hasAdminToken: true,
@@ -104,12 +104,15 @@ const renderOrgs = ({
 	envConfig,
 	issued = null,
 }: {
-	envConfig: ShadowAtomEnvView;
-	issued?: { orgId: string; token: string } | null;
+	envConfig: ShadowAtomConfigView;
+	issued?: {
+		orgId: string;
+		tokens: Record<"sandbox" | "live", string>;
+	} | null;
 }) =>
 	renderToStaticMarkup(
 		<ShadowAtomOrgTable
-			envConfig={envConfig}
+			config={envConfig}
 			names={names}
 			issued={issued}
 			onAdd={added}
@@ -145,7 +148,10 @@ describe("orgs on the shadow Atom", () => {
 				org_test_1: { registeredAt: 1, percent: 40 },
 				org_test_2: { registeredAt: 2, percent: 0 },
 			}),
-			issued: { orgId: "org_test_1", token: "atom_secret_example" },
+			issued: {
+				orgId: "org_test_1",
+				tokens: { sandbox: "atom_sandbox_example", live: "atom_live_example" },
+			},
 		});
 
 		expect(html).toContain("Example Org");
@@ -155,8 +161,10 @@ describe("orgs on the shadow Atom", () => {
 		expect(html).toMatch(/aria-label="Percent for org_test_2" value="0"/);
 		expect(html).toContain("Registered");
 		expect(html).toContain("Remove Example Org");
-		expect(html).toContain("Token for Example Org");
-		expect(html).toContain("atom_secret_example");
+		expect(html).toContain("Sandbox token for Example Org");
+		expect(html).toContain("Live token for Example Org");
+		expect(html).toContain("atom_sandbox_example");
+		expect(html).toContain("atom_live_example");
 	});
 
 	test("no env percent, customer pins or settle window are shown", () => {
@@ -167,4 +175,16 @@ describe("orgs on the shadow Atom", () => {
 		for (const gone of ["Pinned", "customer", "settle", "Every org follows"])
 			expect(html).not.toContain(gone);
 	});
+});
+
+test("the page has no Sandbox/Live switch: one shadow Atom serves both envs", async () => {
+	const source = await Bun.file(
+		new URL(
+			"../../../src/views/admin/shadow-atom/ShadowAtomTab.tsx",
+			import.meta.url,
+		),
+	).text();
+
+	expect(source).not.toContain("TabsTrigger");
+	expect(source).not.toContain("shadow_env");
 });

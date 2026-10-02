@@ -1,4 +1,4 @@
-import { AppEnv, Scopes } from "@autumn/shared";
+import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { resourcesToMachine } from "@/internal/byoc/utils/byocCacheUtils.js";
@@ -7,8 +7,6 @@ import { findShadowAtom } from "@/internal/misc/shadowAtom/actions/findShadowAto
 import { resizeShadowAtom } from "@/internal/misc/shadowAtom/actions/resizeShadowAtom.js";
 import { startShadowAtom } from "@/internal/misc/shadowAtom/actions/startShadowAtom.js";
 
-const EnvParamsSchema = z.object({ env: z.enum(AppEnv) });
-
 const MachineSchema = z.object({
 	cpu: z.number().positive(),
 	memory: z.number().positive(),
@@ -16,9 +14,8 @@ const MachineSchema = z.object({
 
 export const handleGetAdminShadowAtomDeployment = createRoute({
 	scopes: [Scopes.Superuser],
-	params: EnvParamsSchema,
 	handler: async (c) => {
-		const deployment = await findShadowAtom(c.req.valid("param"));
+		const deployment = await findShadowAtom();
 		if (!deployment) return c.json({ deployment: null });
 		const { machine } = deployment;
 		return c.json({
@@ -35,13 +32,10 @@ export const handleGetAdminShadowAtomDeployment = createRoute({
 /** Starts our shadow Atom on alien with the admin token hash the token mint returned. */
 export const handleCreateAdminShadowAtomDeployment = createRoute({
 	scopes: [Scopes.Superuser],
-	params: EnvParamsSchema,
 	body: MachineSchema.extend({ admin_token_hash: z.string().min(1) }),
 	handler: async (c) => {
-		const { env } = c.req.valid("param");
 		const { admin_token_hash, ...resources } = c.req.valid("json");
 		const setup = await startShadowAtom({
-			env,
 			adminTokenHash: admin_token_hash,
 			machine: resourcesToMachine(resources),
 		});
@@ -54,12 +48,9 @@ export const handleCreateAdminShadowAtomDeployment = createRoute({
 
 export const handleResizeAdminShadowAtomDeployment = createRoute({
 	scopes: [Scopes.Superuser],
-	params: EnvParamsSchema,
 	body: MachineSchema,
 	handler: async (c) => {
-		const { env } = c.req.valid("param");
 		await resizeShadowAtom({
-			env,
 			machine: resourcesToMachine(c.req.valid("json")),
 		});
 		return c.json({ resized: true });
@@ -68,9 +59,8 @@ export const handleResizeAdminShadowAtomDeployment = createRoute({
 
 export const handleDeleteAdminShadowAtomDeployment = createRoute({
 	scopes: [Scopes.Superuser],
-	params: EnvParamsSchema,
 	handler: async (c) => {
-		await deleteShadowAtom(c.req.valid("param"));
+		await deleteShadowAtom();
 		return c.json({ deleted: true });
 	},
 });

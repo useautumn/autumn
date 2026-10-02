@@ -1,17 +1,10 @@
 import { RolloutSection } from "../edge-config/RolloutSection";
 import { ShadowAtomDeploymentCard } from "./ShadowAtomDeploymentCard";
 import { ShadowAtomSectionBody } from "./ShadowAtomSectionBody";
-import type { ShadowAtomEnv } from "./shadowAtomTypes";
 import { useShadowAtomDeployment } from "./useShadowAtomDeployment";
 
-export const ShadowAtomDeploymentSection = ({
-	env,
-}: {
-	env: ShadowAtomEnv;
-}) => {
-	const { query, create, resize, remove, isBusy } = useShadowAtomDeployment({
-		env,
-	});
+export const ShadowAtomDeploymentSection = () => {
+	const { query, create, resize, remove, isBusy } = useShadowAtomDeployment();
 
 	return (
 		<RolloutSection
@@ -31,7 +24,7 @@ export const ShadowAtomDeploymentSection = ({
 					onCreate={(machine) => create.mutate(machine)}
 					onResize={(machine) => resize.mutate(machine)}
 					onDelete={() => {
-						if (window.confirm(`Delete the ${env} shadow Atom and its data?`))
+						if (window.confirm("Delete the shadow Atom and its data?"))
 							remove.mutate();
 					}}
 					isCreating={create.isPending}

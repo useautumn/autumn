@@ -53,6 +53,7 @@ describe("shadowAtomConfig", () => {
 	test("there are no per-env keys: one config serves both envs", () => {
 		expect(Object.keys(shadowAtomConfig.defaultValue()).sort()).toEqual([
 			"adminEncryptedToken",
+			"deploymentGroupId",
 			"endpointUrl",
 			"orgs",
 		]);
@@ -161,18 +162,12 @@ test("a save sets only the address; admin token and orgs stay, whatever the call
 	expect(saved.orgs).toEqual(orgs);
 });
 
-test("a save keeps each env's deployment group, whatever the caller sent", () => {
-	const current = ShadowAtomConfigSchema.parse({
-		sandbox: { deploymentGroupId: "dg_sandbox" },
-		live: { deploymentGroupId: "dg_live" },
-	});
+test("a save keeps the deployment group, whatever the caller sent", () => {
+	const current = ShadowAtomConfigSchema.parse({ deploymentGroupId: "dg_1" });
 	const saved = applyShadowAtomSettings({
 		current,
-		next: ShadowAtomConfigSchema.parse({
-			live: { deploymentGroupId: "dg_x" },
-		}),
+		next: ShadowAtomConfigSchema.parse({ deploymentGroupId: "dg_x" }),
 	});
 
-	expect(saved.sandbox.deploymentGroupId).toBe("dg_sandbox");
-	expect(saved.live.deploymentGroupId).toBe("dg_live");
+	expect(saved.deploymentGroupId).toBe("dg_1");
 });
