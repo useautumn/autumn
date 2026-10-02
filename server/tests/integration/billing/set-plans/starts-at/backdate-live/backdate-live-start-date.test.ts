@@ -44,7 +44,7 @@ test.concurrent(
 		expectPreviewWarning({
 			preview,
 			type: "subscription_recreated_backdated",
-			messageContains: ["cancelled and recreated starting"],
+			messageContains: ["cancelled and recreated from"],
 		});
 		expect(
 			preview.processor_changes.map(({ id, action }) => [id, action]),

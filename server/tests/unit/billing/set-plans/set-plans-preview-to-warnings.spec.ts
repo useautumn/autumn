@@ -461,7 +461,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				type: "subscription_recreated_backdated",
 				severity: "warning",
 				message:
-					"The current subscription will be cancelled and recreated starting 20 Aug 2026; billing continues from 11 Oct 2026.",
+					"The current subscription will be cancelled and recreated from 20 Aug 2026. Billing then continues on 11 Oct 2026.",
 			},
 		]);
 	});
@@ -512,7 +512,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 
 	test("a backdate before the live start says whether the time before it is billed", () => {
 		expect(backdateRecreateMessage({})).toBe(
-			"The current subscription will be cancelled and recreated starting 20 Aug 2026; the time before 30 Aug 2026 isn't billed; billing continues from 11 Oct 2026.",
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. The time before 30 Aug 2026 isn't billed. Billing then continues on 11 Oct 2026.",
 		);
 		expect(
 			backdateRecreateMessage({
@@ -520,7 +520,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				lineItems: [gapLineItem],
 			}),
 		).toBe(
-			"The current subscription will be cancelled and recreated starting 20 Aug 2026; $33.33 is billed for the time before 30 Aug 2026; billing continues from 11 Oct 2026.",
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. $33.33 is billed now for the time before 30 Aug 2026. Billing then continues on 11 Oct 2026.",
 		);
 	});
 
@@ -531,7 +531,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				billingCycleAnchorMs: NOON_UTC + 21 * DAY_MS,
 			}),
 		).toBe(
-			"The current subscription will be cancelled and recreated starting 20 Aug 2026; the time before 30 Aug 2026 isn't billed; the billing cycle restarts from it and renews on 20 Oct 2026.",
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. The time before 30 Aug 2026 isn't billed. The billing cycle restarts from 20 Aug 2026 and renews on 20 Oct 2026.",
 		);
 	});
 

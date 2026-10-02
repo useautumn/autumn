@@ -89,9 +89,9 @@ const backdateGapParts = ({
 	const gapEnd = formatMsToDate(gap.end);
 	if (!billsBackdateGap({ billingContext })) {
 		return [
-			plainText("the time before"),
+			plainText("The time before"),
 			boldText(gapEnd),
-			plainText("isn't billed;"),
+			plainText("isn't billed."),
 		];
 	}
 
@@ -104,8 +104,8 @@ const backdateGapParts = ({
 	});
 	return [
 		boldText(gapTotal),
-		plainText("is billed for the time before"),
-		boldText(`${gapEnd};`),
+		plainText("is billed now for the time before"),
+		boldText(`${gapEnd}.`),
 	];
 };
 
@@ -122,18 +122,23 @@ const backdateRecreateWarning = ({
 	if (subscriptionBackdateStartMs === undefined) return undefined;
 	if (typeof billingCycleAnchorMs !== "number") return undefined;
 
+	const backdateStart = formatMsToDate(subscriptionBackdateStartMs);
 	const renewal = restartsCycleAtBackdatedStart({ billingContext })
-		? plainText("the billing cycle restarts from it and renews on")
-		: plainText("billing continues from");
+		? [
+				plainText("The billing cycle restarts from"),
+				boldText(backdateStart),
+				plainText("and renews on"),
+			]
+		: [plainText("Billing then continues on")];
 	return {
 		type: "subscription_recreated_backdated",
 		...warningText([
 			plainText(
-				"The current subscription will be cancelled and recreated starting",
+				"The current subscription will be cancelled and recreated from",
 			),
-			boldText(`${formatMsToDate(subscriptionBackdateStartMs)};`),
+			boldText(`${backdateStart}.`),
 			...backdateGapParts({ billingContext, lineItems }),
-			renewal,
+			...renewal,
 			boldText(`${formatMsToDate(billingCycleAnchorMs)}.`),
 		]),
 	};
