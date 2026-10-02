@@ -44,6 +44,7 @@ import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRat
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
+import { handleGetAdminShadowAtomConfig } from "./handleGetAdminShadowAtomConfig.js";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
@@ -53,6 +54,7 @@ import { handleGetOrgMember } from "./handleGetOrgMember";
 import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
+import { handleMintAdminShadowAtomToken } from "./handleMintAdminShadowAtomToken.js";
 import { handleSearchAdminOrgCustomers } from "./handleSearchAdminOrgCustomers";
 import {
 	handleCreateSlackAdminInstall,
@@ -79,6 +81,7 @@ import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAd
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
+import { handleUpsertAdminShadowAtomConfig } from "./handleUpsertAdminShadowAtomConfig.js";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
 import { handleCreateImpersonationCliTokens } from "./impersonation/handleCreateImpersonationCliTokens";
@@ -174,6 +177,15 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/balance-shadow-config",
 	...handleUpsertAdminBalanceShadowConfig,
+);
+honoAdminRouter.get("/shadow-atom-config", ...handleGetAdminShadowAtomConfig);
+honoAdminRouter.put(
+	"/shadow-atom-config",
+	...handleUpsertAdminShadowAtomConfig,
+);
+honoAdminRouter.post(
+	"/shadow-atom-config/token",
+	...handleMintAdminShadowAtomToken,
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
 honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);

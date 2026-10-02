@@ -13,6 +13,7 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
+import { queueAtomShadowCheck } from "@/internal/balances/check/atomShadow/queueAtomShadowCheck.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
@@ -120,6 +121,13 @@ export const handleCheck = createRoute({
 					fallback: async ({ error, reason }) =>
 						checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
 				});
+			if (!failedOpen)
+				queueAtomShadowCheck({
+					ctx,
+					params: rawBody,
+					search: new URL(c.req.url).search,
+					apiResponse: result,
+				});
 			return c.json(result, failedOpen ? 202 : 200);
 		}
 
@@ -173,10 +181,13 @@ export const handleCheck = createRoute({
 			ctx,
 		});
 
-		return c.json({
-			...transformedResponse,
-			preview,
-			// lock_id: body.lock?.lock_id ?? undefined,
+		const apiResponse = { ...transformedResponse, preview };
+		queueAtomShadowCheck({
+			ctx,
+			params: rawBody,
+			search: new URL(c.req.url).search,
+			apiResponse,
 		});
+		return c.json(apiResponse);
 	},
 });
