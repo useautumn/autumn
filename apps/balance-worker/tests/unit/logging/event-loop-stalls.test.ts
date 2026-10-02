@@ -1,13 +1,22 @@
 import { expect, test } from "bun:test";
+import type { CpuCounters } from "../../../src/logging/eventLoopStalls/cpuCounters.js";
 import { createEventLoopStallMonitor } from "../../../src/logging/eventLoopStalls/createEventLoopStallMonitor.js";
 import { createSyncSectionRecorder } from "../../../src/logging/eventLoopStalls/syncSections.js";
 
 type Log = unknown[];
 
+const idleCpu: CpuCounters = {
+	processMicros: 0,
+	host: null,
+	throttledMicros: null,
+};
+
 function createFixture({
 	reportEveryMs = 1_000,
+	cpu = () => idleCpu,
 }: {
 	reportEveryMs?: number;
+	cpu?: () => CpuCounters;
 } = {}) {
 	let clock = 1_000;
 	const now = () => clock;
@@ -28,6 +37,7 @@ function createFixture({
 			},
 			recorder,
 			now,
+			cpu,
 			schedule: ({ run }) => {
 				tick = run;
 				return () => {
@@ -42,6 +52,7 @@ function createFixture({
 			stallThresholdMs: 20,
 			logStallMs: 50,
 			reportEveryMs,
+			cpuModel: "Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz",
 		},
 	});
 	/** Advance the clock by `elapsedMs`, doing `work` in that time, then fire the timer. */
@@ -151,6 +162,63 @@ test("the periodic summary counts stalls and sums time per section, then resets"
 	expect(next?.[0]).toMatchObject({
 		data: { stalls: 0, stalledMs: 0, sections: {} },
 	});
+});
+
+function summaryOf({ infos }: { infos: Log[] }) {
+	return infos.find(
+		([fields]) =>
+			(fields as { event?: string }).event === "balance_worker.event_loop",
+	)?.[0];
+}
+
+test("the periodic summary says how much CPU the worker got, and what the host took or waited on", () => {
+	const samples: CpuCounters[] = [
+		{
+			processMicros: 1_000_000,
+			host: { stealTicks: 100, iowaitTicks: 50, totalTicks: 1_000 },
+			throttledMicros: 2_000,
+		},
+		{
+			processMicros: 1_250_000,
+			host: { stealTicks: 160, iowaitTicks: 60, totalTicks: 1_100 },
+			throttledMicros: 7_000,
+		},
+	];
+	const { monitor, infos, elapse } = createFixture({
+		cpu: () => samples.shift() ?? idleCpu,
+	});
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+
+	expect(summaryOf({ infos })).toMatchObject({
+		data: {
+			windowMs: 1_000,
+			cpuModel: "Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz",
+			cpuMs: 250,
+			cpuPct: 25,
+			stealPct: 60,
+			iowaitPct: 10,
+			throttledMs: 5,
+		},
+	});
+});
+
+test("without host or cgroup counters the summary still reports the worker's own CPU, and omits the rest", () => {
+	const samples: CpuCounters[] = [
+		{ processMicros: 0, host: null, throttledMicros: null },
+		{ processMicros: 400_000, host: null, throttledMicros: null },
+	];
+	const { monitor, infos, elapse } = createFixture({
+		cpu: () => samples.shift() ?? idleCpu,
+	});
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+
+	const summary = summaryOf({ infos }) as { data: Record<string, unknown> };
+	expect(summary.data).toMatchObject({ cpuMs: 400, cpuPct: 40 });
+	expect(summary.data).not.toHaveProperty("stealPct");
+	expect(summary.data).not.toHaveProperty("iowaitPct");
+	expect(summary.data).not.toHaveProperty("throttledMs");
 });
 
 test("per-stall logs are capped within one report window", () => {
