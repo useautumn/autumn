@@ -1,0 +1,301 @@
+import { describe, expect, test } from "bun:test";
+import type {
+	AutumnBillingPlan,
+	CreateScheduleBillingContext,
+	FullCusProduct,
+	FullProduct,
+} from "@autumn/shared";
+import {
+	addInterval,
+	BillingInterval,
+	CusProductStatus,
+	ms,
+} from "@autumn/shared";
+import { prices } from "@tests/utils/fixtures/db/prices";
+import { products } from "@tests/utils/fixtures/db/products";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleSetPlansEndDateErrors } from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansEndDateErrors";
+import { handleSetPlansComputeErrors } from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansErrors";
+import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
+import { handleSetPlansErrorsFromContext } from "./setPlansTimelineHelpers";
+
+const buildContext = ({
+	immediateStartsAt,
+	currentEpochMs,
+	existingSchedule,
+	fullProducts = [],
+	checkoutMode,
+}: {
+	immediateStartsAt: number;
+	currentEpochMs: number;
+	existingSchedule?: Stripe.SubscriptionSchedule;
+	fullProducts?: FullProduct[];
+	checkoutMode?: "stripe_checkout";
+}) =>
+	({
+		currentEpochMs,
+		immediatePhase: {
+			starts_at: immediateStartsAt,
+			plans: [{ plan_id: "plan" }],
+		},
+		stripeSubscriptionSchedule: existingSchedule,
+		checkoutMode,
+		productContexts: [],
+		scheduledPhaseContexts: [],
+		fullProducts,
+		fullCustomer: {
+			internal_id: "internal_cus_123",
+			customer_products: [],
+		},
+	}) as unknown as CreateScheduleBillingContext;
+
+const ctx = {
+	org: { default_currency: "usd", config: {} },
+} as unknown as AutumnContext;
+
+describe(chalk.yellowBright("handleSetPlansErrors"), () => {
+	test("allows an immediate phase within the tolerance window", async () => {
+		const now = Date.now();
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now,
+					currentEpochMs: now,
+				}),
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("rejects creation when a past immediate phase has no paid recurring products", async () => {
+		const now = Date.now();
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now - ms.hours(1),
+					currentEpochMs: now,
+				}),
+			}),
+		).rejects.toThrow(
+			"Past first phase starts_at is only supported for paid recurring plans",
+		);
+	});
+
+	test("allows creation when the immediate phase is a supported backdate", async () => {
+		const now = Date.now();
+		const pro = products.createFull({
+			id: "pro",
+			prices: [prices.createFixed({ id: "price_pro" })],
+		});
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now - ms.hours(1),
+					currentEpochMs: now,
+					fullProducts: [pro],
+				}),
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("rejects creation when a backdated first invoice would exceed Stripe's line item limit", async () => {
+		const now = Date.UTC(2026, 4, 29);
+		const pro = products.createFull({
+			id: "pro",
+			prices: [prices.createFixed({ id: "price_pro" })],
+		});
+		const startsAt = addInterval({
+			from: now,
+			interval: BillingInterval.Month,
+			intervalCount: -(STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT + 1),
+		});
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: startsAt,
+					currentEpochMs: now,
+					fullProducts: [pro],
+				}),
+			}),
+		).rejects.toThrow("at most 250 line items");
+	});
+
+	test("rejects a backdated checkout-required start at execution time", async () => {
+		const now = Date.now();
+		const pro = products.createFull({
+			id: "pro",
+			prices: [prices.createFixed({ id: "price_pro" })],
+		});
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now - ms.hours(1),
+					currentEpochMs: now,
+					fullProducts: [pro],
+					checkoutMode: "stripe_checkout",
+				}),
+			}),
+		).rejects.toThrow(
+			"Past first phase starts_at cannot be used when Stripe Checkout is required",
+		);
+	});
+
+	test("skips the checkout-required guard during preview", async () => {
+		const now = Date.now();
+		const pro = products.createFull({
+			id: "pro",
+			prices: [prices.createFixed({ id: "price_pro" })],
+		});
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				preview: true,
+				billingContext: buildContext({
+					immediateStartsAt: now - ms.hours(1),
+					currentEpochMs: now,
+					fullProducts: [pro],
+					checkoutMode: "stripe_checkout",
+				}),
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("rejects creation when the immediate phase is far in the future", async () => {
+		const now = Date.now();
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now + ms.hours(1),
+					currentEpochMs: now,
+				}),
+			}),
+		).rejects.toThrow("The first phase must start immediately");
+	});
+
+	test("skips the immediate-start guard on updates (existing schedule)", async () => {
+		// Regression: when editing an existing schedule, the frontend preserves
+		// the persisted starts_at for phase 0. Downstream Stripe execution anchors
+		// the first phase to the schedule's current_phase.start_date anyway, so
+		// the tolerance check should not reject a historical starts_at here.
+		const now = Date.now();
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now - ms.days(30),
+					currentEpochMs: now,
+					existingSchedule: {
+						id: "sub_sched_existing",
+					} as unknown as Stripe.SubscriptionSchedule,
+				}),
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("allows license-backed products expired by the computed plan", async () => {
+		const customerProduct = {
+			id: "cus_product",
+			customer_licenses: [{ id: "license" }],
+		} as unknown as FullCusProduct;
+		const autumnBillingPlan = {
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct,
+					updates: { status: CusProductStatus.Expired },
+				},
+			],
+		} as unknown as AutumnBillingPlan;
+
+		await expect(
+			handleSetPlansComputeErrors({
+				ctx: {} as unknown as AutumnContext,
+				billingContext: buildContext({
+					immediateStartsAt: Date.now(),
+					currentEpochMs: Date.now(),
+				}),
+				autumnBillingPlan,
+				immediatePhaseTransition: {
+					outgoingCustomerProducts: [],
+					incomingCustomerProducts: [],
+					keptCustomerProducts: [],
+				},
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("rejects a transition whose incoming pool grants fewer seats than assigned", async () => {
+		const autumnBillingPlan = {
+			insertCustomerProducts: [],
+			customerLicenseTransitions: [{ updates: { granted: 1, remaining: -1 } }],
+		} as unknown as AutumnBillingPlan;
+
+		await expect(
+			handleSetPlansComputeErrors({
+				ctx: {} as unknown as AutumnContext,
+				billingContext: buildContext({
+					immediateStartsAt: Date.now(),
+					currentEpochMs: Date.now(),
+				}),
+				autumnBillingPlan,
+				immediatePhaseTransition: {
+					outgoingCustomerProducts: [],
+					incomingCustomerProducts: [],
+					keptCustomerProducts: [],
+				},
+			}),
+		).rejects.toThrow("2 assigned, but the incoming plan grants 1");
+	});
+});
+
+describe(chalk.yellowBright("handleSetPlansEndDateErrors"), () => {
+	const now = Date.now();
+	const backdatedContext = {
+		...buildContext({
+			immediateStartsAt: now - ms.days(1),
+			currentEpochMs: now,
+		}),
+		futurePhases: [],
+	} as CreateScheduleBillingContext;
+
+	test("rejects an ends_at that passed moments ago", () => {
+		expect(() =>
+			handleSetPlansEndDateErrors({
+				billingContext: backdatedContext,
+				endsAt: now - ms.seconds(30),
+			}),
+		).toThrow("ends_at cannot be set to a past timestamp");
+	});
+
+	test("rejects an ends_at of exactly now", () => {
+		expect(() =>
+			handleSetPlansEndDateErrors({
+				billingContext: backdatedContext,
+				endsAt: now,
+			}),
+		).toThrow("ends_at cannot be set to a past timestamp");
+	});
+});

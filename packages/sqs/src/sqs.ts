@@ -1,5 +1,14 @@
 export { createSqsJobs, jobsOnQueue } from "./createSqsJobs.js";
 export { autoTopupJob } from "./jobs/autoTopup.js";
+export {
+	type CustomerCreationRecoveryJobPayload,
+	creationRecoveryGroupId,
+	customerCreationRecoveryDedupeId,
+	customerCreationRecoveryJob,
+	type EntityCreationRecoveryJobPayload,
+	entityCreationRecoveryDedupeId,
+	entityCreationRecoveryJob,
+} from "./jobs/creationRecovery.js";
 export { type JobCatalogue, jobCatalogue } from "./jobs/jobs.js";
 export {
 	createSqsClient,

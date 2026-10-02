@@ -76,24 +76,34 @@ export function buildCustomizeItems({
 	);
 }
 
-/** The Stripe price the base price already bills under, while its amount and
- * interval are untouched — an edited price must mint a new one. */
-function unchangedBaseStripePriceId({ item }: { item: ProductItem }) {
+/** A stored base price whose amount and interval the user left untouched. */
+function isUnchangedStoredPrice({ item }: { item: ProductItem }) {
 	const config = item.price_config as Partial<FixedPriceConfig> | undefined;
-	if (!config?.stripe_price_id) return undefined;
-	const isUnchanged =
+	if (!config) return false;
+	return (
 		config.amount === item.price &&
 		billingToItemInterval({ billingInterval: config.interval }) ===
 			item.interval &&
-		(config.interval_count ?? 1) === (item.interval_count ?? 1);
-	return isUnchanged ? config.stripe_price_id : undefined;
+		(config.interval_count ?? 1) === (item.interval_count ?? 1)
+	);
 }
+
+/** The Stripe price the base price already bills under — an edited price must mint a new one. */
+function unchangedBaseStripePriceId({ item }: { item: ProductItem }) {
+	const config = item.price_config as Partial<FixedPriceConfig> | undefined;
+	if (!config?.stripe_price_id) return undefined;
+	return isUnchangedStoredPrice({ item }) ? config.stripe_price_id : undefined;
+}
+
+/** A $0 base price means free unless it is a stored $0 price kept as-is, which must round-trip. */
+const isFreeBasePrice = (item: ProductItem) =>
+	item.price === 0 && !isUnchangedStoredPrice({ item });
 
 export function buildCustomizeBasePrice({ items }: { items: ProductItem[] }) {
 	const priceItem = items.find(
 		(item) => item.price != null && !item.feature_id,
 	);
-	if (!priceItem || priceItem.price === 0) return null;
+	if (!priceItem || isFreeBasePrice(priceItem)) return null;
 	if (!priceItem.interval) return undefined;
 	const stripePriceId = unchangedBaseStripePriceId({ item: priceItem });
 	return {

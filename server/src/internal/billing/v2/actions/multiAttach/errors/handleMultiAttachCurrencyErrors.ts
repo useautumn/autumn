@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	type FullProduct,
 	isFreeProduct,
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
@@ -19,10 +20,12 @@ export const handleMultiAttachCurrencyErrors = ({
 	ctx,
 	billingContext,
 	params,
+	fullProducts,
 }: {
 	ctx: AutumnContext;
 	billingContext: MultiAttachBillingContext;
 	params: Pick<MultiAttachParamsV0, "currency">;
+	fullProducts: FullProduct[];
 }) => {
 	const { fullCustomer } = billingContext;
 
@@ -35,8 +38,8 @@ export const handleMultiAttachCurrencyErrors = ({
 	}
 
 	// Free / auto-enabled plans neither need nor lock a currency.
-	const allPrices = billingContext.productContexts.flatMap((productContext) =>
-		productToEffectivePrices({ product: productContext.fullProduct }),
+	const allPrices = fullProducts.flatMap((product) =>
+		productToEffectivePrices({ product }),
 	);
 	if (isFreeProduct({ prices: allPrices })) return;
 
@@ -64,13 +67,11 @@ export const handleMultiAttachCurrencyErrors = ({
 	}
 
 	// Every charging price on every plan must offer the resolved currency (no FX fallback).
-	for (const productContext of billingContext.productContexts) {
+	for (const product of fullProducts) {
 		assertPlanOffersCurrency({
 			ctx,
-			prices: productToEffectivePrices({
-				product: productContext.fullProduct,
-			}),
-			planName: productContext.fullProduct.name,
+			prices: productToEffectivePrices({ product }),
+			planName: product.name,
 			currency: resolved,
 			customerConfigured: !!locked && resolved === locked,
 		});

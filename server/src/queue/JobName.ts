@@ -23,6 +23,8 @@ export enum JobName {
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",
 	CustomerCreationRecovery = "customer-creation-recovery",
+	/** Replays a failed entities.create from the customer creation recovery queue */
+	EntityCreationRecovery = "entity-creation-recovery",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
 

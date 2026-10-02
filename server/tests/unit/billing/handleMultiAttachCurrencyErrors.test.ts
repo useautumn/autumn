@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type {
+	FullProduct,
 	MultiAttachBillingContext,
 	MultiAttachParamsV0,
 	Price,
@@ -39,11 +40,11 @@ const run = ({
 		ctx,
 		billingContext: {
 			fullCustomer: { currency: customerCurrency },
-			productContexts: productPrices.map((prices, i) => ({
-				fullProduct: { name: `Plan ${i}`, prices },
-			})),
 		} as unknown as MultiAttachBillingContext,
 		params: { currency: requestedCurrency } as MultiAttachParamsV0,
+		fullProducts: productPrices.map(
+			(prices, i) => ({ name: `Plan ${i}`, prices }) as unknown as FullProduct,
+		),
 	});
 
 describe("handleMultiAttachCurrencyErrors", () => {

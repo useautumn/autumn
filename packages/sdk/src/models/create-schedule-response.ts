@@ -1354,7 +1354,7 @@ export type CreateScheduleParams = {
    */
   enablePlanImmediately?: boolean | undefined;
   /**
-   * Deprecated and ignored. Active plans the schedule does not declare are always retained.
+   * Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them or the schedule ends.
    */
   preserveAddOns?: boolean | undefined;
   /**

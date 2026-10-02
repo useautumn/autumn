@@ -31,6 +31,8 @@ export const resolveProcessorItemPrice = ({
 	if (autumnStripePrice) {
 		return autumnPriceToProcessorItemPrice({
 			price: autumnStripePrice.price,
+			entitlement: autumnStripePrice.entitlement,
+			org: context.org,
 			currency: context.currency,
 		});
 	}

@@ -287,6 +287,7 @@ export const getBenchContext = async (): Promise<BenchContext> => {
 		skipCache: false,
 		expand: [],
 		extraLogs: {},
+		state: {},
 	};
 
 	return { ctx, org, benchProducts };

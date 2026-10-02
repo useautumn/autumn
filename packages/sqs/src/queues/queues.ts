@@ -41,7 +41,8 @@ export const queues: Record<QueueName, QueueDefinition> = {
 		batch: false,
 	},
 	customerCreationRecovery: {
-		url: (env) => env.SQS_CUSTOMER_CREATION_RECOVERY_QUEUE_URL,
+		url: (env) =>
+			env.SQS_CUSTOMER_CREATION_RECOVERY_QUEUE_URL ?? env.SQS_GENERAL_QUEUE_URL,
 		batch: false,
 	},
 	stripeWebhook: {

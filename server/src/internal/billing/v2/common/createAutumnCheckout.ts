@@ -7,6 +7,7 @@ import type {
 	CheckoutAction,
 	CreateScheduleBillingContext,
 	CreateScheduleParamsV0,
+	SetPlansParamsV0,
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -40,7 +41,11 @@ export async function createAutumnCheckout<
 }: {
 	ctx: AutumnContext;
 	action: CheckoutAction;
-	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
+	params:
+		| AttachParamsV1
+		| CreateScheduleParamsV0
+		| SetPlansParamsV0
+		| UpdateSubscriptionV1Params;
 	billingContext: T;
 	billingPlan: BillingPlan;
 	expiresInMs?: number;

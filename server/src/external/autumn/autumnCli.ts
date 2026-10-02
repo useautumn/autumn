@@ -61,6 +61,7 @@ import {
 	type RestoreParamsV1,
 	type RestoreResponse,
 	type RewardRedemption,
+	type SetPlansParamsV0Input,
 	type SetPlansPreviewResponse,
 	type SetUsageParams,
 	type SetupPaymentParamsV1,
@@ -1528,7 +1529,7 @@ export class AutumnInt {
 			}),
 
 		setPlans: async <
-			TInput = CreateScheduleParamsV0Input,
+			TInput = SetPlansParamsV0Input,
 			TResponse = CreateScheduleResponse,
 		>(
 			params: TInput,
@@ -1540,7 +1541,7 @@ export class AutumnInt {
 				timeout,
 			}),
 
-		previewSetPlans: async <TInput = CreateScheduleParamsV0Input>(
+		previewSetPlans: async <TInput = SetPlansParamsV0Input>(
 			params: TInput,
 		): Promise<SetPlansPreviewResponse> =>
 			await this.post(`/billing.preview_set_plans`, params),

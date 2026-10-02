@@ -75,6 +75,7 @@ export const getFeatureRewriteBenchContext =
 			skipCache: false,
 			expand: [],
 			extraLogs: {},
+			state: {},
 		};
 
 		return { ctx, org };

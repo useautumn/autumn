@@ -1,18 +1,4 @@
-/**
- * createSchedule + enable_plan_immediately + stripe_checkout
- *
- * Mirrors the attach test (`stripe-checkout-enable-plan-immediately.test.ts`)
- * for the createSchedule action:
- *
- * - At request time, immediate-phase cusProducts (Active) and scheduled-phase
- *   cusProducts (Scheduled) are pre-inserted, all linked to the pending Stripe
- *   checkout session via `stripe_checkout_session_id`.
- * - Autumn `schedules` + `schedule_phases` rows are NOT created at request time
- *   — they're persisted in the webhook handler on `checkout.session.completed`
- *   (via `persistDeferredCreateSchedule`).
- * - Response is `pending_payment` with `schedule_id: null` and a `payment_url`.
- * - On `checkout.session.expired`, all linked cusProducts are cleaned up.
- */
+/** set_plans with enable_plan_immediately through Stripe Checkout, from pending payment to checkout completion or expiry. */
 
 import { expect, test } from "bun:test";
 import {

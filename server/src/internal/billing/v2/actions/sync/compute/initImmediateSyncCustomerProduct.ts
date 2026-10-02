@@ -15,6 +15,7 @@ import {
 	getTrialEndsAtFromStripe,
 } from "@/internal/billing/v2/actions/sync/utils/initSyncFromStripe";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
+import { isProductFreeInSyncCurrency } from "../utils/syncContextUtils";
 
 /**
  * Build the immediate-phase cusProduct row for one plan instance, mirroring
@@ -23,6 +24,7 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
  *   - anchor the reset cycle to the Stripe billing_cycle_anchor
  *   - carry the previous plan's rollovers onto the matching features
  *   - link the Stripe subscription id
+ *   - free plans skip all of the Stripe fields: they stay customer-wide
  *   - apply prepaid feature quantities + customize-derived custom prices/ents
  */
 export const initImmediateSyncCustomerProduct = ({
@@ -30,6 +32,7 @@ export const initImmediateSyncCustomerProduct = ({
 	fullCustomer,
 	productContext,
 	stripeSubscription,
+	currency,
 	currentEpochMs,
 	existingUsagesConfig,
 	existingRolloversConfig,
@@ -38,12 +41,34 @@ export const initImmediateSyncCustomerProduct = ({
 	fullCustomer: FullCustomer;
 	productContext: SyncProductContext;
 	stripeSubscription: Stripe.Subscription;
+	currency: string;
 	currentEpochMs: number;
 	existingUsagesConfig?: ExistingUsagesConfig;
 	existingRolloversConfig?: ExistingRolloversConfig;
 }): FullCusProduct => {
 	const { fullProduct, featureQuantities, customerLicenseQuantities, entity } =
 		productContext;
+
+	if (isProductFreeInSyncCurrency({ fullProduct, currency })) {
+		return initFullCustomerProduct({
+			ctx,
+			initContext: {
+				fullCustomer,
+				fullProduct,
+				featureQuantities,
+				customerLicenseQuantities,
+				entity,
+				resetCycleAnchor: currentEpochMs,
+				now: currentEpochMs,
+				freeTrial: null,
+				trialEndsAt: undefined,
+				billingVersion: BillingVersion.V2,
+				existingUsagesConfig,
+				existingRolloversConfig,
+			},
+			initOptions: { internalEntityId: entity?.internal_id },
+		});
+	}
 
 	const trialEndsAt = getTrialEndsAtFromStripe({ stripeSubscription });
 	const { canceledAt, endedAt } = getCancelFieldsFromStripe({

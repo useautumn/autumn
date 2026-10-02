@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { hasPendingPreviewParams } from "../hasPendingPreviewParams";
 
 const PREVIEW_DEBOUNCE_MS = 400;
 
@@ -33,5 +34,9 @@ export const usePreviewSyncV2 = ({
 		placeholderData: keepPreviousData,
 	});
 
-	return { mismatches: query.data?.mismatches };
+	const isPending = hasPendingPreviewParams({ params, debouncedParams });
+	return {
+		mismatches: query.data?.mismatches,
+		isFetching: query.isFetching || isPending,
+	};
 };

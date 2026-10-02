@@ -104,7 +104,10 @@ import {
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
 import { KafkaPartitionInvariantError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
-import { OwnedPartitionRecoveryRequiredError } from "../../../src/runtime/runtimeErrors.js";
+import {
+	OwnedPartitionProducerFencedError,
+	OwnedPartitionRecoveryRequiredError,
+} from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionRuntimeStatus as OwnedPartitionRuntimeStatus } from "../../../src/runtime/types/partitionRuntimeState.js";
 import {
 	closeStoreFixture,
@@ -1192,6 +1195,98 @@ describe("Kafka owned partition group", () => {
 				() =>
 					group.findRuntime({ partition: 1, routeEpoch: "0" }) !== undefined,
 			);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a parked partition revoked before its retry is retired and stops reporting, instead of stranding mid-handoff", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const startAttempts = new Map<number, number>();
+			const released: number[] = [];
+			const stopped: number[] = [];
+			const events: string[] = [];
+			const unavailableListeners = new Map<
+				number,
+				(failure: { cause: unknown }) => void
+			>();
+			const failedAttempt = new Map<number, number>();
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5,
+				partitionBootstrapRetryIntervalMs: 5,
+				createRuntime: ({ partition }) => ({
+					start: async () => {
+						startAttempts.set(
+							partition,
+							(startAttempts.get(partition) ?? 0) + 1,
+						);
+					},
+					stop: async () => {
+						stopped.push(partition);
+					},
+					subscribeUnavailable: (listener) => {
+						unavailableListeners.set(partition, listener);
+						return () => unavailableListeners.delete(partition);
+					},
+					getHealth: () =>
+						failedAttempt.get(partition) === startAttempts.get(partition)
+							? terminalHealth({ partition, reason: "producer_fenced" })
+							: ownedPartitionHealthOf({
+									topic,
+									partition,
+									status: "ready",
+									localNextOffset: 0n,
+									consumedNextOffset: 0n,
+									highWatermark: 0n,
+									failureReason: null,
+								}),
+					publication: {
+						claim: async () => ({ routeEpoch: "0" }),
+						release: async () => {
+							released.push(partition);
+						},
+					},
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+				onServiceStopped: () => {
+					events.push("service-stopped");
+				},
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0, 1]);
+			await waitFor(
+				() =>
+					group.findRuntime({ partition: 1, routeEpoch: "0" }) !== undefined,
+			);
+
+			failedAttempt.set(1, startAttempts.get(1) ?? 0);
+			unavailableListeners.get(1)?.({
+				cause: new OwnedPartitionProducerFencedError({
+					topic,
+					partition: 1,
+					cause: new Error("log diverged"),
+				}),
+			});
+			consumer.emitRebalancing();
+			consumer.emitGroupJoin([0]);
+
+			await waitFor(() => released.includes(1) && stopped.includes(1));
+			await waitFor(() =>
+				group.partitions().every(({ partition }) => partition !== 1),
+			);
+			expect(startAttempts.get(1)).toBe(1);
+			expect(events).toEqual([]);
 			await group.stop();
 		} finally {
 			closeStoreFixture(fixture);

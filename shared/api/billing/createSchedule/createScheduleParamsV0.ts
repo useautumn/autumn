@@ -166,72 +166,73 @@ export const createScheduleTimingIssues = (
 	return issues;
 };
 
-export const CreateScheduleParamsV0Schema = z
-	.object({
-		customer_id: z.string().meta({
-			description: "The ID of the customer to create the schedule for.",
+export const CreateScheduleParamsV0BaseSchema = z.object({
+	customer_id: z.string().meta({
+		description: "The ID of the customer to create the schedule for.",
+	}),
+	entity_id: z.string().optional().meta({
+		description: "Optional entity ID for an entity-scoped schedule.",
+	}),
+	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
+		description:
+			"Free trial configuration applied to every plan in the immediate phase.",
+	}),
+	currency: CurrencyCodeSchema.length(3).optional().meta({
+		description:
+			"Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').",
+	}),
+	invoice_mode: InvoiceModeParamsSchema.optional().meta({
+		description:
+			"Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.",
+	}),
+	discounts: z.array(AttachDiscountSchema).optional().meta({
+		description:
+			"List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
+	}),
+	success_url: z.string().optional().meta({
+		description: "URL to redirect to after successful checkout.",
+	}),
+	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
+		description:
+			"Additional parameters to pass into the creation of the Stripe checkout session.",
+	}),
+	redirect_mode: RedirectModeSchema.default("if_required").meta({
+		description:
+			"Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.",
+	}),
+	billing_behavior: BillingBehaviorSchema.optional().meta({
+		description:
+			"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.",
+	}),
+	no_billing_changes: z.boolean().optional().meta({
+		description: "If true, skips any billing changes for the schedule.",
+	}),
+	billing_cycle_anchor: ImmediateBillingCycleAnchorSchema.optional().meta({
+		description:
+			"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
+	}),
+	enable_plan_immediately: z.boolean().optional().meta({
+		description:
+			"If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.",
+	}),
+	preserve_add_ons: z.boolean().optional().meta({
+		description:
+			"Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them or the schedule ends.",
+	}),
+	unscheduled_plans: z.array(CreateSchedulePlanSchema).optional().meta({
+		description:
+			"Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.",
+	}),
+	phases: z
+		.tuple([CreateSchedulePhaseSchema])
+		.rest(CreateSchedulePhaseSchema)
+		.meta({
+			description: "Ordered phase definitions for the schedule.",
 		}),
-		entity_id: z.string().optional().meta({
-			description: "Optional entity ID for an entity-scoped schedule.",
-		}),
-		free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
-			description:
-				"Free trial configuration applied to every plan in the immediate phase.",
-		}),
-		currency: CurrencyCodeSchema.length(3).optional().meta({
-			description:
-				"Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').",
-		}),
-		invoice_mode: InvoiceModeParamsSchema.optional().meta({
-			description:
-				"Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.",
-		}),
-		discounts: z.array(AttachDiscountSchema).optional().meta({
-			description:
-				"List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
-		}),
-		success_url: z.string().optional().meta({
-			description: "URL to redirect to after successful checkout.",
-		}),
-		checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
-			description:
-				"Additional parameters to pass into the creation of the Stripe checkout session.",
-		}),
-		redirect_mode: RedirectModeSchema.default("if_required").meta({
-			description:
-				"Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.",
-		}),
-		billing_behavior: BillingBehaviorSchema.optional().meta({
-			description:
-				"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.",
-		}),
-		no_billing_changes: z.boolean().optional().meta({
-			description: "If true, skips any billing changes for the schedule.",
-		}),
-		billing_cycle_anchor: ImmediateBillingCycleAnchorSchema.optional().meta({
-			description:
-				"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
-		}),
-		enable_plan_immediately: z.boolean().optional().meta({
-			description:
-				"If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.",
-		}),
-		preserve_add_ons: z.boolean().optional().meta({
-			description:
-				"Deprecated and ignored. Active plans the schedule does not declare are always retained.",
-		}),
-		unscheduled_plans: z.array(CreateSchedulePlanSchema).optional().meta({
-			description:
-				"Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.",
-		}),
-		phases: z
-			.tuple([CreateSchedulePhaseSchema])
-			.rest(CreateSchedulePhaseSchema)
-			.meta({
-				description: "Ordered phase definitions for the schedule.",
-			}),
-	})
-	.check((ctx) => {
+});
+
+export const CreateScheduleParamsV0Schema =
+	CreateScheduleParamsV0BaseSchema.check((ctx) => {
 		for (const issue of createScheduleTimingIssues(ctx.value.phases)) {
 			ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
 		}

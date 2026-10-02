@@ -76,7 +76,11 @@ export type RequestContext = {
 	 *  re-enqueue another migration task. */
 	insideTriggerTask?: boolean;
 
+	/** Payload for the request log line. Request state belongs on `state`; a few older readers still look here. */
 	extraLogs: Record<string, unknown>;
+
+	/** What the request has done so far, read back by later steps; never logged. Narrowed by each owner's get/set. */
+	state: Record<string, unknown>;
 
 	fullCustomer?: FullCustomer;
 
@@ -104,6 +108,8 @@ export type RequestContext = {
 		mockVercelApi?: boolean;
 		allowVercelTestOidc?: boolean;
 		mockRevenueCat?: boolean;
+		/** Every balance worker write fails as unreachable (non-prod only). */
+		balanceWorkerOutage?: boolean;
 		/** Caps customers walked per list page (non-prod only). */
 		listScanCap?: number;
 		revenueCat?: {

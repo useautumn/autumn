@@ -1,13 +1,13 @@
 import {
 	ACTIVE_STATUSES,
 	type CustomerProductUpdate,
-	filterCustomerProductsByStripeSubscriptionId,
+	filterCustomerProductsByStripeSubscriptionScope,
 	type SyncBillingContext,
 } from "@autumn/shared";
 import { expireCustomerProduct } from "./computeSyncImmediatePhase";
 
-/** Ids of live plans some synced plan carries forward, whether it replaces them
- * or only changes their seats. */
+/** Ids of live plans some synced plan carries forward, whether it replaces them,
+ * changes their seats or repeats them unchanged. */
 const listedCustomerProductIds = ({
 	syncContext,
 }: {
@@ -18,15 +18,16 @@ const listedCustomerProductIds = ({
 		...syncContext.futurePhases.flatMap((phase) => phase.productContexts),
 		...syncContext.unscheduledProductContexts,
 	];
-	return new Set(
-		productContexts.flatMap(({ currentCustomerProduct }) =>
+	return new Set([
+		...productContexts.flatMap(({ currentCustomerProduct }) =>
 			currentCustomerProduct ? [currentCustomerProduct.id] : [],
 		),
-	);
+		...syncContext.retainedCustomerProducts.map(({ id }) => id),
+	]);
 };
 
-/** Live plans on the subscription that no synced plan carries forward, when the
- * caller sent the full plan list — leaving one out means removing it. */
+/** Live plans on the subscription, and free plans, that no synced plan carries
+ * forward when the caller sent the full plan list — leaving one out removes it. */
 export const computeUnlistedCustomerProductExpiries = ({
 	syncContext,
 }: {
@@ -37,7 +38,7 @@ export const computeUnlistedCustomerProductExpiries = ({
 
 	const listedIds = listedCustomerProductIds({ syncContext });
 
-	return filterCustomerProductsByStripeSubscriptionId({
+	return filterCustomerProductsByStripeSubscriptionScope({
 		customerProducts: fullCustomer.customer_products,
 		stripeSubscriptionId: stripeSubscription.id,
 	})

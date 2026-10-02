@@ -68,6 +68,7 @@ export const createWorkerAutumnContext = async ({
 		scopes: [],
 		skipCache: false,
 		extraLogs: {},
+		state: {},
 	} satisfies AutumnContext;
 	return getCtxWithCustomerRedis({ ctx }).ctx;
 };

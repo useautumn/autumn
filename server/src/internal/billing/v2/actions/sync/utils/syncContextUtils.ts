@@ -1,8 +1,11 @@
 import {
 	type FullCustomer,
+	type FullProduct,
 	isCustomerProductPaid,
+	isFreeProduct,
 	type Price,
 	priceAmountsForCurrency,
+	productToEffectivePrices,
 	RELEVANT_STATUSES,
 	type SyncBillingContext,
 } from "@autumn/shared";
@@ -23,6 +26,20 @@ const isPaidInCurrency = ({
 			(amount ?? 0) > 0 ||
 			tiers?.some((tier) => tier.amount + (tier.flat_amount ?? 0) > 0)
 		);
+	});
+
+/** Free in the base currency and in the sync currency, which can price a plan differently. */
+export const isProductFreeInSyncCurrency = ({
+	fullProduct,
+	currency,
+}: {
+	fullProduct: FullProduct;
+	currency: string;
+}) =>
+	isFreeProduct({ product: fullProduct }) &&
+	!isPaidInCurrency({
+		prices: productToEffectivePrices({ product: fullProduct }),
+		currency,
 	});
 
 export const syncContextHasPaidProduct = ({

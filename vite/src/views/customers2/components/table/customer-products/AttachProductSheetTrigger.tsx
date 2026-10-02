@@ -15,6 +15,8 @@ import {
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
+import { useOpenSetPlans } from "@/views/customers2/components/sheets/set-plans-subscription/hooks/useOpenSetPlans";
+import { usePrefetchSubscriptionPicker } from "@/views/customers2/components/sheets/set-plans-subscription/hooks/usePrefetchSubscriptionPicker";
 
 export function AttachProductSheetTrigger() {
 	const { setSheet } = useSheetStore();
@@ -24,9 +26,8 @@ export function AttachProductSheetTrigger() {
 		setSheet({ type: "attach-product" });
 	};
 
-	const handleCreateSchedule = () => {
-		setSheet({ type: "create-schedule" });
-	};
+	const openSetPlans = useOpenSetPlans();
+	usePrefetchSubscriptionPicker();
 
 	return (
 		<div
@@ -55,7 +56,7 @@ export function AttachProductSheetTrigger() {
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" sideOffset={4}>
-					<DropdownMenuItem onClick={handleCreateSchedule}>
+					<DropdownMenuItem onClick={openSetPlans}>
 						<CalendarBlankIcon className="size-4" />
 						Set Plans
 					</DropdownMenuItem>

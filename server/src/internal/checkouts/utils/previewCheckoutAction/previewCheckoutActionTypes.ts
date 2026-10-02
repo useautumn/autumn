@@ -6,6 +6,7 @@ import type {
 	CreateScheduleBillingContext,
 	CreateScheduleParamsV0,
 	PreviewUpdateSubscriptionResponse,
+	SetPlansParamsV0,
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -30,9 +31,9 @@ export type CheckoutActionTypeMap = {
 	[CheckoutAction.CreateSchedule]: {
 		checkout: BaseCheckoutForAction<
 			CheckoutAction.CreateSchedule,
-			CreateScheduleParamsV0
+			CreateScheduleParamsV0 | SetPlansParamsV0
 		>;
-		params: CreateScheduleParamsV0;
+		params: CreateScheduleParamsV0 | SetPlansParamsV0;
 		billingContext: CreateScheduleBillingContext;
 		preview: AttachPreviewResponse;
 	};
@@ -73,7 +74,11 @@ export type PreviewCheckoutActionArgs<TAction extends CheckoutAction> = {
 export type PreviewCheckoutAnyActionArgs = {
 	ctx: AutumnContext;
 	checkout: Checkout;
-	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
+	params:
+		| AttachParamsV1
+		| CreateScheduleParamsV0
+		| SetPlansParamsV0
+		| UpdateSubscriptionV1Params;
 };
 
 export type PreviewCheckoutAnyActionResult =

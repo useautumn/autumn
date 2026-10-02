@@ -25,7 +25,7 @@ export const inlinePriceDataToProcessorItemPrice = (
 		interval_count: priceData.recurring?.interval_count ?? 1,
 		usage_type: "licensed",
 		tiers_mode: null,
-		first_tier_amount: null,
+		tiers: null,
 		units_per_quantity: null,
 	};
 };

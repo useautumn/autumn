@@ -1,30 +1,4 @@
-/**
- * Scheduling a customer who ALREADY holds license pools.
- *
- * PR #3295 unblocked the incoming direction (a future phase may offer
- * licenses), but left the outgoing direction rejected: handleCreateScheduleErrors
- * called handleUnsupportedOutgoingLicenseErrors, which threw on any customer
- * product the schedule expires that owns a customer_licenses row — regardless of
- * whether seats were assigned or whether the incoming plan offered the same
- * license.
- *
- * The dashboard's Create Schedule sheet always sends the current plan as phase 0,
- * so resolveCreateScheduleRecurringProducts gives that row the "endsNow" fate:
- * expired immediately, re-inserted as a fresh row. That is the reported flow, and
- * it is the case that tripped the guard.
- *
- * Red (before):
- *  - 1 + 3: 400 "billing.create_schedule does not support license-backed plans yet."
- *  - 2: already passed — the "endsAtPhase" fate updates ended_at without setting
- *    status Expired, so the outgoing guard never saw it.
- *
- * Green (after): create_schedule matches immediate attach. The immediate phase
- * computes customer license transitions, so a pool with a 1:1 successor
- * re-parents onto the new row with its seats intact (1), a pool the incoming
- * plan drops loses its inventory while the assignment history survives (3), and
- * an incoming pool too small for the assigned seats is still rejected by
- * handleLicenseTransitionErrors.
- */
+/** Scheduling a customer who already holds license pools transitions those pools like an immediate attach. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

@@ -84,14 +84,8 @@ test.concurrent(
 			},
 			{
 				timing: [false, false],
-				previewPlans: [
-					["starts", pro.id],
-					["ends", premium.id],
-				],
-				plans: [
-					["scheduled", pro.id],
-					["expired", premium.id],
-				],
+				previewPlans: [["starts", pro.id]],
+				plans: [["scheduled", pro.id]],
 				granted: [[TestFeature.Messages, 500, 100]],
 				stripeItems: [[pro.id, true]],
 			},

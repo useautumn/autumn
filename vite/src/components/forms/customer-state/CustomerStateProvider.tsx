@@ -13,8 +13,10 @@ import type {
 	CustomerStatePlan,
 	PlanLocation,
 } from "@/components/forms/customer-state/customerStateSchema";
+import type { SubscriptionLinks } from "@/components/forms/customer-state/types/subscriptionLinks";
 import type { UseCustomerStateForm } from "@/components/forms/customer-state/useCustomerStateForm";
 import { useCustomerStateHandlers } from "@/components/forms/customer-state/useCustomerStateHandlers";
+import type { FindSubscriptionConflict } from "@/components/forms/customer-state/utils/findSubscriptionConflict";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
@@ -32,6 +34,8 @@ type CustomerStateContextValue = CustomerStateHandlers & {
 	canMakeUnscheduled: boolean;
 	/** Why a plan has no Stripe item after the sync; empty when it does. */
 	planNotFoundReasons: (location: PlanLocation) => string[];
+	findSubscriptionConflict: FindSubscriptionConflict;
+	subscriptionLinks: SubscriptionLinks | null;
 	editingPlan: PlanLocation | null;
 	editingPlanValue: CustomerStatePlan | null;
 	setEditingPlan: (editing: PlanLocation | null) => void;
@@ -44,6 +48,7 @@ const CustomerStateContext = createContext<CustomerStateContextValue | null>(
 const NO_EXISTING_PLANS: CustomerStatePlan[] = [];
 const NO_NOT_FOUND_REASONS: string[] = [];
 const NEVER_NOT_FOUND = () => NO_NOT_FOUND_REASONS;
+const NEVER_CONFLICTS: FindSubscriptionConflict = () => null;
 
 /**
  * The customer's plans across phases, plus the row handlers that edit them.
@@ -56,6 +61,8 @@ export function CustomerStateProvider({
 	existingPlans = NO_EXISTING_PLANS,
 	canMakeUnscheduled,
 	planNotFoundReasons = NEVER_NOT_FOUND,
+	findSubscriptionConflict = NEVER_CONFLICTS,
+	subscriptionLinks = null,
 	children,
 }: {
 	form: UseCustomerStateForm;
@@ -63,6 +70,9 @@ export function CustomerStateProvider({
 	existingPlans?: CustomerStatePlan[];
 	canMakeUnscheduled: boolean;
 	planNotFoundReasons?: (location: PlanLocation) => string[];
+	/** Set when the form edits one of several subscriptions. */
+	findSubscriptionConflict?: FindSubscriptionConflict;
+	subscriptionLinks?: SubscriptionLinks | null;
 	children: ReactNode;
 }) {
 	const { products } = useProductsQuery();
@@ -112,6 +122,8 @@ export function CustomerStateProvider({
 			existingPlans,
 			canMakeUnscheduled,
 			planNotFoundReasons,
+			findSubscriptionConflict,
+			subscriptionLinks,
 			editingPlan,
 			editingPlanValue,
 			setEditingPlan,
@@ -126,6 +138,10 @@ export function CustomerStateProvider({
 			existingPlans,
 			canMakeUnscheduled,
 			planNotFoundReasons,
+			findSubscriptionConflict,
+			findSubscriptionConflict,
+			subscriptionLinks,
+			subscriptionLinks,
 			editingPlan,
 			editingPlanValue,
 		],
