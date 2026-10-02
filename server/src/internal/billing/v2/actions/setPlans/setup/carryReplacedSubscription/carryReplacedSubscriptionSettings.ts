@@ -27,6 +27,7 @@ export const carryReplacedSubscriptionSettings = async ({
 	const { replacedStripeSubscription } = billingContext;
 	if (!replacedStripeSubscription) return {};
 	if (!isBackdateRecreate({ billingContext })) return {};
+	if (billingContext.skipBillingChanges && !preview) return {};
 
 	return {
 		stripeDiscounts: await carryReplacedSubscriptionDiscounts({

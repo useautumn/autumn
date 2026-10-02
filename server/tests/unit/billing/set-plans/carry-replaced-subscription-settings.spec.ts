@@ -53,6 +53,7 @@ const liveSubscription = (overrides: Partial<Stripe.Subscription> = {}) =>
 		default_tax_rates: [{ id: "txr_vat" }],
 		automatic_tax: { enabled: true },
 		discounts: ["di_forever", "di_once", "di_repeating"],
+		billing_cycle_anchor: msToSeconds(PERIOD_END),
 		items: {
 			data: [
 				{
@@ -133,6 +134,71 @@ describe("carryReplacedSubscriptionSettings", () => {
 		]);
 	});
 
+	test("a legacy subscription-level default source moves with it", async () => {
+		const carried = await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: backdateContext({
+				replacedStripeSubscription: liveSubscription({
+					default_payment_method: null,
+					default_source: "card_legacy",
+				}),
+			}),
+			preview: true,
+		});
+
+		expect(carried.carriedSubscriptionParams?.default_source).toBe(
+			"card_legacy",
+		);
+		expect(
+			carried.carriedSubscriptionParams?.default_payment_method,
+		).toBeUndefined();
+	});
+
+	test("the previewed repeating coupon runs only the months execution would copy", async () => {
+		const repeating = subscriptionDiscount({
+			id: "di_repeating",
+			couponOverrides: {
+				id: "co_repeating",
+				duration: "repeating",
+				duration_in_months: 6,
+			},
+			endMs: addMonths(PERIOD_END, 2).getTime(),
+		});
+
+		const carried = await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: backdateContext({ stripeDiscounts: [repeating] }),
+			preview: true,
+		});
+
+		expect(carried.stripeDiscounts?.[0]?.source.coupon).toMatchObject({
+			id: "co_repeating",
+			duration: "repeating",
+			duration_in_months: 2,
+		});
+	});
+
+	test("with billing changes skipped nothing is carried, though the preview still shows it", async () => {
+		const billingContext = backdateContext({ skipBillingChanges: true });
+
+		expect(
+			await carryReplacedSubscriptionSettings({
+				ctx,
+				billingContext,
+				preview: false,
+			}),
+		).toEqual({});
+		expect(
+			(
+				await carryReplacedSubscriptionSettings({
+					ctx,
+					billingContext,
+					preview: true,
+				})
+			).carriedSubscriptionParams,
+		).toBeDefined();
+	});
+
 	test("a customer's own discount isn't the subscription's to move", async () => {
 		const customerDiscount = subscriptionDiscount({
 			id: "di_customer",
@@ -164,10 +230,23 @@ describe("carryReplacedSubscriptionSettings", () => {
 describe("remainingDiscountMonths", () => {
 	const monthly = { interval: "month", intervalCount: 1 } as const;
 
+	test("renewals step from the anchor, so a day-31 cycle renews on Mar 31, not Mar 28", () => {
+		expect(
+			remainingDiscountMonths({
+				currentEpochMs: Date.UTC(2027, 1, 10, 12),
+				billingCycleAnchorMs: Date.UTC(2027, 0, 31, 12),
+				periodEndMs: Date.UTC(2027, 1, 28, 12),
+				renewal: monthly,
+				discountEndMs: Date.UTC(2027, 2, 30, 12),
+			}),
+		).toBe(1);
+	});
+
 	test("covers exactly the renewals the old discount would have reached", () => {
 		expect(
 			remainingDiscountMonths({
 				currentEpochMs: NOW,
+				billingCycleAnchorMs: PERIOD_END,
 				periodEndMs: PERIOD_END,
 				renewal: monthly,
 				discountEndMs: addMonths(PERIOD_END, 2).getTime(),
@@ -176,6 +255,7 @@ describe("remainingDiscountMonths", () => {
 		expect(
 			remainingDiscountMonths({
 				currentEpochMs: NOW,
+				billingCycleAnchorMs: PERIOD_END,
 				periodEndMs: PERIOD_END,
 				renewal: monthly,
 				discountEndMs: addMonths(PERIOD_END, 2).getTime() + ms.days(3),
@@ -187,6 +267,7 @@ describe("remainingDiscountMonths", () => {
 		expect(
 			remainingDiscountMonths({
 				currentEpochMs: NOW,
+				billingCycleAnchorMs: PERIOD_END,
 				periodEndMs: PERIOD_END,
 				renewal: monthly,
 				discountEndMs: PERIOD_END,
@@ -197,6 +278,7 @@ describe("remainingDiscountMonths", () => {
 	test("an annual renewal inside the discount is reached and the next one isn't", () => {
 		const months = remainingDiscountMonths({
 			currentEpochMs: NOW,
+			billingCycleAnchorMs: PERIOD_END,
 			periodEndMs: PERIOD_END,
 			renewal: { interval: "year", intervalCount: 1 },
 			discountEndMs: addMonths(PERIOD_END, 6).getTime(),
