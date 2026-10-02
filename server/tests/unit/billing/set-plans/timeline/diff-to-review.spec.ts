@@ -417,4 +417,39 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		});
 		expect(phaseRows(review)).toEqual([["pro:kept", "credits:kept"]]);
 	});
+
+	test("a scheduled plan updated on its saved date is not a withdrawn start", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [
+					running({ product: pro, endedAt: PHASE_B }),
+					scheduled({ product: enterprise, startsAt: PHASE_B }),
+				],
+				opening: [{ fullProduct: pro }],
+				later: [
+					{
+						startsAt: PHASE_B,
+						plans: [
+							{ fullProduct: versionOf({ product: enterprise, version: 2 }) },
+						],
+					},
+				],
+			}),
+		});
+		expect(review.withdrawnStarts).toEqual([]);
+	});
+
+	test("a postponed scheduled plan is not a withdrawn start", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [
+					running({ product: pro, endedAt: PHASE_B }),
+					scheduled({ product: enterprise, startsAt: PHASE_B }),
+				],
+				opening: [{ fullProduct: pro }],
+				later: [{ startsAt: PHASE_C, plans: [{ fullProduct: enterprise }] }],
+			}),
+		});
+		expect(review.withdrawnStarts).toEqual([]);
+	});
 });

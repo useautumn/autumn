@@ -1,9 +1,9 @@
 import type { FullCusProduct, FullCustomer } from "@autumn/shared";
-import { isAliveAt } from "../../timeline/timelineGuards";
 import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { TimelineDiff } from "../../timeline/types/timelineDiff";
 import type { SavedSegment } from "../../timeline/types/timelineSegment";
 
+/** The instance still runs from its saved start on, even if updated or postponed. */
 const isStillScheduled = ({
 	savedSegment,
 	diff,
@@ -14,8 +14,7 @@ const isStillScheduled = ({
 	diff.timeline.some(
 		(segment) =>
 			segment.key === savedSegment.key &&
-			segment.configHash === savedSegment.configHash &&
-			isAliveAt({ segment, at: savedSegment.startsAt }),
+			(segment.endsAt === null || segment.endsAt > savedSegment.startsAt),
 	);
 
 /** Saved scheduled plans the request drops before they ever start. */
