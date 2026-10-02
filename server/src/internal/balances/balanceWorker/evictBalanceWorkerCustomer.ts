@@ -21,6 +21,7 @@ export async function evictBalanceWorkerCustomer({
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	barrier?: boolean;
 	client?: Pick<BalanceWorkerClient, "evict"> & {
 		queue: Pick<BalanceWorkerClient["queue"], "evict">;
 	};

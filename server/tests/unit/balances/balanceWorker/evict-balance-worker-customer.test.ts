@@ -100,6 +100,19 @@ describe("evictBalanceWorkerCustomer", () => {
 		}
 	});
 
+	test("an unconfirmed evict a Postgres read waits on is queued and still reported: the read may miss the worker's writes", async () => {
+		const h = createHarness({ directFailure: notReady() });
+		await evictBalanceWorkerCustomer({
+			ctx: h.ctx,
+			customerId: "cus_1",
+			client: h.client,
+			barrier: true,
+		});
+		expect(h.queued).toEqual(h.sent);
+		expect(h.errors).toHaveLength(1);
+		expect(h.errors[0]?.[0]).toContain("before a Postgres read");
+	});
+
 	test("an evict neither the worker nor the log took is reported as stale", async () => {
 		const h = createHarness({
 			directFailure: notReady(),
