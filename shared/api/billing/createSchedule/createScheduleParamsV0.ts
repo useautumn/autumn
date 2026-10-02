@@ -217,7 +217,7 @@ export const CreateScheduleParamsV0BaseSchema = z.object({
 	}),
 	preserve_add_ons: z.boolean().optional().meta({
 		description:
-			"Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them.",
+			"Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them or the schedule ends.",
 	}),
 	unscheduled_plans: z.array(CreateSchedulePlanSchema).optional().meta({
 		description:
