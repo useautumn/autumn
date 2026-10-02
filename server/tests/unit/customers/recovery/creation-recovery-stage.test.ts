@@ -4,7 +4,7 @@
  *
  * Contract under test:
  * - Setting the stage writes `ctx.state.customerCreationRecoveryStage` and leaves `ctx.extraLogs` untouched.
- * - Reading an unset stage gives `lookup`.
+ * - Reading an unset or unknown stage gives `lookup`; the narrowing lives in the accessor.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -18,10 +18,13 @@ const buildContext = () =>
 	({ extraLogs: {}, state: {} }) as unknown as AutumnContext;
 
 describe("customer creation recovery stage", () => {
-	test("starts at lookup", () => {
+	test("starts at lookup, and an unknown value reads as lookup", () => {
 		expect(getCustomerCreationRecoveryStage({ ctx: buildContext() })).toBe(
 			"lookup",
 		);
+		const ctx = buildContext();
+		ctx.state.customerCreationRecoveryStage = "stripe_invoiced";
+		expect(getCustomerCreationRecoveryStage({ ctx })).toBe("lookup");
 	});
 
 	test("is kept on ctx.state, never in the log payload", () => {

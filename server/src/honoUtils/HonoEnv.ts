@@ -11,7 +11,6 @@ import type { Redis } from "ioredis";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
-import type { CustomerCreationRecoveryStage } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
 export type RequestContext = {
@@ -80,10 +79,8 @@ export type RequestContext = {
 	/** Payload for the request log line only; never read back by the request. */
 	extraLogs: Record<string, unknown>;
 
-	/** What the request has done so far, read back by later steps; never logged. */
-	state: {
-		customerCreationRecoveryStage?: CustomerCreationRecoveryStage;
-	};
+	/** What the request has done so far, read back by later steps; never logged. Narrowed by each owner's get/set. */
+	state: Record<string, unknown>;
 
 	fullCustomer?: FullCustomer;
 
