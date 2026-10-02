@@ -11,6 +11,7 @@ import { initScheduledCustomerProduct } from "@/internal/billing/v2/utils/initFu
 import { firstPhaseStartsInFuture } from "../../setup/classifyFirstPhaseStart";
 import { startsInFuture } from "../../timeline/timelineGuards";
 import type { ResolvedSegment } from "../../timeline/types/timelineDiff";
+import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
 
 const findProductContext = ({
 	billingContext,
@@ -92,7 +93,9 @@ const insertImmediateCustomerProduct = ({
 	});
 
 	if (replacedCustomerProduct && !startsLater) {
-		customerProduct.starts_at = replacedCustomerProduct.starts_at;
+		customerProduct.starts_at = isBackdateRecreate({ billingContext })
+			? (billingContext.subscriptionBackdateStartMs ?? segment.startsAt)
+			: replacedCustomerProduct.starts_at;
 	}
 	applyScheduleTimingToCustomerProductPlan({
 		result: { insertCustomerProduct: customerProduct },

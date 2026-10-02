@@ -9,6 +9,7 @@ type StripeErrorFields = { code?: string; type?: string; statusCode?: number };
 const stripeState = {
 	cancelErrors: [] as Error[],
 	cancelCalls: 0,
+	cancelParams: undefined as Stripe.SubscriptionCancelParams | undefined,
 	retrievedStatus: "incomplete" as Stripe.Subscription.Status,
 };
 const loggedErrors: string[] = [];
@@ -16,8 +17,9 @@ const loggedErrors: string[] = [];
 await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({
 		subscriptions: {
-			cancel: async (id: string) => {
+			cancel: async (id: string, params?: Stripe.SubscriptionCancelParams) => {
 				stripeState.cancelCalls++;
+				stripeState.cancelParams = params;
 				const cancelError = stripeState.cancelErrors.shift();
 				if (cancelError) throw cancelError;
 				return { id, status: "canceled" };
@@ -44,7 +46,7 @@ const ctx = {
 	},
 } as unknown as AutumnContext;
 
-const cancelReplaced = () =>
+const cancelReplaced = ({ reason }: { reason?: "backdate" } = {}) =>
 	executeStripeReplacedSubscriptionAction({
 		ctx,
 		fullCustomer: {
@@ -54,6 +56,7 @@ const cancelReplaced = () =>
 		replacedSubscriptionAction: {
 			type: "cancel",
 			stripeSubscriptionId: "sub_old",
+			reason,
 		},
 	});
 
@@ -67,6 +70,7 @@ describe("executeStripeReplacedSubscriptionAction", () => {
 	beforeEach(() => {
 		stripeState.cancelErrors = [];
 		stripeState.cancelCalls = 0;
+		stripeState.cancelParams = undefined;
 		stripeState.retrievedStatus = "incomplete";
 		loggedErrors.length = 0;
 	});
@@ -105,6 +109,17 @@ describe("executeStripeReplacedSubscriptionAction", () => {
 
 		expect(stripeState.cancelCalls).toBe(2);
 		expect(loggedErrors).toEqual([]);
+	});
+
+	test("a subscription recreated for a backdate is cancelled without proration or a final invoice", async () => {
+		stripeState.retrievedStatus = "active";
+
+		await cancelReplaced({ reason: "backdate" });
+
+		expect(stripeState.cancelParams).toEqual({
+			prorate: false,
+			invoice_now: false,
+		});
 	});
 
 	test("a cancel Stripe rejects outright is not retried", async () => {

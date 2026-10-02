@@ -11,6 +11,7 @@ import type {
 	TimelineDiff,
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
+import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -120,15 +121,17 @@ const isOnReplacedSubscription = ({
 const isLiveRow = (customerProduct: FullCusProduct) =>
 	customerProduct.status !== CusProductStatus.Scheduled;
 
-/** A kept row takes its new end, and moves off a replaced subscription onto the new one. */
+/** A kept row takes its new end, and moves off a replaced subscription onto the new one, from its backdated start if any. */
 const keptRowUpdate = ({
 	billingContext,
 	customerProduct,
 	retime,
+	backdatedStartsAt,
 }: {
 	billingContext: CreateScheduleBillingContext;
 	customerProduct: FullCusProduct;
 	retime?: OperationOf<"retime">;
+	backdatedStartsAt?: number;
 }): { update?: CustomerProductUpdate; patch?: CustomerProductPatch } => {
 	const update: CustomerProductUpdate = { customerProduct, updates: {} };
 	if (retime && isLiveRow(customerProduct)) {
@@ -145,6 +148,9 @@ const keptRowUpdate = ({
 		isOnReplacedSubscription({ billingContext, customerProduct });
 	// Unlinked and paired with an empty patch, execution stamps the new subscription's id on it.
 	if (relinks) update.updates.subscription_ids = [];
+	if (relinks && backdatedStartsAt !== undefined) {
+		update.updates.starts_at = backdatedStartsAt;
+	}
 
 	return {
 		update: Object.keys(update.updates).length > 0 ? update : undefined,
@@ -191,6 +197,15 @@ export const diffToCustomerProducts = ({
 	const patchCustomerProducts: CustomerProductPatch[] = [];
 	const keptCustomerProducts: FullCusProduct[] = [];
 
+	const segmentsById = new Map(
+		diff.timeline.map((segment) => [segment.id, segment]),
+	);
+	const backdatedStartsAtFor = (segmentId: string) => {
+		if (!isBackdateRecreate({ billingContext })) return undefined;
+		const declared = segmentsById.get(segmentId)?.origin === "declared";
+		return declared ? billingContext.subscriptionBackdateStartMs : undefined;
+	};
+
 	for (const keep of operations.keep) {
 		const customerProduct = customerProductFor(keep.customerProductId);
 		if (!customerProductIdBySegmentId.has(keep.segmentId)) {
@@ -204,14 +219,12 @@ export const diffToCustomerProducts = ({
 			retime: retimes.find(
 				({ customerProductId }) => customerProductId === customerProduct.id,
 			),
+			backdatedStartsAt: backdatedStartsAtFor(keep.segmentId),
 		});
 		if (update) updateCustomerProducts.push(update);
 		if (patch) patchCustomerProducts.push(patch);
 	}
 
-	const segmentsById = new Map(
-		diff.timeline.map((segment) => [segment.id, segment]),
-	);
 	const immediateInsertCustomerProducts: FullCusProduct[] = [];
 	const scheduledInsertCustomerProducts: FullCusProduct[] = [];
 	for (const insert of operations.insert) {
