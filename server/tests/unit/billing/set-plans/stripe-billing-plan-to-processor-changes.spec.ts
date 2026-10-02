@@ -139,6 +139,24 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		]);
 	});
 
+	test("a replaced subscription shows its cancel beside the new one's create", () => {
+		expect(
+			stripeBillingPlanToProcessorChanges({
+				stripeBillingPlan: {
+					subscriptionAction: { type: "create", params: {} },
+					replacedSubscriptionAction: {
+						type: "cancel",
+						stripeSubscriptionId: "sub_live",
+						reason: "backdate",
+					},
+				},
+			}),
+		).toEqual([
+			{ type: "subscription", id: null, action: "created" },
+			{ type: "subscription", id: "sub_live", action: "canceled" },
+		]);
+	});
+
 	test("no Stripe actions", () => {
 		expect(
 			stripeBillingPlanToProcessorChanges({

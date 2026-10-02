@@ -112,6 +112,18 @@ const scheduleActionToProcessorChanges = ({
 	}
 };
 
+const replacedSubscriptionToProcessorChanges = ({
+	replacedSubscriptionAction,
+}: StripeBillingPlan): ProcessorChange[] =>
+	replacedSubscriptionAction
+		? [
+				subscriptionChange({
+					id: replacedSubscriptionAction.stripeSubscriptionId,
+					action: "canceled",
+				}),
+			]
+		: [];
+
 export const stripeBillingPlanToProcessorChanges = ({
 	stripeBillingPlan,
 	stripeSubscriptionSchedule,
@@ -123,6 +135,7 @@ export const stripeBillingPlanToProcessorChanges = ({
 		subscriptionAction: stripeBillingPlan.subscriptionAction,
 		checkoutSessionAction: stripeBillingPlan.checkoutSessionAction,
 	}),
+	...replacedSubscriptionToProcessorChanges(stripeBillingPlan),
 	...scheduleActionToProcessorChanges({
 		subscriptionScheduleAction: stripeBillingPlan.subscriptionScheduleAction,
 		stripeSubscriptionSchedule,
