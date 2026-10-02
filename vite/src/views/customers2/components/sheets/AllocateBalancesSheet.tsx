@@ -24,7 +24,12 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import {
+	AllocationUsageWindows,
+	allocationStateQueryKey,
+} from "./AllocationUsageWindows";
 
 type AmountInputs = Record<string, string>;
 
@@ -82,6 +87,7 @@ export function AllocateBalancesSheet() {
 	const { customer } = useCusQuery();
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const queryClient = useQueryClient();
+	const { isAdmin } = useAdmin();
 
 	const fullCustomer = customer as FullCustomer | null;
 	const entities = (fullCustomer?.entities ?? []).filter(
@@ -141,6 +147,9 @@ export function AllocateBalancesSheet() {
 				`Allocated ${featureName} to ${allocations.length} ${allocations.length === 1 ? "entity" : "entities"}`,
 			);
 			await queryClient.invalidateQueries({ queryKey: ["customer"] });
+			await queryClient.invalidateQueries({
+				queryKey: allocationStateQueryKey(customerId),
+			});
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to allocate balances"));
 		} finally {
@@ -198,6 +207,13 @@ export function AllocateBalancesSheet() {
 						})}
 					</div>
 				</SheetSection>
+
+				{isAdmin && (
+					<AllocationUsageWindows
+						customerId={customerId}
+						featureId={featureId}
+					/>
+				)}
 
 				{response && (
 					<SheetSection withSeparator>
