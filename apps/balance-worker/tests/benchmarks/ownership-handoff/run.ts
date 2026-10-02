@@ -86,7 +86,7 @@ type OwnershipEvent = {
 	seenAt: number;
 	partition: number;
 	offset: string;
-	type: "claimed" | "unowned" | "ready" | "draining" | "preparing";
+	type: "claimed" | "unowned" | "released" | "ready" | "draining" | "preparing";
 	endpoint?: string;
 	at: number;
 };
@@ -123,6 +123,7 @@ function recordTimestamp({
 		case "preparing":
 			return record.preparingAt;
 		case "unowned":
+		case "released":
 			return record.releasedAt;
 	}
 }

@@ -1,56 +1,68 @@
 import { Accordion } from "@autumn/ui";
-import type { ComponentProps } from "react";
-import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../../context/CreateScheduleFormProvider";
 import { useSetPlansReviewSections } from "../../hooks/useSetPlansReviewSections";
+import { formPhasesToSkeletonPhases } from "../../utils/review/formPhasesToSkeletonPhases";
+import type {
+	ReviewChangeLayout,
+	ReviewChangeSystem,
+} from "../../utils/review/types/reviewChange";
 import { ReviewChangeGroup } from "./ReviewChangeGroup";
 import { ReviewWarnings } from "./ReviewWarnings";
 
+const REVIEW_GROUPS: {
+	value: string;
+	system: ReviewChangeSystem;
+	title: string;
+	sectionKey: "plans" | "balances" | "processor";
+	layout?: ReviewChangeLayout;
+}[] = [
+	{ value: "plans", system: "autumn", title: "Plans", sectionKey: "plans" },
+	{
+		value: "balances",
+		system: "autumn",
+		title: "Balances",
+		sectionKey: "balances",
+	},
+	{
+		value: "subscription",
+		system: "stripe",
+		title: "Subscription",
+		sectionKey: "processor",
+		layout: "pricing_table",
+	},
+];
+
 const DEFAULT_OPEN_GROUPS = ["plans"];
 
+/** Every group always renders, as a skeleton whenever a preview is loading, so the
+ * sheet never jumps and never shows a stale preview. */
 export function SetPlansReviewChanges() {
-	const { isPreviewLoading } = useCreateScheduleFormContext();
-	const sections = useSetPlansReviewSections();
-	if (!sections) return null;
+	const { isPreviewLoading, formValues } = useCreateScheduleFormContext();
+	const latestSections = useSetPlansReviewSections();
+	const sections = isPreviewLoading ? undefined : latestSections;
+	if (!sections && !isPreviewLoading) return null;
 
-	const { warnings, plans, balances, processor } = sections;
-	const groups: ComponentProps<typeof ReviewChangeGroup>[] = [
-		{ value: "plans", system: "autumn", title: "Plans", section: plans },
-		{
-			value: "balances",
-			system: "autumn",
-			title: "Balances",
-			section: balances,
-		},
-		{
-			value: "subscription",
-			system: "stripe",
-			title: "Subscription",
-			section: processor,
-		},
-	];
-	const visibleGroups = groups.filter(
-		({ section }) =>
-			section === plans ||
-			section.phases.length > 0 ||
-			Boolean(section.stripeIds?.length),
-	);
+	const placeholderPhases = formPhasesToSkeletonPhases({
+		phases: formValues.phases,
+	});
 
 	return (
-		<div
-			className={cn(
-				"flex flex-col transition-opacity",
-				isPreviewLoading && "opacity-60",
-			)}
-		>
-			<ReviewWarnings warnings={warnings} />
+		<div className="flex flex-col">
+			{sections && <ReviewWarnings warnings={sections.warnings} />}
 			<Accordion
 				type="multiple"
 				defaultValue={DEFAULT_OPEN_GROUPS}
 				className="px-4 pt-1"
 			>
-				{visibleGroups.map((group) => (
-					<ReviewChangeGroup key={group.value} {...group} />
+				{REVIEW_GROUPS.map(({ sectionKey, ...group }) => (
+					<ReviewChangeGroup
+						key={group.value}
+						{...group}
+						section={sections?.[sectionKey]}
+						placeholderPhases={
+							sectionKey === "balances" ? undefined : placeholderPhases
+						}
+					/>
 				))}
 			</Accordion>
 		</div>

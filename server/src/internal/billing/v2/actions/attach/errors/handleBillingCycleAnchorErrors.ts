@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { assertFutureBillingCycleAnchor } from "@/internal/billing/v2/common/errors/assertFutureBillingCycleAnchor";
+import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 
 /**
  * Validates billing cycle anchor constraints for attach.
@@ -68,15 +69,7 @@ export const handleBillingCycleAnchorErrors = ({
 		});
 	}
 
-	// Cannot combine billing_cycle_anchor with a trial
-	if (billingContext.trialContext?.trialEndsAt) {
-		throw new RecaseError({
-			message:
-				"billing_cycle_anchor cannot be used together with a free trial. The trial already controls the billing cycle start.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
+	assertNoBillingCycleAnchorWithTrial({ billingContext });
 
 	// Cannot use billing_cycle_anchor on one-off products
 	if (isOneOffProduct({ product: billingContext.attachProduct })) {

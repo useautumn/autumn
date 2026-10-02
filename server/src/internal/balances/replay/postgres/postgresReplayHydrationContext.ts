@@ -83,6 +83,7 @@ export function createReplayHydrationContext({
 		expand: [],
 		skipCache: true,
 		extraLogs: {},
+		state: {},
 	};
 	Object.defineProperty(context, "redisV2", {
 		configurable: false,

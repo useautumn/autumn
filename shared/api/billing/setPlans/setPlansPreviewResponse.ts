@@ -1,12 +1,23 @@
-import type { AttachPreviewResponse } from "@api/billing/common/attachPreviewResponse";
+import { AttachPreviewResponseSchema } from "@api/billing/common/attachPreviewResponse";
 import { CustomerPlanChangeSchema } from "@api/billing/common/customerPlanChange";
-import { PreviewBalanceChangeSchema } from "@api/billing/components/billingChanges/previewBalanceChange";
+import {
+	PreviewBalanceChangeSchema,
+	PreviewBalanceSchema,
+} from "@api/billing/components/billingChanges/previewBalanceChange";
 import { z } from "zod/v4";
+import { SetPlansTextPartSchema } from "./setPlansTextParts";
 
 export const ProcessorChangeSchema = z.object({
 	type: z.enum(["subscription", "subscription_schedule"]),
 	id: z.string().nullable(),
 	action: z.enum(["created", "updated", "released", "canceled"]),
+});
+
+/** One Stripe price tier; `up_to` is null on the last tier. */
+export const ProcessorItemPriceTierSchema = z.object({
+	up_to: z.number().nullable(),
+	unit_amount: z.number(),
+	flat_amount: z.number(),
 });
 
 /** How Stripe bills one item. Amounts are in major currency units. */
@@ -17,7 +28,7 @@ export const ProcessorItemPriceSchema = z.object({
 	interval_count: z.number(),
 	usage_type: z.enum(["licensed", "metered"]),
 	tiers_mode: z.enum(["graduated", "volume"]).nullable(),
-	first_tier_amount: z.number().nullable(),
+	tiers: z.array(ProcessorItemPriceTierSchema).nullable(),
 	units_per_quantity: z.number().nullable(),
 });
 
@@ -39,9 +50,17 @@ export const SetPlansPreviewPlanSchema = z.object({
 	plan_id: z.string(),
 	entity_id: z.string().nullable(),
 	name: z.string(),
-	status: z.enum(["starts", "ends", "updated", "kept"]),
+	status: z.enum(["starts", "ends", "updated", "kept"]).meta({
+		description:
+			"How the plan differs from what this phase held before the request; 'kept' is unchanged.",
+	}),
 	custom: z.boolean(),
+	ongoing: z.boolean().meta({
+		description:
+			"Listed in unscheduled_plans: kept across every phase, so later schedule changes don't end it.",
+	}),
 	expires_at: z.number().nullable(),
+	trial_ends_at: z.number().nullable(),
 	credit: z.number().nullable(),
 	prices: z.array(
 		z.object({
@@ -51,9 +70,34 @@ export const SetPlansPreviewPlanSchema = z.object({
 	),
 });
 
+export const SetPlansPreviewBalanceSchema = PreviewBalanceSchema.extend({
+	overage_allowed: z.boolean(),
+});
+
+export const SetPlansPreviewPooledBalanceSchema = z.object({
+	previous_total: z.number().nullable().meta({
+		description:
+			"The shared pool's total before, or null when this scope wasn't pooling into it.",
+	}),
+	total: z.number(),
+	contributors: z.number().meta({
+		description:
+			"How many scopes pool into the shared balance after the change.",
+	}),
+});
+
 export const SetPlansPreviewBalanceChangeSchema =
 	PreviewBalanceChangeSchema.extend({
+		entity_id: z.string().nullable().meta({
+			description:
+				"The entity whose plans hold this balance, or null for customer-level plans.",
+		}),
+		balance: SetPlansPreviewBalanceSchema,
 		behavior: z.enum(["added", "removed", "reset", "carried", "updated"]),
+		pooled: SetPlansPreviewPooledBalanceSchema.optional().meta({
+			description:
+				"Set when this scope's plans pool the feature into the customer's shared balance; `balance` then holds their contribution.",
+		}),
 	});
 
 export const SetPlansPreviewPhaseSchema = z.object({
@@ -66,6 +110,12 @@ export const SetPlansPreviewPhaseSchema = z.object({
 	processor_items: z.array(ProcessorItemSchema),
 });
 
+/** A saved phase the request no longer has, with every plan it held ending. */
+export const SetPlansPreviewRemovedPhaseSchema = z.object({
+	starts_at: z.number(),
+	plans: z.array(SetPlansPreviewPlanSchema),
+});
+
 export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"unmanaged_stripe_item_removed",
 	"usage_reset",
@@ -74,33 +124,78 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"pending_quantity_change_dropped",
 	"new_stripe_price_created",
 	"proration_disabled",
+	"subscription_replaced",
+	"new_stripe_subscription",
+	"open_invoice_not_collected",
+	"discount_not_carried",
+	"trial_ended",
+	"scheduled_cancel_changed",
+	"interval_change_invoices_now",
+	"usage_not_billed",
+	"past_due_invoice_open",
+	"cycle_reset",
+	"other_subscriptions_unaffected",
 ]);
 
 export const SetPlansPreviewWarningSchema = z.object({
 	type: SetPlansPreviewWarningTypeSchema,
 	severity: z.enum(["warning", "info"]),
 	message: z.string(),
+	parts: z.array(SetPlansTextPartSchema).optional().meta({
+		description:
+			"The message split into parts, with names, amounts and dates marked bold.",
+	}),
 });
 
 export const SetPlansPreviewChangesSchema = z.object({
-	phases: z.array(SetPlansPreviewPhaseSchema),
-	processor_changes: z.array(ProcessorChangeSchema),
-	warnings: z.array(SetPlansPreviewWarningSchema),
+	phases: z.array(SetPlansPreviewPhaseSchema).meta({
+		description:
+			"Each phase in start order, with the plans, balances and Stripe items it would hold.",
+	}),
+	removed_phases: z.array(SetPlansPreviewRemovedPhaseSchema).meta({
+		description:
+			"Saved phases the request removes, in start order, each listing the plans it held.",
+	}),
+	processor_changes: z.array(ProcessorChangeSchema).meta({
+		description:
+			"The Stripe subscriptions and subscription schedules the request would create, update, release or cancel.",
+	}),
+	warnings: z.array(SetPlansPreviewWarningSchema).meta({
+		description:
+			"Side effects of the request worth confirming before it is sent, such as a replaced schedule or a reset balance.",
+	}),
 });
+
+export const SetPlansPreviewResponseSchema = AttachPreviewResponseSchema.extend(
+	SetPlansPreviewChangesSchema.shape,
+);
 
 export type ProcessorChange = z.infer<typeof ProcessorChangeSchema>;
 export type ProcessorItemPrice = z.infer<typeof ProcessorItemPriceSchema>;
+export type ProcessorItemPriceTier = z.infer<
+	typeof ProcessorItemPriceTierSchema
+>;
 export type ProcessorItem = z.infer<typeof ProcessorItemSchema>;
 export type SetPlansPreviewPlan = z.infer<typeof SetPlansPreviewPlanSchema>;
+export type SetPlansPreviewBalance = z.infer<
+	typeof SetPlansPreviewBalanceSchema
+>;
+export type SetPlansPreviewPooledBalance = z.infer<
+	typeof SetPlansPreviewPooledBalanceSchema
+>;
 export type SetPlansPreviewBalanceChange = z.infer<
 	typeof SetPlansPreviewBalanceChangeSchema
 >;
 export type SetPlansPreviewPhase = z.infer<typeof SetPlansPreviewPhaseSchema>;
+export type SetPlansPreviewRemovedPhase = z.infer<
+	typeof SetPlansPreviewRemovedPhaseSchema
+>;
 export type SetPlansPreviewWarning = z.infer<
 	typeof SetPlansPreviewWarningSchema
 >;
 export type SetPlansPreviewChanges = z.infer<
 	typeof SetPlansPreviewChangesSchema
 >;
-export type SetPlansPreviewResponse = AttachPreviewResponse &
-	SetPlansPreviewChanges;
+export type SetPlansPreviewResponse = z.infer<
+	typeof SetPlansPreviewResponseSchema
+>;

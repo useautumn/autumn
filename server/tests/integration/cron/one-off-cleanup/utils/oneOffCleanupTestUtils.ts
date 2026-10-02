@@ -5,6 +5,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
@@ -20,6 +21,13 @@ export const trackUsageForCleanup = async (
 ) => {
 	await autumnV1.track(params, { skipCache: true });
 };
+
+/**
+ * A test clock would stamp every attach's created_at with its frozen time, tying repeat
+ * purchases so the cron's strictly-newer product check never matches; skip it.
+ */
+export const oneOffCleanupCustomer = () =>
+	s.customer({ paymentMethod: "success", testClock: false });
 
 /** Gets full customer including expired products. */
 export const getFullCustomerWithExpired = async (

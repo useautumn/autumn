@@ -74,12 +74,17 @@ export const collectPoolKeys = (): string[] => {
 	return keys;
 };
 
-const parsePool = (): string[] => {
+export const resolvePoolKeys = (): string[] => {
 	const fromPool = collectPoolKeys();
 	if (fromPool.length > 0) {
 		return fromPool;
 	}
 	const single = process.env.STRIPE_SANDBOX_SECRET_KEY?.trim();
+	if (single && isStripeConnectShardKey(single)) {
+		throw new Error(
+			"STRIPE_SANDBOX_SECRET_KEY is reserved for the stripe-connect shard; set a pool key in STRIPE_TEST_KEY_POOL",
+		);
+	}
 	if (single) {
 		return [single];
 	}
@@ -90,7 +95,7 @@ const parsePool = (): string[] => {
 
 let poolCache: string[] | undefined;
 const pool = (): string[] => {
-	poolCache ??= parsePool();
+	poolCache ??= resolvePoolKeys();
 	return poolCache;
 };
 

@@ -5,6 +5,7 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { SubjectScope } from "../../types/subject.js";
+import { awaitLoadWithinDeadline } from "./awaitLoadWithinDeadline.js";
 import { loadSubjectState } from "./loadSubjectState.js";
 
 const viewHasEntity = ({
@@ -41,12 +42,18 @@ export const ensureSubjectState = async ({
 	const customerIdentity: MeteringIdentity = { ...identity, entityId: null };
 	let state = scope.ctx.writer.readFreshestState({ identity });
 	if (!state) {
-		await hydrateOnce({ scope, identity: customerIdentity });
+		await awaitLoadWithinDeadline({
+			identity: customerIdentity,
+			load: hydrateOnce({ scope, identity: customerIdentity }),
+		});
 		state = scope.ctx.writer.readFreshestState({ identity });
 	}
 	if (!state) throw new Error("Customer state missing after hydration");
 	if (viewHasEntity({ state, identity })) return state;
-	const hydrated = await hydrateOnce({ scope, identity });
+	const hydrated = await awaitLoadWithinDeadline({
+		identity,
+		load: hydrateOnce({ scope, identity }),
+	});
 	// The decision reads the freshest merged view, so the catalog must be ensured for that view, not the entity slice alone.
 	return scope.ctx.writer.readFreshestState({ identity }) ?? hydrated;
 };

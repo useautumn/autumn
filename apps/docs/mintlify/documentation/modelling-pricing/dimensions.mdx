@@ -1,0 +1,453 @@
+---
+title: Dimensions & Rate Cards
+description: Charge different credit amounts for the same feature based on event properties
+---
+
+A [credit system](/documentation/modelling-pricing/credit-systems) has a **rate card**. The rate card says how many credits one unit of each feature costs. Each feature is one row on the rate card.
+
+A **dimension** is a different rate for the same row. It applies when the properties you send with an event match it. A **multiplier** changes the rate up or down after a rate is chosen.
+
+> **Example** <br />
+> You sell compute minutes. A normal minute costs `1 credit`. But some machines cost you more to run, so you want to charge more for them:
+> - A `large` machine costs `16 credits` per minute
+> - A `large` machine in the `eu` region costs `20 credits` per minute
+> - A `spot` machine gets a 70% discount (`× 0.3`)
+>
+> You keep one feature, `compute_minutes`, and one credit balance. You send the machine details as properties on each event, and Autumn picks the right rate.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Add `dimensions` and `multipliers` to a row of the credit system's `creditSchema`. Each one has a name and a `match` object:
+
+```ts autumn.config.ts
+import { atmn, feature, plan } from "atmn";
+
+export const computeMinutes = feature({
+  featureId: "compute_minutes",
+  name: "Compute minutes",
+  type: "metered",
+  consumable: true,
+});
+
+export const credits = feature({
+  featureId: "credits",
+  name: "Credits",
+  type: "credit_system",
+  creditSchema: [
+    {
+      meteredFeatureId: computeMinutes.featureId,
+      creditCost: 1, // the rate when no dimension matches
+      dimensions: {
+        size_large: { match: { size: "large" }, creditCost: 16 },
+        size_large_region_eu: {
+          match: { size: "large", region: "eu" },
+          creditCost: 20,
+        },
+      },
+      multipliers: {
+        lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+      },
+    },
+  ],
+});
+
+export const pro = plan({
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [
+    {
+      featureId: credits.featureId,
+      included: 1000,
+      reset: { interval: "month" },
+    },
+  ],
+});
+
+export default atmn({
+  features: [computeMinutes, credits],
+  plans: [pro],
+});
+```
+
+Preview with `atmn push`, then apply with `atmn push --yes`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to the features page, under Plans.
+2. Open your credit system, or create one.
+3. On a rate card row, click **Add dimension** (next to **Add Tier**).
+4. In the **Dimensions** table, add each property and the values it can take (eg, `size` with `large, small`).
+5. In the **Rates** table, set the credits for each combination. Leave a property blank to mean "any value". Set a **Priority** if two rates could match the same event.
+6. In the **Multipliers** table, add any factor that should scale the rate (eg, `lifecycle = spot`, `× 0.3`).
+7. Save your changes.
+
+To remove all dimensions from a row, click **Remove dimensions**.
+
+</Tab>
+</Tabs>
+
+## Sending properties
+
+Pass `properties` on `track` and `check`. Use the **underlying feature** (`compute_minutes`), not the credit system, as with any credit system.
+
+#### Tracking usage
+
+This event is a `large` machine in `eu`, on `spot`. The rate is 20 credits, the multiplier makes it 6 credits, and 10 minutes cost **60 credits**.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.track({
+  customerId: "user_123",
+  featureId: "compute_minutes",
+  value: 10,
+  properties: { size: "large", region: "eu", lifecycle: "spot" },
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.track(
+    customer_id="user_123",
+    feature_id="compute_minutes",
+    value=10,
+    properties={"size": "large", "region": "eu", "lifecycle": "spot"},
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "compute_minutes",
+    "value": 10,
+    "properties": { "size": "large", "region": "eu", "lifecycle": "spot" }
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="track response">
+```json
+{
+  "customerId": "user_123",
+  "value": 10,
+  "balance": {
+    "featureId": "credits",
+    "granted": 1000,
+    "remaining": 940,
+    "usage": 60,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1757192635393
+  }
+}
+```
+</Expandable>
+
+#### Checking access
+
+`check` uses the same properties. Autumn converts `required_balance` at the rate the properties choose. Here, 10 minutes on a `large` machine need **160 credits**, not 10.
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await autumn.check({
+  customerId: "user_123",
+  featureId: "compute_minutes",
+  requiredBalance: 10,
+  properties: { size: "large" },
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="compute_minutes",
+    required_balance=10,
+    properties={"size": "large"},
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "compute_minutes",
+    "required_balance": 10,
+    "properties": { "size": "large" }
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response">
+The customer has 940 credits left, which is more than the 160 credits needed.
+
+```json
+{
+  "allowed": true,
+  "customerId": "user_123",
+  "balance": {
+    "featureId": "credits",
+    "granted": 1000,
+    "remaining": 940,
+    "usage": 60,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1757192635393
+  }
+}
+```
+</Expandable>
+
+<Note>
+  If you [lock a balance](/documentation/customers/balance-locking) with `check`, the properties are saved with the lock. `balances.finalize` then prices the final usage with those same properties.
+</Note>
+
+## How a rate is chosen
+
+For each event, Autumn picks **one** rate:
+
+1. A dimension matches when **every** key in its `match` is in the event's properties, with the same value.
+2. If more than one dimension matches, the one with the **most keys** wins. `{ size: "large", region: "eu" }` beats `{ size: "large" }`.
+3. If they have the same number of keys, the higher `priority` wins.
+4. If no dimension matches, the row's own rate applies. This is also true when you send no properties.
+
+Extra properties that no dimension uses are ignored.
+
+Using the example rate card:
+
+| Properties sent | Dimension chosen | Rate |
+|-----------------|------------------|------|
+| none | none (row rate) | 1 credit |
+| `{ size: "small" }` | none (row rate) | 1 credit |
+| `{ size: "large" }` | `size_large` | 16 credits |
+| `{ size: "large", region: "us" }` | `size_large` | 16 credits |
+| `{ size: "large", region: "eu" }` | `size_large_region_eu` | 20 credits |
+
+<Note>
+  Values are compared as text, so `{ size: 1 }` and `{ size: "1" }` match the same dimension. Properties with a `null` or object value never match.
+</Note>
+
+Autumn checks your rate card when you save it. If two dimensions could match the same event with the same number of keys and the same priority, the save fails. Add a key or a `priority` to one of them to fix it.
+
+## Multipliers
+
+A multiplier changes the chosen rate. Unlike dimensions, **every** matching multiplier applies, not just one.
+
+The final rate is:
+
+```
+final rate = chosen rate × (all matching factors, multiplied together) + (all matching adds, summed)
+```
+
+- `factor` multiplies the rate. `0.3` means 30% of the rate. `2` means double.
+- `add` adds a fixed number of credits to the rate. It can be negative.
+
+> **Example** <br />
+> An event has `{ size: "large", region: "eu", lifecycle: "spot" }` and `value: 10`.
+> 1. The dimension `size_large_region_eu` sets the rate to 20 credits.
+> 2. The multiplier `lifecycle_spot` (`× 0.3`) changes it to 6 credits.
+> 3. 10 minutes × 6 credits = **60 credits**.
+
+A rate can never go below zero. If your multipliers could make any rate negative, the save fails.
+
+<Note>
+  The dashboard only edits `factor`. To use `add`, set it with the CLI or the API.
+</Note>
+
+## Graduated dimensions
+
+A dimension can have [graduated](/documentation/modelling-pricing/graduated-pricing) tiers instead of a single `creditCost`. Each dimension counts its own usage, so it moves through its own tiers. Usage on other dimensions does not move it forward.
+
+```ts autumn.config.ts
+dimensions: {
+  size_xl: {
+    match: { size: "xl" },
+    tierBehavior: "graduated",
+    tiers: [
+      { to: 5, creditCost: 2 }, // first 5 minutes: 2 credits each
+      { to: "inf", creditCost: 1 }, // after that: 1 credit each
+    ],
+  },
+},
+```
+
+Tier progress starts again at zero each time the balance resets.
+
+## Rate card fields
+
+Each **dimension** has these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `match` | object | The event properties this rate applies to. Every key must match. |
+| `creditCost` | number | Credits per unit (or per `billingUnits`) when this dimension wins. |
+| `tierBehavior`, `tiers` | | Use these instead of `creditCost` for a graduated rate. The final tier must use `"inf"`. |
+| `priority` | integer | Optional. Breaks ties between dimensions with the same number of keys. Higher wins. |
+
+Each **multiplier** has these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `match` | object | The event properties this multiplier applies to. Every key must match. |
+| `factor` | number | Optional. Multiplies the rate. Must be greater than 0. |
+| `add` | number | Optional. Credits added to the rate after all factors. |
+
+A multiplier needs at least one of `factor` or `add`.
+
+<Note>
+  Dimension and multiplier names can be up to 64 characters and cannot contain `::`. The name appears on invoices (see below), so choose a name your customers will understand.
+</Note>
+
+## Invoices with monetary credits
+
+When your credits are money (eg, one credit is \$1), you usually want the invoice to show **what** the customer spent them on. Autumn does this when the plan item for the credit system has:
+
+- a **usage-based** price (pay per use), and
+- a price of **exactly one currency unit per credit** (eg, `$1` per credit, or `$100` per 100 credits), and
+- no pooling across [entities](/documentation/modelling-pricing/entity-plans).
+
+```ts autumn.config.ts
+import { atmn, feature, plan } from "atmn";
+
+export const computeMinutes = feature({
+  featureId: "compute_minutes",
+  name: "Compute minutes",
+  type: "metered",
+  consumable: true,
+});
+
+export const credits = feature({
+  featureId: "credits",
+  name: "Credits",
+  type: "credit_system",
+  creditSchema: [
+    {
+      meteredFeatureId: computeMinutes.featureId,
+      creditCost: 1,
+      dimensions: {
+        size_large: { match: { size: "large" }, creditCost: 16 },
+        size_large_region_eu: {
+          match: { size: "large", region: "eu" },
+          creditCost: 20,
+        },
+      },
+      multipliers: {
+        lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+      },
+    },
+  ],
+});
+
+export const pro = plan({
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [
+    {
+      featureId: credits.featureId,
+      included: 100, // $100 of credits included each month
+      reset: { interval: "month" },
+      // $1 per credit, billed at the end of the month
+      price: { amount: 1, interval: "month", billingMethod: "usage_based" },
+    },
+  ],
+});
+
+export default atmn({
+  features: [computeMinutes, credits],
+  plans: [pro],
+});
+```
+
+At the end of the billing period, the invoice has:
+
+- **one line for each feature and dimension** that used credits. The line shows the feature name, the dimension name, the units used, and the cost.
+- **one "Credits applied" line** that takes off the credits included in the plan.
+
+Usage with no matching dimension goes on a line with just the feature name. Multipliers do not get their own line. Their usage is added to the line of the dimension that was chosen.
+
+> **Example** <br />
+> A customer on Pro (\$20 per month, \$100 of credits included) uses this in one month:
+> - 40 minutes with no properties: 40 × 1 = 40 credits
+> - 10 minutes on `{ size: "large" }`: 10 × 16 = 160 credits
+> - 10 minutes on `{ size: "large", region: "eu", lifecycle: "spot" }`: 10 × 20 × 0.3 = 60 credits
+
+The invoice looks like this:
+
+| Line | Amount |
+|------|--------|
+| Pro | \$20 |
+| Compute minutes, 40 units | \$40 |
+| Compute minutes — size_large, 10 units | \$160 |
+| Compute minutes — size_large_region_eu, 10 units | \$60 |
+| Credits applied | −\$100 |
+| **Total** | **\$180** |
+
+The customer used \$260 of credits. \$100 was included, so they pay \$160 for usage plus the \$20 plan price.
+
+When a balance belongs to an [entity](/documentation/modelling-pricing/entity-plans), the entity's name is added to the end of each line, eg `Compute minutes — size_large, 10 units (Workspace A)`.
+
+<Note>
+  The plan item's price decides this, and there is no switch to turn it on. Any other price shape (a different price per credit, prepaid credits, included-only, or pooled balances) bills usage above the included amount as one normal overage line, with no breakdown by dimension.
+</Note>
+
+See [Itemized invoice credits](/documentation/modelling-pricing/credit-systems#itemized-invoice-credits) for more on how this works.
+
+## Custom rate cards per plan
+
+A plan can use its own rate card for a credit system. Set `featureOverride` on the plan item:
+
+```ts autumn.config.ts
+{
+  featureId: credits.featureId,
+  included: 1000,
+  reset: { interval: "month" },
+  featureOverride: {
+    creditSchema: [
+      {
+        meteredFeatureId: computeMinutes.featureId,
+        creditCost: 1,
+        dimensions: {
+          size_large: { match: { size: "large" }, creditCost: 12 },
+        },
+      },
+    ],
+  },
+}
+```
+
+The override **replaces the whole rate card** for customers on this plan, including all dimensions and multipliers. Anything you do not copy into the override is not used.
+
+In the dashboard, open the plan item's advanced settings and use the **Custom rate card** section.
+
+## Limits
+
+- Dimensions only work on credit systems (`type: "credit_system"`). [AI credit systems](/documentation/modelling-pricing/credit-systems#ai-credit-systems) use markups instead.
+- Properties change the price only through a credit system. A metered feature with its own balance ignores them.
+- [`invoices.create`](/api-reference/invoices/createInvoice) with `usage` uses properties to price each entry, but the invoice has one total line, not one line per dimension.

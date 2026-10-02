@@ -261,16 +261,22 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				endpoint: "http://10.0.0.4:8080",
 			}),
 		).resolves.toEqual({ routeEpoch: "12" });
+		const message = fake.records[0]?.messages[0];
+		expect(message?.key?.toString()).toBe(
+			`${partition}:released:http://10.0.0.4:8080`,
+		);
 		expect(
 			ownershipTopic.parse({
-				key: Buffer.isBuffer(fake.records[0]?.messages[0]?.key)
-					? fake.records[0].messages[0].key
-					: null,
-				value: Buffer.isBuffer(fake.records[0]?.messages[0]?.value)
-					? fake.records[0].messages[0].value
-					: null,
-			}).type,
-		).toBe("unowned");
+				key: Buffer.isBuffer(message?.key) ? message.key : null,
+				value: Buffer.isBuffer(message?.value) ? message.value : null,
+			}),
+		).toEqual({
+			schemaVersion: 1,
+			type: "released",
+			partition,
+			endpoint: "http://10.0.0.4:8080",
+			releasedAt: 1_700_000_000_100,
+		});
 	}
 
 	async function announcesReadyOutsideTransactions(): Promise<void> {
@@ -386,7 +392,10 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		publishesClaimAndReturnsEpoch,
 	);
 
-	test("releases with an unowned record", publishesRelease);
+	test(
+		"releases with a record keyed to the releasing worker",
+		publishesRelease,
+	);
 
 	test(
 		"announces readiness with a plain send, never a transaction",
@@ -1148,6 +1157,127 @@ describe("ownershipReplay", function ownershipReplayTests() {
 					offset: 3n,
 				}).get(7)?.routeEpoch,
 			).toBe("9");
+		});
+	});
+});
+
+describe("compactedOwnershipLog", function compactedOwnershipLogTests() {
+	const topic = "balance-partition-owners";
+	const partition = 7;
+	const formerOwner = "http://10.0.0.4:8080";
+	const currentOwner = "http://10.0.0.9:8080";
+
+	type LoggedMessage = {
+		key: Buffer | null;
+		value: Buffer | null;
+		offset: bigint;
+	};
+
+	function createLoggingPublisher() {
+		const log: LoggedMessage[] = [];
+		async function send(record: ProducerRecord): Promise<RecordMetadata[]> {
+			const baseOffset = log.length;
+			for (const message of record.messages)
+				log.push({
+					key: Buffer.isBuffer(message.key) ? message.key : null,
+					value: Buffer.isBuffer(message.value) ? message.value : null,
+					offset: BigInt(log.length),
+				});
+			return [
+				{
+					topicName: topic,
+					partition,
+					errorCode: 0,
+					baseOffset: baseOffset.toString(),
+				},
+			];
+		}
+		async function transaction(): Promise<KafkaTransaction> {
+			return {
+				send,
+				commit: async () => {},
+				abort: async () => {},
+				sendOffsets: async () => {},
+			};
+		}
+		const publisher = createOwnershipPublisher({
+			ctx: { producer: { transaction } },
+			config: { topic },
+		});
+		return { publisher, log };
+	}
+
+	function compact({ log }: { log: LoggedMessage[] }): LoggedMessage[] {
+		const latestByKey = new Map<string, LoggedMessage>();
+		for (const message of log)
+			latestByKey.set(message.key?.toString("utf8") ?? "", message);
+		return [...latestByKey.values()].sort((left, right) =>
+			left.offset < right.offset ? -1 : 1,
+		);
+	}
+
+	function replayOwner({ messages }: { messages: LoggedMessage[] }) {
+		const state: OwnershipConsumerState = {
+			status: "started",
+			owners: new Map(),
+			lastAppliedOffsets: new Map(),
+			lifetime: new AbortController(),
+		};
+		for (const { key, value, offset } of messages)
+			applyOwnershipMessage({
+				state,
+				message: { key, value },
+				partition,
+				offset,
+			});
+		return state.owners.get(partition);
+	}
+
+	test("a cold replay keeps the current owner when a former owner's release was written after its claim", async () => {
+		const { publisher, log } = createLoggingPublisher();
+		await publisher.claim({ partition, endpoint: formerOwner, claimedAt: 1 });
+		await publisher.claim({ partition, endpoint: currentOwner, claimedAt: 2 });
+		await publisher.release({
+			partition,
+			endpoint: formerOwner,
+			releasedAt: 3,
+		});
+
+		expect(replayOwner({ messages: log })?.endpoint).toBe(currentOwner);
+		expect(replayOwner({ messages: compact({ log }) })).toEqual({
+			partition,
+			endpoint: currentOwner,
+			routeEpoch: "1",
+		});
+	});
+
+	test("a cold replay still honours a release from the worker holding the partition", async () => {
+		const { publisher, log } = createLoggingPublisher();
+		await publisher.claim({ partition, endpoint: currentOwner, claimedAt: 1 });
+		await publisher.release({
+			partition,
+			endpoint: currentOwner,
+			releasedAt: 2,
+		});
+
+		expect(replayOwner({ messages: log })).toBeUndefined();
+		expect(replayOwner({ messages: compact({ log }) })).toBeUndefined();
+	});
+
+	test("a cold replay follows a reclaim after the holder's own release", async () => {
+		const { publisher, log } = createLoggingPublisher();
+		await publisher.claim({ partition, endpoint: currentOwner, claimedAt: 1 });
+		await publisher.release({
+			partition,
+			endpoint: currentOwner,
+			releasedAt: 2,
+		});
+		await publisher.claim({ partition, endpoint: currentOwner, claimedAt: 3 });
+
+		expect(replayOwner({ messages: compact({ log }) })).toEqual({
+			partition,
+			endpoint: currentOwner,
+			routeEpoch: "2",
 		});
 	});
 });

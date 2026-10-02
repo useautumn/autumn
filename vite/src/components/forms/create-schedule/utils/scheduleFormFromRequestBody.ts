@@ -10,6 +10,7 @@ import type {
 	CustomerStatePlan,
 } from "@/components/forms/customer-state/customerStateSchema";
 import {
+	anchorOverridesFrom,
 	type FieldReaders,
 	overridesFromRequest,
 	readArray,
@@ -81,7 +82,7 @@ const startsAtFrom = ({
 		: addMonths(base, offset.duration_count).getTime();
 };
 
-/** Inverse of the schedule request builder: maps a resolved create_schedule
+/** Inverse of the schedule request builder: maps a resolved set_plans
  * request (per-plan customize already flattened to items) into form values. */
 export const scheduleFormFromRequestBody = (
 	request: RequestBody,
@@ -122,15 +123,18 @@ export const scheduleFormFromRequestBody = (
 		];
 	});
 	if (!phases.length) return undefined;
+	const anchorOverrides = anchorOverridesFrom(request.billing_cycle_anchor);
 	return {
 		billingBehavior:
-			typeof request.billing_behavior === "string"
-				? (request.billing_behavior as BillingBehavior)
+			typeof request.proration_behavior === "string"
+				? (request.proration_behavior as BillingBehavior)
 				: null,
 		enablePlanImmediately: request.enable_plan_immediately === true,
+		endDate: readNumber("ends_at")(request) ?? null,
 		phases,
+		...anchorOverrides,
 		resetBillingCycle:
-			request.billing_cycle_anchor === "now" ||
+			anchorOverrides.resetBillingCycle === true ||
 			request.phases.some(
 				(value) => requestRecord(value)?.billing_cycle_anchor === "phase_start",
 			),

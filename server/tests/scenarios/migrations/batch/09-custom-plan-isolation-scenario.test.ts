@@ -50,7 +50,7 @@ test(`${chalk.yellowBright("SEED: customized-customer isolation")}`, async () =>
 					kind: "custom_patch",
 					addItems: [itemsV2.monthlyWords({ included: 25 })],
 				},
-				note: "is_custom set later by a subscriptions.update patch",
+				note: "is_custom set later by a billing.update patch",
 			},
 			{
 				role: "custom-def",

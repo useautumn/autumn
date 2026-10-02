@@ -2,7 +2,12 @@ import { PlusCircleIcon } from "@phosphor-icons/react";
 import { Flame, Play, X } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Branch, Capacity } from "../../../src/api/contract.ts";
+import {
+	type Branch,
+	type Capacity,
+	MAX_REPEAT,
+} from "../../../src/api/contract.ts";
+import { MAX_REPEAT_WORK_ITEMS } from "../../../src/internal/runs/repeat/repetitions.ts";
 import {
 	useBranches,
 	useCapacity,
@@ -31,10 +36,17 @@ import { useRunSelection } from "./newRun/useRunSelection.ts";
 const capacityCheck = ({
 	capacity,
 	files,
+	repeat,
 }: {
 	capacity: Capacity;
 	files: number;
+	repeat: number;
 }) => {
+	if (repeat > 1 && files > MAX_REPEAT_WORK_ITEMS)
+		return {
+			tone: "bad" as const,
+			text: `Repeat runs are capped at ${num(MAX_REPEAT_WORK_ITEMS)} test runs. Select only the flaky file(s), or lower the repeat.`,
+		};
 	if (capacity.gate === "draining")
 		return {
 			tone: "bad" as const,
@@ -76,18 +88,27 @@ export const NewRunScreen = () => {
 
 	const branch: Branch | null =
 		branches.data?.find((b) => b.name === branchName) ?? null;
-	const fileCount = sel.effective.length;
 	const p90ByPath = new Map(
 		catalog.data?.files.map((f) => [f.path, f.baselineP90Ms]),
 	);
 	const [maxWorkers, setMaxWorkers] = useState("");
 	const workerCap = Number.parseInt(maxWorkers, 10);
+	const [repeatInput, setRepeatInput] = useState("");
+	const repeatValue = repeatInput.trim() === "" ? 1 : Number(repeatInput);
+	const repeatValid =
+		Number.isInteger(repeatValue) &&
+		repeatValue >= 1 &&
+		repeatValue <= MAX_REPEAT;
+	const repeat = repeatValid ? repeatValue : 1;
+	const fileCount = sel.effective.length * repeat;
 	const autoWorkers = capacity.data
 		? Math.min(fileCount, capacity.data.poolCap)
 		: fileCount;
 	const workers =
 		workerCap > 0 ? Math.min(workerCap, autoWorkers) : autoWorkers;
-	const p90s = sel.effective.map((f) => p90ByPath.get(f) ?? null);
+	const p90s = sel.effective.flatMap((f) =>
+		Array<number | null>(repeat).fill(p90ByPath.get(f) ?? null),
+	);
 	const estimate = estimateWallMs({ p90s, workers });
 	const rates = useCostRates();
 	const costEstimate =
@@ -97,10 +118,14 @@ export const NewRunScreen = () => {
 	const unseen = sel.effective.filter((f) => p90ByPath.get(f) === null).length;
 	const check =
 		capacity.data && fileCount > 0
-			? capacityCheck({ capacity: capacity.data, files: fileCount })
+			? capacityCheck({ capacity: capacity.data, files: fileCount, repeat })
 			: null;
 	const canStart =
-		!!branch && fileCount > 0 && check?.tone !== "bad" && !createRun.isPending;
+		!!branch &&
+		fileCount > 0 &&
+		repeatValid &&
+		check?.tone !== "bad" &&
+		!createRun.isPending;
 
 	const start = () => {
 		if (!branch) return;
@@ -110,6 +135,7 @@ export const NewRunScreen = () => {
 				branch: branch.name,
 				sha: branch.sha,
 				...(workerCap > 0 && { maxWorkers: workerCap }),
+				...(repeat > 1 && { repeat }),
 				selection: {
 					groups: groups.length ? groups : undefined,
 					files: files.length ? files : undefined,
@@ -197,7 +223,14 @@ export const NewRunScreen = () => {
 					<SectionTag>Summary</SectionTag>
 					<Panel className="flex flex-col gap-3 p-3">
 						<div className="flex flex-col gap-1.5">
-							<SummaryRow label="Files" value={num(fileCount)} />
+							<SummaryRow
+								label="Files"
+								value={
+									repeat > 1
+										? `${num(sel.effective.length)} × ${repeat}`
+										: num(fileCount)
+								}
+							/>
 							<SummaryRow
 								label="Workers"
 								value={fileCount ? `~${num(workers)}` : "0"}
@@ -228,6 +261,18 @@ export const NewRunScreen = () => {
 							value={maxWorkers}
 							onChange={(e) => setMaxWorkers(e.target.value)}
 							placeholder={`auto · one per file, up to ${num(capacity.data?.poolCap ?? 0)}`}
+							inputClassName="text-xs tabular-nums"
+						/>
+
+						<Field
+							label="Repeat"
+							hint="(flaky checks only)"
+							type="number"
+							min={1}
+							max={MAX_REPEAT}
+							value={repeatInput}
+							onChange={(e) => setRepeatInput(e.target.value)}
+							placeholder="1 · runs each file N times"
 							inputClassName="text-xs tabular-nums"
 						/>
 
@@ -292,6 +337,11 @@ export const NewRunScreen = () => {
 						{!branch && (
 							<p className="-mt-1 text-center text-xs text-subtle">
 								Choose a branch to start.
+							</p>
+						)}
+						{!repeatValid && (
+							<p className="-mt-1 text-center text-xs text-red-600 dark:text-red-400">
+								Repeat must be a whole number from 1 to {MAX_REPEAT}.
 							</p>
 						)}
 						{branch && fileCount === 0 && (

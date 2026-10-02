@@ -96,6 +96,16 @@ export const stripeItemMark = ({
 	return isLinkedToday ? "linked" : "links_on_sync";
 };
 
+/** The worst item mark, or undefined while any item is unmarked. */
+export const rollUpStripeItemMarks = (
+	marks: (StripeItemMark | undefined)[],
+): StripeItemMark | undefined => {
+	if (marks.length === 0 || marks.some((mark) => !mark)) return undefined;
+	if (marks.includes("out_of_sync")) return "out_of_sync";
+	if (marks.includes("links_on_sync")) return "links_on_sync";
+	return "linked";
+};
+
 const isMissingPlanPrice = (mismatch: SubscriptionMismatch) => {
 	if (mismatch.type === "item_mismatch") return mismatch.reason === "missing";
 	if (mismatch.type === "base_price_mismatch")

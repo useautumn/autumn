@@ -145,6 +145,144 @@ describe("createErrorLogHook", () => {
 		);
 	});
 
+	it.each(["live", "sandbox"])(
+		"groups Stripe webhook delivery and replay together in %s without changing their operation tags",
+		(env) => {
+			captureException.mockClear();
+			const { logger } = createTestLogger();
+			const webhookLogger = logger.child({ context: { env } });
+			const operation = `POST /webhooks/connect/${env}`;
+			const origins = [
+				{ req: { name: operation } },
+				{ req: { name: operation, route: "POST /webhooks/connect/:env" } },
+				{ req: { name: `POST /webhooks/stripe/org_1/${env}` } },
+				{
+					req: {
+						name: `POST /webhooks/stripe/org_1/${env}`,
+						route: "POST /webhooks/stripe/:orgId/:env",
+					},
+				},
+				{ workflow: { name: "stripe-webhook-replay" } },
+			];
+
+			for (const origin of origins) {
+				const error = Object.assign(new Error("Stripe request failed"), {
+					type: "StripeInvalidRequestError",
+				});
+				webhookLogger.child(origin).error({ error }, "failed");
+
+				expect(captureException).toHaveBeenLastCalledWith(
+					error,
+					expect.objectContaining({
+						fingerprint: ["stripe", "StripeInvalidRequestError", operation],
+						tags: expect.objectContaining({
+							env,
+							operation:
+								origin.workflow?.name ?? origin.req?.route ?? origin.req?.name,
+						}),
+					}),
+				);
+			}
+
+			expect(captureException).toHaveBeenCalledTimes(origins.length);
+		},
+	);
+
+	it.each(["resource_missing", "parameter_invalid_integer"])(
+		"keeps the Stripe code %s in the webhook replay grouping key",
+		(code) => {
+			captureException.mockClear();
+			const { logger } = createTestLogger();
+			const error = Object.assign(new Error("Stripe request failed"), {
+				type: "StripeInvalidRequestError",
+				code,
+			});
+
+			logger
+				.child({
+					context: { env: "live" },
+					workflow: { name: "stripe-webhook-replay" },
+				})
+				.error({ error }, "failed");
+
+			expect(captureException).toHaveBeenLastCalledWith(
+				error,
+				expect.objectContaining({
+					fingerprint: ["stripe", code, "POST /webhooks/connect/live"],
+				}),
+			);
+		},
+	);
+
+	it.each([undefined, "unknown"])(
+		"preserves Stripe replay grouping when the environment is %s",
+		(env) => {
+			captureException.mockClear();
+			const { logger } = createTestLogger();
+			const error = Object.assign(new Error("Stripe request failed"), {
+				type: "StripeInvalidRequestError",
+			});
+
+			logger
+				.child({
+					context: { env },
+					workflow: { name: "stripe-webhook-replay" },
+				})
+				.error({ error }, "failed");
+
+			expect(captureException).toHaveBeenLastCalledWith(
+				error,
+				expect.objectContaining({
+					fingerprint: [
+						"stripe",
+						"StripeInvalidRequestError",
+						"stripe-webhook-replay",
+					],
+				}),
+			);
+		},
+	);
+
+	it("preserves explicit fingerprints on Stripe webhook replay errors", () => {
+		captureException.mockClear();
+		const { logger } = createTestLogger();
+		const error = Object.assign(new Error("Stripe request failed"), {
+			type: "StripeInvalidRequestError",
+			fingerprint: ["specific-stripe-failure"],
+		});
+
+		logger
+			.child({
+				context: { env: "live" },
+				workflow: { name: "stripe-webhook-replay" },
+			})
+			.error({ error }, "failed");
+
+		expect(captureException).toHaveBeenLastCalledWith(
+			error,
+			expect.objectContaining({ fingerprint: ["specific-stripe-failure"] }),
+		);
+	});
+
+	it("keeps non-Stripe webhook replay errors on their default grouping", () => {
+		captureException.mockClear();
+		const { logger } = createTestLogger();
+		const error = new TypeError("Replay state is invalid");
+
+		logger
+			.child({
+				context: { env: "live" },
+				workflow: { name: "stripe-webhook-replay" },
+			})
+			.error({ error }, "failed");
+
+		expect(captureException).toHaveBeenCalledTimes(1);
+		expect(captureException).toHaveBeenLastCalledWith(
+			error,
+			expect.not.objectContaining({ fingerprint: expect.anything() }),
+		);
+	});
+
 	it("names background work by the log's type when there is no request or job", () => {
 		captureException.mockClear();
 		const { logger } = createTestLogger();
@@ -225,6 +363,35 @@ describe("createErrorLogHook", () => {
 		expect(event.tags).toMatchObject({ error_kind: "bug", org_slug: "acme" });
 		expect(lines[0].msg).toBe("sync failed: connection reset");
 		expect(lines[0].error).toBeUndefined();
+	});
+
+	it("retains caller context on text-only invalidation errors with batch data", () => {
+		captureEvent.mockClear();
+		const { jobLogger, lines } = createTestLogger();
+
+		jobLogger.error(
+			{
+				type: "batch_invalidate_full_subjects_dropped",
+				data: { org_id: "org_1", env: "live", customer_count: 2 },
+			},
+			"FullSubject batch invalidation exhausted its attempts",
+		);
+
+		expect(captureEvent).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tags: expect.objectContaining({
+					org_id: "org_1",
+					org_slug: "acme",
+					env: "live",
+					operation: "track",
+				}),
+			}),
+		);
+		expect(lines[0].context).toEqual({
+			org_id: "org_1",
+			org_slug: "acme",
+			env: "live",
+		});
 	});
 
 	it("finds a bare Error passed as the first argument", () => {

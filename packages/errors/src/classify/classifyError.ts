@@ -13,7 +13,8 @@ const builtInClassifiers: ErrorClassifier[] = [
 
 const errorCodeOf = (error: unknown): string | undefined => {
 	if (!(error instanceof Error) || !("code" in error)) return;
-	return typeof error.code === "string" ? error.code : undefined;
+	if (typeof error.code === "string" || typeof error.code === "number")
+		return String(error.code);
 };
 
 /** Type-based only: whoever threw the error decided its kind; unrecognised errors are bugs. App classifiers run first. */

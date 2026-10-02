@@ -42,6 +42,7 @@ export const handleClearCustomerCache = createRoute({
 					getRedisTargetsForCustomer({
 						org: ctx.org,
 					}),
+				logger: ctx.logger,
 			});
 		}
 

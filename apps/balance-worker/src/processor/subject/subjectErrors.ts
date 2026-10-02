@@ -62,3 +62,15 @@ export class SubjectLoadOvertakenError extends Error {
 		this.identity = identity;
 	}
 }
+
+export class SubjectLoadBusyError extends Error {
+	readonly identity: MeteringIdentity;
+
+	constructor({ identity }: { identity: MeteringIdentity }) {
+		super(
+			`Customer ${identity.customerId} was still loading at the caller's deadline in ${identity.orgId}/${identity.env}`,
+		);
+		this.name = "SubjectLoadBusyError";
+		this.identity = identity;
+	}
+}

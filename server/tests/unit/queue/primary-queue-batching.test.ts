@@ -34,6 +34,7 @@ const createPayload = ({ index }: { index: number }) => ({
 
 describe("primary queue send batching", () => {
 	const originalPrimaryQueueUrl = process.env.SQS_QUEUE_URL_V2;
+	const originalBalanceSyncQueueUrl = process.env.BALANCE_SYNC_SQS_QUEUE_URL;
 	let originalPrimarySend: SQSClient["send"];
 	let originalDedicatedSend: SQSClient["send"];
 	let primaryCommands: Array<{ input: Record<string, unknown> }>;
@@ -41,6 +42,8 @@ describe("primary queue send batching", () => {
 
 	beforeEach(() => {
 		process.env.SQS_QUEUE_URL_V2 = PRIMARY_QUEUE_URL;
+		// Test workers route SyncCustomerDirty to a dedicated queue; this suite covers the primary one.
+		delete process.env.BALANCE_SYNC_SQS_QUEUE_URL;
 		primaryCommands = [];
 		dedicatedCommands = [];
 
@@ -73,6 +76,9 @@ describe("primary queue send batching", () => {
 		getSqsClient({ queueUrl: DEDICATED_QUEUE_URL }).send =
 			originalDedicatedSend;
 		process.env.SQS_QUEUE_URL_V2 = originalPrimaryQueueUrl;
+		if (originalBalanceSyncQueueUrl === undefined)
+			delete process.env.BALANCE_SYNC_SQS_QUEUE_URL;
+		else process.env.BALANCE_SYNC_SQS_QUEUE_URL = originalBalanceSyncQueueUrl;
 	});
 
 	test("sends 10 primary jobs in one SQS batch with their original envelopes", async () => {

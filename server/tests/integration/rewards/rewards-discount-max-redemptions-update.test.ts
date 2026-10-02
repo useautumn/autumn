@@ -200,7 +200,7 @@ test(`${chalk.yellowBright("discount-max-red-update-4: invalid max uses is rejec
 
 	reward.promo_codes[0].global_max_redemption = 0;
 	await expectAutumnError({
-		errCode: ErrCode.InvalidReward,
+		errCode: ErrCode.InvalidInputs,
 		func: () => autumnV1.rewards.update({ internalId: reward.id, reward }),
 	});
 

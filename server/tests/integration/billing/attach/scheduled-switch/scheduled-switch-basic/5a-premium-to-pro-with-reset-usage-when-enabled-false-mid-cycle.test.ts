@@ -1,0 +1,122 @@
+/**
+ * Scheduled Switch Basic Tests (Attach V2)
+ *
+ * Tests for basic downgrade scenarios where a lower-tier product takes effect at end of billing cycle.
+ *
+ * Key behaviors:
+ * - Downgrade schedules new product for end of cycle
+ * - Current product enters "canceling" state (active with canceled_at set)
+ * - New product has "scheduled" status
+ * - At cycle end: current product removed, scheduled product becomes active
+ * - Scheduled downgrades can be replaced by other downgrades
+ *
+ * Each scenario is split into an "a" (mid-cycle) and "b" (after cycle) test with
+ * separate customers so each test owns its own Stripe test clock.
+ *
+ * NOTE: Tests for "upgrade cancels scheduled downgrade" are in immediate-switch-basic.test.ts
+ */
+
+import { test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import {
+	expectProductCanceling,
+	expectProductScheduled,
+} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: Premium to Pro with reset_usage_when_enabled: false
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Premium ($50/mo) with 1000 messages, reset_usage_when_enabled: false
+ * - Track 300 messages
+ * - Downgrade to Pro ($20/mo) with 500 messages, reset_usage_when_enabled: false
+ * - Advance to next cycle
+ *
+ * Expected Result:
+ * - Pro active with messages usage RESET to 0
+ * - Balance = 500 (reset_usage_when_enabled only affects IMMEDIATE switches, not scheduled)
+ * - Scheduled product switches ALWAYS reset usage regardless of reset_usage_when_enabled setting
+ */
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-basic 5a: premium to pro with reset_usage_when_enabled: false (mid-cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-reset-usage-false-premium-to-pro-a";
+
+		const premiumMessagesItem = items.monthlyMessages({
+			includedUsage: 1000,
+			resetUsageWhenEnabled: false,
+		});
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumMessagesItem],
+		});
+
+		const proMessagesItem = items.monthlyMessages({
+			includedUsage: 500,
+			resetUsageWhenEnabled: false,
+		});
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessagesItem],
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id }),
+				s.track({ featureId: TestFeature.Messages, value: 300, timeout: 4000 }),
+			],
+		});
+
+		// Verify usage tracked on premium
+		const customerBefore =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expectCustomerFeatureCorrect({
+			customer: customerBefore,
+			featureId: TestFeature.Messages,
+			includedUsage: 1000,
+			balance: 700, // 1000 - 300
+			usage: 300,
+		});
+
+		// Schedule downgrade to pro
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			redirect_mode: "if_required",
+		});
+
+		// Verify scheduled states
+		const customerMidCycle =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductCanceling({
+			customer: customerMidCycle,
+			productId: premium.id,
+		});
+		await expectProductScheduled({
+			customer: customerMidCycle,
+			productId: pro.id,
+		});
+
+		// Usage still shows on canceling product
+		expectCustomerFeatureCorrect({
+			customer: customerMidCycle,
+			featureId: TestFeature.Messages,
+			includedUsage: 1000,
+			balance: 700,
+			usage: 300,
+		});
+	},
+);

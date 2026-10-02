@@ -1,16 +1,17 @@
 import {
-	CreateScheduleParamsV0Schema,
 	type CreateScheduleResponse,
 	Scopes,
+	SetPlansParamsV0Schema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans/utils/setPlansResultToResponse";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 /** Handle the internal set-plans RPC route. */
 export const handleSetPlans = createRoute({
 	scopes: [Scopes.Billing.Write],
-	body: CreateScheduleParamsV0Schema,
+	body: SetPlansParamsV0Schema,
 
 	lock:
 		process.env.NODE_ENV !== "development"
@@ -30,10 +31,12 @@ export const handleSetPlans = createRoute({
 				}
 			: undefined,
 	handler: async (c) => {
-		const response = (await billingActions.setPlans({
-			ctx: c.get("ctx"),
-			params: c.req.valid("json"),
-		})) satisfies CreateScheduleResponse;
+		const response = setPlansResultToResponse({
+			result: await billingActions.setPlans({
+				ctx: c.get("ctx"),
+				params: c.req.valid("json"),
+			}),
+		}) satisfies CreateScheduleResponse;
 
 		return c.json(response, 200);
 	},

@@ -38,7 +38,6 @@ const defaultTrialPro = constructProduct({
 	isDefault: true,
 	forcePaidDefault: true,
 	id: "defaultTrial_pro",
-	group: "defaultTrial",
 	type: "pro",
 	freeTrial: {
 		length: 7,
@@ -57,7 +56,6 @@ const defaultTrialFree = constructProduct({
 		}),
 	],
 	id: "defaultTrial_free",
-	group: "defaultTrial",
 	type: "free",
 	isDefault: true,
 });
@@ -83,6 +81,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure default trials are 
 			ctx,
 			customerId,
 			withTestClock: true,
+			withDefault: true,
 		});
 
 		testClockID = res.testClockId;

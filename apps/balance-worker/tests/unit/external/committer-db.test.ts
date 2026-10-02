@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { createCommitterDb } from "../../../src/external/postgres/getWorkerDb.js";
+import { createDatabaseTimings } from "../../../src/logging/databaseTimings.js";
 
 const dialect = new PgDialect();
 
@@ -60,7 +61,10 @@ describe("createCommitterDb", () => {
 	test("a flush is one transaction: the statement timeout, one statement, and the counts read back", async () => {
 		const fake = createFakePostgres();
 		const committerDb = createCommitterDb({
-			ctx: { postgres: { db: fake.db as never } },
+			ctx: {
+				postgres: { db: fake.db as never },
+				timings: createDatabaseTimings(),
+			},
 		});
 
 		await committerDb.insertPartitionProgress({
@@ -89,7 +93,10 @@ describe("createCommitterDb", () => {
 	test("a guarded row that no longer matches rolls the whole flush back: no row and no bookmark lands", async () => {
 		const fake = createFakePostgres({ applied: [1, 0] });
 		const committerDb = createCommitterDb({
-			ctx: { postgres: { db: fake.db as never } },
+			ctx: {
+				postgres: { db: fake.db as never },
+				timings: createDatabaseTimings(),
+			},
 		});
 
 		const result = await committerDb.flush({

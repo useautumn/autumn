@@ -1,24 +1,24 @@
-import { getApiBalances } from "@api/customers/cusFeatures";
 import type {
 	BillingPlan,
 	CreateScheduleBillingContext,
 	SetPlansPreviewPhase,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { transitionsToCustomerPlanChanges } from "@/internal/billing/v2/actions/buildBillingChanges/autumnBillingPlanToCustomerPlanChanges/autumnBillingPlanToCustomerPlanChanges";
-import { buildBalanceChanges } from "@/internal/billing/v2/actions/buildBillingChanges/buildBalanceChanges/buildBalanceChanges";
-import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { savedComparisonCustomers } from "./balances/savedComparisonCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
-import { classifySetPlansBalanceChange } from "./classifySetPlansBalanceChange";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
+import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
 import {
 	phasesEndingSubscription,
 	scheduleActionToProcessorItems,
 } from "./processorItems/scheduleActionToProcessorItems";
 import { subscriptionActionToProcessorItems } from "./processorItems/subscriptionActionToProcessorItems";
 import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
-import { setPlansPhasePlans } from "./setPlansPhasePlans";
-import { setPlansPhaseTransitions } from "./setPlansPhaseTransitions";
+import { diffToReview, type SetPlansReview } from "./review/diffToReview";
+import { matchReviewPhases } from "./review/matchReviewPhases";
+import { setPlansPhaseBalanceChanges } from "./setPlansPhaseBalanceChanges";
 
 /** Credits on the immediate invoice, unless custom line items replace the computed ones. */
 const immediateCreditLineItems = (billingPlan: BillingPlan) =>
@@ -34,14 +34,21 @@ export const buildSetPlansPreviewPhases = async ({
 	billingContext,
 	billingPlan,
 	phases,
+	timeline,
+	customerProductIdBySegmentId,
 	processorItemContext,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	phases: SchedulePhasePlan[];
+	timeline: Pick<SetPlansTimeline, "saved" | "diff">;
+	customerProductIdBySegmentId: Map<string, string>;
 	processorItemContext: ProcessorItemContext;
-}): Promise<SetPlansPreviewPhase[]> => {
+}): Promise<{
+	phases: SetPlansPreviewPhase[];
+	review: Pick<SetPlansReview, "removedPhases" | "withdrawnStarts">;
+}> => {
 	const { fullCustomer, stripeSubscription } = billingContext;
 	const { autumn: autumnBillingPlan, stripe: stripeBillingPlan } = billingPlan;
 
@@ -51,23 +58,37 @@ export const buildSetPlansPreviewPhases = async ({
 		autumnBillingPlan,
 		phases,
 	});
-	const phaseBalances = await Promise.all(
-		[fullCustomer, ...phaseCustomers].map((phaseCustomer) =>
-			getApiBalances({ ctx, fullCus: phaseCustomer }),
-		),
-	);
-	const phaseTransitions = setPlansPhaseTransitions({
-		autumnBillingPlan,
-		originalFullCustomer: fullCustomer,
-		phases,
-		phaseCustomers,
+	const matches = matchReviewPhases({
+		saved: timeline.saved,
+		timeline: timeline.diff.timeline,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
+		now: timeline.diff.now,
 	});
-	const phasePlans = setPlansPhasePlans({
-		phaseTransitions,
-		phaseCustomers,
+	const phaseBalanceChanges = await setPlansPhaseBalanceChanges({
+		ctx,
 		originalFullCustomer: fullCustomer,
+		phaseCustomers,
+		savedComparisonCustomers: savedComparisonCustomers({
+			ctx,
+			fullCustomer,
+			autumnBillingPlan,
+			phases,
+			matches,
+			now: timeline.diff.now,
+		}),
+	});
+	const review = diffToReview({
+		saved: timeline.saved,
+		diff: timeline.diff,
+		matches,
+		lookup: {
+			originalFullCustomer: fullCustomer,
+			finalFullCustomer: phaseCustomers[0] ?? fullCustomer,
+			customerProductIdBySegmentId,
+		},
 		creditLineItems: immediateCreditLineItems(billingPlan),
 		currency: processorItemContext.currency,
+		org: processorItemContext.org,
 	});
 	const endsSubscription = phasesEndingSubscription({
 		subscriptionAction: stripeBillingPlan.subscriptionAction,
@@ -88,27 +109,33 @@ export const buildSetPlansPreviewPhases = async ({
 			}),
 		],
 		...scheduleActionToProcessorItems({
-			subscriptionScheduleAction: stripeBillingPlan.subscriptionScheduleAction,
+			subscriptionScheduleAction:
+				stripeBillingPlan.subscriptionScheduleAction ??
+				(billingContext.stripeSubscriptionSchedule
+					? liveScheduleAsUpdateAction(
+							billingContext.stripeSubscriptionSchedule,
+						)
+					: undefined),
 			phases,
 			context: processorItemContext,
 		}),
 	];
 
-	return phases.map((phase, phaseIndex) => ({
-		starts_at: phase.startsAt,
-		starts_now:
-			phaseIndex === 0 &&
-			billingContext.subscriptionBackdateStartMs === undefined,
-		ends_subscription: endsSubscription[phaseIndex],
-		plans: phasePlans[phaseIndex],
-		plan_changes: transitionsToCustomerPlanChanges({
-			transitions: phaseTransitions[phaseIndex],
-			entities: fullCustomer.entities,
-		}),
-		balance_changes: buildBalanceChanges({
-			beforeBalances: phaseBalances[phaseIndex].balances,
-			afterBalances: phaseBalances[phaseIndex + 1].balances,
-		}).map(classifySetPlansBalanceChange),
-		processor_items: processorItemsByPhase[phaseIndex],
-	}));
+	return {
+		phases: phases.map((phase, phaseIndex) => ({
+			starts_at: phase.startsAt,
+			starts_now:
+				phaseIndex === 0 &&
+				billingContext.subscriptionBackdateStartMs === undefined,
+			ends_subscription: endsSubscription[phaseIndex],
+			plans: review.phases[phaseIndex]?.plans ?? [],
+			plan_changes: review.phases[phaseIndex]?.planChanges ?? [],
+			balance_changes: phaseBalanceChanges[phaseIndex],
+			processor_items: processorItemsByPhase[phaseIndex],
+		})),
+		review: {
+			removedPhases: review.removedPhases,
+			withdrawnStarts: review.withdrawnStarts,
+		},
+	};
 };

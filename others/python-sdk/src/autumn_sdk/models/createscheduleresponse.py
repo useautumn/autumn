@@ -2345,7 +2345,7 @@ class CreateScheduleParamsTypedDict(TypedDict):
     enable_plan_immediately: NotRequired[bool]
     r"""If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed."""
     preserve_add_ons: NotRequired[bool]
-    r"""Deprecated and ignored. Active plans the schedule does not declare are always retained."""
+    r"""Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them or the schedule ends."""
     unscheduled_plans: NotRequired[List[UnscheduledPlanTypedDict]]
     r"""Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope."""
 
@@ -2397,7 +2397,7 @@ class CreateScheduleParams(BaseModel):
     r"""If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed."""
 
     preserve_add_ons: Optional[bool] = None
-    r"""Deprecated and ignored. Active plans the schedule does not declare are always retained."""
+    r"""Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them or the schedule ends."""
 
     unscheduled_plans: Optional[List[UnscheduledPlan]] = None
     r"""Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope."""

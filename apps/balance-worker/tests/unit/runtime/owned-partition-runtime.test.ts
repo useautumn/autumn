@@ -27,11 +27,13 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import { SubjectLoadBusyError } from "../../../src/processor/subject/subjectErrors.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
 	MutationBatchAppendError,
 	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
+import { readAnswerDeadline } from "../../../src/runtime/answerDeadline.js";
 import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import type {
 	PartitionBootstrapper as OwnedPartitionBootstrapPort,
@@ -1899,6 +1901,39 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				finishFence();
 				await f.cleanup();
 			}
+		});
+		test("a command that says how long it can wait carries its answer deadline into the run; one that does not carries none", async () => {
+			const f = createFixture();
+			try {
+				await f.runtime.prepare();
+				await f.runtime.activate();
+				const startedAt = performance.now();
+				const deadline = await f.runtime.process(
+					async () => readAnswerDeadline(),
+					{ budgetMs: 800 },
+				);
+				expect(deadline).toBeGreaterThan(startedAt + 600);
+				expect(deadline).toBeLessThanOrEqual(performance.now() + 700);
+				expect(
+					await f.runtime.process(async () => readAnswerDeadline()),
+				).toBeUndefined();
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("a customer still loading at the caller's deadline is answered not ready, so nothing ran", () => {
+			expect(
+				workerErrorOf({
+					cause: new SubjectLoadBusyError({
+						identity: {
+							orgId: "org_1",
+							env: "sandbox",
+							customerId: "cus_1",
+							entityId: null,
+						},
+					}),
+				}),
+			).toMatchObject({ status: 503, error: { code: "NOT_READY" } });
 		});
 		test("a command whose budget is inside the answer margin is refused at once", async () => {
 			let finishFence = () => {};

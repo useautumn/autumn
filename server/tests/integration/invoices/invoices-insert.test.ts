@@ -101,6 +101,7 @@ test.concurrent(
 			...proV1!,
 			internal_id: proV2InternalId,
 			version: proV1!.version + 1,
+			version_slug: `v${proV1!.version + 1}`,
 			created_at: proV1!.created_at + 1,
 			active: true,
 		});

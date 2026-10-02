@@ -1,4 +1,5 @@
 import { FailOpenHook } from "./failOpenHook.js";
+import { RedactDebugLogHook } from "./redactDebugLogHook.js";
 import { TimeoutFixHook } from "./timeoutFixHook.js";
 import type { Hooks } from "./types.js";
 
@@ -12,6 +13,7 @@ export function initHooks(hooks: Hooks) {
 	const failOpenHook = new FailOpenHook();
 	const timeoutFixHook = new TimeoutFixHook();
 	hooks.registerSDKInitHook(failOpenHook);
+	hooks.registerSDKInitHook(new RedactDebugLogHook());
 	hooks.registerBeforeCreateRequestHook(timeoutFixHook);
 	hooks.registerAfterErrorHook(failOpenHook);
 }

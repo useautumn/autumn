@@ -5,12 +5,16 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
-export const useSyncProposalsV2 = ({ customerId }: { customerId: string }) => {
+/** Shared by the Sync sheet, the subscription picker and its prefetch, so all read one cache entry. */
+export const useSyncProposalsV2QueryOptions = ({
+	customerId,
+}: {
+	customerId: string;
+}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryKeyFactory = useQueryKeyFactory();
-	const queryClient = useQueryClient();
 
-	const proposalsQuery = useQuery({
+	return {
 		queryKey: queryKeyFactory(["sync-proposals-v2", customerId]),
 		queryFn: async (): Promise<SyncProposalsV2Response> => {
 			const { data } = await axiosInstance.post(
@@ -19,6 +23,17 @@ export const useSyncProposalsV2 = ({ customerId }: { customerId: string }) => {
 			);
 			return data;
 		},
+	};
+};
+
+export const useSyncProposalsV2 = ({ customerId }: { customerId: string }) => {
+	const axiosInstance = useAxiosInstance();
+	const queryKeyFactory = useQueryKeyFactory();
+	const queryClient = useQueryClient();
+	const queryOptions = useSyncProposalsV2QueryOptions({ customerId });
+
+	const proposalsQuery = useQuery({
+		...queryOptions,
 		enabled: Boolean(customerId),
 	});
 

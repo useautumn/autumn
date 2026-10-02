@@ -7,6 +7,7 @@ import {
 	getTargetSubscriptionCusProduct,
 	type InvoiceMode,
 	isFreeProduct,
+	isFutureStartDate,
 	isOneOffProduct,
 	isPastStartDate,
 	isProductPaidAndRecurring,
@@ -24,6 +25,9 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
+import { isAttachUpgrade } from "@/internal/billing/v2/actions/attach/utils/isAttachUpgrade";
+import { assertStripeSubscriptionLinkedToCustomer } from "@/internal/billing/v2/actions/setPlans/errors/subscriptionScope/assertStripeSubscriptionLinkedToCustomer";
+import { resolveReplacedStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/resolveReplacedStripeSubscription";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
@@ -38,6 +42,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import {
 	applyProductTrialConfig,
 	handleFreeTrialParam,
+	inheritTrialFromSubscription,
 } from "@/internal/billing/v2/setup/trialContext";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 
@@ -46,7 +51,21 @@ export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
 		license_quantities?: LicenseQuantityParams[];
 	})[];
 	no_billing_changes?: boolean;
+	/** Pins billing to this subscription instead of resolving one from the plans. */
+	processor_subscription_id?: string;
 };
+
+const isWithinStartTolerance = ({
+	startsAt,
+	currentEpochMs,
+	toleranceMs,
+}: {
+	startsAt: number;
+	currentEpochMs: number;
+	toleranceMs?: number;
+}) =>
+	!isPastStartDate(startsAt, currentEpochMs, toleranceMs) &&
+	!isFutureStartDate(startsAt, currentEpochMs, toleranceMs);
 
 const getSubscriptionTarget = ({
 	productContext,
@@ -70,6 +89,60 @@ const getSubscriptionTarget = ({
 		productGroup: fullProduct.group ?? "",
 		cusProductId: currentCustomerProduct?.id ?? scheduledCustomerProduct?.id,
 	});
+};
+
+/** A pinned subscription wins; otherwise the plans being changed must share one. */
+const resolveSubscriptionTarget = ({
+	params,
+	fullCustomer,
+	productContexts,
+}: {
+	params: ImmediateMultiProductParams;
+	fullCustomer: MultiAttachBillingContext["fullCustomer"];
+	productContexts: MultiAttachProductContext[];
+}) => {
+	const pinnedStripeSubscriptionId = params.processor_subscription_id;
+	if (pinnedStripeSubscriptionId) {
+		assertStripeSubscriptionLinkedToCustomer({
+			customerProducts: fullCustomer.customer_products,
+			stripeSubscriptionId: pinnedStripeSubscriptionId,
+		});
+		const [targetCustomerProduct] =
+			filterCustomerProductsByStripeSubscriptionId({
+				customerProducts: fullCustomer.customer_products,
+				stripeSubscriptionId: pinnedStripeSubscriptionId,
+			});
+		return { forceNewSubscription: false, targetCustomerProduct };
+	}
+
+	const hasSubscriptionTransition = productContexts.some(
+		({ currentCustomerProduct, scheduledCustomerProduct }) =>
+			customerProductHasSubscription(currentCustomerProduct) ||
+			customerProductHasSubscription(scheduledCustomerProduct),
+	);
+	const forceNewSubscription =
+		params.new_billing_subscription === true && !hasSubscriptionTransition;
+	const targetCustomerProducts = forceNewSubscription
+		? []
+		: productContexts
+				.map((productContext) => getSubscriptionTarget({ productContext }))
+				.filter(notNullish);
+	const subscriptionIds = customerProductsToStripeSubscriptionIds({
+		customerProducts: targetCustomerProducts,
+	});
+
+	if (subscriptionIds.length > 1) {
+		throw new RecaseError({
+			message: "Cannot update products across multiple existing subscriptions.",
+			statusCode: 400,
+		});
+	}
+
+	const [targetCustomerProduct] = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: targetCustomerProducts,
+		stripeSubscriptionId: subscriptionIds[0],
+	});
+	return { forceNewSubscription, targetCustomerProduct };
 };
 
 /** Resolve checkout mode for immediate multi-product billing. */
@@ -103,22 +176,46 @@ const setupImmediateMultiProductCheckoutMode = ({
 	return "stripe_checkout";
 };
 
+const canInheritSubscriptionTrial = ({
+	productContexts,
+	targetProduct,
+}: {
+	productContexts: MultiAttachProductContext[];
+	targetProduct: FullProduct;
+}) => {
+	if (!isProductPaidAndRecurring(targetProduct)) return false;
+
+	const currentCustomerProduct = productContexts.find(
+		(productContext) => productContext.fullProduct === targetProduct,
+	)?.currentCustomerProduct;
+	const keepsPlan = currentCustomerProduct?.product.id === targetProduct.id;
+	return (
+		keepsPlan ||
+		!isAttachUpgrade({ currentCustomerProduct, attachProduct: targetProduct })
+	);
+};
+
 /** Resolve trial behavior for immediate multi-product billing. */
 const setupImmediateMultiProductTrialContext = async ({
 	ctx,
 	freeTrialParam,
 	fullCustomer,
 	stripeSubscription,
-	fullProducts,
+	productContexts,
 	currentEpochMs,
+	inheritSubscriptionTrial,
 }: {
 	ctx: AutumnContext;
 	freeTrialParam?: FreeTrialParamsV1 | null;
 	fullCustomer: MultiAttachBillingContext["fullCustomer"];
 	stripeSubscription?: Stripe.Subscription;
-	fullProducts: MultiAttachBillingContext["fullProducts"];
+	productContexts: MultiAttachProductContext[];
 	currentEpochMs: number;
+	inheritSubscriptionTrial: boolean;
 }) => {
+	const fullProducts = productContexts.map(
+		(productContext) => productContext.fullProduct,
+	);
 	const paidRecurringProduct = fullProducts.find((product) =>
 		isProductPaidAndRecurring(product),
 	);
@@ -139,6 +236,14 @@ const setupImmediateMultiProductTrialContext = async ({
 			fullProduct: targetProduct,
 			currentEpochMs,
 		});
+	}
+
+	if (
+		inheritSubscriptionTrial &&
+		stripeSubscription &&
+		canInheritSubscriptionTrial({ productContexts, targetProduct })
+	) {
+		return inheritTrialFromSubscription({ stripeSubscription });
 	}
 
 	const productWithTrial = fullProducts.find((product) => product.free_trial);
@@ -164,6 +269,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 	billingStartsAt,
 	billingStartsAtToleranceMs,
 	includeScheduledProductsForScheduleLookup,
+	replaceUnusableSubscription = false,
+	inheritSubscriptionTrial = false,
 }: {
 	ctx: AutumnContext;
 	params: ImmediateMultiProductParams;
@@ -171,6 +278,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
 	includeScheduledProductsForScheduleLookup?: boolean;
+	replaceUnusableSubscription?: boolean;
+	inheritSubscriptionTrial?: boolean;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -258,44 +367,10 @@ export const setupImmediateMultiProductBillingContext = async ({
 		throw new Error("setupImmediateMultiProductBillingContext requires plans");
 	}
 
-	const hasSubscriptionTransition = productContexts.some(
-		({ currentCustomerProduct, scheduledCustomerProduct }) =>
-			customerProductHasSubscription(currentCustomerProduct) ||
-			customerProductHasSubscription(scheduledCustomerProduct),
-	);
-	const forceNewSubscription =
-		params.new_billing_subscription === true && !hasSubscriptionTransition;
-	const targetCustomerProducts = forceNewSubscription
-		? []
-		: productContexts
-				.map((productContext) => getSubscriptionTarget({ productContext }))
-				.filter(notNullish);
-	const subscriptionIds = customerProductsToStripeSubscriptionIds({
-		customerProducts: targetCustomerProducts,
-	});
+	const { forceNewSubscription, targetCustomerProduct } =
+		resolveSubscriptionTarget({ params, fullCustomer, productContexts });
 
-	if (subscriptionIds.length > 1) {
-		throw new RecaseError({
-			message: "Cannot update products across multiple existing subscriptions.",
-			statusCode: 400,
-		});
-	}
-
-	const [subscriptionId] = subscriptionIds;
-	const [targetCustomerProduct] = filterCustomerProductsByStripeSubscriptionId({
-		customerProducts: targetCustomerProducts,
-		stripeSubscriptionId: subscriptionId,
-	});
-
-	const {
-		stripeSubscription,
-		stripeSubscriptionSchedule,
-		stripeCustomer,
-		stripeDiscounts,
-		stripeTaxRate,
-		paymentMethod,
-		testClockFrozenTime,
-	} = await setupStripeBillingContext({
+	const stripeBillingContext = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
 		targetCustomerProduct,
@@ -307,6 +382,23 @@ export const setupImmediateMultiProductBillingContext = async ({
 		includeScheduledProductsForScheduleLookup,
 		createStripeCustomerIfMissing:
 			!preview && params.no_billing_changes !== true,
+	});
+	const {
+		stripeCustomer,
+		stripeDiscounts,
+		stripeTaxRate,
+		paymentMethod,
+		testClockFrozenTime,
+	} = stripeBillingContext;
+	const {
+		stripeSubscription,
+		stripeSubscriptionSchedule,
+		replacedStripeSubscription,
+	} = await resolveReplacedStripeSubscription({
+		ctx,
+		fullCustomer,
+		stripeBillingContext,
+		replaceUnusableSubscription,
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({
@@ -321,8 +413,9 @@ export const setupImmediateMultiProductBillingContext = async ({
 		freeTrialParam: params.free_trial,
 		fullCustomer,
 		stripeSubscription,
-		fullProducts,
+		productContexts,
 		currentEpochMs,
+		inheritSubscriptionTrial,
 	});
 
 	const requestedBillingCycleAnchor = setupRequestedBillingCycleAnchor({
@@ -331,7 +424,13 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeSubscription,
 		trialContext,
 		currentEpochMs,
-		startsNow: billingStartsAt === undefined,
+		startsNow:
+			billingStartsAt === undefined ||
+			isWithinStartTolerance({
+				startsAt: billingStartsAt,
+				currentEpochMs,
+				toleranceMs: billingStartsAtToleranceMs,
+			}),
 	});
 
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
@@ -421,6 +520,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
+		replacedStripeSubscription,
 		stripeDiscounts,
 		stripeTaxRate,
 		paymentMethod,

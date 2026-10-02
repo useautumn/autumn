@@ -10,6 +10,20 @@ const getPositiveModulo = ({
 	divisor: number;
 }) => ((value % divisor) + divisor) % divisor;
 
+const MIN_INPUT_WIDTH = "4rem";
+const MIN_COMPACT_INPUT_WIDTH = "2.5rem";
+const INPUT_HORIZONTAL_PADDING = "1rem";
+
+/** Grows the input with the number so large quantities are never clipped. */
+const fitToDigitsWidth = ({
+	text,
+	compact,
+}: {
+	text: string;
+	compact?: boolean;
+}) =>
+	`max(${compact ? MIN_COMPACT_INPUT_WIDTH : MIN_INPUT_WIDTH}, calc(${text.length}ch + ${INPUT_HORIZONTAL_PADDING}))`;
+
 /** Controlled minus/input/plus stepper. `QuantityField` wraps this for forms. */
 export function QuantityStepper({
 	value,
@@ -170,9 +184,19 @@ export function QuantityStepper({
 					<Input
 						variant="headless"
 						className={cn(
-							"text-sm text-center h-input p-2",
-							fullWidth ? "w-full" : compact ? "w-10" : "w-16",
+							"text-sm text-center h-input p-2 tabular-nums",
+							fullWidth && "w-full",
 						)}
+						style={
+							fullWidth
+								? undefined
+								: {
+										width: fitToDigitsWidth({
+											text: String(value ?? placeholder ?? ""),
+											compact,
+										}),
+									}
+						}
 						onChange={handleInputChange}
 						type="number"
 						value={value ?? ""}

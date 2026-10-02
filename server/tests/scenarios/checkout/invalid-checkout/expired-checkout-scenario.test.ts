@@ -12,48 +12,56 @@ import {
 	markCheckoutExpired,
 } from "./invalidCheckoutUtils";
 
-test.concurrent(`${chalk.yellowBright("autumn-checkout: invalid - expired checkout")}`, async () => {
-	const customerId = "checkout-invalid-expired";
+test.concurrent(
+	`${chalk.yellowBright("autumn-checkout: invalid - expired checkout")}`,
+	async () => {
+		const customerId = "checkout-invalid-expired";
 
-	const pro = products.pro({
-		id: "pro-invalid-expired",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
+		const starter = products.base({
+			id: "starter-invalid-expired",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [],
-	});
+		const pro = products.pro({
+			id: "pro-invalid-expired",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
 
-	const { checkoutId, checkoutUrl } = await createAutumnCheckout({
-		autumnV1,
-		customerId,
-		productId: pro.id,
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [starter, pro] }),
+			],
+			actions: [s.attach({ productId: starter.id })],
+		});
 
-	await markCheckoutExpired({
-		ctx,
-		checkoutId,
-	});
+		const { checkoutId, checkoutUrl } = await createAutumnCheckout({
+			autumnV1,
+			customerId,
+			productId: pro.id,
+		});
 
-	const response = await fetchCheckoutError({
-		checkoutId,
-	});
+		await markCheckoutExpired({
+			ctx,
+			checkoutId,
+		});
 
-	expectCheckoutErrorResponse({
-		...response,
-		code: CheckoutErrorCode.CheckoutExpired,
-	});
+		const response = await fetchCheckoutError({
+			checkoutId,
+		});
 
-	await logInvalidCheckoutScenario({
-		label: "expired checkout scenario",
-		checkoutUrl,
-		autumnV1,
-		customerId,
-		...response,
-	});
-});
+		expectCheckoutErrorResponse({
+			...response,
+			code: CheckoutErrorCode.CheckoutExpired,
+		});
+
+		await logInvalidCheckoutScenario({
+			label: "expired checkout scenario",
+			checkoutUrl,
+			autumnV1,
+			customerId,
+			...response,
+		});
+	},
+);

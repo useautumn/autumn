@@ -40,6 +40,20 @@ export const getOrCreateApiCustomerByRollout = async ({
 }) => {
 	if (billingDetails) assertBillingDetailsWritable({ ctx });
 
+	setCustomerCreationRecoveryStage({ ctx, stage: "lookup" });
+	const queueRecovery = enqueueRecoveryOnTransientFailure
+		? async () => {
+				await queueFailedCustomerCreation({
+					ctx,
+					params,
+					billingDetails,
+					source,
+					withAutumnId,
+					failureStage: getCustomerCreationRecoveryStage({ ctx }),
+				});
+			}
+		: undefined;
+
 	// The worker is keyed by customer id; an id-less customer stays on Postgres.
 	if (
 		params.customer_id &&
@@ -47,26 +61,30 @@ export const getOrCreateApiCustomerByRollout = async ({
 	) {
 		const customerId = params.customer_id;
 		const entityId = params.entity_id;
-		const fullSubject = await withCreateIfMissing({
+		const fullSubject = await shed503OnTransientError({
 			ctx,
-			customerId,
-			customerData: params.customer_data,
-			billingDetails,
-			entityId,
-			entityData: params.entity_data,
-			run: async () => {
-				const subject = await readBalanceWorkerSubject({
+			source: "get_or_create",
+			onTransientError: queueRecovery,
+			run: () =>
+				withCreateIfMissing({
 					ctx,
 					customerId,
+					customerData: params.customer_data,
+					billingDetails,
 					entityId,
-				});
-				return { result: subject, customer: subject.customer };
-			},
+					entityData: params.entity_data,
+					run: async () => {
+						const subject = await readBalanceWorkerSubject({
+							ctx,
+							customerId,
+							entityId,
+						});
+						return { result: subject, customer: subject.customer };
+					},
+				}),
 		});
 		return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
 	}
-
-	setCustomerCreationRecoveryStage({ ctx, stage: "lookup" });
 
 	const lookup = ({ skipCache }: { skipCache: boolean }) =>
 		getOrCreateCachedFullSubject({
@@ -84,18 +102,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 		fallbackOnRedisUnavailable: isRedisFallbackToDbEnabled()
 			? () => lookup({ skipCache: true })
 			: undefined,
-		onTransientError: enqueueRecoveryOnTransientFailure
-			? async () => {
-					await queueFailedCustomerCreation({
-						ctx,
-						params,
-						billingDetails,
-						source,
-						withAutumnId,
-						failureStage: getCustomerCreationRecoveryStage({ ctx }),
-					});
-				}
-			: undefined,
+		onTransientError: queueRecovery,
 	});
 
 	await ensureStripeCustomerFromCustomerData({

@@ -1,5 +1,6 @@
 import type { FullProduct } from "@autumn/shared";
 import { isFixedPrice } from "@autumn/shared";
+import { v2BillingStripePriceId } from "@tests/integration/utils/expectStripePriceResources";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
@@ -84,7 +85,7 @@ export const createStripeSubscriptionFromProducts = async ({
 };
 
 /**
- * Extracts all stripe_price_id values from a product's prices (fixed and usage).
+ * Extracts each price's V2 billing Stripe price id (prepaid reads stripe_prepaid_price_v2_id).
  * Falls back to stripe_empty_price_id if the main one is missing.
  */
 export const getAllStripePriceIds = ({
@@ -96,7 +97,8 @@ export const getAllStripePriceIds = ({
 
 	for (const price of fullProduct.prices) {
 		const stripePriceId =
-			price.config.stripe_price_id ?? price.config.stripe_empty_price_id;
+			v2BillingStripePriceId({ price, product: fullProduct }) ??
+			price.config.stripe_empty_price_id;
 		if (stripePriceId) priceIds.push(stripePriceId);
 	}
 

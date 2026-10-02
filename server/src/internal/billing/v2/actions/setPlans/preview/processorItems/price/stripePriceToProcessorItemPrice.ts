@@ -1,5 +1,6 @@
 import type { ProcessorItemPrice } from "@autumn/shared";
 import type Stripe from "stripe";
+import { stripeTiersToProcessorItemTiers } from "./stripeTiersToProcessorItemTiers";
 import { stripeUnitAmountToMajorUnits } from "./stripeUnitAmountToMajorUnits";
 
 export const stripePriceToProcessorItemPrice = (
@@ -7,7 +8,6 @@ export const stripePriceToProcessorItemPrice = (
 ): ProcessorItemPrice => {
 	const { currency } = stripePrice;
 	const isTiered = stripePrice.billing_scheme === "tiered";
-	const firstTier = stripePrice.tiers?.[0];
 
 	return {
 		currency,
@@ -18,9 +18,12 @@ export const stripePriceToProcessorItemPrice = (
 		interval_count: stripePrice.recurring?.interval_count ?? 1,
 		usage_type: stripePrice.recurring?.usage_type ?? "licensed",
 		tiers_mode: isTiered ? (stripePrice.tiers_mode ?? null) : null,
-		first_tier_amount:
-			isTiered && firstTier
-				? stripeUnitAmountToMajorUnits({ unitAmounts: firstTier, currency })
+		tiers:
+			isTiered && stripePrice.tiers
+				? stripeTiersToProcessorItemTiers({
+						tiers: stripePrice.tiers,
+						currency,
+					})
 				: null,
 		units_per_quantity: stripePrice.transform_quantity?.divide_by ?? null,
 	};

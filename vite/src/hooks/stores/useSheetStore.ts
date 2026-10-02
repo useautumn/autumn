@@ -47,6 +47,7 @@ export type SheetType =
 	| "record-usage"
 	| "check-balance"
 	| "allocate-balances"
+	| "create-schedule-choose-subscription"
 	| "create-schedule"
 	| "create-schedule-review"
 	| "create-schedule-send-invoice"

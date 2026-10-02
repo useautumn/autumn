@@ -48,6 +48,7 @@ export const invalidateBatchMigrationCaches = async ({
 		commandTimeoutMs: MIGRATION_REDIS_COMMAND_TIMEOUT_MS,
 		phases,
 		throwWhenExhausted: true,
+		logger: ctx.logger,
 	});
 
 	// One line per page: the split says whether a future stall sat in the

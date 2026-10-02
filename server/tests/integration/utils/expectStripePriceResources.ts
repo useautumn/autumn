@@ -11,12 +11,16 @@
 
 import { expect } from "bun:test";
 import {
+	BillingVersion,
 	type FullProduct,
 	findPriceByFeatureId,
 	isFixedPrice,
 	isPrepaidPrice,
 	type Price,
 	type PriceStripeReuseLevel,
+	priceToRequiredStripeSlots,
+	STRIPE_PRICE_MAPPING_SLOTS,
+	type StripePriceMappingSlot,
 } from "@autumn/shared";
 
 export const STRIPE_RESOURCE_FIELDS = [
@@ -43,6 +47,24 @@ export const stripeConfigValue = ({
 	] ??
 		null) ||
 	null;
+
+/** The Stripe price id V2 billing subscribes with: prepaid's v2 slot, else stripe_price_id. */
+export const v2BillingStripePriceId = ({
+	price,
+	product,
+}: {
+	price: Price;
+	product: FullProduct;
+}): string | null => {
+	const slot = priceToRequiredStripeSlots({
+		price,
+		product,
+		billingVersion: BillingVersion.V2,
+	}).find((requiredSlot): requiredSlot is StripePriceMappingSlot =>
+		STRIPE_PRICE_MAPPING_SLOTS.includes(requiredSlot as StripePriceMappingSlot),
+	);
+	return slot ? stripeConfigValue({ price, field: slot }) : null;
+};
 
 type ExpectedStripeIds = {
 	/** Omit to skip. Pass null to assert absent. */

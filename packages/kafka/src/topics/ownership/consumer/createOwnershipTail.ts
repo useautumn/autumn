@@ -76,7 +76,10 @@ export function createOwnershipTail({
 				activeDrain: null,
 				activePreparation: null,
 			});
-		} else if (record.type === "unowned") {
+		} else if (
+			record.type === "unowned" ||
+			(record.type === "released" && view?.owner === record.endpoint)
+		) {
 			state.viewByPartition.set(record.partition, {
 				owner: null,
 				activeDrain: null,

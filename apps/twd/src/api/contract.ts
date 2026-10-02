@@ -101,15 +101,25 @@ export const Branch = z.object({
 
 // ---- runs -----------------------------------------------------------------
 
-export const CreateRunBody = z.object({
-	branch: z.string().min(1),
-	/** Defaults to the branch head. */
-	sha: z.string().optional(),
-	selection: RunSelection,
-	/** Cap on workers for this run (default: one per file, bounded by the key budget). */
-	maxWorkers: z.number().int().min(1).max(5_000).optional(),
-	purpose: z.enum(["adhoc", "baseline"]).default("adhoc"),
-});
+/** Flake checks only: 50 clean first attempts bound a flake rate near 6% (95% confidence). */
+export const MAX_REPEAT = 50;
+
+export const CreateRunBody = z
+	.object({
+		branch: z.string().min(1),
+		/** Defaults to the branch head. */
+		sha: z.string().optional(),
+		selection: RunSelection,
+		/** Cap on workers for this run (default: one per file, bounded by the key budget). */
+		maxWorkers: z.number().int().min(1).max(5_000).optional(),
+		purpose: z.enum(["adhoc", "baseline"]).default("adhoc"),
+		/** Runs each selected file N times, each as its own work item; only for checking a flaky test. */
+		repeat: z.number().int().min(1).max(MAX_REPEAT).default(1),
+	})
+	.refine((body) => body.purpose !== "baseline" || body.repeat === 1, {
+		message: "baseline runs cannot repeat",
+		path: ["repeat"],
+	});
 
 export const WorkerBoot = z.object({
 	/** Ordered boot phases: orchestrator-side (modal create, tunnel, exec, ready seen, ingress) and in-sandbox. */
@@ -138,6 +148,7 @@ export const RunMilestones = z.object({
 });
 
 export const RunFile = z.object({
+	/** server/tests-relative path; `<path>#<k>` is repetition k of a repeat run. */
 	file: z.string(),
 	status: FileResultStatus,
 	durationMs: z.number().nullable(),
@@ -167,6 +178,9 @@ export const RunSummary = z.object({
 	status: RunStatus,
 	purpose: z.enum(["adhoc", "baseline"]),
 	selection: RunSelection,
+	/** Times each selected file runs; > 1 only for flake checks. */
+	repeat: z.number(),
+	/** Work items: files × repeat. */
 	fileCount: z.number().nullable(),
 	/** Workers currently attached; grows as accounts free up (elastic, FIFO). */
 	workerCount: z.number().nullable(),
@@ -183,10 +197,22 @@ export const RunSummary = z.object({
 	finishedAt: z.string().nullable(),
 });
 
+/** One file of a repeat run: firstAttemptPassed/total is its pass rate. */
+export const RepeatStat = z.object({
+	file: z.string(),
+	total: z.number(),
+	done: z.number(),
+	firstAttemptPassed: z.number(),
+	passedOnRetry: z.number(),
+	failed: z.number(),
+});
+
 export const RunDetail = RunSummary.extend({
 	phase: z.string().nullable(),
 	workers: z.array(WorkerState),
 	files: z.array(RunFile),
+	/** Empty unless repeat > 1; drift is skipped for repeat runs. */
+	repeats: z.array(RepeatStat),
 	drift: z.array(Drift),
 	milestones: RunMilestones.nullable().optional(),
 });
@@ -542,6 +568,7 @@ export type RunSummary = z.infer<typeof RunSummary>;
 export type RunsPage = z.infer<typeof RunsPage>;
 export type RunDetail = z.infer<typeof RunDetail>;
 export type RunFile = z.infer<typeof RunFile>;
+export type RepeatStat = z.infer<typeof RepeatStat>;
 export type RunEvent = z.infer<typeof RunEvent>;
 export type WorkerState = z.infer<typeof WorkerState>;
 export type WorkerBoot = z.infer<typeof WorkerBoot>;

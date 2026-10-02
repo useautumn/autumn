@@ -26,7 +26,7 @@ export function beginPartitionHandoffs({
 }): PartitionEntry[] {
 	const handingOff: PartitionEntry[] = [];
 	for (const entry of [...state.entries.values()]) {
-		if (!entry.startupSettled || !entry.claimed) continue;
+		if (!entry.startupSettled || !entry.claimed || entry.withdrawn) continue;
 		state.entries.delete(entry.partition);
 		state.handingOff.set(entry.partition, entry);
 		entry.retirement = handOffPartition({ ctx, state, entry });

@@ -20,6 +20,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly + an
 
 	const monthlyPlan = products.pro({
 		id: "monthly",
+		group: "monthly",
 		items: [messagesItem],
 	});
 	const annualPlan = products.proAnnual({

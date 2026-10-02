@@ -1,20 +1,38 @@
 import {
 	type BillingBehavior,
+	boldText,
 	type Feature,
 	type FullCusProduct,
 	findFeatureById,
+	type LineItem,
 	notNullish,
 	type ProcessorChange,
 	type ProcessorItem,
+	plainText,
+	type SetPlansPreviewBalanceChange,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
+	type StripeBillingPlan,
+	type StripeSubscriptionScope,
 } from "@autumn/shared";
+import type Stripe from "stripe";
+import { liveSubscriptionChangeWarnings } from "./liveSubscriptionChangeWarnings";
+import { otherSubscriptionsWarnings } from "./otherSubscriptionsWarnings";
+import {
+	type SubscriptionWarningContext,
+	subscriptionStateToWarnings,
+} from "./subscriptionStateToWarnings";
+import { unbilledUsageWarnings } from "./unbilledUsageWarnings";
+import { warningText } from "./warningText";
 
 type WarningType = SetPlansPreviewWarning["type"];
 
 const INFO_WARNING_TYPES: WarningType[] = [
 	"new_stripe_price_created",
 	"proration_disabled",
+	"new_stripe_subscription",
+	"past_due_invoice_open",
+	"other_subscriptions_unaffected",
 ];
 
 /** Unmanaged live items that the immediate phase's end state no longer holds. */
@@ -56,6 +74,27 @@ const replacesExistingSchedule = (processorChanges: ProcessorChange[]) =>
 			SCHEDULE_REPLACING_ACTIONS.includes(processorChange.action),
 	);
 
+const USAGE_RESTARTING_BEHAVIORS: SetPlansPreviewBalanceChange["behavior"][] = [
+	"reset",
+	"updated",
+];
+
+const restartsUsage = (balanceChange: SetPlansPreviewBalanceChange) =>
+	USAGE_RESTARTING_BEHAVIORS.includes(balanceChange.behavior) &&
+	Number(balanceChange.previous_attributes.usage ?? 0) > 0 &&
+	balanceChange.balance.usage === 0;
+
+/** One warning per feature whose usage this request restarts, wherever and however often. */
+const requestedResetFeatureIds = (
+	balanceChanges: SetPlansPreviewBalanceChange[],
+) => [
+	...new Set(
+		balanceChanges
+			.filter(restartsUsage)
+			.map((balanceChange) => balanceChange.feature_id),
+	),
+];
+
 const hasPendingQuantityChange = (customerProduct: FullCusProduct) =>
 	customerProduct.options.some((option) =>
 		notNullish(option.upcoming_quantity),
@@ -65,61 +104,103 @@ export const setPlansPreviewToWarnings = ({
 	phases,
 	liveProcessorItems,
 	processorChanges,
-	deletedCustomerProducts,
+	withdrawnCustomerProducts,
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
+	requestedAnchorResetMs,
 	features,
+	billingContext,
+	stripeBillingPlan,
+	replacedOpenInvoices,
+	liveOpenInvoices,
+	unbilledUsageLineItems = [],
+	stripeSubscriptionScope,
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
 	processorChanges: ProcessorChange[];
-	deletedCustomerProducts: FullCusProduct[];
+	/** Saved scheduled plans the request withdraws; a re-timed or updated plan isn't one. */
+	withdrawnCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
+	requestedAnchorResetMs: number | undefined;
 	features: Feature[];
+	billingContext: SubscriptionWarningContext;
+	stripeBillingPlan: StripeBillingPlan;
+	replacedOpenInvoices: Stripe.Invoice[];
+	liveOpenInvoices: Stripe.Invoice[];
+	unbilledUsageLineItems?: LineItem[];
+	stripeSubscriptionScope?: StripeSubscriptionScope;
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
 
 	const warnings: Omit<SetPlansPreviewWarning, "severity">[] = [
+		...subscriptionStateToWarnings({
+			billingContext,
+			stripeBillingPlan,
+			replacedOpenInvoices,
+			liveOpenInvoices,
+		}),
+		...liveSubscriptionChangeWarnings({
+			stripeSubscription: billingContext.stripeSubscription,
+			stripeBillingPlan,
+			liveProcessorItems,
+			immediateItems: phases[0]?.processor_items ?? [],
+			requestedAnchorResetMs,
+		}),
+		...unbilledUsageWarnings(unbilledUsageLineItems),
 		...removedUnmanagedItems({
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
 		}).map((item) => ({
 			type: "unmanaged_stripe_item_removed" as const,
-			message: `${item.display_name} isn't managed by Autumn and will be removed from Stripe.`,
+			...warningText([
+				boldText(item.display_name),
+				plainText("isn't managed by Autumn and will be removed from Stripe."),
+			]),
 		})),
 		...priceCreatingItems(processorItems).map((item) => ({
 			type: "new_stripe_price_created" as const,
-			message: `A new Stripe price will be created for ${item.display_name}.`,
+			...warningText([
+				plainText("A new Stripe price will be created for"),
+				boldText(`${item.display_name}.`),
+			]),
 		})),
-		...balanceChanges
-			.filter((balanceChange) => balanceChange.behavior === "reset")
-			.map((balanceChange) => ({
-				type: "usage_reset" as const,
-				message: `Usage for ${
-					findFeatureById({ features, featureId: balanceChange.feature_id })
-						?.name ?? balanceChange.feature_id
-				} restarts from zero.`,
-			})),
+		...requestedResetFeatureIds(balanceChanges).map((featureId) => ({
+			type: "usage_reset" as const,
+			...warningText([
+				plainText("Usage for"),
+				boldText(findFeatureById({ features, featureId })?.name ?? featureId),
+				plainText("restarts from zero."),
+			]),
+		})),
 		...(replacesExistingSchedule(processorChanges)
 			? [
 					{
 						type: "existing_schedule_replaced" as const,
 						message:
-							"The existing Stripe subscription schedule will be replaced.",
+							"Edits made directly to the Stripe schedule will be overwritten.",
 					},
 				]
 			: []),
-		...deletedCustomerProducts.map((customerProduct) => ({
+		...withdrawnCustomerProducts.map((customerProduct) => ({
 			type: "future_phase_removed" as const,
-			message: `The scheduled ${customerProduct.product.name} plan will be removed.`,
+			...warningText([
+				plainText("The scheduled"),
+				boldText(customerProduct.product.name),
+				plainText("plan will be removed."),
+			]),
 		})),
 		...outgoingCustomerProducts
 			.filter(hasPendingQuantityChange)
 			.map((customerProduct) => ({
 				type: "pending_quantity_change_dropped" as const,
-				message: `The pending quantity change on ${customerProduct.product.name} won't happen.`,
+				...warningText([
+					plainText("The pending quantity change on"),
+					boldText(customerProduct.product.name),
+					plainText("won't happen."),
+				]),
 			})),
 		...(requestedProrationBehavior === "none"
 			? [
@@ -129,6 +210,7 @@ export const setPlansPreviewToWarnings = ({
 					},
 				]
 			: []),
+		...otherSubscriptionsWarnings({ stripeSubscriptionScope }),
 	];
 
 	return warnings.map((warning) => ({

@@ -5,6 +5,7 @@ export * from "./classifyCustomerProduct/cpBuilder";
 export * from "./convertCusProduct";
 export * from "./convertCusProduct/cusProductToConvertedFeatureOptions";
 export * from "./convertCusProduct/cusProductToFeatureOptions";
+export * from "./convertCusProduct/customerProductsToMainPlanName";
 export * from "./convertCusProduct/customerProductsToRecurringActiveAndScheduled";
 export * from "./convertCusProduct/customerProductsToStripeSubscriptionIds";
 export * from "./convertCusProduct/customerProductToApiSubscriptionStatus";
@@ -24,6 +25,7 @@ export * from "./filterCustomerProducts/filterCustomerProductsByActiveStatuses.j
 export * from "./filterCustomerProducts/filterCustomerProductsByFeatureId.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByProcessorType.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionId.js";
+export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionScope.js";
 export * from "./filterCustomerProducts/filterLicenseAssignmentsByEntityId.js";
 export * from "./findCustomerProduct/findActiveCustomerProduct.js";
 export * from "./findCustomerProduct/findCustomerProduct.js";

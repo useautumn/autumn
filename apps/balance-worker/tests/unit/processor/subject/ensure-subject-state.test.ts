@@ -10,6 +10,7 @@ import { AppEnv } from "@autumn/shared";
 import { ensureSubjectState } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubjectState.js";
 import { createInFlightLoads } from "../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
 import {
+	SubjectLoadBusyError,
 	SubjectLoadOvertakenError,
 	SubjectNotFoundError,
 } from "../../../../src/processor/subject/subjectErrors.js";
@@ -18,6 +19,7 @@ import type { SubjectScope } from "../../../../src/processor/subject/types/subje
 import { commandToFingerprint } from "../../../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../../../src/processor/writer/receipt/mutationToRecord.js";
 import type { MutationSubmission } from "../../../../src/processor/writer/types/mutation.js";
+import { runWithAnswerDeadline } from "../../../../src/runtime/answerDeadline.js";
 import { createTestCatalogCache } from "../../../fixtures/catalog.js";
 
 const identity = {
@@ -311,5 +313,96 @@ describe("ensure subject state", () => {
 		).rejects.toBeInstanceOf(SubjectNotFoundError);
 		expect(writer.committed).toHaveLength(0);
 		expect(scope.state.inFlightLoads.count()).toBe(0);
+	});
+});
+
+describe("ensure subject state against the caller's answer deadline", () => {
+	test("a cold load still running at the deadline answers busy, and finishes for the next caller", async () => {
+		const { scope, writer, sourceCalls, releaseSource } = createScope({
+			initial: null,
+			rows: emptyEnvelope,
+		});
+
+		await expect(
+			runWithAnswerDeadline({
+				expiresAt: performance.now() + 20,
+				run: () => ensureSubjectState({ scope, identity }),
+			}),
+		).rejects.toBeInstanceOf(SubjectLoadBusyError);
+		expect(scope.state.inFlightLoads.count()).toBe(1);
+
+		releaseSource();
+		await settle();
+		await settle();
+		expect(writer.readFreshestState()?.revision).toBe(1);
+		expect((await ensureSubjectState({ scope, identity })).revision).toBe(1);
+		expect(sourceCalls()).toBe(1);
+	});
+
+	test("a caller with no deadline waits for the load however long it takes", async () => {
+		const { scope, releaseSource } = createScope({
+			initial: null,
+			rows: emptyEnvelope,
+		});
+		let answered = false;
+		const waiting = ensureSubjectState({ scope, identity }).then((state) => {
+			answered = true;
+			return state;
+		});
+
+		await new Promise<void>((resolve) => setTimeout(resolve, 40));
+		expect(answered).toBe(false);
+		releaseSource();
+		expect((await waiting).revision).toBe(1);
+	});
+
+	test("a caller giving up at its deadline does not fail a caller without one on the same load", async () => {
+		const { scope, releaseSource } = createScope({
+			initial: null,
+			rows: emptyEnvelope,
+		});
+		const patient = ensureSubjectState({ scope, identity });
+		const hurried = runWithAnswerDeadline({
+			expiresAt: performance.now() + 10,
+			run: () => ensureSubjectState({ scope, identity }),
+		});
+
+		await expect(hurried).rejects.toBeInstanceOf(SubjectLoadBusyError);
+		releaseSource();
+		expect((await patient).revision).toBe(1);
+	});
+
+	test("a load that fails after its only caller gave up is not left unhandled", async () => {
+		const { scope, releaseSource } = createScope({ initial: null, rows: null });
+		const unhandled: unknown[] = [];
+		const onUnhandled = (reason: unknown) => unhandled.push(reason);
+		process.on("unhandledRejection", onUnhandled);
+		try {
+			await expect(
+				runWithAnswerDeadline({
+					expiresAt: performance.now() + 10,
+					run: () => ensureSubjectState({ scope, identity }),
+				}),
+			).rejects.toBeInstanceOf(SubjectLoadBusyError);
+			releaseSource();
+			await new Promise<void>((resolve) => setTimeout(resolve, 20));
+			expect(unhandled).toEqual([]);
+		} finally {
+			process.off("unhandledRejection", onUnhandled);
+		}
+	});
+
+	test("a resident customer answers at once, even past the deadline", async () => {
+		const { scope, sourceCalls } = createScope({
+			initial: { ...emptyState, revision: 3 },
+			rows: null,
+		});
+
+		const state = await runWithAnswerDeadline({
+			expiresAt: performance.now() - 1,
+			run: () => ensureSubjectState({ scope, identity }),
+		});
+		expect(state.revision).toBe(3);
+		expect(sourceCalls()).toBe(0);
 	});
 });

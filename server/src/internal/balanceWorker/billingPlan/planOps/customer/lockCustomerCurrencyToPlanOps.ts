@@ -4,7 +4,7 @@ import {
 } from "@autumn/balance-engine";
 import type { AutumnBillingPlan } from "@autumn/shared";
 
-/** The first paid attach locks the currency; a customer that already has one keeps it. */
+/** Locks or relocks the currency; callers only send it when no live paid product holds the old one. */
 export const lockCustomerCurrencyToPlanOps = ({
 	autumnBillingPlan,
 }: {
@@ -17,7 +17,6 @@ export const lockCustomerCurrencyToPlanOps = ({
 			table: "customer",
 			id: lockCustomerCurrency.internalCustomerId,
 			set: { currency: lockCustomerCurrency.currency },
-			whereUnset: true,
 		}),
 	];
 };

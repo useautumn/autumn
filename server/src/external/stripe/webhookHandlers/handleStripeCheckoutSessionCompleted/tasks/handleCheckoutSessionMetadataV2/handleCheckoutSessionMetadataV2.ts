@@ -12,12 +12,13 @@ import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers
 import { withClaimedCheckoutSessionMetadata } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/withClaimedCheckoutSessionMetadata";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import {
-	isCreateScheduleBillingContext,
-	persistDeferredCreateSchedule,
-} from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
+	isSetPlansBillingContext,
+	persistDeferredSetPlansSchedule,
+} from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/promotePendingCustomerProducts";
+import { executeStripeReplacedSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeReplacedSubscriptionAction";
 import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { withBillingLock } from "@/internal/billing/v2/utils/billingLock/withBillingLock";
@@ -91,7 +92,7 @@ const executeCheckoutSessionMetadataV2 = async ({
 	// was told about ahead of time, and can't place an unplanned product into a
 	// phase after the fact.
 	let dataWithOptionalItems = deferredData;
-	if (!isCreateScheduleBillingContext(deferredData.billingContext)) {
+	if (!isSetPlansBillingContext(deferredData.billingContext)) {
 		const optionalItemMatch = await matchOptionalInvoiceItemsToProducts({
 			ctx,
 			checkoutContext,
@@ -145,6 +146,13 @@ const executeCheckoutSessionMetadataV2 = async ({
 		deferredData: updatedDeferredData,
 	});
 
+	await executeStripeReplacedSubscriptionAction({
+		ctx,
+		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
+		replacedSubscriptionAction:
+			updatedDeferredData.billingPlan.stripe.replacedSubscriptionAction,
+	});
+
 	if (stripeScheduleId) {
 		addStripeSubscriptionScheduleIdToBillingPlan({
 			autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
@@ -181,7 +189,7 @@ const executeCheckoutSessionMetadataV2 = async ({
 		stripeInvoice: checkoutContext.stripeInvoice,
 	});
 
-	await persistDeferredCreateSchedule({
+	await persistDeferredSetPlansSchedule({
 		ctx,
 		billingContext: updatedDeferredData.billingContext,
 		billingPlan: updatedDeferredData.billingPlan,

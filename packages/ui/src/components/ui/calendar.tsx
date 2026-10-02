@@ -31,6 +31,7 @@ const MONTHS = [
 	"December",
 ] as const;
 
+/** Fixed-width month and year triggers keep the popover from resizing, so the arrows never move under the cursor. */
 function CalendarCaption({ displayMonth, id }: CaptionProps) {
 	const { goToMonth, previousMonth, nextMonth } = useNavigation();
 	const { fromYear, toYear } = useDayPicker();
@@ -60,7 +61,7 @@ function CalendarCaption({ displayMonth, id }: CaptionProps) {
 					onValueChange={(v) => goToMonth(setMonth(displayMonth, Number(v)))}
 					items={MONTHS.map((name, i) => ({ value: String(i), label: name }))}
 				>
-					<SelectTrigger className="h-7 border-none shadow-none px-2 text-sm font-medium text-foreground hover:bg-accent gap-1">
+					<SelectTrigger className="h-7 w-[7.25rem] justify-between border-none shadow-none px-2 text-sm font-medium text-foreground hover:bg-accent gap-1">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -76,7 +77,7 @@ function CalendarCaption({ displayMonth, id }: CaptionProps) {
 					value={yearValue}
 					onValueChange={(v) => goToMonth(setYear(displayMonth, Number(v)))}
 				>
-					<SelectTrigger className="h-7 border-none shadow-none px-2 text-sm font-medium text-foreground hover:bg-accent gap-1">
+					<SelectTrigger className="h-7 w-[4.5rem] justify-between border-none shadow-none px-2 text-sm font-medium text-foreground hover:bg-accent gap-1">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -105,6 +106,7 @@ function Calendar({
 	className,
 	classNames,
 	showOutsideDays = true,
+	fixedWeeks = true,
 	...props
 }: React.ComponentProps<typeof DayPicker>) {
 	const hasDropdown =
@@ -114,6 +116,8 @@ function Calendar({
 	return (
 		<DayPicker
 			showOutsideDays={showOutsideDays}
+			// Six rows every month, so paging never changes the popover's height.
+			fixedWeeks={fixedWeeks}
 			className={cn("p-3", className)}
 			classNames={{
 				months: "flex flex-col sm:flex-row gap-2",

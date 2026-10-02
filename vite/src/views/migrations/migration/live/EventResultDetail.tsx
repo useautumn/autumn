@@ -12,6 +12,7 @@ import {
 } from "@autumn/ui";
 import { PackageIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
+import { ChangeDot, type ItemStatusState } from "@/components/v2/ItemStatusDot";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -90,14 +91,14 @@ function formatUnknownError(value: unknown): string | null {
 	return "Unknown error";
 }
 
-const DOT_COLORS: Record<string, string> = {
-	activated: "bg-green-500",
-	scheduled: "bg-blue-500",
-	updated: "bg-amber-500",
-	created: "bg-green-500",
-	expired: "bg-red-500",
-	removed: "bg-red-500",
-	deleted: "bg-red-500",
+const ACTION_DOT_STATES: Record<string, ItemStatusState> = {
+	activated: "new",
+	created: "new",
+	scheduled: "scheduled",
+	updated: "updated",
+	expired: "removed",
+	removed: "removed",
+	deleted: "removed",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -111,14 +112,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 function StatusDot({ action }: { action: string }) {
-	return (
-		<span
-			className={cn(
-				"size-2 rounded-full shrink-0",
-				DOT_COLORS[action] ?? "bg-tertiary-foreground",
-			)}
-		/>
-	);
+	return <ChangeDot state={ACTION_DOT_STATES[action] ?? "updated"} />;
 }
 
 function getPlanId(change: PlanChange): string | undefined {

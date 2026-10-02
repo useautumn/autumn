@@ -105,10 +105,7 @@ export const assertBenchDatabaseSafe = (): SafeDatabaseTarget => {
 			`bench: refusing staging/prod-looking host ${target.hostname}`,
 		);
 	}
-	if (
-		/prod|staging/i.test(target.database) &&
-		target.database !== "neondb"
-	) {
+	if (/prod|staging/i.test(target.database) && target.database !== "neondb") {
 		throw new Error(
 			`bench: refusing database name ${target.database} (looks like staging/prod)`,
 		);
@@ -172,6 +169,7 @@ export const createPlanRenameBenchContext = async ({
 		skipCache: false,
 		expand: [],
 		extraLogs: {},
+		state: {},
 	};
 
 	return { ctx, org };

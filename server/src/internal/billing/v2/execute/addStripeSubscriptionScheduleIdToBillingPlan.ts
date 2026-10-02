@@ -1,7 +1,22 @@
-import type { AutumnBillingPlan, StripeBillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	FullCusProduct,
+	StripeBillingPlan,
+} from "@autumn/shared";
 import { CusProductStatus, cp } from "@autumn/shared";
 import { isFreePhasePlaceholderCustomerProduct } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isFreePhasePlaceholderCustomerProduct";
 import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+
+const isOnStripeSchedule = ({
+	customerProduct,
+	linksFreePlaceholders,
+}: {
+	customerProduct: FullCusProduct;
+	linksFreePlaceholders: boolean;
+}) =>
+	cp(customerProduct).paid().recurring().valid ||
+	(linksFreePlaceholders &&
+		isFreePhasePlaceholderCustomerProduct(customerProduct));
 
 export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	autumnBillingPlan,
@@ -17,23 +32,21 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 		autumnBillingPlan.ownsSchedulePersistence === true;
 
 	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
-		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
-		const isOnStripeSchedule =
-			isPaidRecurring ||
-			(linksFreePlaceholders &&
-				isFreePhasePlaceholderCustomerProduct(customerProduct));
-
-		if (!isOnStripeSchedule) continue;
-
+		if (!isOnStripeSchedule({ customerProduct, linksFreePlaceholders })) {
+			continue;
+		}
 		customerProduct.scheduled_ids = [stripeSubscriptionScheduleId];
 	}
 
-	for (const { updates } of getUpdateCustomerProducts({ autumnBillingPlan })) {
+	for (const { customerProduct, updates } of getUpdateCustomerProducts({
+		autumnBillingPlan,
+	})) {
 		const isExpiring = updates.status === CusProductStatus.Expired;
-
-		if (!isExpiring) {
-			updates.scheduled_ids = [stripeSubscriptionScheduleId];
+		if (isExpiring) continue;
+		if (!isOnStripeSchedule({ customerProduct, linksFreePlaceholders })) {
+			continue;
 		}
+		updates.scheduled_ids = [stripeSubscriptionScheduleId];
 	}
 
 	const { subscriptionScheduleAction } = stripeBillingPlan;

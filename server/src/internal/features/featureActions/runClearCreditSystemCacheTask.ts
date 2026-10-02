@@ -169,6 +169,7 @@ export const runClearCreditSystemCacheTask = async ({
 					getRedisTargetsForCustomer({
 						org: orgWithFeatures.org,
 					}),
+				logger,
 			});
 			totalDeleted += deleted;
 		}

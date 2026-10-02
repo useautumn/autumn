@@ -5,7 +5,7 @@ import {
 	type StripeSubscriptionScheduleAction,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
+import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
 import { scheduleActionToParams } from "./scheduleActionToParams";
 import { itemParamsToProcessorItem } from "./toProcessorItem";
 import type { ProcessorItemContext } from "./types/processorItemContext";

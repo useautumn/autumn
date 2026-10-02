@@ -20,6 +20,20 @@ export const deleteIngressRoute = ({
 }): void => {
 	routes.delete(accountId);
 };
+/** Accounts of finished stripe-connect runs: their late events are acked, never sent to a later run's worker. */
+const dropped = new Set<string>();
+export const dropIngressAccounts = ({
+	accountIds,
+}: {
+	accountIds: string[];
+}): void => {
+	for (const accountId of accountIds) dropped.add(accountId);
+};
+export const isIngressAccountDropped = ({
+	accountId,
+}: {
+	accountId: string;
+}): boolean => dropped.has(accountId);
 export const getIngressRoute = ({
 	accountId,
 }: {

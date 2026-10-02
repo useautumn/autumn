@@ -10,8 +10,9 @@ import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookH
 import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
+import { persistDeferredSetPlansSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
+import { executeStripeReplacedSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeReplacedSubscriptionAction";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -78,6 +79,13 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		deferredData: updatedDeferredData,
 	});
 
+	await executeStripeReplacedSubscriptionAction({
+		ctx,
+		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
+		replacedSubscriptionAction:
+			updatedDeferredData.billingPlan.stripe.replacedSubscriptionAction,
+	});
+
 	// 5. Look up the cusProduct rows linked to this checkout session so we can
 	//    patch subscription_ids / scheduled_ids onto them. One DB read serves
 	//    both patches below.
@@ -135,8 +143,7 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		stripeInvoice,
 	});
 
-	// 7. Persist the Autumn schedule rows (createSchedule only — no-op for attach).
-	await persistDeferredCreateSchedule({
+	await persistDeferredSetPlansSchedule({
 		ctx,
 		billingContext: updatedDeferredData.billingContext,
 		billingPlan: updatedDeferredData.billingPlan,

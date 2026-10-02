@@ -1,6 +1,7 @@
 import type { RunSummary } from "../../../api/contract.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { splitRepetitionId } from "../repeat/repetitions.ts";
 import { createRun } from "./createRun.ts";
 import { getRun } from "./getRun.ts";
 
@@ -13,9 +14,13 @@ export const rerunFailed = async ({
 	runId: string;
 }): Promise<RunSummary> => {
 	const run = await getRun({ ctx, runId });
-	const failed = run.files
-		.filter((file) => file.status === "failed" || file.status === "crashed")
-		.map((file) => file.file);
+	const failed = [
+		...new Set(
+			run.files
+				.filter((file) => file.status === "failed" || file.status === "crashed")
+				.map((file) => splitRepetitionId({ id: file.file }).file),
+		),
+	];
 	if (failed.length === 0) {
 		throw new TwdError({
 			status: 409,
@@ -31,5 +36,6 @@ export const rerunFailed = async ({
 		branch: run.branch,
 		sha: run.sha,
 		selection: { files: failed, grep: run.selection.grep },
+		repeat: run.repeat,
 	});
 };

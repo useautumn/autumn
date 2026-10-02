@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { RecaseError } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
@@ -34,6 +35,39 @@ describe("shouldRetrySqsJobError", () => {
 				}),
 			}),
 		).toBe(true);
+	});
+
+	test("retries creation recovery when the balance worker gave no verdict", () => {
+		const workerUnavailable = new RecaseError({
+			code: "balance_worker_unavailable",
+			statusCode: 503,
+			message: "Balance worker is temporarily unavailable",
+		});
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.CustomerCreationRecovery,
+				error: workerUnavailable,
+			}),
+		).toBe(true);
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.EntityCreationRecovery,
+				error: workerUnavailable,
+			}),
+		).toBe(true);
+	});
+
+	test("does not retry entity creation recovery on a 4xx verdict", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.EntityCreationRecovery,
+				error: new RecaseError({
+					code: "feature_limit_reached",
+					statusCode: 400,
+					message: "limit",
+				}),
+			}),
+		).toBe(false);
 	});
 
 	test("retries track jobs on transient Redis errors", () => {

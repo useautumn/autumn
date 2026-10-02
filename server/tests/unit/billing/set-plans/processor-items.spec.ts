@@ -6,6 +6,7 @@ import {
 	type FullCusProduct,
 	ms,
 	msToSeconds,
+	type Organization,
 	PriceType,
 	type ProcessorItem,
 	type ProcessorItemPrice,
@@ -149,6 +150,7 @@ const context: ProcessorItemContext = {
 		liveSubscription.items.data.map((item) => [item.price.id, item.price]),
 	),
 	currency: "usd",
+	org: { default_currency: "usd" } as Organization,
 };
 
 const monthlyPrice = (unitAmount: number): ProcessorItemPrice => ({
@@ -158,7 +160,7 @@ const monthlyPrice = (unitAmount: number): ProcessorItemPrice => ({
 	interval_count: 1,
 	usage_type: "licensed",
 	tiers_mode: null,
-	first_tier_amount: null,
+	tiers: null,
 	units_per_quantity: null,
 });
 

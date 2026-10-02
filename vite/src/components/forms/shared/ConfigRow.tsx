@@ -25,11 +25,11 @@ const CONFIG_ROW_LAYOUT_CLASSES: Record<
 	}
 > = {
 	plain: {
-		root: "flex flex-col gap-2",
+		root: "flex flex-col",
 		header: "flex items-center justify-between gap-3",
 		label: "flex min-w-0 flex-col gap-px",
 		description: "text-xs leading-snug text-tertiary-foreground/70",
-		body: "flex flex-col gap-2 empty:hidden",
+		body: "flex flex-col gap-2 pt-2 empty:hidden",
 	},
 	tray: {
 		root: cn("flex flex-col", TABLE_TRAY_SURFACE_ROW_CLASS),

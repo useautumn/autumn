@@ -28,79 +28,70 @@ const baseArgs = {
 };
 
 describe("buildRefreshEntityAggregateDedupId", () => {
-	test(
-		`${chalk.yellowBright("dedup-id-1: same bucket → same id")}`,
-		() => {
-			const t0 = 1_700_000_000_000;
-			const a = buildRefreshEntityAggregateDedupId({
-				orgId: "org-1",
-				env: AppEnv.Sandbox,
-				customerId: "cust-1",
-				nowMs: t0,
-			});
-			const b = buildRefreshEntityAggregateDedupId({
-				orgId: "org-1",
-				env: AppEnv.Sandbox,
-				customerId: "cust-1",
-				nowMs: t0 + 4999,
-			});
-			expect(a).toBe(b);
-		},
-	);
+	test(`${chalk.yellowBright("dedup-id-1: same bucket → same id")}`, () => {
+		const t0 = 1_700_000_000_000;
+		const a = buildRefreshEntityAggregateDedupId({
+			orgId: "org-1",
+			env: AppEnv.Sandbox,
+			customerId: "cust-1",
+			nowMs: t0,
+		});
+		const b = buildRefreshEntityAggregateDedupId({
+			orgId: "org-1",
+			env: AppEnv.Sandbox,
+			customerId: "cust-1",
+			nowMs: t0 + REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS - 1,
+		});
+		expect(a).toBe(b);
+	});
 
-	test(
-		`${chalk.yellowBright("dedup-id-2: across bucket boundary → different ids")}`,
-		() => {
-			const t0 = 1_700_000_000_000;
-			const a = buildRefreshEntityAggregateDedupId({
-				orgId: "org-1",
-				env: AppEnv.Sandbox,
-				customerId: "cust-1",
-				nowMs: t0,
-			});
-			const b = buildRefreshEntityAggregateDedupId({
-				orgId: "org-1",
-				env: AppEnv.Sandbox,
-				customerId: "cust-1",
-				nowMs: t0 + REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS,
-			});
-			expect(a).not.toBe(b);
-		},
-	);
+	test(`${chalk.yellowBright("dedup-id-2: across bucket boundary → different ids")}`, () => {
+		const t0 = 1_700_000_000_000;
+		const a = buildRefreshEntityAggregateDedupId({
+			orgId: "org-1",
+			env: AppEnv.Sandbox,
+			customerId: "cust-1",
+			nowMs: t0,
+		});
+		const b = buildRefreshEntityAggregateDedupId({
+			orgId: "org-1",
+			env: AppEnv.Sandbox,
+			customerId: "cust-1",
+			nowMs: t0 + REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS,
+		});
+		expect(a).not.toBe(b);
+	});
 
-	test(
-		`${chalk.yellowBright("dedup-id-3: different orgs/envs/customers → different ids")}`,
-		() => {
-			const nowMs = 1_700_000_000_000;
-			const ids = new Set([
-				buildRefreshEntityAggregateDedupId({
-					orgId: "org-1",
-					env: AppEnv.Sandbox,
-					customerId: "cust-1",
-					nowMs,
-				}),
-				buildRefreshEntityAggregateDedupId({
-					orgId: "org-2",
-					env: AppEnv.Sandbox,
-					customerId: "cust-1",
-					nowMs,
-				}),
-				buildRefreshEntityAggregateDedupId({
-					orgId: "org-1",
-					env: AppEnv.Live,
-					customerId: "cust-1",
-					nowMs,
-				}),
-				buildRefreshEntityAggregateDedupId({
-					orgId: "org-1",
-					env: AppEnv.Sandbox,
-					customerId: "cust-2",
-					nowMs,
-				}),
-			]);
-			expect(ids.size).toBe(4);
-		},
-	);
+	test(`${chalk.yellowBright("dedup-id-3: different orgs/envs/customers → different ids")}`, () => {
+		const nowMs = 1_700_000_000_000;
+		const ids = new Set([
+			buildRefreshEntityAggregateDedupId({
+				orgId: "org-1",
+				env: AppEnv.Sandbox,
+				customerId: "cust-1",
+				nowMs,
+			}),
+			buildRefreshEntityAggregateDedupId({
+				orgId: "org-2",
+				env: AppEnv.Sandbox,
+				customerId: "cust-1",
+				nowMs,
+			}),
+			buildRefreshEntityAggregateDedupId({
+				orgId: "org-1",
+				env: AppEnv.Live,
+				customerId: "cust-1",
+				nowMs,
+			}),
+			buildRefreshEntityAggregateDedupId({
+				orgId: "org-1",
+				env: AppEnv.Sandbox,
+				customerId: "cust-2",
+				nowMs,
+			}),
+		]);
+		expect(ids.size).toBe(4);
+	});
 });
 
 describe("RefreshEntityAggregateBatchingManager", () => {
@@ -210,11 +201,10 @@ describe("RefreshEntityAggregateBatchingManager", () => {
 		{ timeout: 5_000 },
 	);
 
-	test(
-		`${chalk.yellowBright("batch-5: settle buffer honored")}`,
-		() => {
-			expect(REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS).toBe(5000);
-			expect(REFRESH_ENTITY_AGGREGATE_SETTLE_BUFFER_MS).toBe(1500);
-		},
-	);
+	test(`${chalk.yellowBright("batch-5: settle buffer honored")}`, () => {
+		expect(REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS).toBe(
+			process.env.NODE_ENV === "development" ? 1000 : 5000,
+		);
+		expect(REFRESH_ENTITY_AGGREGATE_SETTLE_BUFFER_MS).toBe(1500);
+	});
 });
