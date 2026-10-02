@@ -5,6 +5,7 @@ import { RecaseError, Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { z } from "zod/v4";
 import * as alienClientModule from "@/external/alien/getAlienClient.js";
+import * as lockModule from "@/external/redis/utils/lockUtils/withLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
 	handleCreateAdminShadowAtomDeployment,
@@ -66,6 +67,8 @@ let stored = shadowAtomConfig.defaultValue();
 const getAlien = spyOn(alienClientModule, "getAlienClient").mockReturnValue(
 	alienClient,
 );
+// Locks are Redis's to prove; here they only run what they guard.
+const lock = spyOn(lockModule, "withLock").mockImplementation(({ fn }) => fn());
 const write = spyOn(shadowAtomConfigStore, "writeToSource").mockResolvedValue();
 const read = spyOn(shadowAtomConfigStore, "readFromSource").mockImplementation(
 	async () => structuredClone(stored),
@@ -82,6 +85,7 @@ afterEach(() => {
 	read.mockClear();
 });
 afterAll(() => {
+	lock.mockRestore();
 	getAlien.mockRestore();
 	write.mockRestore();
 	read.mockRestore();
