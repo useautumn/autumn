@@ -26,6 +26,7 @@ import {
 } from "@autumn/ui";
 import { ClockCountdownIcon, QuestionIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
+import { Decimal } from "decimal.js";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
@@ -647,7 +648,10 @@ function SetBalanceFields({
 					<div className="text-subtle text-sm truncate mb-1 flex justify-center max-w-full w-full">
 						<span className="truncate">
 							{numberWithCommas(
-								(gpb ?? 0) + form.rolloverBalance - (balance ?? 0),
+								new Decimal(gpb ?? 0)
+									.plus(form.rolloverBalance)
+									.minus(balance ?? 0)
+									.toNumber(),
 							)}{" "}
 							used
 						</span>

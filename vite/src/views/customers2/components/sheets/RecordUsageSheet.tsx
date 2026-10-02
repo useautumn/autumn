@@ -14,6 +14,7 @@ import {
 } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Decimal } from "decimal.js";
 import { CheckIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -38,7 +39,7 @@ import {
 } from "./lock/TrackAdvancedSection";
 
 type TrackResponse = {
-	deductions?: { value: number }[];
+	deductions?: { feature_id: string; value: number }[];
 	balance?: {
 		remaining?: number | null;
 		overage_allowed?: boolean | null;
@@ -50,10 +51,12 @@ type TrackResponse = {
 const showRecordUsageToast = ({
 	requested,
 	response,
+	featureId,
 	featureName,
 }: {
 	requested: number;
 	response: TrackResponse;
+	featureId: string;
 	featureName?: string;
 }) => {
 	const feature = featureName ?? "feature";
@@ -63,12 +66,19 @@ const showRecordUsageToast = ({
 		return;
 	}
 
-	const deducted = response.deductions.reduce(
-		(sum, deduction) => sum + deduction.value,
-		0,
-	);
+	const deducted = response.deductions
+		.reduce((sum, deduction) => sum.plus(deduction.value), new Decimal(0))
+		.toNumber();
 
-	if (deducted >= requested) {
+	// Credit-system deductions are in credits, not tracked units, so only a zero deduction is comparable.
+	const deductedInTrackedUnits = response.deductions.every(
+		(deduction) => deduction.feature_id === featureId,
+	);
+	const fullyDeducted = deductedInTrackedUnits
+		? deducted >= requested
+		: deducted > 0;
+
+	if (fullyDeducted) {
 		toast.success("Usage recorded");
 		return;
 	}
@@ -257,6 +267,7 @@ export function RecordUsageSheet() {
 			showRecordUsageToast({
 				requested: parsedValue,
 				response: data,
+				featureId: trackingFeatureId,
 				featureName: trackingFeatureName,
 			});
 			await new Promise((resolve) => setTimeout(resolve, 500));
