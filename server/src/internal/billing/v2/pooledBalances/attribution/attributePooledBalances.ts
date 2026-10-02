@@ -17,9 +17,14 @@ export type AttributedBalance = Pick<
 	| "overage_allowed"
 >;
 
-export type PoolTotals = Pick<ApiBalanceV1, "granted" | "remaining" | "usage">;
+export type PoolTotals = Pick<
+	ApiBalanceV1,
+	"granted" | "remaining" | "usage" | "unlimited" | "overage_allowed"
+>;
 
+/** What one scope feeds into one pool; `poolId` is null until billing links the source. */
 export type PooledContribution = {
+	poolId: string | null;
 	contribution: number;
 	nextResetAt: number | null;
 };
@@ -44,15 +49,33 @@ const earliestResetAt = (first: number | null, second: number | null) => {
 	return Math.min(first, second);
 };
 
-/** What the given plans pool into the customer's shared balances, per feature. */
+const mergeContribution = ({
+	existing,
+	added,
+}: {
+	existing: PooledContribution | undefined;
+	added: PooledContribution;
+}): PooledContribution => ({
+	poolId: added.poolId,
+	contribution: (existing?.contribution ?? 0) + added.contribution,
+	nextResetAt: earliestResetAt(
+		existing?.nextResetAt ?? null,
+		added.nextResetAt,
+	),
+});
+
+/** What the given plans pool into the customer's shared balances, per feature and pool. */
 export const customerProductsToPooledContributions = ({
 	customerProducts,
 	inStatuses,
 }: {
 	customerProducts: FullCusProduct[];
 	inStatuses: CusProductStatus[];
-}): Record<string, PooledContribution> => {
-	const contributions: Record<string, PooledContribution> = {};
+}): Record<string, PooledContribution[]> => {
+	const contributions: Record<
+		string,
+		Map<string | null, PooledContribution>
+	> = {};
 	for (const customerProduct of customerProducts) {
 		if (!inStatuses.includes(customerProduct.status)) continue;
 
@@ -61,30 +84,49 @@ export const customerProductsToPooledContributions = ({
 				continue;
 			}
 			const featureId = customerEntitlement.entitlement.feature.id;
-			const existing = contributions[featureId];
-			contributions[featureId] = {
-				contribution:
-					(existing?.contribution ?? 0) +
-					contributionOf({ customerEntitlement, customerProduct }),
-				nextResetAt: earliestResetAt(
-					existing?.nextResetAt ?? null,
-					customerEntitlement.next_reset_at ?? null,
-				),
-			};
+			const byPool = contributions[featureId] ?? new Map();
+			const poolId =
+				customerEntitlement.pooled_balance_contribution?.pooled_balance_id ??
+				null;
+			byPool.set(
+				poolId,
+				mergeContribution({
+					existing: byPool.get(poolId),
+					added: {
+						poolId,
+						contribution: contributionOf({
+							customerEntitlement,
+							customerProduct,
+						}),
+						nextResetAt: customerEntitlement.next_reset_at ?? null,
+					},
+				}),
+			);
+			contributions[featureId] = byPool;
 		}
 	}
-	return contributions;
+	return Object.fromEntries(
+		Object.entries(contributions).map(([featureId, byPool]) => [
+			featureId,
+			[...byPool.values()],
+		]),
+	);
 };
 
-/** A contributor's slice of a pool: its contribution as granted, with the pool's remaining and usage in proportion. */
+/**
+ * A contributor's slice of a pool: its contribution as granted, with the pool's remaining and
+ * usage split by its share of all contributions, so rollovers in the pool are shared out too.
+ */
 export const attributePooledBalance = ({
 	own,
 	contribution,
 	pool,
+	poolContributions,
 }: {
 	own: AttributedBalance | undefined;
 	contribution: PooledContribution;
 	pool: PoolTotals | undefined;
+	poolContributions: number;
 }): AttributedBalance => {
 	const base = own ?? {
 		granted: 0,
@@ -95,12 +137,14 @@ export const attributePooledBalance = ({
 		overage_allowed: false,
 	};
 	const share =
-		pool && pool.granted > 0 ? contribution.contribution / pool.granted : 0;
+		poolContributions > 0 ? contribution.contribution / poolContributions : 0;
 
 	return {
 		...base,
 		granted: base.granted + contribution.contribution,
 		remaining: base.remaining + (pool?.remaining ?? 0) * share,
 		usage: base.usage + (pool?.usage ?? 0) * share,
+		unlimited: base.unlimited || (pool?.unlimited ?? false),
+		overage_allowed: base.overage_allowed || (pool?.overage_allowed ?? false),
 	};
 };
