@@ -94,16 +94,6 @@ export function CustomerBalanceTable({
 							featureName: balance.entitlement.feature.name,
 						},
 					}),
-				onAllocateClick: (balance) =>
-					setSheet({
-						type: "allocate-balances",
-						data: {
-							featureId: balance.entitlement.feature.id,
-							featureName: balance.entitlement.feature.name,
-							internalFeatureId: balance.entitlement.feature.internal_id,
-							interval: balance.entitlement.interval,
-						},
-					}),
 				onRecalculateClick: (balance) => {
 					setRecalcBalance(balance);
 					setRecalcOpen(true);
