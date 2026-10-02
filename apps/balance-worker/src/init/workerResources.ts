@@ -71,13 +71,6 @@ export async function openWorkerResources({
 	bootstrap: WorkerBootstrapConfig;
 }): Promise<WorkerResources> {
 	const { env } = config;
-	function recordSnapshotSizeCapped({
-		customers,
-	}: {
-		customers: number;
-	}): void {
-		databaseTimings.recordSubjectSnapshots({ sizeCapped: customers });
-	}
 	/** Every token the client presents, so a broker's refusal can be read against the key and lifetime it was shown. */
 	function logKafkaToken(info: KafkaTokenInfo): void {
 		dependencies.logger?.info(
@@ -191,7 +184,6 @@ export async function openWorkerResources({
 							db: committerDb,
 							logger: dependencies.logger,
 							control: { read: readCommitterControl },
-							onSnapshotSizeCapped: recordSnapshotSizeCapped,
 							subjectSnapshots: edgeConfigs.subjectSnapshots,
 						},
 						config: {

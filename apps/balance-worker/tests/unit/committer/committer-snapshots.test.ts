@@ -24,7 +24,6 @@ const retry = {
 	maxBackoffMs: 1,
 };
 const PARTITION_COUNT = 64;
-const MAX_BYTES = 262_144;
 const BASELINE_AT = 1_699_999_000_000;
 
 const identityOf = (customerId: string): MeteringIdentity => ({
@@ -62,12 +61,8 @@ const SNAPSHOTS = { partitionCount: PARTITION_COUNT };
 const committerFor = ({
 	db,
 	snapshots = SNAPSHOTS,
-	subjectSnapshots = createSubjectSnapshotsStore({
-		mode: "write",
-		maxBytes: MAX_BYTES,
-	}),
+	subjectSnapshots = createSubjectSnapshotsStore({ mode: "write" }),
 	maxRowsPerFlush = 500,
-	onSnapshotSizeCapped,
 }: {
 	db: CommitterDb;
 	/** Null: the committer is not configured for snapshots at all. */
@@ -75,12 +70,10 @@ const committerFor = ({
 	/** Null: the worker registered no store, as a worker without edge configs. */
 	subjectSnapshots?: ReturnType<typeof createSubjectSnapshotsStore> | null;
 	maxRowsPerFlush?: number;
-	onSnapshotSizeCapped?: (params: { customers: number }) => void;
 }) =>
 	createCommitter({
 		ctx: {
 			db,
-			onSnapshotSizeCapped,
 			...(subjectSnapshots && { subjectSnapshots }),
 		},
 		config: {
@@ -195,38 +188,6 @@ describe("committer subject snapshots", () => {
 		expect(requests[2]).not.toHaveProperty("snapshots");
 	});
 
-	test("the size cap is the store's, read at the flush", async () => {
-		const { db, requests } = createRecordingDb();
-		const subjectSnapshots = createSubjectSnapshotsStore({
-			mode: "write",
-			maxBytes: 64,
-		});
-		const committer = committerFor({ db, subjectSnapshots });
-		const state = createState({ identity: identityOf("cus_1") });
-
-		await committer.apply({
-			topic,
-			partition: 3,
-			expectedOffset: 10n,
-			records: [trackRecord({ customerId: "cus_1", offset: 10n })],
-			snapshotIntent: writing(state),
-		});
-		expect(deletedCustomers(requests[0])).toEqual(["cus_1"]);
-
-		subjectSnapshots._setRuntimeConfigForTesting({
-			...subjectSnapshots.get(),
-			maxBytes: MAX_BYTES,
-		});
-		await committer.apply({
-			topic,
-			partition: 3,
-			expectedOffset: 11n,
-			records: [trackRecord({ customerId: "cus_1", offset: 11n })],
-			snapshotIntent: writing(state),
-		});
-		expect(upsertedKeys(requests[1])).toEqual(["cus_1:"]);
-	});
-
 	test("a customer the writer vouched for is upserted: each state a row, keyed and partitioned as held, aged by its full read", async () => {
 		const { db, requests } = createRecordingDb();
 		const committer = committerFor({ db });
@@ -289,83 +250,6 @@ describe("committer subject snapshots", () => {
 		});
 		expect(upsertedKeys(requests[0])).toEqual(["cus_kept:"]);
 		expect(requests[1]).not.toHaveProperty("snapshots");
-	});
-
-	test("a state over the size cap deletes its customer instead, and is counted once the flush lands, not per attempt", async () => {
-		let transientFailures = 1;
-		const { db, requests } = createRecordingDb({
-			failWhen: () =>
-				transientFailures-- > 0
-					? Object.assign(new Error("connection reset"), { errno: "08006" })
-					: null,
-		});
-		const capped: number[] = [];
-		const committer = committerFor({
-			db,
-			onSnapshotSizeCapped: ({ customers }) => capped.push(customers),
-		});
-		const huge = createState({
-			identity: identityOf("cus_huge"),
-			customerEntitlements: [
-				createCustomerEntitlement({ id: "x".repeat(MAX_BYTES) }),
-			],
-		});
-		const small = createState({ identity: identityOf("cus_small") });
-
-		await committer.apply({
-			topic,
-			partition: 3,
-			expectedOffset: 10n,
-			records: [
-				trackRecord({ customerId: "cus_huge", offset: 10n }),
-				trackRecord({ customerId: "cus_small", offset: 11n }),
-			],
-			snapshotIntent: writing(huge, small),
-		});
-
-		expect(requests).toHaveLength(2);
-		expect(deletedCustomers(requests[1])).toEqual(["cus_huge"]);
-		expect(upsertedKeys(requests[1])).toEqual(["cus_small:"]);
-		expect(capped).toEqual([1]);
-	});
-
-	test("a flush never carries more serialised bytes than its budget: the customers that would cross it delete instead, and are counted", async () => {
-		const { db, requests } = createRecordingDb();
-		const capped: number[] = [];
-		const states = ["cus_first", "cus_second", "cus_third"].map((customerId) =>
-			createState({ identity: identityOf(customerId) }),
-		);
-		// Room for one state and a half: the first lands, the second would cross, the third is never serialised.
-		const oneState = Buffer.byteLength(JSON.stringify(states[0]));
-		const committer = committerFor({
-			db,
-			subjectSnapshots: createSubjectSnapshotsStore({
-				mode: "write",
-				maxFlushBytes: Math.floor(oneState * 1.5),
-			}),
-			onSnapshotSizeCapped: ({ customers }) => capped.push(customers),
-		});
-
-		await committer.apply({
-			topic,
-			partition: 3,
-			expectedOffset: 10n,
-			records: [
-				trackRecord({ customerId: "cus_first", offset: 10n }),
-				trackRecord({ customerId: "cus_second", offset: 11n }),
-				trackRecord({ customerId: "cus_third", offset: 12n }),
-			],
-			snapshotIntent: writing(...states),
-		});
-
-		expect(upsertedKeys(requests[0])).toEqual(["cus_first:"]);
-		expect(deletedCustomers(requests[0])).toEqual(["cus_second", "cus_third"]);
-		expect(capped).toEqual([2]);
-		const carried = requests[0]?.snapshots?.upserts.reduce(
-			(total, row) => total + Buffer.byteLength(row.stateJson),
-			0,
-		);
-		expect(carried).toBeLessThanOrEqual(Math.floor(oneState * 1.5));
 	});
 
 	test("a flush that times out twice with its snapshots attached lands on the third attempt with the customers' snapshots deleted, and never refuses a record", async () => {

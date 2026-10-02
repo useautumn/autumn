@@ -25,12 +25,7 @@ export type DatabaseTimingsSummary = {
 	subjectSnapshots?: SubjectSnapshotCounts;
 };
 
-type SubjectSnapshotCounts = {
-	upserted: number;
-	deleted: number;
-	/** Customers whose state was over the cap, so the flush deleted them instead. */
-	sizeCapped: number;
-};
+type SubjectSnapshotCounts = { upserted: number; deleted: number };
 
 type SampledWindow = { count: number; max: number; samples: number[] };
 
@@ -118,14 +113,12 @@ export function createDatabaseTimings() {
 	}
 
 	function recordSubjectSnapshots({
-		upserted = 0,
-		deleted = 0,
-		sizeCapped = 0,
-	}: Partial<SubjectSnapshotCounts>): void {
-		subjectSnapshots ??= { upserted: 0, deleted: 0, sizeCapped: 0 };
+		upserted,
+		deleted,
+	}: SubjectSnapshotCounts): void {
+		subjectSnapshots ??= { upserted: 0, deleted: 0 };
 		subjectSnapshots.upserted += upserted;
 		subjectSnapshots.deleted += deleted;
-		subjectSnapshots.sizeCapped += sizeCapped;
 	}
 
 	function drain(): DatabaseTimingsSummary {

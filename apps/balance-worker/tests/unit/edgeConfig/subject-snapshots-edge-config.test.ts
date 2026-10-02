@@ -22,7 +22,6 @@ describe("the subject snapshots edge config", () => {
 		expect(SubjectSnapshotsEdgeConfigSchema.parse({ mode: "write" })).toEqual({
 			mode: "write",
 			maxBytes: 262_144,
-			maxFlushBytes: 4_194_304,
 			dropBatch: 500,
 		});
 	});
@@ -33,7 +32,6 @@ describe("the subject snapshots edge config", () => {
 			{ mode: "serve" },
 			{ mode: "write", serve: true },
 			{ maxBytes: 0 },
-			{ maxFlushBytes: 0 },
 			{ dropBatch: 5_001 },
 			{ dropBatch: 1.5 },
 		])
@@ -52,7 +50,6 @@ describe("the subject snapshots edge config", () => {
 			config: {
 				mode: "write",
 				maxBytes: 1_024,
-				maxFlushBytes: 8_192,
 				dropBatch: 10,
 			},
 		});
@@ -60,7 +57,6 @@ describe("the subject snapshots edge config", () => {
 		expect(edgeConfigs.subjectSnapshots.get()).toEqual({
 			mode: "write",
 			maxBytes: 1_024,
-			maxFlushBytes: 8_192,
 			dropBatch: 10,
 		});
 	});

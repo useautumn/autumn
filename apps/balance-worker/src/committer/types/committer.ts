@@ -19,8 +19,6 @@ export type CommitterContext = {
 	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 	/** Read on every flush start; absent means the boot config is the only source. */
 	control?: { read(): CommitterControl };
-	/** Customers whose state was too large to snapshot, so their rows were deleted instead. */
-	onSnapshotSizeCapped?: (params: { customers: number }) => void;
 	/** Read at every decision that touches `subject_snapshots`: a flip in S3 lands with the next flush. */
 	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 };
