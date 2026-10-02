@@ -5,6 +5,7 @@ import {
 	CustomerNotFoundError,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
+	cusEntsToPrepaidQuantity,
 	EntityNotFoundError,
 	entities,
 	findFeatureById,
@@ -12,6 +13,7 @@ import {
 	type ResetInterval,
 	resetIntvToEntIntv,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
@@ -131,7 +133,17 @@ export const allocateBalances = async ({
 		internalCustomerId: customer.internal_id,
 		entityIds: params.allocations.map((entry) => entry.entity_id),
 	});
-	const sharedGranted = cusEntsToGrantedBalance({ cusEnts: sharedRows });
+	// Prepaid packs (a credits add-on) hold their credits as quantity, not allowance.
+	const sharedGranted = new Decimal(
+		cusEntsToGrantedBalance({ cusEnts: sharedRows }),
+	)
+		.plus(
+			cusEntsToPrepaidQuantity({
+				cusEnts: sharedRows,
+				sumAcrossEntities: true,
+			}),
+		)
+		.toNumber();
 	const sharedRemaining = cusEntsToBalance({ cusEnts: sharedRows });
 	const now = Date.now();
 

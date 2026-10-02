@@ -237,7 +237,7 @@ export function AllocateBalancesSheet() {
 					) : (
 						<p className="text-xs text-tertiary-foreground">
 							{allocations.length > 0
-								? `Sends ${allocations.length} change${allocations.length === 1 ? "" : "s"} to POST /balances.allocate. Entities not changed keep their share.`
+								? `One POST /balances.allocate with ${allocations.length} ${allocations.length === 1 ? "entity" : "entities"} in its allocations array. Entities not changed keep their share.`
 								: "Change an amount to allocate. Entities you don't change keep their share."}
 						</p>
 					)}

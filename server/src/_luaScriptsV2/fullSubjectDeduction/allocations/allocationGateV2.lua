@@ -55,7 +55,8 @@ local function allocation_granted(requested, usage, scale)
     return requested
   end
   local claimed = math.min(usage, requested)
-  return math.max(claimed, math.floor(requested * scale))
+  -- Same float tolerance as ALLOCATION_FLOAT_TOLERANCE in allocationMath.ts.
+  return math.max(claimed, math.floor(requested * scale + 1e-6))
 end
 
 local function shared_remaining(context, gate)

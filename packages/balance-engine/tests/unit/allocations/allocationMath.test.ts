@@ -72,6 +72,22 @@ describe("allocationGranted", () => {
 		);
 	});
 
+	test("a share the scale cuts to a whole number stays whole despite float error", () => {
+		const scale = solveAllocationScale({
+			sharedRemaining: 15000,
+			entries: [
+				{ requested: 12000, usage: 5000 },
+				{ requested: 10000, usage: 0 },
+				{ requested: 8000, usage: 0 },
+			],
+		});
+		expect(
+			[12000, 10000, 8000].map((requested) =>
+				allocationGranted({ requested, usage: 0, scale }),
+			),
+		).toEqual([8000, 6666, 5333]);
+	});
+
 	test("never drops below what's already been used", () => {
 		expect(
 			allocationGranted({ requested: 5000, usage: 4000, scale: 0.6 }),
