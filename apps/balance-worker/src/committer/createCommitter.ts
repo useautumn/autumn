@@ -1,6 +1,7 @@
 import { landFlush } from "./actions/landFlush.js";
 import { takeFlush } from "./actions/takeFlush.js";
 import { CommitterStoppedError } from "./committerErrors.js";
+import { snapshotRowsOf } from "./subjectSnapshots/flushSnapshotGuards.js";
 import type {
 	Committer,
 	CommitterConfig,
@@ -43,7 +44,13 @@ export const createCommitter = ({
 			);
 		const call: FlushCall = {
 			...params,
-			rows: countRowChanges({ records: params.records }),
+			rows:
+				countRowChanges({ records: params.records }) +
+				snapshotRowsOf({
+					config: scope.config,
+					records: params.records,
+					snapshotDrops: params.snapshotDrops,
+				}),
 			settle: Promise.withResolvers<FlushOutcome>(),
 		};
 		scope.state.queue.push(call);

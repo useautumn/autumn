@@ -1,0 +1,265 @@
+import { describe, expect, test } from "bun:test";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { commitFlush } from "../../../src/flush/repos/commitFlush.js";
+import { flushSql } from "../../../src/flush/repos/flushSql.js";
+import type { FlushRequest } from "../../../src/flush/types/flush.js";
+import type { SubjectSnapshotUpsert } from "../../../src/subjects/types/subjectSnapshot.js";
+import type { PostgresDb } from "../../../src/types/postgresClient.js";
+
+const dialect = new PgDialect();
+const flatten = (sql: string) => sql.replace(/\s+/g, " ").trim();
+
+const bookmark = {
+	topic: "metering",
+	partition: 3,
+	expectedOffset: 40n,
+	nextOffset: 41n,
+};
+
+const upsert = (
+	overrides: Partial<SubjectSnapshotUpsert> = {},
+): SubjectSnapshotUpsert => ({
+	orgId: "org_1",
+	env: "sandbox",
+	customerId: "cus_1",
+	entityId: null,
+	internalCustomerId: "cus_internal_1",
+	internalEntityId: null,
+	partition: 3,
+	partitionCount: 64,
+	stateVersion: 1,
+	stateJson: '{"revision":4}',
+	baselineAt: 1_700_000_000_000,
+	logOffset: 40n,
+	...overrides,
+});
+
+describe("flushSql subject snapshots", () => {
+	test("no snapshot writes leave the statement exactly as it was", () => {
+		const without = dialect.sqlToQuery(
+			flushSql({ changes: [], bookmarks: [bookmark] }),
+		);
+		const empty = dialect.sqlToQuery(
+			flushSql({
+				changes: [],
+				bookmarks: [bookmark],
+				snapshots: { upserts: [], deletes: [] },
+			}),
+		);
+		expect(empty).toEqual(without);
+		expect(flatten(without.sql)).not.toContain("subject_snapshots");
+	});
+
+	test("upserts and deletes are one CTE each, bound as one JSON document apiece, and counted beside the bookmarks", () => {
+		const query = dialect.sqlToQuery(
+			flushSql({
+				changes: [],
+				bookmarks: [bookmark],
+				snapshots: {
+					upserts: [
+						upsert(),
+						upsert({
+							entityId: "ent_1",
+							internalEntityId: "ent_internal_1",
+							logOffset: null,
+						}),
+					],
+					deletes: [{ orgId: "org_1", env: "live", customerId: "cus_9" }],
+				},
+			}),
+		);
+		const sql = flatten(query.sql);
+		expect(sql).toContain(
+			'snapshot_deletes AS ( DELETE FROM subject_snapshots s USING jsonb_to_recordset($9::text::jsonb) AS d(org_id text, env text, customer_id text) WHERE s.org_id = d.org_id COLLATE "C" AND s.env = d.env COLLATE "C" AND s.customer_id = d.customer_id COLLATE "C" RETURNING 1 )',
+		);
+		expect(sql).toContain(
+			"snapshot_upserts AS ( INSERT INTO subject_snapshots AS s",
+		);
+		expect(sql).toContain(
+			"ON CONFLICT (org_id, env, customer_id, entity_id) DO UPDATE SET",
+		);
+		// A row whose customer or entity is gone is skipped, never an FK error that fails the flush.
+		expect(sql).toContain(
+			"WHERE EXISTS (SELECT 1 FROM customers c WHERE c.internal_id = v.internal_customer_id) AND (v.internal_entity_id IS NULL OR EXISTS (SELECT 1 FROM entities e WHERE e.internal_id = v.internal_entity_id))",
+		);
+		expect(sql).toEndWith(
+			"(SELECT count(*) FROM b) AS bookmarks, (SELECT count(*) FROM snapshot_upserts) AS snapshot_upserts, (SELECT count(*) FROM snapshot_deletes) AS snapshot_deletes",
+		);
+		const [deletes, upserts] = query.params.slice(-2) as [string, string];
+		expect(JSON.parse(deletes)).toEqual([
+			{ org_id: "org_1", env: "live", customer_id: "cus_9" },
+		]);
+		expect(JSON.parse(upserts)).toEqual([
+			{
+				org_id: "org_1",
+				env: "sandbox",
+				customer_id: "cus_1",
+				entity_id: "",
+				internal_customer_id: "cus_internal_1",
+				internal_entity_id: null,
+				partition: 3,
+				partition_count: 64,
+				state_version: 1,
+				state: { revision: 4 },
+				baseline_at: 1_700_000_000_000,
+				log_offset: "40",
+			},
+			{
+				org_id: "org_1",
+				env: "sandbox",
+				customer_id: "cus_1",
+				entity_id: "ent_1",
+				internal_customer_id: "cus_internal_1",
+				internal_entity_id: "ent_internal_1",
+				partition: 3,
+				partition_count: 64,
+				state_version: 1,
+				state: { revision: 4 },
+				baseline_at: 1_700_000_000_000,
+				log_offset: null,
+			},
+		]);
+	});
+
+	test("a flush of snapshot deletes alone moves no bookmark", () => {
+		const sql = flatten(
+			dialect.sqlToQuery(
+				flushSql({
+					changes: [],
+					bookmarks: [],
+					snapshots: {
+						upserts: [],
+						deletes: [{ orgId: "org_1", env: "live", customerId: "cus_9" }],
+					},
+				}),
+			).sql,
+		);
+		expect(sql).not.toContain("partition_progress");
+		expect(sql).toEndWith(
+			"SELECT '[]'::json AS applied, 0 AS bookmarks, 0 AS snapshot_upserts, (SELECT count(*) FROM snapshot_deletes) AS snapshot_deletes",
+		);
+	});
+
+	test("a delete asked under a claim shares its partition's progress row and lands only while that claim still holds", () => {
+		const claim = { topic: "metering", partition: 3, claimToken: "claim_a" };
+		const query = dialect.sqlToQuery(
+			flushSql({
+				changes: [],
+				bookmarks: [],
+				snapshots: {
+					upserts: [],
+					deletes: [
+						{ orgId: "org_1", env: "live", customerId: "cus_9", claim },
+						{ orgId: "org_1", env: "live", customerId: "cus_8", claim },
+						{ orgId: "org_2", env: "live", customerId: "cus_7" },
+					],
+				},
+			}),
+		);
+		const sql = flatten(query.sql);
+		expect(sql).toContain(
+			"snapshot_claims AS ( SELECT p.topic, p.partition_id, c.claim_token FROM partition_progress p JOIN jsonb_to_recordset($1::text::jsonb) AS c(topic text, partition_id integer, claim_token text) ON p.topic = c.topic AND p.partition_id = c.partition_id WHERE p.claim_token IS NULL OR p.claim_token = c.claim_token FOR SHARE OF p )",
+		);
+		expect(sql).toContain(
+			'snapshot_deletes AS ( DELETE FROM subject_snapshots s USING jsonb_to_recordset($2::text::jsonb) AS d(org_id text, env text, customer_id text, topic text, partition_id integer, claim_token text) WHERE s.org_id = d.org_id COLLATE "C" AND s.env = d.env COLLATE "C" AND s.customer_id = d.customer_id COLLATE "C" AND (d.claim_token IS NULL OR EXISTS (SELECT 1 FROM snapshot_claims k WHERE k.topic = d.topic AND k.partition_id = d.partition_id AND k.claim_token = d.claim_token)) RETURNING 1 )',
+		);
+		const [claims, deletes] = query.params as [string, string];
+		expect(JSON.parse(claims)).toEqual([
+			{ topic: "metering", partition_id: 3, claim_token: "claim_a" },
+		]);
+		expect(JSON.parse(deletes)).toEqual([
+			{
+				org_id: "org_1",
+				env: "live",
+				customer_id: "cus_9",
+				topic: "metering",
+				partition_id: 3,
+				claim_token: "claim_a",
+			},
+			{
+				org_id: "org_1",
+				env: "live",
+				customer_id: "cus_8",
+				topic: "metering",
+				partition_id: 3,
+				claim_token: "claim_a",
+			},
+			{
+				org_id: "org_2",
+				env: "live",
+				customer_id: "cus_7",
+				topic: null,
+				partition_id: null,
+				claim_token: null,
+			},
+		]);
+	});
+});
+
+/** A transaction stand-in that answers the flush statement with the given row. */
+const fakeDb = ({ row }: { row: Record<string, unknown> }) => {
+	const statements: string[] = [];
+	const db = {
+		transaction: async <Result>(
+			run: (tx: {
+				execute: (query: unknown) => Promise<unknown[]>;
+			}) => Promise<Result>,
+		) =>
+			run({
+				execute: async (query) => {
+					statements.push(
+						flatten(
+							dialect.sqlToQuery(
+								query as Parameters<typeof dialect.sqlToQuery>[0],
+							).sql,
+						),
+					);
+					return [row];
+				},
+			}),
+	} as unknown as Pick<PostgresDb, "transaction">;
+	return { db, statements };
+};
+
+describe("commitFlush subject snapshots", () => {
+	test("snapshot deletes with no bookmark still run, and report what they removed", async () => {
+		const { db, statements } = fakeDb({
+			row: {
+				applied: [],
+				bookmarks: 0,
+				snapshot_upserts: 0,
+				snapshot_deletes: 3,
+			},
+		});
+		const request: FlushRequest = {
+			changes: [],
+			bookmarks: [],
+			snapshots: {
+				upserts: [],
+				deletes: [{ orgId: "org_1", env: "live", customerId: "cus_9" }],
+			},
+		};
+		const result = await commitFlush({
+			ctx: { db },
+			request,
+			statementTimeoutMs: 2_000,
+		});
+		expect(statements).toHaveLength(2);
+		expect(statements[1]).toContain("snapshot_deletes AS");
+		expect(result).toEqual({
+			applied: [],
+			snapshots: { upserted: 0, deleted: 3 },
+		});
+	});
+
+	test("a flush without snapshot writes reports none and still skips Postgres when nothing moves", async () => {
+		const { db, statements } = fakeDb({ row: {} });
+		const result = await commitFlush({
+			ctx: { db },
+			request: { changes: [], bookmarks: [] },
+			statementTimeoutMs: 2_000,
+		});
+		expect(statements).toEqual([]);
+		expect(result).toEqual({ applied: [] });
+	});
+});

@@ -13,7 +13,9 @@ import {
 	StaleSubjectRowsError,
 	UnsupportedRowChangeError,
 } from "../committerErrors.js";
+import { collectSnapshotWrites } from "../subjectSnapshots/collectSnapshotWrites.js";
 import type {
+	CommitterConfig,
 	CommitterContext,
 	Flush,
 	FlushCall,
@@ -283,12 +285,14 @@ export const flushLandedEarlier = async ({
 	return outcomes;
 };
 
-/** One transaction for the whole flush: every call's row updates, then every call's bookmark. */
+/** One transaction for the whole flush: every call's row updates, its subject snapshots, then every call's bookmark. */
 export const runFlush = async ({
 	ctx,
+	config,
 	flush,
 }: {
 	ctx: CommitterContext;
+	config: Pick<CommitterConfig, "snapshots">;
 	flush: Flush;
 }): Promise<Map<FlushCall, FlushOutcome>> => {
 	const outcomes = new Map<FlushCall, FlushOutcome>();
@@ -306,7 +310,19 @@ export const runFlush = async ({
 		collectChanges({ flush }),
 	);
 
-	const { applied } = await ctx.db.flush({ changes, bookmarks });
+	const snapshots = timeSync({ label: "flush.snapshots" }, () =>
+		collectSnapshotWrites({
+			config,
+			flush,
+			onSizeCapped: ctx.onSnapshotSizeCapped,
+		}),
+	);
+
+	const { applied } = await ctx.db.flush({
+		changes,
+		bookmarks,
+		...(snapshots ? { snapshots } : undefined),
+	});
 	const staleIds = changes
 		.filter((_, index) => !applied[index])
 		.map(

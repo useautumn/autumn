@@ -84,6 +84,10 @@ export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;
  *  BALANCE_WORKER_COMMIT_MODE=idempotent once its fence has been exercised. */
 export const BALANCE_WORKER_COMMIT_MODE = "transactional" as const;
 
+/** Written beside every snapshot; a reader serves a row only at exactly this version. A code constant on purpose:
+ *  the shape is what this build serialises, so the number must ship with the build, never be toggled at runtime. */
+export const BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION = 1;
+
 /** Share of successful requests the worker logs a line for. Every failure is
  *  logged whatever this says; the API keeps a line per request either way.
  *  Building and serialising a line costs the event loop about as much as a
