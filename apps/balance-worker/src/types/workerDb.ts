@@ -8,11 +8,12 @@ import type {
 
 /** Postgres as the worker reads it: the repos it needs, bound to the pool and scoped per call. Tests stand these in. */
 export type WorkerDb = {
-	/** The subject's snapshot at `snapshotVersion` when asked for and present, else its rows. */
+	/** The subject's snapshot at `snapshotVersion` when asked for and present, else its rows; both with `rowsBesideSnapshot`. */
 	getSubjectRows(params: {
 		identity: MeteringIdentity;
 		asOfTimestampMs: number;
 		snapshotVersion?: number;
+		rowsBesideSnapshot?: boolean;
 	}): Promise<SubjectRowsRead>;
 	/** Several of the customer's entities in one read: one envelope per entity that exists. */
 	getEntitySubjectRows(params: {

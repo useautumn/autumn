@@ -6,6 +6,8 @@ import {
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
+import type { SubjectSnapshotMode } from "../../../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { subjectEnvelopeToState } from "../../../../../src/processor/subject/actions/ensureSubject/readSubjectBaseline.js";
 import { createEntityLoads } from "../../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
 import { loadSubjectBaseline } from "../../../../../src/processor/subject/snapshotLoader/loadSubjectBaseline.js";
@@ -13,7 +15,10 @@ import { SubjectNotFoundError } from "../../../../../src/processor/subject/subje
 import { createSubjectJoinCache } from "../../../../../src/processor/subject/subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectScope } from "../../../../../src/processor/subject/types/subject.js";
 import { createTestCatalogCache } from "../../../../fixtures/catalog.js";
-import { createState } from "../../../../fixtures/mutations.js";
+import {
+	createCustomerEntitlement,
+	createState,
+} from "../../../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../../../fixtures/subjectSnapshotsStore.js";
 
 const NOW = 1_700_000_000_000;
@@ -58,11 +63,12 @@ const createScope = ({
 	snapshot = null,
 	rows = envelope,
 }: {
-	mode?: "off" | "write" | "serve";
+	mode?: SubjectSnapshotMode;
 	snapshot?: unknown;
 	rows?: SubjectRowsEnvelope | null;
 } = {}) => {
 	const asked: (number | undefined)[] = [];
+	const rowsBeside: (boolean | undefined)[] = [];
 	const warnings: unknown[] = [];
 	const backfills: { customerKey: string; baselineAt: number }[] = [];
 	const catalogCache = createTestCatalogCache();
@@ -70,11 +76,14 @@ const createScope = ({
 		ctx: {
 			catalogCache,
 			db: {
-				getSubjectRows: async ({ snapshotVersion }) => {
+				getSubjectRows: async ({ snapshotVersion, rowsBesideSnapshot }) => {
 					asked.push(snapshotVersion);
-					return snapshotVersion !== undefined && snapshot !== null
-						? { snapshot, envelope: null }
-						: { snapshot: null, envelope: rows };
+					rowsBeside.push(rowsBesideSnapshot);
+					const hit = snapshotVersion !== undefined && snapshot !== null;
+					return {
+						snapshot: hit ? snapshot : null,
+						envelope: hit && !rowsBesideSnapshot ? null : rows,
+					};
 				},
 				getEntitySubjectRows: async () => [],
 			},
@@ -110,16 +119,20 @@ const createScope = ({
 		occurredAt = NOW,
 		inFlight = { customerKey: "cus_1", overtaken: false },
 	) => loadSubjectBaseline({ scope, identity, occurredAt, load: inFlight });
-	return { load, asked, warnings, backfills };
+	return { load, asked, rowsBeside, warnings, backfills };
 };
+
+const eventsOf = (warnings: unknown[]) =>
+	warnings.map((args) => (args as [{ event: string }])[0].event);
 
 describe("loadSubjectBaseline", () => {
 	test("serving: the statement is asked for this build's snapshot, and a row that parses is the baseline at revision zero", async () => {
-		const { load, asked } = createScope({
+		const { load, asked, rowsBeside } = createScope({
 			snapshot: { ...createState({ identity, balance: 95 }), revision: 9 },
 		});
 		const state = await load();
 		expect(asked).toEqual([BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION]);
+		expect(rowsBeside).toEqual([false]);
 		expect(state.revision).toBe(0);
 		expect(state.customerEntitlements[0]?.balance).toBe(95);
 	});
@@ -167,6 +180,65 @@ describe("loadSubjectBaseline", () => {
 		expect((warnings[0] as [{ event: string }])[0].event).toBe(
 			"balance_worker.snapshot_unreadable",
 		);
+	});
+
+	describe("verifying", () => {
+		const rowsState = subjectEnvelopeToState({ identity, envelope });
+
+		test("the statement is asked for this build's row and the rows beside it; the rows are served, and a row that agrees logs nothing", async () => {
+			const { load, asked, rowsBeside, warnings } = createScope({
+				mode: "verify",
+				snapshot: { ...rowsState, revision: 4 },
+			});
+			const state = await load();
+			expect(asked).toEqual([BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION]);
+			expect(rowsBeside).toEqual([true]);
+			expect(state).toEqual(rowsState);
+			expect(warnings).toEqual([]);
+		});
+
+		test("a row that disagrees is logged with the fields where it does; the rows are still what is served", async () => {
+			const { load, warnings } = createScope({
+				mode: "verify",
+				snapshot: {
+					...rowsState,
+					customerEntitlements: [createCustomerEntitlement({ balance: 95 })],
+				},
+			});
+			const state = await load();
+			expect(state).toEqual(rowsState);
+			expect(warnings).toHaveLength(1);
+			const [record] = warnings[0] as [{ event: string; data: unknown }];
+			expect(record.event).toBe("balance_worker.snapshot_mismatch");
+			expect(record.data).toEqual({
+				identity,
+				fields: ["customerEntitlements"],
+			});
+		});
+
+		test("a row that will not parse is the unreadable warning, and nothing more is asked: the rows were read beside it", async () => {
+			const { load, asked, warnings } = createScope({
+				mode: "verify",
+				snapshot: { schemaVersion: 1, nope: true },
+			});
+			expect(await load()).toEqual(rowsState);
+			expect(asked).toEqual([BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION]);
+			expect(eventsOf(warnings)).toEqual([
+				"balance_worker.snapshot_unreadable",
+			]);
+		});
+
+		test("no row is a miss written back; a row, right or wrong, is not", async () => {
+			const miss = createScope({ mode: "verify" });
+			await miss.load();
+			const wrong = createScope({
+				mode: "verify",
+				snapshot: createState({ identity, balance: 95 }),
+			});
+			await wrong.load();
+			expect(miss.backfills).toHaveLength(1);
+			expect(wrong.backfills).toEqual([]);
+		});
 	});
 
 	test("no row and no rows is a customer that does not exist", async () => {

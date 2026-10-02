@@ -187,7 +187,7 @@ describe("subjectRowsSql: limits", () => {
 });
 
 describe("subjectRowsSql with a snapshot version", () => {
-	const render = (snapshotVersion?: number) =>
+	const render = (snapshotVersion?: number, rowsBesideSnapshot?: boolean) =>
 		dialect.sqlToQuery(
 			subjectRowsSql({
 				ctx: { orgId: "org_1", env: "sandbox" },
@@ -196,6 +196,7 @@ describe("subjectRowsSql with a snapshot version", () => {
 				statuses: ["active"],
 				asOfTimestampMs: 1_700_000_000_000,
 				snapshotVersion,
+				rowsBesideSnapshot,
 			}),
 		);
 	const flatten = (text: string) => text.replace(/\s+/g, " ").trim();
@@ -226,5 +227,18 @@ describe("subjectRowsSql with a snapshot version", () => {
 		expect(text).toContain(") END AS envelope");
 		// The customer's own subject keys on an empty entity id, and the version is the fifth parameter.
 		expect(params.slice(0, 5)).toEqual(["org_1", "sandbox", "cus_1", "", 1]);
+	});
+
+	test("with the rows asked beside the snapshot, both are built: one statement, one instant, no CASE", () => {
+		const text = flatten(render(1, true).sql);
+		expect(text).toContain(
+			"SELECT (SELECT state FROM snap) AS snapshot, json_build_object(",
+		);
+		expect(text).not.toContain("CASE WHEN");
+		expect(text).toContain(") AS envelope");
+	});
+
+	test("rows beside the snapshot mean nothing without a version: the statement is exactly today's", () => {
+		expect(render(undefined, true).sql).toBe(render().sql);
 	});
 });

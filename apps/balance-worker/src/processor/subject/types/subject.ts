@@ -26,7 +26,7 @@ export type SubjectHydratorContext = {
 	db: Pick<WorkerDb, "getSubjectRows" | "getEntitySubjectRows">;
 	writer: Pick<PartitionWriter, "decide" | "readFreshestState" | "adopt">;
 	receiptPolicy: ReceiptPolicy;
-	/** Read at each cold load: `serve` asks for the subject's snapshot in the same statement as its rows; absent or any other mode, every load is the rows. */
+	/** Read at each cold load: `serve` asks the statement for the subject's snapshot in place of its rows, `verify` beside them; absent or any other mode, every load is the rows. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Where a cold load's full read is written back, through the partition's lane; absent, nothing is. */
 	snapshotWrites?: StateStore["snapshotWrites"];
