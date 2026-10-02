@@ -89,6 +89,56 @@ const FUTURE_START_CONFLICT_COPY: Record<
 	},
 };
 
+const BACKDATE_CONFLICT_COPY: Record<
+	Exclude<
+		Extract<SetPlansErrorDetails, { type: "backdate_conflict" }>["conflict"],
+		"plan_outside_request"
+	>,
+	{ subject: string; hint: string }
+> = {
+	free_trial: {
+		subject: "A trial can't be backdated to",
+		hint: "End the trial first, or start the first phase now.",
+	},
+	stripe_checkout: {
+		subject: "Stripe Checkout can't backdate the subscription to",
+		hint: "Add a payment method, or start the first phase now.",
+	},
+	subscription_schedule: {
+		subject: "A subscription with a schedule can't be backdated to",
+		hint: "Keep the first phase on its current start date.",
+	},
+	billing_cycle_anchor: {
+		subject: "The billing cycle anchor can't change when backdating to",
+		hint: "Billing continues on the current cycle, so remove the anchor.",
+	},
+	too_far_back: {
+		subject: "Stripe can't backdate the subscription this far, to",
+		hint: "The first invoice would have more than 250 line items. Pick a later date.",
+	},
+};
+
+const backdateConflictCopy = (
+	details: Extract<SetPlansErrorDetails, { type: "backdate_conflict" }>,
+): SetPlansErrorCopy => {
+	const startsOn = bold(`${formatMsToDate(details.starts_at)}.`);
+	if (details.conflict === "plan_outside_request") {
+		return {
+			line: [
+				bold(details.plan_name ?? "A plan"),
+				plain(
+					"is on the subscription but not in this request, so it can't be backdated to",
+				),
+				startsOn,
+			],
+			hint: { text: "Include every plan on the subscription in the request." },
+		};
+	}
+
+	const copy = BACKDATE_CONFLICT_COPY[details.conflict];
+	return { line: [plain(copy.subject), startsOn], hint: { text: copy.hint } };
+};
+
 /** The one place every Set Plans error is worded, for the API message and the dashboard alike. */
 export const setPlansErrorCopy = (
 	details: SetPlansErrorDetails,
@@ -234,6 +284,8 @@ export const setPlansErrorCopy = (
 					text: "Stripe has nothing to start it then. Start the first phase now, or turn on early access.",
 				},
 			};
+		case "backdate_conflict":
+			return backdateConflictCopy(details);
 	}
 };
 
