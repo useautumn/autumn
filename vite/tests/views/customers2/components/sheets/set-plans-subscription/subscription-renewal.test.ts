@@ -86,6 +86,22 @@ describe("stripeSubscriptionIntervalLabel", () => {
 		expect(label("month", 3)).toBe("Quarterly");
 		expect(label("week", 2)).toBe("Every 2 weeks");
 	});
+
+	test("a mixed-interval subscription reads as its longest cadence, whatever the item order", () => {
+		const monthly = makeStripeSubscription({ id: "sub_a" }).items.data[0];
+		const yearly = makeStripeSubscription({ id: "sub_a", interval: "year" })
+			.items.data[0];
+		const subscription = makeStripeSubscription({ id: "sub_a" });
+
+		expect(
+			stripeSubscriptionIntervalLabel({
+				subscription: {
+					...subscription,
+					items: { ...subscription.items, data: [monthly, yearly] },
+				},
+			}),
+		).toBe("Yearly");
+	});
 });
 
 describe("formatStripeObjectId", () => {

@@ -8,15 +8,42 @@ const SINGLE_INTERVAL_LABELS: Record<Stripe.Price.Recurring.Interval, string> =
 		year: "Yearly",
 	};
 
-/** How often the subscription bills, read from its first recurring item. */
+const APPROXIMATE_INTERVAL_DAYS: Record<
+	Stripe.Price.Recurring.Interval,
+	number
+> = {
+	day: 1,
+	week: 7,
+	month: 30,
+	year: 365,
+};
+
+const recurringLengthInDays = (recurring: Stripe.Price.Recurring) =>
+	APPROXIMATE_INTERVAL_DAYS[recurring.interval] * recurring.interval_count;
+
+const findLongestRecurring = ({
+	subscription,
+}: {
+	subscription: Stripe.Subscription;
+}): Stripe.Price.Recurring | undefined =>
+	(subscription.items?.data ?? [])
+		.flatMap((item) => (item.price?.recurring ? [item.price.recurring] : []))
+		.reduce<Stripe.Price.Recurring | undefined>(
+			(longest, recurring) =>
+				!longest ||
+				recurringLengthInDays(recurring) > recurringLengthInDays(longest)
+					? recurring
+					: longest,
+			undefined,
+		);
+
+/** How often the subscription bills, read from its longest recurring item. */
 export const stripeSubscriptionIntervalLabel = ({
 	subscription,
 }: {
 	subscription: Stripe.Subscription;
 }): string | null => {
-	const recurring = subscription.items?.data?.find(
-		(item) => item.price?.recurring,
-	)?.price.recurring;
+	const recurring = findLongestRecurring({ subscription });
 	if (!recurring) return null;
 
 	if (recurring.interval_count <= 1) {
