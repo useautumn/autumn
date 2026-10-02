@@ -50,9 +50,15 @@ const shadowWith = ({
 			endpointUrl,
 			adminEncryptedToken: "encrypted_admin",
 			orgs: registered
-				? { org_1: { encryptedToken: "encrypted_org_1", registeredAt: 1 } }
+				? {
+						org_1: {
+							encryptedToken: "encrypted_org_1",
+							registeredAt: 1,
+							percent,
+							previousPercent: percent,
+						},
+					}
 				: {},
-			rollout: { percent, previousPercent: percent },
 		},
 	});
 

@@ -1,6 +1,6 @@
 import {
+	applyShadowAtomSettings,
 	ShadowAtomSettingsSchema,
-	scheduleShadowAtomConfig,
 } from "@autumn/edge-config";
 import { Scopes } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
@@ -11,7 +11,7 @@ import {
 } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { shadowAtomConfigToAdminView } from "./shadowAtom/shadowAtomConfigToAdminView.js";
 
-/** Staff-only load-test dial: where each env's shadow Atom answers and which customers it holds. */
+/** Staff-only: where each env's shadow Atom answers. Orgs and their percents have their own routes. */
 export const handleUpsertAdminShadowAtomConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	body: ShadowAtomSettingsSchema,
@@ -19,13 +19,12 @@ export const handleUpsertAdminShadowAtomConfig = createRoute({
 		const config = await withLock({
 			lockKey: SHADOW_ATOM_CONFIG_LOCK_KEY,
 			fn: async () => {
-				const scheduled = scheduleShadowAtomConfig({
+				const saved = applyShadowAtomSettings({
 					current: await shadowAtomConfigStore.readFromSource(),
 					next: c.req.valid("json"),
-					now: Date.now(),
 				});
-				await shadowAtomConfigStore.writeToSource({ config: scheduled });
-				return scheduled;
+				await shadowAtomConfigStore.writeToSource({ config: saved });
+				return saved;
 			},
 		});
 		return c.json(shadowAtomConfigToAdminView({ config }));

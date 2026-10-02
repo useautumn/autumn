@@ -7,12 +7,14 @@ import { registerShadowAtomOrg } from "./shadowAtom/registerShadowAtomOrg.js";
 export const handleRegisterAdminShadowAtomOrg = createRoute({
 	scopes: [Scopes.Superuser],
 	params: z.object({ env: z.enum(AppEnv), org_id: z.string().min(1) }),
+	body: z.object({ percent: z.number().int().min(0).max(100).default(100) }),
 	handler: async (c) => {
 		const { env, org_id: orgId } = c.req.valid("param");
 		const { token } = await registerShadowAtomOrg({
 			ctx: c.get("ctx"),
 			env,
 			orgId,
+			percent: c.req.valid("json").percent,
 		});
 		return c.json({ env, org_id: orgId, token });
 	},

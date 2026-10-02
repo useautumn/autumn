@@ -3,30 +3,19 @@ import { SHADOW_ATOM_CONFIG_KEY } from "../../keys.js";
 
 const PercentSchema = z.number().int().min(0).max(100);
 
-/** Which of an env's customers the shadow Atom holds. A percent change routes once `changedAt` has settled. */
-const ShadowAtomRolloutSchema = z.object({
-	percent: PercentSchema.default(0),
-	/** What routes until the change settles; the admin write keeps it, never the caller. */
-	previousPercent: PercentSchema.default(0),
-	changedAt: z.number().default(0),
-	/** An org's own percent, in place of the env's. */
-	orgs: z.record(z.string(), PercentSchema).default({}),
-	/** By org id, then customer id: pinned in (true) or out (false) whatever the percent. */
-	customers: z
-		.record(z.string(), z.record(z.string(), z.boolean()))
-		.default({}),
-});
-
-/** An org registered on the shadow Atom: its own token there, encrypted the way an org's Atom token is. */
+/** An org registered on the shadow Atom: its own token there, and the share of its customers the Atom holds. */
 const ShadowAtomOrgSchema = z.object({
 	encryptedToken: z.string().min(1),
 	registeredAt: z.number(),
+	percent: PercentSchema,
+	/** What routes until a percent change settles; only the admin routes set it and `changedAt`. */
+	previousPercent: PercentSchema.default(0),
+	changedAt: z.number().default(0),
 });
 
-/** What an admin save sets: where the shadow Atom answers and whom it holds. */
+/** What an admin save sets: where the shadow Atom answers. */
 const ShadowAtomEnvSettingsSchema = z.object({
 	endpointUrl: z.url().nullable().default(null),
-	rollout: ShadowAtomRolloutSchema.prefault({}),
 });
 
 /** One env's shadow Atom (ATOM_MODE=multi_tenant). Its tokens are set only by the admin mint and the org register routes. */
@@ -49,7 +38,7 @@ export const ShadowAtomSettingsSchema = z.object({
 	live: ShadowAtomEnvSettingsSchema.prefault({}),
 });
 
-export type ShadowAtomRollout = z.infer<typeof ShadowAtomRolloutSchema>;
+export type ShadowAtomOrg = z.infer<typeof ShadowAtomOrgSchema>;
 export type ShadowAtomEnvConfig = z.infer<typeof ShadowAtomEnvConfigSchema>;
 export type ShadowAtomConfig = z.infer<typeof ShadowAtomConfigSchema>;
 export type ShadowAtomSettings = z.infer<typeof ShadowAtomSettingsSchema>;

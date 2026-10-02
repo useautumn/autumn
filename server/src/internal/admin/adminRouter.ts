@@ -57,6 +57,7 @@ import { handleListOAuthClients } from "./handleListOAuthClients";
 import { handleMintAdminShadowAtomToken } from "./handleMintAdminShadowAtomToken.js";
 import { handleRegisterAdminShadowAtomOrg } from "./handleRegisterAdminShadowAtomOrg.js";
 import { handleSearchAdminOrgCustomers } from "./handleSearchAdminOrgCustomers";
+import { handleSetAdminShadowAtomOrgPercent } from "./handleSetAdminShadowAtomOrgPercent.js";
 import {
 	handleCreateSlackAdminInstall,
 	handleDeleteSlackAdminInstall,
@@ -192,6 +193,10 @@ honoAdminRouter.post(
 honoAdminRouter.put(
 	"/shadow-atom-config/:env/orgs/:org_id",
 	...handleRegisterAdminShadowAtomOrg,
+);
+honoAdminRouter.patch(
+	"/shadow-atom-config/:env/orgs/:org_id",
+	...handleSetAdminShadowAtomOrgPercent,
 );
 honoAdminRouter.delete(
 	"/shadow-atom-config/:env/orgs/:org_id",

@@ -147,14 +147,22 @@ const register = ({
 	orgId = "org_1",
 	env = "sandbox",
 	scopes = [Scopes.Superuser],
+	percent,
 }: {
 	orgId?: string;
 	env?: string;
 	scopes?: string[];
+	percent?: number;
 } = {}) =>
 	createApp({ scopes }).request(
 		`/admin/shadow-atom-config/${env}/orgs/${orgId}`,
-		{ method: "PUT" },
+		percent === undefined
+			? { method: "PUT" }
+			: {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ percent }),
+				},
 	);
 
 const unregister = ({
@@ -214,8 +222,18 @@ test("staff register an org: its token is answered once and stored only encrypte
 	});
 	const registered = stored.sandbox.orgs.org_1;
 	expect(registered && decryptData(registered.encryptedToken)).toBe(token);
+	expect(registered?.percent).toBe(100);
 	expect(JSON.stringify(stored)).not.toContain(token);
 	expect(stored.live.orgs).toEqual({});
+});
+
+test("registering takes the org's percent in the same call", async () => {
+	await register({ percent: 25 });
+
+	expect(stored.sandbox.orgs.org_1).toMatchObject({
+		percent: 25,
+		previousPercent: 0,
+	});
 });
 
 test("registering again rotates the org's token", async () => {

@@ -5,12 +5,11 @@ import type {
 
 const envToAdminView = ({ config }: { config: ShadowAtomEnvConfig }) => ({
 	endpointUrl: config.endpointUrl,
-	rollout: config.rollout,
 	hasAdminToken: config.adminEncryptedToken !== null,
 	orgs: Object.fromEntries(
-		Object.entries(config.orgs).map(([orgId, { registeredAt }]) => [
+		Object.entries(config.orgs).map(([orgId, { registeredAt, percent }]) => [
 			orgId,
-			{ registeredAt },
+			{ registeredAt, percent },
 		]),
 	),
 });

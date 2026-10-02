@@ -1,3 +1,4 @@
+import { scheduleOrgPercent } from "@autumn/edge-config";
 import type { AppEnv } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -12,20 +13,22 @@ import {
 	shadowAtomIdOf,
 } from "./shadowAtomDeployerFor.js";
 
-/** Puts the org on the env's shadow Atom under a fresh token, then records it; registering again rotates the token. */
+/** Puts the org on the env's shadow Atom under a fresh token at `percent`, then records it; registering again rotates the token. */
 export const registerShadowAtomOrg = async ({
 	ctx,
 	env,
 	orgId,
+	percent,
 }: {
 	ctx: AutumnContext;
 	env: AppEnv;
 	orgId: string;
+	percent: number;
 }): Promise<{ token: string }> => {
 	await OrgService.get({ db: ctx.db, orgId });
 	return withLock({
 		lockKey: SHADOW_ATOM_CONFIG_LOCK_KEY,
-		fn: () => putOrgAndRecordToken({ env, orgId }),
+		fn: () => putOrgAndRecordToken({ env, orgId, percent }),
 	});
 };
 
@@ -33,17 +36,21 @@ export const registerShadowAtomOrg = async ({
 const putOrgAndRecordToken = async ({
 	env,
 	orgId,
+	percent,
 }: {
 	env: AppEnv;
 	orgId: string;
+	percent: number;
 }): Promise<{ token: string }> => {
 	const config = await shadowAtomConfigStore.readFromSource();
 	const { token } = await shadowAtomDeployerFor({
 		config: config[env],
 	}).register({ atomId: shadowAtomIdOf({ orgId, env }) });
+	const now = Date.now();
 	const registered = {
 		encryptedToken: encryptData(token),
-		registeredAt: Date.now(),
+		registeredAt: now,
+		...scheduleOrgPercent({ current: config[env].orgs[orgId], percent, now }),
 	};
 	// Never mutated in place: a schema default can be one object shared by both envs.
 	await shadowAtomConfigStore.writeToSource({
