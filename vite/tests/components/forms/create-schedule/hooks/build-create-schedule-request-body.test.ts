@@ -495,28 +495,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result).not.toHaveProperty("ends_at");
 	});
 
-	test("restarts the cycle on a backdated first phase's start instead of a top-level anchor", () => {
-		const now = Date.UTC(2027, 0, 1);
-		const backdatedStart = Date.UTC(2026, 11, 10);
-		const result = buildCreateScheduleRequestBody({
-			customerId: "cus_1",
-			phases: [schedulePhase({ startsAt: backdatedStart })],
-			products: paidProducts,
-			features,
-			nowMs: now,
-			allowFirstPhaseBackdate: true,
-			resetBillingCycle: true,
-			billingCycleAnchorMode: "phase_start",
-			billingCycleAnchorDate: null,
-		});
-
-		expect(result!.phases[0]).toMatchObject({
-			starts_at: backdatedStart,
-			billing_cycle_anchor: "phase_start",
-		});
-		expect(result).not.toHaveProperty("billing_cycle_anchor");
-	});
-
 	test("omits the anchor when the billing cycle reset is off", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const result = buildCreateScheduleRequestBody({

@@ -12,11 +12,10 @@ import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationB
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
-import { findBackdateRecreateWarning } from "../utils/review/findBackdateRecreateWarning";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function CreateScheduleAdvancedSection() {
-	const { form, formValues, products, nowMs, preview } =
+	const { form, formValues, products, nowMs, backdatesLiveSubscription } =
 		useCreateScheduleFormContext();
 	const {
 		billingBehavior,
@@ -41,8 +40,14 @@ export function CreateScheduleAdvancedSection() {
 			hasPaidRecurringPlan,
 		},
 	});
-	const recreatesBackdatedSubscription =
-		findBackdateRecreateWarning({ warnings: preview?.warnings }) !== undefined;
+	const anchorRule = backdatesLiveSubscription
+		? {
+				...rules.resetBillingCycle,
+				disabled: true,
+				disabledReason:
+					"A backdated subscription keeps its current renewal date",
+			}
+		: rules.resetBillingCycle;
 	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
 	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
 
@@ -66,15 +71,15 @@ export function CreateScheduleAdvancedSection() {
 			{rules.proration.visible && (
 				<ProrationBehaviorConfigRow
 					rule={rules.proration}
-					billsBackdatedGap={recreatesBackdatedSubscription}
+					billsBackdatedGap={backdatesLiveSubscription}
 					value={
 						billingBehavior ??
-						(recreatesBackdatedSubscription ? "none" : "prorate_immediately")
+						(backdatesLiveSubscription ? "none" : "prorate_immediately")
 					}
 					onChange={(value) =>
 						form.setFieldValue(
 							"billingBehavior",
-							value === "prorate_immediately" && !recreatesBackdatedSubscription
+							value === "prorate_immediately" && !backdatesLiveSubscription
 								? null
 								: value,
 						)
@@ -83,11 +88,10 @@ export function CreateScheduleAdvancedSection() {
 			)}
 			{rules.resetBillingCycle.visible && (
 				<BillingCycleAnchorConfigRow
-					rule={rules.resetBillingCycle}
+					rule={anchorRule}
 					enabled={resetBillingCycle}
 					mode={billingCycleAnchorMode}
 					allowCustomAnchor={!hasPersistedCreateSchedule({ phases })}
-					allowBackdatedStartAnchor={recreatesBackdatedSubscription}
 					customAnchor={billingCycleAnchorDate}
 					maxUnixDate={endDate ? endDate - 1_000 : undefined}
 					onEnabledChange={(enabled) =>

@@ -31,14 +31,4 @@ describe("resolveBillingCycleAnchor", () => {
 			}),
 		).toBe(1_788_220_800_000);
 	});
-
-	test("omits the top-level anchor when the cycle restarts on the first phase's start", () => {
-		expect(
-			resolveBillingCycleAnchor({
-				resetBillingCycle: true,
-				billingCycleAnchorMode: "phase_start",
-				billingCycleAnchorDate: 1_788_220_800_000,
-			}),
-		).toBeUndefined();
-	});
 });
