@@ -310,6 +310,35 @@ describe("createSubjectMap onEvicted", () => {
 		expect(evicted).toEqual([customerKey]);
 	});
 
+	test("a subject read whole meanwhile does not hold the DELETE back: the pinned drop still fires", () => {
+		const { map, evicted } = createEvicting();
+		const state = createState();
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		map.pin({ subjectKey: customerKey });
+		map.evictCustomer({ customerKey });
+		// A new entity of the customer, read whole after the evict.
+		map.setState({ subjectKey: entityKey, customerKey, state, baselineAt: 5 });
+
+		map.unpin({ subjectKey: customerKey });
+		expect(evicted).toEqual([customerKey]);
+		expect(map.readState({ subjectKey: entityKey })).toEqual(state);
+	});
+
+	test("two pinned subjects fire once each as they drop; the batcher dedupes the customer", () => {
+		const { map, evicted } = createEvicting();
+		const state = createState();
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		map.setState({ subjectKey: entityKey, customerKey, state });
+		map.pin({ subjectKey: customerKey });
+		map.pin({ subjectKey: entityKey });
+		map.evictCustomer({ customerKey });
+		expect(evicted).toEqual([]);
+		map.unpin({ subjectKey: customerKey });
+		expect(evicted).toEqual([customerKey]);
+		map.unpin({ subjectKey: entityKey });
+		expect(evicted).toEqual([customerKey, customerKey]);
+	});
+
 	test("a drop for space never fires it: those rows are still true in Postgres", () => {
 		const { map, evicted } = createEvicting({ maxBytes: 1 });
 		const state = createState();

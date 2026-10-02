@@ -209,26 +209,24 @@ export const createSubjectMap = ({
 			unindex({ subjectKey, customerKey: entry.customerKey });
 	};
 
-	// Only an evict's drop: a drop for space leaves rows Postgres still holds true, so nothing is owed for it.
-	const settleEvict = ({ customerKey }: { customerKey: string }) => {
-		if (!subjectKeysByCustomer.has(customerKey)) onEvicted?.({ customerKey });
-	};
-
 	const unpin = ({ subjectKey }: { subjectKey: string }) => {
 		const entry = entries.get(subjectKey);
 		if (!entry || entry.pins === 0) return;
 		entry.pins -= 1;
 		if (entry.pins === 0 && entry.evictOnUnpin) {
 			dropState({ subjectKey, entry });
+			// Once per pinned subject, so the DELETE follows the last record that read it; the batcher dedupes.
 			if (entry.customerKey !== null)
-				settleEvict({ customerKey: entry.customerKey });
+				onEvicted?.({ customerKey: entry.customerKey });
 		}
 	};
 
 	const readBaselineAt = ({ subjectKey }: { subjectKey: string }) =>
 		entries.get(subjectKey)?.baselineAt ?? null;
 
+	// Only an evict's drops reach `onEvicted`: a drop for space leaves rows Postgres still holds true.
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
+		let pinned = 0;
 		for (const subjectKey of [
 			...(subjectKeysByCustomer.get(customerKey) ?? []),
 		]) {
@@ -236,8 +234,9 @@ export const createSubjectMap = ({
 			if (!entry) continue;
 			if (entry.pins > 0) entry.evictOnUnpin = true;
 			else dropState({ subjectKey, entry });
+			pinned += entry.pins > 0 ? 1 : 0;
 		}
-		settleEvict({ customerKey });
+		if (pinned === 0) onEvicted?.({ customerKey });
 	};
 
 	const clear = () => {
