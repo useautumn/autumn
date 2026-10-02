@@ -8,7 +8,6 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
-import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey";
 import {
 	completeImmediateItemTransition,
 	ITEM_TRANSITION_ENTITY_COUNT,
@@ -24,16 +23,15 @@ const TOTAL_USAGE = ITEM_TRANSITION_ENTITY_USAGES.reduce(
 );
 
 afterAll(async () => {
-	const balanceKey = buildSharedFullSubjectBalanceKey({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		customerId: "license-pooled-carry-customer",
-		featureId: TestFeature.Messages,
-	});
-	console.log(
-		"[pooled-cache-write-trace]",
-		await ctx.redisV2.lrange(`${balanceKey}:pr3977_pooled_cache_trace`, 0, -1),
-	);
+	const keys = await ctx.redisV2.keys("*:pr3977_pooled_cache_trace");
+	console.log("[pooled-cache-trace-keys]", keys);
+	for (const key of keys) {
+		console.log(
+			"[pooled-cache-write-trace]",
+			key,
+			await ctx.redisV2.lrange(key, 0, -1),
+		);
+	}
 });
 
 const pooledMessages = ({ grant }: { grant: number }) => ({
