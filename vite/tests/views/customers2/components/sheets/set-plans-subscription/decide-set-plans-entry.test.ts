@@ -128,6 +128,40 @@ describe("decideSetPlansEntry", () => {
 		});
 	});
 
+	test("finds the subscription's schedule on any of its plans, not just the first", () => {
+		const entry = decideSetPlansEntry({
+			customerProducts: [
+				proOnSubscriptionA,
+				seatsOnSubscriptionB,
+				{
+					...seatsOnSubscriptionB,
+					id: "seats_addon",
+					scheduled_ids: ["sub_sched_b"],
+				},
+			],
+			entityId: "ent_1",
+		});
+
+		expect(
+			entry.kind === "set_plans" && entry.subscriptionTarget?.stripeScheduleId,
+		).toBe("sub_sched_b");
+	});
+
+	test("on an entity page, matches plans saved under the entity's internal id", () => {
+		const entry = decideSetPlansEntry({
+			customerProducts: [
+				proOnSubscriptionA,
+				{ ...seatsOnSubscriptionB, entity_id: null },
+			],
+			entityId: "int_ent_1",
+		});
+
+		expect(
+			entry.kind === "set_plans" &&
+				entry.subscriptionTarget?.stripeSubscriptionId,
+		).toBe("sub_b");
+	});
+
 	test("on an entity page with no entity subscription, opens without a target", () => {
 		expect(
 			decideSetPlansEntry({

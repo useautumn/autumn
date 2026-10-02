@@ -30,10 +30,13 @@ const findScheduleIdOfSubscription = ({
 	stripeSubscriptionId: string;
 }) =>
 	customerProducts
-		.filter(isLiveCustomerProduct)
-		.find((customerProduct) =>
-			customerProduct.subscription_ids?.includes(stripeSubscriptionId),
-		)?.scheduled_ids?.[0] ?? null;
+		.filter(
+			(customerProduct) =>
+				isLiveCustomerProduct(customerProduct) &&
+				customerProduct.subscription_ids?.includes(stripeSubscriptionId),
+		)
+		.flatMap((customerProduct) => customerProduct.scheduled_ids ?? [])[0] ??
+	null;
 
 const onlyLinkedObjectToTarget = ({
 	linkedIds,
@@ -99,7 +102,9 @@ export const decideSetPlansEntry = ({
 	if (!entityId) return { kind: "choose_subscription" };
 
 	const entityCustomerProducts = customerProducts.filter(
-		(customerProduct) => customerProduct.entity_id === entityId,
+		(customerProduct) =>
+			customerProduct.entity_id === entityId ||
+			customerProduct.internal_entity_id === entityId,
 	);
 	const entityLinkedIds = collectLinkedStripeObjectIds({
 		customerProducts: entityCustomerProducts,
