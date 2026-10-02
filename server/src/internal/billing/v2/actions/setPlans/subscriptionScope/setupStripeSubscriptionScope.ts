@@ -1,8 +1,8 @@
 import {
 	customerProductsToStripeSubscriptionIds,
 	type FullCustomer,
-	filterCustomerProductsByActiveStatuses,
 	filterCustomerProductsByStripeSubscriptionScope,
+	STRIPE_LINKED_STATUSES,
 	type StripeSubscriptionScope,
 } from "@autumn/shared";
 
@@ -24,9 +24,9 @@ export const setupStripeSubscriptionScope = ({
 			stripeScheduleId,
 		});
 	const linkedStripeSubscriptionIds = customerProductsToStripeSubscriptionIds({
-		customerProducts: filterCustomerProductsByActiveStatuses({
-			customerProducts: fullCustomer.customer_products,
-		}),
+		customerProducts: fullCustomer.customer_products.filter(({ status }) =>
+			STRIPE_LINKED_STATUSES.includes(status),
+		),
 	});
 
 	return {

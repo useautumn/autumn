@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { FullCustomer } from "@autumn/shared";
+import { CusProductStatus, type FullCustomer } from "@autumn/shared";
 import chalk from "chalk";
 import { setupStripeSubscriptionScope } from "@/internal/billing/v2/actions/setPlans/subscriptionScope/setupStripeSubscriptionScope";
 import {
@@ -57,6 +57,34 @@ describe(chalk.yellowBright("setupStripeSubscriptionScope"), () => {
 			customerProductIds: ["cus_prod_pro", "cus_prod_premium", "cus_prod_free"],
 			otherStripeSubscriptionIds: [SUBSCRIPTION_B],
 		});
+	});
+
+	test("counts subscriptions whose only plans are paused or scheduled", () => {
+		const pausedOnC = {
+			...planCustomerProduct({
+				id: "cus_prod_paused",
+				product: planProduct({ id: "paused", group: "", isAddOn: true }),
+				subscriptionIds: ["sub_c"],
+			}),
+			status: CusProductStatus.Paused,
+		};
+		const scheduledOnD = {
+			...planCustomerProduct({
+				id: "cus_prod_scheduled",
+				product: planProduct({ id: "later", group: "", isAddOn: true }),
+				subscriptionIds: ["sub_d"],
+			}),
+			status: CusProductStatus.Scheduled,
+		};
+
+		expect(
+			setupStripeSubscriptionScope({
+				fullCustomer: {
+					customer_products: [proOnA, pausedOnC, scheduledOnD],
+				} as unknown as FullCustomer,
+				stripeSubscriptionId: SUBSCRIPTION_A,
+			})?.otherStripeSubscriptionIds,
+		).toEqual(["sub_c", "sub_d"]);
 	});
 
 	test("is unset without a target subscription", () => {
