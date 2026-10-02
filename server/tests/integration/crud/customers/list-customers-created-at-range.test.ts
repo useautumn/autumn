@@ -278,3 +278,61 @@ describe("list-customers-created-at-range", () => {
 		expect(sorted(descendingWalk)).toEqual(sorted(expectedIds));
 	});
 });
+
+// Without `search`, the created_at filter is the last fragment and ends in a
+// bound parameter, so the cursor predicate must not be glued onto it ("$3AND").
+describe("list-customers-created-at-range (no search filter)", () => {
+	const autumn = new AutumnInt({ version: ApiVersion.V2_3 });
+	let start = 0;
+
+	beforeAll(async () => {
+		const page = (await autumn.customers.listV2({
+			start_cursor: "",
+			limit: 50,
+			search: SEARCH,
+			sort_order: "asc",
+			keepInternalFields: true,
+		})) as ListPage;
+		start = page.list[0]?.created_at ?? 0;
+	});
+
+	test(`${chalk.yellowBright("list-customers-created-at-range: start only on the first page without search")}`, async () => {
+		const page = (await autumn.customers.listV2({
+			start_cursor: "",
+			limit: 2,
+			created_at_range: { start },
+			keepInternalFields: true,
+		})) as ListPage;
+
+		expect(page.list.length).toBeGreaterThan(0);
+		for (const customer of page.list) {
+			expect(customer.created_at).toBeGreaterThanOrEqual(start);
+		}
+	});
+
+	test(`${chalk.yellowBright("list-customers-created-at-range: start only with a non-empty start_cursor without search")}`, async () => {
+		const firstPage = (await autumn.customers.listV2({
+			start_cursor: "",
+			limit: 1,
+			created_at_range: { start },
+			sort_order: "asc",
+			keepInternalFields: true,
+		})) as ListPage;
+
+		expect(firstPage.next_cursor).toBeTruthy();
+
+		const secondPage = (await autumn.customers.listV2({
+			start_cursor: firstPage.next_cursor ?? "",
+			limit: 1,
+			created_at_range: { start },
+			sort_order: "asc",
+			keepInternalFields: true,
+		})) as ListPage;
+
+		expect(secondPage.list.length).toBe(1);
+		expect(secondPage.list[0]?.id).not.toBe(firstPage.list[0]?.id);
+		expect(secondPage.list[0]?.created_at).toBeGreaterThanOrEqual(
+			firstPage.list[0]?.created_at ?? start,
+		);
+	});
+});
