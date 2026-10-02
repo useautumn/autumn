@@ -103,8 +103,20 @@ describe("evictBalanceWorkerCustomer", () => {
 			expect(h.queued).toEqual(h.sent);
 			expect(h.errors).toHaveLength(0);
 			expect(h.warnings).toHaveLength(1);
-			const fields = h.warnings[0]?.[1] as { type: string; error: unknown };
+			expect(h.warnings[0]?.[0]).toBe(
+				"[balance-worker] evict unavailable or unconfirmed; queueing it",
+			);
+			const fields = h.warnings[0]?.[1] as {
+				type: string;
+				error: unknown;
+				worker_failure: unknown;
+			};
 			expect(fields.type).toBe("balance_worker_fail_open");
+			expect(fields.worker_failure).toEqual({
+				clientCode: directFailure.code,
+				workerCode: directFailure.workerCode,
+				outcome: directFailure.outcome,
+			});
 			expect(classifyInfraError({ error: fields.error })?.kind).toBe("infra");
 		}
 	});
