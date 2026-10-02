@@ -11,6 +11,7 @@ import {
 	isOneOffProductV2,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
+import { isAfter } from "date-fns";
 import {
 	createContext,
 	type ReactNode,
@@ -50,6 +51,7 @@ import {
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
+import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 interface CreateScheduleFormContextValue {
 	generation: BillingGenerationState;
@@ -255,16 +257,18 @@ export function CreateScheduleFormProvider({
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
+		enablePlanImmediately: formValues.enablePlanImmediately,
 		stripeSubscriptionId,
 	});
 
 	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
 		if (allowFirstPhaseBackdate || isExistingSchedule) return;
-		if (form.store.state.values.phases[0]?.startsAt != null) {
+		const startsAt = form.store.state.values.phases[0]?.startsAt;
+		if (startsAt != null && !isAfter(startsAt, nowMs)) {
 			form.setFieldValue("phases[0].startsAt", null);
 		}
-	}, [allowFirstPhaseBackdate, isExistingSchedule, form]);
+	}, [allowFirstPhaseBackdate, isExistingSchedule, form, nowMs]);
 
 	const phaseTimingError = useMemo(
 		() =>
@@ -281,14 +285,19 @@ export function CreateScheduleFormProvider({
 		error: previewError,
 	} = useCreateSchedulePreview({ requestBody: generationRequestBody });
 
-	// Only the checkout stage sets this, so drop it once the schedule no longer
-	// goes through checkout — otherwise a stale `true` reaches a direct submit.
+	const startsLater = firstPhaseStartsLater({
+		phases: formValues.phases,
+		nowMs,
+	});
+
+	// Checkout and a later first phase set this, so drop it once neither applies
+	// — otherwise a stale `true` reaches a direct submit.
 	useEffect(() => {
-		if (preview?.redirect_to_checkout) return;
+		if (preview?.redirect_to_checkout || startsLater) return;
 		if (form.store.state.values.enablePlanImmediately) {
 			form.setFieldValue("enablePlanImmediately", false);
 		}
-	}, [preview?.redirect_to_checkout, form]);
+	}, [preview?.redirect_to_checkout, startsLater, form]);
 
 	const generation = useCreateScheduleGeneration({
 		currentRequest: generationRequestBody as Record<string, unknown> | null,

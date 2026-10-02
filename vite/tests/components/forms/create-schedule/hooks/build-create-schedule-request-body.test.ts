@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { AppEnv, ProductItemInterval, UsageModel } from "@autumn/shared";
+import { addDays, subDays } from "date-fns";
 import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import {
 	type CustomerStatePhase,
@@ -834,6 +835,34 @@ describe("buildCreateScheduleRequestBody", () => {
 
 		expect(result).not.toBeNull();
 		expect(result!.phases[0].starts_at).toBe(now);
+	});
+
+	test("sends a future first-phase starts_at, with early access only then", () => {
+		const now = Date.now();
+		const later = addDays(now, 7).getTime();
+		const firstPhaseFrom = (startsAt: number) =>
+			buildCreateScheduleRequestBody({
+				customerId: "cus_1",
+				phases: [
+					{
+						startsAt,
+						persistedStartsAt: undefined,
+						plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
+					},
+				],
+				products: defaultProducts,
+				features,
+				nowMs: now,
+				enablePlanImmediately: true,
+			});
+
+		const futureStart = firstPhaseFrom(later);
+		expect(futureStart!.phases[0].starts_at).toBe(later);
+		expect(futureStart!.enable_plan_immediately).toBe(true);
+
+		const immediateStart = firstPhaseFrom(subDays(now, 1).getTime());
+		expect(immediateStart!.phases[0].starts_at).toBe(now);
+		expect(immediateStart!.enable_plan_immediately).toBeUndefined();
 	});
 
 	test("preserves persisted first phase start when editing an existing schedule", () => {
