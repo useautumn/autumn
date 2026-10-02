@@ -1,3 +1,4 @@
+import { CouponNameSchema } from "@models/rewardModels/rewardModels/rewardModels.js";
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { ApiCouponPromoCodeV0Schema } from "./components/apiCouponPromoCodeV0.js";
@@ -32,7 +33,7 @@ export const GetRewardResponseSchema = z
 
 const UpdateCouponSchema = z
 	.object({
-		name: z.string().min(1).optional(),
+		name: CouponNameSchema.min(1).optional(),
 		plan_ids: z.array(z.string().min(1)).min(1).nullish().meta({
 			description:
 				"Plan IDs must be unique. Null applies the coupon to all plans.",

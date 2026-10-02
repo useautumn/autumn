@@ -45,4 +45,12 @@ describe("classifyStripeError", () => {
 		});
 		expect(classifyStripeError({ error })).toBeUndefined();
 	});
+
+	it("classifies a missing Stripe resource outside a request as a bug", () => {
+		const error = Object.assign(new Error("No such subscription: 'sub_123'"), {
+			type: "StripeInvalidRequestError",
+			code: "resource_missing",
+		});
+		expect(classifyStripeError({ error })).toBeUndefined();
+	});
 });
