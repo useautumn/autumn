@@ -18,11 +18,10 @@ test.concurrent(
 		const customerId = "set-plans-multi-sub-guards";
 		const { autumnV2_4, ctx, subscriptionA, subscriptionB, plans } =
 			await initMultiSubScenario({ customerId });
-		const proBefore = await fetchLiveCustomerProduct({
-			ctx,
-			customerId,
-			productId: plans.pro.id,
-		});
+		const fetchLive = (productId: string) =>
+			fetchLiveCustomerProduct({ ctx, customerId, productId });
+		const proBefore = await fetchLive(plans.pro.id);
+		const seatsBefore = await fetchLive(plans.seats.id);
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
@@ -45,7 +44,7 @@ test.concurrent(
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: "is already on the ",
+			errMessage: "is already billed on another subscription.",
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,
@@ -71,19 +70,12 @@ test.concurrent(
 				}),
 		});
 
-		const proAfter = await fetchLiveCustomerProduct({
-			ctx,
-			customerId,
-			productId: plans.pro.id,
-		});
+		const proAfter = await fetchLive(plans.pro.id);
 		expect(proAfter?.id).toBe(proBefore?.id);
-		expect(
-			await fetchLiveCustomerProduct({
-				ctx,
-				customerId,
-				productId: plans.annualAddOn.id,
-			}),
-		).toBeUndefined();
+		const seatsAfter = await fetchLive(plans.seats.id);
+		expect(seatsAfter?.id).toBe(seatsBefore?.id);
+		expect(seatsAfter?.subscription_ids).toEqual([subscriptionB]);
+		expect(await fetchLive(plans.annualAddOn.id)).toBeUndefined();
 	},
 );
 
