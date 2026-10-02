@@ -27,6 +27,11 @@ const ImpersonateRedirect = React.lazy(() =>
 		({ ImpersonateRedirect }) => ({ default: ImpersonateRedirect }),
 	),
 );
+const ShadowAtomView = React.lazy(() =>
+	import("./views/admin/shadow-atom/ShadowAtomView").then(
+		({ ShadowAtomView }) => ({ default: ShadowAtomView }),
+	),
+);
 const OAuthClientsView = React.lazy(() =>
 	import("./views/admin/oauth/OAuthClientsView").then(
 		({ OAuthClientsView }) => ({ default: OAuthClientsView }),
@@ -199,6 +204,7 @@ export default function App() {
 							{envRoutes("admin", <AdminView />)}
 							{envRoutes("admin/oauth", <OAuthClientsView />)}
 							{envRoutes("admin/edge-config", <EdgeConfigView />)}
+							{envRoutes("admin/shadow-atom", <ShadowAtomView />)}
 							{envRoutes("impersonate-redirect", <ImpersonateRedirect />)}
 							<Route path="/trmnl" element={<TerminalView />} />
 

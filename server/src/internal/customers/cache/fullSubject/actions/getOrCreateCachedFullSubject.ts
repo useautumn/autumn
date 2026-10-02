@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { customerActions } from "@/internal/customers/actions/index.js";
+import { createCustomerWithDefaults } from "@/internal/customers/actions/createWithDefaults/createCustomerWithDefaults.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
@@ -87,7 +87,7 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!fullSubject) {
-		const fullCustomer = await customerActions.createWithDefaults({
+		const fullCustomer = await createCustomerWithDefaults({
 			ctx,
 			customerId,
 			customerData,

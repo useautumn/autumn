@@ -1,13 +1,15 @@
+import type { EvictCommand } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isBalanceWorkerUnconfirmed } from "./balanceWorkerErrors.js";
 import { requestContextToCommandBase } from "./requestContextToCommandBase.js";
 
-/**
- * Another writer just changed the customer's rows, so the owning worker must forget its copy.
- * Returns once the copy is gone and the worker's earlier writes are in Postgres; a failure is logged and never fails the write.
- * Not gated on the rollout: invalidation reaches both caches so a flip in either direction finds nothing stale.
- */
+const STALE_ROWS_MESSAGE =
+	"[balance-worker] evict failed; worker rows may be stale";
+
+/** Drops the owner's copy after another writer changed the rows, whatever the rollout says; a failure is logged, never fails the write.
+ *  If the worker path is unavailable or unconfirmed (e.g. a partition mid-handoff), the evict is queued on the command log for the next owner. */
 export async function evictBalanceWorkerCustomer({
 	ctx,
 	customerId,
@@ -15,22 +17,40 @@ export async function evictBalanceWorkerCustomer({
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	client?: Pick<BalanceWorkerClient, "evict">;
+	client?: Pick<BalanceWorkerClient, "evict"> & {
+		queue: Pick<BalanceWorkerClient["queue"], "evict">;
+	};
 }): Promise<void> {
+	const command: EvictCommand = {
+		...requestContextToCommandBase({ ctx, customerId }),
+		type: "evict",
+	};
 	try {
-		await client.evict({
-			command: {
-				...requestContextToCommandBase({ ctx, customerId }),
-				type: "evict",
-			},
-		});
+		await client.evict({ command });
+		return;
 	} catch (error) {
-		ctx.logger.error(
-			"[balance-worker] evict failed; worker rows may be stale",
+		if (!isBalanceWorkerUnconfirmed(error)) {
+			ctx.logger.error(STALE_ROWS_MESSAGE, { error, data: { customerId } });
+			return;
+		}
+		ctx.logger.warn(
+			"[balance-worker] evict unavailable or unconfirmed; queueing it",
 			{
-				error,
+				type: "balance_worker_fail_open",
+				fail_open_source: "evict",
+				worker_failure: {
+					clientCode: error.code,
+					workerCode: error.workerCode,
+					outcome: error.outcome,
+				},
 				data: { customerId },
+				error,
 			},
 		);
+	}
+	try {
+		await client.queue.evict({ commands: [command] });
+	} catch (error) {
+		ctx.logger.error(STALE_ROWS_MESSAGE, { error, data: { customerId } });
 	}
 }

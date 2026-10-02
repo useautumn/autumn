@@ -2,45 +2,62 @@ import { describe, expect, test } from "bun:test";
 import { createAtomEnv } from "./atom.js";
 
 const TOKEN_HASH = "a".repeat(64);
+const ADMIN_TOKEN_HASH = "b".repeat(64);
+const MULTI_TENANT = {
+	ATOM_MODE: "multi_tenant",
+	ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
+};
 
 describe("atom env", () => {
-	test("an org's deployment is given its token hash", () => {
+	test("a customer's Atom sets no ATOM_MODE: unset is single-tenant, given its token hash", () => {
 		const env = createAtomEnv({
 			ATOM_TOKEN_HASH: TOKEN_HASH,
 			ATOM_HOSTNAME: "0.0.0.0",
 		});
 
-		expect(env.ATOM_DEV).toBe(false);
+		expect(env.ATOM_MODE).toBe("deployed");
 		expect(env.ATOM_TOKEN_HASH).toBe(TOKEN_HASH);
 	});
 
-	test("a dev stack needs nothing but the flag", () => {
-		const env = createAtomEnv({ ATOM_DEV: "true" });
+	test("a multi-tenant Atom's ATOM_TOKEN_HASH is the admin token that registers its orgs", () => {
+		const env = createAtomEnv({
+			ATOM_MODE: "multi_tenant",
+			ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
+			ATOM_HOSTNAME: "0.0.0.0",
+		});
 
-		expect(env.ATOM_DEV).toBe(true);
-		expect(env.ATOM_HOSTNAME).toBe("127.0.0.1");
+		expect(env.ATOM_MODE).toBe("multi_tenant");
+		expect(env.ATOM_TOKEN_HASH).toBe(ADMIN_TOKEN_HASH);
+		expect(env.ATOM_HOSTNAME).toBe("0.0.0.0");
 	});
 
-	test("dev mode never listens beyond loopback", () => {
-		expect(() =>
-			createAtomEnv({ ATOM_DEV: "true", ATOM_HOSTNAME: "0.0.0.0" }),
-		).toThrow("loopback");
-	});
-
-	test("neither or both modes is refused", () => {
+	test("both modes need a SHA-256 ATOM_TOKEN_HASH", () => {
 		expect(() => createAtomEnv({})).toThrow("ATOM_TOKEN_HASH");
-		expect(() =>
-			createAtomEnv({ ATOM_DEV: "true", ATOM_TOKEN_HASH: TOKEN_HASH }),
-		).toThrow("not both");
+		expect(() => createAtomEnv({ ATOM_MODE: "multi_tenant" })).toThrow(
+			"ATOM_TOKEN_HASH",
+		);
 		expect(() => createAtomEnv({ ATOM_TOKEN_HASH: "not-a-hash" })).toThrow(
 			"SHA-256",
 		);
+		expect(() =>
+			createAtomEnv({ ATOM_MODE: "multi_tenant", ATOM_TOKEN_HASH: "nope" }),
+		).toThrow("SHA-256");
+	});
+
+	test("multi_tenant is the only ATOM_MODE value; anything else, deployed included, is refused", () => {
+		for (const mode of ["dev", "deployed", "shared", "multiTenant"])
+			expect(() =>
+				createAtomEnv({ ATOM_MODE: mode, ATOM_TOKEN_HASH: TOKEN_HASH }),
+			).toThrow("ATOM_MODE is either unset or multi_tenant");
+		expect(
+			createAtomEnv({ ATOM_MODE: " ", ATOM_TOKEN_HASH: TOKEN_HASH }).ATOM_MODE,
+		).toBe("deployed");
 	});
 
 	test("forwards to the public Autumn API unless told where the API is", () => {
 		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
 		const local = createAtomEnv({
-			ATOM_DEV: "true",
+			...MULTI_TENANT,
 			AUTUMN_API_URL: "http://localhost:8080",
 		});
 
@@ -48,14 +65,14 @@ describe("atom env", () => {
 		expect(local.ATOM_AUTUMN_API_URL).toBe("http://localhost:8080");
 	});
 
-	test("an org's deployment splits its customers over 128 slots, a dev stack over 2, unless told otherwise", () => {
+	test("every Atom splits each org's customers over 128 slots unless told otherwise", () => {
 		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
-		const dev = createAtomEnv({ ATOM_DEV: "true" });
-		const told = createAtomEnv({ ATOM_DEV: "true", ATOM_SLOT_COUNT: "16" });
+		const multiTenant = createAtomEnv(MULTI_TENANT);
+		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_SLOT_COUNT: "2" });
 
 		expect(deployed.ATOM_SLOT_COUNT).toBe(128);
-		expect(dev.ATOM_SLOT_COUNT).toBe(2);
-		expect(told.ATOM_SLOT_COUNT).toBe(16);
+		expect(multiTenant.ATOM_SLOT_COUNT).toBe(128);
+		expect(told.ATOM_SLOT_COUNT).toBe(2);
 	});
 
 	test("runs as many processes as both its CPUs and its memory allow, up to 8", () => {
@@ -84,15 +101,15 @@ describe("atom env", () => {
 		expect(told.ATOM_PROCESSES).toBe(12);
 	});
 
-	test("a dev stack is always one process", () => {
-		const dev = createAtomEnv(
-			{ ATOM_DEV: "true" },
-			{ availableCpus: 16, memoryLimitBytes: 64 * 1024 ** 3 },
-		);
+	test("a multi-tenant Atom is always one process", () => {
+		const multiTenant = createAtomEnv(MULTI_TENANT, {
+			availableCpus: 16,
+			memoryLimitBytes: 64 * 1024 ** 3,
+		});
 
-		expect(dev.ATOM_PROCESSES).toBe(1);
+		expect(multiTenant.ATOM_PROCESSES).toBe(1);
 		expect(() =>
-			createAtomEnv({ ATOM_DEV: "true", ATOM_PROCESSES: "2" }),
+			createAtomEnv({ ...MULTI_TENANT, ATOM_PROCESSES: "2" }),
 		).toThrow("one process");
 	});
 

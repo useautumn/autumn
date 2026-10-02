@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	applyMutation,
+	computeEvict,
 	computeTrack,
 	createSubjectState,
 	type InitializeRequest,
+	type LoggedEvictCommand,
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
 	parseTrackCommand,
@@ -39,6 +41,7 @@ import type {
 } from "../../../../src/processor/writer/types/mutation.js";
 import type {
 	CommittedOutcomeAppender,
+	CommitWaits,
 	PartitionWriterLimits,
 } from "../../../../src/processor/writer/types/partitionWriter.js";
 import {
@@ -175,17 +178,21 @@ class RecordingCommittedAppender implements CommittedOutcomeAppender {
 
 class ControlledCommittedAppender implements CommittedOutcomeAppender {
 	readonly batches: MeteringRecord[][] = [];
+	readonly waits: (CommitWaits | undefined)[] = [];
 	private resolveAppend: ((result: { baseOffset: bigint }) => void) | null =
 		null;
 
 	appendCommitted({
 		outcomes,
+		waits,
 	}: {
 		topic: string;
 		partition: number;
 		outcomes: readonly MeteringRecord[];
+		waits?: CommitWaits;
 	}): Promise<{ baseOffset: bigint }> {
 		this.batches.push([...outcomes]);
+		this.waits.push(waits);
 		return new Promise((resolve) => {
 			this.resolveAppend = resolve;
 		});
@@ -267,6 +274,7 @@ type TestWriter = {
 	submitInitialization(params: {
 		initialization: InitializeRequest;
 	}): Promise<InitializeReply>;
+	logDeferredEvict(): Promise<void>;
 };
 
 const createPartitionTrackWriter = ({
@@ -276,6 +284,7 @@ const createPartitionTrackWriter = ({
 	appender,
 	limits,
 	receiptPolicy = defaultReceiptPolicy,
+	now,
 }: {
 	topic: string;
 	partition: number;
@@ -283,13 +292,14 @@ const createPartitionTrackWriter = ({
 	appender: CommittedOutcomeAppender;
 	limits: PartitionWriterLimits;
 	receiptPolicy?: ReceiptPolicy;
+	now?: () => number;
 }): TestWriter => {
 	const recentCommands = createRecentCommands({
 		windowMs: 600_000,
 		now: () => 0,
 	});
 	const writer = createPartitionWriterCore({
-		ctx: { stateStore, appender, receiptPolicy, recentCommands },
+		ctx: { stateStore, appender, receiptPolicy, recentCommands, now },
 		config: { topic, partition, limits },
 	});
 	const db = createSyntheticWorkerDb();
@@ -331,6 +341,21 @@ const createPartitionTrackWriter = ({
 				: track({ scope, command }),
 		submitInitialization: ({ initialization }) =>
 			initialize({ scope, request: initialization }),
+		logDeferredEvict: () => {
+			const command: LoggedEvictCommand = {
+				schemaVersion: 1,
+				type: "evict",
+				requestId: "req_evict",
+				commandId: `evict_${crypto.randomUUID()}`,
+				identity: { ...firstIdentity, entityId: null },
+				occurredAt: 1_700_000_000_000,
+			};
+			return writer.log({
+				command,
+				mutation: computeEvict({ state: null, command }),
+				defersCommit: true,
+			});
+		},
 	};
 };
 
@@ -1096,6 +1121,97 @@ describe("partition writer", () => {
 				balance: 4,
 				revision: 2,
 			});
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("a commit reports how long its oldest record waited, including behind the commit in flight", async () => {
+		const fixture = createFixture();
+		let clock = 0;
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+				now: () => clock,
+			});
+			const first = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1", value: 1 }),
+			});
+			await waitForBatch();
+			clock = 10;
+			const second = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_2", value: 1 }),
+			});
+			await waitForBatch();
+			clock = 30;
+			appender.resolve({ baseOffset: 0n });
+			await waitForBatch();
+			appender.resolve({ baseOffset: 1n });
+			await Promise.all([first, second]);
+
+			expect(appender.waits).toEqual([
+				{ queuedMs: 0, lingerMs: 0, storeWaitMs: 0 },
+				{ queuedMs: 20, lingerMs: 0, storeWaitMs: 0 },
+			]);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("an evict deferred at the front of a batch does not count as the track's wait", async () => {
+		const fixture = createFixture();
+		let clock = 0;
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+				now: () => clock,
+			});
+			const evicted = writer.logDeferredEvict();
+			clock = 500;
+			const tracked = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1", value: 1 }),
+			});
+			await waitForBatch();
+			appender.resolve({ baseOffset: 0n });
+			await Promise.all([evicted, tracked]);
+
+			expect(appender.batches[0]).toHaveLength(2);
+			expect(appender.waits[0]?.queuedMs).toBe(0);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("a commit of deferred evicts alone reports no queued wait", async () => {
+		const fixture = createFixture();
+		let clock = 0;
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, deferredCommitMs: 5 },
+				now: () => clock,
+			});
+			const evicted = writer.logDeferredEvict();
+			clock = 900;
+			await Bun.sleep(20);
+			appender.resolve({ baseOffset: 0n });
+			await evicted;
+
+			expect(appender.waits[0]?.queuedMs).toBeNull();
 		} finally {
 			closeFixture(fixture);
 		}

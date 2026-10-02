@@ -127,6 +127,45 @@ test.concurrent(
 );
 
 test.concurrent(
+	"a commit line says how long its batch waited before the commit started",
+	async () => {
+		const fixture = createStoreFixture();
+		const logs: unknown[][] = [];
+		try {
+			const { appender } = createPartitionCommitLogging({
+				ctx: {
+					stateStore: fixture.store,
+					appender: { appendCommitted: async () => ({ baseOffset: 4n }) },
+					logger: {
+						debug: (...args) => {
+							logs.push(args);
+						},
+					},
+					monotonicNow: () => 0,
+				},
+				config,
+			});
+			await appender.appendCommitted({
+				topic,
+				partition,
+				outcomes: [createMutation({ state: createState() })],
+				waits: { queuedMs: 12.3456, lingerMs: 5.001, storeWaitMs: 0 },
+			});
+			expect(logs[0]?.[0]).toMatchObject({
+				data: {
+					phase: "kafka_commit",
+					queuedMs: 12.35,
+					lingerMs: 5,
+					storeWaitMs: 0,
+				},
+			});
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	},
+);
+
+test.concurrent(
 	"measures one atomic SQLite batch including initialization, without logging payloads",
 	async () => {
 		const fixture = createStoreFixture();

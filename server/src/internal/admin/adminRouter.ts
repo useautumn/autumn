@@ -24,6 +24,12 @@ import {
 	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import {
+	handleCreateAdminShadowAtomDeployment,
+	handleDeleteAdminShadowAtomDeployment,
+	handleGetAdminShadowAtomDeployment,
+	handleResizeAdminShadowAtomDeployment,
+} from "./handleAdminShadowAtomDeployment.js";
 import { handleGetAdminAgentProvisionRateLimitConfig } from "./handleGetAdminAgentProvisionRateLimitConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
@@ -44,6 +50,8 @@ import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRat
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
+import { handleGetAdminShadowAtomConfig } from "./handleGetAdminShadowAtomConfig.js";
+import { handleGetAdminShadowAtomNames } from "./handleGetAdminShadowAtomNames.js";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
@@ -53,13 +61,17 @@ import { handleGetOrgMember } from "./handleGetOrgMember";
 import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
+import { handleMintAdminShadowAtomToken } from "./handleMintAdminShadowAtomToken.js";
+import { handleRegisterAdminShadowAtomOrg } from "./handleRegisterAdminShadowAtomOrg.js";
 import { handleSearchAdminOrgCustomers } from "./handleSearchAdminOrgCustomers";
+import { handleSetAdminShadowAtomOrgPercent } from "./handleSetAdminShadowAtomOrgPercent.js";
 import {
 	handleCreateSlackAdminInstall,
 	handleDeleteSlackAdminInstall,
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleUnregisterAdminShadowAtomOrg } from "./handleUnregisterAdminShadowAtomOrg.js";
 import { handleUpsertAdminAgentProvisionRateLimitConfig } from "./handleUpsertAdminAgentProvisionRateLimitConfig";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
 import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
@@ -79,6 +91,7 @@ import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAd
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
+import { handleUpsertAdminShadowAtomConfig } from "./handleUpsertAdminShadowAtomConfig.js";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
 import { handleCreateImpersonationCliTokens } from "./impersonation/handleCreateImpersonationCliTokens";
@@ -174,6 +187,47 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/balance-shadow-config",
 	...handleUpsertAdminBalanceShadowConfig,
+);
+honoAdminRouter.get("/shadow-atom-config", ...handleGetAdminShadowAtomConfig);
+honoAdminRouter.put(
+	"/shadow-atom-config",
+	...handleUpsertAdminShadowAtomConfig,
+);
+honoAdminRouter.post(
+	"/shadow-atom-config/token",
+	...handleMintAdminShadowAtomToken,
+);
+honoAdminRouter.put(
+	"/shadow-atom-config/orgs/:org_id",
+	...handleRegisterAdminShadowAtomOrg,
+);
+honoAdminRouter.patch(
+	"/shadow-atom-config/orgs/:org_id",
+	...handleSetAdminShadowAtomOrgPercent,
+);
+honoAdminRouter.delete(
+	"/shadow-atom-config/orgs/:org_id",
+	...handleUnregisterAdminShadowAtomOrg,
+);
+honoAdminRouter.get(
+	"/shadow-atom-config/names",
+	...handleGetAdminShadowAtomNames,
+);
+honoAdminRouter.get(
+	"/shadow-atom-config/deployment",
+	...handleGetAdminShadowAtomDeployment,
+);
+honoAdminRouter.post(
+	"/shadow-atom-config/deployment",
+	...handleCreateAdminShadowAtomDeployment,
+);
+honoAdminRouter.patch(
+	"/shadow-atom-config/deployment",
+	...handleResizeAdminShadowAtomDeployment,
+);
+honoAdminRouter.delete(
+	"/shadow-atom-config/deployment",
+	...handleDeleteAdminShadowAtomDeployment,
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
 honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);
