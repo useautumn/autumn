@@ -1,5 +1,8 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
+import type {
+	CommittedOutcomeAppender,
+	CommitWaits,
+} from "../processor/writer/types/partitionWriter.js";
 import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
 import type { PartitionRuntimeDependencies } from "../runtime/types/partitionRuntime.js";
 import type { DurableMutationApplyResult } from "../state/types/durableMutation.js";
@@ -12,6 +15,7 @@ type CommitLog = {
 	baseOffset: bigint | null;
 	startedAt: number;
 	errorName?: string;
+	waits?: CommitWaits;
 } & (
 	| { phase: "kafka_commit"; result: "committed" | "not_committed" | "unknown" }
 	| { phase: "store_apply"; result: "applied" | "failed" }
@@ -41,6 +45,7 @@ export function createPartitionCommitLogging({
 		baseOffset,
 		batchSize,
 		errorName,
+		waits,
 		...fields
 	}: CommitLog): void {
 		try {
@@ -49,6 +54,7 @@ export function createPartitionCommitLogging({
 				durationMs: Math.round((now() - startedAt) * 100) / 100,
 				data: {
 					...fields,
+					...waitFieldsOf({ waits }),
 					workerEndpoint: config.endpoint,
 					batchSize,
 					baseOffset: baseOffset?.toString() ?? null,
@@ -75,6 +81,7 @@ export function createPartitionCommitLogging({
 			partition: params.partition,
 			batchSize: params.outcomes.length,
 			startedAt: now(),
+			waits: params.waits,
 			phase: "kafka_commit" as const,
 		};
 		let result: { baseOffset: bigint };
@@ -193,4 +200,17 @@ export function createPartitionCommitLogging({
 			applyDurableMutations,
 		},
 	};
+}
+
+function waitFieldsOf({ waits }: { waits?: CommitWaits }) {
+	if (!waits) return {};
+	return {
+		queuedMs: roundMs(waits.queuedMs),
+		lingerMs: roundMs(waits.lingerMs),
+		storeWaitMs: roundMs(waits.storeWaitMs),
+	};
+}
+
+function roundMs(ms: number): number {
+	return Math.round(ms * 100) / 100;
 }

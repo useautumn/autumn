@@ -39,6 +39,7 @@ import type {
 } from "../../../../src/processor/writer/types/mutation.js";
 import type {
 	CommittedOutcomeAppender,
+	CommitWaits,
 	PartitionWriterLimits,
 } from "../../../../src/processor/writer/types/partitionWriter.js";
 import {
@@ -175,17 +176,21 @@ class RecordingCommittedAppender implements CommittedOutcomeAppender {
 
 class ControlledCommittedAppender implements CommittedOutcomeAppender {
 	readonly batches: MeteringRecord[][] = [];
+	readonly waits: (CommitWaits | undefined)[] = [];
 	private resolveAppend: ((result: { baseOffset: bigint }) => void) | null =
 		null;
 
 	appendCommitted({
 		outcomes,
+		waits,
 	}: {
 		topic: string;
 		partition: number;
 		outcomes: readonly MeteringRecord[];
+		waits?: CommitWaits;
 	}): Promise<{ baseOffset: bigint }> {
 		this.batches.push([...outcomes]);
+		this.waits.push(waits);
 		return new Promise((resolve) => {
 			this.resolveAppend = resolve;
 		});
@@ -276,6 +281,7 @@ const createPartitionTrackWriter = ({
 	appender,
 	limits,
 	receiptPolicy = defaultReceiptPolicy,
+	now,
 }: {
 	topic: string;
 	partition: number;
@@ -283,13 +289,14 @@ const createPartitionTrackWriter = ({
 	appender: CommittedOutcomeAppender;
 	limits: PartitionWriterLimits;
 	receiptPolicy?: ReceiptPolicy;
+	now?: () => number;
 }): TestWriter => {
 	const recentCommands = createRecentCommands({
 		windowMs: 600_000,
 		now: () => 0,
 	});
 	const writer = createPartitionWriterCore({
-		ctx: { stateStore, appender, receiptPolicy, recentCommands },
+		ctx: { stateStore, appender, receiptPolicy, recentCommands, now },
 		config: { topic, partition, limits },
 	});
 	const db = createSyntheticWorkerDb();
@@ -1096,6 +1103,43 @@ describe("partition writer", () => {
 				balance: 4,
 				revision: 2,
 			});
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("a commit reports how long its oldest record waited, including behind the commit in flight", async () => {
+		const fixture = createFixture();
+		let clock = 0;
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+				now: () => clock,
+			});
+			const first = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1", value: 1 }),
+			});
+			await waitForBatch();
+			clock = 10;
+			const second = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_2", value: 1 }),
+			});
+			await waitForBatch();
+			clock = 30;
+			appender.resolve({ baseOffset: 0n });
+			await waitForBatch();
+			appender.resolve({ baseOffset: 1n });
+			await Promise.all([first, second]);
+
+			expect(appender.waits).toEqual([
+				{ queuedMs: 0, lingerMs: 0, storeWaitMs: 0 },
+				{ queuedMs: 20, lingerMs: 0, storeWaitMs: 0 },
+			]);
 		} finally {
 			closeFixture(fixture);
 		}

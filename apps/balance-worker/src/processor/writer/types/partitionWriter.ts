@@ -52,6 +52,12 @@ export type PartitionWriter = {
 	dispose(): void;
 };
 
+export type CommitWaits = {
+	queuedMs: number;
+	lingerMs: number;
+	storeWaitMs: number;
+};
+
 export type CommittedOutcomeAppender = {
 	commitCommandOffset?(params: {
 		topic: string;
@@ -74,6 +80,7 @@ export type CommittedOutcomeAppender = {
 		topic: string;
 		partition: number;
 		outcomes: readonly MeteringRecord[];
+		waits?: CommitWaits;
 	}): Promise<{ baseOffset: bigint }>;
 };
 
@@ -97,6 +104,7 @@ export type PartitionWriterContext = {
 		to: SubjectState;
 		changes: RowChange[];
 	}) => void;
+	now?: () => number;
 };
 
 export type PartitionWriterLimits = {
@@ -154,6 +162,7 @@ export type PendingMutation = {
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
+	queuedAt: number;
 };
 
 /** Mutable writer state: the subject map (projected and committed rows) and mutations awaiting commit. */

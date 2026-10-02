@@ -162,6 +162,9 @@ export const maxBatchBytesOf = ({
 }): number => limits.maxBatchBytes ?? DEFAULT_MAX_BATCH_BYTES;
 
 /** A queued mutation owns both durability milestones, even after its log reply releases its pins. */
+export const writerNowOf = ({ scope }: { scope: PartitionWriterScope }) =>
+	scope.ctx.now?.() ?? performance.now();
+
 export function enqueueMutation({
 	scope,
 	pendingKey,
@@ -223,6 +226,7 @@ export function enqueueMutation({
 		settlement,
 		encodedBytes,
 		defersCommit,
+		queuedAt: writerNowOf({ scope }),
 	};
 	for (const [index, projected] of projectedStates.entries()) {
 		const subjectKey = pending.projectedSubjectKeys[index];

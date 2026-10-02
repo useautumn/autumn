@@ -11,8 +11,10 @@ import {
 	maxUnappliedBatchesOf,
 	rejectAllPending,
 	removePendingMutation,
+	writerNowOf,
 } from "../pendingMutations.js";
 import type {
+	CommitWaits,
 	PartitionWriterScope,
 	PendingMutation,
 } from "../types/partitionWriter.js";
@@ -118,6 +120,7 @@ async function commitOutcomes({
 				scheduleDeferredCommit({ scope });
 				return;
 			}
+			const storeWaitStartedAt = writerNowOf({ scope });
 			while (
 				state.unapplied.length >=
 				maxUnappliedBatchesOf({ limits: config.limits })
@@ -127,12 +130,22 @@ async function commitOutcomes({
 					.catch(() => undefined);
 				if (state.recoveryError) return;
 			}
+			const lingerStartedAt = writerNowOf({ scope });
 			await lingerForBatch({ scope });
 			if (state.recoveryError) return;
 			const batch = takeBatch({ scope });
+			const takenAt = writerNowOf({ scope });
 			releaseDeferredRecords({ state, batch });
 			state.lastBatchSize = batch.length;
-			const baseOffset = await appendBatch({ scope, batch });
+			const baseOffset = await appendBatch({
+				scope,
+				batch,
+				waits: {
+					queuedMs: takenAt - (batch[0]?.queuedAt ?? takenAt),
+					lingerMs: takenAt - lingerStartedAt,
+					storeWaitMs: lingerStartedAt - storeWaitStartedAt,
+				},
+			});
 			if (baseOffset === null) return;
 			settleAppended({ scope, batch });
 			queueApply({ scope, batch, baseOffset });
@@ -225,9 +238,11 @@ async function applyQueued({
 async function appendBatch({
 	scope,
 	batch,
+	waits,
 }: {
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
+	waits: CommitWaits;
 }): Promise<bigint | null> {
 	const { ctx, config, state } = scope;
 	try {
@@ -235,6 +250,7 @@ async function appendBatch({
 			topic: config.topic,
 			partition: config.partition,
 			outcomes: batch.map(mutationOf),
+			waits,
 		});
 		if (typeof baseOffset !== "bigint" || baseOffset < 0n) {
 			throw new RangeError("Invalid appended Kafka offset");
