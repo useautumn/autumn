@@ -9,7 +9,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 
 /** Keeps the webhook from linking the subscription, leaving it for a first import. */
-const SKIPS_AUTO_SYNC = { autumn_managed: "true" };
+const SKIPS_AUTO_SYNC = { autumn_managed_at: String(Date.now()) };
 
 const qaProducts = () => ({
 	free: products.base({
