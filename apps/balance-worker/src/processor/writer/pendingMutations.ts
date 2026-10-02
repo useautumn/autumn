@@ -44,6 +44,7 @@ export function createPartitionWriterState({
 		deferredQueued: 0,
 		deferredCommitTimer: null,
 		deferredCommitDue: false,
+		evicting: new Set(),
 	};
 }
 

@@ -18,6 +18,7 @@ import type {
 	DurableMutationRecord,
 	SqliteDurableMutationApplyResult,
 } from "./durableMutation.js";
+import type { SnapshotIntent } from "./snapshotIntent.js";
 
 /** Where a fetched baseline goes: onto the log as an initialize mutation, or straight into the writer's map. */
 export type SubjectBaseline = "log" | "map";
@@ -67,9 +68,11 @@ export type StateStore = {
 		partition: number;
 		fence: OwnerFence;
 	}): void | Promise<void>;
-	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either. */
+	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either.
+	 *  `snapshotIntent` is the writer's word on the customers these records touch; a store that keeps no snapshots ignores it. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
+		snapshotIntent?: SnapshotIntent;
 	}): DurableMutationApplyResult[] | Promise<DurableMutationApplyResult[]>;
 	close(): void;
 };

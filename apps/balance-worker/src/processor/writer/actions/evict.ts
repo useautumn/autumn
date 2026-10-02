@@ -8,7 +8,14 @@ export async function evict({
 	scope: PartitionWriterScope;
 	customerKey: string;
 }): Promise<void> {
-	// The next command re-reads Postgres, so the worker's own writes must be there first.
-	await scope.state.storeCompletion;
-	scope.state.subjects.evictCustomer({ customerKey });
+	const { state } = scope;
+	// Set before any await: a flush landing from here on must not write these rows as the customer's snapshot.
+	state.evicting.add(customerKey);
+	try {
+		// The next command re-reads Postgres, so the worker's own writes must be there first.
+		await state.storeCompletion;
+		state.subjects.evictCustomer({ customerKey });
+	} finally {
+		state.evicting.delete(customerKey);
+	}
 }
