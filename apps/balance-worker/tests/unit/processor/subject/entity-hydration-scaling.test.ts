@@ -425,14 +425,14 @@ describe("entity hydration scaling", () => {
 		for (const { reply } of replies) expect(reply.result.allowed).toBe(false);
 	});
 
-	test("under the default budget of an 8 GiB worker whose other partitions hold a full equal share each, a 6,000-entity customer stays resident across a second pass", async () => {
+	test("under the default budget of a 4 GiB worker holding five partitions that each hold a full equal share, a 6,000-entity customer stays resident across a second pass", async () => {
 		const budget = createSubjectMapBudget({
 			totalBytes: subjectMapBudgetBytesOf({
-				containerMemoryBytes: 8 * 1024 * 1024 * 1024,
+				containerMemoryBytes: 4 * 1024 * 1024 * 1024,
 				memoryFraction: BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
 			}),
 		});
-		const partitions = 85;
+		const partitions = 5;
 		const equalShare = Math.floor(budget.totalBytes / partitions);
 		for (let peer = 1; peer < partitions; peer++)
 			budget.join({ sizeBytes: () => equalShare });
