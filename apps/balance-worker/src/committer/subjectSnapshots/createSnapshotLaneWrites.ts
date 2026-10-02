@@ -39,7 +39,11 @@ type SnapshotLaneWritesContext = {
 	}): Promise<void>;
 };
 
-/** Writes collect per partition, the latest per customer; each lane tick lands one statement of at most `dropBatch`, one in flight per partition. */
+/**
+ * Writes collect per partition, the latest per customer; each lane tick lands one statement of at most `dropBatch`,
+ * one in flight per partition. A tick takes deletes or backfills, never both: only a backfill carries the bookmark
+ * a stale owner rolls back on, and a DELETE must never roll back with it.
+ */
 export const createSnapshotLaneWrites = ({
 	ctx,
 }: {
@@ -62,7 +66,11 @@ export const createSnapshotLaneWrites = ({
 		if (!writesSubjectSnapshots(ctx.subjectSnapshotsConfig.get())) return;
 		const position = { topic, partition };
 		const writes = partitionWritesOf({ byPartition, position });
-		if (writes.pending.size >= SNAPSHOT_LANE_MAX_PENDING) {
+		// A customer already pending always takes the latest word; the ceiling is on new customers.
+		if (
+			!writes.pending.has(customerKey) &&
+			writes.pending.size >= SNAPSHOT_LANE_MAX_PENDING
+		) {
 			if (!writes.warned)
 				ctx.logger?.warn(
 					`[snapshot lane] ${keyOf(position)} has ${writes.pending.size} customers pending; further writes leave their rows to the next flush`,
@@ -148,6 +156,7 @@ function partitionWritesOf({
 	return writes;
 }
 
+/** The oldest pending customer decides the kind the tick takes; the other kind waits for the next. */
 function takeWrites({
 	writes,
 	batch,
@@ -156,8 +165,13 @@ function takeWrites({
 	batch: number;
 }): SnapshotIntent {
 	const taken: SnapshotIntent = new Map();
+	const kindOf = (entry: SnapshotIntentEntry) =>
+		entry === "delete" ? "delete" : "backfill";
+	let kind: "delete" | "backfill" | null = null;
 	for (const [customerKey, entry] of writes.pending) {
 		if (taken.size >= batch) break;
+		kind ??= kindOf(entry);
+		if (kindOf(entry) !== kind) continue;
 		writes.pending.delete(customerKey);
 		taken.set(customerKey, entry);
 	}

@@ -595,7 +595,8 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		const topic = topicOf();
 		const db: CommitterDb = {
 			readPartitionProgress: async () => null,
-			insertPartitionProgress: async () => {},
+			insertPartitionProgress: (params) =>
+				insertPartitionProgress({ ctx: { db: postgres.db }, ...params }),
 			claimPartitionProgress: async () => {},
 			flush: (request) =>
 				commitFlush({
@@ -644,7 +645,10 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				states: [state],
 				baselineAt: 1,
 			});
-			await Bun.sleep(5);
+			await committer.drain();
+			await Bun.sleep(20);
+			// The backfill landed under the bookmark; the DELETE enqueued after it lands after it.
+			expect(await readSnapshots({ seeded })).toHaveLength(1);
 			writes.enqueueDelete({ topic, partition: 0, customerKey });
 			await committer.drain();
 			await Bun.sleep(50);

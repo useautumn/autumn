@@ -329,7 +329,7 @@ describe("snapshot lane writes: backfills", () => {
 	const stateOf = (index: number) =>
 		createState({ identity: customerOf(index), balance: 100 });
 
-	test("a backfill lands as an upsert under the partition's bookmark and claim, so a stale owner's rolls back as a bookmark conflict", async () => {
+	test("a backfill lands as an upsert carrying the partition's bookmark and claim: the fence a stale owner rolls back on", async () => {
 		const { db, requests } = createCountingDb();
 		const { store, deletes, drained } = createStore({
 			db,
@@ -427,5 +427,77 @@ describe("snapshot lane writes: backfills", () => {
 		await drained();
 		expect(warnings).toHaveLength(1);
 		expect(warnings[0]).toContain("could not write 1 customers' rows");
+	});
+
+	test("deletes and backfills never share a statement: a stale owner's backfill conflict cannot take a DELETE down with it", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests } = createCountingDb({ gate: held.promise });
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(9) });
+		await Bun.sleep(2);
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
+		deletes.enqueueBackfill({
+			topic,
+			partition: 4,
+			customerKey: keyOf(2),
+			states: [stateOf(2)],
+			baselineAt: 1,
+		});
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(3) });
+		held.resolve();
+		await drained();
+
+		const kinds = requests.slice(1).map((request) => ({
+			deletes: request.snapshots?.deletes.map((d) => d.customerId),
+			upserts: request.snapshots?.upserts.map((row) => row.customerId),
+			bookmarks: request.bookmarks.length,
+		}));
+		expect(kinds).toEqual([
+			{ deletes: ["cus_1", "cus_3"], upserts: [], bookmarks: 0 },
+			{ deletes: [], upserts: ["cus_2"], bookmarks: 1 },
+		]);
+	});
+
+	test("at the pending ceiling a customer already pending still takes the latest word", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests, deleteStatements } = createCountingDb({
+			gate: held.promise,
+		});
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(-1) });
+		await Bun.sleep(2);
+		for (let index = 0; index < SNAPSHOT_LANE_MAX_PENDING; index++)
+			deletes.enqueueBackfill({
+				topic,
+				partition: 4,
+				customerKey: keyOf(index),
+				states: [stateOf(index)],
+				baselineAt: 1,
+			});
+		// Full: a new customer is refused, a pending one is replaced.
+		deletes.enqueueBackfill({
+			topic,
+			partition: 4,
+			customerKey: keyOf(SNAPSHOT_LANE_MAX_PENDING),
+			states: [stateOf(SNAPSHOT_LANE_MAX_PENDING)],
+			baselineAt: 1,
+		});
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(5) });
+		held.resolve();
+		await drained();
+
+		const deleted = deleteStatements().flatMap((request) =>
+			(request.snapshots?.deletes ?? []).map((d) => d.customerId),
+		);
+		expect(deleted).toContain("cus_5");
+		expect(deleted).not.toContain(`cus_${SNAPSHOT_LANE_MAX_PENDING}`);
 	});
 });
