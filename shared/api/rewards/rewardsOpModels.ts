@@ -32,7 +32,11 @@ export const GetRewardResponseSchema = z
 
 const UpdateCouponSchema = z
 	.object({
-		name: z.string().min(1).optional(),
+		name: z
+			.string()
+			.min(1)
+			.max(40, { message: "Reward name must be at most 40 characters" })
+			.optional(),
 		plan_ids: z.array(z.string().min(1)).min(1).nullish().meta({
 			description:
 				"Plan IDs must be unique. Null applies the coupon to all plans.",

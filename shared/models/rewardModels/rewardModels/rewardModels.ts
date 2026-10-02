@@ -60,7 +60,9 @@ const FullRewardSchema = RewardSchema.extend({
 
 export const CreateRewardSchema = z
 	.object({
-		name: z.string(),
+		name: z
+			.string()
+			.max(40, { message: "Reward name must be at most 40 characters" }),
 		promo_codes: z.array(PromoCodeSchema),
 		id: z.string(),
 		type: z.nativeEnum(RewardType).nullish(),
@@ -85,7 +87,10 @@ export const CreateRewardSchema = z
 	);
 
 export const UpdateRewardSchema = z.object({
-	name: z.string().nullish(),
+	name: z
+		.string()
+		.max(40, { message: "Reward name must be at most 40 characters" })
+		.nullish(),
 	promo_codes: z.array(PromoCodeSchema).optional(),
 	id: z.string().optional(),
 	type: z.nativeEnum(RewardType).optional(),

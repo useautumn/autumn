@@ -83,5 +83,5 @@ export const callerErrorToRecaseError = ({
 }): Error =>
 	userInputZodErrorToRecaseError({ err, c }) ??
 	stripeRouteErrorToRecaseError({ err, c }) ??
-	stripeErrorToRecaseError({ error: err }) ??
+	stripeErrorToRecaseError({ error: err, path: c.req.path }) ??
 	err;

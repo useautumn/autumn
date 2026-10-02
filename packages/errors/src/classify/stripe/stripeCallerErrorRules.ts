@@ -1,10 +1,12 @@
 import { ErrCode } from "@autumn/shared";
 import type { StripeLikeError } from "./isStripeError.js";
 
-/** Stripe failures the merchant caused, on any route; route-scoped ones live in the server's errorMiddleware. */
+/** Stripe failures the merchant caused; server-specific route rules live in the server's errorMiddleware. */
 type StripeCallerErrorRule = {
 	name: string;
 	matches: (error: StripeLikeError) => boolean;
+	/** Set when the error is the caller's only on some request paths; never matches outside a request. */
+	matchesPath?: (path: string) => boolean;
 	statusCode: number;
 	code: string;
 };
@@ -14,6 +16,17 @@ const messageIncludes =
 	({ message }) =>
 		message.includes(text);
 
+/** Webhooks have no caller, and usage routes reach Stripe only as a billing side effect. */
+const NON_CALLER_STRIPE_PATHS = [
+	/^\/webhooks\//,
+	/^\/v1\/(track|track_tokens|events|usage|check|entitled)$/,
+	/^\/v1\/(balances|entities)[./]/,
+	/^\/v1\/customers\/[^/]+\/(balances|entities)/,
+];
+
+const isCallerStripePath = (path: string) =>
+	!NON_CALLER_STRIPE_PATHS.some((pattern) => pattern.test(path));
+
 export const stripeCallerErrorRules: StripeCallerErrorRule[] = [
 	{
 		name: "rate limit exceeded",
@@ -21,6 +34,13 @@ export const stripeCallerErrorRules: StripeCallerErrorRule[] = [
 			type === "StripeRateLimitError" || statusCode === 429,
 		statusCode: 429,
 		code: "stripe_rate_limit_exceeded",
+	},
+	{
+		name: "resource missing",
+		matches: ({ code }) => code === "resource_missing",
+		matchesPath: isCallerStripePath,
+		statusCode: 404,
+		code: "stripe_resource_missing",
 	},
 	{
 		name: "card declined",
@@ -55,6 +75,45 @@ export const stripeCallerErrorRules: StripeCallerErrorRule[] = [
 	{
 		name: "invalid URL",
 		matches: messageIncludes("Not a valid URL"),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "trial ends within 2 days",
+		matches: messageIncludes(
+			"The `trial_end` date has to be at least 2 days in the future",
+		),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "more than one discount",
+		matches: messageIncludes(
+			"Array discounts exceeded maximum 1 allowed elements",
+		),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "cancellation details on a subscription not cancelling",
+		matches: messageIncludes(
+			"`cancellation_details` can only be set on subscriptions that are set to cancel",
+		),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "coupon name over 40 characters",
+		matches: ({ param, message }) =>
+			param === "name" && message.includes("must be at most 40 characters"),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "sent invoice without customer email",
+		matches: messageIncludes(
+			"In order to create invoices that are sent to the customer, the customer must have a valid email",
+		),
 		statusCode: 400,
 		code: ErrCode.InvalidRequest,
 	},

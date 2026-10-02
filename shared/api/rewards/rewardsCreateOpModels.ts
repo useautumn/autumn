@@ -48,7 +48,10 @@ const CreateCouponBaseSchema = ApiCouponV0Schema.omit({
 	.extend({
 		id: z.string().min(1),
 		internal_id: internalId,
-		name: z.string().min(1),
+		name: z
+			.string()
+			.min(1)
+			.max(40, { message: "Reward name must be at most 40 characters" }),
 		duration: CouponDurationSchema,
 		plan_ids: z
 			.array(z.string().min(1))
