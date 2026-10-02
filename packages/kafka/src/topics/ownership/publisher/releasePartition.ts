@@ -26,10 +26,10 @@ export async function releasePartition({
 			ownershipTopic.serialize({
 				record: {
 					schemaVersion: 1,
-					type: "unowned",
+					type: "released",
 					partition,
-					releasedAt,
 					endpoint,
+					releasedAt,
 				},
 			}),
 		],
