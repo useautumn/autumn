@@ -10,7 +10,7 @@ import {
 import { mergePooledBalancePlans } from "../billingPlan/mergePooledBalancePlans";
 import { pooledBalancePlanHasChanges } from "../billingPlan/pooledBalancePlan";
 
-/** Two updates to one grant: later columns win, deltas add up, rows accumulate. A delta and a column set on the same grant is a bug: the executor applies one or the other. */
+/** Later columns win and deltas add up; build splits compatible replacements and deltas for the executors. */
 const mergeCustomerEntitlementUpdates = ({
 	base,
 	incoming,
@@ -38,11 +38,17 @@ const mergeCustomerEntitlementUpdates = ({
 		...base.moveEntityBalances,
 		...incoming.moveEntityBalances,
 	};
-	const movesBalance =
-		balanceChange !== 0 ||
-		Object.keys(entityBalanceChanges).length > 0 ||
+	const hasConflictingBalanceChange =
+		(balanceChange !== 0 && updates?.balance !== undefined) ||
+		Object.keys(entityBalanceChanges).some((entityId) => {
+			const entry = updates?.entities?.[entityId];
+			return (
+				entry !== undefined &&
+				entry.balance !== base.customerEntitlement.entities?.[entityId]?.balance
+			);
+		}) ||
 		Object.keys(moveEntityBalances).length > 0;
-	if (updates && movesBalance)
+	if (updates && hasConflictingBalanceChange)
 		throw new InternalError({
 			message: `Billing plan sets columns and moves the balance of the same grant ${base.customerEntitlement.id}`,
 		});
@@ -92,7 +98,34 @@ export const createAutumnBillingPlanBuilder = ({
 		customerId,
 		insertCustomerProducts: [],
 		updateCustomerProducts: [...customerProductUpdates.values()],
-		updateCustomerEntitlements: [...customerEntitlementUpdates.values()],
+		updateCustomerEntitlements: [
+			...customerEntitlementUpdates.values(),
+		].flatMap((update) => {
+			if (
+				!update.updates ||
+				(!update.balanceChange &&
+					Object.keys(update.entityBalanceChanges ?? {}).length === 0)
+			)
+				return [update];
+
+			const { updates, ...balanceUpdate } = update;
+			return [
+				{ customerEntitlement: update.customerEntitlement, updates },
+				{
+					...balanceUpdate,
+					...(updates.entities !== undefined && update.entityBalanceChanges
+						? {
+								entityBalanceChanges: Object.fromEntries(
+									Object.entries(update.entityBalanceChanges).filter(
+										([entityId]) =>
+											Object.hasOwn(updates.entities ?? {}, entityId),
+									),
+								),
+							}
+						: {}),
+				},
+			];
+		}),
 		pooledBalancePlan,
 	});
 
@@ -117,7 +150,7 @@ export const createAutumnBillingPlanBuilder = ({
 			);
 		},
 
-		/** The grant as the plan so far leaves it, for a task that builds on an earlier task's columns. */
+		/** Planned column replacements before deltas, for a task that refines an earlier replacement. */
 		projectedCustomerEntitlement: <T extends FullCustomerEntitlement>(
 			customerEntitlement: T,
 		): T => ({

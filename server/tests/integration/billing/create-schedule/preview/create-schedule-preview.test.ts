@@ -614,19 +614,13 @@ test.concurrent(
 				],
 			},
 			expectedTotal: 66,
-			expectedLineItemTotals: [0, 30, 36],
+			expectedLineItemTotals: [30, 36],
 			assertPreview: (preview) => {
 				expect(
 					sortStrings(
 						preview.line_items.map((lineItem) => lineItem.feature_id ?? "base"),
 					),
-				).toEqual(
-					sortStrings([
-						TestFeature.Messages,
-						TestFeature.Users,
-						TestFeature.Words,
-					]),
-				);
+				).toEqual(sortStrings([TestFeature.Messages, TestFeature.Words]));
 			},
 		});
 	},
@@ -934,7 +928,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule preview 15: invoice excludes unrelated pending Stripe invoice items")}`,
+	`${chalk.yellowBright("create-schedule preview 15: invoice includes existing pending Stripe invoice items")}`,
 	async () => {
 		const pro = products.pro({
 			id: "preview-pending-items-pro",
@@ -988,17 +982,19 @@ test.concurrent(
 		const response = await autumnV1.billing.createSchedule(params);
 
 		expect(response.status).toBe("created");
-		expect(response.invoice?.total).toBe(preview.total);
+		expect(preview.total).toBe(30);
+		expect(response.invoice?.total).toBe(153.45);
 
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 			response.invoice!.stripe_id!,
 			{ expand: ["lines"] },
 		);
+		expect(stripeInvoice.total).toBe(15345);
 		expect(
 			stripeInvoice.lines.data.some(
 				(line) => line.description === "Unrelated pending Stripe invoice item",
 			),
-		).toBe(false);
+		).toBe(true);
 	},
 );
 

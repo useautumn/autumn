@@ -57,7 +57,7 @@ const assertCustomerInvoiceCorrect = ({
 
 		if (diff > TOTAL_TOLERANCE) {
 			throw new Error(
-				`Invoice[${invoiceIndex}] total mismatch: expected $${latestTotal.toFixed(2)}, got $${actualTotal.toFixed(2)} (diff: $${diff.toFixed(2)}, tolerance: ±$${TOTAL_TOLERANCE})`,
+				`Invoice[${invoiceIndex}] total mismatch: expected $${latestTotal.toFixed(2)}, got $${actualTotal.toFixed(2)} (status: ${invoice.status}, diff: $${diff.toFixed(2)}, tolerance: ±$${TOTAL_TOLERANCE})`,
 			);
 		}
 	}

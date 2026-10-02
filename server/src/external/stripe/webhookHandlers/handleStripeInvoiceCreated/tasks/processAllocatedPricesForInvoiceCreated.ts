@@ -1,4 +1,5 @@
 import {
+	addCusProductToCusEnt,
 	BillingType,
 	cusProductsToCusEnts,
 	type FullCusEntWithFullCusProduct,
@@ -45,7 +46,10 @@ const processAllocatedPrice = ({
 		});
 
 		plan.updateCustomerEntitlement({
-			customerEntitlement: linkedCusEnt,
+			customerEntitlement: addCusProductToCusEnt({
+				cusEnt: linkedCusEnt,
+				cusProduct: customerProduct,
+			}),
 			updates: { entities: newEntities },
 		});
 	}

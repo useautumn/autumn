@@ -147,6 +147,7 @@ export const advanceToNextInvoice = async ({
 	testClockId,
 	currentEpochMs,
 	withPause = false,
+	beforeFinalize,
 	timeoutMs = 180_000,
 	signal,
 }: {
@@ -154,6 +155,7 @@ export const advanceToNextInvoice = async ({
 	testClockId: string;
 	currentEpochMs?: number;
 	withPause?: boolean;
+	beforeFinalize?: () => Promise<unknown>;
 	timeoutMs?: number;
 	signal?: AbortSignal;
 }): Promise<number> => {
@@ -165,7 +167,9 @@ export const advanceToNextInvoice = async ({
 	).getTime();
 	// Clock readiness does not guarantee Autumn's webhook work has finished.
 	const stages = [
-		...(withPause ? [{ targetMs: invoiceTime, minimumWaitMs: 50_000 }] : []),
+		...(withPause || beforeFinalize
+			? [{ targetMs: invoiceTime, minimumWaitMs: withPause ? 50_000 : 0 }]
+			: []),
 		{ targetMs: finalizationTime, minimumWaitMs: 30_000 },
 	];
 	const wait = createTestWait({
@@ -183,6 +187,9 @@ export const advanceToNextInvoice = async ({
 				signal: wait.signal,
 				timeoutMs: wait.remainingMs(),
 			});
+			if (targetMs === invoiceTime && beforeFinalize) {
+				await wait.run(beforeFinalize);
+			}
 		}
 		return withPause ? invoiceTime : finalizationTime;
 	} finally {

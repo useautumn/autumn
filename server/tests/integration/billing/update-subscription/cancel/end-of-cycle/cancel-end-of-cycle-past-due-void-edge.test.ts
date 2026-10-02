@@ -3,10 +3,11 @@
 // void-correctness. Cases mutate shared org.config -> serial via withVoidFlag.
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, ErrCode } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -240,7 +241,7 @@ test(`${chalk.yellowBright("edge: explicit cancel_immediately on past_due -> imm
 	});
 });
 
-test(`${chalk.yellowBright("edge: refund_last_payment=full on unpaid past_due -> NO credit")}`, async () => {
+test(`${chalk.yellowBright("edge: refund_last_payment=full on unpaid past_due rejects without cancellation")}`, async () => {
 	const customerId = "qa-refund-last-payment";
 	const { free, pro } = buildProductSet();
 	const { autumnV1, ctx, testClockId } = await initScenario({
@@ -262,23 +263,46 @@ test(`${chalk.yellowBright("edge: refund_last_payment=full on unpaid past_due ->
 				customerId,
 				productId: pro.id,
 			});
-			// refund_last_payment requires cancel_immediately. The unpaid cycle has no collected
-			// payment to refund, so this must still net no credit.
-			await autumnV1.subscriptions.update({
-				customer_id: customerId,
-				product_id: pro.id,
-				cancel_action: "cancel_immediately",
-				refund_last_payment: "full",
+			const subscriptionBefore = await ctx.stripeCli.subscriptions.retrieve(
+				subscriptionId,
+			);
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				errMessage: "Could not resolve a charge from the invoice to refund",
+				func: () =>
+					autumnV1.subscriptions.update({
+						customer_id: customerId,
+						product_id: pro.id,
+						cancel_action: "cancel_immediately",
+						refund_last_payment: "full",
+					}),
 			});
-			await timeout(3000);
 
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 			await expectCustomerProducts({
 				customer,
-				notPresent: [pro.id],
-				active: [free.id],
+				pastDue: [pro.id],
+				notPresent: [free.id],
 			});
-			await expectInvoicesVoided({ ctx, stripeCustomerId, subscriptionId });
+			const subscriptionAfter = await ctx.stripeCli.subscriptions.retrieve(
+				subscriptionId,
+			);
+			expect(subscriptionAfter).toMatchObject({
+				status: subscriptionBefore.status,
+				cancel_at: subscriptionBefore.cancel_at,
+				cancel_at_period_end: subscriptionBefore.cancel_at_period_end,
+				ended_at: subscriptionBefore.ended_at,
+			});
+			const invoices = await ctx.stripeCli.invoices.list({
+				customer: stripeCustomerId,
+				subscription: subscriptionId,
+			});
+			expect(invoices.data.some((invoice) => invoice.status === "open")).toBe(
+				true,
+			);
+			expect(invoices.data.some((invoice) => invoice.status === "void")).toBe(
+				false,
+			);
 			await expectNoCredit({ ctx, stripeCustomerId });
 		},
 	});

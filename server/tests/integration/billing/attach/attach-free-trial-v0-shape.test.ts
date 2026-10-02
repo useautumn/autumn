@@ -29,7 +29,7 @@ test.concurrent(
 	`${chalk.yellowBright("attach free trial: a top-level free_trial is honoured, not dropped")}`,
 	async () => {
 		const customerId = "attach-trial-v0-shape";
-		const scale = products.pro({
+		const scale = products.base({
 			id: "scale-trial-v0",
 			items: [items.monthlyPrice({ price: 500 })],
 		});
@@ -71,11 +71,8 @@ test.concurrent(
 			} as AttachParamsV1Input,
 		);
 
-		const dueNow = (preview: unknown) =>
-			(preview as { total?: number } | undefined)?.total ?? 0;
-
 		// A trialling attach charges nothing today; both shapes must agree.
-		expect(dueNow(v1Shape)).toBe(0);
-		expect(dueNow(v0Shape)).toBe(dueNow(v1Shape));
+		expect(v1Shape.total).toBe(0);
+		expect(v0Shape.total).toBe(v1Shape.total);
 	},
 );

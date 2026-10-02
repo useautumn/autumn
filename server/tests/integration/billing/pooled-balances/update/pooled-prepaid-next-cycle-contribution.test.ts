@@ -38,6 +38,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq, inArray } from "drizzle-orm";
@@ -222,21 +223,25 @@ test.concurrent(
 		});
 
 		const { state: staggeredState, contributions: staggeredContributions } =
-			await sortedContributions({ ctx, customerId });
-		expect(staggeredContributions[0]).toMatchObject({
-			current_contribution: DOWNGRADED_QUANTITY,
-			next_cycle_contribution: DOWNGRADED_QUANTITY,
-			effective_at: null,
-		});
-		expect(staggeredContributions[1]).toMatchObject({
-			current_contribution: ATTACHED_QUANTITY,
-			next_cycle_contribution: SECOND_DOWNGRADED_QUANTITY,
-		});
-		expect(staggeredContributions[1].effective_at).not.toBeNull();
-		expect(staggeredState.pools[0]?.granted).toBe(staggeredGrant);
-		expect(staggeredState.poolCustomerEntitlements[0]?.balance).toBe(
-			staggeredGrant,
-		);
+			await pollUntilAsserted({
+				fetch: () => sortedContributions({ ctx, customerId }),
+				assert: ({ state, contributions }) => {
+					expect(contributions[0]).toMatchObject({
+						current_contribution: DOWNGRADED_QUANTITY,
+						next_cycle_contribution: DOWNGRADED_QUANTITY,
+						effective_at: null,
+					});
+					expect(contributions[1]).toMatchObject({
+						current_contribution: ATTACHED_QUANTITY,
+						next_cycle_contribution: SECOND_DOWNGRADED_QUANTITY,
+					});
+					expect(contributions[1].effective_at).not.toBeNull();
+					expect(state.pools[0]?.granted).toBe(staggeredGrant);
+					expect(state.poolCustomerEntitlements[0]?.balance).toBe(
+						staggeredGrant,
+					);
+				},
+			});
 
 		// ── Contract: second boundary promotes entity 1 AND heals drifted granted ──
 		// Warm the cache first so this reset runs on the CACHE-HIT lazy path and
@@ -280,21 +285,22 @@ test.concurrent(
 			usage: 0,
 		});
 
-		const { state: settledState, contributions: settledContributions } =
-			await sortedContributions({ ctx, customerId });
-		expect(settledContributions[0]).toMatchObject({
-			current_contribution: DOWNGRADED_QUANTITY,
-			next_cycle_contribution: DOWNGRADED_QUANTITY,
-			effective_at: null,
+		await pollUntilAsserted({
+			fetch: () => sortedContributions({ ctx, customerId }),
+			assert: ({ state, contributions }) => {
+				expect(contributions[0]).toMatchObject({
+					current_contribution: DOWNGRADED_QUANTITY,
+					next_cycle_contribution: DOWNGRADED_QUANTITY,
+					effective_at: null,
+				});
+				expect(contributions[1]).toMatchObject({
+					current_contribution: SECOND_DOWNGRADED_QUANTITY,
+					next_cycle_contribution: SECOND_DOWNGRADED_QUANTITY,
+					effective_at: null,
+				});
+				expect(state.pools[0]?.granted).toBe(settledGrant);
+				expect(state.poolCustomerEntitlements[0]?.balance).toBe(settledGrant);
+			},
 		});
-		expect(settledContributions[1]).toMatchObject({
-			current_contribution: SECOND_DOWNGRADED_QUANTITY,
-			next_cycle_contribution: SECOND_DOWNGRADED_QUANTITY,
-			effective_at: null,
-		});
-		expect(settledState.pools[0]?.granted).toBe(settledGrant);
-		expect(settledState.poolCustomerEntitlements[0]?.balance).toBe(
-			settledGrant,
-		);
 	},
 );
