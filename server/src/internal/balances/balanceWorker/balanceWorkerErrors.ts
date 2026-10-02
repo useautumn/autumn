@@ -32,6 +32,14 @@ const UNAVAILABLE_CLIENT_CODES = new Set([
 	"COMMAND_LOG_UNAVAILABLE",
 ]);
 
+/** The worker path failed before any verdict: no owner, still activating, stale route, transport or deadline. Check `outcome` before assuming nothing was submitted. */
+export const isBalanceWorkerUnconfirmed = (
+	error: unknown,
+): error is BalanceWorkerClientError =>
+	error instanceof BalanceWorkerClientError &&
+	(UNAVAILABLE_CLIENT_CODES.has(error.code) ||
+		error.workerCode === "NOT_READY");
+
 const STALE_SUBJECT_CODE = "balance_worker_stale_subject";
 const UNAVAILABLE_CODE = "balance_worker_unavailable";
 const OVERLOADED_CODE = "balance_worker_overloaded";
@@ -258,11 +266,7 @@ export function rethrowBalanceWorkerError({
 			},
 		});
 	}
-	if (
-		cause instanceof BalanceWorkerClientError &&
-		(UNAVAILABLE_CLIENT_CODES.has(cause.code) ||
-			cause.workerCode === "NOT_READY")
-	) {
+	if (isBalanceWorkerUnconfirmed(cause)) {
 		// "unknown" means the command may already have been applied, so the caller
 		// must reuse its idempotency key rather than retry blind.
 		const mayHaveApplied = cause.outcome === "unknown";
