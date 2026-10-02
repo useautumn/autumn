@@ -40,6 +40,7 @@ export const getAllocatableSharedBalanceInterval = ({
 				!ent.unlimited &&
 				ent.entitlement.allowance_type !== AllowanceType.Unlimited &&
 				ent.entitlement.allowance != null &&
+				(ent.entitlement.interval_count ?? 1) === 1 &&
 				!!ent.entitlement.interval &&
 				ent.entitlement.interval !== EntInterval.Lifetime,
 		);
