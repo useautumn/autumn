@@ -14,6 +14,7 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { findBackdateRecreateWarning } from "../utils/review/findBackdateRecreateWarning";
+import { gateBackdateRecreateSubmit } from "../utils/review/gateBackdateRecreateSubmit";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
 import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
@@ -115,7 +116,9 @@ export function CreateScheduleReviewContent() {
 		createsRecurringSubscription,
 	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
-	const [isConfirmingRecreate, setIsConfirmingRecreate] = useState(false);
+	const [pendingRecreateSubmit, setPendingRecreateSubmit] = useState<
+		(() => void) | null
+	>(null);
 
 	const confirmLabel = getConfirmLabel({ preview });
 	const backdateRecreateWarning = findBackdateRecreateWarning({
@@ -138,6 +141,22 @@ export function CreateScheduleReviewContent() {
 		}
 		setSheet({ type: "create-schedule-send-invoice" });
 	};
+
+	const handlePrimaryButtonClick = () => {
+		if (preview?.redirect_to_checkout) {
+			setSheet({ type: "create-schedule-checkout" });
+			return;
+		}
+		handleSubmit();
+	};
+
+	const submitAfterRecreateConfirm = (submit: () => void) =>
+		gateBackdateRecreateSubmit({
+			warnings: preview?.warnings,
+			submit,
+			requestConfirm: (confirmedSubmit) =>
+				setPendingRecreateSubmit(() => confirmedSubmit),
+		});
 
 	const isDisabled = isPreviewLoading || !!error;
 
@@ -168,24 +187,14 @@ export function CreateScheduleReviewContent() {
 					disabledReason={invoiceDisabledReason}
 					tooltipClassName="max-w-(--anchor-width)"
 					isLoading={isInvoiceOnlyStart && isPending}
-					onClick={handleInvoiceButtonClick}
+					onClick={() => submitAfterRecreateConfirm(handleInvoiceButtonClick)}
 				>
 					{invoiceButtonLabel}
 				</DisabledTooltipButton>
 				<Button
 					variant="primary"
 					className="w-full"
-					onClick={() => {
-						if (preview?.redirect_to_checkout) {
-							setSheet({ type: "create-schedule-checkout" });
-							return;
-						}
-						if (backdateRecreateWarning) {
-							setIsConfirmingRecreate(true);
-							return;
-						}
-						handleSubmit();
-					}}
+					onClick={() => submitAfterRecreateConfirm(handlePrimaryButtonClick)}
 					isLoading={isPending}
 					disabled={isDisabled}
 				>
@@ -195,12 +204,14 @@ export function CreateScheduleReviewContent() {
 			{backdateRecreateWarning && (
 				<BackdateRecreateConfirmDialog
 					warning={backdateRecreateWarning}
-					open={isConfirmingRecreate}
+					open={pendingRecreateSubmit !== null}
 					isPending={isPending}
-					onOpenChange={setIsConfirmingRecreate}
+					onOpenChange={(open) => {
+						if (!open) setPendingRecreateSubmit(null);
+					}}
 					onConfirm={() => {
-						setIsConfirmingRecreate(false);
-						handleSubmit();
+						pendingRecreateSubmit?.();
+						setPendingRecreateSubmit(null);
 					}}
 				/>
 			)}
