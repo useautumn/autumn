@@ -13,10 +13,12 @@ const scheduledAtBoundary = customerProducts.create({
 	startsAt: BOUNDARY,
 });
 
+type TestPhase = { starts_at: number | "now" };
+
 const alignedStarts = (startsAt: number[]) =>
-	alignPhasesToSavedBoundaries({
+	alignPhasesToSavedBoundaries<TestPhase>({
 		phases: [
-			{ starts_at: "now" as const },
+			{ starts_at: "now" },
 			...startsAt.map((start) => ({ starts_at: start })),
 		],
 		customerProducts: [scheduledAtBoundary],
