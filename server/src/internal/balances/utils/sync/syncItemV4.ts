@@ -92,6 +92,15 @@ export const syncItemV4 = async ({
 		usageWindowUpdates,
 	} = payload;
 	const { db } = ctx;
+	console.log(
+		"SYNC_DIAG " +
+			JSON.stringify({
+				stage: "consume",
+				at: Date.now(),
+				customerId,
+				queuedAt: payload.timestamp,
+			}),
+	);
 
 	// The worker owns a routed customer's rows: a sync that lands after the flip carries a pre-flip
 	// absolute balance and would overwrite what the worker has since acked. Those last deductions are dropped.
@@ -142,6 +151,21 @@ export const syncItemV4 = async ({
 	const entries: SyncEntry[] = allSubjectBalances.map((subjectBalance) =>
 		subjectBalanceToSyncEntry({ subjectBalance }),
 	);
+	console.log(
+		"SYNC_DIAG " +
+			JSON.stringify({
+				stage: "read",
+				at: Date.now(),
+				customerId,
+				queuedAt: payload.timestamp,
+				entries: entries.map((entry) => ({
+					id: entry.customer_entitlement_id,
+					balance: entry.balance,
+					cacheVersion: entry.cache_version,
+					nextResetAt: entry.next_reset_at,
+				})),
+			}),
+	);
 
 	// Build rollover sync entries
 	const rolloverEntries: RolloverSyncEntry[] = [];
@@ -186,6 +210,17 @@ export const syncItemV4 = async ({
 		),
 	);
 
+	console.log(
+		"SYNC_DIAG " +
+			JSON.stringify({
+				stage: "write",
+				at: Date.now(),
+				customerId,
+				queuedAt: payload.timestamp,
+				error: error?.message,
+				result: result?.[0]?.sync_balances_v2,
+			}),
+	);
 	if (error) {
 		await handleSyncPostgresError({
 			error,

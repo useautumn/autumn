@@ -441,6 +441,17 @@ export class SyncBatchingManagerV3 {
 			rolloverIds,
 			usageWindowUpdates,
 		});
+		const timestamp = Date.now();
+		console.log(
+			"SYNC_DIAG " +
+				JSON.stringify({
+					stage: "enqueue",
+					at: timestamp,
+					customerId: context.customerId,
+					messageDeduplicationId,
+					cusEntIds,
+				}),
+		);
 
 		try {
 			await this._addTaskToQueue({
@@ -450,7 +461,7 @@ export class SyncBatchingManagerV3 {
 					orgId: context.orgId,
 					env: context.env,
 					region: context.region,
-					timestamp: Date.now(),
+					timestamp,
 					cusEntIds,
 					rolloverIds,
 					entityId: context.entityId,

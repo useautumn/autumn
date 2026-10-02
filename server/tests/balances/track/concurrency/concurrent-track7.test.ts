@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type LimitedItem } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
@@ -56,6 +56,23 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 
 	// Store expected total usage per customer using Decimal for precision
 	const customerExpectedUsage: Record<string, Decimal> = {};
+	afterAll(async () => {
+		for (const path of [
+			"/tmp/pr3977-sync-server.log",
+			"/tmp/pr3977-sync-workers.log",
+		]) {
+			const log = Bun.file(path);
+			if (!(await log.exists())) {
+				console.log(`SYNC_DIAG missing log: ${path}`);
+				continue;
+			}
+			console.log(`SYNC_DIAG source: ${path}`);
+			for (const line of (await log.text()).split("\n")) {
+				if (line.includes("SYNC_DIAG ") || line.includes("[SYNC V4]"))
+					console.log(line);
+			}
+		}
+	});
 
 	beforeAll(async () => {
 		// Initialize all customers

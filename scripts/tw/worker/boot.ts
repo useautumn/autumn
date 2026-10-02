@@ -381,7 +381,7 @@ export const startServer = (repoRoot: string, port: number): Subprocess => {
 	log(`starting Autumn server (bun src/index.ts) on :${port}`);
 	return spawn(["bun", "src/index.ts"], {
 		cwd: serverRoot,
-		stdout: "inherit",
+		stdout: Bun.file("/tmp/pr3977-sync-server.log"),
 		stderr: "inherit",
 		env: {
 			...process.env,
@@ -416,7 +416,7 @@ export const startBackgroundProcs = (
 	log("starting SQS queue workers (bun src/workers.ts)");
 	const workersProc = spawn(["bun", "src/workers.ts"], {
 		cwd: serverRoot,
-		stdout: "inherit",
+		stdout: Bun.file("/tmp/pr3977-sync-workers.log"),
 		stderr: "inherit",
 		env,
 	});
