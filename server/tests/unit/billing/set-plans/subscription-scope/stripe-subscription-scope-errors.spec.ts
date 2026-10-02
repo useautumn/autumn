@@ -281,6 +281,22 @@ describe(chalk.yellowBright("set_plans target subscription guards"), () => {
 		).not.toThrow();
 	});
 
+	test("without a target, rejects plans already billed on two subscriptions", () => {
+		expect(
+			checkScope({
+				existingCustomerProducts: [proOnA, seatsOnB],
+				requestedProducts: [pro, seats],
+				scoped: false,
+			}),
+		).toThrow(
+			expect.objectContaining({
+				code: ErrCode.InvalidRequest,
+				message:
+					"Cannot update products across multiple existing subscriptions.",
+			}),
+		);
+	});
+
 	test("rejects a target subscription none of the customer's plans use", () => {
 		const assertLinked = (stripeSubscriptionId: string) => () =>
 			assertStripeSubscriptionLinkedToCustomer({
