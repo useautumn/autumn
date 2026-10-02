@@ -5,6 +5,7 @@ import type {
 	ProcessorItem,
 	SetPlansPreviewBalanceChange,
 	SetPlansPreviewPhase,
+	SetPlansPreviewWarning,
 	StripeBillingPlan,
 } from "@autumn/shared";
 import { textPartsToText } from "@autumn/shared";
@@ -63,6 +64,11 @@ const resetMessages = ({
 	previous_attributes: { usage: 40, granted: 100 },
 	behavior: "reset",
 });
+
+const MESSAGE_ONLY_WARNING_TYPES: SetPlansPreviewWarning["type"][] = [
+	"existing_schedule_replaced",
+	"proration_disabled",
+];
 
 const noSubscriptionState = {
 	billingContext: { currentEpochMs: 0, billingCycleAnchorMs: "now" as const },
@@ -168,11 +174,28 @@ describe("setPlansPreviewToWarnings", () => {
 		expect(
 			warnings[4].parts?.filter((part) => part.bold).map((part) => part.text),
 		).toEqual([scheduledEnterprise.product.name]);
-		for (const warning of warnings) {
-			if (warning.parts) {
-				expect(textPartsToText(warning.parts)).toBe(warning.message);
-			}
+		const warningsWithParts = warnings.filter(
+			(warning) => !MESSAGE_ONLY_WARNING_TYPES.includes(warning.type),
+		);
+		expect(warningsWithParts).toHaveLength(5);
+		for (const warning of warningsWithParts) {
+			expect(warning.parts).toBeDefined();
+			expect(textPartsToText(warning.parts ?? [])).toBe(warning.message);
 		}
+	});
+
+	test("a reset confined to a later phase still warns that usage restarts", () => {
+		const warnings = setPlansPreviewToWarnings({
+			phases: [phase({}), phase({ balance_changes: [resetMessages()] })],
+			liveProcessorItems: [],
+			processorChanges: [],
+			withdrawnCustomerProducts: [],
+			outgoingCustomerProducts: [],
+			features: [],
+			...noSubscriptionState,
+		});
+
+		expect(warnings.map((warning) => warning.type)).toEqual(["usage_reset"]);
 	});
 
 	test("an updated allowance that clears usage warns that usage restarts", () => {
