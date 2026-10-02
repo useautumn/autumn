@@ -79,12 +79,23 @@ export const createWorkerDb = ({
 			}),
 		),
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
-		getEntitySubjectRows({
-			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
-			customerId: identity.customerId,
-			entityIds,
-			asOfTimestampMs,
-		}),
+		ctx.subjectLoads.run(() =>
+			timeQuery({
+				ctx,
+				kind: "entity_rows",
+				run: () =>
+					getEntitySubjectRows({
+						ctx: {
+							db: ctx.postgres.db,
+							orgId: identity.orgId,
+							env: identity.env,
+						},
+						customerId: identity.customerId,
+						entityIds,
+						asOfTimestampMs,
+					}),
+			}),
+		),
 	getCatalogRows: ({ identity, ids }) =>
 		timeQuery({
 			ctx,
