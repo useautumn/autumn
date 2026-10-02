@@ -12,48 +12,56 @@ import {
 	markCheckoutCompleted,
 } from "./invalidCheckoutUtils";
 
-test.concurrent(`${chalk.yellowBright("autumn-checkout: invalid - completed checkout")}`, async () => {
-	const customerId = "checkout-invalid-completed";
+test.concurrent(
+	`${chalk.yellowBright("autumn-checkout: invalid - completed checkout")}`,
+	async () => {
+		const customerId = "checkout-invalid-completed";
 
-	const pro = products.pro({
-		id: "pro-invalid-completed",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
+		const starter = products.base({
+			id: "starter-invalid-completed",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [],
-	});
+		const pro = products.pro({
+			id: "pro-invalid-completed",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
 
-	const { checkoutId, checkoutUrl } = await createAutumnCheckout({
-		autumnV1,
-		customerId,
-		productId: pro.id,
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [starter, pro] }),
+			],
+			actions: [s.attach({ productId: starter.id })],
+		});
 
-	await markCheckoutCompleted({
-		ctx,
-		checkoutId,
-	});
+		const { checkoutId, checkoutUrl } = await createAutumnCheckout({
+			autumnV1,
+			customerId,
+			productId: pro.id,
+		});
 
-	const response = await fetchCheckoutError({
-		checkoutId,
-	});
+		await markCheckoutCompleted({
+			ctx,
+			checkoutId,
+		});
 
-	expectCheckoutErrorResponse({
-		...response,
-		code: CheckoutErrorCode.CheckoutCompleted,
-	});
+		const response = await fetchCheckoutError({
+			checkoutId,
+		});
 
-	await logInvalidCheckoutScenario({
-		label: "completed checkout scenario",
-		checkoutUrl,
-		autumnV1,
-		customerId,
-		...response,
-	});
-});
+		expectCheckoutErrorResponse({
+			...response,
+			code: CheckoutErrorCode.CheckoutCompleted,
+		});
+
+		await logInvalidCheckoutScenario({
+			label: "completed checkout scenario",
+			checkoutUrl,
+			autumnV1,
+			customerId,
+			...response,
+		});
+	},
+);
