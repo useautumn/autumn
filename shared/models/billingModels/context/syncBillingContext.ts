@@ -65,7 +65,8 @@ export interface SyncBillingContext {
 	currentEpochMs: number;
 	acknowledgedWarnings: NonNullable<SyncParamsV1["acknowledge_warnings"]>;
 
-	/** Expire live plans linked to the subscription, and free plans, that the request leaves out. */
+	/** On a live subscription sync, expire its linked plans and the free plans the request leaves out.
+	 * Schedule-only syncs expire nothing. */
 	expireUnlistedPlans: boolean;
 
 	/** Carry an expired plan's consumed usage onto the replacement plan's

@@ -240,7 +240,8 @@ export const isCustomerProductOnStripeSubscriptionSchedule = ({
 	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
 };
 
-/** Free and billed on no Stripe subscription or schedule, so it applies customer-wide. */
+/** Free and billed on no Stripe subscription or schedule, so no single subscription owns it
+ * (it may still be scoped to an entity). */
 export const isCustomerProductUnlinkedFree = (
 	customerProduct: FullCusProduct,
 ) =>

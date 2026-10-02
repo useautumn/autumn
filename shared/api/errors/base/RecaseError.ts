@@ -6,7 +6,7 @@ export class RecaseError extends Error {
 	code: string;
 	statusCode: number;
 	data?: unknown;
-	/** Returned to the client alongside the message; `data` is only logged. */
+	/** Returned to the client alongside the message; `data` is never sent to the client. */
 	details?: Record<string, unknown>;
 
 	constructor({
