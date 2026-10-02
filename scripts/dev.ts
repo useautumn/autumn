@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -67,6 +68,8 @@ const EVE_PORT = process.env.EVE_PORT
 	: 3999 + portOffset;
 const ATOM_PORT = 8086 + portOffset;
 const ATOM_URL = `http://127.0.0.1:${ATOM_PORT}`;
+/** Minted per run: the dev server registers each org's Atom with it; the Atom keeps only its hash. */
+const ATOM_ADMIN_TOKEN = `atom_admin_${randomBytes(32).toString("base64url")}`;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
 const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
@@ -460,11 +463,16 @@ async function startDev() {
 			EVE_PORT: EVE_PORT.toString(),
 			EVE_SERVER_URL,
 			EVE_INTERNAL_AUTH_TOKEN,
-			// A dev-mode Atom keeps each deployed org's folder under the worktree's .data/atom.
-			ATOM_DEV: "true",
+			// One shared Atom keeps each deployed org's folder under the worktree's .data/atom, in 2 slots each.
+			ATOM_MODE: "shared",
+			ATOM_ADMIN_TOKEN_HASH: createHash("sha256")
+				.update(ATOM_ADMIN_TOKEN)
+				.digest("hex"),
+			ATOM_SLOT_COUNT: "2",
 			ATOM_PORT: ATOM_PORT.toString(),
 			ATOM_DATA_DIR: join(projectRoot, ".data", "atom"),
 			ATOM_URL,
+			ATOM_ADMIN_TOKEN,
 			MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 			// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
 			// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.

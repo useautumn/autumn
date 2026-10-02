@@ -9,12 +9,12 @@ import {
 import { join } from "node:path";
 import { z } from "zod/v4";
 
-/** What a dev stack's server registers: an id for the folder, and the hash of the token that opens it. */
-export type DevAtom = { id: string; tokenHash: string };
+/** What the admin registers on a shared Atom: an id for the folder, and the hash of the token that opens it. */
+export type SharedAtom = { id: string; tokenHash: string };
 
 const ATOM_FILE = "atom.json";
 /** One path segment, so an id can never name a folder outside the data directory. */
-export const DEV_ATOM_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+export const ATOM_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 const atomFileSchema = z.object({ token_hash: z.string().min(1) });
 
@@ -25,39 +25,43 @@ export const atomFolderPath = ({
 	dataDir: string;
 	id: string;
 }): string => {
-	if (!DEV_ATOM_ID.test(id)) throw new Error(`Invalid Atom id: ${id}`);
+	if (!ATOM_ID.test(id)) throw new Error(`Invalid Atom id: ${id}`);
 	return join(dataDir, id);
 };
 
 /** Every folder under the data directory that records an Atom; anything else there is left alone. */
-export const listDevAtoms = ({ dataDir }: { dataDir: string }): DevAtom[] => {
+export const listSharedAtoms = ({
+	dataDir,
+}: {
+	dataDir: string;
+}): SharedAtom[] => {
 	mkdirSync(dataDir, { recursive: true });
-	const devAtoms: DevAtom[] = [];
+	const sharedAtoms: SharedAtom[] = [];
 	for (const entry of readdirSync(dataDir, { withFileTypes: true })) {
 		const atomFile = join(dataDir, entry.name, ATOM_FILE);
-		if (!entry.isDirectory() || !DEV_ATOM_ID.test(entry.name)) continue;
+		if (!entry.isDirectory() || !ATOM_ID.test(entry.name)) continue;
 		if (!existsSync(atomFile)) continue;
 		const parsed = atomFileSchema.safeParse(
 			JSON.parse(readFileSync(atomFile, "utf8")),
 		);
 		if (parsed.success)
-			devAtoms.push({ id: entry.name, tokenHash: parsed.data.token_hash });
+			sharedAtoms.push({ id: entry.name, tokenHash: parsed.data.token_hash });
 	}
-	return devAtoms;
+	return sharedAtoms;
 };
 
-export const writeDevAtom = ({
+export const writeSharedAtom = ({
 	dataDir,
-	devAtom,
+	sharedAtom,
 }: {
 	dataDir: string;
-	devAtom: DevAtom;
+	sharedAtom: SharedAtom;
 }): void => {
-	const folder = atomFolderPath({ dataDir, id: devAtom.id });
+	const folder = atomFolderPath({ dataDir, id: sharedAtom.id });
 	mkdirSync(folder, { recursive: true });
 	writeFileSync(
 		join(folder, ATOM_FILE),
-		JSON.stringify({ token_hash: devAtom.tokenHash }),
+		JSON.stringify({ token_hash: sharedAtom.tokenHash }),
 	);
 };
 

@@ -21,7 +21,7 @@ token gets 401. It calls Autumn as little as possible.
  create_atom      Autumn makes the token and keeps it (encrypted) on the org
    prod           alien deploys the container with the token's hash
    dev / tw       server tells the stack's Atom: POST /v1/atoms.put { id, token_hash }
-                  (dev-only routes, on only with ATOM_DEV=true; loopback, no secret)
+                  (ATOM_MODE=shared only; needs the admin token, x-atom-admin-token)
 ```
 
 ## Auth, decided (John, 2026-09-30)
@@ -45,7 +45,8 @@ type AtomDeployer = {
 }
 ALIEN_API_KEY      → alien, hosted
 ALIEN_MANAGER_URL  → alien dev (set by hand for the smoke test; needs Docker)
-ATOM_URL           → the stack's Atom process (set by dev.ts and tw's boot.ts)
+ATOM_URL           → the stack's Atom process (set by dev.ts and tw's boot.ts,
+                     with ATOM_ADMIN_TOKEN minted per run)
 ```
 
 `create_atom` returns the endpoint and the token; `get_atom` never returns the token. A stack

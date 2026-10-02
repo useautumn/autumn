@@ -4,30 +4,31 @@ import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import {
 	atomFolderPath,
-	type DevAtom,
-	listDevAtoms,
+	listSharedAtoms,
 	removeAtomFolder,
-	writeDevAtom,
+	type SharedAtom,
+	writeSharedAtom,
 } from "./atomFolders.js";
 
-/** A dev stack's one Atom process stands in for every org's deployment: each gets a token and a folder of its own. */
-export type DevAuth = Auth & {
+/** Our one Atom process holding many orgs: each gets a token and a folder of its own. */
+export type SharedAuth = Auth & {
 	/** Putting an Atom that exists only replaces its token hash; its customers stay. */
-	putAtom(params: DevAtom): void;
+	putAtom(params: SharedAtom): void;
 	hasAtom(params: { id: string }): boolean;
 	/** Deletes the Atom's folder. Removing one that is not held is a no-op. */
 	removeAtom(params: { id: string }): void;
 };
 
-type HeldAtom = DevAtom & { slots: Slots };
+/** Slots stay null until the token is first used, so an Atom nobody asks holds no files, statements or timers. */
+type HeldAtom = SharedAtom & { slots: Slots | null };
 
-export const createDevAuth = ({
+export const createSharedAuth = ({
 	dataDir,
 	slotCount,
 }: {
 	dataDir: string;
 	slotCount: number;
-}): DevAuth => {
+}): SharedAuth => {
 	const heldById = new Map<string, HeldAtom>();
 	const heldByTokenHash = new Map<string, HeldAtom>();
 
@@ -36,27 +37,32 @@ export const createDevAuth = ({
 		heldByTokenHash.set(held.tokenHash, held);
 	}
 
-	function open(devAtom: DevAtom): void {
-		const folder = atomFolderPath({ dataDir, id: devAtom.id });
-		hold({ ...devAtom, slots: openSlots({ folder, slotCount }) });
+	function slotsOf(held: HeldAtom): Slots {
+		held.slots ??= openSlots({
+			folder: atomFolderPath({ dataDir, id: held.id }),
+			slotCount,
+		});
+		return held.slots;
 	}
 
+	/** One map lookup by the token's hash: no other org is read or touched. */
 	function authorize({ token }: { token: string }): Slots | null {
-		return heldByTokenHash.get(hashToken({ token }))?.slots ?? null;
+		const held = heldByTokenHash.get(hashToken({ token }));
+		return held ? slotsOf(held) : null;
 	}
 
-	function putAtom(devAtom: DevAtom): void {
-		const held = heldById.get(devAtom.id);
-		if (held?.tokenHash === devAtom.tokenHash) return;
+	function putAtom(sharedAtom: SharedAtom): void {
+		const held = heldById.get(sharedAtom.id);
+		if (held?.tokenHash === sharedAtom.tokenHash) return;
 
-		writeDevAtom({ dataDir, devAtom });
+		writeSharedAtom({ dataDir, sharedAtom });
 		if (!held) {
-			open(devAtom);
+			hold({ ...sharedAtom, slots: null });
 			return;
 		}
 		// The same folder under a new token: the old one stops working at once.
 		heldByTokenHash.delete(held.tokenHash);
-		hold({ ...held, tokenHash: devAtom.tokenHash });
+		hold({ ...held, tokenHash: sharedAtom.tokenHash });
 	}
 
 	function hasAtom({ id }: { id: string }): boolean {
@@ -66,7 +72,7 @@ export const createDevAuth = ({
 	function removeAtom({ id }: { id: string }): void {
 		const held = heldById.get(id);
 		if (held) {
-			held.slots.close();
+			held.slots?.close();
 			heldById.delete(id);
 			heldByTokenHash.delete(held.tokenHash);
 		}
@@ -74,12 +80,13 @@ export const createDevAuth = ({
 	}
 
 	function close(): void {
-		for (const held of heldById.values()) held.slots.close();
+		for (const held of heldById.values()) held.slots?.close();
 		heldById.clear();
 		heldByTokenHash.clear();
 	}
 
-	for (const devAtom of listDevAtoms({ dataDir })) open(devAtom);
+	for (const sharedAtom of listSharedAtoms({ dataDir }))
+		hold({ ...sharedAtom, slots: null });
 
 	return { authorize, putAtom, hasAtom, removeAtom, close };
 };

@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { createAtomEnv } from "./atom.js";
 
 const TOKEN_HASH = "a".repeat(64);
+const ADMIN_TOKEN_HASH = "b".repeat(64);
+const SHARED = { ATOM_MODE: "shared", ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH };
 
 describe("atom env", () => {
 	test("an org's deployment is given its token hash", () => {
@@ -10,37 +12,60 @@ describe("atom env", () => {
 			ATOM_HOSTNAME: "0.0.0.0",
 		});
 
-		expect(env.ATOM_DEV).toBe(false);
+		expect(env.ATOM_MODE).toBe("deployed");
 		expect(env.ATOM_TOKEN_HASH).toBe(TOKEN_HASH);
+		expect(env.ATOM_ADMIN_TOKEN_HASH).toBeNull();
 	});
 
-	test("a dev stack needs nothing but the flag", () => {
-		const env = createAtomEnv({ ATOM_DEV: "true" });
+	test("a shared Atom is given the hash of the admin token that registers its orgs", () => {
+		const env = createAtomEnv({
+			ATOM_MODE: "shared",
+			ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
+			ATOM_HOSTNAME: "0.0.0.0",
+		});
 
-		expect(env.ATOM_DEV).toBe(true);
-		expect(env.ATOM_HOSTNAME).toBe("127.0.0.1");
+		expect(env.ATOM_MODE).toBe("shared");
+		expect(env.ATOM_ADMIN_TOKEN_HASH).toBe(ADMIN_TOKEN_HASH);
+		expect(env.ATOM_TOKEN_HASH).toBeNull();
+		expect(env.ATOM_HOSTNAME).toBe("0.0.0.0");
 	});
 
-	test("dev mode never listens beyond loopback", () => {
-		expect(() =>
-			createAtomEnv({ ATOM_DEV: "true", ATOM_HOSTNAME: "0.0.0.0" }),
-		).toThrow("loopback");
-	});
-
-	test("neither or both modes is refused", () => {
+	test("each mode refuses the other's token and needs its own", () => {
 		expect(() => createAtomEnv({})).toThrow("ATOM_TOKEN_HASH");
+		expect(() => createAtomEnv({ ATOM_MODE: "shared" })).toThrow(
+			"ATOM_ADMIN_TOKEN_HASH",
+		);
 		expect(() =>
-			createAtomEnv({ ATOM_DEV: "true", ATOM_TOKEN_HASH: TOKEN_HASH }),
-		).toThrow("not both");
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
+			}),
+		).toThrow("ATOM_MODE=shared");
+		expect(() =>
+			createAtomEnv({
+				ATOM_MODE: "shared",
+				ATOM_ADMIN_TOKEN_HASH: ADMIN_TOKEN_HASH,
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+			}),
+		).toThrow("ATOM_MODE=deployed");
 		expect(() => createAtomEnv({ ATOM_TOKEN_HASH: "not-a-hash" })).toThrow(
 			"SHA-256",
 		);
+		expect(() =>
+			createAtomEnv({ ATOM_MODE: "shared", ATOM_ADMIN_TOKEN_HASH: "nope" }),
+		).toThrow("SHA-256");
+	});
+
+	test("an unknown mode is refused", () => {
+		expect(() =>
+			createAtomEnv({ ATOM_MODE: "dev", ATOM_TOKEN_HASH: TOKEN_HASH }),
+		).toThrow("ATOM_MODE");
 	});
 
 	test("forwards to the public Autumn API unless told where the API is", () => {
 		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
 		const local = createAtomEnv({
-			ATOM_DEV: "true",
+			...SHARED,
 			AUTUMN_API_URL: "http://localhost:8080",
 		});
 
@@ -48,14 +73,14 @@ describe("atom env", () => {
 		expect(local.ATOM_AUTUMN_API_URL).toBe("http://localhost:8080");
 	});
 
-	test("an org's deployment splits its customers over 128 slots, a dev stack over 2, unless told otherwise", () => {
+	test("every Atom splits each org's customers over 128 slots unless told otherwise", () => {
 		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
-		const dev = createAtomEnv({ ATOM_DEV: "true" });
-		const told = createAtomEnv({ ATOM_DEV: "true", ATOM_SLOT_COUNT: "16" });
+		const shared = createAtomEnv(SHARED);
+		const told = createAtomEnv({ ...SHARED, ATOM_SLOT_COUNT: "2" });
 
 		expect(deployed.ATOM_SLOT_COUNT).toBe(128);
-		expect(dev.ATOM_SLOT_COUNT).toBe(2);
-		expect(told.ATOM_SLOT_COUNT).toBe(16);
+		expect(shared.ATOM_SLOT_COUNT).toBe(128);
+		expect(told.ATOM_SLOT_COUNT).toBe(2);
 	});
 
 	test("runs as many processes as both its CPUs and its memory allow, up to 8", () => {
@@ -84,16 +109,16 @@ describe("atom env", () => {
 		expect(told.ATOM_PROCESSES).toBe(12);
 	});
 
-	test("a dev stack is always one process", () => {
-		const dev = createAtomEnv(
-			{ ATOM_DEV: "true" },
-			{ availableCpus: 16, memoryLimitBytes: 64 * 1024 ** 3 },
-		);
+	test("a shared Atom is always one process", () => {
+		const shared = createAtomEnv(SHARED, {
+			availableCpus: 16,
+			memoryLimitBytes: 64 * 1024 ** 3,
+		});
 
-		expect(dev.ATOM_PROCESSES).toBe(1);
-		expect(() =>
-			createAtomEnv({ ATOM_DEV: "true", ATOM_PROCESSES: "2" }),
-		).toThrow("one process");
+		expect(shared.ATOM_PROCESSES).toBe(1);
+		expect(() => createAtomEnv({ ...SHARED, ATOM_PROCESSES: "2" })).toThrow(
+			"one process",
+		);
 	});
 
 	test("about 30% of the processes receive pushes when the push queue is linked, at least one of each", () => {

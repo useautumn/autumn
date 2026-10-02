@@ -6,12 +6,14 @@ import type { AtomDeployer } from "./types/atomDeployer.js";
 
 let atomDeployer: AtomDeployer | null | undefined;
 
-/** alien where a manager is configured; otherwise the dev stack's own Atom process (`ATOM_URL`). */
+/** alien where a manager is configured; otherwise the dev stack's own shared Atom (`ATOM_URL` + `ATOM_ADMIN_TOKEN`). Never the shadow Atom. */
 const createAtomDeployer = (): AtomDeployer | null => {
 	const alienClient = getAlienClient();
 	if (alienClient) return createAlienAtomDeployer({ alienClient });
 	const atomUrl = process.env.ATOM_URL;
-	return atomUrl ? createStackAtomDeployer({ atomUrl }) : null;
+	const adminToken = process.env.ATOM_ADMIN_TOKEN;
+	if (!atomUrl || !adminToken) return null;
+	return createStackAtomDeployer({ atom: { atomUrl, adminToken } });
 };
 
 /** The server's one deployer; a 503 where nothing can run an Atom. */

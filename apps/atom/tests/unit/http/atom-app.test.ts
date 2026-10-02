@@ -11,11 +11,12 @@ import {
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
-import { createDevAuth } from "../../../src/dev/createDevAuth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
+import { createSharedAuth } from "../../../src/shared/createSharedAuth.js";
 import { atomOrg } from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
+const ADMIN_TOKEN = "atom_admin_token_1";
 const AUTUMN_API_URL = "https://api.autumn.example";
 const SECRET_KEY = "Bearer am_sk_test_1";
 
@@ -65,13 +66,18 @@ const createDeployedApp = () => {
 	};
 };
 
-/** An Atom as a dev stack runs it: no Atoms until the stack's server puts one. */
-const createDevApp = () => {
-	const auth = createDevAuth({ dataDir: newDataDir(), slotCount: 2 });
+/** Our shared Atom: no orgs until the admin token's holder registers one. */
+const createSharedApp = () => {
+	const auth = createSharedAuth({ dataDir: newDataDir(), slotCount: 2 });
 	opened.push(auth);
 	const { logger } = createLogger();
 	return createAtomApp({
-		ctx: { auth, logger, dev: { auth }, autumnApiUrl: AUTUMN_API_URL },
+		ctx: {
+			auth,
+			logger,
+			shared: { auth, adminTokenHash: hashToken({ token: ADMIN_TOKEN }) },
+			autumnApiUrl: AUTUMN_API_URL,
+		},
 	});
 };
 
@@ -138,8 +144,15 @@ const checkMessages = ({
 		body: { customer_id: "cus_1", feature_id: "messages", ...body },
 	});
 
+const withAdminToken = (
+	token: string | null = ADMIN_TOKEN,
+): Record<string, string> => (token ? { "x-atom-admin-token": token } : {});
+
+const adminPost = ({ body }: { body: unknown }) =>
+	post({ headers: withAdminToken(), body });
+
 const putAtom = ({ id, token }: { id: string; token: string }) =>
-	post({ body: { id, token_hash: hashToken({ token }) } });
+	adminPost({ body: { id, token_hash: hashToken({ token }) } });
 
 describe("an Atom in an org's cloud", () => {
 	test("a check answers from the subject Autumn sent, in the API's own shape", async () => {
@@ -541,9 +554,9 @@ describe("the shared catalog", () => {
 	});
 });
 
-describe("an Atom on a dev stack", () => {
-	test("the stack's server puts an Atom per org, and each token reads only its own customers", async () => {
-		const app = createDevApp();
+describe("our shared Atom", () => {
+	test("an Atom is put per org, and each org's token reads only its own customers", async () => {
+		const app = createSharedApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -574,7 +587,7 @@ describe("an Atom on a dev stack", () => {
 	});
 
 	test("a deleted Atom's token stops working", async () => {
-		const app = createDevApp();
+		const app = createSharedApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -582,7 +595,7 @@ describe("an Atom on a dev stack", () => {
 
 		const deleted = await app.request(
 			"/v1/atoms.delete",
-			post({ body: { id: "org_a.sandbox" } }),
+			adminPost({ body: { id: "org_a.sandbox" } }),
 		);
 		const check = await app.request(
 			"/v1/balances.check",
@@ -596,8 +609,8 @@ describe("an Atom on a dev stack", () => {
 		expect(check.status).toBe(401);
 	});
 
-	test("the stack's server can ask whether an Atom is held", async () => {
-		const app = createDevApp();
+	test("the admin can ask whether an Atom is held", async () => {
+		const app = createSharedApp();
 		await app.request(
 			"/v1/atoms.put",
 			putAtom({ id: "org_a.sandbox", token: "token_a" }),
@@ -605,23 +618,80 @@ describe("an Atom on a dev stack", () => {
 
 		const held = await app.request(
 			"/v1/atoms.get",
-			post({ body: { id: "org_a.sandbox" } }),
+			adminPost({ body: { id: "org_a.sandbox" } }),
 		);
 		const unknown = await app.request(
 			"/v1/atoms.get",
-			post({ body: { id: "org_b.sandbox" } }),
+			adminPost({ body: { id: "org_b.sandbox" } }),
 		);
 
 		expect(await held.json()).toEqual({ atom: { id: "org_a.sandbox" } });
 		expect(await unknown.json()).toEqual({ atom: null });
 	});
 
+	test("every Atom route needs the admin token: without it, or with an org's token, nothing is put, read or deleted", async () => {
+		const app = createSharedApp();
+		await app.request(
+			"/v1/atoms.put",
+			putAtom({ id: "org_a.sandbox", token: "token_a" }),
+		);
+		const routes = [
+			{
+				path: "/v1/atoms.put",
+				body: { id: "org_b.sandbox", token_hash: hashToken({ token: "b" }) },
+			},
+			{ path: "/v1/atoms.get", body: { id: "org_a.sandbox" } },
+			{ path: "/v1/atoms.delete", body: { id: "org_a.sandbox" } },
+		];
+
+		for (const { path, body } of routes) {
+			for (const token of [null, "token_a", "wrong_admin_token"]) {
+				const response = await app.request(
+					path,
+					post({ headers: withAdminToken(token), body }),
+				);
+				expect(response.status).toBe(401);
+				expect(await response.json()).toEqual({
+					message: "Atom admin token required",
+					code: "atom_admin_token_required",
+				});
+			}
+		}
+
+		const held = await app.request(
+			"/v1/atoms.get",
+			adminPost({ body: { id: "org_a.sandbox" } }),
+		);
+		const unknown = await app.request(
+			"/v1/atoms.get",
+			adminPost({ body: { id: "org_b.sandbox" } }),
+		);
+		expect(held.status).toBe(200);
+		expect(await held.json()).toEqual({ atom: { id: "org_a.sandbox" } });
+		expect(await unknown.json()).toEqual({ atom: null });
+	});
+
+	test("the admin token opens no org's customers", async () => {
+		const app = createSharedApp();
+		await app.request(
+			"/v1/atoms.put",
+			putAtom({ id: "org_a.sandbox", token: "token_a" }),
+		);
+
+		const push = await app.request(
+			"/v1/subjects.set",
+			setSubject({ balance: 10, token: ADMIN_TOKEN }),
+		);
+
+		expect(push.status).toBe(401);
+	});
+
 	test("an id or hash the process cannot use is a 400", async () => {
-		const app = createDevApp();
+		const app = createSharedApp();
 
 		const badHash = await app.request(
 			"/v1/atoms.put",
-			post({ body: { id: "org_a.sandbox", token_hash: "not-a-hash" } }),
+			adminPost({ body: { id: "org_a.sandbox", token_hash: "not-a-hash" } }),
 		);
 		const badId = await app.request(
 			"/v1/atoms.put",

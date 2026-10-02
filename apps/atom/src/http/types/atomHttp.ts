@@ -1,6 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
-import type { DevContext } from "../../dev/devContext.js";
+import type { SharedContext } from "../../shared/sharedContext.js";
 import type { Slots } from "../../slots/types/slots.js";
 
 export type AtomHttpContext = {
@@ -8,8 +8,8 @@ export type AtomHttpContext = {
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	/** Where a request Atom does not answer itself is sent. */
 	autumnApiUrl: string;
-	/** Present only on a dev stack. */
-	dev?: DevContext;
+	/** Present only on a shared Atom. */
+	shared?: SharedContext;
 };
 
 /** How a request failed, as its error response said; the request line carries it. */

@@ -1,7 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
-import { hashToken } from "./hashToken.js";
+import { tokenMatchesHash } from "./tokenMatchesHash.js";
 import type { Auth } from "./types/auth.js";
 
 /** A deployment holds one data folder, so what arrives without a token (Autumn's pushes) is applied to it directly. */
@@ -18,11 +17,9 @@ export const createDeployedAuth = ({
 	slotCount: number;
 }): DeployedAuth => {
 	const slots = openSlots({ folder: dataDir, slotCount });
-	const expectedHash = Buffer.from(tokenHash, "hex");
 
 	function authorize({ token }: { token: string }) {
-		const sentHash = Buffer.from(hashToken({ token }), "hex");
-		return timingSafeEqual(sentHash, expectedHash) ? slots : null;
+		return tokenMatchesHash({ token, expectedHash: tokenHash }) ? slots : null;
 	}
 
 	return { authorize, slots, close: () => slots.close() };

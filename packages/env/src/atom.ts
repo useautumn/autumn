@@ -1,12 +1,10 @@
 import { availableParallelism, totalmem } from "node:os";
-import { loopbackHost, positiveInteger } from "./balanceWorker/primitives.js";
+import { positiveInteger } from "./balanceWorker/primitives.js";
 
 const LOCAL_ATOM_PORT = 8790;
 const AUTUMN_API_URL = "https://api.useautumn.com";
-/** Fixed for an org's deployment, so more or fewer cores never moves a customer to another file. */
-const DEPLOYED_SLOT_COUNT = 128;
-/** A dev stack holds an Atom per org, so each is kept to a couple of files: enough to exercise the split. */
-const DEV_SLOT_COUNT = 2;
+/** Fixed per org, so more or fewer cores never moves a customer to another file; a shared Atom splits each org the same way. */
+const SLOT_COUNT = 128;
 /** A container given no limits sees its whole host; past this many, more processes only cost memory. */
 const MAX_AUTOMATIC_PROCESSES = 8;
 /** Measured on Linux with 128 slots: a serving process, and the supervisor, each hold a little under this. */
@@ -36,49 +34,77 @@ const processesMemoryAllows = ({
 };
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
+const sha256Hex = ({ name, value }: { name: string; value: string }) => {
+	if (!SHA256_HEX.test(value))
+		throw new Error(`${name} must be a SHA-256 hex digest`);
+	return value;
+};
+
 type AtomModeEnv =
 	/** In an org's cloud: the hash of the one token this deployment answers to. */
-	| { ATOM_DEV: false; ATOM_TOKEN_HASH: string }
-	/** On a dev stack: Atoms are added and removed over HTTP, so it must stay on loopback. */
-	| { ATOM_DEV: true; ATOM_TOKEN_HASH: null };
+	| {
+			ATOM_MODE: "deployed";
+			ATOM_TOKEN_HASH: string;
+			ATOM_ADMIN_TOKEN_HASH: null;
+	  }
+	/** Our own Atom holding many orgs: only the admin token's holder registers them, each with a token of its own. */
+	| {
+			ATOM_MODE: "shared";
+			ATOM_TOKEN_HASH: null;
+			ATOM_ADMIN_TOKEN_HASH: string;
+	  };
 
 const modeEnvOf = ({
 	runtimeEnv,
-	hostname,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
-	hostname: string;
 }): AtomModeEnv => {
+	const mode = runtimeEnv.ATOM_MODE?.trim() || "deployed";
 	const tokenHash = runtimeEnv.ATOM_TOKEN_HASH?.trim() || null;
-	const isDev = runtimeEnv.ATOM_DEV === "true";
-	if (isDev && tokenHash)
-		throw new Error("Set ATOM_DEV or ATOM_TOKEN_HASH, not both");
-	if (isDev) {
-		if (!loopbackHost.safeParse(hostname).success)
-			throw new Error("ATOM_DEV only runs on a loopback ATOM_HOSTNAME");
-		return { ATOM_DEV: true, ATOM_TOKEN_HASH: null };
+	const adminTokenHash = runtimeEnv.ATOM_ADMIN_TOKEN_HASH?.trim() || null;
+	if (mode === "shared") {
+		if (tokenHash)
+			throw new Error("ATOM_TOKEN_HASH is only for ATOM_MODE=deployed");
+		if (!adminTokenHash)
+			throw new Error("ATOM_MODE=shared needs ATOM_ADMIN_TOKEN_HASH");
+		return {
+			ATOM_MODE: "shared",
+			ATOM_TOKEN_HASH: null,
+			ATOM_ADMIN_TOKEN_HASH: sha256Hex({
+				name: "ATOM_ADMIN_TOKEN_HASH",
+				value: adminTokenHash,
+			}),
+		};
 	}
-	if (!tokenHash) throw new Error("Set ATOM_TOKEN_HASH, or ATOM_DEV=true");
-	if (!SHA256_HEX.test(tokenHash))
-		throw new Error("ATOM_TOKEN_HASH must be a SHA-256 hex digest");
-	return { ATOM_DEV: false, ATOM_TOKEN_HASH: tokenHash };
+	if (mode !== "deployed")
+		throw new Error("ATOM_MODE must be deployed or shared");
+	if (adminTokenHash)
+		throw new Error("ATOM_ADMIN_TOKEN_HASH is only for ATOM_MODE=shared");
+	if (!tokenHash) throw new Error("Set ATOM_TOKEN_HASH, or ATOM_MODE=shared");
+	return {
+		ATOM_MODE: "deployed",
+		ATOM_TOKEN_HASH: sha256Hex({ name: "ATOM_TOKEN_HASH", value: tokenHash }),
+		ATOM_ADMIN_TOKEN_HASH: null,
+	};
 };
 
 /** As many processes as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step. */
 const processesOf = ({
 	runtimeEnv,
-	isDev,
+	isShared,
 	machine,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
-	isDev: boolean;
+	isShared: boolean;
 	machine: AtomMachine;
 }): number => {
 	const told = runtimeEnv.ATOM_PROCESSES;
-	// A dev stack's Atom keeps its list of orgs in memory, which a second process would not see.
-	if (isDev) {
+	// A shared Atom keeps its list of orgs in memory, which a second process would not see.
+	if (isShared) {
 		if (told && positiveInteger.parse(told) > 1)
-			throw new Error("ATOM_DEV runs as one process; unset ATOM_PROCESSES");
+			throw new Error(
+				"ATOM_MODE=shared runs as one process; unset ATOM_PROCESSES",
+			);
 		return 1;
 	}
 	if (told) return positiveInteger.parse(told);
@@ -110,10 +136,10 @@ export function createAtomEnv(
 	machine: AtomMachine = readMachine(),
 ) {
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
-	const modeEnv = modeEnvOf({ runtimeEnv, hostname });
+	const modeEnv = modeEnvOf({ runtimeEnv });
 	const processes = processesOf({
 		runtimeEnv,
-		isDev: modeEnv.ATOM_DEV,
+		isShared: modeEnv.ATOM_MODE === "shared",
 		machine,
 	});
 	// alien sets this where the `pushes` queue is linked to the container.
@@ -124,10 +150,9 @@ export function createAtomEnv(
 		ATOM_DATA_DIR: runtimeEnv.ATOM_DATA_DIR?.trim() || ".data/atom",
 		/** Where a request Atom does not answer itself is sent. */
 		ATOM_AUTUMN_API_URL: runtimeEnv.AUTUMN_API_URL?.trim() || AUTUMN_API_URL,
-		/** How many SQLite files an Atom's customers are split over. Changing it empties them: Autumn sends the customers again. */
+		/** How many SQLite files an org's customers are split over. Changing it empties them: Autumn sends the customers again. */
 		ATOM_SLOT_COUNT: positiveInteger.parse(
-			runtimeEnv.ATOM_SLOT_COUNT ??
-				(modeEnv.ATOM_DEV ? DEV_SLOT_COUNT : DEPLOYED_SLOT_COUNT),
+			runtimeEnv.ATOM_SLOT_COUNT ?? SLOT_COUNT,
 		),
 		/** How many processes run: those that serve checks share the port. */
 		ATOM_PROCESSES: processes,

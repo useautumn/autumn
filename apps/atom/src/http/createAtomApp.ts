@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { mountDevRoutes } from "../dev/mountDevRoutes.js";
+import { mountSharedRoutes } from "../shared/mountSharedRoutes.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
@@ -16,7 +16,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	app.onError(handleError);
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth);
-	if (ctx.dev) mountDevRoutes({ app, ctx: ctx.dev });
+	if (ctx.shared) mountSharedRoutes({ app, ctx: ctx.shared });
 
 	// Everything else needs the Atom token: the customer's app asks, Autumn keeps the subjects current.
 	const authorized = new Hono<AtomHttpEnv>();

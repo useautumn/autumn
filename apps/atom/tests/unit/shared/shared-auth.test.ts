@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
-import { createDevAuth } from "../../../src/dev/createDevAuth.js";
+import { createSharedAuth } from "../../../src/shared/createSharedAuth.js";
 import {
 	checkRequestFor,
 	forwardReasonOf,
@@ -19,7 +19,7 @@ const newDataDir = () => {
 	return dataDir;
 };
 const open = ({ dataDir }: { dataDir: string }) => {
-	const auth = createDevAuth({ dataDir, slotCount: 2 });
+	const auth = createSharedAuth({ dataDir, slotCount: 2 });
 	opened.push(auth);
 	return auth;
 };
@@ -44,7 +44,7 @@ const checkCustomer = ({ auth, token }: { auth: Auth; token: string }) =>
 		?.processorFor({ customerId: "cus_1" })
 		.check({ request: checkRequestFor({ params: { required_balance: 5 } }) });
 
-describe("dev auth", () => {
+describe("shared auth", () => {
 	test("a token opens the Atom it was put with, and no other", () => {
 		const auth = open({ dataDir: newDataDir() });
 		auth.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
@@ -104,6 +104,33 @@ describe("dev auth", () => {
 
 		expect(auth.authorize({ token: "token_a" })).toBeNull();
 		expect(existsSync(join(dataDir, "atom_a"))).toBe(false);
+	});
+
+	test("an Atom opens its files only when its token is first used, so an idle one holds none", () => {
+		const dataDir = newDataDir();
+		const auth = open({ dataDir });
+		auth.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		auth.putAtom({ id: "atom_b", tokenHash: tokenHash("token_b") });
+
+		expect(readdirSync(join(dataDir, "atom_a"))).toEqual(["atom.json"]);
+
+		storeCustomer({ auth, token: "token_a" });
+
+		expect(readdirSync(join(dataDir, "atom_a"))).toContain("catalog.sqlite");
+		expect(readdirSync(join(dataDir, "atom_b"))).toEqual(["atom.json"]);
+	});
+
+	test("an Atom held before a restart stays closed until its token is used", () => {
+		const dataDir = newDataDir();
+		open({ dataDir }).putAtom({
+			id: "atom_a",
+			tokenHash: tokenHash("token_a"),
+		});
+
+		const reopened = open({ dataDir });
+
+		expect(reopened.hasAtom({ id: "atom_a" })).toBe(true);
+		expect(readdirSync(join(dataDir, "atom_a"))).toEqual(["atom.json"]);
 	});
 
 	test("an id that is not a plain folder name is refused", () => {
