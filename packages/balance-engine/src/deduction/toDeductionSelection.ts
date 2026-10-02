@@ -14,6 +14,7 @@ export const toDeductionSelection = ({
 	properties,
 	includesCreditSystems,
 	countsUsageWindows,
+	countsAllocations,
 	customerEntitlementFilters,
 	org,
 	enforceOverdueBlock,
@@ -24,6 +25,7 @@ export const toDeductionSelection = ({
 	properties: Record<string, JsonValue> | null;
 	includesCreditSystems: boolean;
 	countsUsageWindows: boolean;
+	countsAllocations: boolean;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 	org: CommandOrg;
 	/** Checks honour the org's overdue block; tracks only the threshold-billing one. */
@@ -35,6 +37,7 @@ export const toDeductionSelection = ({
 	properties,
 	includesCreditSystems,
 	countsUsageWindows,
+	countsAllocations,
 	customerEntitlementFilters,
 	inStatuses: orgToInStatuses({ org }),
 	reverseOrder: Boolean(org.config.reverse_deduction_order),

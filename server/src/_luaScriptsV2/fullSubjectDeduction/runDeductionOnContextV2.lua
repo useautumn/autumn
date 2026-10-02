@@ -35,6 +35,7 @@ local function process_deduction_pass(params)
   local overage_behavior_is_allow = params.overage_behavior_is_allow or false
   local enforce_spend_limit_gate = params.enforce_spend_limit_gate or false
   local bypass_usage_windows = params.bypass_usage_windows or false
+  local allocation_gates = params.allocation_gates
   local pass_number = params.pass_number
   local skip_if_not_usage_allowed = params.skip_if_not_usage_allowed
   local updates = params.updates or {}
@@ -117,6 +118,33 @@ local function process_deduction_pass(params)
       if ent_amount == 0 then
         should_process = false
         skip_reason = "usage window headroom exhausted"
+      end
+    end
+
+    -- Allocation gate: shared credits above zero go only to the entity's own share plus
+    -- unallocated credits; once its headroom covers them, overage below zero is free.
+    local shared_balance_before = 0
+    if context.customer_entitlements[ent_id] then
+      shared_balance_before = math.max(0, safe_number(context.customer_entitlements[ent_id].balance))
+    end
+    if should_process and remaining_amount > 0 then
+      local available_from_allocation = get_available_from_allocation({
+        context = context,
+        gates = allocation_gates,
+        ent_id = ent_id,
+        credit_cost = credit_cost,
+        rate_card = rate_card,
+        current_units = get_credit_rate_current_units(context, ent_id, rate_card),
+        requested_units = ent_amount,
+        shared_balance_before = shared_balance_before,
+      })
+      if not is_nil(available_from_allocation)
+          and available_from_allocation < ent_amount then
+        ent_amount = available_from_allocation
+      end
+      if ent_amount <= 0 then
+        should_process = false
+        skip_reason = "allocation exhausted"
       end
     end
 
@@ -227,6 +255,18 @@ local function process_deduction_pass(params)
       end
 
       remaining_amount = remaining_amount - deducted_units
+
+      -- Only credits above zero are shared; the counters ignore overage below it.
+      local shared_deducted = deducted
+      if deducted > 0 then
+        shared_deducted = math.min(deducted, shared_balance_before)
+      end
+      consume_allocation({
+        context = context,
+        gates = allocation_gates,
+        ent_id = ent_id,
+        credits = shared_deducted,
+      })
 
       -- Settle the gate: record what this ent actually drained against every
       -- applicable window limit so the next ent sees the reduced headroom.
@@ -365,6 +405,7 @@ local function run_deduction_on_context(params)
   local enforce_spend_limit_gate = overage_behaviour == 'overflow'
       or not (alter_granted_balance or overage_behaviour == 'allow')
   local bypass_usage_windows = overage_behaviour == 'overflow'
+  local allocation_gates = params.allocation_gates
   local updates = {}
 
   -- Unlimited entries arrive sorted first and act as an infinite sink; the
@@ -539,6 +580,7 @@ local function run_deduction_on_context(params)
     overage_behavior_is_allow = overage_behavior_is_allow,
     enforce_spend_limit_gate = enforce_spend_limit_gate,
     bypass_usage_windows = bypass_usage_windows,
+    allocation_gates = allocation_gates,
     pass_number = 1,
     skip_if_not_usage_allowed = false,
     updates = updates,
@@ -558,6 +600,7 @@ local function run_deduction_on_context(params)
       overage_behavior_is_allow = overage_behavior_is_allow,
       enforce_spend_limit_gate = enforce_spend_limit_gate,
       bypass_usage_windows = bypass_usage_windows,
+      allocation_gates = allocation_gates,
       pass_number = 2,
       skip_if_not_usage_allowed = not is_refund,
       updates = updates,

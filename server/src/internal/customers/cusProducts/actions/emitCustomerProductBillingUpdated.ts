@@ -23,11 +23,13 @@ export const emitCustomerProductBillingUpdated = ({
 	originalFullCustomer,
 	updateCustomerProducts = [],
 	insertCustomerProducts = [],
+	allocationsAdjusted,
 }: {
 	ctx: AutumnContext;
 	originalFullCustomer: FullCustomer;
 	updateCustomerProducts?: LifecycleCustomerProductUpdate[];
 	insertCustomerProducts?: FullCusProduct[];
+	allocationsAdjusted?: boolean;
 }): void => {
 	void sendBillingUpdatedWebhook({
 		ctx,
@@ -42,5 +44,6 @@ export const emitCustomerProductBillingUpdated = ({
 			),
 		},
 		originalFullCustomer,
+		allocationsAdjusted,
 	});
 };

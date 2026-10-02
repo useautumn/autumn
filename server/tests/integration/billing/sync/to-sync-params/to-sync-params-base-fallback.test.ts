@@ -92,6 +92,7 @@ const initBaseVariantScenario = async ({
 			base_variant_id: basePlan.id,
 		},
 	});
+	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 	// $75/mo shape-matches neither the $20 base nor the $50 variant.
 	const customStripePrice = await createStripeFixedPriceUnderProduct({

@@ -6,6 +6,7 @@ import {
 	ms,
 	msToSeconds,
 	type SetPlansParamsV0Input,
+	secondsToMs,
 } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -58,11 +59,13 @@ test.concurrent(
 		};
 
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.warnings).toContainEqual({
-			type: "scheduled_cancel_changed",
-			severity: "warning",
-			message: `The plans end on ${formatMsToDate(endsAt)}.`,
-		});
+		expect(preview.warnings).toContainEqual(
+			expect.objectContaining({
+				type: "scheduled_cancel_changed",
+				severity: "warning",
+				message: `The plans end on ${formatMsToDate(endsAt)}.`,
+			}),
+		);
 		const previewPlans = preview.phases[0]?.plans.map(
 			({ plan_id, expires_at }) => ({ plan_id, expires_at }),
 		);
@@ -124,7 +127,7 @@ test.concurrent(
 			],
 		});
 
-		const endsAt = advancedTo + ms.days(20);
+		const endsAt = secondsToMs(msToSeconds(advancedTo + ms.days(20)));
 		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 			customer_id: customerId,
 			ends_at: endsAt,

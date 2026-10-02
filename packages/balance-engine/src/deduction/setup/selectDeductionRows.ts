@@ -61,12 +61,16 @@ export const selectDeductionRows = ({
 	const blockedProducts = fullSubject.customer_products.filter(
 		(customerProduct) => isOverdueBlocked({ customerProduct, selection }),
 	);
-	const fundingSubject = {
-		...fullSubject,
-		customer_products: fullSubject.customer_products.filter(
-			(customerProduct) => !blockedProducts.includes(customerProduct),
-		),
-	};
+	// Only a blocked product calls for a narrowed copy; the view itself keeps the rows it has already flattened.
+	const fundingSubject =
+		blockedProducts.length === 0
+			? fullSubject
+			: {
+					...fullSubject,
+					customer_products: fullSubject.customer_products.filter(
+						(customerProduct) => !blockedProducts.includes(customerProduct),
+					),
+				};
 	const customerEntitlements = hoistUnlimited({
 		customerEntitlements: fullSubjectToCustomerEntitlements({
 			fullSubject: fundingSubject,

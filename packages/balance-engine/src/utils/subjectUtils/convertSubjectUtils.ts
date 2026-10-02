@@ -1,3 +1,4 @@
+import { fullSubjectToRowsWithProduct } from "@autumn/shared";
 import { CatalogRowMissingError } from "../../errors.js";
 import type { Catalog } from "../../models/catalog/catalog.js";
 import {
@@ -198,21 +199,8 @@ export const fullSubjectToHeldRows = ({
 	fullSubject,
 }: {
 	fullSubject: WorkerFullSubject;
-}): WorkerFullCustomerEntitlementWithProduct[] => [
-	...fullSubject.customer_products.flatMap((customerProduct) =>
-		customerProduct.customer_entitlements.map((customerEntitlement) => ({
-			...customerEntitlement,
-			customer_product: customerProduct,
-		})),
-	),
-	...[
-		...fullSubject.extra_customer_entitlements,
-		...fullSubject.pooled_customer_entitlements,
-	].map((customerEntitlement) => ({
-		...customerEntitlement,
-		customer_product: null,
-	})),
-];
+}): WorkerFullCustomerEntitlementWithProduct[] =>
+	fullSubjectToRowsWithProduct({ fullSubject });
 
 /** Back to the stored row: joined catalog rows and the product the selection attached never travel in a mutation. */
 export const fullCustomerEntitlementToRow = ({

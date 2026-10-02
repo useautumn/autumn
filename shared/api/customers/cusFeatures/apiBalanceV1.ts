@@ -105,6 +105,24 @@ export const ApiBalanceBreakdownV1Schema = z.object({
 	overage: z.number().meta({
 		internal: true,
 	}),
+
+	source: z.enum(["customer", "entity"]).optional().readonly().meta({
+		description:
+			"Where this row's credits come from: shared at the customer level, or owned by the entity.",
+	}),
+	allocation: z
+		.object({
+			amount: z.number().meta({
+				description: "The amount allocated to this entity.",
+			}),
+		})
+		.nullable()
+		.optional()
+		.readonly()
+		.meta({
+			description:
+				"Set when this row's numbers are the entity's allocated share of the customer's credits.",
+		}),
 });
 
 export const ApiBalanceV1Schema = z
@@ -155,6 +173,14 @@ export const ApiBalanceV1Schema = z
 		rollovers: z.array(ApiBalanceRolloverSchema).optional().meta({
 			description: "Rollover balances carried over from previous periods.",
 		}),
+		allocated: z.number().optional().readonly().meta({
+			description:
+				"Shared credits held for entities by allocations; present only when the customer allocates this feature.",
+		}),
+		unallocated: z.number().optional().readonly().meta({
+			description:
+				"Remaining shared credits no allocation holds; any entity may use them.",
+		}),
 	})
 	.meta({
 		examples: [API_BALANCE_V1_EXAMPLE],
@@ -165,3 +191,8 @@ export type ApiBalanceBreakdownPrice = z.infer<
 >;
 export type ApiBalanceBreakdownV1 = z.infer<typeof ApiBalanceBreakdownV1Schema>;
 export type ApiBalanceV1 = z.infer<typeof ApiBalanceV1Schema>;
+
+/** Internal: what check may draw for an allocated customer's subject; never part of the public schema. */
+export type ApiBalanceWithAllocationCheck = ApiBalanceV1 & {
+	allocation_check_remaining?: number;
+};

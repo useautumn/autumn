@@ -11,6 +11,12 @@ export type WorkerDb = {
 		identity: MeteringIdentity;
 		asOfTimestampMs: number;
 	}): Promise<SubjectRowsEnvelope | null>;
+	/** Several of the customer's entities in one read: one envelope per entity that exists. */
+	getEntitySubjectRows(params: {
+		identity: MeteringIdentity;
+		entityIds: readonly string[];
+		asOfTimestampMs: number;
+	}): Promise<SubjectRowsEnvelope[]>;
 	getCatalogRows(params: {
 		identity: MeteringIdentity;
 		ids: CatalogRowIds;

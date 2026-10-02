@@ -25,7 +25,7 @@ import {
 export function createPartitionWriterState({
 	subjectMapMaxBytes,
 }: {
-	subjectMapMaxBytes?: number;
+	subjectMapMaxBytes?: number | (() => number);
 } = {}): PartitionWriterState {
 	return {
 		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes }),

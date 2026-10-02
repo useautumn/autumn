@@ -9,6 +9,7 @@ import {
 	ADJUST_SUBJECT_BALANCE_SCRIPT,
 	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	GETDEL_SHARED_BALANCE_FIELDS_SCRIPT,
+	PATCH_ALLOCATION_COUNTER_SCRIPT,
 	PUBLISH_CACHED_FULL_SUBJECT_SCRIPT,
 	ROLL_USAGE_WINDOWS_SCRIPT,
 	SET_CACHED_FULL_SUBJECT_SCRIPT,
@@ -71,6 +72,11 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("rollUsageWindows", {
 		numberOfKeys: 1,
 		lua: ROLL_USAGE_WINDOWS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("patchAllocationCounter", {
+		numberOfKeys: 1,
+		lua: PATCH_ALLOCATION_COUNTER_SCRIPT,
 	});
 
 	redisInstance.defineCommand("setCachedFullSubject", {

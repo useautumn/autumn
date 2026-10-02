@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
+import { releaseEntityAllocations } from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -134,6 +135,12 @@ export const deleteEntity = async ({
 		ctx,
 		fullCustomer: fullCus,
 		entity,
+	});
+
+	await releaseEntityAllocations({
+		ctx,
+		customerId,
+		internalEntityId: entity.internal_id,
 	});
 
 	await EntityService.deleteInInternalIds({

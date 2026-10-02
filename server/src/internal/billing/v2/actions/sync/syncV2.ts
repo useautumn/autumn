@@ -50,7 +50,11 @@ export const syncV2 = async ({
 	logSyncPlan({ ctx, autumnBillingPlan, phases });
 
 	// 4. Execute
-	await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan,
+		emitsBillingUpdated: true,
+	});
 
 	// 5. Persist scheduled phases (only when sync produced more than one phase)
 	let scheduleId: string | null = null;
@@ -75,6 +79,7 @@ export const syncV2 = async ({
 	});
 
 	void sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan,
 		originalFullCustomer: syncContext.fullCustomer,

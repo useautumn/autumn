@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
 	applyMutation,
 	computeTrack,
@@ -70,6 +70,94 @@ describe("createSubjectMap", () => {
 		map.unpin({ subjectKey: customerKey });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.sizeBytes()).toBe(0);
+	});
+
+	test("a replaced row is weighed by itself, never by serialising the whole state again", () => {
+		const map = createSubjectMap();
+		const state = createState({ balance: 100 });
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		const command = createTrackCommand({
+			identity: testIdentity,
+			commandId: "cmd_1",
+			value: 5,
+		});
+		const mutation = computeTrack({
+			fullSubject: createSubjectFor({ state, entityId: null }),
+			command,
+		});
+		const next = applyMutation({ state, mutation });
+
+		const stringify = spyOn(JSON, "stringify");
+		try {
+			map.setState({ subjectKey: customerKey, customerKey, state: next });
+			expect(stringify).toHaveBeenCalled();
+			expect(stringify.mock.calls.filter(isWholeState)).toHaveLength(0);
+		} finally {
+			stringify.mockRestore();
+		}
+		expect(map.sizeBytes()).toBe(JSON.stringify(next).length);
+	});
+
+	test("after rows are replaced, added and removed the weight is still the serialised size", () => {
+		const map = createSubjectMap();
+		const initial = createState({ balance: 100 });
+		map.setState({ subjectKey: customerKey, customerKey, state: initial });
+		const steps: ((state: SubjectState) => SubjectState)[] = [
+			(state) => ({
+				...state,
+				customerEntitlements: state.customerEntitlements.map((row) => ({
+					...row,
+					balance: 7,
+				})),
+			}),
+			(state) => ({
+				...state,
+				customerEntitlements: [
+					...state.customerEntitlements,
+					...state.customerEntitlements.map((row, index) => ({
+						...row,
+						id: `extra_${index}`,
+					})),
+				],
+			}),
+			(state) => ({ ...state, revision: state.revision + 1_000 }),
+			(state) => ({
+				...state,
+				customer: { ...state.customer, id: "renamed_customer" },
+			}),
+			(state) => ({
+				...state,
+				customerEntitlements: state.customerEntitlements.slice(1),
+			}),
+		];
+		let state = initial;
+		for (const step of steps) {
+			state = step(state);
+			map.setState({ subjectKey: customerKey, customerKey, state });
+			expect(map.sizeBytes()).toBe(JSON.stringify(state).length);
+		}
+	});
+
+	test("growth found by re-weighing still evicts the least recently read subject", () => {
+		const a = createState({ identity: { ...testIdentity, customerId: "a" } });
+		const b = createState({ identity: { ...testIdentity, customerId: "b" } });
+		const bytes = JSON.stringify(a).length;
+		const map = createSubjectMap({ maxBytes: bytes * 2 + 50 });
+		map.setState({ subjectKey: "a", customerKey: "a", state: a });
+		map.setState({ subjectKey: "b", customerKey: "b", state: b });
+		expect(map.readState({ subjectKey: "a" })).toEqual(a);
+
+		const grown: SubjectState = {
+			...b,
+			customerEntitlements: [
+				...b.customerEntitlements,
+				...b.customerEntitlements.map((row) => ({ ...row, id: "grown" })),
+			],
+		};
+		map.setState({ subjectKey: "b", customerKey: "b", state: grown });
+		expect(map.readState({ subjectKey: "a" })).toBeNull();
+		expect(map.readState({ subjectKey: "b" })).toEqual(grown);
+		expect(map.sizeBytes()).toBe(JSON.stringify(grown).length);
 	});
 
 	test("evicts the least recently read subject first and never a pinned one", () => {
@@ -175,6 +263,11 @@ function trackSubmission({
 const balanceOf = (state: SubjectState | null) =>
 	state?.customerEntitlements[0]?.balance;
 
+const isWholeState = ([value]: unknown[]) =>
+	typeof value === "object" &&
+	value !== null &&
+	"customerEntitlements" in value;
+
 describe("writer over a store with no resident state", () => {
 	test("the map keeps the committed rows, so the next track starts from them", async () => {
 		const { writer } = createWriterOverNullStore();
@@ -206,6 +299,45 @@ describe("writer over a store with no resident state", () => {
 			}),
 		);
 		await second.waitForCommit();
+		expect(
+			balanceOf(writer.readFreshestState({ identity: testIdentity })),
+		).toBe(90);
+	});
+
+	test("a warm track serialises its record and its changed rows, never the whole state", async () => {
+		const { writer } = createWriterOverNullStore();
+		const initial = createState({ balance: 100 });
+		await writer
+			.decide(
+				trackSubmission({
+					command: createTrackCommand({
+						identity: testIdentity,
+						commandId: "cmd_1",
+						value: 5,
+					}),
+					initial,
+				}),
+			)
+			.waitForCommit();
+
+		const stringify = spyOn(JSON, "stringify");
+		try {
+			await writer
+				.decide(
+					trackSubmission({
+						command: createTrackCommand({
+							identity: testIdentity,
+							commandId: "cmd_2",
+							value: 5,
+						}),
+						initial,
+					}),
+				)
+				.waitForCommit();
+			expect(stringify.mock.calls.filter(isWholeState)).toHaveLength(0);
+		} finally {
+			stringify.mockRestore();
+		}
 		expect(
 			balanceOf(writer.readFreshestState({ identity: testIdentity })),
 		).toBe(90);

@@ -1,6 +1,7 @@
 import { serializeMeteringRecord } from "@autumn/kafka";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
+import { timeSync } from "../../../src/logging/eventLoopStalls/syncSections.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
@@ -31,6 +32,14 @@ export const createBenchProcessor = async ({
 	let appended = 0;
 	let serializedBytes = 0;
 	const appender: CommittedOutcomeAppender = {
+		encodedBytesOf: serialize
+			? ({ record }) => {
+					const { key, value } = timeSync({ label: "record.encode" }, () =>
+						serializeMeteringRecord({ record }),
+					);
+					return key.length + value.length;
+				}
+			: undefined,
 		async appendCommitted({ outcomes }) {
 			if (serialize) {
 				for (const record of outcomes) {

@@ -8,6 +8,7 @@ import {
 	subjectStateToFullSubject,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
+import { markFullSubjectImmutable } from "@autumn/shared";
 import { SubjectCatalogEvictedError } from "../subjectErrors.js";
 import type { SubjectScope } from "../types/subject.js";
 import { readPlanLicenseCatalogKeys } from "./readPlanLicenseCatalogKeys.js";
@@ -65,9 +66,11 @@ export const readSubject = ({
 		state,
 		entityId: identity.entityId,
 		join: () =>
-			subjectStateToFullSubject({
-				state,
-				catalog: readSubjectCatalog({ scope, state }),
-				entityId: identity.entityId,
+			markFullSubjectImmutable({
+				fullSubject: subjectStateToFullSubject({
+					state,
+					catalog: readSubjectCatalog({ scope, state }),
+					entityId: identity.entityId,
+				}),
 			}),
 	});

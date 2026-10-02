@@ -25,6 +25,7 @@ export const activateScheduledCustomerProduct = async ({
 	subscriptionIds,
 	scheduledIds,
 	activatedAt,
+	emitsBillingUpdated = false,
 }: {
 	ctx: AutumnContext;
 	fromCustomerProduct?: FullCusProduct; // for cases where expiry happens before activation (eg. expireAndActivateDefault)
@@ -33,7 +34,12 @@ export const activateScheduledCustomerProduct = async ({
 	subscriptionIds?: string[];
 	scheduledIds?: string[];
 	activatedAt: number;
-}): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
+	/** The caller sends billing.updated and carries `allocationsAdjusted` on it. */
+	emitsBillingUpdated?: boolean;
+}): Promise<{
+	updates: Partial<InsertCustomerProduct>;
+	allocationsAdjusted: boolean;
+}> => {
 	const { org, env, logger } = ctx;
 
 	logger.info(
@@ -88,8 +94,9 @@ export const activateScheduledCustomerProduct = async ({
 			})
 		: undefined;
 
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted = false } = await executeAutumnBillingPlan({
 		ctx,
+		emitsBillingUpdated,
 		autumnBillingPlan: {
 			customerId: fullCustomer.id || fullCustomer.internal_id,
 			insertCustomerProducts: [],
@@ -115,5 +122,5 @@ export const activateScheduledCustomerProduct = async ({
 		cusProduct: customerProduct,
 	});
 
-	return { updates };
+	return { updates, allocationsAdjusted };
 };

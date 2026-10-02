@@ -13,6 +13,53 @@ import { isPooledBalanceSourceCustomerEntitlement } from "../cusEntUtils/classif
 import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { notNullish } from "../utils.js";
+import { memoOnFullSubject } from "./fullSubjectRowsMemo.js";
+
+/**
+ * Every row the subject holds with the product that granted it, loose and
+ * pooled rows with none, in product order: the one flatten every selection
+ * filters from. A view marked immutable keeps it, so the row copies are made
+ * once per view rather than once per selection.
+ */
+export const fullSubjectToRowsWithProduct = <
+	CE extends FullCustomerEntitlementView,
+	CP extends FullCusProductView,
+>({
+	fullSubject,
+}: {
+	fullSubject: FullSubjectView<CE, CP>;
+}): FullCusEntWithFullCusProductView<
+	CE,
+	CP & { customer_entitlements: CE[] }
+>[] =>
+	memoOnFullSubject({
+		fullSubject,
+		key: "rowsWithProduct",
+		build: () => {
+			const rows: FullCusEntWithFullCusProductView<
+				CE,
+				CP & { customer_entitlements: CE[] }
+			>[] = [];
+			for (const customerProduct of fullSubject.customer_products) {
+				for (const customerEntitlement of customerProduct.customer_entitlements) {
+					rows.push({
+						...customerEntitlement,
+						customer_product: customerProduct,
+					});
+				}
+			}
+			for (const customerEntitlement of fullSubject.extra_customer_entitlements) {
+				rows.push({ ...customerEntitlement, customer_product: null });
+			}
+			// Guarded for subjects built without going through the schema, which fills
+			// this in via .default([]).
+			for (const customerEntitlement of fullSubject.pooled_customer_entitlements ??
+				[]) {
+				rows.push({ ...customerEntitlement, customer_product: null });
+			}
+			return rows;
+		},
+	});
 
 /** Generic over the row shape so the same selection serves a FullSubject and the balance worker's leaner view. */
 export const fullSubjectToCustomerEntitlements = <
@@ -42,38 +89,13 @@ export const fullSubjectToCustomerEntitlements = <
 		CE,
 		CP & { customer_entitlements: CE[] }
 	>;
-	let customerEntitlements: Selected[] = [];
-
-	for (const customerProduct of fullSubject.customer_products) {
-		if (!inStatuses.includes(customerProduct.status)) continue;
-
-		customerEntitlements.push(
-			...customerProduct.customer_entitlements.map((customerEntitlement) => ({
-				...customerEntitlement,
-				customer_product: customerProduct,
-			})),
-		);
-	}
-
-	for (const customerEntitlement of fullSubject.extra_customer_entitlements) {
-		customerEntitlements.push({
-			...customerEntitlement,
-			customer_product: null,
-		});
-	}
-
-	// Guarded for subjects built without going through the schema, which fills
-	// this in via .default([]).
-	for (const customerEntitlement of fullSubject.pooled_customer_entitlements ??
-		[]) {
-		customerEntitlements.push({
-			...customerEntitlement,
-			customer_product: null,
-		});
-	}
-
-	customerEntitlements = customerEntitlements.filter(
+	// The kept rows are only filtered here, never edited; a loose or pooled row has no product to judge by status.
+	let customerEntitlements: Selected[] = fullSubjectToRowsWithProduct({
+		fullSubject,
+	}).filter(
 		(customerEntitlement) =>
+			(customerEntitlement.customer_product === null ||
+				inStatuses.includes(customerEntitlement.customer_product.status)) &&
 			!isPooledBalanceSourceCustomerEntitlement({ customerEntitlement }),
 	);
 

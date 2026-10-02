@@ -1,5 +1,6 @@
 import type { FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
@@ -100,6 +101,15 @@ export const resetCustomerEntitlements = async ({
 			logger.info(
 				`[resetCustomerEntitlements] customer=${customerId}, Redis cache updated`,
 			);
+
+			// A new cycle may let reduced shares grow back; this request reads the re-fit shares too.
+			if (fullCus.balance_allocations) {
+				const { written } = await refreshAllocationScaleAfterWrite({
+					ctx,
+					customerId,
+				});
+				if (written) fullCus.balance_allocations = written;
+			}
 		}
 
 		return true;

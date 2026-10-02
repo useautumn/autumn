@@ -52,7 +52,7 @@ export const ensureSubjectState = async ({
 	if (viewHasEntity({ state, identity })) return state;
 	const hydrated = await awaitLoadWithinDeadline({
 		identity,
-		load: hydrateOnce({ scope, identity }),
+		load: scope.state.entityLoads.load({ identity }),
 	});
 	// The decision reads the freshest merged view, so the catalog must be ensured for that view, not the entity slice alone.
 	return scope.ctx.writer.readFreshestState({ identity }) ?? hydrated;

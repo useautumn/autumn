@@ -50,9 +50,15 @@ export const normalizedToUsageWindowFeatureIds = ({
 	const planUsageLimits = (customerProduct: { internal_product_id: string }) =>
 		productById.get(customerProduct.internal_product_id)?.usage_limits ?? [];
 
+	// Allocation counters ride usage_windows, so allocated features cache them too.
+	const allocatedFeatureIds = Object.values(
+		normalized.customer.balance_allocations ?? {},
+	).map((allocation) => allocation.feature_id);
+
 	return [
-		...new Set(
-			[
+		...new Set([
+			...allocatedFeatureIds,
+			...[
 				...(normalized.customer.usage_limits ?? []),
 				...(normalized.entity?.usage_limits ?? []),
 				...normalized.customer_products.flatMap(planUsageLimits),
@@ -60,7 +66,7 @@ export const normalizedToUsageWindowFeatureIds = ({
 					normalized.entity_aggregations?.aggregated_customer_products ?? []
 				).flatMap(planUsageLimits),
 			].map((usageLimit) => usageLimit.feature_id),
-		),
+		]),
 	];
 };
 

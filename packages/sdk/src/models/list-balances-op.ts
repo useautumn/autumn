@@ -154,6 +154,25 @@ export type ListBalancesPrice = {
 };
 
 /**
+ * Where this row's credits come from: shared at the customer level, or owned by the entity.
+ */
+export const ListBalancesSource = {
+  Customer: "customer",
+  Entity: "entity",
+} as const;
+/**
+ * Where this row's credits come from: shared at the customer level, or owned by the entity.
+ */
+export type ListBalancesSource = OpenEnum<typeof ListBalancesSource>;
+
+export type ListBalancesAllocation = {
+  /**
+   * The amount allocated to this entity.
+   */
+  amount: number;
+};
+
+/**
  * Whether this balance is active or expired.
  */
 export const ListBalancesListStatus = {
@@ -221,6 +240,14 @@ export type ListBalancesList = {
    * Timestamp when this balance expires, or null for no expiration.
    */
   expiresAt: number | null;
+  /**
+   * Where this row's credits come from: shared at the customer level, or owned by the entity.
+   */
+  source?: ListBalancesSource | undefined;
+  /**
+   * Set when this row's numbers are the entity's allocated share of the customer's credits.
+   */
+  allocation?: ListBalancesAllocation | null | undefined;
   /**
    * The feature this balance is for.
    */
@@ -458,6 +485,30 @@ export function listBalancesPriceFromJSON(
 }
 
 /** @internal */
+export const ListBalancesSource$inboundSchema: z.ZodMiniType<
+  ListBalancesSource,
+  unknown
+> = openEnums.inboundSchema(ListBalancesSource);
+
+/** @internal */
+export const ListBalancesAllocation$inboundSchema: z.ZodMiniType<
+  ListBalancesAllocation,
+  unknown
+> = z.object({
+  amount: types.number(),
+});
+
+export function listBalancesAllocationFromJSON(
+  jsonString: string,
+): SafeParseResult<ListBalancesAllocation, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListBalancesAllocation$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListBalancesAllocation' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListBalancesListStatus$inboundSchema: z.ZodMiniType<
   ListBalancesListStatus,
   unknown
@@ -506,6 +557,10 @@ export const ListBalancesList$inboundSchema: z.ZodMiniType<
     reset: types.nullable(z.lazy(() => ListBalancesReset$inboundSchema)),
     price: types.nullable(z.lazy(() => ListBalancesPrice$inboundSchema)),
     expires_at: types.nullable(types.number()),
+    source: types.optional(ListBalancesSource$inboundSchema),
+    allocation: z.optional(
+      z.nullable(z.lazy(() => ListBalancesAllocation$inboundSchema)),
+    ),
     feature_id: types.string(),
     status: ListBalancesListStatus$inboundSchema,
     rollovers: z.array(z.lazy(() => ListBalancesRollover$inboundSchema)),

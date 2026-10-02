@@ -16,12 +16,18 @@ export const activateFreeDefaultProduct = async ({
 	customerProduct,
 	fullCustomer,
 	defaultProduct,
+	emitsBillingUpdated = false,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	defaultProduct?: FullProduct;
-}): Promise<FullCusProduct | undefined> => {
+	/** The caller sends billing.updated and carries `allocationsAdjusted` on it. */
+	emitsBillingUpdated?: boolean;
+}): Promise<{
+	insertedCustomerProduct?: FullCusProduct;
+	allocationsAdjusted: boolean;
+}> => {
 	const { logger } = ctx;
 
 	// customerProduct eligible for default product
@@ -34,7 +40,7 @@ export const activateFreeDefaultProduct = async ({
 		logger.debug(
 			`[activateFreeDefaultProduct] Skipping - product is not main recurring customer scoped: ${customerProduct.product.name}`,
 		);
-		return undefined;
+		return { allocationsAdjusted: false };
 	}
 
 	// 1. Get free default product for group
@@ -45,7 +51,7 @@ export const activateFreeDefaultProduct = async ({
 			productGroup: customerProduct.product.group,
 		}));
 
-	if (!freeDefaultProduct) return;
+	if (!freeDefaultProduct) return { allocationsAdjusted: false };
 
 	// 2. Initialise customer product
 	const newCustomerProduct = initFullCustomerProductFromProduct({
@@ -80,8 +86,9 @@ export const activateFreeDefaultProduct = async ({
 	});
 
 	// 3. Execute autumn billing plan
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted = false } = await executeAutumnBillingPlan({
 		ctx,
+		emitsBillingUpdated,
 		autumnBillingPlan: {
 			customerId: fullCustomer?.id ?? "",
 			insertCustomerProducts: [newCustomerProduct],
@@ -89,5 +96,5 @@ export const activateFreeDefaultProduct = async ({
 		},
 	});
 
-	return newCustomerProduct;
+	return { insertedCustomerProduct: newCustomerProduct, allocationsAdjusted };
 };

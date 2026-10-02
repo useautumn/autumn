@@ -1,9 +1,11 @@
 import {
 	ErrCode,
+	notNullish,
 	RecaseError,
 	type UpdateBalanceParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
 import { isAsyncBalanceUpdateEnabled } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { JobName } from "@/queue/JobName.js";
@@ -11,7 +13,10 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getUpdateBalanceProducerQueueUrl } from "@/queue/trackAsyncQueueUrls.js";
 import { runBalanceWorkerAsyncUpdateBalance } from "../balanceWorker/runBalanceWorkerAsyncUpdateBalance.js";
 import { runBalanceWorkerUpdateBalance } from "../balanceWorker/runBalanceWorkerUpdateBalance.js";
-import { updateBalanceOnCacheV2 } from "./updateBalanceOnCacheV2.js";
+import {
+	updateBalanceOnCacheV2,
+	updateChangesBalance,
+} from "./updateBalanceOnCacheV2.js";
 
 const ASYNC_UPDATE_BALANCE_UNAVAILABLE_MESSAGE =
 	"Async balance update is not available right now";
@@ -75,11 +80,18 @@ export const runUpdateBalanceV2 = async ({
 	params: UpdateBalanceParamsV0;
 	targetBalance?: number;
 }): Promise<void> => {
-	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id })) {
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id }))
 		await runBalanceWorkerUpdateBalance({ ctx, params, targetBalance });
-		return;
-	}
-	await updateBalanceOnCacheV2({ ctx, params, targetBalance });
+	else await updateBalanceOnCacheV2({ ctx, params, targetBalance });
+
+	if (
+		updateChangesBalance({ params, targetBalance }) ||
+		notNullish(params.next_reset_at)
+	)
+		await refreshAllocationScaleAfterWrite({
+			ctx,
+			customerId: params.customer_id,
+		});
 };
 
 /** `balances.update`: queued for orgs on async updates, run now for everyone else. */

@@ -8,18 +8,20 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { notifyAllocationsAdjusted } from "@/internal/balances/allocate/actions/notifyAllocationsAdjusted.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
 import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import type { CustomerProductActivation } from "../types/customerProductActivation";
 
-/** Billing webhook emission is opt-in because some callers batch their own events. */
+/** Billing webhook emission is opt-in because some callers batch their own events; allocation changes still get exactly one. */
 export const expireCustomerProductAndActivateDefault = async ({
 	ctx,
 	customerProduct,
 	fullCustomer,
 	updates: extraUpdates,
 	emitBillingUpdated = false,
+	callerEmitsBillingUpdated = false,
 	activatedAt = Date.now(),
 }: {
 	ctx: AutumnContext;
@@ -27,11 +29,14 @@ export const expireCustomerProductAndActivateDefault = async ({
 	fullCustomer: FullCustomer;
 	updates?: Partial<InsertCustomerProduct>;
 	emitBillingUpdated?: boolean;
+	/** The caller batches its own billing.updated and tags it from the returned `allocationsAdjusted`. */
+	callerEmitsBillingUpdated?: boolean;
 	activatedAt?: number;
 }): Promise<{
 	updates: Partial<InsertCustomerProduct>;
 	activation?: CustomerProductActivation;
 	insertedCustomerProduct?: FullCusProduct;
+	allocationsAdjusted: boolean;
 }> => {
 	const { org, env } = ctx;
 
@@ -43,19 +48,22 @@ export const expireCustomerProductAndActivateDefault = async ({
 		...extraUpdates,
 	};
 
-	await executeAutumnBillingPlan({
-		ctx,
-		autumnBillingPlan: {
-			customerId: fullCustomer.id || fullCustomer.internal_id,
-			insertCustomerProducts: [],
-			updateCustomerProducts: [
-				{
-					customerProduct,
-					updates: updates as CustomerProductUpdate["updates"],
-				},
-			],
-		},
-	});
+	// Both plans defer their allocation notice to this action, which sends one for the pair.
+	const { allocationsAdjusted: expiryAdjusted = false } =
+		await executeAutumnBillingPlan({
+			emitsBillingUpdated: true,
+			ctx,
+			autumnBillingPlan: {
+				customerId: fullCustomer.id || fullCustomer.internal_id,
+				insertCustomerProducts: [],
+				updateCustomerProducts: [
+					{
+						customerProduct,
+						updates: updates as CustomerProductUpdate["updates"],
+					},
+				],
+			},
+		});
 
 	ctx.logger.debug(
 		`[expireCustomerProduct]: expiring ${customerProduct.product.name}`,
@@ -80,17 +88,23 @@ export const expireCustomerProductAndActivateDefault = async ({
 	});
 
 	// 3. Activate free successor (scheduled or default)
-	const { activation, insertedCustomerProduct } =
-		await activateFreeSuccessorProduct({
-			ctx,
-			fromCustomerProduct: customerProduct,
-			fullCustomer,
-			activatedAt,
-		});
+	const {
+		activation,
+		insertedCustomerProduct,
+		allocationsAdjusted: successorAdjusted,
+	} = await activateFreeSuccessorProduct({
+		ctx,
+		fromCustomerProduct: customerProduct,
+		fullCustomer,
+		activatedAt,
+		emitsBillingUpdated: true,
+	});
+	const allocationsAdjusted = expiryAdjusted || successorAdjusted;
 
 	// 4. Emit billing.updated (payload needs the activated/inserted products)
 	if (emitBillingUpdated) {
 		emitCustomerProductBillingUpdated({
+			allocationsAdjusted,
 			ctx,
 			originalFullCustomer,
 			updateCustomerProducts: [
@@ -108,11 +122,17 @@ export const expireCustomerProductAndActivateDefault = async ({
 				? [insertedCustomerProduct]
 				: [],
 		});
+	} else if (allocationsAdjusted && !callerEmitsBillingUpdated) {
+		void notifyAllocationsAdjusted({
+			ctx,
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+		});
 	}
 
 	return {
 		updates,
 		activation,
 		insertedCustomerProduct,
+		allocationsAdjusted,
 	};
 };

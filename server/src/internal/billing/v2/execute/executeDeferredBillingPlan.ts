@@ -70,7 +70,8 @@ export const executeDeferredBillingPlan = async ({
 		metadataId: metadata.id,
 	});
 
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan: autumnBillingPlanToExecute,
 		stripeInvoice: stripeBillingResult.stripeInvoice ?? stripeInvoice,
@@ -92,6 +93,7 @@ export const executeDeferredBillingPlan = async ({
 	});
 
 	void sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		originalFullCustomer: billingContext.fullCustomer,

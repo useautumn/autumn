@@ -42,6 +42,7 @@ export const prepareDeductionOptionsV2 = ({
 			: (options.overageBehaviour ?? "cap"),
 		skipAdditionalBalance: true,
 		alterGrantedBalance: options.alterGrantedBalance ?? false,
+		countsAllocations: options.countsAllocations ?? false,
 		customerEntitlementFilters: options.customerEntitlementFilters,
 		eventProperties: options.eventProperties,
 		paidAllocatedV1: isPaidAllocatedV1,

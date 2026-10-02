@@ -115,7 +115,7 @@ export const insertSegmentCustomerProduct = ({
 		externalId: productContext.externalId,
 		billingCycleAnchorResetsAt:
 			phaseContext.billingCycleAnchor === "phase_start"
-				? segment.startsAt
+				? phaseContext.startsAt
 				: null,
 	});
 };

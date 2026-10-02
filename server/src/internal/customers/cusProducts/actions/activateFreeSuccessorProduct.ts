@@ -17,14 +17,18 @@ export const activateFreeSuccessorProduct = async ({
 	fromCustomerProduct,
 	fullCustomer,
 	activatedAt,
+	emitsBillingUpdated = false,
 }: {
 	ctx: AutumnContext;
 	fromCustomerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	activatedAt: number;
+	/** The caller sends billing.updated and carries `allocationsAdjusted` on it. */
+	emitsBillingUpdated?: boolean;
 }): Promise<{
 	activation?: CustomerProductActivation;
 	insertedCustomerProduct?: FullCusProduct;
+	allocationsAdjusted: boolean;
 }> => {
 	const { logger } = ctx;
 
@@ -34,7 +38,7 @@ export const activateFreeSuccessorProduct = async ({
 		logger.debug(
 			`[activateFreeSuccessor] Skipping - product is add-on or one-off: ${fromCustomerProduct.product.name}`,
 		);
-		return {};
+		return { allocationsAdjusted: false };
 	}
 
 	// 2. Check if there's another active customer product in the same group
@@ -48,7 +52,7 @@ export const activateFreeSuccessorProduct = async ({
 		logger.debug(
 			`[activateFreeSuccessor] Skipping - another active customer product in group: ${hasActiveInGroup.product.name}`,
 		);
-		return {};
+		return { allocationsAdjusted: false };
 	}
 
 	// 3. Activate free scheduled customer product if exists
@@ -65,13 +69,15 @@ export const activateFreeSuccessorProduct = async ({
 		scheduledCustomerProduct &&
 		isCustomerProductFree(scheduledCustomerProduct)
 	) {
-		const { updates } = await activateScheduledCustomerProduct({
-			ctx,
-			fromCustomerProduct,
-			customerProduct: scheduledCustomerProduct,
-			fullCustomer,
-			activatedAt,
-		});
+		const { updates, allocationsAdjusted } =
+			await activateScheduledCustomerProduct({
+				ctx,
+				fromCustomerProduct,
+				customerProduct: scheduledCustomerProduct,
+				fullCustomer,
+				activatedAt,
+				emitsBillingUpdated,
+			});
 		const activatedCustomerProduct = {
 			...scheduledCustomerProduct,
 			...updates,
@@ -86,16 +92,19 @@ export const activateFreeSuccessorProduct = async ({
 				before: scheduledCustomerProduct,
 				after: activatedCustomerProduct,
 			},
+			allocationsAdjusted,
 		};
 	}
 
 	// 2. Fall back to default product (creates a new customer product)
 
-	const newCustomerProduct = await activateFreeDefaultProduct({
-		ctx,
-		customerProduct: fromCustomerProduct,
-		fullCustomer,
-	});
+	const { insertedCustomerProduct: newCustomerProduct, allocationsAdjusted } =
+		await activateFreeDefaultProduct({
+			ctx,
+			customerProduct: fromCustomerProduct,
+			fullCustomer,
+			emitsBillingUpdated,
+		});
 
 	if (newCustomerProduct) {
 		fullCustomer.customer_products = [
@@ -104,5 +113,5 @@ export const activateFreeSuccessorProduct = async ({
 		];
 	}
 
-	return { insertedCustomerProduct: newCustomerProduct };
+	return { insertedCustomerProduct: newCustomerProduct, allocationsAdjusted };
 };

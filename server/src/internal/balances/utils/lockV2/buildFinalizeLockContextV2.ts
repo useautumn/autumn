@@ -27,6 +27,7 @@ export type FinalizeLockContextV2 = {
 	deductionOptions: {
 		triggerAutoTopUp: boolean;
 		eventProperties?: EventProperties;
+		countsAllocations: boolean;
 		overageBehaviour: NonNullable<DeductionOptions["overageBehaviour"]>;
 	};
 };
@@ -97,6 +98,7 @@ export const buildFinalizeLockContextV2 = async ({
 		deductionOptions: {
 			triggerAutoTopUp: true,
 			eventProperties,
+			countsAllocations: true,
 			// Receipts written before this field existed were always locked under reject.
 			overageBehaviour: receipt.overage_behavior ?? "reject",
 		},

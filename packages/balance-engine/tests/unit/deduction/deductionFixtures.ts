@@ -90,6 +90,7 @@ export const createDeductionRequest = ({
 	enforcesSpendLimit = true,
 	customerEntitlementFilters,
 	countsUsageWindows = true,
+	countsAllocations = true,
 	properties = null,
 	enforceOverdueBlock = false,
 	now = occurredAt,
@@ -103,6 +104,7 @@ export const createDeductionRequest = ({
 	enforcesSpendLimit?: boolean;
 	customerEntitlementFilters?: DeductionRequest["selection"]["customerEntitlementFilters"];
 	countsUsageWindows?: boolean;
+	countsAllocations?: boolean;
 	properties?: DeductionRequest["selection"]["properties"];
 	enforceOverdueBlock?: boolean;
 	now?: number;
@@ -115,6 +117,7 @@ export const createDeductionRequest = ({
 		properties,
 		includesCreditSystems,
 		countsUsageWindows,
+		countsAllocations,
 		customerEntitlementFilters,
 		org,
 		enforceOverdueBlock,

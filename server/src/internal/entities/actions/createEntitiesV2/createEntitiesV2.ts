@@ -89,7 +89,8 @@ export const createEntitiesV2 = async ({
 		await refuseUnpaidInvoice({ ctx, billingContext, stripeResult });
 	}
 
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan,
 		stripeInvoice: stripeResult.stripeInvoice,
@@ -104,6 +105,7 @@ export const createEntitiesV2 = async ({
 	});
 	// Fire-and-forget, as customer creation does
 	void sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan,
 		originalFullCustomer: context.fullCustomer,

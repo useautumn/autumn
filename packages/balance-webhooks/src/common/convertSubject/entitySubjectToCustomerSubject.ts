@@ -5,8 +5,11 @@ export const entitySubjectToCustomerSubject = ({
 	fullSubject,
 }: {
 	fullSubject: WorkerFullSubject;
-}): WorkerFullSubject => ({
-	...fullSubject,
-	identity: { ...fullSubject.identity, entityId: null },
-	entity: null,
-});
+}): WorkerFullSubject =>
+	fullSubject.entity === null && fullSubject.identity.entityId === null
+		? fullSubject
+		: {
+				...fullSubject,
+				identity: { ...fullSubject.identity, entityId: null },
+				entity: null,
+			};

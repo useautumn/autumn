@@ -15,6 +15,7 @@ export const checkCommandToDeductionRequest = ({
 		properties: command.properties,
 		includesCreditSystems: true,
 		countsUsageWindows: true,
+		countsAllocations: true,
 		org: command.org,
 		enforceOverdueBlock: true,
 	}),

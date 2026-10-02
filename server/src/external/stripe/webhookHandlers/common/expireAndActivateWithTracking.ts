@@ -1,9 +1,11 @@
 import type { FullCusProduct } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import type { CustomerProductActivation } from "@/internal/customers/cusProducts/types/customerProductActivation";
 import type { StripeSubscriptionDeletedContext } from "../handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
 import type { StripeSubscriptionUpdatedContext } from "../handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
+import { addBillingChangeTag } from "./billingChangeTags";
 import {
 	trackCustomerProductInsertion,
 	trackCustomerProductUpdate,
@@ -29,13 +31,16 @@ export const expireAndActivateWithTracking = async ({
 }> => {
 	const { fullCustomer } = eventContext;
 
-	const { updates, activation, insertedCustomerProduct } =
+	const { updates, activation, insertedCustomerProduct, allocationsAdjusted } =
 		await customerProductActions.expireAndActivateDefault({
 			ctx,
 			customerProduct,
 			fullCustomer,
 			activatedAt: eventContext.nowMs,
+			callerEmitsBillingUpdated: true,
 		});
+	if (allocationsAdjusted)
+		addBillingChangeTag(eventContext, ALLOCATIONS_ADJUSTED_TAG);
 
 	const expiredCustomerProduct = trackCustomerProductUpdate({
 		eventContext,

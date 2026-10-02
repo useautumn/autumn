@@ -100,14 +100,14 @@ export type CustomerPurchaseLimitUnion =
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export const AutoTopupSource = {
+export const CustomerAutoTopupSource = {
   Customer: "customer",
   Plan: "plan",
 } as const;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export type AutoTopupSource = OpenEnum<typeof AutoTopupSource>;
+export type CustomerAutoTopupSource = OpenEnum<typeof CustomerAutoTopupSource>;
 
 export type CustomerAutoTopup = {
   /**
@@ -137,7 +137,7 @@ export type CustomerAutoTopup = {
   /**
    * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
    */
-  source?: AutoTopupSource | undefined;
+  source?: CustomerAutoTopupSource | undefined;
 };
 
 /**
@@ -155,14 +155,16 @@ export type CustomerLimitType = OpenEnum<typeof CustomerLimitType>;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export const SpendLimitSource = {
+export const CustomerSpendLimitSource = {
   Customer: "customer",
   Plan: "plan",
 } as const;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export type SpendLimitSource = OpenEnum<typeof SpendLimitSource>;
+export type CustomerSpendLimitSource = OpenEnum<
+  typeof CustomerSpendLimitSource
+>;
 
 export type CustomerSpendLimit = {
   /**
@@ -188,7 +190,7 @@ export type CustomerSpendLimit = {
   /**
    * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
    */
-  source?: SpendLimitSource | undefined;
+  source?: CustomerSpendLimitSource | undefined;
 };
 
 /**
@@ -229,14 +231,16 @@ export type CustomerUsageLimitFilter = {
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export const UsageLimitSource = {
+export const CustomerUsageLimitSource = {
   Customer: "customer",
   Plan: "plan",
 } as const;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export type UsageLimitSource = OpenEnum<typeof UsageLimitSource>;
+export type CustomerUsageLimitSource = OpenEnum<
+  typeof CustomerUsageLimitSource
+>;
 
 export type CustomerUsageLimit = {
   /**
@@ -270,7 +274,7 @@ export type CustomerUsageLimit = {
   /**
    * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
    */
-  source?: UsageLimitSource | undefined;
+  source?: CustomerUsageLimitSource | undefined;
 };
 
 /**
@@ -311,14 +315,16 @@ export type CustomerUsageAlertFilter = {
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export const UsageAlertSource = {
+export const CustomerUsageAlertSource = {
   Customer: "customer",
   Plan: "plan",
 } as const;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export type UsageAlertSource = OpenEnum<typeof UsageAlertSource>;
+export type CustomerUsageAlertSource = OpenEnum<
+  typeof CustomerUsageAlertSource
+>;
 
 export type CustomerUsageAlert = {
   /**
@@ -352,20 +358,22 @@ export type CustomerUsageAlert = {
   /**
    * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
    */
-  source?: UsageAlertSource | undefined;
+  source?: CustomerUsageAlertSource | undefined;
 };
 
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export const OverageAllowedSource = {
+export const CustomerOverageAllowedSource = {
   Customer: "customer",
   Plan: "plan",
 } as const;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export type OverageAllowedSource = OpenEnum<typeof OverageAllowedSource>;
+export type CustomerOverageAllowedSource = OpenEnum<
+  typeof CustomerOverageAllowedSource
+>;
 
 export type CustomerOverageAllowed = {
   /**
@@ -379,7 +387,7 @@ export type CustomerOverageAllowed = {
   /**
    * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
    */
-  source?: OverageAllowedSource | undefined;
+  source?: CustomerOverageAllowedSource | undefined;
 };
 
 /**
@@ -1590,10 +1598,10 @@ export function customerPurchaseLimitUnionFromJSON(
 }
 
 /** @internal */
-export const AutoTopupSource$inboundSchema: z.ZodMiniType<
-  AutoTopupSource,
+export const CustomerAutoTopupSource$inboundSchema: z.ZodMiniType<
+  CustomerAutoTopupSource,
   unknown
-> = openEnums.inboundSchema(AutoTopupSource);
+> = openEnums.inboundSchema(CustomerAutoTopupSource);
 
 /** @internal */
 export const CustomerAutoTopup$inboundSchema: z.ZodMiniType<
@@ -1610,7 +1618,7 @@ export const CustomerAutoTopup$inboundSchema: z.ZodMiniType<
       z.lazy(() => CustomerPurchaseLimit2$inboundSchema),
     ])),
     invoice_mode: types.optional(types.boolean()),
-    source: types.optional(AutoTopupSource$inboundSchema),
+    source: types.optional(CustomerAutoTopupSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1638,10 +1646,10 @@ export const CustomerLimitType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CustomerLimitType);
 
 /** @internal */
-export const SpendLimitSource$inboundSchema: z.ZodMiniType<
-  SpendLimitSource,
+export const CustomerSpendLimitSource$inboundSchema: z.ZodMiniType<
+  CustomerSpendLimitSource,
   unknown
-> = openEnums.inboundSchema(SpendLimitSource);
+> = openEnums.inboundSchema(CustomerSpendLimitSource);
 
 /** @internal */
 export const CustomerSpendLimit$inboundSchema: z.ZodMiniType<
@@ -1654,7 +1662,7 @@ export const CustomerSpendLimit$inboundSchema: z.ZodMiniType<
     limit_type: types.optional(CustomerLimitType$inboundSchema),
     overage_limit: types.optional(types.number()),
     skip_overage_billing: types.optional(types.boolean()),
-    source: types.optional(SpendLimitSource$inboundSchema),
+    source: types.optional(CustomerSpendLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1707,10 +1715,10 @@ export function customerUsageLimitFilterFromJSON(
 }
 
 /** @internal */
-export const UsageLimitSource$inboundSchema: z.ZodMiniType<
-  UsageLimitSource,
+export const CustomerUsageLimitSource$inboundSchema: z.ZodMiniType<
+  CustomerUsageLimitSource,
   unknown
-> = openEnums.inboundSchema(UsageLimitSource);
+> = openEnums.inboundSchema(CustomerUsageLimitSource);
 
 /** @internal */
 export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
@@ -1727,7 +1735,7 @@ export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
       z.lazy(() => CustomerUsageLimitFilter$inboundSchema),
     ),
     usage: types.optional(types.number()),
-    source: types.optional(UsageLimitSource$inboundSchema),
+    source: types.optional(CustomerUsageLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1777,10 +1785,10 @@ export function customerUsageAlertFilterFromJSON(
 }
 
 /** @internal */
-export const UsageAlertSource$inboundSchema: z.ZodMiniType<
-  UsageAlertSource,
+export const CustomerUsageAlertSource$inboundSchema: z.ZodMiniType<
+  CustomerUsageAlertSource,
   unknown
-> = openEnums.inboundSchema(UsageAlertSource);
+> = openEnums.inboundSchema(CustomerUsageAlertSource);
 
 /** @internal */
 export const CustomerUsageAlert$inboundSchema: z.ZodMiniType<
@@ -1797,7 +1805,7 @@ export const CustomerUsageAlert$inboundSchema: z.ZodMiniType<
       z.lazy(() => CustomerUsageAlertFilter$inboundSchema),
     ),
     name: types.optional(types.string()),
-    source: types.optional(UsageAlertSource$inboundSchema),
+    source: types.optional(CustomerUsageAlertSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1818,10 +1826,10 @@ export function customerUsageAlertFromJSON(
 }
 
 /** @internal */
-export const OverageAllowedSource$inboundSchema: z.ZodMiniType<
-  OverageAllowedSource,
+export const CustomerOverageAllowedSource$inboundSchema: z.ZodMiniType<
+  CustomerOverageAllowedSource,
   unknown
-> = openEnums.inboundSchema(OverageAllowedSource);
+> = openEnums.inboundSchema(CustomerOverageAllowedSource);
 
 /** @internal */
 export const CustomerOverageAllowed$inboundSchema: z.ZodMiniType<
@@ -1831,7 +1839,7 @@ export const CustomerOverageAllowed$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.string(),
     enabled: z._default(types.boolean(), false),
-    source: types.optional(OverageAllowedSource$inboundSchema),
+    source: types.optional(CustomerOverageAllowedSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

@@ -51,15 +51,18 @@ export const checkAfterDeduction = ({
 	const checkWith = ({
 		moved,
 		windowsUsed,
+		allocationUsed,
 	}: {
 		moved: DeductionDelta[];
 		windowsUsed: Map<string, Decimal>;
+		allocationUsed?: Map<string, Decimal>;
 	}): CheckResult => {
 		const deductionState: DeductionState = {
 			remaining: new Decimal(request.value),
 			terms: request.terms,
 			deltas: [...moved],
 			usageWindowConsumed: new Map(windowsUsed),
+			allocationConsumed: allocationUsed && new Map(allocationUsed),
 		};
 		deductFromBuckets({ context, deductionState });
 		const drawn = deductionStateToOutcome({ context, deductionState, request });
@@ -77,8 +80,11 @@ export const checkAfterDeduction = ({
 	const windowsUsed = outcome.rejected
 		? new Map()
 		: outcome.usageWindowConsumed;
+	const allocationUsed = outcome.rejected
+		? undefined
+		: outcome.allocationConsumed;
 	return {
-		after: checkWith({ moved, windowsUsed }),
+		after: checkWith({ moved, windowsUsed, allocationUsed }),
 		before: () => checkWith({ moved: [], windowsUsed: new Map() }),
 	};
 };

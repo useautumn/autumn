@@ -1,6 +1,7 @@
 import {
 	CusProductStatus,
 	customerEntitlementFundsFeature,
+	fullSubjectToRowsWithProduct,
 	isCusEntExpired,
 	isCustomerProductLicenseAssignment,
 	isEntityCusEnt,
@@ -39,19 +40,14 @@ export const subjectToFeatureRows = <
 	fundsFeatureId?: string;
 	now: number;
 }): AutoTopupFeatureRow<CE, CP>[] => {
-	const rows: AutoTopupFeatureRow<CE, CP>[] = [];
-	for (const customerProduct of fullSubject.customer_products) {
-		if (!ROW_STATUSES.includes(customerProduct.status)) continue;
-		for (const row of customerProduct.customer_entitlements) {
-			rows.push({ ...row, customer_product: customerProduct });
-		}
-	}
-	for (const row of fullSubject.extra_customer_entitlements) {
-		rows.push({ ...row, customer_product: null });
-	}
-	for (const row of fullSubject.pooled_customer_entitlements ?? []) {
-		rows.push({ ...row, customer_product: null });
-	}
+	// A loose or pooled row has no product to judge by status, so it stays.
+	const rows: AutoTopupFeatureRow<CE, CP>[] = fullSubjectToRowsWithProduct({
+		fullSubject,
+	}).filter(
+		(row) =>
+			row.customer_product === null ||
+			ROW_STATUSES.includes(row.customer_product.status),
+	);
 
 	const selected = rows.filter(
 		(row) =>

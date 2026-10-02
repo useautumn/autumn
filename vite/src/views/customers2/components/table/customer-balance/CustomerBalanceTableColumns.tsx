@@ -4,10 +4,12 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import {
+	AllowanceType,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	cusEntsToUnlimitedUsage,
+	EntInterval,
 	getRolloverFields,
 	isCusEntDisplayExpired,
 	nullish,
@@ -25,6 +27,7 @@ import {
 import {
 	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
+	ChartPieSliceIcon,
 	ClockCountdownIcon,
 	PulseIcon,
 } from "@phosphor-icons/react";
@@ -411,6 +414,30 @@ function BarCell({
 	);
 }
 
+/** balances.allocate splits the shared rows of one finite, resetting interval; entity-owned rows don't count. */
+const isAllocatableSharedBalance = ({
+	customerEntitlements,
+}: {
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) => {
+	const sharedRows = customerEntitlements.filter(
+		(ent) =>
+			!ent.internal_entity_id && !ent.customer_product?.internal_entity_id,
+	);
+	const intervals = new Set(sharedRows.map((ent) => ent.entitlement.interval));
+	return (
+		intervals.size === 1 &&
+		sharedRows.every(
+			(ent) =>
+				!ent.unlimited &&
+				ent.entitlement.allowance_type !== AllowanceType.Unlimited &&
+				ent.entitlement.allowance != null &&
+				!!ent.entitlement.interval &&
+				ent.entitlement.interval !== EntInterval.Lifetime,
+		)
+	);
+};
+
 function BalanceActionsCell({
 	row,
 	fullCustomer,
@@ -418,6 +445,7 @@ function BalanceActionsCell({
 	onDeleteClick,
 	onRecordUsageClick,
 	onCheckBalanceClick,
+	onAllocateClick,
 	onRecalculateClick,
 }: {
 	row: Row<CustomerBalanceRowData>;
@@ -426,6 +454,7 @@ function BalanceActionsCell({
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onAllocateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) {
 	const expired = isCusEntDisplayExpired({ cusEnt: row.original });
@@ -451,9 +480,23 @@ function BalanceActionsCell({
 			? row.subRows.map((subRow) => subRow.original)
 			: [row.original]
 	).filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
+	const canAllocate =
+		!expired &&
+		isParentRow &&
+		!!onAllocateClick &&
+		(fullCustomer?.entities ?? []).some(
+			(entity) => entity.id && !entity.deleted,
+		) &&
+		isAllocatableSharedBalance({ customerEntitlements });
 
 	// Reserve the slot, or the column edge goes ragged.
-	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
+	if (
+		!canDelete &&
+		!canRecordUsage &&
+		!canCheckBalance &&
+		!canAllocate &&
+		!canRecalculate
+	)
 		return (
 			<div className="flex justify-end" aria-hidden>
 				<ToolbarButton className="invisible" tabIndex={-1} />
@@ -493,6 +536,22 @@ function BalanceActionsCell({
 							<div className="flex w-full items-center justify-between gap-2 text-sm">
 								Check balance
 								<BracketsSquareIcon
+									size={12}
+									className="text-tertiary-foreground"
+								/>
+							</div>
+						</DropdownMenuItem>
+					)}
+					{canAllocate && (
+						<DropdownMenuItem
+							onClick={(event) => {
+								event.stopPropagation();
+								onAllocateClick(row.original);
+							}}
+						>
+							<div className="flex w-full items-center justify-between gap-2 text-sm">
+								Allocate to entities
+								<ChartPieSliceIcon
 									size={12}
 									className="text-tertiary-foreground"
 								/>
@@ -629,6 +688,7 @@ export const CustomerBalanceTableColumns = ({
 	onDeleteClick,
 	onRecordUsageClick,
 	onCheckBalanceClick,
+	onAllocateClick,
 	onRecalculateClick,
 }: {
 	fullCustomer: FullCustomer | null | undefined;
@@ -637,6 +697,7 @@ export const CustomerBalanceTableColumns = ({
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onAllocateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) => [
 	{
@@ -700,6 +761,7 @@ export const CustomerBalanceTableColumns = ({
 				onDeleteClick={onDeleteClick}
 				onRecordUsageClick={onRecordUsageClick}
 				onCheckBalanceClick={onCheckBalanceClick}
+				onAllocateClick={onAllocateClick}
 				onRecalculateClick={onRecalculateClick}
 			/>
 		),

@@ -5,6 +5,7 @@ import type { SubjectBaseline } from "../../../state/types/stateStore.js";
 import type { WorkerDb } from "../../../types/workerDb.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { PartitionWriter } from "../../writer/types/partitionWriter.js";
+import type { EntityLoads } from "../entityLoads/types/entityLoads.js";
 import type { InFlightLoads } from "../inFlightLoads/types/inFlightLoad.js";
 import type { SubjectJoinCache } from "../subjectJoinCache/types/subjectJoinCache.js";
 
@@ -16,7 +17,7 @@ export type Subject = {
 
 export type SubjectHydratorContext = {
 	catalogCache: CatalogCache;
-	db: Pick<WorkerDb, "getSubjectRows">;
+	db: Pick<WorkerDb, "getSubjectRows" | "getEntitySubjectRows">;
 	writer: Pick<PartitionWriter, "decide" | "readFreshestState" | "adopt">;
 	receiptPolicy: ReceiptPolicy;
 	/** Defaults to "log", the sqlite store's answer. */
@@ -29,6 +30,7 @@ export type SubjectHydratorContext = {
 export type SubjectHydratorState = {
 	inFlightLoads: InFlightLoads;
 	joinCache: SubjectJoinCache;
+	entityLoads: EntityLoads;
 };
 
 export type SubjectScope = {

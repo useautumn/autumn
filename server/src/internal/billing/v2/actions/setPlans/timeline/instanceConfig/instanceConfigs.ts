@@ -4,6 +4,7 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullProduct,
+	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import type {
 	GrantedLicense,
@@ -37,8 +38,9 @@ const resetsBillingCycleAtStart = ({
 	now: number;
 }) =>
 	customerProduct.billing_cycle_anchor_resets_at != null &&
-	customerProduct.billing_cycle_anchor_resets_at ===
-		customerProduct.starts_at &&
+	truncateMsToSecondPrecision(
+		customerProduct.billing_cycle_anchor_resets_at,
+	) === truncateMsToSecondPrecision(customerProduct.starts_at) &&
 	customerProduct.starts_at > now;
 
 export const customerProductToInstanceConfig = ({

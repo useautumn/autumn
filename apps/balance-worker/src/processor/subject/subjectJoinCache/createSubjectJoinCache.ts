@@ -105,6 +105,15 @@ export const createSubjectJoinCache = ({
 		if (!from || !changesKeepCatalogKeys({ changes })) return;
 		const join = joins.get(from);
 		if (!isCatalogCurrent(join)) return;
+		// The decision already joined the next state's view; it keeps that and gains the catalog.
+		const existing = joins.get(to);
+		if (existing && existing.catalogChangeCount === join.catalogChangeCount) {
+			if (existing.catalog === null) {
+				existing.catalog = join.catalog;
+				existing.catalogJoinedAt = join.catalogJoinedAt;
+			}
+			return;
+		}
 		joins.set(to, {
 			catalogChangeCount: join.catalogChangeCount,
 			catalog: join.catalog,

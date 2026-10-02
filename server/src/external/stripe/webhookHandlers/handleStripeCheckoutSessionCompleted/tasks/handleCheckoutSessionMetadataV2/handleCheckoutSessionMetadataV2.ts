@@ -182,7 +182,8 @@ const executeCheckoutSessionMetadataV2 = async ({
 	});
 
 	// Execute autumn billing plan (includes customer products, upsertSubscription, upsertInvoice)
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan: autumnBillingPlanToExecute,
 		stripeInvoice: checkoutContext.stripeInvoice,
@@ -208,6 +209,7 @@ const executeCheckoutSessionMetadataV2 = async ({
 
 	// Fire-and-forget billing.updated webhook (mirrors executeBillingPlan)
 	void sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		originalFullCustomer: updatedDeferredData.billingContext.fullCustomer,

@@ -1111,6 +1111,26 @@ class BalancePrice(BaseModel):
         return m
 
 
+BalanceSource = Union[
+    Literal[
+        "customer",
+        "entity",
+    ],
+    UnrecognizedStr,
+]
+r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
+
+
+class AllocationTypedDict(TypedDict):
+    amount: float
+    r"""The amount allocated to this entity."""
+
+
+class Allocation(BaseModel):
+    amount: float
+    r"""The amount allocated to this entity."""
+
+
 class BreakdownTypedDict(TypedDict):
     plan_id: Nullable[str]
     r"""The plan ID this balance originates from, or null for standalone balances."""
@@ -1132,6 +1152,10 @@ class BreakdownTypedDict(TypedDict):
     r"""Timestamp when this balance expires, or null for no expiration."""
     id: NotRequired[str]
     r"""The unique identifier for this balance breakdown."""
+    source: NotRequired[BalanceSource]
+    r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
+    allocation: NotRequired[Nullable[AllocationTypedDict]]
+    r"""Set when this row's numbers are the entity's allocated share of the customer's credits."""
 
 
 class Breakdown(BaseModel):
@@ -1165,10 +1189,16 @@ class Breakdown(BaseModel):
     id: Optional[str] = ""
     r"""The unique identifier for this balance breakdown."""
 
+    source: Optional[BalanceSource] = None
+    r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
+
+    allocation: OptionalNullable[Allocation] = UNSET
+    r"""Set when this row's numbers are the entity's allocated share of the customer's credits."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["id"])
-        nullable_fields = set(["plan_id", "reset", "price", "expires_at"])
+        optional_fields = set(["id", "source", "allocation"])
+        nullable_fields = set(["plan_id", "reset", "price", "expires_at", "allocation"])
         serialized = handler(self)
         m = {}
 
@@ -1234,6 +1264,10 @@ class BalanceTypedDict(TypedDict):
     r"""Detailed breakdown of balance sources when stacking multiple plans or grants."""
     rollovers: NotRequired[List[BalanceRolloverTypedDict]]
     r"""Rollover balances carried over from previous periods."""
+    allocated: NotRequired[float]
+    r"""Shared credits held for entities by allocations; present only when the customer allocates this feature."""
+    unallocated: NotRequired[float]
+    r"""Remaining shared credits no allocation holds; any entity may use them."""
 
 
 class Balance(BaseModel):
@@ -1270,9 +1304,17 @@ class Balance(BaseModel):
     rollovers: Optional[List[BalanceRollover]] = None
     r"""Rollover balances carried over from previous periods."""
 
+    allocated: Optional[float] = None
+    r"""Shared credits held for entities by allocations; present only when the customer allocates this feature."""
+
+    unallocated: Optional[float] = None
+    r"""Remaining shared credits no allocation holds; any entity may use them."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature", "breakdown", "rollovers"])
+        optional_fields = set(
+            ["feature", "breakdown", "rollovers", "allocated", "unallocated"]
+        )
         nullable_fields = set(["max_purchase", "next_reset_at"])
         serialized = handler(self)
         m = {}

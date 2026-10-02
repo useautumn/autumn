@@ -1,6 +1,7 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { refreshAllocationScale } from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import {
 	type PendingBatchTransition,
 	startBatchTransitions,
@@ -10,6 +11,21 @@ import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/re
 import { SubService } from "@/internal/subscriptions/SubService";
 import { workflows } from "@/queue/workflows";
 
+/** Customer-only plans (links, profile fields, subscription upserts) leave the shared credits allocations divide alone. */
+const planMayMoveSharedCredits = (plan: AutumnBillingPlan): boolean =>
+	plan.insertCustomerProducts.length > 0 ||
+	Boolean(plan.updateCustomerProduct) ||
+	(plan.updateCustomerProducts?.length ?? 0) > 0 ||
+	Boolean(plan.deleteCustomerProduct) ||
+	(plan.deleteCustomerProducts?.length ?? 0) > 0 ||
+	(plan.patchCustomerProducts?.length ?? 0) > 0 ||
+	(plan.insertCustomerEntitlements?.length ?? 0) > 0 ||
+	(plan.updateCustomerEntitlements?.length ?? 0) > 0 ||
+	Boolean(plan.pooledBalancePlan) ||
+	Boolean(plan.balanceTransitionPlan) ||
+	Boolean(plan.autoTopupRebalance) ||
+	Boolean(plan.oneOffPurchaseRebalance);
+
 /** After the plan's rows commit: what reads them back or reaches past them (seat convergence, ledgers, workflows, reconcile). */
 export const runPlanSideEffects = async ({
 	ctx,
@@ -18,6 +34,7 @@ export const runPlanSideEffects = async ({
 	stripeInvoice,
 	stripeInvoiceItems,
 	autumnInvoice,
+	emitsBillingUpdated,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
@@ -25,7 +42,8 @@ export const runPlanSideEffects = async ({
 	stripeInvoice?: Stripe.Invoice;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	autumnInvoice?: Invoice;
-}): Promise<void> => {
+	emitsBillingUpdated: boolean;
+}): Promise<{ allocationsAdjusted: boolean }> => {
 	const { db } = ctx;
 
 	await startBatchTransitions({ ctx, pending: pendingBatchTransitions });
@@ -88,4 +106,19 @@ export const runPlanSideEffects = async ({
 			deleteCache: true,
 		});
 	}
+
+	if (
+		!autumnBillingPlan.customerId ||
+		!planMayMoveSharedCredits(autumnBillingPlan)
+	)
+		return { allocationsAdjusted: false };
+	const { adjusted } = await refreshAllocationScale({
+		ctx,
+		customerId: autumnBillingPlan.customerId,
+		notify: !emitsBillingUpdated,
+	}).catch((error) => {
+		ctx.logger.error("[refreshAllocationScale] failed", { error });
+		return { adjusted: false };
+	});
+	return { allocationsAdjusted: emitsBillingUpdated && adjusted };
 };

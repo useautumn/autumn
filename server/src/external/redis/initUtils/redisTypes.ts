@@ -11,6 +11,10 @@ declare module "ioredis" {
 			paramsJson: string,
 		): Promise<string>;
 		rollUsageWindows(balanceKey: string, paramsJson: string): Promise<string>;
+		patchAllocationCounter(
+			balanceKey: string,
+			paramsJson: string,
+		): Promise<string>;
 		setCachedFullSubject(
 			numKeys: number,
 			...args: string[]

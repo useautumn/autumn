@@ -136,7 +136,8 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		oneOffPurchaseRebalance: undefined,
 	};
 
-	await executeAutumnBillingPlan({
+	const { allocationsAdjusted } = await executeAutumnBillingPlan({
+		emitsBillingUpdated: true,
 		ctx,
 		autumnBillingPlan: completionAutumnPlan,
 		stripeInvoice,
@@ -157,6 +158,7 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 	});
 
 	void sendBillingUpdatedWebhook({
+		allocationsAdjusted,
 		ctx,
 		autumnBillingPlan: completionAutumnPlan,
 		originalFullCustomer: updatedDeferredData.billingContext.fullCustomer,

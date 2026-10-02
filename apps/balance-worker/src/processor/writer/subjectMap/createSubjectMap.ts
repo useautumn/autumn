@@ -2,13 +2,7 @@ import type { SubjectState } from "@autumn/balance-engine";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type { SubjectMap } from "./types/subjectMap.js";
 
-/** Per partition writer; a worker holds many partitions, so the fleet total is this × partitions. */
-/** How much resident customer state a partition keeps. This is the cache that
- *  decides whether a check costs a millisecond or a Postgres subject load, and
- *  it is replacing a dedicated Redis instance holding gigabytes, so sizing it in
- *  single-digit megabytes left almost every customer cold between visits. At 512
- *  partitions this is 16 GiB across the fleet, under 3 GiB on a worker holding
- *  its ~85 partitions, against the 8 GiB a worker is given. */
+/** The bound a map falls back to when no worker budget is handed in: the fixed per-partition size prod ran before the budget existed. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
 
 type Entry = {
@@ -21,12 +15,74 @@ type Entry = {
 	evictOnUnpin: boolean;
 };
 
+const weigh = ({ value }: { value: unknown }): number =>
+	JSON.stringify(value)?.length ?? 0;
+
+const sameKeys = ({
+	previous,
+	next,
+}: {
+	previous: object;
+	next: object;
+}): boolean => {
+	const previousKeys = Object.keys(previous);
+	const nextKeys = Object.keys(next);
+	return (
+		previousKeys.length === nextKeys.length &&
+		previousKeys.every((key, index) => nextKeys[index] === key)
+	);
+};
+
+/**
+ * The serialised size of `next`, from the size `previous` was known to have
+ * and only the parts that changed. A state is replaced, never edited, so a row
+ * the mutation left alone is the same object in both, and the serialised text
+ * differs by exactly the rows and fields that were replaced.
+ */
+export const reweighSubjectState = ({
+	previous,
+	previousBytes,
+	next,
+}: {
+	previous: SubjectState;
+	previousBytes: number;
+	next: SubjectState;
+}): number => {
+	if (previous === next) return previousBytes;
+	if (!sameKeys({ previous, next })) return weigh({ value: next });
+	let bytes = previousBytes;
+	for (const key of Object.keys(next) as (keyof SubjectState)[]) {
+		const before = previous[key];
+		const after = next[key];
+		if (before === after) continue;
+		if (before === undefined || after === undefined)
+			return weigh({ value: next });
+		if (
+			Array.isArray(before) &&
+			Array.isArray(after) &&
+			before.length === after.length
+		) {
+			for (const [index, row] of after.entries()) {
+				const previousRow = before[index];
+				if (previousRow === row) continue;
+				bytes += weigh({ value: row }) - weigh({ value: previousRow });
+			}
+			continue;
+		}
+		bytes += weigh({ value: after }) - weigh({ value: before });
+	}
+	return bytes;
+};
+
 export const createSubjectMap = ({
 	maxBytes = SUBJECT_MAP_MAX_BYTES,
 }: {
-	maxBytes?: number;
+	maxBytes?: number | (() => number);
 } = {}): SubjectMap => {
-	if (!(maxBytes > 0)) throw new RangeError("maxBytes must be positive");
+	if (typeof maxBytes === "number" && !(maxBytes > 0))
+		throw new RangeError("maxBytes must be positive");
+	const boundBytes = () =>
+		typeof maxBytes === "number" ? maxBytes : maxBytes();
 	// Insertion order is recency: a read re-inserts, eviction walks from the front.
 	const entries = new Map<string, Entry>();
 	// A customer's subject keys (its own and its entities'), so an evict never walks the partition.
@@ -60,8 +116,9 @@ export const createSubjectMap = ({
 
 	/** Best effort: pinned subjects and the one just written stay even if the bound is exceeded. */
 	const evictUntilWithinBound = ({ except }: { except: string }) => {
+		const bound = boundBytes();
 		for (const [subjectKey, entry] of entries) {
-			if (totalBytes <= maxBytes) return;
+			if (totalBytes <= bound) return;
 			if (entry.pins > 0 || subjectKey === except) continue;
 			dropState({ subjectKey, entry });
 		}
@@ -111,12 +168,18 @@ export const createSubjectMap = ({
 		const entry = entryOf({ subjectKey });
 		entry.customerKey = customerKey;
 		index({ subjectKey, customerKey });
+		const previous = entry.bytes > 0 ? entry.state : null;
 		totalBytes -= entry.bytes;
-		entry.state = state;
-		entry.bytes = timeSync(
-			{ label: "subject.weigh" },
-			() => JSON.stringify(state).length,
+		entry.bytes = timeSync({ label: "subject.weigh" }, () =>
+			previous
+				? reweighSubjectState({
+						previous,
+						previousBytes: entry.bytes,
+						next: state,
+					})
+				: weigh({ value: state }),
 		);
+		entry.state = state;
 		totalBytes += entry.bytes;
 		touch({ subjectKey, entry });
 		evictUntilWithinBound({ except: subjectKey });

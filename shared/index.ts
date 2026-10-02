@@ -270,6 +270,7 @@ export * from "./utils/agentTypes";
 export * from "./utils/auth/autumnOAuthScopes";
 export * from "./utils/auth/oauthScopeUtils";
 export * from "./utils/authAccessControl";
+export * from "./utils/balanceAllocationUtils/allocationMath";
 export * from "./utils/billingControlUtils/index";
 export * from "./utils/billingUtils/index";
 // Checkout Utils

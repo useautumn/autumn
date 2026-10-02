@@ -133,6 +133,8 @@ local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = lock_receipt_key_from_keys
 local usage_window_limits = params.usage_window_limits
+local allocation_gates = index_allocation_gates(params.allocation_gates)
+local counts_allocations = params.counts_allocations == true
 local usage_window_now = params.usage_window_now
 local usage_window_ttl_seconds = params.usage_window_ttl_seconds
 local is_consumption = params.is_consumption
@@ -196,15 +198,28 @@ local enforce_usage_windows = is_consumption
     and not has_unwind
     and has_usage_window_limits
 local unwind_usage_windows = has_unwind and has_usage_window_limits
+-- Only customer usage (and its refunds) is gated and counted; admin balance edits never are.
+local allocation_active = counts_allocations
+    and not is_nil(allocation_gates)
+    and has_usage_window_limits
+local loaded_usage_window_limits = nil
+if enforce_usage_windows or unwind_usage_windows then
+  loaded_usage_window_limits = usage_window_limits
+elseif allocation_active then
+  loaded_usage_window_limits = {}
+  for _, limit in ipairs(usage_window_limits) do
+    if not is_nil(limit.allocation_role) then
+      table.insert(loaded_usage_window_limits, limit)
+    end
+  end
+end
 
 local context = init_context({
   org_id = org_id,
   env = env,
   customer_id = customer_id,
   customer_entitlement_deductions = customer_entitlement_deductions,
-  usage_window_limits = (enforce_usage_windows or unwind_usage_windows)
-      and usage_window_limits
-    or nil,
+  usage_window_limits = loaded_usage_window_limits,
   usage_window_now = usage_window_now,
   balance_keys_by_feature_id = params.balance_keys_by_feature_id,
   debug = params.debug,
@@ -221,6 +236,10 @@ if #(context.missing_customer_entitlement_ids or {}) > 0 then
     logs = context.logs,
     missing_customer_entitlement_ids = context.missing_customer_entitlement_ids,
   })
+end
+
+if allocation_active then
+  snapshot_allocation_pots(context, allocation_gates)
 end
 
 local unwind_modified_cus_ent_ids = {}
@@ -254,6 +273,13 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
       now = usage_window_now,
     })
   end
+  if allocation_active then
+    release_allocation_for_unwind({
+      context = context,
+      gates = allocation_gates,
+      iterations = unwind_result.iterations,
+    })
+  end
 
   -- Fold any skipped unwind (missing entitlements/rollovers) into amount_to_deduct
   -- so the forward pass compensates against current live entitlements.
@@ -283,6 +309,7 @@ local deduction_result = run_deduction_on_context({
   target_entity_id = target_entity_id,
   alter_granted_balance = alter_granted_balance,
   overage_behaviour = overage_behaviour,
+  allocation_gates = allocation_active and allocation_gates or nil,
 })
 
 local updates = deduction_result.updates
@@ -334,10 +361,10 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
   })
 end
 
-if enforce_usage_windows then
+if enforce_usage_windows or allocation_active then
   increment_usage_window_counters({
     context = context,
-    usage_window_limits = usage_window_limits,
+    usage_window_limits = loaded_usage_window_limits,
     now = usage_window_now,
   })
 end
@@ -398,7 +425,7 @@ update_aggregated_balances({
   mutation_logs = mutation_logs,
 })
 
-if enforce_usage_windows or unwind_usage_windows then
+if enforce_usage_windows or unwind_usage_windows or allocation_active then
   apply_usage_window_writes(context, usage_window_ttl_seconds)
 end
 
