@@ -2079,6 +2079,7 @@ export const LINT_RULES: LintRules = {
 			},
 			name: {
 				minLength: 1,
+				maxLength: 40,
 			},
 			internalId: {
 				minLength: 1,
