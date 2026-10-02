@@ -1,4 +1,4 @@
-import { ms } from "@autumn/shared";
+import { isCustomerProductRevertingTrial, ms } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService";
 import type { CronContext } from "../utils/CronContext";
 import {
@@ -8,6 +8,19 @@ import {
 	type OrgEnvExpiredTrials,
 } from "./fetchExpiredTrialProducts";
 import { processExpiredTrialRow } from "./processExpiredTrialRow";
+
+export const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
+	const revert: ExpiredTrialRow[] = [];
+	const standard: ExpiredTrialRow[] = [];
+	for (const row of rows) {
+		if (isCustomerProductRevertingTrial(row.customerProduct)) {
+			revert.push(row);
+		} else {
+			standard.push(row);
+		}
+	}
+	return { revert, standard };
+};
 
 const groupRowsByCustomer = (rows: ExpiredTrialRow[]) => {
 	const rowsByCustomer = new Map<string, ExpiredTrialRow[]>();
@@ -83,6 +96,19 @@ export const runProductCron = async ({
 			const resultsByOrgEnv = await groupByOrgEnv({ results, cronContext });
 
 			for (const { ctx, rows } of resultsByOrgEnv) {
+				const { revert: revertRows, standard: standardRows } =
+					partitionRevertRows(rows);
+
+				if (revertRows.length > 0) {
+					await processRowsInBatches({
+						ctx,
+						rows: revertRows,
+						defaultProducts: [],
+					});
+				}
+
+				if (standardRows.length === 0) continue;
+
 				const defaultProducts = await ProductService.listDefault({
 					db: ctx.db,
 					orgId: ctx.org.id,
@@ -94,7 +120,11 @@ export const runProductCron = async ({
 				// `billing.updated` webhook (tagged "trial_ended") fires from
 				// a single emission site — regardless of whether a free default
 				// is being activated alongside the expiry.
-				await processRowsInBatches({ ctx, rows, defaultProducts });
+				await processRowsInBatches({
+					ctx,
+					rows: standardRows,
+					defaultProducts,
+				});
 			}
 
 			totalExpired += results.length;

@@ -5,16 +5,14 @@
  *  - no card on file → trial expires and the free default plan takes over, still no Stripe sub
  *  - card added during the trial → plan is billed into a new Stripe sub and stops trialing
  *  - two entities trialing the same plan convert into a single Stripe sub
- *  - on_end: revert with no previous plan → expires to the default plan, never billed even with a card
  *  - a trial Autumn did not mark on_trial_end "bill" (e.g. no_billing_changes, legacy rows) is never settled
  */
 
 import { test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	type ApiEntityV0,
-	type AttachParamsV1Input,
-	FreeTrialDuration,
+import type {
+	ApiCustomerV3,
+	ApiEntityV0,
+	AttachParamsV1Input,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
@@ -173,56 +171,6 @@ test.concurrent(
 			customerId,
 			autumn: autumnV1,
 			productId: proTrial.id,
-		});
-		await expectSubCount({ ctx, customerId, count: 0 });
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("no-card-trial-end 4: revert with no previous plan → expires to the free default")}`,
-	async () => {
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
-		const free = freeDefault();
-
-		const { customerId, autumnV1, autumnV2_3, ctx, testClockId } =
-			await initScenario({
-				customerId: "no-card-end-revert",
-				setup: [
-					s.customer({ paymentMethod: "success" }),
-					s.products({ list: [pro, free] }),
-				],
-				actions: [],
-			});
-
-		await autumnV2_3.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: pro.id,
-			redirect_mode: "if_required",
-			customize: {
-				free_trial: {
-					duration_length: TRIAL_DAYS,
-					duration_type: FreeTrialDuration.Day,
-					card_required: false,
-					on_end: "revert",
-				},
-			},
-		});
-		await expectSubCount({ ctx, customerId, count: 0 });
-
-		await advanceTestClock({
-			stripeCli: ctx.stripeCli,
-			testClockId: testClockId ?? "",
-			numberOfDays: DAYS_PAST_TRIAL_END,
-		});
-
-		await expectCustomerProducts({
-			customerId,
-			autumn: autumnV1,
-			active: [free.id],
-			notPresent: [pro.id],
 		});
 		await expectSubCount({ ctx, customerId, count: 0 });
 	},

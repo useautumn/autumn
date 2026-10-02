@@ -240,6 +240,35 @@ test.concurrent(
 	},
 );
 
+test.concurrent(
+	chalk.yellowBright("multi-attach error: revert trial requires an existing subscription"),
+	async () => {
+		const plan = products.base({
+			id: "revert-plan",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "ma-err-revert-without-subscription",
+			setup: [s.customer(), s.products({ list: [plan] })],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errMessage: "without an existing paid subscription",
+			func: () =>
+				autumnV2_2.billing.multiAttach({
+					customer_id: customerId,
+					plans: [{ plan_id: plan.id }],
+					free_trial: {
+						duration_length: 14,
+						duration_type: "day",
+						on_end: "revert",
+					},
+				}),
+		});
+	},
+);
+
 // ═══════════════════════════════════════════════════════════════════
 // Test 4: redirect_mode "always" on entity without new_billing_sub → error
 // ═══════════════════════════════════════════════════════════════════

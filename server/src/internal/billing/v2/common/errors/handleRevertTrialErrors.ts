@@ -2,6 +2,7 @@ import {
 	type BillingContext,
 	ErrCode,
 	type FullCusProduct,
+	hasActivePaidSubscription,
 	isCustomerProductRevertingTrial,
 	RecaseError,
 } from "@autumn/shared";
@@ -36,10 +37,10 @@ export const handleRevertTrialErrors = ({
 	billingContext,
 	updatedCustomerProduct,
 }: {
-	billingContext: Pick<BillingContext, "trialContext">;
+	billingContext: Pick<BillingContext, "trialContext" | "fullCustomer">;
 	updatedCustomerProduct?: FullCusProduct;
 }) => {
-	const { trialContext } = billingContext;
+	const { trialContext, fullCustomer } = billingContext;
 
 	if (isCustomerProductRevertingTrial(updatedCustomerProduct)) {
 		handleExistingRevertTrialErrors({ trialContext });
@@ -51,6 +52,15 @@ export const handleRevertTrialErrors = ({
 	if (updatedCustomerProduct) {
 		throwRevertTrialError(
 			"on_end: 'revert' can only be set when attaching a plan.",
+		);
+	}
+
+	const hasPaidSubscription = hasActivePaidSubscription({
+		customerProducts: fullCustomer.customer_products,
+	});
+	if (!hasPaidSubscription) {
+		throwRevertTrialError(
+			"Cannot use on_end: 'revert' without an existing paid subscription.",
 		);
 	}
 };
