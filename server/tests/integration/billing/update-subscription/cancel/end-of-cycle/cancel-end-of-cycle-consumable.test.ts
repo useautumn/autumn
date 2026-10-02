@@ -580,6 +580,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		actions: [
 			s.attach({ productId: customerPro.id }), // Customer-level
 			s.attach({ productId: entityPro.id, entityIndex: 0, timeout: 4000 }), // Entity-level
+			s.warmEntityCaches(),
 			s.track({ featureId: TestFeature.Messages, value: 300 }),
 			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }),
 			s.updateSubscription({
@@ -731,6 +732,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 		actions: [
 			s.attach({ productId: customerPro.id }), // Customer-level
 			s.attach({ productId: entityPro.id, entityIndex: 0, timeout: 4000 }), // Entity-level
+			s.warmEntityCaches(),
 			s.track({ featureId: TestFeature.Messages, value: 300 }),
 			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }),
 			s.updateSubscription({
