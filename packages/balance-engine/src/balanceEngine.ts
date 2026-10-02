@@ -226,6 +226,7 @@ export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUt
 export {
 	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
+	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
 // utils

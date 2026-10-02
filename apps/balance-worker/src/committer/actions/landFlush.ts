@@ -10,6 +10,7 @@ import {
 	SubjectStaleError,
 } from "../../processor/subject/subjectErrors.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import {
 	BillingPlanRowCollisionError,
 	CommitterStoppedError,
@@ -155,7 +156,7 @@ const runWithRetries = async ({
 	let delayMs = config.retry.initialBackoffMs;
 	for (let attempt = 1; ; attempt++) {
 		try {
-			const outcomes = await runFlush({ ctx, flush });
+			const outcomes = await runFlush({ ctx, config, flush });
 			reportStoreRecovered({ scope, attempt });
 			return outcomes;
 		} catch (cause) {
@@ -191,7 +192,22 @@ const recordCall = ({
 	expectedOffset,
 	records: [record],
 	rows: record.mutation.changes.length,
+	// A record landing alone no longer lands with the rest of its customer's: its snapshot is deleted, not written.
+	snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
 });
+
+/** The same intent with every customer's rows deleted instead of written. */
+const withSnapshotsDeleted = ({
+	intent,
+}: {
+	intent: SnapshotIntent | undefined;
+}): SnapshotIntent | undefined =>
+	intent && new Map([...intent.keys()].map((key) => [key, "delete" as const]));
+
+const writesSnapshots = ({ call }: { call: FlushCall }): boolean =>
+	[...(call.snapshotIntent?.values() ?? [])].some(
+		(entry) => entry !== "delete",
+	);
 
 type RefusedRecord =
 	| {
@@ -324,10 +340,21 @@ export const landFlush = async ({
 			outcomes.set(call, await landRecordsOneByOne({ scope, call }));
 			return outcomes;
 		}
-		// A lone record already failed alone: it is not re-run, only classified.
+		// A lone record already failed alone: it is not re-run, only classified,
+		// unless its snapshot could be the reason, which must never cost a record.
 		const record = call.records[0];
 		if (!record) {
 			throw cause;
+		}
+		if (writesSnapshots({ call })) {
+			const deleted = {
+				...call,
+				snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
+			};
+			const landed = await landFlush({ scope, flush: { calls: [deleted] } });
+			const outcome = landed.get(deleted);
+			if (outcome) outcomes.set(call, outcome);
+			return outcomes;
 		}
 		const refused = await settleRefusedRecord({
 			scope,

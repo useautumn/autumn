@@ -1,0 +1,379 @@
+import { describe, expect, test } from "bun:test";
+import {
+	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
+	type SubjectState,
+} from "@autumn/balance-engine";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
+import type { FlushRequest, SubjectRowChange } from "@autumn/postgres";
+import { createCommitter } from "../../../src/committer/createCommitter.js";
+import type { DurableMutationRecord } from "../../../src/state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../../src/state/types/snapshotIntent.js";
+import type { CommitterDb } from "../../../src/types/committerDb.js";
+import {
+	createCustomerEntitlement,
+	createState,
+	createTrackMutation,
+} from "../../fixtures/mutations.js";
+
+const topic = "autumn-metering";
+const retry = {
+	degradedAfterAttempts: 1,
+	initialBackoffMs: 1,
+	maxBackoffMs: 1,
+};
+const PARTITION_COUNT = 64;
+const MAX_BYTES = 262_144;
+const BASELINE_AT = 1_699_999_000_000;
+
+const identityOf = (customerId: string): MeteringIdentity => ({
+	orgId: "org_1",
+	env: "sandbox",
+	customerId,
+	entityId: null,
+});
+const keyOf = (customerId: string) =>
+	meteringIdentityToPartitionKey({ identity: identityOf(customerId) });
+
+/** Records every flush request; a flush refuses whatever `failWhen` names. */
+const createRecordingDb = ({
+	failWhen,
+}: {
+	failWhen?: (request: FlushRequest) => Error | null;
+} = {}) => {
+	const requests: FlushRequest[] = [];
+	const db: CommitterDb = {
+		readPartitionProgress: async () => null,
+		insertPartitionProgress: async () => {},
+		claimPartitionProgress: async () => {},
+		flush: async (request) => {
+			requests.push(request);
+			const failure = failWhen?.(request);
+			if (failure) throw failure;
+			return { applied: request.changes.map(() => true) };
+		},
+	};
+	return { db, requests };
+};
+
+const SNAPSHOTS = { partitionCount: PARTITION_COUNT, maxBytes: MAX_BYTES };
+
+const committerFor = ({
+	db,
+	snapshots = SNAPSHOTS,
+	maxRowsPerFlush = 500,
+	onSnapshotSizeCapped,
+}: {
+	db: CommitterDb;
+	/** Null: the committer is not configured for snapshots at all. */
+	snapshots?: { partitionCount: number; maxBytes: number } | null;
+	maxRowsPerFlush?: number;
+	onSnapshotSizeCapped?: (params: { customers: number }) => void;
+}) =>
+	createCommitter({
+		ctx: { db, onSnapshotSizeCapped },
+		config: {
+			concurrency: 1,
+			maxRowsPerFlush,
+			retry,
+			...(snapshots && { snapshots }),
+		},
+	});
+
+const trackRecord = ({
+	customerId,
+	offset,
+	partition = 3,
+	balance = 100,
+}: {
+	customerId: string;
+	offset: bigint;
+	partition?: number;
+	balance?: number;
+}): DurableMutationRecord => ({
+	position: { topic, partition, offset },
+	mutation: createTrackMutation({
+		state: createState({ identity: identityOf(customerId), balance }),
+		value: 5,
+		commandId: `${customerId}_${offset}`,
+	}),
+});
+
+/** The intent the writer would attach: the state each customer leaves, from a full read at BASELINE_AT. */
+const writing = (...states: SubjectState[]): SnapshotIntent =>
+	new Map(
+		states.map((state) => [
+			meteringIdentityToPartitionKey({ identity: state.identity }),
+			{ states: [state], baselineAt: BASELINE_AT },
+		]),
+	);
+
+const upsertedKeys = (request: FlushRequest | undefined) =>
+	(request?.snapshots?.upserts ?? []).map(
+		(row) => `${row.customerId}:${row.entityId ?? ""}`,
+	);
+const deletedCustomers = (request: FlushRequest | undefined) =>
+	(request?.snapshots?.deletes ?? []).map((customer) => customer.customerId);
+
+describe("committer subject snapshots", () => {
+	test("without snapshots configured the flush statement is untouched, whatever the writer intended", async () => {
+		const { db, requests } = createRecordingDb();
+		const committer = committerFor({ db, snapshots: null });
+		const state = createState({ identity: identityOf("cus_1"), balance: 95 });
+
+		await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 10n,
+			records: [trackRecord({ customerId: "cus_1", offset: 10n })],
+			snapshotIntent: writing(state),
+		});
+
+		expect(requests).toHaveLength(1);
+		expect(requests[0]).not.toHaveProperty("snapshots");
+	});
+
+	test("a customer the writer vouched for is upserted: each state a row, keyed and partitioned as held, aged by its full read", async () => {
+		const { db, requests } = createRecordingDb();
+		const committer = committerFor({ db });
+		const state = createState({ identity: identityOf("cus_1"), balance: 95 });
+
+		await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 10n,
+			records: [trackRecord({ customerId: "cus_1", offset: 10n })],
+			snapshotIntent: writing(state),
+		});
+
+		const [upsert] = requests[0]?.snapshots?.upserts ?? [];
+		expect(requests[0]?.snapshots?.deletes).toEqual([]);
+		expect(upsert).toMatchObject({
+			orgId: "org_1",
+			env: "sandbox",
+			customerId: "cus_1",
+			entityId: null,
+			internalCustomerId: state.customer.internal_id,
+			partition: 3,
+			partitionCount: PARTITION_COUNT,
+			stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+			baselineAt: BASELINE_AT,
+			logOffset: 10n,
+		});
+		expect(JSON.parse(upsert?.stateJson ?? "{}")).toEqual(state);
+	});
+
+	test("a customer the writer could not vouch for is deleted; others in the flush still upsert; a replay with no intent writes nothing", async () => {
+		const { db, requests } = createRecordingDb();
+		const committer = committerFor({ db });
+		const kept = createState({ identity: identityOf("cus_kept"), balance: 1 });
+
+		await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 10n,
+			records: [
+				trackRecord({ customerId: "cus_gone", offset: 10n }),
+				trackRecord({ customerId: "cus_kept", offset: 11n }),
+			],
+			snapshotIntent: new Map([
+				[keyOf("cus_gone"), "delete"],
+				...writing(kept),
+			]),
+		});
+		await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 12n,
+			records: [trackRecord({ customerId: "cus_replayed", offset: 12n })],
+		});
+
+		expect(deletedCustomers(requests[0])).toEqual(["cus_gone"]);
+		expect(requests[0]?.snapshots?.deletes[0]).toMatchObject({
+			orgId: "org_1",
+			env: "sandbox",
+		});
+		expect(upsertedKeys(requests[0])).toEqual(["cus_kept:"]);
+		expect(requests[1]).not.toHaveProperty("snapshots");
+	});
+
+	test("a state over the size cap deletes its customer instead, and is counted", async () => {
+		const { db, requests } = createRecordingDb();
+		const capped: number[] = [];
+		const committer = committerFor({
+			db,
+			onSnapshotSizeCapped: ({ customers }) => capped.push(customers),
+		});
+		const huge = createState({
+			identity: identityOf("cus_huge"),
+			customerEntitlements: [
+				createCustomerEntitlement({ id: "x".repeat(MAX_BYTES) }),
+			],
+		});
+		const small = createState({ identity: identityOf("cus_small") });
+
+		await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 10n,
+			records: [
+				trackRecord({ customerId: "cus_huge", offset: 10n }),
+				trackRecord({ customerId: "cus_small", offset: 11n }),
+			],
+			snapshotIntent: writing(huge, small),
+		});
+
+		expect(deletedCustomers(requests[0])).toEqual(["cus_huge"]);
+		expect(upsertedKeys(requests[0])).toEqual(["cus_small:"]);
+		expect(capped).toEqual([1]);
+	});
+
+	test("a flush that fails lands call by call: the call whose snapshot is the reason lands its records with the customer deleted, and no record is refused", async () => {
+		const poisonId = "ce_poison";
+		const { db, requests } = createRecordingDb({
+			failWhen: (request) =>
+				request.snapshots?.upserts.some((row) =>
+					row.stateJson.includes(poisonId),
+				)
+					? new Error(
+							'insert or update on table "subject_snapshots" violates foreign key constraint',
+						)
+					: null,
+		});
+		const committer = committerFor({ db });
+		const poison = createState({
+			identity: identityOf("cus_x"),
+			customerEntitlements: [createCustomerEntitlement({ id: poisonId })],
+		});
+		const fine = createState({ identity: identityOf("cus_a") });
+
+		const [a, x] = await Promise.all([
+			committer.apply({
+				topic,
+				partition: 1,
+				expectedOffset: 10n,
+				records: [
+					trackRecord({ customerId: "cus_a", offset: 10n, partition: 1 }),
+				],
+				snapshotIntent: writing(fine),
+			}),
+			committer.apply({
+				topic,
+				partition: 2,
+				expectedOffset: 20n,
+				records: [
+					trackRecord({ customerId: "cus_x", offset: 20n, partition: 2 }),
+				],
+				snapshotIntent: writing(poison),
+			}),
+		]);
+
+		expect(a).toEqual({ nextOffset: 11n });
+		expect(x).toEqual({ nextOffset: 21n });
+		const landedA = requests.filter((r) => upsertedKeys(r).includes("cus_a:"));
+		expect(landedA.length).toBeGreaterThanOrEqual(1);
+		const landedX = requests.filter((r) =>
+			deletedCustomers(r).includes("cus_x"),
+		);
+		expect(landedX).toHaveLength(1);
+		expect(landedX[0]?.bookmarks.map((b) => b.partition)).toEqual([2]);
+	});
+
+	test("landing piece by piece deletes every customer of the call: a record alone no longer lands with the rest of its customer's", async () => {
+		const poisonId = "cp_poison";
+		const { db, requests } = createRecordingDb({
+			failWhen: (request) =>
+				request.changes.some(
+					(change: SubjectRowChange) =>
+						change.op === "update" && change.id === poisonId,
+				)
+					? new Error("value too long for type character varying(64)")
+					: null,
+		});
+		const committer = committerFor({ db });
+		const poison = trackRecord({ customerId: "cus_poison", offset: 11n });
+		poison.mutation.changes = poison.mutation.changes.map((change) => ({
+			...change,
+			id: poisonId,
+		}));
+		const states = ["cus_a", "cus_poison", "cus_b"].map((customerId) =>
+			createState({ identity: identityOf(customerId) }),
+		);
+
+		const outcome = await committer.apply({
+			topic,
+			partition: 3,
+			expectedOffset: 10n,
+			records: [
+				trackRecord({ customerId: "cus_a", offset: 10n }),
+				poison,
+				trackRecord({ customerId: "cus_b", offset: 12n }),
+			],
+			snapshotIntent: writing(...states),
+		});
+
+		expect(outcome.nextOffset).toBe(13n);
+		expect(outcome.rejections?.map(({ record }) => record)).toEqual([poison]);
+		expect(upsertedKeys(requests[0])).toEqual([
+			"cus_a:",
+			"cus_poison:",
+			"cus_b:",
+		]);
+		for (const request of requests.slice(1))
+			expect(upsertedKeys(request)).toEqual([]);
+		expect(
+			new Set(
+				requests.slice(1).flatMap((request) => deletedCustomers(request)),
+			),
+		).toEqual(new Set(["cus_a", "cus_poison", "cus_b"]));
+	});
+
+	test("snapshot rows count toward the flush's row cap only when snapshots are configured", async () => {
+		const flushesOf = async (
+			snapshots: { partitionCount: number; maxBytes: number } | null,
+		) => {
+			const { db, requests } = createRecordingDb();
+			const committer = committerFor({ db, snapshots, maxRowsPerFlush: 3 });
+			let release: () => void = () => {};
+			const gate = new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			const flush = db.flush;
+			db.flush = async (request) => {
+				await gate;
+				return flush(request);
+			};
+			const first = committer.apply({
+				topic,
+				partition: 0,
+				expectedOffset: 0n,
+				records: [
+					trackRecord({ customerId: "cus_0", offset: 0n, partition: 0 }),
+				],
+			});
+			const queued = [1, 2].map((partition) =>
+				committer.apply({
+					topic,
+					partition,
+					expectedOffset: 0n,
+					records: [
+						trackRecord({
+							customerId: `cus_${partition}`,
+							offset: 0n,
+							partition,
+						}),
+					],
+					snapshotIntent: writing(
+						createState({ identity: identityOf(`cus_${partition}`) }),
+					),
+				}),
+			);
+			release();
+			await Promise.all([first, ...queued]);
+			return requests.length;
+		};
+		// Each record is one row change plus one snapshot row: at a cap of 3 the two queued calls no longer share a flush.
+		expect(await flushesOf(null)).toBe(2);
+		expect(await flushesOf(SNAPSHOTS)).toBe(3);
+	});
+});

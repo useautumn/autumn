@@ -1,4 +1,5 @@
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
+import type { SubjectSnapshotWrites } from "../../subjects/types/subjectSnapshot.js";
 
 /** One partition's bookmark move, guarded by the offset the caller last saw. */
 export type FlushBookmark = {
@@ -13,11 +14,15 @@ export type FlushBookmark = {
 	claimToken?: string;
 };
 
-/** Everything one transaction lands: row changes (any row may repeat) and the bookmarks they advance. */
+/** Everything one transaction lands: row changes (any row may repeat), the bookmarks they advance, and the subject snapshots they replace or remove. */
 export type FlushRequest = {
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
+	snapshots?: SubjectSnapshotWrites;
 };
 
-/** `applied[i]` answers for `changes[i]`, folded or not; bookmarks are all-or-nothing. */
-export type FlushResult = { applied: boolean[] };
+/** `applied[i]` answers for `changes[i]`, folded or not; bookmarks are all-or-nothing. Snapshot counts come back only when the flush wrote any. */
+export type FlushResult = {
+	applied: boolean[];
+	snapshots?: { upserted: number; deleted: number };
+};
