@@ -22,6 +22,7 @@ import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
 import { attachPaymentMethod as attachPaymentMethodFn } from "@/utils/scriptUtils/initCustomer.js";
@@ -1927,6 +1928,17 @@ export async function initScenario({
 
 	for (const action of config.actions) {
 		await runAction(action);
+		if (customerId === "cancel-eoc-cons-both") {
+			console.log("warming diagnostic", JSON.stringify({
+				action,
+				balances: await ctx.redisV2.hgetall(buildSharedFullSubjectBalanceKey({
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId,
+					featureId: "messages",
+				})),
+			}));
+		}
 	}
 
 	return {
