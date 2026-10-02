@@ -12,6 +12,8 @@ import {
 	type EdgeConfigStore,
 	type MiscRedisConfig,
 	miscRedisEdgeConfig,
+	type ShadowAtomConfig,
+	shadowAtomConfig,
 } from "@autumn/edge-config";
 
 export const HERALD_BLUE_GREEN_SERVICE_NAME = "herald";
@@ -20,6 +22,8 @@ const ACTIVE_SLOT_POLL_INTERVAL_MS = 2_000;
 /** The edge configs herald polls; one registry drives them all. */
 export type HeraldEdgeConfigs = {
 	miscRedis: EdgeConfigStore<MiscRedisConfig>;
+	/** Our shadow Atom per env and whom it holds; the server's shadow check reads the same object. */
+	shadowAtom: EdgeConfigStore<ShadowAtomConfig>;
 	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
 	/** The same bucket and client the stores read, for the heartbeat herald writes itself. */
@@ -51,6 +55,14 @@ export const createHeraldEdgeConfigs = ({
 		defaultValue: miscRedisEdgeConfig.defaultValue,
 	});
 	registry.register({ store: miscRedis });
+	const shadowAtom = createEdgeConfigStore({
+		ctx: edgeConfigContext,
+		s3Key: shadowAtomConfig.key,
+		schema: shadowAtomConfig.schema,
+		defaultValue: shadowAtomConfig.defaultValue,
+		retainOnError: true,
+	});
+	registry.register({ store: shadowAtom });
 	const activeSlotDefinition = activeSlotEdgeConfigOf({
 		serviceName: HERALD_BLUE_GREEN_SERVICE_NAME,
 	});
@@ -76,6 +88,7 @@ export const createHeraldEdgeConfigs = ({
 
 	return {
 		miscRedis,
+		shadowAtom,
 		activeSlot,
 		adminBucket: { s3Client, location: config.location },
 		start,

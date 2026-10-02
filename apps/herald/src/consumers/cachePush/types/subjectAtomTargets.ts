@@ -1,8 +1,8 @@
 import type { Organization } from "@autumn/shared";
 import type { AtomConnection } from "../../../atom/types/atomClient.js";
 
-/** An org whose env has a ready cache, and how its Atom is reached. */
-export type CacheReadyOrg = {
+/** A subject's org, and every Atom the subject is pushed to. */
+export type SubjectAtomTargets = {
 	org: Organization;
-	atomConnection: AtomConnection;
+	atomConnections: AtomConnection[];
 };

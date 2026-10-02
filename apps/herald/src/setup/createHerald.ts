@@ -87,7 +87,11 @@ export function createHerald({
 		}),
 	);
 	const admin = kafka.admin();
-	const consumersCtx = { ...ctx, db: ctx.postgres.db };
+	const consumersCtx = {
+		...ctx,
+		db: ctx.postgres.db,
+		shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
+	};
 	const jobNames = createHeraldConsumers({ ctx: consumersCtx }).map(
 		(job) => job.name,
 	);
@@ -131,6 +135,7 @@ export function createHerald({
 				logger: ctx.logger,
 				db: ctx.postgres.db,
 				getAtomClient: ctx.getAtomClient,
+				shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
 			},
 			config: {
 				topic: env.HERALD_CATALOG_INVALIDATION_TOPIC,

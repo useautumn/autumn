@@ -1,21 +1,21 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import { AppEnv } from "@autumn/shared";
 import { z } from "zod/v4";
-import { orgToAtomConnection } from "../../../atom/orgToAtomConnection.js";
+import { orgToAtomTargets } from "../../../atom/orgToAtomTargets.js";
 import { getOrgWithFeaturesCached } from "../../../orgs/getOrgWithFeaturesCached.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
-import type { CacheReadyOrg } from "../types/cacheReadyOrg.js";
+import type { SubjectAtomTargets } from "../types/subjectAtomTargets.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
-/** The subject's org and its Atom's address, or null unless that env's cache is ready and reachable. */
-export const readCacheReadyOrg = async ({
+/** The subject's org and every Atom that holds the subject, or null when no Atom does. */
+export const readSubjectAtomTargets = async ({
 	ctx,
 	identity,
 }: {
 	ctx: CachePushContext;
 	identity: MeteringIdentity;
-}): Promise<CacheReadyOrg | null> => {
+}): Promise<SubjectAtomTargets | null> => {
 	const env = appEnvSchema.parse(identity.env);
 	const orgWithFeatures = await getOrgWithFeaturesCached({
 		ctx,
@@ -24,7 +24,12 @@ export const readCacheReadyOrg = async ({
 	});
 	if (!orgWithFeatures) return null;
 	const { org } = orgWithFeatures;
-	const atomConnection = orgToAtomConnection({ org, env });
-	if (!atomConnection) return null;
-	return { org, atomConnection };
+	const atomConnections = orgToAtomTargets({
+		shadowAtomConfig: ctx.shadowAtomConfig.get(),
+		org,
+		env,
+		customerId: identity.customerId,
+	});
+	if (atomConnections.length === 0) return null;
+	return { org, atomConnections };
 };
