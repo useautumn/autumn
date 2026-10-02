@@ -171,8 +171,8 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing price and billing
 	});
 });
 
-// 5. Error: updating quantity of one-off item on recurring product
-test.concurrent(`${chalk.yellowBright("error: one-off item quantity update on recurring product")}`, async () => {
+// 5. Updating the quantity of a one-off item on a recurring product is a manual top-up
+test.concurrent(`${chalk.yellowBright("one-off item quantity update on recurring product tops up")}`, async () => {
 	const billingUnits = 100;
 	const oneOffMessagesItem = items.oneOffMessages({
 		price: 10,
@@ -199,17 +199,24 @@ test.concurrent(`${chalk.yellowBright("error: one-off item quantity update on re
 		],
 	});
 
-	// Try to update quantity of one-off messages - should fail
-	await expectAutumnError({
-		func: async () => {
-			await autumnV1.subscriptions.update({
-				customer_id: customerId,
-				product_id: recurringProduct.id,
-				options: [
-					{ feature_id: TestFeature.Messages, quantity: 2 * billingUnits },
-				],
-			});
-		},
+	// Manual top-up treats the quantity as a delta: 2 more packs on top of 1
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: recurringProduct.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 2 * billingUnits }],
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 3 * billingUnits,
+		usage: 0,
+	});
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 20,
 	});
 });
 
@@ -331,9 +338,10 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		{ timeout: 2000 },
 	);
 
-	// Update included usage from 50 to 100 (same quantity)
-	const newTotalGranted = 300;
+	// Included usage goes 50 -> 100; the remaining 150 carries over on top
+	const remainingBeforeUpdate = oldIncludedUsage + quantity - messagesUsed;
 	const newIncludedUsage = 100;
+	const newTotalGranted = newIncludedUsage + remainingBeforeUpdate;
 	const updatedPrepaidItem = items.oneOffMessages({
 		includedUsage: newIncludedUsage,
 		billingUnits,
@@ -354,8 +362,8 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: newTotalGranted,
-		balance: newTotalGranted - messagesUsed,
-		usage: messagesUsed,
+		balance: newTotalGranted,
+		usage: 0,
 	});
 
 	await expectCustomerInvoiceCorrect({

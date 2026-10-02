@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { BillingPreviewChange } from "@autumn/shared";
 import { expectPreviewChanges } from "@tests/integration/billing/utils/expectPreviewChanges";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -104,10 +105,23 @@ test.concurrent(`${chalk.yellowBright("attach preview: scheduled switch")}`, asy
 		product_id: free.id,
 	});
 
+	const endOfCycle = preview.outgoing.find(
+		(change: BillingPreviewChange) => change.plan_id === pro.id,
+	)?.effective_at;
+	expect(endOfCycle).toBeNumber();
+
 	expect(preview.total).toBe(0);
 	expectPreviewChanges({
 		preview,
-		incoming: [{ planId: free.id, effectiveAt: null }],
+		incoming: [
+			{ planId: free.id, effectiveAt: endOfCycle },
+			{
+				planId: pro.id,
+				effectiveAt: null,
+				canceledAtDefined: true,
+				expiresAtDefined: true,
+			},
+		],
 		outgoing: [{ planId: pro.id }],
 	});
 });

@@ -29,7 +29,7 @@ test.concurrent(
 	`${chalk.yellowBright("attach free trial: a top-level free_trial is honoured, not dropped")}`,
 	async () => {
 		const customerId = "attach-trial-v0-shape";
-		const scale = products.pro({
+		const scale = products.base({
 			id: "scale-trial-v0",
 			items: [items.monthlyPrice({ price: 500 })],
 		});

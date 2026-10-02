@@ -3,6 +3,7 @@ import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -267,13 +268,10 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 		latestTotal: 30, // $20 base + $10 prepaid
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
+	await expectStripeSubscriptionCorrect({
+		ctx,
 		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		entityId: entities[1].id,
-		subCount: 1,
+		options: { subCount: 1 },
 	});
 });
 

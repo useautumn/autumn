@@ -1,5 +1,7 @@
 import { test } from "bun:test";
-import { ErrCode, FreeTrialDuration } from "@autumn/shared";
+import { type ApiCustomerV3, ErrCode, FreeTrialDuration } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -12,15 +14,16 @@ import chalk from "chalk";
  * Tests that verify billing_behavior: 'next_cycle_only' is rejected
  * in scenarios where deferring charges is not allowed:
  *
- * 1. Free -> Paid transition (must charge for the paid plan)
- * 2. Removing a free trial (must charge for the full plan)
+ * 1. Removing a free trial (must charge for the full plan)
+ *
+ * Free -> Paid creates a new subscription, where 'none' is a no-op, so it succeeds.
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FREE -> PAID TRANSITION ERRORS
+// FREE -> PAID TRANSITION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("next_cycle_only error: free to paid upgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("next_cycle_only: free to paid upgrade creates the subscription and charges")}`, async () => {
 	const freeMessagesItem = items.monthlyMessages({ includedUsage: 50 });
 	const freeProduct = products.base({
 		id: "free",
@@ -43,17 +46,19 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only error: free to paid upgra
 		actions: [s.attach({ productId: "free" })],
 	});
 
-	// Try to upgrade from free to paid with next_cycle_only - should fail
-	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
-		func: async () => {
-			await autumnV1.subscriptions.update({
-				customer_id: customerId,
-				product_id: freeProduct.id,
-				items: [paidMessagesItem, paidPriceItem],
-				billing_behavior: "none",
-			});
-		},
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: freeProduct.id,
+		items: [paidMessagesItem, paidPriceItem],
+		billing_behavior: "none",
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({ customer, productId: freeProduct.id });
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 20,
 	});
 });
 
