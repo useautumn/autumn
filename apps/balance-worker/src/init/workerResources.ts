@@ -203,6 +203,7 @@ export async function openWorkerResources({
 						},
 					}),
 					db: committerDb,
+					logger: dependencies.logger,
 					subjectSnapshots: edgeConfigs.subjectSnapshots,
 				},
 			});
