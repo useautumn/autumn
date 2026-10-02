@@ -1,9 +1,12 @@
 import {
+	ACTIVE_STATUSES,
+	CusProductStatus,
 	type FullCusProduct,
-	filterCustomerProductsByActiveStatuses,
 	filterCustomerProductsByStripeSubscriptionId,
 } from "@autumn/shared";
 import { getStripePriceIdsForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/matchUtils/getStripePriceIdsForAutumnPrice";
+
+const ONGOING_STATUSES = [...ACTIVE_STATUSES, CusProductStatus.Trialing];
 
 /** Stripe prices of plans on the subscription that run with no end date, i.e.
  * the ones a released schedule leaves billing. */
@@ -16,12 +19,14 @@ export const customerProductsToOngoingStripePriceIds = ({
 }): Set<string> => {
 	if (!stripeSubscriptionId) return new Set();
 
-	const ongoingCustomerProducts = filterCustomerProductsByActiveStatuses({
-		customerProducts: filterCustomerProductsByStripeSubscriptionId({
-			customerProducts,
-			stripeSubscriptionId,
-		}),
-	}).filter((customerProduct) => !customerProduct.ended_at);
+	const ongoingCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts,
+		stripeSubscriptionId,
+	}).filter(
+		(customerProduct) =>
+			ONGOING_STATUSES.includes(customerProduct.status) &&
+			!customerProduct.ended_at,
+	);
 
 	return new Set(
 		ongoingCustomerProducts.flatMap((customerProduct) =>
