@@ -562,7 +562,7 @@ class Billing(BaseSDK):
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
         :param no_billing_changes: If true, skips any billing changes for the schedule.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
-        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them or the schedule ends.
         :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -723,7 +723,7 @@ class Billing(BaseSDK):
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
         :param no_billing_changes: If true, skips any billing changes for the schedule.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
-        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not list keep running until a listed plan in their group replaces them or the schedule ends.
         :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method

@@ -40549,8 +40549,9 @@ paths:
                     rows are persisted on checkout.session.completed.
                 preserve_add_ons:
                   type: boolean
-                  description: Deprecated and ignored. Active plans the schedule does not declare
-                    are always retained.
+                  description: Deprecated and ignored. Active plans the schedule does not list
+                    keep running until a listed plan in their group replaces
+                    them or the schedule ends.
                 unscheduled_plans:
                   type: array
                   items:
