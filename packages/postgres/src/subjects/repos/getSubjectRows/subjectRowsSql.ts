@@ -57,6 +57,7 @@ export const subjectRowsSql = ({
 			AND s.customer_id = ${customerId} COLLATE "C"
 			AND s.entity_id = ${entityId ?? ""} COLLATE "C"
 			AND s.state_version = ${snapshotVersion}
+			AND jsonb_typeof(s.state) = 'object'
 	),
 	`;
 

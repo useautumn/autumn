@@ -218,6 +218,8 @@ describe("subjectRowsSql with a snapshot version", () => {
 			expect(text).toContain(`s.${column} = $`);
 		expect(text).toContain('COLLATE "C"');
 		expect(text).toContain("s.state_version = $5");
+		// A row whose state is not an object cannot stand in for the rows, so it must not suppress them either.
+		expect(text).toContain("jsonb_typeof(s.state) = 'object'");
 		expect(text).toContain(
 			"SELECT (SELECT state FROM snap) AS snapshot, CASE WHEN NOT EXISTS (SELECT 1 FROM snap) THEN json_build_object(",
 		);
