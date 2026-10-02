@@ -304,18 +304,24 @@ test("skips add-on attach targets without loading rows or touching Stripe", asyn
 	expect(state.retrievedInvoiceIds).toEqual([]);
 });
 
-test("no pending rows: never creates a Stripe client", async () => {
+test("no invoice-backed rows: never creates a Stripe client", async () => {
 	withInvoices({});
 	state.stripeConnected = false;
+	const skippedRow = {
+		...pendingRow({ invoiceId: "in_a", createdAt: 1 }),
+		metadata_id: null,
+	} as FullCusProduct;
 
 	try {
-		const billingResult = await findPendingInvoiceConflict({
-			ctx,
-			fullCustomer,
-			attachProduct,
-			loadPendingCustomerProducts: async () => [],
-		});
-		expect(billingResult).toBeUndefined();
+		for (const rows of [[], [skippedRow]]) {
+			const billingResult = await findPendingInvoiceConflict({
+				ctx,
+				fullCustomer,
+				attachProduct,
+				loadPendingCustomerProducts: async () => rows,
+			});
+			expect(billingResult).toBeUndefined();
+		}
 	} finally {
 		state.stripeConnected = true;
 	}
