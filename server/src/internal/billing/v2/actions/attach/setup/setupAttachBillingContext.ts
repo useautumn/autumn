@@ -225,7 +225,6 @@ export const setupAttachBillingContext = async ({
 				currentCustomerProduct,
 			},
 		}),
-		invoiceMode,
 		stripeSubscription,
 		skipBillingChangesBase,
 	});

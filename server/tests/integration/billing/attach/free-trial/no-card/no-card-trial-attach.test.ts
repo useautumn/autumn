@@ -4,7 +4,6 @@
  * Contract:
  *  - card_required: false, no invoice mode → trial runs in Autumn only: trialing, no Stripe sub, no invoice,
  *    marked on_trial_end "bill" so the product cron settles it
- *  - card_required: false + invoice mode → Stripe trialing sub with send_invoice, so Stripe invoices at trial end
  *  - upgrading off an Autumn-only trial bills the new plan and drops the trial
  */
 
@@ -12,7 +11,6 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	type AttachParamsV1Input,
-	FreeTrialDuration,
 	ms,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -72,59 +70,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("no-card-trial-attach 2: invoice mode keeps a send_invoice Stripe trial")}`,
-	async () => {
-		const enterprise = products.base({
-			id: "enterprise",
-			items: [items.monthlyPrice({ price: 50 })],
-		});
-
-		const { customerId, autumnV2_3, ctx } = await initScenario({
-			customerId: "no-card-attach-invoice",
-			setup: [s.customer({}), s.products({ list: [enterprise] })],
-			actions: [],
-		});
-
-		await autumnV2_3.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: enterprise.id,
-			redirect_mode: "if_required",
-			invoice_mode: {
-				enabled: true,
-				enable_plan_immediately: true,
-				finalize: false,
-			},
-			customize: {
-				free_trial: {
-					duration_length: 15,
-					duration_type: FreeTrialDuration.Day,
-					card_required: false,
-				},
-			},
-		});
-
-		const customer = await CusService.get({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
-		const subscriptions = await ctx.stripeCli.subscriptions.list({
-			customer: customer?.processor?.id ?? "",
-		});
-
-		expect(subscriptions.data).toHaveLength(1);
-		const [subscription] = subscriptions.data;
-		expect(subscription.status).toBe("trialing");
-		expect(subscription.collection_method).toBe("send_invoice");
-		expect(
-			subscription.trial_settings?.end_behavior.missing_payment_method,
-		).not.toBe("cancel");
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("no-card-trial-attach 3: upgrading off an Autumn-only trial bills the new plan")}`,
+	`${chalk.yellowBright("no-card-trial-attach 2: upgrading off an Autumn-only trial bills the new plan")}`,
 	async () => {
 		const proTrial = noCardProTrial();
 		const premium = products.premium({
