@@ -347,6 +347,23 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		expect(phaseRows(review)).toEqual([["enterprise:starts", "pro:ends"]]);
 	});
 
+	test("a first phase starting later lists its plans as starting there", () => {
+		const review = reviewFor({
+			billingContext: {
+				...buildContext({
+					existing: [],
+					opening: [{ fullProduct: pro }, { fullProduct: bonus }],
+					later: [{ startsAt: PHASE_C, plans: [{ fullProduct: premium }] }],
+				}),
+				immediatePhase: { starts_at: PHASE_B, plans: [] },
+			},
+		});
+		expect(phaseRows(review)).toEqual([
+			["pro:starts", "bonus:starts"],
+			["premium:starts"],
+		]);
+	});
+
 	test("a plan billed on another subscription is left out of the preview", () => {
 		const proOnA = running({ product: pro, subscriptionIds: ["sub_a"] });
 		const ssoOnB = running({ product: sso, subscriptionIds: ["sub_b"] });
