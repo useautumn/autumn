@@ -522,6 +522,30 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result).not.toHaveProperty("ends_at");
 	});
 
+	test("keeps the end date when a free plan is customized with a recurring price", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const customizedPhase: CustomerStatePhase = {
+			startsAt: now,
+			plans: [
+				{
+					...schedulePlan("prod_1"),
+					items: [basePriceItem],
+					isCustom: true,
+				},
+			],
+		};
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [customizedPhase],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			endDate: Date.UTC(2027, 6, 1),
+		});
+
+		expect(result?.ends_at).toBe(Date.UTC(2027, 6, 1));
+	});
+
 	test("sends unscheduled plans alongside the phases, not inside them", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({

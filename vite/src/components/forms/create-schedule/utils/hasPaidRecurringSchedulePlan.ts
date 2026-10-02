@@ -16,10 +16,8 @@ export const hasPaidRecurringSchedulePlan = ({
 	phases.some((phase) =>
 		phase.plans.some((plan) => {
 			const product = products.find(({ id }) => id === plan.productId);
-			return (
-				!!product &&
-				!isFreeProductV2({ items: product.items }) &&
-				!isOneOffProductV2({ items: product.items })
-			);
+			if (!product) return false;
+			const items = plan.items ?? product.items;
+			return !isFreeProductV2({ items }) && !isOneOffProductV2({ items });
 		}),
 	);
