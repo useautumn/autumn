@@ -49,7 +49,7 @@ export function BackdateRecreateConfirmDialog({
 						metaShortcut="enter"
 						onClick={onConfirm}
 					>
-						Recreate subscription
+						Recreate
 					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>

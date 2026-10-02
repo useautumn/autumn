@@ -98,6 +98,8 @@ const backdateGapParts = ({
 	const gapLineItems = lineItems.filter(({ context }) => context.backdate);
 	const gapTotal = formatAmount({
 		currency: gapLineItems[0]?.context.currency,
+		minFractionDigits: 2,
+		maxFractionDigits: 2,
 		amount: sumValues(
 			gapLineItems.map(({ amountAfterDiscounts }) => amountAfterDiscounts),
 		),
