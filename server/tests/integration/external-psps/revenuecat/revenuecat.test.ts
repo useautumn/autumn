@@ -23,6 +23,8 @@ import {
 	invoices,
 	ProcessorType,
 } from "@autumn/shared";
+import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";
+import { TestFeature } from "@tests/setup/v2Features";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -32,16 +34,15 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq, inArray } from "drizzle-orm";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { encryptData } from "@/utils/encryptUtils";
 import {
 	expectWebhookSuccess,
 	RevenueCatWebhookClient,
 } from "./utils/revenue-cat-webhook-client";
-import { TestFeature } from "@tests/setup/v2Features";
 
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
 
@@ -93,7 +94,10 @@ const setupRevenueCatOrg = async () => {
 // that make the freshly-created customer read 0 invoices. Clear those by stripe_id, and
 // bust the customers' cached full-customer entries so the re-created customers are clean
 // (s.deleteCustomer + s.customer in setup handle the DB rows).
-const INVOICE_TEST_CUSTOMER_IDS = ["rc-invoices-1", "rc-invoices-nonrenewing-1"];
+const INVOICE_TEST_CUSTOMER_IDS = [
+	"rc-invoices-1",
+	"rc-invoices-nonrenewing-1",
+];
 const INVOICE_TEST_TX_IDS = [
 	"rc3_tx_initial_001",
 	"rc3_tx_renewal_002",
@@ -123,194 +127,201 @@ const clearInvoiceTestData = async () => {
 // - Initial purchase → upgrade → downgrade → cancel → uncancel → billing issue → expire → add-on
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("revenuecat 1: webhook lifecycle")}`, async () => {
-	const customerId = "rc-webhook-1";
+test.concurrent(
+	`${chalk.yellowBright("revenuecat 1: webhook lifecycle")}`,
+	async () => {
+		const customerId = "rc-webhook-1";
 
-	// RevenueCat product IDs
-	const RC_PRO_MONTHLY_ID = "com.app.rc1_pro_monthly";
-	const RC_PRO_YEARLY_ID = "com.app.rc1_pro_yearly";
-	const RC_ADD_ON_ID = "com.app.rc1_add_on_pack";
+		// RevenueCat product IDs
+		const RC_PRO_MONTHLY_ID = "com.app.rc1_pro_monthly";
+		const RC_PRO_YEARLY_ID = "com.app.rc1_pro_yearly";
+		const RC_ADD_ON_ID = "com.app.rc1_add_on_pack";
 
-	// Autumn products
-	const proMonthly = rcProMonthly();
-	const proYearly = rcProYearly();
-	const addOnPack = products.base({
-		id: "add-on",
-		items: [items.lifetimeMessages({ includedUsage: 100 })],
-		isAddOn: true,
-	});
-
-	// Setup org with RevenueCat config
-	await setupRevenueCatOrg();
-
-	// Initialize scenario
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.products({ list: [proMonthly, proYearly, addOnPack] }),
-		],
-		actions: [],
-	});
-
-	// Create RC mappings
-	await Promise.all([
-		RCMappingService.upsert({
-			db: ctx.db,
-			data: {
-				org_id: ctx.org.id,
-				env: AppEnv.Sandbox,
-				autumn_product_id: proMonthly.id,
-				revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
-			},
-		}),
-		RCMappingService.upsert({
-			db: ctx.db,
-			data: {
-				org_id: ctx.org.id,
-				env: AppEnv.Sandbox,
-				autumn_product_id: proYearly.id,
-				revenuecat_product_ids: [RC_PRO_YEARLY_ID],
-			},
-		}),
-		RCMappingService.upsert({
-			db: ctx.db,
-			data: {
-				org_id: ctx.org.id,
-				env: AppEnv.Sandbox,
-				autumn_product_id: addOnPack.id,
-				revenuecat_product_ids: [RC_ADD_ON_ID],
-			},
-		}),
-	]);
-
-	const rcClient = new RevenueCatWebhookClient({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		webhookSecret: RC_WEBHOOK_SECRET,
-	});
-
-	// Get internal customer ID
-	const dbCustomer = await ctx.db.query.customers.findFirst({
-		where: eq(customers.id, customerId),
-	});
-	expect(dbCustomer).toBeDefined();
-	const internalCustomerId = dbCustomer!.internal_id;
-
-	// Helper to fetch latest active cus_product
-	const fetchLatestActiveCusProductId = async () => {
-		const cusProducts = await CusProductService.list({
-			db: ctx.db,
-			internalCustomerId,
-			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+		// Autumn products
+		const proMonthly = rcProMonthly();
+		const proYearly = rcProYearly();
+		const addOnPack = products.base({
+			id: "add-on",
+			items: [items.lifetimeMessages({ includedUsage: 100 })],
+			isAddOn: true,
 		});
-		const sorted = cusProducts.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
-		expect(sorted.length > 0).toBe(true);
-		return sorted[sorted.length - 1]!.id;
-	};
 
-	// 1. Initial Purchase - Pro Monthly
-	let result = await rcClient.initialPurchase({
-		productId: RC_PRO_MONTHLY_ID,
-		appUserId: customerId,
-		originalTransactionId: "rc1_tx_001",
-	});
-	expectWebhookSuccess(result);
+		// Setup org with RevenueCat config
+		await setupRevenueCatOrg();
 
-	let customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].id).toBe(proMonthly.id);
-	let baselineCusProductId = await fetchLatestActiveCusProductId();
+		// Initialize scenario
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [proMonthly, proYearly, addOnPack] }),
+			],
+			actions: [],
+		});
 
-	// 2. Upgrade to Pro Yearly (via renewal)
-	result = await rcClient.renewal({
-		productId: RC_PRO_YEARLY_ID,
-		appUserId: customerId,
-		originalTransactionId: "rc1_tx_001",
-	});
-	expectWebhookSuccess(result);
+		// Create RC mappings
+		await Promise.all([
+			RCMappingService.upsert({
+				db: ctx.db,
+				data: {
+					org_id: ctx.org.id,
+					env: AppEnv.Sandbox,
+					autumn_product_id: proMonthly.id,
+					revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
+				},
+			}),
+			RCMappingService.upsert({
+				db: ctx.db,
+				data: {
+					org_id: ctx.org.id,
+					env: AppEnv.Sandbox,
+					autumn_product_id: proYearly.id,
+					revenuecat_product_ids: [RC_PRO_YEARLY_ID],
+				},
+			}),
+			RCMappingService.upsert({
+				db: ctx.db,
+				data: {
+					org_id: ctx.org.id,
+					env: AppEnv.Sandbox,
+					autumn_product_id: addOnPack.id,
+					revenuecat_product_ids: [RC_ADD_ON_ID],
+				},
+			}),
+		]);
 
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].id).toBe(proYearly.id);
+		const rcClient = new RevenueCatWebhookClient({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			webhookSecret: RC_WEBHOOK_SECRET,
+		});
 
-	// 3. Downgrade to Pro Monthly (via initial purchase)
-	result = await rcClient.initialPurchase({
-		productId: RC_PRO_MONTHLY_ID,
-		appUserId: customerId,
-		originalTransactionId: "rc1_tx_001",
-	});
-	expectWebhookSuccess(result);
+		// Get internal customer ID
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		expect(dbCustomer).toBeDefined();
+		const internalCustomerId = dbCustomer!.internal_id;
 
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].id).toBe(proMonthly.id);
+		// Helper to fetch latest active cus_product
+		const fetchLatestActiveCusProductId = async () => {
+			const cusProducts = await CusProductService.list({
+				db: ctx.db,
+				internalCustomerId,
+				inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+			});
+			const sorted = cusProducts.sort(
+				(a, b) => (a.created_at ?? 0) - (b.created_at ?? 0),
+			);
+			expect(sorted.length > 0).toBe(true);
+			return sorted[sorted.length - 1]!.id;
+		};
 
-	const newCusProductId = await fetchLatestActiveCusProductId();
-	expect(newCusProductId).not.toBe(baselineCusProductId);
-	baselineCusProductId = newCusProductId;
+		// 1. Initial Purchase - Pro Monthly
+		let result = await rcClient.initialPurchase({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc1_tx_001",
+		});
+		expectWebhookSuccess(result);
 
-	// 4. Cancellation
-	result = await rcClient.cancellation({
-		productId: RC_PRO_MONTHLY_ID,
-		appUserId: customerId,
-		originalTransactionId: "rc1_tx_001",
-		expirationAtMs: Date.now() + 1000 * 60 * 60 * 24 * 30,
-	});
-	expectWebhookSuccess(result);
+		let customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(proMonthly.id);
+		let baselineCusProductId = await fetchLatestActiveCusProductId();
 
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].id).toBe(proMonthly.id);
-	expect(customer.products[0].canceled_at).toBeDefined();
-	expect(Math.abs(Date.now() - (customer.products[0].canceled_at ?? 0))).toBeLessThanOrEqual(3000);
+		// 2. Upgrade to Pro Yearly (via renewal)
+		result = await rcClient.renewal({
+			productId: RC_PRO_YEARLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc1_tx_001",
+		});
+		expectWebhookSuccess(result);
 
-	// 5. Uncancellation
-	result = await rcClient.uncancellation({
-		productId: RC_PRO_MONTHLY_ID,
-		appUserId: customerId,
-	});
-	expectWebhookSuccess(result);
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(proYearly.id);
 
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].canceled_at).toBeNull();
+		// 3. Downgrade to Pro Monthly (via initial purchase)
+		result = await rcClient.initialPurchase({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc1_tx_001",
+		});
+		expectWebhookSuccess(result);
 
-	// 6. Billing Issue
-	result = await rcClient.billingIssue({
-		productId: RC_PRO_MONTHLY_ID,
-		appUserId: customerId,
-		originalTransactionId: "rc1_tx_001",
-	});
-	expectWebhookSuccess(result);
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(proMonthly.id);
 
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(String(customer.products[0].status)).toBe("past_due");
+		const newCusProductId = await fetchLatestActiveCusProductId();
+		expect(newCusProductId).not.toBe(baselineCusProductId);
+		baselineCusProductId = newCusProductId;
 
-	// 7. Expiration
-	result = await rcClient.expiration({
-		productId: RC_PRO_MONTHLY_ID,
-		appUserId: customerId,
-		originalTransactionId: "rc1_tx_001",
-	});
-	expectWebhookSuccess(result);
+		// 4. Cancellation
+		result = await rcClient.cancellation({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc1_tx_001",
+			expirationAtMs: Date.now() + 1000 * 60 * 60 * 24 * 30,
+		});
+		expectWebhookSuccess(result);
 
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(0);
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(proMonthly.id);
+		expect(customer.products[0].canceled_at).toBeDefined();
+		expect(
+			Math.abs(Date.now() - (customer.products[0].canceled_at ?? 0)),
+		).toBeLessThanOrEqual(3000);
 
-	// 8. Non-renewing purchase (add-on after expiration)
-	result = await rcClient.nonRenewingPurchase({
-		productId: RC_ADD_ON_ID,
-		appUserId: customerId,
-		originalTransactionId: "rc1_addon_tx_001",
-	});
-	expectWebhookSuccess(result);
+		// 5. Uncancellation
+		result = await rcClient.uncancellation({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+		});
+		expectWebhookSuccess(result);
 
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].id).toBe(addOnPack.id);
-});
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].canceled_at).toBeNull();
+
+		// 6. Billing Issue
+		result = await rcClient.billingIssue({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc1_tx_001",
+		});
+		expectWebhookSuccess(result);
+
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(String(customer.products[0].status)).toBe("past_due");
+
+		// 7. Expiration
+		result = await rcClient.expiration({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc1_tx_001",
+		});
+		expectWebhookSuccess(result);
+
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(0);
+
+		// 8. Non-renewing purchase (add-on after expiration)
+		result = await rcClient.nonRenewingPurchase({
+			productId: RC_ADD_ON_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc1_addon_tx_001",
+		});
+		expectWebhookSuccess(result);
+
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(addOnPack.id);
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: RevenueCat customer migration (v1 to v2 product version)
@@ -319,127 +330,165 @@ test.concurrent(`${chalk.yellowBright("revenuecat 1: webhook lifecycle")}`, asyn
 // Scenario:
 // - Customer purchases Pro Monthly v1 via RevenueCat
 // - Product is updated to v2 with increased usage
-// - Customer is migrated from v1 to v2, preserving usage
+// - Customer is migrated from v1 to v2 via a v2 update_plan migration,
+//   preserving usage and the RevenueCat processor
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("revenuecat 2: customer migration v1 to v2")}`, async () => {
-	const customerId = "rc-migration-1";
-	const RC_PRO_MONTHLY_ID = "com.app.rc_migration_pro_monthly";
+test.concurrent(
+	`${chalk.yellowBright("revenuecat 2: customer migration v1 to v2")}`,
+	async () => {
+		const customerId = "rc-migration-1";
+		const RC_PRO_MONTHLY_ID = "com.app.rc_migration_pro_monthly";
 
-	// Pro Monthly v1
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({ id: "pro-monthly", items: [messagesItem] });
+		// Pro Monthly v1
+		const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
+		const proMonthly = products.pro({
+			id: "pro-monthly",
+			items: [messagesItem],
+		});
 
-	// Setup org with RevenueCat config
-	await setupRevenueCatOrg();
+		// Setup org with RevenueCat config
+		await setupRevenueCatOrg();
 
-	// Initialize scenario
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.products({ list: [proMonthly] }),
-		],
-		actions: [],
-	});
+		// Initialize scenario
+		const { autumnV1, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [proMonthly] }),
+			],
+			actions: [],
+		});
 
-	// Create RC mapping
-	await RCMappingService.upsert({
-		db: ctx.db,
-		data: {
-			org_id: ctx.org.id,
-			env: AppEnv.Sandbox,
-			autumn_product_id: proMonthly.id,
-			revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
-		},
-	});
-
-	const rcClient = new RevenueCatWebhookClient({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		webhookSecret: RC_WEBHOOK_SECRET,
-	});
-
-	// Get internal customer ID
-	const dbCustomer = await ctx.db.query.customers.findFirst({
-		where: eq(customers.id, customerId),
-	});
-	expect(dbCustomer).toBeDefined();
-	const internalCustomerId = dbCustomer!.internal_id;
-
-	// 1. Initial purchase via RevenueCat
-	const result = await rcClient.initialPurchase({
-		productId: RC_PRO_MONTHLY_ID,
-		appUserId: customerId,
-		originalTransactionId: "migration_tx_001",
-	});
-	expectWebhookSuccess(result);
-
-	let customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].id).toBe(proMonthly.id);
-
-	// Verify cus_product has RevenueCat processor
-	const cusProducts = await CusProductService.list({
-		db: ctx.db,
-		internalCustomerId,
-		inStatuses: [CusProductStatus.Active],
-	});
-	expect(cusProducts).toHaveLength(1);
-	expect(cusProducts[0].processor?.type).toBe(ProcessorType.RevenueCat);
-
-	// 2. Update product to v2 with increased usage
-	await autumnV1.products.update(proMonthly.id, {
-		items: [
-			items.monthlyMessages({ includedUsage: 2000 }),
-			items.monthlyPrice({ price: 20 }),
-		],
-	});
-
-	// 3. Track some usage before migration
-	await autumnV1.track({
-		customer_id: customerId,
-		value: 500,
-		feature_id: TestFeature.Messages,
-	});
-	await timeout(2000);
-
-	// 4. Run migration
-	await autumnV1.migrate({
-		from_product_id: proMonthly.id,
-		to_product_id: proMonthly.id,
-		from_version: 1,
-		to_version: 2,
-	});
-	await timeout(5000);
-
-	// 5. Verify migration succeeded
-	customer = await autumnV1.customers.get(customerId);
-	expect(customer.products).toHaveLength(1);
-	expect(customer.products[0].id).toBe(proMonthly.id);
-	expect(customer.products[0].version).toBe(2);
-
-	// Verify features reflect v2 (2000 included) with 500 usage
-	const proMonthlyV2 = {
-		...proMonthly,
-		version: 2,
-		items: [
-			items.monthlyMessages({ includedUsage: 2000 }),
-			items.monthlyPrice({ price: 20 }),
-		],
-	};
-
-	expectFeaturesCorrect({
-		customer,
-		product: proMonthlyV2,
-		usage: [
-			{
-				featureId: TestFeature.Messages,
-				value: 500,
+		// Create RC mapping
+		await RCMappingService.upsert({
+			db: ctx.db,
+			data: {
+				org_id: ctx.org.id,
+				env: AppEnv.Sandbox,
+				autumn_product_id: proMonthly.id,
+				revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
 			},
-		],
-	});
-});
+		});
+
+		const rcClient = new RevenueCatWebhookClient({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			webhookSecret: RC_WEBHOOK_SECRET,
+		});
+
+		// Get internal customer ID
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		expect(dbCustomer).toBeDefined();
+		const internalCustomerId = dbCustomer!.internal_id;
+
+		// 1. Initial purchase via RevenueCat
+		const result = await rcClient.initialPurchase({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "migration_tx_001",
+		});
+		expectWebhookSuccess(result);
+
+		let customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(proMonthly.id);
+
+		// Verify cus_product has RevenueCat processor
+		const cusProducts = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId,
+			inStatuses: [CusProductStatus.Active],
+		});
+		expect(cusProducts).toHaveLength(1);
+		expect(cusProducts[0].processor?.type).toBe(ProcessorType.RevenueCat);
+		// An uncustomized RC purchase must stay eligible for version migrations
+		expect(cusProducts[0].is_custom).toBe(false);
+
+		// 2. Update product to v2 with increased usage
+		await autumnV1.products.update(proMonthly.id, {
+			items: [
+				items.monthlyMessages({ includedUsage: 2000 }),
+				items.monthlyPrice({ price: 20 }),
+			],
+		});
+
+		// 3. Track some usage before migration
+		await autumnV1.track({
+			customer_id: customerId,
+			value: 500,
+			feature_id: TestFeature.Messages,
+		});
+		await timeout(2000);
+
+		// 4. Run migration
+		await runUpdatePlanMigration({
+			ctx,
+			migrationClient: autumnV2_2,
+			migrationId: `${customerId}-mig-${Date.now()}`,
+			customerId,
+			filter: {
+				customer: {
+					customer_id: customerId,
+					plan: { plan_id: proMonthly.id, version: 1 },
+				},
+			},
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: proMonthly.id, version: 1 },
+						version: 2,
+					},
+				],
+			},
+			waitFor: async () => {
+				const migrated = await autumnV1.customers.get(customerId);
+				expect(migrated.products[0]?.version).toBe(2);
+			},
+		});
+
+		// 5. Verify migration succeeded
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(proMonthly.id);
+		expect(customer.products[0].version).toBe(2);
+
+		const migratedCusProducts = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId,
+			inStatuses: [CusProductStatus.Active],
+		});
+		expect(migratedCusProducts).toHaveLength(1);
+		expect(migratedCusProducts[0].processor?.type).toBe(
+			ProcessorType.RevenueCat,
+		);
+		expect(migratedCusProducts[0].processor).toEqual(cusProducts[0].processor);
+
+		// Verify features reflect v2 (2000 included) with 500 usage
+		const proMonthlyV2 = {
+			...proMonthly,
+			version: 2,
+			items: [
+				items.monthlyMessages({ includedUsage: 2000 }),
+				items.monthlyPrice({ price: 20 }),
+			],
+		};
+
+		expectFeaturesCorrect({
+			customer,
+			product: proMonthlyV2,
+			usage: [
+				{
+					featureId: TestFeature.Messages,
+					value: 500,
+				},
+			],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: RevenueCat invoice rows
@@ -634,8 +683,9 @@ test.concurrent(
 			}),
 		);
 
-		const nrV1Customer =
-			await autumnV1.customers.get<ApiCustomerV3>(nonRenewingCustomerId);
+		const nrV1Customer = await autumnV1.customers.get<ApiCustomerV3>(
+			nonRenewingCustomerId,
+		);
 		expect(nrV1Customer.invoices).toBeDefined();
 		expect(nrV1Customer.invoices).toHaveLength(1);
 		const nrInvoice = nrV1Customer.invoices![0]!;
