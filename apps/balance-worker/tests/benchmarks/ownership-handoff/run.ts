@@ -7,7 +7,7 @@
  * (same machine, so Date.now() is comparable everywhere).
  *
  *   cd apps/balance-worker
- *   KAFKA_BROKERS=127.0.0.1:19092 NODE_ENV=test bun tests/benchmarks/ownership-handoff/run.ts [--runs 3] [--backend sqlite]
+ *   KAFKA_BROKERS=127.0.0.1:19092 NODE_ENV=test bun tests/benchmarks/ownership-handoff/run.ts [--runs 3] [--backend sqlite] [--snapshots write]
  *
  * --slots runs the blue-green scenario instead: two fleets told apart only by a fake
  * ECS service ARN (BENCH_SERVICE_ARN, which names their consumer groups), a slot
@@ -61,6 +61,7 @@ const { values: args } = parseArgs({
 		// the metering log volume, and replay re-reads the last ten minutes of it, so it inflates the very window being measured.
 		probe: { type: "boolean", default: false },
 		slots: { type: "boolean", default: false },
+		snapshots: { type: "string", default: "off" },
 	},
 });
 const RUNS = Number(args.runs);
@@ -470,6 +471,7 @@ async function spawnWorker(name: string, fleet?: Fleet): Promise<Worker> {
 			BALANCE_WORKER_DEPLOYMENT: deployment,
 		}),
 		BENCH_NAME: name,
+		BENCH_SUBJECT_SNAPSHOTS: args.snapshots,
 		BENCH_BACKEND: BACKEND,
 		...(fleet && {
 			BENCH_SERVICE_ARN: fleet.serviceArn,

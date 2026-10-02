@@ -11,6 +11,10 @@ import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
+import {
+	defaultSubjectSnapshotsEdgeConfig,
+	SubjectSnapshotsEdgeConfigSchema,
+} from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
@@ -31,12 +35,17 @@ const env = JSON.parse(process.env.BENCH_WORKER_ENV ?? "null") as
 	| (BalanceWorkerEnv & {
 			BENCH_NAME: string;
 			BENCH_BACKEND: StateBackend;
+			BENCH_SUBJECT_SNAPSHOTS: string;
 			BENCH_SERVICE_ARN?: string;
 			BENCH_EDGE_CONFIG_DIR?: string;
 	  })
 	| null;
 if (!env) throw new Error("BENCH_WORKER_ENV is required");
 const name = env.BENCH_NAME;
+const subjectSnapshots = SubjectSnapshotsEdgeConfigSchema.parse({
+	...defaultSubjectSnapshotsEdgeConfig(),
+	mode: env.BENCH_SUBJECT_SNAPSHOTS,
+});
 
 function emit(event: string, fields: Record<string, unknown> = {}): void {
 	process.stdout.write(
@@ -75,6 +84,7 @@ const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 const resources = await openWorkerResources({
 	ctx: {
 		logger,
+		subjectSnapshots: { read: () => subjectSnapshots },
 		edgeConfigS3Client: env.BENCH_EDGE_CONFIG_DIR
 			? createDirectoryEdgeConfigClient({
 					directory: env.BENCH_EDGE_CONFIG_DIR,
