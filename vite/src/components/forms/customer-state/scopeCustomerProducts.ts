@@ -4,7 +4,7 @@ import {
 } from "@autumn/shared";
 
 /** The plans a customer-state form seeds from: every plan, or with a Stripe
- * subscription in focus, the ones billed on it plus the free plans. */
+ * subscription or schedule in focus, the ones on it plus unlinked free plans. */
 export const scopeCustomerProducts = ({
 	customerProducts,
 	stripeSubscriptionId,
