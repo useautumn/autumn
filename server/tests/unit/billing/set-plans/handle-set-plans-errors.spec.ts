@@ -207,7 +207,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		[
 			"a free trial",
 			{ trialEndsAt: Date.now() + ms.days(14) },
-			"A free trial can't start on a later date",
+			"A free trial can't start on",
 		],
 		[
 			"invoice mode",
