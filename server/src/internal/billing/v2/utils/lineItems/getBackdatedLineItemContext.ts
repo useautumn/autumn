@@ -4,6 +4,7 @@ import type {
 	LineItemContext,
 	Price,
 } from "@autumn/shared";
+import { isBackdateRecreate } from "@/internal/billing/v2/actions/setPlans/utils/isBackdateRecreate";
 import { getBackdatedImmediatePeriod } from "@/internal/billing/v2/utils/backdate/getBackdatedImmediatePeriod";
 
 type BackdatedLineItemContext = Pick<
@@ -25,8 +26,10 @@ export const getBackdatedLineItemContext = ({
 	billingTiming: LineItemContext["billingTiming"];
 }): BackdatedLineItemContext | undefined => {
 	if (!billingPeriod) return undefined;
-	if (billingContext.subscriptionBackdateStartMs === undefined) return undefined;
+	if (billingContext.subscriptionBackdateStartMs === undefined)
+		return undefined;
 	if (billingContext.stripeSubscription) return undefined;
+	if (isBackdateRecreate({ billingContext })) return undefined;
 	if (direction !== "charge") return undefined;
 	if (billingTiming !== "in_advance") return undefined;
 

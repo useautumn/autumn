@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 
 type KeptSubscriptionCycle = Partial<
 	Pick<
@@ -14,7 +15,10 @@ type KeptSubscriptionCycle = Partial<
 	>
 >;
 
-/** A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it. */
+/**
+ * A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it.
+ * A backdate recreate always does, and leaves proration to the plan changes it makes.
+ */
 export const setupKeptSubscriptionCycle = ({
 	billingContext,
 	timeline,
@@ -26,6 +30,15 @@ export const setupKeptSubscriptionCycle = ({
 }): KeptSubscriptionCycle => {
 	const { replacedStripeSubscription, currentEpochMs } = billingContext;
 	if (!replacedStripeSubscription?.items.data.length) return {};
+
+	const periodEndMs = secondsToMs(
+		getLatestPeriodEnd({ sub: replacedStripeSubscription }),
+	);
+	if (periodEndMs <= currentEpochMs) return {};
+
+	if (isBackdateRecreate({ billingContext })) {
+		return { billingCycleAnchorMs: periodEndMs, requestedProrationBehavior };
+	}
 
 	const declaredSegmentIds = new Set(
 		timeline.diff.timeline
@@ -48,11 +61,6 @@ export const setupKeptSubscriptionCycle = ({
 			}),
 	);
 	if (!keepsReplacedPlan) return {};
-
-	const periodEndMs = secondsToMs(
-		getLatestPeriodEnd({ sub: replacedStripeSubscription }),
-	);
-	if (periodEndMs <= currentEpochMs) return {};
 
 	return {
 		billingCycleAnchorMs: periodEndMs,

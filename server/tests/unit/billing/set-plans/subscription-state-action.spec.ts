@@ -38,3 +38,28 @@ describe("subscriptionStateAction", () => {
 		});
 	}
 });
+
+const HEALTHY_STATES: SubscriptionState[] = ["active", "trialing", "past_due"];
+
+describe("subscriptionStateAction: a backdated first phase", () => {
+	for (const state of HEALTHY_STATES) {
+		test(`a healthy ${state} subscription is cancelled and recreated backdated`, () => {
+			expect(
+				subscriptionStateAction({ state, backdatesFirstPhase: true }),
+			).toEqual({
+				action: "cancel_and_create",
+				warning: "subscription_recreated_backdated",
+				reason: "backdate",
+			});
+		});
+	}
+
+	for (const [state, expected] of EXPECTED_DECISIONS) {
+		if (HEALTHY_STATES.includes(state)) continue;
+		test(`${state} decides as it would without a backdate`, () => {
+			expect(
+				subscriptionStateAction({ state, backdatesFirstPhase: true }),
+			).toEqual(expected);
+		});
+	}
+});

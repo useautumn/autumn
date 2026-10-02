@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+	addInterval,
+	BillingInterval,
 	BillingVersion,
 	type CreateScheduleBillingContext,
 	CusProductStatus,
@@ -7,6 +9,7 @@ import {
 	type FullCusProduct,
 	type MultiAttachProductContext,
 	ms,
+	msToSeconds,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -896,3 +899,124 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 		);
 	});
 });
+
+describe(
+	chalk.yellowBright("computeSetPlansPlan: backdate over a live subscription"),
+	() => {
+		const currentEpochMs = 1_800_000_000_000;
+		const periodStart = currentEpochMs - ms.days(18);
+		const periodEnd = addInterval({
+			from: periodStart,
+			interval: BillingInterval.Month,
+		});
+		const backdatedStart = currentEpochMs - ms.days(40);
+		const liveSubscription = {
+			id: "sub_live",
+			status: "active",
+			billing_cycle_anchor: msToSeconds(periodStart),
+			items: { data: [{ current_period_end: msToSeconds(periodEnd) }] },
+		} as Stripe.Subscription;
+
+		const backdatedContext = ({
+			fullProduct,
+			currentCustomerProduct,
+		}: {
+			fullProduct: MultiAttachProductContext["fullProduct"];
+			currentCustomerProduct: FullCusProduct;
+		}): CreateScheduleBillingContext => ({
+			...createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({ fullProduct, currentCustomerProduct }),
+				],
+				immediatePhase: {
+					starts_at: backdatedStart,
+					plans: [{ plan_id: fullProduct.id }],
+				},
+			}),
+			replacedStripeSubscription: liveSubscription,
+			subscriptionBackdateStartMs: backdatedStart,
+			billingCycleAnchorMs: periodEnd,
+		});
+
+		test("only the start date moving keeps the plan, bills nothing, and records the backdated start", () => {
+			const ctx = contexts.create({});
+			const { pro, customerProduct } = proWithCustomerProduct({
+				subscriptionIds: [liveSubscription.id],
+			});
+			customerProduct.starts_at = periodStart;
+
+			const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+				ctx,
+				billingContext: backdatedContext({
+					fullProduct: pro,
+					currentCustomerProduct: customerProduct,
+				}),
+			});
+
+			expect(autumnBillingPlan.insertCustomerProducts).toEqual([]);
+			expect(autumnBillingPlan.lineItems ?? []).toEqual([]);
+			expect(
+				autumnBillingPlan.updateCustomerProducts?.map(
+					({ customerProduct: updated, updates }) => ({
+						id: updated.id,
+						updates,
+					}),
+				),
+			).toEqual([
+				{
+					id: customerProduct.id,
+					updates: { subscription_ids: [], starts_at: backdatedStart },
+				},
+			]);
+		});
+
+		test("a plan change credits and charges only the rest of the live period", () => {
+			const ctx = contexts.create({});
+			const { pro, customerProduct } = proWithCustomerProduct({
+				subscriptionIds: [liveSubscription.id],
+			});
+			customerProduct.starts_at = periodStart;
+			const premium = products.createFull({
+				id: "premium",
+				prices: [prices.createFixed({ id: "price_premium" })],
+			});
+
+			const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+				ctx,
+				billingContext: backdatedContext({
+					fullProduct: premium,
+					currentCustomerProduct: customerProduct,
+				}),
+			});
+
+			const lineItems = autumnBillingPlan.lineItems ?? [];
+			const linePeriods = lineItems.map(({ amount, context }) => ({
+				productId: context.product.id,
+				direction: context.direction,
+				charges: amount > 0,
+				periodEnd: context.billingPeriod?.end,
+				backdated: context.backdate !== undefined,
+			}));
+			expect(linePeriods).toEqual([
+				{
+					productId: pro.id,
+					direction: "refund",
+					charges: false,
+					periodEnd,
+					backdated: false,
+				},
+				{
+					productId: premium.id,
+					direction: "charge",
+					charges: true,
+					periodEnd,
+					backdated: false,
+				},
+			]);
+			expect(autumnBillingPlan.insertCustomerProducts[0]?.starts_at).toBe(
+				backdatedStart,
+			);
+		});
+	},
+);

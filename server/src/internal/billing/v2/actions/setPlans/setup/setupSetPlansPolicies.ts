@@ -3,11 +3,12 @@ import type {
 	SetPlansParamsV0,
 } from "@autumn/shared";
 import type { SetPlansPolicies } from "../timeline/types/setPlansPolicies";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { firstPhaseStartsInFuture } from "./classifyFirstPhaseStart";
 
 /**
- * A requested trial starts every plan afresh. A replacement for a canceled, paid-up
- * subscription keeps plans' cycle unless a new paid plan or anchor restarts billing.
+ * A requested trial starts every plan afresh. A replacement for a paid-up subscription keeps
+ * plans' cycle unless a new paid plan or anchor restarts billing; a backdate always keeps it.
  */
 const liveRowsPolicy = ({
 	billingContext,
@@ -21,6 +22,7 @@ const liveRowsPolicy = ({
 	} = billingContext;
 	if (trialContext?.customFreeTrial) return "recreate";
 	if (!replacedStripeSubscription) return "carry";
+	if (isBackdateRecreate({ billingContext })) return "carry";
 
 	const continuesPaidUpCycle =
 		replacedStripeSubscription.status === "canceled" &&

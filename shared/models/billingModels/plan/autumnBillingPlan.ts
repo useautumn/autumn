@@ -66,6 +66,7 @@ export const CustomerProductUpdateSchema = z.object({
 		internal_entity_id: z.string().nullish(),
 		entity_id: z.string().nullish(),
 		released_at: z.number().nullish(),
+		starts_at: z.number().optional(),
 		billing_cycle_anchor: z.number().nullish(),
 		billing_cycle_anchor_resets_at: z.number().nullish(),
 		free_trial_id: z.string().nullish(),

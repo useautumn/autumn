@@ -117,3 +117,60 @@ describe(chalk.yellowBright("setupKeptSubscriptionCycle"), () => {
 		).toEqual({});
 	});
 });
+
+describe(chalk.yellowBright("setupKeptSubscriptionCycle: backdate"), () => {
+	const BACKDATED_START = NOW - ms.days(40);
+	const liveSubscription = {
+		...cancelledSubscription({ periodEndMs: PERIOD_END }),
+		status: "active",
+	} as Stripe.Subscription;
+
+	const backdatedOverLiveSubscription = ({
+		planOnSubscription,
+	}: {
+		planOnSubscription: boolean;
+	}): CreateScheduleBillingContext => {
+		const billingContext = proRequestedAgain({
+			replacedStripeSubscription: liveSubscription,
+		});
+		const [customerProduct] = billingContext.fullCustomer.customer_products;
+		customerProduct!.subscription_ids = planOnSubscription
+			? [liveSubscription.id]
+			: [];
+		return {
+			...billingContext,
+			subscriptionBackdateStartMs: BACKDATED_START,
+			immediatePhase: {
+				...billingContext.immediatePhase,
+				starts_at: BACKDATED_START,
+			},
+		};
+	};
+
+	test("anchors on the live period end, leaving the requested proration to the plan change", () => {
+		expect(
+			setupKeptSubscriptionCycle({
+				billingContext: backdatedOverLiveSubscription({
+					planOnSubscription: true,
+				}),
+				timeline: setupSetPlansTimeline({
+					ctx,
+					billingContext: backdatedOverLiveSubscription({
+						planOnSubscription: true,
+					}),
+					params: { undeclared_plans: "end" },
+				}),
+				requestedProrationBehavior: "prorate_immediately",
+			}),
+		).toEqual({
+			billingCycleAnchorMs: PERIOD_END,
+			requestedProrationBehavior: "prorate_immediately",
+		});
+	});
+
+	test("anchors on the live period end even when no plan on it is kept", () => {
+		expect(
+			keptCycle(backdatedOverLiveSubscription({ planOnSubscription: false })),
+		).toEqual({ billingCycleAnchorMs: PERIOD_END });
+	});
+});
