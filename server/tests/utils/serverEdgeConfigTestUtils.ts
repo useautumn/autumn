@@ -66,6 +66,11 @@ export const updateServerEdgeConfig = async <T>({
 		const landed = await dashboardFetch(ctx, session, path, {
 			method: "GET",
 		});
+		if (landed.status !== 200) {
+			throw new Error(
+				`GET ${path} returned ${landed.status}: ${JSON.stringify(landed.data)}`,
+			);
+		}
 		if (!Bun.deepEquals(schema.parse(landed.data), next)) {
 			throw new Error(
 				`PUT ${path} did not land: ${JSON.stringify(landed.data)}`,
