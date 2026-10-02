@@ -1,27 +1,15 @@
 import type { ByocCacheStatus } from "@autumn/shared";
-import type {
-	RolloutCustomerName,
-	RolloutOrg,
-	RolloutPercent,
-} from "../edge-config/rolloutTypes";
+import type { RolloutOrg } from "../edge-config/rolloutTypes";
 
 export const SHADOW_ATOM_ENVS = ["sandbox", "live"] as const;
 export type ShadowAtomEnv = (typeof SHADOW_ATOM_ENVS)[number];
 
-/** Mirrors the server's `SHADOW_ATOM_SETTLE_MS`: 15s in production builds, 5s locally. */
-export const SHADOW_ATOM_SETTLE_MS = import.meta.env.PROD ? 15_000 : 5_000;
-
-export type ShadowAtomRollout = RolloutPercent & {
-	orgs: Record<string, number>;
-	customers: Record<string, Record<string, boolean>>;
-};
-
 /** One env as `GET /admin/shadow-atom-config` returns it: no token, encrypted or not. */
 export type ShadowAtomEnvView = {
 	endpointUrl: string | null;
-	rollout: ShadowAtomRollout;
 	hasAdminToken: boolean;
-	orgs: Record<string, { registeredAt: number }>;
+	/** A registered org and the share of its customers the shadow Atom holds. */
+	orgs: Record<string, { registeredAt: number; percent: number }>;
 };
 
 export type ShadowAtomConfigView = Record<ShadowAtomEnv, ShadowAtomEnvView>;
@@ -41,8 +29,5 @@ export type ShadowAtomCreated = {
 	setupUrl: string | null;
 };
 
-/** Names for the ids the env's config holds, from `GET /admin/shadow-atom-config/:env/names`. */
-export type ShadowAtomNames = {
-	orgsById: Record<string, RolloutOrg>;
-	customerNamesByOrgId: Record<string, Record<string, RolloutCustomerName>>;
-};
+/** Registered orgs' names, from `GET /admin/shadow-atom-config/:env/names`. */
+export type ShadowAtomNames = { orgsById: Record<string, RolloutOrg> };

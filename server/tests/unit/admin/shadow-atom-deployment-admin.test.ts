@@ -270,7 +270,15 @@ test("delete tears the deployment down and forgets its group, endpoint and regis
 	stored = configWith({
 		deploymentGroupId: "dg_1",
 		endpointUrl: ENDPOINT,
-		orgs: { org_1: { encryptedToken: "enc", registeredAt: 1 } },
+		orgs: {
+			org_1: {
+				encryptedToken: "enc",
+				registeredAt: 1,
+				percent: 100,
+				previousPercent: 0,
+				changedAt: 0,
+			},
+		},
 	});
 	deployment = runningDeployment;
 

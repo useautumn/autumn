@@ -108,18 +108,26 @@ describe("inAtomRollout", () => {
 });
 
 describe("scheduleOrgPercent", () => {
-	const current = registered({ percent: 20, previousPercent: 10, changedAt: 0 });
+	const current = registered({
+		percent: 20,
+		previousPercent: 10,
+		changedAt: 0,
+	});
 
 	test("a new percent starts from what routes now", () => {
-		expect(
-			scheduleOrgPercent({ current, percent: 50, now: settled }),
-		).toEqual({ percent: 50, previousPercent: 20, changedAt: settled });
+		expect(scheduleOrgPercent({ current, percent: 50, now: settled })).toEqual({
+			percent: 50,
+			previousPercent: 20,
+			changedAt: settled,
+		});
 	});
 
 	test("the same percent keeps its settle bookkeeping", () => {
-		expect(
-			scheduleOrgPercent({ current, percent: 20, now: settled }),
-		).toEqual({ percent: 20, previousPercent: 10, changedAt: 0 });
+		expect(scheduleOrgPercent({ current, percent: 20, now: settled })).toEqual({
+			percent: 20,
+			previousPercent: 10,
+			changedAt: 0,
+		});
 	});
 
 	test("a newly registered org starts from no one", () => {
@@ -157,12 +165,11 @@ test("a save keeps each env's deployment group, whatever the caller sent", () =>
 		sandbox: { deploymentGroupId: "dg_sandbox" },
 		live: { deploymentGroupId: "dg_live" },
 	});
-	const saved = scheduleShadowAtomConfig({
+	const saved = applyShadowAtomSettings({
 		current,
 		next: ShadowAtomConfigSchema.parse({
 			live: { deploymentGroupId: "dg_x" },
 		}),
-		now: 0,
 	});
 
 	expect(saved.sandbox.deploymentGroupId).toBe("dg_sandbox");

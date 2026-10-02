@@ -23,6 +23,7 @@ export const ShadowAtomOrgPicker = ({
 				subtitle={value.slug || value.id}
 				clearLabel="Pick another org"
 				onClear={() => onChange(null)}
+				disabled={disabled}
 			/>
 		);
 

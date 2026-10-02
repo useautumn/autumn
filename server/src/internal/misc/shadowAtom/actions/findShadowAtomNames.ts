@@ -1,10 +1,9 @@
 import { type AppEnv, organizations } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { findRolloutCustomerNames } from "@/internal/admin/rollouts/findRolloutCustomerNames.js";
 import { shadowAtomConfigStore } from "../shadowAtomConfigStore.js";
 
-/** Names for every org and pinned customer the env's shadow Atom config holds by id. */
+/** Name and slug for every org registered on the env's shadow Atom. */
 export const findShadowAtomNames = async ({
 	db,
 	env,
@@ -12,16 +11,9 @@ export const findShadowAtomNames = async ({
 	db: DrizzleCli;
 	env: AppEnv;
 }) => {
-	const { rollout, orgs: registered } = (
-		await shadowAtomConfigStore.readFromSource()
-	)[env];
-	const orgIds = [
-		...new Set([
-			...Object.keys(rollout.orgs),
-			...Object.keys(rollout.customers),
-			...Object.keys(registered),
-		]),
-	];
+	const orgIds = Object.keys(
+		(await shadowAtomConfigStore.readFromSource())[env].orgs,
+	);
 	const orgs =
 		orgIds.length > 0
 			? await db
@@ -33,11 +25,5 @@ export const findShadowAtomNames = async ({
 					.from(organizations)
 					.where(inArray(organizations.id, orgIds))
 			: [];
-	return {
-		orgsById: Object.fromEntries(orgs.map((org) => [org.id, org])),
-		customerNamesByOrgId: await findRolloutCustomerNames({
-			db,
-			customersByOrgId: rollout.customers,
-		}),
-	};
+	return { orgsById: Object.fromEntries(orgs.map((org) => [org.id, org])) };
 };

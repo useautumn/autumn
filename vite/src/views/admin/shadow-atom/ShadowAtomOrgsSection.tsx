@@ -1,5 +1,5 @@
 import { RolloutSection } from "../edge-config/RolloutSection";
-import { ShadowAtomOrgList } from "./ShadowAtomOrgList";
+import { ShadowAtomOrgTable } from "./ShadowAtomOrgTable";
 import { ShadowAtomSectionBody } from "./ShadowAtomSectionBody";
 import type { ShadowAtomEnv } from "./shadowAtomTypes";
 import { useShadowAtomConfig } from "./useShadowAtomConfig";
@@ -8,13 +8,13 @@ import { useShadowAtomOrgs } from "./useShadowAtomOrgs";
 
 export const ShadowAtomOrgsSection = ({ env }: { env: ShadowAtomEnv }) => {
 	const { query, envConfig } = useShadowAtomConfig({ env });
-	const { register, unregister, isBusy } = useShadowAtomOrgs({ env });
+	const { add, setPercent, remove, isBusy } = useShadowAtomOrgs({ env });
 	const names = useShadowAtomNames({ env });
 
 	return (
 		<RolloutSection
 			title="Orgs on the shadow Atom"
-			description="Each registered org gets its own folder and token on the shadow Atom."
+			description="Each org's percent is the share of its customers pushed to the shadow Atom and checked against it."
 		>
 			<ShadowAtomSectionBody
 				isError={query.isError}
@@ -23,18 +23,19 @@ export const ShadowAtomOrgsSection = ({ env }: { env: ShadowAtomEnv }) => {
 				onRetry={() => void query.refetch()}
 			>
 				{envConfig && (
-					<ShadowAtomOrgList
+					<ShadowAtomOrgTable
 						envConfig={envConfig}
 						names={names}
-						issued={register.data ?? null}
-						onRegister={(params) =>
-							register.mutateAsync(params).then(
+						issued={add.data ?? null}
+						onAdd={(params) =>
+							add.mutateAsync(params).then(
 								() => true,
 								() => false,
 							)
 						}
-						onUnregister={(params) => unregister.mutate(params)}
-						isRegistering={register.isPending}
+						onSetPercent={(params) => setPercent.mutate(params)}
+						onRemove={(params) => remove.mutate(params)}
+						isAdding={add.isPending}
 						isBusy={isBusy}
 					/>
 				)}

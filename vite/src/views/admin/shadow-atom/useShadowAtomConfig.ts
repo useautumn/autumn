@@ -1,21 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
-import { toShadowAtomSettings } from "./shadowAtomRolloutEdits";
-import type {
-	ShadowAtomConfigView,
-	ShadowAtomEnv,
-	ShadowAtomRollout,
-} from "./shadowAtomTypes";
+import type { ShadowAtomConfigView, ShadowAtomEnv } from "./shadowAtomTypes";
 
 export const SHADOW_ATOM_CONFIG_QUERY_KEY = ["admin-shadow-atom-config"];
 
-/** The shadow Atom config as staff see it, and the one write that moves a rollout. */
+/** The shadow Atom config as staff see it: no token, encrypted or not. */
 export const useShadowAtomConfig = ({ env }: { env: ShadowAtomEnv }) => {
 	const axiosInstance = useAxiosInstance();
-	const queryClient = useQueryClient();
-
 	const query = useQuery<ShadowAtomConfigView>({
 		queryKey: SHADOW_ATOM_CONFIG_QUERY_KEY,
 		queryFn: async () => {
@@ -23,25 +14,5 @@ export const useShadowAtomConfig = ({ env }: { env: ShadowAtomEnv }) => {
 			return data;
 		},
 	});
-
-	const saveRollout = useMutation({
-		mutationFn: async ({ rollout }: { rollout: ShadowAtomRollout }) => {
-			if (!query.data) throw new Error("The config has not loaded yet");
-			await axiosInstance.put(
-				"/admin/shadow-atom-config",
-				toShadowAtomSettings({ config: query.data, env, rollout }),
-			);
-		},
-		// Stays pending until the refetch lands, so the next edit starts from the saved rollout.
-		onSuccess: () => {
-			toast.success("Shadow Atom rollout saved");
-			return queryClient.invalidateQueries({
-				queryKey: SHADOW_ATOM_CONFIG_QUERY_KEY,
-			});
-		},
-		onError: (error) =>
-			toast.error(getBackendErr(error, "Failed to save the rollout")),
-	});
-
-	return { query, envConfig: query.data?.[env], saveRollout };
+	return { query, envConfig: query.data?.[env] };
 };

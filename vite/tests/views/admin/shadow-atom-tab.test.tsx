@@ -2,53 +2,36 @@ import { describe, expect, test } from "bun:test";
 import { ByocCacheStatus } from "@autumn/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ShadowAtomDeploymentCard } from "../../../src/views/admin/shadow-atom/ShadowAtomDeploymentCard";
-import { ShadowAtomOrgList } from "../../../src/views/admin/shadow-atom/ShadowAtomOrgList";
-import { ShadowAtomRolloutPanel } from "../../../src/views/admin/shadow-atom/ShadowAtomRolloutPanel";
-import {
-	toShadowAtomSettings,
-	unpinCustomer,
-} from "../../../src/views/admin/shadow-atom/shadowAtomRolloutEdits";
+import { ShadowAtomOrgTable } from "../../../src/views/admin/shadow-atom/ShadowAtomOrgTable";
 import type {
-	ShadowAtomConfigView,
 	ShadowAtomDeployment,
 	ShadowAtomEnvView,
 	ShadowAtomNames,
-	ShadowAtomRollout,
 } from "../../../src/views/admin/shadow-atom/shadowAtomTypes";
 
 const noop = () => {};
+const added = async () => true;
 const names: ShadowAtomNames = {
 	orgsById: {
 		org_test_1: { id: "org_test_1", name: "Example Org", slug: "example-org" },
 	},
-	customerNamesByOrgId: {
-		org_test_1: {
-			cus_in: { name: "Pinned In Person", email: "in@example.com" },
-		},
-	},
 };
-const saved = async () => true;
-
-const rollout = (
-	overrides: Partial<ShadowAtomRollout> = {},
-): ShadowAtomRollout => ({
-	percent: 0,
-	previousPercent: 0,
-	changedAt: 0,
-	orgs: {},
-	customers: {},
-	...overrides,
-});
 
 const envView = (
 	overrides: Partial<ShadowAtomEnvView> = {},
 ): ShadowAtomEnvView => ({
 	endpointUrl: null,
-	rollout: rollout(),
 	hasAdminToken: false,
 	orgs: {},
 	...overrides,
 });
+
+const ready = (orgs: ShadowAtomEnvView["orgs"]) =>
+	envView({
+		endpointUrl: "https://shadow-atom.example.com",
+		hasAdminToken: true,
+		orgs,
+	});
 
 const renderDeployment = ({
 	deployment,
@@ -125,123 +108,63 @@ const renderOrgs = ({
 	issued?: { orgId: string; token: string } | null;
 }) =>
 	renderToStaticMarkup(
-		<ShadowAtomOrgList
+		<ShadowAtomOrgTable
 			envConfig={envConfig}
 			names={names}
 			issued={issued}
-			onRegister={saved}
-			onUnregister={noop}
-			isRegistering={false}
+			onAdd={added}
+			onSetPercent={noop}
+			onRemove={noop}
+			isAdding={false}
 			isBusy={false}
 		/>,
 	);
 
 describe("orgs on the shadow Atom", () => {
-	test("without an endpoint and admin token, registering is disabled and says why", () => {
+	test("without an endpoint and admin token, adding is disabled and says why", () => {
 		const html = renderOrgs({ envConfig: envView() });
 
 		expect(html).toContain("No org is on the shadow Atom.");
-		expect(html).toContain("Search orgs by name or slug");
-		expect(html).toContain(
-			"Registering and unregistering need a ready shadow Atom",
-		);
+		expect(html).toContain("Adding and changing orgs need a ready shadow Atom");
 		expect(html).toMatch(
-			/<button type="submit"[^>]* disabled=""[^>]*><span[^>]*>Register</,
+			/<button type="submit"[^>]* disabled=""[^>]*><span[^>]*>Add org</,
 		);
 	});
 
-	test("a registered org is listed and a fresh token shows once", () => {
+	test("the add form picks an org by name or slug and starts at 100%", () => {
+		const html = renderOrgs({ envConfig: ready({}) });
+
+		expect(html).toContain("Search orgs by name or slug");
+		expect(html).toMatch(/aria-label="Percent" value="100"/);
+		expect(html).not.toContain("Adding and changing orgs need");
+	});
+
+	test("each org shows name · slug, its percent in place, and whether it is pushing", () => {
 		const html = renderOrgs({
-			envConfig: envView({
-				endpointUrl: "https://shadow-atom.example.com",
-				hasAdminToken: true,
-				orgs: { org_test_1: { registeredAt: Date.UTC(2026, 9, 2, 12, 0) } },
+			envConfig: ready({
+				org_test_1: { registeredAt: 1, percent: 40 },
+				org_test_2: { registeredAt: 2, percent: 0 },
 			}),
 			issued: { orgId: "org_test_1", token: "atom_secret_example" },
 		});
 
 		expect(html).toContain("Example Org");
-		expect(html).toContain("example-org · org_test_1");
+		expect(html).toContain("example-org");
+		expect(html).toMatch(/aria-label="Percent for Example Org" value="40"/);
+		expect(html).toContain("Pushing");
+		expect(html).toMatch(/aria-label="Percent for org_test_2" value="0"/);
+		expect(html).toContain("Registered");
+		expect(html).toContain("Remove Example Org");
 		expect(html).toContain("Token for Example Org");
 		expect(html).toContain("atom_secret_example");
-		expect(html).toContain("Shown once");
-		expect(html).not.toContain("Registering and unregistering need");
-	});
-});
-
-describe("rollout panel", () => {
-	test("empty overrides and pins read as such", () => {
-		const html = renderToStaticMarkup(
-			<ShadowAtomRolloutPanel
-				rollout={rollout()}
-				names={names}
-				onSave={saved}
-				isSaving={false}
-			/>,
-		);
-
-		expect(html).toContain("Every org follows the env&#x27;s percent.");
-		expect(html).toContain("No customer is pinned.");
-		expect(html).toContain("Never changed");
 	});
 
-	test("overrides and pins are listed with their values", () => {
-		const html = renderToStaticMarkup(
-			<ShadowAtomRolloutPanel
-				rollout={rollout({
-					percent: 10,
-					changedAt: 1,
-					orgs: { org_test_1: 50 },
-					customers: { org_test_1: { cus_in: true, cus_out: false } },
-				})}
-				names={names}
-				onSave={saved}
-				isSaving={false}
-			/>,
-		);
-
-		expect(html).toContain("50%");
-		expect(html).toContain("Example Org");
-		expect(html).toContain("Pinned In Person");
-		expect(html).toContain("in@example.com · cus_in");
-		expect(html).toContain("cus_out");
-		expect(html).toContain("Pick an org first");
-		expect(html).toContain("Pinned in");
-		expect(html).toContain("Pinned out");
-	});
-});
-
-describe("rollout edits", () => {
-	const config: ShadowAtomConfigView = {
-		sandbox: envView({ endpointUrl: "https://sandbox.example.com" }),
-		live: envView({ rollout: rollout({ percent: 7 }) }),
-	};
-
-	test("a save sends both envs' address and rollout, replacing only this env's rollout", () => {
-		const settings = toShadowAtomSettings({
-			config,
-			env: "sandbox",
-			rollout: rollout({ percent: 25 }),
+	test("no env percent, customer pins or settle window are shown", () => {
+		const html = renderOrgs({
+			envConfig: ready({ org_test_1: { registeredAt: 1, percent: 40 } }),
 		});
 
-		expect(settings).toEqual({
-			sandbox: {
-				endpointUrl: "https://sandbox.example.com",
-				rollout: rollout({ percent: 25 }),
-			},
-			live: { endpointUrl: null, rollout: rollout({ percent: 7 }) },
-		});
-	});
-
-	test("unpinning an org's last customer drops the org", () => {
-		const next = unpinCustomer({
-			rollout: rollout({
-				customers: { org_a: { cus_1: true }, org_b: { cus_2: false } },
-			}),
-			orgId: "org_a",
-			customerId: "cus_1",
-		});
-
-		expect(next.customers).toEqual({ org_b: { cus_2: false } });
+		for (const gone of ["Pinned", "customer", "settle", "Every org follows"])
+			expect(html).not.toContain(gone);
 	});
 });

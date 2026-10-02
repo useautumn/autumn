@@ -1,6 +1,6 @@
 import { afterAll, expect, spyOn, test } from "bun:test";
 import { type ShadowAtomConfig, shadowAtomConfig } from "@autumn/edge-config";
-import { customers, organizations, RecaseError, Scopes } from "@autumn/shared";
+import { organizations, RecaseError, Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetAdminShadowAtomNames } from "@/internal/admin/handleGetAdminShadowAtomNames.js";
@@ -8,17 +8,16 @@ import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConf
 
 const config: ShadowAtomConfig = (() => {
 	const base = shadowAtomConfig.defaultValue();
+	const org = (registeredAt: number) => ({
+		encryptedToken: "enc",
+		registeredAt,
+		percent: 100,
+		previousPercent: 0,
+		changedAt: 0,
+	});
 	return {
 		...base,
-		sandbox: {
-			...base.sandbox,
-			rollout: {
-				...base.sandbox.rollout,
-				orgs: { org_a: 50 },
-				customers: { org_b: { cus_1: true } },
-			},
-			orgs: { org_c: { encryptedToken: "enc", registeredAt: 1 } },
-		},
+		sandbox: { ...base.sandbox, orgs: { org_a: org(1), org_b: org(2) } },
 	};
 })();
 const read = spyOn(shadowAtomConfigStore, "readFromSource").mockResolvedValue(
@@ -26,37 +25,14 @@ const read = spyOn(shadowAtomConfigStore, "readFromSource").mockResolvedValue(
 );
 afterAll(() => read.mockRestore());
 
-const queried: { table: unknown; rows: unknown[] }[] = [];
-const rowsByTable = new Map<unknown, unknown[]>([
-	[
-		organizations,
-		[
-			{ id: "org_a", name: "Org A", slug: "org-a" },
-			{ id: "org_b", name: "Org B", slug: "org-b" },
-			{ id: "org_c", name: "Org C", slug: "org-c" },
-		],
-	],
-	[
-		customers,
-		[
-			{
-				orgId: "org_b",
-				customerId: "cus_1",
-				env: "sandbox",
-				name: "Customer One",
-				email: "one@example.com",
-			},
-		],
-	],
-]);
+const orgRows = [
+	{ id: "org_a", name: "Org A", slug: "org-a" },
+	{ id: "org_b", name: "Org B", slug: "org-b" },
+];
 const db = {
 	select: () => ({
 		from: (table: unknown) => ({
-			where: async () => {
-				const rows = rowsByTable.get(table) ?? [];
-				queried.push({ table, rows });
-				return rows;
-			},
+			where: async () => (table === organizations ? orgRows : []),
 		}),
 	}),
 };
@@ -80,7 +56,7 @@ const fetchNames = ({ scopes }: { scopes: string[] }) => {
 	return app.request("/admin/shadow-atom-config/sandbox/names");
 };
 
-test("staff get names for every org and pinned customer the env holds by id", async () => {
+test("staff get the name and slug of every org registered on the env's shadow Atom", async () => {
 	const response = await fetchNames({ scopes: [Scopes.Superuser] });
 
 	expect(response.status).toBe(200);
@@ -88,10 +64,6 @@ test("staff get names for every org and pinned customer the env holds by id", as
 		orgsById: {
 			org_a: { id: "org_a", name: "Org A", slug: "org-a" },
 			org_b: { id: "org_b", name: "Org B", slug: "org-b" },
-			org_c: { id: "org_c", name: "Org C", slug: "org-c" },
-		},
-		customerNamesByOrgId: {
-			org_b: { cus_1: { name: "Customer One", email: "one@example.com" } },
 		},
 	});
 });
