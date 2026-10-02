@@ -101,9 +101,14 @@ test.concurrent(
 test.concurrent(
 	"QA SA6: live pro with a saved later phase — a backdate is rejected, a future start replaces the schedule",
 	async () => {
-		const { premium } = startsAtProducts();
-		const { autumnV2_4, customerId, pro } = await initLiveProScenario({
+		const { pro, premium } = startsAtProducts();
+		const { autumnV2_4, customerId } = await initScenario({
 			customerId: "qa-sa-live-schedule",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
 		});
 		await autumnV2_4.billing.setPlans({
 			customer_id: customerId,
