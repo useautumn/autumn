@@ -50,7 +50,10 @@ import {
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
-import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
+import {
+	firstPhaseIsBackdated,
+	firstPhaseStartsLater,
+} from "../utils/schedulePhaseTiming";
 
 interface CreateScheduleFormContextValue {
 	generation: BillingGenerationState;
@@ -63,6 +66,8 @@ interface CreateScheduleFormContextValue {
 	isExistingSchedule: boolean;
 	/** First phase may start in the past; a live subscription is recreated from that date. */
 	allowFirstPhaseBackdate: boolean;
+	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
+	backdatesLiveSubscription: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -185,6 +190,10 @@ export function CreateScheduleFormProvider({
 	const allowFirstPhaseBackdate =
 		!isExistingSchedule && immediatePlansPaidRecurring;
 
+	const backdatesLiveSubscription =
+		hasActiveSubscription &&
+		firstPhaseIsBackdated({ phases: formValues.phases, nowMs });
+
 	// Mirrors attach: a new sub is created when there's no active subscription, and
 	// usage-only plans still bill recurring even though nothing is due immediately.
 	const createsRecurringSubscription =
@@ -299,6 +308,15 @@ export function CreateScheduleFormProvider({
 		}
 	}, [preview?.redirect_to_checkout, startsLater, form]);
 
+	useEffect(() => {
+		if (
+			backdatesLiveSubscription &&
+			form.store.state.values.resetBillingCycle
+		) {
+			form.setFieldValue("resetBillingCycle", false);
+		}
+	}, [backdatesLiveSubscription, form]);
+
 	const generation = useCreateScheduleGeneration({
 		currentRequest: generationRequestBody as Record<string, unknown> | null,
 		customerId,
@@ -328,6 +346,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,
@@ -349,6 +368,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,
