@@ -1,5 +1,5 @@
-import { initMasterStripe } from "@/external/connect/initStripeCli";
 import { Scopes } from "@autumn/shared";
+import { initMasterStripe } from "@/external/connect/initStripeCli";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleGetMasterStripeAccount = createRoute({

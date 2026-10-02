@@ -1,5 +1,5 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CustomerBlockConfigSchema } from "@/internal/misc/customerBlocks/customerBlockSchemas.js";
 import { updateFullCustomerBlockConfig } from "@/internal/misc/customerBlocks/customerBlockStore.js";
 

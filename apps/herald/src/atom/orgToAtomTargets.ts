@@ -3,7 +3,7 @@ import type { AppEnv, Organization } from "@autumn/shared";
 import { orgToAtomConnection } from "./orgToAtomConnection.js";
 import type { AtomConnection } from "./types/atomClient.js";
 
-/** Our shadow Atom for this env, or null unless it has an address, the org is registered on it and, for a subject, it holds the customer. */
+/** Our shadow Atom's folder for this env, or null unless it has an address, the org is registered on it and, for a subject, it holds the customer. */
 const shadowAtomConnection = ({
 	shadowAtomConfig,
 	org,
@@ -15,8 +15,10 @@ const shadowAtomConnection = ({
 	env: AppEnv;
 	customerId: string | null;
 }): AtomConnection | null => {
-	const config = shadowAtomConfig[env];
-	const registered = config.orgs[org.id];
+	const config = shadowAtomConfig;
+	const registered = Object.hasOwn(config.orgs, org.id)
+		? config.orgs[org.id]
+		: null;
 	if (!config.endpointUrl || !registered) return null;
 	const holdsSubject =
 		customerId === null || inAtomRollout({ config, orgId: org.id, customerId });
@@ -24,7 +26,7 @@ const shadowAtomConnection = ({
 	return {
 		target: "shadow",
 		endpointUrl: config.endpointUrl,
-		encryptedToken: registered.encryptedToken,
+		encryptedToken: registered.encryptedTokens[env],
 	};
 };
 

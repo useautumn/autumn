@@ -92,10 +92,8 @@ const useShadowAtom = ({
 	adminToken?: string | null;
 } = {}) => {
 	stored = ShadowAtomConfigSchema.parse({
-		sandbox: {
-			endpointUrl,
-			adminEncryptedToken: adminToken ? encryptData(adminToken) : null,
-		},
+		endpointUrl,
+		adminEncryptedToken: adminToken ? encryptData(adminToken) : null,
 	});
 };
 
@@ -133,11 +131,11 @@ const createApp = ({ scopes }: { scopes: string[] }) => {
 			}),
 	);
 	app.put(
-		"/admin/shadow-atom-config/:env/orgs/:org_id",
+		"/admin/shadow-atom-config/orgs/:org_id",
 		...handleRegisterAdminShadowAtomOrg,
 	);
 	app.delete(
-		"/admin/shadow-atom-config/:env/orgs/:org_id",
+		"/admin/shadow-atom-config/orgs/:org_id",
 		...handleUnregisterAdminShadowAtomOrg,
 	);
 	return app;
@@ -145,17 +143,15 @@ const createApp = ({ scopes }: { scopes: string[] }) => {
 
 const register = ({
 	orgId = "org_1",
-	env = "sandbox",
 	scopes = [Scopes.Superuser],
 	percent,
 }: {
 	orgId?: string;
-	env?: string;
 	scopes?: string[];
 	percent?: number;
 } = {}) =>
 	createApp({ scopes }).request(
-		`/admin/shadow-atom-config/${env}/orgs/${orgId}`,
+		`/admin/shadow-atom-config/orgs/${orgId}`,
 		percent === undefined
 			? { method: "PUT" }
 			: {
@@ -172,10 +168,9 @@ const unregister = ({
 	orgId?: string;
 	scopes?: string[];
 } = {}) =>
-	createApp({ scopes }).request(
-		`/admin/shadow-atom-config/sandbox/orgs/${orgId}`,
-		{ method: "DELETE" },
-	);
+	createApp({ scopes }).request(`/admin/shadow-atom-config/orgs/${orgId}`, {
+		method: "DELETE",
+	});
 
 test("the multi-tenant deployer puts an org with the admin token, and the Atom gets only the org token's hash", async () => {
 	const deployer = createMultiTenantAtomDeployer({
@@ -210,60 +205,59 @@ test("a multi-tenant Atom that refuses the admin token is a 503, not a silent su
 	});
 });
 
-test("staff register an org: its token is answered once and stored only encrypted, under the env's orgs", async () => {
+test("staff register an org once for both envs: a folder and token per env, answered once and stored only encrypted", async () => {
 	const response = await register();
 
 	expect(response.status).toBe(200);
-	const { token, ...rest } = await response.json();
-	expect(rest).toEqual({ env: "sandbox", org_id: "org_1" });
-	expect(received[0]?.body).toEqual({
-		id: "org_1.sandbox",
-		token_hash: atomTokenToHash({ token }),
-	});
-	const registered = stored.sandbox.orgs.org_1;
-	expect(registered && decryptData(registered.encryptedToken)).toBe(token);
+	const { tokens, ...rest } = await response.json();
+	expect(rest).toEqual({ org_id: "org_1" });
+	expect(received.map(({ body }) => body)).toEqual([
+		{
+			id: "org_1.sandbox",
+			token_hash: atomTokenToHash({ token: tokens.sandbox }),
+		},
+		{ id: "org_1.live", token_hash: atomTokenToHash({ token: tokens.live }) },
+	]);
+	const registered = stored.orgs.org_1;
+	expect(registered && decryptData(registered.encryptedTokens.sandbox)).toBe(
+		tokens.sandbox,
+	);
+	expect(registered && decryptData(registered.encryptedTokens.live)).toBe(
+		tokens.live,
+	);
 	expect(registered?.percent).toBe(100);
-	expect(JSON.stringify(stored)).not.toContain(token);
-	expect(stored.live.orgs).toEqual({});
+	expect(JSON.stringify(stored)).not.toContain(tokens.sandbox);
+	expect(JSON.stringify(stored)).not.toContain(tokens.live);
 });
 
 test("registering takes the org's percent in the same call", async () => {
 	await register({ percent: 25 });
 
-	expect(stored.sandbox.orgs.org_1).toMatchObject({
-		percent: 25,
-		previousPercent: 0,
-	});
+	expect(stored.orgs.org_1).toMatchObject({ percent: 25, previousPercent: 0 });
 });
 
-test("registering again rotates the org's token", async () => {
+test("registering again rotates both of the org's tokens", async () => {
 	const first = await (await register()).json();
 	const second = await (await register()).json();
 
-	expect(second.token).not.toBe(first.token);
-	expect(decryptData(stored.sandbox.orgs.org_1?.encryptedToken ?? "")).toBe(
-		second.token,
+	expect(second.tokens.sandbox).not.toBe(first.tokens.sandbox);
+	expect(second.tokens.live).not.toBe(first.tokens.live);
+	expect(decryptData(stored.orgs.org_1?.encryptedTokens.live ?? "")).toBe(
+		second.tokens.live,
 	);
 });
 
-test("staff unregister an org: it leaves the config, then the Atom deletes its folder", async () => {
+test("staff unregister an org: it leaves the config, then the Atom deletes both its folders", async () => {
 	await register();
 	received.length = 0;
 
 	const response = await unregister();
 
-	expect(await response.json()).toEqual({
-		env: "sandbox",
-		org_id: "org_1",
-		deleted: true,
-	});
-	expect(stored.sandbox.orgs).toEqual({});
-	expect(received).toEqual([
-		{
-			route: "atoms.delete",
-			adminToken: ADMIN_TOKEN,
-			body: { id: "org_1.sandbox" },
-		},
+	expect(await response.json()).toEqual({ org_id: "org_1", deleted: true });
+	expect(stored.orgs).toEqual({});
+	expect(received.map(({ route, body }) => [route, body])).toEqual([
+		["atoms.delete", { id: "org_1.sandbox" }],
+		["atoms.delete", { id: "org_1.live" }],
 	]);
 });
 
@@ -274,7 +268,6 @@ test("nothing is registered without a shadow Atom address and admin token, or fo
 	}
 	useShadowAtom();
 	expect((await register({ orgId: "org_missing" })).status).toBe(404);
-	expect((await register({ env: "staging" })).status).toBe(400);
 
 	expect(received).toHaveLength(0);
 	expect(write).not.toHaveBeenCalled();
@@ -296,13 +289,16 @@ test("two registers at once: the second is refused with a 423 while the first ho
 	]);
 
 	expect([first.status, second.status]).toEqual([200, 423]);
-	expect(Object.keys(stored.sandbox.orgs)).toEqual(["org_1"]);
-	expect(received.map(({ route }) => route)).toEqual(["atoms.put"]);
+	expect(Object.keys(stored.orgs)).toEqual(["org_1"]);
+	expect(received.map(({ route }) => route)).toEqual([
+		"atoms.put",
+		"atoms.put",
+	]);
 
 	expect((await register({ orgId: "org_2" })).status).toBe(200);
 	await unregister({ orgId: "org_1" });
 
-	expect(Object.keys(stored.sandbox.orgs)).toEqual(["org_2"]);
+	expect(Object.keys(stored.orgs)).toEqual(["org_2"]);
 	expect(new Set(lockedKeys)).toEqual(new Set(["admin:shadow-atom-config"]));
 });
 

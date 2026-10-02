@@ -191,15 +191,15 @@ honoAdminRouter.post(
 	...handleMintAdminShadowAtomToken,
 );
 honoAdminRouter.put(
-	"/shadow-atom-config/:env/orgs/:org_id",
+	"/shadow-atom-config/orgs/:org_id",
 	...handleRegisterAdminShadowAtomOrg,
 );
 honoAdminRouter.patch(
-	"/shadow-atom-config/:env/orgs/:org_id",
+	"/shadow-atom-config/orgs/:org_id",
 	...handleSetAdminShadowAtomOrgPercent,
 );
 honoAdminRouter.delete(
-	"/shadow-atom-config/:env/orgs/:org_id",
+	"/shadow-atom-config/orgs/:org_id",
 	...handleUnregisterAdminShadowAtomOrg,
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);

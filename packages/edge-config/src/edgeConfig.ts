@@ -21,7 +21,6 @@ export {
 export {
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
-	type ShadowAtomEnvConfig,
 	type ShadowAtomOrg,
 	type ShadowAtomSettings,
 	ShadowAtomSettingsSchema,

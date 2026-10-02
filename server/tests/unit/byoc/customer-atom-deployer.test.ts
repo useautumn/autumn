@@ -62,10 +62,8 @@ test("off a dev stack the customer path resolves alien, even beside a multi-tena
 	);
 	_setShadowAtomConfigForTesting({
 		config: {
-			sandbox: {
-				endpointUrl: multiTenantAtom.url.origin,
-				adminEncryptedToken: encryptData("atom_admin_test"),
-			},
+			endpointUrl: multiTenantAtom.url.origin,
+			adminEncryptedToken: encryptData("atom_admin_test"),
 		},
 	});
 	const { getAtomDeployer } = await import(

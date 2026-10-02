@@ -1,6 +1,5 @@
 import type {
 	ShadowAtomConfig,
-	ShadowAtomEnvConfig,
 	ShadowAtomOrg,
 	ShadowAtomSettings,
 } from "./shadowAtomEdgeConfig.js";
@@ -24,19 +23,19 @@ const routingPercentAt = ({
 		? org.percent
 		: org.previousPercent;
 
-/** Only a registered org's customers, and of those its percent as it routes now. */
+/** Only a registered org's customers, in either env, and of those its percent as it routes now. */
 export const inAtomRollout = ({
 	config,
 	orgId,
 	customerId,
 	now = Date.now(),
 }: {
-	config: ShadowAtomEnvConfig;
+	config: ShadowAtomConfig;
 	orgId: string;
 	customerId: string;
 	now?: number;
 }): boolean => {
-	const org = config.orgs[orgId];
+	const org = Object.hasOwn(config.orgs, orgId) ? config.orgs[orgId] : null;
 	if (!org) return false;
 	return customerBucket({ customerId }) < routingPercentAt({ org, now });
 };
@@ -64,14 +63,11 @@ export const scheduleOrgPercent = ({
 	};
 };
 
-/** The config an admin saved: only each env's address changes; tokens and orgs stay. */
+/** The config an admin saved: only the address changes; tokens and orgs stay. */
 export const applyShadowAtomSettings = ({
 	current,
 	next,
 }: {
 	current: ShadowAtomConfig;
 	next: ShadowAtomSettings;
-}): ShadowAtomConfig => ({
-	sandbox: { ...current.sandbox, endpointUrl: next.sandbox.endpointUrl },
-	live: { ...current.live, endpointUrl: next.live.endpointUrl },
-});
+}): ShadowAtomConfig => ({ ...current, endpointUrl: next.endpointUrl });
