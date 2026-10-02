@@ -17,6 +17,9 @@ const store = createEdgeConfigStore<ShadowAtomConfig>({
 
 registerEdgeConfig({ store });
 
+/** Held by every admin write, so two staff saves never drop each other's change. */
+export const SHADOW_ATOM_CONFIG_LOCK_KEY = "admin:shadow-atom-config";
+
 /** The store handle, for the admin routes that read and write the source. */
 export const shadowAtomConfigStore = store;
 export const getShadowAtomConfig = (): ShadowAtomConfig => store.get();

@@ -6,6 +6,7 @@ import {
 import { RecaseError, Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { z } from "zod/v4";
+import * as lockModule from "@/external/redis/utils/lockUtils/withLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleRegisterAdminShadowAtomOrg } from "@/internal/admin/handleRegisterAdminShadowAtomOrg.js";
 import { handleUnregisterAdminShadowAtomOrg } from "@/internal/admin/handleUnregisterAdminShadowAtomOrg.js";
@@ -26,7 +27,10 @@ const received: Received[] = [];
 const multiTenantAtom = Bun.serve({
 	port: 0,
 	fetch: async (request) => {
-		const route = new URL(request.url).pathname.replace("/v1/", "");
+		const { pathname } = new URL(request.url);
+		if (!pathname.startsWith("/v1/atoms."))
+			return new Response("not found", { status: 404 });
+		const route = pathname.slice("/v1/".length);
 		const adminToken = request.headers.get("x-atom-admin-token");
 		const body = (await request.json()) as { id: string };
 		received.push({ route, adminToken, body });
@@ -62,6 +66,22 @@ const getOrg = spyOn(OrgService, "get").mockImplementation(
 	},
 );
 
+/** Redis's lock, held in-process: each key runs its holders one at a time. */
+const lockedKeys: string[] = [];
+const held = new Map<string, Promise<unknown>>();
+const withLock = spyOn(lockModule, "withLock").mockImplementation(
+	async ({ lockKey, fn }) => {
+		lockedKeys.push(lockKey);
+		const previous = held.get(lockKey) ?? Promise.resolve();
+		const run = previous.then(fn, fn);
+		held.set(
+			lockKey,
+			run.catch(() => {}),
+		);
+		return run;
+	},
+);
+
 const useShadowAtom = ({
 	endpointUrl = multiTenantAtom.url.origin,
 	adminToken = ADMIN_TOKEN as string | null,
@@ -88,6 +108,7 @@ afterAll(() => {
 	read.mockRestore();
 	write.mockRestore();
 	getOrg.mockRestore();
+	withLock.mockRestore();
 	if (previousPassword === undefined) delete process.env.ENCRYPTION_PASSWORD;
 	else process.env.ENCRYPTION_PASSWORD = previousPassword;
 });
@@ -246,4 +267,51 @@ test("an org's own key can neither register nor unregister", async () => {
 	expect((await unregister({ scopes })).status).toBe(403);
 	expect(received).toHaveLength(0);
 	expect(write).not.toHaveBeenCalled();
+});
+
+test("two orgs registered at once both land: register and unregister hold the shadow Atom config's lock", async () => {
+	const [first, second] = await Promise.all([
+		register({ orgId: "org_1" }),
+		register({ orgId: "org_2" }),
+	]);
+	await unregister({ orgId: "org_1" });
+
+	expect([first.status, second.status]).toEqual([200, 200]);
+	expect(Object.keys(stored.sandbox.orgs)).toEqual(["org_2"]);
+	expect(new Set(lockedKeys)).toEqual(new Set(["admin:shadow-atom-config"]));
+});
+
+test("an Atom URL with a trailing slash still reaches the admin routes, and a redirect is refused rather than followed with the admin token", async () => {
+	const deployer = createMultiTenantAtomDeployer({
+		atom: {
+			atomUrl: `${multiTenantAtom.url.origin}/`,
+			adminToken: ADMIN_TOKEN,
+		},
+	});
+	await deployer.register({ atomId: "org_1.sandbox" });
+	expect(received[0]?.route).toBe("atoms.put");
+
+	const elsewhere: string[] = [];
+	const target = Bun.serve({
+		port: 0,
+		fetch: (request) => {
+			elsewhere.push(request.headers.get("x-atom-admin-token") ?? "");
+			return Response.json({ id: "x" });
+		},
+	});
+	const redirecting = Bun.serve({
+		port: 0,
+		fetch: () => Response.redirect(`${target.url.origin}/v1/atoms.put`, 307),
+	});
+	const redirected = createMultiTenantAtomDeployer({
+		atom: { atomUrl: redirecting.url.origin, adminToken: ADMIN_TOKEN },
+	});
+
+	expect(
+		redirected.register({ atomId: "org_1.sandbox" }),
+	).rejects.toMatchObject({ statusCode: 503 });
+	await Bun.sleep(50);
+	expect(elsewhere).toEqual([]);
+	target.stop(true);
+	redirecting.stop(true);
 });

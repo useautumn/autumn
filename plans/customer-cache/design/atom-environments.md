@@ -27,6 +27,7 @@ token gets 401. It calls Autumn as little as possible.
 ## Auth, decided (John, 2026-09-30)
 
 - One API, one rule: every route past `/health` needs the Atom's token, sent as `x-atom-token`.
+  The exception is a multi-tenant Atom's `atoms.put/get/delete`, which need its admin token, sent as `x-atom-admin-token`.
   `Authorization` stays the Autumn secret key, which Atom only uses when it forwards to Autumn.
 - The same API is reachable at a private address (the customer's app, inside the VPC) and a public
   one (herald's pushes). Atom does not care which was used.

@@ -12,7 +12,14 @@ const createAtomDeployer = (): AtomDeployer | null => {
 	if (alienClient) return createAlienAtomDeployer({ alienClient });
 	const atomUrl = process.env.ATOM_URL;
 	const adminToken = process.env.ATOM_ADMIN_TOKEN;
-	if (!atomUrl || !adminToken) return null;
+	if (!atomUrl) return null;
+	if (!adminToken)
+		throw new RecaseError({
+			message:
+				"ATOM_URL is set without ATOM_ADMIN_TOKEN, so the stack's Atom cannot be reached.",
+			code: ErrCode.ByocUnavailable,
+			statusCode: 503,
+		});
 	return createStackAtomDeployer({ atom: { atomUrl, adminToken } });
 };
 

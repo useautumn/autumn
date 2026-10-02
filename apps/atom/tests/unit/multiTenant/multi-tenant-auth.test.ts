@@ -120,17 +120,17 @@ describe("multi-tenant auth", () => {
 		expect(readdirSync(join(dataDir, "atom_b"))).toEqual(["atom.json"]);
 	});
 
-	test("an Atom held before a restart stays closed until its token is used", () => {
+	test("an Atom held before a restart stays closed until its token is used, then opens", () => {
 		const dataDir = newDataDir();
-		open({ dataDir }).putAtom({
-			id: "atom_a",
-			tokenHash: tokenHash("token_a"),
-		});
+		const first = open({ dataDir });
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		first.close();
 
 		const reopened = open({ dataDir });
 
-		expect(reopened.hasAtom({ id: "atom_a" })).toBe(true);
 		expect(readdirSync(join(dataDir, "atom_a"))).toEqual(["atom.json"]);
+		expect(reopened.authorize({ token: "token_a" })).not.toBeNull();
+		expect(readdirSync(join(dataDir, "atom_a"))).toContain("catalog.sqlite");
 	});
 
 	test("an id that is not a plain folder name is refused", () => {

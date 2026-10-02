@@ -35,13 +35,15 @@ export const postToMultiTenantAtom = async ({
 }): Promise<unknown> => {
 	let response: Response;
 	try {
-		response = await fetch(`${atom.atomUrl}/v1/${route}`, {
+		response = await fetch(new URL(`/v1/${route}`, atom.atomUrl), {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 				[ADMIN_TOKEN_HEADER]: atom.adminToken,
 			},
 			body: JSON.stringify(body),
+			// The admin token must never follow a redirect to another host.
+			redirect: "error",
 			signal: AbortSignal.timeout(MULTI_TENANT_ATOM_TIMEOUT_MS),
 		});
 	} catch (error) {
