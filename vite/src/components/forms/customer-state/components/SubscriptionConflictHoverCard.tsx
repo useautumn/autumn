@@ -22,10 +22,7 @@ const conflictReasonParts = ({
 }) =>
 	setPlansErrorCopy({
 		type: "plan_on_another_subscription",
-		conflict:
-			productName === conflict.conflictingPlanName
-				? "already_billed"
-				: "replaces",
+		conflict: conflict.conflict,
 		requested_plan_name: productName,
 		conflicting_plan_name: conflict.conflictingPlanName,
 		stripe_subscription_id: conflict.stripeSubscriptionId,

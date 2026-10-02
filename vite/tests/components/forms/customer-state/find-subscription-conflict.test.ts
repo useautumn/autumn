@@ -18,7 +18,14 @@ const product = ({
 	id: string;
 	isAddOn?: boolean;
 	group?: string;
-}) => ({ id, name: id, is_add_on: isAddOn, group }) as unknown as ProductV2;
+}) =>
+	({
+		id,
+		name: id,
+		is_add_on: isAddOn,
+		group,
+		items: [],
+	}) as unknown as ProductV2;
 
 const onSubscription = ({
 	plan,
@@ -63,6 +70,7 @@ const conflictWhileEditingB = (requested: ProductV2) =>
 
 test("a main plan whose group is live on another subscription conflicts, naming that subscription", () => {
 	expect(conflictWhileEditingB(product({ id: "Free" }))).toEqual({
+		conflict: "replaces",
 		conflictingPlanName: "Pro",
 		stripeSubscriptionId: "sub_a",
 		subscriptionPlanName: "Pro",
@@ -71,6 +79,7 @@ test("a main plan whose group is live on another subscription conflicts, naming 
 
 test("the same plan billed on another subscription conflicts", () => {
 	expect(conflictWhileEditingB(pro)).toEqual({
+		conflict: "already_billed",
 		conflictingPlanName: "Pro",
 		stripeSubscriptionId: "sub_a",
 		subscriptionPlanName: "Pro",
@@ -90,4 +99,19 @@ test("add-ons and plans in other groups don't conflict, and nothing does without
 			entityId: null,
 		}),
 	]).toEqual([null, null, null]);
+});
+
+test("a different plan sharing the live plan's name still reads as replacing it", () => {
+	const renamedPro = { ...product({ id: "pro_v2" }), name: "Pro" } as ProductV2;
+
+	expect(conflictWhileEditingB(renamedPro)?.conflict).toBe("replaces");
+});
+
+test("one-off plans attach across subscriptions, so they never conflict", () => {
+	const oneOffPro = {
+		...pro,
+		items: [{ feature_id: null, price: 50, interval: null }],
+	} as unknown as ProductV2;
+
+	expect(conflictWhileEditingB(oneOffPro)).toBeNull();
 });
