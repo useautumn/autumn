@@ -62,7 +62,7 @@ describe("decideSnapshotHit", () => {
 		expect(decide(row)).toEqual({ hit: false, reason });
 	});
 
-	test("a read for another time than now is a replay and never trusts the row, whatever it holds", () => {
+	test("a read outside the allowed skew from now is a replay and never trusts the row; the boundary itself is a read for now", () => {
 		expect(decide(rowOf(), NOW - SNAPSHOT_AS_OF_SKEW_MS - 1)).toEqual({
 			hit: false,
 			reason: "asOf",

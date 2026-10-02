@@ -322,14 +322,14 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 	test("a cold load reads back what the flush wrote, by key: the customer and its entity under the identity the worker holds, a key with no row absent", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();
-		await insertPartitionProgress({
-			ctx: { db: postgres.db },
-			topic,
-			partition: 5,
-			nextOffset: 40n,
-		});
-		const internalEntityId = await seedEntity({ seeded, entityId: "seat_1" });
 		try {
+			await insertPartitionProgress({
+				ctx: { db: postgres.db },
+				topic,
+				partition: 5,
+				nextOffset: 40n,
+			});
+			const internalEntityId = await seedEntity({ seeded, entityId: "seat_1" });
 			await flushAt({
 				topic,
 				upserts: [
