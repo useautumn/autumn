@@ -89,6 +89,7 @@ export const createWorkerContext = async ({
 		expand: [],
 		skipCache,
 		extraLogs: {},
+		state: {},
 	};
 	return getCtxWithCustomerRedis({ ctx, customerId }).ctx;
 };

@@ -1,17 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CustomerCreationRecoveryStage } from "./customerCreationRecoveryTypes.js";
 
-const CUSTOMER_CREATION_RECOVERY_STAGE_KEY = "customerCreationRecoveryStage";
-
 /** The worker path reaches the same stages: its plan write is the `pre_commit` → `autumn_committed` step, Stripe linking follows. */
-const RECOVERY_STAGES = new Set<CustomerCreationRecoveryStage>([
-	"lookup",
-	"pre_commit",
-	"existing",
-	"autumn_committed",
-	"completed",
-]);
-
 export const setCustomerCreationRecoveryStage = ({
 	ctx,
 	stage,
@@ -19,17 +9,12 @@ export const setCustomerCreationRecoveryStage = ({
 	ctx: AutumnContext;
 	stage: CustomerCreationRecoveryStage;
 }) => {
-	ctx.extraLogs[CUSTOMER_CREATION_RECOVERY_STAGE_KEY] = stage;
+	ctx.state.customerCreationRecoveryStage = stage;
 };
 
 export const getCustomerCreationRecoveryStage = ({
 	ctx,
 }: {
 	ctx: AutumnContext;
-}): CustomerCreationRecoveryStage => {
-	const stage = ctx.extraLogs[CUSTOMER_CREATION_RECOVERY_STAGE_KEY];
-	return typeof stage === "string" &&
-		RECOVERY_STAGES.has(stage as CustomerCreationRecoveryStage)
-		? (stage as CustomerCreationRecoveryStage)
-		: "lookup";
-};
+}): CustomerCreationRecoveryStage =>
+	ctx.state.customerCreationRecoveryStage ?? "lookup";

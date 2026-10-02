@@ -85,6 +85,7 @@ const buildContext = () =>
 		env: AppEnv.Live,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
 		extraLogs: {},
+		state: {},
 		logger: {
 			warn: mock(() => {}),
 			error: mock(() => {}),

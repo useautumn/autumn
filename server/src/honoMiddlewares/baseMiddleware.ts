@@ -152,6 +152,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Test params:
 		extraLogs: {},
+		state: {},
 
 		testOptions: {
 			asyncBalanceUpdate:
