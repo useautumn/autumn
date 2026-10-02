@@ -41,10 +41,10 @@ const startStackAtom = async ({
 	auth: AtomAuth;
 	machine: ByocCacheMachine;
 }): Promise<AtomSetup> => {
-	if (auth.mode === "shared")
+	if (auth.mode === "multi_tenant")
 		throw new RecaseError({
 			message:
-				"The dev stack's Atom is already shared; it cannot start another.",
+				"The dev stack's Atom is already multi-tenant; it cannot start another.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

@@ -24,7 +24,7 @@ export type AtomSetup = {
 /** Who an Atom answers to: one org's token, or, for our shadow Atom only, an admin token that registers orgs. */
 export type AtomAuth =
 	| { mode: "deployed"; tokenHash: string }
-	| { mode: "shared"; adminTokenHash: string };
+	| { mode: "multi_tenant"; adminTokenHash: string };
 
 /** What names an Atom's deployment group: an org, or a fixed admin id for our shadow Atom. */
 export type AtomOwner = Pick<Organization, "id" | "slug">;

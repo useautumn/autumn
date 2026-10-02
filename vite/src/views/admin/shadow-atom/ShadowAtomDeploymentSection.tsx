@@ -16,7 +16,7 @@ export const ShadowAtomDeploymentSection = ({
 	return (
 		<RolloutSection
 			title="Shadow Atom"
-			description="Our own Atom on alien, from the same stack a customer's cache uses, in shared mode."
+			description="Our own Atom on alien, from the same stack a customer's cache uses, in multi-tenant mode."
 		>
 			{/* A failed lookup must not read as "not deployed": Create would rotate a live Atom's admin token. */}
 			<ShadowAtomSectionBody

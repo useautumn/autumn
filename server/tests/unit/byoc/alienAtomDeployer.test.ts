@@ -71,21 +71,21 @@ describe("starting an Atom on alien", () => {
 		});
 	});
 
-	test("our shadow Atom starts in shared mode with only the admin token hash", async () => {
+	test("our shadow Atom starts in multi-tenant mode with only the admin token hash", async () => {
 		const { alienClient, started } = recordingAlienClient();
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
 			org,
 			env: AppEnv.Sandbox,
-			auth: { mode: "shared", adminTokenHash: "admin_hash" },
+			auth: { mode: "multi_tenant", adminTokenHash: "admin_hash" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 		});
 
 		expect(started[0]?.environmentVariables).toEqual([
 			{
 				name: "ATOM_MODE",
-				value: "shared",
+				value: "multi_tenant",
 				type: "plain",
 				targetResources: null,
 			},

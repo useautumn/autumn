@@ -77,7 +77,7 @@ const atomAuthToVariables = ({ auth }: { auth: AtomAuth }) =>
 	auth.mode === "deployed"
 		? [plainVariable({ name: "ATOM_TOKEN_HASH", value: auth.tokenHash })]
 		: [
-				plainVariable({ name: "ATOM_MODE", value: "shared" }),
+				plainVariable({ name: "ATOM_MODE", value: "multi_tenant" }),
 				plainVariable({
 					name: "ATOM_ADMIN_TOKEN_HASH",
 					value: auth.adminTokenHash,

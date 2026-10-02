@@ -133,7 +133,7 @@ const send = ({
 
 const lastWritten = () => write.mock.calls.at(-1)?.[0].config;
 
-test("staff create the shadow Atom with the customer's alien stack, in shared mode, under a fixed admin group", async () => {
+test("staff create the shadow Atom with the customer's alien stack, in multi-tenant mode, under a fixed admin group", async () => {
 	const response = await send({
 		method: "POST",
 		body: { admin_token_hash: "admin_hash", cpu: 4, memory: 8 },
@@ -156,7 +156,7 @@ test("staff create the shadow Atom with the customer's alien stack, in shared mo
 		]),
 	);
 	expect(variables).toMatchObject({
-		ATOM_MODE: "shared",
+		ATOM_MODE: "multi_tenant",
 		ATOM_ADMIN_TOKEN_HASH: "admin_hash",
 	});
 	expect(variables.ATOM_TOKEN_HASH).toBeUndefined();
