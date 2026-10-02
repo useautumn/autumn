@@ -6,6 +6,7 @@ import {
 import { RecaseError, Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { z } from "zod/v4";
+import { lockConflictError } from "@/external/redis/utils/lockUtils/acquireLock.js";
 import * as lockModule from "@/external/redis/utils/lockUtils/withLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleRegisterAdminShadowAtomOrg } from "@/internal/admin/handleRegisterAdminShadowAtomOrg.js";
@@ -66,19 +67,20 @@ const getOrg = spyOn(OrgService, "get").mockImplementation(
 	},
 );
 
-/** Redis's lock, held in-process: each key runs its holders one at a time. */
+/** Redis's SET NX lock, held in-process: a second holder of a held key gets the same 423 the real lock throws. */
 const lockedKeys: string[] = [];
-const held = new Map<string, Promise<unknown>>();
+const heldKeys = new Set<string>();
 const withLock = spyOn(lockModule, "withLock").mockImplementation(
 	async ({ lockKey, fn }) => {
 		lockedKeys.push(lockKey);
-		const previous = held.get(lockKey) ?? Promise.resolve();
-		const run = previous.then(fn, fn);
-		held.set(
-			lockKey,
-			run.catch(() => {}),
-		);
-		return run;
+		if (heldKeys.has(lockKey))
+			throw lockConflictError("Operation already in progress");
+		heldKeys.add(lockKey);
+		try {
+			return await fn();
+		} finally {
+			heldKeys.delete(lockKey);
+		}
 	},
 );
 
@@ -269,14 +271,19 @@ test("an org's own key can neither register nor unregister", async () => {
 	expect(write).not.toHaveBeenCalled();
 });
 
-test("two orgs registered at once both land: register and unregister hold the shadow Atom config's lock", async () => {
+test("two registers at once: the second is refused with a 423 while the first holds the lock, and lands on retry", async () => {
 	const [first, second] = await Promise.all([
 		register({ orgId: "org_1" }),
 		register({ orgId: "org_2" }),
 	]);
+
+	expect([first.status, second.status]).toEqual([200, 423]);
+	expect(Object.keys(stored.sandbox.orgs)).toEqual(["org_1"]);
+	expect(received.map(({ route }) => route)).toEqual(["atoms.put"]);
+
+	expect((await register({ orgId: "org_2" })).status).toBe(200);
 	await unregister({ orgId: "org_1" });
 
-	expect([first.status, second.status]).toEqual([200, 200]);
 	expect(Object.keys(stored.sandbox.orgs)).toEqual(["org_2"]);
 	expect(new Set(lockedKeys)).toEqual(new Set(["admin:shadow-atom-config"]));
 });
