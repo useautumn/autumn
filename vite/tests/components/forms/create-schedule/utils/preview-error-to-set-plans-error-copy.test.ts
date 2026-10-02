@@ -8,7 +8,7 @@ const axiosError = (data: object) =>
 		status: 400,
 	} as AxiosResponse);
 
-test("an error with details renders the shared copy, bold names and link included", () => {
+test("an error with details renders the shared copy with bold phase counts", () => {
 	const copy = previewErrorToSetPlansErrorCopy(
 		axiosError({
 			message: "ignored when details are present",
