@@ -49,13 +49,6 @@ export const getAllocatableSharedBalanceInterval = ({
 		: undefined;
 };
 
-export const isAllocatableSharedBalance = ({
-	customerEntitlements,
-}: {
-	customerEntitlements: FullCusEntWithFullCusProduct[];
-}) =>
-	getAllocatableSharedBalanceInterval({ customerEntitlements }) !== undefined;
-
 export const getCustomerBalanceId = ({
 	balance,
 }: {

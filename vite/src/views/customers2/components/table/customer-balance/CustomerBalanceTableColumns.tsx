@@ -25,7 +25,6 @@ import {
 import {
 	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
-	ChartPieSliceIcon,
 	ClockCountdownIcon,
 	PulseIcon,
 } from "@phosphor-icons/react";
@@ -41,7 +40,6 @@ import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 import {
 	canDeleteCustomerBalance,
 	canRecalculateCustomerBalances,
-	isAllocatableSharedBalance,
 } from "./customerBalanceUtils";
 import { SyncAnchorMenuItem } from "./SyncAnchorMenuItem";
 
@@ -420,7 +418,6 @@ function BalanceActionsCell({
 	onDeleteClick,
 	onRecordUsageClick,
 	onCheckBalanceClick,
-	onAllocateClick,
 	onRecalculateClick,
 }: {
 	row: Row<CustomerBalanceRowData>;
@@ -429,7 +426,6 @@ function BalanceActionsCell({
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
-	onAllocateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) {
 	const expired = isCusEntDisplayExpired({ cusEnt: row.original });
@@ -455,23 +451,9 @@ function BalanceActionsCell({
 			? row.subRows.map((subRow) => subRow.original)
 			: [row.original]
 	).filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
-	const canAllocate =
-		!expired &&
-		isParentRow &&
-		!!onAllocateClick &&
-		(fullCustomer?.entities ?? []).some(
-			(entity) => entity.id && !entity.deleted,
-		) &&
-		isAllocatableSharedBalance({ customerEntitlements });
 
 	// Reserve the slot, or the column edge goes ragged.
-	if (
-		!canDelete &&
-		!canRecordUsage &&
-		!canCheckBalance &&
-		!canAllocate &&
-		!canRecalculate
-	)
+	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
 		return (
 			<div className="flex justify-end" aria-hidden>
 				<ToolbarButton className="invisible" tabIndex={-1} />
@@ -511,22 +493,6 @@ function BalanceActionsCell({
 							<div className="flex w-full items-center justify-between gap-2 text-sm">
 								Check balance
 								<BracketsSquareIcon
-									size={12}
-									className="text-tertiary-foreground"
-								/>
-							</div>
-						</DropdownMenuItem>
-					)}
-					{canAllocate && (
-						<DropdownMenuItem
-							onClick={(event) => {
-								event.stopPropagation();
-								onAllocateClick(row.original);
-							}}
-						>
-							<div className="flex w-full items-center justify-between gap-2 text-sm">
-								Allocate to entities
-								<ChartPieSliceIcon
 									size={12}
 									className="text-tertiary-foreground"
 								/>
@@ -663,7 +629,6 @@ export const CustomerBalanceTableColumns = ({
 	onDeleteClick,
 	onRecordUsageClick,
 	onCheckBalanceClick,
-	onAllocateClick,
 	onRecalculateClick,
 }: {
 	fullCustomer: FullCustomer | null | undefined;
@@ -672,7 +637,6 @@ export const CustomerBalanceTableColumns = ({
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
-	onAllocateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) => [
 	{
@@ -736,7 +700,6 @@ export const CustomerBalanceTableColumns = ({
 				onDeleteClick={onDeleteClick}
 				onRecordUsageClick={onRecordUsageClick}
 				onCheckBalanceClick={onCheckBalanceClick}
-				onAllocateClick={onAllocateClick}
 				onRecalculateClick={onRecalculateClick}
 			/>
 		),
