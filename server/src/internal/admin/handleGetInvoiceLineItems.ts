@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
