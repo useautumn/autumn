@@ -211,7 +211,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			expect(statementMs).toHaveLength(statements);
 			expect(deleted).toBe(10_000);
 			expect(maxInFlight).toBe(1);
-			expect(durationMs).toBeLessThan(2_000);
+			expect(durationMs).toBeLessThan(1_000);
 			expect(
 				await postgres.db.execute(
 					sql`SELECT 1 FROM subject_snapshots WHERE org_id = ${seeded.orgId} AND env = ${seeded.env}`,
