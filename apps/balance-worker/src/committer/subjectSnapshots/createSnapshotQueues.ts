@@ -20,11 +20,10 @@ import type { SnapshotQueues } from "./types/snapshotQueues.js";
  */
 export const SNAPSHOT_LANE_MAX_PENDING = 10_000;
 
-/** One customer's refreshed subjects waiting for a tick; `baselineAt` and `logOffset` are the earliest read's among them. */
+/** One customer's refreshed subjects waiting for a tick, with each read's log offset. */
 type PendingRefreshes = {
-	states: Map<string, SubjectState>;
+	states: Map<string, { state: SubjectState; logOffset: bigint }>;
 	baselineAt: number;
-	logOffset: bigint;
 };
 
 /** Settled by the tick that ran the customer's DELETE with the rows it removed: what an evict rebuilds once they are gone. */
@@ -135,10 +134,9 @@ export const createSnapshotQueues = ({
 		if (!alreadyPending && !hasRoom({ writes, position: { topic, partition } }))
 			return;
 		if (!alreadyPending) writes.pendingCount += 1;
-		const refreshes = pending ?? { states: new Map(), baselineAt, logOffset };
-		refreshes.states.set(subjectKey, state);
+		const refreshes = pending ?? { states: new Map(), baselineAt };
+		refreshes.states.set(subjectKey, { state, logOffset });
 		refreshes.baselineAt = Math.min(refreshes.baselineAt, baselineAt);
-		if (logOffset < refreshes.logOffset) refreshes.logOffset = logOffset;
 		writes.refreshes.set(customerKey, refreshes);
 		scheduleTick({ position: { topic, partition }, writes });
 	}
@@ -308,17 +306,19 @@ function takeWrites({
 	for (const [customerKey, pending] of writes.refreshes) {
 		if (room === 0) break;
 		const states: SubjectState[] = [];
-		for (const [subjectKey, state] of pending.states) {
+		const logOffsets = new Map<string, bigint>();
+		for (const [subjectKey, refresh] of pending.states) {
 			if (states.length === room) break;
 			pending.states.delete(subjectKey);
-			states.push(state);
+			states.push(refresh.state);
+			logOffsets.set(subjectKey, refresh.logOffset);
 		}
 		if (pending.states.size === 0) writes.refreshes.delete(customerKey);
 		room -= states.length;
 		taken.set(customerKey, {
 			states,
 			baselineAt: pending.baselineAt,
-			logOffset: pending.logOffset,
+			logOffsets,
 		});
 	}
 	writes.pendingCount -= batch - room;

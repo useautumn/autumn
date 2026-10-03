@@ -618,7 +618,7 @@ describe("snapshot lane writes: refreshes", () => {
 		]);
 	});
 
-	test("a customer's refreshed subjects land together, aged and fenced by the earliest read; a subject refreshed twice takes the latest word", async () => {
+	test("a customer's refreshed subjects keep their own offsets; a subject refreshed twice takes the latest word", async () => {
 		const held = Promise.withResolvers<void>();
 		const { db, requests } = createCountingDb({ gate: held.promise });
 		const { store, deletes, drained } = createStore({
@@ -651,7 +651,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: createState({ identity: customerOf(1), balance: 42 }),
 			baselineAt: 9,
-			logOffset: 12n,
+			logOffset: 13n,
 		});
 		held.resolve();
 		await drained();
@@ -665,8 +665,8 @@ describe("snapshot lane writes: refreshes", () => {
 				row.logOffset,
 			]),
 		).toEqual([
-			["cus_1", "en_1", 3, 11n],
-			["cus_1", null, 3, 11n],
+			["cus_1", "en_1", 3, 12n],
+			["cus_1", null, 3, 13n],
 		]);
 		expect(requests[1]?.snapshots?.upserts.length).toBe(2);
 		expect(
