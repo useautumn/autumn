@@ -7,8 +7,12 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { listOpenStripeSubscriptionInvoices } from "@/external/stripe/invoices/operations/listOpenStripeSubscriptionInvoices";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 
-/** What the replaced subscription leaves behind: open invoices and arrear usage it never bills. */
+/**
+ * What the replaced subscription leaves behind: open invoices and arrear usage it never bills.
+ * A backdate recreate bills that usage itself: now for plans that end, at renewal for kept ones.
+ */
 export const fetchReplacedSubscriptionPreviewInputs = async ({
 	ctx,
 	billingContext,
@@ -27,6 +31,10 @@ export const fetchReplacedSubscriptionPreviewInputs = async ({
 		stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
 		stripeSubscriptionId: replacedStripeSubscription.id,
 	});
+
+	if (isBackdateRecreate({ billingContext })) {
+		return { replacedOpenInvoices, unbilledUsageLineItems: [] };
+	}
 
 	const unbilledUsageLineItems = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts: outgoingCustomerProducts,

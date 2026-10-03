@@ -7,16 +7,10 @@ import {
 } from "@autumn/shared";
 import type { TimelineOperation } from "../timeline/types/timelineDiff";
 import { firstPhaseStartsInFuture } from "./classifyFirstPhaseStart";
-import { scheduleSubscriptionId } from "./splitReplacedStripeSubscription";
-
-type LiveSubscriptionFields = Partial<
-	Pick<
-		CreateScheduleBillingContext,
-		| "stripeSubscription"
-		| "stripeSubscriptionSchedule"
-		| "replacedStripeSubscription"
-	>
->;
+import {
+	type LiveSubscriptionFields,
+	replaceStripeSubscription,
+} from "./replaceStripeSubscription";
 
 /** A plan the request leaves running on the live subscription or its schedule. */
 const staysOnLiveSubscription = ({
@@ -75,16 +69,8 @@ export const replaceLiveSubscriptionForFutureStart = ({
 	);
 	if (keepsSubscription) return {};
 
-	const { stripeSubscriptionSchedule } = billingContext;
-	const scheduleBelongsToReplaced =
-		scheduleSubscriptionId(stripeSubscriptionSchedule) ===
-		stripeSubscription.id;
-
-	return {
-		stripeSubscription: undefined,
-		stripeSubscriptionSchedule: scheduleBelongsToReplaced
-			? undefined
-			: stripeSubscriptionSchedule,
-		replacedStripeSubscription: stripeSubscription,
-	};
+	return replaceStripeSubscription({
+		stripeSubscription,
+		stripeSubscriptionSchedule: billingContext.stripeSubscriptionSchedule,
+	});
 };

@@ -21,6 +21,7 @@ import {
 } from "./classifyFirstPhaseStart";
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
+import { replaceLiveSubscriptionForBackdate } from "./replaceLiveSubscriptionForBackdate";
 import { replaceLiveSubscriptionForFutureStart } from "./replaceLiveSubscriptionForFutureStart";
 import { setupFutureStartTiming } from "./setupFutureStartTiming";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
@@ -89,15 +90,26 @@ export const setupSetPlansBillingContext = async ({
 		currentEpochMs: initialBillingContext.currentEpochMs,
 	});
 
-	const { billingContext, immediatePhase, futurePhases } =
-		await setupSetPlansImmediatePhase({
-			ctx,
-			params,
-			preview,
-			billingContext: initialBillingContext,
-			normalizedPhases,
+	const {
+		billingContext: immediateBillingContext,
+		immediatePhase,
+		futurePhases,
+	} = await setupSetPlansImmediatePhase({
+		ctx,
+		params,
+		preview,
+		billingContext: initialBillingContext,
+		normalizedPhases,
+		stripeSubscriptionScope,
+	});
+	const billingContext = {
+		...immediateBillingContext,
+		...replaceLiveSubscriptionForBackdate({
+			billingContext: immediateBillingContext,
+			immediatePhase,
 			stripeSubscriptionScope,
-		});
+		}),
+	};
 
 	const firstPhaseContext = {
 		immediatePhase,

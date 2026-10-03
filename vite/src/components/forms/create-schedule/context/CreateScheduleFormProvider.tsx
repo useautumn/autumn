@@ -50,7 +50,10 @@ import {
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
-import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
+import {
+	firstPhaseIsBackdated,
+	firstPhaseStartsLater,
+} from "../utils/schedulePhaseTiming";
 
 interface CreateScheduleFormContextValue {
 	generation: BillingGenerationState;
@@ -61,8 +64,10 @@ interface CreateScheduleFormContextValue {
 	products: ProductV2[];
 	features: Feature[];
 	isExistingSchedule: boolean;
-	/** First phase may start in the past — only when a new Stripe subscription will be created. */
+	/** First phase may start in the past; a live subscription is recreated from that date. */
 	allowFirstPhaseBackdate: boolean;
+	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
+	backdatesLiveSubscription: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -183,9 +188,11 @@ export function CreateScheduleFormProvider({
 	}, [formValues.phases, products]);
 
 	const allowFirstPhaseBackdate =
-		!isExistingSchedule &&
-		!hasActiveSubscription &&
-		immediatePlansPaidRecurring;
+		!isExistingSchedule && immediatePlansPaidRecurring;
+
+	const backdatesLiveSubscription =
+		hasActiveSubscription &&
+		firstPhaseIsBackdated({ phases: formValues.phases, nowMs });
 
 	// Mirrors attach: a new sub is created when there's no active subscription, and
 	// usage-only plans still bill recurring even though nothing is due immediately.
@@ -208,8 +215,10 @@ export function CreateScheduleFormProvider({
 	);
 
 	const getResetBillingCycle = useCallback(
-		() => form.store.state.values.resetBillingCycle ?? false,
-		[form.store],
+		() =>
+			!backdatesLiveSubscription &&
+			(form.store.state.values.resetBillingCycle ?? false),
+		[form.store, backdatesLiveSubscription],
 	);
 
 	const getBillingCycleAnchorAndEndDate = useCallback(() => {
@@ -251,7 +260,8 @@ export function CreateScheduleFormProvider({
 		features,
 		nowMs,
 		billingBehavior: formValues.billingBehavior,
-		resetBillingCycle: formValues.resetBillingCycle,
+		resetBillingCycle:
+			formValues.resetBillingCycle && !backdatesLiveSubscription,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
@@ -330,6 +340,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,
@@ -351,6 +362,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,

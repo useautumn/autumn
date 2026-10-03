@@ -9,6 +9,10 @@ import { isExistingScheduleUpdate } from "@/internal/billing/v2/actions/setPlans
 import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
 import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
+import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { handleBackdateRecreateErrors } from "./handleBackdateRecreateErrors";
+import { handleScheduledSubscriptionBackdateErrors } from "./handleScheduledSubscriptionBackdateErrors";
 import { setPlansError } from "./setPlansError";
 
 const futureStartConflict = ({
@@ -43,9 +47,11 @@ const handleFutureStartErrors = ({
 
 const handlePastStartErrors = ({
 	billingContext,
+	timeline,
 	preview,
 }: {
 	billingContext: CreateScheduleBillingContext;
+	timeline: Pick<SetPlansTimeline, "outOfScopeCustomerProductIds">;
 	preview: boolean;
 }) => {
 	const { currentEpochMs, immediatePhase } = billingContext;
@@ -60,6 +66,11 @@ const handlePastStartErrors = ({
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
+	}
+
+	if (isBackdateRecreate({ billingContext })) {
+		handleBackdateRecreateErrors({ billingContext, timeline, preview });
+		return;
 	}
 
 	assertNoBackdateWithExistingSubscription({
@@ -98,9 +109,11 @@ const handlePastStartErrors = ({
 
 export const handleFirstPhaseStartDateErrors = ({
 	billingContext,
+	timeline,
 	preview = false,
 }: {
 	billingContext: CreateScheduleBillingContext;
+	timeline: Pick<SetPlansTimeline, "outOfScopeCustomerProductIds">;
 	preview?: boolean;
 }) => {
 	const firstPhaseStart = classifyFirstPhaseStart({
@@ -113,12 +126,13 @@ export const handleFirstPhaseStartDateErrors = ({
 		return;
 	}
 
+	if (firstPhaseStart !== "past") return;
+
 	// Re-saving an existing schedule replays the started phase's own start date,
 	// which is a past timestamp but never a request to bill from it.
-	if (
-		firstPhaseStart === "past" &&
-		!isExistingScheduleUpdate({ billingContext })
-	) {
-		handlePastStartErrors({ billingContext, preview });
+	if (isExistingScheduleUpdate({ billingContext })) {
+		handleScheduledSubscriptionBackdateErrors({ billingContext });
+		return;
 	}
+	handlePastStartErrors({ billingContext, timeline, preview });
 };

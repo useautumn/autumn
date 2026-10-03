@@ -16,6 +16,7 @@ const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"interval_change_invoices_now",
 	"past_due_invoice_open",
 	"billing_starts_later",
+	"subscription_recreated_backdated",
 ]);
 
 type BannerLine = {

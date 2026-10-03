@@ -15,7 +15,8 @@ import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringScheduleP
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function CreateScheduleAdvancedSection() {
-	const { form, formValues, products, nowMs } = useCreateScheduleFormContext();
+	const { form, formValues, products, nowMs, backdatesLiveSubscription } =
+		useCreateScheduleFormContext();
 	const {
 		billingBehavior,
 		resetBillingCycle,
@@ -39,6 +40,14 @@ export function CreateScheduleAdvancedSection() {
 			hasPaidRecurringPlan,
 		},
 	});
+	const anchorRule = backdatesLiveSubscription
+		? {
+				...rules.resetBillingCycle,
+				disabled: true,
+				disabledReason:
+					"A backdated subscription keeps its current renewal date",
+			}
+		: rules.resetBillingCycle;
 	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
 	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
 
@@ -62,19 +71,25 @@ export function CreateScheduleAdvancedSection() {
 			{rules.proration.visible && (
 				<ProrationBehaviorConfigRow
 					rule={rules.proration}
-					value={billingBehavior ?? "prorate_immediately"}
+					billsBackdatedGap={backdatesLiveSubscription}
+					value={
+						billingBehavior ??
+						(backdatesLiveSubscription ? "none" : "prorate_immediately")
+					}
 					onChange={(value) =>
 						form.setFieldValue(
 							"billingBehavior",
-							value === "prorate_immediately" ? null : value,
+							value === "prorate_immediately" && !backdatesLiveSubscription
+								? null
+								: value,
 						)
 					}
 				/>
 			)}
 			{rules.resetBillingCycle.visible && (
 				<BillingCycleAnchorConfigRow
-					rule={rules.resetBillingCycle}
-					enabled={resetBillingCycle}
+					rule={anchorRule}
+					enabled={resetBillingCycle && !backdatesLiveSubscription}
 					mode={billingCycleAnchorMode}
 					allowCustomAnchor={!hasPersistedCreateSchedule({ phases })}
 					customAnchor={billingCycleAnchorDate}

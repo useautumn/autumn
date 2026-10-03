@@ -1,15 +1,22 @@
 import {
 	type BillingContext,
 	boldText,
+	type CreateScheduleBillingContext,
 	formatAmount,
 	formatMsToDate,
+	type LineItem,
 	plainText,
 	type SetPlansPreviewWarning,
+	type SetPlansTextPart,
 	type StripeBillingPlan,
 	secondsToMs,
 	stripeToAtmnAmount,
+	sumValues,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { backdateGap, billsBackdateGap } from "../utils/backdateGap";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
 import { billingStartsLaterWarning } from "./billingStartsLaterWarning";
 import { warningText } from "./warningText";
@@ -25,7 +32,9 @@ export type SubscriptionWarningContext = Pick<
 	| "trialContext"
 	| "billingStartsAt"
 	| "accessStartsAt"
->;
+	| "requestedProrationBehavior"
+> &
+	Partial<Pick<CreateScheduleBillingContext, "immediatePhase">>;
 
 type Warning = Omit<SetPlansPreviewWarning, "severity">;
 
@@ -64,6 +73,77 @@ const replacedSubscriptionWarning = ({
 	}
 
 	return undefined;
+};
+
+/** Whether the time before the replaced subscription started is billed, and for how much. */
+const backdateGapParts = ({
+	billingContext,
+	lineItems,
+}: {
+	billingContext: SubscriptionWarningContext;
+	lineItems: LineItem[];
+}): SetPlansTextPart[] => {
+	const gap = backdateGap({ billingContext });
+	if (!gap) return [];
+
+	const gapEnd = formatMsToDate(gap.end);
+	if (!billsBackdateGap({ billingContext })) {
+		return [
+			plainText("The time before"),
+			boldText(gapEnd),
+			plainText("isn't billed."),
+		];
+	}
+
+	const gapLineItems = lineItems.filter(({ context }) => context.backdate);
+	const gapTotal = formatAmount({
+		currency: gapLineItems[0]?.context.currency,
+		minFractionDigits: 2,
+		maxFractionDigits: 2,
+		amount: sumValues(
+			gapLineItems.map(({ amountAfterDiscounts }) => amountAfterDiscounts),
+		),
+	});
+	return [
+		boldText(gapTotal),
+		plainText("is billed now for the time before"),
+		boldText(`${gapEnd}.`),
+	];
+};
+
+/** A backdate recreates a healthy subscription from its new start, continuing the paid cycle or restarting it. */
+const backdateRecreateWarning = ({
+	billingContext,
+	lineItems,
+}: {
+	billingContext: SubscriptionWarningContext;
+	lineItems: LineItem[];
+}): Warning | undefined => {
+	const { subscriptionBackdateStartMs, billingCycleAnchorMs } = billingContext;
+	if (!isBackdateRecreate({ billingContext })) return undefined;
+	if (subscriptionBackdateStartMs === undefined) return undefined;
+	if (typeof billingCycleAnchorMs !== "number") return undefined;
+
+	const backdateStart = formatMsToDate(subscriptionBackdateStartMs);
+	const renewal = restartsCycleAtBackdatedStart({ billingContext })
+		? [
+				plainText("The billing cycle restarts from"),
+				boldText(backdateStart),
+				plainText("and renews on"),
+			]
+		: [plainText("Billing then continues on")];
+	return {
+		type: "subscription_recreated_backdated",
+		...warningText([
+			plainText(
+				"The current subscription will be cancelled and recreated from",
+			),
+			boldText(`${backdateStart}.`),
+			...backdateGapParts({ billingContext, lineItems }),
+			...renewal,
+			boldText(`${formatMsToDate(billingCycleAnchorMs)}.`),
+		]),
+	};
 };
 
 const createsStripeSubscription = (stripeBillingPlan: StripeBillingPlan) =>
@@ -197,11 +277,13 @@ export const subscriptionStateToWarnings = ({
 	stripeBillingPlan,
 	replacedOpenInvoices,
 	liveOpenInvoices,
+	lineItems,
 }: {
 	billingContext: SubscriptionWarningContext;
 	stripeBillingPlan: StripeBillingPlan;
 	replacedOpenInvoices: Stripe.Invoice[];
 	liveOpenInvoices: Stripe.Invoice[];
+	lineItems: LineItem[];
 }): Warning[] => {
 	const { replacedStripeSubscription } = billingContext;
 
@@ -211,6 +293,7 @@ export const subscriptionStateToWarnings = ({
 					replacedStripeSubscription,
 					stripeBillingPlan,
 				}),
+				backdateRecreateWarning({ billingContext, lineItems }),
 				...(stripeVoidsOpenInvoices(replacedStripeSubscription)
 					? []
 					: openInvoiceWarnings(replacedOpenInvoices)),

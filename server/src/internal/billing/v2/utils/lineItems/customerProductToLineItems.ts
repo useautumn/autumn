@@ -2,7 +2,7 @@
 // import { prepaidPriceToLineItem } from "./lineItemBuilders/prepaidPriceToLineItem";
 // import { allocatedPriceToLineItem } from "./lineItemBuilders/allocatedPriceToLineItem";
 
-import type { BillingContext } from "@autumn/shared";
+import type { BillingContext, BillingPeriod } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
 	billingContextToCurrency,
@@ -40,6 +40,7 @@ export const customerProductToLineItems = ({
 	direction,
 	priceFilters,
 	billingCycleAnchorMsOverride,
+	backdateGap,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -49,6 +50,7 @@ export const customerProductToLineItems = ({
 		excludeOneOffPrices?: boolean;
 	};
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
+	backdateGap?: BillingPeriod;
 }): LineItem[] => {
 	const { currentEpochMs } = billingContext;
 
@@ -110,6 +112,7 @@ export const customerProductToLineItems = ({
 			billingPeriod,
 			direction,
 			billingTiming: "in_advance",
+			backdateGap,
 		});
 		if (backdatedLineItemContext) effectiveNow = backdatedLineItemContext.now;
 
@@ -119,7 +122,7 @@ export const customerProductToLineItems = ({
 			product: customerProduct.product,
 			feature: undefined,
 
-			billingPeriod,
+			billingPeriod: backdatedLineItemContext?.billingPeriod ?? billingPeriod,
 			direction,
 			billingTiming: "in_advance",
 			now: effectiveNow,

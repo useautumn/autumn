@@ -14,6 +14,7 @@ import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/util
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
+import { backdateGapLineItems } from "./backdateGapLineItems";
 import {
 	diffToCustomerProducts,
 	type SetPlansCustomerProductChanges,
@@ -148,7 +149,10 @@ export const computeSetPlansPlan = ({
 			? insertPlanLicenses
 			: undefined,
 		customerLicenseTransitions,
-		lineItems: allLineItems,
+		lineItems: [
+			...allLineItems,
+			...backdateGapLineItems({ ctx, billingContext, customerProductChanges }),
+		],
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 		pooledBalancePlan,

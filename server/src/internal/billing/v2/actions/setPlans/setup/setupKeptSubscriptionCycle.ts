@@ -1,11 +1,14 @@
 import {
 	type BillingBehavior,
 	type CreateScheduleBillingContext,
+	getCycleEnd,
+	getSmallestInterval,
 	isCustomerProductOnStripeSubscription,
-	secondsToMs,
 } from "@autumn/shared";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
+import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 
 type KeptSubscriptionCycle = Partial<
 	Pick<
@@ -14,7 +17,34 @@ type KeptSubscriptionCycle = Partial<
 	>
 >;
 
-/** A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it. */
+/** The first renewal of a cycle restarted on the backdated start: its next boundary after now. */
+const backdatedCycleRenewalMs = ({
+	billingContext,
+}: {
+	billingContext: CreateScheduleBillingContext;
+}) => {
+	const { subscriptionBackdateStartMs, currentEpochMs, fullProducts } =
+		billingContext;
+	const smallestInterval = getSmallestInterval({
+		prices: fullProducts.flatMap(({ prices }) => prices),
+		excludeOneOff: true,
+	});
+	if (subscriptionBackdateStartMs === undefined || !smallestInterval) {
+		return undefined;
+	}
+
+	return getCycleEnd({
+		anchor: subscriptionBackdateStartMs,
+		interval: smallestInterval.interval,
+		intervalCount: smallestInterval.intervalCount,
+		now: currentEpochMs,
+	});
+};
+
+/**
+ * A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it.
+ * A backdate recreate does too unless it restarts the cycle on its start, and leaves proration to the plan changes it makes.
+ */
 export const setupKeptSubscriptionCycle = ({
 	billingContext,
 	timeline,
@@ -25,7 +55,21 @@ export const setupKeptSubscriptionCycle = ({
 	requestedProrationBehavior?: BillingBehavior;
 }): KeptSubscriptionCycle => {
 	const { replacedStripeSubscription, currentEpochMs } = billingContext;
-	if (!replacedStripeSubscription?.items.data.length) return {};
+	if (!replacedStripeSubscription) return {};
+
+	const periodEndMs = replacedSubscriptionPeriodEndMs({
+		replacedStripeSubscription,
+	});
+	if (periodEndMs === undefined || periodEndMs <= currentEpochMs) return {};
+
+	if (isBackdateRecreate({ billingContext })) {
+		const billingCycleAnchorMs = restartsCycleAtBackdatedStart({
+			billingContext,
+		})
+			? (backdatedCycleRenewalMs({ billingContext }) ?? periodEndMs)
+			: periodEndMs;
+		return { billingCycleAnchorMs, requestedProrationBehavior };
+	}
 
 	const declaredSegmentIds = new Set(
 		timeline.diff.timeline
@@ -48,11 +92,6 @@ export const setupKeptSubscriptionCycle = ({
 			}),
 	);
 	if (!keepsReplacedPlan) return {};
-
-	const periodEndMs = secondsToMs(
-		getLatestPeriodEnd({ sub: replacedStripeSubscription }),
-	);
-	if (periodEndMs <= currentEpochMs) return {};
 
 	return {
 		billingCycleAnchorMs: periodEndMs,

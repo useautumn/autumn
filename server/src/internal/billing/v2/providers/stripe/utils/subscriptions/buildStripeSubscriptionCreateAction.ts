@@ -2,6 +2,7 @@ import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isBackdateRecreate } from "@/internal/billing/v2/actions/setPlans/utils/isBackdateRecreate";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 import { buildStripeNewSubscriptionAnchorParams } from "./buildStripeNewSubscriptionAnchorParams";
 import { willStripeSubscriptionInvoiceEndOfCycle } from "./willStripeSubscriptionInvoiceEndOfCycle";
@@ -53,15 +54,18 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		collection_method: "charge_automatically",
 
+		...billingContext.carriedSubscriptionParams,
+
 		payment_behavior:
 			billingContext.paymentBehaviorIntent ??
 			(!paymentMethod || isCustomPaymentMethod
 				? "default_incomplete"
 				: "allow_incomplete"),
 
-		add_invoice_items: willCreateInvoiceEndOfCycle
-			? undefined
-			: addInvoiceItems,
+		add_invoice_items:
+			willCreateInvoiceEndOfCycle || isBackdateRecreate({ billingContext })
+				? undefined
+				: addInvoiceItems,
 
 		trial_end: trialEndsAt ? msToSeconds(trialEndsAt) : undefined,
 
