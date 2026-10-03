@@ -25,7 +25,23 @@ export const handleStripeSecretKey = async ({
 	org: Organization;
 }) => {
 	// 1. Check if key is valid
-	await checkKeyValid(secretKey);
+	try {
+		await checkKeyValid(secretKey);
+	} catch (error) {
+		const isInvalidKey =
+			error instanceof Stripe.errors.StripeAuthenticationError &&
+			error.code === undefined;
+		const isPublishableKey =
+			error instanceof Stripe.errors.StripePermissionError &&
+			error.code === "secret_key_required";
+		if (!isInvalidKey && !isPublishableKey) throw error;
+
+		throw new RecaseError({
+			message: "Invalid Stripe secret key. Please provide a valid secret key.",
+			code: ErrCode.StripeKeyInvalid,
+			statusCode: 400,
+		});
+	}
 	const stripe = new Stripe(secretKey);
 	const account = await stripe.accounts.retrieve();
 
