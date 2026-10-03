@@ -11,7 +11,9 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { createWorkerContext } from "@/queue/createWorkerContext.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
+import { flushCachedCustomerBalances } from "./flushCachedCustomerBalances.js";
 
 export interface ClearCreditSystemCachePayload {
 	orgId: string;
@@ -147,6 +149,18 @@ export const runClearCreditSystemCacheTask = async ({
 
 	logger.info(`Total affected customers: ${allAffectedCustomers.length}`);
 
+	const ctx = await createWorkerContext({
+		db,
+		payload: { orgId, env },
+		logger,
+	});
+	if (!ctx) {
+		logger.error(
+			`Could not build context for org ${orgId} (${env}); skipping cache clear so unsynced balances are not dropped`,
+		);
+		return;
+	}
+
 	// Process in batches of BATCH_SIZE
 	const CACHE_BATCH_SIZE = 1000;
 	let totalDeleted = 0;
@@ -162,6 +176,13 @@ export const runClearCreditSystemCacheTask = async ({
 			}));
 
 		if (customersToDelete.length > 0) {
+			// The batch unlink below drops balance hashes blindly; land them first.
+			await flushCachedCustomerBalances({
+				ctx,
+				customerIds: customersToDelete.map(({ customerId }) => customerId),
+				source: "runClearCreditSystemCacheTask",
+			});
+
 			const deleted = await batchInvalidateCachedFullSubjects({
 				customers: customersToDelete,
 				featuresByOrgEnv,
