@@ -1,4 +1,6 @@
-import { deduct } from "../../deduction/deduct.js";
+import { deductWithContext } from "../../deduction/deduct.js";
+import { setupDeductionContext } from "../../deduction/setup/setupDeductionContext.js";
+import type { DeductionContext } from "../../deduction/types/deductionContext.js";
 import type { DeductionDecision } from "../../deduction/types/deductionDecision.js";
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
 import { isPaidAllocatedV1Deduction } from "../../deduction/utils/classifyDeductionUtils.js";
@@ -26,9 +28,15 @@ const isDeductingCheck = ({ command }: { command: TrackCommand }): boolean =>
 export const computeTrackDecision = ({
 	fullSubject,
 	command,
+	context,
+	revision = fullSubject.revision,
 }: {
 	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
+	/** Set up (or advanced) for this command's selection on the state being decided; set up here when absent. */
+	context?: DeductionContext;
+	/** The state's revision, when `fullSubject` is an earlier view of it that differs only in balances. */
+	revision?: number;
 }): DeductionDecision => {
 	assertCommandSupported({ fullSubject, command });
 
@@ -39,9 +47,12 @@ export const computeTrackDecision = ({
 	);
 	if (lockId && holdsLock) throw new LockAlreadyExistsError({ lockId });
 
-	const outcome = deduct({
-		fullSubject,
-		request: trackCommandToDeductionRequest({ command }),
+	const request = trackCommandToDeductionRequest({ command });
+	const outcome = deductWithContext({
+		context:
+			context ??
+			setupDeductionContext({ fullSubject, selection: request.selection }),
+		request,
 	});
 	// A plain track nothing funds applies as a no-op, as on legacy, so its usage event is still recorded.
 	if (fundsNothing({ outcome }) && isDeductingCheck({ command })) {
@@ -54,7 +65,12 @@ export const computeTrackDecision = ({
 	}
 
 	return {
-		mutation: trackOutcomeToMutation({ command, outcome, fullSubject }),
+		mutation: trackOutcomeToMutation({
+			command,
+			outcome,
+			fullSubject,
+			revision,
+		}),
 		outcome,
 	};
 };
