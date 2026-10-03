@@ -1,3 +1,4 @@
+import { stripeErrorToRecaseError } from "@autumn/errors";
 import {
 	AppEnv,
 	ErrCode,
@@ -25,7 +26,13 @@ export const handleStripeSecretKey = async ({
 	org: Organization;
 }) => {
 	// 1. Check if key is valid
-	await checkKeyValid(secretKey);
+	try {
+		await checkKeyValid(secretKey);
+	} catch (error) {
+		throw (
+			stripeErrorToRecaseError({ error, context: "new_stripe_key" }) ?? error
+		);
+	}
 	const stripe = new Stripe(secretKey);
 	const account = await stripe.accounts.retrieve();
 
