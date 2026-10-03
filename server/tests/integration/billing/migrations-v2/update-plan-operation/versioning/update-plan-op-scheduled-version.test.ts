@@ -417,7 +417,10 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: mixed acti
 	const customerId = "migration-update-scheduled-mixed-same-plan";
 	const plan = products.pro({
 		id: "scheduled-mixed-pro",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
+		items: [
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.prepaidUsers(),
+		],
 	});
 
 	const { autumnV1, autumnV2_2, ctx } = await initScenario({
@@ -426,17 +429,33 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: mixed acti
 		actions: [],
 	});
 
+	// An unchanged plan across phases merges into one row, so phase 2 changes
+	// the seat quantity to keep a separate scheduled row.
 	const now = Date.now();
 	await autumnV1.billing.createSchedule({
 		customer_id: customerId,
 		phases: [
 			{
 				starts_at: now,
-				plans: [{ plan_id: plan.id }],
+				plans: [
+					{
+						plan_id: plan.id,
+						feature_quantities: [
+							{ feature_id: TestFeature.Users, quantity: 2 },
+						],
+					},
+				],
 			},
 			{
 				starts_at: now + ms.days(30),
-				plans: [{ plan_id: plan.id }],
+				plans: [
+					{
+						plan_id: plan.id,
+						feature_quantities: [
+							{ feature_id: TestFeature.Users, quantity: 3 },
+						],
+					},
+				],
 			},
 		],
 	});
@@ -462,7 +481,10 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: mixed acti
 	);
 
 	await autumnV1.products.update(plan.id, {
-		items: [items.monthlyMessages({ includedUsage: 250 })],
+		items: [
+			items.monthlyMessages({ includedUsage: 250 }),
+			items.prepaidUsers(),
+		],
 	});
 
 	await runUpdatePlanMigration({
