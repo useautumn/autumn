@@ -18,6 +18,11 @@ import {
 	optionToSkipOverageBilling,
 	skipOverageBillingToOption,
 } from "@/components/billing-controls/overageBillingOptions";
+import type { UsageLimitCondition } from "@/components/billing-controls/UsageLimitConditionRows";
+import {
+	conditionsFromFilter,
+	conditionsToFilter,
+} from "@/components/billing-controls/usageLimitFilterConditions";
 import { useAppForm } from "@/hooks/form/form";
 
 export type ControlItem =
@@ -47,6 +52,7 @@ export type PlanBillingControlFormValues = {
 	alert_threshold: number | null;
 	threshold_type: DbUsageAlert["threshold_type"];
 	alert_basis: UsageAlertBasis;
+	conditions: UsageLimitCondition[];
 };
 
 const requireNumber = (min: number, message: string) =>
@@ -101,10 +107,35 @@ const SpendLimitFormSchema = z
 		}
 	});
 
-const UsageLimitFormSchema = z.object({
-	feature_id: z.string().min(1, "Please select a feature"),
-	usage_limit: requireNumber(0, "Please enter a valid usage limit"),
-});
+const ConditionSchema = z.object({ key: z.string(), value: z.string() });
+
+const pushConditionIssues = (ctx: {
+	value: { conditions: UsageLimitCondition[] };
+	issues: Array<{
+		code: "custom";
+		input: unknown;
+		path: string[];
+		message: string;
+	}>;
+}) => {
+	const { error } = conditionsToFilter(ctx.value.conditions);
+	if (error) {
+		ctx.issues.push({
+			code: "custom",
+			input: ctx.value.conditions,
+			path: ["conditions"],
+			message: error,
+		});
+	}
+};
+
+const UsageLimitFormSchema = z
+	.object({
+		feature_id: z.string().min(1, "Please select a feature"),
+		usage_limit: requireNumber(0, "Please enter a valid usage limit"),
+		conditions: z.array(ConditionSchema),
+	})
+	.check(pushConditionIssues);
 
 const UsageAlertFormSchema = z
 	.object({
@@ -112,10 +143,12 @@ const UsageAlertFormSchema = z
 		alert_threshold: requireNumber(0, "Please enter a valid threshold"),
 		threshold_type: z.string(),
 		alert_basis: z.string(),
+		conditions: z.array(ConditionSchema),
 	})
 	.check((ctx) => {
 		const { feature_id, alert_threshold, threshold_type, alert_basis } =
 			ctx.value;
+		if (alert_basis === "usage_limit") pushConditionIssues(ctx);
 		if (alert_basis === "usage_limit" && !feature_id) {
 			ctx.issues.push({
 				code: "custom",
@@ -186,22 +219,29 @@ export function buildControlItem(
 	}
 
 	if (controlKey === "usage_limits") {
+		const { filter } = conditionsToFilter(values.conditions);
 		return {
 			feature_id: values.feature_id,
 			enabled: values.enabled,
 			limit: values.usage_limit ?? 0,
 			interval: values.usage_interval,
 			anchor: values.usage_anchor_utc ? "utc" : "billing_cycle",
+			...(filter && { filter }),
 		} satisfies DbUsageLimit;
 	}
 
 	if (controlKey === "usage_alerts") {
+		const { filter } =
+			values.alert_basis === "usage_limit"
+				? conditionsToFilter(values.conditions)
+				: {};
 		return {
 			feature_id: emptyToUndefined(values.feature_id),
 			enabled: values.enabled,
 			threshold: values.alert_threshold ?? 0,
 			threshold_type: values.threshold_type,
 			basis: values.alert_basis,
+			...(filter && { filter }),
 			name: emptyToUndefined(values.alert_name),
 		} satisfies DbUsageAlert;
 	}
@@ -262,6 +302,7 @@ function toDefaultValues(
 		alert_threshold: usageAlert?.threshold ?? null,
 		threshold_type: usageAlert?.threshold_type ?? "usage",
 		alert_basis: usageAlert?.basis ?? DEFAULT_USAGE_ALERT_BASIS,
+		conditions: conditionsFromFilter(usageLimit?.filter ?? usageAlert?.filter),
 	};
 }
 
