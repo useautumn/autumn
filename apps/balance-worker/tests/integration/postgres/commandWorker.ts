@@ -10,7 +10,9 @@ const worker = await createBalanceWorker({
 	ctx: {
 		logger: {
 			debug: ignoreLog,
-			info: ignoreLog,
+			info: process.env.BALANCE_WORKER_TEST_INFO_LOGS
+				? (...args: unknown[]) => console.info(JSON.stringify(args))
+				: ignoreLog,
 			warn: ignoreLog,
 			error: console.error,
 		},

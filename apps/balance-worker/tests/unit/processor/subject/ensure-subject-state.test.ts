@@ -123,6 +123,7 @@ const createScope = ({
 		ctx: {
 			catalogCache,
 			db: {
+				readSubjectSnapshot: async () => null,
 				getSubjectRows: async () => {
 					const read = sourceCalls;
 					sourceCalls += 1;
