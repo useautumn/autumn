@@ -1,8 +1,6 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
 import type { SubjectScope } from "../../types/subject.js";
 import { snapshotDivergenceOf } from "../rules/snapshotDivergenceOf.js";
-import { snapshotStateOf } from "../rules/snapshotStateOf.js";
-import { warnSnapshotUnreadable } from "./warnSnapshotUnreadable.js";
 
 /** A row read beside the rows it would have served: where the two disagree is logged, and the rows stay what is served. */
 export const verifySnapshot = ({
@@ -13,15 +11,10 @@ export const verifySnapshot = ({
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
-	snapshot: unknown;
+	snapshot: SubjectState;
 	baseline: SubjectState;
 }): void => {
-	const state = snapshotStateOf({ snapshot });
-	if (!state) {
-		warnSnapshotUnreadable({ scope, identity });
-		return;
-	}
-	const fields = snapshotDivergenceOf({ snapshot: state, baseline });
+	const fields = snapshotDivergenceOf({ snapshot, baseline });
 	if (fields.length === 0) return;
 	scope.ctx.logger?.warn?.(
 		{ event: "balance_worker.snapshot_mismatch", data: { identity, fields } },
