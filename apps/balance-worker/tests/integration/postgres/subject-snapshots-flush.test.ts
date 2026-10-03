@@ -328,6 +328,23 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			const [customerRow] = await readSnapshots({ seeded });
 			expect(customerRow?.state).toEqual({ revision: 2, entityId: null });
 			expect(customerRow?.log_offset).toBe("43");
+			for (const replacement of [
+				{ ...upsertOf({ seeded, revision: 4, logOffset: 1n }), partition: 6 },
+				{
+					...upsertOf({ seeded, revision: 5, logOffset: 0n }),
+					partition: 6,
+					partitionCount: 128,
+				},
+			]) {
+				const replaced = await flushAt({
+					topic,
+					expectedOffset: 42n,
+					upserts: [replacement],
+				});
+				expect(replaced.snapshots?.upserted).toBe(1);
+				const [row] = await readSnapshots({ seeded });
+				expect(row?.state).toEqual(JSON.parse(replacement.stateJson));
+			}
 		} finally {
 			await seeded.cleanup();
 		}

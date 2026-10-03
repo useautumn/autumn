@@ -5,8 +5,8 @@ export type SnapshotIntentEntry =
 	| {
 			states: SubjectState[];
 			baselineAt: number;
-			/** The last log offset the states include; absent, the flush's own last record is. */
-			logOffset?: bigint;
+			/** Each refreshed subject's last included offset; absent, the flush's own last record is used. */
+			logOffsets?: ReadonlyMap<string, bigint>;
 	  }
 	| "delete";
 

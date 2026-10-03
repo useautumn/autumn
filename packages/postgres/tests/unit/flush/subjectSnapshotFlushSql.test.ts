@@ -82,7 +82,7 @@ describe("flushSql subject snapshots", () => {
 		);
 		// A row from an older log never replaces a newer one; a row of unknown lineage, either way, is replaced.
 		expect(sql).toContain(
-			"log_offset = EXCLUDED.log_offset WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset RETURNING 1",
+			"log_offset = EXCLUDED.log_offset WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset OR s.partition <> EXCLUDED.partition OR s.partition_count <> EXCLUDED.partition_count RETURNING 1",
 		);
 		// A row whose customer or entity is gone is skipped, never an FK error that fails the flush.
 		expect(sql).toContain(
