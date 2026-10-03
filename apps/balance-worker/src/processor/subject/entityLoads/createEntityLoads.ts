@@ -6,26 +6,17 @@ import {
 } from "@autumn/balance-engine";
 import { SUBJECT_ROW_LIMITS } from "@autumn/postgres";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
-import { keepSubjectBaseline } from "../actions/ensureSubject/keepSubjectBaseline.js";
-import { loadSubjectState } from "../actions/ensureSubject/loadSubjectState.js";
 import { subjectEnvelopeToState } from "../actions/ensureSubject/readSubjectBaseline.js";
-import type { InFlightLoad } from "../inFlightLoads/types/inFlightLoad.js";
 import { SubjectNotFoundError } from "../subjectErrors.js";
 import type { SubjectScope } from "../types/subject.js";
+import type { SubjectRead } from "../types/subjectRead.js";
 import type { EntityLoads } from "./types/entityLoads.js";
 
 const ADOPT_CHUNK = 25;
 
-type Settle = {
-	promise: Promise<SubjectState>;
-	resolve: (state: SubjectState) => void;
-	reject: (cause: unknown) => void;
-};
-
 type Waiting = {
 	identity: MeteringIdentity;
-	load: InFlightLoad;
-	settle: Settle;
+	settle: ReturnType<typeof Promise.withResolvers<SubjectRead>>;
 };
 
 type CustomerQueue = {
@@ -49,42 +40,21 @@ const chunksOf = <Item>({
 	return chunks;
 };
 
-const settleFromBatch = async ({
-	scope,
+/** Each waiting entity gets its own rows at the batch's read time, or not-found; what to do with them is the caller's. */
+const settleFromBatch = ({
 	waiting,
 	baseline,
 	occurredAt,
 }: {
-	scope: SubjectScope;
 	waiting: Waiting;
 	baseline: SubjectState | null;
 	occurredAt: number;
-}): Promise<void> => {
-	try {
-		if (waiting.load.overtaken) {
-			waiting.load.overtaken = false;
-			waiting.settle.resolve(
-				await loadSubjectState({
-					scope,
-					identity: waiting.identity,
-					load: waiting.load,
-				}),
-			);
-			return;
-		}
-		if (!baseline)
-			throw new SubjectNotFoundError({ identity: waiting.identity });
-		waiting.settle.resolve(
-			await keepSubjectBaseline({
-				scope,
-				identity: waiting.identity,
-				baseline,
-				occurredAt,
-			}),
+}): void => {
+	if (!baseline)
+		waiting.settle.reject(
+			new SubjectNotFoundError({ identity: waiting.identity }),
 		);
-	} catch (cause) {
-		waiting.settle.reject(cause);
-	}
+	else waiting.settle.resolve({ baseline, baselineAt: occurredAt });
 };
 
 const runBatch = async ({
@@ -97,7 +67,9 @@ const runBatch = async ({
 	const first = batch[0];
 	if (!first) return;
 	const occurredAt = scope.ctx.receiptPolicy.now();
-	let envelopes: Awaited<ReturnType<SubjectScope["ctx"]["db"]["getEntitySubjectRows"]>>;
+	let envelopes: Awaited<
+		ReturnType<SubjectScope["ctx"]["db"]["getEntitySubjectRows"]>
+	>;
 	try {
 		envelopes = await scope.ctx.db.getEntitySubjectRows({
 			identity: { ...first.identity, entityId: null },
@@ -135,7 +107,7 @@ const runBatch = async ({
 			}),
 		);
 		for (const { waiting, baseline } of baselines)
-			await settleFromBatch({ scope, waiting, baseline, occurredAt });
+			settleFromBatch({ waiting, baseline, occurredAt });
 		await yieldToEventLoop();
 	}
 };
@@ -162,7 +134,9 @@ export const createEntityLoads = ({
 			while (queue.waiting.size > 0) {
 				const batch = [...queue.waiting.values()].slice(0, maxEntitiesPerLoad);
 				for (const waiting of batch)
-					queue.waiting.delete(meteringIdentityToSubjectKey({ identity: waiting.identity }));
+					queue.waiting.delete(
+						meteringIdentityToSubjectKey({ identity: waiting.identity }),
+					);
 				await runBatch({ scope: scopeOf(), batch });
 			}
 		} finally {
@@ -173,11 +147,9 @@ export const createEntityLoads = ({
 
 	const enqueue = ({
 		identity,
-		load,
 	}: {
 		identity: MeteringIdentity;
-		load: InFlightLoad;
-	}): Promise<SubjectState> => {
+	}): Promise<SubjectRead> => {
 		const customerKey = meteringIdentityToPartitionKey({ identity });
 		const queue = queues.get(customerKey) ?? {
 			running: false,
@@ -186,8 +158,7 @@ export const createEntityLoads = ({
 		queues.set(customerKey, queue);
 		const waiting: Waiting = {
 			identity,
-			load,
-			settle: Promise.withResolvers<SubjectState>(),
+			settle: Promise.withResolvers<SubjectRead>(),
 		};
 		queue.waiting.set(meteringIdentityToSubjectKey({ identity }), waiting);
 		if (!queue.running) {
@@ -202,7 +173,7 @@ export const createEntityLoads = ({
 			scopeOf().state.inFlightLoads.join({
 				subjectKey: meteringIdentityToSubjectKey({ identity }),
 				customerKey: meteringIdentityToPartitionKey({ identity }),
-				start: ({ load }) => enqueue({ identity, load }),
+				start: () => enqueue({ identity }),
 			}),
 	};
 };

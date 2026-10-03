@@ -10,6 +10,7 @@ import { AppEnv } from "@autumn/shared";
 import { ensureSubjectState } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubjectState.js";
 import { createEntityLoads } from "../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
+import { createSnapshotRefresh } from "../../../../src/processor/subject/snapshotRefresh/createSnapshotRefresh.js";
 import {
 	SubjectLoadBusyError,
 	SubjectLoadOvertakenError,
@@ -141,6 +142,7 @@ const createScope = ({
 				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
 			}),
 			entityLoads: createEntityLoads({ scopeOf: () => scope }),
+			snapshotRefresh: createSnapshotRefresh({ ctx: {}, scopeOf: () => scope }),
 		},
 	};
 	return {

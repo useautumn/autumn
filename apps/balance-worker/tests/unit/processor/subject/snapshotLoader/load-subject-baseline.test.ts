@@ -7,6 +7,7 @@ import { subjectEnvelopeToState } from "../../../../../src/processor/subject/act
 import { createEntityLoads } from "../../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
 import { loadSubjectBaseline } from "../../../../../src/processor/subject/snapshotLoader/loadSubjectBaseline.js";
+import { createSnapshotRefresh } from "../../../../../src/processor/subject/snapshotRefresh/createSnapshotRefresh.js";
 import { SubjectNotFoundError } from "../../../../../src/processor/subject/subjectErrors.js";
 import { createSubjectJoinCache } from "../../../../../src/processor/subject/subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectScope } from "../../../../../src/processor/subject/types/subject.js";
@@ -98,6 +99,7 @@ const createScope = ({
 				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
 			}),
 			entityLoads: createEntityLoads({ scopeOf: () => scope }),
+			snapshotRefresh: createSnapshotRefresh({ ctx: {}, scopeOf: () => scope }),
 		},
 	};
 	const load = (occurredAt = NOW) =>
