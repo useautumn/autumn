@@ -79,12 +79,14 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		internalEntityId = null,
 		partition = 5,
 		revision = 1,
+		logOffset = 41n,
 	}: {
 		seeded: SeededCustomer;
 		entityId?: string | null;
 		internalEntityId?: string | null;
 		partition?: number;
 		revision?: number;
+		logOffset?: bigint;
 	}): SubjectSnapshotUpsert => ({
 		orgId: seeded.orgId,
 		env: seeded.env,
@@ -97,7 +99,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		stateVersion: 1,
 		stateJson: JSON.stringify({ revision, entityId }),
 		baselineAt: 1_700_000_000_000,
-		logOffset: 41n,
+		logOffset,
 	});
 
 	const readSnapshots = async ({
@@ -307,14 +309,38 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				},
 			]);
 
-			// The next flush replaces the row in place.
+			// The next flush replaces the row in place; a write from an older log, such as a refresh read before that flush landed, does not.
 			await flushAt({
 				topic,
 				expectedOffset: 42n,
-				upserts: [upsertOf({ seeded, revision: 2 })],
+				upserts: [upsertOf({ seeded, revision: 2, logOffset: 43n })],
 			});
+			const stale = await flushAt({
+				topic,
+				expectedOffset: 42n,
+				upserts: [upsertOf({ seeded, revision: 3, logOffset: 42n })],
+			});
+			expect(stale.snapshots?.upserted).toBe(0);
 			const [customerRow] = await readSnapshots({ seeded });
 			expect(customerRow?.state).toEqual({ revision: 2, entityId: null });
+			expect(customerRow?.log_offset).toBe("43");
+			for (const replacement of [
+				{ ...upsertOf({ seeded, revision: 4, logOffset: 1n }), partition: 6 },
+				{
+					...upsertOf({ seeded, revision: 5, logOffset: 0n }),
+					partition: 6,
+					partitionCount: 128,
+				},
+			]) {
+				const replaced = await flushAt({
+					topic,
+					expectedOffset: 42n,
+					upserts: [replacement],
+				});
+				expect(replaced.snapshots?.upserted).toBe(1);
+				const [row] = await readSnapshots({ seeded });
+				expect(row?.state).toEqual(JSON.parse(replacement.stateJson));
+			}
 		} finally {
 			await seeded.cleanup();
 		}
@@ -349,7 +375,13 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				entityId: string | null,
 				stateVersion = 1,
 				customerId = seeded.identity.customerId,
-			) => readSubjectSnapshot({ ctx, customerId, entityId, stateVersion });
+			) =>
+				readSubjectSnapshot({
+					ctx,
+					customerId,
+					entityId,
+					probe: { stateVersion, writtenAfter: 0 },
+				});
 			expect(await read(null)).toEqual({ revision: 7, entityId: null });
 			expect(await read("seat_1")).toEqual({ revision: 8, entityId: "seat_1" });
 			expect(await read(null, 2)).toBeNull();
@@ -643,6 +675,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				partition: 0,
 				state,
 				baselineAt: 1,
+				logOffset: 0n,
 			});
 			await committer.drain();
 			await Bun.sleep(20);
@@ -867,12 +900,12 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`INSERT INTO subject_snapshots
 						(org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
-						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, 0
+						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, ROUND(date_part('epoch', now()) * 1000)::bigint
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`ANALYZE subject_snapshots`);
 					const ctx = { db: tx, orgId: seeded.orgId, env: "live" };
 					const rows = (await tx.execute(
-						sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotSql({ ctx, customerId: "cus_51", entityId: null, stateVersion: 1 })}`,
+						sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotSql({ ctx, customerId: "cus_51", entityId: null, probe: { stateVersion: 1, writtenAfter: 0 } })}`,
 					)) as unknown as { "QUERY PLAN": unknown }[];
 					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
 					expect(
@@ -880,7 +913,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 							ctx,
 							customerId: "cus_51",
 							entityId: null,
-							stateVersion: 1,
+							probe: { stateVersion: 1, writtenAfter: 0 },
 						}),
 					).toEqual({});
 					throw rolledBack;

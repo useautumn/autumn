@@ -240,7 +240,7 @@ describe("snapshot lane writes: evict deletes", () => {
 		expect(warnings[0]).toContain("could not write 2 customers' rows");
 	});
 
-	test("past the pending ceiling a partition stops enqueuing and warns once; nothing is awaited or thrown", async () => {
+	test("past the pending ceiling a partition still takes every DELETE, and refuses refreshes with one warning; nothing is awaited or thrown", async () => {
 		const held = Promise.withResolvers<void>();
 		const { db, requests, deleteStatements } = createCountingDb({
 			gate: held.promise,
@@ -256,18 +256,37 @@ describe("snapshot lane writes: evict deletes", () => {
 		const offered = SNAPSHOT_LANE_MAX_PENDING + 50;
 		for (let index = 0; index < offered; index++)
 			deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(index) });
+		expect(warnings).toHaveLength(0);
+		// An evict past the ceiling is still answered by its own tick, never settled early as "no rows".
+		let landed = false;
+		const landing = deletes
+			.deleteLanded({ topic, partition: 4, customerKey: keyOf(offered - 1) })
+			.then(() => {
+				landed = true;
+			});
+		deletes.enqueueRefresh({
+			topic,
+			partition: 4,
+			state: createState({ identity: customerOf(offered) }),
+			baselineAt: 1,
+			logOffset: 0n,
+		});
 		expect(warnings).toHaveLength(1);
-		expect(warnings[0]).toContain(
-			`${SNAPSHOT_LANE_MAX_PENDING} customers pending`,
-		);
+		expect(warnings[0]).toContain(`${offered} customers pending`);
+		await Bun.sleep(5);
+		expect(landed).toBe(false);
 		held.resolve();
 		await drained();
+		await landing;
 
 		const deleted = deleteStatements().reduce(
 			(total, request) => total + (request.snapshots?.deletes.length ?? 0),
 			0,
 		);
-		expect(deleted).toBe(SNAPSHOT_LANE_MAX_PENDING);
+		expect(deleted).toBe(offered);
+		expect(
+			requests.some((request) => (request.snapshots?.upserts.length ?? 0) > 0),
+		).toBe(false);
 	});
 
 	test("with the store off, an enqueue is a no-op and Postgres sees no statement", async () => {
@@ -449,6 +468,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1_700_000_000_000,
+			logOffset: 0n,
 		});
 		await drained();
 
@@ -496,6 +516,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
 		held.resolve();
@@ -526,6 +547,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		await drained();
 		expect(warnings).toHaveLength(1);
@@ -548,6 +570,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(2),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(3) });
 		held.resolve();
@@ -580,6 +603,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		held.resolve();
 		await drained();
@@ -594,7 +618,7 @@ describe("snapshot lane writes: refreshes", () => {
 		]);
 	});
 
-	test("a customer's refreshed subjects land together, aged by the earliest read; a subject refreshed twice takes the latest word", async () => {
+	test("a customer's refreshed subjects keep their own offsets; a subject refreshed twice takes the latest word", async () => {
 		const held = Promise.withResolvers<void>();
 		const { db, requests } = createCountingDb({ gate: held.promise });
 		const { store, deletes, drained } = createStore({
@@ -613,28 +637,36 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: entity,
 			baselineAt: 5,
+			logOffset: 12n,
 		});
 		deletes.enqueueRefresh({
 			topic,
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 3,
+			logOffset: 11n,
 		});
 		deletes.enqueueRefresh({
 			topic,
 			partition: 4,
 			state: createState({ identity: customerOf(1), balance: 42 }),
 			baselineAt: 9,
+			logOffset: 13n,
 		});
 		held.resolve();
 		await drained();
 
 		const rows = requests[1]?.snapshots?.upserts ?? [];
 		expect(
-			rows.map((row) => [row.customerId, row.entityId, row.baselineAt]),
+			rows.map((row) => [
+				row.customerId,
+				row.entityId,
+				row.baselineAt,
+				row.logOffset,
+			]),
 		).toEqual([
-			["cus_1", "en_1", 3],
-			["cus_1", null, 3],
+			["cus_1", "en_1", 3, 12n],
+			["cus_1", null, 3, 13n],
 		]);
 		expect(requests[1]?.snapshots?.upserts.length).toBe(2);
 		expect(
@@ -660,6 +692,7 @@ describe("snapshot lane writes: refreshes", () => {
 				partition: 4,
 				state: stateOf(index),
 				baselineAt: 1,
+				logOffset: 0n,
 			});
 		// Full: a new customer is refused, a pending one is replaced.
 		deletes.enqueueRefresh({
@@ -667,6 +700,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(SNAPSHOT_LANE_MAX_PENDING),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(5) });
 		held.resolve();

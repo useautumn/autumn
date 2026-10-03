@@ -106,7 +106,10 @@ export type PartitionProcessorDependencies = {
 	stateStore: PartitionWriterContext["stateStore"] &
 		Pick<
 			StateStore,
-			"baseline" | "readCommandNextOffset" | "advanceCommandNextOffset"
+			| "baseline"
+			| "readNextOffset"
+			| "readCommandNextOffset"
+			| "advanceCommandNextOffset"
 		>;
 	catalogCache: CatalogCache;
 	db: WorkerDb;

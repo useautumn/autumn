@@ -53,7 +53,10 @@ const upsertsDocumentOf = ({
 	return `[${rows.join(",")}]`;
 };
 
-/** A row whose customer or entity is already gone is skipped: an FK error would fail every row of the flush. */
+/**
+ * A row whose customer or entity is already gone is skipped: an FK error would fail every row of the flush.
+ * A row from an older log never replaces a newer one: a refresh read while a flush landed loses to that flush's row.
+ */
 const snapshotUpsertsCte = ({
 	upserts,
 }: {
@@ -76,6 +79,8 @@ const snapshotUpsertsCte = ({
 				baseline_at = EXCLUDED.baseline_at,
 				written_at = EXCLUDED.written_at,
 				log_offset = EXCLUDED.log_offset
+			WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset
+				OR s.partition <> EXCLUDED.partition OR s.partition_count <> EXCLUDED.partition_count
 			RETURNING 1
 		)`;
 };

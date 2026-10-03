@@ -14,14 +14,15 @@ import type {
 import type { SnapshotQueues } from "./types/snapshotQueues.js";
 
 /**
- * Past this many pending entries a partition stops enqueuing: 20 statements of 500 drain in well under a
- * second, so a backlog beyond it means Postgres is the slow part, and a row left behind only costs its next flush.
+ * Past this many pending entries a partition stops enqueuing refreshes: 20 statements of 500 drain in well under a
+ * second, so a backlog beyond it means Postgres is the slow part, and a row not rebuilt only costs its next cold load.
+ * A DELETE is never refused: a customer that left memory must not leave a row behind, and its entry is a key, not a state.
  */
 export const SNAPSHOT_LANE_MAX_PENDING = 10_000;
 
-/** One customer's refreshed subjects waiting for a tick; `baselineAt` is the earliest read among them. */
+/** One customer's refreshed subjects waiting for a tick, with each read's log offset. */
 type PendingRefreshes = {
-	states: Map<string, SubjectState>;
+	states: Map<string, { state: SubjectState; logOffset: bigint }>;
 	baselineAt: number;
 };
 
@@ -82,7 +83,6 @@ export const createSnapshotQueues = ({
 		if (!writes) return;
 		dropRefreshes({ writes, customerKey });
 		if (writes.deletes.has(customerKey)) return;
-		if (!hasRoom({ writes, position: { topic, partition } })) return;
 		writes.deletes.set(
 			customerKey,
 			Promise.withResolvers<DeletedSubjectSnapshot[]>(),
@@ -112,11 +112,13 @@ export const createSnapshotQueues = ({
 		partition,
 		state,
 		baselineAt,
+		logOffset,
 	}: {
 		topic: string;
 		partition: number;
 		state: SubjectState;
 		baselineAt: number;
+		logOffset: bigint;
 	}): void {
 		const writes = writesWhenOn({ position: { topic, partition } });
 		if (!writes) return;
@@ -133,7 +135,7 @@ export const createSnapshotQueues = ({
 			return;
 		if (!alreadyPending) writes.pendingCount += 1;
 		const refreshes = pending ?? { states: new Map(), baselineAt };
-		refreshes.states.set(subjectKey, state);
+		refreshes.states.set(subjectKey, { state, logOffset });
 		refreshes.baselineAt = Math.min(refreshes.baselineAt, baselineAt);
 		writes.refreshes.set(customerKey, refreshes);
 		scheduleTick({ position: { topic, partition }, writes });
@@ -160,7 +162,7 @@ export const createSnapshotQueues = ({
 		if (writes.pendingCount < SNAPSHOT_LANE_MAX_PENDING) return true;
 		if (!writes.warned)
 			ctx.logger?.warn(
-				`[snapshot lane] ${keyOf(position)} has ${writes.pendingCount} customers pending; further writes leave their rows to the next flush`,
+				`[snapshot lane] ${keyOf(position)} has ${writes.pendingCount} customers pending; further refreshes leave their rows to the next cold load`,
 			);
 		writes.warned = true;
 		return false;
@@ -304,14 +306,20 @@ function takeWrites({
 	for (const [customerKey, pending] of writes.refreshes) {
 		if (room === 0) break;
 		const states: SubjectState[] = [];
-		for (const [subjectKey, state] of pending.states) {
+		const logOffsets = new Map<string, bigint>();
+		for (const [subjectKey, refresh] of pending.states) {
 			if (states.length === room) break;
 			pending.states.delete(subjectKey);
-			states.push(state);
+			states.push(refresh.state);
+			logOffsets.set(subjectKey, refresh.logOffset);
 		}
 		if (pending.states.size === 0) writes.refreshes.delete(customerKey);
 		room -= states.length;
-		taken.set(customerKey, { states, baselineAt: pending.baselineAt });
+		taken.set(customerKey, {
+			states,
+			baselineAt: pending.baselineAt,
+			logOffsets,
+		});
 	}
 	writes.pendingCount -= batch - room;
 	return taken;

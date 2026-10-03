@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import { createSnapshotRefreshQueue } from "../../../../../src/processor/subject/snapshotRefresh/createSnapshotRefreshQueue.js";
-import type { SubjectRead } from "../../../../../src/processor/subject/types/subjectRead.js";
+import type { SnapshotRefreshRead } from "../../../../../src/processor/subject/snapshotRefresh/types/snapshotRefreshQueue.js";
 import { createState } from "../../../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../../../fixtures/subjectSnapshotsStore.js";
 
@@ -38,7 +38,10 @@ const createScriptedReads = () => {
 	const started: string[] = [];
 	const written: string[] = [];
 	const warnings: unknown[] = [];
-	const releases = new Map<string, (read: SubjectRead | null) => void>();
+	const releases = new Map<
+		string,
+		(read: SnapshotRefreshRead | null) => void
+	>();
 	const rejects = new Map<string, (cause: unknown) => void>();
 	const queue = createSnapshotRefreshQueue({
 		ctx: {
@@ -59,7 +62,7 @@ const createScriptedReads = () => {
 			logger: { warn: (...args: unknown[]) => warnings.push(args) },
 		},
 	});
-	const readOf = (subject: string): SubjectRead => ({
+	const readOf = (subject: string): SnapshotRefreshRead => ({
 		baseline: createState({
 			identity: {
 				...customer(subject.split("/")[0] as string),
@@ -67,10 +70,12 @@ const createScriptedReads = () => {
 			},
 		}),
 		baselineAt: 1,
+		logOffset: 0n,
+		bytes: 1_024,
 	});
 	const release = async (
 		subject: string,
-		read: SubjectRead | null = readOf(subject),
+		read: SnapshotRefreshRead | null = readOf(subject),
 	) => {
 		const resolve = releases.get(subject);
 		if (!resolve) throw new Error(`no read in flight for ${subject}`);
@@ -87,6 +92,40 @@ const createScriptedReads = () => {
 };
 
 describe("snapshot refresh queue", () => {
+	test("oversized refreshes are skipped without an error; the size boundary is inclusive", async () => {
+		const written: string[] = [];
+		const warnings: unknown[] = [];
+		const queue = createSnapshotRefreshQueue({
+			ctx: {
+				read: async ({ identity }) => ({
+					baseline: createState({ identity }),
+					baselineAt: 1,
+					logOffset: 0n,
+					bytes: identity.customerId === "oversized" ? 1_025 : 1_024,
+				}),
+				write: ({ identity }) => {
+					written.push(identity.customerId);
+				},
+				subjectSnapshotsConfig: createSubjectSnapshotsStore({
+					mode: "write",
+					maxBytes: 1_024,
+				}),
+				logger: { warn: (...args: unknown[]) => warnings.push(args) },
+			},
+		});
+		evict(queue, "oversized", []);
+		evict(queue, "at_limit", []);
+		await queue.settled();
+		expect(written).toEqual(["at_limit"]);
+		expect(queue.counts()).toEqual({
+			queued: 2,
+			refreshed: 1,
+			skipped: 1,
+			failed: 0,
+		});
+		expect(warnings).toEqual([]);
+	});
+
 	test("an evict queues the customer then its entities, FIFO, refreshConcurrency reading at a time; each read is written back", async () => {
 		const { queue, started, written, release } = createScriptedReads();
 		evict(queue, "cus_1", ["en_1", "en_2", "en_3"]);
