@@ -124,7 +124,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 				receiptPolicy,
 				baseline: stateStore.baseline,
 				subjectSnapshotsConfig,
-				snapshotWrites: stateStore.snapshotWrites,
+				snapshotQueues: stateStore.snapshotQueues,
 				position: { topic, partition },
 			},
 		});

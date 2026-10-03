@@ -189,7 +189,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		try {
 			await postgres.db.execute(sql`INSERT INTO subject_snapshots (org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
 				SELECT ${seeded.orgId}, ${seeded.env}, 'cus_storm_' || i, '', ${seeded.internalCustomerId}, 0, 64, 1, '{}'::jsonb, 0, 0 FROM generate_series(0, 9999) i`);
-			const deletes = store.snapshotWrites;
+			const deletes = store.snapshotQueues;
 			if (!deletes) throw new Error("Expected snapshot writes");
 			const startedAt = performance.now();
 			for (let index = 0; index < 10_000; index++)
@@ -604,7 +604,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		});
 		try {
 			await store.initializePartition({ topic, partition: 0, nextOffset: 0n });
-			const writes = store.snapshotWrites;
+			const writes = store.snapshotQueues;
 			if (!writes) throw new Error("Expected snapshot writes");
 			const customerKey = meteringIdentityToPartitionKey({
 				identity: { ...seeded.identity, entityId: null },

@@ -8,7 +8,7 @@ import type {
 	PartitionCheckpointV1,
 	PreparedPartitionCheckpoint,
 } from "../../checkpoint/partitionCheckpoint.js";
-import type { SnapshotLaneWrites } from "../../committer/subjectSnapshots/types/snapshotLaneWrites.js";
+import type { SnapshotQueues } from "../../committer/subjectSnapshots/types/snapshotQueues.js";
 import type { PartitionCheckpointCaptureLimits } from "../actions/checkpoint/capturePartitionCheckpoint.js";
 import type {
 	PartitionCheckpointRestoreLimits,
@@ -70,7 +70,7 @@ export type StateStore = {
 		fence: OwnerFence;
 	}): void | Promise<void>;
 	/** Present on a store that holds subject snapshots: an evict's DELETE and an evict's refresh land through it. */
-	snapshotWrites?: SnapshotLaneWrites;
+	snapshotQueues?: SnapshotQueues;
 	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either.
 	 *  `snapshotIntent` is the writer's word on the customers these records touch; a store that keeps no snapshots ignores it. */
 	applyDurableMutations(params: {

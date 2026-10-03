@@ -10,7 +10,7 @@ import type {
 	CommitterContext,
 	PartitionPosition,
 } from "../types/committer.js";
-import type { SnapshotLaneWrites } from "./types/snapshotLaneWrites.js";
+import type { SnapshotQueues } from "./types/snapshotQueues.js";
 
 /**
  * Past this many pending entries a partition stops enqueuing: 20 statements of 500 drain in well under a
@@ -33,7 +33,7 @@ type PartitionWrites = {
 	warned: boolean;
 };
 
-type SnapshotLaneWritesContext = {
+type SnapshotQueuesContext = {
 	committer: Pick<Committer, "apply">;
 	logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
 	/** Read at each tick: `dropBatch` sizes the statement, and off means no statement at all. */
@@ -54,11 +54,11 @@ type SnapshotLaneWritesContext = {
  * A tick takes deletes while any wait, else refreshes, never both: only a refresh carries the bookmark a stale owner
  * rolls back on, and a DELETE must never roll back with it. Deletes first also keeps an evict ahead of its refreshes.
  */
-export const createSnapshotLaneWrites = ({
+export const createSnapshotQueues = ({
 	ctx,
 }: {
-	ctx: SnapshotLaneWritesContext;
-}): SnapshotLaneWrites => {
+	ctx: SnapshotQueuesContext;
+}): SnapshotQueues => {
 	const byPartition = new Map<string, PartitionWrites>();
 
 	function enqueueDelete({

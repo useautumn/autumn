@@ -3,7 +3,7 @@ import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type { FlushRequest } from "@autumn/postgres";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
-import { SNAPSHOT_LANE_MAX_PENDING } from "../../../src/committer/subjectSnapshots/createSnapshotLaneWrites.js";
+import { SNAPSHOT_LANE_MAX_PENDING } from "../../../src/committer/subjectSnapshots/createSnapshotQueues.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import { createState, createTrackMutation } from "../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
@@ -81,7 +81,7 @@ const createStore = ({
 			subjectSnapshotsConfig,
 		},
 	});
-	const deletes = store.snapshotWrites;
+	const deletes = store.snapshotQueues;
 	if (!deletes) throw new Error("expected snapshot writes");
 	/** Lane ticks hand the committer one DELETE at a time, so quiet means every tick has run and landed. */
 	const drained = async () => {

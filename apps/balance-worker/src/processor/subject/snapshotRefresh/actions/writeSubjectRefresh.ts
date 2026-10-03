@@ -9,9 +9,9 @@ export const writeSubjectRefresh = ({
 	scope: SubjectScope;
 	read: SubjectRead;
 }): void => {
-	const { snapshotWrites, position } = scope.ctx;
-	if (!snapshotWrites || !position) return;
-	snapshotWrites.enqueueRefresh({
+	const { snapshotQueues, position } = scope.ctx;
+	if (!snapshotQueues || !position) return;
+	snapshotQueues.enqueueRefresh({
 		...position,
 		state: read.baseline,
 		baselineAt: read.baselineAt,

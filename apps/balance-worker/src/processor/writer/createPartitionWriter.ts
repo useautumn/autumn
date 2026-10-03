@@ -133,7 +133,7 @@ function evictDeleteOf({
 	ctx: PartitionWriterContext;
 	config: PartitionWriterConfig;
 }): OnSubjectEvicted | undefined {
-	const writes = ctx.stateStore.snapshotWrites;
+	const writes = ctx.stateStore.snapshotQueues;
 	if (!writes) return undefined;
 	return ({ customerKey }) =>
 		writes.enqueueDelete({

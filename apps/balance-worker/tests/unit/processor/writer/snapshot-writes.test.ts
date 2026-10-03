@@ -70,7 +70,7 @@ const createWriter = ({
 				nextOffset: record.position.offset + 1n,
 			}));
 		},
-		snapshotWrites: {
+		snapshotQueues: {
 			enqueueDelete: ({ customerKey }) => {
 				events.push(`enqueue ${customerKey}`);
 			},

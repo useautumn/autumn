@@ -33,7 +33,7 @@ export type SubjectHydratorContext = {
 	/** Read at each cold load: `serve` and `verify` probe the subject's snapshot before its rows; absent or any other mode, every load is the rows. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Where a refresh's read is written as the subject's row, through the partition's lane; absent, nothing is. */
-	snapshotWrites?: StateStore["snapshotWrites"];
+	snapshotQueues?: StateStore["snapshotQueues"];
 	/** The partition the hydrator serves, where its refreshes land. */
 	position?: PartitionPosition;
 	/** Defaults to "log", the sqlite store's answer. */

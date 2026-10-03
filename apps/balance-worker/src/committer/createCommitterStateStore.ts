@@ -9,7 +9,7 @@ import {
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
-import { createSnapshotLaneWrites } from "./subjectSnapshots/createSnapshotLaneWrites.js";
+import { createSnapshotQueues } from "./subjectSnapshots/createSnapshotQueues.js";
 import type {
 	Committer,
 	CommitterContext,
@@ -116,8 +116,8 @@ export const createCommitterStateStore = ({
 	function readCommandNextOffset(params: PartitionPosition) {
 		return ctx.progress.readCommandNextOffset(params);
 	}
-	const snapshotWrites = dependencies.subjectSnapshotsConfig
-		? createSnapshotLaneWrites({
+	const snapshotQueues = dependencies.subjectSnapshotsConfig
+		? createSnapshotQueues({
 				ctx: {
 					committer: ctx.committer,
 					logger: dependencies.logger,
@@ -137,7 +137,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
-		...(snapshotWrites && { snapshotWrites }),
+		...(snapshotQueues && { snapshotQueues }),
 		claimPartition,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,
