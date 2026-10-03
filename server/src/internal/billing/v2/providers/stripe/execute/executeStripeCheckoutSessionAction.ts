@@ -10,7 +10,10 @@ import { addDays } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeCheckoutSessionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeCheckoutSessionIdToBillingPlan";
-import { buildCheckoutSessionParams } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildCheckoutSessionParams";
+import {
+	buildCheckoutSessionParams,
+	getDefaultCheckoutSessionLifetimeSeconds,
+} from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildCheckoutSessionParams";
 import { createStripeSessionWithCardFallback } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/createStripeSessionWithCardFallback";
 import {
 	insertMetadataFromBillingPlan,
@@ -63,6 +66,9 @@ export const executeStripeCheckoutSessionAction = async ({
 				: undefined,
 		autumnMetadataId: metadata.id,
 		userMetadata: billingContext.userMetadata,
+		defaultSessionLifetimeSeconds: getDefaultCheckoutSessionLifetimeSeconds({
+			authType: ctx.authType,
+		}),
 	});
 
 	// 3. Create checkout session with card-type fallback
