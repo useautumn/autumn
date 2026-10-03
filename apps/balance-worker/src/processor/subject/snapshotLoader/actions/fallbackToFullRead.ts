@@ -9,15 +9,21 @@ import type { Quarantine } from "../quarantine/createQuarantine.js";
 import { SNAPSHOT_QUARANTINE_AFTER } from "../snapshotLoaderLimits.js";
 import type { SnapshotWaiting } from "../types/snapshotLoader.js";
 import { backfillSnapshot } from "./backfillSnapshot.js";
+import { verifySnapshot } from "./verifySnapshot.js";
 
-/** A miss answered by the full query; a subject that keeps failing it is shut out for a while instead of asked again. */
+/**
+ * A subject answered by the full query; a subject that keeps failing it is shut out for a while instead of asked again.
+ * A miss is written back; a row carried along (verifying) is compared with the answer instead.
+ */
 export const fallbackToFullRead = async ({
 	scope,
 	waiting,
+	snapshot,
 	quarantine,
 }: {
 	scope: SubjectScope;
 	waiting: SnapshotWaiting;
+	snapshot: SubjectState | null;
 	quarantine: Quarantine;
 }): Promise<SubjectState> => {
 	const { identity, subjectKey, asOf } = waiting;
@@ -30,7 +36,8 @@ export const fallbackToFullRead = async ({
 			occurredAt: asOf,
 		});
 		quarantine.succeeded({ subjectKey });
-		backfillSnapshot({ scope, waiting, baseline });
+		if (snapshot) verifySnapshot({ scope, identity, snapshot, baseline });
+		else backfillSnapshot({ scope, waiting, baseline });
 		return baseline;
 	} catch (cause) {
 		// An answer, not a failure: the customer is simply not there.

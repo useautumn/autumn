@@ -1,5 +1,5 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
-import { servesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { readsSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { readSubjectBaseline } from "../actions/ensureSubject/readSubjectBaseline.js";
 import type { InFlightLoad } from "../inFlightLoads/types/inFlightLoad.js";
 import type { SubjectScope } from "../types/subject.js";
@@ -8,8 +8,8 @@ import type { SubjectScope } from "../types/subject.js";
 const SNAPSHOT_AS_OF_SKEW_MS = 1_000;
 
 /**
- * The subject's rows at `occurredAt`: from the partition's snapshot loader when the worker serves snapshots and the
- * read is for now, else the full query.
+ * The subject's rows at `occurredAt`: through the partition's snapshot loader when the worker reads snapshots (to serve
+ * or to verify them) and the read is for now, else the full query.
  */
 export const loadSubjectBaseline = ({
 	scope,
@@ -25,7 +25,7 @@ export const loadSubjectBaseline = ({
 	const settings = scope.ctx.subjectSnapshotsConfig?.get();
 	const skewMs = Math.abs(occurredAt - scope.ctx.receiptPolicy.now());
 	return settings &&
-		servesSubjectSnapshots(settings) &&
+		readsSubjectSnapshots(settings) &&
 		skewMs <= SNAPSHOT_AS_OF_SKEW_MS
 		? scope.state.snapshotLoader.load({
 				identity,

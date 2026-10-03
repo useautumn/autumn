@@ -7,6 +7,8 @@ import {
 } from "@autumn/balance-engine";
 import type { SubjectRowsEnvelope, SubjectSnapshotRow } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
+import type { SubjectSnapshotMode } from "../../../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { subjectEnvelopeToState } from "../../../../../src/processor/subject/actions/ensureSubject/readSubjectBaseline.js";
 import { createEntityLoads } from "../../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
 import { createSnapshotLoader } from "../../../../../src/processor/subject/snapshotLoader/createSnapshotLoader.js";
@@ -25,7 +27,10 @@ import {
 import { createSubjectJoinCache } from "../../../../../src/processor/subject/subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectScope } from "../../../../../src/processor/subject/types/subject.js";
 import { createTestCatalogCache } from "../../../../fixtures/catalog.js";
-import { createState } from "../../../../fixtures/mutations.js";
+import {
+	createCustomerEntitlement,
+	createState,
+} from "../../../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../../../fixtures/subjectSnapshotsStore.js";
 
 const NOW = 1_700_000_000_000;
@@ -92,7 +97,7 @@ const createScope = ({
 	rows?: SubjectSnapshotRow[];
 	/** A full read's answer per customer: an envelope, null (not found), or an error to throw. */
 	full?: Record<string, SubjectRowsEnvelope | null | Error>;
-	mode?: "off" | "write" | "serve";
+	mode?: SubjectSnapshotMode;
 	fullDelayMs?: number;
 } = {}) => {
 	const selects: MeteringIdentity[][] = [];
@@ -189,6 +194,11 @@ const createScope = ({
 			occurredAt: asOf,
 			load: inFlight,
 		});
+	const eventsOf = (event: string) =>
+		logged
+			.map((args) => (args as [{ event?: string; data?: unknown }])[0])
+			.filter((record) => record?.event === event)
+			.map((record) => record.data);
 	const batchLines = () =>
 		logged.filter(
 			(args) =>
@@ -199,6 +209,7 @@ const createScope = ({
 		scope,
 		load,
 		backfills,
+		eventsOf,
 		selects,
 		fullReads,
 		sleeps,
@@ -467,5 +478,59 @@ describe("the snapshot loader", () => {
 		const off = createScope({ mode: "write" });
 		await off.load("cus_1");
 		expect([replay.backfills, off.backfills]).toEqual([[], []]);
+	});
+
+	describe("verifying", () => {
+		test("a row is probed and the rows are read anyway: the rows are served, a row that agrees logs nothing, and nothing is written back", async () => {
+			const rowsState = subjectEnvelopeToState({
+				identity: identityOf("cus_1"),
+				envelope: envelopeOf("cus_1"),
+			});
+			const { load, selects, fullReads, backfills, eventsOf, batchLines } =
+				createScope({
+					mode: "verify",
+					rows: [rowOf("cus_1", { state: { ...rowsState, revision: 9 } })],
+				});
+			const state = await load("cus_1");
+			expect(selects).toHaveLength(1);
+			expect(fullReads).toEqual(["cus_1"]);
+			expect(state).toEqual(rowsState);
+			expect(eventsOf("balance_worker.snapshot_mismatch")).toEqual([]);
+			expect(backfills).toEqual([]);
+			await Bun.sleep(1);
+			expect(batchLines()[0]?.[0].data).toMatchObject({ hits: 1, absent: 0 });
+		});
+
+		test("a row that disagrees is logged with the fields where it does; the rows are still what is served", async () => {
+			const rowsState = subjectEnvelopeToState({
+				identity: identityOf("cus_1"),
+				envelope: envelopeOf("cus_1"),
+			});
+			const { load, eventsOf } = createScope({
+				mode: "verify",
+				rows: [
+					rowOf("cus_1", {
+						state: {
+							...rowsState,
+							customerEntitlements: [
+								createCustomerEntitlement({ balance: 42 }),
+							],
+						},
+					}),
+				],
+			});
+			const state = await load("cus_1");
+			expect(state.customerEntitlements).toEqual([]);
+			expect(eventsOf("balance_worker.snapshot_mismatch")).toEqual([
+				{ identity: identityOf("cus_1"), fields: ["customerEntitlements"] },
+			]);
+		});
+
+		test("a miss is a miss: the rows are served and written back, as in serve", async () => {
+			const { load, backfills, eventsOf } = createScope({ mode: "verify" });
+			await load("cus_1");
+			expect(backfills).toHaveLength(1);
+			expect(eventsOf("balance_worker.snapshot_mismatch")).toEqual([]);
+		});
 	});
 });

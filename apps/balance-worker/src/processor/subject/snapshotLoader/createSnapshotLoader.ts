@@ -3,6 +3,7 @@ import {
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
+import { servesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createSubjectLoadGate } from "../../../external/postgres/createSubjectLoadGate.js";
 import { SubjectLoadBusyError } from "../subjectErrors.js";
 import type { SubjectScope } from "../types/subject.js";
@@ -18,6 +19,7 @@ import {
 	SNAPSHOT_QUEUE_CAP,
 } from "./snapshotLoaderLimits.js";
 import type {
+	SnapshotFullRead,
 	SnapshotLoader,
 	SnapshotWaiting,
 } from "./types/snapshotLoader.js";
@@ -96,14 +98,16 @@ export const createSnapshotLoader = ({
 		backoffMs = SNAPSHOT_BACKOFF_MS.initial;
 		for (const entry of batch) waiting.delete(entry.subjectKey);
 		const selectMs = performance.now() - startedAt;
-		const { misses, counts } = settleSnapshotHits({
+		const settings = scope.ctx.subjectSnapshotsConfig?.get();
+		const { fullReads, counts } = settleSnapshotHits({
 			batch,
 			rowsBySubject: read.ok ? read.rowsBySubject : new Map(),
+			serving: settings !== undefined && servesSubjectSnapshots(settings),
 		});
 		// The next SELECT does not wait for these: the gate keeps them to a few, the line lands once they settle.
 		const fallbackStartedAt = performance.now();
 		void Promise.all(
-			misses.map((entry) => settleFromFullRead({ scope, entry })),
+			fullReads.map((fullRead) => settleFromFullRead({ scope, fullRead })),
 		).then(() =>
 			logSnapshotBatch({
 				scope,
@@ -119,19 +123,20 @@ export const createSnapshotLoader = ({
 
 	async function settleFromFullRead({
 		scope,
-		entry,
+		fullRead,
 	}: {
 		scope: SubjectScope;
-		entry: SnapshotWaiting;
+		fullRead: SnapshotFullRead;
 	}): Promise<void> {
+		const { settle } = fullRead.waiting;
 		try {
-			entry.settle.resolve(
+			settle.resolve(
 				await fallbacks.run(() =>
-					fallbackToFullRead({ scope, waiting: entry, quarantine }),
+					fallbackToFullRead({ scope, ...fullRead, quarantine }),
 				),
 			);
 		} catch (cause) {
-			entry.settle.reject(cause);
+			settle.reject(cause);
 		}
 	}
 
