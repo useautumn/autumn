@@ -10,6 +10,8 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		description: string;
 		scanningLabel?: string;
 		runningLabel: string;
+		/** What the progress counts measure. */
+		unitLabel: string;
 		submitLabel: string;
 	}
 > = {
@@ -19,6 +21,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		title: "Export customers",
 		description: "Download your customer list as a CSV file.",
 		runningLabel: "Exporting customers",
+		unitLabel: "rows",
 		submitLabel: "Start export",
 	},
 	[CustomerExportKind.BillingVerify]: {
@@ -26,9 +29,10 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		menuLabel: "Export billing issues",
 		title: "Export billing issues",
 		description:
-			"Check each Stripe-linked customer's billing against Autumn and download the mismatches as a CSV file. Customers without a Stripe customer are skipped. Large accounts can take up to an hour.",
+			"Check each Stripe-linked customer's billing against Autumn and download the mismatches as a CSV file. Customers with no Stripe-linked plan are skipped, so the count below covers only those checked. Large accounts can take up to an hour.",
 		scanningLabel: "Scanning Stripe subscriptions",
 		runningLabel: "Checking customers",
+		unitLabel: "customers",
 		submitLabel: "Start check",
 	},
 };

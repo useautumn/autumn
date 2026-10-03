@@ -34,10 +34,16 @@ const toPercent = ({
 	);
 };
 
-const toCount = ({ progress }: { progress: CustomerExportProgress }) =>
+const toCount = ({
+	progress,
+	unitLabel,
+}: {
+	progress: CustomerExportProgress;
+	unitLabel: string;
+}) =>
 	progress.phase === CustomerExportPhase.Scanning
 		? `${progress.processed_rows.toLocaleString()} subscriptions found`
-		: `${progress.processed_rows.toLocaleString()} of ${progress.total_rows.toLocaleString()} rows`;
+		: `${progress.processed_rows.toLocaleString()} of ${progress.total_rows.toLocaleString()} ${unitLabel}`;
 
 const toLabel = ({
 	activeExport,
@@ -58,10 +64,13 @@ export function CustomerExportActiveProgress({
 	activeExport,
 	runningLabel,
 	scanningLabel = runningLabel,
+	unitLabel = "rows",
 }: {
 	activeExport: CustomerExportResponse | undefined;
 	scanningLabel?: string;
 	runningLabel: string;
+	/** What the counts measure; billing verify reports customers it checks. */
+	unitLabel?: string;
 }) {
 	const shouldReduceMotion = useReducedMotion();
 
@@ -91,7 +100,7 @@ export function CustomerExportActiveProgress({
 							</span>
 							{progress ? (
 								<span className="text-tertiary-foreground tabular-nums">
-									{toCount({ progress })}
+									{toCount({ progress, unitLabel })}
 								</span>
 							) : null}
 						</div>

@@ -18,7 +18,10 @@ export type CustomerExportRowStreamFactory = (args: {
 	population: CustomerExportPopulation;
 	progress?: CustomerExportProgressReporter;
 	onPageProcessed: (page: {
+		/** Customers walked; the plain export's unit of progress. */
 		customerCount: number;
+		/** Customers actually verified, when the kind filters before working. */
+		candidateCount?: number;
 		rowCount: number;
 	}) => Promise<void> | void;
 }) => Readable;
