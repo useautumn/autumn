@@ -22,7 +22,7 @@ export type DatabaseTimingsSummary = {
 	>;
 	subjectLoadWait: Distribution;
 	errorCodes: Record<string, number>;
-	/** Present only in a window that wrote or deleted snapshots. */
+	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
 	subjectSnapshots?: SubjectSnapshotCounts;
 };
 
