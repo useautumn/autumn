@@ -118,7 +118,7 @@ describe("newly supplied Stripe key validation", () => {
 		[
 			"publishable",
 			"pk_test_synthetic",
-			new Stripe.errors.StripeInvalidRequestError({
+			new Stripe.errors.StripePermissionError({
 				type: "invalid_request_error",
 				message: "A secret key is required: credential_marker",
 				code: "secret_key_required",
