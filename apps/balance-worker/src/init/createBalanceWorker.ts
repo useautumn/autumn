@@ -1,6 +1,7 @@
 import { cpus } from "node:os";
 import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
+	BALANCE_WORKER_STANDBY_PREPARATION_SETTLE_MS,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
 } from "@autumn/env/balanceWorkerConstants";
 import type { KafkaOffsetCommit } from "@autumn/kafka";
@@ -154,6 +155,7 @@ export async function createBalanceWorker({
 					ctx: { gate: slotGate },
 					config: {
 						concurrency: BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
+						settleMs: BALANCE_WORKER_STANDBY_PREPARATION_SETTLE_MS,
 					},
 				})
 			: undefined;
