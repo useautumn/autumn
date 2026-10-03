@@ -37,7 +37,7 @@ const triggerToResetCommand = ({
 });
 
 /** Runs inside the writer's critical section: no await, no I/O. Nothing due answers without a record. */
-export const decideReset = ({
+export const mutateReset = ({
 	scope,
 	state,
 	command,
@@ -82,6 +82,6 @@ export const advanceResets = ({
 	const reset = triggerToResetCommand({ command, inputs });
 	scope.ctx.writer.decide<ResetReply>({
 		command: reset,
-		mutate: ({ state }) => decideReset({ scope, state, command: reset }),
+		mutate: ({ state }) => mutateReset({ scope, state, command: reset }),
 	});
 };

@@ -123,6 +123,13 @@ const settlesWithin = async ({
 		new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms)),
 	]);
 
+/** The consumed batch the evict's held record joins, as the command consumer hands it over. */
+const sinkOf = ({ deferredLogs }: { deferredLogs: Promise<void>[] }) => ({
+	add: (log: Promise<void>) => {
+		deferredLogs.push(log);
+	},
+});
+
 const queueEvict = ({
 	processor,
 	customerId,
@@ -136,7 +143,7 @@ const queueEvict = ({
 }) =>
 	processor.execute({
 		source: { commandOffset: String(commandOffset) },
-		deferredLogs,
+		deferredLogs: sinkOf({ deferredLogs }),
 		run: (queued) => queued.evict({ command: evictOf({ customerId }) }),
 	});
 
@@ -220,7 +227,7 @@ describe("queued evict logging", () => {
 		});
 		await processor.execute({
 			source: { commandOffset: "2" },
-			deferredLogs,
+			deferredLogs: sinkOf({ deferredLogs }),
 			run: async () => undefined,
 		});
 

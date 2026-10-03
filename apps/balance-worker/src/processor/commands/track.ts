@@ -15,16 +15,20 @@ import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import { decideEffects } from "../effects/decideEffects.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
-import type { MutationResult } from "../writer/types/mutation.js";
+import type {
+	CommittedMutation,
+	DecidedMutation,
+	MutationResult,
+} from "../writer/types/mutation.js";
 
-/** Decide now, reply once committed. */
-export async function track({
+/** Every track, sync or queued, deducts here: serialized by the partition writer. */
+export async function decideTrack({
 	scope,
 	command,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
-}): Promise<TrackReply> {
+}): Promise<DecidedTrack> {
 	const { ctx } = scope;
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
@@ -42,7 +46,7 @@ export async function track({
 				durability: command.lock ? "store" : "log",
 				mutate: ({ state }) =>
 					timeSync({ label: "track.decide" }, () =>
-						decideTrack({
+						mutateTrack({
 							scope,
 							state,
 							customerKey,
@@ -52,15 +56,45 @@ export async function track({
 					),
 			}),
 	});
+	return { ...decided, decidedAgainst };
+}
 
-	// Asynchronous: Kafka commit, then SQLite apply.
-	const { mutation, state } = await decided.waitForCommit();
+/** Sync: decide, then answer once the deduction is committed. */
+export async function track({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+}): Promise<TrackReply> {
+	const decided = await decideTrack({ scope, command });
+	const committed = await decided.waitForCommit();
+	return toTrackReply({
+		scope,
+		command,
+		committed,
+		decidedAgainst: decided.decidedAgainst,
+	});
+}
+
+function toTrackReply({
+	scope,
+	command,
+	committed,
+	decidedAgainst,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+	committed: CommittedMutation;
+	decidedAgainst: DecidedAgainst;
+}): TrackReply {
+	const { mutation, state } = committed;
 	if (mutation.result.type !== "track") {
 		throw new Error(`Track ${mutation.id} committed a non-track record`);
 	}
 	// A duplicate or joined command never ran the decision, so it reads the committed state's catalog.
 	const catalog =
-		decidedAgainst.catalog ?? ctx.subjectHydrator.readCatalog({ state });
+		decidedAgainst.catalog ?? scope.ctx.subjectHydrator.readCatalog({ state });
 	// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
 	return {
 		result: mutation.result,
@@ -79,8 +113,11 @@ type DecidedAgainst = {
 	effects?: MutationEffect[];
 };
 
+/** The deduction, enqueued in order; what it was decided against shapes the sync reply. */
+type DecidedTrack = DecidedMutation<never> & { decidedAgainst: DecidedAgainst };
+
 /** Runs inside the writer's critical section: no await, no I/O. */
-function decideTrack({
+function mutateTrack({
 	scope,
 	state,
 	customerKey,
