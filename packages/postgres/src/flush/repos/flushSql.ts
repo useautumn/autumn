@@ -1,15 +1,19 @@
 import { type SQL, sql } from "drizzle-orm";
 import { subjectRowChangeSql } from "../../subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
+import { subjectSnapshotFlushSql } from "../../subjects/repos/subjectSnapshots/subjectSnapshotFlushSql.js";
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
+import type { SubjectSnapshotWrites } from "../../subjects/types/subjectSnapshot.js";
 import type { FlushBookmark } from "../types/flush.js";
 
 /** Every folded change as its own CTE, the bookmarks as one, and a row of counts to read the outcome from. */
 export const flushSql = ({
 	changes,
 	bookmarks,
+	snapshots,
 }: {
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
+	snapshots?: SubjectSnapshotWrites;
 }): SQL => {
 	const updateCtes = changes.map(
 		(change, index) =>
@@ -42,8 +46,22 @@ export const flushSql = ({
 			: // An array constructor, not json_build_array: a function call is capped at 100 arguments.
 				sql`to_json(ARRAY[${sql.join(appliedCounts, sql`, `)}])`;
 
-	return sql`
+	const hasSnapshotWrites =
+		(snapshots?.upserts.length ?? 0) + (snapshots?.deletes.length ?? 0) > 0;
+	if (!snapshots || !hasSnapshotWrites)
+		return sql`
 		WITH ${sql.join([...updateCtes, bookmarkCte], sql`, `)}
 		SELECT ${applied} AS applied, (SELECT count(*) FROM b) AS bookmarks
+	`;
+
+	const snapshotSql = subjectSnapshotFlushSql({ snapshots });
+	// Snapshot deletes travel alone when an evict has no record to carry them, and VALUES cannot be empty.
+	const bookmarkParts =
+		bookmarks.length > 0
+			? { ctes: [bookmarkCte], count: sql`(SELECT count(*) FROM b)` }
+			: { ctes: [], count: sql`0` };
+	return sql`
+		WITH ${sql.join([...updateCtes, ...bookmarkParts.ctes, ...snapshotSql.ctes], sql`, `)}
+		SELECT ${applied} AS applied, ${bookmarkParts.count} AS bookmarks, ${snapshotSql.upserted} AS snapshot_upserts, ${snapshotSql.deleted} AS snapshot_deletes
 	`;
 };
