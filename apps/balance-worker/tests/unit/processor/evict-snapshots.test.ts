@@ -365,4 +365,30 @@ describe("evict snapshot refreshes", () => {
 		expect(noRows.refreshed).toEqual([]);
 		expect(notAsked.refreshed).toEqual([]);
 	});
+
+	test("an oversized customer stays deleted while its small entity refresh lands", async () => {
+		const db: WorkerDb = {
+			...createSyntheticWorkerDb(),
+			getSubjectRows: async ({ identity }) => {
+				const rows = envelopeOf(identity);
+				if (!identity.entityId)
+					rows.customer.metadata = { padding: "x".repeat(262_145) };
+				return rows;
+			},
+		};
+		const { processor, deleted, refreshed } = await createProcessor({
+			logsEvicts: false,
+			db,
+			rowsOf: () => [null, "en_1"],
+		});
+		await processor.evict({
+			command: evictOf({ customerId: "cus_1", refreshSnapshots: true }),
+		});
+		for (let attempt = 0; refreshed.length === 0 && attempt < 100; attempt++)
+			await Bun.sleep(2);
+		expect(deleted).toEqual([[keyOf("cus_1")]]);
+		expect(refreshed.flat()).toEqual([
+			meteringIdentityToSubjectKey({ identity: identityOf("cus_1", "en_1") }),
+		]);
+	});
 });

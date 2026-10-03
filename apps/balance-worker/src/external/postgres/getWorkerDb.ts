@@ -148,7 +148,6 @@ export const createWorkerDb = ({
 			});
 			return snapshots;
 		}),
-	// One primary-key prefix scan, outside the subject-load gate like the other small lookups: an evict must not wait behind cold loads.
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>
 			timeQuery({
