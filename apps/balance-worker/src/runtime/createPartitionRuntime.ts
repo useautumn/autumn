@@ -52,6 +52,7 @@ export function createPartitionRuntime({
 				receiptPolicy: dependencies.receiptPolicy,
 				recentCommands: dependencies.recentCommands,
 				commitPositions: dependencies.commitPositions,
+				subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
 				assertCanRead,
 				logger: dependencies.logger,
 			},
