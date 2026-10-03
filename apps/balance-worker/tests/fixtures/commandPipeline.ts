@@ -70,6 +70,7 @@ export const createCommandPipeline = ({
 	});
 
 	const commits: MeteringRecord[][] = [];
+	/** Every bookmark advance asked of the store, in order, including ones it already passed. */
 	const bookmarks: bigint[] = [];
 	const parked: { partition: number; cause: unknown }[] = [];
 	const logs: string[] = [];
@@ -77,9 +78,9 @@ export const createCommandPipeline = ({
 	let decides = 0;
 	let bookmark: bigint | null = null;
 	function advanceBookmark({ to }: { to: bigint }): void {
+		bookmarks.push(to);
 		if (bookmark !== null && bookmark >= to) return;
 		bookmark = to;
-		bookmarks.push(to);
 	}
 
 	const stateStore: SqliteStateStore = {
@@ -187,6 +188,8 @@ export const createCommandPipeline = ({
 	return {
 		processor,
 		consumeBatch,
+		/** Waits for every commit and store apply, as a handoff does. */
+		drain: () => processor.drain(),
 		close,
 		commits,
 		bookmarks,
