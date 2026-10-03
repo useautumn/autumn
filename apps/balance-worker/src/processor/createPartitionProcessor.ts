@@ -221,10 +221,12 @@ function createProcessor({
 		source,
 		run,
 		deferredLogs,
+		onDecided,
 	}: {
 		source: MutationSource;
 		run: (processor: PartitionProcessor) => Promise<Decision>;
 		deferredLogs?: Promise<void>[];
+		onDecided?: () => void;
 	}) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -232,6 +234,7 @@ function createProcessor({
 				scope,
 				source,
 				deferredLogs,
+				onDecided,
 				run: (executionScope) =>
 					run(createProcessor({ scope: executionScope })),
 			}),

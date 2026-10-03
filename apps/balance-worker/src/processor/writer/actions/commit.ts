@@ -260,10 +260,10 @@ async function appendBatch({
 		// Clearing speculative state is only safe when every committed batch is
 		// already in the store; otherwise memory holds rows the store lacks, so the
 		// partition rebuilds from the log instead.
-		if (
+		const provenUncommitted =
 			cause instanceof MutationBatchNotCommittedError &&
-			state.unapplied.length === 0
-		) {
+			state.unapplied.length === 0;
+		if (provenUncommitted && !holdsQueuedCommand({ state, batch })) {
 			rejectAllPending({
 				state,
 				batch,
@@ -275,6 +275,20 @@ async function appendBatch({
 		}
 		return null;
 	}
+}
+
+/** A queued command that missed the log is a gap in the command stream: carrying on would let
+ *  a later command land past it and move the bookmark over a command that never happened. */
+function holdsQueuedCommand({
+	state,
+	batch,
+}: {
+	state: PartitionWriterScope["state"];
+	batch: PendingMutation[];
+}): boolean {
+	const isQueued = (pending: PendingMutation) =>
+		pending.mutation.source !== undefined;
+	return batch.some(isQueued) || state.queue.some(isQueued);
 }
 
 /** The log is the record and the store is a projection of it, so once Kafka has

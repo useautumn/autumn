@@ -1,3 +1,5 @@
+import type { MutationSource } from "@autumn/balance-engine";
+import { BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT } from "@autumn/env/balanceWorkerConstants";
 import {
 	parseCommandRecord,
 	parseKafkaOffset,
@@ -17,29 +19,35 @@ import type { PartitionProcessor } from "../../processor/types/partitionProcesso
 import { CommandPartitionUnavailableError } from "./commandConsumerErrors.js";
 import type { CommandConsumerContext } from "./types/commandConsumer.js";
 
+/** One batch's queued work still landing: held evict records and decided commands awaiting their commit. */
+type DeferredWork = {
+	runtime: PartitionRuntimePort;
+	logs: Promise<void>[];
+	committing: Set<Promise<void>>;
+};
+
+function ignoreOutcome(): void {}
+
 /** The command stream's transport: a record in, its partition's runtime found, the `consume/` layer called. No business logic here. */
 export function createCommandRecordHandler({
 	ctx,
 }: {
 	ctx: CommandConsumerContext;
 }): TopicRecordHandler {
-	const deferredLogsByPartition = new Map<
-		number,
-		{ runtime: PartitionRuntimePort; logs: Promise<void>[] }
-	>();
+	const deferredWorkByPartition = new Map<number, DeferredWork>();
 
-	function deferredLogsOf({
+	function deferredWorkOf({
 		partition,
 		runtime,
 	}: {
 		partition: number;
 		runtime: PartitionRuntimePort;
-	}): Promise<void>[] {
-		const existing = deferredLogsByPartition.get(partition);
-		if (existing?.runtime === runtime) return existing.logs;
-		const logs: Promise<void>[] = [];
-		deferredLogsByPartition.set(partition, { runtime, logs });
-		return logs;
+	}): DeferredWork {
+		const existing = deferredWorkByPartition.get(partition);
+		if (existing?.runtime === runtime) return existing;
+		const deferred: DeferredWork = { runtime, logs: [], committing: new Set() };
+		deferredWorkByPartition.set(partition, deferred);
+		return deferred;
 	}
 
 	async function settleBatch({
@@ -49,9 +57,9 @@ export function createCommandRecordHandler({
 		topic: string;
 		partition: number;
 	}): Promise<void> {
-		const deferred = deferredLogsByPartition.get(partition);
+		const deferred = deferredWorkByPartition.get(partition);
 		if (!deferred) return;
-		deferredLogsByPartition.delete(partition);
+		deferredWorkByPartition.delete(partition);
 		if (deferred.runtime !== ctx.findOwnedRuntime({ partition })) return;
 		try {
 			await Promise.all(deferred.logs);
@@ -139,14 +147,56 @@ export function createCommandRecordHandler({
 				settleQueuedFailure({ ctx: { logger: ctx.logger }, command, cause });
 			}
 		}
-		const deferredLogs = deferredLogsOf({ partition, runtime });
+		const deferred = deferredWorkOf({ partition, runtime });
+		await waitForCommitRoom({ deferred });
 		try {
-			return await runtime.process((processor) =>
-				processor.execute({ source, run, deferredLogs }),
-			);
+			await processUntilDecided({ runtime, source, run, deferred });
 		} catch (cause) {
 			parkOrRethrow({ topic, partition, offset, cause });
 		}
+	}
+
+	/** A queued command holds the stream only until it is decided, so the records behind it can
+	 *  share its Kafka commit; the rest of its run joins the batch, which settles before its offset. */
+	async function processUntilDecided({
+		runtime,
+		source,
+		run,
+		deferred,
+	}: {
+		runtime: PartitionRuntimePort;
+		source: MutationSource;
+		run: (processor: PartitionProcessor) => Promise<void>;
+		deferred: DeferredWork;
+	}): Promise<void> {
+		const decided = Promise.withResolvers<"decided">();
+		function markDecided(): void {
+			decided.resolve("decided");
+		}
+		const processed = runtime.process((processor) =>
+			processor.execute({
+				source,
+				run,
+				deferredLogs: deferred.logs,
+				onDecided: markDecided,
+			}),
+		);
+		const first = await Promise.race([decided.promise, processed]);
+		if (first !== "decided") return;
+		deferred.logs.push(processed);
+		const settled = processed.then(ignoreOutcome, ignoreOutcome);
+		deferred.committing.add(settled);
+		void settled.then(() => deferred.committing.delete(settled));
+	}
+
+	/** Bounds how far decides run ahead of their commits, well inside the writer's pending capacity. */
+	async function waitForCommitRoom({
+		deferred,
+	}: {
+		deferred: DeferredWork;
+	}): Promise<void> {
+		while (deferred.committing.size >= BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT)
+			await Promise.race(deferred.committing);
 	}
 
 	/** A batch the broker refused says the partition fell behind, not that the worker is broken:

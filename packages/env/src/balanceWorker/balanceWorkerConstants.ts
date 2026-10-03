@@ -125,6 +125,8 @@ export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
 export const BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS = 100;
 export const BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS = 5_000;
 export const BALANCE_WORKER_DEFERRED_COMMIT_MS = 1_000;
+/** Queued commands decided but not yet committed, per partition: two full commits' worth. */
+export const BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT = 200;
 /** How long a command-offset landing holds the next one back. A skipped command
  *  (an evict, a queued track already applied) leaves no record to carry its
  *  offset, so the offset rides with the next batch or lands through the consumer

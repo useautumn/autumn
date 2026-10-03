@@ -49,6 +49,8 @@ export type PartitionProcessor = {
 		source: MutationSource;
 		run: (processor: PartitionProcessor) => Promise<Decision>;
 		deferredLogs?: Promise<void>[];
+		/** Called once the run has decided and only waits for its commit; it still settles in full. */
+		onDecided?: () => void;
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
