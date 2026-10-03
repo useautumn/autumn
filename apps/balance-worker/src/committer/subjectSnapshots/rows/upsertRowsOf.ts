@@ -1,4 +1,7 @@
-import type { SubjectState } from "@autumn/balance-engine";
+import {
+	meteringIdentityToSubjectKey,
+	type SubjectState,
+} from "@autumn/balance-engine";
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import type { SubjectSnapshotUpsert } from "@autumn/postgres";
 
@@ -9,12 +12,14 @@ export const upsertRowsOf = ({
 	partition,
 	partitionCount,
 	logOffset,
+	logOffsets,
 }: {
 	states: readonly SubjectState[];
 	baselineAt: number;
 	partition: number;
 	partitionCount: number;
 	logOffset: bigint | null;
+	logOffsets?: ReadonlyMap<string, bigint>;
 }): SubjectSnapshotUpsert[] =>
 	states.map((state) => ({
 		orgId: state.identity.orgId,
@@ -28,5 +33,8 @@ export const upsertRowsOf = ({
 		stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
 		stateJson: JSON.stringify(state),
 		baselineAt,
-		logOffset,
+		logOffset:
+			logOffsets?.get(
+				meteringIdentityToSubjectKey({ identity: state.identity }),
+			) ?? logOffset,
 	}));
