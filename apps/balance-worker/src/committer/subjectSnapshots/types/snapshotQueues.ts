@@ -6,7 +6,7 @@ import type { DeletedSubjectSnapshot } from "@autumn/postgres";
  * rebuild the rows. Both are synchronous enqueues a request never waits on; they land on the lane's next ticks.
  */
 export type SnapshotQueues = {
-	/** Every row of the customer goes; a refresh of it still pending goes with them, the evict will queue a fresh one. */
+	/** Every row of the customer goes, never refused; a refresh of it still pending goes with them, the evict will queue a fresh one. */
 	enqueueDelete(params: {
 		topic: string;
 		partition: number;

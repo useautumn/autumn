@@ -240,7 +240,7 @@ describe("snapshot lane writes: evict deletes", () => {
 		expect(warnings[0]).toContain("could not write 2 customers' rows");
 	});
 
-	test("past the pending ceiling a partition stops enqueuing and warns once; nothing is awaited or thrown", async () => {
+	test("past the pending ceiling a partition still takes every DELETE, and refuses refreshes with one warning; nothing is awaited or thrown", async () => {
 		const held = Promise.withResolvers<void>();
 		const { db, requests, deleteStatements } = createCountingDb({
 			gate: held.promise,
@@ -256,18 +256,37 @@ describe("snapshot lane writes: evict deletes", () => {
 		const offered = SNAPSHOT_LANE_MAX_PENDING + 50;
 		for (let index = 0; index < offered; index++)
 			deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(index) });
+		expect(warnings).toHaveLength(0);
+		// An evict past the ceiling is still answered by its own tick, never settled early as "no rows".
+		let landed = false;
+		const landing = deletes
+			.deleteLanded({ topic, partition: 4, customerKey: keyOf(offered - 1) })
+			.then(() => {
+				landed = true;
+			});
+		deletes.enqueueRefresh({
+			topic,
+			partition: 4,
+			state: createState({ identity: customerOf(offered) }),
+			baselineAt: 1,
+			logOffset: 0n,
+		});
 		expect(warnings).toHaveLength(1);
-		expect(warnings[0]).toContain(
-			`${SNAPSHOT_LANE_MAX_PENDING} customers pending`,
-		);
+		expect(warnings[0]).toContain(`${offered} customers pending`);
+		await Bun.sleep(5);
+		expect(landed).toBe(false);
 		held.resolve();
 		await drained();
+		await landing;
 
 		const deleted = deleteStatements().reduce(
 			(total, request) => total + (request.snapshots?.deletes.length ?? 0),
 			0,
 		);
-		expect(deleted).toBe(SNAPSHOT_LANE_MAX_PENDING);
+		expect(deleted).toBe(offered);
+		expect(
+			requests.some((request) => (request.snapshots?.upserts.length ?? 0) > 0),
+		).toBe(false);
 	});
 
 	test("with the store off, an enqueue is a no-op and Postgres sees no statement", async () => {
