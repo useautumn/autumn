@@ -37,7 +37,7 @@ test("a failed balance flush reports unknown persistence without claiming data l
 	expect(logger.error).toHaveBeenCalledTimes(1);
 	expect(logger.error).toHaveBeenCalledWith(
 		"[flushSubjectBalancesToDb] customer_123: flush failed, persistence outcome unknown, source: invalidateSharedBalanceFields, error: Error: deadlock detected",
-		{ type: "subject_balance_flush_failed" },
+		{ error_type: "subject_balance_flush_failed" },
 	);
 	expect(logger.warn).not.toHaveBeenCalled();
 	expect(logger.info).not.toHaveBeenCalled();

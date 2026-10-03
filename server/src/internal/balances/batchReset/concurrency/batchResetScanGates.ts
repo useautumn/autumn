@@ -99,7 +99,7 @@ export const waitForQueueDrained = async ({
 			logger.error(
 				"[reset-cus-ents-v2] sweep barrier wait exceeded 30 minutes; waiting for consecutive empty queue reads",
 				{
-					type: "batch_reset_barrier_wait_exceeded",
+					error_type: "batch_reset_barrier_wait_exceeded",
 					jobName: "reset-cus-ents-v2",
 					data: {
 						queueVisible: depth.visible,

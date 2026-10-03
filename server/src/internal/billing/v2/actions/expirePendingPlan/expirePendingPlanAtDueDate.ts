@@ -67,7 +67,7 @@ export const expirePendingPlanAtDueDate = async ({
 	} catch (error) {
 		ctx.logger.error(
 			`[expirePendingPlanAtDueDate] Failed for invoice ${params.stripeInvoice.id}; retrying next run: ${error}`,
-			{ type: "pending_plan_expiry_failed" },
+			{ error_type: "pending_plan_expiry_failed" },
 		);
 	}
 };

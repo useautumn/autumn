@@ -453,25 +453,34 @@ describe("createErrorLogHook", () => {
 	});
 
 	it.each([
-		{ type: "pending_plan_expiry_failed", bindings: {}, operation: undefined },
 		{
-			type: "subject_balance_flush_failed",
-			bindings: { req: { route: "POST /webhooks/connect/:env" } },
-			operation: "POST /webhooks/connect/:env",
-		},
-		{
-			type: "batch_reset_barrier_wait_exceeded",
+			errorType: "pending_plan_expiry_failed",
 			bindings: {},
 			operation: undefined,
 		},
 		{
-			type: "subject_balance_flush_failed",
+			errorType: "subject_balance_flush_failed",
+			bindings: { req: { route: "POST /webhooks/connect/:env" } },
+			operation: "POST /webhooks/connect/:env",
+		},
+		{
+			errorType: "batch_reset_barrier_wait_exceeded",
+			bindings: {},
+			operation: undefined,
+		},
+		{
+			errorType: "subject_balance_flush_failed",
 			bindings: { workflow: { name: "track" }, req: { route: "POST /track" } },
 			operation: "track",
 		},
+		{
+			errorType: "subject_balance_flush_failed",
+			bindings: { type: "general_log_type" },
+			operation: "general_log_type",
+		},
 	])(
-		"keeps text-only grouping and operation precedence when adding $type",
-		({ type, bindings, operation }) => {
+		"keeps text-only grouping and operation unchanged when adding $errorType",
+		({ errorType, bindings, operation }) => {
 			captureEvent.mockClear();
 			captureException.mockClear();
 			const { logger } = createTestLogger();
@@ -485,22 +494,20 @@ describe("createErrorLogHook", () => {
 			const before = captureEvent.mock.calls[0][0];
 			expect(before.fingerprint).toEqual(fingerprint);
 			expect(before.tags?.operation).toBe(operation);
+			expect(before.exception?.values?.[0].type).toBe("Error");
 
 			for (const message of [
 				"Failure for customer_123",
 				"Failure for customer_456",
 			]) {
-				sourceLogger.error({ type }, message);
+				sourceLogger.error({ error_type: errorType }, message);
 				const after = captureEvent.mock.calls.at(-1)?.[0];
 				expect(after?.fingerprint).toEqual(before.fingerprint);
-				expect(after?.tags).toEqual({
-					...before.tags,
-					operation: operation ?? type,
-				});
+				expect(after?.tags).toEqual(before.tags);
 				expect(after?.level).toBe(before.level);
 				expect(after?.exception?.values?.[0]).toEqual({
 					...before.exception?.values?.[0],
-					type,
+					type: errorType,
 					value: message,
 				});
 			}
@@ -520,14 +527,18 @@ describe("createErrorLogHook", () => {
 		expect(lines[0].error).toMatchObject({ kind: "bug", message: "bare" });
 	});
 
-	it("keeps native exception identity when a log line has a static type", () => {
+	it("keeps native exception identity when a log line has an error_type", () => {
 		captureEvent.mockClear();
 		captureException.mockClear();
 		const { jobLogger } = createTestLogger();
 		const error = new TypeError("original failure");
 
 		jobLogger.error(
-			{ type: "subject_balance_flush_failed", error },
+			{
+				type: "general_log_type",
+				error_type: "subject_balance_flush_failed",
+				error,
+			},
 			"flush failed",
 		);
 

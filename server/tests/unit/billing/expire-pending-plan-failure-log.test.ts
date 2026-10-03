@@ -12,7 +12,7 @@ const { expirePendingPlanAtDueDate } = await import(
 	"@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanAtDueDate.js"
 );
 
-test("pending plan expiry failures have a static type and retain the original cause", async () => {
+test("pending plan expiry failures have an error_type and retain the original cause", async () => {
 	const voidInvoice = mock(async () => {
 		throw new Error("invoice operation failed");
 	});
@@ -47,7 +47,7 @@ test("pending plan expiry failures have a static type and retain the original ca
 	expect(logger.error).toHaveBeenCalledTimes(1);
 	expect(logger.error).toHaveBeenCalledWith(
 		"[expirePendingPlanAtDueDate] Failed for invoice in_123; retrying next run: Error: invoice operation failed",
-		{ type: "pending_plan_expiry_failed" },
+		{ error_type: "pending_plan_expiry_failed" },
 	);
 	expect(logger.warn).not.toHaveBeenCalled();
 	expect(logger.info).not.toHaveBeenCalled();

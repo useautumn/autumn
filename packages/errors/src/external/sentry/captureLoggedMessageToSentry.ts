@@ -40,7 +40,7 @@ export const captureLoggedMessageToSentry = ({
 		exception: {
 			values: [
 				{
-					type: logContext.type ?? "Error",
+					type: logContext.error_type ?? "Error",
 					value: message,
 					stacktrace: { frames },
 					mechanism: { type: "logger", handled: true },
