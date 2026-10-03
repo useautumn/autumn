@@ -1,4 +1,4 @@
-import { secondsToMs } from "@autumn/shared";
+import { isResettingEntitlement, secondsToMs } from "@autumn/shared";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 
@@ -26,5 +26,21 @@ export const consumeBillingCycleAnchorReset = ({
 				billing_cycle_anchor_resets_at: null,
 			},
 		});
+
+		// Every resetting row re-phases to the new anchor, not only prepaid ones:
+		// usage windows that outlast a row's reset interval anchor to it.
+		for (const customerEntitlement of customerProduct.customer_entitlements) {
+			if (
+				!isResettingEntitlement({
+					entitlement: customerEntitlement.entitlement,
+				})
+			) {
+				continue;
+			}
+			plan.updateCustomerEntitlement({
+				customerEntitlement,
+				updates: { reset_cycle_anchor: stripeAnchorMs },
+			});
+		}
 	}
 };

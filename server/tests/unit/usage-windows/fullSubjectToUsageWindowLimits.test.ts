@@ -375,7 +375,7 @@ describe("fullSubjectToUsageWindowLimits", () => {
 
 	test("a monthly cap on a daily-reset ent anchors to reset_cycle_anchor and holds across daily resets", () => {
 		const resetCycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
-		const nextResetAt = Date.UTC(2026, 5, 16, 15, 30, 0);
+		const nextResetAt = Date.UTC(2026, 5, 15, 15, 30, 0);
 		const resolveAt = ({
 			now,
 			nextReset,
@@ -441,8 +441,10 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		);
 	});
 
-	test("a monthly cap on a daily-reset ent without reset_cycle_anchor falls back to the billing-cycle anchor", () => {
-		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
+	test("a monthly cap on a daily-reset ent ignores a pending billing-cycle date", () => {
+		// The pending date is cleared when the anchor move lands; anchoring to it
+		// would shift the bounds at that moment and zero the counter mid-window.
+		const pendingAnchorResetsAt = Date.UTC(2026, 6, 9, 15, 30, 0);
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
 				usageLimits: [
@@ -458,7 +460,7 @@ describe("fullSubjectToUsageWindowLimits", () => {
 						featureId: "action1",
 						interval: EntInterval.Day,
 						nextResetAt: Date.UTC(2026, 5, 16, 8, 45, 0),
-						cycleAnchor,
+						cycleAnchor: pendingAnchorResetsAt,
 					}),
 				],
 			}),
@@ -467,14 +469,19 @@ describe("fullSubjectToUsageWindowLimits", () => {
 			now: NOW,
 		});
 
-		const cycleAligned = getUsageWindowBounds({
+		const calendar = getUsageWindowBounds({
 			interval: EntInterval.Month,
 			now: NOW,
-			anchor: cycleAnchor,
+		});
+		const pendingAligned = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now: NOW,
+			anchor: pendingAnchorResetsAt,
 		});
 		expect(limits).toHaveLength(1);
-		expect(limits[0].window_start_at).toBe(cycleAligned.windowStartAt);
-		expect(limits[0].window_end_at).toBe(cycleAligned.windowEndAt);
+		expect(limits[0].window_start_at).toBe(calendar.windowStartAt);
+		expect(limits[0].window_end_at).toBe(calendar.windowEndAt);
+		expect(pendingAligned.windowStartAt).not.toBe(calendar.windowStartAt);
 	});
 
 	test("a monthly cap on a daily-reset ent with no fixed anchor uses UTC calendar bounds", () => {

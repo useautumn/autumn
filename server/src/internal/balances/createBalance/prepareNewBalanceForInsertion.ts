@@ -8,6 +8,7 @@ import {
 	type Feature,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	isResettingEntitlement,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { validateInvoiceCreditBalanceMutationForFeature } from "@/internal/balances/utils/validateInvoiceCreditBalanceMutation.js";
@@ -97,7 +98,9 @@ export const prepareNewBalanceForInsertion = async ({
 	// is the cycle's phase, and usage windows read the anchor to stay fixed.
 	if (params.next_reset_at !== undefined) {
 		newCustomerEntitlement.next_reset_at = params.next_reset_at;
-		newCustomerEntitlement.reset_cycle_anchor = params.next_reset_at;
+		if (isResettingEntitlement({ entitlement: newEntitlementWithFeature })) {
+			newCustomerEntitlement.reset_cycle_anchor = params.next_reset_at;
+		}
 	}
 
 	if (params.balance_id) {

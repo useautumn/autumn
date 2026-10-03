@@ -45,8 +45,9 @@ const resetIntervalAlignsToWindow = ({
  * change that restarts the cycle restarts the window). An entitlement that
  * resets more often than the window (daily credits under a monthly cap) would
  * drag the window forward on every reset and zero its counter, so it anchors
- * to its fixed `reset_cycle_anchor` instead. Falls back to the product's
- * billing-cycle anchor, else null (UTC calendar).
+ * to its fixed `reset_cycle_anchor` instead, else null (UTC calendar). The
+ * pending `billing_cycle_anchor_resets_at` is no anchor for that case: it is
+ * cleared when the move lands, which would shift the bounds and zero the count.
  */
 export const getUsageWindowAnchorTimestamp = ({
 	anchorCustomerEntitlement,
@@ -68,14 +69,14 @@ export const getUsageWindowAnchorTimestamp = ({
 		resetInterval: anchorCustomerEntitlement.entitlement.interval,
 		windowInterval,
 	});
-	if (resetAlignsToWindow && anchorCustomerEntitlement.next_reset_at != null) {
-		return anchorCustomerEntitlement.next_reset_at;
+	if (resetAlignsToWindow) {
+		return (
+			anchorCustomerEntitlement.next_reset_at ??
+			anchorCustomerEntitlement.customer_product
+				?.billing_cycle_anchor_resets_at ??
+			null
+		);
 	}
 
-	return (
-		anchorCustomerEntitlement.reset_cycle_anchor ??
-		anchorCustomerEntitlement.customer_product
-			?.billing_cycle_anchor_resets_at ??
-		null
-	);
+	return anchorCustomerEntitlement.reset_cycle_anchor ?? null;
 };
