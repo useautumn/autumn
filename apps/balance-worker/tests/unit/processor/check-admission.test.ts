@@ -90,7 +90,7 @@ describe("check admission", () => {
 			await expect(
 				processor.check({ command: checkOf({ customerId: "cus_hot" }) }),
 			).rejects.toBeInstanceOf(CheckCapacityError);
-			expect(processor.readCounters()).toEqual({ checksShed: 1 });
+			expect(processor.readCounters()).toMatchObject({ checksShed: 1 });
 
 			release();
 			for (const check of [...admitted, neighbour])

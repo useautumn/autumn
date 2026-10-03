@@ -26,6 +26,10 @@ export type OwnedPartitionRequestCounters = {
 	droppedPastDeadline: number;
 	/** Checks refused because their customer had too many in flight. */
 	checksShed: number;
+	/** Checks answered from the reply memo, decided afresh, or never memoised (event properties). */
+	checkMemoHits: number;
+	checkMemoMisses: number;
+	checkMemoBypassed: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<
