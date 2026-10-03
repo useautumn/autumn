@@ -119,7 +119,8 @@ test.concurrent(
 		expect(scopeByProductId.get(inheritedPlan.id)).toBe(entities[0].id);
 		expect(scopeByProductId.get(customerPlan.id)).toBeNull();
 		expect(scopeByProductId.get(explicitPlan.id)).toBe(entities[1].id);
-		expect(scopeByProductId.get(existingAddon.id)).toBe(entities[1].id);
+		// Unlisted plans are retained outside every phase; entity1 still holds it below.
+		expect(scopeByProductId.has(existingAddon.id)).toBe(false);
 		await expectCustomerProducts({
 			customer: entity0,
 			active: [inheritedPlan.id, customerPlan.id],
