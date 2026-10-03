@@ -53,19 +53,18 @@ export {
 export { getEntitySubjectRows } from "./subjects/repos/getSubjectRows/getEntitySubjectRows.js";
 export { getSubjectRows } from "./subjects/repos/getSubjectRows/getSubjectRows.js";
 export { SUBJECT_ROW_LIMITS } from "./subjects/repos/getSubjectRows/subjectRowLimits.js";
-export { readSubjectSnapshots } from "./subjects/repos/subjectSnapshots/readSubjectSnapshots.js";
 export { SubjectRowsInvalidError } from "./subjects/subjectErrors.js";
 export {
 	type SubjectRowChange,
 	subjectRowIdOf,
 } from "./subjects/types/subjectRowChange.js";
 export type { SubjectRowsEnvelope } from "./subjects/types/subjectRowsEnvelope.js";
+export type { SubjectRowsRead } from "./subjects/types/subjectRowsRead.js";
 export type {
 	SubjectRowTable,
 	SubjectRowUpdate,
 } from "./subjects/types/subjectRowUpdate.js";
 export type {
-	SubjectSnapshotRow,
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "./subjects/types/subjectSnapshot.js";

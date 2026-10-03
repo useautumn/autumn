@@ -196,8 +196,12 @@ const createCustomer = ({
 			identity: MeteringIdentity;
 		}) => {
 			loads += 1;
-			if (!subjectIdentity.entityId) return customerEnvelope;
-			return envelopes.get(subjectIdentity.entityId) ?? null;
+			if (!subjectIdentity.entityId)
+				return { snapshot: null, envelope: customerEnvelope };
+			return {
+				snapshot: null,
+				envelope: envelopes.get(subjectIdentity.entityId) ?? null,
+			};
 		},
 		getEntitySubjectRows: async ({
 			entityIds,
