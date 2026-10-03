@@ -571,6 +571,11 @@ describe("owned partition runtime", () => {
 				highWatermark: 5n,
 				lag: 5n,
 				failureReason: null,
+				requests: {
+					checkMemoHits: 0,
+					checkMemoMisses: 0,
+					checkMemoBypassed: 0,
+				},
 			});
 			await expect(
 				runtime.process((processor) =>

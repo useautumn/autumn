@@ -122,6 +122,11 @@ const fixture = ({
 		trackInline: () => ({ kind: "refused", reason: "not_resident" }),
 		trackBatchInline: () => ({ kind: "refused", reason: "not_resident" }),
 		checkInline: () => ({ kind: "refused", reason: "not_resident" }),
+		readCounters: () => ({
+			checkMemoHits: 0,
+			checkMemoMisses: 0,
+			checkMemoBypassed: 0,
+		}),
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
 		},
