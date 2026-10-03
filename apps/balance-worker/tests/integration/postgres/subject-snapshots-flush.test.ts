@@ -8,9 +8,11 @@ import {
 	insertPartitionProgress,
 	type PostgresClient,
 	readPartitionProgress,
+	readSubjectSnapshot,
 	type SubjectSnapshotUpsert,
 } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
+import { readSubjectSnapshotSql } from "../../../../../packages/postgres/src/subjects/repos/subjectSnapshots/readSubjectSnapshot.js";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
@@ -316,6 +318,45 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			});
 			const [customerRow] = await readSnapshots({ seeded });
 			expect(customerRow?.state).toEqual({ revision: 2, entityId: null });
+		} finally {
+			await seeded.cleanup();
+		}
+	});
+
+	test("a cold load reads back what the flush wrote, by primary key at this build's version: the customer's and its entity's states, null for a stranger or another version", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const topic = topicOf();
+		try {
+			await insertPartitionProgress({
+				ctx: { db: postgres.db },
+				topic,
+				partition: 5,
+				nextOffset: 40n,
+			});
+			const internalEntityId = await seedEntity({ seeded, entityId: "seat_1" });
+			await flushAt({
+				topic,
+				upserts: [
+					upsertOf({ seeded, revision: 7 }),
+					upsertOf({
+						seeded,
+						entityId: "seat_1",
+						internalEntityId,
+						revision: 8,
+					}),
+				],
+			});
+
+			const ctx = { db: postgres.db, orgId: seeded.orgId, env: seeded.env };
+			const read = (
+				entityId: string | null,
+				stateVersion = 1,
+				customerId = seeded.identity.customerId,
+			) => readSubjectSnapshot({ ctx, customerId, entityId, stateVersion });
+			expect(await read(null)).toEqual({ revision: 7, entityId: null });
+			expect(await read("seat_1")).toEqual({ revision: 8, entityId: "seat_1" });
+			expect(await read(null, 2)).toBeNull();
+			expect(await read(null, 1, "cus_nobody")).toBeNull();
 		} finally {
 			await seeded.cleanup();
 		}
@@ -662,6 +703,51 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						"QUERY PLAN": unknown;
 					}[];
 					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
+					throw rolledBack;
+				})
+				.catch((cause) => {
+					if (cause !== rolledBack) throw cause;
+				});
+		} finally {
+			await seeded.cleanup();
+		}
+
+		expect(plan).toContain('"Index Name":"subject_snapshots_pkey"');
+		expect(plan).not.toMatch(
+			/"Seq Scan"[^}]*"Relation Name":"subject_snapshots"/,
+		);
+	});
+
+	test("a cold load's probe is one primary-key lookup, never a scan of the table", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const rolledBack = new Error("explain only");
+		let plan = "";
+		try {
+			await postgres.db
+				.transaction(async (tx) => {
+					await tx.execute(sql`INSERT INTO customers (internal_id, id, org_id, env, created_at)
+						SELECT ${seeded.orgId} || '_c' || n, 'cus_' || n, ${seeded.orgId}, 'live', 0
+						FROM generate_series(1, 20000) AS n`);
+					await tx.execute(sql`INSERT INTO subject_snapshots
+						(org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
+						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, 0
+						FROM generate_series(1, 20000) AS n`);
+					await tx.execute(sql`ANALYZE subject_snapshots`);
+					const ctx = { db: tx, orgId: seeded.orgId, env: "live" };
+					const rows = (
+						await tx.execute(
+							sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotSql({ ctx, customerId: "cus_51", entityId: null, stateVersion: 1 })}`,
+						)
+					).rows as { "QUERY PLAN": unknown }[];
+					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
+					expect(
+						await readSubjectSnapshot({
+							ctx,
+							customerId: "cus_51",
+							entityId: null,
+							stateVersion: 1,
+						}),
+					).toEqual({});
 					throw rolledBack;
 				})
 				.catch((cause) => {
