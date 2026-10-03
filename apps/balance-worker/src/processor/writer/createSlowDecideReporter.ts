@@ -36,22 +36,18 @@ export function createSlowDecideReporter({
 		return window.logged < MAX_LOGS_PER_WINDOW;
 	}
 
+	/** The heap is read only here: heapSize() walks the whole heap, ~1 ms at production sizes. */
 	function report({
 		command,
 		durationMs,
-		heapBefore,
-		heapAfter,
 		at,
 	}: {
 		command: MutatingCommand;
 		durationMs: number;
-		heapBefore: number;
-		heapAfter: number;
 		at: number;
 	}): void {
 		if (durationMs < SLOW_DECIDE_MS || !hasLogRoom({ at })) return;
 		window.logged += 1;
-		const gcRan = heapAfter !== heapBefore;
 		const { identity } = command;
 		ctx.logger?.warn?.(
 			{
@@ -63,16 +59,14 @@ export function createSlowDecideReporter({
 					customerId: identity.customerId,
 					entityId: identity.entityId ?? null,
 					durationMs: roundMs(durationMs),
-					gcRan,
-					heapBeforeMb: Math.round(heapBefore / BYTES_PER_MB),
-					heapAfterMb: Math.round(heapAfter / BYTES_PER_MB),
+					heapMb: Math.round(ctx.heapSize() / BYTES_PER_MB),
 					stateBytes: ctx.stateBytesOf({
 						subjectKey: meteringIdentityToSubjectKey({ identity }),
 					}),
 					pendingCommands: ctx.pendingCommands(),
 				},
 			},
-			`Balance worker decide held the thread ${roundMs(durationMs)}ms (${command.type}${gcRan ? ", heap collected" : ""})`,
+			`Balance worker decide held the thread ${roundMs(durationMs)}ms (${command.type})`,
 		);
 	}
 
@@ -85,19 +79,12 @@ export function createSlowDecideReporter({
 	}): Value {
 		if (!ctx.logger?.warn) return run();
 		const startedAt = ctx.now();
-		const heapBefore = ctx.heapSize();
 		try {
 			return run();
 		} finally {
 			try {
 				const at = ctx.now();
-				report({
-					command,
-					durationMs: at - startedAt,
-					heapBefore,
-					heapAfter: ctx.heapSize(),
-					at,
-				});
+				report({ command, durationMs: at - startedAt, at });
 			} catch {}
 		}
 	}
