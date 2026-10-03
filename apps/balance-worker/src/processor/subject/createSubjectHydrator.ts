@@ -6,7 +6,6 @@ import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatal
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
 import { createEntityLoads } from "./entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "./inFlightLoads/createInFlightLoads.js";
-import { createSnapshotLoader } from "./snapshotLoader/createSnapshotLoader.js";
 import { createSubjectJoinCache } from "./subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectHydratorContext, SubjectScope } from "./types/subject.js";
 import type { SubjectHydrator } from "./types/subjectHydrator.js";
@@ -27,7 +26,6 @@ export const createSubjectHydrator = ({
 				},
 			}),
 			entityLoads: createEntityLoads({ scopeOf: () => scope }),
-			snapshotLoader: createSnapshotLoader({ scopeOf: () => scope }),
 		},
 	};
 

@@ -73,7 +73,6 @@ export function createPartitionProcessor({
 			receiptPolicy: dependencies.receiptPolicy,
 			baseline: dependencies.stateStore.baseline,
 			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
-			partition: config.partition,
 			logger: dependencies.logger,
 		},
 	});
