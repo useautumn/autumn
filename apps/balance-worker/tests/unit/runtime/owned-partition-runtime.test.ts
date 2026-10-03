@@ -572,7 +572,13 @@ describe("owned partition runtime", () => {
 				highWatermark: 5n,
 				lag: 5n,
 				failureReason: null,
-				requests: { droppedPastDeadline: 0, checksShed: 0 },
+				requests: {
+					droppedPastDeadline: 0,
+					checksShed: 0,
+					checkMemoHits: 0,
+					checkMemoMisses: 0,
+					checkMemoBypassed: 0,
+				},
 			});
 			await expect(
 				runtime.process((processor) =>
@@ -1944,7 +1950,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 						deadlineAt: Date.now() + 1_000,
 					}),
 				).toBe("served");
-				expect(f.runtime.getHealth().requests).toEqual({
+				expect(f.runtime.getHealth().requests).toMatchObject({
 					droppedPastDeadline: 1,
 					checksShed: 0,
 				});

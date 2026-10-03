@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
+	checkCommandToDeductionRequest,
 	computeCheck as computeCheckResult,
 	computeTrack,
 	type SubjectState,
+	setupDeductionContext,
 	UnsupportedCommandError,
 } from "../../../../src/balanceEngine.js";
 import {
@@ -20,14 +22,20 @@ const computeCheck = ({
 }: {
 	state: SubjectState;
 	command: Parameters<typeof computeCheckResult>[0]["command"];
-}) =>
-	computeCheckResult({
-		fullSubject: createSubjectFor({
-			state,
-			entityId: command.identity.entityId,
-		}),
-		command,
+}) => {
+	const fullSubject = createSubjectFor({
+		state,
+		entityId: command.identity.entityId,
 	});
+	const result = computeCheckResult({ fullSubject, command });
+	// A context set up once for the selection answers every check exactly as a fresh one does.
+	const context = setupDeductionContext({
+		fullSubject,
+		selection: checkCommandToDeductionRequest({ command }).selection,
+	});
+	expect(computeCheckResult({ fullSubject, command, context })).toEqual(result);
+	return result;
+};
 
 describe("check computation", () => {
 	test.concurrent("reads a balance without changing state", () => {

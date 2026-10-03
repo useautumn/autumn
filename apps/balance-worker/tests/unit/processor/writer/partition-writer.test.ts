@@ -28,6 +28,7 @@ import { createAcceptedCommands } from "../../../../src/processor/common/accepte
 import { createPartitionProcessor } from "../../../../src/processor/createPartitionProcessor.js";
 import { executeCommand } from "../../../../src/processor/execution/executeCommand.js";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
+import { createSubjectDecisions } from "../../../../src/processor/subject/subjectDecisions/createSubjectDecisions.js";
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../../../src/processor/types/receiptPolicy.js";
@@ -315,6 +316,7 @@ const createPartitionTrackWriter = ({
 			assertCanRead: () => undefined,
 			config: { topic, partition, writerLimits: limits },
 			writer,
+			subjectDecisions: createSubjectDecisions(),
 			subjectHydrator: createSubjectHydrator({
 				ctx: {
 					catalogCache,
