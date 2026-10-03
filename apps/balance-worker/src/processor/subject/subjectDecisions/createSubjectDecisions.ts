@@ -7,6 +7,7 @@ import {
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
+import { createTrackDecisions } from "./createTrackDecisions.js";
 import type {
 	SubjectDecision,
 	SubjectDecisionCounters,
@@ -16,7 +17,8 @@ import type {
 /** How long a decision may answer for a moving clock: rollover, grant and window boundaries land at most this late. */
 const DECISION_SECOND_MS = 1_000;
 
-/** Keyed on the joined view, which is one object per (state, entity, catalog version): a write replaces the state, so its decisions die with it. */
+/** Checks are keyed on the joined view, one object per (state, entity, catalog version), and die with it on a write;
+ *  tracks carry theirs across balance-only writes. */
 export const createSubjectDecisions = (): SubjectDecisions => {
 	const decisionsByView = new WeakMap<
 		WorkerFullSubject,
@@ -26,7 +28,12 @@ export const createSubjectDecisions = (): SubjectDecisions => {
 		checkMemoHits: 0,
 		checkMemoMisses: 0,
 		checkMemoBypassed: 0,
+		trackContextHits: 0,
+		trackContextMisses: 0,
+		effectsRun: 0,
+		effectsSkipped: 0,
 	};
+	const trackDecisions = createTrackDecisions({ counters });
 
 	/** One entry per selection: a new second replaces it, so a view read for hours holds no history. */
 	function decisionOf({
@@ -89,5 +96,5 @@ export const createSubjectDecisions = (): SubjectDecisions => {
 		return { ...counters };
 	}
 
-	return { readCheckReply, readCounters };
+	return { readCheckReply, ...trackDecisions, readCounters };
 };
