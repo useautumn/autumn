@@ -31,7 +31,7 @@ export async function confirmExpiredLock({
 		command: parsed,
 		mutate: ({ state }) =>
 			timeSync({ label: "confirmExpiredLock.decide" }, () =>
-				decideConfirmExpiredLock({
+				mutateConfirmExpiredLock({
 					scope,
 					state,
 					customerKey,
@@ -50,7 +50,7 @@ export async function confirmExpiredLock({
 }
 
 /** Runs inside the writer's critical section: the open-lock check and the deletion are one step. */
-function decideConfirmExpiredLock({
+function mutateConfirmExpiredLock({
 	scope,
 	state,
 	customerKey,

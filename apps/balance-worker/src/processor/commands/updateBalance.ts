@@ -9,9 +9,27 @@ import type { UpdateBalanceReply } from "@autumn/balance-worker-client/protocol"
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
-import type { MutationResult } from "../writer/types/mutation.js";
+import type {
+	DecidedMutation,
+	MutationResult,
+} from "../writer/types/mutation.js";
 
-/** Decided on the rows as they stand after any due reset; replied once Kafka holds it. No effects: legacy fires none. */
+/** Every balance update, sync or queued, is decided here on the rows as they stand after any due reset. No effects: legacy fires none. */
+export async function decideUpdateBalance({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: UpdateBalanceCommand;
+}): Promise<DecidedMutation<UpdateBalanceReply>> {
+	await ensureSubjectCurrent({ scope, command });
+	return scope.ctx.writer.decide<UpdateBalanceReply>({
+		command,
+		mutate: ({ state }) => mutateUpdateBalance({ scope, state, command }),
+	});
+}
+
+/** Sync: decide, then answer once Kafka holds it. */
 export async function updateBalance({
 	scope,
 	command,
@@ -19,12 +37,7 @@ export async function updateBalance({
 	scope: PartitionProcessorScope;
 	command: UpdateBalanceCommand;
 }): Promise<UpdateBalanceReply> {
-	await ensureSubjectCurrent({ scope, command });
-
-	const decided = scope.ctx.writer.decide<UpdateBalanceReply>({
-		command,
-		mutate: ({ state }) => decideUpdateBalance({ scope, state, command }),
-	});
+	const decided = await decideUpdateBalance({ scope, command });
 	const committed = await decided.waitForCommit();
 	if (!("mutation" in committed)) return committed;
 	if (committed.mutation.result.type !== "updateBalance") {
@@ -36,7 +49,7 @@ export async function updateBalance({
 }
 
 /** Runs inside the writer's critical section: no await, no I/O. */
-function decideUpdateBalance({
+function mutateUpdateBalance({
 	scope,
 	state,
 	command,

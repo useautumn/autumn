@@ -1,11 +1,36 @@
 import { parseResetCommand, type ResetCommand } from "@autumn/balance-engine";
 import type { ResetReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
-import { decideReset } from "../actions/ensureSubjectCurrent/advanceResets.js";
+import { mutateReset } from "../actions/ensureSubjectCurrent/advanceResets.js";
 import { readResetInputs } from "../actions/ensureSubjectCurrent/readResetInputs.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
+import type { DecidedMutation } from "../writer/types/mutation.js";
 
-/** The explicit reset: what every command does implicitly first, sent on its own by the cron or a writer about to read Postgres. */
+/** Every explicit reset, sync or queued, refills here: what each command does implicitly first, sent on its own by the cron or a writer about to read Postgres. */
+export async function decideReset({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: ResetCommand;
+}): Promise<DecidedMutation<ResetReply>> {
+	const { ctx } = scope;
+	const parsed = parseResetCommand({ input: command });
+	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
+	const inputs = await readResetInputs({ scope, command: parsed });
+	const anchored: ResetCommand = { ...parsed, ...inputs };
+
+	return ctx.writer.decide<ResetReply>({
+		command: anchored,
+		durability: parsed.durability ?? "log",
+		mutate: ({ state }) =>
+			timeSync({ label: "reset.decide" }, () =>
+				mutateReset({ scope, state, command: anchored }),
+			),
+	});
+}
+
+/** Sync: decide, then answer once the refill is committed. */
 export async function reset({
 	scope,
 	command,
@@ -13,25 +38,11 @@ export async function reset({
 	scope: PartitionProcessorScope;
 	command: ResetCommand;
 }): Promise<ResetReply> {
-	const { ctx } = scope;
-	const parsed = parseResetCommand({ input: command });
-	const durability = parsed.durability ?? "log";
-	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
-	const inputs = await readResetInputs({ scope, command: parsed });
-	const anchored: ResetCommand = { ...parsed, ...inputs };
-
-	const decided = ctx.writer.decide<ResetReply>({
-		command: anchored,
-		durability,
-		mutate: ({ state }) =>
-			timeSync({ label: "reset.decide" }, () =>
-				decideReset({ scope, state, command: anchored }),
-			),
-	});
+	const decided = await decideReset({ scope, command });
 	const committed = await decided.waitForCommit();
 	if (!("mutation" in committed)) {
 		// Nothing due now, but a "store" caller reads Postgres next: earlier records must have landed first.
-		if (durability === "store") await decided.waitForStore();
+		if (command.durability === "store") await decided.waitForStore();
 		return committed;
 	}
 	if (committed.mutation.result.type !== "reset") {

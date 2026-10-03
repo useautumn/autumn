@@ -24,7 +24,7 @@ export async function deleteBalance({
 	const decided = scope.ctx.writer.decide<DeleteBalanceReply>({
 		command,
 		durability: "store",
-		mutate: ({ state }) => decideDeleteBalance({ scope, state, command }),
+		mutate: ({ state }) => mutateDeleteBalance({ scope, state, command }),
 	});
 	const committed = await decided.waitForCommit();
 	if (!("mutation" in committed)) return committed;
@@ -37,7 +37,7 @@ export async function deleteBalance({
 }
 
 /** Runs inside the writer's critical section: no await, no I/O. */
-function decideDeleteBalance({
+function mutateDeleteBalance({
 	scope,
 	state,
 	command,
