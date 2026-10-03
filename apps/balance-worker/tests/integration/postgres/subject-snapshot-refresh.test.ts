@@ -198,7 +198,10 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		const { hydrator, writer, reads, topic, close } = await createHydrator();
 		try {
 			expect(await readRow({ identity: seeded.identity })).toBeNull();
-			hydrator.refreshSnapshots({ identity: seeded.identity, entityIds: [] });
+			hydrator.refreshSnapshots({
+				customer: seeded.identity,
+				subjects: [seeded.identity],
+			});
 
 			const row = await waitForRow({ identity: seeded.identity });
 			expect(balanceOf(row)).toBe(100);
@@ -219,7 +222,10 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		const held = Promise.withResolvers<void>();
 		gate.held = held.promise;
 		try {
-			hydrator.refreshSnapshots({ identity: seeded.identity, entityIds: [] });
+			hydrator.refreshSnapshots({
+				customer: seeded.identity,
+				subjects: [seeded.identity],
+			});
 			await waitUntil(() => reads.length === 1);
 			const ensured = hydrator.ensure({ identity: seeded.identity });
 			await Bun.sleep(5);
@@ -248,7 +254,10 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		try {
 			const ensured = hydrator.ensure({ identity: seeded.identity });
 			await waitUntil(() => reads.length === 1);
-			hydrator.refreshSnapshots({ identity: seeded.identity, entityIds: [] });
+			hydrator.refreshSnapshots({
+				customer: seeded.identity,
+				subjects: [seeded.identity],
+			});
 			await Bun.sleep(5);
 			expect(reads).toHaveLength(1);
 			held.resolve();

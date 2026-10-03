@@ -1,13 +1,23 @@
 import { appendFileSync } from "node:fs";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
+import { databaseTimings } from "../../../src/logging/databaseTimings.js";
 
 const env = JSON.parse(
 	process.env.BALANCE_WORKER_TEST_ENV ?? "null",
 ) as BalanceWorkerEnv | null;
 if (!env) throw new Error("Missing test worker environment");
 const warnFile = process.env.BALANCE_WORKER_TEST_WARN_FILE;
+const databaseFile = process.env.BALANCE_WORKER_TEST_DATABASE_FILE;
 function ignoreLog(): void {}
+// The database line's counts, drained every second into a file the test reads back; the reporter itself runs only in production.
+if (databaseFile)
+	setInterval(() => {
+		appendFileSync(
+			databaseFile,
+			`${JSON.stringify({ at: Date.now(), data: databaseTimings.drain() })}\n`,
+		);
+	}, 1_000).unref();
 const worker = await createBalanceWorker({
 	ctx: {
 		logger: {

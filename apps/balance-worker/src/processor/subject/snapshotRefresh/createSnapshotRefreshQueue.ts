@@ -29,19 +29,28 @@ type Queue = {
 
 const enqueue = ({
 	queue,
-	identity,
-	entityIds,
+	customer,
+	subjects,
 }: {
 	queue: Queue;
-	identity: MeteringIdentity;
-	entityIds: readonly string[];
+	customer: MeteringIdentity;
+	subjects: readonly MeteringIdentity[];
 }): void => {
 	if (queue.disposed) return;
-	supersedeReadsOf({ queue, identity });
-	admit({ queue, identity: { ...identity, entityId: null } });
-	for (const entityId of entityIds)
-		admit({ queue, identity: { ...identity, entityId } });
+	supersedeReadsOf({ queue, identity: customer });
+	for (const identity of subjects) admit({ queue, identity });
 	startReads({ queue });
+};
+
+const count = ({
+	queue,
+	field,
+}: {
+	queue: Queue;
+	field: keyof SnapshotRefreshCounts;
+}): void => {
+	queue.counts[field] += 1;
+	queue.ctx.recordCounts?.({ [field]: 1 });
 };
 
 /** A read the evict overtook may predate the write behind it; it will write nothing and wait again. */
@@ -74,7 +83,7 @@ const admit = ({
 		return;
 	}
 	queue.waiting.set(subjectKey, identity);
-	queue.counts.queued += 1;
+	count({ queue, field: "queued" });
 };
 
 const warnCapped = ({ queue }: { queue: Queue }): void => {
@@ -122,18 +131,18 @@ const refreshOne = async ({
 	try {
 		const read = await queue.ctx.read({ identity });
 		if (refresh.superseded) {
-			queue.counts.skipped += 1;
+			count({ queue, field: "skipped" });
 			if (!queue.disposed) admit({ queue, identity });
 			return;
 		}
 		if (read === null) {
-			queue.counts.skipped += 1;
+			count({ queue, field: "skipped" });
 			return;
 		}
 		queue.ctx.write({ identity, read });
-		queue.counts.refreshed += 1;
+		count({ queue, field: "refreshed" });
 	} catch (cause) {
-		queue.counts.failed += 1;
+		count({ queue, field: "failed" });
 		queue.ctx.logger?.warn?.(
 			{
 				event: "balance_worker.snapshot_refresh_failed",
@@ -187,8 +196,7 @@ export const createSnapshotRefreshQueue = ({
 		settledWaiters: [],
 	};
 	return {
-		enqueue: ({ identity, entityIds }) =>
-			enqueue({ queue, identity, entityIds }),
+		enqueue: ({ customer, subjects }) => enqueue({ queue, customer, subjects }),
 		depth: () => queue.waiting.size + queue.reading.size,
 		counts: () => ({ ...queue.counts }),
 		settled: () => settled({ queue }),

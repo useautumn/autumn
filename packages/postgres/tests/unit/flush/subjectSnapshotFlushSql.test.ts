@@ -33,6 +33,9 @@ const upsert = (
 	...overrides,
 });
 
+/** The deleted subjects come back as one JSON array, so the lane knows which rows to rebuild. */
+const DELETED_SUBJECTS = `(SELECT coalesce(json_agg(json_build_object('org_id', org_id, 'env', env, 'customer_id', customer_id, 'entity_id', entity_id)), '[]'::json) FROM snapshot_deletes) AS snapshot_deletes`;
+
 describe("flushSql subject snapshots", () => {
 	test("no snapshot writes leave the statement exactly as it was", () => {
 		const without = dialect.sqlToQuery(
@@ -69,7 +72,7 @@ describe("flushSql subject snapshots", () => {
 		);
 		const sql = flatten(query.sql);
 		expect(sql).toContain(
-			'snapshot_deletes AS ( DELETE FROM subject_snapshots s USING jsonb_to_recordset($9::text::jsonb) AS d(org_id text, env text, customer_id text) WHERE s.org_id = d.org_id COLLATE "C" AND s.env = d.env COLLATE "C" AND s.customer_id = d.customer_id COLLATE "C" RETURNING 1 )',
+			'snapshot_deletes AS ( DELETE FROM subject_snapshots s USING jsonb_to_recordset($9::text::jsonb) AS d(org_id text, env text, customer_id text) WHERE s.org_id = d.org_id COLLATE "C" AND s.env = d.env COLLATE "C" AND s.customer_id = d.customer_id COLLATE "C" RETURNING s.org_id, s.env, s.customer_id, s.entity_id )',
 		);
 		expect(sql).toContain(
 			"snapshot_upserts AS ( INSERT INTO subject_snapshots AS s",
@@ -82,7 +85,7 @@ describe("flushSql subject snapshots", () => {
 			"WHERE EXISTS (SELECT 1 FROM customers c WHERE c.internal_id = v.internal_customer_id) AND (v.internal_entity_id IS NULL OR EXISTS (SELECT 1 FROM entities e WHERE e.internal_id = v.internal_entity_id))",
 		);
 		expect(sql).toEndWith(
-			"(SELECT count(*) FROM b) AS bookmarks, (SELECT count(*) FROM snapshot_upserts) AS snapshot_upserts, (SELECT count(*) FROM snapshot_deletes) AS snapshot_deletes",
+			`(SELECT count(*) FROM b) AS bookmarks, (SELECT count(*) FROM snapshot_upserts) AS snapshot_upserts, ${DELETED_SUBJECTS}`,
 		);
 		const [deletes, upserts] = query.params.slice(-2) as [string, string];
 		expect(JSON.parse(deletes)).toEqual([
@@ -135,7 +138,7 @@ describe("flushSql subject snapshots", () => {
 		);
 		expect(sql).not.toContain("partition_progress");
 		expect(sql).toEndWith(
-			"SELECT '[]'::json AS applied, 0 AS bookmarks, 0 AS snapshot_upserts, (SELECT count(*) FROM snapshot_deletes) AS snapshot_deletes",
+			`SELECT '[]'::json AS applied, 0 AS bookmarks, 0 AS snapshot_upserts, ${DELETED_SUBJECTS}`,
 		);
 	});
 });
@@ -159,13 +162,19 @@ const fakeDb = ({ row }: { row: Record<string, unknown> }) => {
 };
 
 describe("commitFlush subject snapshots", () => {
-	test("snapshot deletes with no bookmark still run, and report what they removed", async () => {
+	test("snapshot deletes with no bookmark still run, and report which subjects they removed", async () => {
+		const deleted = (entityId: string) => ({
+			org_id: "org_1",
+			env: "live",
+			customer_id: "cus_9",
+			entity_id: entityId,
+		});
 		const { db, statements } = fakeDb({
 			row: {
 				applied: [],
 				bookmarks: 0,
 				snapshot_upserts: 0,
-				snapshot_deletes: 3,
+				snapshot_deletes: [deleted(""), deleted("en_1"), deleted("en_2")],
 			},
 		});
 		const request: FlushRequest = {
@@ -182,11 +191,23 @@ describe("commitFlush subject snapshots", () => {
 			statementTimeoutMs: 2_000,
 			roundTrips: "single",
 		});
-		expect(statements).toHaveLength(2);
-		expect(statements[1]).toContain("snapshot_deletes AS");
+		expect(statements).toHaveLength(1);
+		expect(statements[0]).toContain("snapshot_deletes AS");
+		expect(statements[0]).toContain(
+			"RETURNING s.org_id, s.env, s.customer_id, s.entity_id",
+		);
+		const subject = (entityId: string | null) => ({
+			orgId: "org_1",
+			env: "live",
+			customerId: "cus_9",
+			entityId,
+		});
 		expect(result).toEqual({
 			applied: [],
-			snapshots: { upserted: 0, deleted: 3 },
+			snapshots: {
+				upserted: 0,
+				deleted: [subject(null), subject("en_1"), subject("en_2")],
+			},
 		});
 	});
 
