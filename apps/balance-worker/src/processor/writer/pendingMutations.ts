@@ -7,6 +7,7 @@ import {
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
+import type { OnSubjectEvicted } from "./subjectMap/types/subjectMap.js";
 import type {
 	CommittedMutation,
 	MutationDurability,
@@ -25,11 +26,13 @@ import {
 
 export function createPartitionWriterState({
 	subjectMapMaxBytes,
+	onEvicted,
 }: {
 	subjectMapMaxBytes?: number | (() => number);
+	onEvicted?: OnSubjectEvicted;
 } = {}): PartitionWriterState {
 	return {
-		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes }),
+		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes, onEvicted }),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],

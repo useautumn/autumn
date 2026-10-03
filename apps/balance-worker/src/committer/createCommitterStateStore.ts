@@ -7,8 +7,10 @@ import {
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
+import { createEvictDeletes } from "./subjectSnapshots/createEvictDeletes.js";
 import type {
 	Committer,
+	CommitterContext,
 	CommitterStateStore,
 	PartitionPosition,
 } from "./types/committer.js";
@@ -26,6 +28,9 @@ export const createCommitterStateStore = ({
 			| "insertPartitionProgress"
 			| "claimPartitionProgress"
 		>;
+		logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
+		/** Present when the committer writes snapshots: evicts delete their customer's rows through the store. */
+		snapshots?: { dropBatch: number };
 	};
 }): CommitterStateStore => {
 	const claimTokens = new Map<string, string>();
@@ -37,7 +42,7 @@ export const createCommitterStateStore = ({
 		progress: createProgressMirror(),
 		claimTokenOf,
 	};
-	// Replay, writer applies and command-only bookmarks share one lane per partition.
+	// Replay, writer applies, command-only bookmarks and evict DELETEs share one lane per partition: Postgres sees them in the order the partition asked.
 	const laneByPartition = new Map<string, Promise<unknown>>();
 	function runInLane<Result>({
 		position,
@@ -109,6 +114,16 @@ export const createCommitterStateStore = ({
 	function readCommandNextOffset(params: PartitionPosition) {
 		return ctx.progress.readCommandNextOffset(params);
 	}
+	const evictDeletes = dependencies.snapshots
+		? createEvictDeletes({
+				ctx: {
+					committer: ctx.committer,
+					logger: dependencies.logger,
+					batch: dependencies.snapshots.dropBatch,
+					runInLane,
+				},
+			})
+		: undefined;
 	function readAbsent(): null {
 		return null;
 	}
@@ -118,6 +133,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
+		...(evictDeletes && { evictDeletes }),
 		claimPartition,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,
