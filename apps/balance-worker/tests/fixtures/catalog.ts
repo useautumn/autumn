@@ -91,6 +91,7 @@ export const createSyntheticWorkerDb = ({
 	subjectRows?: SubjectRowsEnvelope | null;
 } = {}): WorkerDb => ({
 	getSubjectRows: async () => subjectRows,
+	readSubjectSnapshot: async () => null,
 	getEntitySubjectRows: entitySubjectRowsFrom({
 		getSubjectRows: async () => subjectRows,
 	}),
@@ -104,6 +105,7 @@ export const createSyntheticWorkerDb = ({
 /** A Postgres stand-in that knows nothing: every miss stays a miss. */
 export const createEmptyWorkerDb = (): WorkerDb => ({
 	getSubjectRows: async () => null,
+	readSubjectSnapshot: async () => null,
 	getEntitySubjectRows: async () => [],
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,

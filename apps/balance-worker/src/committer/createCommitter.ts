@@ -1,3 +1,4 @@
+import { writesSubjectSnapshots } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { landFlush } from "./actions/landFlush.js";
 import { takeFlush } from "./actions/takeFlush.js";
 import { CommitterStoppedError } from "./committerErrors.js";
@@ -134,7 +135,8 @@ function snapshotRowsOf({
 	call: Pick<FlushCall, "snapshotIntent">;
 }): number {
 	if (!scope.config.snapshots) return 0;
-	if (scope.ctx.subjectSnapshotsConfig?.get().mode !== "write") return 0;
+	const settings = scope.ctx.subjectSnapshotsConfig?.get();
+	if (!settings || !writesSubjectSnapshots(settings)) return 0;
 	let rows = 0;
 	for (const entry of call.snapshotIntent?.values() ?? [])
 		rows += entry === "delete" ? 1 : entry.states.length;
