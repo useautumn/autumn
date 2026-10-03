@@ -27,6 +27,8 @@ describe("the subject snapshots edge config", () => {
 			mode: "serve",
 			maxBytes: 262_144,
 			dropBatch: 500,
+			refreshConcurrency: 50,
+			refreshMaxPending: 10_000,
 		});
 	});
 
@@ -48,6 +50,8 @@ describe("the subject snapshots edge config", () => {
 			{ mode: "write", serve: true },
 			{ maxBytes: 0 },
 			{ dropBatch: 5_001 },
+			{ refreshConcurrency: 0 },
+			{ refreshMaxPending: 1.5 },
 			{ dropBatch: 1.5 },
 		])
 			expect(SubjectSnapshotsEdgeConfigSchema.safeParse(raw).success).toBe(
@@ -66,6 +70,8 @@ describe("the subject snapshots edge config", () => {
 				mode: "write",
 				maxBytes: 1_024,
 				dropBatch: 10,
+				refreshConcurrency: 4,
+				refreshMaxPending: 100,
 			},
 		});
 		await edgeConfigs.subjectSnapshotsConfig.refresh();
@@ -73,6 +79,8 @@ describe("the subject snapshots edge config", () => {
 			mode: "write",
 			maxBytes: 1_024,
 			dropBatch: 10,
+			refreshConcurrency: 4,
+			refreshMaxPending: 100,
 		});
 	});
 
