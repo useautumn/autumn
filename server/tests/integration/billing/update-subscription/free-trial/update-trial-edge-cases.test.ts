@@ -12,6 +12,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addDays } from "date-fns";
@@ -320,11 +321,13 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longe
 		usage: 0,
 	});
 
-	// Still no invoice (still in trial)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterExtend,
+	// $0 invoice from moving trial_end arrives by Stripe webhook only
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		autumn: autumnV1,
 		count: 2,
 		latestTotal: 0,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 	});
 
 	await expectSubToBeCorrect({
