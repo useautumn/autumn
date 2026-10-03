@@ -69,3 +69,30 @@ test("a product without a landed anchor move keeps its rows' anchors", () => {
 	expect(updateCustomerProducts ?? []).toHaveLength(0);
 	expect(updateCustomerEntitlements ?? []).toHaveLength(0);
 });
+
+test("a landed anchor move merges with a seat-return balance change on the same row", () => {
+	const { eventContext, dailyCredits } = createScenario({ landed: true });
+	// What processAllocatedPricesForInvoiceCreated plans when a seat is returned.
+	plan.updateCustomerEntitlement({
+		customerEntitlement: dailyCredits,
+		balanceChange: 1,
+		deletedReplaceables: [],
+	});
+
+	expect(() =>
+		consumeBillingCycleAnchorReset({ eventContext, plan }),
+	).not.toThrow();
+
+	const { updateCustomerEntitlements } = plan.build();
+	const forDailyCredits = (updateCustomerEntitlements ?? []).filter(
+		(update) => update.customerEntitlement.id === dailyCredits.id,
+	);
+	expect(forDailyCredits).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				updates: { reset_cycle_anchor: STRIPE_ANCHOR_SECONDS * 1000 },
+			}),
+			expect.objectContaining({ balanceChange: 1 }),
+		]),
+	);
+});
