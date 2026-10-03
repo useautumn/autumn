@@ -11,6 +11,12 @@ export type SnapshotQueues = {
 		partition: number;
 		customerKey: string;
 	}): void;
+	/** Resolves once the lane tick carrying the customer's DELETE has run; at once when none waits or is in flight. */
+	deleteLanded(params: {
+		topic: string;
+		partition: number;
+		customerKey: string;
+	}): Promise<void>;
 	/** One subject's rows read whole after an evict, written as its row so the next cold load is a hit; lands after any DELETE pending for the customer. */
 	enqueueRefresh(params: {
 		topic: string;

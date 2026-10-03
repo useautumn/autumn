@@ -20,6 +20,10 @@ export type WorkerDb = {
 		identity: MeteringIdentity;
 		entityIds: readonly string[];
 	}): Promise<Map<string, unknown>>;
+	/** Every subject of the customer with a snapshot row, whatever its version; a primary-key prefix scan. */
+	listSubjectSnapshots(params: {
+		identity: MeteringIdentity;
+	}): Promise<MeteringIdentity[]>;
 	/** Several of the customer's entities in one read: one envelope per entity that exists. */
 	getEntitySubjectRows(params: {
 		identity: MeteringIdentity;

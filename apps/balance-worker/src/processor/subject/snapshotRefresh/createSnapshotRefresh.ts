@@ -1,11 +1,12 @@
 import { defaultSubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { databaseTimings } from "../../../logging/databaseTimings.js";
 import type { SubjectHydratorContext, SubjectScope } from "../types/subject.js";
 import { readSubjectForRefresh } from "./actions/readSubjectForRefresh.js";
 import { writeSubjectRefresh } from "./actions/writeSubjectRefresh.js";
 import { createSnapshotRefreshQueue } from "./createSnapshotRefreshQueue.js";
 import type { SnapshotRefreshQueue } from "./types/snapshotRefreshQueue.js";
 
-/** The partition's refresh queue over its hydrator: reads share the loads in flight, writes go through the lane. */
+/** The partition's refresh queue over its hydrator: reads share the loads in flight, writes go through the lane, counts go to the worker's database line. */
 export const createSnapshotRefresh = ({
 	ctx,
 	scopeOf,
@@ -22,6 +23,7 @@ export const createSnapshotRefresh = ({
 			subjectSnapshotsConfig: ctx.subjectSnapshotsConfig ?? {
 				get: defaultSubjectSnapshotsEdgeConfig,
 			},
+			recordCounts: databaseTimings.recordSnapshotRefreshes,
 			logger: ctx.logger,
 		},
 	});

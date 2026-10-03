@@ -325,6 +325,77 @@ describe("snapshot lane writes: evict deletes", () => {
 	});
 });
 
+describe("snapshot lane writes: deleteLanded", () => {
+	test("resolves once the tick carrying the customer's DELETE ran; duplicates share it; a customer without one is settled at once", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests } = createCountingDb({ gate: held.promise });
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		const at = (index: number) => ({
+			topic,
+			partition: 4,
+			customerKey: keyOf(index),
+		});
+
+		deletes.enqueueDelete(at(1));
+		deletes.enqueueDelete(at(1));
+		let landed = false;
+		const landing = deletes.deleteLanded(at(1)).then(() => {
+			landed = true;
+		});
+		await Bun.sleep(5);
+		expect(requests).toHaveLength(1);
+		expect(landed).toBe(false);
+		await expect(deletes.deleteLanded(at(2))).resolves.toBeUndefined();
+
+		held.resolve();
+		await landing;
+		await drained();
+		expect(requests).toHaveLength(1);
+		await expect(deletes.deleteLanded(at(1))).resolves.toBeUndefined();
+	});
+
+	test("a DELETE enqueued while the customer's earlier one is in flight waits for the later tick", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests } = createCountingDb({ gate: held.promise });
+		const { store, deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		const at = { topic, partition: 4, customerKey: keyOf(1) };
+		deletes.enqueueDelete(at);
+		await Bun.sleep(2);
+		deletes.enqueueDelete(at);
+		const ticks: number[] = [];
+		const landing = deletes.deleteLanded(at).then(() => {
+			ticks.push(requests.length);
+		});
+		held.resolve();
+		await landing;
+		await drained();
+		expect(ticks).toEqual([2]);
+	});
+
+	test("a refused DELETE still answers: the lane's warning is the record", async () => {
+		const { db, requests } = createCountingDb({ failDeletes: true });
+		const warnings: string[] = [];
+		const { store, deletes } = createStore({
+			db,
+			requestCount: () => requests.length,
+			warnings,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		const at = { topic, partition: 4, customerKey: keyOf(1) };
+		deletes.enqueueDelete(at);
+		await deletes.deleteLanded(at);
+		expect(warnings).toHaveLength(1);
+	});
+});
+
 describe("snapshot lane writes: refreshes", () => {
 	const stateOf = (index: number) =>
 		createState({ identity: customerOf(index), balance: 100 });

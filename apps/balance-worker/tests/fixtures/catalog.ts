@@ -93,6 +93,7 @@ export const createSyntheticWorkerDb = ({
 	getSubjectRows: async () => subjectRows,
 	readSubjectSnapshot: async () => null,
 	readEntitySubjectSnapshots: async () => new Map(),
+	listSubjectSnapshots: async () => [],
 	getEntitySubjectRows: entitySubjectRowsFrom({
 		getSubjectRows: async () => subjectRows,
 	}),
@@ -108,6 +109,7 @@ export const createEmptyWorkerDb = (): WorkerDb => ({
 	getSubjectRows: async () => null,
 	readSubjectSnapshot: async () => null,
 	readEntitySubjectSnapshots: async () => new Map(),
+	listSubjectSnapshots: async () => [],
 	getEntitySubjectRows: async () => [],
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,

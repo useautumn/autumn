@@ -77,6 +77,7 @@ const createWriter = ({
 			enqueueRefresh: () => {
 				throw new Error("not exercised");
 			},
+			deleteLanded: async () => undefined,
 		},
 	};
 	let nextOffset = 0n;

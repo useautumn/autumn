@@ -120,10 +120,16 @@ function createProcessor({
 		});
 	}
 
-	function evict({ command }: { command: EvictCommand }) {
+	function evict({
+		command,
+		waitsForSnapshotDelete = true,
+	}: {
+		command: EvictCommand;
+		waitsForSnapshotDelete?: boolean;
+	}) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: evictPartition({ scope, command }),
+			operation: evictPartition({ scope, command, waitsForSnapshotDelete }),
 		});
 	}
 
