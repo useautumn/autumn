@@ -5,6 +5,7 @@ import { timeSync } from "../../../src/logging/eventLoopStalls/syncSections.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
+import type { WorkerDb } from "../../../src/types/workerDb.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -22,11 +23,14 @@ export const createBenchProcessor = async ({
 	partition,
 	latency,
 	serialize,
+	db = createSyntheticWorkerDb(),
 }: {
 	scenario: Scenario;
 	partition: number;
 	latency: BenchLatency;
 	serialize: boolean;
+	/** Postgres stand-in for cold loads; entity benches answer their entities from it. */
+	db?: WorkerDb;
 }) => {
 	const topic = "bench-metering";
 	let appended = 0;
@@ -75,7 +79,6 @@ export const createBenchProcessor = async ({
 	});
 	await stateStore.initializePartition({ topic, partition, nextOffset: 0n });
 
-	const db = createSyntheticWorkerDb();
 	const catalogCache = createTestCatalogCache({
 		db,
 		rows: scenario.catalogRows,
