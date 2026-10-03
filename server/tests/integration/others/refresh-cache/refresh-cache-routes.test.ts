@@ -11,8 +11,10 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
-	getOrSetCachedFullSubject,
+	getOrInitFullSubjectViewEpoch,
+	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
+import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { cleanupFullSubjectScenario } from "../../db/full-subject/utils/cleanupFullSubjectScenario.js";
 import { buildEntitySubjectScenario } from "../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { insertFullSubjectScenario } from "../../db/full-subject/utils/insertFullSubjectScenario.js";
@@ -95,6 +97,7 @@ const buildRequestData = ({
 	}
 };
 
+// Seeds the Redis views directly: a balance-worker-routed customer's reads never fill them, but the middleware still clears them.
 const warmCaches = async ({
 	ctx,
 	customerId,
@@ -104,20 +107,29 @@ const warmCaches = async ({
 	customerId: string;
 	entityIds: string[];
 }) => {
-	await getOrSetCachedFullSubject({
+	const subjectViewEpoch = await getOrInitFullSubjectViewEpoch({
 		ctx,
 		customerId,
-		source: "refreshCacheRoutesTest",
 	});
 
-	for (const entityId of entityIds) {
-		await getOrSetCachedFullSubject({
+	for (const entityId of [undefined, ...entityIds]) {
+		const result = await getFullSubjectNormalized({
 			ctx,
 			customerId,
 			entityId,
-			source: "refreshCacheRoutesTest",
+			runLazyResets: false,
 		});
+		if (!result) throw new Error(`no subject for ${customerId}:${entityId}`);
+		expect(
+			await setCachedFullSubject({
+				ctx,
+				normalized: result.normalized,
+				fetchedSubjectViewEpoch: subjectViewEpoch,
+			}),
+		).toBe("OK");
 	}
+
+	return subjectViewEpoch;
 };
 
 const describeDb = process.env.TESTS_ORG ? describe : describe.skip;
@@ -178,7 +190,7 @@ describeDb("refreshCacheMiddleware routes", () => {
 	test.each(REFRESH_CACHE_ROUTE_CONFIGS)(
 		"$method $url invalidates the expected caches",
 		async (config) => {
-			await warmCaches({
+			const subjectViewEpoch = await warmCaches({
 				ctx,
 				customerId: scenario.ids.customerId,
 				entityIds: scenario.ids.entityIds,
@@ -224,7 +236,9 @@ describeDb("refreshCacheMiddleware routes", () => {
 			});
 
 			expect(await ctx.redisV2.exists(customerSubjectKey)).toBe(0);
-			expect(await ctx.redisV2.get(epochKey)).toBe("1");
+			expect(await ctx.redisV2.get(epochKey)).toBe(
+				String(subjectViewEpoch + 1),
+			);
 
 			if (touchedEntityId) {
 				const touchedEntityKey = buildFullSubjectKey({
