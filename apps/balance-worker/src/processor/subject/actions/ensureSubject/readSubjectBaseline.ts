@@ -39,7 +39,7 @@ export const readSubjectBaseline = async ({
 	identity: MeteringIdentity;
 	occurredAt: number;
 }): Promise<SubjectState> => {
-	const { envelope } = await scope.ctx.db.getSubjectRows({
+	const envelope = await scope.ctx.db.getSubjectRows({
 		identity,
 		asOfTimestampMs: occurredAt,
 	});

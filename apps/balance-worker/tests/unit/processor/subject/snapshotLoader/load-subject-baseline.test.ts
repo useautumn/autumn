@@ -3,7 +3,6 @@ import {
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
 } from "@autumn/balance-engine";
-import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { createEntityLoads } from "../../../../../src/processor/subject/entityLoads/createEntityLoads.js";
@@ -52,7 +51,7 @@ const envelope: SubjectRowsEnvelope = {
 	entity: null,
 };
 
-/** A hydrator scope over a scripted Postgres that records what each read asked for and answers what it is told. */
+/** A hydrator scope over a scripted Postgres that records each probe and each full read and answers what it is told. */
 const createScope = ({
 	mode = "serve",
 	snapshot = null,
@@ -62,7 +61,8 @@ const createScope = ({
 	snapshot?: unknown;
 	rows?: SubjectRowsEnvelope | null;
 } = {}) => {
-	const asked: (number | undefined)[] = [];
+	const probes: string[] = [];
+	const fullReads: string[] = [];
 	const warnings: unknown[] = [];
 	const backfills: { customerKey: string; baselineAt: number }[] = [];
 	const catalogCache = createTestCatalogCache();
@@ -70,11 +70,13 @@ const createScope = ({
 		ctx: {
 			catalogCache,
 			db: {
-				getSubjectRows: async ({ snapshotVersion }) => {
-					asked.push(snapshotVersion);
-					return snapshotVersion !== undefined && snapshot !== null
-						? { snapshot, envelope: null }
-						: { snapshot: null, envelope: rows };
+				readSubjectSnapshot: async ({ identity }) => {
+					probes.push(identity.customerId);
+					return snapshot;
+				},
+				getSubjectRows: async ({ identity }) => {
+					fullReads.push(identity.customerId);
+					return rows;
 				},
 				getEntitySubjectRows: async () => [],
 			},
@@ -110,59 +112,61 @@ const createScope = ({
 		occurredAt = NOW,
 		inFlight = { customerKey: "cus_1", overtaken: false },
 	) => loadSubjectBaseline({ scope, identity, occurredAt, load: inFlight });
-	return { load, asked, warnings, backfills };
+	return { load, probes, fullReads, warnings, backfills };
 };
 
 describe("loadSubjectBaseline", () => {
-	test("serving: the statement is asked for this build's snapshot, and a row that parses is the baseline at revision zero", async () => {
-		const { load, asked } = createScope({
+	test("serving: one probe for this build's row, and a row that parses is the baseline at revision zero with no full read", async () => {
+		const { load, probes, fullReads } = createScope({
 			snapshot: { ...createState({ identity, balance: 95 }), revision: 9 },
 		});
 		const state = await load();
-		expect(asked).toEqual([BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION]);
+		expect(probes).toEqual(["cus_1"]);
+		expect(fullReads).toEqual([]);
 		expect(state.revision).toBe(0);
 		expect(state.customerEntitlements[0]?.balance).toBe(95);
 	});
 
-	test("serving with no row: the same statement answered the rows, nothing more was asked", async () => {
-		const { load, asked, warnings } = createScope();
+	test("serving with no row: the probe misses and the rows are read whole", async () => {
+		const { load, probes, fullReads, warnings } = createScope();
 		const state = await load();
-		expect(asked).toEqual([BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION]);
+		expect(probes).toEqual(["cus_1"]);
+		expect(fullReads).toEqual(["cus_1"]);
 		expect(state.customer.id).toBe("cus_1");
 		expect(warnings).toEqual([]);
 	});
 
 	test.each(["off", "write"] as const)(
-		"mode %s: the statement is asked for the rows alone",
+		"mode %s: no probe, the rows alone",
 		async (mode) => {
-			const { load, asked } = createScope({
+			const { load, probes, fullReads } = createScope({
 				mode,
 				snapshot: createState({ identity }),
 			});
 			const state = await load();
-			expect(asked).toEqual([undefined]);
+			expect(probes).toEqual([]);
+			expect(fullReads).toEqual(["cus_1"]);
 			expect(state.customer.id).toBe("cus_1");
 		},
 	);
 
-	test("a read for another time than now is a replay: the rows alone, never a row written for now", async () => {
-		const { load, asked } = createScope({
+	test("a read for another time than now is a replay: no probe, never a row written for now", async () => {
+		const { load, probes } = createScope({
 			snapshot: createState({ identity }),
 		});
 		await load(NOW - 5_000);
-		expect(asked).toEqual([undefined]);
+		expect(probes).toEqual([]);
 		expect((await load(NOW + 1_000)).revision).toBe(0);
-		expect(asked).toEqual([undefined, BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION]);
+		expect(probes).toEqual(["cus_1"]);
 	});
 
-	test("a row that will not parse is warned about and the rows are read whole by one more statement", async () => {
-		const { load, asked, warnings } = createScope({
+	test("a row that will not parse is warned about and the rows are read whole", async () => {
+		const { load, fullReads, warnings } = createScope({
 			snapshot: { schemaVersion: 1, nope: true },
-			rows: envelope,
 		});
 		const state = await load();
 		expect(state.customer.id).toBe("cus_1");
-		expect(asked).toEqual([BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION, undefined]);
+		expect(fullReads).toEqual(["cus_1"]);
 		expect(warnings).toHaveLength(1);
 		expect((warnings[0] as [{ event: string }])[0].event).toBe(
 			"balance_worker.snapshot_unreadable",
@@ -174,7 +178,7 @@ describe("loadSubjectBaseline", () => {
 		await expect(load()).rejects.toBeInstanceOf(SubjectNotFoundError);
 	});
 
-	test("rows answered in place of a missing snapshot are written back, keyed by the engine's customer key, aged by this read", async () => {
+	test("rows read after a miss are written back, keyed by the engine's customer key, aged by this read", async () => {
 		const { load, backfills } = createScope();
 		await load();
 		expect(backfills).toEqual([
@@ -185,17 +189,20 @@ describe("loadSubjectBaseline", () => {
 		]);
 	});
 
-	test("a hit, a read for the rows alone, and a read an evict overtook write nothing back", async () => {
+	test("a hit, a read for the rows alone, a replay, and a read an evict overtook write nothing back", async () => {
 		const hit = createScope({ snapshot: createState({ identity }) });
 		await hit.load();
 		const off = createScope({ mode: "write" });
 		await off.load();
+		const replay = createScope();
+		await replay.load(NOW - 5_000);
 		const overtaken = createScope();
 		await overtaken.load(NOW, { customerKey: "cus_1", overtaken: true });
-		expect([hit.backfills, off.backfills, overtaken.backfills]).toEqual([
-			[],
-			[],
-			[],
-		]);
+		expect([
+			hit.backfills,
+			off.backfills,
+			replay.backfills,
+			overtaken.backfills,
+		]).toEqual([[], [], [], []]);
 	});
 });
