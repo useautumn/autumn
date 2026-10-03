@@ -4,6 +4,7 @@
 
 import { expect, test } from "bun:test";
 import {
+	BillingVersion,
 	CusProductStatus,
 	customerProducts,
 	customers,
@@ -54,6 +55,7 @@ test(`${chalk.yellowBright("activate scheduled: early activation replaces future
 		status: CusProductStatus.Scheduled,
 		starts_at: futureStartsAt,
 		options: [],
+		billing_version: BillingVersion.V1,
 	});
 
 	try {
