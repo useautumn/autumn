@@ -8,7 +8,10 @@ import {
 	type TrackCommand,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
+import { buildIdempotencyStorageKey } from "@autumn/dynamodb";
+import { BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT } from "@autumn/env/balanceWorkerConstants";
 import { serializeCommandRecord } from "@autumn/kafka";
+import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { CommandPartitionUnavailableError } from "../../../src/kafka/commandConsumer/commandConsumerErrors.js";
 import { createCommandRecordHandler } from "../../../src/kafka/commandConsumer/createCommandRecordHandler.js";
 import type { PartitionRuntimePort } from "../../../src/partitions/types/partitions.js";
@@ -32,6 +35,7 @@ function createFixture({
 	commandNextOffset = null,
 	canPark = false,
 	evictLog,
+	commitFailures = [],
 }: {
 	outcome?: "applied" | "rejected" | Error;
 	owned?: boolean;
@@ -39,6 +43,8 @@ function createFixture({
 	/** Gives the handler somewhere to park a partition, as the worker wiring does. */
 	canPark?: boolean;
 	evictLog?: Promise<void>;
+	/** Each track's commit fails with the next of these, in order; once used up, commits land. */
+	commitFailures?: Error[];
 } = {}) {
 	const tracked: TrackCommand[] = [];
 	const evicted: EvictCommand[] = [];
@@ -46,7 +52,9 @@ function createFixture({
 	const completed: unknown[] = [];
 	const logs: string[] = [];
 	const parked: { partition: number; cause: unknown }[] = [];
-	let deferredLogs: Promise<void>[] = [];
+	const committed: string[] = [];
+	const keys = createFakeIdempotencyKeys();
+	let deferredLogs: { add(log: Promise<void>): void } | undefined;
 	const runtime = {
 		process: async (run: (processor: never) => Promise<unknown>) => {
 			const processor = {
@@ -57,27 +65,41 @@ function createFixture({
 				}: {
 					source: unknown;
 					run: (processor: never) => Promise<unknown>;
-					deferredLogs?: Promise<void>[];
+					deferredLogs?: { add(log: Promise<void>): void };
 				}) => {
-					deferredLogs = logs ?? [];
+					deferredLogs = logs;
 					sources.push(source);
 					const result = await run(processor as never);
 					completed.push(source);
 					return result;
 				},
-				track: async (params: { command: TrackCommand }) => {
+				decideTrack: async (params: { command: TrackCommand }) => {
 					expect(Object.keys(params)).toEqual(["command"]);
 					tracked.push(params.command);
 					if (outcome instanceof Error) throw outcome;
-					return { result: { status: outcome ?? "applied", reason: null } };
+					const result = {
+						type: "track",
+						status: outcome ?? "applied",
+						reason: null,
+					};
+					const commitFailure = commitFailures.shift();
+					async function waitForCommit() {
+						if (commitFailure) throw commitFailure;
+						committed.push(params.command.commandId);
+						return { mutation: { result } };
+					}
+					return { kind: "write", waitForCommit };
 				},
-				reset: async () => {
+				decideReset: async () => {
 					if (outcome instanceof Error) throw outcome;
-					return { result: null };
+					return {
+						kind: "reply",
+						waitForCommit: async () => ({ result: null }),
+					};
 				},
 				evict: async (params: { command: EvictCommand }) => {
 					evicted.push(params.command);
-					if (evictLog) deferredLogs.push(evictLog);
+					if (evictLog) deferredLogs?.add(evictLog);
 					if (outcome instanceof Error) throw outcome;
 					return { evicted: true };
 				},
@@ -89,7 +111,7 @@ function createFixture({
 		ctx: {
 			findOwnedRuntime: () => (owned ? runtime : undefined),
 			readCommandNextOffset: () => commandNextOffset,
-			idempotencyKeys: createFakeIdempotencyKeys().keys,
+			idempotencyKeys: keys.keys,
 			logger: {
 				info: (message: string) => logs.push(`info:${message}`),
 				warn: (message: string) => logs.push(`warn:${message}`),
@@ -101,7 +123,17 @@ function createFixture({
 			}),
 		},
 	});
-	return { handler, tracked, evicted, sources, logs, completed, parked };
+	return {
+		handler,
+		tracked,
+		evicted,
+		sources,
+		logs,
+		completed,
+		parked,
+		committed,
+		keys,
+	};
 }
 
 const command = parseTrackCommand({
@@ -132,6 +164,23 @@ const evictCommand = parseEvictCommand({
 		identity: testIdentity,
 		occurredAt: 1_700_000_000_000,
 	},
+});
+
+const idempotency = { key: "track:item_1", ttlMs: 60_000 };
+const keyedCommand = parseTrackCommand({
+	input: {
+		...createTrackCommand({
+			identity: testIdentity,
+			commandId: "cmd_keyed",
+			value: 1,
+		}),
+		idempotency,
+	},
+});
+const { storageKey: keyedStorageKey } = buildIdempotencyStorageKey({
+	orgId: testIdentity.orgId,
+	env: testIdentity.env,
+	idempotencyKey: idempotency.key,
 });
 
 function recordOf({
@@ -201,6 +250,7 @@ describe("command record handler", () => {
 
 		const rejected = createFixture({ outcome: "rejected" });
 		await rejected.handler.applyRecord(recordOf({ command }));
+		await rejected.handler.settleBatch?.({ topic, partition });
 		expect(rejected.logs).toEqual([
 			"warn:Queued track rejected by the balance",
 		]);
@@ -318,5 +368,69 @@ describe("command record handler", () => {
 		expect(tracked).toEqual([]);
 		expect(completed).toEqual([{ commandOffset: "7" }]);
 		expect(logs).toEqual(["warn:Queued command skipped: unreadable"]);
+	});
+
+	test("a commit the store refused is consumed and frees the track's idempotency key, as a refused decide does", async () => {
+		const fixture = createFixture({
+			commitFailures: [
+				new FlushRecordRefusedError({
+					mutationId: "cmd_keyed",
+					cause: new Error("check constraint"),
+				}),
+			],
+		});
+		await fixture.handler.applyRecord(recordOf({ command: keyedCommand }));
+		await fixture.handler.settleBatch?.({ topic, partition });
+		expect(fixture.keys.released).toEqual([keyedStorageKey]);
+		expect(fixture.logs).toEqual(["warn:Queued track refused"]);
+	});
+
+	test("a commit that failed transiently keeps the key and reaches Kafka; the redelivery resumes the claim and applies exactly once", async () => {
+		const fixture = createFixture({
+			commitFailures: [new Error("broker away")],
+		});
+		await fixture.handler.applyRecord(recordOf({ command: keyedCommand }));
+		await expect(
+			fixture.handler.settleBatch?.({ topic, partition }),
+		).rejects.toThrow("broker away");
+		expect(fixture.keys.released).toEqual([]);
+		expect(fixture.keys.owners.get(keyedStorageKey)).toBe(
+			keyedCommand.requestId,
+		);
+
+		await fixture.handler.applyRecord(recordOf({ command: keyedCommand }));
+		await fixture.handler.settleBatch?.({ topic, partition });
+		expect(fixture.tracked.map((tracked) => tracked.commandId)).toEqual([
+			"cmd_keyed",
+			"cmd_keyed",
+		]);
+		expect(fixture.committed).toEqual(["cmd_keyed"]);
+	});
+
+	test("a track the balance rejected is logged once its commit lands", async () => {
+		const fixture = createFixture({ outcome: "rejected" });
+		await fixture.handler.applyRecord(recordOf({ command }));
+		await fixture.handler.settleBatch?.({ topic, partition });
+		expect(fixture.logs).toEqual(["warn:Queued track rejected by the balance"]);
+	});
+
+	test("held evicts and decided commands share one in-flight bound", async () => {
+		const evictLog = Promise.withResolvers<void>();
+		const fixture = createFixture({ evictLog: evictLog.promise });
+		for (
+			let index = 0;
+			index < BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT;
+			index++
+		)
+			await fixture.handler.applyRecord(recordOf({ command: evictCommand }));
+
+		const blocked = fixture.handler.applyRecord(recordOf({ command }));
+		await Bun.sleep(20);
+		expect(fixture.tracked).toEqual([]);
+
+		evictLog.resolve();
+		await blocked;
+		expect(fixture.tracked).toEqual([command]);
+		await fixture.handler.settleBatch?.({ topic, partition });
 	});
 });
