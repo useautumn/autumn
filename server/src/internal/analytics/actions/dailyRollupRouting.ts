@@ -259,12 +259,16 @@ const buildCountAndSumSourceQuery = ({
 		SELECT
 			event_name,
 			sum(event_count_value) as count,
-			sum(total_value_value) as sum
+			sum(total_value_value) as sum,
+			sum(actual_daily_event_count_value) as actual_daily_event_count,
+			sum(expected_daily_event_count_value) as expected_daily_event_count
 		FROM (
 			SELECT
 				event_name,
 				sumMerge(event_count) as event_count_value,
-				sumMerge(total_value) as total_value_value
+				sumMerge(total_value) as total_value_value,
+				sumMerge(event_count) as actual_daily_event_count_value,
+				0 as expected_daily_event_count_value
 			FROM events_customer_daily_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}
@@ -279,13 +283,32 @@ const buildCountAndSumSourceQuery = ({
 			SELECT
 				event_name,
 				sum(event_count) as event_count_value,
-				sum(total_value) as total_value_value
+				sum(total_value) as total_value_value,
+				0 as actual_daily_event_count_value,
+				0 as expected_daily_event_count_value
 			FROM events_customer_hourly_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}
 				${entityFilter}
 				AND hour >= full_hours_start AND hour < full_hours_end
 				AND (hour < ${fullDayStartSql} OR hour >= toStartOfDay({end_date:DateTime}))
+				AND event_name IN {event_names:Array(String)}
+			GROUP BY event_name
+
+			UNION ALL
+
+			SELECT
+				event_name,
+				0 as event_count_value,
+				0 as total_value_value,
+				0 as actual_daily_event_count_value,
+				sumMerge(expected_event_count) as expected_daily_event_count_value
+			FROM events_customer_daily_coverage_mv
+			WHERE org_id = {org_id:String} AND env = {env:String}
+				${customerFilter}
+				${entityFilter}
+				AND day >= ${fullDayStartSql}
+				AND day < toStartOfDay({end_date:DateTime})
 				AND event_name IN {event_names:Array(String)}
 			GROUP BY event_name
 		)
