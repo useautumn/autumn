@@ -1,5 +1,6 @@
 import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type {
 	Committer,
@@ -46,7 +47,7 @@ export const createEvictDeletes = ({
 		customerKey,
 	}: Parameters<EvictDeletes["enqueue"]>[0]): void {
 		// Off keeps Postgres untouched: nothing was written, so nothing is owed.
-		if (ctx.subjectSnapshotsConfig.get().mode !== "write") return;
+		if (!writesSubjectSnapshots(ctx.subjectSnapshotsConfig.get())) return;
 		const position = { topic, partition };
 		const deletes = partitionDeletesOf({ byPartition, position });
 		if (deletes.pending.size >= EVICT_DELETES_MAX_PENDING) {
@@ -83,13 +84,13 @@ export const createEvictDeletes = ({
 		const deletes = byPartition.get(key);
 		if (!deletes) return;
 		deletes.scheduled = false;
-		const { mode, dropBatch } = ctx.subjectSnapshotsConfig.get();
+		const settings = ctx.subjectSnapshotsConfig.get();
 		// Flipped off since these were enqueued: what they would delete is no longer served by anyone.
-		if (mode !== "write") {
+		if (!writesSubjectSnapshots(settings)) {
 			byPartition.delete(key);
 			return;
 		}
-		const taken = takeDeletes({ deletes, batch: dropBatch });
+		const taken = takeDeletes({ deletes, batch: settings.dropBatch });
 		if (deletes.pending.size > 0) scheduleDelete({ position, deletes });
 		else byPartition.delete(key);
 		const snapshotIntent: SnapshotIntent = new Map(

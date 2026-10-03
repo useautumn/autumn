@@ -4,6 +4,7 @@ import { percentileOf, sampleInto } from "./sampleWindow.js";
 
 export type DatabaseQueryKind =
 	| "subject_rows"
+	| "subject_snapshot"
 	| "entity_rows"
 	| "catalog_rows"
 	| "billing_anchors"
@@ -21,11 +22,16 @@ export type DatabaseTimingsSummary = {
 	>;
 	subjectLoadWait: Distribution;
 	errorCodes: Record<string, number>;
-	/** Present only in a window that wrote or deleted snapshots. */
+	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
 	subjectSnapshots?: SubjectSnapshotCounts;
 };
 
-type SubjectSnapshotCounts = { upserted: number; deleted: number };
+type SubjectSnapshotCounts = {
+	upserted: number;
+	deleted: number;
+	hits: number;
+	misses: number;
+};
 
 type SampledWindow = { count: number; max: number; samples: number[] };
 
@@ -112,13 +118,14 @@ export function createDatabaseTimings() {
 		addSample({ window: subjectLoadWait, value: waitMs });
 	}
 
-	function recordSubjectSnapshots({
-		upserted,
-		deleted,
-	}: SubjectSnapshotCounts): void {
-		subjectSnapshots ??= { upserted: 0, deleted: 0 };
-		subjectSnapshots.upserted += upserted;
-		subjectSnapshots.deleted += deleted;
+	function recordSubjectSnapshots(
+		counts: Partial<SubjectSnapshotCounts>,
+	): void {
+		subjectSnapshots ??= { upserted: 0, deleted: 0, hits: 0, misses: 0 };
+		subjectSnapshots.upserted += counts.upserted ?? 0;
+		subjectSnapshots.deleted += counts.deleted ?? 0;
+		subjectSnapshots.hits += counts.hits ?? 0;
+		subjectSnapshots.misses += counts.misses ?? 0;
 	}
 
 	function drain(): DatabaseTimingsSummary {
