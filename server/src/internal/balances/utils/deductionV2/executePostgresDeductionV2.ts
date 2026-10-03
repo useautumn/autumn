@@ -7,8 +7,11 @@ import {
 	isUsageBasedAllocatedCustomerEntitlement,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { planetScaleTag } from "@/db/dbUtils.js";
+import Stripe from "stripe";
+import { isTransientDbError, planetScaleTag } from "@/db/dbUtils.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
+import { isStripeResourceMissing } from "@/external/stripe/common/utils/isStripeResourceMissing.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
@@ -260,23 +263,41 @@ export const executePostgresDeductionV2 = async ({
 					});
 				}
 			} catch (error) {
-				if (error instanceof Error && !error?.message?.includes("declined")) {
-					ctx.logger.error(
+				const shouldLogError =
+					error instanceof Error && !error.message.includes("declined");
+				const isMissingStripeResource =
+					error instanceof Stripe.errors.StripeError &&
+					isStripeResourceMissing(error);
+				const mayFailOpen =
+					isTransientDbError({ error }) || isTransientRedisError({ error });
+				const deferCaptureToBoundary = isMissingStripeResource && !mayFailOpen;
+				if (shouldLogError) {
+					ctx.logger[deferCaptureToBoundary ? "warn" : "error"](
 						`[executePostgresDeductionV2] Attempting rollback due to error: ${error}`,
 					);
 				}
-				await rollbackDeductionV2({
-					ctx,
-					oldFullSubject,
-					updates,
-				});
-				// The cache already mirrors the rolled-back balances and Postgres is right again, so drop it unflushed.
-				if (mirrorsSubjectCache)
-					await invalidateCachedFullSubject({
+				try {
+					await rollbackDeductionV2({
 						ctx,
-						customerId,
-						source: "executePostgresDeductionV2:rollback",
+						oldFullSubject,
+						updates,
 					});
+					// The cache already mirrors the rolled-back balances and Postgres is right again, so drop it unflushed.
+					if (mirrorsSubjectCache)
+						await invalidateCachedFullSubject({
+							ctx,
+							customerId,
+							source: "executePostgresDeductionV2:rollback",
+						});
+				} catch (cleanupError) {
+					if (shouldLogError && deferCaptureToBoundary) {
+						ctx.logger.error(
+							"[executePostgresDeductionV2] Original deduction failed before rollback cleanup threw",
+							{ error },
+						);
+					}
+					throw cleanupError;
+				}
 				throw error;
 			}
 
