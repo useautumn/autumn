@@ -26,6 +26,12 @@ export type OwnedPartitionRequestCounters = {
 	checkMemoHits: number;
 	checkMemoMisses: number;
 	checkMemoBypassed: number;
+	/** Tracks decided on a context carried from the previous state, or set up afresh. */
+	trackContextHits: number;
+	trackContextMisses: number;
+	/** Tracks whose effects were decided, or skipped because no draw could have called for one. */
+	effectsRun: number;
+	effectsSkipped: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<

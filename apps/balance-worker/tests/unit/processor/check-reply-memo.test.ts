@@ -6,114 +6,35 @@
 import { describe, expect, test } from "bun:test";
 import {
 	type CheckCommand,
-	type MeteringIdentity,
 	parseCheckCommand,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
-import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
-import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
-import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
-import {
-	createSyntheticWorkerDb,
-	createTestCatalogCache,
-} from "../../fixtures/catalog.js";
 import {
 	createCustomerEntitlement,
-	createInitializeRequest,
 	createState,
 	createTrackCommand,
 	testOrg,
 } from "../../fixtures/mutations.js";
+import {
+	createResidentProcessor,
+	residentIdentityOf,
+} from "../../fixtures/residentProcessor.js";
 
 /** A second boundary, so offsets below 1000 stay inside one second. */
 const SECOND_START = 1_700_000_000_000;
 
-const identityOf = ({
-	customerId,
-}: {
-	customerId: string;
-}): MeteringIdentity => ({
-	orgId: "org_1",
-	env: "sandbox",
-	customerId,
-	entityId: null,
-});
+const identityOf = residentIdentityOf;
 
-/** The production shape: the Postgres-backed store, so subjects live in the map as one object per state. */
-const createResidentProcessor = async ({
-	states = [
-		createState({
-			identity: identityOf({ customerId: "cus_1" }),
-			balance: 1_000,
-		}),
-	],
-}: {
-	states?: SubjectState[];
-} = {}) => {
-	const stateStore = createCommitterStateStore({
-		ctx: {
-			committer: {
-				apply: async ({ records, expectedOffset }) => ({
-					nextOffset:
-						(records.at(-1)?.position.offset ?? expectedOffset - 1n) + 1n,
-				}),
-				drain: async () => undefined,
-				stop: () => undefined,
-			},
-			db: {
-				readPartitionProgress: async () => null,
-				insertPartitionProgress: async () => undefined,
-				claimPartitionProgress: async () => undefined,
-			},
-		},
-	});
-	await stateStore.initializePartition({
-		topic: "outcomes",
-		partition: 0,
-		nextOffset: 0n,
-	});
-	let appended = 0n;
-	const processor = createPartitionProcessor({
-		ctx: {
-			stateStore: {
-				...stateStore,
-				readCommandNextOffset: () => null,
-				advanceCommandNextOffset: async () => undefined,
-			},
-			catalogCache: createTestCatalogCache(),
-			db: createSyntheticWorkerDb(),
-			appender: {
-				appendCommitted: async ({ outcomes }) => {
-					const baseOffset = appended;
-					appended += BigInt(outcomes.length);
-					return { baseOffset };
-				},
-			},
-			receiptPolicy: { retentionMs: 86_400_000, now: () => SECOND_START },
-			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
-			assertCanRead: () => undefined,
-		},
-		config: {
-			topic: "outcomes",
-			partition: 0,
-			writerLimits: {
-				maxBatchSize: 100,
-				maxPendingCommands: 100,
-				maxPendingCommandsPerCustomer: 100,
-			},
-		},
-	});
-	for (const [index, state] of states.entries())
-		await processor.initialize({
-			request: createInitializeRequest({
-				state,
-				commandId: `init_${index}`,
-				requestId: `req_init_${index}`,
+const createProcessor = ({ states }: { states?: SubjectState[] } = {}) =>
+	createResidentProcessor({
+		states: states ?? [
+			createState({
+				identity: identityOf({ customerId: "cus_1" }),
+				balance: 1_000,
 			}),
-		});
-	return processor;
-};
+		],
+	});
 
 const checkOf = ({
 	customerId = "cus_1",
@@ -146,7 +67,7 @@ const balanceIn = (reply: CheckReply) =>
 
 describe("check reply memo", () => {
 	test("an identical check in the same second reuses the reply", async () => {
-		const processor = await createResidentProcessor();
+		const processor = await createProcessor();
 		const first = await processor.check({ command: checkOf() });
 		const again = await processor.check({
 			command: checkOf({ at: SECOND_START + 900 }),
@@ -159,7 +80,7 @@ describe("check reply memo", () => {
 	});
 
 	test("a write replaces the state, so the next check answers from the new balance", async () => {
-		const processor = await createResidentProcessor();
+		const processor = await createProcessor();
 		const before = await processor.check({ command: checkOf() });
 		await processor.track({
 			command: createTrackCommand({
@@ -175,7 +96,7 @@ describe("check reply memo", () => {
 	});
 
 	test("the next second, another required balance, or event properties each decide afresh", async () => {
-		const processor = await createResidentProcessor();
+		const processor = await createProcessor();
 		const first = await processor.check({ command: checkOf() });
 		const nextSecond = await processor.check({
 			command: checkOf({ at: SECOND_START + 1_000 }),
@@ -201,7 +122,7 @@ describe("check reply memo", () => {
 	});
 
 	test("a reset that falls due inside the second advances before the memo is read", async () => {
-		const processor = await createResidentProcessor({
+		const processor = await createProcessor({
 			states: [
 				createState({
 					identity: identityOf({ customerId: "cus_reset" }),
