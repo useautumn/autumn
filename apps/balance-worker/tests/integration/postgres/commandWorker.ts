@@ -19,3 +19,8 @@ const worker = await createBalanceWorker({
 	config: { env, stateBackend: "postgres" },
 });
 await worker.start();
+// A graceful stop releases the partition so the next worker can own it; a crash test kills instead.
+process.once("SIGTERM", async () => {
+	await worker.stop();
+	process.exit(0);
+});

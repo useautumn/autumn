@@ -1,6 +1,6 @@
 import type { SubjectState } from "@autumn/balance-engine";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
-import type { SubjectMap } from "./types/subjectMap.js";
+import type { OnSubjectEvicted, SubjectMap } from "./types/subjectMap.js";
 
 /** The bound a map falls back to when no worker budget is handed in: the fixed per-partition size prod ran before the budget existed. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
@@ -13,6 +13,7 @@ type Entry = {
 	pins: number;
 	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
 	evictOnUnpin: boolean;
+	baselineAt: number | null;
 };
 
 const weigh = ({ value }: { value: unknown }): number =>
@@ -76,8 +77,10 @@ export const reweighSubjectState = ({
 
 export const createSubjectMap = ({
 	maxBytes = SUBJECT_MAP_MAX_BYTES,
+	onEvicted,
 }: {
 	maxBytes?: number | (() => number);
+	onEvicted?: OnSubjectEvicted;
 } = {}): SubjectMap => {
 	if (typeof maxBytes === "number" && !(maxBytes > 0))
 		throw new RangeError("maxBytes must be positive");
@@ -109,6 +112,7 @@ export const createSubjectMap = ({
 			bytes: 0,
 			pins: 0,
 			evictOnUnpin: false,
+			baselineAt: null,
 		};
 		entries.set(subjectKey, created);
 		return created;
@@ -160,13 +164,16 @@ export const createSubjectMap = ({
 		subjectKey,
 		customerKey,
 		state,
+		baselineAt,
 	}: {
 		subjectKey: string;
 		customerKey: string;
 		state: SubjectState;
+		baselineAt?: number;
 	}) => {
 		const entry = entryOf({ subjectKey });
 		entry.customerKey = customerKey;
+		if (baselineAt !== undefined) entry.baselineAt = baselineAt;
 		index({ subjectKey, customerKey });
 		const previous = entry.bytes > 0 ? entry.state : null;
 		totalBytes -= entry.bytes;
@@ -206,19 +213,33 @@ export const createSubjectMap = ({
 		const entry = entries.get(subjectKey);
 		if (!entry || entry.pins === 0) return;
 		entry.pins -= 1;
-		if (entry.pins === 0 && entry.evictOnUnpin)
+		if (entry.pins === 0 && entry.evictOnUnpin) {
 			dropState({ subjectKey, entry });
+			// Once per pinned subject, so the DELETE follows the last record that read it; the batcher dedupes.
+			if (entry.customerKey !== null)
+				onEvicted?.({ customerKey: entry.customerKey });
+		}
 	};
 
+	const readBaselineAt = ({ subjectKey }: { subjectKey: string }) =>
+		entries.get(subjectKey)?.baselineAt ?? null;
+
+	const readBytes = ({ subjectKey }: { subjectKey: string }) =>
+		entries.get(subjectKey)?.bytes ?? 0;
+
+	// Only an evict's drops reach `onEvicted`: a drop for space leaves rows Postgres still holds true.
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
-		const keys = subjectKeysByCustomer.get(customerKey);
-		if (!keys) return;
-		for (const subjectKey of [...keys]) {
+		let pinned = 0;
+		for (const subjectKey of [
+			...(subjectKeysByCustomer.get(customerKey) ?? []),
+		]) {
 			const entry = entries.get(subjectKey);
 			if (!entry) continue;
 			if (entry.pins > 0) entry.evictOnUnpin = true;
 			else dropState({ subjectKey, entry });
+			pinned += entry.pins > 0 ? 1 : 0;
 		}
+		if (pinned === 0) onEvicted?.({ customerKey });
 	};
 
 	const clear = () => {
@@ -230,6 +251,8 @@ export const createSubjectMap = ({
 	return {
 		readState,
 		setState,
+		readBaselineAt,
+		readBytes,
 		pin,
 		unpin,
 		evictCustomer,

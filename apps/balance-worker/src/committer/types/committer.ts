@@ -1,4 +1,7 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";
 import type { CommitterDb } from "../../types/committerDb.js";
 
@@ -16,6 +19,8 @@ export type CommitterContext = {
 	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 	/** Read on every flush start; absent means the boot config is the only source. */
 	control?: { read(): CommitterControl };
+	/** Read at every decision that touches `subject_snapshots`: a flip in S3 lands with the next flush. */
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 };
 
 /** A transient failure is retried until the store answers or the committer stops; the record is never given up on. */
@@ -32,6 +37,8 @@ export type CommitterConfig = {
 	/** Row changes one flush may carry; a hot partition cannot crowd out the others. */
 	maxRowsPerFlush: number;
 	retry: FlushRetryPolicy;
+	/** The deployment's partition count, written beside every snapshot row; absent, no flush touches `subject_snapshots`. */
+	snapshots?: { partitionCount: number };
 };
 
 export type PartitionPosition = { topic: string; partition: number };
@@ -57,6 +64,8 @@ export type FlushCall = PartitionPosition & {
 	ownerFence?: OwnerFence;
 	claimToken?: string;
 	records: readonly DurableMutationRecord[];
+	/** The writer's word on the customers these records touch; absent on a replay. */
+	snapshotIntent?: SnapshotIntent;
 	rows: number;
 	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
 };
@@ -87,6 +96,7 @@ export type Committer = {
 			ownerFence?: OwnerFence;
 			claimToken?: string;
 			records: readonly DurableMutationRecord[];
+			snapshotIntent?: SnapshotIntent;
 		},
 	): Promise<FlushOutcome>;
 	/** Resolves once nothing is queued or in flight. */

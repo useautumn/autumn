@@ -7,6 +7,7 @@ import {
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
+import type { OnSubjectEvicted } from "./subjectMap/types/subjectMap.js";
 import type {
 	CommittedMutation,
 	MutationDurability,
@@ -24,11 +25,13 @@ import {
 
 export function createPartitionWriterState({
 	subjectMapMaxBytes,
+	onEvicted,
 }: {
 	subjectMapMaxBytes?: number | (() => number);
+	onEvicted?: OnSubjectEvicted;
 } = {}): PartitionWriterState {
 	return {
-		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes }),
+		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes, onEvicted }),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],
@@ -279,15 +282,23 @@ export function removePendingMutation({
 	pending: PendingMutation;
 }): void {
 	state.pendingByKey.delete(pending.pendingKey);
-	// The committed rows stay resident; only the pin that kept them from eviction is released.
-	for (const subjectKey of pending.projectedSubjectKeys) {
-		state.subjects.unpin({ subjectKey });
-	}
 	const customerPending = state.pendingByCustomerKey.get(pending.customerKey);
 	customerPending?.delete(pending);
 	if (customerPending && customerPending.size === 0) {
 		state.pendingByCustomerKey.delete(pending.customerKey);
 	}
+}
+
+/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. */
+export function releasePins({
+	state,
+	pending,
+}: {
+	state: PartitionWriterState;
+	pending: PendingMutation;
+}): void {
+	for (const subjectKey of pending.projectedSubjectKeys)
+		state.subjects.unpin({ subjectKey });
 }
 
 export function rejectAllPending({

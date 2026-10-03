@@ -6,10 +6,12 @@ import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../../state/types/snapshotIntent.js";
 import {
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
+	releasePins,
 	removePendingMutation,
 	writerNowOf,
 } from "../pendingMutations.js";
@@ -23,6 +25,7 @@ import {
 	MutationBatchNotCommittedError,
 	PartitionWriterRecoveryRequiredError,
 } from "../writerErrors.js";
+import { decideSnapshotIntent } from "./decideSnapshotIntent.js";
 
 /** Bounds one store flush; the committer writes a flush as a single statement. */
 const MAX_BATCHES_PER_FLUSH = 16;
@@ -225,7 +228,10 @@ async function applyQueued({
 					}),
 				),
 			);
-			const ok = await applyBatch({ scope, batch, records });
+			const snapshotIntent = timeSync({ label: "writer.apply.intent" }, () =>
+				decideSnapshotIntent({ scope, batch }),
+			);
+			const ok = await applyBatch({ scope, batch, records, snapshotIntent });
 			state.unapplied.splice(0, taken.length);
 			if (!ok) return;
 		}
@@ -335,14 +341,17 @@ async function applyBatch({
 	scope,
 	batch,
 	records,
+	snapshotIntent,
 }: {
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
 	records: DurableMutationRecord[];
+	snapshotIntent: SnapshotIntent;
 }): Promise<boolean> {
 	try {
 		const results = await scope.ctx.stateStore.applyDurableMutations({
 			records,
+			snapshotIntent,
 		});
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
@@ -382,6 +391,7 @@ async function applyBatch({
 			enterRecovery({ scope, batch, cause: firstFailure });
 			return false;
 		}
+		for (const pending of batch) releasePins({ state: scope.state, pending });
 		for (const pending of batch) pending.settlement.settleStore();
 		return true;
 	} catch (cause) {

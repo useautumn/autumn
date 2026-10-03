@@ -172,7 +172,12 @@ const FLUSH_STATEMENT_TIMEOUT_MS = 2_000;
 export const createCommitterDb = ({
 	ctx,
 }: {
-	ctx: Omit<WorkerDbContext, "subjectLoads">;
+	ctx: Omit<WorkerDbContext, "subjectLoads" | "timings"> & {
+		timings: Pick<
+			DatabaseTimings,
+			"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
+		>;
+	};
 }): CommitterDb => ({
 	readPartitionProgress: (params) =>
 		timeQuery({
@@ -195,8 +200,8 @@ export const createCommitterDb = ({
 			run: () =>
 				claimPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 		}),
-	flush: (request) =>
-		timeQuery({
+	flush: async (request) => {
+		const result = await timeQuery({
 			ctx,
 			kind: "flush",
 			run: () =>
@@ -205,7 +210,13 @@ export const createCommitterDb = ({
 					request,
 					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
 				}),
-		}),
+		});
+		const { snapshots } = result;
+		// A rolled-back flush answers zero counts: nothing to put on the database line.
+		if (snapshots && snapshots.upserted + snapshots.deleted > 0)
+			ctx.timings.recordSubjectSnapshots(snapshots);
+		return result;
+	},
 });
 
 /** The flush's synchronous work shows up in the stall sections beside the request path's. */
