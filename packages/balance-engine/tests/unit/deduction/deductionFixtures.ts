@@ -1,3 +1,4 @@
+import { expect } from "bun:test";
 import type {
 	CommandOrg,
 	WorkerCustomer,
@@ -9,7 +10,8 @@ import {
 	createSubjectState,
 	incrementRow,
 } from "../../../src/balanceEngine.js";
-import { deduct } from "../../../src/deduction/deduct.js";
+import { deduct, deductWithContext } from "../../../src/deduction/deduct.js";
+import { setupDeductionContext } from "../../../src/deduction/setup/setupDeductionContext.js";
 import { toDeductionSelection } from "../../../src/deduction/toDeductionSelection.js";
 import type { DeductionRequest } from "../../../src/deduction/types/deductionRequest.js";
 import {
@@ -21,6 +23,19 @@ import {
 } from "../engineFixtures.js";
 
 export type DeductionOutcome = ReturnType<typeof deduct>;
+
+/** Every scenario also proves a context set up once and drawn from gives the same outcome as `deduct`. */
+export const deductAndCompare = (params: Parameters<typeof deduct>[0]) => {
+	const outcome = deduct(params);
+	const context = setupDeductionContext({
+		fullSubject: params.fullSubject,
+		selection: params.request.selection,
+	});
+	expect(deductWithContext({ context, request: params.request })).toEqual(
+		outcome,
+	);
+	return outcome;
+};
 
 export const deductFrom = ({
 	customer,
@@ -57,7 +72,7 @@ export const deductFrom = ({
 	countsUsageWindows?: boolean;
 	orgConfig?: CommandOrg["config"];
 }) =>
-	deduct({
+	deductAndCompare({
 		fullSubject: createSubjectFor({
 			state: createSubjectState({
 				identity,

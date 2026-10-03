@@ -211,6 +211,8 @@ const createFixture = () => {
 		store,
 		appender,
 		subjectRowsCalls,
+		readFreshestState: (requested: MeteringIdentity) =>
+			writer.readFreshestState({ identity: requested }),
 		track: (command: Parameters<typeof createTrackCommand>[0]) =>
 			track({ scope, command: createTrackCommand(command) }),
 		check: () =>
@@ -283,6 +285,44 @@ describe("entity subjects", () => {
 				commandId: "cmd_2",
 			});
 			expect(fixture.subjectRowsCalls).toHaveLength(1);
+		} finally {
+			fixture.close();
+		}
+	});
+
+	test("an entity's merged state is one object until its customer or entity changes, so per-state caches hit", async () => {
+		const fixture = createFixture();
+		try {
+			await fixture.track({
+				identity: entityIdentity,
+				featureId: "seats",
+				value: 1,
+			});
+			const first = fixture.readFreshestState(entityIdentity);
+			expect(first).not.toBeNull();
+			expect(fixture.readFreshestState(entityIdentity)).toBe(first);
+
+			await fixture.track({
+				identity,
+				featureId: "messages",
+				value: 1,
+				commandId: "cmd_customer",
+			});
+			const afterCustomerWrite = fixture.readFreshestState(entityIdentity);
+			expect(afterCustomerWrite).not.toBe(first);
+			expect(fixture.readFreshestState(entityIdentity)).toBe(
+				afterCustomerWrite,
+			);
+
+			await fixture.track({
+				identity: entityIdentity,
+				featureId: "seats",
+				value: 1,
+				commandId: "cmd_entity",
+			});
+			expect(fixture.readFreshestState(entityIdentity)).not.toBe(
+				afterCustomerWrite,
+			);
 		} finally {
 			fixture.close();
 		}
