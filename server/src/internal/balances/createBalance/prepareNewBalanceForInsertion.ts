@@ -92,9 +92,12 @@ export const prepareNewBalanceForInsertion = async ({
 
 	// Apply an explicit first reset boundary if provided. This overrides the
 	// derived next_reset_at (and the null set above when expires_at is present),
-	// allowing a custom first period that resets up until expiry.
+	// allowing a custom first period that resets up until expiry. The cycle
+	// anchor follows it: resets step from next_reset_at, so the explicit boundary
+	// is the cycle's phase, and usage windows read the anchor to stay fixed.
 	if (params.next_reset_at !== undefined) {
 		newCustomerEntitlement.next_reset_at = params.next_reset_at;
+		newCustomerEntitlement.reset_cycle_anchor = params.next_reset_at;
 	}
 
 	if (params.balance_id) {
