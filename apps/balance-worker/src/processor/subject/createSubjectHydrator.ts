@@ -55,8 +55,8 @@ export const createSubjectHydrator = ({
 			}),
 		overtakeInFlightLoads: ({ customerKey }) =>
 			scope.state.inFlightLoads.overtakeCustomer({ customerKey }),
-		refreshSnapshots: ({ identity, entityIds }) =>
-			scope.state.snapshotRefresh.enqueue({ identity, entityIds }),
+		refreshSnapshots: ({ customer, subjects }) =>
+			scope.state.snapshotRefresh.enqueue({ customer, subjects }),
 		dispose: () => scope.state.snapshotRefresh.dispose(),
 		inheritCatalog: ({ from, to, changes }) =>
 			scope.state.joinCache.inheritCatalog({ from, to, changes }),

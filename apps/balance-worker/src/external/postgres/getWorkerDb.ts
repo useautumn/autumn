@@ -135,6 +135,7 @@ export const createWorkerDb = ({
 			});
 			return snapshots;
 		}),
+	// One primary-key prefix scan, outside the subject-load gate like the other small lookups: an evict must not wait behind cold loads.
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>
 			timeQuery({
@@ -271,8 +272,11 @@ export const createCommitterDb = ({
 		});
 		const { snapshots } = result;
 		// A rolled-back flush answers zero counts: nothing to put on the database line.
-		if (snapshots && snapshots.upserted + snapshots.deleted > 0)
-			ctx.timings.recordSubjectSnapshots(snapshots);
+		if (snapshots && snapshots.upserted + snapshots.deleted.length > 0)
+			ctx.timings.recordSubjectSnapshots({
+				upserted: snapshots.upserted,
+				deleted: snapshots.deleted.length,
+			});
 		return result;
 	},
 });

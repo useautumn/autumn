@@ -157,7 +157,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						request,
 						statementTimeoutMs: 10_000,
 					});
-					deleted += result.snapshots?.deleted ?? 0;
+					deleted += result.snapshots?.deleted.length ?? 0;
 					return result;
 				} finally {
 					statementMs.push(performance.now() - startedAt);
@@ -271,7 +271,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				],
 			});
 
-			expect(result.snapshots).toEqual({ upserted: 2, deleted: 0 });
+			expect(result.snapshots).toEqual({ upserted: 2, deleted: [] });
 			const rows = await readSnapshots({ seeded });
 			expect(
 				rows.map(({ written_at, ...row }) => ({
@@ -406,7 +406,19 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				],
 			});
 
-			expect(result.snapshots).toEqual({ upserted: 0, deleted: 4 });
+			// The statement says which subjects went: the customer's own and its three entities, nobody else's.
+			const deletedOf = (entityId: string | null) => ({
+				orgId: seeded.orgId,
+				env: seeded.env,
+				customerId: seeded.identity.customerId,
+				entityId,
+			});
+			expect(result.snapshots?.upserted).toBe(0);
+			expect(
+				[...(result.snapshots?.deleted ?? [])].sort((a, b) =>
+					(a.entityId ?? "").localeCompare(b.entityId ?? ""),
+				),
+			).toEqual([deletedOf(null), ...entityIds.map(deletedOf)]);
 			expect(await readSnapshots({ seeded })).toEqual([]);
 			expect(await readSnapshots({ seeded: other })).toHaveLength(1);
 		} finally {
@@ -442,7 +454,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			});
 
 			expect(result.applied).toEqual([false]);
-			expect(result.snapshots).toEqual({ upserted: 0, deleted: 0 });
+			expect(result.snapshots).toEqual({ upserted: 0, deleted: [] });
 			expect(await readSnapshots({ seeded })).toEqual([]);
 			expect(await seeded.readNextOffset({ topic, partition: 5 })).toBe(40n);
 		} finally {
@@ -509,7 +521,17 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 
 			expect(lateEvict).toEqual({
 				applied: [],
-				snapshots: { upserted: 0, deleted: 1 },
+				snapshots: {
+					upserted: 0,
+					deleted: [
+						{
+							orgId: seeded.orgId,
+							env: seeded.env,
+							customerId: seeded.identity.customerId,
+							entityId: null,
+						},
+					],
+				},
 			});
 			expect(await readSnapshots({ seeded })).toEqual([]);
 			expect(await seeded.readNextOffset({ topic, partition: 5 })).toBe(42n);
@@ -572,7 +594,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		}
 	});
 
-	test("a refresh and an evict for the same customer land in lane order: the DELETE after leaves no row", async () => {
+	test("a refresh and an evict for the same customer land in lane order: the DELETE after leaves no row and names it", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();
 		const db: CommitterDb = {
@@ -628,13 +650,16 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			});
 			await committer.drain();
 			await Bun.sleep(20);
-			// The refresh landed under the bookmark; the DELETE enqueued after it lands after it.
+			// The refresh landed under the bookmark; the DELETE enqueued after it lands after it, and says which row went.
 			expect(await readSnapshots({ seeded })).toHaveLength(1);
 			writes.enqueueDelete({ topic, partition: 0, customerKey });
-			await committer.drain();
-			await Bun.sleep(50);
-			await committer.drain();
+			const deleted = await writes.deleteLanded({
+				topic,
+				partition: 0,
+				customerKey,
+			});
 
+			expect(deleted).toEqual([{ ...seeded.identity, entityId: null }]);
 			expect(await readSnapshots({ seeded })).toEqual([]);
 		} finally {
 			store.close();
@@ -709,7 +734,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				],
 			});
 
-			expect(result.snapshots).toEqual({ upserted: 1, deleted: 0 });
+			expect(result.snapshots).toEqual({ upserted: 1, deleted: [] });
 			expect(
 				(await readSnapshots({ seeded })).map((row) => row.entity_id),
 			).toEqual([""]);

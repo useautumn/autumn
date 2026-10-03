@@ -1,4 +1,5 @@
 import type { SubjectState } from "@autumn/balance-engine";
+import type { DeletedSubjectSnapshot } from "@autumn/postgres";
 
 /**
  * What the partition's lane writes to `subject_snapshots` outside a flush: an evict's DELETE, then the refreshes that
@@ -11,6 +12,12 @@ export type SnapshotQueues = {
 		partition: number;
 		customerKey: string;
 	}): void;
+	/** The rows the customer's DELETE removed, once the lane tick carrying it has run; none, at once, when no DELETE waits or is in flight. */
+	deleteLanded(params: {
+		topic: string;
+		partition: number;
+		customerKey: string;
+	}): Promise<DeletedSubjectSnapshot[]>;
 	/** One subject's rows read whole after an evict, written as its row so the next cold load is a hit; lands after any DELETE pending for the customer. */
 	enqueueRefresh(params: {
 		topic: string;

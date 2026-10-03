@@ -2,6 +2,7 @@ import type { EvictCommand } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { isBalanceWorkerUnconfirmed } from "./balanceWorkerErrors.js";
 import { requestContextToCommandBase } from "./requestContextToCommandBase.js";
 
@@ -9,7 +10,8 @@ const STALE_ROWS_MESSAGE =
 	"[balance-worker] evict failed; worker rows may be stale";
 
 /** Drops the owner's copy after another writer changed the rows, whatever the rollout says; a failure is logged, never fails the write.
- *  If the worker path is unavailable or unconfirmed (e.g. a partition mid-handoff), the evict is queued on the command log for the next owner. */
+ *  If the worker path is unavailable or unconfirmed (e.g. a partition mid-handoff), the evict is queued on the command log for the next owner.
+ *  The snapshot rows are rebuilt only for a customer the worker keeps writing; a rollback's evict leaves none behind. */
 export async function evictBalanceWorkerCustomer({
 	ctx,
 	customerId,
@@ -24,6 +26,7 @@ export async function evictBalanceWorkerCustomer({
 	const command: EvictCommand = {
 		...requestContextToCommandBase({ ctx, customerId }),
 		type: "evict",
+		refreshSnapshots: isBalanceWorkerRolloutEnabled({ ctx, customerId }),
 	};
 	try {
 		await client.evict({ command });

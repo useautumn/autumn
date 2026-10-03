@@ -25,6 +25,8 @@ export type SnapshotRefreshQueueContext = {
 		EdgeConfigStore<SubjectSnapshotsEdgeConfig>,
 		"get"
 	>;
+	/** Each count as it happens, for the worker's database line. */
+	recordCounts?(counts: Partial<SnapshotRefreshCounts>): void;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };
 
@@ -33,10 +35,10 @@ export type SnapshotRefreshQueueContext = {
  * `refreshConcurrency` reading at a time. A customer's evicts all reach its owner partition, so a read one overtakes is seen here.
  */
 export type SnapshotRefreshQueue = {
-	/** Synchronous: the customer was evicted; its own subject and the entities named wait for a refresh. */
+	/** Synchronous: a customer was evicted; the subjects named, every one of that customer, wait for a refresh. */
 	enqueue(params: {
-		identity: MeteringIdentity;
-		entityIds: readonly string[];
+		customer: MeteringIdentity;
+		subjects: readonly MeteringIdentity[];
 	}): void;
 	/** Subjects waiting or reading. */
 	depth(): number;

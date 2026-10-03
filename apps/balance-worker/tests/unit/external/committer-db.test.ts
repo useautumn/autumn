@@ -29,7 +29,19 @@ function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 					{ rows: [] },
 					{
 						rows: [
-							{ applied, bookmarks: 1, snapshot_upserts: 2, snapshot_deletes: 4 },
+							{
+								applied,
+								bookmarks: 1,
+								snapshot_upserts: 2,
+								snapshot_deletes: ["", "en_1", "en_2", "en_3"].map(
+									(entityId) => ({
+										org_id: "org_1",
+										env: "live",
+										customer_id: "cus_1",
+										entity_id: entityId,
+									}),
+								),
+							},
 						],
 					},
 				];
@@ -146,7 +158,13 @@ describe("createCommitterDb", () => {
 			},
 		});
 
-		expect(result.snapshots).toEqual({ upserted: 2, deleted: 4 });
+		expect(result.snapshots?.upserted).toBe(2);
+		expect(result.snapshots?.deleted.map((row) => row.entityId)).toEqual([
+			null,
+			"en_1",
+			"en_2",
+			"en_3",
+		]);
 		expect(timings.drain().subjectSnapshots).toEqual({
 			upserted: 2,
 			deleted: 4,

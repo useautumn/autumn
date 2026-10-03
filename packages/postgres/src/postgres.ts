@@ -34,6 +34,7 @@ export {
 } from "./flush/repos/commitFlush.js";
 export { flushSql } from "./flush/repos/flushSql.js";
 export type {
+	DeletedSubjectSnapshot,
 	FlushBookmark,
 	FlushRequest,
 	FlushResult,
