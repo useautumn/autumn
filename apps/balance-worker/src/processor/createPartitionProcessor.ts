@@ -47,6 +47,7 @@ import {
 } from "./common/acceptedCommands.js";
 import { executeCommand } from "./execution/executeCommand.js";
 import { createSubjectHydrator } from "./subject/createSubjectHydrator.js";
+import { createSubjectDecisions } from "./subject/subjectDecisions/createSubjectDecisions.js";
 import type { DeferredLogSink } from "./types/deferredLogSink.js";
 import type {
 	PartitionProcessor,
@@ -89,7 +90,13 @@ export function createPartitionProcessor({
 		},
 	});
 	const scope: PartitionProcessorScope = {
-		ctx: { ...dependencies, config, writer, subjectHydrator },
+		ctx: {
+			...dependencies,
+			config,
+			writer,
+			subjectHydrator,
+			subjectDecisions: createSubjectDecisions(),
+		},
 		accepted: createAcceptedCommands(),
 		customerPlans: createCustomerPlans(),
 	};
@@ -283,6 +290,7 @@ function createProcessor({
 	return {
 		execute,
 		dispose: () => scope.ctx.writer.dispose(),
+		readCounters: () => scope.ctx.subjectDecisions.readCounters(),
 		track,
 		decideTrack,
 		check,

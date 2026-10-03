@@ -33,6 +33,10 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type {
+	SubjectDecisionCounters,
+	SubjectDecisions,
+} from "../subject/subjectDecisions/types/subjectDecisions.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
 import type { DecidedMutation } from "../writer/types/mutation.js";
@@ -60,6 +64,8 @@ export type PartitionProcessor = {
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
+	/** What the partition counted since it started; partition health reports them. */
+	readCounters(): SubjectDecisionCounters;
 	readSubjectState(params: {
 		command: ReadSubjectStateCommand;
 	}): Promise<ReadSubjectStateReply>;
@@ -124,6 +130,7 @@ export interface PartitionProcessorContext
 	config: PartitionProcessorConfig;
 	writer: PartitionWriter;
 	subjectHydrator: SubjectHydrator;
+	subjectDecisions: SubjectDecisions;
 }
 
 /** Commands still in flight, so drain can settle them before the runtime disposes. */
