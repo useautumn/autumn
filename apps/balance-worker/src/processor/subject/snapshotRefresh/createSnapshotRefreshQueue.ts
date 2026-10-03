@@ -9,15 +9,6 @@ import type {
 	SnapshotRefreshQueueContext,
 } from "./types/snapshotRefreshQueue.js";
 
-/** Two reads at a time per partition: a 10,000-entity evict refreshes behind requests, never beside them. */
-export const SNAPSHOT_REFRESH_CONCURRENCY = 2;
-
-/**
- * Past this many waiting subjects a partition stops queuing: at two reads in flight a backlog beyond it is minutes of
- * work, and a subject left out only misses once on its next cold load, as it would with no refresh at all.
- */
-export const SNAPSHOT_REFRESH_MAX_PENDING = 10_000;
-
 /** One read in flight; `superseded` once the customer was evicted again behind it. */
 type Refresh = {
 	identity: MeteringIdentity;
@@ -75,7 +66,10 @@ const admit = ({
 }): void => {
 	const subjectKey = meteringIdentityToSubjectKey({ identity });
 	if (queue.waiting.has(subjectKey)) return;
-	if (queue.waiting.size >= SNAPSHOT_REFRESH_MAX_PENDING) {
+	if (
+		queue.waiting.size >=
+		queue.ctx.subjectSnapshotsConfig.get().refreshMaxPending
+	) {
 		warnCapped({ queue });
 		return;
 	}
@@ -95,12 +89,10 @@ const warnCapped = ({ queue }: { queue: Queue }): void => {
 	);
 };
 
-/** Takes waiting subjects into reads until two are in flight or nothing waits. */
+/** Takes waiting subjects into reads until `refreshConcurrency` are in flight or nothing waits. */
 const startReads = ({ queue }: { queue: Queue }): void => {
-	while (
-		queue.reading.size < SNAPSHOT_REFRESH_CONCURRENCY &&
-		queue.waiting.size > 0
-	) {
+	const { refreshConcurrency } = queue.ctx.subjectSnapshotsConfig.get();
+	while (queue.reading.size < refreshConcurrency && queue.waiting.size > 0) {
 		const next = queue.waiting.entries().next().value;
 		if (!next) break;
 		const [subjectKey, identity] = next;

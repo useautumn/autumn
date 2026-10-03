@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { MeteringIdentity } from "@autumn/balance-engine";
-import {
-	createSnapshotRefreshQueue,
-	SNAPSHOT_REFRESH_CONCURRENCY,
-	SNAPSHOT_REFRESH_MAX_PENDING,
-} from "../../../../../src/processor/subject/snapshotRefresh/createSnapshotRefreshQueue.js";
+import { createSnapshotRefreshQueue } from "../../../../../src/processor/subject/snapshotRefresh/createSnapshotRefreshQueue.js";
 import type { SubjectRefreshRead } from "../../../../../src/processor/subject/snapshotRefresh/types/snapshotRefreshQueue.js";
 import { createState } from "../../../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../../../fixtures/subjectSnapshotsStore.js";
+
+/** Two at a time and a ceiling of twelve: small enough to watch every read start and the ceiling bite. */
+const REFRESH_CONCURRENCY = 2;
+const REFRESH_MAX_PENDING = 12;
 
 const customer = (customerId: string): MeteringIdentity => ({
 	orgId: "org_1",
@@ -37,6 +38,11 @@ const createScriptedReads = () => {
 			write: ({ identity }) => {
 				written.push(subjectOf(identity));
 			},
+			subjectSnapshotsConfig: createSubjectSnapshotsStore({
+				mode: "write",
+				refreshConcurrency: REFRESH_CONCURRENCY,
+				refreshMaxPending: REFRESH_MAX_PENDING,
+			}),
 			logger: { warn: (...args: unknown[]) => warnings.push(args) },
 		},
 	});
@@ -68,7 +74,7 @@ const createScriptedReads = () => {
 };
 
 describe("snapshot refresh queue", () => {
-	test("an evict queues the customer then its entities, FIFO, two reading at a time; each read is written back", async () => {
+	test("an evict queues the customer then its entities, FIFO, refreshConcurrency reading at a time; each read is written back", async () => {
 		const { queue, started, written, release } = createScriptedReads();
 		queue.enqueue({
 			identity: customer("cus_1"),
@@ -77,7 +83,7 @@ describe("snapshot refresh queue", () => {
 
 		expect(queue.depth()).toBe(4);
 		expect(started).toEqual(["cus_1", "cus_1/en_1"]);
-		expect(SNAPSHOT_REFRESH_CONCURRENCY).toBe(2);
+		expect(REFRESH_CONCURRENCY).toBe(2);
 
 		await release("cus_1/en_1");
 		expect(started).toEqual(["cus_1", "cus_1/en_1", "cus_1/en_2"]);
@@ -166,29 +172,29 @@ describe("snapshot refresh queue", () => {
 	test("past the ceiling further subjects are dropped with one warning", async () => {
 		const { queue, warnings, release } = createScriptedReads();
 		const entityIds = Array.from(
-			{ length: SNAPSHOT_REFRESH_MAX_PENDING + 5 },
+			{ length: REFRESH_MAX_PENDING + 5 },
 			(_, index) => `en_${index}`,
 		);
 		queue.enqueue({ identity: customer("cus_1"), entityIds });
 
-		expect(queue.depth()).toBe(SNAPSHOT_REFRESH_MAX_PENDING);
-		expect(queue.counts().queued).toBe(SNAPSHOT_REFRESH_MAX_PENDING);
+		expect(queue.depth()).toBe(REFRESH_MAX_PENDING);
+		expect(queue.counts().queued).toBe(REFRESH_MAX_PENDING);
 		expect(warnings).toHaveLength(1);
 		expect((warnings[0] as [{ event: string }])[0].event).toBe(
 			"balance_worker.snapshot_refresh_capped",
 		);
 
+		// Two reads are in flight, so two more subjects fit under the ceiling; cus_2's third is dropped, with no second warning.
 		queue.enqueue({
 			identity: customer("cus_2"),
 			entityIds: ["en_1", "en_2", "en_3"],
 		});
-		expect(queue.depth()).toBe(
-			SNAPSHOT_REFRESH_MAX_PENDING + SNAPSHOT_REFRESH_CONCURRENCY,
-		);
+		expect(queue.counts().queued).toBe(REFRESH_MAX_PENDING + 2);
+		expect(queue.depth()).toBe(REFRESH_MAX_PENDING + REFRESH_CONCURRENCY);
 		expect(warnings).toHaveLength(1);
 		await release("cus_1");
 		await release("cus_1/en_0");
-		expect(queue.depth()).toBe(SNAPSHOT_REFRESH_MAX_PENDING);
+		expect(queue.depth()).toBe(REFRESH_MAX_PENDING);
 	});
 
 	test("a read that throws is counted and logged; a read of a subject that is gone writes nothing; the queue carries on", async () => {
