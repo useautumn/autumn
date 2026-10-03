@@ -7,7 +7,6 @@ import {
 	settleRuntimeStartup,
 	stopRuntimeFollower,
 } from "./disposeRuntimeResources.js";
-import { drainSnapshotQueues } from "./drainSnapshotQueues.js";
 
 export function stopRuntime({
 	ctx,
@@ -83,7 +82,6 @@ async function finishRuntimeDrain({
 }: PartitionRuntimeScope): Promise<void> {
 	await settleRuntimeStartup({ state });
 	await ctx.processor.drain();
-	await drainSnapshotQueues({ ctx });
 	await stopRuntimeFollower({ ctx, state });
 	if (state.terminalError) throw state.terminalError;
 }

@@ -344,38 +344,6 @@ describe("snapshot lane writes: evict deletes", () => {
 	});
 });
 
-describe("snapshot lane writes: drain", () => {
-	test("settles once every pending write landed and nothing more waits; at once when the partition has nothing on the lane", async () => {
-		const held = Promise.withResolvers<void>();
-		const { db, requests } = createCountingDb({ gate: held.promise });
-		const { store, deletes } = createStore({
-			db,
-			requestCount: () => requests.length,
-		});
-		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
-		const at = { topic, partition: 4 };
-		await expect(deletes.drain(at)).resolves.toBeUndefined();
-
-		for (const index of [1, 2, 3])
-			deletes.enqueueDelete({ ...at, customerKey: keyOf(index) });
-		await Bun.sleep(2);
-		// All three in the one statement in flight: still pending until it lands.
-		expect(deletes.pending(at)).toBe(3);
-		let drained = false;
-		const draining = deletes.drain(at).then(() => {
-			drained = true;
-		});
-		await Bun.sleep(5);
-		expect(drained).toBe(false);
-
-		held.resolve();
-		await draining;
-		expect(deletes.pending(at)).toBe(0);
-		expect(requests).toHaveLength(1);
-		await expect(deletes.drain(at)).resolves.toBeUndefined();
-	});
-});
-
 describe("snapshot lane writes: deleteLanded", () => {
 	test("resolves once the tick carrying the customer's DELETE ran; duplicates share it; a customer without one is settled at once", async () => {
 		const held = Promise.withResolvers<void>();

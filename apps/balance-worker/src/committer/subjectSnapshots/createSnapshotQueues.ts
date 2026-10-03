@@ -41,8 +41,6 @@ type PartitionWrites = {
 	pendingCount: number;
 	scheduled: boolean;
 	warned: boolean;
-	/** Settled when the partition's last write landed and nothing more waits. */
-	drained: (() => void)[];
 };
 
 type SnapshotQueuesContext = {
@@ -108,17 +106,6 @@ export const createSnapshotQueues = ({
 		const landing =
 			writes?.deletes.get(customerKey) ?? writes?.deleting.get(customerKey);
 		return landing?.promise ?? Promise.resolve([]);
-	}
-
-	function drain(position: PartitionPosition): Promise<void> {
-		const writes = byPartition.get(keyOf(position));
-		if (!writes) return Promise.resolve();
-		return new Promise((resolve) => writes.drained.push(resolve));
-	}
-
-	function pending(position: PartitionPosition): number {
-		const writes = byPartition.get(keyOf(position));
-		return writes ? writes.pendingCount + writes.deleting.size : 0;
 	}
 
 	function enqueueRefresh({
@@ -209,7 +196,7 @@ export const createSnapshotQueues = ({
 		// Flipped off since these were enqueued: what they would write is no longer served by anyone.
 		if (!writesSubjectSnapshots(settings)) {
 			for (const landing of writes.deletes.values()) landing.resolve([]);
-			settle({ key, writes });
+			byPartition.delete(key);
 			return;
 		}
 		const snapshotIntent = takeWrites({ writes, batch: settings.dropBatch });
@@ -235,23 +222,11 @@ export const createSnapshotQueues = ({
 				landing.resolve(deletedByCustomer.get(customerKey) ?? []);
 			writes.deleting.clear();
 			if (writes.pendingCount === 0 && !writes.scheduled)
-				settle({ key, writes });
+				byPartition.delete(key);
 		}
 	}
 
-	/** The partition has nothing left on the lane: forget it, and answer whoever waited for that. */
-	function settle({
-		key,
-		writes,
-	}: {
-		key: string;
-		writes: PartitionWrites;
-	}): void {
-		byPartition.delete(key);
-		for (const resolve of writes.drained.splice(0)) resolve();
-	}
-
-	return { enqueueDelete, enqueueRefresh, deleteLanded, drain, pending };
+	return { enqueueDelete, enqueueRefresh, deleteLanded };
 };
 
 /** The rows a statement removed, under the engine's customer key, so each evict is answered with its own. */
@@ -291,7 +266,6 @@ function partitionWritesOf({
 		pendingCount: 0,
 		scheduled: false,
 		warned: false,
-		drained: [],
 	};
 	byPartition.set(key, writes);
 	return writes;
