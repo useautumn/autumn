@@ -70,6 +70,7 @@ export const createPipeline = ({
 	const batches: MeteringRecord[][] = [];
 	const bookmarks: bigint[] = [];
 	const parked: { partition: number; cause: unknown }[] = [];
+	const logs: string[] = [];
 	let appends = 0;
 	let processed = 0;
 	let bookmark: bigint | null = null;
@@ -139,6 +140,10 @@ export const createPipeline = ({
 			findOwnedRuntime: () => runtime,
 			readCommandNextOffset: () => bookmark,
 			idempotencyKeys: createFakeIdempotencyKeys().keys,
+			logger: {
+				info: (message: string) => logs.push(`info:${message}`),
+				warn: (message: string) => logs.push(`warn:${message}`),
+			} as never,
 			markUnavailable: (failure) => {
 				parked.push(failure);
 			},
@@ -181,6 +186,7 @@ export const createPipeline = ({
 		batches,
 		bookmarks,
 		parked,
+		logs,
 		close,
 		readBookmark: () => bookmark,
 		readProcessed: () => processed,
