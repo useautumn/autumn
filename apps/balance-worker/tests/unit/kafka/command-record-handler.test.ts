@@ -65,15 +65,26 @@ function createFixture({
 					completed.push(source);
 					return result;
 				},
-				track: async (params: { command: TrackCommand }) => {
+				decideTrack: async (params: { command: TrackCommand }) => {
 					expect(Object.keys(params)).toEqual(["command"]);
 					tracked.push(params.command);
 					if (outcome instanceof Error) throw outcome;
-					return { result: { status: outcome ?? "applied", reason: null } };
+					const result = {
+						type: "track",
+						status: outcome ?? "applied",
+						reason: null,
+					};
+					return {
+						kind: "write",
+						waitForCommit: async () => ({ mutation: { result } }),
+					};
 				},
-				reset: async () => {
+				decideReset: async () => {
 					if (outcome instanceof Error) throw outcome;
-					return { result: null };
+					return {
+						kind: "reply",
+						waitForCommit: async () => ({ result: null }),
+					};
 				},
 				evict: async (params: { command: EvictCommand }) => {
 					evicted.push(params.command);
@@ -201,6 +212,7 @@ describe("command record handler", () => {
 
 		const rejected = createFixture({ outcome: "rejected" });
 		await rejected.handler.applyRecord(recordOf({ command }));
+		await rejected.handler.settleBatch?.({ topic, partition });
 		expect(rejected.logs).toEqual([
 			"warn:Queued track rejected by the balance",
 		]);

@@ -15,8 +15,14 @@ import {
 	type CommandPipeline,
 	createCommandPipeline,
 	customers,
+	identityOf,
 	STARTING_BALANCE,
 } from "../../fixtures/commandPipeline.js";
+import {
+	createCustomerEntitlement,
+	createState,
+	testOccurredAt,
+} from "../../fixtures/mutations.js";
 import {
 	resetOf,
 	trackOf,
@@ -30,6 +36,18 @@ const queuedTracks = ({ count }: { count: number }) =>
 	Array.from({ length: count }, (_, index) =>
 		trackOf({ customerId: customerOf({ index }), commandId: `track_${index}` }),
 	);
+
+/** A customer whose balance cycle ended before the commands' clock: its reset writes a refill. */
+const dueForResetState = ({ customerId }: { customerId: string }) =>
+	createState({
+		identity: identityOf({ customerId }),
+		customerEntitlements: [
+			{
+				...createCustomerEntitlement({ balance: 3 }),
+				next_reset_at: testOccurredAt - 1_000,
+			},
+		],
+	});
 
 const offsetsOf = ({ commands }: { commands: CommandRecord[] }) =>
 	commands.map((_, offset) => offset);
@@ -69,26 +87,60 @@ describe("queued commit batching", () => {
 		}
 	});
 
-	test("resets and balance updates share commits too; a reset with nothing due still moves the bookmark, in order", async () => {
-		const pipeline = createCommandPipeline();
+	test("resets and balance updates share commits with tracks, and their offsets move forward in order", async () => {
+		const resets = Array.from({ length: 10 }, (_, index) => `due_${index}`);
+		const pipeline = createCommandPipeline({
+			states: resets.map((customerId) => dueForResetState({ customerId })),
+		});
 		try {
-			const builders = [trackOf, resetOf, updateBalanceOf];
-			const commands: CommandRecord[] = Array.from({ length: 30 }, (_, index) =>
-				(builders[index % builders.length] ?? trackOf)({
-					customerId: customerOf({ index }),
-					commandId: `command_${index}`,
-				}),
+			const commands: CommandRecord[] = Array.from(
+				{ length: 30 },
+				(_, index) => {
+					const commandId = `command_${index}`;
+					const customerId = customerOf({ index });
+					if (index % 3 === 1)
+						return resetOf({
+							customerId: resets[(index - 1) / 3] ?? "due_0",
+							commandId,
+						});
+					if (index % 3 === 2)
+						return updateBalanceOf({ customerId, commandId });
+					return trackOf({ customerId, commandId });
+				},
 			);
 			await pipeline.consumeBatch({ commands });
 			await pipeline.drain();
 
-			const writes = commands.flatMap((command, offset) =>
-				command.type === "reset" ? [] : [offset],
-			);
-			expect(pipeline.committedSources()).toEqual(writes);
-			expect(pipeline.commits.length).toBeLessThan(writes.length);
+			expect(pipeline.committedSources()).toEqual(offsetsOf({ commands }));
+			expect(pipeline.commits.length).toBeLessThan(commands.length);
 			expect(isNonDecreasing(pipeline.bookmarks)).toBe(true);
 			expect(pipeline.readBookmark()).toBe(30n);
+		} finally {
+			await pipeline.close();
+		}
+	});
+
+	test("a reset with nothing due leaves no record, and its offset still lands in order behind the writes decided before it", async () => {
+		const pipeline = createCommandPipeline();
+		try {
+			const commands: CommandRecord[] = Array.from(
+				{ length: 12 },
+				(_, index) => {
+					const customerId = customerOf({ index });
+					const commandId = `command_${index}`;
+					return index % 2 === 1
+						? resetOf({ customerId, commandId })
+						: trackOf({ customerId, commandId });
+				},
+			);
+			await pipeline.consumeBatch({ commands });
+			await pipeline.drain();
+
+			expect(pipeline.committedSources()).toEqual(
+				offsetsOf({ commands }).filter((offset) => offset % 2 === 0),
+			);
+			expect(isNonDecreasing(pipeline.bookmarks)).toBe(true);
+			expect(pipeline.readBookmark()).toBe(12n);
 		} finally {
 			await pipeline.close();
 		}

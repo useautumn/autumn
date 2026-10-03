@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { MeteringIdentity } from "@autumn/balance-engine";
+import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
 import {
 	type CommandRecord,
 	type MeteringRecord,
@@ -46,7 +46,10 @@ export const identityOf = ({
 export const createCommandPipeline = ({
 	failAppendAt,
 	heldAppend,
+	states = [],
 }: {
+	/** Subjects resident beside the default customers. */
+	states?: SubjectState[];
 	/** The nth commit (0-based) the broker refuses outright. */
 	failAppendAt?: number;
 	/** The nth commit (0-based) stays in flight until `until` resolves. */
@@ -61,12 +64,15 @@ export const createCommandPipeline = ({
 		store,
 		topic,
 		partition,
-		states: customers.map((customerId) =>
-			createState({
-				identity: identityOf({ customerId }),
-				balance: STARTING_BALANCE,
-			}),
-		),
+		states: [
+			...customers.map((customerId) =>
+				createState({
+					identity: identityOf({ customerId }),
+					balance: STARTING_BALANCE,
+				}),
+			),
+			...states,
+		],
 	});
 
 	const commits: MeteringRecord[][] = [];
@@ -175,6 +181,8 @@ export const createCommandPipeline = ({
 				},
 			});
 			if (parked.length > 0) return;
+			// The consumer's heartbeat between records is where the writer's commit loop gets its turn.
+			await new Promise<void>((resolve) => setImmediate(resolve));
 		}
 		await handler.settleBatch?.({ topic, partition });
 	}

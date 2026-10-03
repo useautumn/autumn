@@ -47,6 +47,8 @@ export async function executeCommand<Decision>({
 	if (!wroteMutation) {
 		await precedingWrites;
 		await scope.ctx.writer.flushDeferredLogs();
+		// An earlier queued command whose commit failed is a gap this bookmark must not pass.
+		scope.ctx.writer.assertCommitsHealthy();
 		await completeCommand({ scope, source });
 	}
 	return result;
