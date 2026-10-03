@@ -53,7 +53,7 @@ export const attachAndExpectCorrect = async ({
 	shouldBeCanceled = false,
 	checkNotTrialing = false,
 	attachParams,
-	skipInvoiceCheck: skipInvoiceCheckParam = false,
+	expectNoInvoice = false,
 }: {
 	autumn: AutumnInt;
 	customerId: string;
@@ -78,7 +78,7 @@ export const attachAndExpectCorrect = async ({
 	shouldBeCanceled?: boolean;
 	checkNotTrialing?: boolean;
 	attachParams?: Partial<AttachParamsV0Input>;
-	skipInvoiceCheck?: boolean;
+	expectNoInvoice?: boolean;
 }) => {
 	const preview = await autumn.attachPreview({
 		customer_id: customerId,
@@ -177,12 +177,16 @@ export const attachAndExpectCorrect = async ({
 	});
 
 	const skipInvoiceCheck =
-		skipInvoiceCheckParam ||
+		expectNoInvoice ||
 		(preview.branch === AttachBranch.UpdatePrepaidQuantity &&
 			checkoutRes.total === 0) ||
 		preview.branch === AttachBranch.Downgrade;
 
 	const freeProduct = isFreeProductV2({ product });
+
+	if (expectNoInvoice) {
+		expect(customer.invoices ?? []).toHaveLength(0);
+	}
 
 	if (!skipInvoiceCheck && !freeProduct) {
 		expectInvoicesCorrect({
