@@ -144,6 +144,7 @@ export * from "./models/featureModels/featureConfig/meteredConfig";
 export * from "./models/featureModels/featureEnums";
 export * from "./models/featureModels/featureModels";
 export * from "./models/meteringLogModels/partitionProgressTable";
+export * from "./models/meteringLogModels/subjectSnapshotTable";
 
 // export * from "./models/featureModels/featureResModels";
 
