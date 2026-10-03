@@ -15,6 +15,7 @@ import { getCusBillingDetailsRes } from "../cusResponseUtils/getCusBillingDetail
 import { getCusInvoicePreviews } from "../cusResponseUtils/getCusInvoicePreviews.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
+import { getCusReferredBy } from "../cusResponseUtils/getCusReferredBy.js";
 import { getCusRewards } from "../cusResponseUtils/getCusRewards.js";
 import { getCusTrialsUsed } from "../cusResponseUtils/getCusTrialsUsed.js";
 
@@ -85,6 +86,7 @@ export const getApiCustomerExpandV2 = async ({
 		entities,
 		rewards,
 		referrals,
+		referredBy,
 		paymentMethod,
 		trialsUsed,
 		autoTopupsWithLimits,
@@ -100,6 +102,11 @@ export const getApiCustomerExpandV2 = async ({
 			expand: cusExpand,
 		}),
 		getCusReferrals({
+			db: ctx.db,
+			fullCus,
+			expand: cusExpand,
+		}),
+		getCusReferredBy({
 			db: ctx.db,
 			fullCus,
 			expand: cusExpand,
@@ -139,6 +146,7 @@ export const getApiCustomerExpandV2 = async ({
 		entities: entities ?? undefined,
 		rewards: rewards ?? undefined,
 		referrals: referrals ?? undefined,
+		referred_by: referredBy ?? undefined,
 		payment_method: paymentMethod ?? undefined,
 		billing_details: billingDetails,
 		billing_controls_override: autoTopupsWithLimits
