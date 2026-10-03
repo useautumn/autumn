@@ -81,7 +81,7 @@ export const MainSidebar = ({
 							: "min-w-[52px] max-w-[52px]",
 				)}
 			>
-				<div className="relative flex flex-col gap-3.5">
+				<div className="relative flex flex-col gap-3">
 					<div
 						className={cn(
 							"flex items-center gap-1",
@@ -89,21 +89,29 @@ export const MainSidebar = ({
 						)}
 					>
 						<OrgDropdown />
-						{expanded && !isMobileSheet && (
-							<button
-								type="button"
-								aria-label="Collapse sidebar"
-								title="Collapse sidebar (⌘B)"
-								onClick={() => setExpanded((prev) => !prev)}
-								className={SIDEBAR_HEADER_ICON_BUTTON_CLASS}
-							>
-								<PanelLeft className="size-[15px]" strokeWidth={ICON_STROKE} />
-							</button>
+						{expanded && (
+							<div className="flex shrink-0 items-center">
+								<SidebarSearchButton />
+								{!isMobileSheet && (
+									<button
+										type="button"
+										aria-label="Collapse sidebar"
+										title="Collapse sidebar (⌘B)"
+										onClick={() => setExpanded((prev) => !prev)}
+										className={SIDEBAR_HEADER_ICON_BUTTON_CLASS}
+									>
+										<PanelLeft
+											className="size-[15px]"
+											strokeWidth={ICON_STROKE}
+										/>
+									</button>
+								)}
+							</div>
 						)}
 					</div>
 					<EnvDropdown env={env} />
-					<nav className="flex flex-col gap-[18px]">
-						<SidebarSearchButton />
+					<nav className="flex flex-col gap-[18px] pt-2.5">
+						{!expanded && <SidebarSearchButton />}
 						<NavSection title="Catalog">
 							<NavButton
 								value="products"
