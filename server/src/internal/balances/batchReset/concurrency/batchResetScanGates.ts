@@ -97,8 +97,9 @@ export const waitForQueueDrained = async ({
 		if (!warnedStuck && waitedMs > BARRIER_STUCK_WARN_MS) {
 			warnedStuck = true;
 			logger.error(
-				"[reset-cus-ents-v2] sweep barrier stuck — workers not draining the batch reset queue",
+				"[reset-cus-ents-v2] sweep barrier wait exceeded 30 minutes; waiting for consecutive empty queue reads",
 				{
+					type: "batch_reset_barrier_wait_exceeded",
 					jobName: "reset-cus-ents-v2",
 					data: {
 						queueVisible: depth.visible,

@@ -1,8 +1,9 @@
 import { describe, expect, it, mock } from "bun:test";
 import { Writable } from "node:stream";
+import type { Event } from "@sentry/bun";
 
 const captureException = mock(() => "event_123");
-const captureEvent = mock(() => "event_456");
+const captureEvent = mock((_event: Event) => "event_456");
 const loggedFrames = [
 	{
 		filename: "/app/server/src/sync/syncBatching.ts",
@@ -451,6 +452,64 @@ describe("createErrorLogHook", () => {
 		});
 	});
 
+	it.each([
+		{ type: "pending_plan_expiry_failed", bindings: {}, operation: undefined },
+		{
+			type: "subject_balance_flush_failed",
+			bindings: { req: { route: "POST /webhooks/connect/:env" } },
+			operation: "POST /webhooks/connect/:env",
+		},
+		{
+			type: "batch_reset_barrier_wait_exceeded",
+			bindings: {},
+			operation: undefined,
+		},
+		{
+			type: "subject_balance_flush_failed",
+			bindings: { workflow: { name: "track" }, req: { route: "POST /track" } },
+			operation: "track",
+		},
+	])(
+		"keeps text-only grouping and operation precedence when adding $type",
+		({ type, bindings, operation }) => {
+			captureEvent.mockClear();
+			captureException.mockClear();
+			const { logger } = createTestLogger();
+			const sourceLogger = logger.child(bindings);
+			const fingerprint = [
+				"logged-message",
+				"/app/server/src/sync/syncBatching.ts:queueSyncJob",
+			];
+
+			sourceLogger.error("Original failure for customer_123");
+			const before = captureEvent.mock.calls[0][0];
+			expect(before.fingerprint).toEqual(fingerprint);
+			expect(before.tags?.operation).toBe(operation);
+
+			for (const message of [
+				"Failure for customer_123",
+				"Failure for customer_456",
+			]) {
+				sourceLogger.error({ type }, message);
+				const after = captureEvent.mock.calls.at(-1)?.[0];
+				expect(after?.fingerprint).toEqual(before.fingerprint);
+				expect(after?.tags).toEqual({
+					...before.tags,
+					operation: operation ?? type,
+				});
+				expect(after?.level).toBe(before.level);
+				expect(after?.exception?.values?.[0]).toEqual({
+					...before.exception?.values?.[0],
+					type,
+					value: message,
+				});
+			}
+
+			expect(captureEvent).toHaveBeenCalledTimes(3);
+			expect(captureException).not.toHaveBeenCalled();
+		},
+	);
+
 	it("finds a bare Error passed as the first argument", () => {
 		captureException.mockClear();
 		const { jobLogger, lines } = createTestLogger();
@@ -459,6 +518,31 @@ describe("createErrorLogHook", () => {
 
 		expect(captureException).toHaveBeenCalledTimes(1);
 		expect(lines[0].error).toMatchObject({ kind: "bug", message: "bare" });
+	});
+
+	it("keeps native exception identity when a log line has a static type", () => {
+		captureEvent.mockClear();
+		captureException.mockClear();
+		const { jobLogger } = createTestLogger();
+		const error = new TypeError("original failure");
+
+		jobLogger.error(
+			{ type: "subject_balance_flush_failed", error },
+			"flush failed",
+		);
+
+		expect(captureEvent).not.toHaveBeenCalled();
+		expect(captureException).toHaveBeenCalledWith(
+			error,
+			expect.objectContaining({
+				tags: expect.objectContaining({
+					error_kind: "bug",
+					operation: "track",
+				}),
+			}),
+		);
+		expect(error.name).toBe("TypeError");
+		expect(error.message).toBe("original failure");
 	});
 
 	it("logs the line even when Sentry throws", () => {

@@ -19,7 +19,7 @@
  *     - respects an aborted signal
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { BatchResetQueueDepth } from "@/internal/balances/batchReset/concurrency/getBatchResetQueueDepth.js";
 import { ResetJobV2ConfigSchema } from "@/internal/misc/resetJobV2/resetJobV2Schemas.js";
 import { setResetJobV2ConfigForTesting } from "@/internal/misc/resetJobV2/resetJobV2Store.js";
@@ -96,6 +96,31 @@ describe("waitForQueueBelowHighWater (gate A)", () => {
 });
 
 describe("waitForQueueDrained (gate B)", () => {
+	test("labels a prolonged barrier wait without claiming workers are stuck", async () => {
+		setDepthSequence([0, 0]);
+		const waitedMs = 30 * 60 * 1000 + 1;
+		const now = spyOn(Date, "now").mockReturnValue(waitedMs);
+		now.mockReturnValueOnce(0);
+		const logError = spyOn(logger, "error").mockImplementation(() => {});
+
+		try {
+			await waitForQueueDrained({ logger, signal: liveSignal() });
+			expect(depthCalls).toBe(2);
+			expect(logError).toHaveBeenCalledTimes(1);
+			expect(logError).toHaveBeenCalledWith(
+				"[reset-cus-ents-v2] sweep barrier wait exceeded 30 minutes; waiting for consecutive empty queue reads",
+				{
+					type: "batch_reset_barrier_wait_exceeded",
+					jobName: "reset-cus-ents-v2",
+					data: { queueVisible: 0, queueInFlight: 0, waitedMs },
+				},
+			);
+		} finally {
+			now.mockRestore();
+			logError.mockRestore();
+		}
+	});
+
 	test("returns only after two consecutive zero reads", async () => {
 		setDepthSequence([3, 0, 0]);
 		await waitForQueueDrained({ logger, signal: liveSignal() });

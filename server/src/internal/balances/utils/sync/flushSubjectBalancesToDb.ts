@@ -134,5 +134,6 @@ export const flushSubjectBalancesToDb = async ({
 
 	logger.error(
 		`[flushSubjectBalancesToDb] ${customerId}: flush failed, persistence outcome unknown, source: ${source}, error: ${error}`,
+		{ type: "subject_balance_flush_failed" },
 	);
 };
