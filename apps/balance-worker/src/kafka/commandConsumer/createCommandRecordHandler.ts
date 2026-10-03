@@ -9,6 +9,7 @@ import {
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import { consumeEvict } from "../../consume/consumeEvict.js";
+import { consumeFinalize } from "../../consume/consumeFinalize.js";
 import { consumeReset } from "../../consume/consumeReset.js";
 import { consumeTrack } from "../../consume/consumeTrack.js";
 import { consumeUpdateBalance } from "../../consume/consumeUpdateBalance.js";
@@ -130,6 +131,12 @@ export function createCommandRecordHandler({
 						break;
 					case "updateBalance":
 						await consumeUpdateBalance({
+							ctx: { processor, logger: ctx.logger },
+							command,
+						});
+						break;
+					case "finalize":
+						await consumeFinalize({
 							ctx: { processor, logger: ctx.logger },
 							command,
 						});
