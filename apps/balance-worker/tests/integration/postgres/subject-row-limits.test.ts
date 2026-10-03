@@ -27,7 +27,7 @@ describe.skipIf(!databaseUrl)("subject row limits", () => {
 	});
 
 	const loadCustomer = async ({ seeded }: { seeded: SeededCustomer }) => {
-		const { envelope } = await getSubjectRows({
+		const envelope = await getSubjectRows({
 			ctx: { db: postgres.db, orgId: seeded.orgId, env: seeded.env },
 			customerId: seeded.identity.customerId,
 			asOfTimestampMs: Date.now(),

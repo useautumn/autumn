@@ -19,10 +19,13 @@ export type Subject = {
 
 export type SubjectHydratorContext = {
 	catalogCache: CatalogCache;
-	db: Pick<WorkerDb, "getSubjectRows" | "getEntitySubjectRows">;
+	db: Pick<
+		WorkerDb,
+		"getSubjectRows" | "readSubjectSnapshot" | "getEntitySubjectRows"
+	>;
 	writer: Pick<PartitionWriter, "decide" | "readFreshestState" | "adopt">;
 	receiptPolicy: ReceiptPolicy;
-	/** Read at each cold load: `serve` asks for the subject's snapshot in the same statement as its rows; absent or any other mode, every load is the rows. */
+	/** Read at each cold load: `serve` probes the subject's snapshot before its rows; absent or any other mode, every load is the rows. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Defaults to "log", the sqlite store's answer. */
 	baseline?: SubjectBaseline;
