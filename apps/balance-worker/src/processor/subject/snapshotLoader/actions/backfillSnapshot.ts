@@ -1,31 +1,29 @@
 import {
-	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { SubjectScope } from "../../types/subject.js";
+import type { SnapshotWaiting } from "../types/snapshotLoader.js";
 
 /**
- * Rows the full query answered are written back so the next cold load is a hit. The caller skips this when an
- * evict landed during the read: the rows may predate the write behind it, and the evict's DELETE is already on the lane.
+ * A miss answered by the full query is written back so the next cold load is a hit. Skipped when an evict landed
+ * during the read: the rows may predate the write behind it, and the evict's DELETE is already on the lane.
  */
 export const backfillSnapshot = ({
 	scope,
-	identity,
+	waiting,
 	baseline,
-	baselineAt,
 }: {
 	scope: SubjectScope;
-	identity: MeteringIdentity;
+	waiting: SnapshotWaiting;
 	baseline: SubjectState;
-	baselineAt: number;
 }): void => {
 	const { snapshotWrites, position } = scope.ctx;
-	if (!snapshotWrites || !position) return;
+	if (!snapshotWrites || !position || waiting.overtaken()) return;
 	snapshotWrites.enqueueBackfill({
 		...position,
-		customerKey: meteringIdentityToPartitionKey({ identity }),
+		customerKey: meteringIdentityToPartitionKey({ identity: waiting.identity }),
 		states: [baseline],
-		baselineAt,
+		baselineAt: waiting.asOf,
 	});
 };
