@@ -99,8 +99,8 @@ export function createPartitionWriter({
 		return evictCustomer({ scope, customerKey });
 	}
 
-	function adopt({ state }: Parameters<PartitionWriter["adopt"]>[0]) {
-		return adoptState({ scope, state });
+	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {
+		return adoptState({ scope, ...params });
 	}
 
 	function waitForStore() {

@@ -1,4 +1,5 @@
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";
 import type { CommitterDb } from "../../types/committerDb.js";
 
@@ -57,6 +58,8 @@ export type FlushCall = PartitionPosition & {
 	ownerFence?: OwnerFence;
 	claimToken?: string;
 	records: readonly DurableMutationRecord[];
+	/** The writer's word on the customers these records touch; absent on a replay. */
+	snapshotIntent?: SnapshotIntent;
 	rows: number;
 	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
 };
@@ -87,6 +90,7 @@ export type Committer = {
 			ownerFence?: OwnerFence;
 			claimToken?: string;
 			records: readonly DurableMutationRecord[];
+			snapshotIntent?: SnapshotIntent;
 		},
 	): Promise<FlushOutcome>;
 	/** Resolves once nothing is queued or in flight. */
