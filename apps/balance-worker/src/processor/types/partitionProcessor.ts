@@ -63,7 +63,11 @@ export type PartitionProcessor = {
 	applyBillingPlan(params: {
 		request: ApplyBillingPlanRequest;
 	}): Promise<ApplyBillingPlanReply>;
-	evict(params: { command: EvictCommand }): Promise<EvictReply>;
+	/** Answers once the rows are gone from memory and, unless told otherwise, once the customer's snapshot DELETE has landed. */
+	evict(params: {
+		command: EvictCommand;
+		waitsForSnapshotDelete?: boolean;
+	}): Promise<EvictReply>;
 	flush(params: { command: FlushCommand }): Promise<FlushReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	confirmExpiredLock(params: {

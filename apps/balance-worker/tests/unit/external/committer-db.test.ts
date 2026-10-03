@@ -18,7 +18,19 @@ function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 				statements.push({ via, sql, params });
 				if (sql.includes("AS snapshot_deletes"))
 					return [
-						{ applied, bookmarks: 1, snapshot_upserts: 2, snapshot_deletes: 4 },
+						{
+							applied,
+							bookmarks: 1,
+							snapshot_upserts: 2,
+							snapshot_deletes: ["", "en_1", "en_2", "en_3"].map(
+								(entityId) => ({
+									org_id: "org_1",
+									env: "live",
+									customer_id: "cus_1",
+									entity_id: entityId,
+								}),
+							),
+						},
 					];
 				return sql.includes("AS bookmarks")
 					? [{ applied, bookmarks: 1 }]
@@ -143,7 +155,13 @@ describe("createCommitterDb", () => {
 			},
 		});
 
-		expect(result.snapshots).toEqual({ upserted: 2, deleted: 4 });
+		expect(result.snapshots?.upserted).toBe(2);
+		expect(result.snapshots?.deleted.map((row) => row.entityId)).toEqual([
+			null,
+			"en_1",
+			"en_2",
+			"en_3",
+		]);
 		expect(timings.drain().subjectSnapshots).toEqual({
 			upserted: 2,
 			deleted: 4,

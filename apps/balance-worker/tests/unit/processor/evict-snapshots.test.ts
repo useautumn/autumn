@@ -2,13 +2,17 @@ import { describe, expect, test } from "bun:test";
 import {
 	type EvictCommand,
 	meteringIdentityToPartitionKey,
+	meteringIdentityToSubjectKey,
 	parseCheckCommand,
 	partitionKeyToMeteringIdentity,
 } from "@autumn/balance-engine";
+import type { SubjectRowsEnvelope } from "@autumn/postgres";
+import { AppEnv } from "@autumn/shared";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import type { WorkerDb } from "../../../src/types/workerDb.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -31,23 +35,65 @@ const keyOf = (customerId: string) =>
 const customerIdOf = (customerKey: string) =>
 	partitionKeyToMeteringIdentity({ partitionKey: customerKey }).customerId;
 
-const evictOf = ({ customerId }: { customerId: string }): EvictCommand => ({
+const evictOf = ({
+	customerId,
+	refreshSnapshots,
+}: {
+	customerId: string;
+	refreshSnapshots?: boolean;
+}): EvictCommand => ({
 	schemaVersion: 1,
 	type: "evict",
 	requestId: `req_${customerId}`,
 	identity: { orgId: "org_1", env: "sandbox", customerId, entityId: null },
 	occurredAt: 1_700_000_000_000,
+	...(refreshSnapshots !== undefined && { refreshSnapshots }),
 });
 
 /** The production processor over the committer's store with evict deletes; DELETEs wait on `deleteGate`. */
-const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
+const createProcessor = async ({
+	logsEvicts,
+	db = createSyntheticWorkerDb(),
+	rowsOf = () => [],
+}: {
+	logsEvicts: boolean;
+	db?: WorkerDb;
+	/** The snapshot rows Postgres holds for a customer, by entity id (null for its own): what its DELETE returns. */
+	rowsOf?: (customerId: string) => (string | null)[];
+}) => {
 	const deleted: string[][] = [];
+	/** Subject keys of the rows each refresh statement wrote. */
+	const refreshed: string[][] = [];
 	const deleteGate = { held: Promise.resolve() as Promise<void> };
 	const committer: Committer = {
 		apply: async ({ records, expectedOffset, snapshotIntent }) => {
 			if (records.length === 0 && snapshotIntent) {
-				await deleteGate.held;
-				deleted.push([...snapshotIntent.keys()]);
+				const entries = [...snapshotIntent.values()];
+				if (entries.every((entry) => entry === "delete")) {
+					await deleteGate.held;
+					deleted.push([...snapshotIntent.keys()]);
+					return {
+						nextOffset: expectedOffset,
+						deletedSnapshots: [...snapshotIntent.keys()].flatMap((key) => {
+							const customer = partitionKeyToMeteringIdentity({
+								partitionKey: key,
+							});
+							return rowsOf(customer.customerId).map((entityId) => ({
+								...customer,
+								entityId,
+							}));
+						}),
+					};
+				}
+				refreshed.push(
+					entries.flatMap((entry) =>
+						entry === "delete"
+							? []
+							: entry.states.map((state) =>
+									meteringIdentityToSubjectKey({ identity: state.identity }),
+								),
+					),
+				);
 				return { nextOffset: expectedOffset };
 			}
 			return {
@@ -79,7 +125,7 @@ const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
 				advanceCommandNextOffset: async () => undefined,
 			},
 			catalogCache: createTestCatalogCache(),
-			db: createSyntheticWorkerDb(),
+			db,
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
 					const baseOffset = appended;
@@ -104,7 +150,7 @@ const createProcessor = async ({ logsEvicts }: { logsEvicts: boolean }) => {
 			logsEvicts,
 		},
 	});
-	return { processor, deleted, deleteGate };
+	return { processor, deleted, refreshed, deleteGate };
 };
 
 describe("evict snapshot deletes", () => {
@@ -116,7 +162,9 @@ describe("evict snapshot deletes", () => {
 		await processor.drain();
 		const held = Promise.withResolvers<void>();
 		deleteGate.held = held.promise;
-		await processor.evict({ command: evictOf({ customerId: "cus_other" }) });
+		const evicted = processor.evict({
+			command: evictOf({ customerId: "cus_other" }),
+		});
 		await Bun.sleep(2);
 		expect(deleted).toEqual([]);
 		try {
@@ -141,12 +189,12 @@ describe("evict snapshot deletes", () => {
 		} finally {
 			held.resolve();
 		}
-		await Bun.sleep(2);
+		await evicted;
 		expect(deleted).toEqual([[keyOf("cus_other")]]);
 	});
 
 	test.each([true, false])(
-		"an evict over HTTP answers once the rows are gone from memory; its DELETE lands on the lane behind it (evicts logged: %p)",
+		"an evict over HTTP answers only once its snapshot DELETE has landed (evicts logged: %p)",
 		async (logsEvicts) => {
 			const { processor, deleted, deleteGate } = await createProcessor({
 				logsEvicts,
@@ -154,17 +202,30 @@ describe("evict snapshot deletes", () => {
 			const held = Promise.withResolvers<void>();
 			deleteGate.held = held.promise;
 
-			await processor.evict({ command: evictOf({ customerId: "cus_1" }) });
-			await Bun.sleep(2);
+			let answered = false;
+			const evicted = processor
+				.evict({ command: evictOf({ customerId: "cus_1" }) })
+				.then(() => {
+					answered = true;
+				});
+			await Bun.sleep(5);
 			expect(deleted).toEqual([]);
+			expect(answered).toBe(false);
 
 			held.resolve();
-			await Bun.sleep(2);
+			await evicted;
 			expect(deleted).toEqual([[keyOf("cus_1")]]);
 		},
 	);
 
+	test("an evict with nothing resident still lands its DELETE before it answers", async () => {
+		const { processor, deleted } = await createProcessor({ logsEvicts: false });
+		await processor.evict({ command: evictOf({ customerId: "cus_nobody" }) });
+		expect(deleted).toEqual([[keyOf("cus_nobody")]]);
+	});
+
 	test("queued evicts never wait on the lane, and the ones behind an in-flight DELETE share the next", async () => {
+		// The stream is serial and answers nobody, so consumeEvict asks for no wait.
 		const { processor, deleted, deleteGate } = await createProcessor({
 			logsEvicts: true,
 		});
@@ -176,7 +237,11 @@ describe("evict snapshot deletes", () => {
 			await processor.execute({
 				source: { commandOffset: String(index) },
 				deferredLogs,
-				run: (scope) => scope.evict({ command: evictOf({ customerId }) }),
+				run: (scope) =>
+					scope.evict({
+						command: evictOf({ customerId }),
+						waitsForSnapshotDelete: false,
+					}),
 			});
 			await Bun.sleep(1);
 		}
@@ -190,5 +255,114 @@ describe("evict snapshot deletes", () => {
 			["cus_1"],
 			["cus_2", "cus_3"],
 		]);
+	});
+});
+
+describe("evict snapshot refreshes", () => {
+	const identityOf = (customerId: string, entityId: string | null = null) => ({
+		orgId: "org_1",
+		env: "sandbox",
+		customerId,
+		entityId,
+	});
+
+	const envelopeOf = (identity: {
+		customerId: string;
+		entityId: string | null;
+	}): SubjectRowsEnvelope => ({
+		customer: {
+			internal_id: `${identity.customerId}_internal`,
+			id: identity.customerId,
+			org_id: "org_1",
+			env: AppEnv.Sandbox,
+			created_at: 1_700_000_000_000,
+			processor: null,
+			metadata: null,
+			send_email_receipts: false,
+			config: null,
+			spend_limits: null,
+			overage_allowed: null,
+			usage_limits: null,
+			usage_alerts: null,
+		},
+		customer_products: [],
+		customer_prices: [],
+		customer_entitlements: [],
+		rollovers: [],
+		replaceables: [],
+		usage_windows: [],
+		pooled_balances: [],
+		customer_licenses: [],
+		open_locks: [],
+		entity: identity.entityId
+			? {
+					id: identity.entityId,
+					internal_id: `${identity.entityId}_internal`,
+					internal_customer_id: `${identity.customerId}_internal`,
+					feature_id: "seats",
+					internal_feature_id: "feat_seats",
+					org_id: "org_1",
+					env: AppEnv.Sandbox,
+					created_at: 1_700_000_000_000,
+					name: null,
+					deleted: false,
+				}
+			: null,
+	});
+
+	/** A Postgres whose full reads answer the subject's own empty rows, counting each read. */
+	const createReadingDb = () => {
+		const fullReads: string[] = [];
+		const db: WorkerDb = {
+			...createSyntheticWorkerDb(),
+			getSubjectRows: async ({ identity }) => {
+				fullReads.push(meteringIdentityToSubjectKey({ identity }));
+				return envelopeOf(identity);
+			},
+		};
+		return { db, fullReads };
+	};
+
+	test("an evict asked to refresh rebuilds exactly the rows its DELETE removed, after it landed", async () => {
+		const { db, fullReads } = createReadingDb();
+		const { processor, deleted, refreshed } = await createProcessor({
+			logsEvicts: false,
+			db,
+			rowsOf: () => [null, "en_1"],
+		});
+		await processor.evict({
+			command: evictOf({ customerId: "cus_1", refreshSnapshots: true }),
+		});
+		expect(deleted).toEqual([[keyOf("cus_1")]]);
+		await processor.drain();
+		await Bun.sleep(10);
+		expect(fullReads.sort()).toEqual(
+			[identityOf("cus_1"), identityOf("cus_1", "en_1")]
+				.map((identity) => meteringIdentityToSubjectKey({ identity }))
+				.sort(),
+		);
+		expect(refreshed.flat().sort()).toEqual(fullReads.sort());
+	});
+
+	test("a DELETE that removed nothing, or an evict not asked to refresh, rebuilds nothing", async () => {
+		const none = createReadingDb();
+		const silent = createReadingDb();
+		const noRows = await createProcessor({ logsEvicts: false, db: none.db });
+		const notAsked = await createProcessor({
+			logsEvicts: false,
+			db: silent.db,
+			rowsOf: () => [null],
+		});
+		await noRows.processor.evict({
+			command: evictOf({ customerId: "cus_1", refreshSnapshots: true }),
+		});
+		await notAsked.processor.evict({
+			command: evictOf({ customerId: "cus_1" }),
+		});
+		await Bun.sleep(10);
+		expect(none.fullReads).toEqual([]);
+		expect(silent.fullReads).toEqual([]);
+		expect(noRows.refreshed).toEqual([]);
+		expect(notAsked.refreshed).toEqual([]);
 	});
 });
