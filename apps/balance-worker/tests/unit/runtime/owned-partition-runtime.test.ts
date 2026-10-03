@@ -347,8 +347,6 @@ const createRuntime = ({
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
 	storeApplyGate,
-	snapshotQueues,
-	logger,
 }: {
 	store: SqliteStateStore;
 	producer: OwnedPartitionProducerPort;
@@ -358,9 +356,6 @@ const createRuntime = ({
 	recoveryDrainTimeoutMs?: number;
 	/** Holds every store apply, the way a slow Postgres committer would. */
 	storeApplyGate?: Promise<void>;
-	/** The partition's snapshot lane as the Postgres store exposes it; the sqlite store has none. */
-	snapshotQueues?: PartitionRuntimeDependencies["stateStore"]["snapshotQueues"];
-	logger?: PartitionRuntimeDependencies["logger"];
 }) => {
 	function createProducer(): OwnedPartitionProducerPort {
 		return producer;
@@ -383,21 +378,19 @@ const createRuntime = ({
 		ctx: { session },
 		config: { topic, partition },
 	});
-	const stateStore: PartitionRuntimeDependencies["stateStore"] = {
-		...store,
-		...(storeApplyGate && {
-			applyDurableMutations: async (params) => {
-				await storeApplyGate;
-				return store.applyDurableMutations(params);
-			},
-		}),
-		...(snapshotQueues && { snapshotQueues }),
-	};
+	const stateStore: PartitionRuntimeDependencies["stateStore"] = storeApplyGate
+		? {
+				...store,
+				applyDurableMutations: async (params) => {
+					await storeApplyGate;
+					return store.applyDurableMutations(params);
+				},
+			}
+		: store;
 	return createPartitionRuntime({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore,
-			logger,
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
 			bootstrapper: { bootstrap },
@@ -1450,84 +1443,6 @@ test("drain waits for the store apply behind a log-durability reply", async () =
 		expect(fixture.store.readState({ identity })?.revision).toBe(1);
 	} finally {
 		storeApply.resolve(undefined);
-		await runtime.stop();
-		closeStoreFixture(fixture);
-	}
-});
-
-/** A lane with `pending` customers whose ticks land when `landed` resolves, or never. */
-const createLane = ({
-	pending,
-	landed,
-}: {
-	pending: number;
-	landed: Promise<void>;
-}): NonNullable<
-	PartitionRuntimeDependencies["stateStore"]["snapshotQueues"]
-> => ({
-	enqueueDelete: () => {},
-	enqueueRefresh: () => {},
-	deleteLanded: async () => [],
-	drain: () => landed,
-	pending: () => pending,
-});
-
-test("drain waits for the partition's snapshot lane to land behind the store", async () => {
-	const fixture = createStoreFixture();
-	const landed = createDeferred<void>();
-	const producer = createFakeProducer();
-	const runtime = createRuntime({
-		store: fixture.store,
-		producer: producer.producer,
-		follower: createFollower().follower,
-		snapshotQueues: createLane({ pending: 2, landed: landed.promise }),
-	});
-	try {
-		await runtime.start();
-		let drained = false;
-		const draining = runtime.drain().then(() => {
-			drained = true;
-		});
-		await waitForTurn();
-		expect(drained).toBe(false);
-		landed.resolve(undefined);
-		await draining;
-	} finally {
-		landed.resolve(undefined);
-		await runtime.stop();
-		closeStoreFixture(fixture);
-	}
-});
-
-test("a snapshot lane that never lands holds the drain only for the recovery drain budget, and is logged with what it left", async () => {
-	const fixture = createStoreFixture();
-	const producer = createFakeProducer();
-	const warnings: unknown[] = [];
-	const runtime = createRuntime({
-		store: fixture.store,
-		producer: producer.producer,
-		follower: createFollower().follower,
-		recoveryDrainTimeoutMs: 20,
-		snapshotQueues: createLane({ pending: 7, landed: new Promise(() => {}) }),
-		logger: { warn: (...args: unknown[]) => warnings.push(args) },
-	});
-	try {
-		await runtime.start();
-		const startedAt = Date.now();
-		await runtime.drain();
-		expect(Date.now() - startedAt).toBeLessThan(500);
-		expect(warnings).toEqual([
-			[
-				{
-					event: "balance_worker.snapshot_drain_timeout",
-					data: { topic, partition, pending: 7 },
-				},
-				expect.stringContaining(
-					"7 customers' snapshot writes still on the lane",
-				),
-			],
-		]);
-	} finally {
 		await runtime.stop();
 		closeStoreFixture(fixture);
 	}
