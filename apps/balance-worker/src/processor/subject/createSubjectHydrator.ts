@@ -6,6 +6,7 @@ import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatal
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
 import { createEntityLoads } from "./entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "./inFlightLoads/createInFlightLoads.js";
+import { createSnapshotRefresh } from "./snapshotRefresh/createSnapshotRefresh.js";
 import { createSubjectJoinCache } from "./subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectHydratorContext, SubjectScope } from "./types/subject.js";
 import type { SubjectHydrator } from "./types/subjectHydrator.js";
@@ -26,6 +27,7 @@ export const createSubjectHydrator = ({
 				},
 			}),
 			entityLoads: createEntityLoads({ scopeOf: () => scope }),
+			snapshotRefresh: createSnapshotRefresh({ ctx, scopeOf: () => scope }),
 		},
 	};
 
@@ -51,6 +53,9 @@ export const createSubjectHydrator = ({
 			}),
 		overtakeInFlightLoads: ({ customerKey }) =>
 			scope.state.inFlightLoads.overtakeCustomer({ customerKey }),
+		refreshSnapshots: ({ identity, entityIds }) =>
+			scope.state.snapshotRefresh.enqueue({ identity, entityIds }),
+		dispose: () => scope.state.snapshotRefresh.dispose(),
 		inheritCatalog: ({ from, to, changes }) =>
 			scope.state.joinCache.inheritCatalog({ from, to, changes }),
 	};

@@ -22,6 +22,7 @@ import { ensureSubject } from "../../../../src/processor/subject/actions/ensureS
 import { readSubject } from "../../../../src/processor/subject/actions/readSubject.js";
 import { createEntityLoads } from "../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
+import { createSnapshotRefresh } from "../../../../src/processor/subject/snapshotRefresh/createSnapshotRefresh.js";
 import {
 	SubjectCatalogEvictedError,
 	SubjectNotFoundError,
@@ -146,6 +147,7 @@ const createScope = ({
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
 		readSubjectSnapshot: async () => null,
+		readEntitySubjectSnapshots: async () => new Map(),
 		getEntitySubjectRows: async () => [],
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
@@ -210,6 +212,7 @@ const createScope = ({
 				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
 			}),
 			entityLoads: createEntityLoads({ scopeOf: () => scope }),
+			snapshotRefresh: createSnapshotRefresh({ ctx: {}, scopeOf: () => scope }),
 		},
 	};
 	return { scope, calls, catalogCache };
