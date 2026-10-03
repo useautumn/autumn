@@ -94,6 +94,7 @@ export type {
 } from "./common/rebalance/types/rebalanceOutcome.js";
 export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest.js";
 // deduction
+export { advanceDeductionContext } from "./deduction/advanceDeductionContext.js";
 export { deduct } from "./deduction/deduct.js";
 export { setupDeductionContext } from "./deduction/setup/setupDeductionContext.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
