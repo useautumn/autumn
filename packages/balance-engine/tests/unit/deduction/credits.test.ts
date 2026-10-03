@@ -22,6 +22,7 @@ import {
 	createDeductionRequest,
 	customerWith,
 	deductAndCompare as deduct,
+	deductAndAdvance,
 } from "./deductionFixtures.js";
 
 const creditsSystem = ({
@@ -65,11 +66,9 @@ const creditsSystem = ({
 		overageBehavior?: "cap" | "reject" | "overflow";
 		includesCreditSystems?: boolean;
 	}) =>
-		deduct({
-			fullSubject: subjectStateToFullSubject({
-				state,
-				catalog: withCatalog({ state }),
-			}),
+		deductAndAdvance({
+			state,
+			catalog: withCatalog({ state }),
 			request: createDeductionRequest({
 				internalFeatureId: "feat_messages",
 				org,
