@@ -150,30 +150,29 @@ test.concurrent(`${chalk.yellowBright("metadata: autumn_* keys are stripped")}`,
 test.concurrent(`${chalk.yellowBright("metadata: passthrough to proration invoice on upgrade")}`, async () => {
 	const customerId = "attach-metadata-upgrade-invoice";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const free = products.base({
-		id: "free-metadata-inv",
-		items: [messagesItem],
-	});
-
-	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	// Paid -> paid, so the proration lands on Autumn's manual invoice (a new subscription's first invoice is Stripe's).
 	const pro = products.pro({
 		id: "pro-metadata-inv",
-		items: [proMessagesItem],
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const premium = products.premium({
+		id: "premium-metadata-inv",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
 	});
 
 	const { autumnV2_1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
-			s.products({ list: [free, pro] }),
+			s.products({ list: [pro, premium] }),
 		],
-		actions: [s.billing.attach({ productId: free.id })],
+		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
 	const result = await autumnV2_1.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
-		plan_id: pro.id,
+		plan_id: premium.id,
 		metadata: {
 			user_id: "u-invoice-test",
 			campaign: "upgrade-promo",

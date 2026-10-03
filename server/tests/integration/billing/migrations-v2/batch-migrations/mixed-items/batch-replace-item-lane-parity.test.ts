@@ -1,6 +1,7 @@
 /**
  * Batch and per-customer replace use different write paths but must preserve
- * the same consumed usage and non-custom plan state.
+ * the same consumed usage. The batch lane keeps the row non-custom; the
+ * per-customer lane derives is_custom from the diverged items (see batch-lane-parity).
  */
 import { expect, test } from "bun:test";
 import {
@@ -106,9 +107,9 @@ test(`${chalk.yellowBright("batch migration parity: replace matches the per-cust
 	});
 	expect(perCustomerRun.result?.lane).toBe("per_customer");
 
-	for (const [customerId, planId] of [
-		[batchCustomerId, batchPlan.id],
-		[perCustomerId, perCustomerPlan.id],
+	for (const [customerId, planId, expectedIsCustom] of [
+		[batchCustomerId, batchPlan.id, false],
+		[perCustomerId, perCustomerPlan.id, true],
 	] as const) {
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
@@ -133,6 +134,6 @@ test(`${chalk.yellowBright("batch migration parity: replace matches the per-cust
 				),
 			);
 		expect(rows).toHaveLength(1);
-		expect(rows[0].isCustom).toBe(false);
+		expect(rows[0].isCustom).toBe(expectedIsCustom);
 	}
 });

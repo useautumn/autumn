@@ -21,12 +21,9 @@ const command = (): ResetCommand =>
 function createFixture({ outcome }: { outcome: "refilled" | "idle" | Error }) {
 	const logs: string[] = [];
 	const processor = {
-		reset: async () => {
+		decideReset: async () => {
 			if (outcome instanceof Error) throw outcome;
-			return {
-				result:
-					outcome === "idle" ? null : { type: "reset" as const, rows: [] },
-			};
+			return { kind: outcome === "idle" ? "reply" : "write" };
 		},
 	} as unknown as PartitionProcessor;
 	const ctx = {

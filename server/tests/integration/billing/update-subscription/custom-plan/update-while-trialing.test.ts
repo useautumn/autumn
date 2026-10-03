@@ -8,6 +8,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -188,11 +189,13 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 		usage: usersUsage,
 	});
 
-	// No charge during trial
-	expectCustomerInvoiceCorrect({
-		customer,
-		count: 2, // Just the $0 trial invoice
+	// $0 invoice from the trial update arrives by Stripe webhook only
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		autumn: autumnV1,
+		count: 2,
 		latestTotal: 0,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 	});
 
 	await expectSubToBeCorrect({
@@ -280,11 +283,13 @@ test.concurrent(`${chalk.yellowBright("trial-update: add prepaid messages while 
 		usage: 0,
 	});
 
-	// Invoice should have the prepaid charge
-	expectCustomerInvoiceCorrect({
-		customer,
-		count: 2, // $0 trial invoice + $20 prepaid charge
+	// $0 invoice from the trial update arrives by Stripe webhook only
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		autumn: autumnV1,
+		count: 2,
 		latestTotal: 0,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 	});
 
 	await expectSubToBeCorrect({

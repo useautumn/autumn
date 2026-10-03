@@ -94,38 +94,46 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 
 	// Use up events
 	test("should send events and have correct balance (up to 10 DP)", async () => {
-		const eventCount = 20;
-
-		const batchEvents = [];
-		for (let i = 0; i < eventCount; i++) {
-			const randomVal = new Decimal(Math.random().toFixed(PRECISION))
+		const randomValue = () =>
+			new Decimal(Math.random().toFixed(PRECISION))
 				.mul(CREDIT_MULTIPLIER)
-				.mul(Math.random() > 0.2 ? 1 : -1)
 				.toNumber();
-			const featureId = i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2;
 
+		const sendEvent = ({
+			featureId,
+			value,
+		}: {
+			featureId: string;
+			value: number;
+		}) => {
 			const creditsUsed = getCreditCost({
 				creditSystem: creditsFeature,
-				featureId: featureId,
-				amount: randomVal,
+				featureId,
+				amount: value,
 			});
-
 			totalCreditsUsed = new Decimal(totalCreditsUsed)
 				.plus(creditsUsed)
 				.toNumber();
 
-			batchEvents.push(
-				AutumnCli.sendEvent({
-					customerId: customerId,
-					featureId: featureId,
-					properties: { value: randomVal },
-				}),
-			);
-		}
+			return AutumnCli.sendEvent({
+				customerId,
+				featureId,
+				properties: { value },
+			});
+		};
 
-		await Promise.all(batchEvents);
+		const usages = Array.from({ length: 16 }, (_, i) => ({
+			featureId: i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2,
+			value: randomValue(),
+		}));
+		await Promise.all(usages.map(sendEvent));
 
-		// await timeout(10000);
+		// Refunds are capped at the starting balance, so each one refunds at most an already-tracked usage.
+		const refunds = usages.slice(0, 4).map(({ featureId, value }) => ({
+			featureId,
+			value: -Math.min(randomValue(), value),
+		}));
+		await Promise.all(refunds.map(sendEvent));
 
 		const { allowed, balanceObj }: any = await AutumnCli.entitled(
 			customerId,

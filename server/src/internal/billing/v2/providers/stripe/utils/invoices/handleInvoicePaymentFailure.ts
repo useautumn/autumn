@@ -14,7 +14,11 @@ const getFailureCodeFromStripeError = ({
 }: {
 	stripeError: Stripe.errors.StripeError;
 }): "3ds_required" | "payment_failed" => {
-	const authCodes = ["authentication_required", "authentication_not_handled"];
+	const authCodes = [
+		"authentication_required",
+		"authentication_not_handled",
+		"invoice_payment_intent_requires_action",
+	];
 
 	if (authCodes.includes(stripeError.code ?? "")) {
 		return "3ds_required";

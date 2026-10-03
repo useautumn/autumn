@@ -4,11 +4,13 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq, sql } from "drizzle-orm";
 
+// Each case gets its own sub-org: they run concurrently and each rewrites org config.
+
 test.concurrent(
 	`${chalk.yellowBright("org config: sequential updates preserve previous fields")}`,
 	async () => {
 		const { ctx } = await initScenario({
-			setup: [],
+			setup: [s.platform.create()],
 			actions: [],
 		});
 
@@ -47,12 +49,6 @@ test.concurrent(
 		expect(parsed.automatic_tax).toBe(true);
 		expect(parsed.include_past_due).toBe(true); // default
 		expect(parsed.block_overdue_entitlements).toBe(false);
-
-		// Restore
-		await db
-			.update(organizations)
-			.set({ config: org.config })
-			.where(eq(organizations.id, org.id));
 	},
 );
 
@@ -60,7 +56,7 @@ test.concurrent(
 	`${chalk.yellowBright("org config: concurrent updates do not overwrite each other")}`,
 	async () => {
 		const { ctx } = await initScenario({
-			setup: [],
+			setup: [s.platform.create()],
 			actions: [],
 		});
 
@@ -115,12 +111,6 @@ test.concurrent(
 		expect(parsed.anchor_start_of_month).toBe(true);
 		expect(parsed.disable_stripe_writes).toBe(true);
 		expect(parsed.invoice_memos).toBe(true);
-
-		// Restore
-		await db
-			.update(organizations)
-			.set({ config: org.config })
-			.where(eq(organizations.id, org.id));
 	},
 );
 
@@ -128,7 +118,7 @@ test.concurrent(
 	`${chalk.yellowBright("org config: toggling off preserves other fields")}`,
 	async () => {
 		const { ctx } = await initScenario({
-			setup: [],
+			setup: [s.platform.create()],
 			actions: [],
 		});
 
@@ -158,11 +148,5 @@ test.concurrent(
 
 		expect(parsed.automatic_tax).toBe(false);
 		expect(parsed.void_invoices_on_subscription_deletion).toBe(true);
-
-		// Restore
-		await db
-			.update(organizations)
-			.set({ config: org.config })
-			.where(eq(organizations.id, org.id));
 	},
 );

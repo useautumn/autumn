@@ -13,7 +13,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import {
 	getCustomerProductRows,
 	getRequiredScheduleId,
@@ -84,19 +84,16 @@ test.concurrent(
 			],
 		});
 
+		// One schedule per customer; entity scope lives on its customer products.
 		const dbSchedules = await ctx.db
 			.select()
 			.from(schedules)
-			.where(
-				and(
-					eq(schedules.customer_id, customerId),
-					eq(schedules.entity_id, entityId),
-				),
-			);
+			.where(eq(schedules.customer_id, customerId));
 		expect(dbSchedules).toHaveLength(1);
 		expect(dbSchedules[0]!.id).toBe(
 			getRequiredScheduleId(secondResponse.schedule_id),
 		);
+		expect(dbSchedules[0]!.entity_id).toBeNull();
 
 		const removedScheduledProducts = await ctx.db
 			.select()
@@ -356,16 +353,17 @@ test.concurrent(
 			],
 		});
 
-		const replacementNow = Date.now();
+		// Stay on the frozen test clock: wall-clock Date.now() is over a minute
+		// ahead by now, which would schedule the immediate phase instead.
 		const secondResponse = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			phases: [
 				{
-					starts_at: replacementNow,
+					starts_at: now,
 					plans: [{ plan_id: secondNowA.id }, { plan_id: currentAddon.id }],
 				},
 				{
-					starts_at: replacementNow + ms.days(15),
+					starts_at: now + ms.days(15),
 					plans: [{ plan_id: secondFutureA.id }, { plan_id: secondFutureB.id }],
 				},
 			],
@@ -425,6 +423,7 @@ test.concurrent(
 			],
 		});
 
+		// currentB is unlisted, so it is retained until secondFutureB claims group-b.
 		expect(
 			productRowsAfterReplace
 				.filter((productRow) => productRow.status === CusProductStatus.Active)
@@ -432,6 +431,7 @@ test.concurrent(
 		).toEqual(
 			[
 				{ productId: currentAddon.id, status: CusProductStatus.Active },
+				{ productId: currentB.id, status: CusProductStatus.Active },
 				{ productId: secondNowA.id, status: CusProductStatus.Active },
 			].sort((a, b) => a.productId.localeCompare(b.productId)),
 		);
@@ -464,6 +464,7 @@ test.concurrent(
 		).toEqual(
 			[
 				{ id: currentAddon.id, status: "active" as const },
+				{ id: currentB.id, status: "active" as const },
 				{ id: secondFutureA.id, status: "scheduled" as const },
 				{ id: secondFutureB.id, status: "scheduled" as const },
 				{ id: secondNowA.id, status: "active" as const },

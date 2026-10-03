@@ -156,7 +156,8 @@ export const setupPausedPro = async ({
 	const scenario = await initScenario({
 		customerId,
 		setup: [s.customer({}), s.products({ list: [pro] })],
-		actions: [s.billing.attach({ productId: pro.id })],
+		// v1 attach still runs no-card trials on Stripe; billing.attach keeps them Autumn-only (#4024).
+		actions: [s.attach({ productId: pro.id })],
 	});
 	const { ctx, testClockId, advancedTo } = scenario;
 

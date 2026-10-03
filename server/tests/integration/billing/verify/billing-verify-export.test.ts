@@ -24,6 +24,7 @@ import {
 	CustomerExportKind,
 	CustomerExportStatus,
 	customerExports,
+	customerProducts,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -420,9 +421,16 @@ test.concurrent(
 				removeItemPriceIds: [await basePriceIdFor({ ctx, productId: pro.id })],
 			},
 		});
-		await ctx.stripeCli.subscriptions.update(subscriptions[0].id, {
-			cancel_at_period_end: true,
-		});
+		// Drift the cancel on Autumn's side: a Stripe-side cancel is imported by
+		// the subscription.updated webhook and heals before verify runs.
+		await ctx.db
+			.update(customerProducts)
+			.set({
+				canceled: true,
+				canceled_at: Date.now(),
+				ended_at: subscriptions[0].items.data[0].current_period_end * 1000,
+			})
+			.where(eq(customerProducts.internal_customer_id, scalar.internal_id));
 
 		const rows = await verifyCustomerToExportRows({
 			ctx,

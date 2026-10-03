@@ -57,6 +57,7 @@ export const updateCustomer = async ({
 		billing_controls,
 		billing_details: billingDetails,
 		config,
+		stripe_id: newStripeId,
 		...newCusData
 	} = params;
 
@@ -129,7 +130,6 @@ export const updateCustomer = async ({
 	// Try to update stripe ID. Distinguish omitted (undefined -> leave as is)
 	// from explicitly cleared (null/"" -> unlink the Stripe customer).
 	let stripeId = originalCustomer.processor?.id;
-	const newStripeId = newCusData.stripe_id;
 	const clearStripeId = newStripeId === null || newStripeId === "";
 
 	if (clearStripeId) {
