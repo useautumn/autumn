@@ -357,7 +357,9 @@ const attributeDeletedSnapshots = ({
 			meteringIdentityToPartitionKey({ identity: { ...row, entityId: null } }),
 		);
 		const outcome = call && outcomes.get(call);
-		if (outcome) (outcome.deletedSnapshots ??= []).push(row);
+		if (!outcome) continue;
+		outcome.deletedSnapshots ??= [];
+		outcome.deletedSnapshots.push(row);
 	}
 };
 
