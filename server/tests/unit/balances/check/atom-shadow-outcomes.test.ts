@@ -172,3 +172,80 @@ test("an Atom that refuses the check is an atom_error, never an error-level line
 	expect(logs[0]).toMatchObject({ status: "atom_error", reason: "http_500" });
 	expect(errors).toHaveLength(0);
 });
+
+test("every line carries both sides' allowed and remaining, a match included", async () => {
+	atom.reply = () => Response.json(apiResponse);
+	const { ctx, logs } = createCtx();
+	await shadow(ctx);
+
+	expect(logs[0]).toMatchObject({
+		status: "match",
+		api_allowed: true,
+		atom_allowed: true,
+		api_remaining: 9,
+		atom_remaining: 9,
+	});
+});
+
+test("a mismatch reads each side on its own; no balance is a null remaining", async () => {
+	atom.reply = () =>
+		Response.json({ allowed: false, customer_id: "cus_1", balance: null });
+	const { ctx, logs } = createCtx();
+	await shadow(ctx);
+
+	expect(logs[0]).toMatchObject({
+		status: "mismatch",
+		api_allowed: true,
+		atom_allowed: false,
+		api_remaining: 9,
+		atom_remaining: null,
+	});
+});
+
+test("a timeout keeps the API's side and leaves Atom's null", async () => {
+	atom.reply = async () => {
+		await Bun.sleep(3_000);
+		return Response.json(apiResponse);
+	};
+	const { ctx, logs } = createCtx();
+	await shadow(ctx);
+
+	expect(logs[0]).toMatchObject({
+		status: "timeout",
+		api_allowed: true,
+		atom_allowed: null,
+		api_remaining: 9,
+		atom_remaining: null,
+	});
+});
+
+test.each([
+	["v2.1+ balance.remaining", { allowed: true, balance: { remaining: 4 } }, 4],
+	[
+		"v2.0 balance.current_balance",
+		{ allowed: true, balance: { current_balance: 6 } },
+		6,
+	],
+	["v1 top-level balance", { allowed: true, balance: 7, unlimited: false }, 7],
+	[
+		"v0 balances list",
+		{ allowed: true, balances: [{ feature_id: "messages", balance: 3 }] },
+		3,
+	],
+	[
+		"unlimited",
+		{ allowed: true, balance: { remaining: 0, unlimited: true } },
+		null,
+	],
+	["v1 unlimited", { allowed: true, balance: 0, unlimited: true }, null],
+	["boolean feature", { allowed: true, balance: null }, null],
+])("remaining reads %s", async (_name, body, expected) => {
+	atom.reply = () => Response.json(body);
+	const { ctx, logs } = createCtx();
+	await runAtomShadowCheck({ ctx, params, search: "", apiResponse: body });
+
+	expect(logs[0]).toMatchObject({
+		api_remaining: expected,
+		atom_remaining: expected,
+	});
+});
