@@ -13,6 +13,7 @@ type Entry = {
 	pins: number;
 	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
 	evictOnUnpin: boolean;
+	baselineAt: number | null;
 };
 
 const weigh = ({ value }: { value: unknown }): number =>
@@ -109,6 +110,7 @@ export const createSubjectMap = ({
 			bytes: 0,
 			pins: 0,
 			evictOnUnpin: false,
+			baselineAt: null,
 		};
 		entries.set(subjectKey, created);
 		return created;
@@ -160,13 +162,16 @@ export const createSubjectMap = ({
 		subjectKey,
 		customerKey,
 		state,
+		baselineAt,
 	}: {
 		subjectKey: string;
 		customerKey: string;
 		state: SubjectState;
+		baselineAt?: number;
 	}) => {
 		const entry = entryOf({ subjectKey });
 		entry.customerKey = customerKey;
+		if (baselineAt !== undefined) entry.baselineAt = baselineAt;
 		index({ subjectKey, customerKey });
 		const previous = entry.bytes > 0 ? entry.state : null;
 		totalBytes -= entry.bytes;
@@ -210,6 +215,12 @@ export const createSubjectMap = ({
 			dropState({ subjectKey, entry });
 	};
 
+	const readBaselineAt = ({ subjectKey }: { subjectKey: string }) =>
+		entries.get(subjectKey)?.baselineAt ?? null;
+
+	const readBytes = ({ subjectKey }: { subjectKey: string }) =>
+		entries.get(subjectKey)?.bytes ?? 0;
+
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
 		const keys = subjectKeysByCustomer.get(customerKey);
 		if (!keys) return;
@@ -230,6 +241,8 @@ export const createSubjectMap = ({
 	return {
 		readState,
 		setState,
+		readBaselineAt,
+		readBytes,
 		pin,
 		unpin,
 		evictCustomer,
