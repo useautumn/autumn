@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { applyMutation } from "@autumn/balance-engine";
+import {
+	applyMutation,
+	meteringIdentityToPartitionKey,
+} from "@autumn/balance-engine";
 import {
 	createProgressTracker,
 	InvalidRecordError,
@@ -807,6 +810,45 @@ describe("Kafka metering consumer", () => {
 			expect(recentCommands.read({ identity, commandId: "cmd_2" })).toEqual({
 				fingerprint: second.receipt.fingerprint,
 			});
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a replayed record asks the store to delete its customer's snapshot: it carries no state to write", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const initialState = createState();
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition,
+				states: [initialState],
+			});
+			const intents: unknown[] = [];
+			const apply = fixture.store.applyDurableMutations.bind(fixture.store);
+			fixture.store.applyDurableMutations = (params) => {
+				intents.push(params.snapshotIntent);
+				return apply(params);
+			};
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaMeteringConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+			await consumer.start();
+			await consumerPort.deliver({
+				offset: "0",
+				...serializeMeteringRecord({
+					record: createMutation({ state: initialState }),
+				}),
+			});
+
+			expect(intents).toEqual([
+				new Map([[meteringIdentityToPartitionKey({ identity }), "delete"]]),
+			]);
 		} finally {
 			closeStoreFixture(fixture);
 		}

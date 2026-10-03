@@ -55,13 +55,15 @@ export const createCommitterStateStore = ({
 
 	const applyInLane: CommitterStateStore["applyDurableMutations"] = ({
 		records,
+		snapshotIntent,
 	}) => {
 		const first = records[0];
 		if (!first) return Promise.resolve([]);
 		const claimToken = claimTokenOf(first.position);
 		return runInLane({
 			position: first.position,
-			run: () => applyDurableMutations({ ctx, records, claimToken }),
+			run: () =>
+				applyDurableMutations({ ctx, records, snapshotIntent, claimToken }),
 		});
 	};
 
