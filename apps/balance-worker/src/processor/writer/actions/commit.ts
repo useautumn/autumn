@@ -12,6 +12,7 @@ import {
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
+	releasePins,
 	removePendingMutation,
 	settlementOf,
 	writerNowOf,
@@ -414,6 +415,7 @@ async function applyBatch({
 			enterRecovery({ scope, batch, cause: firstFailure });
 			return false;
 		}
+		for (const pending of batch) releasePins({ state: scope.state, pending });
 		for (const pending of batch) pending.settlement?.settleStore();
 		const last = batch.at(-1);
 		if (last) advanceStored({ state: scope.state, seq: last.seq });
