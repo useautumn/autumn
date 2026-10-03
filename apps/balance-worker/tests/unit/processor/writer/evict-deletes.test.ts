@@ -19,6 +19,7 @@ import {
 	createSubjectFor,
 	createTrackCommand,
 } from "../../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "writer-evict-deletes";
 const partition = 2;
@@ -236,10 +237,11 @@ const createWriterOverStore = () => {
 			return { applied: request.changes.map(() => true) };
 		},
 	};
+	const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode: "write" });
 	const stateStore = createCommitterStateStore({
 		ctx: {
 			committer: createCommitter({
-				ctx: { db },
+				ctx: { db, subjectSnapshotsConfig },
 				config: {
 					concurrency: 4,
 					maxRowsPerFlush: 500,
@@ -248,11 +250,11 @@ const createWriterOverStore = () => {
 						initialBackoffMs: 1,
 						maxBackoffMs: 1,
 					},
-					snapshots: { partitionCount: 64, maxBytes: 262_144 },
+					snapshots: { partitionCount: 64 },
 				},
 			}),
 			db,
-			snapshots: { dropBatch: 500 },
+			subjectSnapshotsConfig,
 		},
 	});
 	let nextOffset = 0n;

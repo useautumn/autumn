@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
 	applyMutation,
 	computeTrack,
@@ -29,6 +29,7 @@ import {
 	createTrackCommand,
 	createTrackMutation,
 } from "../../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "writer-intent";
 const partition = 2;
@@ -58,7 +59,17 @@ const decideTrack = ({
 };
 
 /** The writer over a store with nothing resident; the store records the intent handed in with each apply. */
-const createWriter = () => {
+const createWriter = ({
+	mode = "write",
+	maxBytes,
+}: {
+	mode?: "off" | "write";
+	maxBytes?: number;
+} = {}) => {
+	const subjectSnapshotsConfig = createSubjectSnapshotsStore({
+		mode,
+		...(maxBytes !== undefined && { maxBytes }),
+	});
 	const intents: (SnapshotIntent | undefined)[] = [];
 	const applyGate = { held: Promise.resolve() as Promise<void> };
 	let rejectNext: string | null = null;
@@ -90,6 +101,7 @@ const createWriter = () => {
 	const writer = createPartitionWriter({
 		ctx: {
 			stateStore,
+			subjectSnapshotsConfig,
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
 					const baseOffset = nextOffset;
@@ -148,6 +160,12 @@ const createWriter = () => {
 		rejectCommand: (id: string) => {
 			rejectNext = id;
 		},
+		setMode: (next: "off" | "write") => {
+			subjectSnapshotsConfig._setRuntimeConfigForTesting({
+				...subjectSnapshotsConfig.get(),
+				mode: next,
+			});
+		},
 	};
 };
 
@@ -158,6 +176,30 @@ const balanceOf = (intent: SnapshotIntent | undefined) => {
 };
 
 describe("the writer's snapshot intent", () => {
+	test("with the store reading off, a subject read whole still leaves no intent: the flush carries no customer", async () => {
+		const { intents, track, readWhole } = createWriter({ mode: "off" });
+		readWhole({ baselineAt: 1_234 });
+		await track("t1").waitForStore();
+
+		expect(intents).toHaveLength(1);
+		expect(intents[0]?.size).toBe(0);
+	});
+
+	test("a flip in the store takes effect at the next flush: off carries nothing, write carries the rows, off again carries nothing", async () => {
+		const { intents, track, readWhole, setMode } = createWriter({
+			mode: "off",
+		});
+		readWhole({ baselineAt: 1_234 });
+		await track("t1").waitForStore();
+		setMode("write");
+		await track("t2").waitForStore();
+		setMode("off");
+		await track("t3").waitForStore();
+
+		expect(intents.map((intent) => intent?.size)).toEqual([0, 1, 0]);
+		expect(balanceOf(intents[1])).toEqual([98]);
+	});
+
 	test("a subject read whole: its record's flush may write the rows it leaves, aged by that read", async () => {
 		const { intents, track, readWhole } = createWriter();
 		readWhole({ baselineAt: 1_234 });
@@ -220,6 +262,9 @@ describe("the writer's snapshot intent", () => {
 			baselineAt: 3_000,
 		});
 		const scope = {
+			ctx: {
+				subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "write" }),
+			},
 			state: { subjects },
 		} as unknown as PartitionWriterScope;
 		const pending = {
@@ -285,6 +330,26 @@ describe("the writer's snapshot intent", () => {
 		readWhole({ balance: 100, baselineAt: 3 });
 		await track("t3").waitForStore();
 		expect(balanceOf(intents[2])).toEqual([99]);
+	});
+
+	test("a state over the cap is decided from the map's weight: the customer deletes, and nothing of it is serialised", async () => {
+		const { intents, readWhole, track } = createWriter({
+			maxBytes: 64,
+		});
+		const resident = readWhole();
+		const stringify = spyOn(JSON, "stringify");
+		try {
+			await track("t1").waitForStore();
+			expect(balanceOf(intents[0])).toBe("delete");
+			const serialisedState = stringify.mock.calls.some(
+				([value]) =>
+					value === resident ||
+					(value as { customer?: unknown })?.customer === resident.customer,
+			);
+			expect(serialisedState).toBe(false);
+		} finally {
+			stringify.mockRestore();
+		}
 	});
 
 	test("a mutation that inserts the customer's own row cannot be snapshotted by the statement that inserts it", async () => {
