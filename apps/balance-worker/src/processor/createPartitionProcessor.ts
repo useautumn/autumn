@@ -73,6 +73,8 @@ export function createPartitionProcessor({
 			receiptPolicy: dependencies.receiptPolicy,
 			baseline: dependencies.stateStore.baseline,
 			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
+			snapshotQueues: dependencies.stateStore.snapshotQueues,
+			position: { topic: config.topic, partition: config.partition },
 			logger: dependencies.logger,
 		},
 	});
@@ -242,7 +244,10 @@ function createProcessor({
 
 	return {
 		execute,
-		dispose: () => scope.ctx.writer.dispose(),
+		dispose: () => {
+			scope.ctx.subjectHydrator.dispose();
+			scope.ctx.writer.dispose();
+		},
 		track,
 		check,
 		applyBillingPlan,
