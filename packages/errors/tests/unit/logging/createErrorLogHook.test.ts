@@ -18,11 +18,12 @@ const loggedFrames = [
 		function: "prepareErrorLog",
 	},
 ];
+const stackParser = mock(() => loggedFrames);
 mock.module("@sentry/bun", () => ({
 	captureException,
 	captureEvent,
 	getClient: () => ({
-		getOptions: () => ({ stackParser: () => loggedFrames }),
+		getOptions: () => ({ stackParser }),
 	}),
 }));
 
@@ -363,6 +364,62 @@ describe("createErrorLogHook", () => {
 		expect(event.tags).toMatchObject({ error_kind: "bug", org_slug: "acme" });
 		expect(lines[0].msg).toBe("sync failed: connection reset");
 		expect(lines[0].error).toBeUndefined();
+	});
+
+	it("keeps anonymous text-only failures message-titled without grouping by dynamic text", () => {
+		captureEvent.mockClear();
+		captureException.mockClear();
+		const { jobLogger, lines } = createTestLogger();
+		const caller = {
+			filename: "/app/server/src/sync/syncBatching.ts",
+			function: "<anonymous>",
+		};
+		const messages = [
+			"Balance flush failed for customer_123: deadlock detected",
+			"Balance flush failed for customer_456: connection reset",
+		];
+
+		for (const message of messages) {
+			stackParser.mockImplementationOnce(() => [
+				caller,
+				...loggedFrames.slice(1),
+			]);
+			jobLogger.error(message);
+
+			expect(captureEvent).toHaveBeenLastCalledWith({
+				message,
+				level: "error",
+				fingerprint: [
+					"logged-message",
+					"/app/server/src/sync/syncBatching.ts:<anonymous>",
+				],
+				exception: {
+					values: [
+						{
+							type: "Error",
+							value: message,
+							stacktrace: { frames: [caller] },
+							mechanism: { type: "logger", handled: true },
+						},
+					],
+				},
+				tags: expect.objectContaining({
+					error_kind: "bug",
+					service: "server",
+					operation: "track",
+					env: "live",
+					org_id: "org_1",
+				}),
+				user: { id: "org_1", username: "acme" },
+				contexts: expect.objectContaining({
+					autumn: expect.objectContaining({ request_id: "job_1" }),
+				}),
+			});
+		}
+
+		expect(captureEvent).toHaveBeenCalledTimes(2);
+		expect(captureException).not.toHaveBeenCalled();
+		expect(lines.map((line) => line.msg)).toEqual(messages);
 	});
 
 	it("retains caller context on text-only invalidation errors with batch data", () => {

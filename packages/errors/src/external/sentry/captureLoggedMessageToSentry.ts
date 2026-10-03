@@ -40,11 +40,10 @@ export const captureLoggedMessageToSentry = ({
 		exception: {
 			values: [
 				{
-					// Without a type Sentry titles the issue by the caller's function name, e.g. "<anonymous>".
 					type: "Error",
 					value: message,
 					stacktrace: { frames },
-					mechanism: { type: "logger", handled: true, synthetic: true },
+					mechanism: { type: "logger", handled: true },
 				},
 			],
 		},

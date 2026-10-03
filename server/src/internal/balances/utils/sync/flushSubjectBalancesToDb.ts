@@ -133,6 +133,6 @@ export const flushSubjectBalancesToDb = async ({
 	}
 
 	logger.error(
-		`[flushSubjectBalancesToDb] ${customerId}: flush failed, unsynced balances lost, source: ${source}, error: ${error}`,
+		`[flushSubjectBalancesToDb] ${customerId}: flush failed, persistence outcome unknown, source: ${source}, error: ${error}`,
 	);
 };
