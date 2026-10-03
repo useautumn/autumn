@@ -4,6 +4,7 @@ import { BillWhen } from "@shared/models/productModels/priceModels/priceConfig/u
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
+import { entityAggregationCtx } from "./utils/entityAggregationCtx.js";
 import {
 	buildEntitySubjectScenario,
 	type FullSubjectScenario,
@@ -221,7 +222,7 @@ describe(`${chalk.yellowBright("fullSubject aggregate options")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const fullSubject = await getFullSubject({
-					ctx,
+					ctx: entityAggregationCtx,
 					customerId: scenario.ids.customerId,
 				});
 

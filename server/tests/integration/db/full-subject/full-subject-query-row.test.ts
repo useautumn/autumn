@@ -59,7 +59,7 @@ describe(`${chalk.yellowBright("fullSubject raw query row")}`, () => {
 				expect(row?.customer_products).toHaveLength(2);
 				expect(
 					row?.customer_products.map((product) => product.internal_entity_id),
-				).toEqual([null, scenario.ids.internalEntityIds[0]]);
+				).toEqual([scenario.ids.internalEntityIds[0], null]);
 			},
 		});
 	});
