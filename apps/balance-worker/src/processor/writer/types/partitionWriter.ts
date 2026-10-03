@@ -8,8 +8,10 @@ import type {
 	SubjectState,
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
+import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
+import type { SubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
@@ -97,6 +99,8 @@ export type PartitionWriterContext = {
 		| "evictDeletes"
 	>;
 	appender: CommittedOutcomeAppender;
+	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */
