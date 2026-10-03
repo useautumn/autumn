@@ -135,7 +135,11 @@ const refreshOne = async ({
 			if (!queue.disposed) admit({ queue, identity });
 			return;
 		}
-		if (read === null) {
+		if (
+			read === null ||
+			read.bytes === undefined ||
+			read.bytes > queue.ctx.subjectSnapshotsConfig.get().maxBytes
+		) {
 			count({ queue, field: "skipped" });
 			return;
 		}
