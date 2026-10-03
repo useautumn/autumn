@@ -73,6 +73,19 @@ const buildRequestData = ({
 		case "/billing.attach":
 		case "/billing.setup_payment":
 		case "/billing.multi_attach":
+		case "/balances/update":
+		case "/billing.multi_update":
+		case "/billing.create_schedule":
+		case "/billing.set_plans":
+		case "/billing.open_customer_portal":
+		case "/balances.update":
+		case "/rewards.redeem":
+		case "/customers.update":
+		case "/licenses.attach":
+		case "/licenses.release":
+		case "/billing.import":
+		case "/billing.sync":
+		case "/billing.sync_v2":
 			return {
 				path,
 				body: {
