@@ -2,13 +2,18 @@ import type { Catalog, SubjectState } from "@autumn/balance-engine";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
+import type { PartitionPosition } from "../../../committer/types/committer.js";
 import type { SubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
-import type { SubjectBaseline } from "../../../state/types/stateStore.js";
+import type {
+	StateStore,
+	SubjectBaseline,
+} from "../../../state/types/stateStore.js";
 import type { WorkerDb } from "../../../types/workerDb.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { PartitionWriter } from "../../writer/types/partitionWriter.js";
 import type { EntityLoads } from "../entityLoads/types/entityLoads.js";
 import type { InFlightLoads } from "../inFlightLoads/types/inFlightLoad.js";
+import type { SnapshotRefreshQueue } from "../snapshotRefresh/types/snapshotRefreshQueue.js";
 import type { SubjectJoinCache } from "../subjectJoinCache/types/subjectJoinCache.js";
 
 /** A customer's rows plus the catalog rows they reference: what every command computes against. */
@@ -21,12 +26,19 @@ export type SubjectHydratorContext = {
 	catalogCache: CatalogCache;
 	db: Pick<
 		WorkerDb,
-		"getSubjectRows" | "readSubjectSnapshot" | "getEntitySubjectRows"
+		| "getSubjectRows"
+		| "readSubjectSnapshot"
+		| "readEntitySubjectSnapshots"
+		| "getEntitySubjectRows"
 	>;
 	writer: Pick<PartitionWriter, "decide" | "readFreshestState" | "adopt">;
 	receiptPolicy: ReceiptPolicy;
 	/** Read at each cold load: `serve` and `verify` probe the subject's snapshot before its rows; absent or any other mode, every load is the rows. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	/** Where a refresh's read is written as the subject's row, through the partition's lane; absent, nothing is. */
+	snapshotQueues?: StateStore["snapshotQueues"];
+	/** The partition the hydrator serves, where its refreshes land. */
+	position?: PartitionPosition;
 	/** Defaults to "log", the sqlite store's answer. */
 	baseline?: SubjectBaseline;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
@@ -38,6 +50,7 @@ export type SubjectHydratorState = {
 	inFlightLoads: InFlightLoads;
 	joinCache: SubjectJoinCache;
 	entityLoads: EntityLoads;
+	snapshotRefresh: SnapshotRefreshQueue;
 };
 
 export type SubjectScope = {

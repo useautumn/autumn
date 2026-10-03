@@ -33,6 +33,13 @@ export type SubjectHydrator = {
 	}): WorkerFullSubject;
 	/** An evict arrived: any load of this customer still in flight started before it, so its rows cannot be trusted. */
 	overtakeInFlightLoads(params: { customerKey: string }): void;
+	/** Synchronous: the customer's own row and the entities named are rebuilt in the background; nothing becomes resident. */
+	refreshSnapshots(params: {
+		identity: MeteringIdentity;
+		entityIds: readonly string[];
+	}): void;
+	/** Releases what the hydrator holds for the partition: refreshes still waiting are dropped. */
+	dispose(): void;
 	/** The writer advanced a state; when the mutation kept its catalog keys, the next state starts with the same joined catalog. */
 	inheritCatalog(params: {
 		from: SubjectState | null;

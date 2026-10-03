@@ -158,6 +158,7 @@ const createFixture = () => {
 			return requested.entityId === entity.id ? entityEnvelope : null;
 		},
 		readSubjectSnapshot: async () => null,
+		readEntitySubjectSnapshots: async () => new Map(),
 		getEntitySubjectRows: async ({ identity: requested, entityIds }) => {
 			for (const entityId of entityIds)
 				subjectRowsCalls.push({ ...requested, entityId });
