@@ -449,6 +449,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1_700_000_000_000,
+			logOffset: 0n,
 		});
 		await drained();
 
@@ -496,6 +497,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
 		held.resolve();
@@ -526,6 +528,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		await drained();
 		expect(warnings).toHaveLength(1);
@@ -548,6 +551,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(2),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(3) });
 		held.resolve();
@@ -580,6 +584,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		held.resolve();
 		await drained();
@@ -594,7 +599,7 @@ describe("snapshot lane writes: refreshes", () => {
 		]);
 	});
 
-	test("a customer's refreshed subjects land together, aged by the earliest read; a subject refreshed twice takes the latest word", async () => {
+	test("a customer's refreshed subjects land together, aged and fenced by the earliest read; a subject refreshed twice takes the latest word", async () => {
 		const held = Promise.withResolvers<void>();
 		const { db, requests } = createCountingDb({ gate: held.promise });
 		const { store, deletes, drained } = createStore({
@@ -613,28 +618,36 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: entity,
 			baselineAt: 5,
+			logOffset: 12n,
 		});
 		deletes.enqueueRefresh({
 			topic,
 			partition: 4,
 			state: stateOf(1),
 			baselineAt: 3,
+			logOffset: 11n,
 		});
 		deletes.enqueueRefresh({
 			topic,
 			partition: 4,
 			state: createState({ identity: customerOf(1), balance: 42 }),
 			baselineAt: 9,
+			logOffset: 12n,
 		});
 		held.resolve();
 		await drained();
 
 		const rows = requests[1]?.snapshots?.upserts ?? [];
 		expect(
-			rows.map((row) => [row.customerId, row.entityId, row.baselineAt]),
+			rows.map((row) => [
+				row.customerId,
+				row.entityId,
+				row.baselineAt,
+				row.logOffset,
+			]),
 		).toEqual([
-			["cus_1", "en_1", 3],
-			["cus_1", null, 3],
+			["cus_1", "en_1", 3, 11n],
+			["cus_1", null, 3, 11n],
 		]);
 		expect(requests[1]?.snapshots?.upserts.length).toBe(2);
 		expect(
@@ -660,6 +673,7 @@ describe("snapshot lane writes: refreshes", () => {
 				partition: 4,
 				state: stateOf(index),
 				baselineAt: 1,
+				logOffset: 0n,
 			});
 		// Full: a new customer is refused, a pending one is replaced.
 		deletes.enqueueRefresh({
@@ -667,6 +681,7 @@ describe("snapshot lane writes: refreshes", () => {
 			partition: 4,
 			state: stateOf(SNAPSHOT_LANE_MAX_PENDING),
 			baselineAt: 1,
+			logOffset: 0n,
 		});
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(5) });
 		held.resolve();

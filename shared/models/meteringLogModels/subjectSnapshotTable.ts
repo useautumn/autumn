@@ -32,7 +32,7 @@ export const subjectSnapshots = pgTable(
 		/** When the subject's lineage was last read whole from Postgres; ages the row, a flush never refreshes it. */
 		baseline_at: bigint("baseline_at", { mode: "number" }).notNull(),
 		written_at: bigint("written_at", { mode: "number" }).notNull(),
-		/** Audit only: the last log offset the row's state includes. */
+		/** The last log offset the row's state includes; a write from an older log never replaces the row. */
 		log_offset: bigint("log_offset", { mode: "bigint" }),
 	},
 	(table) => [
