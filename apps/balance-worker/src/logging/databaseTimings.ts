@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { SubjectLoadGate } from "../external/postgres/createSubjectLoadGate.js";
+import type { SnapshotRefreshCounts } from "../processor/subject/snapshotRefresh/types/snapshotRefreshQueue.js";
 import { percentileOf, sampleInto } from "./sampleWindow.js";
 
 export type DatabaseQueryKind =
@@ -31,6 +32,8 @@ type SubjectSnapshotCounts = {
 	deleted: number;
 	hits: number;
 	misses: number;
+	/** Present only in a window where an evict rebuilt rows. */
+	refreshes?: SnapshotRefreshCounts;
 };
 
 type SampledWindow = { count: number; max: number; samples: number[] };
@@ -119,13 +122,29 @@ export function createDatabaseTimings() {
 	}
 
 	function recordSubjectSnapshots(
-		counts: Partial<SubjectSnapshotCounts>,
+		counts: Partial<Omit<SubjectSnapshotCounts, "refreshes">>,
 	): void {
 		subjectSnapshots ??= { upserted: 0, deleted: 0, hits: 0, misses: 0 };
 		subjectSnapshots.upserted += counts.upserted ?? 0;
 		subjectSnapshots.deleted += counts.deleted ?? 0;
 		subjectSnapshots.hits += counts.hits ?? 0;
 		subjectSnapshots.misses += counts.misses ?? 0;
+	}
+
+	function recordSnapshotRefreshes(
+		counts: Partial<SnapshotRefreshCounts>,
+	): void {
+		subjectSnapshots ??= { upserted: 0, deleted: 0, hits: 0, misses: 0 };
+		const refreshes = (subjectSnapshots.refreshes ??= {
+			queued: 0,
+			refreshed: 0,
+			skipped: 0,
+			failed: 0,
+		});
+		for (const field of Object.keys(
+			refreshes,
+		) as (keyof SnapshotRefreshCounts)[])
+			refreshes[field] += counts[field] ?? 0;
 	}
 
 	function drain(): DatabaseTimingsSummary {
@@ -157,6 +176,7 @@ export function createDatabaseTimings() {
 		queryFinished,
 		recordSubjectLoadWait,
 		recordSubjectSnapshots,
+		recordSnapshotRefreshes,
 		drain,
 	};
 }

@@ -29,6 +29,7 @@ const uniqueCustomers = ({
 /**
  * A batch writer changed many customers' rows in Postgres: each owning worker drops its copy, in log order.
  * Best effort: the client bounds the append; a failure is logged, since the rows stay stale in memory until the next evict.
+ * No org here to resolve the rollout by, so no snapshot rows are rebuilt: these customers miss once instead of risking a stale row.
  */
 export async function queueBalanceWorkerEvicts({
 	customers,
@@ -48,6 +49,7 @@ export async function queueBalanceWorkerEvicts({
 			requestId,
 			identity: { orgId, env, customerId, entityId: null },
 			occurredAt,
+			refreshSnapshots: false,
 		}),
 	);
 	try {
