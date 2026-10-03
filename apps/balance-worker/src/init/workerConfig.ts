@@ -146,7 +146,8 @@ export function balanceWorkerEnvToRuntimeConfig({
 			maxBackoffMs: 1000,
 		},
 		writerLimits: {
-			maxBatchSize: 100,
+			// One append is in flight per partition, so records/s ≤ batch ÷ commit latency; the 800 KB byte cap binds near here.
+			maxBatchSize: 500,
 			// Sized for one customer bursting 500 parallel tracks, the largest the balance suites send.
 			maxPendingCommands: 4000,
 			maxPendingCommandsPerCustomer: 1000,
