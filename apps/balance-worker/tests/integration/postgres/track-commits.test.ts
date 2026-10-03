@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +31,7 @@ import { Kafka, logLevel } from "kafkajs";
 import {
 	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 	defaultSubjectSnapshotsEdgeConfig,
+	type SubjectSnapshotMode,
 } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
@@ -68,7 +69,12 @@ type Harness = {
 	stop(): Promise<void>;
 };
 
-type RunningWorker = { endpoint: string; stop(): Promise<void> };
+type RunningWorker = {
+	endpoint: string;
+	/** Every warning the worker logged so far, as the logger's argument lists. */
+	warnings(): unknown[][];
+	stop(): Promise<void>;
+};
 
 function ignoreLog(): void {}
 
@@ -181,7 +187,7 @@ async function createHarness(): Promise<Harness> {
 function edgeConfigOverrideOf({
 	subjectSnapshots,
 }: {
-	subjectSnapshots: "off" | "write" | "serve";
+	subjectSnapshots: SubjectSnapshotMode;
 }): string {
 	const configs = {
 		[BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY]: {
@@ -200,7 +206,7 @@ async function startWorker({
 }: {
 	harness: Harness;
 	subprocess?: boolean;
-	subjectSnapshots?: "off" | "write" | "serve";
+	subjectSnapshots?: SubjectSnapshotMode;
 }): Promise<RunningWorker> {
 	if (!databaseUrl) throw new Error("No worktree DATABASE_URL");
 	const directory = mkdtempSync(join(tmpdir(), "pg-commit-"));
@@ -221,6 +227,8 @@ async function startWorker({
 		BALANCE_WORKER_PARTITION_COUNT: PARTITION_COUNT,
 	};
 	const errors: unknown[] = [];
+	const warnings: unknown[][] = [];
+	const warnFile = join(directory, "warnings.jsonl");
 	// The snapshot settings come from the edge-config override, decoded once per process: a writing worker is its own process.
 	const child =
 		subprocess || subjectSnapshots !== "off"
@@ -237,6 +245,7 @@ async function startWorker({
 							AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverrideOf({
 								subjectSnapshots,
 							}),
+							BALANCE_WORKER_TEST_WARN_FILE: warnFile,
 						},
 						stdout: "inherit",
 						stderr: "inherit",
@@ -261,7 +270,10 @@ async function startWorker({
 					logger: {
 						debug: ignoreLog,
 						info: ignoreLog,
-						warn: (...args: unknown[]) => workerLogs.push(["warn", ...args]),
+						warn: (...args: unknown[]) => {
+							warnings.push(args);
+							workerLogs.push(["warn", ...args]);
+						},
 						error: (...args: unknown[]) => workerLogs.push(["error", ...args]),
 					},
 				},
@@ -288,11 +300,20 @@ async function startWorker({
 	}
 	return {
 		endpoint: env.BALANCE_WORKER_ENDPOINT,
+		warnings: () => (child ? readWarnFile({ path: warnFile }) : warnings),
 		stop: async () => {
 			await worker.stop();
 			rmSync(directory, { recursive: true, force: true });
 		},
 	};
+}
+
+function readWarnFile({ path }: { path: string }): unknown[][] {
+	if (!existsSync(path)) return [];
+	return readFileSync(path, "utf8")
+		.split("\n")
+		.filter((line) => line.length > 0)
+		.map((line) => JSON.parse(line) as unknown[]);
 }
 
 function trackCommand({
@@ -2513,6 +2534,77 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				await served.cleanup();
 			}
 		}, 90_000);
+
+		test("verifying snapshots: a restart reads the row beside the rows and serves the rows; a bypass write the row cannot know is logged as a mismatch on the field it changed, and never served", async () => {
+			const isolated = await createHarness();
+			const checked = await seedCustomer({ postgres, balance: 100 });
+			let running: RunningWorker | undefined;
+			try {
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "verify",
+				});
+				await trackOrExplain(
+					isolated,
+					trackCommand({ customer: checked, commandId: "verify_1", value: 5 }),
+				);
+				const written = await waitForSnapshotBalance({
+					postgres,
+					customer: checked,
+					balance: 95,
+				});
+				expect(snapshotBalanceOf(written[0], checked)).toBe(95);
+				await running.stop();
+
+				// A restart over an untouched row: the row and the rows agree, nothing is logged.
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "verify",
+				});
+				const agreed = await trackOrExplain(
+					isolated,
+					trackCommand({ customer: checked, commandId: "verify_2", value: 5 }),
+				);
+				expect(balanceOf(agreed, checked.customerEntitlementId)).toBe(90);
+				const rewritten = await waitForSnapshotBalance({
+					postgres,
+					customer: checked,
+					balance: 90,
+				});
+				expect(snapshotBalanceOf(rewritten[0], checked)).toBe(90);
+				expect(running.warnings()).toEqual([]);
+				await running.stop();
+
+				// The legacy path rewrites the grant underneath: the row still says 90, the rows say 50.
+				await checked.deleteGrant();
+				await checked.restoreGrant({ balance: 50 });
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "verify",
+				});
+				const served = await trackOrExplain(
+					isolated,
+					trackCommand({ customer: checked, commandId: "verify_3", value: 5 }),
+				);
+				expect(balanceOf(served, checked.customerEntitlementId)).toBe(45);
+				expect(await waitForBalance({ customer: checked, balance: 45 })).toBe(
+					45,
+				);
+				const mismatches = running
+					.warnings()
+					.map(([record]) => record as { event: string; data: unknown })
+					.filter(
+						(record) => record.event === "balance_worker.snapshot_mismatch",
+					);
+				expect(mismatches.map((record) => record.data)).toEqual([
+					{ identity: checked.identity, fields: ["customerEntitlements"] },
+				]);
+			} finally {
+				await running?.stop();
+				await isolated.stop();
+				await checked.cleanup();
+			}
+		}, 120_000);
 
 		test("with snapshots off, nothing is written to subject_snapshots", async () => {
 			const isolated = await createHarness();
