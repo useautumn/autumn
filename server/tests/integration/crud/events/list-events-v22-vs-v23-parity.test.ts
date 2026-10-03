@@ -8,7 +8,7 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -47,132 +47,159 @@ const findDiff = (a: unknown, b: unknown, path = "$"): string | null => {
 	return `${path}: ${JSON.stringify(a)} vs ${JSON.stringify(b)}`;
 };
 
-const TINYBIRD_INGEST_WAIT_MS = 3000;
-
 const SEED_EVENT_COUNT = 5;
 
-test.concurrent(`${chalk.yellowBright("events-list-v22-vs-v23-parity: V2.2 offset and V2.3 cursor return identical list[] for the same customer")}`, async () => {
-	const messagesItem = items.free({
-		featureId: TestFeature.Messages,
-		includedUsage: 1000,
-	});
-	const freeProd = products.base({
-		id: "free",
-		items: [messagesItem],
+// Tracked events reach events.list asynchronously (worker -> Postgres -> Tinybird);
+// 1s polls keep each customer under the 5/s events limiter.
+const waitForSeededEvents = (customerId: string) =>
+	pollUntil({
+		fetch: () =>
+			new AutumnInt({ version: ApiVersion.V2_3 }).events.list({
+				customer_id: customerId,
+				limit: SEED_EVENT_COUNT,
+			} as unknown as { customer_id: string }) as Promise<
+				CursorPaginatedResponse<ApiEventsListItem>
+			>,
+		until: (res) => res.list.length >= SEED_EVENT_COUNT,
+		intervalMs: 1000,
 	});
 
-	const { customerId, autumnV2_2 } = await initScenario({
-		customerId: `events-list-v22-v23-parity-${Date.now()}`,
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
-
-	for (let i = 0; i < SEED_EVENT_COUNT; i++) {
-		await autumnV2_2.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: i + 1,
+test.concurrent(
+	`${chalk.yellowBright("events-list-v22-vs-v23-parity: V2.2 offset and V2.3 cursor return identical list[] for the same customer")}`,
+	async () => {
+		const messagesItem = items.free({
+			featureId: TestFeature.Messages,
+			includedUsage: 1000,
 		});
-	}
-
-	await timeout(TINYBIRD_INGEST_WAIT_MS);
-
-	const autumnV22 = new AutumnInt({ version: ApiVersion.V2_2 });
-	const autumnV23 = new AutumnInt({ version: ApiVersion.V2_3 });
-
-	const PARITY_LIMIT = 500;
-	const [v22Res, v23Res] = await Promise.all([
-		autumnV22.events.list({
-			customer_id: customerId,
-			limit: PARITY_LIMIT,
-		} as unknown as { customer_id: string }) as Promise<ApiEventsListResponse>,
-		autumnV23.events.list({
-			customer_id: customerId,
-			limit: PARITY_LIMIT,
-		} as unknown as { customer_id: string }) as Promise<
-			CursorPaginatedResponse<ApiEventsListItem>
-		>,
-	]);
-
-	expect(v22Res.list.length).toBe(v23Res.list.length);
-	expect(v22Res.list.length).toBeGreaterThanOrEqual(SEED_EVENT_COUNT);
-
-	const diff = findDiff(v22Res.list, v23Res.list);
-	if (diff) {
-		console.log(chalk.red(`[events parity] divergence at ${diff}`));
-	}
-	expect(diff).toBeNull();
-
-	expect(typeof v22Res.has_more).toBe("boolean");
-	expect(typeof v22Res.total).toBe("number");
-	expect(typeof v22Res.offset).toBe("number");
-	expect(typeof v22Res.limit).toBe("number");
-	expect("next_cursor" in v22Res).toBe(false);
-
-	expect(
-		v23Res.next_cursor === null || typeof v23Res.next_cursor === "string",
-	).toBe(true);
-	expect("has_more" in v23Res).toBe(false);
-	expect("total" in v23Res).toBe(false);
-	expect("offset" in v23Res).toBe(false);
-});
-
-test.concurrent(`${chalk.yellowBright("events-list-v22-vs-v23-parity: V2.3 cursor round-trip returns disjoint pages")}`, async () => {
-	const messagesItem = items.free({
-		featureId: TestFeature.Messages,
-		includedUsage: 1000,
-	});
-	const freeProd = products.base({
-		id: "free",
-		items: [messagesItem],
-	});
-
-	const { customerId, autumnV2_2 } = await initScenario({
-		customerId: `events-list-v23-cursor-roundtrip-${Date.now()}`,
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
-
-	for (let i = 0; i < SEED_EVENT_COUNT; i++) {
-		await autumnV2_2.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: i + 1,
+		const freeProd = products.base({
+			id: "free",
+			items: [messagesItem],
 		});
-	}
 
-	await timeout(TINYBIRD_INGEST_WAIT_MS);
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: `events-list-v22-v23-parity-${Date.now()}`,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
 
-	const autumnV23 = new AutumnInt({ version: ApiVersion.V2_3 });
+		for (let i = 0; i < SEED_EVENT_COUNT; i++) {
+			await autumnV2_2.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: i + 1,
+			});
+		}
 
-	const page1 = (await autumnV23.events.list({
-		customer_id: customerId,
-		start_cursor: "",
-		limit: 2,
-	} as unknown as {
-		customer_id: string;
-	})) as CursorPaginatedResponse<ApiEventsListItem>;
+		await waitForSeededEvents(customerId);
 
-	expect(page1.list.length).toBe(2);
-	expect(page1.next_cursor).not.toBeNull();
-	expect(typeof page1.next_cursor).toBe("string");
+		const autumnV22 = new AutumnInt({ version: ApiVersion.V2_2 });
+		const autumnV23 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-	const page2 = (await autumnV23.events.list({
-		customer_id: customerId,
-		start_cursor: page1.next_cursor as string,
-		limit: 2,
-	} as unknown as {
-		customer_id: string;
-	})) as CursorPaginatedResponse<ApiEventsListItem>;
+		const PARITY_LIMIT = 500;
+		const [v22Res, v23Res] = await Promise.all([
+			autumnV22.events.list({
+				customer_id: customerId,
+				limit: PARITY_LIMIT,
+			} as unknown as {
+				customer_id: string;
+			}) as Promise<ApiEventsListResponse>,
+			autumnV23.events.list({
+				customer_id: customerId,
+				limit: PARITY_LIMIT,
+			} as unknown as { customer_id: string }) as Promise<
+				CursorPaginatedResponse<ApiEventsListItem>
+			>,
+		]);
 
-	expect(page2.list.length).toBeGreaterThan(0);
+		expect(v22Res.list.length).toBe(v23Res.list.length);
+		expect(v22Res.list.length).toBeGreaterThanOrEqual(SEED_EVENT_COUNT);
 
-	const page1Ids = new Set(page1.list.map((e) => e.id));
-	const page2Ids = new Set(page2.list.map((e) => e.id));
-	const overlap = [...page1Ids].filter((id) => page2Ids.has(id));
-	expect(overlap).toEqual([]);
+		const diff = findDiff(v22Res.list, v23Res.list);
+		if (diff) {
+			console.log(chalk.red(`[events parity] divergence at ${diff}`));
+		}
+		expect(diff).toBeNull();
 
-	const minPage1Timestamp = Math.min(...page1.list.map((e) => e.timestamp));
-	const maxPage2Timestamp = Math.max(...page2.list.map((e) => e.timestamp));
-	expect(maxPage2Timestamp).toBeLessThanOrEqual(minPage1Timestamp);
-});
+		expect(typeof v22Res.has_more).toBe("boolean");
+		expect(typeof v22Res.total).toBe("number");
+		expect(typeof v22Res.offset).toBe("number");
+		expect(typeof v22Res.limit).toBe("number");
+		expect("next_cursor" in v22Res).toBe(false);
+
+		expect(
+			v23Res.next_cursor === null || typeof v23Res.next_cursor === "string",
+		).toBe(true);
+		expect("has_more" in v23Res).toBe(false);
+		expect("total" in v23Res).toBe(false);
+		expect("offset" in v23Res).toBe(false);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("events-list-v22-vs-v23-parity: V2.3 cursor round-trip returns disjoint pages")}`,
+	async () => {
+		const messagesItem = items.free({
+			featureId: TestFeature.Messages,
+			includedUsage: 1000,
+		});
+		const freeProd = products.base({
+			id: "free",
+			items: [messagesItem],
+		});
+
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: `events-list-v23-cursor-roundtrip-${Date.now()}`,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
+
+		for (let i = 0; i < SEED_EVENT_COUNT; i++) {
+			await autumnV2_2.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: i + 1,
+			});
+		}
+
+		await waitForSeededEvents(customerId);
+
+		const autumnV23 = new AutumnInt({ version: ApiVersion.V2_3 });
+
+		const page1 = (await autumnV23.events.list({
+			customer_id: customerId,
+			start_cursor: "",
+			limit: 2,
+		} as unknown as {
+			customer_id: string;
+		})) as CursorPaginatedResponse<ApiEventsListItem>;
+
+		expect(page1.list.length).toBe(2);
+		expect(page1.next_cursor).not.toBeNull();
+		expect(typeof page1.next_cursor).toBe("string");
+
+		const page2 = (await autumnV23.events.list({
+			customer_id: customerId,
+			start_cursor: page1.next_cursor as string,
+			limit: 2,
+		} as unknown as {
+			customer_id: string;
+		})) as CursorPaginatedResponse<ApiEventsListItem>;
+
+		expect(page2.list.length).toBeGreaterThan(0);
+
+		const page1Ids = new Set(page1.list.map((e) => e.id));
+		const page2Ids = new Set(page2.list.map((e) => e.id));
+		const overlap = [...page1Ids].filter((id) => page2Ids.has(id));
+		expect(overlap).toEqual([]);
+
+		const minPage1Timestamp = Math.min(...page1.list.map((e) => e.timestamp));
+		const maxPage2Timestamp = Math.max(...page2.list.map((e) => e.timestamp));
+		expect(maxPage2Timestamp).toBeLessThanOrEqual(minPage1Timestamp);
+	},
+);

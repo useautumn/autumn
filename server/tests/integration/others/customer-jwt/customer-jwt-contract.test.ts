@@ -36,7 +36,7 @@ import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -190,16 +190,20 @@ test(`${chalk.yellowBright("customer-jwt: mint/scope/allowlist/refresh/revoke co
 			body: { feature_id: TestFeature.Messages, value: 1 },
 		});
 	}
-	// Tinybird ingest is async — give it a moment before querying.
-	await timeout(3000);
 
 	// 9a: events.list authorized with an access token (previously 403).
 	//     Pass a SPOOFED customer_id — force-set must override it so every
 	//     returned row belongs to the token's own customer, never `otherId`.
-	const listEvents = await raw({
-		path: "/events.list",
-		token: accessToken,
-		body: { customer_id: otherId, limit: 100 },
+	//     Ingest is async (worker -> Postgres -> Tinybird); 1s polls stay under the events limiter.
+	const listEvents = await pollUntil({
+		fetch: () =>
+			raw({
+				path: "/events.list",
+				token: accessToken,
+				body: { customer_id: otherId, limit: 100 },
+			}),
+		until: (res) => res.status !== 200 || res.json?.list?.length >= 3,
+		intervalMs: 1000,
 	});
 	expect(listEvents.status).toBe(200);
 	expect(Array.isArray(listEvents.json?.list)).toBe(true);

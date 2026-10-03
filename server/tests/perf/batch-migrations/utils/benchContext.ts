@@ -159,6 +159,8 @@ const ensureProduct = async ({
 		name,
 		created_at: Date.now(),
 		version: 1,
+		version_slug: "v1",
+		active: true,
 	});
 	return internalId;
 };
