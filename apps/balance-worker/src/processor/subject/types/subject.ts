@@ -26,7 +26,10 @@ export type SubjectHydratorContext = {
 	catalogCache: CatalogCache;
 	db: Pick<
 		WorkerDb,
-		"getSubjectRows" | "readSubjectSnapshot" | "getEntitySubjectRows"
+		| "getSubjectRows"
+		| "readSubjectSnapshot"
+		| "readEntitySubjectSnapshots"
+		| "getEntitySubjectRows"
 	>;
 	writer: Pick<PartitionWriter, "decide" | "readFreshestState" | "adopt">;
 	receiptPolicy: ReceiptPolicy;

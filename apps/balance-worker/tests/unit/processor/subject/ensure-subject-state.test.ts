@@ -125,6 +125,7 @@ const createScope = ({
 			catalogCache,
 			db: {
 				readSubjectSnapshot: async () => null,
+				readEntitySubjectSnapshots: async () => new Map(),
 				getSubjectRows: async () => {
 					const read = sourceCalls;
 					sourceCalls += 1;

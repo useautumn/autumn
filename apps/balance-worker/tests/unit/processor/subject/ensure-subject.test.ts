@@ -147,6 +147,7 @@ const createScope = ({
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
 		readSubjectSnapshot: async () => null,
+		readEntitySubjectSnapshots: async () => new Map(),
 		getEntitySubjectRows: async () => [],
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,

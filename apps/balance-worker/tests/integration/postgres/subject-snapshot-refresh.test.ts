@@ -7,6 +7,7 @@ import {
 	type PostgresClient,
 	readSubjectSnapshot,
 } from "@autumn/postgres";
+import { sql } from "drizzle-orm";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { createSubjectLoadGate } from "../../../src/external/postgres/createSubjectLoadGate.js";
@@ -42,9 +43,15 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 	});
 
 	/** The production hydrator over the production writer, committer and lane, on real Postgres; `gate` holds every full read until released. */
-	const createHydrator = async () => {
+	const createHydrator = async ({
+		mode = "write",
+	}: {
+		mode?: "write" | "serve" | "verify";
+	} = {}) => {
 		const topic = `snapshot-refresh-${crypto.randomUUID()}`;
 		const reads: string[] = [];
+		const entityProbes: string[][] = [];
+		const entityReads: string[][] = [];
 		const gate = { held: Promise.resolve() as Promise<void> };
 		const timings = createDatabaseTimings();
 		const workerDb = createWorkerDb({
@@ -61,6 +68,14 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 				await gate.held;
 				return workerDb.getSubjectRows(params);
 			},
+			readEntitySubjectSnapshots: async (params) => {
+				entityProbes.push([...params.entityIds]);
+				return workerDb.readEntitySubjectSnapshots(params);
+			},
+			getEntitySubjectRows: async (params) => {
+				entityReads.push([...params.entityIds]);
+				return workerDb.getEntitySubjectRows(params);
+			},
 		};
 		const committerDb: CommitterDb = {
 			readPartitionProgress: async () => null,
@@ -74,9 +89,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 					statementTimeoutMs: 10_000,
 				}),
 		};
-		const subjectSnapshotsConfig = createSubjectSnapshotsStore({
-			mode: "write",
-		});
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode });
 		const committer = createCommitter({
 			ctx: { db: committerDb, subjectSnapshotsConfig },
 			config: {
@@ -133,7 +146,17 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 			writer.dispose();
 			stateStore.close();
 		};
-		return { hydrator, writer, reads, gate, topic, close };
+		return {
+			hydrator,
+			writer,
+			stateStore,
+			reads,
+			entityProbes,
+			entityReads,
+			gate,
+			topic,
+			close,
+		};
 	};
 
 	const readRow = async ({
@@ -240,6 +263,62 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 			]);
 		} finally {
 			close();
+			await seeded.cleanup();
+		}
+	});
+
+	/** An entity of the seeded customer, with no rows of its own: its state is the customer's with the entity attached. */
+	const seedEntity = async ({
+		seeded,
+		entityId,
+	}: {
+		seeded: SeededCustomer;
+		entityId: string;
+	}): Promise<MeteringIdentity> => {
+		await postgres.db.execute(sql`INSERT INTO entities
+			(internal_id, id, internal_customer_id, org_id, env, created_at, name, feature_id, internal_feature_id)
+			VALUES (${`${entityId}_internal`}, ${entityId}, ${seeded.internalCustomerId}, ${seeded.orgId}, ${seeded.env}, ${Date.now()}, 'Seat', ${seeded.featureId}, ${seeded.internalFeatureId})`);
+		return { ...seeded.identity, entityId };
+	};
+
+	test("serving: an entity's cold load probes its row with its batch and skips the rows on a hit; a miss reads the rows for the misses alone", async () => {
+		const seeded = await seedCustomer({ postgres, balance: 100 });
+		const suffix = seeded.identity.customerId.slice(-8);
+		const hitId = `en_hit_${suffix}`;
+		const missId = `en_miss_${suffix}`;
+		const hit = await seedEntity({ seeded, entityId: hitId });
+		const miss = await seedEntity({ seeded, entityId: missId });
+		const writing = await createHydrator({ mode: "serve" });
+		try {
+			// The production row for en_hit: read whole once, written through the lane as a refresh would.
+			const { state } = await writing.hydrator.ensure({ identity: hit });
+			writing.stateStore.snapshotQueues?.enqueueRefresh({
+				topic: writing.topic,
+				partition,
+				state,
+				baselineAt: Date.now(),
+			});
+			await waitForRow({ identity: hit });
+		} finally {
+			writing.close();
+		}
+
+		const serving = await createHydrator({ mode: "serve" });
+		try {
+			await serving.hydrator.ensure({ identity: seeded.identity });
+			const [served, read] = await Promise.all([
+				serving.hydrator.ensure({ identity: hit }),
+				serving.hydrator.ensure({ identity: miss }),
+			]);
+			expect(served.state.entity?.id).toBe(hitId);
+			expect(read.state.entity?.id).toBe(missId);
+			expect(serving.entityProbes).toEqual([[hitId, missId]]);
+			expect(serving.entityReads).toEqual([[missId]]);
+		} finally {
+			serving.close();
+			await postgres.db.execute(
+				sql`DELETE FROM entities WHERE internal_customer_id = ${seeded.internalCustomerId}`,
+			);
 			await seeded.cleanup();
 		}
 	});

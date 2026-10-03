@@ -80,6 +80,7 @@ const createScope = ({
 					fullReads.push(identity.customerId);
 					return rows;
 				},
+				readEntitySubjectSnapshots: async () => new Map(),
 				getEntitySubjectRows: async () => [],
 			},
 			writer: {

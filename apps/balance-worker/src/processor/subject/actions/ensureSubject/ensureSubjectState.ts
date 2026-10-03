@@ -48,7 +48,8 @@ const hydrateEntity = ({
 	hydrateSubject({
 		scope,
 		identity,
-		read: () => scope.state.entityLoads.load({ identity }),
+		read: ({ rowsOnly }) =>
+			scope.state.entityLoads.load({ identity, rowsOnly }),
 	});
 
 /** The freshest view for the identity, pending baseline included; a missing customer hydrates first, then a missing entity. */
