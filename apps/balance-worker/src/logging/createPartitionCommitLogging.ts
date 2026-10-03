@@ -197,8 +197,8 @@ export function createPartitionCommitLogging({
 			...(ctx.stateStore.claimPartition
 				? { claimPartition: ctx.stateStore.claimPartition.bind(ctx.stateStore) }
 				: {}),
-			...(ctx.stateStore.evictDeletes
-				? { evictDeletes: ctx.stateStore.evictDeletes }
+			...(ctx.stateStore.snapshotWrites
+				? { snapshotWrites: ctx.stateStore.snapshotWrites }
 				: {}),
 			applyDurableMutations,
 		},

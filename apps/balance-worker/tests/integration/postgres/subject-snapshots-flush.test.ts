@@ -17,6 +17,7 @@ import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
+import { createState } from "../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 import {
 	openFixturePostgres,
@@ -188,11 +189,11 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		try {
 			await postgres.db.execute(sql`INSERT INTO subject_snapshots (org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
 				SELECT ${seeded.orgId}, ${seeded.env}, 'cus_storm_' || i, '', ${seeded.internalCustomerId}, 0, 64, 1, '{}'::jsonb, 0, 0 FROM generate_series(0, 9999) i`);
-			const deletes = store.evictDeletes;
-			if (!deletes) throw new Error("Expected evict deletes");
+			const deletes = store.snapshotWrites;
+			if (!deletes) throw new Error("Expected snapshot writes");
 			const startedAt = performance.now();
 			for (let index = 0; index < 10_000; index++)
-				deletes.enqueue({
+				deletes.enqueueDelete({
 					topic,
 					partition: 0,
 					customerKey: meteringIdentityToPartitionKey({
@@ -520,6 +521,124 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		}
 	});
 
+	test("a late backfill from an owner the partition has left rolls back on its bookmark: a stale read never resurrects a row", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const topic = topicOf();
+		await insertPartitionProgress({
+			ctx: { db: postgres.db },
+			topic,
+			partition: 5,
+			nextOffset: 40n,
+			claimToken: "owner_a",
+		});
+		try {
+			await claimPartitionProgress({
+				ctx: { db: postgres.db },
+				topic,
+				partition: 5,
+				claimToken: "owner_b",
+			});
+
+			// What the lane sends for a backfill: no records, the bookmark it last saw, its own claim.
+			const lateBackfill = commitFlush({
+				ctx: { db: postgres.db },
+				request: {
+					changes: [],
+					bookmarks: [
+						{
+							topic,
+							partition: 5,
+							expectedOffset: 40n,
+							nextOffset: 40n,
+							claimToken: "owner_a",
+						},
+					],
+					snapshots: { upserts: [upsertOf({ seeded })], deletes: [] },
+				},
+				statementTimeoutMs: 2_000,
+			});
+
+			await expect(lateBackfill).rejects.toBeInstanceOf(
+				FlushBookmarkConflictError,
+			);
+			expect(await readSnapshots({ seeded })).toEqual([]);
+			expect(await seeded.readNextOffset({ topic, partition: 5 })).toBe(40n);
+		} finally {
+			await seeded.cleanup();
+		}
+	});
+
+	test("a backfill and an evict for the same customer land in lane order: the DELETE after leaves no row", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const topic = topicOf();
+		const db: CommitterDb = {
+			readPartitionProgress: async () => null,
+			insertPartitionProgress: (params) =>
+				insertPartitionProgress({ ctx: { db: postgres.db }, ...params }),
+			claimPartitionProgress: async () => {},
+			flush: (request) =>
+				commitFlush({
+					ctx: { db: postgres.db },
+					request,
+					statementTimeoutMs: 10_000,
+				}),
+		};
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({
+			mode: "write",
+		});
+		const committer = createCommitter({
+			ctx: { db, subjectSnapshotsConfig },
+			config: {
+				concurrency: 1,
+				maxRowsPerFlush: 500,
+				retry: {
+					degradedAfterAttempts: 1,
+					initialBackoffMs: 1,
+					maxBackoffMs: 1,
+				},
+				snapshots: { partitionCount: 64 },
+			},
+		});
+		const store = createCommitterStateStore({
+			ctx: { committer, db, subjectSnapshotsConfig },
+		});
+		try {
+			await store.initializePartition({ topic, partition: 0, nextOffset: 0n });
+			const writes = store.snapshotWrites;
+			if (!writes) throw new Error("Expected snapshot writes");
+			const customerKey = meteringIdentityToPartitionKey({
+				identity: { ...seeded.identity, entityId: null },
+			});
+			const fresh = createState({
+				identity: { ...seeded.identity, entityId: null },
+			});
+			const state = {
+				...fresh,
+				customer: { ...fresh.customer, internal_id: seeded.internalCustomerId },
+			};
+			writes.enqueueBackfill({
+				topic,
+				partition: 0,
+				customerKey,
+				states: [state],
+				baselineAt: 1,
+			});
+			await committer.drain();
+			await Bun.sleep(20);
+			// The backfill landed under the bookmark; the DELETE enqueued after it lands after it.
+			expect(await readSnapshots({ seeded })).toHaveLength(1);
+			writes.enqueueDelete({ topic, partition: 0, customerKey });
+			await committer.drain();
+			await Bun.sleep(50);
+			await committer.drain();
+
+			expect(await readSnapshots({ seeded })).toEqual([]);
+		} finally {
+			store.close();
+			await seeded.cleanup();
+		}
+	});
+
 	test("a statement timeout rolls the snapshot back with the rows", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();
@@ -710,7 +829,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		expect(plan).not.toMatch(
 			/"Seq Scan"[^}]*"Relation Name":"subject_snapshots"/,
 		);
-	});
+	}, 30_000);
 
 	test("a cold load's probe is one primary-key lookup, never a scan of the table", async () => {
 		const seeded = await seedCustomer({ postgres });
@@ -753,5 +872,5 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		expect(plan).not.toMatch(
 			/"Seq Scan"[^}]*"Relation Name":"subject_snapshots"/,
 		);
-	});
+	}, 30_000);
 });

@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { MeteringIdentity } from "@autumn/balance-engine";
+import {
+	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
+} from "@autumn/balance-engine";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { createEntityLoads } from "../../../../../src/processor/subject/entityLoads/createEntityLoads.js";
@@ -61,6 +64,7 @@ const createScope = ({
 	const probes: string[] = [];
 	const fullReads: string[] = [];
 	const warnings: unknown[] = [];
+	const backfills: { customerKey: string; baselineAt: number }[] = [];
 	const catalogCache = createTestCatalogCache();
 	const scope: SubjectScope = {
 		ctx: {
@@ -85,6 +89,15 @@ const createScope = ({
 			},
 			receiptPolicy: { retentionMs: 60_000, now: () => NOW },
 			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode }),
+			snapshotWrites: {
+				enqueueDelete: () => {
+					throw new Error("not exercised");
+				},
+				enqueueBackfill: ({ customerKey, baselineAt }) => {
+					backfills.push({ customerKey, baselineAt });
+				},
+			},
+			position: { topic: "metering", partition: 7 },
 			logger: { warn: (...args: unknown[]) => warnings.push(args) },
 		},
 		state: {
@@ -95,9 +108,11 @@ const createScope = ({
 			entityLoads: createEntityLoads({ scopeOf: () => scope }),
 		},
 	};
-	const load = (occurredAt = NOW) =>
-		loadSubjectBaseline({ scope, identity, occurredAt });
-	return { load, probes, fullReads, warnings };
+	const load = (
+		occurredAt = NOW,
+		inFlight = { customerKey: "cus_1", overtaken: false },
+	) => loadSubjectBaseline({ scope, identity, occurredAt, load: inFlight });
+	return { load, probes, fullReads, warnings, backfills };
 };
 
 describe("loadSubjectBaseline", () => {
@@ -161,5 +176,33 @@ describe("loadSubjectBaseline", () => {
 	test("no row and no rows is a customer that does not exist", async () => {
 		const { load } = createScope({ rows: null });
 		await expect(load()).rejects.toBeInstanceOf(SubjectNotFoundError);
+	});
+
+	test("rows read after a miss are written back, keyed by the engine's customer key, aged by this read", async () => {
+		const { load, backfills } = createScope();
+		await load();
+		expect(backfills).toEqual([
+			{
+				customerKey: meteringIdentityToPartitionKey({ identity }),
+				baselineAt: NOW,
+			},
+		]);
+	});
+
+	test("a hit, a read for the rows alone, a replay, and a read an evict overtook write nothing back", async () => {
+		const hit = createScope({ snapshot: createState({ identity }) });
+		await hit.load();
+		const off = createScope({ mode: "write" });
+		await off.load();
+		const replay = createScope();
+		await replay.load(NOW - 5_000);
+		const overtaken = createScope();
+		await overtaken.load(NOW, { customerKey: "cus_1", overtaken: true });
+		expect([
+			hit.backfills,
+			off.backfills,
+			replay.backfills,
+			overtaken.backfills,
+		]).toEqual([[], [], [], []]);
 	});
 });

@@ -95,7 +95,7 @@ export type PartitionWriterContext = {
 		| "readOwnState"
 		| "readReceipt"
 		| "applyDurableMutations"
-		| "evictDeletes"
+		| "snapshotWrites"
 	>;
 	appender: CommittedOutcomeAppender;
 	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */

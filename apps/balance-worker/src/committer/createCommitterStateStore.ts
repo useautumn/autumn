@@ -9,7 +9,7 @@ import {
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
-import { createEvictDeletes } from "./subjectSnapshots/createEvictDeletes.js";
+import { createSnapshotLaneWrites } from "./subjectSnapshots/createSnapshotLaneWrites.js";
 import type {
 	Committer,
 	CommitterContext,
@@ -31,7 +31,7 @@ export const createCommitterStateStore = ({
 			| "claimPartitionProgress"
 		>;
 		logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
-		/** Present when the worker has the snapshot settings: evicts delete their customer's rows through the store. */
+		/** Present when the worker has the snapshot settings: evict DELETEs and backfills land through the store's lane. */
 		subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	};
 }): CommitterStateStore => {
@@ -116,12 +116,14 @@ export const createCommitterStateStore = ({
 	function readCommandNextOffset(params: PartitionPosition) {
 		return ctx.progress.readCommandNextOffset(params);
 	}
-	const evictDeletes = dependencies.subjectSnapshotsConfig
-		? createEvictDeletes({
+	const snapshotWrites = dependencies.subjectSnapshotsConfig
+		? createSnapshotLaneWrites({
 				ctx: {
 					committer: ctx.committer,
 					logger: dependencies.logger,
 					subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
+					readNextOffset: (position) => ctx.progress.readNextOffset(position),
+					claimTokenOf,
 					runInLane,
 				},
 			})
@@ -135,7 +137,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
-		...(evictDeletes && { evictDeletes }),
+		...(snapshotWrites && { snapshotWrites }),
 		claimPartition,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,

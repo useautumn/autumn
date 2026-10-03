@@ -1,7 +1,9 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
 import { servesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { readSubjectBaseline } from "../actions/ensureSubject/readSubjectBaseline.js";
+import type { InFlightLoad } from "../inFlightLoads/types/inFlightLoad.js";
 import type { SubjectScope } from "../types/subject.js";
+import { backfillSnapshot } from "./actions/backfillSnapshot.js";
 import { snapshotStateOf } from "./rules/snapshotStateOf.js";
 
 /** A read further from now than this is a replay, which never trusts a row written for now. */
@@ -9,16 +11,19 @@ const SNAPSHOT_AS_OF_SKEW_MS = 1_000;
 
 /**
  * The subject's rows at `occurredAt`: one probe for its snapshot when the worker serves snapshots and the read is for
- * now, answered from the row when it stands (parses), else the full rows. Nothing becomes resident here.
+ * now, answered from the row when it stands (parses), else the full rows, which are written back for the next cold
+ * load. Nothing becomes resident here.
  */
 export const loadSubjectBaseline = async ({
 	scope,
 	identity,
 	occurredAt,
+	load,
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
 	occurredAt: number;
+	load: InFlightLoad;
 }): Promise<SubjectState> => {
 	if (!probesSnapshot({ scope, occurredAt }))
 		return readSubjectBaseline({ scope, identity, occurredAt });
@@ -31,7 +36,10 @@ export const loadSubjectBaseline = async ({
 			`Balance worker could not read ${identity.customerId}'s snapshot; its next flush rewrites it`,
 		);
 	}
-	return readSubjectBaseline({ scope, identity, occurredAt });
+	const baseline = await readSubjectBaseline({ scope, identity, occurredAt });
+	if (!load.overtaken)
+		backfillSnapshot({ scope, identity, baseline, baselineAt: occurredAt });
+	return baseline;
 };
 
 /** Serving, and reading for now: a replay never trusts a row written for now. */
