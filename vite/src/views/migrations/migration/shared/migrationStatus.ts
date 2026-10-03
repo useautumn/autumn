@@ -1,4 +1,18 @@
 import type { MigrationStatus } from "@autumn/shared";
+import type { StatusGlyph, StatusTone } from "@autumn/ui";
+
+export const STATUS_INDICATORS: Record<
+	MigrationStatus,
+	{ tone: StatusTone; glyph: StatusGlyph }
+> = {
+	draft: { tone: "neutral", glyph: "pencil" },
+	waiting: { tone: "yellow", glyph: "clock" },
+	running: { tone: "green", glyph: "play" },
+	run: { tone: "blue", glyph: "check" },
+	no_changes: { tone: "neutral", glyph: "minus" },
+	failed: { tone: "red", glyph: "x" },
+	canceled: { tone: "neutral", glyph: "ban" },
+};
 
 export function runButtonLabel(status: MigrationStatus): string {
 	return status === "run" || status === "no_changes" ? "Run again" : "Run All";

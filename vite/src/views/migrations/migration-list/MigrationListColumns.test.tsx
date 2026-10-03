@@ -1,31 +1,34 @@
 import { expect, test } from "bun:test";
 import type { Row } from "@tanstack/react-table";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
 import { createMigrationListColumns } from "./MigrationListColumns";
+import { fixtureRows } from "./preview/migrationListFixtures";
+import type { MigrationListRow } from "./rowView/deriveMigrationRowView";
 
-const renderStatusCell = (
-	migration: Pick<MigrationWithRunInfo, "status" | "blocked_by">,
-) => {
+const renderCell = ({ id, header }: { id: string; header: string }) => {
+	const row = fixtureRows.find((candidate) => candidate.id === id);
 	const column = createMigrationListColumns().find(
-		(candidate) => candidate.header === "Status",
+		(candidate) => candidate.header === header,
 	);
-	if (!column || typeof column.cell !== "function")
-		throw new Error("Status column missing");
+	if (!row || !column || typeof column.cell !== "function")
+		throw new Error(`${header} cell for ${id} missing`);
 	const cell = column.cell({
-		row: { original: migration } as Row<MigrationWithRunInfo>,
+		row: { original: row } as Row<MigrationListRow>,
 	} as Parameters<typeof column.cell>[0]);
-	return renderToStaticMarkup(cell);
+	return renderToStaticMarkup(cell)
+		.replace(/<[^>]+>/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
 };
 
-test("the list status column renders the computed status", () => {
-	expect(renderStatusCell({ status: "draft", blocked_by: null })).toContain(
-		"Draft",
+test("list cells render the derived filter, operations and status text", () => {
+	const id = "migration-starter-v2";
+	expect(renderCell({ id, header: "Filter" })).toBe("Starter +1");
+	expect(renderCell({ id, header: "Operations" })).toBe(
+		"Starter → v2 Base price $39 → $49/mo +2",
 	);
-	const waiting = renderStatusCell({ status: "waiting", blocked_by: "pro-v3" });
-	expect(waiting).toContain(">Waiting<");
-	expect(waiting).not.toContain("Waiting on");
-	expect(renderStatusCell({ status: "run", blocked_by: null })).toContain(
-		">Run<",
+	expect(renderCell({ id, header: "Status" })).toBe("Failed at 80%");
+	expect(renderCell({ id: "migration-a7k", header: "Filter" })).toBe(
+		"No filter",
 	);
 });
