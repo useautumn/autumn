@@ -46,8 +46,9 @@ export type PartitionWriter = {
 	}): SubjectState | null;
 	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
 	evict(params: { customerKey: string }): Promise<void>;
-	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there. */
-	adopt(params: { state: SubjectState }): SubjectState;
+	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
+	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
+	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;
 	/** Releases the partition's share of the worker's budget and drops its resident rows. */
 	dispose(): void;
 };
