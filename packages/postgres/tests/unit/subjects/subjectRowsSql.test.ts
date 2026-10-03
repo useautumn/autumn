@@ -185,3 +185,46 @@ describe("subjectRowsSql: limits", () => {
 		);
 	});
 });
+
+describe("subjectRowsSql with a snapshot version", () => {
+	const render = (snapshotVersion?: number) =>
+		dialect.sqlToQuery(
+			subjectRowsSql({
+				ctx: { orgId: "org_1", env: "sandbox" },
+				customerId: "cus_1",
+				entityId: null,
+				statuses: ["active"],
+				asOfTimestampMs: 1_700_000_000_000,
+				snapshotVersion,
+			}),
+		);
+	const flatten = (text: string) => text.replace(/\s+/g, " ").trim();
+
+	test("without a version the statement is exactly today's", () => {
+		expect(render().sql).toBe(render(undefined).sql);
+		expect(flatten(render().sql)).not.toContain("subject_snapshots");
+		expect(flatten(render().sql)).toContain(") AS envelope");
+	});
+
+	test("with a version the snapshot row is the first CTE, keyed by the primary key, and the envelope is built only when it is absent", () => {
+		const { sql, params } = render(1);
+		const text = flatten(sql);
+		expect(
+			text.startsWith(
+				"WITH snap AS ( SELECT s.state FROM subject_snapshots s WHERE",
+			),
+		).toBe(true);
+		for (const column of ["org_id", "env", "customer_id", "entity_id"])
+			expect(text).toContain(`s.${column} = $`);
+		expect(text).toContain('COLLATE "C"');
+		expect(text).toContain("s.state_version = $5");
+		// A row whose state is not an object cannot stand in for the rows, so it must not suppress them either.
+		expect(text).toContain("jsonb_typeof(s.state) = 'object'");
+		expect(text).toContain(
+			"SELECT (SELECT state FROM snap) AS snapshot, CASE WHEN NOT EXISTS (SELECT 1 FROM snap) THEN json_build_object(",
+		);
+		expect(text).toContain(") END AS envelope");
+		// The customer's own subject keys on an empty entity id, and the version is the fifth parameter.
+		expect(params.slice(0, 5)).toEqual(["org_1", "sandbox", "cus_1", "", 1]);
+	});
+});
