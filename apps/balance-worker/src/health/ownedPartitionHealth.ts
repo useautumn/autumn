@@ -11,12 +11,23 @@ export type OwnedPartitionHealth = {
 	lag: bigint | null;
 	failureReason: string | null;
 	checkpoint?: PartitionCheckpointHealth;
+	/** What the partition's processor counted since it started. */
+	requests?: OwnedPartitionRequestCounters;
 	/** The partition's queued commands: how far the decided bookmark trails the topic. */
 	commands?: {
 		consumedNextOffset: bigint | null;
 		highWatermark: bigint | null;
 		lag: bigint | null;
 	};
+};
+
+export type OwnedPartitionRequestCounters = {
+	/** Tracks decided on a context carried from the previous state, or set up afresh. */
+	trackContextHits: number;
+	trackContextMisses: number;
+	/** Tracks whose effects were decided, or skipped because no draw could have called for one. */
+	effectsRun: number;
+	effectsSkipped: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<
@@ -46,6 +57,7 @@ export const ownedPartitionHealthOf = ({
 	consumedNextOffset,
 	highWatermark,
 	failureReason,
+	requests,
 }: OwnedPartitionHealthInput): OwnedPartitionHealth => {
 	if (topic.trim().length === 0) throw new Error("Kafka topic cannot be empty");
 	if (!Number.isSafeInteger(partition) || partition < 0) {
@@ -77,6 +89,7 @@ export const ownedPartitionHealthOf = ({
 		highWatermark,
 		lag,
 		failureReason,
+		...(requests && { requests }),
 	};
 };
 

@@ -75,6 +75,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export { trackCommandToDeductionRequest } from "./commands/track/trackCommandToDeductionRequest.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -105,7 +106,11 @@ export type {
 	DeductionSelection,
 } from "./deduction/types/deductionRequest.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
-export { deductionSelectionToKey } from "./deduction/utils/convertDeductionUtils.js";
+export {
+	deductionContextToExpiresAt,
+	deductionRowToCurrentBalance,
+	deductionSelectionToKey,
+} from "./deduction/utils/convertDeductionUtils.js";
 export { usageWindowFeaturesOf } from "./deduction/utils/limits/usageWindowFeaturesOf.js";
 export type { UnsupportedCommandReason } from "./errors.js";
 // boundary

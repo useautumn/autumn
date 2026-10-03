@@ -18,6 +18,7 @@ import { check } from "../../../../src/processor/commands/check.js";
 import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
+import { createSubjectDecisions } from "../../../../src/processor/subject/subjectDecisions/createSubjectDecisions.js";
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
@@ -203,6 +204,7 @@ const createFixture = () => {
 			subjectHydrator: createSubjectHydrator({
 				ctx: { catalogCache, db, writer, receiptPolicy },
 			}),
+			subjectDecisions: createSubjectDecisions(),
 		},
 		accepted: createAcceptedCommands(),
 		customerPlans: createCustomerPlans(),

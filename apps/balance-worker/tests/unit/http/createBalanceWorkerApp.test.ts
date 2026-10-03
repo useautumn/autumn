@@ -118,6 +118,12 @@ const fixture = ({
 	const processor: PartitionProcessor = {
 		execute: ({ run }) => run(processor),
 		dispose: () => undefined,
+		readCounters: () => ({
+			trackContextHits: 0,
+			trackContextMisses: 0,
+			effectsRun: 0,
+			effectsSkipped: 0,
+		}),
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
 		},
