@@ -64,7 +64,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 			db: ctx.db,
 			org: ctx.org,
 			env: ctx.env,
+			skipInvoiceCheck: true,
 		});
+
+		// Flexible billing mode issues no first invoice for a metered-only subscription.
+		const customer = await autumn.customers.get(customerId);
+		expect(customer.invoices).toHaveLength(0);
 	});
 
 	const usage = 100012;
@@ -96,7 +101,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		expect(customer.invoices.length).toBe(2);
+		expect(customer.invoices.length).toBe(1);
 		expect(invoiceAmount).toBe(customer.invoices[0].total);
 	});
 });

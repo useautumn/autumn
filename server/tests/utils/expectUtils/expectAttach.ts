@@ -53,6 +53,7 @@ export const attachAndExpectCorrect = async ({
 	shouldBeCanceled = false,
 	checkNotTrialing = false,
 	attachParams,
+	skipInvoiceCheck: skipInvoiceCheckParam = false,
 }: {
 	autumn: AutumnInt;
 	customerId: string;
@@ -77,6 +78,7 @@ export const attachAndExpectCorrect = async ({
 	shouldBeCanceled?: boolean;
 	checkNotTrialing?: boolean;
 	attachParams?: Partial<AttachParamsV0Input>;
+	skipInvoiceCheck?: boolean;
 }) => {
 	const preview = await autumn.attachPreview({
 		customer_id: customerId,
@@ -175,6 +177,7 @@ export const attachAndExpectCorrect = async ({
 	});
 
 	const skipInvoiceCheck =
+		skipInvoiceCheckParam ||
 		(preview.branch === AttachBranch.UpdatePrepaidQuantity &&
 			checkoutRes.total === 0) ||
 		preview.branch === AttachBranch.Downgrade;
