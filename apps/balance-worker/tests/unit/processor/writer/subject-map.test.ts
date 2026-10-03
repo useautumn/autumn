@@ -278,6 +278,19 @@ const isWholeState = ([value]: unknown[]) =>
 	value !== null &&
 	"customerEntitlements" in value;
 
+describe("createSubjectMap readBytes", () => {
+	test("answers the weighed size of the resident state, and 0 for a subject not resident", () => {
+		const map = createSubjectMap();
+		const state = createState();
+		expect(map.readBytes({ subjectKey: customerKey })).toBe(0);
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		expect(map.readBytes({ subjectKey: customerKey })).toBe(
+			JSON.stringify(state).length,
+		);
+		expect(map.sizeBytes()).toBe(map.readBytes({ subjectKey: customerKey }));
+	});
+});
+
 describe("writer over a store with no resident state", () => {
 	test("the map keeps the committed rows, so the next track starts from them", async () => {
 		const { writer } = createWriterOverNullStore();
