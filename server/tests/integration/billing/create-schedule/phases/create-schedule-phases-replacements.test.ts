@@ -13,7 +13,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import {
 	getCustomerProductRows,
 	getRequiredScheduleId,
@@ -84,19 +84,16 @@ test.concurrent(
 			],
 		});
 
+		// One schedule per customer; entity scope lives on its customer products.
 		const dbSchedules = await ctx.db
 			.select()
 			.from(schedules)
-			.where(
-				and(
-					eq(schedules.customer_id, customerId),
-					eq(schedules.entity_id, entityId),
-				),
-			);
+			.where(eq(schedules.customer_id, customerId));
 		expect(dbSchedules).toHaveLength(1);
 		expect(dbSchedules[0]!.id).toBe(
 			getRequiredScheduleId(secondResponse.schedule_id),
 		);
+		expect(dbSchedules[0]!.entity_id).toBeNull();
 
 		const removedScheduledProducts = await ctx.db
 			.select()
