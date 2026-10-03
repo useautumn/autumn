@@ -78,6 +78,8 @@ const createWriter = ({
 				throw new Error("not exercised");
 			},
 			deleteLanded: async () => [],
+			drain: async () => {},
+			pending: () => 0,
 		},
 	};
 	let nextOffset = 0n;

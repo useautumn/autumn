@@ -12,6 +12,10 @@ export type SnapshotQueues = {
 		partition: number;
 		customerKey: string;
 	}): void;
+	/** Resolves once nothing of the partition's waits or is in flight; at once when nothing does. */
+	drain(params: { topic: string; partition: number }): Promise<void>;
+	/** Customers whose write has not landed yet: waiting for a tick or in the statement in flight. */
+	pending(params: { topic: string; partition: number }): number;
 	/** The rows the customer's DELETE removed, once the lane tick carrying it has run; none, at once, when no DELETE waits or is in flight. */
 	deleteLanded(params: {
 		topic: string;
