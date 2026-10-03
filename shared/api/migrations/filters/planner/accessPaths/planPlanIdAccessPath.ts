@@ -79,7 +79,7 @@ export const buildPlanProductsSql = ({
 
 	return {
 		sql: [
-			"SELECT p.internal_id FROM products p",
+			'SELECT p.internal_id COLLATE "default" AS internal_id FROM products p',
 			"WHERE p.org_id = ? AND p.env = ?",
 			`AND ${planPredicate}`,
 			...extraSql,

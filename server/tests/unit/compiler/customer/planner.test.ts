@@ -53,7 +53,7 @@ describe("customer filter planner", () => {
 		expect(normalize(candidate.source.sql)).toBe(
 			normalize(`
 				(WITH plan_products AS MATERIALIZED (
-				SELECT p.internal_id FROM products p
+				SELECT p.internal_id COLLATE \"default\" AS internal_id FROM products p
 				WHERE p.org_id = ? AND p.env = ?
 				AND p.id = ?
 				) SELECT DISTINCT c.internal_id, c.id, c.name, c.email, c.org_id, c.env
