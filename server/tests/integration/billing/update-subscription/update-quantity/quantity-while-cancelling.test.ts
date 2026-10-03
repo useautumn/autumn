@@ -4,7 +4,7 @@ import {
 	expectProductCanceling,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -64,7 +64,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 			s.products({ list: [prepaid] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: prepaid.id,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
@@ -107,12 +107,10 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 	);
 
 	// Verify Stripe subscription is correct (still set to cancel at period end)
-	await expectSubToBeCorrect({
-		db: ctx.db,
+	await expectStripeSubscriptionCorrect({
+		ctx,
 		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		shouldBeCanceled: true,
+		options: { shouldBeCanceling: true },
 	});
 });
 
@@ -243,7 +241,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 			s.products({ list: [prepaid] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: prepaid.id,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
@@ -315,11 +313,9 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 	);
 
 	// Verify Stripe subscription is correct (still set to cancel at period end)
-	await expectSubToBeCorrect({
-		db: ctx.db,
+	await expectStripeSubscriptionCorrect({
+		ctx,
 		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		shouldBeCanceled: true,
+		options: { shouldBeCanceling: true },
 	});
 });
