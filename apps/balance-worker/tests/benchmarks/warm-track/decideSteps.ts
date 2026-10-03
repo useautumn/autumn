@@ -168,7 +168,12 @@ const steps: Record<string, () => unknown> = {
 	"deduction: deductionStateToOutcome": () =>
 		deductionStateToOutcome({ context, deductionState: drawn, request }),
 	"track: trackOutcomeToMutation (usage event fields)": () =>
-		trackOutcomeToMutation({ command, outcome, fullSubject }),
+		trackOutcomeToMutation({
+			command,
+			outcome,
+			fullSubject,
+			revision: fullSubject.revision,
+		}),
 	"effects: outcomeToAffectedFeatures": () =>
 		outcomeToAffectedFeatures({
 			outcome,

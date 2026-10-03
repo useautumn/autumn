@@ -121,6 +121,8 @@ export type PartitionProcessorConfig = {
 	topic: string;
 	partition: number;
 	writerLimits: PartitionWriterLimits;
+	/** Off decides every track on a fresh view with every effect: the reference the carried path must equal. */
+	carriesTrackContexts?: boolean;
 	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };

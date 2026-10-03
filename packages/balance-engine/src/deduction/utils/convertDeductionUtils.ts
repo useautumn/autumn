@@ -264,3 +264,18 @@ export const deductionSelectionToKey = ({
 		selection.blocksOverdue,
 	]);
 };
+
+/** The first moment a held row expires after the context's clock: until then the selection finds the same rows. */
+export const deductionContextToExpiresAt = ({
+	context,
+}: {
+	context: DeductionContext;
+}): number => {
+	let expiresAt = Number.POSITIVE_INFINITY;
+	for (const row of [...context.customerEntitlements, ...context.rollovers]) {
+		if (row.expires_at === null || row.expires_at <= context.selection.now)
+			continue;
+		expiresAt = Math.min(expiresAt, row.expires_at);
+	}
+	return expiresAt;
+};

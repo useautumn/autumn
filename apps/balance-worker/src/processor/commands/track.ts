@@ -2,11 +2,14 @@ import {
 	applyMutation,
 	type Catalog,
 	computeTrackDecision,
+	type DeductionDecision,
 	type MutationEffect,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
 	slimSubjectForFeatures,
 	type TrackCommand,
+	trackCommandToDeductionRequest,
+	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
@@ -14,6 +17,7 @@ import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubj
 import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import { decideEffects } from "../effects/decideEffects.js";
+import { shouldDecideEffects } from "../effects/shouldDecideEffects.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type {
 	CommittedMutation,
@@ -134,21 +138,70 @@ function mutateTrack({
 	// One catalog read serves both views: the rows a mutation adds reference catalog the state already held.
 	const catalog = scope.ctx.subjectHydrator.readCatalog({ state });
 	decidedAgainst.catalog = catalog;
+	const readView = (viewed: SubjectState) =>
+		scope.ctx.subjectHydrator.readSubjectWith({
+			state: viewed,
+			catalog,
+			identity: command.identity,
+		});
 
-	const fullSubject = scope.ctx.subjectHydrator.readSubjectWith({
-		state,
-		catalog,
-		identity: command.identity,
-	});
-	const decision = computeTrackDecision({ fullSubject, command });
+	const { decision, alwaysDecidesEffects } =
+		scope.ctx.config.carriesTrackContexts === false
+			? {
+					decision: computeTrackDecision({
+						fullSubject: readView(state),
+						command,
+					}),
+					alwaysDecidesEffects: true,
+				}
+			: decideOnCarriedContext({ scope, state, catalog, command, readView });
 	const { mutation } = decision;
 	const nextState = applyMutation({ state, mutation });
-	const after = scope.ctx.subjectHydrator.readSubjectWith({
-		state: nextState,
-		catalog,
-		identity: command.identity,
+	const decidesEffects = shouldDecideEffects({
+		command,
+		decision,
+		alwaysDecides: alwaysDecidesEffects,
 	});
-	const effects = decideEffects({ decision, before: fullSubject, after });
+	scope.ctx.subjectDecisions.countEffects({ decided: decidesEffects });
+	const effects = decidesEffects
+		? decideEffects({
+				decision,
+				before: readView(state),
+				after: readView(nextState),
+			})
+		: [];
 	decidedAgainst.effects = effects;
 	return { kind: "write", mutation, nextState, effects };
+}
+
+/** The run's carried context and base view, at this state's revision: equal to deciding on a fresh view of `state`. */
+function decideOnCarriedContext({
+	scope,
+	state,
+	catalog,
+	command,
+	readView,
+}: {
+	scope: PartitionProcessorScope;
+	state: SubjectState;
+	catalog: Catalog;
+	command: TrackCommand;
+	readView: (viewed: SubjectState) => WorkerFullSubject;
+}): { decision: DeductionDecision; alwaysDecidesEffects: boolean } {
+	const carried = scope.ctx.subjectDecisions.readTrackDecision({
+		state,
+		identity: command.identity,
+		request: trackCommandToDeductionRequest({ command }),
+		catalog,
+		join: () => readView(state),
+	});
+	return {
+		decision: computeTrackDecision({
+			fullSubject: carried.fullSubject,
+			command,
+			context: carried.context,
+			revision: state.revision,
+		}),
+		alwaysDecidesEffects: carried.alwaysDecidesEffects,
+	};
 }
