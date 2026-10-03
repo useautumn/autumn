@@ -79,12 +79,14 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		internalEntityId = null,
 		partition = 5,
 		revision = 1,
+		logOffset = 41n,
 	}: {
 		seeded: SeededCustomer;
 		entityId?: string | null;
 		internalEntityId?: string | null;
 		partition?: number;
 		revision?: number;
+		logOffset?: bigint;
 	}): SubjectSnapshotUpsert => ({
 		orgId: seeded.orgId,
 		env: seeded.env,
@@ -97,7 +99,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		stateVersion: 1,
 		stateJson: JSON.stringify({ revision, entityId }),
 		baselineAt: 1_700_000_000_000,
-		logOffset: 41n,
+		logOffset,
 	});
 
 	const readSnapshots = async ({
@@ -307,14 +309,21 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				},
 			]);
 
-			// The next flush replaces the row in place.
+			// The next flush replaces the row in place; a write from an older log, such as a refresh read before that flush landed, does not.
 			await flushAt({
 				topic,
 				expectedOffset: 42n,
-				upserts: [upsertOf({ seeded, revision: 2 })],
+				upserts: [upsertOf({ seeded, revision: 2, logOffset: 43n })],
 			});
+			const stale = await flushAt({
+				topic,
+				expectedOffset: 42n,
+				upserts: [upsertOf({ seeded, revision: 3, logOffset: 42n })],
+			});
+			expect(stale.snapshots?.upserted).toBe(0);
 			const [customerRow] = await readSnapshots({ seeded });
 			expect(customerRow?.state).toEqual({ revision: 2, entityId: null });
+			expect(customerRow?.log_offset).toBe("43");
 		} finally {
 			await seeded.cleanup();
 		}
@@ -643,6 +652,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				partition: 0,
 				state,
 				baselineAt: 1,
+				logOffset: 0n,
 			});
 			await committer.drain();
 			await Bun.sleep(20);
