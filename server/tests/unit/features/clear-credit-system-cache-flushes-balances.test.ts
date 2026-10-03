@@ -169,7 +169,7 @@ describe("credit-system cache clear", () => {
 		]);
 	});
 
-	test("one customer's failed flush does not stop the others or the clear", async () => {
+	test("a customer whose flush failed keeps their cache; the others are flushed and cleared", async () => {
 		failFlushForCustomerId = "cus_a";
 
 		await runClear({ customerIds: ["cus_a", "cus_b"] });
@@ -177,12 +177,11 @@ describe("credit-system cache clear", () => {
 		expect(steps).toEqual([
 			"flush-failed:cus_a",
 			"flush:cus_b:primary:true",
-			"unlink:cus_a",
 			"unlink:cus_b",
 		]);
 	});
 
-	test("one customer's routing failure does not stop the others or the clear", async () => {
+	test("a customer whose routing failed keeps their cache; the others are flushed and cleared", async () => {
 		failRoutingForCustomerId = "cus_a";
 
 		await runClear({ customerIds: ["cus_a", "cus_b"] });
@@ -190,7 +189,6 @@ describe("credit-system cache clear", () => {
 		expect(steps).toEqual([
 			"routing-failed:cus_a",
 			"flush:cus_b:primary:true",
-			"unlink:cus_a",
 			"unlink:cus_b",
 		]);
 	});

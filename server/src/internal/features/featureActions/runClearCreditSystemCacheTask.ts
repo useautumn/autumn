@@ -174,14 +174,24 @@ export const runClearCreditSystemCacheTask = async ({
 
 		if (customersToDelete.length > 0) {
 			// The batch unlink below drops balance hashes blindly; land them first.
-			await flushCachedCustomerBalances({
+			const { failedCustomerIds } = await flushCachedCustomerBalances({
 				ctx,
 				customerIds: customersToDelete.map(({ customerId }) => customerId),
 				source: "runClearCreditSystemCacheTask",
 			});
 
+			// A customer whose flush failed keeps the old rates until TTL rather than losing unsynced balances.
+			if (failedCustomerIds.size > 0) {
+				logger.error(
+					`Keeping cache for ${failedCustomerIds.size} customers whose balance flush failed; they keep the old credit rates until TTL`,
+				);
+			}
+			const customersToInvalidate = customersToDelete.filter(
+				({ customerId }) => !failedCustomerIds.has(customerId),
+			);
+
 			const deleted = await batchInvalidateCachedFullSubjects({
-				customers: customersToDelete,
+				customers: customersToInvalidate,
 				featuresByOrgEnv,
 				getRedisTargetsForCustomer: () =>
 					getRedisTargetsForCustomer({

@@ -14,7 +14,8 @@ const FLUSH_CONCURRENCY = 25;
  * Only the customer's current Redis is flushed: a migration or legacy copy can
  * hold an older snapshot that would overwrite the newer balance. The batch
  * invalidation drops those copies. Best effort per customer: one failure is
- * logged and never stops the rest.
+ * logged and never stops the rest. Returns the customers whose flush threw, so
+ * the caller can keep their cache rather than drop unsynced balances.
  */
 export const flushCachedCustomerBalances = async ({
 	ctx,
@@ -24,8 +25,9 @@ export const flushCachedCustomerBalances = async ({
 	ctx: AutumnContext;
 	customerIds: string[];
 	source: string;
-}): Promise<void> => {
+}): Promise<{ failedCustomerIds: Set<string> }> => {
 	const limit = pLimit(FLUSH_CONCURRENCY);
+	const failedCustomerIds = new Set<string>();
 
 	await Promise.all(
 		customerIds.map((customerId) =>
@@ -42,6 +44,7 @@ export const flushCachedCustomerBalances = async ({
 						flushBalances: true,
 					});
 				} catch (error) {
+					failedCustomerIds.add(customerId);
 					ctx.logger.error(
 						`[flushCachedCustomerBalances] ${customerId}: flush before invalidation failed, source: ${source}, error: ${error}`,
 					);
@@ -49,4 +52,6 @@ export const flushCachedCustomerBalances = async ({
 			}),
 		),
 	);
+
+	return { failedCustomerIds };
 };
