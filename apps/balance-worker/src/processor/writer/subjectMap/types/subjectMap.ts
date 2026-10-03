@@ -20,4 +20,5 @@ export type SubjectMap = {
 	clear(): void;
 	/** Bytes held by resident states, for tests and health. */
 	sizeBytes(): number;
+	bytesOf(params: { subjectKey: string }): number | null;
 };

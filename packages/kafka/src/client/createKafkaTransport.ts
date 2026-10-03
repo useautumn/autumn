@@ -1,5 +1,10 @@
 import { generateAuthToken } from "aws-msk-iam-sasl-signer-js";
 import type { OauthbearerProviderResponse } from "kafkajs";
+import {
+	type KafkaTokenRecord,
+	processKafkaTokens,
+	writeKafkaTokenLine,
+} from "./kafkaTokens.js";
 import { describeMskToken, type KafkaTokenInfo } from "./mskTokenInfo.js";
 import type { KafkaTransportConfig } from "./types/kafkaClient.js";
 
@@ -7,13 +12,17 @@ export function createKafkaTransport({
 	authMode,
 	region,
 	generateToken = generateAuthToken,
-	onToken,
+	onToken = writeKafkaTokenLine,
+	tokens = processKafkaTokens,
+	now = Date.now,
 }: {
 	authMode: "none" | "msk_iam";
 	region?: string;
 	generateToken?: typeof generateAuthToken;
 	/** Told about every token signed, so a refusal can be read against the key and lifetime the client presented. */
 	onToken?(info: KafkaTokenInfo): void;
+	tokens?: KafkaTokenRecord;
+	now?: () => number;
 }): KafkaTransportConfig {
 	if (authMode === "none") return {};
 	if (authMode !== "msk_iam") {
@@ -28,12 +37,12 @@ export function createKafkaTransport({
 		const { token, expiryTime } = await generateToken({
 			region: signingRegion,
 		});
-		if (onToken) {
-			try {
-				onToken(describeMskToken({ token, expiryTime }));
-			} catch {
-				// Telemetry must never fail an authentication.
-			}
+		try {
+			const info = describeMskToken({ token, expiryTime });
+			tokens.record({ info, at: now() });
+			onToken(info);
+		} catch {
+			// Telemetry must never fail an authentication.
 		}
 		return { value: token };
 	}

@@ -2,9 +2,9 @@ import type {
 	ApiCustomerV5,
 	BalanceAllocationControl,
 	Entity,
-	FullCustomer,
 } from "@autumn/shared";
 import {
+	findFeatureById,
 	fullCustomerToCustomerEntitlements,
 	LATEST_VERSION,
 } from "@autumn/shared";
@@ -19,7 +19,7 @@ import {
 	SelectValue,
 	ShortcutButton,
 } from "@autumn/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -35,17 +35,18 @@ import {
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-// import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerAllocationControls } from "../../hooks/useCustomerAllocationControls";
 import { getAllocatableSharedBalanceInterval } from "../table/customer-balance/customerBalanceUtils";
 import {
 	// AllocationUsageWindows,
 	allocationStateQueryKey,
 } from "./AllocationUsageWindows";
+// import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { sharedIntervalBalanceTotals } from "./sharedIntervalBalanceTotals";
 
 type AmountInputs = Record<string, string>;
 
@@ -96,62 +97,79 @@ const changedAllocations = ({
 export function AllocateBalancesSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
-	const { customer } = useCusQuery();
+	const { customer, features } = useCusQuery();
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const queryClient = useQueryClient();
-	const buildKey = useQueryKeyFactory();
 	// const { isAdmin } = useAdmin();
 
-	const fullCustomer = customer as FullCustomer | null;
+	const fullCustomer = customer;
 	const entities = (fullCustomer?.entities ?? []).filter(
 		(entity: Entity) => entity.id && !entity.deleted,
 	);
 	const customerId = customer?.id || customer?.internal_id;
 	const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
-	const featureId =
-		selectedFeatureId ?? (sheetData?.featureId as string | undefined);
-	const featureName =
-		(sheetData?.featureName as string | undefined) ?? featureId;
 
 	const {
 		data: apiCustomer,
 		isPending,
 		isError,
-	} = useQuery({
-		queryKey: buildKey(["customer-allocation-config", customerId]),
-		queryFn: async () =>
-			(
-				await axiosInstance.get<ApiCustomerV5>(
-					`/v1/customers/${encodeURIComponent(customerId ?? "")}`,
-				)
-			).data,
-		enabled: !!customerId,
-	});
+		queryKey,
+	} = useCustomerAllocationControls({ customerId });
 	const [response, setResponse] = useState<ApiCustomerV5 | null>(null);
 	const controls =
 		(response ?? apiCustomer)?.billing_controls.balance_allocations ?? [];
+	const allocatableFeatures = (features ?? []).flatMap((feature) => {
+		const existing = controls.find(
+			(control) => control.feature_id === feature.id,
+		);
+		const sharedInterval = fullCustomer
+			? getAllocatableSharedBalanceInterval({
+					customerEntitlements: fullCustomerToCustomerEntitlements({
+						fullCustomer,
+						featureId: feature.id,
+					}),
+				})
+			: undefined;
+		const supportedInterval = existing?.interval ?? sharedInterval;
+		return supportedInterval
+			? [
+					{
+						featureId: feature.id,
+						name: feature.name,
+						interval: supportedInterval,
+					},
+				]
+			: [];
+	});
+	for (const control of controls) {
+		if (
+			!findFeatureById({
+				features: features ?? [],
+				featureId: control.feature_id,
+			})
+		)
+			allocatableFeatures.push({
+				featureId: control.feature_id,
+				name: control.feature_id,
+				interval: control.interval,
+			});
+	}
+	const featureId =
+		selectedFeatureId ??
+		(sheetData?.featureId as string | undefined) ??
+		controls[0]?.feature_id ??
+		(allocatableFeatures.length === 1
+			? allocatableFeatures[0].featureId
+			: undefined);
+	const featureName = featureId
+		? (findFeatureById({ features: features ?? [], featureId })?.name ??
+			featureId)
+		: undefined;
 	const existingControl = controls.find(
 		(control) => control.feature_id === featureId,
 	);
-	const pinnedInterval = existingControl?.allocations.length
-		? existingControl.interval
-		: undefined;
-	const allocatableFeatures = Object.keys(apiCustomer?.balances ?? {}).flatMap(
-		(id) => {
-			if (!fullCustomer || entities.length === 0) return [];
-			const sharedInterval = getAllocatableSharedBalanceInterval({
-				customerEntitlements: fullCustomerToCustomerEntitlements({
-					fullCustomer,
-					featureId: id,
-				}),
-			});
-			return sharedInterval
-				? [{ featureId: id, interval: sharedInterval }]
-				: [];
-		},
-	);
 	const interval =
-		pinnedInterval ??
+		existingControl?.interval ??
 		allocatableFeatures.find((feature) => feature.featureId === featureId)
 			?.interval;
 	const stored = storedAmountInputs({ controls, featureId, interval });
@@ -212,26 +230,52 @@ export function AllocateBalancesSheet() {
 					interval,
 					allocations: featureAllocations,
 				});
-			const { data } = await axiosInstance.post<ApiCustomerV5>(
-				"/v1/customers.update",
-				{
-					customer_id: customerId,
-					billing_controls: { balance_allocations: balanceAllocations },
-				},
-			);
+			const data = await saveBalanceAllocations({ balanceAllocations });
 			setResponse(data);
-			queryClient.setQueryData(
-				buildKey(["customer-allocation-config", customerId]),
-				data,
-			);
 			setInputs(null);
 			toast.success(`Saved ${featureName} allocations`);
-			await queryClient.invalidateQueries({ queryKey: ["customer"] });
-			await queryClient.invalidateQueries({
-				queryKey: allocationStateQueryKey(customerId),
-			});
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to allocate balances"));
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	const saveBalanceAllocations = async ({
+		balanceAllocations,
+	}: {
+		balanceAllocations: BalanceAllocationControl[];
+	}) => {
+		const { data } = await axiosInstance.post<ApiCustomerV5>(
+			"/v1/customers.update",
+			{
+				customer_id: customerId,
+				billing_controls: { balance_allocations: balanceAllocations },
+			},
+		);
+		queryClient.setQueryData(queryKey, data);
+		await queryClient.invalidateQueries({ queryKey: ["customer"] });
+		await queryClient.invalidateQueries({
+			queryKey: allocationStateQueryKey(customerId),
+		});
+		return data;
+	};
+
+	const handleDelete = async () => {
+		if (!customerId || !featureId) return;
+		setIsSubmitting(true);
+		try {
+			const { data: freshCustomer } = await axiosInstance.get<ApiCustomerV5>(
+				`/v1/customers/${encodeURIComponent(customerId)}`,
+			);
+			const balanceAllocations = (
+				freshCustomer.billing_controls.balance_allocations ?? []
+			).filter((control) => control.feature_id !== featureId);
+			await saveBalanceAllocations({ balanceAllocations });
+			closeSheet();
+			toast.success(`Deleted ${featureName} allocations`);
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to delete allocations"));
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -240,6 +284,9 @@ export function AllocateBalancesSheet() {
 	const formattedJson = response ? JSON.stringify(response, null, 2) : "";
 	const effectiveBalance = featureId
 		? (response ?? apiCustomer)?.balances[featureId]
+		: undefined;
+	const sharedTotals = effectiveBalance
+		? sharedIntervalBalanceTotals({ balance: effectiveBalance, interval })
 		: undefined;
 
 	return (
@@ -262,12 +309,14 @@ export function AllocateBalancesSheet() {
 								}}
 							>
 								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Select a feature" />
+									<SelectValue placeholder="Select a feature">
+										{featureName}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
-									{allocatableFeatures.map(({ featureId: id }) => (
+									{allocatableFeatures.map(({ featureId: id, name }) => (
 										<SelectItem key={id} value={id}>
-											{id}
+											{name}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -354,17 +403,17 @@ export function AllocateBalancesSheet() {
 					/>
 				)} */}
 
-				{effectiveBalance && (
+				{effectiveBalance && sharedTotals && (
 					<SheetSection withSeparator>
 						<div className="grid grid-cols-4 gap-2 text-xs">
 							{(
 								[
-									["Granted", effectiveBalance.granted],
-									["Remaining", effectiveBalance.remaining],
+									["Granted", sharedTotals.granted],
+									["Remaining", sharedTotals.remaining],
 									["Allocated", effectiveBalance.allocated ?? 0],
 									[
 										"Unallocated",
-										effectiveBalance.unallocated ?? effectiveBalance.remaining,
+										effectiveBalance.unallocated ?? sharedTotals.remaining,
 									],
 								] as const
 							).map(([label, value]) => (
@@ -394,6 +443,19 @@ export function AllocateBalancesSheet() {
 						</CodeGroup>
 					) : null}
 				</div>
+
+				{existingControl && (
+					<div className="px-4 pb-2">
+						<Button
+							variant="ghost"
+							className="text-destructive hover:text-destructive w-full"
+							onClick={handleDelete}
+							disabled={isSubmitting}
+						>
+							Delete allocations
+						</Button>
+					</div>
+				)}
 
 				<SheetFooter>
 					<Button

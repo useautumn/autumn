@@ -80,7 +80,10 @@ export const usageLimitToUsageWindowLimit = <
 	const { windowStartAt, windowEndAt } = getUsageWindowBounds({
 		interval,
 		now,
-		anchor: getUsageWindowAnchorTimestamp({ anchorCustomerEntitlement }),
+		anchor: getUsageWindowAnchorTimestamp({
+			anchorCustomerEntitlement,
+			windowInterval: interval,
+		}),
 	});
 
 	const filterKey = usageLimitFilterKey(usageLimit.filter);

@@ -30,7 +30,9 @@ export const getAllocatableSharedBalanceInterval = ({
 		(ent) =>
 			!isCusEntDisplayExpired({ cusEnt: ent }) &&
 			!ent.internal_entity_id &&
-			!ent.customer_product?.internal_entity_id,
+			!ent.customer_product?.internal_entity_id &&
+			!!ent.entitlement.interval &&
+			ent.entitlement.interval !== EntInterval.Lifetime,
 	);
 	const intervals = new Set(sharedRows.map((ent) => ent.entitlement.interval));
 	const eligible =

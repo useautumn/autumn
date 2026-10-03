@@ -28,7 +28,8 @@ const invoice = () => ({
 const processConsumable = mock(async () => []);
 const customerProduct = {
 	id: "product_123",
-} as InvoiceCreatedContext["customerProducts"][number];
+	customer_entitlements: [],
+} as unknown as InvoiceCreatedContext["customerProducts"][number];
 const processPrepaid = mock(({ plan }: { plan: AutumnBillingPlanBuilder }) => {
 	if (state.customerStateChanged)
 		plan.updateCustomerProduct({ customerProduct, updates: { options: [] } });
