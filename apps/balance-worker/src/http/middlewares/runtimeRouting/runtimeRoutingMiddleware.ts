@@ -24,7 +24,7 @@ export function runtimeRoutingMiddleware({
 		context.set("ctx", {
 			runtime: withRequestBudget({
 				runtime,
-				budgetMs: readRequestBudget(context),
+				budget: readRequestBudget(context),
 			}),
 		});
 		await next();

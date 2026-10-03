@@ -33,6 +33,7 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type { CheckAdmissionCounters } from "../checkAdmission/types/checkAdmission.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
 import type { DecidedMutation } from "../writer/types/mutation.js";
@@ -60,6 +61,8 @@ export type PartitionProcessor = {
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
+	/** What the partition turned away since it started; partition health reports them. */
+	readCounters(): CheckAdmissionCounters;
 	readSubjectState(params: {
 		command: ReadSubjectStateCommand;
 	}): Promise<ReadSubjectStateReply>;
@@ -115,6 +118,8 @@ export type PartitionProcessorConfig = {
 	topic: string;
 	partition: number;
 	writerLimits: PartitionWriterLimits;
+	/** Overrides BALANCE_WORKER_MAX_IN_FLIGHT_CHECKS_PER_CUSTOMER. */
+	maxInFlightChecksPerCustomer?: number;
 	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };

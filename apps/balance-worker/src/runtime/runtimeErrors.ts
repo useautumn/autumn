@@ -10,6 +10,14 @@ export class OwnedPartitionNotReadyError extends Error {
 	}
 }
 
+/** The caller had stopped waiting before the command reached the partition; nothing ran. */
+export class RequestPastDeadlineError extends Error {
+	constructor() {
+		super("The caller's deadline passed before the command ran");
+		this.name = "RequestPastDeadlineError";
+	}
+}
+
 export class OwnedPartitionRecoveryRequiredError extends Error {
 	readonly topic: string;
 	readonly partition: number;

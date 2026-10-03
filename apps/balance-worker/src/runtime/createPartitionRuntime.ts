@@ -92,7 +92,13 @@ export function createPartitionRuntime({
 		run: ProcessorRun<Decision>,
 		options?: ProcessOptions,
 	): Promise<Decision> {
-		return processCommand({ ctx, state, run, budgetMs: options?.budgetMs });
+		return processCommand({
+			ctx,
+			state,
+			run,
+			budgetMs: options?.budgetMs,
+			deadlineAt: options?.deadlineAt,
+		});
 	}
 
 	function getStatus(): PartitionRuntimeStatus {
@@ -169,5 +175,6 @@ function createRuntimeState(): PartitionRuntimeState {
 		startupAbortController: new AbortController(),
 		checkpointLease: null,
 		unavailableListeners: new Set(),
+		requestCounters: { droppedPastDeadline: 0 },
 	};
 }

@@ -10,7 +10,10 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
-import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
+import {
+	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_REQUEST_DEADLINE_HEADER,
+} from "../src/protocol.js";
 
 const baseCommand: TrackCommand = {
 	schemaVersion: 1,
@@ -88,6 +91,7 @@ const replacement: PartitionOwner = {
 
 type PendingRequest = {
 	budget?: string;
+	deadline?: string;
 	url: string;
 	body: { route: unknown; commands: TrackCommand[] };
 	signal: AbortSignal;
@@ -129,6 +133,7 @@ function createFixture({
 			url: request.url,
 			body: structuredClone(request.body) as PendingRequest["body"],
 			budget: request.headers?.[WORKER_REQUEST_BUDGET_HEADER],
+			deadline: request.headers?.[WORKER_REQUEST_DEADLINE_HEADER],
 			signal: request.signal,
 			respond: response.resolve,
 			fail: response.reject,
@@ -540,6 +545,27 @@ test("a batch tells the worker how long its most impatient item will wait", asyn
 	expect(Number(budget)).toBeLessThanOrEqual(1000);
 	fixture.requests[0].respond(okResults(["a"]));
 	expect(await pending).toEqual(replyFor("a"));
+});
+
+test("a batch is abandoned only once its most patient item has stopped waiting", async () => {
+	const fixture = createFixture({ timeoutMs: 1000 });
+	const first = fixture.client.track({ command: commandFor("a") });
+	await fixture.sent(1);
+	const second = fixture.client.track({ command: commandFor("b") });
+	await Bun.sleep(40);
+	const lastEnqueuedAt = Date.now();
+	const third = fixture.client.track({ command: commandFor("c") });
+	fixture.requests[0].respond(okResults(["a"]));
+	await fixture.sent(2);
+	const batch = fixture.requests[1];
+	expect(batch.body.commands.map((sent) => sent.commandId)).toEqual(["b", "c"]);
+	expect(Number(batch.deadline)).toBeGreaterThanOrEqual(lastEnqueuedAt + 990);
+	// The budget still follows the most impatient item.
+	expect(Number(batch.budget)).toBeLessThan(970);
+	batch.respond(okResults(["b", "c"]));
+	expect(await first).toEqual(replyFor("a"));
+	expect(await second).toEqual(replyFor("b"));
+	expect(await third).toEqual(replyFor("c"));
 });
 
 test("a batch answered NOT_READY with less than the retry budget left is not resent", async () => {

@@ -57,6 +57,12 @@ const nextCommand = (): CheckCommand => {
 };
 const requestBodyOf = (command: CheckCommand) =>
 	JSON.stringify({ route: { partition: 0, routeEpoch: "1" }, command });
+/** The headers the server's client sends: a 1 s budget, and the moment it runs out. */
+const requestHeadersOf = () => ({
+	"content-type": "application/json",
+	"x-request-budget-ms": "1000",
+	"x-request-deadline-at": String(Date.now() + 1000),
+});
 
 type Sender = (command: CheckCommand) => Promise<void>;
 type CpuClock = () => number;
@@ -93,7 +99,7 @@ const setUp = async (): Promise<{
 			assertOk(
 				await app.request("/v1/check", {
 					method: "POST",
-					headers: { "content-type": "application/json" },
+					headers: requestHeadersOf(),
 					body: requestBodyOf(command),
 				}),
 			),
@@ -136,7 +142,7 @@ const setUpSocket = async () => {
 			assertOk(
 				await fetch(url, {
 					method: "POST",
-					headers: { "content-type": "application/json" },
+					headers: requestHeadersOf(),
 					body: requestBodyOf(command),
 				}),
 			),

@@ -12,7 +12,10 @@ import { CatalogRowsNotFoundError } from "@autumn/catalog-lru";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod/v4";
 import { FlushRecordRefusedError } from "../../../committer/committerErrors.js";
-import { PartitionProcessorStateNotFoundError } from "../../../processor/common/processorErrors.js";
+import {
+	CheckCapacityError,
+	PartitionProcessorStateNotFoundError,
+} from "../../../processor/common/processorErrors.js";
 import {
 	SubjectCatalogEvictedError,
 	SubjectLoadBusyError,
@@ -31,6 +34,7 @@ import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
+	RequestPastDeadlineError,
 } from "../../../runtime/runtimeErrors.js";
 import { ConflictingMutationReceiptError } from "../../../state/stateStoreErrors.js";
 import {
@@ -195,6 +199,20 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 			code: "RECORD_TOO_LARGE",
 			message:
 				"This customer's state is too large to write in one record; nothing was applied",
+		};
+	} else if (cause instanceof RequestPastDeadlineError) {
+		status = 503;
+		error = {
+			code: "NOT_READY",
+			message:
+				"The caller's deadline passed before the command ran; nothing ran",
+		};
+	} else if (cause instanceof CheckCapacityError) {
+		status = 429;
+		error = {
+			code: "OVERLOADED",
+			message:
+				"Too many checks in flight for this customer; retry with backoff",
 		};
 	} else if (cause instanceof PartitionWriterCapacityError) {
 		status = 429;
