@@ -9,6 +9,7 @@ import {
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import { consumeEvict } from "../../consume/consumeEvict.js";
+import { consumeFinalize } from "../../consume/consumeFinalize.js";
 import { consumeReset } from "../../consume/consumeReset.js";
 import { consumeTrack } from "../../consume/consumeTrack.js";
 import { consumeUpdateBalance } from "../../consume/consumeUpdateBalance.js";
@@ -160,6 +161,9 @@ export function createCommandRecordHandler({
 					break;
 				case "updateBalance":
 					queued = await consumeUpdateBalance({ ctx: consumeCtx, command });
+					break;
+				case "finalize":
+					queued = await consumeFinalize({ ctx: consumeCtx, command });
 					break;
 				default:
 					ctx.logger?.warn("Queued command skipped: not consumable yet", {
