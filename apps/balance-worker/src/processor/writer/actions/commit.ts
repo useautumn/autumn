@@ -10,6 +10,7 @@ import {
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
+	releasePins,
 	removePendingMutation,
 	writerNowOf,
 } from "../pendingMutations.js";
@@ -382,6 +383,7 @@ async function applyBatch({
 			enterRecovery({ scope, batch, cause: firstFailure });
 			return false;
 		}
+		for (const pending of batch) releasePins({ state: scope.state, pending });
 		for (const pending of batch) pending.settlement.settleStore();
 		return true;
 	} catch (cause) {
