@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
+import { billingStartsLaterWarning } from "./billingStartsLaterWarning";
 import { warningText } from "./warningText";
 
 export type SubscriptionWarningContext = Pick<
@@ -22,6 +23,8 @@ export type SubscriptionWarningContext = Pick<
 	| "replacedStripeSubscription"
 	| "stripeDiscounts"
 	| "trialContext"
+	| "billingStartsAt"
+	| "accessStartsAt"
 >;
 
 type Warning = Omit<SetPlansPreviewWarning, "severity">;
@@ -226,5 +229,6 @@ export const subscriptionStateToWarnings = ({
 			liveOpenInvoices,
 		}),
 		trialEndedWarning(billingContext),
+		billingStartsLaterWarning({ billingContext }),
 	].filter((warning): warning is Warning => warning !== undefined);
 };

@@ -286,6 +286,47 @@ describe(chalk.yellowBright("set_plans balance preview: phase scope"), () => {
 });
 
 describe(chalk.yellowBright("set_plans balance preview: projection"), () => {
+	test("a first phase starting later adds its balances at its start, and the next phase compares with it", async () => {
+		const premium = scheduledRow({
+			planId: "premium",
+			startsAt: PHASE_TWO,
+			endedAt: PHASE_THREE,
+			balances: [included({ featureId: "words", allowance: 500 })],
+		});
+		const addOn = scheduledRow({
+			planId: "add_on",
+			startsAt: PHASE_TWO,
+			endedAt: PHASE_THREE,
+			isAddOn: true,
+			balances: [included({ featureId: "credits", allowance: 100 })],
+		});
+		const pro = scheduledRow({
+			planId: "pro",
+			startsAt: PHASE_THREE,
+			balances: [included({ featureId: "words", allowance: 300 })],
+		});
+
+		const phaseChanges = await previewBalanceChanges({
+			current: [],
+			inserts: [premium, addOn, pro],
+			phases: [
+				{ startsAt: PHASE_TWO, customerProductIds: [premium.id, addOn.id] },
+				{ startsAt: PHASE_THREE, customerProductIds: [pro.id] },
+			],
+		});
+
+		expect(describeBalancePhases(phaseChanges)).toEqual([
+			[
+				"words added: 0 -> 500 granted, 500 left",
+				"credits added: 0 -> 100 granted, 100 left",
+			],
+			[
+				"words updated: 500 -> 300 granted, 300 left",
+				"credits removed: 100 -> 0 granted, 0 left",
+			],
+		]);
+	});
+
 	test("a pay-per-use add-on reads as added", async () => {
 		const pro = planRow({
 			planId: "pro",

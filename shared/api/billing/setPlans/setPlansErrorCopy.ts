@@ -2,7 +2,10 @@ import {
 	formatMs,
 	formatMsToDate,
 } from "../../../utils/common/formatUtils/formatUnix";
-import type { SetPlansErrorDetails } from "./setPlansErrorDetails";
+import type {
+	SetPlansErrorDetails,
+	SetPlansFutureStartConflict,
+} from "./setPlansErrorDetails";
 import {
 	boldText,
 	plainText,
@@ -64,6 +67,25 @@ const BOUNDARY_COPY: Record<
 	end_date: {
 		relation: "is after the end date",
 		hint: "Move it before the end date.",
+	},
+};
+
+const FUTURE_START_CONFLICT_COPY: Record<
+	SetPlansFutureStartConflict,
+	{ subject: string; hint: string }
+> = {
+	free_trial: {
+		subject: "A free trial can't start on",
+		hint: "Start the first phase now, or remove the trial.",
+	},
+	invoice_mode: {
+		subject: "Invoice mode can't be used when the first phase starts on",
+		hint: "Start the first phase now, or turn off invoice mode.",
+	},
+	billing_cycle_anchor: {
+		subject:
+			"The billing cycle anchor can't be set when the first phase starts on",
+		hint: "Billing is anchored to that date, so remove the anchor.",
 	},
 };
 
@@ -191,6 +213,27 @@ export const setPlansErrorCopy = (
 				hint: { text: boundary.hint },
 			};
 		}
+		case "future_start_conflict": {
+			const copy = FUTURE_START_CONFLICT_COPY[details.conflict];
+			return {
+				line: [
+					plain(copy.subject),
+					bold(`${formatMsToDate(details.starts_at)}.`),
+				],
+				hint: { text: copy.hint },
+			};
+		}
+		case "plan_cannot_start_later":
+			return {
+				line: [
+					bold(details.plan_name),
+					plain("can't start on a later date,"),
+					bold(`${formatMsToDate(details.starts_at)}.`),
+				],
+				hint: {
+					text: "Stripe has nothing to start it then. Start the first phase now, or turn on early access.",
+				},
+			};
 	}
 };
 

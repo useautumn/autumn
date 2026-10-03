@@ -2,9 +2,10 @@ import {
 	type CreateScheduleBillingContext,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
+import { firstPhaseStartsInFuture } from "../../setup/classifyFirstPhaseStart";
 import type { RequestedPhase } from "./types/requestedPhase";
 
-/** The opening phase runs from now: its plans plus the unscheduled ones, then each scheduled phase. */
+/** The opening phase runs from now, or its later start: its plans plus the unscheduled ones, then each scheduled phase. */
 export const billingContextToRequestedPhases = ({
 	billingContext,
 	now,
@@ -13,7 +14,9 @@ export const billingContextToRequestedPhases = ({
 	now: number;
 }): RequestedPhase[] => {
 	const openingPhase: RequestedPhase = {
-		startsAt: now,
+		startsAt: firstPhaseStartsInFuture({ billingContext })
+			? truncateMsToSecondPrecision(billingContext.immediatePhase.starts_at)
+			: now,
 		resetsBillingCycle: false,
 		plans: billingContext.productContexts.map((productContext, planIndex) => ({
 			fullProduct: productContext.fullProduct,

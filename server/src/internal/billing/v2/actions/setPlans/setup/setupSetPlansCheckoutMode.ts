@@ -19,14 +19,17 @@ type SetPlansCheckoutModeContext = Pick<
 export const setupSetPlansCheckoutMode = ({
 	billingContext,
 	redirectMode,
+	startsInFuture,
 }: {
 	billingContext: SetPlansCheckoutModeContext;
 	redirectMode: SetPlansParamsV0["redirect_mode"];
+	startsInFuture: boolean;
 }): CheckoutMode => {
 	const bypassesCheckout =
 		billingContext.skipBillingChanges ||
 		redirectMode === "never" ||
-		billingContext.invoiceMode;
+		billingContext.invoiceMode ||
+		startsInFuture;
 	if (bypassesCheckout) {
 		return null;
 	}

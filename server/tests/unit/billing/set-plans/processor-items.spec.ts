@@ -359,7 +359,7 @@ describe("scheduleActionToProcessorItems", () => {
 					],
 				},
 			]),
-			phases: phasesAt(NOW, PHASE_TWO),
+			phases: phasesAt(PHASE_TWO),
 			context,
 		});
 
@@ -385,13 +385,33 @@ describe("scheduleActionToProcessorItems", () => {
 					items: [{ price: "price_PREVIEW_abc" }],
 				},
 			]),
-			phases: phasesAt(NOW, PHASE_TWO, PHASE_THREE),
+			phases: phasesAt(PHASE_TWO, PHASE_THREE),
 			context,
 		});
 
 		expect(items.map(summarize)).toEqual([
 			[["pro", "Seats", 2]],
 			[["premium", null, null]],
+		]);
+	});
+
+	test("a schedule starting at a later first phase lists its items there", () => {
+		const items = scheduleActionToProcessorItems({
+			subscriptionScheduleAction: scheduleCreate([
+				{
+					start_date: msToSeconds(PHASE_TWO),
+					items: [{ price: "price_pro_base" }, { price: "price_PREVIEW_abc" }],
+				},
+			]),
+			phases: phasesAt(PHASE_TWO),
+			context,
+		});
+
+		expect(items.map(summarize)).toEqual([
+			[
+				["pro", null, null],
+				["premium", null, null],
+			],
 		]);
 	});
 
@@ -403,7 +423,7 @@ describe("scheduleActionToProcessorItems", () => {
 					items: [{ price: "price_pro_base" }],
 				},
 			]),
-			phases: phasesAt(NOW, PHASE_TWO),
+			phases: phasesAt(PHASE_TWO),
 			context,
 		});
 
@@ -425,7 +445,7 @@ describe("scheduleActionToProcessorItems", () => {
 					],
 				},
 			},
-			phases: phasesAt(NOW, PHASE_TWO),
+			phases: phasesAt(PHASE_TWO),
 			context,
 		});
 
@@ -447,7 +467,7 @@ describe("scheduleActionToProcessorItems", () => {
 					],
 				},
 			},
-			phases: phasesAt(NOW, PHASE_TWO),
+			phases: phasesAt(PHASE_TWO),
 			context,
 		});
 

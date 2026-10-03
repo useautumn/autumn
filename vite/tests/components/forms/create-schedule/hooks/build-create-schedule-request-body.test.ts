@@ -1,12 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { AppEnv, ProductItemInterval, UsageModel } from "@autumn/shared";
-import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
+import { addDays, subDays } from "date-fns";
+import {
+	buildCreateScheduleRequestBody,
+	buildCreateScheduleStageRequestBody,
+} from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import {
 	type CustomerStatePhase,
 	canResetScheduleBillingCycle,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import {
 	buildCustomize,
 	buildCustomizeBasePrice,
@@ -105,7 +110,7 @@ const schedulePhase = ({
 	persistedStartsAt,
 	productIds = ["prod_1"],
 }: {
-	startsAt?: number;
+	startsAt?: number | null;
 	persistedStartsAt?: number;
 	productIds?: string[];
 }): CustomerStatePhase => ({
@@ -834,6 +839,59 @@ describe("buildCreateScheduleRequestBody", () => {
 
 		expect(result).not.toBeNull();
 		expect(result!.phases[0].starts_at).toBe(now);
+	});
+
+	test("sends a future first-phase starts_at, with early access only then", () => {
+		const now = Date.now();
+		const later = addDays(now, 7).getTime();
+		const firstPhaseFrom = (startsAt: number) =>
+			buildCreateScheduleRequestBody({
+				customerId: "cus_1",
+				phases: [schedulePhase({ startsAt })],
+				products: defaultProducts,
+				features,
+				nowMs: now,
+				enablePlanImmediately: true,
+			});
+
+		const futureStart = firstPhaseFrom(later);
+		expect(futureStart!.phases[0].starts_at).toBe(later);
+		expect(futureStart!.enable_plan_immediately).toBe(true);
+
+		const immediateStart = firstPhaseFrom(subDays(now, 1).getTime());
+		expect(immediateStart!.phases[0].starts_at).toBe(now);
+		expect(immediateStart!.enable_plan_immediately).toBeUndefined();
+	});
+
+	test("a submit sends early access only for a later first phase or from the checkout stage", () => {
+		const now = Date.now();
+		const submit = ({
+			startsAt,
+			stageParams,
+		}: {
+			startsAt: number | null;
+			stageParams?: BillingStageParams;
+		}) =>
+			buildCreateScheduleStageRequestBody({
+				stageParams,
+				customerId: "cus_1",
+				phases: [schedulePhase({ startsAt })],
+				products: defaultProducts,
+				features,
+				nowMs: now,
+				enablePlanImmediately: true,
+			});
+
+		expect(submit({ startsAt: null })!.enable_plan_immediately).toBeUndefined();
+		expect(
+			submit({ startsAt: addDays(now, 7).getTime() })!.enable_plan_immediately,
+		).toBe(true);
+		expect(
+			submit({
+				startsAt: null,
+				stageParams: { enableProductImmediately: true },
+			})!.enable_plan_immediately,
+		).toBe(true);
 	});
 
 	test("preserves persisted first phase start when editing an existing schedule", () => {

@@ -45,7 +45,7 @@ const stripePhaseActiveAt = ({
 		.filter((stripePhase) => startsBy({ stripePhase, startsAt }))
 		.pop();
 
-/** Items Stripe will hold at the start of each future phase, read straight off the schedule. */
+/** Items Stripe will hold at the start of each given phase, read straight off the schedule. */
 export const scheduleActionToProcessorItems = ({
 	subscriptionScheduleAction,
 	phases,
@@ -59,7 +59,7 @@ export const scheduleActionToProcessorItems = ({
 	const stripePhases = scheduleParams?.phases ?? [];
 	const cancelsAtSeconds = scheduleCancelsAtSeconds(scheduleParams);
 
-	return phases.slice(1).map((phase) => {
+	return phases.map((phase) => {
 		const subscriptionCanceled =
 			cancelsAtSeconds !== undefined &&
 			msToSeconds(phase.startsAt) >= cancelsAtSeconds;

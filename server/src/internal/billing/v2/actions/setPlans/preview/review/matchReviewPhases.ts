@@ -1,4 +1,5 @@
 import { truncateMsToSecondPrecision } from "@autumn/shared";
+import { classifyFirstPhaseStart } from "../../setup/classifyFirstPhaseStart";
 import { isAliveAt, isAliveJustBefore } from "../../timeline/timelineGuards";
 import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { ResolvedSegment } from "../../timeline/types/timelineDiff";
@@ -125,6 +126,14 @@ export const matchReviewPhases = ({
 	phaseStarts: number[];
 	now: number;
 }): ReviewPhaseMatches => {
+	const [firstPhaseStart = now] = phaseStarts;
+	const firstPhaseAt =
+		classifyFirstPhaseStart({
+			startsAt: firstPhaseStart,
+			currentEpochMs: now,
+		}) === "future"
+			? truncateMsToSecondPrecision(firstPhaseStart)
+			: now;
 	const requestStarts = phaseStarts.slice(1).map(truncateMsToSecondPrecision);
 	const savedStarts = savedPhaseStarts({ saved, now });
 	const anchors = [
@@ -155,7 +164,7 @@ export const matchReviewPhases = ({
 
 	return {
 		phases: [
-			{ at: now, comparison: { type: "saved", at: now } },
+			{ at: firstPhaseAt, comparison: { type: "saved", at: now } },
 			...futurePhases,
 		],
 		removedPhaseStarts: changedSavedStarts.filter(

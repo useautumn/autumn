@@ -453,6 +453,62 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		expect(warnings).toEqual([]);
 	});
 
+	test("a future first phase says when billing starts", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Billing starts on 06 Oct 2026, when the first invoice is sent.",
+				parts: [
+					{ text: "Billing starts on" },
+					{ text: "06 Oct 2026,", bold: true },
+					{ text: "when the first invoice is sent." },
+				],
+			},
+		]);
+	});
+
+	test("early access says the plans are usable before billing starts", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+				accessStartsAt: NOON_UTC,
+			},
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Access starts now. Billing starts on 06 Oct 2026, when the first invoice is sent.",
+			},
+		]);
+	});
+
+	test("a first phase that starts now doesn't say billing starts later", () => {
+		expect(
+			stateWarnings({
+				billingContext: {
+					currentEpochMs: NOON_UTC,
+					billingCycleAnchorMs: "now",
+					billingStartsAt: NOON_UTC,
+				},
+			}),
+		).toEqual([]);
+	});
+
 	test("a discount the request carries over is not flagged", () => {
 		const warnings = stateWarnings({
 			billingContext: {

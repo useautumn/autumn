@@ -1,18 +1,18 @@
 import type { StripeReplacedSubscriptionAction } from "@autumn/shared";
 import type Stripe from "stripe";
-import { subscriptionStateAction } from "./subscriptionStateAction";
 
+const hasStripeSubscriptionEnded = (subscription: Stripe.Subscription) =>
+	subscription.status === "canceled" ||
+	subscription.status === "incomplete_expired";
+
+/** Setup only moves a subscription into replacedStripeSubscription to cancel it; one that already ended needs nothing. */
 export const buildReplacedSubscriptionAction = ({
 	replacedStripeSubscription,
 }: {
 	replacedStripeSubscription?: Stripe.Subscription;
 }): StripeReplacedSubscriptionAction | undefined => {
 	if (!replacedStripeSubscription) return undefined;
-
-	const { action } = subscriptionStateAction({
-		state: replacedStripeSubscription.status,
-	});
-	if (action !== "cancel_and_create") return undefined;
+	if (hasStripeSubscriptionEnded(replacedStripeSubscription)) return undefined;
 
 	return {
 		type: "cancel",

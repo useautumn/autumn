@@ -1,3 +1,4 @@
+import { Switch } from "@autumn/ui";
 import {
 	canResetScheduleBillingCycle,
 	hasMultipleImmediateSchedulePlans,
@@ -5,11 +6,13 @@ import {
 } from "@/components/forms/customer-state/customerStateSchema";
 import { AdvancedSection } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
+import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
+import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function CreateScheduleAdvancedSection() {
 	const { form, formValues, products, nowMs } = useCreateScheduleFormContext();
@@ -20,6 +23,7 @@ export function CreateScheduleAdvancedSection() {
 		billingCycleAnchorDate,
 		endDate,
 		phases,
+		enablePlanImmediately,
 	} = formValues;
 
 	const hasPaidRecurringPlan = hasPaidRecurringSchedulePlan({
@@ -40,6 +44,21 @@ export function CreateScheduleAdvancedSection() {
 
 	return (
 		<AdvancedSection>
+			{firstPhaseStartsLater({ phases, nowMs }) && (
+				<ConfigRow
+					title="Early Access"
+					description="Give access now, and start billing when the first phase starts"
+					action={
+						<Switch
+							aria-label="Early Access"
+							checked={enablePlanImmediately}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("enablePlanImmediately", checked)
+							}
+						/>
+					}
+				/>
+			)}
 			{rules.proration.visible && (
 				<ProrationBehaviorConfigRow
 					rule={rules.proration}

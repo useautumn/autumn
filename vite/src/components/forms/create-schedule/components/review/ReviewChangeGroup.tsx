@@ -87,15 +87,17 @@ export function ReviewChangeGroup({
 					<Skeleton className="h-3.5 w-24 rounded-sm" />
 				)}
 			</AccordionTrigger>
-			<AccordionContent className="pb-4">
-				<ReviewChangeGroupBody
-					layout={layout}
-					section={section}
-					placeholderPhases={placeholderPhases}
-					showsStatus={showsStatus}
-					showsScopes={showsScopes}
-				/>
-			</AccordionContent>
+			{!isEmpty && (
+				<AccordionContent className="pb-4">
+					<ReviewChangeGroupBody
+						layout={layout}
+						section={section}
+						placeholderPhases={placeholderPhases}
+						showsStatus={showsStatus}
+						showsScopes={showsScopes}
+					/>
+				</AccordionContent>
+			)}
 		</AccordionItem>
 	);
 }
