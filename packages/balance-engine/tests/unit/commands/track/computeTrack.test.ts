@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import {
+	advanceDeductionContext,
+	applyMutation,
+	computeTrackDecision,
 	computeTrack as computeTrackMutation,
 	type SubjectState,
 	type SubjectStateMutation,
@@ -223,6 +226,45 @@ describe("track computation", () => {
 					},
 				}),
 			).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
+		},
+	);
+});
+
+describe("a run of tracks on a carried context", () => {
+	test.concurrent(
+		"decides every track as a fresh view of each state would, from one base view and its advanced context",
+		() => {
+			const base = createState({ balance: 7 });
+			const baseView = createSubjectFor({ state: base });
+			const commands = [3, -1, 4, 2, 5, -2].map((value, index) =>
+				createTrackCommand({
+					commandId: `cmd_${index}`,
+					value,
+					overageBehavior: index % 2 === 0 ? "reject" : "cap",
+				}),
+			);
+
+			let state = base;
+			let context = null as ReturnType<typeof advanceDeductionContext>;
+			for (const command of commands) {
+				const fresh = computeTrackDecision({
+					fullSubject: createSubjectFor({ state }),
+					command,
+				});
+				const carried = computeTrackDecision({
+					fullSubject: baseView,
+					command,
+					revision: state.revision,
+					...(context ? { context } : {}),
+				});
+				expect(carried.mutation).toEqual(fresh.mutation);
+				context = advanceDeductionContext({
+					context: carried.outcome.context,
+					changes: carried.mutation.changes,
+				});
+				expect(context).not.toBeNull();
+				state = applyMutation({ state, mutation: fresh.mutation });
+			}
 		},
 	);
 });

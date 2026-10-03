@@ -12,13 +12,16 @@ export const trackOutcomeToMutation = ({
 	command,
 	outcome,
 	fullSubject,
+	revision,
 }: {
 	command: TrackCommand;
 	outcome: DeductionOutcome;
 	fullSubject: WorkerFullSubject;
+	/** The revision the mutation applies to. */
+	revision: number;
 }): SubjectStateMutation => {
 	const { rejected, changes } = outcome;
-	const revisionBefore = fullSubject.revision;
+	const revisionBefore = revision;
 	const fundingRow = fundingRowOf({ outcome });
 	// A rejected track deducted nothing, so there is nothing for a lock to hold.
 	const lockChanges =
