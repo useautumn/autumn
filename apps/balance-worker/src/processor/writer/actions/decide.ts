@@ -1,6 +1,5 @@
 import {
 	type MeteringIdentity,
-	mergeSubjectStates,
 	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
@@ -27,6 +26,7 @@ import {
 	PartitionWriterStateNotFoundError,
 } from "../writerErrors.js";
 import { scheduleCommit } from "./commit.js";
+import { mergeResidentStates } from "./mergeResidentStates.js";
 
 /**
  * Synchronous until the record is enqueued: no await may separate reading the
@@ -201,7 +201,7 @@ export function readFreshestState({
 	const entity = identity.entityId
 		? readOwnState({ ownIdentity: identity })
 		: null;
-	return mergeSubjectStates({ customer, entity });
+	return mergeResidentStates({ customer, entity });
 }
 
 /** A known record for this commandId must have been produced by the same request. */

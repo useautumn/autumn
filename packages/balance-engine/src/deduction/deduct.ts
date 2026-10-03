@@ -71,11 +71,23 @@ export const deduct = ({
 }: {
 	fullSubject: WorkerFullSubject;
 	request: DeductionRequest;
-}): DeductionOutcome => {
-	const context = setupDeductionContext({
-		fullSubject,
-		selection: request.selection,
+}): DeductionOutcome =>
+	deductWithContext({
+		context: setupDeductionContext({
+			fullSubject,
+			selection: request.selection,
+		}),
+		request,
 	});
+
+/** `deduct` on a context already set up for the request's selection, so several requests can share one setup. */
+export const deductWithContext = ({
+	context,
+	request,
+}: {
+	context: DeductionContext;
+	request: DeductionRequest;
+}): DeductionOutcome => {
 	const deductionState: DeductionState = {
 		remaining: new Decimal(request.value),
 		terms: request.terms,
