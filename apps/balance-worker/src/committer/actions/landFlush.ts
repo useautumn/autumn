@@ -385,8 +385,10 @@ export const landFlush = async ({
 		// A lone record already failed alone: it is not re-run, only classified,
 		// unless its snapshot could be the reason, which must never cost a record.
 		const record = call.records[0];
+		// A delete-only call has no record to classify: it alone is refused, never the calls that landed beside it.
 		if (!record) {
-			throw cause;
+			call.settle.reject(cause);
+			return outcomes;
 		}
 		if (writesSnapshots({ call })) {
 			const deleted = {
