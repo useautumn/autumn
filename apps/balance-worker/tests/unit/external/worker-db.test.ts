@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { createWorkerDb } from "../../../src/external/postgres/getWorkerDb.js";
 import { createDatabaseTimings } from "../../../src/logging/databaseTimings.js";
 
+const dialect = new PgDialect();
 const identity = {
 	orgId: "org_1",
 	env: "sandbox",
@@ -28,35 +32,44 @@ describe("createWorkerDb", () => {
 
 		expect(
 			await db.getSubjectRows({ identity, asOfTimestampMs: 1_700_000_000_000 }),
-		).toEqual({ snapshot: null, envelope: null });
+		).toBeNull();
 		expect(gated).toEqual(["subject_rows"]);
-		const drained = timings.drain();
-		expect(drained.queries.subject_rows).toMatchObject({ count: 1 });
-		// Not asked for a snapshot, so nothing to count as a hit or a miss.
-		expect(drained).not.toHaveProperty("subjectSnapshots");
+		expect(timings.drain().queries.subject_rows).toMatchObject({ count: 1 });
 	});
 
-	test("a read that asked for a snapshot counts a hit or a miss on the database line", async () => {
+	test("a snapshot probe asks for this build's version and counts a hit per row and a miss per key without one", async () => {
 		const timings = createDatabaseTimings();
-		let answer: Record<string, unknown> = { snapshot: null, envelope: null };
+		const statements: { sql: string; params: unknown[] }[] = [];
 		const db = createWorkerDb({
 			ctx: {
-				postgres: { db: { execute: async () => [answer] } as never },
+				postgres: {
+					db: {
+						execute: async (query: unknown) => {
+							statements.push(dialect.sqlToQuery(query as SQL));
+							return [
+								{
+									org_id: "org_1",
+									env: "sandbox",
+									customer_id: "cus_hit",
+									entity_id: "",
+									state: { revision: 0 },
+									baseline_at: "1",
+								},
+							];
+						},
+					} as never,
+				},
 				subjectLoads: { run: async (load) => load() },
 				timings,
 			},
 		});
-		await db.getSubjectRows({
-			identity,
-			asOfTimestampMs: 1_700_000_000_000,
-			snapshotVersion: 1,
+		const rows = await db.readSubjectSnapshots({
+			identities: [identity, { ...identity, customerId: "cus_hit" }],
 		});
-		answer = { snapshot: { revision: 0 }, envelope: null };
-		await db.getSubjectRows({
-			identity,
-			asOfTimestampMs: 1_700_000_000_000,
-			snapshotVersion: 1,
-		});
+		expect(rows.map((row) => row.customerId)).toEqual(["cus_hit"]);
+		expect(statements[0]?.params).toContain(
+			BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+		);
 		expect(timings.drain().subjectSnapshots).toEqual({
 			upserted: 0,
 			deleted: 0,

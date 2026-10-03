@@ -155,11 +155,9 @@ const createFixture = () => {
 	const db: WorkerDb = {
 		getSubjectRows: async ({ identity: requested }) => {
 			subjectRowsCalls.push(requested);
-			return {
-				snapshot: null,
-				envelope: requested.entityId === entity.id ? entityEnvelope : null,
-			};
+			return requested.entityId === entity.id ? entityEnvelope : null;
 		},
+		readSubjectSnapshots: async () => [],
 		getEntitySubjectRows: async ({ identity: requested, entityIds }) => {
 			for (const entityId of entityIds)
 				subjectRowsCalls.push({ ...requested, entityId });

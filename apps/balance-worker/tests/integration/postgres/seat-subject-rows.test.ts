@@ -32,7 +32,7 @@ describe.skipIf(!databaseUrl)("seat subject rows", () => {
 		seeded: SeededCustomer;
 		entityId: string;
 	}) => {
-		const { envelope } = await getSubjectRows({
+		const envelope = await getSubjectRows({
 			ctx: { db: postgres.db, orgId: seeded.orgId, env: seeded.env },
 			customerId: seeded.identity.customerId,
 			entityId,
@@ -100,7 +100,7 @@ describe.skipIf(!databaseUrl)("seat subject rows", () => {
 	});
 
 	const loadCustomer = async ({ seeded }: { seeded: SeededCustomer }) => {
-		const { envelope } = await getSubjectRows({
+		const envelope = await getSubjectRows({
 			ctx: { db: postgres.db, orgId: seeded.orgId, env: seeded.env },
 			customerId: seeded.identity.customerId,
 			asOfTimestampMs: Date.now(),
@@ -113,7 +113,7 @@ describe.skipIf(!databaseUrl)("seat subject rows", () => {
 	};
 
 	const loadCustomerPools = async ({ seeded }: { seeded: SeededCustomer }) => {
-		const { envelope } = await getSubjectRows({
+		const envelope = await getSubjectRows({
 			ctx: { db: postgres.db, orgId: seeded.orgId, env: seeded.env },
 			customerId: seeded.identity.customerId,
 			asOfTimestampMs: Date.now(),
