@@ -1,15 +1,21 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
-import { servesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import {
+	readsSubjectSnapshots,
+	servesSubjectSnapshots,
+} from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { readSubjectBaseline } from "../actions/ensureSubject/readSubjectBaseline.js";
 import type { SubjectScope } from "../types/subject.js";
+import { verifySnapshot } from "./actions/verifySnapshot.js";
+import { warnSnapshotUnreadable } from "./actions/warnSnapshotUnreadable.js";
 import { snapshotStateOf } from "./rules/snapshotStateOf.js";
 
 /** A read further from now than this is a replay, which never trusts a row written for now. */
 const SNAPSHOT_AS_OF_SKEW_MS = 1_000;
 
 /**
- * The subject's rows at `occurredAt`: one probe for its snapshot when the worker serves snapshots and the read is for
- * now, answered from the row when it stands (parses), else the full rows. Nothing becomes resident here.
+ * The subject's rows at `occurredAt`: one probe for its snapshot when the worker reads snapshots and the read is for
+ * now. Serving answers from a row that stands (parses); verifying reads the rows anyway and logs where the row
+ * disagrees. Nothing becomes resident here.
  */
 export const loadSubjectBaseline = async ({
 	scope,
@@ -20,32 +26,24 @@ export const loadSubjectBaseline = async ({
 	identity: MeteringIdentity;
 	occurredAt: number;
 }): Promise<SubjectState> => {
-	if (!probesSnapshot({ scope, occurredAt }))
+	const mode = scope.ctx.subjectSnapshotsConfig?.get().mode ?? "off";
+	if (!readsSubjectSnapshots({ mode }) || isReplay({ scope, occurredAt }))
 		return readSubjectBaseline({ scope, identity, occurredAt });
 	const snapshot = await scope.ctx.db.readSubjectSnapshot({ identity });
-	if (snapshot !== null) {
-		const served = snapshotStateOf({ snapshot });
-		if (served) return served;
-		scope.ctx.logger?.warn?.(
-			{ event: "balance_worker.snapshot_unreadable", data: { identity } },
-			`Balance worker could not read ${identity.customerId}'s snapshot; its next flush rewrites it`,
-		);
-	}
-	return readSubjectBaseline({ scope, identity, occurredAt });
+	const row = snapshot === null ? null : snapshotStateOf({ snapshot });
+	if (snapshot !== null && !row) warnSnapshotUnreadable({ scope, identity });
+	if (row && servesSubjectSnapshots({ mode })) return row;
+	const baseline = await readSubjectBaseline({ scope, identity, occurredAt });
+	if (row) verifySnapshot({ scope, identity, snapshot: row, baseline });
+	return baseline;
 };
 
-/** Serving, and reading for now: a replay never trusts a row written for now. */
-const probesSnapshot = ({
+/** A read further from now than the skew never trusts a row written for now. */
+const isReplay = ({
 	scope,
 	occurredAt,
 }: {
 	scope: SubjectScope;
 	occurredAt: number;
-}): boolean => {
-	const settings = scope.ctx.subjectSnapshotsConfig?.get();
-	if (!settings || !servesSubjectSnapshots(settings)) return false;
-	return (
-		Math.abs(occurredAt - scope.ctx.receiptPolicy.now()) <=
-		SNAPSHOT_AS_OF_SKEW_MS
-	);
-};
+}): boolean =>
+	Math.abs(occurredAt - scope.ctx.receiptPolicy.now()) > SNAPSHOT_AS_OF_SKEW_MS;
