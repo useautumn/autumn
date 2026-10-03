@@ -2,9 +2,11 @@ import { ErrCode } from "@autumn/shared";
 import type { StripeLikeError } from "./isStripeError.js";
 
 /** Stripe failures the merchant caused; server-specific route rules live in the server's errorMiddleware. */
-type StripeCallerErrorRule = {
+export type StripeCallerErrorRule = {
 	name: string;
 	matches: (error: StripeLikeError) => boolean;
+	context?: "new_stripe_key";
+	message?: string;
 	/** Set when the error is the caller's only on some request paths; never matches outside a request. */
 	matchesPath?: (path: string) => boolean;
 	statusCode: number;
@@ -28,6 +30,22 @@ const isCallerStripePath = (path: string) =>
 	!NON_CALLER_STRIPE_PATHS.some((pattern) => pattern.test(path));
 
 export const stripeCallerErrorRules: StripeCallerErrorRule[] = [
+	{
+		name: "invalid newly supplied Stripe key",
+		context: "new_stripe_key",
+		matches: ({ type, code, message }) => {
+			const isInvalidKey =
+				type === "StripeAuthenticationError" &&
+				code === undefined &&
+				message.startsWith("Invalid API Key provided:");
+			const isPublishableKey =
+				type === "StripePermissionError" && code === "secret_key_required";
+			return isInvalidKey || isPublishableKey;
+		},
+		message: "Invalid Stripe secret key. Please provide a valid secret key.",
+		statusCode: 400,
+		code: ErrCode.StripeKeyInvalid,
+	},
 	{
 		name: "rate limit exceeded",
 		matches: ({ type, statusCode }) =>
