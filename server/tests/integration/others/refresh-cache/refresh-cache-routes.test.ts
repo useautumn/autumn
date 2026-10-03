@@ -97,7 +97,7 @@ const buildRequestData = ({
 	}
 };
 
-// Seeds the Redis views directly: a balance-worker-routed customer's reads never fill them, but the middleware still clears them.
+// Each case starts from fresh Redis views, seeded directly: a balance-worker-routed customer's reads never fill them.
 const warmCaches = async ({
 	ctx,
 	customerId,
@@ -107,6 +107,9 @@ const warmCaches = async ({
 	customerId: string;
 	entityIds: string[];
 }) => {
+	const customerKeys = await ctx.redisV2.keys(`{${customerId}}:*`);
+	if (customerKeys.length > 0) await ctx.redisV2.unlink(...customerKeys);
+
 	const subjectViewEpoch = await getOrInitFullSubjectViewEpoch({
 		ctx,
 		customerId,
@@ -128,8 +131,6 @@ const warmCaches = async ({
 			}),
 		).toBe("OK");
 	}
-
-	return subjectViewEpoch;
 };
 
 const describeDb = process.env.TESTS_ORG ? describe : describe.skip;
@@ -190,7 +191,7 @@ describeDb("refreshCacheMiddleware routes", () => {
 	test.each(REFRESH_CACHE_ROUTE_CONFIGS)(
 		"$method $url invalidates the expected caches",
 		async (config) => {
-			const subjectViewEpoch = await warmCaches({
+			await warmCaches({
 				ctx,
 				customerId: scenario.ids.customerId,
 				entityIds: scenario.ids.entityIds,
@@ -236,9 +237,7 @@ describeDb("refreshCacheMiddleware routes", () => {
 			});
 
 			expect(await ctx.redisV2.exists(customerSubjectKey)).toBe(0);
-			expect(await ctx.redisV2.get(epochKey)).toBe(
-				String(subjectViewEpoch + 1),
-			);
+			expect(await ctx.redisV2.get(epochKey)).toBe("1");
 
 			if (touchedEntityId) {
 				const touchedEntityKey = buildFullSubjectKey({
