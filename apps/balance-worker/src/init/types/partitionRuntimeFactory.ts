@@ -1,4 +1,5 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
+import type { EdgeConfigStore } from "@autumn/edge-config";
 import type {
 	KafkaCommitMode,
 	KafkaConsumerGroupTimings,
@@ -9,6 +10,7 @@ import type {
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
 import type { OwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
@@ -69,6 +71,7 @@ export type PartitionRuntimeFactoryContext = {
 	bootstrapper: PartitionBootstrapper;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
+	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
 	partitionLoad?: PartitionLoad;
 	/** Commits command offsets through the consumer group when no transaction carries them (idempotent commits). */

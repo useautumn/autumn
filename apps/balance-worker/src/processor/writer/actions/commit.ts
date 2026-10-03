@@ -7,9 +7,11 @@ import type {
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import {
+	disownQueuedSnapshots,
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
+	releasePins,
 	removePendingMutation,
 	writerNowOf,
 } from "../pendingMutations.js";
@@ -348,6 +350,10 @@ async function applyBatch({
 			// Refused by the store, not broken: the customer's rows are dropped because
 			// memory had already applied a deduction that never landed there.
 			if (result.kind === "rejected") {
+				disownQueuedSnapshots({
+					state: scope.state,
+					customerKey: pending.customerKey,
+				});
 				scope.state.subjects.evictCustomer({
 					customerKey: pending.customerKey,
 				});
@@ -366,6 +372,7 @@ async function applyBatch({
 			enterRecovery({ scope, batch, cause: firstFailure });
 			return false;
 		}
+		for (const pending of batch) releasePins({ state: scope.state, pending });
 		for (const pending of batch) pending.settlement.settleStore();
 		return true;
 	} catch (cause) {
@@ -444,6 +451,7 @@ function durableRecordsOf({
 		records.push({
 			position: { topic, partition, offset: baseOffset + BigInt(index) },
 			mutation: pending.mutation,
+			...(pending.snapshots && { snapshots: pending.snapshots }),
 		});
 	}
 	return records;

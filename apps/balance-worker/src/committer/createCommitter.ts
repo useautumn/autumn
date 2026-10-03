@@ -1,3 +1,5 @@
+import type { SubjectSnapshotCustomer } from "@autumn/postgres";
+import type { DurableMutationRecord } from "../state/types/durableMutation.js";
 import { landFlush } from "./actions/landFlush.js";
 import { takeFlush } from "./actions/takeFlush.js";
 import { CommitterStoppedError } from "./committerErrors.js";
@@ -43,7 +45,13 @@ export const createCommitter = ({
 			);
 		const call: FlushCall = {
 			...params,
-			rows: countRowChanges({ records: params.records }),
+			rows:
+				countRowChanges({ records: params.records }) +
+				snapshotRowsOf({
+					ctx: scope.ctx,
+					records: params.records,
+					snapshotDrops: params.snapshotDrops,
+				}),
 			settle: Promise.withResolvers<FlushOutcome>(),
 		};
 		scope.state.queue.push(call);
@@ -120,5 +128,21 @@ function countRowChanges({
 }): number {
 	let rows = 0;
 	for (const record of records) rows += record.mutation.changes.length;
+	return rows;
+}
+
+/** Rows a call's snapshot writes add to its flush; nothing unless snapshots are written. */
+function snapshotRowsOf({
+	ctx,
+	records,
+	snapshotDrops,
+}: {
+	ctx: Pick<CommitterContext, "subjectSnapshots">;
+	records: readonly DurableMutationRecord[];
+	snapshotDrops?: readonly SubjectSnapshotCustomer[];
+}): number {
+	if (ctx.subjectSnapshots?.get().mode !== "write") return 0;
+	let rows = snapshotDrops?.length ?? 0;
+	for (const record of records) rows += record.snapshots?.length ?? 0;
 	return rows;
 }

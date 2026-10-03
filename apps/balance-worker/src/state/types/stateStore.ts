@@ -8,6 +8,7 @@ import type {
 	PartitionCheckpointV1,
 	PreparedPartitionCheckpoint,
 } from "../../checkpoint/partitionCheckpoint.js";
+import type { SubjectSnapshots } from "../../committer/subjectSnapshots/types/subjectSnapshots.js";
 import type { PartitionCheckpointCaptureLimits } from "../actions/checkpoint/capturePartitionCheckpoint.js";
 import type {
 	PartitionCheckpointRestoreLimits,
@@ -67,6 +68,8 @@ export type StateStore = {
 		partition: number;
 		fence: OwnerFence;
 	}): void | Promise<void>;
+	/** Present on a store that holds subject snapshots: an evict deletes the customer's rows through it. */
+	subjectSnapshots?: SubjectSnapshots;
 	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];

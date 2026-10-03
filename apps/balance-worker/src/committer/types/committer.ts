@@ -1,3 +1,6 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
+import type { SubjectSnapshotCustomer } from "@autumn/postgres";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";
 import type { CommitterDb } from "../../types/committerDb.js";
@@ -16,6 +19,10 @@ export type CommitterContext = {
 	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 	/** Read on every flush start; absent means the boot config is the only source. */
 	control?: { read(): CommitterControl };
+	/** Customers whose state was too large to snapshot, so their rows were deleted instead. */
+	onSnapshotSizeCapped?: (params: { customers: number }) => void;
+	/** Read at every decision that touches `subject_snapshots`: a flip in S3 lands with the next flush. */
+	subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 };
 
 /** A transient failure is retried until the store answers or the committer stops; the record is never given up on. */
@@ -32,6 +39,8 @@ export type CommitterConfig = {
 	/** Row changes one flush may carry; a hot partition cannot crowd out the others. */
 	maxRowsPerFlush: number;
 	retry: FlushRetryPolicy;
+	/** The deployment's partition count, written beside every snapshot row. */
+	snapshots?: { partitionCount: number };
 };
 
 export type PartitionPosition = { topic: string; partition: number };
@@ -57,6 +66,8 @@ export type FlushCall = PartitionPosition & {
 	ownerFence?: OwnerFence;
 	claimToken?: string;
 	records: readonly DurableMutationRecord[];
+	/** Customers whose snapshot rows an evict removes; a call with only these moves no bookmark. */
+	snapshotDrops?: readonly SubjectSnapshotCustomer[];
 	rows: number;
 	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
 };
@@ -87,6 +98,7 @@ export type Committer = {
 			ownerFence?: OwnerFence;
 			claimToken?: string;
 			records: readonly DurableMutationRecord[];
+			snapshotDrops?: readonly SubjectSnapshotCustomer[];
 		},
 	): Promise<FlushOutcome>;
 	/** Resolves once nothing is queued or in flight. */

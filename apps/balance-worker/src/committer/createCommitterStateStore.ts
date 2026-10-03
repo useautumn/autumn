@@ -1,3 +1,5 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
+import type { SubjectSnapshotsEdgeConfig } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {
@@ -7,6 +9,7 @@ import {
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
+import { createEvictDeletes } from "./subjectSnapshots/createEvictDeletes.js";
 import type {
 	Committer,
 	CommitterStateStore,
@@ -26,6 +29,8 @@ export const createCommitterStateStore = ({
 			| "insertPartitionProgress"
 			| "claimPartitionProgress"
 		>;
+		/** The same store the committer reads; present, evicts delete rows while it says write. */
+		subjectSnapshots?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	};
 }): CommitterStateStore => {
 	const claimTokens = new Map<string, string>();
@@ -52,6 +57,17 @@ export const createCommitterStateStore = ({
 		laneByPartition.set(key, operation);
 		return operation;
 	}
+
+	// Evict DELETEs share the lane, so Postgres sees them in the order the partition asked.
+	const subjectSnapshots = dependencies.subjectSnapshots
+		? createEvictDeletes({
+				ctx: {
+					committer: ctx.committer,
+					subjectSnapshots: dependencies.subjectSnapshots,
+					runInLane,
+				},
+			})
+		: undefined;
 
 	const applyInLane: CommitterStateStore["applyDurableMutations"] = ({
 		records,
@@ -116,6 +132,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
+		...(subjectSnapshots ? { subjectSnapshots } : undefined),
 		claimPartition,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,

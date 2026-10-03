@@ -81,13 +81,28 @@ const reportRefusal = ({
 		ctx.logger?.error(`[committer] ${refusal.message}`);
 };
 
-/** The same record with nothing to write: lands only its bookmark, so the records behind it are not held up. */
+const withoutSnapshots = ({
+	record,
+}: {
+	record: DurableMutationRecord;
+}): DurableMutationRecord => {
+	if (!record.snapshots) return record;
+	const { snapshots: _dropped, ...rest } = record;
+	return rest;
+};
+
+const carriesSnapshots = ({ flush }: { flush: Flush }): boolean =>
+	flush.calls.some((call) =>
+		call.records.some((record) => record.snapshots !== undefined),
+	);
+
+/** The same record with nothing to write: lands only its bookmark, so the records behind it are not held up. Its customer's snapshot is deleted. */
 const withoutChanges = ({
 	record,
 }: {
 	record: DurableMutationRecord;
 }): DurableMutationRecord => ({
-	...record,
+	...withoutSnapshots({ record }),
 	mutation: { ...record.mutation, changes: [] },
 });
 
@@ -155,7 +170,7 @@ const runWithRetries = async ({
 	let delayMs = config.retry.initialBackoffMs;
 	for (let attempt = 1; ; attempt++) {
 		try {
-			const outcomes = await runFlush({ ctx, flush });
+			const outcomes = await runFlush({ ctx, config, flush });
 			reportStoreRecovered({ scope, attempt });
 			return outcomes;
 		} catch (cause) {
@@ -189,9 +204,53 @@ const recordCall = ({
 }): FlushCall => ({
 	...call,
 	expectedOffset,
-	records: [record],
+	// A record landing alone no longer lands with the rest of its customer's: its snapshot is deleted, not written.
+	records: [withoutSnapshots({ record })],
 	rows: record.mutation.changes.length,
 });
+
+/** The same flush with every snapshot turned into its customer's DELETE; outcomes come back under the caller's own calls and records. */
+const landWithSnapshotsDeleted = async ({
+	scope,
+	flush,
+}: {
+	scope: CommitterScope;
+	flush: Flush;
+}): Promise<Map<FlushCall, FlushOutcome>> => {
+	const originalOf = new Map<DurableMutationRecord, DurableMutationRecord>();
+	const stripped = flush.calls.map((call) => ({
+		...call,
+		records: call.records.map((record) => {
+			const bare = withoutSnapshots({ record });
+			originalOf.set(bare, record);
+			return bare;
+		}),
+	}));
+	const restore = (record: DurableMutationRecord) =>
+		originalOf.get(record) ?? record;
+	const landed = await landFlush({ scope, flush: { calls: stripped } });
+	const outcomes = new Map<FlushCall, FlushOutcome>();
+	for (const [index, call] of flush.calls.entries()) {
+		const outcome = landed.get(stripped[index] as FlushCall);
+		if (!outcome) continue;
+		outcomes.set(call, {
+			...outcome,
+			...(outcome.failure && {
+				failure: {
+					...outcome.failure,
+					record: restore(outcome.failure.record),
+				},
+			}),
+			...(outcome.rejections && {
+				rejections: outcome.rejections.map((rejection) => ({
+					...rejection,
+					record: restore(rejection.record),
+				})),
+			}),
+		});
+	}
+	return outcomes;
+};
 
 type RefusedRecord =
 	| {
@@ -301,6 +360,12 @@ export const landFlush = async ({
 		return await runWithRetries({ scope, flush });
 	} catch (cause) {
 		if (cause instanceof CommitterStoppedError) throw cause;
+		// Only a flush landing whole may write a snapshot, and a snapshot must never be why a record is refused.
+		if (
+			scope.ctx.subjectSnapshots?.get().mode === "write" &&
+			carriesSnapshots({ flush })
+		)
+			return landWithSnapshotsDeleted({ scope, flush });
 		const outcomes = new Map<FlushCall, FlushOutcome>();
 		const recordCount = flush.calls.reduce(
 			(total, call) => total + call.records.length,
@@ -326,8 +391,10 @@ export const landFlush = async ({
 		}
 		// A lone record already failed alone: it is not re-run, only classified.
 		const record = call.records[0];
+		// A drop-only call has no record to classify: it alone is refused, never the calls that landed beside it.
 		if (!record) {
-			throw cause;
+			call.settle.reject(cause);
+			return outcomes;
 		}
 		const refused = await settleRefusedRecord({
 			scope,

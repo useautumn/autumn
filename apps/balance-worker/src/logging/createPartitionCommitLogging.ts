@@ -197,6 +197,9 @@ export function createPartitionCommitLogging({
 			...(ctx.stateStore.claimPartition
 				? { claimPartition: ctx.stateStore.claimPartition.bind(ctx.stateStore) }
 				: {}),
+			...(ctx.stateStore.subjectSnapshots
+				? { subjectSnapshots: ctx.stateStore.subjectSnapshots }
+				: {}),
 			applyDurableMutations,
 		},
 	};

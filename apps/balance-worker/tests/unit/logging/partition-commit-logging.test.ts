@@ -66,6 +66,30 @@ test.concurrent(
 );
 
 test.concurrent(
+	"a logged store still offers the snapshot drops of the store it wraps, so snapshots stay on behind the logging",
+	() => {
+		const fixture = createStoreFixture();
+		const subjectSnapshots = {
+			written: () => true,
+			dropCustomer: async () => undefined,
+		};
+		try {
+			const { stateStore } = createPartitionCommitLogging({
+				ctx: {
+					appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
+					stateStore: { ...fixture.store, subjectSnapshots },
+					logger: { debug: () => {} },
+				},
+				config,
+			});
+			expect(stateStore.subjectSnapshots).toBe(subjectSnapshots);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	},
+);
+
+test.concurrent(
 	"measures the full committed append and preserves large offsets",
 	async () => {
 		const fixture = createStoreFixture();

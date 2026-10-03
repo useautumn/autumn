@@ -1,9 +1,17 @@
 import type { MutationRecord, SubjectState } from "@autumn/balance-engine";
 import type { KafkaRecordPosition } from "./kafkaRecordPosition.js";
 
+/** A subject's rows once its record lands, and when they were last read whole from Postgres. */
+export type SubjectSnapshotPayload = {
+	state: SubjectState;
+	baselineAt: number;
+};
+
 export type DurableMutationRecord = {
 	position: KafkaRecordPosition;
 	mutation: MutationRecord;
+	/** Attached by the writer only while every subject's rows descend from a full read; a replayed record has none. */
+	snapshots?: readonly SubjectSnapshotPayload[];
 };
 
 export type DurableMutationApplyResult =
