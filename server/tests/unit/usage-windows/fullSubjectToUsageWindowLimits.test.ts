@@ -14,6 +14,7 @@ import {
 } from "@autumn/shared";
 
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const meteredAction1 = {
 	id: "action1",
@@ -85,11 +86,15 @@ const customerProductWithEntitlement = ({
 	featureId,
 	cycleAnchor,
 	nextResetAt,
+	resetCycleAnchor,
+	interval = EntInterval.Month,
 }: {
 	id: string;
 	featureId: string;
 	cycleAnchor?: number;
 	nextResetAt?: number;
+	resetCycleAnchor?: number;
+	interval?: EntInterval;
 }) =>
 	({
 		id: `cusprod_${id}`,
@@ -109,10 +114,11 @@ const customerProductWithEntitlement = ({
 				balance: 0,
 				expires_at: null,
 				next_reset_at: nextResetAt ?? null,
+				reset_cycle_anchor: resetCycleAnchor ?? null,
 				entitlement: {
 					id: `ent_${id}`,
 					feature_id: featureId,
-					interval: EntInterval.Month,
+					interval,
 					feature: { id: featureId, internal_id: featureId },
 				},
 				rollovers: [],
@@ -365,6 +371,182 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits[0].window_end_at).toBe(resetAligned.windowEndAt);
 		// Sanity: the reset-cycle window genuinely differs from the cycle-anchor one.
 		expect(resetAligned.windowStartAt).not.toBe(cycleAligned.windowStartAt);
+	});
+
+	test("a monthly cap on a daily-reset ent anchors to reset_cycle_anchor and holds across daily resets", () => {
+		const resetCycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
+		const nextResetAt = Date.UTC(2026, 5, 16, 15, 30, 0);
+		const resolveAt = ({
+			now,
+			nextReset,
+		}: {
+			now: number;
+			nextReset: number;
+		}) =>
+			fullSubjectToUsageWindowLimits({
+				fullSubject: buildSubject({
+					usageLimits: [
+						{
+							feature_id: "action1",
+							limit: 15000,
+							interval: ResetInterval.Month,
+						},
+					],
+					customerProducts: [
+						customerProductWithEntitlement({
+							id: "ce_daily",
+							featureId: "action1",
+							interval: EntInterval.Day,
+							nextResetAt: nextReset,
+							resetCycleAnchor,
+						}),
+					],
+				}),
+				featureIds: ["action1"],
+				features: [meteredAction1],
+				now,
+			});
+
+		const today = resolveAt({ now: NOW, nextReset: nextResetAt });
+		// The daily ent has reset once: its next_reset_at moved forward a day.
+		const tomorrow = resolveAt({
+			now: NOW + DAY_MS,
+			nextReset: nextResetAt + DAY_MS,
+		});
+
+		const anchored = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now: NOW,
+			anchor: resetCycleAnchor,
+		});
+		expect(today).toHaveLength(1);
+		expect(today[0].window_start_at).toBe(anchored.windowStartAt);
+		expect(today[0].window_end_at).toBe(anchored.windowEndAt);
+		expect(tomorrow[0].window_start_at).toBe(today[0].window_start_at);
+		expect(tomorrow[0].key).toBe(today[0].key);
+
+		// Sanity: anchoring to the moving next_reset_at would shift the window daily.
+		const nextResetAnchoredToday = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now: NOW,
+			anchor: nextResetAt,
+		});
+		const nextResetAnchoredTomorrow = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now: NOW + DAY_MS,
+			anchor: nextResetAt + DAY_MS,
+		});
+		expect(nextResetAnchoredTomorrow.windowStartAt).not.toBe(
+			nextResetAnchoredToday.windowStartAt,
+		);
+	});
+
+	test("a monthly cap on a daily-reset ent without reset_cycle_anchor falls back to the billing-cycle anchor", () => {
+		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				usageLimits: [
+					{
+						feature_id: "action1",
+						limit: 15000,
+						interval: ResetInterval.Month,
+					},
+				],
+				customerProducts: [
+					customerProductWithEntitlement({
+						id: "ce_daily",
+						featureId: "action1",
+						interval: EntInterval.Day,
+						nextResetAt: Date.UTC(2026, 5, 16, 8, 45, 0),
+						cycleAnchor,
+					}),
+				],
+			}),
+			featureIds: ["action1"],
+			features: [meteredAction1],
+			now: NOW,
+		});
+
+		const cycleAligned = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now: NOW,
+			anchor: cycleAnchor,
+		});
+		expect(limits).toHaveLength(1);
+		expect(limits[0].window_start_at).toBe(cycleAligned.windowStartAt);
+		expect(limits[0].window_end_at).toBe(cycleAligned.windowEndAt);
+	});
+
+	test("a monthly cap on a daily-reset ent with no fixed anchor uses UTC calendar bounds", () => {
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				usageLimits: [
+					{
+						feature_id: "action1",
+						limit: 15000,
+						interval: ResetInterval.Month,
+					},
+				],
+				customerProducts: [
+					customerProductWithEntitlement({
+						id: "ce_daily",
+						featureId: "action1",
+						interval: EntInterval.Day,
+						nextResetAt: Date.UTC(2026, 5, 16, 8, 45, 0),
+					}),
+				],
+			}),
+			featureIds: ["action1"],
+			features: [meteredAction1],
+			now: NOW,
+		});
+
+		const calendar = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now: NOW,
+		});
+		expect(limits).toHaveLength(1);
+		expect(limits[0].window_start_at).toBe(calendar.windowStartAt);
+		expect(limits[0].window_end_at).toBe(calendar.windowEndAt);
+	});
+
+	test("a weekly cap on a monthly-reset ent anchors to reset_cycle_anchor, not next_reset_at", () => {
+		// Months are not whole weeks, so a monthly next_reset_at would shift the
+		// weekly window's weekday on every monthly reset.
+		const resetCycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
+		const nextResetAt = Date.UTC(2026, 6, 9, 15, 30, 0);
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				usageLimits: [
+					{ feature_id: "action1", limit: 100, interval: ResetInterval.Week },
+				],
+				customerProducts: [
+					customerProductWithEntitlement({
+						id: "ce_monthly",
+						featureId: "action1",
+						nextResetAt,
+						resetCycleAnchor,
+					}),
+				],
+			}),
+			featureIds: ["action1"],
+			features: [meteredAction1],
+			now: NOW,
+		});
+
+		const anchored = getUsageWindowBounds({
+			interval: EntInterval.Week,
+			now: NOW,
+			anchor: resetCycleAnchor,
+		});
+		const nextResetAnchored = getUsageWindowBounds({
+			interval: EntInterval.Week,
+			now: NOW,
+			anchor: nextResetAt,
+		});
+		expect(limits).toHaveLength(1);
+		expect(limits[0].window_start_at).toBe(anchored.windowStartAt);
+		expect(anchored.windowStartAt).not.toBe(nextResetAnchored.windowStartAt);
 	});
 
 	test("an overage spend_limit does not arm a usage window", () => {
