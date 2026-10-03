@@ -46,6 +46,7 @@ export type FullCustomerEntitlementView = Pick<
 			| "is_pooled_balance"
 			| "pooled_balance_id"
 			| "pooled_contribution_id"
+			| "reset_cycle_anchor"
 		>
 	> & {
 		entitlement: EntitlementWithFeature;
