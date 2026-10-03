@@ -1,6 +1,8 @@
 import type { Catalog, SubjectState } from "@autumn/balance-engine";
 import type { CatalogCache } from "@autumn/catalog-lru";
+import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
+import type { SubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { SubjectBaseline } from "../../../state/types/stateStore.js";
 import type { WorkerDb } from "../../../types/workerDb.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
@@ -17,9 +19,14 @@ export type Subject = {
 
 export type SubjectHydratorContext = {
 	catalogCache: CatalogCache;
-	db: Pick<WorkerDb, "getSubjectRows" | "getEntitySubjectRows">;
+	db: Pick<
+		WorkerDb,
+		"getSubjectRows" | "readSubjectSnapshot" | "getEntitySubjectRows"
+	>;
 	writer: Pick<PartitionWriter, "decide" | "readFreshestState" | "adopt">;
 	receiptPolicy: ReceiptPolicy;
+	/** Read at each cold load: `serve` probes the subject's snapshot before its rows; absent or any other mode, every load is the rows. */
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Defaults to "log", the sqlite store's answer. */
 	baseline?: SubjectBaseline;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
