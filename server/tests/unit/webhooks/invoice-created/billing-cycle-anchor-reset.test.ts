@@ -87,6 +87,8 @@ test("a landed anchor move merges with a seat-return balance change on the same 
 	const forDailyCredits = (updateCustomerEntitlements ?? []).filter(
 		(update) => update.customerEntitlement.id === dailyCredits.id,
 	);
+	// build() splits the column update from the balance delta.
+	expect(forDailyCredits).toHaveLength(2);
 	expect(forDailyCredits).toEqual(
 		expect.arrayContaining([
 			expect.objectContaining({
