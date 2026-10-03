@@ -1,13 +1,20 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH } from "@autumn/env/balanceWorkerConstants";
 import {
+	claimPartitionProgress,
 	commitFlush,
 	FlushBookmarkConflictError,
 	flushSql,
 	insertPartitionProgress,
 	type PostgresClient,
+	readPartitionProgress,
 	type SubjectSnapshotUpsert,
 } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
+import { createCommitter } from "../../../src/committer/createCommitter.js";
+import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
+import type { CommitterDb } from "../../../src/types/committerDb.js";
 import {
 	openFixturePostgres,
 	readWorktreeDatabaseUrl,
@@ -124,6 +131,119 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			},
 			statementTimeoutMs,
 		});
+
+	test("a 10,000-evict storm lands as ceil(10,000 / batch) DELETEs, one in flight, within a second", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const topic = topicOf();
+		let inFlight = 0;
+		let maxInFlight = 0;
+		const statementMs: number[] = [];
+		let deleted = 0;
+		const db: CommitterDb = {
+			readPartitionProgress: async () => null,
+			insertPartitionProgress: async () => {},
+			claimPartitionProgress: async () => {},
+			flush: async (request) => {
+				inFlight += 1;
+				maxInFlight = Math.max(maxInFlight, inFlight);
+				const startedAt = performance.now();
+				try {
+					const result = await commitFlush({
+						ctx: { db: postgres.db },
+						request,
+						statementTimeoutMs: 10_000,
+					});
+					deleted += result.snapshots?.deleted ?? 0;
+					return result;
+				} finally {
+					statementMs.push(performance.now() - startedAt);
+					inFlight -= 1;
+				}
+			},
+		};
+		const committer = createCommitter({
+			ctx: { db },
+			config: {
+				concurrency: 4,
+				maxRowsPerFlush: 500,
+				retry: {
+					degradedAfterAttempts: 1,
+					initialBackoffMs: 1,
+					maxBackoffMs: 1,
+				},
+				snapshots: { partitionCount: 64, maxBytes: 262_144 },
+			},
+		});
+		const store = createCommitterStateStore({
+			ctx: {
+				committer,
+				db,
+				snapshots: { dropBatch: BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH },
+			},
+		});
+		try {
+			await postgres.db.execute(sql`INSERT INTO subject_snapshots (org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
+				SELECT ${seeded.orgId}, ${seeded.env}, 'cus_storm_' || i, '', ${seeded.internalCustomerId}, 0, 64, 1, '{}'::jsonb, 0, 0 FROM generate_series(0, 9999) i`);
+			const deletes = store.evictDeletes;
+			if (!deletes) throw new Error("Expected evict deletes");
+			const startedAt = performance.now();
+			for (let index = 0; index < 10_000; index++)
+				deletes.enqueue({
+					topic,
+					partition: 0,
+					customerKey: meteringIdentityToPartitionKey({
+						identity: {
+							orgId: seeded.orgId,
+							env: seeded.env,
+							customerId: `cus_storm_${index}`,
+							entityId: null,
+						},
+					}),
+				});
+			const enqueuedMs = performance.now() - startedAt;
+			while (deleted < 10_000 && performance.now() - startedAt < 10_000)
+				await Bun.sleep(5);
+			const durationMs = performance.now() - startedAt;
+
+			const statements = Math.ceil(
+				10_000 / BALANCE_WORKER_SUBJECT_SNAPSHOT_DROP_BATCH,
+			);
+			expect(statementMs).toHaveLength(statements);
+			expect(deleted).toBe(10_000);
+			expect(maxInFlight).toBe(1);
+			expect(durationMs).toBeLessThan(1_000);
+			expect(
+				(
+					await postgres.db.execute(
+						sql`SELECT 1 FROM subject_snapshots WHERE org_id = ${seeded.orgId} AND env = ${seeded.env}`,
+					)
+				).rows,
+			).toHaveLength(0);
+			const sorted = [...statementMs].sort((a, b) => a - b);
+			console.info(
+				"[snapshot evict storm]",
+				JSON.stringify({
+					customers: 10_000,
+					statements,
+					maxInFlight,
+					enqueueMs: Math.round(enqueuedMs * 100) / 100,
+					statementP50Ms:
+						Math.round((sorted[Math.floor(sorted.length / 2)] ?? 0) * 100) /
+						100,
+					statementP99Ms:
+						Math.round(
+							(sorted[
+								Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))
+							] ?? 0) * 100,
+						) / 100,
+					durationMs: Math.round(durationMs),
+				}),
+			);
+		} finally {
+			store.close();
+			await seeded.cleanup();
+		}
+	});
 
 	test("a flush writes each subject's row under the identity it was held by, with its partition and lineage", async () => {
 		const seeded = await seedCustomer({ postgres });
@@ -298,6 +418,62 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				flushAt({ topic, upserts: [upsertOf({ seeded })] }),
 			).rejects.toBeInstanceOf(FlushBookmarkConflictError);
 			expect(await readSnapshots({ seeded })).toEqual([]);
+		} finally {
+			await seeded.cleanup();
+		}
+	});
+
+	test("a late evict from an owner the partition has left still deletes the row: a DELETE is always safe, and the next load is a full query", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const topic = topicOf();
+		await insertPartitionProgress({
+			ctx: { db: postgres.db },
+			topic,
+			partition: 5,
+			nextOffset: 40n,
+			claimToken: "owner_a",
+		});
+		try {
+			await flushAt({ topic, upserts: [upsertOf({ seeded })] });
+			await claimPartitionProgress({
+				ctx: { db: postgres.db },
+				topic,
+				partition: 5,
+				claimToken: "owner_b",
+			});
+
+			const lateEvict = await commitFlush({
+				ctx: { db: postgres.db },
+				request: {
+					changes: [],
+					bookmarks: [],
+					snapshots: {
+						upserts: [],
+						deletes: [
+							{
+								orgId: seeded.orgId,
+								env: seeded.env,
+								customerId: seeded.identity.customerId,
+							},
+						],
+					},
+				},
+				statementTimeoutMs: 2_000,
+			});
+
+			expect(lateEvict).toEqual({
+				applied: [],
+				snapshots: { upserted: 0, deleted: 1 },
+			});
+			expect(await readSnapshots({ seeded })).toEqual([]);
+			expect(await seeded.readNextOffset({ topic, partition: 5 })).toBe(42n);
+			expect(
+				await readPartitionProgress({
+					ctx: { db: postgres.db },
+					topic,
+					partition: 5,
+				}),
+			).toMatchObject({ claimToken: "owner_b" });
 		} finally {
 			await seeded.cleanup();
 		}

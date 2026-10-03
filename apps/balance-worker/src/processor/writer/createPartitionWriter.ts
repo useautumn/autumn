@@ -23,6 +23,7 @@ import {
 	createPartitionWriterState,
 	rejectAllPending,
 } from "./pendingMutations.js";
+import type { OnSubjectEvicted } from "./subjectMap/types/subjectMap.js";
 import type {
 	DecidedMutation,
 	HeldDecision,
@@ -55,6 +56,7 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
+			onEvicted: evictDeletesOf({ ctx, config }),
 		}),
 	};
 
@@ -200,4 +202,22 @@ function validateWriterConfig(config: PartitionWriterConfig): void {
 			throw new RangeError(`${name} must be a positive safe integer`);
 		}
 	}
+}
+
+/** The map's evict hook: a synchronous enqueue onto the partition's lane, never awaited by a request. */
+function evictDeletesOf({
+	ctx,
+	config,
+}: {
+	ctx: PartitionWriterContext;
+	config: PartitionWriterConfig;
+}): OnSubjectEvicted | undefined {
+	const deletes = ctx.stateStore.evictDeletes;
+	if (!deletes) return undefined;
+	return ({ customerKey }) =>
+		deletes.enqueue({
+			topic: config.topic,
+			partition: config.partition,
+			customerKey,
+		});
 }
