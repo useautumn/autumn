@@ -68,6 +68,7 @@ export function createPartitionProcessor({
 	ctx: PartitionProcessorDependencies;
 	config: PartitionProcessorConfig;
 }): PartitionProcessor {
+	const subjectDecisions = createSubjectDecisions();
 	const writer = createPartitionWriter({
 		ctx: {
 			stateStore: dependencies.stateStore,
@@ -75,7 +76,10 @@ export function createPartitionProcessor({
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
 			logger: dependencies.logger,
-			onStateAdvanced: (advanced) => subjectHydrator.inheritCatalog(advanced),
+			onStateAdvanced: (advanced) => {
+				subjectHydrator.inheritCatalog(advanced);
+				subjectDecisions.advance(advanced);
+			},
 		},
 		config: {
 			topic: config.topic,
@@ -99,7 +103,7 @@ export function createPartitionProcessor({
 			config,
 			writer,
 			subjectHydrator,
-			subjectDecisions: createSubjectDecisions(),
+			subjectDecisions,
 		},
 		accepted: createAcceptedCommands(),
 		customerPlans: createCustomerPlans(),

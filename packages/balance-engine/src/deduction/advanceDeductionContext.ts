@@ -78,16 +78,38 @@ export const advanceDeductionContext = ({
 	const rolloverChanges = increments.filter(
 		(change) => change.table === "rollovers",
 	);
+	const touchesRow = ({
+		row,
+		rowChanges,
+	}: {
+		row: { id: string };
+		rowChanges: BalanceIncrement[];
+	}) => rowChanges.some((change) => change.id === row.id);
+	const touchesContext =
+		context.customerEntitlements.some((row) =>
+			touchesRow({ row, rowChanges: entitlementChanges }),
+		) ||
+		context.rollovers.some((row) =>
+			touchesRow({ row, rowChanges: rolloverChanges }),
+		);
+	// Rows this context never selected moved: nothing it reads changed.
+	if (!touchesContext) return context;
 
 	const rollovers = context.rollovers.map((row) =>
 		applyIncrements({ row, changes: rolloverChanges }),
 	);
 	const customerEntitlements = context.customerEntitlements.map((row) => {
-		const next = applyIncrements({ row, changes: entitlementChanges });
-		const rowRollovers = next.rollovers.map((rollover) =>
-			applyIncrements({ row: rollover, changes: rolloverChanges }),
+		const touchesRollovers = row.rollovers.some((rollover) =>
+			touchesRow({ row: rollover, rowChanges: rolloverChanges }),
 		);
-		return { ...next, rollovers: rowRollovers };
+		const next = applyIncrements({ row, changes: entitlementChanges });
+		if (!touchesRollovers) return next;
+		return {
+			...next,
+			rollovers: next.rollovers.map((rollover) =>
+				applyIncrements({ row: rollover, changes: rolloverChanges }),
+			),
+		};
 	});
 	const entitlementById = new Map(
 		customerEntitlements.map((row) => [row.id, row]),
@@ -96,7 +118,11 @@ export const advanceDeductionContext = ({
 
 	const rows = context.rows.map((row): DeductionRow => {
 		const customerEntitlement = entitlementById.get(row.id);
-		if (!customerEntitlement) return row;
+		if (
+			!touchesRow({ row, rowChanges: entitlementChanges }) ||
+			!customerEntitlement
+		)
+			return row;
 		return {
 			...row,
 			balance:
@@ -118,14 +144,18 @@ export const advanceDeductionContext = ({
 		);
 	const rolloverRows = context.rolloverRows.map((row): DeductionRow => {
 		const rollover = rolloverById.get(row.id);
-		if (!rollover) return row;
+		const owner = ownerOf(row);
+		const moved =
+			touchesRow({ row, rowChanges: rolloverChanges }) ||
+			(owner !== undefined && owner.rateUnits !== row.rateUnits);
+		if (!moved || !rollover) return row;
 		return {
 			...row,
 			balance:
 				row.entityKey === null
 					? rollover.balance
 					: (rollover.entities[row.entityKey]?.balance ?? 0),
-			rateUnits: ownerOf(row)?.rateUnits ?? row.rateUnits,
+			rateUnits: owner?.rateUnits ?? row.rateUnits,
 		};
 	});
 
