@@ -1,8 +1,11 @@
-import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
+import type { MeteringIdentity } from "@autumn/balance-engine";
 import { loadSubjectBaseline } from "../../snapshotLoader/loadSubjectBaseline.js";
 import type { SubjectScope } from "../../types/subject.js";
 import type { SubjectRead } from "../../types/subjectRead.js";
-import { measureSubjectState } from "./measureSubjectState.js";
+import {
+	measureSubjectState,
+	type SubjectStateMeasure,
+} from "./measureSubjectState.js";
 import { readSubjectBaseline } from "./readSubjectBaseline.js";
 
 const DEFAULT_LARGE_STATE_BYTES = 1_048_576;
@@ -11,16 +14,15 @@ const DEFAULT_LARGE_STATE_BYTES = 1_048_576;
 const reportLargeState = ({
 	scope,
 	identity,
-	baseline,
+	measure,
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
-	baseline: SubjectState;
+	measure: SubjectStateMeasure;
 }): void => {
 	const logger = scope.ctx.logger;
 	if (!logger?.warn) return;
 	const limit = scope.ctx.largeStateBytes ?? DEFAULT_LARGE_STATE_BYTES;
-	const measure = measureSubjectState({ state: baseline });
 	if (measure.bytes < limit) return;
 	logger.warn(
 		{
@@ -48,6 +50,7 @@ export const readSubjectRows = async ({
 	const baseline = rowsOnly
 		? await readSubjectBaseline({ scope, identity, occurredAt })
 		: await loadSubjectBaseline({ scope, identity, occurredAt });
-	reportLargeState({ scope, identity, baseline });
-	return { baseline, baselineAt: occurredAt };
+	const measure = measureSubjectState({ state: baseline });
+	reportLargeState({ scope, identity, measure });
+	return { baseline, baselineAt: occurredAt, bytes: measure.bytes };
 };
