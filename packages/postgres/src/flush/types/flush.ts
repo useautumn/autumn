@@ -21,8 +21,16 @@ export type FlushRequest = {
 	snapshots?: SubjectSnapshotWrites;
 };
 
-/** `applied[i]` answers for `changes[i]`, folded or not; bookmarks are all-or-nothing. Snapshot counts come back only when snapshot writes were requested. */
+/** A snapshot row the flush removed, as the worker's identity names it. */
+export type DeletedSubjectSnapshot = {
+	orgId: string;
+	env: string;
+	customerId: string;
+	entityId: string | null;
+};
+
+/** `applied[i]` answers for `changes[i]`, folded or not; bookmarks are all-or-nothing. Snapshot outcomes come back only when snapshot writes were requested. */
 export type FlushResult = {
 	applied: boolean[];
-	snapshots?: { upserted: number; deleted: number };
+	snapshots?: { upserted: number; deleted: DeletedSubjectSnapshot[] };
 };

@@ -4,6 +4,7 @@ import {
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
+import { writesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type {
 	SnapshotIntent,
 	SnapshotIntentEntry,
@@ -26,7 +27,7 @@ export function decideSnapshotIntent({
 }): SnapshotIntent {
 	const intent: SnapshotIntent = new Map();
 	const settings = scope.ctx.subjectSnapshotsConfig?.get();
-	if (settings?.mode !== "write") return intent;
+	if (!settings || !writesSubjectSnapshots(settings)) return intent;
 	for (const pending of batch) {
 		if (!pending.nextState) continue;
 		const customerKey = meteringIdentityToPartitionKey({

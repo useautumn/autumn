@@ -1,6 +1,11 @@
-import type { MutationCommand, RowChange } from "@autumn/balance-engine";
+import {
+	type MutationCommand,
+	meteringIdentityToPartitionKey,
+	type RowChange,
+} from "@autumn/balance-engine";
 import { BALANCE_WORKER_COMMITTER_GUARDS_ENABLED } from "@autumn/env/balanceWorkerConstants";
 import {
+	type DeletedSubjectSnapshot,
 	type FlushBookmark,
 	type SubjectRowChange,
 	type SubjectRowTable,
@@ -236,12 +241,14 @@ const commandNextOffsetOf = ({
 	return call.commandNextOffset;
 };
 
+/** A call with nothing to move still carries its bookmark when it writes snapshot rows: the bookmark is the fence a stale owner's rows roll back on. Deletes alone are always safe and go unfenced. */
 const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 	const last = call.records.at(-1);
 	if (
 		!last &&
 		call.commandNextOffset === undefined &&
-		call.ownerFence === undefined
+		call.ownerFence === undefined &&
+		!writesSnapshotRows({ call })
 	)
 		return null;
 	return {
@@ -313,11 +320,13 @@ export const runFlush = async ({
 	const snapshots = timeSync({ label: "flush.snapshots" }, () =>
 		collectSnapshotWrites({ ctx, config, flush }),
 	);
-	const { applied } = await ctx.db.flush({
+	const { applied, snapshots: landed } = await ctx.db.flush({
 		changes,
 		bookmarks,
 		...(snapshots && { snapshots }),
 	});
+	if (landed)
+		attributeDeletedSnapshots({ flush, outcomes, deleted: landed.deleted });
 	const staleIds = changes
 		.filter((_, index) => !applied[index])
 		.map(
@@ -327,3 +336,34 @@ export const runFlush = async ({
 	if (staleIds.length > 0) throw new StaleSubjectRowsError({ ids: staleIds });
 	return outcomes;
 };
+
+/** Each deleted row goes to the call whose intent deleted its customer, so a lane tick learns what its evicts removed. */
+const attributeDeletedSnapshots = ({
+	flush,
+	outcomes,
+	deleted,
+}: {
+	flush: Flush;
+	outcomes: Map<FlushCall, FlushOutcome>;
+	deleted: readonly DeletedSubjectSnapshot[];
+}): void => {
+	if (deleted.length === 0) return;
+	const callByCustomer = new Map<string, FlushCall>();
+	for (const call of flush.calls)
+		for (const [customerKey, entry] of call.snapshotIntent ?? [])
+			if (entry === "delete") callByCustomer.set(customerKey, call);
+	for (const row of deleted) {
+		const call = callByCustomer.get(
+			meteringIdentityToPartitionKey({ identity: { ...row, entityId: null } }),
+		);
+		const outcome = call && outcomes.get(call);
+		if (!outcome) continue;
+		outcome.deletedSnapshots ??= [];
+		outcome.deletedSnapshots.push(row);
+	}
+};
+
+export const writesSnapshotRows = ({ call }: { call: FlushCall }): boolean =>
+	[...(call.snapshotIntent?.values() ?? [])].some(
+		(entry) => entry !== "delete",
+	);

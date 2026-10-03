@@ -1,4 +1,5 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
 	claimCustomerByEmail,
 	claimPartitionProgress,
@@ -12,7 +13,9 @@ import {
 	listPooledBalancesWithoutOtherContributions,
 	type PostgresClient,
 	type PostgresClientConfig,
+	readEntitySubjectSnapshots,
 	readPartitionProgress,
+	readSubjectSnapshot,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
 import {
@@ -52,7 +55,10 @@ export const createWorkerPostgresClient = ({
 type WorkerDbContext = {
 	postgres: Pick<PostgresClient, "db">;
 	subjectLoads: Pick<SubjectLoadGate, "run">;
-	timings: Pick<DatabaseTimings, "queryStarted" | "queryFinished">;
+	timings: Pick<
+		DatabaseTimings,
+		"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
+	>;
 };
 
 export const createWorkerDb = ({
@@ -78,6 +84,52 @@ export const createWorkerDb = ({
 					}),
 			}),
 		),
+	readSubjectSnapshot: ({ identity }) =>
+		ctx.subjectLoads.run(async () => {
+			const snapshot = await timeQuery({
+				ctx,
+				kind: "subject_snapshot",
+				run: () =>
+					readSubjectSnapshot({
+						ctx: {
+							db: ctx.postgres.db,
+							orgId: identity.orgId,
+							env: identity.env,
+						},
+						customerId: identity.customerId,
+						entityId: identity.entityId,
+						stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+					}),
+			});
+			ctx.timings.recordSubjectSnapshots(
+				snapshot === null ? { misses: 1 } : { hits: 1 },
+			);
+			return snapshot;
+		}),
+	readEntitySubjectSnapshots: ({ identity, entityIds }) =>
+		ctx.subjectLoads.run(async () => {
+			const snapshots = await timeQuery({
+				ctx,
+				kind: "subject_snapshot",
+				run: () =>
+					readEntitySubjectSnapshots({
+						ctx: {
+							db: ctx.postgres.db,
+							orgId: identity.orgId,
+							env: identity.env,
+						},
+						customerId: identity.customerId,
+						entityIds,
+						stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+					}),
+			});
+			ctx.timings.recordSubjectSnapshots({
+				hits: snapshots.size,
+				misses: entityIds.length - snapshots.size,
+			});
+			return snapshots;
+		}),
+	// One primary-key prefix scan, outside the subject-load gate like the other small lookups: an evict must not wait behind cold loads.
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>
 			timeQuery({
@@ -213,8 +265,11 @@ export const createCommitterDb = ({
 		});
 		const { snapshots } = result;
 		// A rolled-back flush answers zero counts: nothing to put on the database line.
-		if (snapshots && snapshots.upserted + snapshots.deleted > 0)
-			ctx.timings.recordSubjectSnapshots(snapshots);
+		if (snapshots && snapshots.upserted + snapshots.deleted.length > 0)
+			ctx.timings.recordSubjectSnapshots({
+				upserted: snapshots.upserted,
+				deleted: snapshots.deleted.length,
+			});
 		return result;
 	},
 });

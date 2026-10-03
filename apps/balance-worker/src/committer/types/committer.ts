@@ -1,4 +1,5 @@
 import type { EdgeConfigStore } from "@autumn/edge-config";
+import type { DeletedSubjectSnapshot } from "@autumn/postgres";
 import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
@@ -49,6 +50,8 @@ export type FlushRejection = { record: DurableMutationRecord; cause: Error };
 /** Where a call's records stopped landing. Without `failure`, every record before `nextOffset` is settled: landed, or rejected. */
 export type FlushOutcome = {
 	nextOffset: bigint;
+	/** The snapshot rows this call's DELETEs removed, so the lane knows which subjects an evict rebuilds. */
+	deletedSnapshots?: DeletedSubjectSnapshot[];
 	/** Moved only when a record in the call came from the command topic. */
 	commandNextOffset?: bigint;
 	/** Carried only by a call that landed an ownership fence. */

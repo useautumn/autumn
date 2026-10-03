@@ -5,6 +5,7 @@ import {
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "@autumn/postgres";
+import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,
@@ -25,7 +26,11 @@ import type {
 	FlushOutcome,
 	FlushRejection,
 } from "../types/committer.js";
-import { flushLandedEarlier, runFlush } from "./runFlush.js";
+import {
+	flushLandedEarlier,
+	runFlush,
+	writesSnapshotRows,
+} from "./runFlush.js";
 
 /** Another writer moved this partition's bookmark: the record is fine, this worker no longer owns it. */
 const isOwnershipLost = (cause: unknown): boolean =>
@@ -175,7 +180,7 @@ const runWithRetries = async ({
 			// Two transient refusals of a snapshot-carrying flush: the snapshots may be the weight, so they go before the records wait longer.
 			if (
 				attempt === 2 &&
-				attempted.calls.some((call) => writesSnapshots({ call }))
+				attempted.calls.some((call) => writesSnapshotRows({ call }))
 			) {
 				attempted = withoutSnapshotWrites({ flush: attempted });
 				ctx.logger?.warn(
@@ -210,7 +215,7 @@ const recordCall = ({
 /** The same calls with every snapshot deleted instead of written; a call that wrote none is the same object. */
 const withoutSnapshotWrites = ({ flush }: { flush: Flush }): Flush => ({
 	calls: flush.calls.map((call) =>
-		writesSnapshots({ call })
+		writesSnapshotRows({ call })
 			? {
 					...call,
 					snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
@@ -245,11 +250,6 @@ const withSnapshotsDeleted = ({
 	intent: SnapshotIntent | undefined;
 }): SnapshotIntent | undefined =>
 	intent && new Map([...intent.keys()].map((key) => [key, "delete" as const]));
-
-const writesSnapshots = ({ call }: { call: FlushCall }): boolean =>
-	[...(call.snapshotIntent?.values() ?? [])].some(
-		(entry) => entry !== "delete",
-	);
 
 type RefusedRecord =
 	| {
@@ -391,8 +391,10 @@ export const landFlush = async ({
 			return outcomes;
 		}
 		if (
-			scope.ctx.subjectSnapshotsConfig?.get().mode === "write" &&
-			writesSnapshots({ call })
+			writesSubjectSnapshots(
+				scope.ctx.subjectSnapshotsConfig?.get() ?? { mode: "off" },
+			) &&
+			writesSnapshotRows({ call })
 		) {
 			const deleted = {
 				...call,

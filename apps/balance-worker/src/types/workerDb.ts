@@ -11,6 +11,15 @@ export type WorkerDb = {
 		identity: MeteringIdentity;
 		asOfTimestampMs: number;
 	}): Promise<SubjectRowsEnvelope | null>;
+	/** The subject's snapshot state at this build's version as stored, or null when it has none; one primary-key probe. */
+	readSubjectSnapshot(params: {
+		identity: MeteringIdentity;
+	}): Promise<unknown | null>;
+	/** The snapshot states of several of the customer's entities at this build's version, by entity id; one range probe. */
+	readEntitySubjectSnapshots(params: {
+		identity: MeteringIdentity;
+		entityIds: readonly string[];
+	}): Promise<Map<string, unknown>>;
 	/** Several of the customer's entities in one read: one envelope per entity that exists. */
 	getEntitySubjectRows(params: {
 		identity: MeteringIdentity;

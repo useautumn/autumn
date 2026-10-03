@@ -85,6 +85,9 @@ export function createPartitionProcessor({
 			writer,
 			receiptPolicy: dependencies.receiptPolicy,
 			baseline: dependencies.stateStore.baseline,
+			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
+			snapshotQueues: dependencies.stateStore.snapshotQueues,
+			position: { topic: config.topic, partition: config.partition },
 			logger: dependencies.logger,
 		},
 	});
@@ -137,10 +140,16 @@ function createProcessor({
 		});
 	}
 
-	function evict({ command }: { command: EvictCommand }) {
+	function evict({
+		command,
+		waitsForSnapshotDelete = true,
+	}: {
+		command: EvictCommand;
+		waitsForSnapshotDelete?: boolean;
+	}) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: evictPartition({ scope, command }),
+			operation: evictPartition({ scope, command, waitsForSnapshotDelete }),
 		});
 	}
 
@@ -282,7 +291,10 @@ function createProcessor({
 
 	return {
 		execute,
-		dispose: () => scope.ctx.writer.dispose(),
+		dispose: () => {
+			scope.ctx.subjectHydrator.dispose();
+			scope.ctx.writer.dispose();
+		},
 		track,
 		decideTrack,
 		check,

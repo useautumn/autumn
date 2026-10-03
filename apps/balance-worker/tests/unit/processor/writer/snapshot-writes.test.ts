@@ -70,10 +70,14 @@ const createWriter = ({
 				nextOffset: record.position.offset + 1n,
 			}));
 		},
-		evictDeletes: {
-			enqueue: ({ customerKey }) => {
+		snapshotQueues: {
+			enqueueDelete: ({ customerKey }) => {
 				events.push(`enqueue ${customerKey}`);
 			},
+			enqueueRefresh: () => {
+				throw new Error("not exercised");
+			},
+			deleteLanded: async () => [],
 		},
 	};
 	let nextOffset = 0n;
