@@ -362,7 +362,13 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				entityId: string | null,
 				stateVersion = 1,
 				customerId = seeded.identity.customerId,
-			) => readSubjectSnapshot({ ctx, customerId, entityId, stateVersion });
+			) =>
+				readSubjectSnapshot({
+					ctx,
+					customerId,
+					entityId,
+					probe: { stateVersion, writtenAfter: 0 },
+				});
 			expect(await read(null)).toEqual({ revision: 7, entityId: null });
 			expect(await read("seat_1")).toEqual({ revision: 8, entityId: "seat_1" });
 			expect(await read(null, 2)).toBeNull();
@@ -883,13 +889,13 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`INSERT INTO subject_snapshots
 						(org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
-						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, 0
+						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, ROUND(date_part('epoch', now()) * 1000)::bigint
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`ANALYZE subject_snapshots`);
 					const ctx = { db: tx, orgId: seeded.orgId, env: "live" };
 					const rows = (
 						await tx.execute(
-							sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotSql({ ctx, customerId: "cus_51", entityId: null, stateVersion: 1 })}`,
+							sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotSql({ ctx, customerId: "cus_51", entityId: null, probe: { stateVersion: 1, writtenAfter: 0 } })}`,
 						)
 					).rows as { "QUERY PLAN": unknown }[];
 					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
@@ -898,7 +904,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 							ctx,
 							customerId: "cus_51",
 							entityId: null,
-							stateVersion: 1,
+							probe: { stateVersion: 1, writtenAfter: 0 },
 						}),
 					).toEqual({});
 					throw rolledBack;

@@ -20,6 +20,8 @@ export const SubjectSnapshotsEdgeConfigSchema = z
 		refreshConcurrency: z.number().int().positive().max(1_000).default(50),
 		/** Past this many subjects waiting to be rebuilt, a partition drops further ones: they miss once on their next cold load. */
 		refreshMaxPending: z.number().int().positive().default(10_000),
+		/** Rows written at or before this (ms) are invisible to serve and verify: set it to now in the edit that turns off back to write. */
+		writtenAfter: z.number().int().nonnegative().default(0),
 	})
 	.strict();
 
@@ -35,6 +37,7 @@ export const defaultSubjectSnapshotsEdgeConfig =
 		dropBatch: 500,
 		refreshConcurrency: 50,
 		refreshMaxPending: 10_000,
+		writtenAfter: 0,
 	});
 
 export const subjectSnapshotsEdgeConfig = {

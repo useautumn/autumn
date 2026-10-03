@@ -127,6 +127,13 @@ export async function openWorkerResources({
 	try {
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
+		const edgeConfigs = createWorkerEdgeConfigs({
+			ctx: {
+				logger: dependencies.logger,
+				s3Client: dependencies.edgeConfigS3Client,
+			},
+			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
+		});
 		const postgres = createWorkerPostgresClient({
 			ctx: { logger: dependencies.logger },
 			env,
@@ -136,6 +143,7 @@ export async function openWorkerResources({
 				postgres,
 				subjectLoads: subjectLoadGate,
 				timings: databaseTimings,
+				subjectSnapshotsConfig: edgeConfigs.subjectSnapshotsConfig,
 			},
 		});
 		const dynamo = createWorkerDynamoClient({ env });
@@ -145,13 +153,6 @@ export async function openWorkerResources({
 				tableName: env.DYNAMODB_IDEMPOTENCY_TABLE,
 				logger: dependencies.logger,
 			},
-		});
-		const edgeConfigs = createWorkerEdgeConfigs({
-			ctx: {
-				logger: dependencies.logger,
-				s3Client: dependencies.edgeConfigS3Client,
-			},
-			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
 		});
 		function readCommitterControl() {
 			return edgeConfigs.dbControl.get().balanceCommitter;
