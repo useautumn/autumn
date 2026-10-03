@@ -80,6 +80,7 @@ const snapshotUpsertsCte = ({
 				written_at = EXCLUDED.written_at,
 				log_offset = EXCLUDED.log_offset
 			WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset
+				OR s.partition <> EXCLUDED.partition OR s.partition_count <> EXCLUDED.partition_count
 			RETURNING 1
 		)`;
 };

@@ -52,9 +52,11 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 	const createHydrator = async ({
 		mode = "write",
 		writtenAfter = 0,
+		nextOffset = 0n,
 	}: {
 		mode?: "write" | "serve" | "verify";
 		writtenAfter?: number;
+		nextOffset?: bigint;
 	} = {}) => {
 		const topic = `snapshot-refresh-${crypto.randomUUID()}`;
 		const reads: string[] = [];
@@ -120,7 +122,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		const stateStore = createCommitterStateStore({
 			ctx: { committer, db: committerDb, subjectSnapshotsConfig },
 		});
-		await stateStore.initializePartition({ topic, partition, nextOffset: 0n });
+		await stateStore.initializePartition({ topic, partition, nextOffset });
 		const receiptPolicy = { retentionMs: 86_400_000, now: () => Date.now() };
 		const writer = createPartitionWriter({
 			ctx: {
@@ -153,6 +155,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 				subjectSnapshotsConfig,
 				snapshotQueues: stateStore.snapshotQueues,
 				position: { topic, partition },
+				readNextOffset: stateStore.readNextOffset,
 			},
 		});
 		const close = () => {
@@ -213,7 +216,9 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 
 	test("a refresh reads the rows whole and writes the subject's row through the lane; nothing becomes resident", async () => {
 		const seeded = await seedCustomer({ postgres, balance: 100 });
-		const { hydrator, writer, reads, topic, close } = await createHydrator();
+		const { hydrator, writer, reads, topic, close } = await createHydrator({
+			nextOffset: 7n,
+		});
 		try {
 			expect(await readRow({ identity: seeded.identity })).toBeNull();
 			hydrator.refreshSnapshots({
@@ -227,7 +232,11 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 			expect(
 				writer.readFreshestState({ identity: seeded.identity }),
 			).toBeNull();
-			expect(await seeded.readNextOffset({ topic, partition })).toBe(0n);
+			expect(await seeded.readNextOffset({ topic, partition })).toBe(7n);
+			const [snapshot] = await postgres.db.execute(
+				sql`SELECT log_offset FROM subject_snapshots WHERE org_id = ${seeded.orgId} AND env = ${seeded.env} AND customer_id = ${seeded.identity.customerId} AND entity_id = ''`,
+			);
+			expect(String(snapshot?.log_offset)).toBe("6");
 		} finally {
 			close();
 			await seeded.cleanup();
