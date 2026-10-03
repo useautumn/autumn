@@ -70,6 +70,7 @@ export function createPartitionProcessor({
 		ctx: {
 			stateStore: dependencies.stateStore,
 			appender: dependencies.appender,
+			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
 			commitPositions: dependencies.commitPositions,
