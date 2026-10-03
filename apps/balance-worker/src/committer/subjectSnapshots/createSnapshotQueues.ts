@@ -14,8 +14,9 @@ import type {
 import type { SnapshotQueues } from "./types/snapshotQueues.js";
 
 /**
- * Past this many pending entries a partition stops enqueuing: 20 statements of 500 drain in well under a
- * second, so a backlog beyond it means Postgres is the slow part, and a row left behind only costs its next flush.
+ * Past this many pending entries a partition stops enqueuing refreshes: 20 statements of 500 drain in well under a
+ * second, so a backlog beyond it means Postgres is the slow part, and a row not rebuilt only costs its next cold load.
+ * A DELETE is never refused: a customer that left memory must not leave a row behind, and its entry is a key, not a state.
  */
 export const SNAPSHOT_LANE_MAX_PENDING = 10_000;
 
@@ -83,7 +84,6 @@ export const createSnapshotQueues = ({
 		if (!writes) return;
 		dropRefreshes({ writes, customerKey });
 		if (writes.deletes.has(customerKey)) return;
-		if (!hasRoom({ writes, position: { topic, partition } })) return;
 		writes.deletes.set(
 			customerKey,
 			Promise.withResolvers<DeletedSubjectSnapshot[]>(),
@@ -164,7 +164,7 @@ export const createSnapshotQueues = ({
 		if (writes.pendingCount < SNAPSHOT_LANE_MAX_PENDING) return true;
 		if (!writes.warned)
 			ctx.logger?.warn(
-				`[snapshot lane] ${keyOf(position)} has ${writes.pendingCount} customers pending; further writes leave their rows to the next flush`,
+				`[snapshot lane] ${keyOf(position)} has ${writes.pendingCount} customers pending; further refreshes leave their rows to the next cold load`,
 			);
 		writes.warned = true;
 		return false;
