@@ -47,6 +47,7 @@ import {
 } from "./common/acceptedCommands.js";
 import { executeCommand } from "./execution/executeCommand.js";
 import { createSubjectHydrator } from "./subject/createSubjectHydrator.js";
+import type { DeferredLogSink } from "./types/deferredLogSink.js";
 import type {
 	PartitionProcessor,
 	PartitionProcessorConfig,
@@ -264,7 +265,7 @@ function createProcessor({
 	}: {
 		source: MutationSource;
 		run: (processor: PartitionProcessor) => Promise<Decision>;
-		deferredLogs?: Promise<void>[];
+		deferredLogs?: DeferredLogSink;
 	}) {
 		return acceptCommand({
 			accepted: scope.accepted,

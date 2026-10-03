@@ -1,30 +1,32 @@
 import type { DeferredLogs } from "../types/deferredLogs.js";
 
-function ignoreOutcome(): void {}
-
 export function createDeferredLogs({
-	maxCommitsInFlight,
+	maxInFlight,
 }: {
-	maxCommitsInFlight: number;
+	maxInFlight: number;
 }): DeferredLogs {
-	const logs: Promise<void>[] = [];
-	const commitsInFlight = new Set<Promise<void>>();
+	const inFlight = new Set<Promise<void>>();
+	let firstFailure: { cause: unknown } | null = null;
 
-	function add(commit: Promise<void>): void {
-		logs.push(commit);
-		const landed = commit.then(ignoreOutcome, ignoreOutcome);
-		commitsInFlight.add(landed);
-		void landed.then(() => commitsInFlight.delete(landed));
+	function add(log: Promise<void>): void {
+		const landed = log.then(
+			() => undefined,
+			(cause: unknown) => {
+				firstFailure ??= { cause };
+			},
+		);
+		inFlight.add(landed);
+		void landed.then(() => inFlight.delete(landed));
 	}
 
 	async function waitForRoom(): Promise<void> {
-		while (commitsInFlight.size >= maxCommitsInFlight)
-			await Promise.race(commitsInFlight);
+		while (inFlight.size >= maxInFlight) await Promise.race(inFlight);
 	}
 
 	async function settle(): Promise<void> {
-		await Promise.all(logs);
+		await Promise.all(inFlight);
+		if (firstFailure) throw firstFailure.cause;
 	}
 
-	return { logs, add, waitForRoom, settle };
+	return { add, waitForRoom, settle };
 }

@@ -5,7 +5,6 @@ import {
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import { buildIdempotencyStorageKey } from "@autumn/dynamodb";
-import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { consumeTrack } from "../../../src/consume/consumeTrack.js";
 import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
 import { PartitionWriterDuplicateCommandError } from "../../../src/processor/writer/writerErrors.js";
@@ -39,11 +38,8 @@ function commandOf({
 
 function createFixture({
 	outcome,
-	commitFailure,
 }: {
 	outcome?: "applied" | "rejected" | Error;
-	/** The decide succeeds and its commit fails with this. */
-	commitFailure?: Error;
 } = {}) {
 	const tracked: string[] = [];
 	const logs: string[] = [];
@@ -58,7 +54,6 @@ function createFixture({
 				reason: null,
 			};
 			async function waitForCommit() {
-				if (commitFailure) throw commitFailure;
 				return { mutation: { result } };
 			}
 			return { kind: "write", waitForCommit };
@@ -160,44 +155,16 @@ describe("consumeTrack", () => {
 		expect(keys.released).toEqual([]);
 	});
 
-	test("a rejected reply is logged once committed, the claim kept", async () => {
-		const { ctx, logs, keys } = createFixture({ outcome: "rejected" });
-		const decided = await consumeTrack({
+	test("a decided track hands back how to free its claim if the store refuses its commit; the decide itself keeps it", async () => {
+		const { ctx, keys } = createFixture();
+		const queued = await consumeTrack({
 			ctx,
 			command: commandOf({ commandId: "c1", requestId: "r1" }),
 		});
-		expect(logs).toEqual([]);
-		await decided?.waitForCommit();
-		expect(logs).toEqual(["warn:Queued track rejected by the balance"]);
+		expect(keys.owners.get(storageKey)).toBe("r1");
 		expect(keys.released).toEqual([]);
-	});
 
-	test("a record the store refused at its commit frees the claim, as a refused decide does; a transient commit failure keeps it", async () => {
-		const refused = createFixture({
-			commitFailure: new FlushRecordRefusedError({
-				mutationId: "c1",
-				cause: new Error("check constraint"),
-			}),
-		});
-		const refusedDecision = await consumeTrack({
-			ctx: refused.ctx,
-			command: commandOf({ commandId: "c1", requestId: "r1" }),
-		});
-		await expect(refusedDecision?.waitForCommit()).rejects.toBeInstanceOf(
-			FlushRecordRefusedError,
-		);
-		expect(refused.keys.released).toEqual([storageKey]);
-
-		const transient = createFixture({
-			commitFailure: new Error("broker away"),
-		});
-		const transientDecision = await consumeTrack({
-			ctx: transient.ctx,
-			command: commandOf({ commandId: "c1", requestId: "r1" }),
-		});
-		await expect(transientDecision?.waitForCommit()).rejects.toThrow(
-			"broker away",
-		);
-		expect(transient.keys.released).toEqual([]);
+		await queued?.onRefused?.();
+		expect(keys.released).toEqual([storageKey]);
 	});
 });

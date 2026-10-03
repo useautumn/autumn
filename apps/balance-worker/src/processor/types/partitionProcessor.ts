@@ -42,6 +42,7 @@ import type {
 	PartitionWriterContext,
 	PartitionWriterLimits,
 } from "../writer/types/partitionWriter.js";
+import type { DeferredLogSink } from "./deferredLogSink.js";
 import type { ReceiptPolicy } from "./receiptPolicy.js";
 
 /** Processes one partition's accepted commands: track writes, check reads. */
@@ -49,7 +50,7 @@ export type PartitionProcessor = {
 	execute<Decision>(params: {
 		source: MutationSource;
 		run: (processor: PartitionProcessor) => Promise<Decision>;
-		deferredLogs?: Promise<void>[];
+		deferredLogs?: DeferredLogSink;
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
 	/** The track's deduction, enqueued in arrival order; the commit is the caller's to wait for. */

@@ -1,4 +1,5 @@
 import type { MutationSource } from "@autumn/balance-engine";
+import type { DeferredLogSink } from "../types/deferredLogSink.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationSubmission } from "../writer/types/mutation.js";
 import type { PartitionWriter } from "../writer/types/partitionWriter.js";
@@ -13,7 +14,7 @@ export async function executeCommand<Decision>({
 	scope: PartitionProcessorScope;
 	source: MutationSource;
 	run: (scope: PartitionProcessorScope) => Promise<Decision>;
-	deferredLogs?: Promise<void>[];
+	deferredLogs?: DeferredLogSink;
 }): Promise<Decision> {
 	let wroteMutation = false;
 	let precedingWrites = scope.ctx.writer.waitForStore();
@@ -32,7 +33,7 @@ export async function executeCommand<Decision>({
 		});
 		wroteMutation = true;
 		if (!deferredLogs) return logged;
-		deferredLogs.push(logged);
+		deferredLogs.add(logged);
 		return Promise.resolve();
 	}
 
