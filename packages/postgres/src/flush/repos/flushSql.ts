@@ -1,15 +1,19 @@
 import { type SQL, sql } from "drizzle-orm";
 import { subjectRowChangeSql } from "../../subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
+import { subjectSnapshotFlushSql } from "../../subjects/repos/subjectSnapshots/subjectSnapshotFlushSql.js";
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
+import type { SubjectSnapshotWrites } from "../../subjects/types/subjectSnapshot.js";
 import type { FlushBookmark } from "../types/flush.js";
 
-/** The CTEs every flush shape shares: one per folded change, then the bookmarks as `b`. */
+/** The CTEs every flush shape shares: one per folded change, the bookmarks as `b`, then the snapshot writes. */
 const flushParts = ({
 	changes,
 	bookmarks,
+	snapshots,
 }: {
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
+	snapshots?: SubjectSnapshotWrites;
 }) => {
 	const updateCtes = changes.map(
 		(change, index) =>
@@ -41,21 +45,46 @@ const flushParts = ({
 			? sql`'[]'::json`
 			: // An array constructor, not json_build_array: a function call is capped at 100 arguments.
 				sql`to_json(ARRAY[${sql.join(appliedCounts, sql`, `)}])`;
-	return { ctes: [...updateCtes, bookmarkCte], appliedCounts, applied };
+	// Snapshot deletes travel alone when an evict has no record to carry them, and VALUES cannot be empty.
+	const bookmarkParts =
+		bookmarks.length > 0
+			? { ctes: [bookmarkCte], count: sql`(SELECT count(*) FROM b)` }
+			: { ctes: [], count: sql`0` };
+	const hasSnapshotWrites =
+		(snapshots?.upserts.length ?? 0) + (snapshots?.deletes.length ?? 0) > 0;
+	const snapshotSql =
+		snapshots && hasSnapshotWrites
+			? subjectSnapshotFlushSql({ snapshots })
+			: null;
+	return {
+		ctes: [...updateCtes, ...bookmarkParts.ctes, ...(snapshotSql?.ctes ?? [])],
+		appliedCounts,
+		applied,
+		bookmarkCount: bookmarkParts.count,
+		snapshotColumns: snapshotSql
+			? sql`, ${snapshotSql.upserted} AS snapshot_upserts, ${snapshotSql.deleted} AS snapshot_deletes`
+			: sql``,
+	};
 };
 
 /** Every folded change as its own CTE, the bookmarks as one, and a row of counts to read the outcome from. */
 export const flushSql = ({
 	changes,
 	bookmarks,
+	snapshots,
 }: {
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
+	snapshots?: SubjectSnapshotWrites;
 }): SQL => {
-	const { ctes, applied } = flushParts({ changes, bookmarks });
+	const { ctes, applied, bookmarkCount, snapshotColumns } = flushParts({
+		changes,
+		bookmarks,
+		snapshots,
+	});
 	return sql`
 		WITH ${sql.join(ctes, sql`, `)}
-		SELECT ${applied} AS applied, (SELECT count(*) FROM b) AS bookmarks
+		SELECT ${applied} AS applied, ${bookmarkCount} AS bookmarks${snapshotColumns}
 	`;
 };
 
@@ -69,15 +98,17 @@ export const FLUSH_ROLLBACK_MARKER = "flush_rolled_back:";
 export const singleStatementFlushSql = ({
 	changes,
 	bookmarks,
+	snapshots,
 	nonce,
 }: {
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
+	snapshots?: SubjectSnapshotWrites;
 	/** Per flush, so a value Postgres echoes in a cast error can never pass for this flush's rollback. */
 	nonce: string;
 }): SQL => {
-	const { ctes, appliedCounts, applied } = flushParts({ changes, bookmarks });
-	const bookmarkCount = sql`(SELECT count(*) FROM b)`;
+	const { ctes, appliedCounts, applied, bookmarkCount, snapshotColumns } =
+		flushParts({ changes, bookmarks, snapshots });
 	const landed = changes.flatMap((change, index) =>
 		change.op === "promote" ? [] : [sql`${appliedCounts[index]} = 1`],
 	);
@@ -92,7 +123,7 @@ export const singleStatementFlushSql = ({
 	// CASE, not OR: only CASE guarantees the cast is never evaluated when everything landed.
 	return sql`
 		WITH ${sql.join(ctes, sql`, `)}
-		SELECT ${applied} AS applied, ${bookmarkCount} AS bookmarks
+		SELECT ${applied} AS applied, ${bookmarkCount} AS bookmarks${snapshotColumns}
 		WHERE CASE WHEN ${allLanded} THEN true
 			ELSE (${`${FLUSH_ROLLBACK_MARKER}${nonce}:`}::text || ${bookmarkCount} || ':' || ${counts})::integer IS NULL END
 	`;

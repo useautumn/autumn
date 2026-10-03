@@ -33,6 +33,8 @@ export type CommitterConfig = {
 	/** Row changes one flush may carry; a hot partition cannot crowd out the others. */
 	maxRowsPerFlush: number;
 	retry: FlushRetryPolicy;
+	/** The deployment's partition count, written beside every snapshot row; absent, no flush touches `subject_snapshots`. */
+	snapshots?: { partitionCount: number };
 };
 
 export type PartitionPosition = { topic: string; partition: number };
