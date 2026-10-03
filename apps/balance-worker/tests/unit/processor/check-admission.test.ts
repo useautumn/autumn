@@ -10,7 +10,12 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
-import { testIdentity, testOrg } from "../../fixtures/mutations.js";
+import {
+	createInitializeRequest,
+	createState,
+	testIdentity,
+	testOrg,
+} from "../../fixtures/mutations.js";
 
 const checkOf = ({ customerId }: { customerId: string }): CheckCommand =>
 	parseCheckCommand({
@@ -97,6 +102,29 @@ describe("check admission", () => {
 			expect(
 				workerErrorOf({ cause: new CheckCapacityError({ customerKey: "k" }) }),
 			).toMatchObject({ status: 429, error: { code: "OVERLOADED" } });
+		} finally {
+			release();
+			close();
+		}
+	});
+
+	test("a burst of checks on a resident customer is never shed: only checks that wait for a load count", async () => {
+		const { processor, release, close } = createFixture({ maxInFlight: 2 });
+		try {
+			await processor.initialize({
+				request: createInitializeRequest({
+					state: createState({
+						identity: { ...testIdentity, customerId: "cus_hot" },
+					}),
+				}),
+			});
+			// A stall leaves a backlog that arrives in one turn of the loop: every check is in flight at once.
+			const burst = Array.from({ length: 10 }, () =>
+				processor.check({ command: checkOf({ customerId: "cus_hot" }) }),
+			);
+			const replies = await Promise.all(burst);
+			expect(replies.every((reply) => reply.result.allowed)).toBeTrue();
+			expect(processor.readCounters()).toMatchObject({ checksShed: 0 });
 		} finally {
 			release();
 			close();

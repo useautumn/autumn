@@ -1,4 +1,4 @@
-/** Per customer, how many of its checks a partition is running. */
+/** Per customer, how many of its checks a partition holds waiting for a load. */
 export type CheckAdmission = {
 	/** Runs the check, or throws CheckCapacityError when its customer is at the cap. */
 	admit<Result>(params: {

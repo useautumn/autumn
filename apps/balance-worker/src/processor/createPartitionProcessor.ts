@@ -129,15 +129,22 @@ function createProcessor({
 		});
 	}
 
+	/** A resident subject answers within the turn, so only a check that waits for its load is held to the cap. */
 	function check({ command }: { command: CheckCommand }) {
+		const run = () => checkPartition({ scope, command });
+		const isResident =
+			scope.ctx.writer.readFreshestState({ identity: command.identity }) !==
+			null;
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: checkAdmission.admit({
-				customerKey: meteringIdentityToPartitionKey({
-					identity: command.identity,
-				}),
-				run: () => checkPartition({ scope, command }),
-			}),
+			operation: isResident
+				? run()
+				: checkAdmission.admit({
+						customerKey: meteringIdentityToPartitionKey({
+							identity: command.identity,
+						}),
+						run,
+					}),
 		});
 	}
 

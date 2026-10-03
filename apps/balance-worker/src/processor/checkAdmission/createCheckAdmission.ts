@@ -4,7 +4,7 @@ import type {
 	CheckAdmissionCounters,
 } from "./types/checkAdmission.js";
 
-/** Bounds one customer's checks in flight, as the writer bounds its pending writes, so a burst sheds only that customer. */
+/** Bounds one customer's checks waiting for a load, as the writer bounds its pending writes, so a cold burst sheds only that customer. */
 export const createCheckAdmission = ({
 	config,
 }: {
