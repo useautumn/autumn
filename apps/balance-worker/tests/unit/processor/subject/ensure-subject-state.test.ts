@@ -128,10 +128,7 @@ const createScope = ({
 					const read = sourceCalls;
 					sourceCalls += 1;
 					if (!releasedAll) await gateOf(read);
-					return {
-						snapshot: null,
-						envelope: Array.isArray(rows) ? (rows[read] ?? null) : rows,
-					};
+					return Array.isArray(rows) ? (rows[read] ?? null) : rows;
 				},
 				getEntitySubjectRows: async () => [],
 				readSubjectSnapshots: async () => [],
