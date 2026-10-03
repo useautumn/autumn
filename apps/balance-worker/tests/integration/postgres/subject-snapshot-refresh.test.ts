@@ -51,8 +51,10 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 	/** The production hydrator over the production writer, committer and lane, on real Postgres; `gate` holds every full read's answer until released. */
 	const createHydrator = async ({
 		mode = "write",
+		writtenAfter = 0,
 	}: {
 		mode?: "write" | "serve" | "verify";
+		writtenAfter?: number;
 	} = {}) => {
 		const topic = `snapshot-refresh-${crypto.randomUUID()}`;
 		const reads: string[] = [];
@@ -60,11 +62,16 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		const entityReads: string[][] = [];
 		const gate = { held: Promise.resolve() as Promise<void> };
 		const timings = createDatabaseTimings();
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({
+			mode,
+			writtenAfter,
+		});
 		const workerDb = createWorkerDb({
 			ctx: {
 				postgres,
 				subjectLoads: createSubjectLoadGate({ config: { limit: 16 } }),
 				timings,
+				subjectSnapshotsConfig,
 			},
 		});
 		const db: WorkerDb = {
@@ -97,7 +104,6 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 					statementTimeoutMs: 10_000,
 				}),
 		};
-		const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode });
 		const committer = createCommitter({
 			ctx: { db: committerDb, subjectSnapshotsConfig },
 			config: {
@@ -177,7 +183,10 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 			ctx: { db: postgres.db, orgId: identity.orgId, env: identity.env },
 			customerId: identity.customerId,
 			entityId: identity.entityId,
-			stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+			probe: {
+				stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+				writtenAfter: 0,
+			},
 		})) as SubjectState | null;
 
 	const waitForRow = async ({
@@ -394,6 +403,65 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 			expect(serving.entityReads).toEqual([[missId]]);
 		} finally {
 			serving.close();
+			await postgres.db.execute(
+				sql`DELETE FROM entities WHERE internal_customer_id = ${seeded.internalCustomerId}`,
+			);
+			await seeded.cleanup();
+		}
+	});
+
+	test("writtenAfter: a row written at or before it is a miss for the customer's and the entity's probe alike; one written after it is served", async () => {
+		const seeded = await seedCustomer({ postgres, balance: 100 });
+		const entityId = `en_${seeded.identity.customerId.slice(-8)}`;
+		const entity = await seedEntity({ seeded, entityId });
+		const writing = await createHydrator();
+		try {
+			writing.hydrator.refreshSnapshots({
+				customer: seeded.identity,
+				subjects: [seeded.identity, entity],
+			});
+			await Promise.all([
+				waitForRow({ identity: seeded.identity }),
+				waitForRow({ identity: entity }),
+			]);
+		} finally {
+			writing.close();
+		}
+		// The two rows may have landed on different ticks: the newest bounds the miss, the oldest the hit.
+		const rows = (
+			await postgres.db.execute(
+				sql`SELECT min(written_at) AS oldest, max(written_at) AS newest FROM subject_snapshots WHERE org_id = ${seeded.orgId}`,
+			)
+		).rows as { oldest: string; newest: string }[];
+		const writtenAt = {
+			oldest: Number(rows[0]?.oldest),
+			newest: Number(rows[0]?.newest),
+		};
+
+		const stale = await createHydrator({
+			mode: "serve",
+			writtenAfter: writtenAt.newest,
+		});
+		try {
+			await stale.hydrator.ensure({ identity: seeded.identity });
+			await stale.hydrator.ensure({ identity: entity });
+			expect(stale.reads).toEqual([seeded.identity.customerId]);
+			expect(stale.entityReads).toEqual([[entityId]]);
+		} finally {
+			stale.close();
+		}
+
+		const fresh = await createHydrator({
+			mode: "serve",
+			writtenAfter: writtenAt.oldest - 1,
+		});
+		try {
+			await fresh.hydrator.ensure({ identity: seeded.identity });
+			await fresh.hydrator.ensure({ identity: entity });
+			expect(fresh.reads).toEqual([]);
+			expect(fresh.entityReads).toEqual([]);
+		} finally {
+			fresh.close();
 			await postgres.db.execute(
 				sql`DELETE FROM entities WHERE internal_customer_id = ${seeded.internalCustomerId}`,
 			);

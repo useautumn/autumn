@@ -29,6 +29,7 @@ describe("the subject snapshots edge config", () => {
 			dropBatch: 500,
 			refreshConcurrency: 50,
 			refreshMaxPending: 10_000,
+			writtenAfter: 0,
 		});
 	});
 
@@ -72,6 +73,7 @@ describe("the subject snapshots edge config", () => {
 				dropBatch: 10,
 				refreshConcurrency: 4,
 				refreshMaxPending: 100,
+				writtenAfter: 1_700_000_000_000,
 			},
 		});
 		await edgeConfigs.subjectSnapshotsConfig.refresh();
@@ -81,6 +83,7 @@ describe("the subject snapshots edge config", () => {
 			dropBatch: 10,
 			refreshConcurrency: 4,
 			refreshMaxPending: 100,
+			writtenAfter: 1_700_000_000_000,
 		});
 	});
 

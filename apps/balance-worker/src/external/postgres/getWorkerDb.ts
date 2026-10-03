@@ -1,3 +1,4 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
@@ -19,6 +20,7 @@ import {
 	readSubjectSnapshot,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	type DatabaseTimings,
 	timeQuery,
@@ -65,7 +67,18 @@ type WorkerDbContext = {
 		DatabaseTimings,
 		"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
 	>;
+	/** Read at each probe for `writtenAfter`; absent, every row of this build's version answers. */
+	subjectSnapshotsConfig?: Pick<
+		EdgeConfigStore<SubjectSnapshotsEdgeConfig>,
+		"get"
+	>;
 };
+
+/** Which rows a snapshot probe may answer with, as the config stands when it runs. */
+const snapshotProbeOf = ({ ctx }: { ctx: WorkerDbContext }) => ({
+	stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+	writtenAfter: ctx.subjectSnapshotsConfig?.get().writtenAfter ?? 0,
+});
 
 export const createWorkerDb = ({
 	ctx,
@@ -104,7 +117,7 @@ export const createWorkerDb = ({
 						},
 						customerId: identity.customerId,
 						entityId: identity.entityId,
-						stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+						probe: snapshotProbeOf({ ctx }),
 					}),
 			});
 			ctx.timings.recordSubjectSnapshots(
@@ -126,7 +139,7 @@ export const createWorkerDb = ({
 						},
 						customerId: identity.customerId,
 						entityIds,
-						stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+						probe: snapshotProbeOf({ ctx }),
 					}),
 			});
 			ctx.timings.recordSubjectSnapshots({
