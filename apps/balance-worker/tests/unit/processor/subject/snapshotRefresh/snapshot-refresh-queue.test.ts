@@ -71,6 +71,7 @@ const createScriptedReads = () => {
 		}),
 		baselineAt: 1,
 		logOffset: 0n,
+		bytes: 1_024,
 	});
 	const release = async (
 		subject: string,
@@ -91,6 +92,40 @@ const createScriptedReads = () => {
 };
 
 describe("snapshot refresh queue", () => {
+	test("oversized refreshes are skipped without an error; the size boundary is inclusive", async () => {
+		const written: string[] = [];
+		const warnings: unknown[] = [];
+		const queue = createSnapshotRefreshQueue({
+			ctx: {
+				read: async ({ identity }) => ({
+					baseline: createState({ identity }),
+					baselineAt: 1,
+					logOffset: 0n,
+					bytes: identity.customerId === "oversized" ? 1_025 : 1_024,
+				}),
+				write: ({ identity }) => {
+					written.push(identity.customerId);
+				},
+				subjectSnapshotsConfig: createSubjectSnapshotsStore({
+					mode: "write",
+					maxBytes: 1_024,
+				}),
+				logger: { warn: (...args: unknown[]) => warnings.push(args) },
+			},
+		});
+		evict(queue, "oversized", []);
+		evict(queue, "at_limit", []);
+		await queue.settled();
+		expect(written).toEqual(["at_limit"]);
+		expect(queue.counts()).toEqual({
+			queued: 2,
+			refreshed: 1,
+			skipped: 1,
+			failed: 0,
+		});
+		expect(warnings).toEqual([]);
+	});
+
 	test("an evict queues the customer then its entities, FIFO, refreshConcurrency reading at a time; each read is written back", async () => {
 		const { queue, started, written, release } = createScriptedReads();
 		evict(queue, "cus_1", ["en_1", "en_2", "en_3"]);
