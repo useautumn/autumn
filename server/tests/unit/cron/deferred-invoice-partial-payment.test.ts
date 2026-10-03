@@ -3,6 +3,7 @@
  *
  * Contract:
  *   cron, open + unpaid             → void, expire pending, cancel created sub, delete metadata
+ *   cron, uncollectible + unpaid    → void first (still payable), then expire like open
  *   cron, open + partially paid     → untouched, expires_at cleared so the cron stops re-picking it
  *   cron, void + partially paid     → untouched, expires_at cleared
  *   void webhook, partially paid    → pending plan untouched
@@ -17,8 +18,10 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const STRIPE_SUBSCRIPTION_ID = "sub_deferred_created";
 
+type InvoiceStatus = "open" | "uncollectible" | "void";
+
 const state = {
-	invoiceStatus: "open" as "open" | "void",
+	invoiceStatus: "open" as InvoiceStatus,
 	amountPaid: 0,
 	subscriptionStatus: "active" as "active" | "canceled" | "incomplete_expired",
 	cancelFails: false,
@@ -35,7 +38,7 @@ const resetState = ({
 	subscriptionStatus = "active",
 	cancelFails = false,
 }: {
-	invoiceStatus: "open" | "void";
+	invoiceStatus: InvoiceStatus;
 	amountPaid: number;
 	subscriptionStatus?: "active" | "canceled" | "incomplete_expired";
 	cancelFails?: boolean;
@@ -175,6 +178,17 @@ const expectUntouchedWithExpiryCleared = () => {
 
 test("cron: an unpaid deferred invoice voids, expires the plan and cancels the created sub", async () => {
 	resetState({ invoiceStatus: "open", amountPaid: 0 });
+
+	await runCron();
+
+	expect(state.voidedInvoiceIds).toEqual(["in_deferred"]);
+	expect(state.expiredMetadataIds).toEqual([metadata.id]);
+	expect(state.canceledSubscriptionIds).toEqual([STRIPE_SUBSCRIPTION_ID]);
+	expect(state.deletedMetadataIds).toEqual([metadata.id]);
+});
+
+test("cron: an unpaid uncollectible invoice is voided before its plan expires", async () => {
+	resetState({ invoiceStatus: "uncollectible", amountPaid: 0 });
 
 	await runCron();
 
