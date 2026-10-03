@@ -15,7 +15,10 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
-import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
+import {
+	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_REQUEST_DEADLINE_HEADER,
+} from "../src/protocol.js";
 
 const command: TrackCommand = {
 	schemaVersion: 1,
@@ -146,6 +149,8 @@ function createFixture({
 	const requests: Array<{ url: string; body: unknown }> = [];
 	/** The budget header of each send, in order. */
 	const budgets: string[] = [];
+	/** The deadline header of each send, in order. */
+	const deadlines: string[] = [];
 	const refreshed = Promise.withResolvers<void>();
 	function findOwner(): PartitionOwner | undefined {
 		return currentOwner ?? undefined;
@@ -160,6 +165,7 @@ function createFixture({
 	async function postJson(request: HttpRequest): Promise<HttpResponse> {
 		requests.push({ url: request.url, body: structuredClone(request.body) });
 		budgets.push(request.headers?.[WORKER_REQUEST_BUDGET_HEADER] ?? "");
+		deadlines.push(request.headers?.[WORKER_REQUEST_DEADLINE_HEADER] ?? "");
 		if (transportFailure) throw transportFailure;
 		const failure = transportFailures[requests.length - 1];
 		if (failure) throw failure;
@@ -177,7 +183,7 @@ function createFixture({
 			batchTracks: false,
 		},
 	});
-	return { client, stats, budgets, refreshed: refreshed.promise };
+	return { client, stats, budgets, deadlines, refreshed: refreshed.promise };
 }
 
 async function usesCachedOwner(): Promise<void> {
@@ -829,6 +835,22 @@ async function tellsTheWorkerHowLongItCanWait(): Promise<void> {
 test(
 	"every send carries how long the caller will still wait",
 	tellsTheWorkerHowLongItCanWait,
+);
+
+async function tellsTheWorkerWhenItStopsWaiting(): Promise<void> {
+	// Queued behind a stalled loop the worker cannot see time pass, so the caller names the moment.
+	const fixture = createFixture({ timeoutMs: 1000 });
+	const sentAt = Date.now();
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	const [deadline] = fixture.deadlines;
+	expect(deadline).toMatch(/^\d+$/);
+	expect(Number(deadline)).toBeGreaterThan(sentAt + 900);
+	expect(Number(deadline)).toBeLessThanOrEqual(Date.now() + 1000);
+}
+
+test(
+	"every send carries the wall-clock moment the caller stops waiting",
+	tellsTheWorkerWhenItStopsWaiting,
 );
 
 async function doesNotRetryNotReadyWithoutBudget(): Promise<void> {

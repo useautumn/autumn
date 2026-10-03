@@ -48,7 +48,7 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 		}
 		const runtime: Runtime = withRequestBudget({
 			runtime: owner,
-			budgetMs: readRequestBudget(context),
+			budget: readRequestBudget(context),
 		});
 
 		function runCommand(input: unknown): Promise<TrackReply> {

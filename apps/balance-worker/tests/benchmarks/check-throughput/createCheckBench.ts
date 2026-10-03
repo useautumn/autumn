@@ -4,6 +4,8 @@ import { AppEnv } from "@autumn/shared";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
 import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLogger.js";
+import { processCommand } from "../../../src/runtime/processCommand.js";
+import type { PartitionRuntimeScope } from "../../../src/runtime/types/partitionRuntimeState.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";
 import { createSyntheticWorkerDb } from "../../fixtures/catalog.js";
 import {
@@ -66,7 +68,7 @@ const createEntityBenchDb = (): WorkerDb => ({
 		entityIds.map((entityId) => entityEnvelopeOf({ entityId })),
 });
 
-/** One resident customer on a real partition processor, behind the worker's real Hono app. */
+/** One resident customer on a real partition processor, behind the runtime's gate and the worker's real Hono app. */
 export const createCheckBench = async ({
 	scenario,
 }: {
@@ -85,8 +87,18 @@ export const createCheckBench = async ({
 		}),
 	});
 
+	// A ready runtime reads only its processor and terminal state; the rest is never touched.
+	const runtimeScope = {
+		ctx: { processor: bench.processor, config: {} },
+		state: {
+			status: "ready",
+			terminalError: null,
+			requestCounters: { droppedPastDeadline: 0 },
+		},
+	} as unknown as PartitionRuntimeScope;
 	const runtime: BalanceWorkerRequestContext["runtime"] = {
-		process: (run) => run(bench.processor),
+		process: (run, options) =>
+			processCommand({ ...runtimeScope, run, ...options }),
 	};
 	const app = createBalanceWorkerApp({
 		ctx: {

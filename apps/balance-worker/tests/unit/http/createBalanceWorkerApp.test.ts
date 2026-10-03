@@ -34,6 +34,7 @@ import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
+	RequestPastDeadlineError,
 } from "../../../src/runtime/runtimeErrors.js";
 import {
 	createCustomerEntitlement,
@@ -118,6 +119,7 @@ const fixture = ({
 	const processor: PartitionProcessor = {
 		execute: ({ run }) => run(processor),
 		dispose: () => undefined,
+		readCounters: () => ({ checksShed: 0 }),
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
 		},
@@ -179,11 +181,14 @@ const fixture = ({
 	};
 	/** The budget each command was run with, in order; undefined when the request carried none. */
 	const budgets: Array<number | undefined> = [];
+	/** The deadline each command was run with, in order; undefined when the request carried none. */
+	const deadlines: Array<number | undefined> = [];
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (
 		run,
 		options,
 	) => {
 		budgets.push(options?.budgetMs);
+		deadlines.push(options?.deadlineAt);
 		return run(processor);
 	};
 	const runtime = { process };
@@ -234,6 +239,7 @@ const fixture = ({
 		lookups,
 		logs,
 		budgets,
+		deadlines,
 	};
 };
 
@@ -620,6 +626,37 @@ describe("Balance worker HTTP", () => {
 			(await postWithHeaders({ "x-request-budget-ms": "soon" })).status,
 		).toBe(200);
 		expect(budgets).toEqual([750, undefined, 640, 640, undefined]);
+	});
+	test("the caller's deadline header reaches every command the request runs", async () => {
+		const { postWithHeaders, postBatch, post, deadlines } = fixture();
+		expect(
+			(await postWithHeaders({ "x-request-deadline-at": "1700000000500" }))
+				.status,
+		).toBe(200);
+		expect((await post()).status).toBe(200);
+		expect(
+			(
+				await postBatch(
+					{ route, commands: [command, command] },
+					{ "x-request-deadline-at": "1700000000900" },
+				)
+			).status,
+		).toBe(200);
+		expect(deadlines).toEqual([
+			1_700_000_000_500,
+			undefined,
+			1_700_000_000_900,
+			1_700_000_000_900,
+		]);
+	});
+	test("a request dropped past its deadline answers NOT_READY and logs as a sampled shed, not an error", async () => {
+		const { post, logs } = fixture({ cause: new RequestPastDeadlineError() });
+		const response = await post();
+		expect(response.status).toBe(503);
+		expect((await response.json()).error.code).toBe("NOT_READY");
+		const [event] = logs[0] ?? [];
+		expect(event).toMatchObject({ data: { shed: "past_deadline" } });
+		expect((event as { error?: unknown }).error).toBeUndefined();
 	});
 	test("maps runtime readiness races centrally", async () => {
 		const { post } = fixture({

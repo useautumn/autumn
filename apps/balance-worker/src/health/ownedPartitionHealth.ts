@@ -11,12 +11,21 @@ export type OwnedPartitionHealth = {
 	lag: bigint | null;
 	failureReason: string | null;
 	checkpoint?: PartitionCheckpointHealth;
+	/** What the partition turned away since it started, without running it. */
+	requests?: OwnedPartitionRequestCounters;
 	/** The partition's queued commands: how far the decided bookmark trails the topic. */
 	commands?: {
 		consumedNextOffset: bigint | null;
 		highWatermark: bigint | null;
 		lag: bigint | null;
 	};
+};
+
+export type OwnedPartitionRequestCounters = {
+	/** Dropped at the gate: the caller's deadline had passed. */
+	droppedPastDeadline: number;
+	/** Checks refused because their customer had too many in flight. */
+	checksShed: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<
@@ -46,6 +55,7 @@ export const ownedPartitionHealthOf = ({
 	consumedNextOffset,
 	highWatermark,
 	failureReason,
+	requests,
 }: OwnedPartitionHealthInput): OwnedPartitionHealth => {
 	if (topic.trim().length === 0) throw new Error("Kafka topic cannot be empty");
 	if (!Number.isSafeInteger(partition) || partition < 0) {
@@ -77,6 +87,7 @@ export const ownedPartitionHealthOf = ({
 		highWatermark,
 		lag,
 		failureReason,
+		...(requests && { requests }),
 	};
 };
 
