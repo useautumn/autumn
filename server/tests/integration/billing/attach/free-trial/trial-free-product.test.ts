@@ -10,13 +10,20 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, type ApiEntityV0, ms } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	type ApiEntityV0,
+	CusProductStatus,
+	ms,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectCustomerProducts,
 	expectProductActive,
+	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import {
 	expectProductNotTrialing,
 	expectProductTrialing,
@@ -375,7 +382,7 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 6: free to different f
 	await expectProductTrialing({
 		customer,
 		productId: free2.id,
-		trialEndsAt: advancedTo + ms.days(7),
+		trialEndsAt: advancedTo + ms.days(14),
 	});
 
 	// Verify feature balance is free2's balance with resetsAt aligned to trial end
@@ -385,7 +392,7 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 6: free to different f
 		includedUsage: 200,
 		balance: 200,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(7),
+		resetsAt: advancedTo + ms.days(14),
 	});
 
 	// Verify no invoice
@@ -415,8 +422,8 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 6: free to different f
  *
  * Expected Result:
  * - Entity-1 and Entity-2's Pro products remain untouched (on subscription, not trialing)
- * - Free product's trial converts independently at customer level
- * - Free product has its own billing cycle separate from the subscription
+ * - Free product's trial expires independently at customer level (priceless trials expire at trial end)
+ * - Free product never joins the subscription
  */
 test.concurrent(`${chalk.yellowBright("trial-free-product 7: entity pro isolated from customer-level free trial")}`, async () => {
 	const customerId = "trial-free-prod-entity-isolated";
@@ -541,17 +548,17 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 7: entity pro isolated
 		testClockId: testClockId!,
 	});
 
-	// Verify free product trial has ended and is now active (no longer trialing)
-	const customerAfterTrial =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerAfterTrial,
+	// test_clock.ready runs trial expiry: the priceless free trial expires at trial end
+	await expectProductNotPresent({
+		customerId,
+		autumn: autumnV1,
 		productId: freeWithTrial.id,
 	});
-	await expectProductNotTrialing({
-		customer: customerAfterTrial,
+	await expectCustomerProductStatuses({
+		ctx,
+		customerId,
 		productId: freeWithTrial.id,
-		nowMs: advancedToAfterTrial,
+		expected: { [CusProductStatus.Expired]: 1 },
 	});
 
 	// Verify entities' Pro products are STILL not trialing and remain on subscription billing cycle
@@ -577,9 +584,11 @@ test.concurrent(`${chalk.yellowBright("trial-free-product 7: entity pro isolated
 		nowMs: advancedToAfterTrial,
 	});
 
+	// 2 Pro attaches + the $40 renewal for both entities
 	await expectCustomerInvoiceCorrect({
-		customer: customerAfterTrial,
-		count: 3, // Only the 2 Pro attaches
-		latestTotal: 40, // Each Pro attach is $20
+		customerId,
+		autumn: autumnV1,
+		count: 3,
+		latestTotal: 40,
 	});
 });
