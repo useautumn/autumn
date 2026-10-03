@@ -4,7 +4,6 @@ import { percentileOf, sampleInto } from "./sampleWindow.js";
 
 export type DatabaseQueryKind =
 	| "subject_rows"
-	| "subject_snapshots"
 	| "entity_rows"
 	| "catalog_rows"
 	| "billing_anchors"
@@ -22,7 +21,7 @@ export type DatabaseTimingsSummary = {
 	>;
 	subjectLoadWait: Distribution;
 	errorCodes: Record<string, number>;
-	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
+	/** Present only in a window that touched snapshots: rows written or deleted, cold loads a row answered (hits) or not (misses). */
 	subjectSnapshots?: SubjectSnapshotCounts;
 };
 

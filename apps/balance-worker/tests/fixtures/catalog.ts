@@ -76,7 +76,7 @@ export const entitySubjectRowsFrom =
 	async ({ identity, entityIds, asOfTimestampMs }) => {
 		const envelopes: SubjectRowsEnvelope[] = [];
 		for (const entityId of entityIds) {
-			const envelope = await getSubjectRows({
+			const { envelope } = await getSubjectRows({
 				identity: { ...identity, entityId },
 				asOfTimestampMs,
 			});
@@ -90,10 +90,9 @@ export const createSyntheticWorkerDb = ({
 }: {
 	subjectRows?: SubjectRowsEnvelope | null;
 } = {}): WorkerDb => ({
-	getSubjectRows: async () => subjectRows,
-	readSubjectSnapshots: async () => [],
+	getSubjectRows: async () => ({ snapshot: null, envelope: subjectRows }),
 	getEntitySubjectRows: entitySubjectRowsFrom({
-		getSubjectRows: async () => subjectRows,
+		getSubjectRows: async () => ({ snapshot: null, envelope: subjectRows }),
 	}),
 	getCatalogRows: async (params) => syntheticCatalogRows(params),
 	getBillingCycleAnchors: async () => ({}),
@@ -104,8 +103,7 @@ export const createSyntheticWorkerDb = ({
 
 /** A Postgres stand-in that knows nothing: every miss stays a miss. */
 export const createEmptyWorkerDb = (): WorkerDb => ({
-	getSubjectRows: async () => null,
-	readSubjectSnapshots: async () => [],
+	getSubjectRows: async () => ({ snapshot: null, envelope: null }),
 	getEntitySubjectRows: async () => [],
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,

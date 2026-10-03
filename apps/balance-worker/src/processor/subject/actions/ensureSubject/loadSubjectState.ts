@@ -48,7 +48,7 @@ export const loadSubjectState = async ({
 }): Promise<SubjectState> => {
 	for (let read = 0; read < MAX_READS; read++) {
 		const occurredAt = scope.ctx.receiptPolicy.now();
-		// A read an evict overtook goes to the full query: the snapshot row may predate the DELETE still on the lane.
+		// A read an evict overtook goes to the rows alone: the snapshot may predate the DELETE still on the lane.
 		const baseline =
 			read === 0
 				? await loadSubjectBaseline({ scope, identity, occurredAt, load })

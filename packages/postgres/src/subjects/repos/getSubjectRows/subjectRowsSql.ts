@@ -8,6 +8,9 @@ import { SUBJECT_ROW_LIMITS } from "./subjectRowLimits.js";
  * live loose entitlements, unexpired rollovers, replaceables, its usage-window counters, and the ids of its open locks. Customer-level rows
  * when no entity is named, else the entity's own rows. Catalog rows come from getCatalogRows.
  * Expiry is evaluated at `asOfTimestampMs` so a replay sees the same rows as the original.
+ * With `snapshotVersion`, the subject's snapshot row at that version is read first, in the same statement, and the
+ * rows above are built only when there is none: one round trip per cold subject, hit or miss. With
+ * `rowsBesideSnapshot` they are built either way, so the two can be compared as read at one instant.
  */
 export const subjectRowsSql = ({
 	ctx,
@@ -15,12 +18,16 @@ export const subjectRowsSql = ({
 	entityId,
 	statuses,
 	asOfTimestampMs,
+	snapshotVersion,
+	rowsBesideSnapshot = false,
 }: {
 	ctx: Pick<PostgresContext, "orgId" | "env">;
 	customerId: string;
 	entityId: string | null;
 	statuses: string[];
 	asOfTimestampMs: number;
+	snapshotVersion?: number;
+	rowsBesideSnapshot?: boolean;
 }): SQL => {
 	const ownedBySubject = ({ alias }: { alias: SQL }) =>
 		entityId === null
@@ -41,8 +48,25 @@ export const subjectRowsSql = ({
 						AND parent.status = ANY(${statusList})
 				)`;
 
+	// COLLATE "C" on the probe side so the primary key, which is "C", serves the lookup.
+	const snapshot =
+		snapshotVersion === undefined
+			? null
+			: sql`snap AS (
+		SELECT s.state
+		FROM subject_snapshots s
+		WHERE s.org_id = ${ctx.orgId} COLLATE "C"
+			AND s.env = ${ctx.env} COLLATE "C"
+			AND s.customer_id = ${customerId} COLLATE "C"
+			AND s.entity_id = ${entityId ?? ""} COLLATE "C"
+			AND s.state_version = ${snapshotVersion}
+			AND jsonb_typeof(s.state) = 'object'
+	),
+	`;
+	const rowsOnlyOnMiss = snapshot !== null && !rowsBesideSnapshot;
+
 	return sql`
-	WITH customer_record AS (
+	WITH ${snapshot ?? sql``}customer_record AS (
 		SELECT c.*
 		FROM customers c
 		WHERE c.org_id = ${ctx.orgId}
@@ -192,7 +216,7 @@ export const subjectRowsSql = ({
 			AND ${customerOwnedOnly}
 	)
 
-	SELECT json_build_object(
+	SELECT ${snapshot ? sql`(SELECT state FROM snap) AS snapshot, ` : sql``}${rowsOnlyOnMiss ? sql`CASE WHEN NOT EXISTS (SELECT 1 FROM snap) THEN ` : sql``}json_build_object(
 		'customer', (SELECT row_to_json(c) FROM customer_record c),
 		'customer_products', COALESCE(
 			(SELECT json_agg(row_to_json(cp) ORDER BY cp.created_at DESC, cp.id) FROM subject_customer_products cp),
@@ -231,6 +255,6 @@ export const subjectRowsSql = ({
 			'[]'::json
 		),
 		'entity', (SELECT row_to_json(e) FROM entity_record e)
-	) AS envelope
+	) ${rowsOnlyOnMiss ? sql`END ` : sql``}AS envelope
 `;
 };
