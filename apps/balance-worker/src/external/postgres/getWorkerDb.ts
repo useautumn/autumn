@@ -14,6 +14,7 @@ import {
 	type PostgresClient,
 	type PostgresClientConfig,
 	type PostgresLogger,
+	readEntitySubjectSnapshots,
 	readPartitionProgress,
 	readSubjectSnapshot,
 	sumPooledContributionGrants,
@@ -110,6 +111,29 @@ export const createWorkerDb = ({
 				snapshot === null ? { misses: 1 } : { hits: 1 },
 			);
 			return snapshot;
+		}),
+	readEntitySubjectSnapshots: ({ identity, entityIds }) =>
+		ctx.subjectLoads.run(async () => {
+			const snapshots = await timeQuery({
+				ctx,
+				kind: "subject_snapshot",
+				run: () =>
+					readEntitySubjectSnapshots({
+						ctx: {
+							db: ctx.postgres.db,
+							orgId: identity.orgId,
+							env: identity.env,
+						},
+						customerId: identity.customerId,
+						entityIds,
+						stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+					}),
+			});
+			ctx.timings.recordSubjectSnapshots({
+				hits: snapshots.size,
+				misses: entityIds.length - snapshots.size,
+			});
+			return snapshots;
 		}),
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>

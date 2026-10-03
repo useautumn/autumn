@@ -1,13 +1,8 @@
-import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
+import type { MeteringIdentity } from "@autumn/balance-engine";
 import type { EdgeConfigStore } from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
 import type { SubjectSnapshotsEdgeConfig } from "../../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
-
-/** A subject's rows read whole, and when: what a refresh writes back as its snapshot row. */
-export type SubjectRefreshRead = {
-	baseline: SubjectState;
-	baselineAt: number;
-};
+import type { SubjectRead } from "../../types/subjectRead.js";
 
 export type SnapshotRefreshCounts = {
 	/** Subjects taken into the queue; a subject already waiting is not counted twice. */
@@ -21,14 +16,15 @@ export type SnapshotRefreshCounts = {
 };
 
 export type SnapshotRefreshQueueContext = {
-	/** The subject's rows as Postgres holds them now; null when the subject is gone. */
-	read(params: {
-		identity: MeteringIdentity;
-	}): Promise<SubjectRefreshRead | null>;
+	/** The subject's rows as Postgres holds them now; null when there is nothing to write back. */
+	read(params: { identity: MeteringIdentity }): Promise<SubjectRead | null>;
 	/** Synchronous, never a Promise: the queue does not await it. An enqueue onto the lane, which is sync. */
-	write(params: { identity: MeteringIdentity; read: SubjectRefreshRead }): void;
+	write(params: { identity: MeteringIdentity; read: SubjectRead }): void;
 	/** Read at each decision: `refreshConcurrency` as a read is started, `refreshMaxPending` as a subject is queued. */
-	subjectSnapshotsConfig: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	subjectSnapshotsConfig: Pick<
+		EdgeConfigStore<SubjectSnapshotsEdgeConfig>,
+		"get"
+	>;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };
 
