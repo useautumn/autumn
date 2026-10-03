@@ -28,7 +28,7 @@ describe("createWorkerDb", () => {
 
 		expect(
 			await db.getSubjectRows({ identity, asOfTimestampMs: 1_700_000_000_000 }),
-		).toEqual({ snapshot: null, envelope: null });
+		).toBeNull();
 		expect(gated).toEqual(["subject_rows"]);
 		expect(timings.drain().queries.subject_rows).toMatchObject({ count: 1 });
 	});

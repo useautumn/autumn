@@ -55,7 +55,7 @@ if (SHAPE === "realistic") {
 			customerId: `snap_a_${index + 1}`,
 			entityId: null,
 		};
-		const { envelope } = await getSubjectRows({
+		const envelope = await getSubjectRows({
 			ctx: { db: postgres.db, orgId: identity.orgId, env: identity.env },
 			customerId: identity.customerId,
 			entityId: null,
