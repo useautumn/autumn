@@ -6,6 +6,7 @@ import {
 } from "@autumn/dynamodb";
 import { classifyQueuedFailure } from "./settleQueuedFailure.js";
 import type { ConsumeContext } from "./types/consume.js";
+import type { QueuedCommand } from "./types/queuedCommand.js";
 
 /** The item owns its claim: its fan-out commands and redeliveries resume it, any other item is a duplicate. */
 const claimOf = ({
@@ -29,35 +30,34 @@ const claimOf = ({
 const isRefusal = (cause: unknown): boolean =>
 	classifyQueuedFailure({ cause }) === "refused";
 
-/** A queued track: claim the item's key, run it, describe the verdict. Failures go to the stream's boundary. */
+/** A queued track: claim the item's key, then decide it in arrival order. Null when another item holds the key. */
 export async function consumeTrack({
 	ctx,
 	command,
 }: {
 	ctx: ConsumeContext;
 	command: TrackCommand;
-}): Promise<void> {
-	const fields = {
-		commandId: command.commandId,
-		requestId: command.requestId,
-		customerId: command.identity.customerId,
-		featureId: command.featureId,
-	};
-	const reply = await withIdempotencyKey({
+}): Promise<QueuedCommand | null> {
+	const claim = claimOf({ command });
+	const decided = await withIdempotencyKey({
 		store: ctx.idempotencyKeys,
-		claim: claimOf({ command }),
-		run: () => ctx.processor.track({ command }),
+		claim,
+		run: () => ctx.processor.decideTrack({ command }),
 		onDuplicate: () => null,
 		releaseOnError: isRefusal,
 	});
-	if (reply === null)
-		ctx.logger?.info(
-			"Queued track skipped: idempotency key already used",
-			fields,
-		);
-	else if (reply.result.status !== "applied")
-		ctx.logger?.warn("Queued track rejected by the balance", {
-			...fields,
-			reason: reply.result.reason,
+	if (decided === null) {
+		ctx.logger?.info("Queued track skipped: idempotency key already used", {
+			commandId: command.commandId,
+			requestId: command.requestId,
+			customerId: command.identity.customerId,
+			featureId: command.featureId,
 		});
+		return null;
+	}
+	/** A commit the store refused is consumed, never retried: free the key so the item can be sent again. */
+	async function releaseClaim(): Promise<void> {
+		if (claim) await ctx.idempotencyKeys.release(claim);
+	}
+	return { decided, onRefused: releaseClaim };
 }

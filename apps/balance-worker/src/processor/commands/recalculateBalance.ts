@@ -26,7 +26,7 @@ export async function recalculateBalance({
 	const decided = scope.ctx.writer.decide<RecalculateBalanceReply>({
 		command,
 		durability: "store",
-		mutate: ({ state }) => decideRecalculateBalance({ scope, state, command }),
+		mutate: ({ state }) => mutateRecalculateBalance({ scope, state, command }),
 	});
 	const committed = await decided.waitForCommit();
 	if (!("mutation" in committed)) {
@@ -58,7 +58,7 @@ async function previewRecalculateBalance({
 }
 
 /** Runs inside the writer's critical section: no await, no I/O. */
-function decideRecalculateBalance({
+function mutateRecalculateBalance({
 	scope,
 	state,
 	command,
