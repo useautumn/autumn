@@ -4,11 +4,13 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
+import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
 import {
 	migrationItemRunRepo,
 	migrationRunRepo,
 } from "@/internal/migrations/v2/repos/index.js";
-import { waitForMigrationResult } from "../../utils/runUpdatePlanMigration.js";
+import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
 
 const CUSTOMER_COUNT = 10;
 
@@ -75,50 +77,45 @@ test.concurrent(
 			no_billing_changes: true,
 		});
 
-		const runResponse = await autumnV2_2.migrationsV2.run({
-			id: migration.id,
-			dry_run: false,
-			concurrency: 1,
+		// In-process run with one page per chunk: cancel_run lands on the live
+		// run after page 1 commits, so the next chunk's cancel gate always sees it.
+		const { migrationRunId } = await withMigrationRunClaim({
+			ctx,
+			migration,
+			dryRun: false,
+			claimed: async () => undefined,
 		});
-
-		// Wait until the page is claimed, then cancel while it executes so the
-		// loop's next cancel check — after the page commits — sees the request.
-		await waitForMigrationResult({
-			timeoutMs: 30_000,
-			pollIntervalMs: 150,
-			waitFor: async () => {
-				const counts = await migrationItemRunRepo.getCounts({
+		let cancelResponse: { canceled: boolean } | undefined;
+		const result = await runMigrationInChunks({
+			ctx,
+			migration,
+			migrationRunId,
+			dryRun: false,
+			runBatchChunk: async (payload) => {
+				const chunkResult = await runBatchMigrationChunk({
 					ctx,
-					migrationInternalId: migration.internal_id,
-					dryRun: false,
-					migrationRunId: runResponse.run_id,
+					migration: payload.migration,
+					migrationRunId: payload.migrationRunId,
+					plan: payload.plan,
+					afterInternalId: payload.cursor,
+					maxPages: 1,
+					webhooks: payload.webhooks,
+					controls: payload.controls,
 				});
-				expect(counts.total).toBeGreaterThanOrEqual(1);
+				cancelResponse ??= await autumnV2_2.migrationsV2.cancelRun({
+					id: migration.id,
+				});
+				return chunkResult;
 			},
 		});
 
-		const cancel = await autumnV2_2.migrationsV2.cancelRun({
-			id: migration.id,
-		});
-		expect(cancel.canceled).toBe(true);
-
-		await waitForMigrationResult({
-			timeoutMs: 60_000,
-			pollIntervalMs: 500,
-			waitFor: async () => {
-				const [run] = await migrationRunRepo.list({
-					ctx,
-					internalId: runResponse.run_id,
-				});
-				if (!run) throw new Error("Run not found");
-				if (run.status !== MigrationRunStatus.Canceled)
-					throw new Error(`Run still ${run.status}`);
-			},
-		});
+		expect(cancelResponse?.canceled).toBe(true);
+		expect(result.lane).toBe("batch");
+		expect(result.canceled).toBe(true);
 
 		const [run] = await migrationRunRepo.list({
 			ctx,
-			internalId: runResponse.run_id,
+			internalId: migrationRunId,
 		});
 		expect(run.status).toBe(MigrationRunStatus.Canceled);
 		expect(run.error_message).toBe("Canceled by user");
@@ -127,7 +124,7 @@ test.concurrent(
 			ctx,
 			migrationInternalId: migration.internal_id,
 			dryRun: false,
-			migrationRunId: runResponse.run_id,
+			migrationRunId,
 		});
 
 		// The in-flight page finished in full — the run stopped at the boundary
