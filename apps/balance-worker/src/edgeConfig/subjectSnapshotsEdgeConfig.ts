@@ -16,6 +16,10 @@ export const SubjectSnapshotsEdgeConfigSchema = z
 		maxBytes: z.number().int().positive().default(262_144),
 		/** Customers one evict DELETE carries; a storm of evicts lands as this many per statement. */
 		dropBatch: z.number().int().positive().max(5_000).default(500),
+		/** Rows an evict rebuilds at once per partition; the worker's subject-load gate still bounds what reaches Postgres. */
+		refreshConcurrency: z.number().int().positive().max(1_000).default(50),
+		/** Past this many subjects waiting to be rebuilt, a partition drops further ones: they miss once on their next cold load. */
+		refreshMaxPending: z.number().int().positive().default(10_000),
 	})
 	.strict();
 
@@ -29,6 +33,8 @@ export const defaultSubjectSnapshotsEdgeConfig =
 		mode: "off",
 		maxBytes: 262_144,
 		dropBatch: 500,
+		refreshConcurrency: 50,
+		refreshMaxPending: 10_000,
 	});
 
 export const subjectSnapshotsEdgeConfig = {
