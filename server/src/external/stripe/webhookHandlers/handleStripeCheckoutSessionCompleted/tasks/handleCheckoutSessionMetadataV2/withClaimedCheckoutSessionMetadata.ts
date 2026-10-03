@@ -104,7 +104,7 @@ const revertMetadataClaim = async ({
 	}).catch((revertError) => {
 		ctx.logger.error(
 			`[checkout.completed] Failed to revert metadata claim for ${metadataId}`,
-			{ revertError },
+			{ error_type: "checkout_metadata_claim_revert_failed", revertError },
 		);
 	});
 };

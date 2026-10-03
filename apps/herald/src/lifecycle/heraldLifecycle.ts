@@ -65,7 +65,11 @@ async function finishStop({
 
 	function forceExit(): void {
 		ctx.logger.error(
-			{ type: "herald_stop_forced", data: { stopBudgetMs: ctx.stopBudgetMs } },
+			{
+				type: "herald_stop_forced",
+				error_type: "herald_stop_forced",
+				data: { stopBudgetMs: ctx.stopBudgetMs },
+			},
 			"Herald stop exceeded its budget; exiting anyway",
 		);
 		void exitHerald({ ctx, code: 1 });
