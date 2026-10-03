@@ -6,6 +6,7 @@ export * from "@autumn/ui/components/general/copy-button";
 export * from "@autumn/ui/components/general/copy-text-button";
 export * from "@autumn/ui/components/general/copyable-pre";
 export * from "@autumn/ui/components/general/date-input-unix";
+export * from "@autumn/ui/components/general/dropdown-menu-search-input";
 export * from "@autumn/ui/components/general/field-label";
 export * from "@autumn/ui/components/general/form-label";
 export * from "@autumn/ui/components/general/grouped-tab-button";

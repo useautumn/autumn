@@ -3,9 +3,10 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSearchInput,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
-import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -83,17 +84,11 @@ export function FeatureSearchDropdown({
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-(--anchor-width) p-0">
-				<div className="flex items-center gap-2 px-3 py-2 border-b border-border/40">
-					<MagnifyingGlassIcon className="size-3.5 text-subtle" />
-					<input
-						type="text"
-						placeholder="Search features..."
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						onKeyDown={(e) => e.stopPropagation()}
-						className="flex-1 bg-transparent text-xs outline-none placeholder:text-subtle"
-					/>
-				</div>
+				<DropdownMenuSearchInput
+					placeholder="Search features..."
+					value={search}
+					onChange={(event) => setSearch(event.target.value)}
+				/>
 				<div className={cn("max-h-56 overflow-y-auto p-1", listClassName)}>
 					{filteredFeatures.length === 0 ? (
 						<div className="py-3 text-center text-xs text-subtle">
