@@ -43,7 +43,9 @@ export const createCommitter = ({
 			);
 		const call: FlushCall = {
 			...params,
-			rows: countRowChanges({ records: params.records }),
+			rows:
+				countRowChanges({ records: params.records }) +
+				snapshotRowsOf({ config: scope.config, call: params }),
 			settle: Promise.withResolvers<FlushOutcome>(),
 		};
 		scope.state.queue.push(call);
@@ -120,5 +122,20 @@ function countRowChanges({
 }): number {
 	let rows = 0;
 	for (const record of records) rows += record.mutation.changes.length;
+	return rows;
+}
+
+/** Rows the call's snapshot intent adds to its flush: one per state written, one per customer deleted. */
+function snapshotRowsOf({
+	config,
+	call,
+}: {
+	config: Pick<CommitterConfig, "snapshots">;
+	call: Pick<FlushCall, "snapshotIntent">;
+}): number {
+	if (!config.snapshots) return 0;
+	let rows = 0;
+	for (const entry of call.snapshotIntent?.values() ?? [])
+		rows += entry === "delete" ? 1 : entry.states.length;
 	return rows;
 }
