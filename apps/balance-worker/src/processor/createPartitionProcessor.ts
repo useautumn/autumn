@@ -20,14 +20,26 @@ import { check as checkPartition } from "./commands/check.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { deleteBalance as deleteBalancePartition } from "./commands/deleteBalance.js";
 import { evict as evictPartition } from "./commands/evict.js";
-import { finalize as finalizePartition } from "./commands/finalize.js";
+import {
+	decideFinalize as decideFinalizePartition,
+	finalize as finalizePartition,
+} from "./commands/finalize.js";
 import { flush as flushPartition } from "./commands/flush.js";
 import { initialize as initializePartition } from "./commands/initialize.js";
 import { readSubjectState as readSubjectStatePartition } from "./commands/readSubjectState.js";
 import { recalculateBalance as recalculateBalancePartition } from "./commands/recalculateBalance.js";
-import { reset as resetPartition } from "./commands/reset.js";
-import { track as trackPartition } from "./commands/track.js";
-import { updateBalance as updateBalancePartition } from "./commands/updateBalance.js";
+import {
+	decideReset as decideResetPartition,
+	reset as resetPartition,
+} from "./commands/reset.js";
+import {
+	decideTrack as decideTrackPartition,
+	track as trackPartition,
+} from "./commands/track.js";
+import {
+	decideUpdateBalance as decideUpdateBalancePartition,
+	updateBalance as updateBalancePartition,
+} from "./commands/updateBalance.js";
 import {
 	acceptCommand,
 	createAcceptedCommands,
@@ -95,6 +107,13 @@ function createProcessor({
 		});
 	}
 
+	function decideTrack({ command }: { command: TrackCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: decideTrackPartition({ scope, command }),
+		});
+	}
+
 	function check({ command }: { command: CheckCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -137,6 +156,13 @@ function createProcessor({
 		});
 	}
 
+	function decideFinalize({ command }: { command: FinalizeCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: decideFinalizePartition({ scope, command }),
+		});
+	}
+
 	function confirmExpiredLock({
 		command,
 	}: {
@@ -155,6 +181,13 @@ function createProcessor({
 		});
 	}
 
+	function decideReset({ command }: { command: ResetCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: decideResetPartition({ scope, command }),
+		});
+	}
+
 	/** Commands settle when Kafka has them, but the store applies behind the log:
 	 *  a "log" reply lands before its store apply, so a drained partition waits for
 	 *  the current store completion and for every batch handed to the store before it lets go. */
@@ -162,6 +195,13 @@ function createProcessor({
 		return acceptCommand({
 			accepted: scope.accepted,
 			operation: updateBalancePartition({ scope, command }),
+		});
+	}
+
+	function decideUpdateBalance({ command }: { command: UpdateBalanceCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: decideUpdateBalancePartition({ scope, command }),
 		});
 	}
 
@@ -242,6 +282,7 @@ function createProcessor({
 		execute,
 		dispose: () => scope.ctx.writer.dispose(),
 		track,
+		decideTrack,
 		check,
 		applyBillingPlan,
 		readSubjectState,
@@ -249,9 +290,12 @@ function createProcessor({
 		evict,
 		flush,
 		finalize,
+		decideFinalize,
 		confirmExpiredLock,
 		reset,
+		decideReset,
 		updateBalance,
+		decideUpdateBalance,
 		deleteBalance,
 		recalculateBalance,
 		drain,

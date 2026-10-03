@@ -131,6 +131,9 @@ const fixture = ({
 			if (itemCause) throw itemCause;
 			return trackReply;
 		},
+		decideTrack: async () => {
+			throw new Error("Queued tracks are not configured in this fixture");
+		},
 		check: async ({ command }) => ({
 			result: computeCheck({
 				fullSubject: createSubjectFor({ state }),
@@ -148,13 +151,22 @@ const fixture = ({
 		finalize: async () => {
 			throw new Error("Finalize is not configured in this fixture");
 		},
+		decideFinalize: async () => {
+			throw new Error("Finalize is not configured in this fixture");
+		},
 		confirmExpiredLock: async () => {
 			throw new Error("Expire lock is not configured in this fixture");
 		},
 		reset: async () => {
 			throw new Error("Reset is not configured in this fixture");
 		},
+		decideReset: async () => {
+			throw new Error("Reset is not configured in this fixture");
+		},
 		updateBalance: async () => {
+			throw new Error("Update balance is not configured in this fixture");
+		},
+		decideUpdateBalance: async () => {
 			throw new Error("Update balance is not configured in this fixture");
 		},
 		deleteBalance: async () => {
