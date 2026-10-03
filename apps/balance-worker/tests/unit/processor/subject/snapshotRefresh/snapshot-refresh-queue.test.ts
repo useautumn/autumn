@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import { createSnapshotRefreshQueue } from "../../../../../src/processor/subject/snapshotRefresh/createSnapshotRefreshQueue.js";
-import type { SubjectRefreshRead } from "../../../../../src/processor/subject/snapshotRefresh/types/snapshotRefreshQueue.js";
+import type { SubjectRead } from "../../../../../src/processor/subject/types/subjectRead.js";
 import { createState } from "../../../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../../../fixtures/subjectSnapshotsStore.js";
 
@@ -25,7 +25,7 @@ const createScriptedReads = () => {
 	const started: string[] = [];
 	const written: string[] = [];
 	const warnings: unknown[] = [];
-	const releases = new Map<string, (read: SubjectRefreshRead | null) => void>();
+	const releases = new Map<string, (read: SubjectRead | null) => void>();
 	const rejects = new Map<string, (cause: unknown) => void>();
 	const queue = createSnapshotRefreshQueue({
 		ctx: {
@@ -46,7 +46,7 @@ const createScriptedReads = () => {
 			logger: { warn: (...args: unknown[]) => warnings.push(args) },
 		},
 	});
-	const readOf = (subject: string): SubjectRefreshRead => ({
+	const readOf = (subject: string): SubjectRead => ({
 		baseline: createState({
 			identity: {
 				...customer(subject.split("/")[0] as string),
@@ -57,7 +57,7 @@ const createScriptedReads = () => {
 	});
 	const release = async (
 		subject: string,
-		read: SubjectRefreshRead | null = readOf(subject),
+		read: SubjectRead | null = readOf(subject),
 	) => {
 		const resolve = releases.get(subject);
 		if (!resolve) throw new Error(`no read in flight for ${subject}`);
