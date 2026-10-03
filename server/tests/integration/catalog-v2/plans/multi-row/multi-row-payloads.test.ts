@@ -14,7 +14,7 @@
  * Contract:
  *   B1  N rows of one plan → N intents, and derived fan-out claims none of
  *       the rows the payload named (explicit beats derived)
- *   B2  a brand-new plan can be created with its whole history in one request
+ *   B2  a brand-new plan's whole history previews and applies as creates
  *   B3  an unknown version_slug with no internal_id mints a version, rather
  *       than being rejected as unknown
  *   B4  two entries pinning the same version is still an error
@@ -35,6 +35,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { withCatalogPlans } from "../licenses/utils/seedLicensePlans.js";
+import { expectPlanPreviewRowsCorrect } from "../preview/utils/expectPlanPreview.js";
 
 const messagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,
@@ -70,11 +71,7 @@ test.concurrent(
 			ctx,
 			planIds: [planId],
 			run: async () => {
-				// B2 + B3: three rows of a plan that does not exist yet. Each names a
-				// slug nothing owns, which today is rejected twice over — once by the
-				// create-with-multiple-entries guard, once by the version gap check,
-				// since neither counts rows minted earlier in the same request.
-				await autumnV2_3.catalogV2.update({
+				const params = {
 					plans: [
 						{
 							plan_id: planId,
@@ -96,7 +93,18 @@ test.concurrent(
 							active: true,
 						},
 					],
+				};
+
+				// Rows folded earlier in this request are not pre-existing catalog history.
+				expectPlanPreviewRowsCorrect({
+					preview: await autumnV2_3.catalogV2.previewUpdate(params),
+					expected: [
+						{ planId, currentVersion: 1, action: "create" },
+						{ planId, currentVersion: 2, action: "create" },
+						{ planId, currentVersion: 3, action: "create" },
+					],
 				});
+				await autumnV2_3.catalogV2.update(params);
 
 				const versions = await versionsOf({ ctx, planId });
 				expect(
