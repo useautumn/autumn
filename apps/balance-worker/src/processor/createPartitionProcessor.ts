@@ -89,6 +89,8 @@ export function createPartitionProcessor({
 			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
 			snapshotQueues: dependencies.stateStore.snapshotQueues,
 			position: { topic: config.topic, partition: config.partition },
+			readNextOffset: (position) =>
+				dependencies.stateStore.readNextOffset(position),
 			logger: dependencies.logger,
 		},
 	});

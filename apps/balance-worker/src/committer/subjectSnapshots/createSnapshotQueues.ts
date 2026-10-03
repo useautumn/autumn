@@ -19,10 +19,11 @@ import type { SnapshotQueues } from "./types/snapshotQueues.js";
  */
 export const SNAPSHOT_LANE_MAX_PENDING = 10_000;
 
-/** One customer's refreshed subjects waiting for a tick; `baselineAt` is the earliest read among them. */
+/** One customer's refreshed subjects waiting for a tick; `baselineAt` and `logOffset` are the earliest read's among them. */
 type PendingRefreshes = {
 	states: Map<string, SubjectState>;
 	baselineAt: number;
+	logOffset: bigint;
 };
 
 /** Settled by the tick that ran the customer's DELETE with the rows it removed: what an evict rebuilds once they are gone. */
@@ -112,11 +113,13 @@ export const createSnapshotQueues = ({
 		partition,
 		state,
 		baselineAt,
+		logOffset,
 	}: {
 		topic: string;
 		partition: number;
 		state: SubjectState;
 		baselineAt: number;
+		logOffset: bigint;
 	}): void {
 		const writes = writesWhenOn({ position: { topic, partition } });
 		if (!writes) return;
@@ -132,9 +135,10 @@ export const createSnapshotQueues = ({
 		if (!alreadyPending && !hasRoom({ writes, position: { topic, partition } }))
 			return;
 		if (!alreadyPending) writes.pendingCount += 1;
-		const refreshes = pending ?? { states: new Map(), baselineAt };
+		const refreshes = pending ?? { states: new Map(), baselineAt, logOffset };
 		refreshes.states.set(subjectKey, state);
 		refreshes.baselineAt = Math.min(refreshes.baselineAt, baselineAt);
+		if (logOffset < refreshes.logOffset) refreshes.logOffset = logOffset;
 		writes.refreshes.set(customerKey, refreshes);
 		scheduleTick({ position: { topic, partition }, writes });
 	}
@@ -311,7 +315,11 @@ function takeWrites({
 		}
 		if (pending.states.size === 0) writes.refreshes.delete(customerKey);
 		room -= states.length;
-		taken.set(customerKey, { states, baselineAt: pending.baselineAt });
+		taken.set(customerKey, {
+			states,
+			baselineAt: pending.baselineAt,
+			logOffset: pending.logOffset,
+		});
 	}
 	writes.pendingCount -= batch - room;
 	return taken;

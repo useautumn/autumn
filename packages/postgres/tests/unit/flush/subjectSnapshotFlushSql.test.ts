@@ -81,6 +81,10 @@ describe("flushSql subject snapshots", () => {
 		expect(sql).toContain(
 			"ON CONFLICT (org_id, env, customer_id, entity_id) DO UPDATE SET",
 		);
+		// A row from an older log never replaces a newer one; a row of unknown lineage, either way, is replaced.
+		expect(sql).toContain(
+			"log_offset = EXCLUDED.log_offset WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset RETURNING 1",
+		);
 		// A row whose customer or entity is gone is skipped, never an FK error that fails the flush.
 		expect(sql).toContain(
 			"WHERE EXISTS (SELECT 1 FROM customers c WHERE c.internal_id = v.internal_customer_id) AND (v.internal_entity_id IS NULL OR EXISTS (SELECT 1 FROM entities e WHERE e.internal_id = v.internal_entity_id))",

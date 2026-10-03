@@ -1973,6 +1973,7 @@ describe("partition writer", () => {
 			const appender = new RecordingCommittedAppender();
 			const stateStore = {
 				baseline: "log" as const,
+				readNextOffset: fixture.store.readNextOffset.bind(fixture.store),
 				readCommandNextOffset: fixture.store.readCommandNextOffset,
 				advanceCommandNextOffset: fixture.store.advanceCommandNextOffset,
 				readState: fixture.store.readState.bind(fixture.store),

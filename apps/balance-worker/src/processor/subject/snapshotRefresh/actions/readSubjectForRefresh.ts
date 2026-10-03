@@ -6,7 +6,7 @@ import {
 import { readSubjectRows } from "../../actions/ensureSubject/readSubjectRows.js";
 import { SubjectNotFoundError } from "../../subjectErrors.js";
 import type { SubjectScope } from "../../types/subject.js";
-import type { SubjectRead } from "../../types/subjectRead.js";
+import type { SnapshotRefreshRead } from "../types/snapshotRefreshQueue.js";
 
 const ignoreOthersFailure = (): void => {};
 
@@ -20,9 +20,11 @@ export const readSubjectForRefresh = async ({
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
-}): Promise<SubjectRead | null> => {
+}): Promise<SnapshotRefreshRead | null> => {
 	const { inFlightLoads } = scope.state;
 	const subjectKey = meteringIdentityToSubjectKey({ identity });
+	// Taken before the read: a flush landing while it runs has a later offset, so its row outranks this one.
+	const logOffset = bookmarkOf({ scope }) - 1n;
 	for (
 		let running = inFlightLoads.inFlight({ subjectKey });
 		running;
@@ -36,9 +38,15 @@ export const readSubjectForRefresh = async ({
 			start: () => readSubjectRows({ scope, identity, rowsOnly: true }),
 		});
 		// A read an evict overtook may predate the write behind it: the evict's own refresh follows.
-		return load.overtaken ? null : read;
+		return load.overtaken ? null : { ...read, logOffset };
 	} catch (cause) {
 		if (cause instanceof SubjectNotFoundError) return null;
 		throw cause;
 	}
+};
+
+/** The partition's bookmark as the store holds it; zero on a store or hydrator that keeps none, where no refresh is written. */
+const bookmarkOf = ({ scope }: { scope: SubjectScope }): bigint => {
+	const { readNextOffset, position } = scope.ctx;
+	return (position && readNextOffset?.(position)) ?? 0n;
 };

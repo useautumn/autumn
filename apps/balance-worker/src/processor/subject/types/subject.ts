@@ -39,6 +39,8 @@ export type SubjectHydratorContext = {
 	snapshotQueues?: StateStore["snapshotQueues"];
 	/** The partition the hydrator serves, where its refreshes land. */
 	position?: PartitionPosition;
+	/** The partition's bookmark as the store holds it, read as a refresh begins: the log its row is good for. */
+	readNextOffset?: StateStore["readNextOffset"];
 	/** Defaults to "log", the sqlite store's answer. */
 	baseline?: SubjectBaseline;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;

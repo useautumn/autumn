@@ -18,11 +18,15 @@ export type SnapshotQueues = {
 		partition: number;
 		customerKey: string;
 	}): Promise<DeletedSubjectSnapshot[]>;
-	/** One subject's rows read whole after an evict, written as its row so the next cold load is a hit; lands after any DELETE pending for the customer. */
+	/**
+	 * One subject's rows read whole after an evict, written as its row so the next cold load is a hit; lands after any
+	 * DELETE pending for the customer, and never over a row from a later log than `logOffset`, the last the read includes.
+	 */
 	enqueueRefresh(params: {
 		topic: string;
 		partition: number;
 		state: SubjectState;
 		baselineAt: number;
+		logOffset: bigint;
 	}): void;
 };
