@@ -153,6 +153,13 @@ describe("newly supplied Stripe key validation", () => {
 
 	test.each([
 		[
+			new Stripe.errors.StripeAuthenticationError({
+				type: "invalid_request_error",
+				message: "Unrelated authentication rejection",
+			}),
+			"bug",
+		],
+		[
 			new Stripe.errors.StripeConnectionError({
 				type: "api_error",
 				message: "Connection failed after retries",
@@ -220,6 +227,40 @@ describe("newly supplied Stripe key validation", () => {
 			expect(listCustomers).toHaveBeenCalledTimes(
 				stage === "downstream" ? 1 : 0,
 			);
+		},
+	);
+
+	test.each(["downstream", "stored"] as const)(
+		"does not treat known key rejections from %s operations as validation errors",
+		async (stage) => {
+			for (const error of [
+				new Stripe.errors.StripeAuthenticationError({
+					type: "invalid_request_error",
+					message: "Invalid API Key provided: synthetic",
+				}),
+				new Stripe.errors.StripePermissionError({
+					type: "invalid_request_error",
+					message: "A secret key is required",
+					code: "secret_key_required",
+				}),
+			]) {
+				captureException.mockClear();
+				if (stage === "downstream") retrieveAccount.mockRejectedValue(error);
+				else ensureProducts.mockRejectedValue(error);
+				const response = await connectStripe(
+					stage === "downstream" ? { secret_key: "sk_test_synthetic" } : {},
+				);
+				expect(response.status).toBe(400);
+				expect(await response.json()).toMatchObject({
+					code: ErrCode.StripeError,
+				});
+				expect(captureException).toHaveBeenCalledWith(
+					error,
+					expect.objectContaining({
+						tags: expect.objectContaining({ error_kind: "bug" }),
+					}),
+				);
+			}
 		},
 	);
 });
