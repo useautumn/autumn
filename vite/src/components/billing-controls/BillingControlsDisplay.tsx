@@ -2,6 +2,7 @@ import type {
 	ApiUsageLimit,
 	AutoTopup,
 	AutoTopupResponse,
+	BalanceAllocationControl,
 	BillingControlKey,
 	CustomerBillingControls,
 	DbSpendLimit,
@@ -36,7 +37,8 @@ type ControlLine = ControlRef & { item: BillingControlItem };
 
 type FeatureLine =
 	| { kind: "single"; control: ControlLine }
-	| { kind: "alerts"; alerts: Array<ControlLine & { item: DbUsageAlert }> };
+	| { kind: "alerts"; alerts: Array<ControlLine & { item: DbUsageAlert }> }
+	| { kind: "allocation"; allocation: BalanceAllocationControl };
 
 type FeatureCard = { featureId: string | undefined; lines: FeatureLine[] };
 
@@ -131,9 +133,11 @@ const alertThresholdLabel = (alert: DbUsageAlert) => {
 
 const buildFeatureCards = ({
 	billingControls,
+	balanceAllocations,
 	featureNameById,
 }: {
-	billingControls: CustomerBillingControls;
+	billingControls?: CustomerBillingControls | null;
+	balanceAllocations: BalanceAllocationControl[];
 	featureNameById: Map<string, string>;
 }): FeatureCard[] => {
 	const cardsByFeature = new Map<string, FeatureCard>();
@@ -146,8 +150,15 @@ const buildFeatureCards = ({
 		return card;
 	};
 
+	for (const allocation of balanceAllocations) {
+		cardFor(allocation.feature_id).lines.push({
+			kind: "allocation",
+			allocation,
+		});
+	}
+
 	for (const key of KEY_ORDER) {
-		const items = (billingControls[key] ?? []) as BillingControlItem[];
+		const items = (billingControls?.[key] ?? []) as BillingControlItem[];
 		items.forEach((item, index) => {
 			const card = cardFor(item.feature_id);
 			if (key !== "usage_alerts") {
@@ -268,6 +279,29 @@ const AutoTopupSummary = ({
 	);
 };
 
+const AllocationSummary = ({
+	allocation,
+}: {
+	allocation: BalanceAllocationControl;
+}) => {
+	const count = allocation.allocations.length;
+	const totalAllocated = allocation.allocations.reduce(
+		(total, { amount }) => total + amount,
+		0,
+	);
+	const interval = allocation.interval.replace("_", " ");
+	const intervalLabel = interval.charAt(0).toUpperCase() + interval.slice(1);
+	return (
+		<>
+			<StatusChip className="shrink-0">{intervalLabel}</StatusChip>
+			<span className="min-w-0 truncate text-tertiary-foreground">
+				{count} {count === 1 ? "Allocation" : "Allocations"} ·{" "}
+				{totalAllocated.toLocaleString()} Total Allocated
+			</span>
+		</>
+	);
+};
+
 const ControlSummary = ({ control }: { control: ControlLine }) => {
 	switch (control.key) {
 		case "usage_limits":
@@ -292,6 +326,7 @@ const ControlSummary = ({ control }: { control: ControlLine }) => {
 };
 
 type ListCallbacks = {
+	onEditAllocation?: (allocation: BalanceAllocationControl) => void;
 	onEdit?: (args: ControlRef & { item: BillingControlItem }) => void;
 	onOpenAlerts?: (args: { featureId: string | undefined }) => void;
 	getRowBadge?: (args: ControlRef & { item: BillingControlItem }) => ReactNode;
@@ -476,7 +511,7 @@ const isEditingLine = ({
 	line: FeatureLine;
 	editingRow?: ControlRef;
 }) => {
-	if (!editingRow) return false;
+	if (!editingRow || line.kind === "allocation") return false;
 	if (line.kind === "single") {
 		return (
 			line.control.key === editingRow.key &&
@@ -492,10 +527,10 @@ const COUNT_LABELS: Record<
 	Exclude<BillingControlKey, "overage_allowed">,
 	[string, string]
 > = {
-	usage_limits: ["usage limit", "usage limits"],
-	spend_limits: ["spend limit", "spend limits"],
-	usage_alerts: ["usage alert", "usage alerts"],
-	auto_topups: ["auto top-up", "auto top-ups"],
+	usage_limits: ["Usage Limit", "Usage Limits"],
+	spend_limits: ["Spend Limit", "Spend Limits"],
+	usage_alerts: ["Usage Alert", "Usage Alerts"],
+	auto_topups: ["Auto Top-up", "Auto Top-ups"],
 };
 
 const featureSummary = (card: FeatureCard) => {
@@ -503,7 +538,8 @@ const featureSummary = (card: FeatureCard) => {
 	for (const control of cardControls(card)) {
 		counts.set(control.key, (counts.get(control.key) ?? 0) + 1);
 	}
-	return KEY_ORDER.flatMap((key) => {
+	const hasAllocation = card.lines.some((line) => line.kind === "allocation");
+	const controlSummaries = KEY_ORDER.flatMap((key) => {
 		const count = counts.get(key);
 		if (!count) return [];
 		if (key === "overage_allowed") {
@@ -511,17 +547,23 @@ const featureSummary = (card: FeatureCard) => {
 				(control) =>
 					control.key === "overage_allowed" && isControlEnabled(control.item),
 			);
-			return allowsOverage ? "overage allowed" : "overage not allowed";
+			return allowsOverage ? "Overage Allowed" : "Overage Not Allowed";
 		}
 		const [singular, plural] = COUNT_LABELS[key];
 		return `${count} ${count === 1 ? singular : plural}`;
-	}).join(" · ");
+	});
+	return [
+		...(hasAllocation ? ["Balance Allocation"] : []),
+		...controlSummaries,
+	].join(" · ");
 };
 
 const cardControls = (card: FeatureCard): ControlLine[] =>
-	card.lines.flatMap((line) =>
-		line.kind === "alerts" ? line.alerts : [line.control],
-	);
+	card.lines.flatMap((line) => {
+		if (line.kind === "alerts") return line.alerts;
+		if (line.kind === "allocation") return [];
+		return [line.control];
+	});
 
 const cardKey = (card: FeatureCard) => card.featureId ?? "all-features";
 
@@ -595,8 +637,10 @@ const FeatureRow = ({
 
 export function BillingControlsList({
 	billingControls,
+	balanceAllocations = [],
 	featureNameById,
 	onEdit,
+	onEditAllocation,
 	onOpenAlerts,
 	renderFeatureActions,
 	editingRow,
@@ -609,6 +653,7 @@ export function BillingControlsList({
 	emptyText = "No billing controls configured",
 }: {
 	billingControls?: CustomerBillingControls | null;
+	balanceAllocations?: BalanceAllocationControl[];
 	featureNameById: Map<string, string>;
 	/** When set, a feature's alerts row opens one view instead of editing each alert. */
 	onOpenAlerts?: ListCallbacks["onOpenAlerts"];
@@ -623,11 +668,15 @@ export function BillingControlsList({
 } & Omit<ListCallbacks, "onOpenAlerts">) {
 	const [toggled, setToggled] = useState<Set<string>>(() => new Set());
 
-	if (!billingControls || !hasBillingControls(billingControls)) {
+	if (!hasBillingControls(billingControls) && balanceAllocations.length === 0) {
 		return <EmptyState className="h-12 min-h-0" text={emptyText} />;
 	}
 
-	const cards = buildFeatureCards({ billingControls, featureNameById });
+	const cards = buildFeatureCards({
+		billingControls,
+		balanceAllocations,
+		featureNameById,
+	});
 	const toggle = (key: string) =>
 		setToggled((previous) => {
 			const next = new Set(previous);
@@ -671,6 +720,22 @@ export function BillingControlsList({
 							{isExpanded && (
 								<div className="flex flex-col border-t border-table-row-divider bg-card py-1">
 									{card.lines.map((line) => {
+										if (line.kind === "allocation") {
+											return (
+												<SubRow
+													key="allocation"
+													label="Allocation"
+													slim={slim}
+													onClick={
+														onEditAllocation
+															? () => onEditAllocation(line.allocation)
+															: undefined
+													}
+												>
+													<AllocationSummary allocation={line.allocation} />
+												</SubRow>
+											);
+										}
 										const lineKey =
 											line.kind === "alerts"
 												? "alerts"
