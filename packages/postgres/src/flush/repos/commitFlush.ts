@@ -5,7 +5,11 @@ import { foldSubjectRowChanges } from "../../subjects/repos/applySubjectRowUpdat
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
 import { subjectRowChangeLanded } from "../../subjects/types/subjectRowChange.js";
 import type { PostgresDb } from "../../types/postgresClient.js";
-import type { FlushRequest, FlushResult } from "../types/flush.js";
+import type {
+	DeletedSubjectSnapshot,
+	FlushRequest,
+	FlushResult,
+} from "../types/flush.js";
 import { flushSql } from "./flushSql.js";
 
 /** A bookmark that no longer holds the offset the caller saw: another writer moved the partition. */
@@ -17,6 +21,27 @@ export class FlushBookmarkConflictError extends Error {
 }
 
 const count = z.union([z.number(), z.string(), z.bigint()]).transform(Number);
+const deletedSubjectSchema = z
+	.object({
+		org_id: z.string(),
+		env: z.string(),
+		customer_id: z.string(),
+		entity_id: z.string(),
+	})
+	.transform(
+		(row): DeletedSubjectSnapshot => ({
+			orgId: row.org_id,
+			env: row.env,
+			customerId: row.customer_id,
+			entityId: row.entity_id === "" ? null : row.entity_id,
+		}),
+	);
+const deletedSubjects = z.union([
+	z.array(deletedSubjectSchema),
+	z
+		.string()
+		.transform((text) => z.array(deletedSubjectSchema).parse(JSON.parse(text))),
+]);
 const outcomeSchema = z.object({
 	applied: z.union([
 		z.array(count),
@@ -24,7 +49,7 @@ const outcomeSchema = z.object({
 	]),
 	bookmarks: count,
 	snapshot_upserts: count.optional(),
-	snapshot_deletes: count.optional(),
+	snapshot_deletes: deletedSubjects.optional(),
 });
 
 /** Carries the outcome out of a transaction that must not commit: a stale row means nothing of the flush lands. */
@@ -81,7 +106,7 @@ export const commitFlush = async ({
 		applied,
 		snapshots: {
 			upserted: outcome.snapshot_upserts ?? 0,
-			deleted: outcome.snapshot_deletes ?? 0,
+			deleted: outcome.snapshot_deletes ?? [],
 		},
 	};
 };
@@ -140,7 +165,7 @@ const runFlushTransaction = async ({
 	} catch (cause) {
 		// Nothing of a rolled-back flush landed, its snapshot writes included.
 		if (cause instanceof FlushRolledBack)
-			return { ...cause.outcome, snapshot_upserts: 0, snapshot_deletes: 0 };
+			return { ...cause.outcome, snapshot_upserts: 0, snapshot_deletes: [] };
 		throw cause;
 	}
 };

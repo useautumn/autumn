@@ -2676,7 +2676,7 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			pick: (line: DatabaseLine) => number | undefined,
 		) => lines.reduce((sum, line) => sum + (pick(line) ?? 0), 0);
 
-		test("an evict asked to rebuild the row: the row is back within the lane tick, and a check after a restart is a hit with no full read", async () => {
+		test("an evict asked to rebuild the row: the row is back within the lane tick, a check after a restart is a hit with no full read; a rollback evict leaves no row and rebuilds nothing", async () => {
 			const isolated = await createHarness();
 			const customer = await seedCustomer({ postgres, balance: 100 });
 			let running: RunningWorker | undefined;
@@ -2783,6 +2783,27 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(
 					sumOf(served, (line) => line.data.queries.subject_rows?.count),
 				).toBe(0);
+
+				// A rollback's evict: the row goes and nothing rebuilds it, so legacy writes cannot be served stale later.
+				const rolledBackAt = Date.now();
+				await Bun.sleep(5);
+				await isolated.client.evict({
+					command: evictCommand({
+						customerId: customer.identity.customerId,
+						orgId: customer.orgId,
+						env: customer.env,
+						refreshSnapshots: false,
+					}),
+				});
+				expect(await readSnapshots({ postgres, customer })).toEqual([]);
+				const quiet = await waitForDatabaseLines({
+					running,
+					since: rolledBackAt,
+				});
+				expect(
+					sumOf(quiet, (line) => line.data.subjectSnapshots?.refreshes?.queued),
+				).toBe(0);
+				expect(await readSnapshots({ postgres, customer })).toEqual([]);
 			} finally {
 				await running?.stop();
 				await isolated.stop();

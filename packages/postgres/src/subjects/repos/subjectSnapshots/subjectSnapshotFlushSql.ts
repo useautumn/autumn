@@ -4,8 +4,8 @@ import type {
 	SubjectSnapshotWrites,
 } from "../../types/subjectSnapshot.js";
 
-/** COLLATE "C" on the probe side so the PK, which is "C", serves the join. */
-const snapshotDeletesCte = ({
+/** Every row of each customer goes, and the statement says which: the subjects an evict rebuilds. COLLATE "C" so the PK serves the join. */
+const deleteSubjectSnapshotsOfCustomersCte = ({
 	deletes,
 }: {
 	deletes: SubjectSnapshotWrites["deletes"];
@@ -23,7 +23,7 @@ const snapshotDeletesCte = ({
 			WHERE s.org_id = d.org_id COLLATE "C"
 				AND s.env = d.env COLLATE "C"
 				AND s.customer_id = d.customer_id COLLATE "C"
-			RETURNING 1
+			RETURNING s.org_id, s.env, s.customer_id, s.entity_id
 		)`;
 };
 
@@ -86,11 +86,15 @@ export const subjectSnapshotFlushSql = ({
 }: {
 	snapshots: SubjectSnapshotWrites;
 }): { ctes: SQL[]; upserted: SQL; deleted: SQL } => {
+	// `deleted` is the deleted subjects as a JSON array, empty when nothing was.
 	const hasDeletes = snapshots.deletes.length > 0;
 	const hasUpserts = snapshots.upserts.length > 0;
 
 	const ctes: SQL[] = [];
-	if (hasDeletes) ctes.push(snapshotDeletesCte({ deletes: snapshots.deletes }));
+	if (hasDeletes)
+		ctes.push(
+			deleteSubjectSnapshotsOfCustomersCte({ deletes: snapshots.deletes }),
+		);
 	if (hasUpserts) ctes.push(snapshotUpsertsCte({ upserts: snapshots.upserts }));
 
 	return {
@@ -98,6 +102,8 @@ export const subjectSnapshotFlushSql = ({
 		upserted: hasUpserts
 			? sql`(SELECT count(*) FROM snapshot_upserts)`
 			: sql`0`,
-		deleted: hasDeletes ? sql`(SELECT count(*) FROM snapshot_deletes)` : sql`0`,
+		deleted: hasDeletes
+			? sql`(SELECT coalesce(json_agg(json_build_object('org_id', org_id, 'env', env, 'customer_id', customer_id, 'entity_id', entity_id)), '[]'::json) FROM snapshot_deletes)`
+			: sql`'[]'::json`,
 	};
 };

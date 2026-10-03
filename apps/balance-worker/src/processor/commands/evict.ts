@@ -3,7 +3,6 @@ import type { EvictReply } from "@autumn/balance-worker-client/protocol";
 import { BALANCE_WORKER_EVICTS_LOGGED } from "@autumn/env/balanceWorkerConstants";
 import { awaitSnapshotDeleteLanded } from "../actions/awaitSnapshotDeleteLanded.js";
 import { dropStaleSubject } from "../actions/dropStaleSubject.js";
-import { listSnapshotSubjects } from "../actions/listSnapshotSubjects.js";
 import { logEvict } from "../actions/logEvict.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
@@ -15,6 +14,7 @@ export async function evict({
 }: {
 	scope: PartitionProcessorScope;
 	command: EvictCommand;
+	/** A queued evict answers nobody and skips the wait, unless it asked for its rows to be rebuilt. */
 	waitsForSnapshotDelete: boolean;
 }): Promise<EvictReply> {
 	// The flag is the owner's instruction, not part of the record the log keeps.
@@ -26,19 +26,17 @@ export async function evict({
 	const droppedState = scope.ctx.writer.readFreshestState({
 		identity: customerIdentity,
 	});
-	const snapshotSubjects = refreshSnapshots
-		? await listSnapshotSubjects({ scope, identity })
-		: [];
 	// A load still in flight started before this evict, so it must not put its rows back afterwards.
 	await dropStaleSubject({ scope, identity });
-	if (waitsForSnapshotDelete)
-		await awaitSnapshotDeleteLanded({ scope, identity });
-	// Read after the drop; the lane lands deletes before refreshes, so the rows rebuilt never precede the DELETE.
-	if (snapshotSubjects.length > 0)
-		scope.ctx.subjectHydrator.refreshSnapshots({
-			customer: customerIdentity,
-			subjects: snapshotSubjects,
-		});
+	if (waitsForSnapshotDelete || refreshSnapshots) {
+		const deleted = await awaitSnapshotDeleteLanded({ scope, identity });
+		// Exactly the rows the DELETE removed are rebuilt: a subject never read stays a miss.
+		if (refreshSnapshots && deleted.length > 0)
+			scope.ctx.subjectHydrator.refreshSnapshots({
+				customer: customerIdentity,
+				subjects: deleted,
+			});
+	}
 	if (logsEvicts({ scope }))
 		await logEvict({ scope, command: evicting, droppedState });
 	return { evicted: droppedState !== null };

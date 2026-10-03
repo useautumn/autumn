@@ -54,9 +54,12 @@ const evictOf = ({
 const createProcessor = async ({
 	logsEvicts,
 	db = createSyntheticWorkerDb(),
+	rowsOf = () => [],
 }: {
 	logsEvicts: boolean;
 	db?: WorkerDb;
+	/** The snapshot rows Postgres holds for a customer, by entity id (null for its own): what its DELETE returns. */
+	rowsOf?: (customerId: string) => (string | null)[];
 }) => {
 	const deleted: string[][] = [];
 	/** Subject keys of the rows each refresh statement wrote. */
@@ -69,16 +72,28 @@ const createProcessor = async ({
 				if (entries.every((entry) => entry === "delete")) {
 					await deleteGate.held;
 					deleted.push([...snapshotIntent.keys()]);
-				} else
-					refreshed.push(
-						entries.flatMap((entry) =>
-							entry === "delete"
-								? []
-								: entry.states.map((state) =>
-										meteringIdentityToSubjectKey({ identity: state.identity }),
-									),
-						),
-					);
+					return {
+						nextOffset: expectedOffset,
+						deletedSnapshots: [...snapshotIntent.keys()].flatMap((key) => {
+							const customer = partitionKeyToMeteringIdentity({
+								partitionKey: key,
+							});
+							return rowsOf(customer.customerId).map((entityId) => ({
+								...customer,
+								entityId,
+							}));
+						}),
+					};
+				}
+				refreshed.push(
+					entries.flatMap((entry) =>
+						entry === "delete"
+							? []
+							: entry.states.map((state) =>
+									meteringIdentityToSubjectKey({ identity: state.identity }),
+								),
+					),
+				);
 				return { nextOffset: expectedOffset };
 			}
 			return {
@@ -295,34 +310,29 @@ describe("evict snapshot refreshes", () => {
 			: null,
 	});
 
-	/** A Postgres that lists the given rows for the customer and answers every full read with empty rows for that subject. */
-	const createListingDb = ({ rows }: { rows: (string | null)[] }) => {
-		const listed: string[] = [];
+	/** A Postgres whose full reads answer the subject's own empty rows, counting each read. */
+	const createReadingDb = () => {
 		const fullReads: string[] = [];
 		const db: WorkerDb = {
 			...createSyntheticWorkerDb(),
-			listSubjectSnapshots: async ({ identity }) => {
-				listed.push(identity.customerId);
-				return rows.map((entityId) => ({ ...identity, entityId }));
-			},
 			getSubjectRows: async ({ identity }) => {
 				fullReads.push(meteringIdentityToSubjectKey({ identity }));
 				return envelopeOf(identity);
 			},
 		};
-		return { db, listed, fullReads };
+		return { db, fullReads };
 	};
 
-	test("an evict asked to refresh lists the customer's rows before the drop and rebuilds exactly those after its DELETE landed", async () => {
-		const { db, listed, fullReads } = createListingDb({ rows: [null, "en_1"] });
+	test("an evict asked to refresh rebuilds exactly the rows its DELETE removed, after it landed", async () => {
+		const { db, fullReads } = createReadingDb();
 		const { processor, deleted, refreshed } = await createProcessor({
 			logsEvicts: false,
 			db,
+			rowsOf: () => [null, "en_1"],
 		});
 		await processor.evict({
 			command: evictOf({ customerId: "cus_1", refreshSnapshots: true }),
 		});
-		expect(listed).toEqual(["cus_1"]);
 		expect(deleted).toEqual([[keyOf("cus_1")]]);
 		await processor.drain();
 		await Bun.sleep(10);
@@ -334,13 +344,14 @@ describe("evict snapshot refreshes", () => {
 		expect(refreshed.flat().sort()).toEqual(fullReads.sort());
 	});
 
-	test("no rows, or an evict not asked to refresh, rebuilds nothing; the flag never reaches the list when absent", async () => {
-		const none = createListingDb({ rows: [] });
-		const silent = createListingDb({ rows: [null] });
+	test("a DELETE that removed nothing, or an evict not asked to refresh, rebuilds nothing", async () => {
+		const none = createReadingDb();
+		const silent = createReadingDb();
 		const noRows = await createProcessor({ logsEvicts: false, db: none.db });
 		const notAsked = await createProcessor({
 			logsEvicts: false,
 			db: silent.db,
+			rowsOf: () => [null],
 		});
 		await noRows.processor.evict({
 			command: evictOf({ customerId: "cus_1", refreshSnapshots: true }),
@@ -349,8 +360,6 @@ describe("evict snapshot refreshes", () => {
 			command: evictOf({ customerId: "cus_1" }),
 		});
 		await Bun.sleep(10);
-		expect(none.listed).toEqual(["cus_1"]);
-		expect(silent.listed).toEqual([]);
 		expect(none.fullReads).toEqual([]);
 		expect(silent.fullReads).toEqual([]);
 		expect(noRows.refreshed).toEqual([]);

@@ -349,13 +349,48 @@ describe("snapshot lane writes: deleteLanded", () => {
 		await Bun.sleep(5);
 		expect(requests).toHaveLength(1);
 		expect(landed).toBe(false);
-		await expect(deletes.deleteLanded(at(2))).resolves.toBeUndefined();
+		await expect(deletes.deleteLanded(at(2))).resolves.toEqual([]);
 
 		held.resolve();
 		await landing;
 		await drained();
 		expect(requests).toHaveLength(1);
-		await expect(deletes.deleteLanded(at(1))).resolves.toBeUndefined();
+		await expect(deletes.deleteLanded(at(1))).resolves.toEqual([]);
+	});
+
+	test("resolves with the rows the statement removed for that customer alone, as the worker names them", async () => {
+		const { db, requests } = createCountingDb();
+		db.flush = async (request) => {
+			requests.push(request);
+			return {
+				applied: [],
+				snapshots: {
+					upserted: 0,
+					deleted: (request.snapshots?.deletes ?? []).flatMap((customer) =>
+						["", "en_1"].map((entityId) => ({
+							...customer,
+							entityId: entityId === "" ? null : entityId,
+						})),
+					),
+				},
+			};
+		};
+		const { store, deletes } = createStore({
+			db,
+			requestCount: () => requests.length,
+		});
+		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
+		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(2) });
+		const [first, second] = await Promise.all([
+			deletes.deleteLanded({ topic, partition: 4, customerKey: keyOf(1) }),
+			deletes.deleteLanded({ topic, partition: 4, customerKey: keyOf(2) }),
+		]);
+		expect(first).toEqual([
+			{ ...customerOf(1), entityId: null },
+			{ ...customerOf(1), entityId: "en_1" },
+		]);
+		expect(second.map((row) => row.customerId)).toEqual(["cus_2", "cus_2"]);
 	});
 
 	test("a DELETE enqueued while the customer's earlier one is in flight waits for the later tick", async () => {

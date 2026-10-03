@@ -3,6 +3,7 @@ import {
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
+import type { DeletedSubjectSnapshot } from "@autumn/postgres";
 import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type {
@@ -24,8 +25,10 @@ type PendingRefreshes = {
 	baselineAt: number;
 };
 
-/** Resolved by the tick that lands the customer's DELETE, so an evict can answer once the row is gone. */
-type Landing = ReturnType<typeof Promise.withResolvers<void>>;
+/** Settled by the tick that ran the customer's DELETE with the rows it removed: what an evict rebuilds once they are gone. */
+type Landing = ReturnType<
+	typeof Promise.withResolvers<DeletedSubjectSnapshot[]>
+>;
 
 /** A partition's writes waiting for the lane: customers to delete, subjects to refresh by customer, and whether a tick is queued. */
 type PartitionWrites = {
@@ -80,12 +83,15 @@ export const createSnapshotQueues = ({
 		dropRefreshes({ writes, customerKey });
 		if (writes.deletes.has(customerKey)) return;
 		if (!hasRoom({ writes, position: { topic, partition } })) return;
-		writes.deletes.set(customerKey, Promise.withResolvers<void>());
+		writes.deletes.set(
+			customerKey,
+			Promise.withResolvers<DeletedSubjectSnapshot[]>(),
+		);
 		writes.pendingCount += 1;
 		scheduleTick({ position: { topic, partition }, writes });
 	}
 
-	/** Settled at once when no DELETE of the customer waits or is in flight: nothing enqueued, or it already landed. */
+	/** The rows the customer's DELETE removed, once the tick carrying it ran; none at once when no DELETE waits or is in flight. */
 	function deleteLanded({
 		topic,
 		partition,
@@ -94,11 +100,11 @@ export const createSnapshotQueues = ({
 		topic: string;
 		partition: number;
 		customerKey: string;
-	}): Promise<void> {
+	}): Promise<DeletedSubjectSnapshot[]> {
 		const writes = byPartition.get(keyOf({ topic, partition }));
 		const landing =
 			writes?.deletes.get(customerKey) ?? writes?.deleting.get(customerKey);
-		return landing?.promise ?? Promise.resolve();
+		return landing?.promise ?? Promise.resolve([]);
 	}
 
 	function enqueueRefresh({
@@ -185,27 +191,31 @@ export const createSnapshotQueues = ({
 		const settings = ctx.subjectSnapshotsConfig.get();
 		// Flipped off since these were enqueued: what they would write is no longer served by anyone.
 		if (!writesSubjectSnapshots(settings)) {
-			for (const landing of writes.deletes.values()) landing.resolve();
+			for (const landing of writes.deletes.values()) landing.resolve([]);
 			byPartition.delete(key);
 			return;
 		}
 		const snapshotIntent = takeWrites({ writes, batch: settings.dropBatch });
 		if (writes.pendingCount > 0) scheduleTick({ position, writes });
+		let deleted: readonly DeletedSubjectSnapshot[] = [];
 		try {
-			await ctx.committer.apply({
+			const outcome = await ctx.committer.apply({
 				...position,
 				expectedOffset: ctx.readNextOffset(position) ?? 0n,
 				claimToken: ctx.claimTokenOf(position),
 				records: [],
 				snapshotIntent,
 			});
+			deleted = outcome.deletedSnapshots ?? [];
 		} catch (cause) {
 			ctx.logger?.warn(
 				`[snapshot lane] ${key} could not write ${snapshotIntent.size} customers' rows: ${cause instanceof Error ? cause.message : String(cause)}`,
 			);
 		} finally {
-			// Landed or refused, the evict is answered: the lane's warning is the record of a refused one.
-			for (const landing of writes.deleting.values()) landing.resolve();
+			// Landed or refused, the evict is answered with what went: the lane's warning is the record of a refused one.
+			const deletedByCustomer = groupByCustomer({ deleted });
+			for (const [customerKey, landing] of writes.deleting)
+				landing.resolve(deletedByCustomer.get(customerKey) ?? []);
 			writes.deleting.clear();
 			if (writes.pendingCount === 0 && !writes.scheduled)
 				byPartition.delete(key);
@@ -214,6 +224,24 @@ export const createSnapshotQueues = ({
 
 	return { enqueueDelete, enqueueRefresh, deleteLanded };
 };
+
+/** The rows a statement removed, under the engine's customer key, so each evict is answered with its own. */
+function groupByCustomer({
+	deleted,
+}: {
+	deleted: readonly DeletedSubjectSnapshot[];
+}): Map<string, DeletedSubjectSnapshot[]> {
+	const byCustomer = new Map<string, DeletedSubjectSnapshot[]>();
+	for (const row of deleted) {
+		const customerKey = meteringIdentityToPartitionKey({
+			identity: { ...row, entityId: null },
+		});
+		const rows = byCustomer.get(customerKey) ?? [];
+		rows.push(row);
+		byCustomer.set(customerKey, rows);
+	}
+	return byCustomer;
+}
 
 function keyOf(position: PartitionPosition): string {
 	return `${position.topic}[${position.partition}]`;

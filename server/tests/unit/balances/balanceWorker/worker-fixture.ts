@@ -33,7 +33,6 @@ export function createWorkerFixture({
 		getSubjectRows: async () => null,
 		readSubjectSnapshot: async () => null,
 		readEntitySubjectSnapshots: async () => new Map(),
-		listSubjectSnapshots: async () => [],
 		getEntitySubjectRows: async () => [],
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
