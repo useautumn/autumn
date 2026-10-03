@@ -30,9 +30,11 @@ test("one queued evict per distinct customer, under one request id", async () =>
 		"cus_b",
 	]);
 	expect(new Set(batches[0]?.map((command) => command.requestId)).size).toBe(1);
+	// No org to resolve the rollout by: a batch evict never asks for the rows to be rebuilt.
 	expect(batches[0]?.[0]).toMatchObject({
 		type: "evict",
 		identity: { orgId: "org_1", env: "sandbox", entityId: null },
+		refreshSnapshots: false,
 	});
 });
 

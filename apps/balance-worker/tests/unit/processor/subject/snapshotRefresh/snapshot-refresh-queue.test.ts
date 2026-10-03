@@ -15,6 +15,19 @@ const customer = (customerId: string): MeteringIdentity => ({
 	customerId,
 	entityId: null,
 });
+/** What L10c's hook hands in after listing the customer's rows: its own subject and each entity's. */
+const evict = (
+	queue: ReturnType<typeof createSnapshotRefreshQueue>,
+	customerId: string,
+	entityIds: readonly string[],
+) =>
+	queue.enqueue({
+		customer: customer(customerId),
+		subjects: [
+			customer(customerId),
+			...entityIds.map((entityId) => ({ ...customer(customerId), entityId })),
+		],
+	});
 const subjectOf = (identity: MeteringIdentity) =>
 	identity.entityId
 		? `${identity.customerId}/${identity.entityId}`
@@ -76,10 +89,7 @@ const createScriptedReads = () => {
 describe("snapshot refresh queue", () => {
 	test("an evict queues the customer then its entities, FIFO, refreshConcurrency reading at a time; each read is written back", async () => {
 		const { queue, started, written, release } = createScriptedReads();
-		queue.enqueue({
-			identity: customer("cus_1"),
-			entityIds: ["en_1", "en_2", "en_3"],
-		});
+		evict(queue, "cus_1", ["en_1", "en_2", "en_3"]);
 
 		expect(queue.depth()).toBe(4);
 		expect(started).toEqual(["cus_1", "cus_1/en_1"]);
@@ -109,11 +119,11 @@ describe("snapshot refresh queue", () => {
 
 	test("a subject already waiting is not queued twice, whichever evict names it", async () => {
 		const { queue, started, release } = createScriptedReads();
-		queue.enqueue({ identity: customer("cus_a"), entityIds: [] });
-		queue.enqueue({ identity: customer("cus_b"), entityIds: [] });
-		queue.enqueue({ identity: customer("cus_1"), entityIds: ["en_1", "en_2"] });
-		queue.enqueue({ identity: customer("cus_2"), entityIds: [] });
-		queue.enqueue({ identity: customer("cus_1"), entityIds: ["en_2", "en_3"] });
+		evict(queue, "cus_a", []);
+		evict(queue, "cus_b", []);
+		evict(queue, "cus_1", ["en_1", "en_2"]);
+		evict(queue, "cus_2", []);
+		evict(queue, "cus_1", ["en_2", "en_3"]);
 
 		expect(queue.counts().queued).toBe(7);
 		for (const subject of [
@@ -139,11 +149,11 @@ describe("snapshot refresh queue", () => {
 
 	test("a customer evicted again mid-read supersedes that read: nothing is written from it, and the subject reads again behind the evict", async () => {
 		const { queue, started, written, release } = createScriptedReads();
-		queue.enqueue({ identity: customer("cus_1"), entityIds: [] });
-		queue.enqueue({ identity: customer("cus_2"), entityIds: [] });
+		evict(queue, "cus_1", []);
+		evict(queue, "cus_2", []);
 		expect(started).toEqual(["cus_1", "cus_2"]);
 
-		queue.enqueue({ identity: customer("cus_1"), entityIds: ["en_1"] });
+		evict(queue, "cus_1", ["en_1"]);
 		await release("cus_1");
 		expect(written).toEqual([]);
 		expect(queue.counts().skipped).toBe(1);
@@ -163,8 +173,8 @@ describe("snapshot refresh queue", () => {
 
 	test("an evict of another customer leaves a read in flight alone", async () => {
 		const { queue, written, release } = createScriptedReads();
-		queue.enqueue({ identity: customer("cus_1"), entityIds: [] });
-		queue.enqueue({ identity: customer("cus_2"), entityIds: [] });
+		evict(queue, "cus_1", []);
+		evict(queue, "cus_2", []);
 		await release("cus_1");
 		expect(written).toEqual(["cus_1"]);
 	});
@@ -175,7 +185,7 @@ describe("snapshot refresh queue", () => {
 			{ length: REFRESH_MAX_PENDING + 5 },
 			(_, index) => `en_${index}`,
 		);
-		queue.enqueue({ identity: customer("cus_1"), entityIds });
+		evict(queue, "cus_1", entityIds);
 
 		expect(queue.depth()).toBe(REFRESH_MAX_PENDING);
 		expect(queue.counts().queued).toBe(REFRESH_MAX_PENDING);
@@ -185,10 +195,7 @@ describe("snapshot refresh queue", () => {
 		);
 
 		// Two reads are in flight, so two more subjects fit under the ceiling; cus_2's third is dropped, with no second warning.
-		queue.enqueue({
-			identity: customer("cus_2"),
-			entityIds: ["en_1", "en_2", "en_3"],
-		});
+		evict(queue, "cus_2", ["en_1", "en_2", "en_3"]);
 		expect(queue.counts().queued).toBe(REFRESH_MAX_PENDING + 2);
 		expect(queue.depth()).toBe(REFRESH_MAX_PENDING + REFRESH_CONCURRENCY);
 		expect(warnings).toHaveLength(1);
@@ -199,7 +206,7 @@ describe("snapshot refresh queue", () => {
 
 	test("a read that throws is counted and logged; a read of a subject that is gone writes nothing; the queue carries on", async () => {
 		const { queue, written, warnings, release, fail } = createScriptedReads();
-		queue.enqueue({ identity: customer("cus_1"), entityIds: ["en_1", "en_2"] });
+		evict(queue, "cus_1", ["en_1", "en_2"]);
 		await fail("cus_1");
 		await release("cus_1/en_1", null);
 		await release("cus_1/en_2");
@@ -219,12 +226,12 @@ describe("snapshot refresh queue", () => {
 
 	test("disposed: what waits is dropped, a read in flight writes nothing, and nothing new is taken", async () => {
 		const { queue, written, release } = createScriptedReads();
-		queue.enqueue({ identity: customer("cus_1"), entityIds: ["en_1", "en_2"] });
+		evict(queue, "cus_1", ["en_1", "en_2"]);
 		queue.dispose();
 		expect(queue.depth()).toBe(2);
 		await release("cus_1");
 		await release("cus_1/en_1");
-		queue.enqueue({ identity: customer("cus_2"), entityIds: [] });
+		evict(queue, "cus_2", []);
 
 		expect(written).toEqual([]);
 		expect(queue.depth()).toBe(0);

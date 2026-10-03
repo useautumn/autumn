@@ -19,6 +19,7 @@ import {
 	createBalanceWorkerClient,
 } from "@autumn/balance-worker-client";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
 	createCommandPublisher,
 	createIdempotentProducerConfig,
@@ -32,6 +33,7 @@ import {
 	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 	defaultSubjectSnapshotsEdgeConfig,
 	type SubjectSnapshotMode,
+	type SubjectSnapshotsEdgeConfig,
 } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
@@ -73,7 +75,28 @@ type RunningWorker = {
 	endpoint: string;
 	/** Every warning the worker logged so far, as the logger's argument lists. */
 	warnings(): unknown[][];
+	/** The database line's counts a spawned worker drained since `since`, once a second; empty in process. */
+	databaseLines(params: { since: number }): DatabaseLine[];
 	stop(): Promise<void>;
+};
+
+type DatabaseLine = {
+	at: number;
+	data: {
+		queries: Record<string, { count: number; p50: number; p99: number }>;
+		subjectSnapshots?: {
+			hits: number;
+			misses: number;
+			upserted: number;
+			deleted: number;
+			refreshes?: {
+				queued: number;
+				refreshed: number;
+				skipped: number;
+				failed: number;
+			};
+		};
+	};
 };
 
 function ignoreLog(): void {}
@@ -186,12 +209,15 @@ async function createHarness(): Promise<Harness> {
 /** The edge configs a spawned worker serves from memory: the snapshot settings under their S3 key. */
 function edgeConfigOverrideOf({
 	subjectSnapshots,
+	snapshotSettings,
 }: {
 	subjectSnapshots: SubjectSnapshotMode;
+	snapshotSettings?: Partial<SubjectSnapshotsEdgeConfig>;
 }): string {
 	const configs = {
 		[BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY]: {
 			...defaultSubjectSnapshotsEdgeConfig(),
+			...snapshotSettings,
 			mode: subjectSnapshots,
 		},
 	};
@@ -203,10 +229,12 @@ async function startWorker({
 	harness,
 	subprocess = false,
 	subjectSnapshots = "off",
+	snapshotSettings,
 }: {
 	harness: Harness;
 	subprocess?: boolean;
 	subjectSnapshots?: SubjectSnapshotMode;
+	snapshotSettings?: Partial<SubjectSnapshotsEdgeConfig>;
 }): Promise<RunningWorker> {
 	if (!databaseUrl) throw new Error("No worktree DATABASE_URL");
 	const directory = mkdtempSync(join(tmpdir(), "pg-commit-"));
@@ -229,6 +257,7 @@ async function startWorker({
 	const errors: unknown[] = [];
 	const warnings: unknown[][] = [];
 	const warnFile = join(directory, "warnings.jsonl");
+	const databaseFile = join(directory, "database.jsonl");
 	// The snapshot settings come from the edge-config override, decoded once per process: a writing worker is its own process.
 	const child =
 		subprocess || subjectSnapshots !== "off"
@@ -244,8 +273,10 @@ async function startWorker({
 							BALANCE_WORKER_TEST_ENV: JSON.stringify(env),
 							AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverrideOf({
 								subjectSnapshots,
+								snapshotSettings,
 							}),
 							BALANCE_WORKER_TEST_WARN_FILE: warnFile,
+							BALANCE_WORKER_TEST_DATABASE_FILE: databaseFile,
 						},
 						stdout: "inherit",
 						stderr: "inherit",
@@ -301,11 +332,25 @@ async function startWorker({
 	return {
 		endpoint: env.BALANCE_WORKER_ENDPOINT,
 		warnings: () => (child ? readWarnFile({ path: warnFile }) : warnings),
+		databaseLines: ({ since }) =>
+			child
+				? readDatabaseLines({ path: databaseFile }).filter(
+						(line) => line.at >= since,
+					)
+				: [],
 		stop: async () => {
 			await worker.stop();
 			rmSync(directory, { recursive: true, force: true });
 		},
 	};
+}
+
+function readDatabaseLines({ path }: { path: string }): DatabaseLine[] {
+	if (!existsSync(path)) return [];
+	return readFileSync(path, "utf8")
+		.split("\n")
+		.filter((line) => line.length > 0)
+		.map((line) => JSON.parse(line) as DatabaseLine);
 }
 
 function readWarnFile({ path }: { path: string }): unknown[][] {
@@ -547,6 +592,7 @@ type SnapshotRow = {
 	state_version: number;
 	state: { customerEntitlements: { id: string; balance: number }[] };
 	baseline_at: string;
+	written_at: string;
 	log_offset: string | null;
 };
 
@@ -595,10 +641,12 @@ function evictCommand({
 	customerId,
 	orgId,
 	env,
+	refreshSnapshots,
 }: {
 	customerId: string;
 	orgId: string;
 	env: string;
+	refreshSnapshots?: boolean;
 }) {
 	return parseEvictCommand({
 		input: {
@@ -607,6 +655,7 @@ function evictCommand({
 			requestId: `req_evict_${customerId}`,
 			identity: { orgId, env, customerId, entityId: null },
 			occurredAt: Date.now(),
+			...(refreshSnapshots !== undefined && { refreshSnapshots }),
 		},
 	});
 }
@@ -2605,6 +2654,378 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				await checked.cleanup();
 			}
 		}, 120_000);
+
+		/** The counts drain once a second: every line since `since`, once a drain after the moment of asking has landed. */
+		const waitForDatabaseLines = async ({
+			running,
+			since,
+		}: {
+			running: RunningWorker;
+			since: number;
+		}): Promise<DatabaseLine[]> => {
+			const askedAt = Date.now();
+			for (let attempt = 0; attempt < 300; attempt++) {
+				const lines = running.databaseLines({ since });
+				if (lines.some((line) => line.at > askedAt + 1_000)) return lines;
+				await Bun.sleep(100);
+			}
+			throw new Error("no database line arrived");
+		};
+		const sumOf = (
+			lines: DatabaseLine[],
+			pick: (line: DatabaseLine) => number | undefined,
+		) => lines.reduce((sum, line) => sum + (pick(line) ?? 0), 0);
+
+		test("an evict asked to rebuild the row: the row is back within the lane tick, a check after a restart is a hit with no full read; a rollback evict leaves no row and rebuilds nothing", async () => {
+			const isolated = await createHarness();
+			const customer = await seedCustomer({ postgres, balance: 100 });
+			let running: RunningWorker | undefined;
+			try {
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "serve",
+				});
+				await trackOrExplain(
+					isolated,
+					trackCommand({ customer, commandId: "refresh_1", value: 5 }),
+				);
+				await waitForSnapshotBalance({ postgres, customer, balance: 95 });
+				const before = Date.now();
+				await Bun.sleep(5);
+
+				const evictStartedAt = performance.now();
+				const reply = await isolated.client.evict({
+					command: evictCommand({
+						customerId: customer.identity.customerId,
+						orgId: customer.orgId,
+						env: customer.env,
+						refreshSnapshots: true,
+					}),
+				});
+				const evictMs = performance.now() - evictStartedAt;
+				expect(reply).toMatchObject({ evicted: true });
+				const checked = await isolated.client.check({
+					command: checkCommand({
+						customer,
+						requestId: "refresh_check",
+						requiredBalance: 1,
+					}),
+				});
+				expect(checked.result.allowed).toBe(true);
+
+				let rows = await readSnapshots({ postgres, customer });
+				for (
+					let attempt = 0;
+					attempt < 1_000 && !(rows[0] && Number(rows[0].written_at) > before);
+					attempt++
+				) {
+					await Bun.sleep(5);
+					rows = await readSnapshots({ postgres, customer });
+				}
+				const rowBackMs = performance.now() - evictStartedAt;
+				expect(rows).toHaveLength(1);
+				expect(snapshotBalanceOf(rows[0], customer)).toBe(95);
+				const refreshed = await waitForDatabaseLines({
+					running,
+					since: before,
+				});
+				const fullReads = sumOf(
+					refreshed,
+					(line) => line.data.queries.subject_rows?.count,
+				);
+				const refreshes = sumOf(
+					refreshed,
+					(line) => line.data.subjectSnapshots?.refreshes?.refreshed,
+				);
+				expect(fullReads).toBeLessThanOrEqual(2);
+				expect(refreshes).toBe(1);
+
+				await running.stop();
+				const restartedAt = Date.now();
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "serve",
+				});
+				const warm = await isolated.client.check({
+					command: checkCommand({
+						customer,
+						requestId: "refresh_check_2",
+						requiredBalance: 1,
+					}),
+				});
+				expect(warm.result.allowed).toBe(true);
+				const served = await waitForDatabaseLines({
+					running,
+					since: restartedAt,
+				});
+				console.info(
+					"[subject snapshots serve] evict with refresh, then check, then restart and check",
+					JSON.stringify({
+						evictReplyMs: Math.round(evictMs * 100) / 100,
+						rowBackAfterEvictMs: Math.round(rowBackMs),
+						afterEvict: { fullReads, refreshed: refreshes },
+						afterRestart: {
+							hits: sumOf(served, (line) => line.data.subjectSnapshots?.hits),
+							misses: sumOf(
+								served,
+								(line) => line.data.subjectSnapshots?.misses,
+							),
+							fullReads: sumOf(
+								served,
+								(line) => line.data.queries.subject_rows?.count,
+							),
+						},
+					}),
+				);
+				expect(sumOf(served, (line) => line.data.subjectSnapshots?.hits)).toBe(
+					1,
+				);
+				expect(
+					sumOf(served, (line) => line.data.queries.subject_rows?.count),
+				).toBe(0);
+
+				// A rollback's evict: the row goes and nothing rebuilds it, so legacy writes cannot be served stale later.
+				const rolledBackAt = Date.now();
+				await Bun.sleep(5);
+				await isolated.client.evict({
+					command: evictCommand({
+						customerId: customer.identity.customerId,
+						orgId: customer.orgId,
+						env: customer.env,
+						refreshSnapshots: false,
+					}),
+				});
+				expect(await readSnapshots({ postgres, customer })).toEqual([]);
+				const quiet = await waitForDatabaseLines({
+					running,
+					since: rolledBackAt,
+				});
+				expect(
+					sumOf(quiet, (line) => line.data.subjectSnapshots?.refreshes?.queued),
+				).toBe(0);
+				expect(await readSnapshots({ postgres, customer })).toEqual([]);
+			} finally {
+				await running?.stop();
+				await isolated.stop();
+				await customer.cleanup();
+			}
+		}, 120_000);
+
+		test("a bulk evict of 1,000 with refresh rebuilds every row; the herd after a restart is all hits", async () => {
+			const isolated = await createHarness();
+			const herd: SeededCustomer[] = [];
+			for (let start = 0; start < 1_000; start += 50)
+				herd.push(
+					...(await Promise.all(
+						Array.from({ length: 50 }, () =>
+							seedCustomer({ postgres, balance: 100 }),
+						),
+					)),
+				);
+			const customerIds = herd.map((customer) => customer.identity.customerId);
+			const rowsWrittenSince = async (since: number): Promise<number> => {
+				const rows = (await postgres.db.execute(
+					sql`SELECT count(*)::int AS count FROM subject_snapshots WHERE written_at > ${since} AND customer_id = ANY(string_to_array(${customerIds.join(",")}, ','))`,
+				)) as unknown as { count: number }[];
+				return rows[0]?.count ?? 0;
+			};
+			let running: RunningWorker | undefined;
+			try {
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "serve",
+				});
+				for (let start = 0; start < herd.length; start += 100)
+					await Promise.all(
+						herd
+							.slice(start, start + 100)
+							.map((customer) =>
+								trackOrExplain(
+									isolated,
+									trackCommand({ customer, commandId: "bulk_1", value: 1 }),
+								),
+							),
+					);
+				for (
+					let attempt = 0;
+					attempt < 300 && (await rowsWrittenSince(0)) < herd.length;
+					attempt++
+				)
+					await Bun.sleep(100);
+				expect(await rowsWrittenSince(0)).toBe(herd.length);
+				const evictedAt = Date.now();
+				await Bun.sleep(5);
+
+				const evictStartedAt = performance.now();
+				await Promise.all(
+					herd.map((customer) =>
+						isolated.client.evict({
+							command: evictCommand({
+								customerId: customer.identity.customerId,
+								orgId: customer.orgId,
+								env: customer.env,
+								refreshSnapshots: true,
+							}),
+						}),
+					),
+				);
+				const evictWallMs = performance.now() - evictStartedAt;
+				let rebuilt = await rowsWrittenSince(evictedAt);
+				for (
+					let attempt = 0;
+					attempt < 600 && rebuilt < herd.length;
+					attempt++
+				) {
+					await Bun.sleep(50);
+					rebuilt = await rowsWrittenSince(evictedAt);
+				}
+				const drainWallMs = performance.now() - evictStartedAt;
+				expect(rebuilt).toBe(herd.length);
+
+				await running.stop();
+				const restartedAt = Date.now();
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "serve",
+				});
+				const herdStartedAt = performance.now();
+				const samples = await Promise.all(
+					herd.map(async (customer, index) => {
+						const startedAt = performance.now();
+						const reply = await isolated.client.check({
+							command: checkCommand({
+								customer,
+								requestId: `bulk_check_${index}`,
+								requiredBalance: 1,
+							}),
+						});
+						expect(reply.result.allowed).toBe(true);
+						return performance.now() - startedAt;
+					}),
+				);
+				const herdWallMs = performance.now() - herdStartedAt;
+				const lines = await waitForDatabaseLines({
+					running,
+					since: restartedAt,
+				});
+				const hits = sumOf(lines, (line) => line.data.subjectSnapshots?.hits);
+				const misses = sumOf(
+					lines,
+					(line) => line.data.subjectSnapshots?.misses,
+				);
+				console.info(
+					"[subject snapshots serve] bulk evict of 1,000 with refresh, then a 1,000 herd after a restart",
+					JSON.stringify({
+						evictWallMs: Math.round(evictWallMs),
+						refreshDrainWallMs: Math.round(drainWallMs),
+						herd: {
+							p50: Math.round(percentile({ samples, fraction: 0.5 })),
+							p99: Math.round(percentile({ samples, fraction: 0.99 })),
+							wallMs: Math.round(herdWallMs),
+							hits,
+							misses,
+						},
+					}),
+				);
+				expect(hits).toBe(herd.length);
+				expect(misses).toBe(0);
+			} finally {
+				await running?.stop();
+				await isolated.stop();
+				await Promise.all(herd.map((customer) => customer.cleanup()));
+			}
+		}, 600_000);
+
+		test("an evict of a customer with 10,000 entity rows queues them all and drains in the background", async () => {
+			const isolated = await createHarness();
+			const customer = await seedCustomer({ postgres, balance: 100 });
+			const ENTITIES = 10_000;
+			const seedEntityRows = async () => {
+				await postgres.db.execute(sql`INSERT INTO entities
+					(internal_id, id, internal_customer_id, org_id, env, created_at, name, feature_id, internal_feature_id)
+					SELECT ${customer.internalCustomerId} || '_en_' || n, 'en_' || n, ${customer.internalCustomerId}, ${customer.orgId}, ${customer.env}, ${Date.now()}, 'Seat', ${customer.featureId}, ${customer.internalFeatureId}
+					FROM generate_series(1, ${ENTITIES}) AS n`);
+				await postgres.db.execute(sql`INSERT INTO subject_snapshots
+					(org_id, env, customer_id, entity_id, internal_customer_id, internal_entity_id, partition, partition_count, state_version, state, baseline_at, written_at)
+					SELECT ${customer.orgId}, ${customer.env}, ${customer.identity.customerId}, 'en_' || n, ${customer.internalCustomerId}, ${customer.internalCustomerId} || '_en_' || n, 0, 1, ${BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION}, '{}'::jsonb, 1, 1
+					FROM generate_series(1, ${ENTITIES}) AS n`);
+			};
+			const rowsRebuilt = async (since: number): Promise<number> => {
+				const rows = (await postgres.db.execute(
+					sql`SELECT count(*)::int AS count FROM subject_snapshots WHERE internal_customer_id = ${customer.internalCustomerId} AND written_at > ${since}`,
+				)) as unknown as { count: number }[];
+				return rows[0]?.count ?? 0;
+			};
+			let running: RunningWorker | undefined;
+			try {
+				await seedEntityRows();
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "serve",
+					snapshotSettings: { refreshMaxPending: 20_000 },
+				});
+				const evictedAt = Date.now();
+				await Bun.sleep(5);
+				const evictStartedAt = performance.now();
+				await isolated.client.evict({
+					command: evictCommand({
+						customerId: customer.identity.customerId,
+						orgId: customer.orgId,
+						env: customer.env,
+						refreshSnapshots: true,
+					}),
+				});
+				const evictMs = performance.now() - evictStartedAt;
+				let rebuilt = await rowsRebuilt(evictedAt);
+				for (
+					let attempt = 0;
+					attempt < 2_400 && rebuilt < ENTITIES;
+					attempt++
+				) {
+					await Bun.sleep(50);
+					rebuilt = await rowsRebuilt(evictedAt);
+				}
+				const drainMs = performance.now() - evictStartedAt;
+				expect(rebuilt).toBe(ENTITIES);
+				const lines = await waitForDatabaseLines({ running, since: evictedAt });
+				const refreshes = lines.reduce(
+					(sum, line) => ({
+						queued:
+							sum.queued + (line.data.subjectSnapshots?.refreshes?.queued ?? 0),
+						refreshed:
+							sum.refreshed +
+							(line.data.subjectSnapshots?.refreshes?.refreshed ?? 0),
+						skipped:
+							sum.skipped +
+							(line.data.subjectSnapshots?.refreshes?.skipped ?? 0),
+					}),
+					{ queued: 0, refreshed: 0, skipped: 0 },
+				);
+				const reads = lines
+					.map((line) => line.data.queries.subject_rows)
+					.filter(Boolean);
+				console.info(
+					"[subject snapshots serve] evict of a customer with 10,000 entity rows, refreshed in the background",
+					JSON.stringify({
+						evictReplyMs: Math.round(evictMs),
+						drainWallMs: Math.round(drainMs),
+						refreshes,
+						fullReads: reads.reduce((sum, read) => sum + (read?.count ?? 0), 0),
+						fullReadP50Ms: reads.map((read) => read?.p50),
+						fullReadP99Ms: reads.map((read) => read?.p99),
+						warnings: running.warnings().length,
+					}),
+				);
+				expect(refreshes.queued).toBe(ENTITIES);
+			} finally {
+				await running?.stop();
+				await isolated.stop();
+				await postgres.db.execute(
+					sql`DELETE FROM entities WHERE internal_customer_id = ${customer.internalCustomerId}`,
+				);
+				await customer.cleanup();
+			}
+		}, 600_000);
 
 		test("with snapshots off, nothing is written to subject_snapshots", async () => {
 			const isolated = await createHarness();

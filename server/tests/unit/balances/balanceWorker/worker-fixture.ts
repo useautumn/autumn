@@ -31,6 +31,8 @@ export function createWorkerFixture({
 	/** Postgres stand-in: no customers, and only the catalog rows the test hands over. */
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
+		readSubjectSnapshot: async () => null,
+		readEntitySubjectSnapshots: async () => new Map(),
 		getEntitySubjectRows: async () => [],
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
