@@ -8,8 +8,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 const steps: string[] = [];
 
 const primaryRedis = { name: "primary" } as unknown as Redis;
-const orgRedis = { name: "org" } as unknown as Redis;
 let failFlushForCustomerId: string | null = null;
+let failRoutingForCustomerId: string | null = null;
 
 const sharedFieldsModulePath =
 	"@/internal/customers/cache/fullSubject/actions/invalidate/invalidateSharedBalanceFields.js";
@@ -26,6 +26,7 @@ mock.module(sharedFieldsModulePath, () => ({
 		flushBalances: boolean;
 	}) => {
 		if (customerId === failFlushForCustomerId) {
+			steps.push(`flush-failed:${customerId}`);
 			throw new Error("GETDEL failed");
 		}
 		steps.push(`flush:${customerId}:${redisV2.name}:${flushBalances}`);
@@ -36,10 +37,19 @@ const routingModulePath = "@/external/redis/customerRedisRouting.js";
 const realRouting = { ...(await import(routingModulePath)) };
 mock.module(routingModulePath, () => ({
 	...realRouting,
-	getCtxWithCustomerRedis: ({ ctx }: { ctx: AutumnContext }) => ({
-		ctx: { ...ctx, redisV2: primaryRedis },
-	}),
-	getRedisTargetsForCustomer: () => [primaryRedis, orgRedis],
+	getCtxWithCustomerRedis: ({
+		ctx,
+		customerId,
+	}: {
+		ctx: AutumnContext;
+		customerId: string;
+	}) => {
+		if (customerId === failRoutingForCustomerId) {
+			steps.push(`routing-failed:${customerId}`);
+			throw new Error("no Redis route");
+		}
+		return { ctx: { ...ctx, redisV2: primaryRedis } };
+	},
 }));
 
 const batchInvalidateModulePath =
@@ -72,7 +82,7 @@ const workerContextModulePath = "@/queue/createWorkerContext.js";
 const realWorkerContext = { ...(await import(workerContextModulePath)) };
 mock.module(workerContextModulePath, () => ({
 	...realWorkerContext,
-	createWorkerContext: async () =>
+	buildWorkerContext: () =>
 		({
 			org,
 			env: AppEnv.Sandbox,
@@ -145,19 +155,18 @@ describe("credit-system cache clear", () => {
 	beforeEach(() => {
 		steps.length = 0;
 		failFlushForCustomerId = null;
+		failRoutingForCustomerId = null;
 	});
 
-	test("flushes every customer's cached balances on every Redis target before unlinking", async () => {
+	test("flushes every customer's cached balances on their current Redis before unlinking", async () => {
 		await runClear({ customerIds: ["cus_a", "cus_b"] });
 
-		const firstUnlink = steps.findIndex((step) => step.startsWith("unlink:"));
-		expect(steps.slice(0, firstUnlink).sort()).toEqual([
-			"flush:cus_a:org:true",
+		expect(steps).toEqual([
 			"flush:cus_a:primary:true",
-			"flush:cus_b:org:true",
 			"flush:cus_b:primary:true",
+			"unlink:cus_a",
+			"unlink:cus_b",
 		]);
-		expect(steps.slice(firstUnlink)).toEqual(["unlink:cus_a", "unlink:cus_b"]);
 	});
 
 	test("one customer's failed flush does not stop the others or the clear", async () => {
@@ -166,8 +175,21 @@ describe("credit-system cache clear", () => {
 		await runClear({ customerIds: ["cus_a", "cus_b"] });
 
 		expect(steps).toEqual([
+			"flush-failed:cus_a",
 			"flush:cus_b:primary:true",
-			"flush:cus_b:org:true",
+			"unlink:cus_a",
+			"unlink:cus_b",
+		]);
+	});
+
+	test("one customer's routing failure does not stop the others or the clear", async () => {
+		failRoutingForCustomerId = "cus_a";
+
+		await runClear({ customerIds: ["cus_a", "cus_b"] });
+
+		expect(steps).toEqual([
+			"routing-failed:cus_a",
+			"flush:cus_b:primary:true",
 			"unlink:cus_a",
 			"unlink:cus_b",
 		]);

@@ -11,7 +11,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createWorkerContext } from "@/queue/createWorkerContext.js";
+import { buildWorkerContext } from "@/queue/createWorkerContext.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 import { flushCachedCustomerBalances } from "./flushCachedCustomerBalances.js";
 
@@ -149,17 +149,14 @@ export const runClearCreditSystemCacheTask = async ({
 
 	logger.info(`Total affected customers: ${allAffectedCustomers.length}`);
 
-	const ctx = await createWorkerContext({
+	// Built from the org loaded above: a second lookup failing here would skip the clear for good (the job is ACKed upfront).
+	const ctx = buildWorkerContext({
 		db,
-		payload: { orgId, env },
+		org: orgWithFeatures.org,
+		features: orgWithFeatures.features,
+		env,
 		logger,
 	});
-	if (!ctx) {
-		logger.error(
-			`Could not build context for org ${orgId} (${env}); skipping cache clear so unsynced balances are not dropped`,
-		);
-		return;
-	}
 
 	// Process in batches of BATCH_SIZE
 	const CACHE_BATCH_SIZE = 1000;

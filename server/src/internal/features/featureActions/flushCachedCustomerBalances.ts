@@ -1,8 +1,5 @@
 import pLimit from "p-limit";
-import {
-	getCtxWithCustomerRedis,
-	getRedisTargetsForCustomer,
-} from "@/external/redis/customerRedisRouting.js";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invalidateSharedBalanceFields } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateSharedBalanceFields.js";
 
@@ -12,8 +9,12 @@ const FLUSH_CONCURRENCY = 25;
  * Lands each customer's cached balances in Postgres and drops them from Redis.
  * A batch invalidation unlinks balance hashes blindly, so a deduction accepted
  * in Redis but not yet synced would otherwise be lost and the next read would
- * rebuild the pre-deduction balance from Postgres. Best effort per customer:
- * one failure is logged and never stops the rest.
+ * rebuild the pre-deduction balance from Postgres.
+ *
+ * Only the customer's current Redis is flushed: a migration or legacy copy can
+ * hold an older snapshot that would overwrite the newer balance. The batch
+ * invalidation drops those copies. Best effort per customer: one failure is
+ * logged and never stops the rest.
  */
 export const flushCachedCustomerBalances = async ({
 	ctx,
@@ -29,28 +30,21 @@ export const flushCachedCustomerBalances = async ({
 	await Promise.all(
 		customerIds.map((customerId) =>
 			limit(async () => {
-				const { ctx: customerCtx } = getCtxWithCustomerRedis({
-					ctx,
-					customerId,
-				});
-				const redisTargets = getRedisTargetsForCustomer({
-					org: customerCtx.org,
-					currentRedis: customerCtx.redisV2,
-				});
-
-				for (const redisV2 of redisTargets) {
-					try {
-						await invalidateSharedBalanceFields({
-							ctx: customerCtx,
-							customerId,
-							redisV2,
-							flushBalances: true,
-						});
-					} catch (error) {
-						ctx.logger.error(
-							`[flushCachedCustomerBalances] ${customerId}: flush before invalidation failed, source: ${source}, error: ${error}`,
-						);
-					}
+				try {
+					const { ctx: customerCtx } = getCtxWithCustomerRedis({
+						ctx,
+						customerId,
+					});
+					await invalidateSharedBalanceFields({
+						ctx: customerCtx,
+						customerId,
+						redisV2: customerCtx.redisV2,
+						flushBalances: true,
+					});
+				} catch (error) {
+					ctx.logger.error(
+						`[flushCachedCustomerBalances] ${customerId}: flush before invalidation failed, source: ${source}, error: ${error}`,
+					);
 				}
 			}),
 		),
