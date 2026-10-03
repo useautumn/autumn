@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
+import {
+	applyMutation,
+	computeTrack,
+	type MeteringIdentity,
+	type SubjectState,
+} from "@autumn/balance-engine";
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
 	commitFlush,
@@ -19,6 +24,7 @@ import { createRecentCommands } from "../../../src/processor/writer/recentComman
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";
 import { createTestCatalogCache } from "../../fixtures/catalog.js";
+import { createTrackCommand } from "../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 import {
 	openFixturePostgres,
@@ -42,7 +48,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		await postgres?.close();
 	});
 
-	/** The production hydrator over the production writer, committer and lane, on real Postgres; `gate` holds every full read until released. */
+	/** The production hydrator over the production writer, committer and lane, on real Postgres; `gate` holds every full read's answer until released. */
 	const createHydrator = async ({
 		mode = "write",
 	}: {
@@ -64,9 +70,11 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		const db: WorkerDb = {
 			...workerDb,
 			getSubjectRows: async (params) => {
+				const { held } = gate;
 				reads.push(params.identity.customerId);
-				await gate.held;
-				return workerDb.getSubjectRows(params);
+				const rows = await workerDb.getSubjectRows(params);
+				await held;
+				return rows;
 			},
 			readEntitySubjectSnapshots: async (params) => {
 				entityProbes.push([...params.entityIds]);
@@ -149,6 +157,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		return {
 			hydrator,
 			writer,
+			committer,
 			stateStore,
 			reads,
 			entityProbes,
@@ -276,6 +285,65 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		}
 	});
 
+	test("a refresh read before a flush landed never replaces that flush's row: the row keeps the newer balance", async () => {
+		const seeded = await seedCustomer({ postgres, balance: 100 });
+		const { hydrator, writer, committer, reads, gate, close } =
+			await createHydrator();
+		const { identity } = seeded;
+		const request = Promise.withResolvers<void>();
+		const refresh = Promise.withResolvers<void>();
+		gate.held = request.promise;
+		try {
+			// The request's read makes the rows resident; the refresh queued behind it reads them itself.
+			const ensured = hydrator.ensure({ identity });
+			await waitUntil(() => reads.length === 1);
+			hydrator.refreshSnapshots({ customer: identity, subjects: [identity] });
+			gate.held = refresh.promise;
+			request.resolve();
+			const { state } = await ensured;
+			await waitUntil(() => reads.length === 2);
+
+			// With the refresh's answer (balance 100) still held, a track lands balance 95 in the rows and the row.
+			const catalog = await hydrator.ensureCatalog({ identity, state });
+			const command = createTrackCommand({
+				identity,
+				featureId: seeded.featureId,
+				internalFeatureId: seeded.internalFeatureId,
+				value: 5,
+			});
+			await writer
+				.decide({
+					command,
+					mutate: ({ state: resident }) => {
+						if (!resident) throw new Error("Expected the resident rows");
+						const mutation = computeTrack({
+							fullSubject: hydrator.readSubjectWith({
+								state: resident,
+								catalog,
+								identity,
+							}),
+							command,
+						});
+						return {
+							kind: "write",
+							mutation,
+							nextState: applyMutation({ state: resident, mutation }),
+						};
+					},
+				})
+				.waitForStore();
+			expect(balanceOf(await waitForRow({ identity }))).toBe(95);
+
+			refresh.resolve();
+			await Bun.sleep(5);
+			await committer.drain();
+			expect(balanceOf(await waitForRow({ identity }))).toBe(95);
+		} finally {
+			close();
+			await seeded.cleanup();
+		}
+	});
+
 	/** An entity of the seeded customer, with no rows of its own: its state is the customer's with the entity attached. */
 	const seedEntity = async ({
 		seeded,
@@ -306,6 +374,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 				partition,
 				state,
 				baselineAt: Date.now(),
+				logOffset: 0n,
 			});
 			await waitForRow({ identity: hit });
 		} finally {

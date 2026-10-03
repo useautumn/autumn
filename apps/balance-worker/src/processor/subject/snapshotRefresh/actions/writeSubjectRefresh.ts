@@ -1,5 +1,5 @@
 import type { SubjectScope } from "../../types/subject.js";
-import type { SubjectRead } from "../../types/subjectRead.js";
+import type { SnapshotRefreshRead } from "../types/snapshotRefreshQueue.js";
 
 /** The read becomes the subject's row through the partition's lane, bookmark-fenced; a store without the lane owes nothing. */
 export const writeSubjectRefresh = ({
@@ -7,7 +7,7 @@ export const writeSubjectRefresh = ({
 	read,
 }: {
 	scope: SubjectScope;
-	read: SubjectRead;
+	read: SnapshotRefreshRead;
 }): void => {
 	const { snapshotQueues, position } = scope.ctx;
 	if (!snapshotQueues || !position) return;
@@ -15,5 +15,6 @@ export const writeSubjectRefresh = ({
 		...position,
 		state: read.baseline,
 		baselineAt: read.baselineAt,
+		logOffset: read.logOffset,
 	});
 };

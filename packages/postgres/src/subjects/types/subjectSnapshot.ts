@@ -12,6 +12,7 @@ export type SubjectSnapshotUpsert = {
 	stateVersion: number;
 	stateJson: string;
 	baselineAt: number;
+	/** The last log offset the state includes: a flush's last record, or the bookmark a refresh read under, less one. */
 	logOffset: bigint | null;
 };
 
