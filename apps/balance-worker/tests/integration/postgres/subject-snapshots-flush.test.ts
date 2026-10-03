@@ -319,7 +319,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		}
 	});
 
-	test("a cold load reads back what the flush wrote, by key: the customer and its entity under the identity the worker holds, a key with no row absent", async () => {
+	test("a cold load reads back what the flush wrote, by key at this build's version: the customer and its entity under the identity the worker holds, a key with no row absent", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();
 		try {
@@ -344,13 +344,15 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			});
 
 			const own = { ...seeded.identity, entityId: null };
+			const keys = [
+				own,
+				{ ...own, entityId: "seat_1" },
+				{ ...own, customerId: "cus_nobody" },
+			];
 			const rows = await readSubjectSnapshots({
 				ctx: { db: postgres.db },
-				keys: [
-					own,
-					{ ...own, entityId: "seat_1" },
-					{ ...own, customerId: "cus_nobody" },
-				],
+				keys,
+				stateVersion: 1,
 			});
 			expect(
 				rows
@@ -360,15 +362,21 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 					}))
 					.sort((a, b) => a.state - b.state),
 			).toEqual([
-				{ ...own, stateVersion: 1, state: 7, baselineAt: 1_700_000_000_000 },
+				{ ...own, state: 7, baselineAt: 1_700_000_000_000 },
 				{
 					...own,
 					entityId: "seat_1",
-					stateVersion: 1,
 					state: 8,
 					baselineAt: 1_700_000_000_000,
 				},
 			]);
+			expect(
+				await readSubjectSnapshots({
+					ctx: { db: postgres.db },
+					keys,
+					stateVersion: 2,
+				}),
+			).toEqual([]);
 		} finally {
 			await seeded.cleanup();
 		}
@@ -750,11 +758,15 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						entityId: null,
 					}));
 					const rows = (await tx.execute(
-						sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotsSql({ keys })}`,
+						sql`EXPLAIN (FORMAT JSON) ${readSubjectSnapshotsSql({ keys, stateVersion: 1 })}`,
 					)) as unknown as { "QUERY PLAN": unknown }[];
 					plan = JSON.stringify(rows[0]?.["QUERY PLAN"]);
 					expect(
-						await readSubjectSnapshots({ ctx: { db: tx }, keys }),
+						await readSubjectSnapshots({
+							ctx: { db: tx },
+							keys,
+							stateVersion: 1,
+						}),
 					).toHaveLength(200);
 					throw rolledBack;
 				})

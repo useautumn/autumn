@@ -14,12 +14,14 @@ const keys = [
 ];
 
 describe("readSubjectSnapshots", () => {
-	test("one statement probes the primary key for every key, the customer's own subject as an empty entity id", () => {
+	test("one statement probes the primary key for every key at one version, the customer's own subject as an empty entity id", () => {
 		const { sql, params } = dialect.sqlToQuery(
-			readSubjectSnapshotsSql({ keys }),
+			readSubjectSnapshotsSql({ keys, stateVersion: 1 }),
 		);
 		const text = flatten(sql);
 		expect(text).toContain("FROM subject_snapshots s");
+		expect(text).toContain("WHERE s.state_version = $2");
+		expect(params[1]).toBe(1);
 		expect(text).toContain(
 			"JOIN jsonb_to_recordset($1::text::jsonb) AS k(org_id text, env text, customer_id text, entity_id text)",
 		);
@@ -47,7 +49,6 @@ describe("readSubjectSnapshots", () => {
 						env: "live",
 						customer_id: "cus_1",
 						entity_id: "",
-						state_version: 1,
 						state: { revision: 0 },
 						baseline_at: "1700000000000",
 					},
@@ -55,16 +56,19 @@ describe("readSubjectSnapshots", () => {
 			},
 		};
 
-		expect(await readSubjectSnapshots({ ctx: { db }, keys: [] })).toEqual([]);
+		expect(
+			await readSubjectSnapshots({ ctx: { db }, keys: [], stateVersion: 1 }),
+		).toEqual([]);
 		expect(statements).toHaveLength(0);
 
-		expect(await readSubjectSnapshots({ ctx: { db }, keys })).toEqual([
+		expect(
+			await readSubjectSnapshots({ ctx: { db }, keys, stateVersion: 1 }),
+		).toEqual([
 			{
 				orgId: "org_1",
 				env: "live",
 				customerId: "cus_1",
 				entityId: null,
-				stateVersion: 1,
 				state: { revision: 0 },
 				baselineAt: 1_700_000_000_000,
 			},

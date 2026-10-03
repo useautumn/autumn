@@ -22,14 +22,13 @@ export type SubjectSnapshotWrites = {
 	deletes: readonly { orgId: string; env: string; customerId: string }[];
 };
 
-/** One subject's row as a cold load reads it; `state` is the jsonb as stored, parsed by the reader that decides on it. */
+/** One subject's row as a cold load reads it, at the version it asked for; `state` is the jsonb as stored, parsed by the reader. */
 export type SubjectSnapshotRow = {
 	orgId: string;
 	env: string;
 	customerId: string;
 	/** Null for the customer's own subject. */
 	entityId: string | null;
-	stateVersion: number;
 	state: unknown;
 	baselineAt: number;
 };
