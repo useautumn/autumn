@@ -19,7 +19,7 @@ type Warning = { fields: { event?: string; data?: Record<string, unknown> } };
 
 const createFixture = () => {
 	const clock = { ms: 1_000 };
-	const heap = { bytes: 300 * 1_048_576 };
+	const heap = { bytes: 300 * 1_048_576, reads: 0 };
 	const warnings: Warning[] = [];
 	let nextOffset = 0n;
 	const stateStore: PartitionWriterContext["stateStore"] = {
@@ -47,7 +47,10 @@ const createFixture = () => {
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			now: () => clock.ms,
-			heapSize: () => heap.bytes,
+			heapSize: () => {
+				heap.reads += 1;
+				return heap.bytes;
+			},
 			logger: {
 				warn: (...args: unknown[]) => {
 					warnings.push({ fields: args[0] as Warning["fields"] });
@@ -96,7 +99,7 @@ const createFixture = () => {
 		warnings.filter(
 			({ fields }) => fields.event === "balance_worker.slow_decide",
 		);
-	return { clock, decide, slowDecides };
+	return { clock, heap, decide, slowDecides };
 };
 
 function trackSubmission({
@@ -127,16 +130,18 @@ function trackSubmission({
 }
 
 describe("slow decide logging", () => {
-	test("a decide under the threshold logs nothing", () => {
-		const { decide, slowDecides } = createFixture();
+	test("a decide under the threshold logs nothing and never walks the heap", () => {
+		const { decide, heap, slowDecides } = createFixture();
 		decide({ takesMs: 3 });
 		expect(slowDecides()).toHaveLength(0);
+		expect(heap.reads).toBe(0);
 	});
 
-	test("a slow decide names the customer, the command and its state size, and says no collection ran", () => {
-		const { decide, slowDecides } = createFixture();
+	test("a slow decide names the customer, the command, its state size and the heap", () => {
+		const { decide, heap, slowDecides } = createFixture();
 		decide({ takesMs: 2 });
 		decide({ takesMs: 45 });
+		expect(heap.reads).toBe(1);
 
 		expect(slowDecides()).toHaveLength(1);
 		const data = slowDecides()[0]?.fields.data;
@@ -147,23 +152,19 @@ describe("slow decide logging", () => {
 			customerId: testIdentity.customerId,
 			entityId: null,
 			durationMs: 45,
-			gcRan: false,
-			heapBeforeMb: 300,
-			heapAfterMb: 300,
+			heapMb: 300,
 			pendingCommands: 2,
 		});
 		expect(data?.stateBytes).toBeGreaterThan(0);
 	});
 
-	test("a slow decide during which the heap was collected says so, with the heap before and after", () => {
+	test("a slow decide reports the heap as it left it", () => {
 		const { decide, slowDecides } = createFixture();
 		decide({ takesMs: 80, collects: true });
 
 		expect(slowDecides()[0]?.fields.data).toMatchObject({
 			durationMs: 80,
-			gcRan: true,
-			heapBeforeMb: 300,
-			heapAfterMb: 180,
+			heapMb: 180,
 		});
 	});
 
@@ -173,10 +174,11 @@ describe("slow decide logging", () => {
 		expect(slowDecides()[0]?.fields.data).toMatchObject({ durationMs: 60 });
 	});
 
-	test("at most ten slow decides are logged per partition every ten seconds", () => {
-		const { clock, decide, slowDecides } = createFixture();
+	test("at most ten slow decides are logged per partition every ten seconds, and only those walk the heap", () => {
+		const { clock, decide, heap, slowDecides } = createFixture();
 		for (let index = 0; index < 15; index++) decide({ takesMs: 30 });
 		expect(slowDecides()).toHaveLength(10);
+		expect(heap.reads).toBe(10);
 
 		clock.ms += 10_000;
 		decide({ takesMs: 30 });
