@@ -14,7 +14,7 @@ import chalk from "chalk";
 import { eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 import {
-	getFullCustomerSchedule,
+	getCustomerSchedulesByScope,
 	hydrateCustomerWithSchedules,
 } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 import { getRequiredScheduleId } from "../utils/createScheduleTestHelpers";
@@ -183,7 +183,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule: customer-level and entity-level schedules coexist independently")}`,
+	`${chalk.yellowBright("create-schedule: entity schedule replaces customer schedule; plan-level entity_id preserved")}`,
 	async () => {
 		const pro = products.pro({
 			id: "pro",
@@ -195,7 +195,7 @@ test.concurrent(
 		});
 
 		const { customerId, autumnV1, ctx, entities } = await initScenario({
-			customerId: "create-schedule-entity-coexist",
+			customerId: "create-schedule-entity-replaces",
 			setup: [
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [pro, addon] }),
@@ -236,28 +236,64 @@ test.concurrent(
 			],
 		});
 
-		expect(customerSchedule.schedule_id).not.toBe(entitySchedule.schedule_id);
+		const entityScheduleId = getRequiredScheduleId(entitySchedule.schedule_id);
+		expect(entityScheduleId).not.toBe(customerSchedule.schedule_id);
 
 		const dbSchedules = await ctx.db
 			.select()
 			.from(schedules)
 			.where(eq(schedules.customer_id, customerId));
-		expect(dbSchedules).toHaveLength(2);
+		expect(dbSchedules).toHaveLength(1);
+		expect(dbSchedules[0]!.id).toBe(entityScheduleId);
+		expect(dbSchedules[0]!.internal_entity_id).toBeNull();
+		expect(dbSchedules[0]!.entity_id).toBeNull();
 
-		const customerLevelSchedule = dbSchedules.find(
-			(s) => !s.internal_entity_id,
-		);
-		const entityLevelSchedule = dbSchedules.find((s) => !!s.internal_entity_id);
-		expect(customerLevelSchedule).toBeDefined();
-		expect(entityLevelSchedule).toBeDefined();
-		expect(entityLevelSchedule!.entity_id).toBe(entityId);
+		const { customerSchedule: customerScopedSchedule, entitySchedules } =
+			await getCustomerSchedulesByScope({
+				ctx,
+				internalCustomerId: dbSchedules[0]!.internal_customer_id,
+			});
+		expect(customerScopedSchedule).toBeUndefined();
+		expect(
+			Object.values(entitySchedules).map((schedule) => schedule.id),
+		).toEqual([entityScheduleId]);
 
-		const customerScopedSchedule = await getFullCustomerSchedule({
-			ctx,
-			internalCustomerId: dbSchedules[0]!.internal_customer_id,
-		});
+		const replacedScheduledProducts = await ctx.db
+			.select()
+			.from(customerProducts)
+			.where(
+				inArray(
+					customerProducts.id,
+					customerSchedule.phases[1]!.customer_product_ids,
+				),
+			);
+		expect(replacedScheduledProducts).toHaveLength(0);
 
-		expect(customerScopedSchedule?.id).toBe(customerLevelSchedule!.id);
-		expect(customerScopedSchedule?.internal_entity_id).toBeNull();
+		// Every product the replaced schedule placed ends now, including its started plan.
+		const replacedOpeningProducts = await ctx.db
+			.select()
+			.from(customerProducts)
+			.where(
+				inArray(
+					customerProducts.id,
+					customerSchedule.phases[0]!.customer_product_ids,
+				),
+			);
+		expect(replacedOpeningProducts).toHaveLength(1);
+		expect(replacedOpeningProducts[0]!.product_id).toBe(pro.id);
+		expect(replacedOpeningProducts[0]!.status).toBe(CusProductStatus.Expired);
+
+		const entityScheduledProducts = await ctx.db
+			.select()
+			.from(customerProducts)
+			.where(
+				inArray(
+					customerProducts.id,
+					entitySchedule.phases[1]!.customer_product_ids,
+				),
+			);
+		expect(entityScheduledProducts).toHaveLength(1);
+		expect(entityScheduledProducts[0]!.status).toBe(CusProductStatus.Scheduled);
+		expect(entityScheduledProducts[0]!.entity_id).toBe(entityId);
 	},
 );
