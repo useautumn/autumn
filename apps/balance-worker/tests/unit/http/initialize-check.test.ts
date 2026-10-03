@@ -260,6 +260,7 @@ test.concurrent(
 				command: checkCommand,
 			});
 			expect(checked.status).toBe(200);
+			expect(checked.headers.get("content-type")).toBe("application/json");
 			expect(await checked.json()).toMatchObject({
 				result: { allowed: true },
 				state: { revision: 2, customerEntitlements: [{ balance: 5 }] },
