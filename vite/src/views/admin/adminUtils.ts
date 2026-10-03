@@ -42,6 +42,11 @@ export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
 	];
 };
 
+/** The org member to impersonate: a non-admin when there is one, else any member (admins may impersonate admins). */
+export const getImpersonationUser = <T extends { role?: string | null }>(
+	users: T[] | null | undefined,
+): T | undefined => users?.find((user) => user.role !== "admin") ?? users?.[0];
+
 export const impersonateUser = async ({
 	userId,
 	organizationId,
