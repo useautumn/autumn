@@ -1,4 +1,6 @@
-import { deduct } from "../../deduction/deduct.js";
+import { deductWithContext } from "../../deduction/deduct.js";
+import { setupDeductionContext } from "../../deduction/setup/setupDeductionContext.js";
+import type { DeductionContext } from "../../deduction/types/deductionContext.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { checkCommandToDeductionRequest } from "./checkCommandToDeductionRequest.js";
@@ -10,14 +12,20 @@ import type { CheckResult } from "./types/checkResult.js";
 export const computeCheck = ({
 	fullSubject,
 	command,
+	context,
 }: {
 	fullSubject: WorkerFullSubject;
 	command: CheckCommand;
+	/** Already set up for this command's selection on `fullSubject`; set up here when absent. */
+	context?: DeductionContext;
 }): CheckResult => {
 	assertCommandSupported({ fullSubject, command });
-	const outcome = deduct({
-		fullSubject,
-		request: checkCommandToDeductionRequest({ command }),
+	const request = checkCommandToDeductionRequest({ command });
+	const outcome = deductWithContext({
+		context:
+			context ??
+			setupDeductionContext({ fullSubject, selection: request.selection }),
+		request,
 	});
 	return outcomeToCheckResult({ fullSubject, command, outcome });
 };
