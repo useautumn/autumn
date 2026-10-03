@@ -3,18 +3,25 @@ import type {
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "@autumn/postgres";
-import type { CommitterConfig, Flush } from "../types/committer.js";
+import type {
+	CommitterConfig,
+	CommitterContext,
+	Flush,
+} from "../types/committer.js";
 import { upsertRowsOf } from "./rows/upsertRowsOf.js";
 
 /** One action per customer per flush: write the rows the writer vouched for, else delete the customer's. Undefined when the flush touches no snapshot. */
 export const collectSnapshotWrites = ({
+	ctx,
 	config,
 	flush,
 }: {
+	ctx: Pick<CommitterContext, "subjectSnapshotsConfig">;
 	config: Pick<CommitterConfig, "snapshots">;
 	flush: Flush;
 }): SubjectSnapshotWrites | undefined => {
-	if (!config.snapshots) return undefined;
+	if (!config.snapshots || ctx.subjectSnapshotsConfig?.get().mode !== "write")
+		return undefined;
 	const { partitionCount } = config.snapshots;
 	const upserts: SubjectSnapshotUpsert[] = [];
 	const deletes: SubjectSnapshotWrites["deletes"][number][] = [];

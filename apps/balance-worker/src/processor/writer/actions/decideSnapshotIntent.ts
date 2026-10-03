@@ -25,6 +25,8 @@ export function decideSnapshotIntent({
 	batch: readonly PendingMutation[];
 }): SnapshotIntent {
 	const intent: SnapshotIntent = new Map();
+	const settings = scope.ctx.subjectSnapshotsConfig?.get();
+	if (settings?.mode !== "write") return intent;
 	for (const pending of batch) {
 		if (!pending.nextState) continue;
 		const customerKey = meteringIdentityToPartitionKey({
@@ -32,7 +34,10 @@ export function decideSnapshotIntent({
 		});
 		const sofar = intent.get(customerKey);
 		if (sofar === "delete") continue;
-		intent.set(customerKey, extend({ scope, sofar, pending }));
+		intent.set(
+			customerKey,
+			extend({ scope, sofar, pending, maxBytes: settings.maxBytes }),
+		);
 	}
 	return intent;
 }
@@ -42,10 +47,12 @@ function extend({
 	scope,
 	sofar,
 	pending,
+	maxBytes,
 }: {
 	scope: PartitionWriterScope;
 	sofar: Exclude<SnapshotIntentEntry, "delete"> | undefined;
 	pending: PendingMutation;
+	maxBytes: number;
 }): SnapshotIntentEntry {
 	const { state } = scope;
 	const { mutation } = pending;
@@ -63,6 +70,8 @@ function extend({
 		const projected = state.subjects.readState({ subjectKey });
 		const readAt = state.subjects.readBaselineAt({ subjectKey });
 		if (!projected || readAt === null) return "delete";
+		// Decided from the map's weight, so a state over the cap is never serialised for a row it will not get.
+		if (state.subjects.readBytes({ subjectKey }) > maxBytes) return "delete";
 		baselineAt = Math.min(baselineAt, readAt);
 		bySubject.set(subjectKey, projected);
 	}
