@@ -47,6 +47,38 @@ export const createWorkerContext = async ({
 	}
 
 	const { org, features } = orgData;
+	return buildWorkerContext({
+		db,
+		org,
+		features,
+		env,
+		customerId,
+		requestId,
+		logger,
+		skipCache,
+	});
+};
+
+/** Builds a worker context from an org the caller already loaded. */
+export const buildWorkerContext = ({
+	db,
+	org,
+	features,
+	env,
+	customerId,
+	requestId,
+	logger,
+	skipCache = true,
+}: {
+	db: DrizzleCli;
+	org: AutumnContext["org"];
+	features: AutumnContext["features"];
+	env: AppEnv;
+	customerId?: string;
+	requestId?: string;
+	logger: Logger;
+	skipCache?: boolean;
+}): AutumnContext => {
 	const apiVersion = createdAtToVersion({
 		createdAt: org.created_at ?? Date.now(),
 	});

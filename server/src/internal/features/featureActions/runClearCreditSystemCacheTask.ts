@@ -11,7 +11,9 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { buildWorkerContext } from "@/queue/createWorkerContext.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
+import { flushCachedCustomerBalances } from "./flushCachedCustomerBalances.js";
 
 export interface ClearCreditSystemCachePayload {
 	orgId: string;
@@ -147,6 +149,15 @@ export const runClearCreditSystemCacheTask = async ({
 
 	logger.info(`Total affected customers: ${allAffectedCustomers.length}`);
 
+	// Built from the org loaded above: a second lookup failing here would skip the clear for good (the job is ACKed upfront).
+	const ctx = buildWorkerContext({
+		db,
+		org: orgWithFeatures.org,
+		features: orgWithFeatures.features,
+		env,
+		logger,
+	});
+
 	// Process in batches of BATCH_SIZE
 	const CACHE_BATCH_SIZE = 1000;
 	let totalDeleted = 0;
@@ -162,8 +173,25 @@ export const runClearCreditSystemCacheTask = async ({
 			}));
 
 		if (customersToDelete.length > 0) {
+			// The batch unlink below drops balance hashes blindly; land them first.
+			const { failedCustomerIds } = await flushCachedCustomerBalances({
+				ctx,
+				customerIds: customersToDelete.map(({ customerId }) => customerId),
+				source: "runClearCreditSystemCacheTask",
+			});
+
+			// A customer whose flush failed keeps the old rates until TTL rather than losing unsynced balances.
+			if (failedCustomerIds.size > 0) {
+				logger.error(
+					`Keeping cache for ${failedCustomerIds.size} customers whose balance flush failed; they keep the old credit rates until TTL`,
+				);
+			}
+			const customersToInvalidate = customersToDelete.filter(
+				({ customerId }) => !failedCustomerIds.has(customerId),
+			);
+
 			const deleted = await batchInvalidateCachedFullSubjects({
-				customers: customersToDelete,
+				customers: customersToInvalidate,
 				featuresByOrgEnv,
 				getRedisTargetsForCustomer: () =>
 					getRedisTargetsForCustomer({
