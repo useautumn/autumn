@@ -12,7 +12,6 @@ import {
 	createSubjectState,
 	subjectStateToFullSubject,
 } from "../../../src/balanceEngine.js";
-import { deduct } from "../../../src/deduction/deduct.js";
 import type { DeductionRequest } from "../../../src/deduction/types/deductionRequest.js";
 import {
 	createCatalogFor,
@@ -26,6 +25,7 @@ import {
 	balancesAfter,
 	createDeductionRequest,
 	customerWith,
+	deductAndCompare as deduct,
 } from "./deductionFixtures.js";
 
 const ENTITY_FEATURE_ID = "seats";

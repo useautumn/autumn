@@ -23,7 +23,6 @@ import {
 	createSubjectState,
 	subjectStateToFullSubject,
 } from "../../../src/balanceEngine.js";
-import { deduct } from "../../../src/deduction/deduct.js";
 import { toBalanceEditRequest } from "../../../src/deduction/toBalanceEditRequest.js";
 import {
 	createCatalogFor,
@@ -37,7 +36,11 @@ import {
 	occurredAt,
 	org,
 } from "../engineFixtures.js";
-import { createDeductionRequest, customerWith } from "./deductionFixtures.js";
+import {
+	createDeductionRequest,
+	customerWith,
+	deductAndCompare as deduct,
+} from "./deductionFixtures.js";
 
 const nextResetAt = occurredAt + 10 * 24 * 60 * 60 * 1000;
 const cycle = getUsageWindowBounds({
