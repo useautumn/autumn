@@ -34,6 +34,8 @@ export type BalanceWorkerHttpEnv = {
 	};
 };
 
+export type RequestShedReason = "past_deadline" | "check_capacity";
+
 export type BalanceWorkerRequestLog = {
 	id: string;
 	command?: Pick<TrackCommand, "requestId" | "identity"> &
@@ -57,6 +59,8 @@ export type BalanceWorkerRequestLog = {
 		| RecalculateBalanceReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
+	/** Turned away before running so a flood stays cheap: logged at the success sample rate, without a stack. */
+	shed?: RequestShedReason;
 	/** A track batch logs once: its size and failures counted by code, never one line per command. */
 	batch?: BalanceWorkerBatchLog;
 };

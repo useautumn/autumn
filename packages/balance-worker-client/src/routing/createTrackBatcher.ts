@@ -4,7 +4,9 @@ import type { TrackReply } from "../contracts/track.js";
 import type { TrackBatchItemResult } from "../contracts/trackBatch.js";
 import {
 	requestBudgetHeaderValue,
+	requestDeadlineHeaderValue,
 	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_REQUEST_DEADLINE_HEADER,
 } from "../contracts/worker.js";
 import {
 	type HttpResponse,
@@ -282,10 +284,13 @@ export function createTrackBatcher({
 					route: resolved.route,
 					commands: items.map(snapshotOf),
 				},
-				// The batch waits only as long as its most impatient item.
+				// The batch waits only as long as its most impatient item, and is abandoned only once its most patient one gives up.
 				headers: {
 					[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
 						expiresAt: earliestDeadline({ items }).expiresAt,
+					}),
+					[WORKER_REQUEST_DEADLINE_HEADER]: requestDeadlineHeaderValue({
+						expiresAt: attemptDeadline({ items, batchAttempt }).expiresAt,
 					}),
 				},
 				signal: batchAttempt.controller.signal,

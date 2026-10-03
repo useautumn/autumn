@@ -127,4 +127,8 @@ export type PartitionRuntime = {
 	): Promise<Decision>;
 };
 
-export type ProcessOptions = { budgetMs?: number };
+export type ProcessOptions = {
+	budgetMs?: number;
+	/** Epoch ms after which the caller no longer waits: a command reaching the partition later is dropped. */
+	deadlineAt?: number;
+};

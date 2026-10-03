@@ -1,6 +1,8 @@
 import {
 	requestBudgetHeaderValue,
+	requestDeadlineHeaderValue,
 	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_REQUEST_DEADLINE_HEADER,
 } from "../contracts/worker.js";
 import {
 	type HttpResponse,
@@ -107,6 +109,9 @@ export async function sendToOwner<Response>({
 					},
 					headers: {
 						[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
+							expiresAt: deadline.expiresAt,
+						}),
+						[WORKER_REQUEST_DEADLINE_HEADER]: requestDeadlineHeaderValue({
 							expiresAt: deadline.expiresAt,
 						}),
 					},

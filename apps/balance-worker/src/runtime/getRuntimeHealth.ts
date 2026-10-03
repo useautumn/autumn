@@ -23,6 +23,10 @@ export function getRuntimeHealth({
 		localNextOffset: ctx.stateStore.readNextOffset({ topic, partition }),
 		...ctx.follower.readProgress({ topic, partition }),
 		failureReason: state.failureReason,
+		requests: {
+			...state.requestCounters,
+			...ctx.processor.readCounters(),
+		},
 	});
 	return state.checkpointLease
 		? { ...health, checkpoint: state.checkpointLease.getHealth() }

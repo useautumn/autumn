@@ -1,19 +1,23 @@
-import type {
-	ApplyBillingPlanRequest,
-	CheckCommand,
-	ConfirmExpiredLockCommand,
-	DeleteBalanceCommand,
-	EvictCommand,
-	FinalizeCommand,
-	FlushCommand,
-	InitializeRequest,
-	MutationSource,
-	ReadSubjectStateCommand,
-	RecalculateBalanceCommand,
-	ResetCommand,
-	TrackCommand,
-	UpdateBalanceCommand,
+import {
+	type ApplyBillingPlanRequest,
+	type CheckCommand,
+	type ConfirmExpiredLockCommand,
+	type DeleteBalanceCommand,
+	type EvictCommand,
+	type FinalizeCommand,
+	type FlushCommand,
+	type InitializeRequest,
+	type MutationSource,
+	meteringIdentityToPartitionKey,
+	type ReadSubjectStateCommand,
+	type RecalculateBalanceCommand,
+	type ResetCommand,
+	type TrackCommand,
+	type UpdateBalanceCommand,
 } from "@autumn/balance-engine";
+import { BALANCE_WORKER_MAX_IN_FLIGHT_CHECKS_PER_CUSTOMER } from "@autumn/env/balanceWorkerConstants";
+import { createCheckAdmission } from "./checkAdmission/createCheckAdmission.js";
+import type { CheckAdmission } from "./checkAdmission/types/checkAdmission.js";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
@@ -93,14 +97,23 @@ export function createPartitionProcessor({
 		accepted: createAcceptedCommands(),
 		customerPlans: createCustomerPlans(),
 	};
+	const checkAdmission = createCheckAdmission({
+		config: {
+			maxInFlightPerCustomer:
+				config.maxInFlightChecksPerCustomer ??
+				BALANCE_WORKER_MAX_IN_FLIGHT_CHECKS_PER_CUSTOMER,
+		},
+	});
 
-	return createProcessor({ scope });
+	return createProcessor({ scope, checkAdmission });
 }
 
 function createProcessor({
 	scope,
+	checkAdmission,
 }: {
 	scope: PartitionProcessorScope;
+	checkAdmission: CheckAdmission;
 }): PartitionProcessor {
 	function track({ command }: { command: TrackCommand }) {
 		return acceptCommand({
@@ -119,7 +132,12 @@ function createProcessor({
 	function check({ command }: { command: CheckCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: checkPartition({ scope, command }),
+			operation: checkAdmission.admit({
+				customerKey: meteringIdentityToPartitionKey({
+					identity: command.identity,
+				}),
+				run: () => checkPartition({ scope, command }),
+			}),
 		});
 	}
 
@@ -275,7 +293,7 @@ function createProcessor({
 				source,
 				deferredLogs,
 				run: (executionScope) =>
-					run(createProcessor({ scope: executionScope })),
+					run(createProcessor({ scope: executionScope, checkAdmission })),
 			}),
 		});
 	}
@@ -283,6 +301,7 @@ function createProcessor({
 	return {
 		execute,
 		dispose: () => scope.ctx.writer.dispose(),
+		readCounters: () => checkAdmission.readCounters(),
 		track,
 		decideTrack,
 		check,

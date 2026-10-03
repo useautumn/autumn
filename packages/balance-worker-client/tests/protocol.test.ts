@@ -6,6 +6,7 @@ import ts from "typescript";
 import {
 	parseWorkerRequest,
 	readRequestBudgetHeader,
+	readRequestDeadlineHeader,
 	WorkerProtocolError,
 } from "../src/protocol.js";
 
@@ -189,4 +190,15 @@ test("the request budget header reads as a whole number of milliseconds or nothi
 		"1234567890",
 	])
 		expect(readRequestBudgetHeader({ value })).toBeUndefined();
+});
+
+test("the request deadline header reads as a whole epoch millisecond or nothing", () => {
+	expect(readRequestDeadlineHeader({ value: "1700000000123" })).toBe(
+		1_700_000_000_123,
+	);
+	expect(readRequestDeadlineHeader({ value: " 1700000000123 " })).toBe(
+		1_700_000_000_123,
+	);
+	for (const value of [null, undefined, "", "soon", "-1", "1.5", "1e12"])
+		expect(readRequestDeadlineHeader({ value })).toBeUndefined();
 });
