@@ -53,6 +53,7 @@ test(`${chalk.yellowBright("activate scheduled: early activation replaces future
 		updated_at: now,
 		status: CusProductStatus.Scheduled,
 		starts_at: futureStartsAt,
+		options: [],
 	});
 
 	try {
