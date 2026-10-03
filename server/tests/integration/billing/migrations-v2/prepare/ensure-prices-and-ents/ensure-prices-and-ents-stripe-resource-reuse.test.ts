@@ -10,9 +10,9 @@
  *   ladder) to all of them, `ensurePricesAndEntitlements` must:
  *     - still create one distinct Autumn `prices` row per matched version
  *       (unchanged — each version keeps its own row), but
- *     - create exactly ONE real Stripe price (`config.stripe_price_id`) and
- *       ONE real Stripe v2 prepaid price (`config.stripe_prepaid_price_v2_id`)
- *       for that new item, REUSED across every matched version's row —
+ *     - create exactly ONE real Stripe v2 prepaid price
+ *       (`config.stripe_prepaid_price_v2_id`) and ONE Stripe product for that
+ *       new item, REUSED across every matched version's row —
  *       not one independent Stripe price per matched version.
  *
  * Pre-fix red: `ensurePricesAndEntitlements.apply()` ran Stripe resource
@@ -153,7 +153,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: Stripe price/
 			(row) =>
 				row.internal_product_id === internalProductId &&
 				row.is_custom === true &&
-				Boolean((row.config as { stripe_price_id?: string }).stripe_price_id),
+				Boolean((row.config as { stripe_prepaid_price_v2_id?: string }).stripe_prepaid_price_v2_id),
 		)?.id;
 
 	let oldVersionPriceId: string | undefined;
@@ -182,7 +182,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: Stripe price/
 	expect(oldVersionPriceId).not.toBe(latestVersionPriceId);
 
 	// ── Contract assertion 2 (the actual fix): those two DIFFERENT Autumn price
-	// rows share the SAME real Stripe price + v2 prepaid price, not one each ──
+	// rows share the SAME Stripe product + v2 prepaid price, not one each ──
 	await expectPreparedStripePriceReused({
 		ctx,
 		priceIds: [oldVersionPriceId, latestVersionPriceId],

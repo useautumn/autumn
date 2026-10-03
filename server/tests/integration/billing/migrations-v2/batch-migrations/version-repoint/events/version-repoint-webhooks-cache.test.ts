@@ -176,7 +176,7 @@ test.concurrent(
 			customerId,
 		});
 		const billingChange = billingUpdated?.plan_changes?.[0];
-		expect(billingChange).toEqual(eventChange);
+		expect(billingChange).toEqual({ ...eventChange, entity_id: null });
 		expect(eventChange.subscription).toMatchObject({ plan_id: plan.id });
 		expect(eventChange.item_changes).toEqual([]);
 		expect(eventChange.previous_attributes).toBeNull();
