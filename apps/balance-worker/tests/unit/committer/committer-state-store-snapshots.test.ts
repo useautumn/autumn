@@ -6,6 +6,7 @@ import { createCommitterStateStore } from "../../../src/committer/createCommitte
 import { EVICT_DELETES_MAX_PENDING } from "../../../src/committer/subjectSnapshots/createEvictDeletes.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import { createState, createTrackMutation } from "../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "autumn-metering";
 const retry = {
@@ -53,18 +54,23 @@ const createStore = ({
 	db,
 	requestCount,
 	warnings = [],
+	subjectSnapshotsConfig = createSubjectSnapshotsStore({
+		mode: "write",
+		dropBatch: DROP_BATCH,
+	}),
 }: {
 	db: CommitterDb;
 	requestCount: () => number;
 	warnings?: string[];
+	subjectSnapshotsConfig?: ReturnType<typeof createSubjectSnapshotsStore>;
 }) => {
 	const committer = createCommitter({
-		ctx: { db },
+		ctx: { db, subjectSnapshotsConfig },
 		config: {
 			concurrency: 32,
 			maxRowsPerFlush: 500,
 			retry,
-			snapshots: { partitionCount: 64, maxBytes: 262_144 },
+			snapshots: { partitionCount: 64 },
 		},
 	});
 	const store = createCommitterStateStore({
@@ -72,7 +78,7 @@ const createStore = ({
 			committer,
 			db,
 			logger: { warn: (message) => warnings.push(message) },
-			snapshots: { dropBatch: DROP_BATCH },
+			subjectSnapshotsConfig,
 		},
 	});
 	const deletes = store.evictDeletes;
@@ -258,5 +264,59 @@ describe("committer state store evict deletes", () => {
 			0,
 		);
 		expect(deleted).toBe(EVICT_DELETES_MAX_PENDING);
+	});
+
+	test("with the store off, an enqueue is a no-op and Postgres sees no statement", async () => {
+		const { db, requests } = createCountingDb();
+		const { deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "off" }),
+		});
+
+		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(1) });
+		await drained();
+
+		expect(requests).toEqual([]);
+	});
+
+	test("a flip takes effect at the next tick: write → off drops what is pending, off → write lands the next enqueue", async () => {
+		const held = Promise.withResolvers<void>();
+		const { db, requests, deleteStatements } = createCountingDb({
+			gate: held.promise,
+		});
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({
+			mode: "write",
+			dropBatch: 1,
+		});
+		const { deletes, drained } = createStore({
+			db,
+			requestCount: () => requests.length,
+			subjectSnapshotsConfig,
+		});
+
+		for (const index of [1, 2])
+			deletes.enqueue({ topic, partition: 4, customerKey: keyOf(index) });
+		await Bun.sleep(2);
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
+			mode: "off",
+		});
+		held.resolve();
+		await drained();
+		expect(deleteStatements().map((r) => r.snapshots?.deletes)).toEqual([
+			[customerOf(1)],
+		]);
+
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
+			mode: "write",
+		});
+		deletes.enqueue({ topic, partition: 4, customerKey: keyOf(3) });
+		await drained();
+		expect(deleteStatements().map((r) => r.snapshots?.deletes)).toEqual([
+			[customerOf(1)],
+			[customerOf(3)],
+		]);
 	});
 });

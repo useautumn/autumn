@@ -15,6 +15,7 @@ import {
 	createState,
 	createTrackMutation,
 } from "../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "autumn-metering";
 const retry = {
@@ -60,15 +61,23 @@ const SNAPSHOTS = { partitionCount: PARTITION_COUNT };
 const committerFor = ({
 	db,
 	snapshots = SNAPSHOTS,
+	subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode: "write" }),
 	maxRowsPerFlush = 500,
 }: {
 	db: CommitterDb;
 	/** Null: the committer is not configured for snapshots at all. */
 	snapshots?: { partitionCount: number } | null;
+	/** Null: the worker registered no store, as a worker without edge configs. */
+	subjectSnapshotsConfig?: ReturnType<
+		typeof createSubjectSnapshotsStore
+	> | null;
 	maxRowsPerFlush?: number;
 }) =>
 	createCommitter({
-		ctx: { db },
+		ctx: {
+			db,
+			...(subjectSnapshotsConfig && { subjectSnapshotsConfig }),
+		},
 		config: {
 			concurrency: 1,
 			maxRowsPerFlush,
@@ -128,6 +137,57 @@ describe("committer subject snapshots", () => {
 
 		expect(requests).toHaveLength(1);
 		expect(requests[0]).not.toHaveProperty("snapshots");
+	});
+
+	test("with the store reading off, or no store at all, the flush statement is untouched, whatever the writer intended", async () => {
+		const state = createState({ identity: identityOf("cus_1"), balance: 95 });
+		for (const subjectSnapshotsConfig of [
+			createSubjectSnapshotsStore({ mode: "off" }),
+			null,
+		]) {
+			const { db, requests } = createRecordingDb();
+			const committer = committerFor({ db, subjectSnapshotsConfig });
+			await committer.apply({
+				topic,
+				partition: 3,
+				expectedOffset: 10n,
+				records: [trackRecord({ customerId: "cus_1", offset: 10n })],
+				snapshotIntent: writing(state),
+			});
+			expect(requests).toHaveLength(1);
+			expect(requests[0]).not.toHaveProperty("snapshots");
+		}
+	});
+
+	test("a flip in the store takes effect at the next flush: off writes nothing, write upserts, off again writes nothing", async () => {
+		const { db, requests } = createRecordingDb();
+		const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode: "off" });
+		const committer = committerFor({ db, subjectSnapshotsConfig });
+		const state = createState({ identity: identityOf("cus_1"), balance: 95 });
+		const applyAt = (offset: bigint) =>
+			committer.apply({
+				topic,
+				partition: 3,
+				expectedOffset: offset,
+				records: [trackRecord({ customerId: "cus_1", offset })],
+				snapshotIntent: writing(state),
+			});
+
+		await applyAt(10n);
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
+			mode: "write",
+		});
+		await applyAt(11n);
+		subjectSnapshotsConfig._setRuntimeConfigForTesting({
+			...subjectSnapshotsConfig.get(),
+			mode: "off",
+		});
+		await applyAt(12n);
+
+		expect(requests.map(upsertedKeys)).toEqual([[], ["cus_1:"], []]);
+		expect(requests[0]).not.toHaveProperty("snapshots");
+		expect(requests[2]).not.toHaveProperty("snapshots");
 	});
 
 	test("a customer the writer vouched for is upserted: each state a row, keyed and partitioned as held, aged by its full read", async () => {
@@ -351,10 +411,18 @@ describe("committer subject snapshots", () => {
 		).toEqual(new Set(["cus_a", "cus_poison", "cus_b"]));
 	});
 
-	test("snapshot rows count toward the flush's row cap only when snapshots are configured", async () => {
-		const flushesOf = async (snapshots: { partitionCount: number } | null) => {
+	test("snapshot rows count toward the flush's row cap only while snapshots are written", async () => {
+		const flushesOf = async (
+			subjectSnapshotsConfig: ReturnType<
+				typeof createSubjectSnapshotsStore
+			> | null,
+		) => {
 			const { db, requests } = createRecordingDb();
-			const committer = committerFor({ db, snapshots, maxRowsPerFlush: 3 });
+			const committer = committerFor({
+				db,
+				subjectSnapshotsConfig,
+				maxRowsPerFlush: 3,
+			});
 			let release: () => void = () => {};
 			const gate = new Promise<void>((resolve) => {
 				release = resolve;
@@ -395,6 +463,11 @@ describe("committer subject snapshots", () => {
 		};
 		// Each record is one row change plus one snapshot row: at a cap of 3 the two queued calls no longer share a flush.
 		expect(await flushesOf(null)).toBe(2);
-		expect(await flushesOf(SNAPSHOTS)).toBe(3);
+		expect(await flushesOf(createSubjectSnapshotsStore({ mode: "off" }))).toBe(
+			2,
+		);
+		expect(
+			await flushesOf(createSubjectSnapshotsStore({ mode: "write" })),
+		).toBe(3);
 	});
 });

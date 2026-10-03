@@ -16,6 +16,10 @@ function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 			execute: async (query: SQL) => {
 				const { sql, params } = dialect.sqlToQuery(query);
 				statements.push({ via, sql, params });
+				if (sql.includes("AS snapshot_deletes"))
+					return [
+						{ applied, bookmarks: 1, snapshot_upserts: 2, snapshot_deletes: 4 },
+					];
 				return sql.includes("AS bookmarks")
 					? [{ applied, bookmarks: 1 }]
 					: [{ topic: "metering" }];
@@ -106,5 +110,43 @@ describe("createCommitterDb", () => {
 
 		expect(result).toEqual({ applied: [true, false] });
 		expect(fake.transactions).toEqual(["rolled_back"]);
+	});
+
+	test("a flush that writes snapshots counts what it upserted and deleted", async () => {
+		const fake = createFakePostgres();
+		const timings = createDatabaseTimings();
+		const committerDb = createCommitterDb({
+			ctx: { postgres: { db: fake.db as never }, timings },
+		});
+
+		const result = await committerDb.flush({
+			changes: [balanceIncrement],
+			bookmarks: [bookmark],
+			snapshots: {
+				upserts: [
+					{
+						orgId: "org_1",
+						env: "live",
+						customerId: "cus_2",
+						entityId: null,
+						internalCustomerId: "cus_int_2",
+						internalEntityId: null,
+						partition: 0,
+						partitionCount: 1,
+						stateVersion: 1,
+						stateJson: "{}",
+						baselineAt: 0,
+						logOffset: 0n,
+					},
+				],
+				deletes: [{ orgId: "org_1", env: "live", customerId: "cus_1" }],
+			},
+		});
+
+		expect(result.snapshots).toEqual({ upserted: 2, deleted: 4 });
+		expect(timings.drain().subjectSnapshots).toEqual({
+			upserted: 2,
+			deleted: 4,
+		});
 	});
 });

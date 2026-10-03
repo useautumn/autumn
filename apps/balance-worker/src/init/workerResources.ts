@@ -184,13 +184,19 @@ export async function openWorkerResources({
 							db: committerDb,
 							logger: dependencies.logger,
 							control: { read: readCommitterControl },
+							subjectSnapshotsConfig: edgeConfigs.subjectSnapshotsConfig,
 						},
 						config: {
 							...DEFAULT_COMMITTER_CONFIG,
 							concurrency: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
+							snapshots: {
+								partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
+							},
 						},
 					}),
 					db: committerDb,
+					logger: dependencies.logger,
+					subjectSnapshotsConfig: edgeConfigs.subjectSnapshotsConfig,
 				},
 			});
 			stateStore = committerStore;

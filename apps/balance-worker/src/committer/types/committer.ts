@@ -1,3 +1,5 @@
+import type { EdgeConfigStore } from "@autumn/edge-config";
+import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";
@@ -17,6 +19,8 @@ export type CommitterContext = {
 	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 	/** Read on every flush start; absent means the boot config is the only source. */
 	control?: { read(): CommitterControl };
+	/** Read at every decision that touches `subject_snapshots`: a flip in S3 lands with the next flush. */
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 };
 
 /** A transient failure is retried until the store answers or the committer stops; the record is never given up on. */

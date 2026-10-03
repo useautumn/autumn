@@ -114,6 +114,7 @@ export function createPartitionRuntimeFactory({
 					now: Date.now,
 				},
 				recentCommands,
+				subjectSnapshotsConfig: ctx.subjectSnapshotsConfig,
 			},
 			config: {
 				topic,

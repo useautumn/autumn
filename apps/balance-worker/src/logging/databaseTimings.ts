@@ -21,7 +21,11 @@ export type DatabaseTimingsSummary = {
 	>;
 	subjectLoadWait: Distribution;
 	errorCodes: Record<string, number>;
+	/** Present only in a window that wrote or deleted snapshots. */
+	subjectSnapshots?: SubjectSnapshotCounts;
 };
+
+type SubjectSnapshotCounts = { upserted: number; deleted: number };
 
 type SampledWindow = { count: number; max: number; samples: number[] };
 
@@ -75,6 +79,7 @@ export function createDatabaseTimings() {
 	>();
 	let subjectLoadWait = emptySampled();
 	let errorCodes: Record<string, number> = {};
+	let subjectSnapshots: SubjectSnapshotCounts | null = null;
 
 	function queryStarted(): void {
 		inFlight += 1;
@@ -107,6 +112,15 @@ export function createDatabaseTimings() {
 		addSample({ window: subjectLoadWait, value: waitMs });
 	}
 
+	function recordSubjectSnapshots({
+		upserted,
+		deleted,
+	}: SubjectSnapshotCounts): void {
+		subjectSnapshots ??= { upserted: 0, deleted: 0 };
+		subjectSnapshots.upserted += upserted;
+		subjectSnapshots.deleted += deleted;
+	}
+
 	function drain(): DatabaseTimingsSummary {
 		const summary: DatabaseTimingsSummary = {
 			inFlightMax,
@@ -121,7 +135,9 @@ export function createDatabaseTimings() {
 			),
 			subjectLoadWait: distributionOf({ window: subjectLoadWait }),
 			errorCodes,
+			...(subjectSnapshots ? { subjectSnapshots } : undefined),
 		};
+		subjectSnapshots = null;
 		inFlightMax = inFlight;
 		queries = new Map();
 		subjectLoadWait = emptySampled();
@@ -129,7 +145,13 @@ export function createDatabaseTimings() {
 		return summary;
 	}
 
-	return { queryStarted, queryFinished, recordSubjectLoadWait, drain };
+	return {
+		queryStarted,
+		queryFinished,
+		recordSubjectLoadWait,
+		recordSubjectSnapshots,
+		drain,
+	};
 }
 
 export type DatabaseTimings = ReturnType<typeof createDatabaseTimings>;
