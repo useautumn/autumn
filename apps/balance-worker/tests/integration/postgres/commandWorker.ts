@@ -1,4 +1,3 @@
-import { appendFileSync } from "node:fs";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 
@@ -6,7 +5,6 @@ const env = JSON.parse(
 	process.env.BALANCE_WORKER_TEST_ENV ?? "null",
 ) as BalanceWorkerEnv | null;
 if (!env) throw new Error("Missing test worker environment");
-const warnFile = process.env.BALANCE_WORKER_TEST_WARN_FILE;
 function ignoreLog(): void {}
 const worker = await createBalanceWorker({
 	ctx: {
@@ -15,11 +13,7 @@ const worker = await createBalanceWorker({
 			info: process.env.BALANCE_WORKER_TEST_INFO_LOGS
 				? (...args: unknown[]) => console.info(JSON.stringify(args))
 				: ignoreLog,
-			// A spawned worker's warnings land in a file the test reads back, one JSON record per line.
-			warn: warnFile
-				? (...args: unknown[]) =>
-						appendFileSync(warnFile, `${JSON.stringify(args)}\n`)
-				: ignoreLog,
+			warn: ignoreLog,
 			error: console.error,
 		},
 		onError: ({ cause }) => console.error(cause),

@@ -368,15 +368,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			const plain = await read(null);
 			expect(plain.snapshot).toBeNull();
 			expect(plain.envelope?.customer.id).toBe(seeded.identity.customerId);
-			const both = await getSubjectRows({
-				ctx,
-				customerId: seeded.identity.customerId,
-				asOfTimestampMs: Date.now(),
-				snapshotVersion: 1,
-				rowsBesideSnapshot: true,
-			});
-			expect(both.snapshot).toEqual({ revision: 7, entityId: null });
-			expect(both.envelope?.customer.id).toBe(seeded.identity.customerId);
 			expect(
 				await getSubjectRows({
 					ctx,

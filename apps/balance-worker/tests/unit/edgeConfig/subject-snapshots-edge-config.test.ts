@@ -4,11 +4,7 @@ import { createWorkerEdgeConfigs } from "../../../src/edgeConfig/createWorkerEdg
 import {
 	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 	defaultSubjectSnapshotsEdgeConfig,
-	readsSubjectSnapshots,
-	type SubjectSnapshotMode,
 	SubjectSnapshotsEdgeConfigSchema,
-	servesSubjectSnapshots,
-	writesSubjectSnapshots,
 } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createMemoryS3Client } from "../../fixtures/subjectSnapshotsStore.js";
 
@@ -30,21 +26,9 @@ describe("the subject snapshots edge config", () => {
 		});
 	});
 
-	test("each mode says what it does with the table: write keeps it, verify and serve also read it, serve alone trusts it", () => {
-		const of = (mode: SubjectSnapshotMode) => ({
-			writes: writesSubjectSnapshots({ mode }),
-			reads: readsSubjectSnapshots({ mode }),
-			serves: servesSubjectSnapshots({ mode }),
-		});
-		expect(of("off")).toEqual({ writes: false, reads: false, serves: false });
-		expect(of("write")).toEqual({ writes: true, reads: false, serves: false });
-		expect(of("verify")).toEqual({ writes: true, reads: true, serves: false });
-		expect(of("serve")).toEqual({ writes: true, reads: true, serves: true });
-	});
-
-	test("an unknown mode, an unknown key, or a bound out of range is refused whole", () => {
+	test("a mode without a read path, an unknown key, or a bound out of range is refused whole", () => {
 		for (const raw of [
-			{ mode: "read" },
+			{ mode: "verify" },
 			{ mode: "write", serve: true },
 			{ maxBytes: 0 },
 			{ dropBatch: 5_001 },
@@ -97,7 +81,7 @@ describe("the subject snapshots edge config", () => {
 		expect(edgeConfigs.subjectSnapshotsConfig.get().mode).toBe("write");
 	});
 
-	test("an object naming an unknown mode is refused, and the last good record stays", async () => {
+	test("an object naming a mode without a read path is refused, and the last good record stays", async () => {
 		const memory = createMemoryS3Client();
 		const edgeConfigs = workerEdgeConfigsOver(memory);
 		await edgeConfigs.subjectSnapshotsConfig.writeToSource({
@@ -108,7 +92,7 @@ describe("the subject snapshots edge config", () => {
 		await memory.send({
 			input: {
 				Key: BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
-				Body: JSON.stringify({ mode: "read" }),
+				Body: JSON.stringify({ mode: "verify" }),
 			},
 		} as never);
 		await edgeConfigs.subjectSnapshotsConfig.refresh();

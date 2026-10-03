@@ -4,14 +4,11 @@ import { z } from "zod/v4";
 export const BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY =
 	"admin/balance-worker-subject-snapshots.json";
 
-/** An object naming an unknown mode or key is refused whole, and the last good record stays. */
+/** verify needs both reads side by side; until it ships it is not a mode, and an object naming it is refused whole. */
 export const SubjectSnapshotsEdgeConfigSchema = z
 	.object({
-		/**
-		 * off writes nothing; write keeps the table from the committer's flushes and the evicts' deletes; verify also reads
-		 * it beside the rows on a cold load for now and logs where they disagree, serving the rows; serve loads from it.
-		 */
-		mode: z.enum(["off", "write", "verify", "serve"]).default("off"),
+		/** off writes nothing; write keeps the table from the committer's flushes and the evicts' deletes; serve also loads from it. */
+		mode: z.enum(["off", "write", "serve"]).default("off"),
 		/** A state weighing more than this is never written: the writer deletes its customer's rows instead. */
 		maxBytes: z.number().int().positive().default(262_144),
 		/** Customers one evict DELETE carries; a storm of evicts lands as this many per statement. */
@@ -44,14 +41,6 @@ export const writesSubjectSnapshots = ({
 	mode: SubjectSnapshotMode;
 }): boolean => mode !== "off";
 
-/** A cold load asks the statement for the row: to serve it, or to check it against the rows. */
-export const readsSubjectSnapshots = ({
-	mode,
-}: {
-	mode: SubjectSnapshotMode;
-}): boolean => mode === "verify" || mode === "serve";
-
-/** The row answers in place of the rows. */
 export const servesSubjectSnapshots = ({
 	mode,
 }: {

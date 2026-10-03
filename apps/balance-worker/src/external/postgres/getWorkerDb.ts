@@ -63,12 +63,7 @@ export const createWorkerDb = ({
 }: {
 	ctx: WorkerDbContext;
 }): WorkerDb => ({
-	getSubjectRows: ({
-		identity,
-		asOfTimestampMs,
-		snapshotVersion,
-		rowsBesideSnapshot,
-	}) =>
+	getSubjectRows: ({ identity, asOfTimestampMs, snapshotVersion }) =>
 		ctx.subjectLoads.run(async () => {
 			const read = await timeQuery({
 				ctx,
@@ -84,7 +79,6 @@ export const createWorkerDb = ({
 						entityId: identity.entityId,
 						asOfTimestampMs,
 						snapshotVersion,
-						rowsBesideSnapshot,
 					}),
 			});
 			if (snapshotVersion !== undefined)
