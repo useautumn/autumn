@@ -93,6 +93,7 @@ export type PartitionWriterContext = {
 		| "readOwnState"
 		| "readReceipt"
 		| "applyDurableMutations"
+		| "evictDeletes"
 	>;
 	appender: CommittedOutcomeAppender;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
