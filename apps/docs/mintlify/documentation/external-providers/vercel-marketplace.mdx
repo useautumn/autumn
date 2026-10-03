@@ -3,7 +3,9 @@ title: "Vercel Marketplace"
 description: "Set up the Vercel Marketplace integration in Autumn"
 ---
 
-Autumn lets you add your product to [Vercel's Marketplace](https://vercel.com/marketplace) without any additional code. This guide walks through connecting the Autumn partner API and webhooks to Vercel, and setting up Stripe's custom payment method for accurate billing.
+Autumn lets you add your product to [Vercel's Marketplace](https://vercel.com/marketplace) without any additional code. This guide walks through connecting the Autumn partner API and webhooks to Vercel.
+
+Vercel-billed subscriptions run in Stripe **invoice mode** — Vercel collects payment from the end customer, and Autumn marks the corresponding Stripe invoice paid out of band. No Stripe custom payment method setup is required.
 
 <Note>
  This is currently in beta. Reach out on [Discord](https://discord.gg/STqxY92zuS) or email hey@useautumn.com to get access.
@@ -64,46 +66,6 @@ Autumn lets you add your product to [Vercel's Marketplace](https://vercel.com/ma
 
     <Frame>
       <img src="/images/vercel-marketplace/step-5-marketplace-base-url.png" alt="Vercel Marketplace Base URL" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Create a Stripe custom payment method
-
-    Autumn uses Stripe's billing clock for accurate billing cycles and invoice reporting via the **Custom Payment Methods** system. In the Stripe dashboard, go to **Settings → Payments → Custom payment methods**, then click **Create a custom payment method**.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-6-custom-payment-methods.png" alt="Stripe Custom Payment Methods" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Provide a custom name and icon
-
-    Select **Provide a custom name and icon** at the bottom of the payment method selection dialog.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-7-provide-custom-name.png" alt="Provide custom name and icon" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Name the payment method
-
-    Enter **Vercel Marketplace** as the display name and upload the Vercel logo.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-8-vercel-marketplace-name.png" alt="Vercel Marketplace payment method name and logo" />
-    </Frame>
-    </Step>
-
-    <Step>
-    ### Copy the custom payment method ID
-
-    After creating the payment method, Stripe will display a `custom.type ID` (starting with `cpmt_`). Copy this ID and paste it into the **Custom Payment Method ID** field in the Autumn dashboard.
-
-    <Frame>
-      <img src="/images/vercel-marketplace/step-9-custom-payment-id.png" alt="Custom payment method ID" />
     </Frame>
     </Step>
 
