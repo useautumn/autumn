@@ -32,6 +32,7 @@ export {
 	type CheckAfterDeduction,
 	checkAfterDeduction,
 } from "./commands/check/checkAfterDeduction.js";
+export { checkCommandToDeductionRequest } from "./commands/check/checkCommandToDeductionRequest.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
@@ -94,11 +95,17 @@ export type {
 export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest.js";
 // deduction
 export { deduct } from "./deduction/deduct.js";
+export { setupDeductionContext } from "./deduction/setup/setupDeductionContext.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
 export type { DeductionDecision } from "./deduction/types/deductionDecision.js";
 export type { DeductionDelta } from "./deduction/types/deductionDelta.js";
 export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
+export type {
+	DeductionRequest,
+	DeductionSelection,
+} from "./deduction/types/deductionRequest.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
+export { deductionSelectionToKey } from "./deduction/utils/convertDeductionUtils.js";
 export { usageWindowFeaturesOf } from "./deduction/utils/limits/usageWindowFeaturesOf.js";
 export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
