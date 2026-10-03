@@ -3,6 +3,7 @@ import type {
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "@autumn/postgres";
+import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type {
 	CommitterConfig,
 	CommitterContext,
@@ -20,7 +21,8 @@ export const collectSnapshotWrites = ({
 	config: Pick<CommitterConfig, "snapshots">;
 	flush: Flush;
 }): SubjectSnapshotWrites | undefined => {
-	if (!config.snapshots || ctx.subjectSnapshotsConfig?.get().mode !== "write")
+	const settings = ctx.subjectSnapshotsConfig?.get();
+	if (!config.snapshots || !settings || !writesSubjectSnapshots(settings))
 		return undefined;
 	const { partitionCount } = config.snapshots;
 	const upserts: SubjectSnapshotUpsert[] = [];

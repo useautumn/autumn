@@ -181,7 +181,7 @@ async function createHarness(): Promise<Harness> {
 function edgeConfigOverrideOf({
 	subjectSnapshots,
 }: {
-	subjectSnapshots: "off" | "write";
+	subjectSnapshots: "off" | "write" | "serve";
 }): string {
 	const configs = {
 		[BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY]: {
@@ -200,7 +200,7 @@ async function startWorker({
 }: {
 	harness: Harness;
 	subprocess?: boolean;
-	subjectSnapshots?: "off" | "write";
+	subjectSnapshots?: "off" | "write" | "serve";
 }): Promise<RunningWorker> {
 	if (!databaseUrl) throw new Error("No worktree DATABASE_URL");
 	const directory = mkdtempSync(join(tmpdir(), "pg-commit-"));
@@ -223,7 +223,7 @@ async function startWorker({
 	const errors: unknown[] = [];
 	// The snapshot settings come from the edge-config override, decoded once per process: a writing worker is its own process.
 	const child =
-		subprocess || subjectSnapshots === "write"
+		subprocess || subjectSnapshots !== "off"
 			? Bun.spawn(
 					[
 						"bun",
@@ -2449,6 +2449,73 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 120_000);
 
+		test("serving snapshots: a restart answers the next track from the row the last worker wrote, with no full read; a bypass write the row cannot know is served stale until an evict, and a track after it re-reads whole", async () => {
+			const isolated = await createHarness();
+			const served = await seedCustomer({ postgres, balance: 100 });
+			let running: RunningWorker | undefined;
+			try {
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "serve",
+				});
+				await trackOrExplain(
+					isolated,
+					trackCommand({ customer: served, commandId: "serve_1", value: 5 }),
+				);
+				await waitForSnapshotBalance({
+					postgres,
+					customer: served,
+					balance: 95,
+				});
+				await running.stop();
+				running = undefined;
+				expect(
+					await readSnapshots({ postgres, customer: served }),
+				).toHaveLength(1);
+
+				// The legacy path rewrites the grant underneath: the snapshot still says 95.
+				await served.deleteGrant();
+				await served.restoreGrant({ balance: 50 });
+				running = await startWorker({
+					harness: isolated,
+					subjectSnapshots: "serve",
+				});
+				expect(
+					await readSnapshots({ postgres, customer: served }),
+				).toHaveLength(1);
+				const stale = await trackOrExplain(
+					isolated,
+					trackCommand({ customer: served, commandId: "serve_2", value: 5 }),
+				);
+				expect(balanceOf(stale, served.customerEntitlementId)).toBe(90);
+				// The stale decision still landed its deduction on the real row (50 → 45): row changes are deltas.
+				expect(await waitForBalance({ customer: served, balance: 45 })).toBe(
+					45,
+				);
+
+				// An evict drops the row with the memory; the next track reads whole and sees the bypass write.
+				await isolated.client.evict({
+					command: evictCommand({
+						customerId: served.identity.customerId,
+						orgId: served.orgId,
+						env: served.env,
+					}),
+				});
+				const fresh = await trackOrExplain(
+					isolated,
+					trackCommand({ customer: served, commandId: "serve_3", value: 5 }),
+				);
+				expect(balanceOf(fresh, served.customerEntitlementId)).toBe(40);
+				expect(await waitForBalance({ customer: served, balance: 40 })).toBe(
+					40,
+				);
+			} finally {
+				await running?.stop();
+				await isolated.stop();
+				await served.cleanup();
+			}
+		}, 90_000);
+
 		test("with snapshots off, nothing is written to subject_snapshots", async () => {
 			const isolated = await createHarness();
 			const plain = await seedCustomer({ postgres, balance: 100 });
@@ -2579,6 +2646,81 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				}
 			},
 			120_000,
+		);
+
+		test.each(["off", "serve"] as const)(
+			"a cold herd of 1,000 customers checked at once is answered; served rows make the restart warm (snapshots %s)",
+			async (subjectSnapshots) => {
+				const isolated = await createHarness();
+				const herd: SeededCustomer[] = [];
+				for (let start = 0; start < 1_000; start += 50)
+					herd.push(
+						...(await Promise.all(
+							Array.from({ length: 50 }, () =>
+								seedCustomer({ postgres, balance: 100 }),
+							),
+						)),
+					);
+				let running: RunningWorker | undefined;
+				try {
+					running = await startWorker({ harness: isolated, subjectSnapshots });
+					// A track per customer: with snapshots kept, every row exists before the restart.
+					for (let start = 0; start < herd.length; start += 100)
+						await Promise.all(
+							herd
+								.slice(start, start + 100)
+								.map((customer) =>
+									trackOrExplain(
+										isolated,
+										trackCommand({ customer, commandId: "herd_1", value: 1 }),
+									),
+								),
+						);
+					if (subjectSnapshots === "serve")
+						await waitForSnapshotBalance({
+							postgres,
+							customer: herd[herd.length - 1] as SeededCustomer,
+							balance: 99,
+						});
+					await running.stop();
+					running = await startWorker({ harness: isolated, subjectSnapshots });
+
+					const startedAt = performance.now();
+					const samples = await Promise.all(
+						herd.map(async (customer, index) => {
+							const checkStartedAt = performance.now();
+							const reply = await isolated.client.check({
+								command: checkCommand({
+									customer,
+									requestId: `herd_check_${index}`,
+									requiredBalance: 1,
+								}),
+							});
+							expect(reply.result.allowed).toBe(true);
+							return performance.now() - checkStartedAt;
+						}),
+					);
+					console.info(
+						`[subject snapshots ${subjectSnapshots}] cold herd of 1,000 after a restart: check latency ms`,
+						JSON.stringify({
+							p50: Math.round(percentile({ samples, fraction: 0.5 })),
+							p99: Math.round(percentile({ samples, fraction: 0.99 })),
+							max: Math.round(Math.max(...samples)),
+							wallMs: Math.round(performance.now() - startedAt),
+						}),
+					);
+				} finally {
+					await running?.stop();
+					await isolated.stop();
+					for (let start = 0; start < herd.length; start += 50)
+						await Promise.all(
+							herd
+								.slice(start, start + 50)
+								.map((customer) => customer.cleanup()),
+						);
+				}
+			},
+			300_000,
 		);
 	},
 );
