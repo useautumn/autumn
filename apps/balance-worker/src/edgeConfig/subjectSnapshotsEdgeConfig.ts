@@ -9,6 +9,8 @@ export const SubjectSnapshotsEdgeConfigSchema = z
 	.object({
 		/** off writes nothing; write keeps the table from the committer's flushes and the evicts' deletes; serve also loads from it. */
 		mode: z.enum(["off", "write", "serve"]).default("off"),
+		/** A row older than this since its last full read is a miss: the bound on how stale a bypassed write can leave a subject. */
+		ttlMs: z.number().int().positive().default(3_600_000),
 		/** A state weighing more than this is never written: the writer deletes its customer's rows instead. */
 		maxBytes: z.number().int().positive().default(262_144),
 		/** Customers one evict DELETE carries; a storm of evicts lands as this many per statement. */
@@ -24,6 +26,7 @@ export type SubjectSnapshotMode = SubjectSnapshotsEdgeConfig["mode"];
 export const defaultSubjectSnapshotsEdgeConfig =
 	(): SubjectSnapshotsEdgeConfig => ({
 		mode: "off",
+		ttlMs: 3_600_000,
 		maxBytes: 262_144,
 		dropBatch: 500,
 	});

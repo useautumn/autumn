@@ -127,13 +127,9 @@ describe("database timings", () => {
 		reporter.start();
 		timings.recordSubjectSnapshots({ upserted: 3, deleted: 1 });
 		timings.recordSubjectSnapshots({ upserted: 2, deleted: 0 });
-		timings.recordSubjectSnapshots({ hits: 1 });
-		timings.recordSubjectSnapshots({ misses: 2 });
 		tick();
 		expect(logged[0]?.[0]).toMatchObject({
-			data: {
-				subjectSnapshots: { upserted: 5, deleted: 1, hits: 1, misses: 2 },
-			},
+			data: { subjectSnapshots: { upserted: 5, deleted: 1 } },
 		});
 		tick();
 		expect((logged[1]?.[0] as { data: object }).data).not.toHaveProperty(

@@ -13,6 +13,7 @@ import {
 	type PostgresClient,
 	type PostgresClientConfig,
 	readPartitionProgress,
+	readSubjectSnapshots,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
 import {
@@ -52,10 +53,7 @@ export const createWorkerPostgresClient = ({
 type WorkerDbContext = {
 	postgres: Pick<PostgresClient, "db">;
 	subjectLoads: Pick<SubjectLoadGate, "run">;
-	timings: Pick<
-		DatabaseTimings,
-		"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
-	>;
+	timings: Pick<DatabaseTimings, "queryStarted" | "queryFinished">;
 };
 
 export const createWorkerDb = ({
@@ -64,8 +62,8 @@ export const createWorkerDb = ({
 	ctx: WorkerDbContext;
 }): WorkerDb => ({
 	getSubjectRows: ({ identity, asOfTimestampMs, snapshotVersion }) =>
-		ctx.subjectLoads.run(async () => {
-			const read = await timeQuery({
+		ctx.subjectLoads.run(() =>
+			timeQuery({
 				ctx,
 				kind: "subject_rows",
 				run: () =>
@@ -80,13 +78,20 @@ export const createWorkerDb = ({
 						asOfTimestampMs,
 						snapshotVersion,
 					}),
-			});
-			if (snapshotVersion !== undefined)
-				ctx.timings.recordSubjectSnapshots(
-					read.snapshot === null ? { misses: 1 } : { hits: 1 },
-				);
-			return read;
-		}),
+			}),
+		),
+	readSubjectSnapshots: ({ identities }) =>
+		ctx.subjectLoads.run(() =>
+			timeQuery({
+				ctx,
+				kind: "subject_snapshots",
+				run: () =>
+					readSubjectSnapshots({
+						ctx: { db: ctx.postgres.db },
+						keys: identities,
+					}),
+			}),
+		),
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>
 			timeQuery({

@@ -160,6 +160,7 @@ const createFixture = () => {
 				envelope: requested.entityId === entity.id ? entityEnvelope : null,
 			};
 		},
+		readSubjectSnapshots: async () => [],
 		getEntitySubjectRows: async ({ identity: requested, entityIds }) => {
 			for (const entityId of entityIds)
 				subjectRowsCalls.push({ ...requested, entityId });
