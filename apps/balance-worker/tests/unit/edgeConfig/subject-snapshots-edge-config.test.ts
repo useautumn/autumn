@@ -19,8 +19,8 @@ describe("the subject snapshots edge config", () => {
 		expect(SubjectSnapshotsEdgeConfigSchema.parse({})).toEqual(
 			defaultSubjectSnapshotsEdgeConfig(),
 		);
-		expect(SubjectSnapshotsEdgeConfigSchema.parse({ mode: "write" })).toEqual({
-			mode: "write",
+		expect(SubjectSnapshotsEdgeConfigSchema.parse({ mode: "serve" })).toEqual({
+			mode: "serve",
 			maxBytes: 262_144,
 			dropBatch: 500,
 		});
@@ -29,7 +29,6 @@ describe("the subject snapshots edge config", () => {
 	test("a mode without a read path, an unknown key, or a bound out of range is refused whole", () => {
 		for (const raw of [
 			{ mode: "verify" },
-			{ mode: "serve" },
 			{ mode: "write", serve: true },
 			{ maxBytes: 0 },
 			{ dropBatch: 5_001 },
@@ -93,7 +92,7 @@ describe("the subject snapshots edge config", () => {
 		await memory.send({
 			input: {
 				Key: BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
-				Body: JSON.stringify({ mode: "serve" }),
+				Body: JSON.stringify({ mode: "verify" }),
 			},
 		} as never);
 		await edgeConfigs.subjectSnapshotsConfig.refresh();
