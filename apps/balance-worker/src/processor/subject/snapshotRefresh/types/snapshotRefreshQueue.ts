@@ -4,6 +4,9 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { SubjectSnapshotsEdgeConfig } from "../../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { SubjectRead } from "../../types/subjectRead.js";
 
+/** A refresh's read, with the partition's bookmark as it began, less one: the last log offset the rows include. */
+export type SnapshotRefreshRead = SubjectRead & { logOffset: bigint };
+
 export type SnapshotRefreshCounts = {
 	/** Subjects taken into the queue; a subject already waiting is not counted twice. */
 	queued: number;
@@ -17,9 +20,14 @@ export type SnapshotRefreshCounts = {
 
 export type SnapshotRefreshQueueContext = {
 	/** The subject's rows as Postgres holds them now; null when there is nothing to write back. */
-	read(params: { identity: MeteringIdentity }): Promise<SubjectRead | null>;
+	read(params: {
+		identity: MeteringIdentity;
+	}): Promise<SnapshotRefreshRead | null>;
 	/** Synchronous, never a Promise: the queue does not await it. An enqueue onto the lane, which is sync. */
-	write(params: { identity: MeteringIdentity; read: SubjectRead }): void;
+	write(params: {
+		identity: MeteringIdentity;
+		read: SnapshotRefreshRead;
+	}): void;
 	/** Read at each decision: `refreshConcurrency` as a read is started, `refreshMaxPending` as a subject is queued. */
 	subjectSnapshotsConfig: Pick<
 		EdgeConfigStore<SubjectSnapshotsEdgeConfig>,

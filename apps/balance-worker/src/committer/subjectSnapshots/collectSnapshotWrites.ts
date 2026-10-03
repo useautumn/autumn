@@ -39,7 +39,8 @@ export const collectSnapshotWrites = ({
 						...entry,
 						partition: call.partition,
 						partitionCount,
-						logOffset: call.records.at(-1)?.position.offset ?? null,
+						logOffset:
+							entry.logOffset ?? call.records.at(-1)?.position.offset ?? null,
 					}),
 				);
 		}
