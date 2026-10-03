@@ -9,7 +9,6 @@ import {
 	createSubjectState,
 	subjectStateToFullSubject,
 } from "../../../src/balanceEngine.js";
-import { deduct } from "../../../src/deduction/deduct.js";
 import {
 	createCatalogFor,
 	createCustomerEntitlement,
@@ -22,6 +21,7 @@ import {
 	balancesAfter,
 	createDeductionRequest,
 	customerWith,
+	deductAndCompare as deduct,
 } from "./deductionFixtures.js";
 
 const creditsSystem = ({
