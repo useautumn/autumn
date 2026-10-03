@@ -147,6 +147,8 @@ describe("createCommitterDb", () => {
 		expect(timings.drain().subjectSnapshots).toEqual({
 			upserted: 2,
 			deleted: 4,
+			hits: 0,
+			misses: 0,
 		});
 	});
 });

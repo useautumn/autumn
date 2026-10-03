@@ -4,7 +4,6 @@ import {
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
-import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import type { SubjectRowsEnvelope, SubjectSnapshotRow } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { createEntityLoads } from "../../../../../src/processor/subject/entityLoads/createEntityLoads.js";
@@ -74,7 +73,6 @@ const rowOf = (
 	env: "sandbox",
 	customerId,
 	entityId: null,
-	stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
 	state: createState({ identity: identityOf(customerId), balance: 42 }),
 	baselineAt: NOW - 1_000,
 	...overrides,
@@ -381,30 +379,26 @@ describe("the snapshot loader", () => {
 		);
 	}, 20_000);
 
-	test("a load for a time other than now bypasses the row: a replay never serves a snapshot", async () => {
-		const { load, fullReads, batchLines } = createScope({
+	test("a load for a time other than now is a replay: the rows alone, never queued for a row written for now", async () => {
+		const { load, selects, fullReads, batchLines } = createScope({
 			rows: [rowOf("cus_1")],
 		});
 		const state = await load("cus_1", NOW - 5_000);
 		expect(state.customer.id).toBe("cus_1");
 		expect(fullReads).toEqual(["cus_1"]);
-		await Bun.sleep(1);
-		expect(batchLines()[0]?.[0].data).toMatchObject({ asOf: 1, hits: 0 });
+		expect(selects).toEqual([]);
+		expect(batchLines()).toEqual([]);
+		expect(
+			(await load("cus_1", NOW + 1_000)).customerEntitlements[0]?.balance,
+		).toBe(42);
 	});
 
-	test("an expired row and an old-version row are misses by their reasons", async () => {
-		const { load, fullReads, batchLines } = createScope({
-			rows: [
-				rowOf("cus_old", {
-					stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION + 1,
-				}),
-				rowOf("cus_stale", { baselineAt: NOW - 3_600_000 }),
-			],
+	test("a row's age is not a reason: a row written long ago is served until an evict deletes it", async () => {
+		const { load, fullReads } = createScope({
+			rows: [rowOf("cus_old", { baselineAt: NOW - 30 * 86_400_000 })],
 		});
-		await Promise.all([load("cus_old"), load("cus_stale")]);
-		expect(fullReads.sort()).toEqual(["cus_old", "cus_stale"]);
-		await Bun.sleep(1);
-		expect(batchLines()[0]?.[0].data).toMatchObject({ version: 1, expired: 1 });
+		expect((await load("cus_old")).customerEntitlements[0]?.balance).toBe(42);
+		expect(fullReads).toEqual([]);
 	});
 
 	test("the same subject asked twice while queued is one entry: both callers get one answer", async () => {

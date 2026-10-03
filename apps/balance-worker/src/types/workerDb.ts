@@ -3,6 +3,7 @@ import type {
 	CatalogRowIds,
 	CatalogRowsEnvelope,
 	SubjectRowsEnvelope,
+	SubjectSnapshotRow,
 } from "@autumn/postgres";
 
 /** Postgres as the worker reads it: the repos it needs, bound to the pool and scoped per call. Tests stand these in. */
@@ -11,6 +12,10 @@ export type WorkerDb = {
 		identity: MeteringIdentity;
 		asOfTimestampMs: number;
 	}): Promise<SubjectRowsEnvelope | null>;
+	/** The rows that exist among these subjects at this build's version, one statement for the batch; a subject with none is absent. */
+	readSubjectSnapshots(params: {
+		identities: readonly MeteringIdentity[];
+	}): Promise<SubjectSnapshotRow[]>;
 	/** Several of the customer's entities in one read: one envelope per entity that exists. */
 	getEntitySubjectRows(params: {
 		identity: MeteringIdentity;

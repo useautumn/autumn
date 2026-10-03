@@ -1,4 +1,5 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
 	claimCustomerByEmail,
 	claimPartitionProgress,
@@ -53,7 +54,10 @@ export const createWorkerPostgresClient = ({
 type WorkerDbContext = {
 	postgres: Pick<PostgresClient, "db">;
 	subjectLoads: Pick<SubjectLoadGate, "run">;
-	timings: Pick<DatabaseTimings, "queryStarted" | "queryFinished">;
+	timings: Pick<
+		DatabaseTimings,
+		"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
+	>;
 };
 
 export const createWorkerDb = ({
@@ -80,17 +84,23 @@ export const createWorkerDb = ({
 			}),
 		),
 	readSubjectSnapshots: ({ identities }) =>
-		ctx.subjectLoads.run(() =>
-			timeQuery({
+		ctx.subjectLoads.run(async () => {
+			const rows = await timeQuery({
 				ctx,
 				kind: "subject_snapshots",
 				run: () =>
 					readSubjectSnapshots({
 						ctx: { db: ctx.postgres.db },
 						keys: identities,
+						stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
 					}),
-			}),
-		),
+			});
+			ctx.timings.recordSubjectSnapshots({
+				hits: rows.length,
+				misses: identities.length - rows.length,
+			});
+			return rows;
+		}),
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>
 			timeQuery({

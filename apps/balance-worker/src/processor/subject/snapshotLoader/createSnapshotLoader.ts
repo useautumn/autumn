@@ -94,7 +94,6 @@ export const createSnapshotLoader = ({
 		for (const entry of batch) waiting.delete(entry.subjectKey);
 		const selectMs = performance.now() - startedAt;
 		const { misses, counts } = settleSnapshotHits({
-			scope,
 			batch,
 			rowsBySubject: read.ok ? read.rowsBySubject : new Map(),
 		});
