@@ -17,6 +17,7 @@ export async function flush({
 	const { identity } = parseFlushCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({ identity });
 	await scope.ctx.writer.waitForPendingCommits({ customerKey });
+	scope.ctx.writer.hurryStore();
 	await scope.ctx.writer.waitForStore();
 	return { stored: true };
 }

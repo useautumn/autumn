@@ -28,6 +28,8 @@ export type PartitionWriter = {
 	waitForStore(): Promise<void>;
 	/** Resolves once every batch handed to the store so far has been applied or failed. */
 	waitForApplies(): Promise<void>;
+	/** The caller is about to wait on the store: a flush held back to coalesce goes now. */
+	hurryStore(): void;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
 	/** One subject's submissions decided in order in one critical section, as consecutive `decide`s would. */
@@ -196,6 +198,13 @@ export type PartitionWriterState = {
 	lastBatchSize: number;
 	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */
 	lingerWake: (() => void) | null;
+	/** When the last Kafka commit and the last store flush started, on the writer's clock. */
+	lastCommitStartedAt: number;
+	lastApplyStartedAt: number;
+	/** Someone is waiting on the store, so the next flush must not be held back to coalesce. */
+	applyHurried: boolean;
+	/** Set while a flush is held back; ends the hold early. */
+	applyWake: (() => void) | null;
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;

@@ -52,6 +52,7 @@ export async function executeCommand<Decision>({
 	});
 	// Joined and skipped commands have no new mutation to carry their offset.
 	if (!wroteMutation) {
+		scope.ctx.writer.hurryStore();
 		await precedingWrites;
 		await scope.ctx.writer.flushDeferredLogs();
 		// An earlier queued command whose commit failed is a gap this bookmark must not pass.
