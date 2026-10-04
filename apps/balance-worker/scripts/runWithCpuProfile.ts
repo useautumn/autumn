@@ -11,7 +11,8 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 const PROFILE_DIR = "/tmp/balance-worker-cpu-profile";
 
 await initInfisical();
-const profiling = process.env.BALANCE_WORKER_CPU_PROFILE === "1";
+// Diagnostic branch: profile unless explicitly turned off.
+const profiling = process.env.BALANCE_WORKER_CPU_PROFILE !== "0";
 
 const child = Bun.spawn(
 	[
