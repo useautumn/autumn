@@ -23,6 +23,7 @@ import { CustomerCheckShedError } from "../runtime/deadlineShed/deadlineShedErro
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
+import { checkHot as checkHotPartition } from "./commands/checkHot.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { deleteBalance as deleteBalancePartition } from "./commands/deleteBalance.js";
 import { evict as evictPartition } from "./commands/evict.js";
@@ -189,6 +190,12 @@ function createProcessor({
 			identity: command.identity,
 			run: () => checkPartition({ scope, command }),
 		});
+	}
+
+	/** Deadline-shed B sheds on the classic path, so a hot check steps aside while it is shedding. */
+	function checkHot({ command }: { command: CheckCommand }) {
+		if (shedsHotCustomerChecks()) return null;
+		return checkHotPartition({ scope, command });
 	}
 
 	function readSubjectState({ command }: { command: ReadSubjectStateCommand }) {
@@ -406,6 +413,7 @@ function createProcessor({
 		trackHot,
 		decideTrack,
 		check,
+		checkHot,
 		applyBillingPlan,
 		readSubjectState,
 		initialize,

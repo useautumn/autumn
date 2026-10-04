@@ -26,6 +26,7 @@ import {
 	createInitializeRequest,
 	createState,
 	createTrackCommand,
+	testOrg,
 } from "../../fixtures/mutations.js";
 import {
 	createResidentProcessor,
@@ -101,6 +102,7 @@ describe("serial-decide arm D end to end", () => {
 	let port: number;
 	let pool: ReturnType<typeof createIoWorkerPool>;
 	let listener: { stop(): Promise<void> };
+	let classicFetch: ReturnType<typeof createBalanceWorkerFetch>;
 
 	beforeAll(async () => {
 		current = await owner({ board });
@@ -114,10 +116,11 @@ describe("serial-decide arm D end to end", () => {
 			logger,
 		};
 		const app = createBalanceWorkerApp({ ctx });
+		classicFetch = createBalanceWorkerFetch({ ctx, app });
 		port = await freePort();
 		pool = createIoWorkerPool({
 			ctx: {
-				fetch: createBalanceWorkerFetch({ ctx, app }),
+				fetch: classicFetch,
 				logger,
 				onFatal: ({ cause }) => {
 					throw new Error(`unexpected pool failure: ${String(cause)}`);
@@ -156,6 +159,39 @@ describe("serial-decide arm D end to end", () => {
 		});
 	}
 
+	function check({ requestId, at }: { requestId: string; at: number }): {
+		hot: Promise<Response>;
+		classic: () => Promise<Response>;
+	} {
+		const body = JSON.stringify({
+			route,
+			command: {
+				schemaVersion: 1,
+				type: "check",
+				org: testOrg,
+				requestId,
+				identity: customer,
+				featureId: "messages",
+				internalFeatureId: "feat_messages",
+				requiredBalance: 1,
+				properties: null,
+				occurredAt: at,
+			},
+		});
+		const init = {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body,
+		};
+		return {
+			hot: fetch(`http://127.0.0.1:${port}/v1/check`, init),
+			classic: () =>
+				Promise.resolve(
+					classicFetch(new Request("http://worker/v1/check", init)),
+				),
+		};
+	}
+
 	function heldOnLanes(): number {
 		let total = 0;
 		for (const [lane, counters] of Object.entries(pool.readStats()))
@@ -191,8 +227,31 @@ describe("serial-decide arm D end to end", () => {
 		expect(heldOnLanes()).toBe(0);
 	});
 
+	test("a check on the hot path is answered at once with the classic check's bytes, fresh and from the memo, before and after a hot track", async () => {
+		const statsBefore = pool.readStats().main;
+		const fresh = check({ requestId: "chk_1", at: 1_700_000_000_000 });
+		const hot = await fresh.hot;
+		expect(hot.status).toBe(200);
+		expect(hot.headers.get("content-type")).toBe("application/json");
+		const hotBytes = await hot.text();
+		expect(await (await fresh.classic()).text()).toBe(hotBytes);
+		expect(pool.readStats().main).toMatchObject({
+			hot: statsBefore.hot + 1,
+			hotFallback: statsBefore.hotFallback,
+		});
+		expect(heldOnLanes()).toBe(0);
+		// A hot track moves the balance; the next check, decided fresh on the hot path, reads it like the classic one.
+		expect((await track({ commandId: "cmd_chk" })).status).toBe(200);
+		const after = check({ requestId: "chk_2", at: 1_700_000_001_000 });
+		const classicBytes = await (await after.classic()).text();
+		expect(await (await after.hot).text()).toBe(classicBytes);
+		expect(balanceOf(JSON.parse(classicBytes))).toBe(98);
+	});
+
 	test("a refused append answers the held reply as the classic path would, and the owner serves the customer again", async () => {
 		const positionBefore = board.readCommitPos({ partition: 0 });
+		const { hot: hotBefore, hotFallback: fallbackBefore } =
+			pool.readStats().main;
 		current.gate.hold();
 		const reply = watch(track({ commandId: "cmd_2" }));
 		await until(() => heldOnLanes() === 1, "the reply to be held");
@@ -220,7 +279,10 @@ describe("serial-decide arm D end to end", () => {
 		current.gate.open();
 		const classic = await track({ commandId: "cmd_3" });
 		expect(classic.status).toBe(404);
-		expect(pool.readStats().main).toMatchObject({ hot: 3, hotFallback: 1 });
+		expect(pool.readStats().main).toMatchObject({
+			hot: hotBefore + 2,
+			hotFallback: fallbackBefore + 1,
+		});
 		await current.processor.initialize({
 			request: createInitializeRequest({
 				state: createState({ identity: customer, balance: 100 }),
@@ -231,7 +293,10 @@ describe("serial-decide arm D end to end", () => {
 		const hot = await track({ commandId: "cmd_4" });
 		expect(hot.status).toBe(200);
 		expect(balanceOf(await hot.json())).toBe(99);
-		expect(pool.readStats().main).toMatchObject({ hot: 4, hotFallback: 1 });
+		expect(pool.readStats().main).toMatchObject({
+			hot: hotBefore + 3,
+			hotFallback: fallbackBefore + 1,
+		});
 		expect(committed.at(-1)).toBe(board.readCommitPos({ partition: 0 }));
 		expect(committed.at(-1)).toBeGreaterThan(failed[0]?.lastSeq ?? 0);
 		expect(heldOnLanes()).toBe(0);
