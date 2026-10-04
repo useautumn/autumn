@@ -41,6 +41,15 @@ const processorWith = ({
 		config,
 	});
 
+/** An owner that has watched the partition's draws for longer than the warm-up. */
+const warmProcessorWith = async (
+	params: Parameters<typeof processorWith>[0] = {},
+) => {
+	const processor = await processorWith(params);
+	await processor.check({ command: checkOf({ at: SECOND_START - 10_000 }) });
+	return processor;
+};
+
 const checkOf = ({
 	at = SECOND_START,
 	requiredBalance = 1,
@@ -86,7 +95,7 @@ const trackAt = async ({
 
 describe("check leases on the owner", () => {
 	test("a quiet balance with room leases for the full second", async () => {
-		const processor = await processorWith();
+		const processor = await warmProcessorWith();
 		const reply = await processor.check({ command: checkOf() });
 		expect(reply.lease).toEqual({ expiresAt: SECOND_START + 1_000 });
 		// A memo hit is the same reply, so the lease keeps the deciding check's clock.
@@ -94,14 +103,32 @@ describe("check leases on the owner", () => {
 			command: checkOf({ at: SECOND_START + 600 }),
 		});
 		expect(again.lease).toEqual({ expiresAt: SECOND_START + 1_000 });
+		// The warm-up check before it was withheld: a new owner has no draw rate to gate on.
 		expect(processor.readCounters()).toMatchObject({
 			checkLeasesIssued: 1,
-			checkLeasesWithheld: 0,
+			checkLeasesWithheld: 1,
 		});
 	});
 
+	test("a new owner leases only what no draw can refuse until it has watched the draws", async () => {
+		const quiet = await processorWith();
+		expect((await quiet.check({ command: checkOf() })).lease).toBeNull();
+		const overage = await processorWith({
+			customerEntitlements: [
+				{ ...createCustomerEntitlement({ balance: 0 }), usage_allowed: true },
+			],
+		});
+		expect((await overage.check({ command: checkOf() })).lease).toEqual({
+			expiresAt: SECOND_START + 1_000,
+		});
+		expect(
+			(await quiet.check({ command: checkOf({ at: SECOND_START + 2_000 }) }))
+				.lease,
+		).toEqual({ expiresAt: SECOND_START + 3_000 });
+	});
+
 	test("near the limit there is no lease: the headroom must cover ten times a second of draws", async () => {
-		const processor = await processorWith({ balance: 30 });
+		const processor = await warmProcessorWith({ balance: 30 });
 		await trackAt({ processor, at: SECOND_START, value: 2 });
 		// 28 left; the draw rate is ~2 units/s, so a lease needs 1 + 20 fundable.
 		const roomy = await processor.check({
@@ -119,7 +146,7 @@ describe("check leases on the owner", () => {
 	});
 
 	test("the draw rate decays: a burst seconds ago no longer holds a lease back", async () => {
-		const processor = await processorWith({ balance: 200 });
+		const processor = await warmProcessorWith({ balance: 200 });
 		await trackAt({ processor, at: SECOND_START, value: 50 });
 		const during = await processor.check({
 			command: checkOf({ at: SECOND_START + 1 }),
@@ -132,7 +159,7 @@ describe("check leases on the owner", () => {
 	});
 
 	test("overage rows lease whatever the draw rate: no track can refuse the check", async () => {
-		const processor = await processorWith({
+		const processor = await warmProcessorWith({
 			customerEntitlements: [
 				{ ...createCustomerEntitlement({ balance: 0 }), usage_allowed: true },
 			],
@@ -147,7 +174,7 @@ describe("check leases on the owner", () => {
 	});
 
 	test("the lease ends at the rows' next reset or grant expiry", async () => {
-		const resets = await processorWith({
+		const resets = await warmProcessorWith({
 			customerEntitlements: [
 				{
 					...createCustomerEntitlement({ balance: 100 }),
@@ -158,7 +185,7 @@ describe("check leases on the owner", () => {
 		expect((await resets.check({ command: checkOf() })).lease).toEqual({
 			expiresAt: SECOND_START + 300,
 		});
-		const expires = await processorWith({
+		const expires = await warmProcessorWith({
 			customerEntitlements: [
 				{
 					...createCustomerEntitlement({ balance: 100 }),
@@ -172,7 +199,7 @@ describe("check leases on the owner", () => {
 	});
 
 	test("refused answers, event properties and a disabled owner never lease", async () => {
-		const processor = await processorWith({ balance: 5 });
+		const processor = await warmProcessorWith({ balance: 5 });
 		const refused = await processor.check({
 			command: checkOf({ requiredBalance: 10 }),
 		});
@@ -185,7 +212,7 @@ describe("check leases on the owner", () => {
 		expect(withProperties.lease).toBeNull();
 		expect(processor.readCounters()).toMatchObject({
 			checkLeasesIssued: 0,
-			checkLeasesWithheld: 2,
+			checkLeasesWithheld: 3,
 		});
 
 		const disabled = await processorWith({
