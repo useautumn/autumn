@@ -32,6 +32,8 @@ export const createRingWriter = ({
 	const view = new DataView(ring.sab, HEADER_BYTES, ring.capacity);
 	const { capacity } = ring;
 	const mask = capacity - 1;
+	// Above half the ring a frame can fit neither before the end nor after a wrap, wherever the tail is.
+	const maxFrameBytes = capacity / 2 - FRAME_HEADER_BYTES;
 	let tail = Atomics.load(header, TAIL) >>> 0;
 	let cachedHead = Atomics.load(header, HEAD) >>> 0;
 	let claimedAt = -1;
@@ -49,8 +51,9 @@ export const createRingWriter = ({
 		type: number;
 		maxLength: number;
 	}): number {
+		if (maxLength > maxFrameBytes)
+			throw new RangeError("frame larger than half the ring");
 		const total = FRAME_HEADER_BYTES + maxLength;
-		if (total > capacity) throw new RangeError("frame larger than the ring");
 		let index = tail & mask;
 		const toEnd = capacity - index;
 		if (toEnd < total) {
@@ -92,7 +95,7 @@ export const createRingWriter = ({
 	return {
 		bytes,
 		view,
-		maxFrameBytes: capacity - FRAME_HEADER_BYTES,
+		maxFrameBytes,
 		claim,
 		publish,
 		flush,

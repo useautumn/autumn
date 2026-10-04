@@ -143,4 +143,32 @@ describe("SAB ring framing", () => {
 		},
 		60_000,
 	);
+
+	test("a frame of the largest size writes from every tail position, and a larger one is refused", () => {
+		const capacity = 4096;
+		for (let tail = 0; tail < capacity; tail += 7) {
+			const ring = createRing({ capacity });
+			const producer = createRingWriter({ ring, signal: createRingSignal() });
+			const consumer = createRingReader({ ring });
+			// Frames no larger than the maximum carry the tail to about `tail`, then are read.
+			for (let moved = 0; tail - moved >= 5; ) {
+				const length = Math.min(producer.maxFrameBytes, tail - moved - 5);
+				producer.claim({ type: 9, maxLength: length });
+				producer.publish({ length });
+				producer.flush();
+				consumer.next();
+				consumer.advance();
+				consumer.release();
+				moved += 5 + length;
+			}
+			const payload = new Uint8Array(producer.maxFrameBytes);
+			expect(producer.write({ type: 1, payload })).toBe(true);
+		}
+		const ring = createRing({ capacity });
+		const producer = createRingWriter({ ring, signal: createRingSignal() });
+		expect(producer.maxFrameBytes).toBe(capacity / 2 - 5);
+		expect(() =>
+			producer.claim({ type: 1, maxLength: producer.maxFrameBytes + 1 }),
+		).toThrow("frame larger than half the ring");
+	});
 });

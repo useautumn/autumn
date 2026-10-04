@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-	readReplyFrame,
 	REPLY_FRAME,
+	readReplyFrame,
 	writeReplyFrame,
 } from "../../../../src/http/workerThreads/frames/replyFrame.js";
 import {
@@ -80,9 +80,10 @@ describe("HTTP worker frames", () => {
 
 	test("a frame the ring has no room for is refused, not truncated", () => {
 		const { writer } = ringPair();
-		const body = new Uint8Array(3000);
+		const body = new Uint8Array(1500);
 		const write = () =>
 			writeReplyFrame({ writer, reqId: 1, status: 200, metaText: "{}", body });
+		expect(write()).toBe(true);
 		expect(write()).toBe(true);
 		expect(write()).toBe(false);
 	});

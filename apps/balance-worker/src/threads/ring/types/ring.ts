@@ -14,7 +14,7 @@ export type RingFrame = {
 export type RingWriter = {
 	readonly bytes: Uint8Array;
 	readonly view: DataView;
-	/** The largest payload one frame can carry. */
+	/** The largest payload one frame can carry: half the ring, so it fits wherever the tail stands. */
 	readonly maxFrameBytes: number;
 	/** Reserves up to `maxLength` payload bytes; the payload offset, or -1 when the ring cannot take it now. */
 	claim(params: { type: number; maxLength: number }): number;
