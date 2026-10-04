@@ -133,6 +133,8 @@ export type PartitionWriterLimits = {
 	subjectMapBudget?: SubjectMapBudget;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
+	/** Appends the pipelined arm may keep on the wire at once; unset or 1 waits for each before sending the next. */
+	commitPipelineDepth?: number;
 	deferredCommitMs?: number;
 };
 
@@ -186,6 +188,10 @@ export type PartitionWriterState = {
 	queue: PendingMutation[];
 	draining: boolean;
 	storeCompletion: Promise<void>;
+	/** Appends sent and not yet answered, oldest first; always settled in this order. */
+	inFlight: InFlightAppend[];
+	/** Set while the loop idles with room in the pipe; an enqueue or an answered append rings it. */
+	pipeWake: (() => void) | null;
 	/** Batches Kafka has but the store has not applied yet, oldest first. */
 	unapplied: UnappliedBatch[];
 	/** Resolves once every batch handed to the store so far has been applied, in log order. */
@@ -213,6 +219,16 @@ export type PartitionWriterState = {
 export type UnappliedBatch = {
 	batch: PendingMutation[];
 	baseOffset: bigint;
+};
+
+/** What the broker said about one append; a failure is judged by the loop, in log order. */
+export type AppendOutcome = { baseOffset: bigint } | { failed: unknown };
+
+export type InFlightAppend = {
+	batch: PendingMutation[];
+	/** True once `result` has settled, so answered heads settle without an await. */
+	done: boolean;
+	result: Promise<AppendOutcome>;
 };
 
 export type PartitionWriterScope = {

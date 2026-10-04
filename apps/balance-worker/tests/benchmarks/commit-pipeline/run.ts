@@ -1,5 +1,6 @@
 import { performance } from "node:perf_hooks";
 import type { StagingArm } from "@autumn/edge-config";
+import { COMMIT_DEPTH_EXPERIMENT } from "../../../src/experiments/commitDepth.js";
 import { COMMIT_PIPELINE_EXPERIMENT } from "../../../src/experiments/commitPipeline.js";
 import { createPartitionCommitLogging } from "../../../src/logging/createPartitionCommitLogging.js";
 import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLogger.js";
@@ -14,8 +15,8 @@ import { scenarios } from "../track-throughput/scenarios.js";
 
 /**
  * Open-loop sync tracks on one partition through the worker's commit logging, with Kafka and Postgres
- * latency simulated: what each commit-pipeline arm does to track latency, commits/s, flushes/s and CPU.
- * Results go to stderr; stdout carries the worker's own log lines, as on a task.
+ * latency simulated: what each arm of `--experiment` (commit-pipeline, or commit-depth) does to track
+ * latency, commits/s, flushes/s and CPU. Results go to stderr; stdout carries the worker's own log lines, as on a task.
  */
 type LoggedStateStore = Parameters<
 	typeof createPartitionCommitLogging
@@ -28,14 +29,19 @@ const args = Object.fromEntries(
 	}),
 );
 const arm = (args.arm ?? "A") as StagingArm;
+const experiment =
+	args.experiment === COMMIT_DEPTH_EXPERIMENT
+		? COMMIT_DEPTH_EXPERIMENT
+		: COMMIT_PIPELINE_EXPERIMENT;
 const rate = Number(args.rate ?? 500);
+const batch = Number(args.batch ?? 500);
 const seconds = Number(args.seconds ?? 6);
 const appendMs = Number(args.appendMs ?? 4);
 const applyMs = Number(args.applyMs ?? 45);
 const scenario = scenarios.typical;
 if (!scenario) throw new Error("scenario");
 
-forceStagingArm({ experiment: COMMIT_PIPELINE_EXPERIMENT, arm });
+forceStagingArm({ experiment, arm });
 let commits = 0;
 let flushes = 0;
 let logLines = 0;
@@ -45,8 +51,8 @@ const bench = await createBenchProcessor({
 	partition: 0,
 	latency: { appendMs, applyMs },
 	serialize: true,
-	// The worker's own: 500 records a commit, a 5 ms linger on a busy partition.
-	limits: { maxBatchSize: 500, commitLingerMs: 5 },
+	// The worker's own: 500 records a commit, a 5 ms linger on a busy partition, two appends in flight under commit-depth B.
+	limits: { maxBatchSize: batch, commitLingerMs: 5, commitPipelineDepth: 2 },
 	instrument: (ports) => {
 		const counted = {
 			appender: {
@@ -154,8 +160,10 @@ const pct = (p: number) =>
 	0;
 console.error(
 	JSON.stringify({
+		experiment,
 		arm,
 		rate,
+		batch,
 		appendMs,
 		applyMs,
 		tracks: latencies.length,

@@ -1,3 +1,73 @@
+diff --git a/src/broker/index.js b/src/broker/index.js
+index bb86cc5d5e8eb2ab0b0ef885b1b6fcaf288f3c98..108533e80b07861a9ac5a3b18c515fa886b4339a 100644
+--- a/src/broker/index.js
++++ b/src/broker/index.js
+@@ -236,19 +236,20 @@ module.exports = class Broker {
+     acks = -1,
+     timeout = 30000,
+     compression = Compression.None,
++    onRequestQueued,
+   }) {
+     const produce = this.lookupRequest(apiKeys.Produce, requests.Produce)
+-    return await this[PRIVATE.SEND_REQUEST](
+-      produce({
+-        acks,
+-        timeout,
+-        compression,
+-        topicData,
+-        transactionalId,
+-        producerId,
+-        producerEpoch,
+-      })
+-    )
++    const protocolRequest = produce({
++      acks,
++      timeout,
++      compression,
++      topicData,
++      transactionalId,
++      producerId,
++      producerEpoch,
++    })
++    if (onRequestQueued) protocolRequest.onRequestQueued = onRequestQueued
++    return await this[PRIVATE.SEND_REQUEST](protocolRequest)
+   }
+ 
+   /**
+diff --git a/src/index.js b/src/index.js
+index d6369d7eb87c6fa89d97b48d5daea7651f7a017b..42a89025ddabdfd979ef6a7a29fb3f06e5a70dfa 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -129,6 +129,7 @@ module.exports = class Client {
+       transactionalId,
+       transactionTimeout,
+       instrumentationEmitter,
++      maxInFlightRequests,
+     })
+   }
+ 
+diff --git a/src/network/connection.js b/src/network/connection.js
+index dded584d8f8f2ccb001939a97f40739f3e51605a..39aae2be584b7135afeb591f7bdf1cf78e40eda0 100644
+--- a/src/network/connection.js
++++ b/src/network/connection.js
+@@ -376,7 +376,7 @@ module.exports = class Connection {
+    * @param {boolean} [protocol.logResponseError=true] Whether to log errors
+    * @returns {Promise<data>} where data is the return of "response#parse"
+    */
+-  async send({ request, response, requestTimeout = null, logResponseError = true }) {
++  async send({ request, response, requestTimeout = null, logResponseError = true, onRequestQueued }) {
+     if (!this.isAuthenticated() && isAuthenticatedRequest(request)) {
+       await this[PRIVATE.AUTHENTICATE]()
+     }
+@@ -409,6 +409,8 @@ module.exports = class Connection {
+               this.socket.write(requestPayload.buffer, 'binary')
+             },
+           })
++          // Written, or pending in FIFO order behind what was: its place on the wire is fixed.
++          if (onRequestQueued) onRequestQueued()
+         } catch (e) {
+           reject(e)
+         }
 diff --git a/src/network/requestQueue/index.js b/src/network/requestQueue/index.js
 index eee14d66c3869d90f7bac0ac755ecbad3f2a2741..ac44131f5148611a3e3c6d412559b4f5837b4498 100644
 --- a/src/network/requestQueue/index.js
@@ -160,4 +230,185 @@ index 3010db7857a05eccf62d3f47ed8532e928f2c67b..f3154ffd5442515f5855c8b0e3b2e4de
 +        )
  
          hasOffsetsAddedToTransaction = true
+ 
+diff --git a/src/producer/index.js b/src/producer/index.js
+index 785c6494f7df1abec9b53707ffee8325330da391..11c3b78dcb4ab335bcd94f4999a7497ff355305d 100644
+--- a/src/producer/index.js
++++ b/src/producer/index.js
+@@ -38,8 +38,13 @@ module.exports = ({
+   transactionalId,
+   transactionTimeout,
+   instrumentationEmitter: rootInstrumentationEmitter,
++  maxInFlightRequests,
+ }) => {
+   let connectionStatus = CONNECTION_STATUS.DISCONNECTED
++  // More than one in-flight request on an idempotent producer pipelines its produces:
++  // the per-broker lock is held only until the request is on the wire (sequence order
++  // fixed), not until the response. Transactions never pipeline.
++  const pipelined = Boolean(idempotent && maxInFlightRequests > 1)
+   retry = retry || { retries: idempotent ? Number.MAX_SAFE_INTEGER : 5 }
+ 
+   if (idempotent && retry.retries < 1) {
+@@ -73,6 +78,7 @@ module.exports = ({
+     idempotent,
+     retrier,
+     getConnectionStatus: () => connectionStatus,
++    pipelined,
+   })
+ 
+   let transactionalEosManager
+diff --git a/src/producer/messageProducer.js b/src/producer/messageProducer.js
+index ef45c8a3d98d8ed0af72ce96defb9b3606656f51..f7fbc00ecf89b396aaaf219048e002592247ff9c 100644
+--- a/src/producer/messageProducer.js
++++ b/src/producer/messageProducer.js
+@@ -10,6 +10,7 @@ module.exports = ({
+   idempotent,
+   retrier,
+   getConnectionStatus,
++  pipelined = false,
+ }) => {
+   const sendMessages = createSendMessages({
+     logger,
+@@ -17,6 +18,7 @@ module.exports = ({
+     retrier,
+     partitioner,
+     eosManager,
++    pipelined,
+   })
+ 
+   const validateConnectionStatus = () => {
+diff --git a/src/producer/sendMessages.js b/src/producer/sendMessages.js
+index bc675e372222ecb8439f2f7ead0153fda594a88e..0855aec9b880e2330b80c488cfacfc441e65d3ed 100644
+--- a/src/producer/sendMessages.js
++++ b/src/producer/sendMessages.js
+@@ -1,4 +1,4 @@
+-const { KafkaJSMetadataNotLoaded } = require('../errors')
++const { KafkaJSMetadataNotLoaded, KafkaJSNonRetriableError } = require('../errors')
+ const { staleMetadata } = require('../protocol/error')
+ const groupMessagesPerPartition = require('./groupMessagesPerPartition')
+ const createTopicData = require('./createTopicData')
+@@ -14,8 +14,51 @@ const { keys } = Object
+  * @param {import("./eosManager").EosManager} options.eosManager
+  * @param {import("../retry").Retrier} options.retrier
+  */
+-module.exports = ({ logger, cluster, partitioner, eosManager, retrier }) => {
++module.exports = ({ logger, cluster, partitioner, eosManager, retrier, pipelined = false }) => {
++  // A failed produce whose sequences a later in-flight produce already built on cannot be
++  // rolled back: the producer is spent until it is recreated, and the owner recovers from the log.
++  let poisoned = null
++  // Pipelined sends take their sequences in call order. A send held up before the broker lock
++  // (a metadata refresh, a retry backoff) must not be overtaken, so the lock is handed out by
++  // ticket: a send waits for its turn, passes it once its request is queued, and a send that
++  // ends without ever queuing passes it from the outside.
++  let nextTicket = 0
++  const turn = { next: 0, waiters: new Map(), finished: new Set() }
++  const waitTurn = ticket =>
++    new Promise(resolve => {
++      if (turn.next >= ticket) return resolve()
++      turn.waiters.set(ticket, resolve)
++    })
++  const passTurn = ticket => {
++    if (turn.next !== ticket) return
++    let next = ticket + 1
++    while (turn.finished.delete(next)) next++
++    turn.next = next
++    const waiter = turn.waiters.get(next)
++    if (waiter) {
++      turn.waiters.delete(next)
++      waiter()
++    }
++  }
++  // A send that rolled its sequence back retries ahead of anything issued meanwhile.
++  const retakeTurn = ticket => {
++    if (turn.next === ticket + 1) turn.next = ticket
++  }
+   return async ({ acks, timeout, compression, topicMessages }) => {
++    if (poisoned) throw poisoned
++    const pipelining = pipelined && !eosManager.isTransactional() && eosManager.isInitialized()
++    const ticket = pipelining ? nextTicket++ : null
++    try {
++      return await sendOnce({ acks, timeout, compression, topicMessages, pipelining, ticket })
++    } finally {
++      if (ticket !== null) {
++        if (turn.next === ticket) passTurn(ticket)
++        else if (turn.next < ticket) turn.finished.add(ticket)
++      }
++    }
++  }
++
++  async function sendOnce({ acks, timeout, compression, topicMessages, pipelining, ticket }) {
+     /** @type {Map<import("../../types").Broker, any[]>} */
+     const responsePerBroker = new Map()
+ 
+@@ -76,8 +119,18 @@ module.exports = ({ logger, cluster, partitioner, eosManager, retrier }) => {
+ 
+         const topicData = createTopicData(topicDataForBroker)
+ 
++        if (pipelining) await waitTurn(ticket)
+         await eosManager.acquireBrokerLock(broker)
++        let released = false
++        const releaseLock = () => {
++          if (released) return
++          released = true
++          if (pipelining) passTurn(ticket)
++          eosManager.releaseBrokerLock(broker)
++        }
+         try {
++          // Judged under the lock: a batch the poisoning one was decided on must not take a sequence.
++          if (pipelining && poisoned) throw poisoned
+           if (eosManager.isTransactional()) {
+             await eosManager.addPartitionsToTransaction(topicData)
+           }
+@@ -101,13 +154,37 @@ module.exports = ({ logger, cluster, partitioner, eosManager, retrier }) => {
+               timeout,
+               compression,
+               topicData,
++              // Once the request is queued on the connection its order on the wire is
++              // fixed, so the next batch may take its sequence numbers and go.
++              onRequestQueued: pipelining ? releaseLock : undefined,
+             })
+           } catch (e) {
++            if (poisoned) throw poisoned
++            // Rolling the sequence back is only sound while no later batch has taken the next
++            // one, and while pipelining only while no later send exists at all: one waiting at
++            // the lock would take the rolled-back sequence before this batch's retry does.
++            const rollbackSafe =
++              topicData.every(({ topic, partitions }) =>
++                partitions.every(
++                  entry =>
++                    eosManager.getSequence(topic, entry.partition) ===
++                    entry.firstSequence + entry.messages.length
++                )
++              ) &&
++              (!pipelining || nextTicket === ticket + 1)
++            if (!rollbackSafe) {
++              poisoned = new KafkaJSNonRetriableError(
++                `Pipelined idempotent produce failed with later batches in flight; the producer must be recreated: ${e.message}`
++              )
++              poisoned.cause = e
++              throw poisoned
++            }
+             topicData.forEach(({ topic, partitions }) => {
+               partitions.forEach(entry => {
+                 eosManager.updateSequence(topic, entry.partition, -entry.messages.length)
+               })
+             })
++            if (pipelining) retakeTurn(ticket)
+             throw e
+           }
+ 
+@@ -119,12 +196,13 @@ module.exports = ({ logger, cluster, partitioner, eosManager, retrier }) => {
+           responsePerBroker.delete(broker)
+           throw e
+         } finally {
+-          await eosManager.releaseBrokerLock(broker)
++          releaseLock()
+         }
+       })
+     }
+ 
+     return retrier(async (bail, retryCount, retryTime) => {
++      if (poisoned) throw poisoned
+       const topics = topicMessages.map(({ topic }) => topic)
+       await cluster.addMultipleTargetTopics(topics)
  

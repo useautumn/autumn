@@ -1,5 +1,7 @@
 export type KafkaProducerLimits = {
 	transactionTimeoutMs: number;
+	/** Idempotent sessions only: produces allowed on the wire at once; unset or 1 waits for each. */
+	maxInFlightRequests?: number;
 	retryCount: number;
 	initialRetryTimeMs: number;
 	maxRetryTimeMs: number;
