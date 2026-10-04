@@ -7,6 +7,11 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+import {
+	bindStagingVariants,
+	stagingVariantsEdgeConfig,
+	variant,
+} from "@autumn/edge-config";
 import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
@@ -101,6 +106,10 @@ afterEach(() => {
 	if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
 	else process.env.NODE_ENV = originalNodeEnv;
 	mock.restore();
+	bindStagingVariants({
+		read: stagingVariantsEdgeConfig.defaultValue,
+		identity: "",
+	});
 	_setMiscellaneousEdgeConfigForTesting({
 		config: MiscellaneousEdgeConfigSchema.parse({}),
 	});
@@ -744,6 +753,33 @@ describe("logRequestResult", () => {
 			statusCode: 500,
 			durationMs: 40,
 			res: responseBody,
+		});
+	});
+
+	test("labels the request line with each live staging experiment's arm, and only while one is live", async () => {
+		const live = await captureJsonResponse({
+			path: "/v1/customers.get",
+			durationMs: 20,
+			responseBody: { id: "cus_123" },
+		});
+		expect(mergeLoggedObjects(live.captured[0]?.args ?? [])).not.toHaveProperty(
+			"variants",
+		);
+
+		bindStagingVariants({
+			read: () => ({
+				experiments: { slice: { arms: ["A", "B", "C"] } },
+				updatedAt: new Date().toISOString(),
+			}),
+			identity: "arn:aws:ecs:us-east-1:1:task/c/abc",
+		});
+		const labelled = await captureJsonResponse({
+			path: "/v1/customers.get",
+			durationMs: 20,
+			responseBody: { id: "cus_123" },
+		});
+		expect(mergeLoggedObjects(labelled.captured[0]?.args ?? [])).toMatchObject({
+			variants: { slice: variant("slice") },
 		});
 	});
 

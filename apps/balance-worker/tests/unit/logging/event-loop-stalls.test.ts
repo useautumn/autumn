@@ -14,11 +14,15 @@ const idleCpu: CpuCounters = {
 function createFixture({
 	reportEveryMs = 1_000,
 	cpu = () => idleCpu,
+	variants,
+	startAt = 1_000,
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
+	variants?: () => Readonly<Record<string, string>> | null;
+	startAt?: number;
 } = {}) {
-	let clock = 1_000;
+	let clock = startAt;
 	const now = () => clock;
 	const infos: Log[] = [];
 	const warns: Log[] = [];
@@ -38,6 +42,8 @@ function createFixture({
 			recorder,
 			now,
 			cpu,
+			wallNow: now,
+			variants,
 			schedule: ({ run }) => {
 				tick = run;
 				return () => {
@@ -245,4 +251,52 @@ test("a timed section returns its value and still records when it throws", () =>
 		}),
 	).toThrow("boom");
 	expect(recorder.drainTotals()["subject.read"]?.count).toBe(2);
+});
+
+const eventLoopReports = (infos: Log[]) =>
+	infos
+		.map(
+			([fields]) => fields as { event?: string; data: Record<string, unknown> },
+		)
+		.filter(({ event }) => event === "balance_worker.event_loop");
+
+test("reports close on wall-clock window boundaries, even when the monitor starts mid-window", () => {
+	const { monitor, infos, elapse } = createFixture({ startAt: 1_600 });
+	monitor.start();
+	elapse({ elapsedMs: 300 });
+	expect(eventLoopReports(infos)).toHaveLength(0);
+	elapse({ elapsedMs: 110 });
+	elapse({ elapsedMs: 980 });
+	expect(eventLoopReports(infos)).toHaveLength(1);
+	elapse({ elapsedMs: 20 });
+	expect(eventLoopReports(infos).map(({ data }) => data.windowMs)).toEqual([
+		410, 1_000,
+	]);
+});
+
+test("each report carries the staging variants read as its window opened", () => {
+	const opened: number[] = [];
+	let clockAtOpen = 0;
+	const { monitor, infos, elapse } = createFixture({
+		variants: () => {
+			opened.push(clockAtOpen++);
+			return opened.length === 2
+				? { slice: "B", aa: "A" }
+				: { slice: "A", aa: "B" };
+		},
+	});
+	monitor.start();
+	for (let report = 0; report < 2; report++) elapse({ elapsedMs: 1_000 });
+	expect(eventLoopReports(infos).map(({ data }) => data.variants)).toEqual([
+		{ slice: "A", aa: "B" },
+		{ slice: "B", aa: "A" },
+	]);
+	expect(opened).toHaveLength(3);
+});
+
+test("outside a staging experiment no report carries variants", () => {
+	const { monitor, infos, elapse } = createFixture({ variants: () => null });
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+	expect(eventLoopReports(infos)[0]?.data).not.toHaveProperty("variants");
 });

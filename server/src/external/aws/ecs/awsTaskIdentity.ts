@@ -22,6 +22,7 @@ export const AwsTaskIdentitySchema = z.object({
 export type AwsTaskIdentity = z.infer<typeof AwsTaskIdentitySchema>;
 
 let cachedIdentity: AwsTaskIdentity | null = null;
+let cachedTaskArn: string | null = null;
 let identityResolved = false;
 let identityPromise: Promise<AwsTaskIdentity> | null = null;
 
@@ -69,7 +70,9 @@ export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 					const body = (await response.json()) as {
 						ServiceName?: string;
 						Cluster?: string;
+						TaskARN?: string;
 					};
+					if (typeof body.TaskARN === "string") cachedTaskArn = body.TaskARN;
 					if (
 						typeof body.ServiceName === "string" &&
 						typeof body.Cluster === "string"
@@ -107,6 +110,9 @@ export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 
 	return identityPromise;
 };
+
+/** This task's own ARN, unique per task unlike `serviceArn`; null off ECS or until resolved. */
+export const getAwsTaskArn = (): string | null => cachedTaskArn;
 
 /** Synchronous reader. Returns null until `resolveAwsTaskIdentity` resolves. */
 export const getAwsTaskIdentity = (): AwsTaskIdentity | null => cachedIdentity;

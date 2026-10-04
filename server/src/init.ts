@@ -36,6 +36,10 @@ import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
 } from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+import {
+	startStagingVariants,
+	stopStagingVariants,
+} from "./internal/misc/stagingVariants/stagingVariantsStore.js";
 
 // Edge config modules self-register on import
 import "./internal/misc/requestBlocks/requestBlockStore.js";
@@ -135,6 +139,7 @@ const init = async ({
 	prewarmMotherDuckResolver();
 
 	await startAllEdgeConfigPolling({ logger });
+	await startStagingVariants({ logger });
 	// Ownership discovery must not gate the HTTP listener: start() waits for the
 	// initial catch-up, and the load balancer kills the task long before a slow or
 	// failing Kafka connect finishes. Routing refreshes on its own afterwards.
@@ -377,6 +382,7 @@ async function gracefulShutdown() {
 		stopRedisV2Monitor();
 		stopMemorySpikeProbe();
 		stopAllEdgeConfigPolling();
+		stopStagingVariants();
 		// App-level batch windows (events 350ms, balance sync 1s) hold work in
 		// timers that process.exit would silently kill: deliver them, then close
 		// the SQS batchers at the last possible moment.
