@@ -6,6 +6,7 @@ import {
 } from "@autumn/balance-engine";
 import {
 	enqueueMutation,
+	hurryApply,
 	pendingCommitsFor,
 	pendingKeyOf,
 	projectPending,
@@ -21,6 +22,7 @@ import type {
 } from "../types/mutation.js";
 import type {
 	PartitionWriterScope,
+	PartitionWriterState,
 	PendingMutation,
 } from "../types/partitionWriter.js";
 import {
@@ -149,6 +151,7 @@ function decideOn<Reply>({
 		});
 		return {
 			decided: decidedWith<Reply>({
+				state,
 				kind: "duplicate",
 				committed: inFlight.settlement.join({ kind: "duplicate" }),
 				stored: inFlight.settlement.waitForStore(),
@@ -166,6 +169,7 @@ function decideOn<Reply>({
 			throw new PartitionWriterStateNotFoundError({ customerKey });
 		return {
 			decided: decidedWith<Reply>({
+				state,
 				kind: "duplicate",
 				stored: Promise.resolve(),
 				committed: Promise.resolve({
@@ -187,6 +191,7 @@ function decideOn<Reply>({
 	if (result.kind === "reply")
 		return {
 			decided: decidedWith<Reply>({
+				state,
 				kind: "reply",
 				committed: Promise.resolve(result.reply),
 				stored: state.storeCompletion,
@@ -220,6 +225,7 @@ function decideOn<Reply>({
 	});
 	return {
 		decided: decidedWith<Reply>({
+			state,
 			kind: "write",
 			committed: pending.settlement.join({ kind: "new" }),
 			stored: pending.settlement.waitForStore(),
@@ -247,10 +253,12 @@ function durabilityFor({
 }
 
 function decidedWith<Reply>({
+	state,
 	kind,
 	committed,
 	stored,
 }: {
+	state: PartitionWriterState;
 	kind: DecidedMutation<Reply>["kind"];
 	committed: Promise<Reply | CommittedMutation>;
 	stored: Promise<void>;
@@ -259,6 +267,7 @@ function decidedWith<Reply>({
 		return committed;
 	}
 	function waitForStore(): Promise<void> {
+		hurryApply({ state });
 		return stored;
 	}
 	return { kind, waitForCommit, waitForStore };

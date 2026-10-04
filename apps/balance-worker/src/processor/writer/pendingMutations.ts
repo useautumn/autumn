@@ -41,6 +41,10 @@ export function createPartitionWriterState({
 		recoveryError: null,
 		lastBatchSize: 0,
 		lingerWake: null,
+		lastCommitStartedAt: Number.NEGATIVE_INFINITY,
+		lastApplyStartedAt: Number.NEGATIVE_INFINITY,
+		applyHurried: false,
+		applyWake: null,
 		deferredQueued: 0,
 		deferredCommitTimer: null,
 		deferredCommitDue: false,
@@ -338,4 +342,10 @@ export function rejectAllPending({
 	state.pendingByKey.clear();
 	state.pendingByCustomerKey.clear();
 	state.subjects.clear();
+}
+
+/** A caller is waiting on the store: a flush held back to coalesce goes now. */
+export function hurryApply({ state }: { state: PartitionWriterState }): void {
+	state.applyHurried = true;
+	state.applyWake?.();
 }
