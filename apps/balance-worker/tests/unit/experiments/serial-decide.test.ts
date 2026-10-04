@@ -71,10 +71,14 @@ describe("serial-decide boot arm", () => {
 			bucket: "autumn-prod-server",
 		});
 		const mode = createSerialDecideMode().read();
-		expect(mode).toEqual({ arm: "A", ioWorkersEnabled: false });
+		expect(mode).toEqual({
+			arm: "A",
+			ioWorkersEnabled: false,
+			kafkaWorkerEnabled: false,
+		});
 	});
 
-	test("a forced arm wins over the config, and C or D run the I/O worker layout too", () => {
+	test("a forced arm wins over the config; B runs the I/O workers, C and D add the Kafka worker", () => {
 		bindStagingVariants({
 			read: () => config(["A", "B"]),
 			identity: "task-1",
@@ -83,10 +87,22 @@ describe("serial-decide boot arm", () => {
 		expect(createSerialDecideMode({ force: "A" }).read()).toEqual({
 			arm: "A",
 			ioWorkersEnabled: false,
+			kafkaWorkerEnabled: false,
+		});
+		expect(createSerialDecideMode({ force: "B" }).read()).toEqual({
+			arm: "B",
+			ioWorkersEnabled: true,
+			kafkaWorkerEnabled: false,
 		});
 		expect(createSerialDecideMode({ force: "C" }).read()).toEqual({
 			arm: "C",
 			ioWorkersEnabled: true,
+			kafkaWorkerEnabled: true,
+		});
+		expect(createSerialDecideMode({ force: "D" }).read()).toEqual({
+			arm: "D",
+			ioWorkersEnabled: true,
+			kafkaWorkerEnabled: true,
 		});
 	});
 

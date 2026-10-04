@@ -3,7 +3,8 @@ import { type StagingArm, variant } from "@autumn/edge-config";
 /**
  * ATMN-602: under B the worker's HTTP moves to I/O worker threads that hand request bytes to the main
  * thread over shared-memory rings; the main thread keeps every partition, writer and decision as today.
- * C and D run B's layout too, so a four-arm config can weight it (A,B = 50 %; A,B,C,D = 75 %).
+ * C adds the Kafka worker thread: the partition producers (encode, compression, sockets) leave the main
+ * thread, the writer's commit loop stays. D runs C's layout too, so a four-arm config can weight it.
  */
 export const SERIAL_DECIDE_EXPERIMENT = "serial-decide";
 
@@ -11,6 +12,8 @@ export type SerialDecideMode = {
 	arm: StagingArm;
 	/** True for every arm but A. */
 	ioWorkersEnabled: boolean;
+	/** True for C and D. */
+	kafkaWorkerEnabled: boolean;
 };
 
 /**
@@ -30,7 +33,11 @@ export function createSerialDecideMode({
 	function read(): SerialDecideMode {
 		if (mode) return mode;
 		const arm = force ?? variant(SERIAL_DECIDE_EXPERIMENT);
-		mode = { arm, ioWorkersEnabled: arm !== "A" };
+		mode = {
+			arm,
+			ioWorkersEnabled: arm !== "A",
+			kafkaWorkerEnabled: arm === "C" || arm === "D",
+		};
 		return mode;
 	}
 	/** The arm this task booted with, for every health and event-loop line; null before boot and under A, so a task on today's layout (prod, dev) adds no label. */
