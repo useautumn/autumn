@@ -21,6 +21,8 @@ const HEADROOM_FACTOR = 10;
 const DRAW_RATE_TAU_MS = 1_000;
 /** Rows whose draw rate is tracked; the least recently drawn one is forgotten first. */
 const MAX_TRACKED_ROWS = 20_000;
+/** A new owner has seen no draws yet: until it has watched this long, only a check no draw can refuse is leased. */
+const RATE_WARMUP_MS = 2 * DRAW_RATE_TAU_MS;
 
 type DrawRate = { perMs: number; at: number };
 
@@ -36,6 +38,7 @@ export const createCheckLeases = ({
 	counters: LeaseCounters;
 }): Pick<SubjectDecisions, "recordDraws" | "leaseCheck"> => {
 	const drawRates = new Map<string, DrawRate>();
+	let observingSince: number | null = null;
 
 	function decayedPerMs({ rate, at }: { rate: DrawRate; at: number }): number {
 		const elapsed = Math.max(0, at - rate.at);
@@ -141,10 +144,14 @@ export const createCheckLeases = ({
 		if (ttlMs <= 0) return null;
 		const lease = { expiresAt: now + ttlMs };
 		if (result.isFlag) return lease;
+		observingSince ??= now;
 		const drawPerMs = drawPerMsOf({ context, at: now });
 		if (drawPerMs === null) return null;
-		if (drawPerMs === 0) return lease;
-		const margin = Math.ceil(HEADROOM_FACTOR * drawPerMs * ttlMs);
+		const warm = now - observingSince >= RATE_WARMUP_MS;
+		if (warm && drawPerMs === 0) return lease;
+		const margin = warm
+			? Math.ceil(HEADROOM_FACTOR * drawPerMs * ttlMs)
+			: Number.MAX_SAFE_INTEGER;
 		// The same dry run with the margin on top: unlimited and overage rows pass it, a balance near its limit does not.
 		const stressed = computeCheck({
 			fullSubject,
