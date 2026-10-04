@@ -163,6 +163,89 @@ const rowIdsToChange = ({
 	]),
 ];
 
+/** The customer entitlement's change, or null when nothing on it moved. */
+export const customerEntitlementChangeOf = ({
+	id,
+	deltas,
+}: {
+	id: string;
+	deltas: DeductionDelta[];
+}): RowChange | null => {
+	const rowDeltas = rowDeltasOn({
+		table: "customerEntitlements",
+		id,
+		deltas,
+	});
+	const balance = nonZeroSum(
+		rowDeltas
+			.filter((delta) => delta.entityKey === null)
+			.map((delta) => delta.balanceDelta),
+	);
+	const entities = Object.fromEntries(
+		Object.entries(
+			sumByEntityKey({ deltas: rowDeltas, amountOf: (d) => d.balanceDelta }),
+		).map(([key, amount]) => [key, { balance: amount }]),
+	);
+	const usage_attribution = attributionIncrementsOn({ id, deltas });
+	const addEntries = definedEntries({
+		entities: Object.keys(entities).length ? entities : undefined,
+		usage_attribution: Object.keys(usage_attribution).length
+			? usage_attribution
+			: undefined,
+	});
+	if (balance === undefined && Object.keys(addEntries).length === 0)
+		return null;
+	return {
+		table: "customerEntitlements",
+		op: "increment",
+		id,
+		add: definedEntries({ balance }),
+		...(Object.keys(addEntries).length ? { addEntries } : {}),
+	};
+};
+
+/** The rollover's change, or null when nothing on it moved. */
+export const rolloverChangeOf = ({
+	id,
+	deltas,
+}: {
+	id: string;
+	deltas: DeductionDelta[];
+}): RowChange | null => {
+	const rowDeltas = rowDeltasOn({ table: "rollovers", id, deltas });
+	if (rowDeltas.length === 0) return null;
+	const own = rowDeltas.filter((delta) => delta.entityKey === null);
+	const add = definedEntries({
+		balance: nonZeroSum(own.map((delta) => delta.balanceDelta)),
+		usage: nonZeroSum(own.map((delta) => delta.usageDelta)),
+	});
+	const balances = sumByEntityKey({
+		deltas: rowDeltas,
+		amountOf: (d) => d.balanceDelta,
+	});
+	const usages = sumByEntityKey({
+		deltas: rowDeltas,
+		amountOf: (d) => d.usageDelta,
+	});
+	const entities = Object.fromEntries(
+		[...new Set([...Object.keys(balances), ...Object.keys(usages)])].map(
+			(key) => [
+				key,
+				definedEntries({ balance: balances[key], usage: usages[key] }),
+			],
+		),
+	);
+	if (Object.keys(add).length === 0 && Object.keys(entities).length === 0)
+		return null;
+	return {
+		table: "rollovers",
+		op: "increment",
+		id,
+		add,
+		...(Object.keys(entities).length ? { addEntries: { entities } } : {}),
+	};
+};
+
 /** Deltas are the log; a row change adds what every delta on one row moved. Nothing is set, so the change composes with any other writer of the row. */
 export const deltasToRowChanges = ({
 	context,
@@ -172,85 +255,24 @@ export const deltasToRowChanges = ({
 	deltas: DeductionDelta[];
 }): RowChange[] => {
 	const changes: RowChange[] = [];
-
 	const customerEntitlementIds = rowIdsToChange({
 		table: "customerEntitlements",
 		selectedIds: context.customerEntitlements.map((row) => row.id),
 		deltas,
 	});
 	for (const id of customerEntitlementIds) {
-		const rowDeltas = rowDeltasOn({
-			table: "customerEntitlements",
-			id,
-			deltas,
-		});
-		const balance = nonZeroSum(
-			rowDeltas
-				.filter((delta) => delta.entityKey === null)
-				.map((delta) => delta.balanceDelta),
-		);
-		const entities = Object.fromEntries(
-			Object.entries(
-				sumByEntityKey({ deltas: rowDeltas, amountOf: (d) => d.balanceDelta }),
-			).map(([key, amount]) => [key, { balance: amount }]),
-		);
-		const usage_attribution = attributionIncrementsOn({ id, deltas });
-		const addEntries = definedEntries({
-			entities: Object.keys(entities).length ? entities : undefined,
-			usage_attribution: Object.keys(usage_attribution).length
-				? usage_attribution
-				: undefined,
-		});
-		if (balance === undefined && Object.keys(addEntries).length === 0) continue;
-		changes.push({
-			table: "customerEntitlements",
-			op: "increment",
-			id,
-			add: definedEntries({ balance }),
-			...(Object.keys(addEntries).length ? { addEntries } : {}),
-		});
+		const change = customerEntitlementChangeOf({ id, deltas });
+		if (change) changes.push(change);
 	}
-
 	const rolloverIds = rowIdsToChange({
 		table: "rollovers",
 		selectedIds: context.rollovers.map((row) => row.id),
 		deltas,
 	});
 	for (const id of rolloverIds) {
-		const rowDeltas = rowDeltasOn({ table: "rollovers", id, deltas });
-		if (rowDeltas.length === 0) continue;
-		const own = rowDeltas.filter((delta) => delta.entityKey === null);
-		const add = definedEntries({
-			balance: nonZeroSum(own.map((delta) => delta.balanceDelta)),
-			usage: nonZeroSum(own.map((delta) => delta.usageDelta)),
-		});
-		const balances = sumByEntityKey({
-			deltas: rowDeltas,
-			amountOf: (d) => d.balanceDelta,
-		});
-		const usages = sumByEntityKey({
-			deltas: rowDeltas,
-			amountOf: (d) => d.usageDelta,
-		});
-		const entities = Object.fromEntries(
-			[...new Set([...Object.keys(balances), ...Object.keys(usages)])].map(
-				(key) => [
-					key,
-					definedEntries({ balance: balances[key], usage: usages[key] }),
-				],
-			),
-		);
-		if (Object.keys(add).length === 0 && Object.keys(entities).length === 0)
-			continue;
-		changes.push({
-			table: "rollovers",
-			op: "increment",
-			id,
-			add,
-			...(Object.keys(entities).length ? { addEntries: { entities } } : {}),
-		});
+		const change = rolloverChangeOf({ id, deltas });
+		if (change) changes.push(change);
 	}
-
 	return changes;
 };
 

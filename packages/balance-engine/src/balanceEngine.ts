@@ -236,6 +236,7 @@ export {
 	filterCatalogForState,
 	filterCatalogKeysMissingFrom,
 } from "./utils/catalogUtils/filterCatalogUtils.js";
+export { engineDiet } from "./utils/engineDiet/engineDiet.js";
 export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
 export {
 	meteringIdentityToPartitionKey,

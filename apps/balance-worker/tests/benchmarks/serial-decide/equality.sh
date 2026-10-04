@@ -20,7 +20,8 @@ seq_run() { # label out
 	taskset -c 0,1 "$loadgen" seq --addr 127.0.0.1:$port --path /v1/track --count "$count" --template "$rf/track-template.json" --out "$file" --prefix eq
 }
 
-SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 \
+# The baseline side runs the engine as it is (ENGINE_DIET_A, default 0) whatever the pipeline side's ENGINE_DIET.
+SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 ENGINE_DIET=${ENGINE_DIET_A:-0} \
 	setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/a.log" 2>&1 </dev/null &
 seq_run a "$out/a.bin"
 kill "$(ss -ltnp | grep ":$port " | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)"

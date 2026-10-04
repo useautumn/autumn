@@ -1,12 +1,15 @@
 import { Decimal } from "decimal.js";
 import { allocationCountersToRowChanges } from "../allocations/allocationDraw.js";
 import type { WorkerFullSubject } from "../models/subject/workerFullSubject.js";
+import { engineDiet } from "../utils/engineDiet/engineDiet.js";
+import { integerDrawToOutcome } from "./integerDrawToOutcome.js";
 import { setupDeductionContext } from "./setup/setupDeductionContext.js";
 import type { DeductionContext } from "./types/deductionContext.js";
 import type { DeductionOutcome } from "./types/deductionOutcome.js";
 import type { DeductionRequest } from "./types/deductionRequest.js";
 import type { DeductionState } from "./types/deductionState.js";
 import { deltasToRowChanges } from "./utils/convertDeductionUtils.js";
+import { deltasToRowChangesLean } from "./utils/deltasToRowChangesLean.js";
 import { deductFromBucket } from "./utils/draw/deductFromBucket.js";
 import {
 	drawIntegersFromBuckets,
@@ -61,7 +64,9 @@ export const deductionStateToOutcome = ({
 		changes: rejected
 			? []
 			: [
-					...deltasToRowChanges({ context, deltas }),
+					...(engineDiet.rowChanges
+						? deltasToRowChangesLean({ context, deltas })
+						: deltasToRowChanges({ context, deltas })),
 					...usageWindowsToRowChanges({ context, deductionState }),
 					...allocationCountersToRowChanges({ context, deductionState }),
 				],
@@ -94,6 +99,8 @@ export const deductWithContext = ({
 }): DeductionOutcome => {
 	if (isIntegerDraw({ context, request })) {
 		const { remaining, deltas } = drawIntegersFromBuckets({ context, request });
+		if (engineDiet.integerOutcome)
+			return integerDrawToOutcome({ context, remaining, deltas, request });
 		return deductionStateToOutcome({
 			context,
 			deductionState: {
