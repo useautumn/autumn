@@ -64,7 +64,7 @@ function exitAfterServiceStopped({
 	const chain = errorCauseChain({ error: cause }).map(causeToLine).join(" <- ");
 	getBalanceWorkerLogger().error(
 		{ error: cause, data: { scope } },
-		`Balance worker partition service stopped (${scope}); exiting so the task is replaced${chain ? ` <- ${chain}` : ""}`,
+		`Balance worker service stopped (${scope}); exiting so the task is replaced${chain ? ` <- ${chain}` : ""}`,
 	);
 	process.exitCode = 1;
 	async function endProcess(): Promise<void> {
